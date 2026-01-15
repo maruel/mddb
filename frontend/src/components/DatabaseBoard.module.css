@@ -1,0 +1,123 @@
+.board {
+  padding: 1rem 0;
+  overflow-x: auto;
+  min-height: 400px;
+}
+
+.noGroup {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 2px dashed #eee;
+}
+
+.columns {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  padding-bottom: 1rem;
+}
+
+.column {
+  flex: 0 0 280px;
+  background: #f4f5f7;
+  border-radius: 8px;
+  max-height: calc(100vh - 300px);
+  display: flex;
+  flex-direction: column;
+}
+
+.columnHeader {
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.columnName {
+  font-weight: 600;
+  color: #444;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.columnCount {
+  background: #dfe1e6;
+  color: #444;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.cards {
+  padding: 0 0.75rem 0.75rem;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.card {
+  background: white;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  box-shadow: 0 1px 2px rgba(9, 30, 66, 0.25);
+  cursor: grab;
+  transition: box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 2px 4px rgba(9, 30, 66, 0.3);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.cardHeader strong {
+  font-size: 0.9rem;
+  color: #172b4d;
+  display: block;
+  word-break: break-word;
+}
+
+.deleteBtn {
+  background: transparent;
+  border: none;
+  color: #ccc;
+  cursor: pointer;
+  padding: 0 5px;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.deleteBtn:hover {
+  color: #f44336;
+}
+
+.cardBody {
+  font-size: 0.8rem;
+}
+
+.field {
+  margin-top: 0.25rem;
+  display: flex;
+  color: #5e6c84;
+}
+
+.fieldName {
+  margin-right: 0.5rem;
+  font-weight: 500;
+}
+
+.fieldValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

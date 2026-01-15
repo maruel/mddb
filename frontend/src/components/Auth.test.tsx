@@ -1,0 +1,352 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
+import type { JSX } from 'solid-js';
+import Auth from './Auth';
+import { I18nProvider } from '../i18n';
+import type { UserResponse, LoginResponse, ErrorResponse } from '../types';
+
+// Mock CSS module
+vi.mock('./Auth.module.css', () => ({
+  default: {
+    authContainer: 'authContainer',
+    authForm: 'authForm',
+    error: 'error',
+    formGroup: 'formGroup',
+    toggle: 'toggle',
+    oauthSection: 'oauthSection',
+    divider: 'divider',
+    oauthButtons: 'oauthButtons',
+    googleButton: 'googleButton',
+    microsoftButton: 'microsoftButton',
+    authFooter: 'authFooter',
+  },
+}));
+
+// Mock fetch
+const mockFetch = vi.fn();
+globalThis.fetch = mockFetch;
+
+// Mock window.history and PopStateEvent
+const mockPushState = vi.fn();
+const mockDispatchEvent = vi.fn();
+window.history.pushState = mockPushState;
+window.dispatchEvent = mockDispatchEvent;
+
+function renderWithI18n(component: () => JSX.Element) {
+  return render(() => <I18nProvider>{component()}</I18nProvider>);
+}
+
+describe('Auth', () => {
+  const mockOnLogin = vi.fn();
+
+  beforeEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    mockFetch.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+
+  it('renders login form by default', async () => {
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/email/i)).toBeTruthy();
+      expect(screen.getByLabelText(/password/i)).toBeTruthy();
+    });
+
+    // Name field should not be visible in login mode
+    expect(screen.queryByLabelText(/^name$/i)).toBeFalsy();
+  });
+
+  it('switches to register form when clicking register link', async () => {
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/register/i)).toBeTruthy();
+    });
+
+    // Find and click the register button/link
+    const registerButtons = screen.getAllByText(/register/i);
+    const toggleButton = registerButtons.find(
+      (el) => el.tagName.toLowerCase() === 'button' && el.getAttribute('type') === 'button'
+    );
+    if (toggleButton) {
+      fireEvent.click(toggleButton);
+    }
+
+    await waitFor(() => {
+      // Name field should now be visible
+      expect(screen.getByLabelText(/^name$/i)).toBeTruthy();
+    });
+  });
+
+  it('handles successful login', async () => {
+    const mockUser: UserResponse = {
+      id: 'user-1',
+      email: 'test@example.com',
+      name: 'Test User',
+      settings: { theme: 'light', language: 'en' },
+      created: '2024-01-01T00:00:00Z',
+      modified: '2024-01-01T00:00:00Z',
+    };
+
+    const mockResponse: LoginResponse = {
+      token: 'test-token-123',
+      user: mockUser,
+    };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    });
+
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/email/i)).toBeTruthy();
+    });
+
+    // Fill in the form
+    fireEvent.input(screen.getByLabelText(/email/i), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.input(screen.getByLabelText(/password/i), {
+      target: { value: 'password123' },
+    });
+
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /login/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.com', password: 'password123' }),
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockOnLogin).toHaveBeenCalledWith('test-token-123', mockUser);
+    });
+  });
+
+  it('handles login error', async () => {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'UNAUTHORIZED',
+        message: 'Invalid credentials',
+      },
+    };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: () => Promise.resolve(errorResponse),
+    });
+
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/email/i)).toBeTruthy();
+    });
+
+    fireEvent.input(screen.getByLabelText(/email/i), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.input(screen.getByLabelText(/password/i), {
+      target: { value: 'wrongpassword' },
+    });
+
+    const submitButton = screen.getByRole('button', { name: /login/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Invalid credentials')).toBeTruthy();
+    });
+
+    expect(mockOnLogin).not.toHaveBeenCalled();
+  });
+
+  it('handles network error', async () => {
+    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/email/i)).toBeTruthy();
+    });
+
+    fireEvent.input(screen.getByLabelText(/email/i), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.input(screen.getByLabelText(/password/i), {
+      target: { value: 'password123' },
+    });
+
+    const submitButton = screen.getByRole('button', { name: /login/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/error occurred/i)).toBeTruthy();
+    });
+
+    expect(mockOnLogin).not.toHaveBeenCalled();
+  });
+
+  it('handles successful registration', async () => {
+    const mockUser: UserResponse = {
+      id: 'user-1',
+      email: 'new@example.com',
+      name: 'New User',
+      settings: { theme: 'light', language: 'en' },
+      created: '2024-01-01T00:00:00Z',
+      modified: '2024-01-01T00:00:00Z',
+    };
+
+    const mockResponse: LoginResponse = {
+      token: 'new-token-123',
+      user: mockUser,
+    };
+
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    });
+
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/register/i)).toBeTruthy();
+    });
+
+    // Switch to register mode
+    const registerButtons = screen.getAllByText(/register/i);
+    const toggleButton = registerButtons.find(
+      (el) => el.tagName.toLowerCase() === 'button' && el.getAttribute('type') === 'button'
+    );
+    if (toggleButton) {
+      fireEvent.click(toggleButton);
+    }
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/^name$/i)).toBeTruthy();
+    });
+
+    // Fill in the registration form
+    fireEvent.input(screen.getByLabelText(/^name$/i), {
+      target: { value: 'New User' },
+    });
+    fireEvent.input(screen.getByLabelText(/email/i), {
+      target: { value: 'new@example.com' },
+    });
+    fireEvent.input(screen.getByLabelText(/password/i), {
+      target: { value: 'newpassword123' },
+    });
+
+    // Submit the form - find the submit button
+    const submitButtons = screen.getAllByRole('button');
+    const submitButton = submitButtons.find((btn) => btn.getAttribute('type') === 'submit');
+    if (submitButton) {
+      fireEvent.click(submitButton);
+    }
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: 'new@example.com',
+          password: 'newpassword123',
+          name: 'New User',
+        }),
+      });
+    });
+  });
+
+  it('shows OAuth login buttons', async () => {
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/google/i)).toBeTruthy();
+      expect(screen.getByText(/microsoft/i)).toBeTruthy();
+    });
+
+    // Check OAuth links
+    const googleLink = screen.getByText(/google/i);
+    expect(googleLink.getAttribute('href')).toBe('/api/auth/oauth/google');
+
+    const microsoftLink = screen.getByText(/microsoft/i);
+    expect(microsoftLink.getAttribute('href')).toBe('/api/auth/oauth/microsoft');
+  });
+
+  it('shows privacy policy link', async () => {
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/privacy/i)).toBeTruthy();
+    });
+
+    const privacyLink = screen.getByText(/privacy/i);
+    fireEvent.click(privacyLink);
+
+    expect(mockPushState).toHaveBeenCalledWith(null, '', '/privacy');
+  });
+
+  it('disables submit button while loading', async () => {
+    // Make fetch hang
+    mockFetch.mockImplementationOnce(() => new Promise((resolve) => setTimeout(resolve, 10000)));
+
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/email/i)).toBeTruthy();
+    });
+
+    fireEvent.input(screen.getByLabelText(/email/i), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.input(screen.getByLabelText(/password/i), {
+      target: { value: 'password123' },
+    });
+
+    const submitButton = screen.getByRole('button', { name: /login/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(submitButton).toHaveProperty('disabled', true);
+    });
+  });
+
+  it('handles response without token or user', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({}), // Empty response
+    });
+
+    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/email/i)).toBeTruthy();
+    });
+
+    fireEvent.input(screen.getByLabelText(/email/i), {
+      target: { value: 'test@example.com' },
+    });
+    fireEvent.input(screen.getByLabelText(/password/i), {
+      target: { value: 'password123' },
+    });
+
+    const submitButton = screen.getByRole('button', { name: /login/i });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/invalid response/i)).toBeTruthy();
+    });
+
+    expect(mockOnLogin).not.toHaveBeenCalled();
+  });
+});

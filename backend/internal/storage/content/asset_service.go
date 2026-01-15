@@ -1,0 +1,136 @@
+package content
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"mime"
+	"path/filepath"
+	"slices"
+
+	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+)
+
+var (
+	errPageIDEmpty    = errors.New("page id cannot be empty")
+	errFileNameEmpty  = errors.New("file name cannot be empty")
+	errFileDataEmpty  = errors.New("file data cannot be empty")
+	errAssetNameEmpty = errors.New("asset name cannot be empty")
+)
+
+// AssetService handles asset business logic.
+type AssetService struct {
+	FileStore  *FileStore
+	gitService *git.Client
+	orgService *identity.OrganizationService
+}
+
+// NewAssetService creates a new asset service.
+func NewAssetService(fileStore *FileStore, gitService *git.Client, orgService *identity.OrganizationService) *AssetService {
+	return &AssetService{
+		FileStore:  fileStore,
+		gitService: gitService,
+		orgService: orgService,
+	}
+}
+
+// Save saves an asset file to a page's directory.
+func (s *AssetService) Save(ctx context.Context, orgID, pageID jsonldb.ID, fileName string, data []byte) (*Asset, error) {
+	if pageID.IsZero() {
+		return nil, errPageIDEmpty
+	}
+	if fileName == "" {
+		return nil, errFileNameEmpty
+	}
+	if len(data) == 0 {
+		return nil, errFileDataEmpty
+	}
+
+	// Check Quota
+	if s.orgService != nil {
+		org, err := s.orgService.Get(orgID)
+		if err == nil && org.Quotas.MaxStorage > 0 {
+			_, usage, err := s.FileStore.GetOrganizationUsage(orgID)
+			if err == nil && usage+int64(len(data)) > org.Quotas.MaxStorage {
+				return nil, fmt.Errorf("storage quota exceeded (%d/%d bytes)", usage+int64(len(data)), org.Quotas.MaxStorage)
+			}
+		}
+	}
+
+	// Verify page exists
+	if !s.FileStore.PageExists(orgID, pageID) {
+		return nil, errPageNotFound
+	}
+
+	path, err := s.FileStore.SaveAsset(orgID, pageID, fileName, data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Detect MIME type from filename
+	mimeType := mime.TypeByExtension(filepath.Ext(fileName))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	asset := &Asset{
+		ID:       fileName,
+		Name:     fileName,
+		MimeType: mimeType,
+		Size:     int64(len(data)),
+		Path:     path,
+	}
+
+	msg := fmt.Sprintf("create: asset %s in page %s", fileName, pageID.String())
+	files := []string{"pages/" + pageID.String() + "/" + fileName}
+	if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
+		return nil, err
+	}
+
+	return asset, nil
+}
+
+// Get retrieves asset file data.
+func (s *AssetService) Get(ctx context.Context, orgID, pageID jsonldb.ID, assetName string) ([]byte, error) {
+	if pageID.IsZero() {
+		return nil, errPageIDEmpty
+	}
+	if assetName == "" {
+		return nil, errAssetNameEmpty
+	}
+
+	return s.FileStore.ReadAsset(orgID, pageID, assetName)
+}
+
+// Delete deletes an asset file from a page's directory.
+func (s *AssetService) Delete(ctx context.Context, orgID, pageID jsonldb.ID, assetName string) error {
+	if pageID.IsZero() {
+		return errPageIDEmpty
+	}
+	if assetName == "" {
+		return errAssetNameEmpty
+	}
+
+	if err := s.FileStore.DeleteAsset(orgID, pageID, assetName); err != nil {
+		return err
+	}
+
+	msg := fmt.Sprintf("delete: asset %s from page %s", assetName, pageID.String())
+	files := []string{"pages/" + pageID.String() + "/" + assetName}
+	return s.gitService.Commit(ctx, orgID.String(), "", "", msg, files)
+}
+
+// List lists all assets in a page's directory.
+func (s *AssetService) List(ctx context.Context, orgID, pageID jsonldb.ID) ([]*Asset, error) {
+	if pageID.IsZero() {
+		return nil, errPageIDEmpty
+	}
+
+	it, err := s.FileStore.IterAssets(orgID, pageID)
+	if err != nil {
+		return nil, err
+	}
+	return slices.Collect(it), nil
+}

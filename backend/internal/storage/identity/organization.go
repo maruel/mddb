@@ -1,0 +1,171 @@
+package identity
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/git"
+)
+
+// Organization represents a workspace or group of users.
+type Organization struct {
+	ID         jsonldb.ID           `json:"id" jsonschema:"description=Unique organization identifier"`
+	Name       string               `json:"name" jsonschema:"description=Display name of the organization"`
+	Quotas     entity.Quota         `json:"quotas" jsonschema:"description=Resource limits for the organization"`
+	Settings   OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
+	Onboarding OnboardingState      `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
+	GitRemote  GitRemote            `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
+	Created    time.Time            `json:"created" jsonschema:"description=Organization creation timestamp"`
+}
+
+// Clone returns a deep copy of the Organization.
+func (o *Organization) Clone() *Organization {
+	c := *o
+	if o.Settings.AllowedDomains != nil {
+		c.Settings.AllowedDomains = make([]string, len(o.Settings.AllowedDomains))
+		copy(c.Settings.AllowedDomains, o.Settings.AllowedDomains)
+	}
+	return &c
+}
+
+// GetID returns the Organization's ID.
+func (o *Organization) GetID() jsonldb.ID {
+	return o.ID
+}
+
+// Validate checks that the Organization is valid.
+func (o *Organization) Validate() error {
+	if o.ID.IsZero() {
+		return errIDRequired
+	}
+	if o.Name == "" {
+		return errNameRequired
+	}
+	return nil
+}
+
+// OnboardingState tracks the progress of an organization's initial setup.
+type OnboardingState struct {
+	Completed bool      `json:"completed" jsonschema:"description=Whether onboarding is complete"`
+	Step      string    `json:"step" jsonschema:"description=Current onboarding step (name/members/git/done)"`
+	UpdatedAt time.Time `json:"updated_at" jsonschema:"description=Last progress update timestamp"`
+}
+
+// OrganizationSettings represents organization-wide settings.
+type OrganizationSettings struct {
+	AllowedDomains []string `json:"allowed_domains,omitempty" jsonschema:"description=Email domains allowed for membership"`
+	PublicAccess   bool     `json:"public_access" jsonschema:"description=Whether content is publicly accessible"`
+	GitAutoPush    bool     `json:"git_auto_push" jsonschema:"description=Automatically push changes to remote"`
+}
+
+// GitRemote represents the single remote repository configuration for an organization.
+type GitRemote struct {
+	URL      string    `json:"url,omitempty" jsonschema:"description=Git repository URL"`
+	Type     string    `json:"type,omitempty" jsonschema:"description=Remote type (github/gitlab/custom)"`
+	AuthType string    `json:"auth_type,omitempty" jsonschema:"description=Authentication method (token/ssh)"`
+	Token    string    `json:"token,omitempty" jsonschema:"description=Authentication token"`
+	Created  time.Time `json:"created,omitzero" jsonschema:"description=Remote creation timestamp"`
+	LastSync time.Time `json:"last_sync,omitzero" jsonschema:"description=Last synchronization timestamp"`
+}
+
+// IsZero returns true if the GitRemote has no URL configured.
+func (g *GitRemote) IsZero() bool {
+	return g.URL == ""
+}
+
+// OrganizationService handles organization management.
+//
+// An Organization owns a file storage that is managed by git. Users can be member of this organization via a
+// Membership.
+type OrganizationService struct {
+	rootDir    string
+	table      *jsonldb.Table[*Organization]
+	gitService *git.Client
+}
+
+// NewOrganizationService creates a new organization service.
+// tablePath is the path to the organizations.jsonl file.
+// rootDir is the root directory for organization content (each org gets a subdirectory).
+func NewOrganizationService(tablePath, rootDir string, gitService *git.Client) (*OrganizationService, error) {
+	table, err := jsonldb.NewTable[*Organization](tablePath)
+	if err != nil {
+		return nil, err
+	}
+	return &OrganizationService{
+		rootDir:    rootDir,
+		table:      table,
+		gitService: gitService,
+	}, nil
+}
+
+// Create creates a new organization.
+func (s *OrganizationService) Create(ctx context.Context, name string) (*Organization, error) {
+	if name == "" {
+		return nil, errOrgNameRequired
+	}
+	id := jsonldb.NewID()
+	now := time.Now()
+	org := &Organization{
+		ID:      id,
+		Name:    name,
+		Created: now,
+		Onboarding: OnboardingState{
+			Completed: false,
+			Step:      "name",
+			UpdatedAt: now,
+		},
+	}
+	if err := s.table.Append(org); err != nil {
+		return nil, err
+	}
+	// Create organization content directory
+	orgDir := filepath.Join(s.rootDir, id.String())
+	orgPagesDir := filepath.Join(orgDir, "pages")
+	if err := os.MkdirAll(orgPagesDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
+		return nil, fmt.Errorf("failed to create organization content directory: %w", err)
+	}
+	// Initialize git repository for the organization
+	if err := s.gitService.Init(ctx, id.String()); err != nil {
+		return nil, fmt.Errorf("failed to initialize git repo for org %s: %w", id, err)
+	}
+	return org, nil
+}
+
+// Get retrieves an organization by ID.
+func (s *OrganizationService) Get(id jsonldb.ID) (*Organization, error) {
+	org := s.table.Get(id)
+	if org == nil {
+		return nil, errOrgNotFound
+	}
+	return org, nil
+}
+
+// GetQuota returns the quota for an organization.
+func (s *OrganizationService) GetQuota(_ context.Context, id jsonldb.ID) (entity.Quota, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return entity.Quota{}, err
+	}
+	return org.Quotas, nil
+}
+
+// Modify atomically modifies an organization.
+func (s *OrganizationService) Modify(id jsonldb.ID, fn func(org *Organization) error) (*Organization, error) {
+	if id.IsZero() {
+		return nil, errOrgNotFound
+	}
+	return s.table.Modify(id, fn)
+}
+
+//
+
+var (
+	errOrgNameRequired = errors.New("organization name is required")
+	errOrgNotFound     = errors.New("organization not found")
+)

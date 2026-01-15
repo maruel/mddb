@@ -1,0 +1,7 @@
+packages:
+  - path: "github.com/maruel/mddb/backend/internal/server/dto"
+    enum_style: "union"
+    type_mappings:
+      "time.Time": "string"
+      "jsonldb.ID": "string"
+    output_path: "../frontend/src/types.gen.ts"

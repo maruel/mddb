@@ -1,0 +1,575 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+    'Helvetica Neue', sans-serif;
+  color: #333;
+  background: #fafafa;
+}
+
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.headerTitle h1 {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.headerTitle p {
+  font-size: 0.875rem;
+  opacity: 0.9;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.logoutButton {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.logoutButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.orgSwitcher {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.orgSwitcher option {
+  color: #333;
+}
+
+.orgName {
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+}
+
+.container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 280px;
+  background: white;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tabBar {
+  display: flex;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f9f9f9;
+}
+
+.tab {
+  flex: 1;
+  padding: 0.75rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  color: #333;
+  background: #f0f0f0;
+}
+
+.tab.active {
+  color: #667eea;
+  border-bottom-color: #667eea;
+  background: white;
+}
+
+.sidebarHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sidebarHeader h2 {
+  font-size: 1.1rem;
+  flex: 1;
+}
+
+.sidebarHeader button {
+  padding: 0.5rem 1rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.sidebarHeader button:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.sidebarHeader button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.loading {
+  padding: 1rem;
+  color: #999;
+  font-size: 0.875rem;
+}
+
+.pageList {
+  list-style: none;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.sidebarFooter {
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.sidebarFooter a {
+  color: #999;
+  font-size: 0.75rem;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.sidebarFooter a:hover {
+  color: #667eea;
+}
+
+.pageItem {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.pageItem:hover {
+  background: #f9f9f9;
+}
+
+.pageItem.active {
+  background: #f0f4ff;
+  border-left: 4px solid #667eea;
+  padding-left: calc(1.5rem - 4px);
+}
+
+.pageTitle {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pageDate {
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: white;
+}
+
+.error {
+  padding: 1rem 1.5rem;
+  background: #fee;
+  color: #c33;
+  border-bottom: 1px solid #fcc;
+  font-size: 0.875rem;
+}
+
+.welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.welcome h2 {
+  font-size: 2rem;
+  margin-bottom: 2rem;
+  color: #667eea;
+}
+
+.createForm {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.editorHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.editorStatus {
+  flex: 1;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.unsavedIndicator {
+  color: #ff9800;
+  font-weight: 500;
+}
+
+.savingIndicator {
+  color: #2196f3;
+  font-weight: 500;
+  animation: spin 1s linear infinite;
+}
+
+.savedIndicator {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.titleInput {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 1.5rem;
+  font-weight: 500;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+}
+
+.editorActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.editorActions button,
+.createButton {
+  padding: 0.5rem 1.5rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+}
+
+.editorActions button:hover:not(:disabled),
+.createButton:hover:not(:disabled) {
+  background: #5568d3;
+}
+
+.editorActions button:disabled,
+.createButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sidebarActions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.sidebarActions button {
+  padding: 0.25rem 0.5rem;
+  background: #eee;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.sidebarActions button:hover {
+  background: #ddd;
+}
+
+.nodeIcon {
+  margin-right: 0.5rem;
+  font-size: 1rem;
+}
+
+.welcomeActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.nodeContent {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.editorContent {
+  display: flex;
+  height: 60vh;
+  min-height: 400px;
+  overflow: hidden;
+  gap: 1px;
+  background: #e0e0e0;
+}
+
+.databaseView {
+  border-top: 4px solid #f0f0f0;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.databaseHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.viewToggle {
+  display: flex;
+  background: #eee;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.viewToggle button {
+  padding: 4px 12px;
+  border: none;
+  background: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.viewToggle button.active {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sidebarNodeWrapper {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.childList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pageTitleText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expandIcon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  font-size: 8px;
+  line-height: 16px;
+  text-align: center;
+  transition: transform 0.2s;
+  cursor: pointer;
+  color: #666;
+}
+
+.expandIcon.expanded {
+  transform: rotate(90deg);
+}
+
+.expandIcon.hidden {
+  visibility: hidden;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  color: #666;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.breadcrumbItem {
+  cursor: pointer;
+}
+
+.breadcrumbItem:hover {
+  text-decoration: underline;
+  color: #333;
+}
+
+.breadcrumbSeparator {
+  color: #ccc;
+}
+
+.contentInput {
+  flex: 1;
+  padding: 1.5rem;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 0.95rem;
+  border: none;
+  outline: none;
+  resize: none;
+  line-height: 1.6;
+  background: white;
+  min-width: 0;
+}
+
+.createButton {
+  width: 100%;
+  padding: 1rem;
+  font-size: 1rem;
+}
+
+.historyPanel {
+  background: #f5f7fa;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 1rem;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.historyPanel h3 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: #555;
+  font-weight: 600;
+}
+
+.historyList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.historyItem {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.historyItem:hover {
+  border-color: #667eea;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.historyMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.historyDate {
+  font-weight: 500;
+}
+
+.historyHash {
+  font-family: monospace;
+  background: #eee;
+  padding: 0 4px;
+  border-radius: 2px;
+}
+
+.historyMessage {
+  font-size: 0.875rem;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

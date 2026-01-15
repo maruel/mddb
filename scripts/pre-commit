@@ -1,0 +1,30 @@
+#!/bin/bash
+# Pre-commit hook: runs linters before allowing commits
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Run Go linter
+echo "Checking Go code..."
+if ! make lint-go > /dev/null 2>&1; then
+    echo "✗ Go linting failed. Run 'make lint-fix' to fix issues."
+    exit 1
+fi
+
+# Run Frontend linter
+echo "Checking frontend code..."
+if ! make lint-frontend > /dev/null 2>&1; then
+    echo "✗ Frontend linting failed. Run 'make lint-fix' to fix issues."
+    exit 1
+fi
+
+# Run tests
+echo "Running tests..."
+if ! make test > /dev/null 2>&1; then
+    echo "✗ Tests failed."
+    exit 1
+fi
+
+echo "✓ All pre-commit checks passed"
+exit 0
