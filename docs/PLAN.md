@@ -2,20 +2,22 @@
 
 ## Status
 
-**Current Phase: Phase 3.5 (Storage Migration) ✓ COMPLETE**
+**Current Phase: Phase 4 (Assets & Media) ✓ COMPLETE**
 
 - Phase 1 ✓: Core foundation with routing, error handling, page CRUD
 - Phase 1.5 ✓: Code quality & linters (golangci-lint, ESLint, Prettier)
 - Phase 2 ✓: Page editor with live preview and auto-save
 - Phase 3 ✓: Databases with dual-format storage and table UI
 - Phase 3.5 ✓: Storage migration to directory-based numeric IDs
-- Phase 4 → Next: Assets & Media (file uploads, image handling)
+- Phase 4 ✓: Assets & Media (file uploads, asset management, serving)
+- Phase 4.5 → Optional: Frontend Asset Integration (upload UI, gallery, embedding)
+- Phase 5 → Next: Polish & Features (search, history, optimization)
 
 **Key Stats:**
-- Backend: 28 comprehensive tests (100% passing), zero linting errors
+- Backend: 34+ comprehensive tests (100% passing), zero linting errors
 - Frontend: Production-grade TypeScript/SolidJS, zero linting errors
-- Total implementation: ~2500 lines Go, ~500 lines TypeScript
-- Storage: Migrated from UUID files to directory-based numeric IDs (1, 2, 3, etc.)
+- Total implementation: ~3000 lines Go, ~500 lines TypeScript
+- Storage: Directory-based numeric IDs (1, 2, 3, etc.) with asset namespaces
 
 ## Overview
 
@@ -291,12 +293,25 @@ internal/
 - Each page directory is its own namespace for assets
 - No UUID generation needed for pages/databases
 
-### Phase 4: Assets & Media
-- [ ] File upload endpoint
-- [ ] Image storage and serving
-- [ ] Asset gallery UI
-- [ ] Image embedding in pages
-- [ ] Asset cleanup/management
+### Phase 4: Assets & Media ✓ COMPLETE
+**Asset storage and serving with per-page namespaces:**
+- [x] FileStore methods: SaveAsset, ReadAsset, DeleteAsset, ListAssets
+- [x] AssetService layer with full validation
+- [x] File upload via multipart form (POST /api/pages/{id}/assets)
+- [x] Asset listing (GET /api/pages/{id}/assets)
+- [x] Asset deletion (DELETE /api/pages/{id}/assets/{name})
+- [x] Raw asset serving (GET /assets/{id}/{name}) with MIME type detection
+- [x] Page model updated with favicon_url field
+- [x] 6 comprehensive asset tests (100% passing)
+- [x] Asset cleanup via page directory deletion
+- [x] MIME type detection for common formats (PNG, JPG, GIF, WebP, AVIF, ICO, SVG, PDF)
+
+**Key features:**
+- Assets stored in page directories (e.g., 1/image.png)
+- Automatic MIME type detection
+- Multipart form file upload (32 MB max)
+- Binary asset serving with proper headers
+- Assets automatically cleaned up when page is deleted
 
 ### Phase 5: Polish & Features
 - [ ] Full-text search

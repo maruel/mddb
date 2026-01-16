@@ -42,11 +42,13 @@ func NewRouter(fileStore *storage.FileStore) http.Handler {
 	mux.Handle("PUT /api/databases/{id}/records/{rid}", Wrap(dh.UpdateRecord))
 	mux.Handle("DELETE /api/databases/{id}/records/{rid}", Wrap(dh.DeleteRecord))
 
-	// Assets endpoints
-	mux.Handle("GET /api/assets", Wrap(ah.ListAssets))
-	mux.Handle("POST /api/assets", Wrap(ah.UploadAsset))
-	mux.Handle("DELETE /api/assets/{id}", Wrap(ah.DeleteAsset))
-	mux.Handle("GET /assets/{id}", Wrap(ah.ServeAsset))
+	// Assets endpoints (page-based)
+	mux.Handle("GET /api/pages/{id}/assets", Wrap(ah.ListPageAssets))
+	mux.HandleFunc("POST /api/pages/{id}/assets", ah.UploadPageAssetHandler)
+	mux.Handle("DELETE /api/pages/{id}/assets/{name}", Wrap(ah.DeletePageAsset))
+
+	// File serving (raw asset files)
+	mux.HandleFunc("GET /assets/{id}/{name}", ah.ServeAssetFile)
 
 	// Serve static files for SolidJS frontend with SPA fallback
 	publicDir := filepath.Join(fileStore.RootDir(), "public")

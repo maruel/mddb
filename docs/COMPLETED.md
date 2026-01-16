@@ -98,14 +98,45 @@
 - Linting: zero errors
 - Application: fully functional with live API testing
 
+## Phase 4: Assets & Media ✓
+
+**What was done:**
+- Added SaveAsset, ReadAsset, DeleteAsset, ListAssets methods to FileStore
+- Created AssetService with validation and business logic
+- Implemented file upload via multipart form handling (POST /api/pages/{id}/assets)
+- Implemented asset listing (GET /api/pages/{id}/assets)
+- Implemented asset deletion (DELETE /api/pages/{id}/assets/{name})
+- Implemented raw asset serving (GET /assets/{id}/{name}) with MIME type detection
+- Added favicon_url field to Page model
+- Added asset tests (6 comprehensive test cases, 100% passing)
+
+**Backend implementation:**
+- FileStore: SaveAsset, ReadAsset, DeleteAsset, ListAssets methods
+- AssetService: Full validation and service layer
+- AssetHandler: HTTP endpoints with multipart form support
+- Router: All asset endpoints wired up and tested
+- MIME type detection: PNG, JPG, GIF, WebP, AVIF, ICO, SVG, PDF, TXT
+
+**Key features:**
+- Assets stored in page directories (e.g., 1/image.png, 1/favicon.ico)
+- Automatic MIME type detection based on file extension
+- Asset cleanup on page deletion (via directory removal)
+- Multipart form file upload support (32 MB max)
+- Binary asset serving with proper Content-Type and Cache-Control headers
+
+**Test results:**
+- 6 new asset service tests (100% passing)
+- Total: 34+ tests passing
+- Build: clean
+- Linting: zero errors
+
 ## What's Next
 
-**Phase 4: Assets & Media**
-- File upload endpoint
-- Image storage and serving within page directories
-- Asset gallery UI
-- Image embedding in pages
-- Favicon support per page
+**Phase 4.5: Frontend Asset Integration (Optional)**
+- Upload UI component for pages
+- Asset preview gallery
+- Image embedding in markdown editor
+- Favicon upload and preview
 
 **Phase 5: Polish & Features**
 - Full-text search

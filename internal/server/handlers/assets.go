@@ -2,6 +2,14 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log/slog"
+	"mime"
+	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/storage"
@@ -9,69 +17,193 @@ import (
 
 // AssetHandler handles asset/file-related HTTP requests
 type AssetHandler struct {
-	fileStore *storage.FileStore
+	assetService *storage.AssetService
 }
 
 // NewAssetHandler creates a new asset handler
 func NewAssetHandler(fileStore *storage.FileStore) *AssetHandler {
-	return &AssetHandler{fileStore: fileStore}
+	return &AssetHandler{
+		assetService: storage.NewAssetService(fileStore),
+	}
 }
 
-// ListAssetsRequest is a request to list all assets.
-type ListAssetsRequest struct{}
+// ListPageAssetsRequest is a request to list assets in a page.
+type ListPageAssetsRequest struct {
+	PageID string `path:"id"`
+}
 
-// ListAssetsResponse is a response containing a list of assets.
-type ListAssetsResponse struct {
+// ListPageAssetsResponse is a response containing a list of assets.
+type ListPageAssetsResponse struct {
 	Assets []any `json:"assets"`
 }
 
-// UploadAssetRequest is a request to upload an asset.
-type UploadAssetRequest struct{}
-
-// UploadAssetResponse is a response from uploading an asset.
-type UploadAssetResponse struct {
-	ID string `json:"id"`
+// UploadPageAssetRequest is a request to upload an asset to a page.
+// Note: File data is handled separately via multipart form, this is a placeholder for the Wrap handler.
+type UploadPageAssetRequest struct {
+	PageID string `path:"id"`
 }
 
-// ServeAssetRequest is a request to serve an asset.
+// UploadPageAssetResponse is a response from uploading an asset.
+type UploadPageAssetResponse struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`
+	MimeType string `json:"mime_type"`
+}
+
+// DeletePageAssetRequest is a request to delete an asset from a page.
+type DeletePageAssetRequest struct {
+	PageID    string `path:"id"`
+	AssetName string `path:"name"`
+}
+
+// DeletePageAssetResponse is a response from deleting an asset.
+type DeletePageAssetResponse struct{}
+
+// ServeAssetRequest is a request to serve an asset file directly.
 type ServeAssetRequest struct {
-	ID string `path:"id"`
+	PageID    string `path:"id"`
+	AssetName string `path:"name"`
 }
 
-// ServeAssetResponse is a response when serving an asset.
+// ServeAssetResponse wraps the binary asset data.
 type ServeAssetResponse struct {
-	Data string `json:"data"`
+	Data     []byte
+	MimeType string
 }
 
-// DeleteAssetRequest is a request to delete an asset.
-type DeleteAssetRequest struct {
-	ID string `path:"id"`
+// ListPageAssets returns a list of all assets in a page
+func (h *AssetHandler) ListPageAssets(ctx context.Context, req ListPageAssetsRequest) (*ListPageAssetsResponse, error) {
+	assets, err := h.assetService.ListAssets(req.PageID)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to list assets", "pageID", req.PageID, "err", err)
+		return nil, errors.NewAPIError(404, "Page not found")
+	}
+
+	assetList := make([]any, len(assets))
+	for i, a := range assets {
+		assetList[i] = map[string]any{
+			"id":        a.ID,
+			"name":      a.Name,
+			"size":      a.Size,
+			"mime_type": a.MimeType,
+		}
+	}
+
+	return &ListPageAssetsResponse{Assets: assetList}, nil
 }
 
-// DeleteAssetResponse is a response from deleting an asset.
-type DeleteAssetResponse struct{}
+// DeletePageAsset deletes an asset from a page
+func (h *AssetHandler) DeletePageAsset(
+	ctx context.Context,
+	req DeletePageAssetRequest,
+) (*DeletePageAssetResponse, error) {
+	err := h.assetService.DeleteAsset(req.PageID, req.AssetName)
+	if err != nil {
+		slog.ErrorContext(
+			ctx,
+			"failed to delete asset",
+			"pageID", req.PageID,
+			"assetName", req.AssetName,
+			"err", err,
+		)
+		return nil, errors.NewAPIError(404, "Asset not found")
+	}
 
-// ListAssets returns a list of all assets
-func (h *AssetHandler) ListAssets(ctx context.Context, req ListAssetsRequest) (*ListAssetsResponse, error) {
-	// TODO: Implement listing assets
-	return &ListAssetsResponse{Assets: []any{}}, nil
+	return &DeletePageAssetResponse{}, nil
 }
 
-// UploadAsset handles file uploads
-// Note: Multipart form handling needs custom logic, will be implemented separately
-func (h *AssetHandler) UploadAsset(ctx context.Context, req UploadAssetRequest) (*UploadAssetResponse, error) {
-	// TODO: Implement uploading assets
-	return &UploadAssetResponse{ID: "placeholder"}, nil
+// ServeAssetFile serves a raw asset file from a page directory.
+// Handles GET /assets/{id}/{name}
+// Response is binary file data with appropriate Content-Type header.
+func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
+	// Extract page ID and asset name from URL path
+	// Pattern: /assets/{id}/{name}
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/assets/"), "/")
+	if len(parts) < 2 {
+		http.NotFound(w, r)
+		return
+	}
+
+	pageID := parts[0]
+	assetName := parts[1]
+
+	// Read asset data
+	data, err := h.assetService.GetAsset(pageID, assetName)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "failed to read asset", "pageID", pageID, "assetName", assetName, "err", err)
+		http.NotFound(w, r)
+		return
+	}
+
+	// Determine MIME type from file extension
+	mimeType := mime.TypeByExtension(filepath.Ext(assetName))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	// Serve file
+	w.Header().Set("Content-Type", mimeType)
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
+	_, _ = w.Write(data)
 }
 
-// ServeAsset serves an asset file
-func (h *AssetHandler) ServeAsset(ctx context.Context, req ServeAssetRequest) (*ServeAssetResponse, error) {
-	// TODO: Implement serving assets (req.ID is populated from path parameter)
-	return nil, errors.NewAPIError(404, "Asset not found")
-}
+// UploadPageAssetHandler handles file uploads with multipart form data.
+// Handles POST /api/pages/{id}/assets
+// Needs custom http.Handler since Wrap doesn't support multipart file handling.
+func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Request) {
+	// Extract page ID from URL path
+	// Pattern: /api/pages/{id}/assets
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/pages/"), "/")
+	if len(parts) < 2 {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request path"})
+		return
+	}
 
-// DeleteAsset deletes an asset
-func (h *AssetHandler) DeleteAsset(ctx context.Context, req DeleteAssetRequest) (*DeleteAssetResponse, error) {
-	// TODO: Implement deleting assets (req.ID is populated from path parameter)
-	return &DeleteAssetResponse{}, nil
+	pageID := parts[0]
+
+	// Parse multipart form (32 MB max)
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to parse multipart form"})
+		return
+	}
+
+	// Get file from form
+	file, fileHeader, err := r.FormFile("file")
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "No file provided"})
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	// Read file data
+	data, err := io.ReadAll(file)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to read file"})
+		return
+	}
+
+	// Save asset
+	asset, err := h.assetService.SaveAsset(pageID, fileHeader.Filename, data)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "failed to save asset", "pageID", pageID, "err", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to save asset"})
+		return
+	}
+
+	// Return success response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"id":        asset.ID,
+		"name":      asset.Name,
+		"size":      asset.Size,
+		"mime_type": asset.MimeType,
+	})
 }

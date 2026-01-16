@@ -473,3 +473,90 @@ func (fs *FileStore) databaseSchemaFile(id string) string {
 func (fs *FileStore) databaseRecordsFile(id string) string {
 	return filepath.Join(fs.pageDir(id), "data.jsonl")
 }
+
+// Asset operations
+// Assets are files stored within a page's directory namespace.
+// Examples: {id}/image.png, {id}/favicon.ico, {id}/document.pdf
+
+// SaveAsset saves an asset file to a page's directory.
+// Returns the relative path from the page directory (e.g., "image.png").
+func (fs *FileStore) SaveAsset(pageID, assetName string, data []byte) (string, error) {
+	pageDir := fs.pageDir(pageID)
+
+	// Create page directory if needed
+	if err := os.MkdirAll(pageDir, 0o755); err != nil {
+		return "", fmt.Errorf("failed to create page directory: %w", err)
+	}
+
+	assetPath := filepath.Join(pageDir, assetName)
+	if err := os.WriteFile(assetPath, data, 0o644); err != nil {
+		return "", fmt.Errorf("failed to write asset: %w", err)
+	}
+
+	return assetName, nil
+}
+
+// ReadAsset reads an asset file from a page's directory.
+func (fs *FileStore) ReadAsset(pageID, assetName string) ([]byte, error) {
+	assetPath := filepath.Join(fs.pageDir(pageID), assetName)
+	data, err := os.ReadFile(assetPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("asset not found")
+		}
+		return nil, fmt.Errorf("failed to read asset: %w", err)
+	}
+	return data, nil
+}
+
+// DeleteAsset deletes an asset file from a page's directory.
+func (fs *FileStore) DeleteAsset(pageID, assetName string) error {
+	assetPath := filepath.Join(fs.pageDir(pageID), assetName)
+	if err := os.Remove(assetPath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("asset not found")
+		}
+		return fmt.Errorf("failed to delete asset: %w", err)
+	}
+	return nil
+}
+
+// ListAssets lists all asset files in a page's directory, excluding index.md, metadata.json, and data.jsonl.
+func (fs *FileStore) ListAssets(pageID string) ([]*models.Asset, error) {
+	pageDir := fs.pageDir(pageID)
+	entries, err := os.ReadDir(pageDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []*models.Asset{}, nil // Page doesn't exist yet, return empty list
+		}
+		return nil, fmt.Errorf("failed to read assets: %w", err)
+	}
+
+	var assets []*models.Asset
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue // Skip directories
+		}
+
+		name := entry.Name()
+		// Skip index files
+		if name == "index.md" || name == "metadata.json" || name == "data.jsonl" {
+			continue
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			continue // Skip if unable to get info
+		}
+
+		assets = append(assets, &models.Asset{
+			ID:      name, // Use filename as ID for now
+			Name:    name,
+			Size:    info.Size(),
+			Created: info.ModTime(),
+			Path:    name,
+		})
+	}
+
+	return assets, nil
+}

@@ -47,13 +47,14 @@ type Asset struct {
 
 // Page represents a markdown document
 type Page struct {
-	ID       string    `json:"id"`
-	Title    string    `json:"title"`
-	Content  string    `json:"content"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
-	Tags     []string  `json:"tags,omitempty"`
-	Path     string    `json:"path"` // Relative path from pages directory
+	ID         string    `json:"id"`
+	Title      string    `json:"title"`
+	Content    string    `json:"content"`
+	Created    time.Time `json:"created"`
+	Modified   time.Time `json:"modified"`
+	Tags       []string  `json:"tags,omitempty"`
+	Path       string    `json:"path"`                  // Relative path from pages directory
+	FaviconURL string    `json:"favicon_url,omitempty"` // URL to favicon in page directory
 }
 
 // PageMetadata contains the YAML front matter of a page
