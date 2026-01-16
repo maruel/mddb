@@ -74,7 +74,7 @@ type DeletePageResponse struct{}
 func (h *PageHandler) ListPages(ctx context.Context, req ListPagesRequest) (*ListPagesResponse, error) {
 	pages, err := h.pageService.ListPages()
 	if err != nil {
-		return nil, errors.NewAPIError(500, "Failed to list pages")
+		return nil, errors.InternalWithError("Failed to list pages", err)
 	}
 
 	pageList := make([]any, len(pages))
@@ -94,7 +94,7 @@ func (h *PageHandler) ListPages(ctx context.Context, req ListPagesRequest) (*Lis
 func (h *PageHandler) GetPage(ctx context.Context, req GetPageRequest) (*GetPageResponse, error) {
 	page, err := h.pageService.GetPage(req.ID)
 	if err != nil {
-		return nil, errors.NewAPIError(404, "Page not found")
+		return nil, errors.NotFound("page")
 	}
 
 	return &GetPageResponse{
@@ -106,9 +106,13 @@ func (h *PageHandler) GetPage(ctx context.Context, req GetPageRequest) (*GetPage
 
 // CreatePage creates a new page
 func (h *PageHandler) CreatePage(ctx context.Context, req CreatePageRequest) (*CreatePageResponse, error) {
+	if req.Title == "" {
+		return nil, errors.MissingField("title")
+	}
+
 	page, err := h.pageService.CreatePage(req.Title, req.Content)
 	if err != nil {
-		return nil, errors.NewAPIError(400, "Failed to create page")
+		return nil, errors.InternalWithError("Failed to create page", err)
 	}
 
 	return &CreatePageResponse{ID: page.ID}, nil
@@ -118,7 +122,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, req CreatePageRequest) (*C
 func (h *PageHandler) UpdatePage(ctx context.Context, req UpdatePageRequest) (*UpdatePageResponse, error) {
 	page, err := h.pageService.UpdatePage(req.ID, req.Title, req.Content)
 	if err != nil {
-		return nil, errors.NewAPIError(404, "Page not found")
+		return nil, errors.NotFound("page")
 	}
 
 	return &UpdatePageResponse{ID: page.ID}, nil
@@ -128,7 +132,7 @@ func (h *PageHandler) UpdatePage(ctx context.Context, req UpdatePageRequest) (*U
 func (h *PageHandler) DeletePage(ctx context.Context, req DeletePageRequest) (*DeletePageResponse, error) {
 	err := h.pageService.DeletePage(req.ID)
 	if err != nil {
-		return nil, errors.NewAPIError(404, "Page not found")
+		return nil, errors.NotFound("page")
 	}
 
 	return &DeletePageResponse{}, nil

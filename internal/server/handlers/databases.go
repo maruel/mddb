@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
@@ -134,8 +133,7 @@ type DeleteRecordResponse struct{}
 func (h *DatabaseHandler) ListDatabases(ctx context.Context, req ListDatabasesRequest) (*ListDatabasesResponse, error) {
 	databases, err := h.databaseService.ListDatabases()
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to list databases", "err", err)
-		return nil, errors.NewAPIError(500, "Failed to list databases")
+		return nil, errors.InternalWithError("Failed to list databases", err)
 	}
 
 	dbList := make([]any, len(databases))
@@ -155,8 +153,7 @@ func (h *DatabaseHandler) ListDatabases(ctx context.Context, req ListDatabasesRe
 func (h *DatabaseHandler) GetDatabase(ctx context.Context, req GetDatabaseRequest) (*GetDatabaseResponse, error) {
 	db, err := h.databaseService.GetDatabase(req.ID)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to get database", "id", req.ID, "err", err)
-		return nil, errors.NewAPIError(404, "Database not found")
+		return nil, errors.NotFound("database")
 	}
 
 	return &GetDatabaseResponse{
@@ -172,10 +169,13 @@ func (h *DatabaseHandler) GetDatabase(ctx context.Context, req GetDatabaseReques
 func (h *DatabaseHandler) CreateDatabase(ctx context.Context,
 	req CreateDatabaseRequest,
 ) (*CreateDatabaseResponse, error) {
+	if req.Title == "" {
+		return nil, errors.MissingField("title")
+	}
+
 	db, err := h.databaseService.CreateDatabase(req.Title, req.Columns)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to create database", "err", err)
-		return nil, errors.NewAPIError(400, "Failed to create database")
+		return nil, errors.InternalWithError("Failed to create database", err)
 	}
 
 	return &CreateDatabaseResponse{ID: db.ID}, nil
@@ -187,8 +187,7 @@ func (h *DatabaseHandler) UpdateDatabase(ctx context.Context,
 ) (*UpdateDatabaseResponse, error) {
 	db, err := h.databaseService.UpdateDatabase(req.ID, req.Title, req.Columns)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to update database", "id", req.ID, "err", err)
-		return nil, errors.NewAPIError(404, "Database not found")
+		return nil, errors.NotFound("database")
 	}
 
 	return &UpdateDatabaseResponse{ID: db.ID}, nil
@@ -200,8 +199,7 @@ func (h *DatabaseHandler) DeleteDatabase(ctx context.Context,
 ) (*DeleteDatabaseResponse, error) {
 	err := h.databaseService.DeleteDatabase(req.ID)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to delete database", "id", req.ID, "err", err)
-		return nil, errors.NewAPIError(404, "Database not found")
+		return nil, errors.NotFound("database")
 	}
 
 	return &DeleteDatabaseResponse{}, nil
@@ -211,8 +209,7 @@ func (h *DatabaseHandler) DeleteDatabase(ctx context.Context,
 func (h *DatabaseHandler) ListRecords(ctx context.Context, req ListRecordsRequest) (*ListRecordsResponse, error) {
 	records, err := h.databaseService.GetRecords(req.ID)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to list records", "databaseID", req.ID, "err", err)
-		return nil, errors.NewAPIError(404, "Database not found")
+		return nil, errors.NotFound("database")
 	}
 
 	recordList := make([]map[string]any, len(records))
@@ -232,8 +229,7 @@ func (h *DatabaseHandler) ListRecords(ctx context.Context, req ListRecordsReques
 func (h *DatabaseHandler) GetRecord(ctx context.Context, req GetRecordRequest) (*GetRecordResponse, error) {
 	record, err := h.databaseService.GetRecord(req.ID, req.RID)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to get record", "databaseID", req.ID, "recordID", req.RID, "err", err)
-		return nil, errors.NewAPIError(404, "Record not found")
+		return nil, errors.NotFound("record")
 	}
 
 	return &GetRecordResponse{
@@ -248,8 +244,7 @@ func (h *DatabaseHandler) GetRecord(ctx context.Context, req GetRecordRequest) (
 func (h *DatabaseHandler) CreateRecord(ctx context.Context, req CreateRecordRequest) (*CreateRecordResponse, error) {
 	record, err := h.databaseService.CreateRecord(req.ID, req.Data)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to create record", "databaseID", req.ID, "err", err)
-		return nil, errors.NewAPIError(404, "Database not found")
+		return nil, errors.NotFound("database")
 	}
 
 	return &CreateRecordResponse{ID: record.ID}, nil
@@ -257,16 +252,10 @@ func (h *DatabaseHandler) CreateRecord(ctx context.Context, req CreateRecordRequ
 
 // UpdateRecord updates an existing record
 func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req UpdateRecordRequest) (*UpdateRecordResponse, error) {
-	// Note: JSONL format doesn't support efficient updates. For now, require re-writing the entire JSONL file.
-	// This is a limitation we can improve later.
-	slog.WarnContext(ctx, "record update not yet implemented", "databaseID", req.ID, "recordID", req.RID)
-	return nil, errors.NewAPIError(501, "Record update not yet implemented")
+	return nil, errors.NotImplemented("record update")
 }
 
 // DeleteRecord deletes a record
 func (h *DatabaseHandler) DeleteRecord(ctx context.Context, req DeleteRecordRequest) (*DeleteRecordResponse, error) {
-	// Note: JSONL format doesn't support efficient deletes. For now, require re-writing the entire JSONL file.
-	// This is a limitation we can improve later.
-	slog.WarnContext(ctx, "record delete not yet implemented", "databaseID", req.ID, "recordID", req.RID)
-	return nil, errors.NewAPIError(501, "Record delete not yet implemented")
+	return nil, errors.NotImplemented("record delete")
 }

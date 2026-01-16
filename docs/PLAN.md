@@ -2,7 +2,7 @@
 
 ## Status
 
-**Current Phase: Phase 4 (Assets & Media) ✓ COMPLETE + Embedded Build ✓**
+**Current Phase: Phase 5 (Polish & Features) - Better Error Handling ✓ + Full-Text Search ✓**
 
 - Phase 1 ✓: Core foundation with routing, error handling, page CRUD
 - Phase 1.5 ✓: Code quality & linters (golangci-lint, ESLint, Prettier)
@@ -12,7 +12,9 @@
 - Phase 4 ✓: Assets & Media (file uploads, asset management, serving)
 - Embedded Build ✓: go:embed frontend in binary, deterministic builds, tracked in git
 - Phase 4.5 → Optional: Frontend Asset Integration (upload UI, gallery, embedding)
-- Phase 5 → Next: Polish & Features (search, history, optimization)
+- Phase 5.1 ✓: Better Error Handling (error codes, detailed responses, validation)
+- Phase 5.2 ✓: Full-Text Search (pages, databases, records, relevance scoring)
+- Phase 5 → Next: Page history, optimization, documentation
 
 **Key Stats:**
 - Backend: 34+ comprehensive tests (100% passing), zero linting errors
@@ -315,10 +317,90 @@ internal/
 - Binary asset serving with proper headers
 - Assets automatically cleaned up when page is deleted
 
+### Phase 5.1: Better Error Handling ✓ COMPLETE
+**Structured error responses with error codes and details:**
+- [x] ErrorCode type with 11 standard error categories
+- [x] APIError enhanced with code, details, and error wrapping
+- [x] Predefined error constructors (NotFound, BadRequest, MissingField, etc.)
+- [x] Enhanced error response format with code and optional details
+- [x] Handler wrapper updated to extract and return error codes
+- [x] Input validation in handlers (required fields)
+- [x] All handlers updated to use new error constructors
+- [x] Standardized error logging in handler wrapper
+
+**Error Response Format:**
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "page not found",
+    "details": {
+      "resource": "page",
+      "id": "123"
+    }
+  }
+}
+```
+
+**Error Categories:**
+- Validation errors: VALIDATION_FAILED, MISSING_FIELD, INVALID_FORMAT
+- Resource errors: NOT_FOUND, ALREADY_EXISTS, CONFLICT
+- File operation errors: FILE_NOT_FOUND, FILE_READ_FAILED, FILE_WRITE_FAILED, PATH_TRAVERSAL_ATTEMPT
+- Server errors: INTERNAL_ERROR, NOT_IMPLEMENTED
+
+### Phase 5.2: Full-Text Search ✓ COMPLETE
+**Comprehensive search across all content:**
+- [x] SearchService with pages, databases, and records search
+- [x] Case-insensitive matching with match counting
+- [x] Relevance scoring (title matches > body > fields)
+- [x] Search options (query, limit, MatchTitle, MatchBody, MatchFields)
+- [x] Result snippets with context around matches
+- [x] Results sorted by relevance (highest score first)
+- [x] Search API endpoint: POST /api/search
+- [x] 10 comprehensive search tests (100% passing)
+- [x] Integration testing (pages + records combined)
+
+**Search Features:**
+- Searches across page titles and content
+- Searches across database titles and record fields
+- Case-insensitive querying
+- Relevance scoring with configurable weights
+- Optional limit on result count
+- Rich result metadata (type, ID, matches, score, created/modified timestamps)
+
+**API:**
+```
+POST /api/search
+{
+  "query": "search term",
+  "limit": 10,
+  "match_title": true,
+  "match_body": true,
+  "match_fields": true
+}
+
+Response:
+{
+  "results": [
+    {
+      "type": "page|database|record",
+      "id": "page/db id",
+      "record_id": "record id (if type=record)",
+      "title": "Page or DB title",
+      "content": "Preview snippet",
+      "matches": 3,
+      "score": 0.75,
+      "created": "2024-01-15T10:00:00Z",
+      "modified": "2024-01-15T10:00:00Z"
+    }
+  ],
+  "total": 1,
+  "query": "search term"
+}
+```
+
 ### Phase 5: Polish & Features
-- [ ] Full-text search
 - [ ] Page history/versioning (optional)
-- [ ] Better error handling
 - [ ] Performance optimization
 - [ ] Documentation
 

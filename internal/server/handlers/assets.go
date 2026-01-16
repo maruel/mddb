@@ -76,8 +76,7 @@ type ServeAssetResponse struct {
 func (h *AssetHandler) ListPageAssets(ctx context.Context, req ListPageAssetsRequest) (*ListPageAssetsResponse, error) {
 	assets, err := h.assetService.ListAssets(req.PageID)
 	if err != nil {
-		slog.ErrorContext(ctx, "failed to list assets", "pageID", req.PageID, "err", err)
-		return nil, errors.NewAPIError(404, "Page not found")
+		return nil, errors.NotFound("page")
 	}
 
 	assetList := make([]any, len(assets))
@@ -100,14 +99,7 @@ func (h *AssetHandler) DeletePageAsset(
 ) (*DeletePageAssetResponse, error) {
 	err := h.assetService.DeleteAsset(req.PageID, req.AssetName)
 	if err != nil {
-		slog.ErrorContext(
-			ctx,
-			"failed to delete asset",
-			"pageID", req.PageID,
-			"assetName", req.AssetName,
-			"err", err,
-		)
-		return nil, errors.NewAPIError(404, "Asset not found")
+		return nil, errors.NotFound("asset")
 	}
 
 	return &DeletePageAssetResponse{}, nil

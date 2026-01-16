@@ -18,6 +18,7 @@ func NewRouter(fileStore *storage.FileStore) http.Handler {
 	ph := handlers.NewPageHandler(fileStore)
 	dh := handlers.NewDatabaseHandler(fileStore)
 	ah := handlers.NewAssetHandler(fileStore)
+	sh := handlers.NewSearchHandler(fileStore)
 
 	// Health check
 	mux.Handle("/api/health", Wrap(handlers.Health))
@@ -47,6 +48,9 @@ func NewRouter(fileStore *storage.FileStore) http.Handler {
 	mux.Handle("GET /api/pages/{id}/assets", Wrap(ah.ListPageAssets))
 	mux.HandleFunc("POST /api/pages/{id}/assets", ah.UploadPageAssetHandler)
 	mux.Handle("DELETE /api/pages/{id}/assets/{name}", Wrap(ah.DeletePageAsset))
+
+	// Search endpoint
+	mux.Handle("POST /api/search", Wrap(sh.Search))
 
 	// File serving (raw asset files)
 	mux.HandleFunc("GET /assets/{id}/{name}", ah.ServeAssetFile)

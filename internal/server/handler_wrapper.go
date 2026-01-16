@@ -55,12 +55,20 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 		output, err := fn(ctx, input)
 		if err != nil {
 			statusCode := http.StatusInternalServerError
+			errorCode := apierrors.ErrInternal
+			details := make(map[string]any)
+
 			var ewsErr apierrors.ErrorWithStatus
 			if errors.As(err, &ewsErr) {
 				statusCode = ewsErr.StatusCode()
+				errorCode = ewsErr.Code()
+				if d := ewsErr.Details(); d != nil {
+					details = d
+				}
 			}
-			slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode)
-			writeErrorResponse(w, statusCode, err.Error())
+
+			slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode, "code", errorCode)
+			writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
 			return
 		}
 
@@ -107,9 +115,26 @@ func populatePathParams(r *http.Request, input any) {
 
 // writeErrorResponse writes an error response as JSON.
 func writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
+	writeErrorResponseWithCode(w, statusCode, apierrors.ErrInternal, message, nil)
+}
+
+// writeErrorResponseWithCode writes a detailed error response as JSON with code and details.
+func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code apierrors.ErrorCode, message string, details map[string]any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	if err := json.NewEncoder(w).Encode(map[string]string{"error": message}); err != nil {
+
+	response := map[string]any{
+		"error": map[string]any{
+			"code":    code,
+			"message": message,
+		},
+	}
+
+	if details != nil && len(details) > 0 {
+		response["error"].(map[string]any)["details"] = details
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		// Error is already written to client, log only
 		_ = err
 	}
