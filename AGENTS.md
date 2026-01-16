@@ -60,12 +60,12 @@ mddb/
 ├── data/                       # Runtime data directory
 │   └── pages/                  # All content as numbered directories
 ├── docs/                       # Documentation
-│   ├── INDEX.md                # Documentation index
+│   ├── README.md                # Documentation index
 │   ├── REQUIREMENTS.md         # Functional & non-functional requirements
 │   ├── PLAN.md                 # Implementation roadmap
 │   ├── QUICKSTART.md           # Quick start guide
-│   ├── EMBEDDED_BUILD.md       # Embedded build guide
-│   └── LINTERS.md              # Linting rules
+│   ├── TECHNICAL.md            # Storage model and build guide
+│   └── API.md                  # API Reference
 ├── Makefile                    # Common development commands
 ├── AGENTS.md                   # This file - Development guidelines
 └── README.md                   # Project overview and API documentation
@@ -157,15 +157,29 @@ make build            # Build Go binary
 
 - **Do NOT** create a markdown file listing changes you made.
 - Update `docs/PLAN.md` to reflect status changes.
-- Keep `docs/INDEX.md` up to date.
+- Keep `docs/README.md` up to date.
 
 ## Code Quality & Linting
 
 **All code must pass linting before commits.**
 
-- `make lint` - Run all linters (Go + Frontend)
-- `make lint-fix` - Auto-fix all linting issues
-- `make git-hooks` - Install pre-commit hooks
+### Go Backend (golangci-lint)
+
+Configured in `.golangci.yml`. Enforces error handling (`errcheck`, `errorlint`), naming (`errname`), style (`revive`, `gocritic`), and more.
+
+Run with:
+```bash
+make lint
+make lint-fix
+```
+
+### Frontend (ESLint + Prettier)
+
+Configured in `frontend/.eslintrc.cjs` and `frontend/.prettierrc`. Enforces strict equality, no-unused-vars, and consistent formatting (single quotes, 2 spaces).
+
+### Pre-Commit Hooks
+
+Install with `make git-hooks`. Runs linters and tests before every commit.
 
 ## Useful Resources
 

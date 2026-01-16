@@ -117,15 +117,15 @@ A: Not simultaneously - designed for single-user or small team with manual sync.
 **Q: Can I import/export my data?**
 A: Yes! Since everything is markdown and JSON, you can import/export easily.
 
-**Q: What if I need help?**
-A: Check the [Quick Start guide](docs/QUICKSTART.md) or review [the full documentation](docs/PLAN.md).
+Q: What if I need help?
+A: Check the [Quick Start guide](docs/QUICKSTART.md) or review [the documentation index](docs/README.md).
 
 ## Advanced Users
 
 For developers or advanced setup:
 - See [QUICKSTART.md](docs/QUICKSTART.md) for detailed instructions
 - Review [AGENTS.md](AGENTS.md) for development guidelines
-- Check [PLAN.md](docs/PLAN.md) for technical architecture
+- Check [the documentation index](docs/README.md) for more details
 
 ## Building from Source
 
@@ -136,9 +136,9 @@ make build-all
 
 This builds the SolidJS frontend and embeds it in the Go binary using `go:embed`. The result is a single, self-contained executable with no external dependencies.
 
-For detailed information on the embedded build process, reproducibility, and distribution, see [EMBEDDED_BUILD.md](docs/EMBEDDED_BUILD.md).
+For detailed information on the technical architecture, embedded build process, and storage model, see [TECHNICAL.md](docs/TECHNICAL.md).
 
-See [AGENTS.md](AGENTS.md) for full development setup.
+See [AGENTS.md](AGENTS.md) for full development setup and [API.md](docs/API.md) for API reference.
 
 ## License
 
