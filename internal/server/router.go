@@ -3,6 +3,7 @@ package server
 import (
 	"embed"
 	"io"
+	"io/fs"
 	"net/http"
 
 	"github.com/maruel/mddb/frontend"
@@ -68,12 +69,14 @@ func NewEmbeddedSPAHandler(fs embed.FS) *EmbeddedSPAHandler {
 
 // ServeHTTP implements http.Handler for embedded SPA routing.
 func (h *EmbeddedSPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Try to serve the exact file
-	f, err := h.fs.Open(r.URL.Path)
+	// Try to serve the exact file from dist/
+	path := "dist" + r.URL.Path
+	f, err := h.fs.Open(path)
 	if err == nil {
 		_ = f.Close()
 		// File exists, serve it from embedded FS
-		fileServer := http.FileServer(http.FS(h.fs))
+		fsys, _ := fs.Sub(h.fs, "dist")
+		fileServer := http.FileServer(http.FS(fsys))
 		// Set cache headers for static assets with extensions
 		if containsDot(r.URL.Path) {
 			w.Header().Set("Cache-Control", "public, max-age=3600")
@@ -83,7 +86,7 @@ func (h *EmbeddedSPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// File not found - fall back to index.html for SPA routing
-	indexFile, err := h.fs.Open("index.html")
+	indexFile, err := h.fs.Open("dist/index.html")
 	if err != nil {
 		http.NotFound(w, r)
 		return
