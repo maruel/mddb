@@ -23,7 +23,7 @@ func NewAssetService(fileStore *FileStore, gitService *GitService) *AssetService
 }
 
 // SaveAsset saves an asset file to a page's directory.
-func (s *AssetService) SaveAsset(pageID, fileName string, data []byte) (*models.Asset, error) {
+func (s *AssetService) SaveAsset(orgID, pageID, fileName string, data []byte) (*models.Asset, error) {
 	if pageID == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
@@ -35,11 +35,11 @@ func (s *AssetService) SaveAsset(pageID, fileName string, data []byte) (*models.
 	}
 
 	// Verify page exists
-	if !s.fileStore.PageExists(pageID) {
+	if !s.fileStore.PageExists(orgID, pageID) {
 		return nil, fmt.Errorf("page not found")
 	}
 
-	path, err := s.fileStore.SaveAsset(pageID, fileName, data)
+	path, err := s.fileStore.SaveAsset(orgID, pageID, fileName, data)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (s *AssetService) SaveAsset(pageID, fileName string, data []byte) (*models.
 }
 
 // GetAsset retrieves asset file data.
-func (s *AssetService) GetAsset(pageID, assetName string) ([]byte, error) {
+func (s *AssetService) GetAsset(orgID, pageID, assetName string) ([]byte, error) {
 	if pageID == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
@@ -76,11 +76,11 @@ func (s *AssetService) GetAsset(pageID, assetName string) ([]byte, error) {
 		return nil, fmt.Errorf("asset name cannot be empty")
 	}
 
-	return s.fileStore.ReadAsset(pageID, assetName)
+	return s.fileStore.ReadAsset(orgID, pageID, assetName)
 }
 
 // DeleteAsset deletes an asset file from a page's directory.
-func (s *AssetService) DeleteAsset(pageID, assetName string) error {
+func (s *AssetService) DeleteAsset(orgID, pageID, assetName string) error {
 	if pageID == "" {
 		return fmt.Errorf("page id cannot be empty")
 	}
@@ -88,7 +88,7 @@ func (s *AssetService) DeleteAsset(pageID, assetName string) error {
 		return fmt.Errorf("asset name cannot be empty")
 	}
 
-	if err := s.fileStore.DeleteAsset(pageID, assetName); err != nil {
+	if err := s.fileStore.DeleteAsset(orgID, pageID, assetName); err != nil {
 		return err
 	}
 
@@ -102,10 +102,10 @@ func (s *AssetService) DeleteAsset(pageID, assetName string) error {
 }
 
 // ListAssets lists all assets in a page's directory.
-func (s *AssetService) ListAssets(pageID string) ([]*models.Asset, error) {
+func (s *AssetService) ListAssets(orgID, pageID string) ([]*models.Asset, error) {
 	if pageID == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
 
-	return s.fileStore.ListAssets(pageID)
+	return s.fileStore.ListAssets(orgID, pageID)
 }

@@ -41,7 +41,8 @@ type CreateNodeRequest struct {
 
 // ListNodes returns a list of all nodes
 func (h *NodeHandler) ListNodes(ctx context.Context, req ListNodesRequest) (*ListNodesResponse, error) {
-	nodes, err := h.nodeService.ListNodes()
+	orgID := models.GetOrgID(ctx)
+	nodes, err := h.nodeService.ListNodes(orgID)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to list nodes", err)
 	}
@@ -50,7 +51,8 @@ func (h *NodeHandler) ListNodes(ctx context.Context, req ListNodesRequest) (*Lis
 
 // GetNode returns a specific node by ID
 func (h *NodeHandler) GetNode(ctx context.Context, req GetNodeRequest) (*models.Node, error) {
-	node, err := h.nodeService.GetNode(req.ID)
+	orgID := models.GetOrgID(ctx)
+	node, err := h.nodeService.GetNode(orgID, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("node")
 	}
@@ -62,7 +64,9 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req CreateNodeRequest) (*m
 	if req.Title == "" {
 		return nil, errors.MissingField("title")
 	}
-	node, err := h.nodeService.CreateNode(req.Title, req.Type)
+	orgID := models.GetOrgID(ctx)
+	// CreateNode now takes parentID as 4th arg, defaulting to empty for now
+	node, err := h.nodeService.CreateNode(orgID, req.Title, req.Type, "")
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create node", err)
 	}

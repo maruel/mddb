@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/maruel/mddb/internal/errors"
+	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
 
@@ -74,7 +75,8 @@ type ServeAssetResponse struct {
 
 // ListPageAssets returns a list of all assets in a page
 func (h *AssetHandler) ListPageAssets(ctx context.Context, req ListPageAssetsRequest) (*ListPageAssetsResponse, error) {
-	assets, err := h.assetService.ListAssets(req.PageID)
+	orgID := models.GetOrgID(ctx)
+	assets, err := h.assetService.ListAssets(orgID, req.PageID)
 	if err != nil {
 		return nil, errors.NotFound("page")
 	}
@@ -97,7 +99,8 @@ func (h *AssetHandler) DeletePageAsset(
 	ctx context.Context,
 	req DeletePageAssetRequest,
 ) (*DeletePageAssetResponse, error) {
-	err := h.assetService.DeleteAsset(req.PageID, req.AssetName)
+	orgID := models.GetOrgID(ctx)
+	err := h.assetService.DeleteAsset(orgID, req.PageID, req.AssetName)
 	if err != nil {
 		return nil, errors.NotFound("asset")
 	}
@@ -106,24 +109,24 @@ func (h *AssetHandler) DeletePageAsset(
 }
 
 // ServeAssetFile serves a raw asset file from a page directory.
-// Handles GET /assets/{id}/{name}
-// Response is binary file data with appropriate Content-Type header.
+// Handles GET /assets/{orgID}/{id}/{name}
 func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
-	// Extract page ID and asset name from URL path
-	// Pattern: /assets/{id}/{name}
+	// Extract org ID, page ID and asset name from URL path
+	// Pattern: /assets/{orgID}/{id}/{name}
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/assets/"), "/")
-	if len(parts) < 2 {
+	if len(parts) < 3 {
 		http.NotFound(w, r)
 		return
 	}
 
-	pageID := parts[0]
-	assetName := parts[1]
+	orgID := parts[0]
+	pageID := parts[1]
+	assetName := parts[2]
 
 	// Read asset data
-	data, err := h.assetService.GetAsset(pageID, assetName)
+	data, err := h.assetService.GetAsset(orgID, pageID, assetName)
 	if err != nil {
-		slog.ErrorContext(r.Context(), "failed to read asset", "pageID", pageID, "assetName", assetName, "err", err)
+		slog.ErrorContext(r.Context(), "failed to read asset", "orgID", orgID, "pageID", pageID, "assetName", assetName, "err", err)
 		http.NotFound(w, r)
 		return
 	}
@@ -145,6 +148,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 // Handles POST /api/pages/{id}/assets
 // Needs custom http.Handler since Wrap doesn't support multipart file handling.
 func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Request) {
+	orgID := models.GetOrgID(r.Context())
 	// Extract page ID from URL path
 	// Pattern: /api/pages/{id}/assets
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/pages/"), "/")
@@ -156,7 +160,7 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 
 	pageID := parts[0]
 
-	// Parse multipart form (32 MB max)
+	// Parse multipart form (32 << 20) max)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to parse multipart form"})
@@ -181,9 +185,9 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Save asset
-	asset, err := h.assetService.SaveAsset(pageID, fileHeader.Filename, data)
+	asset, err := h.assetService.SaveAsset(orgID, pageID, fileHeader.Filename, data)
 	if err != nil {
-		slog.ErrorContext(r.Context(), "failed to save asset", "pageID", pageID, "err", err)
+		slog.ErrorContext(r.Context(), "failed to save asset", "orgID", orgID, "pageID", pageID, "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to save asset"})
 		return

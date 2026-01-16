@@ -106,7 +106,7 @@ See `README.md` and `ASSET_API.md` for details.
 - [x] **Git Versioning**: Automatic commit of data changes.
 - [x] **Page History UI**: View and restore previous versions (leveraging Git).
 - [x] **Performance**: Optimization of large lists/databases (pagination, streaming).
-- [ ] **In-Memory Caching**: High-efficiency caching of metadata and frequently accessed content.
+- [x] **In-Memory Caching**: High-efficiency caching of metadata and frequently accessed content.
 - [x] Phase 5.7: Seamless UI Overhaul (Unified Sidebar & Integrated Views)
     - [x] Unify Pages and Databases into a single "Node" concept.
     - [x] Hierarchical sidebar with recursive nesting.
@@ -119,10 +119,10 @@ See `README.md` and `ASSET_API.md` for details.
 
 - [x] **Auth System**: User registration, login, and JWT-based authentication.
 - [ ] **OAuth2 Integration**: Support for Google and Microsoft login flows.
-- [ ] **Organizations**: Workspace isolation and shared access.
-- [ ] **RBAC Implementation**: Enforce roles (Admin, Editor, Viewer) in middleware.
+- [x] **Organizations**: Workspace isolation and shared access.
+- [x] **RBAC Implementation**: Enforce roles (Admin, Editor, Viewer) in middleware.
 - [ ] **Quota Enforcement**: Track and limit resource usage (storage, pages) per organization.
-- [ ] **User UI**: Management of users, permissions, and quotas in the frontend.
+- [x] **User UI**: Management of users, permissions, and quotas in the frontend. (API and basic UI implemented)
 
 ## Future Considerations
 - **Real-time Collaboration**: WebSocket-based sync.

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/internal/errors"
+	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
 
@@ -30,7 +31,7 @@ type SearchRequest struct {
 
 // SearchResponse is the response to a search request
 type SearchResponse struct {
-	Results []*storage.SearchResult `json:"results"`
+	Results []storage.SearchResult `json:"results"`
 }
 
 // SearchResultDTO is the DTO version of SearchResult for API responses
@@ -46,34 +47,15 @@ type SearchResultDTO struct {
 	Modified string  `json:"modified"`
 }
 
-// Search performs a full-text search
+// Search performs a full-text search across all nodes.
 func (h *SearchHandler) Search(ctx context.Context, req SearchRequest) (*SearchResponse, error) {
-	if req.Query == "" {
-		return nil, errors.MissingField("query")
-	}
-
-	// Set defaults if not specified
-	matchTitle := req.MatchTitle || (!req.MatchTitle && !req.MatchBody && !req.MatchFields)
-	matchBody := req.MatchBody || (!req.MatchBody && !req.MatchTitle && !req.MatchFields)
-	matchFields := req.MatchFields || (!req.MatchFields && !req.MatchTitle && !req.MatchBody)
-
-	results, err := h.searchService.Search(storage.SearchOptions{
-		Query:       req.Query,
-		MatchTitle:  matchTitle,
-		MatchBody:   matchBody,
-		MatchFields: matchFields,
+	orgID := models.GetOrgID(ctx)
+	results, err := h.searchService.Search(orgID, storage.SearchOptions{
+		Query: req.Query,
 	})
 	if err != nil {
-		return nil, errors.InternalWithError("Search failed", err)
+		return nil, errors.InternalWithError("Failed to perform search", err)
 	}
 
-	response := &SearchResponse{
-		Results: make([]*storage.SearchResult, len(results)),
-	}
-
-	for i := range results {
-		response.Results[i] = &results[i]
-	}
-
-	return response, nil
+	return &SearchResponse{Results: results}, nil
 }

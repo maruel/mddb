@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/maruel/mddb/internal/models"
 )
@@ -22,8 +23,8 @@ func NewNodeService(fileStore *FileStore, gitService *GitService, cache *Cache) 
 	}
 }
 
-// GetNode retrieves a node by ID.
-func (s *NodeService) GetNode(id string) (*models.Node, error) {
+// GetNode retrieves a unified node by ID.
+func (s *NodeService) GetNode(orgID, id string) (*models.Node, error) {
 	if id == "" {
 		return nil, fmt.Errorf("node id cannot be empty")
 	}
@@ -36,16 +37,16 @@ func (s *NodeService) GetNode(id string) (*models.Node, error) {
 		}
 	}
 
-	return s.fileStore.ReadNode(id)
+	return s.fileStore.ReadNode(orgID, id)
 }
 
-// ListNodes returns all nodes as a hierarchical tree.
-func (s *NodeService) ListNodes() ([]*models.Node, error) {
+// ListNodes returns the full hierarchical tree of nodes.
+func (s *NodeService) ListNodes(orgID string) ([]*models.Node, error) {
 	if nodes := s.cache.GetNodeTree(); nodes != nil {
 		return nodes, nil
 	}
 
-	nodes, err := s.fileStore.ReadNodeTree()
+	nodes, err := s.fileStore.ReadNodeTree(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -54,39 +55,49 @@ func (s *NodeService) ListNodes() ([]*models.Node, error) {
 	return nodes, nil
 }
 
-// CreateNode creates a new unified node.
-func (s *NodeService) CreateNode(title string, nodeType models.NodeType) (*models.Node, error) {
-	id := s.fileStore.NextID()
+// CreateNode creates a new node (can be document, database, or hybrid)
+func (s *NodeService) CreateNode(orgID string, title string, nodeType models.NodeType, parentID string) (*models.Node, error) {
+	id := s.fileStore.NextID(orgID)
+	now := time.Now()
 
-	var err error
-
-	if nodeType == models.NodeTypeDatabase {
-		db := &models.Database{
-			ID:      id,
-			Title:   title,
-			Columns: []models.Column{{ID: "1", Name: "Name", Type: "text"}},
-		}
-		err = s.fileStore.WriteDatabase(db)
-	} else {
-		// Default to document
-		_, err = s.fileStore.WritePage(id, title, "")
+	node := &models.Node{
+		ID:       id,
+		ParentID: parentID,
+		Title:    title,
+		Type:     nodeType,
+		Created:  now,
+		Modified: now,
 	}
 
-	if err != nil {
-		return nil, err
+	// Create physical directory (FileStore handles this through WritePage/WriteDatabase)
+	// But we need to support ParentID structure.
+	// Currently FileStore uses flat directory for IDs.
+	// If ParentID is used, we might want to store it in metadata.
+
+	if nodeType == models.NodeTypeDocument || nodeType == models.NodeTypeHybrid {
+		_, err := s.fileStore.WritePage(orgID, id, title, "")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if nodeType == models.NodeTypeDatabase || nodeType == models.NodeTypeHybrid {
+		db := &models.Database{
+			ID:       id,
+			Title:    title,
+			Created:  now,
+			Modified: now,
+		}
+		err := s.fileStore.WriteDatabase(orgID, db)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Invalidate cache
 	s.cache.InvalidateNodeTree()
 
-	if s.gitService != nil {
-		if err := s.gitService.CommitChange("create", "node", id, title); err != nil {
-			// Log error but don't fail node creation
-			fmt.Printf("Warning: failed to commit change: %v\n", err)
-		}
-	}
-
-	return s.fileStore.ReadNode(id)
+	return node, nil
 }
 
 func findNodeInTree(nodes []*models.Node, id string) *models.Node {

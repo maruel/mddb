@@ -56,13 +56,13 @@ func TestDatabase_ReadWrite(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Write database
-			err := fs.WriteDatabase(tt.database)
+			err := fs.WriteDatabase("", tt.database)
 			if err != nil {
 				t.Fatalf("Failed to write database: %v", err)
 			}
 
 			// Read database
-			got, err := fs.ReadDatabase(tt.database.ID)
+			got, err := fs.ReadDatabase("", tt.database.ID)
 			if err != nil {
 				t.Fatalf("Failed to read database: %v", err)
 			}
@@ -93,7 +93,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 			}
 
 			// Verify file exists
-			filePath := fs.databaseSchemaFile(tt.database.ID)
+			filePath := fs.databaseSchemaFile("", tt.database.ID)
 			if _, err := os.Stat(filePath); err != nil {
 				t.Errorf("Database file not found: %s", filePath)
 			}
@@ -120,17 +120,17 @@ func TestDatabase_Exists(t *testing.T) {
 	}
 
 	// Should not exist initially
-	if fs.DatabaseExists(db.ID) {
+	if fs.DatabaseExists("", db.ID) {
 		t.Error("Database should not exist initially")
 	}
 
 	// Write database
-	if err := fs.WriteDatabase(db); err != nil {
+	if err := fs.WriteDatabase("", db); err != nil {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 
 	// Should exist after write
-	if !fs.DatabaseExists(db.ID) {
+	if !fs.DatabaseExists("", db.ID) {
 		t.Error("Database should exist after write")
 	}
 }
@@ -155,13 +155,13 @@ func TestDatabase_List(t *testing.T) {
 			Modified: time.Now(),
 			Path:     "metadata.json",
 		}
-		if err := fs.WriteDatabase(db); err != nil {
+		if err := fs.WriteDatabase("", db); err != nil {
 			t.Fatalf("Failed to write database %s: %v", id, err)
 		}
 	}
 
 	// List databases
-	databases, err := fs.ListDatabases()
+	databases, err := fs.ListDatabases("")
 	if err != nil {
 		t.Fatalf("Failed to list databases: %v", err)
 	}
@@ -203,18 +203,18 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	// Write database
-	if err := fs.WriteDatabase(db); err != nil {
+	if err := fs.WriteDatabase("", db); err != nil {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 
 	// Verify file exists
-	schemaPath := fs.databaseSchemaFile(db.ID)
+	schemaPath := fs.databaseSchemaFile("", db.ID)
 	if _, err := os.Stat(schemaPath); err != nil {
 		t.Fatalf("Database schema file not found: %v", err)
 	}
 
 	// Delete database
-	err = fs.DeleteDatabase(db.ID)
+	err = fs.DeleteDatabase("", db.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete database: %v", err)
 	}
@@ -245,7 +245,7 @@ func TestRecord_AppendRead(t *testing.T) {
 		Modified: time.Now(),
 		Path:     "metadata.json",
 	}
-	if err := fs.WriteDatabase(db); err != nil {
+	if err := fs.WriteDatabase("", db); err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
@@ -272,14 +272,14 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 
 	for _, rec := range records {
-		err := fs.AppendRecord(dbID, rec)
+		err := fs.AppendRecord("", dbID, rec)
 		if err != nil {
 			t.Fatalf("Failed to append record: %v", err)
 		}
 	}
 
 	// Read records
-	got, err := fs.ReadRecords(dbID)
+	got, err := fs.ReadRecords("", dbID)
 	if err != nil {
 		t.Fatalf("Failed to read records: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 
 	// Verify JSONL file exists
-	recordsPath := fs.databaseRecordsFile(dbID)
+	recordsPath := fs.databaseRecordsFile("", dbID)
 	if _, err := os.Stat(recordsPath); err != nil {
 		t.Errorf("Records file not found: %s", recordsPath)
 	}
@@ -326,12 +326,12 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 		Modified: time.Now(),
 		Path:     "metadata.json",
 	}
-	if err := fs.WriteDatabase(db); err != nil {
+	if err := fs.WriteDatabase("", db); err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	// Read records from empty database
-	records, err := fs.ReadRecords(dbID)
+	records, err := fs.ReadRecords("", dbID)
 	if err != nil {
 		t.Fatalf("Failed to read records: %v", err)
 	}
@@ -361,12 +361,12 @@ func TestDatabase_NestedPath(t *testing.T) {
 		Path:     "metadata.json",
 	}
 
-	if err := fs.WriteDatabase(db); err != nil {
+	if err := fs.WriteDatabase("", db); err != nil {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 
 	// Read back
-	got, err := fs.ReadDatabase(dbID)
+	got, err := fs.ReadDatabase("", dbID)
 	if err != nil {
 		t.Fatalf("Failed to read database: %v", err)
 	}
@@ -376,7 +376,7 @@ func TestDatabase_NestedPath(t *testing.T) {
 	}
 
 	// Verify file exists at correct path
-	expectedPath := fs.databaseSchemaFile(dbID)
+	expectedPath := fs.databaseSchemaFile("", dbID)
 	if _, err := os.Stat(expectedPath); err != nil {
 		t.Errorf("Database file not found at expected path: %s", expectedPath)
 	}

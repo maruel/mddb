@@ -5,11 +5,14 @@ import DatabaseTable from './components/DatabaseTable';
 import DatabaseGrid from './components/DatabaseGrid';
 import DatabaseGallery from './components/DatabaseGallery';
 import DatabaseBoard from './components/DatabaseBoard';
+import Auth from './components/Auth';
 import { debounce } from './utils/debounce';
-import type { AppNode, DataRecord, Commit } from './types';
+import type { AppNode, DataRecord, Commit, User } from './types';
 import styles from './App.module.css';
 
 export default function App() {
+  const [user, setUser] = createSignal<User | null>(null);
+  const [token, setToken] = createSignal<string | null>(localStorage.getItem('mddb_token'));
   const [nodes, setNodes] = createSignal<AppNode[]>([]);
   const [records, setRecords] = createSignal<DataRecord[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
@@ -29,6 +32,32 @@ export default function App() {
   const [hasMore, setHasMore] = createSignal(false);
   const PAGE_SIZE = 50;
 
+  // Helper for authenticated fetch
+  const authFetch = async (url: string, options: RequestInit = {}) => {
+    const headers = {
+      ...options.headers,
+      'Authorization': `Bearer ${token()}`,
+    };
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+      logout();
+      throw new Error('Session expired');
+    }
+    return res;
+  };
+
+  const logout = () => {
+    localStorage.removeItem('mddb_token');
+    setToken(null);
+    setUser(null);
+  };
+
+  const handleLogin = (newToken: string, userData: User) => {
+    localStorage.setItem('mddb_token', newToken);
+    setToken(newToken);
+    setUser(userData);
+  };
+
   // Debounced auto-save function
   // eslint-disable-next-line solid/reactivity
   const debouncedAutoSave = debounce(async () => {
@@ -37,7 +66,7 @@ export default function App() {
 
     try {
       setAutoSaveStatus('saving');
-      await fetch(`/api/pages/${nodeId}`, {
+      await authFetch(`/api/pages/${nodeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title(), content: content() }),
@@ -55,15 +84,32 @@ export default function App() {
     }
   }, 2000);
 
-  // Load nodes on mount
+  // Load user on mount
+  createEffect(async () => {
+    if (token() && !user()) {
+      try {
+        const res = await authFetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+        }
+      } catch (err) {
+        console.error('Failed to load user', err);
+      }
+    }
+  });
+
+  // Load nodes when user is available
   createEffect(() => {
-    loadNodes();
+    if (user()) {
+      loadNodes();
+    }
   });
 
   async function loadNodes() {
     try {
       setLoading(true);
-      const res = await fetch('/api/nodes');
+      const res = await authFetch('/api/nodes');
       const data = await res.json();
       setNodes(data.nodes || []);
       setError(null);
@@ -78,7 +124,7 @@ export default function App() {
     try {
       setLoading(true);
       setShowHistory(false);
-      const res = await fetch(`/api/nodes/${id}`);
+      const res = await authFetch(`/api/nodes/${id}`);
       const nodeData = await res.json();
 
       setSelectedNodeId(nodeData.id);
@@ -90,7 +136,7 @@ export default function App() {
 
       // If it's a database or hybrid, load records
       if (nodeData.type === 'database' || nodeData.type === 'hybrid') {
-        const recordsRes = await fetch(`/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`);
+        const recordsRes = await authFetch(`/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`);
         const recordsData = await recordsRes.json();
         const loadedRecords = recordsData.records || [];
         setRecords(loadedRecords);
@@ -114,7 +160,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/pages/${nodeId}/history`);
+      const res = await authFetch(`/api/pages/${nodeId}/history`);
       const data = await res.json();
       setHistory(data.history || []);
       setShowHistory(true);
@@ -135,7 +181,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/pages/${nodeId}/history/${hash}`);
+      const res = await authFetch(`/api/pages/${nodeId}/history/${hash}`);
       const data = await res.json();
       setContent(data.content);
       setHasUnsavedChanges(true); // Mark as modified
@@ -155,7 +201,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const res = await fetch('/api/nodes', {
+      const res = await authFetch('/api/nodes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title(), type }),
@@ -181,7 +227,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      await fetch(`/api/pages/${nodeId}`, {
+      await authFetch(`/api/pages/${nodeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title(), content: content() }),
@@ -205,7 +251,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      await fetch(`/api/pages/${nodeId}`, { method: 'DELETE' });
+      await authFetch(`/api/pages/${nodeId}`, { method: 'DELETE' });
       await loadNodes();
       setSelectedNodeId(null);
       setTitle('');
@@ -252,7 +298,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/databases/${nodeId}/records`, {
+      const res = await authFetch(`/api/databases/${nodeId}/records`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data }),
@@ -281,7 +327,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      await fetch(`/api/databases/${nodeId}/records/${recordId}`, { method: 'DELETE' });
+      await authFetch(`/api/databases/${nodeId}/records/${recordId}`, { method: 'DELETE' });
       loadNode(nodeId);
       setError(null);
     } catch (err) {
@@ -298,7 +344,7 @@ export default function App() {
     try {
       setLoading(true);
       const offset = records().length;
-      const res = await fetch(
+      const res = await authFetch(
         `/api/databases/${nodeId}/records?offset=${offset}&limit=${PAGE_SIZE}`
       );
       const data = await res.json();
@@ -313,254 +359,262 @@ export default function App() {
   }
 
   return (
-    <div class={styles.app}>
-      <header class={styles.header}>
-        <h1>mddb</h1>
-        <p>A seamless markdown-based document and database system</p>
-      </header>
-
-      <div class={styles.container}>
-        <aside class={styles.sidebar}>
-          <div class={styles.sidebarHeader}>
-            <h2>Workspace</h2>
-            <div class={styles.sidebarActions}>
-              <button onClick={() => createNode('document')} title="New Page">
-                +P
-              </button>
-              <button onClick={() => createNode('database')} title="New Database">
-                +D
-              </button>
-            </div>
+    <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
+      <div class={styles.app}>
+        <header class={styles.header}>
+          <div class={styles.headerTitle}>
+            <h1>mddb</h1>
+            <p>A seamless markdown-based document and database system</p>
           </div>
+          <div class={styles.userInfo}>
+            <span>{user()?.name} ({user()?.role})</span>
+            <button onClick={logout} class={styles.logoutButton}>Logout</button>
+          </div>
+        </header>
 
-          <Show when={loading() && nodes().length === 0} fallback={null}>
-            <p class={styles.loading}>Loading...</p>
-          </Show>
+        <div class={styles.container}>
+          <aside class={styles.sidebar}>
+            <div class={styles.sidebarHeader}>
+              <h2>Workspace</h2>
+              <div class={styles.sidebarActions}>
+                <button onClick={() => createNode('document')} title="New Page">
+                  +P
+                </button>
+                <button onClick={() => createNode('database')} title="New Database">
+                  +D
+                </button>
+              </div>
+            </div>
 
-          <ul class={styles.pageList}>
-            <For each={nodes()}>
-              {(node) => (
-                <SidebarNode
-                  node={node}
-                  selectedId={selectedNodeId()}
-                  onSelect={handleNodeClick}
-                  depth={0}
-                />
-              )}
-            </For>
-          </ul>
-        </aside>
+            <Show when={loading() && nodes().length === 0} fallback={null}>
+              <p class={styles.loading}>Loading...</p>
+            </Show>
 
-        <main class={styles.main}>
-          <Show when={selectedNodeId()}>
-            <nav class={styles.breadcrumbs}>
-              <For each={getBreadcrumbs(selectedNodeId())}>
-                {(crumb, i) => (
-                  <>
-                    <Show when={i() > 0}>
-                      <span class={styles.breadcrumbSeparator}>/</span>
-                    </Show>
-                    <span 
-                      class={styles.breadcrumbItem} 
-                      onClick={() => handleNodeClick(crumb)}
-                    >
-                      {crumb.title}
-                    </span>
-                  </>
+            <ul class={styles.pageList}>
+              <For each={nodes()}>
+                {(node) => (
+                  <SidebarNode
+                    node={node}
+                    selectedId={selectedNodeId()}
+                    onSelect={handleNodeClick}
+                    depth={0}
+                  />
                 )}
               </For>
-            </nav>
-          </Show>
+            </ul>
+          </aside>
 
-          <Show when={error()} fallback={null}>
-            <div class={styles.error}>{error()}</div>
-          </Show>
+          <main class={styles.main}>
+            <Show when={selectedNodeId()}>
+              <nav class={styles.breadcrumbs}>
+                <For each={getBreadcrumbs(selectedNodeId())}>
+                  {(crumb, i) => (
+                    <>
+                      <Show when={i() > 0}>
+                        <span class={styles.breadcrumbSeparator}>/</span>
+                      </Show>
+                      <span 
+                        class={styles.breadcrumbItem} 
+                        onClick={() => handleNodeClick(crumb)}
+                      >
+                        {crumb.title}
+                      </span>
+                    </>
+                  )}
+                </For>
+              </nav>
+            </Show>
 
-          <Show
-            when={selectedNodeId()}
-            fallback={
-              <div class={styles.welcome}>
-                <h2>Welcome to mddb</h2>
-                <p>Select a node from the sidebar or create a new one to get started.</p>
-                <div class={styles.createForm}>
+            <Show when={error()} fallback={null}>
+              <div class={styles.error}>{error()}</div>
+            </Show>
+
+            <Show
+              when={selectedNodeId()}
+              fallback={
+                <div class={styles.welcome}>
+                  <h2>Welcome to mddb</h2>
+                  <p>Select a node from the sidebar or create a new one to get started.</p>
+                  <div class={styles.createForm}>
+                    <input
+                      type="text"
+                      placeholder="Title"
+                      value={title()}
+                      onInput={(e) => setTitle(e.target.value)}
+                      class={styles.titleInput}
+                    />
+                    <div class={styles.welcomeActions}>
+                      <button onClick={() => createNode('document')} class={styles.createButton}>
+                        Create Page
+                      </button>
+                      <button onClick={() => createNode('database')} class={styles.createButton}>
+                        Create Database
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            >
+              <div class={styles.editor}>
+                <div class={styles.editorHeader}>
                   <input
                     type="text"
                     placeholder="Title"
                     value={title()}
-                    onInput={(e) => setTitle(e.target.value)}
+                    onInput={(e) => {
+                      setTitle(e.target.value);
+                      setHasUnsavedChanges(true);
+                      debouncedAutoSave();
+                    }}
                     class={styles.titleInput}
                   />
-                  <div class={styles.welcomeActions}>
-                    <button onClick={() => createNode('document')} class={styles.createButton}>
-                      Create Page
-                    </button>
-                    <button onClick={() => createNode('database')} class={styles.createButton}>
-                      Create Database
-                    </button>
-                  </div>
-                </div>
-              </div>
-            }
-          >
-            <div class={styles.editor}>
-              <div class={styles.editorHeader}>
-                <input
-                  type="text"
-                  placeholder="Title"
-                  value={title()}
-                  onInput={(e) => {
-                    setTitle(e.target.value);
-                    setHasUnsavedChanges(true);
-                    debouncedAutoSave();
-                  }}
-                  class={styles.titleInput}
-                />
-                <div class={styles.editorStatus}>
-                  <Show when={hasUnsavedChanges()}>
-                    <span class={styles.unsavedIndicator}>● Unsaved</span>
-                  </Show>
-                  <Show when={autoSaveStatus() === 'saving'}>
-                    <span class={styles.savingIndicator}>⟳ Saving...</span>
-                  </Show>
-                  <Show when={autoSaveStatus() === 'saved'}>
-                    <span class={styles.savedIndicator}>✓ Saved</span>
-                  </Show>
-                </div>
-                <div class={styles.editorActions}>
-                  <button onClick={() => {
-                    const id = selectedNodeId();
-                    if (id) loadHistory(id);
-                  }} disabled={loading()}>
-                    {showHistory() ? 'Hide History' : 'History'}
-                  </button>
-                  <button onClick={saveNode} disabled={loading()}>
-                    {loading() ? 'Saving...' : 'Save'}
-                  </button>
-                  <button onClick={deleteCurrentNode} disabled={loading()}>
-                    Delete
-                  </button>
-                </div>
-              </div>
-
-              <Show when={showHistory()}>
-                <div class={styles.historyPanel}>
-                  <h3>Version History</h3>
-                  <ul class={styles.historyList}>
-                    <For each={history()}>
-                      {(commit) => (
-                        <li
-                          class={styles.historyItem}
-                          onClick={() => {
-                            const id = selectedNodeId();
-                            if (id) loadVersion(id, commit.hash);
-                          }}
-                        >
-                          <div class={styles.historyMeta}>
-                            <span class={styles.historyDate}>
-                              {new Date(commit.timestamp).toLocaleString()}
-                            </span>
-                            <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
-                          </div>
-                          <div class={styles.historyMessage}>{commit.message}</div>
-                        </li>
-                      )}
-                    </For>
-                    <Show when={history().length === 0}>
-                      <li class={styles.historyItem}>No history available</li>
+                  <div class={styles.editorStatus}>
+                    <Show when={hasUnsavedChanges()}>
+                      <span class={styles.unsavedIndicator}>● Unsaved</span>
                     </Show>
-                  </ul>
+                    <Show when={autoSaveStatus() === 'saving'}>
+                      <span class={styles.savingIndicator}>⟳ Saving...</span>
+                    </Show>
+                    <Show when={autoSaveStatus() === 'saved'}>
+                      <span class={styles.savedIndicator}>✓ Saved</span>
+                    </Show>
+                  </div>
+                  <div class={styles.editorActions}>
+                    <button onClick={() => {
+                      const id = selectedNodeId();
+                      if (id) loadHistory(id);
+                    }} disabled={loading()}>
+                      {showHistory() ? 'Hide History' : 'History'}
+                    </button>
+                    <button onClick={saveNode} disabled={loading()}>
+                      {loading() ? 'Saving...' : 'Save'}
+                    </button>
+                    <button onClick={deleteCurrentNode} disabled={loading()}>
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </Show>
 
-              <div class={styles.nodeContent}>
-                {/* Always show markdown content if it exists or if node is document/hybrid */}
-                <Show when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'database'}>
-                  <div class={styles.editorContent}>
-                    <textarea
-                      value={content()}
-                      onInput={(e) => {
-                        setContent(e.target.value);
-                        setHasUnsavedChanges(true);
-                        debouncedAutoSave();
-                      }}
-                      placeholder="Write your content in markdown..."
-                      class={styles.contentInput}
-                    />
-                    <MarkdownPreview content={content()} />
+                <Show when={showHistory()}>
+                  <div class={styles.historyPanel}>
+                    <h3>Version History</h3>
+                    <ul class={styles.historyList}>
+                      <For each={history()}>
+                        {(commit) => (
+                          <li
+                            class={styles.historyItem}
+                            onClick={() => {
+                              const id = selectedNodeId();
+                              if (id) loadVersion(id, commit.hash);
+                            }}
+                          >
+                            <div class={styles.historyMeta}>
+                              <span class={styles.historyDate}>
+                                {new Date(commit.timestamp).toLocaleString()}
+                              </span>
+                              <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
+                            </div>
+                            <div class={styles.historyMessage}>{commit.message}</div>
+                          </li>
+                        )}
+                      </For>
+                      <Show when={history().length === 0}>
+                        <li class={styles.historyItem}>No history available</li>
+                      </Show>
+                    </ul>
                   </div>
                 </Show>
 
-                {/* Show database table if node is database or hybrid */}
-                <Show when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'document'}>
-                    <div class={styles.databaseView}>
-                      <div class={styles.databaseHeader}>
-                        <h3>Database Records</h3>
-                        <div class={styles.viewToggle}>
-                          <button 
-                            classList={{ [`${styles.active}`]: viewMode() === 'table' }}
-                            onClick={() => setViewMode('table')}
-                          >
-                            Table
-                          </button>
-                          <button 
-                            classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
-                            onClick={() => setViewMode('grid')}
-                          >
-                            Grid
-                          </button>
-                          <button 
-                            classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
-                            onClick={() => setViewMode('gallery')}
-                          >
-                            Gallery
-                          </button>
-                          <button 
-                            classList={{ [`${styles.active}`]: viewMode() === 'board' }}
-                            onClick={() => setViewMode('board')}
-                          >
-                            Board
-                          </button>
-                        </div>
-                      </div>
-                      <Show when={viewMode() === 'table'}>
-                        <DatabaseTable
-                          databaseId={selectedNodeId() || ''}
-                          columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
-                          records={records()}
-                          onAddRecord={handleAddRecord}
-                          onDeleteRecord={handleDeleteRecord}
-                          onLoadMore={loadMoreRecords}
-                          hasMore={hasMore()}
-                        />
-                      </Show>
-                      <Show when={viewMode() === 'grid'}>
-                        <DatabaseGrid 
-                          records={records()} 
-                          columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
-                          onDeleteRecord={handleDeleteRecord}
-                        />
-                      </Show>
-                      <Show when={viewMode() === 'gallery'}>
-                        <DatabaseGallery 
-                          records={records()} 
-                          columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
-                          onDeleteRecord={handleDeleteRecord}
-                        />
-                      </Show>
-                      <Show when={viewMode() === 'board'}>
-                        <DatabaseBoard 
-                          records={records()} 
-                          columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
-                          onDeleteRecord={handleDeleteRecord}
-                        />
-                      </Show>
+                <div class={styles.nodeContent}>
+                  {/* Always show markdown content if it exists or if node is document/hybrid */}
+                  <Show when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'database'}>
+                    <div class={styles.editorContent}>
+                      <textarea
+                        value={content()}
+                        onInput={(e) => {
+                          setContent(e.target.value);
+                          setHasUnsavedChanges(true);
+                          debouncedAutoSave();
+                        }}
+                        placeholder="Write your content in markdown..."
+                        class={styles.contentInput}
+                      />
+                      <MarkdownPreview content={content()} orgId={user()?.organization_id} />
                     </div>
-                </Show>
+                  </Show>
+
+                  {/* Show database table if node is database or hybrid */}
+                  <Show when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'document'}>
+                      <div class={styles.databaseView}>
+                        <div class={styles.databaseHeader}>
+                          <h3>Database Records</h3>
+                          <div class={styles.viewToggle}>
+                            <button 
+                              classList={{ [`${styles.active}`]: viewMode() === 'table' }}
+                              onClick={() => setViewMode('table')}
+                            >
+                              Table
+                            </button>
+                            <button 
+                              classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
+                              onClick={() => setViewMode('grid')}
+                            >
+                              Grid
+                            </button>
+                            <button 
+                              classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
+                              onClick={() => setViewMode('gallery')}
+                            >
+                              Gallery
+                            </button>
+                            <button 
+                              classList={{ [`${styles.active}`]: viewMode() === 'board' }}
+                              onClick={() => setViewMode('board')}
+                            >
+                              Board
+                            </button>
+                          </div>
+                        </div>
+                        <Show when={viewMode() === 'table'}>
+                          <DatabaseTable
+                            databaseId={selectedNodeId() || ''}
+                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
+                            records={records()}
+                            onAddRecord={handleAddRecord}
+                            onDeleteRecord={handleDeleteRecord}
+                            onLoadMore={loadMoreRecords}
+                            hasMore={hasMore()}
+                          />
+                        </Show>
+                        <Show when={viewMode() === 'grid'}>
+                          <DatabaseGrid 
+                            records={records()} 
+                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
+                            onDeleteRecord={handleDeleteRecord}
+                          />
+                        </Show>
+                        <Show when={viewMode() === 'gallery'}>
+                          <DatabaseGallery 
+                            records={records()} 
+                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
+                            onDeleteRecord={handleDeleteRecord}
+                          />
+                        </Show>
+                        <Show when={viewMode() === 'board'}>
+                          <DatabaseBoard 
+                            records={records()} 
+                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
+                            onDeleteRecord={handleDeleteRecord}
+                          />
+                        </Show>
+                      </div>
+                  </Show>
+                </div>
               </div>
-            </div>
-          </Show>
-        </main>
+            </Show>
+          </main>
+        </div>
       </div>
-    </div>
+    </Show>
   );
 }

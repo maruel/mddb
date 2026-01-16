@@ -1,7 +1,19 @@
 // Package models defines the core data structures used throughout the application.
 package models
 
-import "time"
+import (
+	"context"
+	"time"
+)
+
+// GetOrgID extracts the organization ID from the context.
+func GetOrgID(ctx context.Context) string {
+	user, ok := ctx.Value(UserKey).(*User)
+	if !ok {
+		return ""
+	}
+	return user.OrganizationID
+}
 
 // Node represents the unified content entity (can be a Page, a Database, or both)
 type Node struct {
@@ -51,7 +63,6 @@ type Record struct {
 type User struct {
 	ID             string    `json:"id"`
 	Email          string    `json:"email"`
-	PasswordHash   string    `json:"-"` // Never export password hash
 	Name           string    `json:"name"`
 	OrganizationID string    `json:"organization_id"`
 	Role           UserRole  `json:"role"`

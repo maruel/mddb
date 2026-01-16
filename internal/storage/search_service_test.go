@@ -18,9 +18,9 @@ func TestSearchService_SearchPages(t *testing.T) {
 	// Create test pages
 	cache := NewCache()
 	pageService := NewPageService(fileStore, nil, cache)
-	_, _ = pageService.CreatePage("Getting Started", "This is a guide to get started with mddb project")
-	_, _ = pageService.CreatePage("Advanced Topics", "Learn about advanced mddb configuration and optimization")
-	_, _ = pageService.CreatePage("API Reference", "Complete mddb API documentation for developers")
+	_, _ = pageService.CreatePage("", "Getting Started", "This is a guide to get started with mddb project")
+	_, _ = pageService.CreatePage("", "Advanced Topics", "Learn about advanced mddb configuration and optimization")
+	_, _ = pageService.CreatePage("", "API Reference", "Complete mddb API documentation for developers")
 
 	tests := []struct {
 		name          string
@@ -65,7 +65,7 @@ func TestSearchService_SearchPages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := searchService.Search(SearchOptions{
+			results, err := searchService.Search("", SearchOptions{
 				Query:      tt.query,
 				MatchTitle: true,
 				MatchBody:  true,
@@ -112,12 +112,12 @@ func TestSearchService_SearchRecords(t *testing.T) {
 		{Name: "description", Type: "text"},
 	}
 
-	db, _ := dbService.CreateDatabase("Tasks", columns)
+	db, _ := dbService.CreateDatabase("", "Tasks", columns)
 
 	// Create records
-	_, _ = dbService.CreateRecord(db.ID, map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"})
-	_, _ = dbService.CreateRecord(db.ID, map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"})
-	_, _ = dbService.CreateRecord(db.ID, map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"})
+	_, _ = dbService.CreateRecord("", db.ID, map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"})
+	_, _ = dbService.CreateRecord("", db.ID, map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"})
+	_, _ = dbService.CreateRecord("", db.ID, map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"})
 
 	tests := []struct {
 		name          string
@@ -153,7 +153,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := searchService.Search(SearchOptions{
+			results, err := searchService.Search("", SearchOptions{
 				Query:       tt.query,
 				MatchFields: true,
 			})
@@ -190,10 +190,10 @@ func TestSearchService_Scoring(t *testing.T) {
 	// Create pages where title match should score higher
 	cache := NewCache()
 	pageService := NewPageService(fileStore, nil, cache)
-	_, _ = pageService.CreatePage("Python Programming", "This is about Java not Python")
-	_, _ = pageService.CreatePage("Java Basics", "Learn Python programming fundamentals")
+	_, _ = pageService.CreatePage("", "Python Programming", "This is about Java not Python")
+	_, _ = pageService.CreatePage("", "Java Basics", "Learn Python programming fundamentals")
 
-	results, err := searchService.Search(SearchOptions{
+	results, err := searchService.Search("", SearchOptions{
 		Query:      "python",
 		MatchTitle: true,
 		MatchBody:  true,
@@ -229,10 +229,10 @@ func TestSearchService_Limit(t *testing.T) {
 	cache := NewCache()
 	pageService := NewPageService(fileStore, nil, cache)
 	for i := range 10 {
-		_, _ = pageService.CreatePage(fmt.Sprintf("Test Page %d", i), "This is test content")
+		_, _ = pageService.CreatePage("", fmt.Sprintf("Test Page %d", i), "This is test content")
 	}
 
-	results, err := searchService.Search(SearchOptions{
+	results, err := searchService.Search("", SearchOptions{
 		Query:      "test",
 		Limit:      2,
 		MatchTitle: true,
@@ -319,18 +319,18 @@ func TestSearchService_Integration(t *testing.T) {
 	// Create mixed content
 	cache := NewCache()
 	pageService := NewPageService(fileStore, nil, cache)
-	_, _ = pageService.CreatePage("Blog Post", "Article about searchable content and web development")
+	_, _ = pageService.CreatePage("", "Blog Post", "Article about searchable content and web development")
 
 	dbService := NewDatabaseService(fileStore, nil, cache)
 	columns := []models.Column{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "content", Type: "text"},
 	}
-	db, _ := dbService.CreateDatabase("Articles", columns)
-	_, _ = dbService.CreateRecord(db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
+	db, _ := dbService.CreateDatabase("", "Articles", columns)
+	_, _ = dbService.CreateRecord("", db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
 
 	// Search should find both page and record
-	results, err := searchService.Search(SearchOptions{
+	results, err := searchService.Search("", SearchOptions{
 		Query:       "searchable",
 		MatchTitle:  true,
 		MatchBody:   true,

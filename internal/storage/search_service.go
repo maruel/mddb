@@ -43,7 +43,7 @@ func NewSearchService(fileStore *FileStore) *SearchService {
 }
 
 // Search performs a full-text search across all nodes.
-func (s *SearchService) Search(opts SearchOptions) ([]SearchResult, error) {
+func (s *SearchService) Search(orgID string, opts SearchOptions) ([]SearchResult, error) {
 	if opts.Query == "" {
 		return nil, nil
 	}
@@ -59,13 +59,13 @@ func (s *SearchService) Search(opts SearchOptions) ([]SearchResult, error) {
 
 	// Search pages
 	if opts.MatchTitle || opts.MatchBody {
-		pageResults := s.searchPages(query, opts)
+		pageResults := s.searchPages(orgID, query, opts)
 		results = append(results, pageResults...)
 	}
 
 	// Search databases
 	if opts.MatchFields {
-		dbResults := s.searchDatabases(query, opts)
+		dbResults := s.searchDatabases(orgID, query, opts)
 		results = append(results, dbResults...)
 	}
 
@@ -80,8 +80,8 @@ func (s *SearchService) Search(opts SearchOptions) ([]SearchResult, error) {
 	return results, nil
 }
 
-func (s *SearchService) searchPages(query string, opts SearchOptions) []SearchResult {
-	nodes, _ := s.fileStore.ReadNodeTree()
+func (s *SearchService) searchPages(orgID, query string, opts SearchOptions) []SearchResult {
+	nodes, _ := s.fileStore.ReadNodeTree(orgID)
 	var results []SearchResult
 
 	var processNodes func([]*models.Node)
@@ -124,15 +124,15 @@ func (s *SearchService) searchPages(query string, opts SearchOptions) []SearchRe
 	return results
 }
 
-func (s *SearchService) searchDatabases(query string, opts SearchOptions) []SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
-	nodes, _ := s.fileStore.ReadNodeTree()
+func (s *SearchService) searchDatabases(orgID, query string, opts SearchOptions) []SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
+	nodes, _ := s.fileStore.ReadNodeTree(orgID)
 	var results []SearchResult
 
 	var processNodes func([]*models.Node)
 	processNodes = func(list []*models.Node) {
 		for _, node := range list {
 			if node.Type != models.NodeTypeDocument {
-				records, _ := s.fileStore.ReadRecords(node.ID)
+				records, _ := s.fileStore.ReadRecords(orgID, node.ID)
 				for _, record := range records {
 					score := 0.0
 					matches := make(map[string]string)

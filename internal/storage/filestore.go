@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/maruel/mddb/internal/models"
@@ -22,58 +23,46 @@ import (
 // - Assets: files within each page's directory namespace
 type FileStore struct {
 	rootDir  string
-	pagesDir string
-	nextID   int // Next available numeric ID (cached)
+	pagesDir string // Legacy default pages dir
+	nextIDs  map[string]int // Next available numeric ID per organization
+	mu       sync.Mutex
 }
 
 // NewFileStore initializes a FileStore with the given root directory.
-// Creates pages/ subdirectory where all content is stored in numeric directories.
 func NewFileStore(rootDir string) (*FileStore, error) {
-	// Create root directory if it doesn't exist
 	if err := os.MkdirAll(rootDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create root directory: %w", err)
 	}
 
 	pagesDir := filepath.Join(rootDir, "pages")
-
-	// Create pages directory
 	if err := os.MkdirAll(pagesDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create directory %s: %w", pagesDir, err)
 	}
 
-	fs := &FileStore{
+	return &FileStore{
 		rootDir:  rootDir,
 		pagesDir: pagesDir,
-		nextID:   1,
+		nextIDs:  make(map[string]int),
+	}, nil
+}
+
+// NextID returns the next available numeric ID for an organization.
+func (fs *FileStore) NextID(orgID string) string {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
+	id, ok := fs.nextIDs[orgID]
+	if !ok {
+		id = fs.findNextID(orgID)
 	}
 
-	// Calculate next ID by finding highest existing numeric directory
-	fs.nextID = fs.findNextID()
-
-	return fs, nil
-}
-
-// PagesDir returns the pages directory path where all content is stored.
-func (fs *FileStore) PagesDir() string {
-	return fs.pagesDir
-}
-
-// RootDir returns the root directory path.
-func (fs *FileStore) RootDir() string {
-	return fs.rootDir
-}
-
-// NextID returns the next available numeric ID and increments the counter.
-func (fs *FileStore) NextID() string {
-	id := fs.nextID
-	fs.nextID++
+	fs.nextIDs[orgID] = id + 1
 	return strconv.Itoa(id)
 }
 
-// findNextID scans the pages directory to find the highest numeric ID
-// and returns the next available ID.
-func (fs *FileStore) findNextID() int {
-	entries, err := os.ReadDir(fs.pagesDir)
+func (fs *FileStore) findNextID(orgID string) int {
+	dir := fs.orgPagesDir(orgID)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return 1
 	}
@@ -83,7 +72,6 @@ func (fs *FileStore) findNextID() int {
 		if !entry.IsDir() {
 			continue
 		}
-		// Try to parse as numeric ID
 		if id, err := strconv.Atoi(entry.Name()); err == nil && id > maxID {
 			maxID = id
 		}
@@ -92,17 +80,25 @@ func (fs *FileStore) findNextID() int {
 	return maxID + 1
 }
 
+func (fs *FileStore) orgPagesDir(orgID string) string {
+	if orgID == "" {
+		return fs.pagesDir
+	}
+	dir := filepath.Join(fs.rootDir, "orgs", orgID, "pages")
+	_ = os.MkdirAll(dir, 0o755)
+	return dir
+}
+
 // PageExists checks if a page directory exists.
-func (fs *FileStore) PageExists(id string) bool {
-	path := fs.pageDir(id)
+func (fs *FileStore) PageExists(orgID, id string) bool {
+	path := fs.pageDir(orgID, id)
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
 
-// ReadPage reads a page from disk, parsing metadata and content.
-// Page is stored as: {id}/index.md with YAML front matter
-func (fs *FileStore) ReadPage(id string) (*models.Page, error) {
-	filePath := fs.pageIndexFile(id)
+// ReadPage reads a page from disk.
+func (fs *FileStore) ReadPage(orgID, id string) (*models.Page, error) {
+	filePath := fs.pageIndexFile(orgID, id)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -115,9 +111,8 @@ func (fs *FileStore) ReadPage(id string) (*models.Page, error) {
 	return page, nil
 }
 
-// WritePage writes a page to disk with metadata and content.
-// Page is stored as: {id}/index.md with YAML front matter
-func (fs *FileStore) WritePage(id, title, content string) (*models.Page, error) {
+// WritePage writes a page to disk.
+func (fs *FileStore) WritePage(orgID, id, title, content string) (*models.Page, error) {
 	now := time.Now()
 	page := &models.Page{
 		ID:       id,
@@ -128,15 +123,12 @@ func (fs *FileStore) WritePage(id, title, content string) (*models.Page, error) 
 		Path:     "index.md",
 	}
 
-	pageDir := fs.pageDir(id)
-
-	// Create page directory
+	pageDir := fs.pageDir(orgID, id)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	// Write index.md with YAML front matter
-	filePath := fs.pageIndexFile(id)
+	filePath := fs.pageIndexFile(orgID, id)
 	data := formatMarkdownFile(page)
 	if err := os.WriteFile(filePath, data, 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write page: %w", err)
@@ -145,9 +137,9 @@ func (fs *FileStore) WritePage(id, title, content string) (*models.Page, error) 
 	return page, nil
 }
 
-// UpdatePage updates an existing page's content and metadata.
-func (fs *FileStore) UpdatePage(id, title, content string) (*models.Page, error) {
-	filePath := fs.pageIndexFile(id)
+// UpdatePage updates an existing page.
+func (fs *FileStore) UpdatePage(orgID, id, title, content string) (*models.Page, error) {
+	filePath := fs.pageIndexFile(orgID, id)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -157,7 +149,6 @@ func (fs *FileStore) UpdatePage(id, title, content string) (*models.Page, error)
 	}
 
 	page := parseMarkdownFile(id, data)
-
 	page.Title = title
 	page.Content = content
 	page.Modified = time.Now()
@@ -170,9 +161,9 @@ func (fs *FileStore) UpdatePage(id, title, content string) (*models.Page, error)
 	return page, nil
 }
 
-// DeletePage deletes a page directory and all its contents.
-func (fs *FileStore) DeletePage(id string) error {
-	pageDir := fs.pageDir(id)
+// DeletePage deletes a page directory.
+func (fs *FileStore) DeletePage(orgID, id string) error {
+	pageDir := fs.pageDir(orgID, id)
 	if err := os.RemoveAll(pageDir); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("page not found")
@@ -182,12 +173,12 @@ func (fs *FileStore) DeletePage(id string) error {
 	return nil
 }
 
-// ListPages returns all document pages in the pages directory.
-// Only considers numeric directories containing index.md (not databases).
-func (fs *FileStore) ListPages() ([]*models.Page, error) {
+// ListPages returns all pages for an organization.
+func (fs *FileStore) ListPages(orgID string) ([]*models.Page, error) {
 	var pages []*models.Page
+	dir := fs.orgPagesDir(orgID)
 
-	entries, err := os.ReadDir(fs.pagesDir)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read pages directory: %w", err)
 	}
@@ -197,44 +188,32 @@ func (fs *FileStore) ListPages() ([]*models.Page, error) {
 			continue
 		}
 
-		// Only consider numeric IDs (skip non-numeric directories)
 		id := entry.Name()
 		if _, err := strconv.Atoi(id); err != nil {
 			continue
 		}
 
-		// Skip if it's a database (has metadata.json but not index.md)
-		indexFile := fs.pageIndexFile(id)
-		_, err := os.Stat(indexFile)
-		if os.IsNotExist(err) {
-			continue // Not a page, skip
+		indexFile := fs.pageIndexFile(orgID, id)
+		if _, err := os.Stat(indexFile); err == nil {
+			page, err := fs.ReadPage(orgID, id)
+			if err == nil {
+				pages = append(pages, page)
+			}
 		}
-		if err != nil {
-			continue // Error checking, skip
-		}
-
-		page, err := fs.ReadPage(id)
-		if err != nil {
-			continue // Log but continue
-		}
-		pages = append(pages, page)
 	}
 
 	return pages, nil
 }
 
 // ReadNode reads a unified node from disk.
-func (fs *FileStore) ReadNode(id string) (*models.Node, error) {
-	nodeDir := fs.pageDir(id)
+func (fs *FileStore) ReadNode(orgID, id string) (*models.Node, error) {
+	nodeDir := fs.pageDir(orgID, id)
 	info, err := os.Stat(nodeDir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("node not found")
 		}
 		return nil, fmt.Errorf("failed to access node: %w", err)
-	}
-	if !info.IsDir() {
-		return nil, fmt.Errorf("node is not a directory")
 	}
 
 	node := &models.Node{
@@ -243,10 +222,9 @@ func (fs *FileStore) ReadNode(id string) (*models.Node, error) {
 		Modified: info.ModTime(),
 	}
 
-	// Try reading as a document
-	indexFile := fs.pageIndexFile(id)
+	indexFile := fs.pageIndexFile(orgID, id)
 	if _, err := os.Stat(indexFile); err == nil {
-		page, err := fs.ReadPage(id)
+		page, err := fs.ReadPage(orgID, id)
 		if err == nil {
 			node.Title = page.Title
 			node.Content = page.Content
@@ -257,12 +235,10 @@ func (fs *FileStore) ReadNode(id string) (*models.Node, error) {
 		}
 	}
 
-	// Try reading as a database
-	schemaFile := fs.databaseSchemaFile(id)
+	schemaFile := fs.databaseSchemaFile(orgID, id)
 	if _, err := os.Stat(schemaFile); err == nil {
-		db, err := fs.ReadDatabase(id)
+		db, err := fs.ReadDatabase(orgID, id)
 		if err == nil {
-			// If it's already a document, it becomes a hybrid
 			if node.Type == models.NodeTypeDocument {
 				node.Type = models.NodeTypeHybrid
 			} else {
@@ -279,11 +255,11 @@ func (fs *FileStore) ReadNode(id string) (*models.Node, error) {
 }
 
 // ReadNodeTree returns the full hierarchical tree of nodes.
-func (fs *FileStore) ReadNodeTree() ([]*models.Node, error) {
-	return fs.readNodesRecursive(fs.pagesDir, "")
+func (fs *FileStore) ReadNodeTree(orgID string) ([]*models.Node, error) {
+	return fs.readNodesRecursive(orgID, fs.orgPagesDir(orgID), "")
 }
 
-func (fs *FileStore) readNodesRecursive(dir, parentID string) ([]*models.Node, error) {
+func (fs *FileStore) readNodesRecursive(orgID, dir, parentID string) ([]*models.Node, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -296,21 +272,16 @@ func (fs *FileStore) readNodesRecursive(dir, parentID string) ([]*models.Node, e
 		}
 
 		id := entry.Name()
-		// Only process numeric IDs or nested folders containing numeric IDs
 		if _, err := strconv.Atoi(id); err != nil {
-			// If it's not a numeric ID, it might be a grouping folder,
-			// we can support recursion through it if needed,
-			// but based on AGENTS.md, pages are numbered directories.
 			continue
 		}
 
-		node, err := fs.ReadNodeFromPath(filepath.Join(dir, id), id, parentID)
+		node, err := fs.ReadNodeFromPath(orgID, filepath.Join(dir, id), id, parentID)
 		if err != nil {
 			continue
 		}
 
-		// Recurse for children
-		children, _ := fs.readNodesRecursive(filepath.Join(dir, id), id)
+		children, _ := fs.readNodesRecursive(orgID, filepath.Join(dir, id), id)
 		node.Children = children
 
 		nodes = append(nodes, node)
@@ -319,7 +290,7 @@ func (fs *FileStore) readNodesRecursive(dir, parentID string) ([]*models.Node, e
 }
 
 // ReadNodeFromPath reads a node from a specific path.
-func (fs *FileStore) ReadNodeFromPath(path, id, parentID string) (*models.Node, error) {
+func (fs *FileStore) ReadNodeFromPath(orgID, path, id, parentID string) (*models.Node, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -332,10 +303,9 @@ func (fs *FileStore) ReadNodeFromPath(path, id, parentID string) (*models.Node, 
 		Modified: info.ModTime(),
 	}
 
-	// Read index.md
 	indexFile := filepath.Join(path, "index.md")
 	if _, err := os.Stat(indexFile); err == nil {
-		page, err := fs.ReadPage(id) // ReadPage might need path adjustment if it assumes top-level
+		page, err := fs.ReadPage(orgID, id) // Note: This might need adjustment if path is deep
 		if err == nil {
 			node.Title = page.Title
 			node.Content = page.Content
@@ -346,10 +316,9 @@ func (fs *FileStore) ReadNodeFromPath(path, id, parentID string) (*models.Node, 
 		}
 	}
 
-	// Read metadata.json
 	schemaFile := filepath.Join(path, "metadata.json")
 	if _, err := os.Stat(schemaFile); err == nil {
-		db, err := fs.ReadDatabase(id)
+		db, err := fs.ReadDatabase(orgID, id)
 		if err == nil {
 			if node.Type == models.NodeTypeDocument {
 				node.Type = models.NodeTypeHybrid
@@ -366,30 +335,284 @@ func (fs *FileStore) ReadNodeFromPath(path, id, parentID string) (*models.Node, 
 	return node, nil
 }
 
-// pageDir returns the directory path for a page ID.
-func (fs *FileStore) pageDir(id string) string {
-	return filepath.Join(fs.pagesDir, id)
+func (fs *FileStore) pageDir(orgID, id string) string {
+	return filepath.Join(fs.orgPagesDir(orgID), id)
 }
 
-// pageIndexFile returns the index.md file path for a page ID.
-func (fs *FileStore) pageIndexFile(id string) string {
-	return filepath.Join(fs.pageDir(id), "index.md")
+func (fs *FileStore) pageIndexFile(orgID, id string) string {
+	return filepath.Join(fs.pageDir(orgID, id), "index.md")
 }
 
-// parseMarkdownFile parses a markdown file with YAML front matter.
+// Database operations
+
+func (fs *FileStore) DatabaseExists(orgID, id string) bool {
+	path := fs.databaseSchemaFile(orgID, id)
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func (fs *FileStore) ReadDatabase(orgID, id string) (*models.Database, error) {
+	filePath := fs.databaseSchemaFile(orgID, id)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("database not found")
+		}
+		return nil, fmt.Errorf("failed to read database: %w", err)
+	}
+
+	var db models.Database
+	if err := json.Unmarshal(data, &db); err != nil {
+		return nil, fmt.Errorf("failed to parse database: %w", err)
+	}
+
+	return &db, nil
+}
+
+func (fs *FileStore) WriteDatabase(orgID string, db *models.Database) error {
+	pageDir := fs.pageDir(orgID, db.ID)
+	if err := os.MkdirAll(pageDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	data, err := json.MarshalIndent(db, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal database: %w", err)
+	}
+
+	filePath := fs.databaseSchemaFile(orgID, db.ID)
+	if err := os.WriteFile(filePath, data, 0o644); err != nil {
+		return fmt.Errorf("failed to write database: %w", err)
+	}
+
+	return nil
+}
+
+func (fs *FileStore) DeleteDatabase(orgID, id string) error {
+	pageDir := fs.pageDir(orgID, id)
+	if err := os.RemoveAll(pageDir); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to delete database: %w", err)
+	}
+	return nil
+}
+
+func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
+	var databases []*models.Database
+	dir := fs.orgPagesDir(orgID)
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read pages directory: %w", err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		id := entry.Name()
+		if _, err := strconv.Atoi(id); err != nil {
+			continue
+		}
+
+		schemaFile := fs.databaseSchemaFile(orgID, id)
+		if _, err := os.Stat(schemaFile); err == nil {
+			db, err := fs.ReadDatabase(orgID, id)
+			if err == nil {
+				databases = append(databases, db)
+			}
+		}
+	}
+
+	return databases, nil
+}
+
+func (fs *FileStore) AppendRecord(orgID, id string, record *models.Record) error {
+	pageDir := fs.pageDir(orgID, id)
+	if err := os.MkdirAll(pageDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	data, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("failed to marshal record: %w", err)
+	}
+
+	filePath := fs.databaseRecordsFile(orgID, id)
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to open records file: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	if _, err := f.Write(data); err != nil {
+		return fmt.Errorf("failed to write record: %w", err)
+	}
+	if _, err := f.WriteString("\n"); err != nil {
+		return fmt.Errorf("failed to write newline: %w", err)
+	}
+
+	return nil
+}
+
+func (fs *FileStore) ReadRecords(orgID, id string) ([]*models.Record, error) {
+	filePath := fs.databaseRecordsFile(orgID, id)
+	f, err := os.Open(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []*models.Record{}, nil
+		}
+		return nil, fmt.Errorf("failed to read records: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	var records []*models.Record
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var record models.Record
+		if err := json.Unmarshal(line, &record); err != nil {
+			return nil, fmt.Errorf("failed to parse record: %w", err)
+		}
+		records = append(records, &record)
+	}
+	return records, nil
+}
+
+func (fs *FileStore) ReadRecordsPage(orgID, id string, offset, limit int) ([]*models.Record, error) {
+	filePath := fs.databaseRecordsFile(orgID, id)
+	f, err := os.Open(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []*models.Record{}, nil
+		}
+		return nil, fmt.Errorf("failed to read records: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	var records []*models.Record
+	scanner := bufio.NewScanner(f)
+	currentIndex := 0
+	count := 0
+	for scanner.Scan() {
+		if currentIndex < offset {
+			currentIndex++
+			continue
+		}
+		if limit > 0 && count >= limit {
+			break
+		}
+		line := scanner.Bytes()
+		if len(line) == 0 {
+			continue
+		}
+		var record models.Record
+		if err := json.Unmarshal(line, &record); err != nil {
+			return nil, fmt.Errorf("failed to parse record: %w", err)
+		}
+		records = append(records, &record)
+		currentIndex++
+		count++
+	}
+	return records, nil
+}
+
+func (fs *FileStore) databaseSchemaFile(orgID, id string) string {
+	return filepath.Join(fs.pageDir(orgID, id), "metadata.json")
+}
+
+func (fs *FileStore) databaseRecordsFile(orgID, id string) string {
+	return filepath.Join(fs.pageDir(orgID, id), "data.jsonl")
+}
+
+// Asset operations
+
+func (fs *FileStore) SaveAsset(orgID, pageID, assetName string, data []byte) (string, error) {
+	pageDir := fs.pageDir(orgID, pageID)
+	if err := os.MkdirAll(pageDir, 0o755); err != nil {
+		return "", fmt.Errorf("failed to create page directory: %w", err)
+	}
+
+	assetPath := filepath.Join(pageDir, assetName)
+	if err := os.WriteFile(assetPath, data, 0o644); err != nil {
+		return "", fmt.Errorf("failed to write asset: %w", err)
+	}
+
+	return assetName, nil
+}
+
+func (fs *FileStore) ReadAsset(orgID, pageID, assetName string) ([]byte, error) {
+	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
+	data, err := os.ReadFile(assetPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("asset not found")
+		}
+		return nil, fmt.Errorf("failed to read asset: %w", err)
+	}
+	return data, nil
+}
+
+func (fs *FileStore) DeleteAsset(orgID, pageID, assetName string) error {
+	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
+	if err := os.Remove(assetPath); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("asset not found")
+		}
+		return fmt.Errorf("failed to delete asset: %w", err)
+	}
+	return nil
+}
+
+func (fs *FileStore) ListAssets(orgID, pageID string) ([]*models.Asset, error) {
+	pageDir := fs.pageDir(orgID, pageID)
+	entries, err := os.ReadDir(pageDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []*models.Asset{}, nil
+		}
+		return nil, fmt.Errorf("failed to read assets: %w", err)
+	}
+
+	var assets []*models.Asset
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if name == "index.md" || name == "metadata.json" || name == "data.jsonl" {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		assets = append(assets, &models.Asset{
+			ID:      name,
+			Name:    name,
+			Size:    info.Size(),
+			Created: info.ModTime(),
+			Path:    name,
+		})
+	}
+	return assets, nil
+}
+
+// Helpers
+
 func parseMarkdownFile(id string, data []byte) *models.Page {
 	content := string(data)
 	title := id
 	var created, modified time.Time
 
-	// Split front matter from content
-	if strings.HasPrefix(content, "---\n") {
-		parts := strings.SplitN(content, "\n---\n", 2)
+	if strings.HasPrefix(content, "---") {
+		parts := strings.SplitN(content, "\n---", 2)
 		if len(parts) == 2 {
-			frontMatter := parts[0][4:] // Remove "---\n"
+			frontMatter := parts[0][4:]
 			content = parts[1]
-
-			// Parse front matter
 			for _, line := range strings.Split(frontMatter, "\n") {
 				switch {
 				case strings.HasPrefix(line, "title:"):
@@ -409,7 +632,6 @@ func parseMarkdownFile(id string, data []byte) *models.Page {
 		}
 	}
 
-	// Use current time if not found in front matter
 	if created.IsZero() {
 		created = time.Now()
 	}
@@ -427,345 +649,18 @@ func parseMarkdownFile(id string, data []byte) *models.Page {
 	}
 }
 
-// formatMarkdownFile formats a page into markdown with YAML front matter.
 func formatMarkdownFile(page *models.Page) []byte {
 	var buf bytes.Buffer
-	buf.WriteString("---\n")
-	buf.WriteString("id: " + page.ID + "\n")
+	buf.WriteString("---")
+	buf.WriteString("\nid: " + page.ID + "\n")
 	buf.WriteString("title: " + page.Title + "\n")
 	buf.WriteString("created: " + page.Created.Format(time.RFC3339) + "\n")
 	buf.WriteString("modified: " + page.Modified.Format(time.RFC3339) + "\n")
 	if len(page.Tags) > 0 {
 		buf.WriteString("tags: [" + strings.Join(page.Tags, ", ") + "]\n")
 	}
-	buf.WriteString("---\n\n")
+	buf.WriteString("---")
+	buf.WriteString("\n\n")
 	buf.WriteString(page.Content)
 	return buf.Bytes()
-}
-
-// Database operations
-// Databases are stored as: {id}/metadata.json (schema) + {id}/data.jsonl (records)
-
-// DatabaseExists checks if a database directory and schema file exist.
-func (fs *FileStore) DatabaseExists(id string) bool {
-	path := fs.databaseSchemaFile(id)
-	_, err := os.Stat(path)
-	return err == nil
-}
-
-// ReadDatabase reads a database schema from disk.
-func (fs *FileStore) ReadDatabase(id string) (*models.Database, error) {
-	filePath := fs.databaseSchemaFile(id)
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("database not found")
-		}
-		return nil, fmt.Errorf("failed to read database: %w", err)
-	}
-
-	var db models.Database
-	if err := json.Unmarshal(data, &db); err != nil {
-		return nil, fmt.Errorf("failed to parse database: %w", err)
-	}
-
-	return &db, nil
-}
-
-// WriteDatabase writes a database schema to disk.
-// Creates {id}/metadata.json in the page directory.
-func (fs *FileStore) WriteDatabase(db *models.Database) error {
-	pageDir := fs.pageDir(db.ID)
-
-	// Create page directory
-	if err := os.MkdirAll(pageDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	data, err := json.MarshalIndent(db, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal database: %w", err)
-	}
-
-	filePath := fs.databaseSchemaFile(db.ID)
-	if err := os.WriteFile(filePath, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write database: %w", err)
-	}
-
-	return nil
-}
-
-// DeleteDatabase deletes a database directory and all its contents.
-func (fs *FileStore) DeleteDatabase(id string) error {
-	pageDir := fs.pageDir(id)
-	if err := os.RemoveAll(pageDir); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to delete database: %w", err)
-	}
-	return nil
-}
-
-// ListDatabases returns all databases in the pages directory.
-// Only considers numeric directories containing metadata.json (not pages).
-func (fs *FileStore) ListDatabases() ([]*models.Database, error) {
-	var databases []*models.Database
-
-	entries, err := os.ReadDir(fs.pagesDir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read pages directory: %w", err)
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		// Only consider numeric IDs (skip non-numeric directories)
-		id := entry.Name()
-		if _, err := strconv.Atoi(id); err != nil {
-			continue
-		}
-
-		// Check if it's a database (has metadata.json)
-		schemaFile := fs.databaseSchemaFile(id)
-		_, err := os.Stat(schemaFile)
-		if os.IsNotExist(err) {
-			continue // Not a database, skip
-		}
-		if err != nil {
-			continue // Error checking, skip
-		}
-
-		db, err := fs.ReadDatabase(id)
-		if err != nil {
-			continue // Log but continue
-		}
-		databases = append(databases, db)
-	}
-
-	return databases, nil
-}
-
-// AppendRecord appends a record to a database's JSONL records file.
-// Stored as: {id}/data.jsonl
-func (fs *FileStore) AppendRecord(id string, record *models.Record) error {
-	pageDir := fs.pageDir(id)
-
-	// Create page directory if needed
-	if err := os.MkdirAll(pageDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	data, err := json.Marshal(record)
-	if err != nil {
-		return fmt.Errorf("failed to marshal record: %w", err)
-	}
-
-	// Open file in append mode, create if doesn't exist
-	filePath := fs.databaseRecordsFile(id)
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("failed to open records file: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-
-	// Write JSON and newline
-	if _, err := f.Write(data); err != nil {
-		return fmt.Errorf("failed to write record: %w", err)
-	}
-	if _, err := f.WriteString("\n"); err != nil {
-		return fmt.Errorf("failed to write newline: %w", err)
-	}
-
-	return nil
-}
-
-// ReadRecords reads all records from a database's JSONL file.
-func (fs *FileStore) ReadRecords(id string) ([]*models.Record, error) {
-	filePath := fs.databaseRecordsFile(id)
-	f, err := os.Open(filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []*models.Record{}, nil // Empty database
-		}
-		return nil, fmt.Errorf("failed to read records: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-
-	var records []*models.Record
-	// Use bufio.Scanner to read line by line efficiently
-	scanner := bufio.NewScanner(f)
-	// Increase buffer size if needed, default is 64k usually enough for records
-
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
-		}
-
-		var record models.Record
-		if err := json.Unmarshal(line, &record); err != nil {
-			// Skip malformed lines or return error?
-			// For robustness, let's log/skip or fail.
-			// Current behavior failed on error, let's keep it.
-			return nil, fmt.Errorf("failed to parse record: %w", err)
-		}
-		records = append(records, &record)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading records file: %w", err)
-	}
-
-	return records, nil
-}
-
-// ReadRecordsPage reads a subset of records from a database's JSONL file.
-// offset: number of records to skip
-// limit: maximum number of records to return
-func (fs *FileStore) ReadRecordsPage(id string, offset, limit int) ([]*models.Record, error) {
-	filePath := fs.databaseRecordsFile(id)
-	f, err := os.Open(filePath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []*models.Record{}, nil // Empty database
-		}
-		return nil, fmt.Errorf("failed to read records: %w", err)
-	}
-	defer func() { _ = f.Close() }()
-
-	var records []*models.Record
-	scanner := bufio.NewScanner(f)
-
-	currentIndex := 0
-	count := 0
-
-	for scanner.Scan() {
-		if currentIndex < offset {
-			currentIndex++
-			continue
-		}
-
-		if limit > 0 && count >= limit {
-			break
-		}
-
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
-		}
-
-		var record models.Record
-		if err := json.Unmarshal(line, &record); err != nil {
-			return nil, fmt.Errorf("failed to parse record: %w", err)
-		}
-		records = append(records, &record)
-
-		currentIndex++
-		count++
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading records file: %w", err)
-	}
-
-	return records, nil
-}
-
-// databaseSchemaFile returns the path for a database schema file.
-// Stored as: {id}/metadata.json
-func (fs *FileStore) databaseSchemaFile(id string) string {
-	return filepath.Join(fs.pageDir(id), "metadata.json")
-}
-
-// databaseRecordsFile returns the path for a database records file.
-// Stored as: {id}/data.jsonl
-func (fs *FileStore) databaseRecordsFile(id string) string {
-	return filepath.Join(fs.pageDir(id), "data.jsonl")
-}
-
-// Asset operations
-// Assets are files stored within a page's directory namespace.
-// Examples: {id}/image.png, {id}/favicon.ico, {id}/document.pdf
-
-// SaveAsset saves an asset file to a page's directory.
-// Returns the relative path from the page directory (e.g., "image.png").
-func (fs *FileStore) SaveAsset(pageID, assetName string, data []byte) (string, error) {
-	pageDir := fs.pageDir(pageID)
-
-	// Create page directory if needed
-	if err := os.MkdirAll(pageDir, 0o755); err != nil {
-		return "", fmt.Errorf("failed to create page directory: %w", err)
-	}
-
-	assetPath := filepath.Join(pageDir, assetName)
-	if err := os.WriteFile(assetPath, data, 0o644); err != nil {
-		return "", fmt.Errorf("failed to write asset: %w", err)
-	}
-
-	return assetName, nil
-}
-
-// ReadAsset reads an asset file from a page's directory.
-func (fs *FileStore) ReadAsset(pageID, assetName string) ([]byte, error) {
-	assetPath := filepath.Join(fs.pageDir(pageID), assetName)
-	data, err := os.ReadFile(assetPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("asset not found")
-		}
-		return nil, fmt.Errorf("failed to read asset: %w", err)
-	}
-	return data, nil
-}
-
-// DeleteAsset deletes an asset file from a page's directory.
-func (fs *FileStore) DeleteAsset(pageID, assetName string) error {
-	assetPath := filepath.Join(fs.pageDir(pageID), assetName)
-	if err := os.Remove(assetPath); err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("asset not found")
-		}
-		return fmt.Errorf("failed to delete asset: %w", err)
-	}
-	return nil
-}
-
-// ListAssets lists all asset files in a page's directory, excluding index.md, metadata.json, and data.jsonl.
-func (fs *FileStore) ListAssets(pageID string) ([]*models.Asset, error) {
-	pageDir := fs.pageDir(pageID)
-	entries, err := os.ReadDir(pageDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []*models.Asset{}, nil // Page doesn't exist yet, return empty list
-		}
-		return nil, fmt.Errorf("failed to read assets: %w", err)
-	}
-
-	var assets []*models.Asset
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue // Skip directories
-		}
-
-		name := entry.Name()
-		// Skip index files
-		if name == "index.md" || name == "metadata.json" || name == "data.jsonl" {
-			continue
-		}
-
-		info, err := entry.Info()
-		if err != nil {
-			continue // Skip if unable to get info
-		}
-
-		assets = append(assets, &models.Asset{
-			ID:      name, // Use filename as ID for now
-			Name:    name,
-			Size:    info.Size(),
-			Created: info.ModTime(),
-			Path:    name,
-		})
-	}
-
-	return assets, nil
 }

@@ -133,7 +133,8 @@ type DeleteRecordResponse struct{}
 
 // ListDatabases returns a list of all databases
 func (h *DatabaseHandler) ListDatabases(ctx context.Context, req ListDatabasesRequest) (*ListDatabasesResponse, error) {
-	databases, err := h.databaseService.ListDatabases()
+	orgID := models.GetOrgID(ctx)
+	databases, err := h.databaseService.ListDatabases(orgID)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to list databases", err)
 	}
@@ -153,7 +154,8 @@ func (h *DatabaseHandler) ListDatabases(ctx context.Context, req ListDatabasesRe
 
 // GetDatabase returns a specific database by ID
 func (h *DatabaseHandler) GetDatabase(ctx context.Context, req GetDatabaseRequest) (*GetDatabaseResponse, error) {
-	db, err := h.databaseService.GetDatabase(req.ID)
+	orgID := models.GetOrgID(ctx)
+	db, err := h.databaseService.GetDatabase(orgID, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}
@@ -175,7 +177,8 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context,
 		return nil, errors.MissingField("title")
 	}
 
-	db, err := h.databaseService.CreateDatabase(req.Title, req.Columns)
+	orgID := models.GetOrgID(ctx)
+	db, err := h.databaseService.CreateDatabase(orgID, req.Title, req.Columns)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create database", err)
 	}
@@ -187,7 +190,8 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context,
 func (h *DatabaseHandler) UpdateDatabase(ctx context.Context,
 	req UpdateDatabaseRequest,
 ) (*UpdateDatabaseResponse, error) {
-	db, err := h.databaseService.UpdateDatabase(req.ID, req.Title, req.Columns)
+	orgID := models.GetOrgID(ctx)
+	db, err := h.databaseService.UpdateDatabase(orgID, req.ID, req.Title, req.Columns)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}
@@ -199,7 +203,8 @@ func (h *DatabaseHandler) UpdateDatabase(ctx context.Context,
 func (h *DatabaseHandler) DeleteDatabase(ctx context.Context,
 	req DeleteDatabaseRequest,
 ) (*DeleteDatabaseResponse, error) {
-	err := h.databaseService.DeleteDatabase(req.ID)
+	orgID := models.GetOrgID(ctx)
+	err := h.databaseService.DeleteDatabase(orgID, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}
@@ -216,7 +221,8 @@ func (h *DatabaseHandler) ListRecords(ctx context.Context, req ListRecordsReques
 		limit = 1000 // Default limit to prevent huge responses
 	}
 
-	records, err := h.databaseService.GetRecordsPage(req.ID, req.Offset, limit)
+	orgID := models.GetOrgID(ctx)
+	records, err := h.databaseService.GetRecordsPage(orgID, req.ID, req.Offset, limit)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}
@@ -236,7 +242,8 @@ func (h *DatabaseHandler) ListRecords(ctx context.Context, req ListRecordsReques
 
 // GetRecord returns a specific record
 func (h *DatabaseHandler) GetRecord(ctx context.Context, req GetRecordRequest) (*GetRecordResponse, error) {
-	record, err := h.databaseService.GetRecord(req.ID, req.RID)
+	orgID := models.GetOrgID(ctx)
+	record, err := h.databaseService.GetRecord(orgID, req.ID, req.RID)
 	if err != nil {
 		return nil, errors.NotFound("record")
 	}
@@ -251,7 +258,8 @@ func (h *DatabaseHandler) GetRecord(ctx context.Context, req GetRecordRequest) (
 
 // CreateRecord creates a new record in a database
 func (h *DatabaseHandler) CreateRecord(ctx context.Context, req CreateRecordRequest) (*CreateRecordResponse, error) {
-	record, err := h.databaseService.CreateRecord(req.ID, req.Data)
+	orgID := models.GetOrgID(ctx)
+	record, err := h.databaseService.CreateRecord(orgID, req.ID, req.Data)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}

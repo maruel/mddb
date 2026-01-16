@@ -16,7 +16,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test WritePage (with numeric ID)
-	page, err := fs.WritePage("1", "Test Title", "# Test Content")
+	page, err := fs.WritePage("", "1", "Test Title", "# Test Content")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
 	}
@@ -29,12 +29,12 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test PageExists
-	if !fs.PageExists("1") {
+	if !fs.PageExists("", "1") {
 		t.Error("page should exist after WritePage")
 	}
 
 	// Test ReadPage
-	readPage, err := fs.ReadPage("1")
+	readPage, err := fs.ReadPage("", "1")
 	if err != nil {
 		t.Fatalf("failed to read page: %v", err)
 	}
@@ -42,12 +42,12 @@ func TestFileStorePageOperations(t *testing.T) {
 	if readPage.Title != "Test Title" {
 		t.Errorf("expected title 'Test Title', got %q", readPage.Title)
 	}
-	if readPage.Content != "\n# Test Content" {
-		t.Errorf("expected content '\\n# Test Content', got %q", readPage.Content)
+	if readPage.Content != "\n\n# Test Content" {
+		t.Errorf("expected content '\n\n# Test Content', got %q", readPage.Content)
 	}
 
 	// Test UpdatePage
-	updated, err := fs.UpdatePage("1", "Updated Title", "# Updated Content")
+	updated, err := fs.UpdatePage("", "1", "Updated Title", "# Updated Content")
 	if err != nil {
 		t.Fatalf("failed to update page: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Verify update persisted
-	readUpdated, err := fs.ReadPage("1")
+	readUpdated, err := fs.ReadPage("", "1")
 	if err != nil {
 		t.Fatalf("failed to read updated page: %v", err)
 	}
@@ -67,17 +67,17 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test DeletePage
-	err = fs.DeletePage("1")
+	err = fs.DeletePage("", "1")
 	if err != nil {
 		t.Fatalf("failed to delete page: %v", err)
 	}
 
-	if fs.PageExists("1") {
+	if fs.PageExists("", "1") {
 		t.Error("page should not exist after DeletePage")
 	}
 
 	// Test error handling for non-existent page
-	_, err = fs.ReadPage("999")
+	_, err = fs.ReadPage("", "999")
 	if err == nil {
 		t.Error("expected error reading non-existent page")
 	}
@@ -101,14 +101,14 @@ func TestFileStoreListPages(t *testing.T) {
 	}
 
 	for _, p := range pages {
-		_, err := fs.WritePage(p.id, p.title, "Content")
+		_, err := fs.WritePage("", p.id, p.title, "Content")
 		if err != nil {
 			t.Fatalf("failed to write page %s: %v", p.id, err)
 		}
 	}
 
 	// List pages
-	listed, err := fs.ListPages()
+	listed, err := fs.ListPages("")
 	if err != nil {
 		t.Fatalf("failed to list pages: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestMarkdownFormatting(t *testing.T) {
 	}
 
 	// Write page with specific content
-	_, err = fs.WritePage("1", "Format Test", "# Content\n\nWith multiple lines")
+	_, err = fs.WritePage("", "1", "Format Test", "# Content\n\nWith multiple lines")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
 	}
@@ -189,7 +189,7 @@ func splitN(s, sep string, n int) []string {
 	for i := 0; i < n && s != ""; i++ {
 		idx := -1
 		for j := range len(s) - len(sep) + 1 {
-			if s[j:j+len(sep)] == sep {
+			if j+len(sep) <= len(s) && s[j:j+len(sep)] == sep {
 				idx = j
 				break
 			}

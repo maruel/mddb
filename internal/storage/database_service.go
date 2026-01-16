@@ -24,15 +24,15 @@ func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cac
 }
 
 // GetDatabase retrieves a database by ID.
-func (s *DatabaseService) GetDatabase(id string) (*models.Database, error) {
+func (s *DatabaseService) GetDatabase(orgID, id string) (*models.Database, error) {
 	if id == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
-	return s.fileStore.ReadDatabase(id)
+	return s.fileStore.ReadDatabase(orgID, id)
 }
 
 // CreateDatabase creates a new database with a generated numeric ID.
-func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) (*models.Database, error) {
+func (s *DatabaseService) CreateDatabase(orgID, title string, columns []models.Column) (*models.Database, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
@@ -41,7 +41,7 @@ func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) 
 	}
 
 	// Generate numeric ID (monotonically increasing)
-	id := s.fileStore.NextID()
+	id := s.fileStore.NextID(orgID)
 
 	// Ensure each column has an ID
 	for i := range columns {
@@ -64,7 +64,7 @@ func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) 
 		Path:     "metadata.json",
 	}
 
-	if err := s.fileStore.WriteDatabase(db); err != nil {
+	if err := s.fileStore.WriteDatabase(orgID, db); err != nil {
 		return nil, err
 	}
 
@@ -81,7 +81,7 @@ func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) 
 }
 
 // UpdateDatabase updates an existing database's schema.
-func (s *DatabaseService) UpdateDatabase(id, title string, columns []models.Column) (*models.Database, error) {
+func (s *DatabaseService) UpdateDatabase(orgID, id, title string, columns []models.Column) (*models.Database, error) {
 	if id == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -92,7 +92,7 @@ func (s *DatabaseService) UpdateDatabase(id, title string, columns []models.Colu
 		return nil, fmt.Errorf("at least one column is required")
 	}
 
-	db, err := s.fileStore.ReadDatabase(id)
+	db, err := s.fileStore.ReadDatabase(orgID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (s *DatabaseService) UpdateDatabase(id, title string, columns []models.Colu
 	db.Columns = columns
 	db.Modified = time.Now()
 
-	if err := s.fileStore.WriteDatabase(db); err != nil {
+	if err := s.fileStore.WriteDatabase(orgID, db); err != nil {
 		return nil, err
 	}
 
@@ -118,11 +118,11 @@ func (s *DatabaseService) UpdateDatabase(id, title string, columns []models.Colu
 }
 
 // DeleteDatabase deletes a database and all its records.
-func (s *DatabaseService) DeleteDatabase(id string) error {
+func (s *DatabaseService) DeleteDatabase(orgID, id string) error {
 	if id == "" {
 		return fmt.Errorf("database id cannot be empty")
 	}
-	if err := s.fileStore.DeleteDatabase(id); err != nil {
+	if err := s.fileStore.DeleteDatabase(orgID, id); err != nil {
 		return err
 	}
 
@@ -140,18 +140,18 @@ func (s *DatabaseService) DeleteDatabase(id string) error {
 }
 
 // ListDatabases returns all databases.
-func (s *DatabaseService) ListDatabases() ([]*models.Database, error) {
-	return s.fileStore.ListDatabases()
+func (s *DatabaseService) ListDatabases(orgID string) ([]*models.Database, error) {
+	return s.fileStore.ListDatabases(orgID)
 }
 
 // CreateRecord creates a new record in a database.
-func (s *DatabaseService) CreateRecord(databaseID string, data map[string]interface{}) (*models.Record, error) {
+func (s *DatabaseService) CreateRecord(orgID, databaseID string, data map[string]interface{}) (*models.Record, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
 
 	// Verify database exists
-	if !s.fileStore.DatabaseExists(databaseID) {
+	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
 	}
 
@@ -169,7 +169,7 @@ func (s *DatabaseService) CreateRecord(databaseID string, data map[string]interf
 		Modified: now,
 	}
 
-	if err := s.fileStore.AppendRecord(databaseID, record); err != nil {
+	if err := s.fileStore.AppendRecord(orgID, databaseID, record); err != nil {
 		return nil, err
 	}
 
@@ -186,7 +186,7 @@ func (s *DatabaseService) CreateRecord(databaseID string, data map[string]interf
 }
 
 // GetRecords retrieves all records from a database.
-func (s *DatabaseService) GetRecords(databaseID string) ([]*models.Record, error) {
+func (s *DatabaseService) GetRecords(orgID, databaseID string) ([]*models.Record, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -196,11 +196,11 @@ func (s *DatabaseService) GetRecords(databaseID string) ([]*models.Record, error
 	}
 
 	// Verify database exists
-	if !s.fileStore.DatabaseExists(databaseID) {
+	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
 	}
 
-	records, err := s.fileStore.ReadRecords(databaseID)
+	records, err := s.fileStore.ReadRecords(orgID, databaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -210,21 +210,21 @@ func (s *DatabaseService) GetRecords(databaseID string) ([]*models.Record, error
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
-func (s *DatabaseService) GetRecordsPage(databaseID string, offset, limit int) ([]*models.Record, error) {
+func (s *DatabaseService) GetRecordsPage(orgID, databaseID string, offset, limit int) ([]*models.Record, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
 
 	// Verify database exists
-	if !s.fileStore.DatabaseExists(databaseID) {
+	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
 	}
 
-	return s.fileStore.ReadRecordsPage(databaseID, offset, limit)
+	return s.fileStore.ReadRecordsPage(orgID, databaseID, offset, limit)
 }
 
 // GetRecord retrieves a specific record by ID.
-func (s *DatabaseService) GetRecord(databaseID, recordID string) (*models.Record, error) {
+func (s *DatabaseService) GetRecord(orgID, databaseID, recordID string) (*models.Record, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -232,7 +232,7 @@ func (s *DatabaseService) GetRecord(databaseID, recordID string) (*models.Record
 		return nil, fmt.Errorf("record id cannot be empty")
 	}
 
-	records, err := s.fileStore.ReadRecords(databaseID)
+	records, err := s.fileStore.ReadRecords(orgID, databaseID)
 	if err != nil {
 		return nil, err
 	}

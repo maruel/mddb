@@ -30,3 +30,11 @@ export interface Commit {
   message: string;
   timestamp: string;
 }
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  organization_id: string;
+  role: 'admin' | 'editor' | 'viewer';
+}

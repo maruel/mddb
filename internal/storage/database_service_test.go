@@ -21,7 +21,7 @@ func TestDatabaseService_Create(t *testing.T) {
 		{Name: "status", Type: "select", Options: []string{"todo", "done"}},
 	}
 
-	db, err := service.CreateDatabase("Test DB", columns)
+	db, err := service.CreateDatabase("", "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := service.CreateDatabase(tt.title, tt.columns)
+			_, err := service.CreateDatabase("", tt.title, tt.columns)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CreateDatabase() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -104,13 +104,13 @@ func TestDatabaseService_Get(t *testing.T) {
 	columns := []models.Column{
 		{Name: "name", Type: "text"},
 	}
-	created, err := service.CreateDatabase("Test DB", columns)
+	created, err := service.CreateDatabase("", "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	// Retrieve it
-	got, err := service.GetDatabase(created.ID)
+	got, err := service.GetDatabase("", created.ID)
 	if err != nil {
 		t.Fatalf("Failed to get database: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestDatabaseService_List(t *testing.T) {
 
 	for _, title := range titles {
 		columns := []models.Column{{Name: "col", Type: "text"}}
-		db, err := service.CreateDatabase(title, columns)
+		db, err := service.CreateDatabase("", title, columns)
 		if err != nil {
 			t.Fatalf("Failed to create database: %v", err)
 		}
@@ -147,7 +147,7 @@ func TestDatabaseService_List(t *testing.T) {
 	}
 
 	// List databases
-	databases, err := service.ListDatabases()
+	databases, err := service.ListDatabases("")
 	if err != nil {
 		t.Fatalf("Failed to list databases: %v", err)
 	}
@@ -182,19 +182,19 @@ func TestDatabaseService_Delete(t *testing.T) {
 
 	// Create a database
 	columns := []models.Column{{Name: "col", Type: "text"}}
-	created, err := service.CreateDatabase("Test DB", columns)
+	created, err := service.CreateDatabase("", "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	// Delete it
-	err = service.DeleteDatabase(created.ID)
+	err = service.DeleteDatabase("", created.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete database: %v", err)
 	}
 
 	// Verify it's gone
-	_, err = service.GetDatabase(created.ID)
+	_, err = service.GetDatabase("", created.ID)
 	if err == nil {
 		t.Error("Database should not exist after deletion")
 	}
@@ -215,7 +215,7 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 		{Name: "title", Type: "text"},
 		{Name: "status", Type: "select"},
 	}
-	db, err := service.CreateDatabase("Test DB", columns)
+	db, err := service.CreateDatabase("", "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 		"title":  "My Task",
 		"status": "todo",
 	}
-	record, err := service.CreateRecord(db.ID, data)
+	record, err := service.CreateRecord("", db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)
 	}
@@ -250,7 +250,7 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 
 	// Create a database
 	columns := []models.Column{{Name: "name", Type: "text"}}
-	db, err := service.CreateDatabase("Test DB", columns)
+	db, err := service.CreateDatabase("", "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -259,14 +259,14 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 	recordCount := 3
 	for i := 0; i < recordCount; i++ {
 		data := map[string]interface{}{"name": "Record " + string(rune(i))}
-		_, err := service.CreateRecord(db.ID, data)
+		_, err := service.CreateRecord("", db.ID, data)
 		if err != nil {
 			t.Fatalf("Failed to create record: %v", err)
 		}
 	}
 
 	// Get all records
-	records, err := service.GetRecords(db.ID)
+	records, err := service.GetRecords("", db.ID)
 	if err != nil {
 		t.Fatalf("Failed to get records: %v", err)
 	}
@@ -288,20 +288,20 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 
 	// Create a database
 	columns := []models.Column{{Name: "name", Type: "text"}}
-	db, err := service.CreateDatabase("Test DB", columns)
+	db, err := service.CreateDatabase("", "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	// Create a record
 	data := map[string]interface{}{"name": "Test Record"}
-	created, err := service.CreateRecord(db.ID, data)
+	created, err := service.CreateRecord("", db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)
 	}
 
 	// Retrieve it
-	got, err := service.GetRecord(db.ID, created.ID)
+	got, err := service.GetRecord("", db.ID, created.ID)
 	if err != nil {
 		t.Fatalf("Failed to get record: %v", err)
 	}

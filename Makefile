@@ -30,7 +30,7 @@ dev: build
 	mddb -port $(PORT) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
 
 test:
-	go test ./...
+	go test -cover ./...
 
 lint:
 	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)

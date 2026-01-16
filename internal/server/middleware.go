@@ -70,3 +70,33 @@ func AuthMiddleware(userService *storage.UserService, jwtSecret []byte) func(htt
 		})
 	}
 }
+
+// RequireRole ensures the authenticated user has at least the required role.
+func RequireRole(requiredRole models.UserRole) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, ok := r.Context().Value(models.UserKey).(*models.User)
+			if !ok {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			if !hasPermission(user.Role, requiredRole) {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func hasPermission(userRole, requiredRole models.UserRole) bool {
+	weights := map[models.UserRole]int{
+		models.RoleViewer: 1,
+		models.RoleEditor: 2,
+		models.RoleAdmin:  3,
+	}
+
+	return weights[userRole] >= weights[requiredRole]
+}

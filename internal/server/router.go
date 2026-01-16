@@ -8,13 +8,14 @@ import (
 	"net/http"
 
 	"github.com/maruel/mddb/frontend"
+	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/server/handlers"
 	"github.com/maruel/mddb/internal/storage"
 )
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
-func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, jwtSecret string) http.Handler {
+func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, jwtSecret string) http.Handler {
 	cache := storage.NewCache()
 	mux := &http.ServeMux{}
 	ph := handlers.NewPageHandler(fileStore, gitService, cache)
@@ -22,7 +23,8 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	nh := handlers.NewNodeHandler(fileStore, gitService, cache)
 	ah := handlers.NewAssetHandler(fileStore, gitService)
 	sh := handlers.NewSearchHandler(fileStore)
-	authh := handlers.NewAuthHandler(userService, jwtSecret)
+	authh := handlers.NewAuthHandler(userService, orgService, jwtSecret)
+	uh := handlers.NewUserHandler(userService)
 
 	// Health check
 	mux.Handle("/api/health", Wrap(handlers.Health))
@@ -32,44 +34,48 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	mux.Handle("POST /api/auth/register", Wrap(authh.Register))
 	mux.Handle("GET /api/auth/me", Wrap(authh.Me))
 
+	// User management endpoints
+	mux.Handle("GET /api/users", RequireRole(models.RoleAdmin)(Wrap(uh.ListUsers)))
+	mux.Handle("PUT /api/users/role", RequireRole(models.RoleAdmin)(Wrap(uh.UpdateUserRole)))
+
 	// Unified Nodes endpoints
-	mux.Handle("GET /api/nodes", Wrap(nh.ListNodes))
-	mux.Handle("GET /api/nodes/{id}", Wrap(nh.GetNode))
-	mux.Handle("POST /api/nodes", Wrap(nh.CreateNode))
+	mux.Handle("GET /api/nodes", RequireRole(models.RoleViewer)(Wrap(nh.ListNodes)))
+	mux.Handle("GET /api/nodes/{id}", RequireRole(models.RoleViewer)(Wrap(nh.GetNode)))
+	mux.Handle("POST /api/nodes", RequireRole(models.RoleEditor)(Wrap(nh.CreateNode)))
 
 	// Pages endpoints
-	mux.Handle("GET /api/pages", Wrap(ph.ListPages))
-	mux.Handle("GET /api/pages/{id}", Wrap(ph.GetPage))
-	mux.Handle("GET /api/pages/{id}/history", Wrap(ph.GetPageHistory))
-	mux.Handle("GET /api/pages/{id}/history/{hash}", Wrap(ph.GetPageVersion))
-	mux.Handle("POST /api/pages", Wrap(ph.CreatePage))
-	mux.Handle("PUT /api/pages/{id}", Wrap(ph.UpdatePage))
-	mux.Handle("DELETE /api/pages/{id}", Wrap(ph.DeletePage))
+	mux.Handle("GET /api/pages", RequireRole(models.RoleViewer)(Wrap(ph.ListPages)))
+	mux.Handle("GET /api/pages/{id}", RequireRole(models.RoleViewer)(Wrap(ph.GetPage)))
+	mux.Handle("GET /api/pages/{id}/history", RequireRole(models.RoleViewer)(Wrap(ph.GetPageHistory)))
+	mux.Handle("GET /api/pages/{id}/history/{hash}", RequireRole(models.RoleViewer)(Wrap(ph.GetPageVersion)))
+	mux.Handle("POST /api/pages", RequireRole(models.RoleEditor)(Wrap(ph.CreatePage)))
+	mux.Handle("PUT /api/pages/{id}", RequireRole(models.RoleEditor)(Wrap(ph.UpdatePage)))
+	mux.Handle("DELETE /api/pages/{id}", RequireRole(models.RoleEditor)(Wrap(ph.DeletePage)))
 
 	// Database endpoints
-	mux.Handle("GET /api/databases", Wrap(dh.ListDatabases))
-	mux.Handle("GET /api/databases/{id}", Wrap(dh.GetDatabase))
-	mux.Handle("POST /api/databases", Wrap(dh.CreateDatabase))
-	mux.Handle("PUT /api/databases/{id}", Wrap(dh.UpdateDatabase))
-	mux.Handle("DELETE /api/databases/{id}", Wrap(dh.DeleteDatabase))
+	mux.Handle("GET /api/databases", RequireRole(models.RoleViewer)(Wrap(dh.ListDatabases)))
+	mux.Handle("GET /api/databases/{id}", RequireRole(models.RoleViewer)(Wrap(dh.GetDatabase)))
+	mux.Handle("POST /api/databases", RequireRole(models.RoleEditor)(Wrap(dh.CreateDatabase)))
+	mux.Handle("PUT /api/databases/{id}", RequireRole(models.RoleEditor)(Wrap(dh.UpdateDatabase)))
+	mux.Handle("DELETE /api/databases/{id}", RequireRole(models.RoleEditor)(Wrap(dh.DeleteDatabase)))
 
 	// Records endpoints
-	mux.Handle("GET /api/databases/{id}/records", Wrap(dh.ListRecords))
-	mux.Handle("GET /api/databases/{id}/records/{rid}", Wrap(dh.GetRecord))
-	mux.Handle("POST /api/databases/{id}/records", Wrap(dh.CreateRecord))
-	mux.Handle("PUT /api/databases/{id}/records/{rid}", Wrap(dh.UpdateRecord))
-	mux.Handle("DELETE /api/databases/{id}/records/{rid}", Wrap(dh.DeleteRecord))
+	mux.Handle("GET /api/databases/{id}/records", RequireRole(models.RoleViewer)(Wrap(dh.ListRecords)))
+	mux.Handle("GET /api/databases/{id}/records/{rid}", RequireRole(models.RoleViewer)(Wrap(dh.GetRecord)))
+	mux.Handle("POST /api/databases/{id}/records", RequireRole(models.RoleEditor)(Wrap(dh.CreateRecord)))
+	mux.Handle("PUT /api/databases/{id}/records/{rid}", RequireRole(models.RoleEditor)(Wrap(dh.UpdateRecord)))
+	mux.Handle("DELETE /api/databases/{id}/records/{rid}", RequireRole(models.RoleEditor)(Wrap(dh.DeleteRecord)))
 
 	// Assets endpoints (page-based)
-	mux.Handle("GET /api/pages/{id}/assets", Wrap(ah.ListPageAssets))
-	mux.HandleFunc("POST /api/pages/{id}/assets", ah.UploadPageAssetHandler)
-	mux.Handle("DELETE /api/pages/{id}/assets/{name}", Wrap(ah.DeletePageAsset))
+	mux.Handle("GET /api/pages/{id}/assets", RequireRole(models.RoleViewer)(Wrap(ah.ListPageAssets)))
+	mux.Handle("POST /api/pages/{id}/assets", RequireRole(models.RoleEditor)(http.HandlerFunc(ah.UploadPageAssetHandler)))
+	mux.Handle("DELETE /api/pages/{id}/assets/{name}", RequireRole(models.RoleEditor)(Wrap(ah.DeletePageAsset)))
 
 	// Search endpoint
-	mux.Handle("POST /api/search", Wrap(sh.Search))
+	mux.Handle("POST /api/search", RequireRole(models.RoleViewer)(Wrap(sh.Search)))
 
 	// File serving (raw asset files)
-	mux.HandleFunc("GET /assets/{id}/{name}", ah.ServeAssetFile)
+	mux.HandleFunc("GET /assets/{orgID}/{id}/{name}", ah.ServeAssetFile)
 
 	// Serve embedded SolidJS frontend with SPA fallback
 	mux.Handle("/", NewEmbeddedSPAHandler(frontend.Files))

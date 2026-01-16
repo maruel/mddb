@@ -13,13 +13,15 @@ import (
 // AuthHandler handles authentication requests.
 type AuthHandler struct {
 	userService *storage.UserService
+	orgService  *storage.OrganizationService
 	jwtSecret   []byte
 }
 
 // NewAuthHandler creates a new auth handler.
-func NewAuthHandler(userService *storage.UserService, jwtSecret string) *AuthHandler {
+func NewAuthHandler(userService *storage.UserService, orgService *storage.OrganizationService, jwtSecret string) *AuthHandler {
 	return &AuthHandler{
 		userService: userService,
+		orgService:  orgService,
 		jwtSecret:   []byte(jwtSecret),
 	}
 }
@@ -77,9 +79,39 @@ func (h *AuthHandler) Register(ctx context.Context, req RegisterRequest) (*Login
 		return nil, errors.NewAPIError(409, errors.ErrConflict, "User already exists")
 	}
 
-	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name)
+	// If this is the first user, create a default organization and make them an admin
+	count, err := h.userService.CountUsers()
+	if err != nil {
+		return nil, errors.InternalWithError("Failed to count users", err)
+	}
+
+	role := models.RoleViewer
+	orgID := ""
+	if count == 0 {
+		role = models.RoleAdmin
+		org, err := h.orgService.CreateOrganization("Default Organization")
+		if err != nil {
+			return nil, errors.InternalWithError("Failed to create default organization", err)
+		}
+		orgID = org.ID
+	} else {
+		// For now, new users join the first organization or none
+		// In a real app, we'd have invitations or org selection
+		orgs, err := h.orgService.ListOrganizations()
+		if err == nil && len(orgs) > 0 {
+			orgID = orgs[0].ID
+		}
+	}
+
+	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name, role)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create user", err)
+	}
+
+	// Update user with organization ID
+	user.OrganizationID = orgID
+	if err := h.userService.UpdateUserOrg(user.ID, orgID); err != nil {
+		return nil, errors.InternalWithError("Failed to update user organization", err)
 	}
 
 	token, err := h.generateToken(user)

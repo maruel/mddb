@@ -37,6 +37,8 @@ const (
 	ErrConflict ErrorCode = "CONFLICT"
 	// ErrUnauthorized is returned when authentication is missing or invalid
 	ErrUnauthorized ErrorCode = "UNAUTHORIZED"
+	// ErrForbidden is returned when a user has insufficient permissions
+	ErrForbidden ErrorCode = "FORBIDDEN"
 )
 
 // ErrorWithStatus is an error that includes an HTTP status code and error code.
@@ -130,6 +132,14 @@ func NotFound(resource string) *APIError {
 // BadRequest creates a 400 Bad Request error.
 func BadRequest(message string) *APIError {
 	return NewAPIError(http.StatusBadRequest, ErrValidationFailed, message)
+}
+
+// Forbidden creates a 403 Forbidden error.
+func Forbidden(message string) *APIError {
+	if message == "" {
+		message = "Forbidden: insufficient permissions"
+	}
+	return NewAPIError(http.StatusForbidden, ErrForbidden, message)
 }
 
 // MissingField creates a 400 error for a missing required field.

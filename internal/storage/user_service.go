@@ -30,15 +30,27 @@ func NewUserService(rootDir string) (*UserService, error) {
 	}, nil
 }
 
+type userStorage struct {
+	models.User
+	PasswordHash string `json:"password_hash"`
+}
+
 // CreateUser creates a new user.
-func (s *UserService) CreateUser(email, password, name string) (*models.User, error) {
+func (s *UserService) CreateUser(email, password, name string, role models.UserRole) (*models.User, error) {
 	if email == "" || password == "" {
 		return nil, fmt.Errorf("email and password are required")
 	}
 
-	// Check if user already exists (by scanning directory for now, or using a secondary index if needed)
-	// For simplicity, we use email as a filename-safe ID or hash it.
-	id := generateShortID() // We can use the same utility as for records if available
+	if role == "" {
+		role = models.RoleViewer
+	}
+
+	// Check if user already exists
+	if _, err := s.GetUserByEmail(email); err == nil {
+		return nil, fmt.Errorf("user already exists")
+	}
+
+	id := generateShortID()
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -49,34 +61,78 @@ func (s *UserService) CreateUser(email, password, name string) (*models.User, er
 	user := &models.User{
 		ID:           id,
 		Email:        email,
-		PasswordHash: string(hash),
 		Name:         name,
-		Role:         models.RoleViewer, // Default role
+		Role:         role,
 		Created:      now,
 		Modified:     now,
 	}
 
-	if err := s.saveUser(user); err != nil {
+	if err := s.saveUser(user, string(hash)); err != nil {
 		return nil, err
 	}
 
 	return user, nil
 }
 
+// CountUsers returns the total number of users.
+func (s *UserService) CountUsers() (int, error) {
+	entries, err := os.ReadDir(s.usersDir)
+	if err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// UpdateUserRole updates the role of a user.
+func (s *UserService) UpdateUserRole(id string, role models.UserRole) error {
+	user, hash, err := s.getUserWithHash(id)
+	if err != nil {
+		return err
+	}
+
+	user.Role = role
+	user.Modified = time.Now()
+	return s.saveUser(user, hash)
+}
+
+// UpdateUserOrg updates the organization of a user.
+func (s *UserService) UpdateUserOrg(id string, orgID string) error {
+	user, hash, err := s.getUserWithHash(id)
+	if err != nil {
+		return err
+	}
+
+	user.OrganizationID = orgID
+	user.Modified = time.Now()
+	return s.saveUser(user, hash)
+}
+
 // GetUser retrieves a user by ID.
 func (s *UserService) GetUser(id string) (*models.User, error) {
+	user, _, err := s.getUserWithHash(id)
+	return user, err
+}
+
+func (s *UserService) getUserWithHash(id string) (*models.User, string, error) {
 	filePath := filepath.Join(s.usersDir, id+".json")
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, "", fmt.Errorf("user not found")
 	}
 
-	var user models.User
-	if err := json.Unmarshal(data, &user); err != nil {
-		return nil, fmt.Errorf("failed to parse user: %w", err)
+	var stored userStorage
+	if err := json.Unmarshal(data, &stored); err != nil {
+		return nil, "", fmt.Errorf("failed to parse user: %w", err)
 	}
 
-	return &user, nil
+	return &stored.User, stored.PasswordHash, nil
 }
 
 // GetUserByEmail retrieves a user by email.
@@ -102,27 +158,62 @@ func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
 
 // Authenticate verifies user credentials.
 func (s *UserService) Authenticate(email, password string) (*models.User, error) {
-	user, err := s.GetUserByEmail(email)
+	entries, err := os.ReadDir(s.usersDir)
 	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, err
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
-	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		user, hash, err := s.getUserWithHash(entry.Name()[:len(entry.Name())-5])
+		if err == nil && user.Email == email {
+			err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+			if err != nil {
+				return nil, fmt.Errorf("invalid credentials")
+			}
+			return user, nil
+		}
 	}
 
-	return user, nil
+	return nil, fmt.Errorf("invalid credentials")
 }
 
-func (s *UserService) saveUser(user *models.User) error {
-	data, err := json.MarshalIndent(user, "", "  ")
+func (s *UserService) saveUser(user *models.User, passwordHash string) error {
+	stored := userStorage{
+		User:         *user,
+		PasswordHash: passwordHash,
+	}
+	data, err := json.MarshalIndent(stored, "", "  ")
 	if err != nil {
 		return err
 	}
 
 	filePath := filepath.Join(s.usersDir, user.ID+".json")
 	return os.WriteFile(filePath, data, 0o600)
+}
+
+// ListUsers returns all users.
+func (s *UserService) ListUsers() ([]*models.User, error) {
+	entries, err := os.ReadDir(s.usersDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var users []*models.User
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		user, err := s.GetUser(entry.Name()[:len(entry.Name())-5])
+		if err == nil {
+			users = append(users, user)
+		}
+	}
+	return users, nil
 }
 
 // generateShortID is a placeholder for a real ID generator if not available in utils.go

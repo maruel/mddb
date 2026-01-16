@@ -21,7 +21,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	dbID := fs.NextID()
+	dbID := fs.NextID("")
 	db := &models.Database{
 		ID:       dbID,
 		Title:    "Benchmark Database",
@@ -33,7 +33,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		},
 	}
 
-	if err := fs.WriteDatabase(db); err != nil {
+	if err := fs.WriteDatabase("", db); err != nil {
 		b.Fatal(err)
 	}
 
@@ -49,7 +49,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 					"c2": i,
 				},
 			}
-			if err := fs.AppendRecord(dbID, record); err != nil {
+			if err := fs.AppendRecord("", dbID, record); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -60,9 +60,9 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// To make this isolated, we can pre-populate a DB with N records
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a database with 1000 records
-		readDBID := fs.NextID()
+		readDBID := fs.NextID("")
 		readDB := &models.Database{ID: readDBID, Title: "Read Bench", Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteDatabase(readDB); err != nil {
+		if err := fs.WriteDatabase("", readDB); err != nil {
 			b.Fatal(err)
 		}
 		for i := 0; i < 1000; i++ {
@@ -72,14 +72,14 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
-			if err := fs.AppendRecord(readDBID, record); err != nil {
+			if err := fs.AppendRecord("", readDBID, record); err != nil {
 				b.Fatal(err)
 			}
 		}
 
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			records, err := fs.ReadRecords(readDBID)
+			records, err := fs.ReadRecords("", readDBID)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -93,7 +93,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := "read_bench_page"
 		readDB := &models.Database{ID: readDBID, Title: "Read Bench Page", Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteDatabase(readDB); err != nil {
+		if err := fs.WriteDatabase("", readDB); err != nil {
 			b.Fatal(err)
 		}
 		// Write 10,000 records
@@ -104,7 +104,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
-			if err := fs.AppendRecord(readDBID, record); err != nil {
+			if err := fs.AppendRecord("", readDBID, record); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -112,7 +112,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			// Read 50 records from middle
-			records, err := fs.ReadRecordsPage(readDBID, 5000, 50)
+			records, err := fs.ReadRecordsPage("", readDBID, 5000, 50)
 			if err != nil {
 				b.Fatal(err)
 			}
