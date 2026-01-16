@@ -70,22 +70,31 @@ When running mddb, you can customize:
 
 ## File Structure
 
-All your data is stored in simple, human-readable files:
+All your data is stored in simple, human-readable directories:
 
 ```
 data/
 └── pages/
-    ├── my-page.md              # A document
-    ├── tasks.db.json           # Database schema
-    ├── tasks.db.jsonl          # Database records
-    ├── project/
-    │   ├── notes.md
-    │   └── contacts.db.json
-    └── photo.png               # Attachments
+    ├── 1/                      # First page (document)
+    │   ├── index.md
+    │   └── favicon.ico
+    ├── 2/                      # Second page (database)
+    │   ├── index.md
+    │   ├── metadata.json       # Database schema
+    │   ├── data.jsonl          # Database records
+    │   └── favicon.png
+    ├── 3/                      # Third page
+    │   ├── index.md
+    │   ├── photo.png           # Page assets
+    │   └── diagram.svg
+    └── 4/subfolder/5/          # Nested pages
+        ├── index.md
+        └── favicon.ico
 ```
 
 You can:
-- Edit `.md` files in any text editor
+- Edit `index.md` files in any text editor
+- Add images/assets directly in each page's directory
 - Back them up with standard tools
 - Share them via Git or cloud storage
 

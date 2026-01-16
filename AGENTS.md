@@ -8,13 +8,15 @@ mddb is a Notion-like document and database system. Frontend built with SolidJS,
 as markdown files and images.
 
 **Storage Model:**
-- All content lives in the `pages/` directory
-- Pages: Files ending with `.md` (e.g., `getting-started.md`)
-- Databases: Two-file format per database:
-  - `.db.json` - Schema + column metadata (e.g., `tasks.db.json`)
-  - `.db.jsonl` - Records, one per line (e.g., `tasks.db.jsonl`)
-- Assets: Any file that doesn't end with `.md` or `.db.*` (e.g., `diagram.png`, `chart.svg`)
-- Everything can be organized in subdirectories for hierarchical organization
+- All content lives in the `pages/` directory as numbered directories (1, 2, 3, etc.)
+- Each directory is a "page" containing:
+  - `index.md` - Content with YAML front matter for metadata (title, tags, etc.)
+  - `favicon.ico` (optional) - Icon for the page (can be .ico, .avif, or .png)
+  - `metadata.json` (databases only) - Database schema and column definitions
+  - `data.jsonl` (databases only) - Database records, one per line
+  - Other assets (images, files, etc.) - Images, attachments, etc.
+- Each page/database is a directory with its own namespace for contained assets
+- Hierarchical organization via nested directories (e.g., `1/subfolder/2/index.md`)
 
 See README.md for project overview and PLAN.md for implementation roadmap.
 
@@ -63,11 +65,14 @@ mddb/
 │   ├── tsconfig.json           # TypeScript configuration
 │   └── package.json            # Frontend dependencies
 ├── data/                       # Runtime data directory
-│   └── pages/                  # All content (pages, databases, assets)
+│   └── pages/                  # All content as numbered directories (1, 2, 3, etc.)
 ├── docs/                       # Documentation
+│   ├── INDEX.md                # Documentation index
 │   ├── PLAN.md                 # Implementation roadmap
-│   ├── PHASE2_IMPLEMENTATION.md# Phase 2 details
-│   └── LINTERS.md              # Linting rules
+│   ├── COMPLETED.md            # What's been implemented
+│   ├── QUICKSTART.md           # Quick start guide
+│   ├── LINTERS.md              # Linting rules and code quality
+│   └── MIGRATION_PNPM.md       # Package manager migration details
 ├── Makefile                    # Common development commands
 ├── AGENTS.md                   # This file - Development guidelines
 └── README.md                   # Project overview and API documentation

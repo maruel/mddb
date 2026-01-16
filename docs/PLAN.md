@@ -17,7 +17,9 @@
 
 ## Overview
 
-mddb is a Notion-like collaborative document and database system where all data is persisted as markdown files and JSON. The frontend (SolidJS) provides a rich user experience while the backend (Go) handles file operations, API endpoints, and business logic.
+mddb is a Notion-like document and database system where all data is persisted as markdown files and JSON in a directory-based structure. The frontend (SolidJS) provides a rich user experience while the backend (Go) handles file operations, API endpoints, and business logic.
+
+**Key Principle**: Every page—whether a document or database—is a directory with a monotonically increasing numeric ID. This provides a clean namespace for assets and supports unlimited scaling.
 
 ## Requirements
 
@@ -70,42 +72,56 @@ mddb is a Notion-like collaborative document and database system where all data 
 ```
 Project Root/
 └── pages/
-    ├── index.md              # Pages end with .md
-    ├── getting-started.md
-    ├── tasks.db.json         # Database schema (JSON)
-    ├── tasks.db.jsonl        # Database records (JSON Lines)
-    ├── contacts.db.json
-    ├── contacts.db.jsonl
-    ├── image-1.png           # Assets are anything else
-    ├── image-2.jpg
-    └── subfolder/
-        ├── nested-page.md
-        ├── notes.db.json
-        ├── notes.db.jsonl
-        └── diagram.svg
+    ├── 1/                    # First page (document)
+    │   ├── index.md
+    │   ├── favicon.ico
+    │   └── image-1.png       # Page assets
+    ├── 2/                    # Second page (database)
+    │   ├── index.md
+    │   ├── metadata.json
+    │   ├── data.jsonl
+    │   └── favicon.ico
+    ├── 3/                    # Third page with nested structure
+    │   ├── index.md
+    │   ├── favicon.png
+    │   └── subfolder/
+    │       ├── 4/           # Nested page (documents/databases can be nested)
+    │       │   ├── index.md
+    │       │   └── favicon.ico
+    │       └── 5/
+    │           ├── index.md
+    │           ├── metadata.json
+    │           └── data.jsonl
+    └── 6/                    # Another page
+        ├── index.md
+        ├── favicon.avif
+        ├── diagram.png
+        └── chart.svg
 ```
 
 ### Storage Format
 
-**Pages (Markdown)**
+**Pages (Markdown with YAML Front Matter)**
+
+File: `1/index.md`
 ```markdown
 ---
 id: uuid
 title: Page Title
-created: 2024-01-15
-modified: 2024-01-15
+created: 2024-01-15T10:00:00Z
+modified: 2024-01-15T10:00:00Z
 tags: [tag1, tag2]
 ---
 
 Page content in markdown...
 
-[Link to another page](./other-page)
-![Image](../assets/images/image.png)
+[Link to another page](../../2)
+![Image](./image.png)
 ```
 
-**Databases (Two-file format for scalability)**
+**Databases (Directory with metadata.json + data.jsonl)**
 
-Schema file (`.db.json`):
+File: `2/metadata.json`
 ```json
 {
   "id": "uuid-here",
@@ -130,16 +146,22 @@ Schema file (`.db.json`):
     }
   ],
   "created": "2024-01-15T10:00:00Z",
-  "modified": "2024-01-15T10:00:00Z",
-  "path": "tasks.db.json"
+  "modified": "2024-01-15T10:00:00Z"
 }
 ```
 
-Records file (`.db.jsonl`, one per line):
+File: `2/data.jsonl`
 ```jsonl
 {"id":"rec_1","data":{"title":"Task A","status":"in-progress","created":"2024-01-15"},"created":"2024-01-15T10:05:00Z","modified":"2024-01-15T10:05:00Z"}
 {"id":"rec_2","data":{"title":"Task B","status":"todo","created":"2024-01-14"},"created":"2024-01-15T10:06:00Z","modified":"2024-01-15T10:06:00Z"}
 ```
+
+**Favicons (Optional, per-page)**
+
+Supported formats (optional in each page directory):
+- `favicon.ico` - Classic favicon
+- `favicon.png` - PNG image
+- `favicon.avif` - Modern AVIF image
 
 ### API Architecture
 
@@ -341,7 +363,15 @@ internal/
 - Errors implementing `ErrorWithStatus` automatically get correct HTTP status codes
 - Context passed through entire handler chain for logging and cancellation
 
-### Why Dual-Format Database Storage (.db.json + .db.jsonl)?
+### Why Directory-Based Storage?
+- **Asset namespace**: Each page has its own directory for contained assets (images, attachments, etc.)
+- **Clarity**: Every page—document or database—is a directory. No ambiguity about what's a page vs. asset.
+- **Scalability**: Numeric IDs avoid filename collisions and allow unlimited pages
+- **Nested organization**: Supports natural hierarchical structures for organizing pages
+- **Future-proof**: Easy to add per-page settings, attachments, or metadata files
+- **Version control friendly**: Directories are natural git/vcs units
+
+### Why metadata.json + data.jsonl for Databases?
 - **Separation of concerns**: Schema in JSON (instant load), records in JSONL (streamable)
 - **Scalability**: JSONL supports append-only writes, no full-file rewrites
 - **Pagination**: Load records in chunks without loading entire database

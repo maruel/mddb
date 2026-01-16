@@ -105,20 +105,25 @@ GET /api/health
 
 ## Data Storage
 
-All data is stored in `./data/pages/` as markdown files:
+All data is stored in `./data/pages/` as numbered directories:
 
 ```
 data/
 └── pages/
-    ├── a1f86c50-b91b-4c70-888a-6e82f83d7dc0.md
-    └── nested/
-        └── another-page.md
+    ├── 1/
+    │   └── index.md
+    ├── 2/
+    │   ├── index.md
+    │   ├── metadata.json
+    │   └── data.jsonl
+    └── 3/subfolder/4/
+        └── index.md
 ```
 
-Each file has YAML front matter with metadata:
+Each page directory contains `index.md` with YAML front matter:
 ```markdown
 ---
-id: a1f86c50-b91b-4c70-888a-6e82f83d7dc0
+id: uuid-here
 title: Page Title
 created: 2026-01-15T20:09:42Z
 modified: 2026-01-15T20:09:42Z
@@ -126,6 +131,11 @@ modified: 2026-01-15T20:09:42Z
 
 # Your content here
 ```
+
+Databases (in any page directory) include:
+- `metadata.json` - Column schema
+- `data.jsonl` - Records, one per line
+- `index.md` - Database metadata (if needed)
 
 ## Common Tasks
 
