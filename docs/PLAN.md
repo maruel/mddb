@@ -2,7 +2,7 @@
 
 ## Status
 
-**Current Phase: Phase 4 (Assets & Media) ✓ COMPLETE**
+**Current Phase: Phase 4 (Assets & Media) ✓ COMPLETE + Embedded Build ✓**
 
 - Phase 1 ✓: Core foundation with routing, error handling, page CRUD
 - Phase 1.5 ✓: Code quality & linters (golangci-lint, ESLint, Prettier)
@@ -10,6 +10,7 @@
 - Phase 3 ✓: Databases with dual-format storage and table UI
 - Phase 3.5 ✓: Storage migration to directory-based numeric IDs
 - Phase 4 ✓: Assets & Media (file uploads, asset management, serving)
+- Embedded Build ✓: go:embed frontend in binary, deterministic builds, tracked in git
 - Phase 4.5 → Optional: Frontend Asset Integration (upload UI, gallery, embedding)
 - Phase 5 → Next: Polish & Features (search, history, optimization)
 
@@ -18,6 +19,7 @@
 - Frontend: Production-grade TypeScript/SolidJS, zero linting errors
 - Total implementation: ~3000 lines Go, ~500 lines TypeScript
 - Storage: Directory-based numeric IDs (1, 2, 3, etc.) with asset namespaces
+- Distribution: Single binary with embedded frontend (go:embed), deterministic builds
 
 ## Overview
 

@@ -126,10 +126,14 @@ For developers or advanced setup:
 
 Clone the repository and run:
 ```bash
-make build
+make build-all
 ```
 
-The binary is created in the current directory. See [AGENTS.md](AGENTS.md) for full development setup.
+This builds the SolidJS frontend and embeds it in the Go binary using `go:embed`. The result is a single, self-contained executable with no external dependencies.
+
+For detailed information on the embedded build process, reproducibility, and distribution, see [EMBEDDED_BUILD.md](docs/EMBEDDED_BUILD.md).
+
+See [AGENTS.md](AGENTS.md) for full development setup.
 
 ## License
 

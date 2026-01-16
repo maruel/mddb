@@ -1,11 +1,11 @@
 package server
 
 import (
+	"embed"
+	"io"
 	"net/http"
-	"path/filepath"
-	"strings"
-	"time"
 
+	"github.com/maruel/mddb/frontend"
 	"github.com/maruel/mddb/internal/server/handlers"
 	"github.com/maruel/mddb/internal/storage"
 )
@@ -50,49 +50,61 @@ func NewRouter(fileStore *storage.FileStore) http.Handler {
 	// File serving (raw asset files)
 	mux.HandleFunc("GET /assets/{id}/{name}", ah.ServeAssetFile)
 
-	// Serve static files for SolidJS frontend with SPA fallback
-	publicDir := filepath.Join(fileStore.RootDir(), "public")
-	mux.Handle("/", NewSPAHandler(http.Dir(publicDir)))
+	// Serve embedded SolidJS frontend with SPA fallback
+	mux.Handle("/", NewEmbeddedSPAHandler(frontend.Files))
 
 	return mux
 }
 
-// SPAHandler serves a single-page application, falling back to index.html for unknown routes.
-type SPAHandler struct {
-	fs http.FileSystem
+// EmbeddedSPAHandler serves an embedded single-page application with fallback to index.html.
+type EmbeddedSPAHandler struct {
+	fs embed.FS
 }
 
-// NewSPAHandler creates a new SPA handler.
-func NewSPAHandler(fs http.FileSystem) *SPAHandler {
-	return &SPAHandler{fs: fs}
+// NewEmbeddedSPAHandler creates a handler for the embedded frontend.
+func NewEmbeddedSPAHandler(fs embed.FS) *EmbeddedSPAHandler {
+	return &EmbeddedSPAHandler{fs: fs}
 }
 
-// ServeHTTP implements http.Handler for SPA routing.
-func (h *SPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// ServeHTTP implements http.Handler for embedded SPA routing.
+func (h *EmbeddedSPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Try to serve the exact file
-	file, err := h.fs.Open(r.URL.Path)
+	f, err := h.fs.Open(r.URL.Path)
 	if err == nil {
-		if err := file.Close(); err != nil {
-			_ = err
-		}
-		// File exists, serve it
-		fs := http.FileServer(h.fs)
+		_ = f.Close()
+		// File exists, serve it from embedded FS
+		fileServer := http.FileServer(http.FS(h.fs))
 		// Set cache headers for static assets with extensions
-		if strings.Contains(r.URL.Path, ".") {
+		if containsDot(r.URL.Path) {
 			w.Header().Set("Cache-Control", "public, max-age=3600")
 		}
-		fs.ServeHTTP(w, r)
+		fileServer.ServeHTTP(w, r)
 		return
 	}
 
 	// File not found - fall back to index.html for SPA routing
-	file, err = h.fs.Open("/index.html")
+	indexFile, err := h.fs.Open("index.html")
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
-	defer func() { _ = file.Close() }()
+	defer func() { _ = indexFile.Close() }()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	http.ServeContent(w, r, "/index.html", time.Now(), file)
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	// Serve index.html
+	_, _ = io.Copy(w, indexFile)
+}
+
+// containsDot checks if a path contains a dot (file extension).
+func containsDot(path string) bool {
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '/' {
+			return false
+		}
+		if path[i] == '.' {
+			return true
+		}
+	}
+	return false
 }

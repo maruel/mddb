@@ -324,7 +324,9 @@ export default function App() {
                     onClick={() => handlePageClick(page)}
                   >
                     <div class={styles.pageTitle}>{page.title}</div>
-                    <div class={styles.pageDate}>{new Date(page.modified).toLocaleDateString()}</div>
+                    <div class={styles.pageDate}>
+                      {new Date(page.modified).toLocaleDateString()}
+                    </div>
                   </li>
                 )}
               </For>
@@ -334,9 +336,7 @@ export default function App() {
           <Show when={activeTab() === 'databases'}>
             <div class={styles.sidebarHeader}>
               <h2>Databases</h2>
-              <button disabled={loading()}>
-                {loading() ? 'Creating...' : 'New DB'}
-              </button>
+              <button disabled={loading()}>{loading() ? 'Creating...' : 'New DB'}</button>
             </div>
 
             <Show when={loading()} fallback={null}>
@@ -372,9 +372,7 @@ export default function App() {
               </div>
               <DatabaseTable
                 databaseId={selectedDatabaseId() || ''}
-                columns={
-                  databases().find((db) => db.id === selectedDatabaseId())?.columns || []
-                }
+                columns={databases().find((db) => db.id === selectedDatabaseId())?.columns || []}
                 records={records()}
                 onAddRecord={handleAddRecord}
                 onDeleteRecord={handleDeleteRecord}

@@ -40,9 +40,10 @@ export default function DatabaseTable(props: DatabaseTableProps) {
   };
 
   const handleCellClick = (recordId: string, columnId: string) => {
-    const value = props.records
-      .find((r) => r.id === recordId)
-      ?.data[props.columns.find((c) => c.id === columnId)?.name ?? ''] ?? '';
+    const value =
+      props.records.find((r) => r.id === recordId)?.data[
+        props.columns.find((c) => c.id === columnId)?.name ?? ''
+      ] ?? '';
 
     setEditingCell({ recordId, columnId });
     setEditValue(String(value));
@@ -104,7 +105,11 @@ export default function DatabaseTable(props: DatabaseTableProps) {
         );
       case 'select':
         return (
-          <select value={initialValue} onChange={(e) => handleCellChange(e.target.value)} class={styles.input}>
+          <select
+            value={initialValue}
+            onChange={(e) => handleCellChange(e.target.value)}
+            class={styles.input}
+          >
             <option value="">--</option>
             <For each={column.options ?? []}>
               {(option) => <option value={option}>{option}</option>}
@@ -177,7 +182,9 @@ export default function DatabaseTable(props: DatabaseTableProps) {
                   </td>
                   <For each={props.columns}>
                     {(column) => {
-                      const isEditing = () => editingCell()?.recordId === record.id && editingCell()?.columnId === column.id;
+                      const isEditing = () =>
+                        editingCell()?.recordId === record.id &&
+                        editingCell()?.columnId === column.id;
 
                       return (
                         <td
@@ -187,7 +194,11 @@ export default function DatabaseTable(props: DatabaseTableProps) {
                         >
                           <Show
                             when={isEditing()}
-                            fallback={<div class={styles.cellContent}>{renderCellContent(record, column)}</div>}
+                            fallback={
+                              <div class={styles.cellContent}>
+                                {renderCellContent(record, column)}
+                              </div>
+                            }
                           >
                             <div class={styles.editContainer}>
                               {renderCellInput(column, editValue())}
@@ -198,7 +209,10 @@ export default function DatabaseTable(props: DatabaseTableProps) {
                                 >
                                   ✓
                                 </button>
-                                <button class={styles.cancelBtn} onClick={() => setEditingCell(null)}>
+                                <button
+                                  class={styles.cancelBtn}
+                                  onClick={() => setEditingCell(null)}
+                                >
                                   ✕
                                 </button>
                               </div>

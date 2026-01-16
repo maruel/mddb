@@ -132,25 +132,45 @@ type GetRequest struct {
 - Prefer stores over props drilling
 - Keep components as functions returning JSX
 
-### Common Commands
+### Build & Distribution
 
-Development server:
+### Single Binary with Embedded Frontend
+
+mddb uses `go:embed` to include the frontend in the binary:
+
 ```bash
-cd web
-npm run dev
+# Build frontend + Go binary with embedded frontend
+make build-all
+
+# Result: ./mddb (single executable, self-contained)
 ```
 
-Build production:
+The compiled `web/dist/` folder is tracked in git for reproducible builds.
+
+### Development Workflow
+
+**Frontend development** (live reload):
 ```bash
-cd web
-npm run build
+make frontend-dev
+# Frontend at http://localhost:5173 (proxies API to :8080)
 ```
 
-Type checking:
+**Backend + embedded frontend** (for testing embedded binary):
 ```bash
-cd web
-npm run typecheck
+make frontend-build   # Build frontend once
+make build            # Build Go binary
+./mddb                # Run with embedded frontend
 ```
+
+### Frontend Build Configuration
+
+The Vite config (`web/vite.config.ts`) ensures deterministic builds:
+- Terser minification for consistent output
+- No source maps
+- Deterministic chunk naming
+- Results are reproducible across different machines/times
+
+**Key**: `web/dist/` is committed to git so builds are fast and reproducible.
 
 ## API Development
 

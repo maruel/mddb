@@ -10,7 +10,8 @@ help:
 	@echo "mddb - Markdown Document & Database System"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  make build          - Build the Go server binary"
+	@echo "  make build          - Build Go server binary (requires frontend built)"
+	@echo "  make build-all      - Build frontend + Go server with embedded assets"
 	@echo "  make dev            - Run the server in development mode"
 	@echo "  make test           - Run all tests"
 	@echo "  make test-backend   - Run backend tests only"
@@ -30,6 +31,7 @@ help:
 	@echo "  PORT=8080           - Server port (default: 8080)"
 	@echo "  LOG_LEVEL=info      - Log level (debug|info|warn|error)"
 
+# Build Go server (assumes frontend is already built)
 build:
 	go build -o $(BINARY_NAME) ./cmd/mddb
 
@@ -39,10 +41,10 @@ dev: build
 test: test-backend test-frontend
 
 test-backend:
-	go test -v ./...
+	go test ./...
 
 test-frontend:
-	cd web && pnpm test || echo "Frontend tests skipped (pnpm not installed)"
+	cd frontend && pnpm test
 
 lint: lint-go lint-frontend
 	@echo "✓ All linting passed"
@@ -52,14 +54,14 @@ lint-go:
 	golangci-lint run ./...
 
 lint-frontend: frontend-install
-	cd web && pnpm lint
+	cd frontend && pnpm lint
 
 lint-fix:
 	golangci-lint run ./... --fix || true
-	cd web && pnpm lint:fix
+	cd frontend && pnpm lint:fix
 
 format:
-	cd web && pnpm format
+	cd frontend && pnpm format
 
 git-hooks:
 	@echo "Installing git pre-commit hooks..."
@@ -74,19 +76,20 @@ clean:
 	go clean
 
 frontend-install:
-	cd web && pnpm install
+	cd frontend && pnpm install
 
 frontend-dev: frontend-install
-	cd web && pnpm dev
+	cd frontend && pnpm dev
 
 frontend-build: frontend-install
-	cd web && pnpm build
+	cd frontend && pnpm build
 
-# Build complete system (backend + frontend)
-build-all: test-backend frontend-build build
-	@echo "✓ Build complete"
-	@echo "  Backend binary: ./$(BINARY_NAME)"
-	@echo "  Frontend built to: ./web/dist/"
+# Build complete system with embedded frontend (frontend + Go server with embedded assets)
+build-all: frontend-build test-backend build
+	@echo "✓ Build complete - embedded binary"
+	@echo "  Binary: ./$(BINARY_NAME)"
+	@echo "  Includes: Frontend from ./frontend/dist/ (go:embed)"
+	@echo "  Build is deterministic and reproducible"
 
 # Run both backend and frontend in development mode
 dev-all: frontend-install
@@ -97,4 +100,4 @@ dev-all: frontend-install
 	@echo "Press Ctrl+C to stop"
 	@echo ""
 	make dev &
-	cd web && pnpm dev
+	cd frontend && pnpm dev

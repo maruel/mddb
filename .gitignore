@@ -2,11 +2,10 @@
 /bin/
 
 # Frontend
-/web/node_modules/
-/web/dist/
-/web/.env.local
-/web/.env.*.local
-/web/.npmrc
+/frontend/node_modules/
+/frontend/.env.local
+/frontend/.env.*.local
+/frontend/.npmrc
 
 # Data directory
 /data/
