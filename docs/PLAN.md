@@ -228,11 +228,11 @@ internal/
 - [x] Makefile targets: `make lint`, `make lint-go`, `make lint-frontend`, `make lint-fix`
 
 ### Phase 2: Page Editor
-- [ ] Markdown editor component (SolidJS)
-- [ ] Live preview functionality
-- [ ] Auto-save mechanism
+- [x] Markdown editor component (SolidJS)
+- [x] Live preview functionality
+- [x] Auto-save mechanism
 - [ ] Page linking with autocomplete
-- [ ] Page creation/deletion UI
+- [x] Page creation/deletion UI
 
 ### Phase 3: Databases
 - [ ] Database schema definition

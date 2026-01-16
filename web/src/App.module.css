@@ -177,6 +177,40 @@ body {
   display: flex;
   gap: 1rem;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.editorStatus {
+  flex: 1;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.unsavedIndicator {
+  color: #ff9800;
+  font-weight: 500;
+}
+
+.savingIndicator {
+  color: #2196f3;
+  font-weight: 500;
+  animation: spin 1s linear infinite;
+}
+
+.savedIndicator {
+  color: #4caf50;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .titleInput {
@@ -218,6 +252,14 @@ body {
   cursor: not-allowed;
 }
 
+.editorContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 1px;
+  background: #e0e0e0;
+}
+
 .contentInput {
   flex: 1;
   padding: 1.5rem;
@@ -227,6 +269,8 @@ body {
   outline: none;
   resize: none;
   line-height: 1.6;
+  background: white;
+  min-width: 0;
 }
 
 .createButton {

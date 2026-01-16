@@ -1,4 +1,6 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
+import MarkdownPreview from './components/MarkdownPreview';
+import { debounce } from './utils/debounce';
 import styles from './App.module.css';
 
 interface Page {
@@ -15,6 +17,33 @@ export default function App() {
   const [content, setContent] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
+  const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+
+  // Debounced auto-save function
+  const debouncedAutoSave = debounce(async () => {
+    const pageId = selectedPageId();
+    if (!pageId || !hasUnsavedChanges()) return;
+
+    try {
+      setAutoSaveStatus('saving');
+      await fetch(`/api/pages/${pageId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title(), content: content() }),
+      });
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('saved');
+      setTimeout(() => {
+        if (autoSaveStatus() === 'saved') {
+          setAutoSaveStatus('idle');
+        }
+      }, 2000);
+    } catch (err) {
+      setError('Auto-save failed: ' + err);
+      setAutoSaveStatus('idle');
+    }
+  }, 2000);
 
   // Load pages on mount
   createEffect(() => {
@@ -42,6 +71,8 @@ export default function App() {
       const pageData = await res.json();
       setTitle(pageData.title);
       setContent(pageData.content);
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('idle');
       setError(null);
     } catch (err) {
       setError('Failed to load page: ' + err);
@@ -66,6 +97,8 @@ export default function App() {
       await loadPages();
       setTitle('');
       setContent('');
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('idle');
       setError(null);
     } catch (err) {
       setError('Failed to create page: ' + err);
@@ -74,7 +107,7 @@ export default function App() {
     }
   }
 
-  async function updatePage() {
+  async function savePage() {
     const pageId = selectedPageId();
     if (!pageId) return;
 
@@ -86,16 +119,17 @@ export default function App() {
         body: JSON.stringify({ title: title(), content: content() }),
       });
       await loadPages();
-      await loadPage(pageId);
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('idle');
       setError(null);
     } catch (err) {
-      setError('Failed to update page: ' + err);
+      setError('Failed to save page: ' + err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function deletePage() {
+  async function deleteCurrentPage() {
     const pageId = selectedPageId();
     if (!pageId) return;
 
@@ -108,6 +142,8 @@ export default function App() {
       setSelectedPageId(null);
       setTitle('');
       setContent('');
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('idle');
       setError(null);
     } catch (err) {
       setError('Failed to delete page: ' + err);
@@ -173,24 +209,46 @@ export default function App() {
                     type="text"
                     placeholder="Page title"
                     value={title()}
-                    onInput={(e) => setTitle(e.target.value)}
+                    onInput={(e) => {
+                      setTitle(e.target.value);
+                      setHasUnsavedChanges(true);
+                      debouncedAutoSave();
+                    }}
                     class={styles.titleInput}
                   />
+                  <div class={styles.editorStatus}>
+                    <Show when={hasUnsavedChanges()}>
+                      <span class={styles.unsavedIndicator}>● Unsaved</span>
+                    </Show>
+                    <Show when={autoSaveStatus() === 'saving'}>
+                      <span class={styles.savingIndicator}>⟳ Saving...</span>
+                    </Show>
+                    <Show when={autoSaveStatus() === 'saved'}>
+                      <span class={styles.savedIndicator}>✓ Saved</span>
+                    </Show>
+                  </div>
                   <div class={styles.editorActions}>
-                    <button onClick={updatePage} disabled={loading()}>
+                    <button onClick={savePage} disabled={loading()}>
                       {loading() ? 'Saving...' : 'Save'}
                     </button>
-                    <button onClick={deletePage} disabled={loading()}>
+                    <button onClick={deleteCurrentPage} disabled={loading()}>
                       Delete
                     </button>
                   </div>
                 </div>
-                <textarea
-                  value={content()}
-                  onInput={(e) => setContent(e.target.value)}
-                  placeholder="Write your content in markdown..."
-                  class={styles.contentInput}
-                />
+                <div class={styles.editorContent}>
+                  <textarea
+                    value={content()}
+                    onInput={(e) => {
+                      setContent(e.target.value);
+                      setHasUnsavedChanges(true);
+                      debouncedAutoSave();
+                    }}
+                    placeholder="Write your content in markdown..."
+                    class={styles.contentInput}
+                  />
+                  <MarkdownPreview content={content()} />
+                </div>
               </div>
             }
           >
