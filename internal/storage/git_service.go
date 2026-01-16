@@ -69,13 +69,20 @@ func (gs *GitService) CommitChange(operation, resourceType, resourceID, descript
 // GetHistory returns commit history for a specific resource.
 // Returns list of commits (hash, author, timestamp, message).
 func (gs *GitService) GetHistory(resourceType, resourceID string) ([]*Commit, error) {
-	// Get commits that mention this resource
-	pattern := fmt.Sprintf("%s %s", resourceType, resourceID)
+	// Filter by path
+	// resourceType is usually "page" or "database", but both are stored in pages/
+	path := filepath.Join("pages", resourceID)
 
-	// Use git log with grep to find relevant commits
-	output, err := gs.gitOutput("log", "--oneline", "--grep", pattern)
+	// Use git log with custom format to get all details in one go
+	// Format: hash|author|timestamp|message
+	// %H: commit hash
+	// %an: author name
+	// %ai: author date, ISO 8601-like format
+	// %s: subject
+	format := "%H|%an|%ai|%s"
+	output, err := gs.gitOutput("log", "--pretty=format:"+format, "--", path)
 	if err != nil {
-		// git log returns error if no matches, treat as empty history
+		// git log returns error if no matches or path doesn't exist in git yet
 		return []*Commit{}, nil
 	}
 
@@ -85,21 +92,17 @@ func (gs *GitService) GetHistory(resourceType, resourceID string) ([]*Commit, er
 			continue
 		}
 
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) < 2 {
+		parts := strings.Split(line, "|")
+		if len(parts) < 4 {
 			continue
 		}
 
 		hash := parts[0]
-		message := parts[1]
+		// author := parts[1] // Currently not used in Commit struct
+		timestampStr := parts[2]
+		message := parts[3]
 
-		// Get full commit details
-		details, err := gs.gitOutput("show", "-s", "--format=%ai", hash)
-		if err != nil {
-			continue
-		}
-
-		timestamp, err := time.Parse("2006-01-02 15:04:05 -0700", strings.TrimSpace(details))
+		timestamp, err := time.Parse("2006-01-02 15:04:05 -0700", timestampStr)
 		if err != nil {
 			timestamp = time.Now()
 		}

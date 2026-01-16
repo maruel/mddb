@@ -27,7 +27,7 @@ const (
 	ErrPathTraversal ErrorCode = "PATH_TRAVERSAL_ATTEMPT"
 
 	// Server errors
-	ErrInternal     ErrorCode = "INTERNAL_ERROR"
+	ErrInternal       ErrorCode = "INTERNAL_ERROR"
 	ErrNotImplemented ErrorCode = "NOT_IMPLEMENTED"
 )
 

@@ -27,6 +27,8 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService) htt
 	// Pages endpoints
 	mux.Handle("GET /api/pages", Wrap(ph.ListPages))
 	mux.Handle("GET /api/pages/{id}", Wrap(ph.GetPage))
+	mux.Handle("GET /api/pages/{id}/history", Wrap(ph.GetPageHistory))
+	mux.Handle("GET /api/pages/{id}/history/{hash}", Wrap(ph.GetPageVersion))
 	mux.Handle("POST /api/pages", Wrap(ph.CreatePage))
 	mux.Handle("PUT /api/pages/{id}", Wrap(ph.UpdatePage))
 	mux.Handle("DELETE /api/pages/{id}", Wrap(ph.DeletePage))

@@ -21,15 +21,15 @@ func NewSearchService(fileStore *FileStore) *SearchService {
 
 // SearchResult represents a single search result.
 type SearchResult struct {
-	Type      string    `json:"type"`      // "page" or "database" or "record"
-	ID        string    `json:"id"`        // Page ID or Database ID
-	RecordID  *string   `json:"record_id"` // Only for records
-	Title     string    `json:"title"`
-	Content   string    `json:"content"`     // Preview or snippet
-	Matches   int       `json:"matches"`     // Number of matches found
-	Score     float64   `json:"score"`       // Relevance score (0-1)
-	Created   time.Time `json:"created"`
-	Modified  time.Time `json:"modified"`
+	Type     string    `json:"type"`      // "page" or "database" or "record"
+	ID       string    `json:"id"`        // Page ID or Database ID
+	RecordID *string   `json:"record_id"` // Only for records
+	Title    string    `json:"title"`
+	Content  string    `json:"content"` // Preview or snippet
+	Matches  int       `json:"matches"` // Number of matches found
+	Score    float64   `json:"score"`   // Relevance score (0-1)
+	Created  time.Time `json:"created"`
+	Modified time.Time `json:"modified"`
 }
 
 // SearchOptions controls search behavior.

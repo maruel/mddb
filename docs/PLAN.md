@@ -2,7 +2,7 @@
 
 ## Status
 
-**Current Phase: Phase 5 (Polish & Features) - Git Versioning ✓ + Full-Text Search ✓**
+**Current Phase: Phase 5 (Polish & Features) - Git Versioning ✓ + Full-Text Search ✓ + Page History ✓**
 
 - [x] Phase 1: Core foundation with routing, error handling, page CRUD
 - [x] Phase 1.5: Code quality & linters (golangci-lint, ESLint, Prettier)
@@ -14,7 +14,8 @@
 - [x] Phase 5.1: Better Error Handling (error codes, detailed responses, validation)
 - [x] Phase 5.2: Full-Text Search (pages, databases, records, relevance scoring)
 - [x] Phase 5.3: Automatic Git Versioning (data directory tracking)
-- [ ] Phase 5.4: Page history/versioning UI
+- [x] Phase 5.4: Page history/versioning UI
+- [ ] Phase 5.5: Performance Optimization
 
 **Key Stats:**
 - Backend: ~40 comprehensive tests (100% passing), zero linting errors
@@ -100,5 +101,5 @@ See `README.md` and `ASSET_API.md` for details.
 - [x] **Better Error Handling**: Structured error responses, validation.
 - [x] **Full-Text Search**: Search service for pages and databases.
 - [x] **Git Versioning**: Automatic commit of data changes.
-- [ ] **Page History UI**: View and restore previous versions (leveraging Git).
+- [x] **Page History UI**: View and restore previous versions (leveraging Git).
 - [ ] **Performance**: Optimization of large lists/databases.

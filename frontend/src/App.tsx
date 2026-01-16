@@ -34,6 +34,12 @@ interface Record {
   modified: string;
 }
 
+interface Commit {
+  hash: string;
+  message: string;
+  timestamp: string;
+}
+
 export default function App() {
   const [pages, setPages] = createSignal<Page[]>([]);
   const [databases, setDatabases] = createSignal<Database[]>([]);
@@ -47,6 +53,10 @@ export default function App() {
   const [error, setError] = createSignal<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+
+  // History state
+  const [showHistory, setShowHistory] = createSignal(false);
+  const [history, setHistory] = createSignal<Commit[]>([]);
 
   // Debounced auto-save function
   const debouncedAutoSave = debounce(async () => {
@@ -96,6 +106,7 @@ export default function App() {
   async function loadPage(id: string) {
     try {
       setLoading(true);
+      setShowHistory(false);
       const res = await fetch(`/api/pages/${id}`);
       const pageData = await res.json();
       setTitle(pageData.title);
@@ -105,6 +116,47 @@ export default function App() {
       setError(null);
     } catch (err) {
       setError('Failed to load page: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadHistory(pageId: string) {
+    if (showHistory()) {
+      setShowHistory(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/pages/${pageId}/history`);
+      const data = await res.json();
+      setHistory(data.history || []);
+      setShowHistory(true);
+    } catch (err) {
+      setError('Failed to load history: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadVersion(pageId: string, hash: string) {
+    if (
+      !confirm(
+        'This will replace current editor content with the selected version. Unsaved changes will be lost. Continue?'
+      )
+    )
+      return;
+
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/pages/${pageId}/history/${hash}`);
+      const data = await res.json();
+      setContent(data.content);
+      setHasUnsavedChanges(true); // Mark as modified
+      setShowHistory(false);
+    } catch (err) {
+      setError('Failed to load version: ' + err);
     } finally {
       setLoading(false);
     }
@@ -408,6 +460,9 @@ export default function App() {
                     </Show>
                   </div>
                   <div class={styles.editorActions}>
+                    <button onClick={() => loadHistory(selectedPageId()!)} disabled={loading()}>
+                      {showHistory() ? 'Hide History' : 'History'}
+                    </button>
                     <button onClick={savePage} disabled={loading()}>
                       {loading() ? 'Saving...' : 'Save'}
                     </button>
@@ -416,6 +471,34 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+
+                <Show when={showHistory()}>
+                  <div class={styles.historyPanel}>
+                    <h3>Version History</h3>
+                    <ul class={styles.historyList}>
+                      <For each={history()}>
+                        {(commit) => (
+                          <li
+                            class={styles.historyItem}
+                            onClick={() => loadVersion(selectedPageId()!, commit.hash)}
+                          >
+                            <div class={styles.historyMeta}>
+                              <span class={styles.historyDate}>
+                                {new Date(commit.timestamp).toLocaleString()}
+                              </span>
+                              <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
+                            </div>
+                            <div class={styles.historyMessage}>{commit.message}</div>
+                          </li>
+                        )}
+                      </For>
+                      <Show when={history().length === 0}>
+                        <li class={styles.historyItem}>No history available</li>
+                      </Show>
+                    </ul>
+                  </div>
+                </Show>
+
                 <div class={styles.editorContent}>
                   <textarea
                     value={content()}

@@ -37,15 +37,15 @@ type SearchResponse struct {
 
 // SearchResultDTO is the DTO version of SearchResult for API responses
 type SearchResultDTO struct {
-	Type      string  `json:"type"`
-	ID        string  `json:"id"`
-	RecordID  *string `json:"record_id,omitempty"`
-	Title     string  `json:"title"`
-	Content   string  `json:"content"`
-	Matches   int     `json:"matches"`
-	Score     float64 `json:"score"`
-	Created   string  `json:"created"`
-	Modified  string  `json:"modified"`
+	Type     string  `json:"type"`
+	ID       string  `json:"id"`
+	RecordID *string `json:"record_id,omitempty"`
+	Title    string  `json:"title"`
+	Content  string  `json:"content"`
+	Matches  int     `json:"matches"`
+	Score    float64 `json:"score"`
+	Created  string  `json:"created"`
+	Modified string  `json:"modified"`
 }
 
 // Search performs a full-text search

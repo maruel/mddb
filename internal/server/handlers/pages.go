@@ -71,6 +71,27 @@ type DeletePageRequest struct {
 // DeletePageResponse is a response from deleting a page.
 type DeletePageResponse struct{}
 
+// GetPageHistoryRequest is a request to get page history.
+type GetPageHistoryRequest struct {
+	ID string `path:"id"`
+}
+
+// GetPageHistoryResponse is a response containing page history.
+type GetPageHistoryResponse struct {
+	History []*storage.Commit `json:"history"`
+}
+
+// GetPageVersionRequest is a request to get a specific page version.
+type GetPageVersionRequest struct {
+	ID   string `path:"id"`
+	Hash string `path:"hash"`
+}
+
+// GetPageVersionResponse is a response containing page content at a version.
+type GetPageVersionResponse struct {
+	Content string `json:"content"`
+}
+
 // ListPages returns a list of all pages
 func (h *PageHandler) ListPages(ctx context.Context, req ListPagesRequest) (*ListPagesResponse, error) {
 	pages, err := h.pageService.ListPages()
@@ -137,4 +158,24 @@ func (h *PageHandler) DeletePage(ctx context.Context, req DeletePageRequest) (*D
 	}
 
 	return &DeletePageResponse{}, nil
+}
+
+// GetPageHistory returns the history of a page
+func (h *PageHandler) GetPageHistory(ctx context.Context, req GetPageHistoryRequest) (*GetPageHistoryResponse, error) {
+	history, err := h.pageService.GetPageHistory(req.ID)
+	if err != nil {
+		return nil, errors.InternalWithError("Failed to get page history", err)
+	}
+
+	return &GetPageHistoryResponse{History: history}, nil
+}
+
+// GetPageVersion returns a specific version of a page
+func (h *PageHandler) GetPageVersion(ctx context.Context, req GetPageVersionRequest) (*GetPageVersionResponse, error) {
+	content, err := h.pageService.GetPageVersion(req.ID, req.Hash)
+	if err != nil {
+		return nil, errors.InternalWithError("Failed to get page version", err)
+	}
+
+	return &GetPageVersionResponse{Content: content}, nil
 }

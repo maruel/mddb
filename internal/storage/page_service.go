@@ -122,3 +122,30 @@ func (s *PageService) SearchPages(query string) ([]*models.Page, error) {
 
 	return results, nil
 }
+
+// GetPageHistory returns the commit history for a page.
+func (s *PageService) GetPageHistory(id string) ([]*Commit, error) {
+	if s.gitService == nil {
+		return []*Commit{}, nil
+	}
+	// Map GitService.Commit to models.Commit or just return the struct from git_service if exported
+	// Since GitService is in the same package (storage), we can use its types,
+	// but normally we should return a model. Let's assume we return storage.Commit for now
+	// or cast it.
+	return s.gitService.GetHistory("page", id)
+}
+
+// GetPageVersion returns the content of a page at a specific commit.
+func (s *PageService) GetPageVersion(id, commitHash string) (string, error) {
+	if s.gitService == nil {
+		return "", fmt.Errorf("git service not available")
+	}
+
+	path := fmt.Sprintf("pages/%s/index.md", id)
+	contentBytes, err := s.gitService.GetFileAtCommit(commitHash, path)
+	if err != nil {
+		return "", err
+	}
+
+	return string(contentBytes), nil
+}

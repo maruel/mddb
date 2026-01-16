@@ -266,8 +266,8 @@ func TestCountMatches(t *testing.T) {
 
 func TestTruncate(t *testing.T) {
 	tests := []struct {
-		text    string
-		maxLen  int
+		text     string
+		maxLen   int
 		expected string
 	}{
 		{"hello world", 5, "hello..."},
