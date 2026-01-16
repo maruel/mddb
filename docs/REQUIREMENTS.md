@@ -48,7 +48,9 @@
 - Single executable binary (zero external dependencies for core)
 
 ### Data & Security
-- Version control friendly (Git-compatible)
+- Automatic Git versioning of content in `data/` directory
+- History tracking for pages and databases via Git commits
+- Version control friendly (Git-compatible) file formats
 - Input validation on all endpoints
 - Sanitize markdown before rendering
 - File path traversal protection

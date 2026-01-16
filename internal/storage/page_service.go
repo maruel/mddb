@@ -9,12 +9,16 @@ import (
 
 // PageService handles page business logic.
 type PageService struct {
-	fileStore *FileStore
+	fileStore  *FileStore
+	gitService *GitService
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *FileStore) *PageService {
-	return &PageService{fileStore: fileStore}
+func NewPageService(fileStore *FileStore, gitService *GitService) *PageService {
+	return &PageService{
+		fileStore:  fileStore,
+		gitService: gitService,
+	}
 }
 
 // GetPage retrieves a page by ID.
@@ -34,7 +38,19 @@ func (s *PageService) CreatePage(title, content string) (*models.Page, error) {
 	// Generate numeric ID (monotonically increasing)
 	id := s.fileStore.NextID()
 
-	return s.fileStore.WritePage(id, title, content)
+	page, err := s.fileStore.WritePage(id, title, content)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange("create", "page", id, title); err != nil {
+			// Log error but don't fail the operation
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
+	return page, nil
 }
 
 // UpdatePage updates an existing page.
@@ -46,7 +62,18 @@ func (s *PageService) UpdatePage(id, title, content string) (*models.Page, error
 		return nil, fmt.Errorf("title cannot be empty")
 	}
 
-	return s.fileStore.UpdatePage(id, title, content)
+	page, err := s.fileStore.UpdatePage(id, title, content)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange("update", "page", id, "Updated content"); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
+	return page, nil
 }
 
 // DeletePage deletes a page.
@@ -54,7 +81,17 @@ func (s *PageService) DeletePage(id string) error {
 	if id == "" {
 		return fmt.Errorf("page id cannot be empty")
 	}
-	return s.fileStore.DeletePage(id)
+	if err := s.fileStore.DeletePage(id); err != nil {
+		return err
+	}
+
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange("delete", "page", id, "Deleted page"); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
+	return nil
 }
 
 // ListPages returns all pages.

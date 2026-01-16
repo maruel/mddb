@@ -20,7 +20,7 @@ func TestAssetService_SaveAsset(t *testing.T) {
 		t.Fatalf("failed to create page: %v", err)
 	}
 
-	as := NewAssetService(fs)
+	as := NewAssetService(fs, nil)
 
 	// Save an asset
 	testData := []byte("test image data")
@@ -70,7 +70,7 @@ func TestAssetService_GetAsset(t *testing.T) {
 		t.Fatalf("failed to create page: %v", err)
 	}
 
-	as := NewAssetService(fs)
+	as := NewAssetService(fs, nil)
 	testData := []byte("test image data")
 	_, err = as.SaveAsset("1", "test.png", testData)
 	if err != nil {
@@ -101,7 +101,7 @@ func TestAssetService_DeleteAsset(t *testing.T) {
 		t.Fatalf("failed to create page: %v", err)
 	}
 
-	as := NewAssetService(fs)
+	as := NewAssetService(fs, nil)
 	_, err = as.SaveAsset("1", "test.png", []byte("test data"))
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
@@ -138,7 +138,7 @@ func TestAssetService_ListAssets(t *testing.T) {
 		t.Fatalf("failed to create page: %v", err)
 	}
 
-	as := NewAssetService(fs)
+	as := NewAssetService(fs, nil)
 
 	// Save multiple assets
 	assets := []string{"image1.png", "image2.jpg", "document.pdf"}
@@ -179,7 +179,7 @@ func TestAssetService_Validation(t *testing.T) {
 		t.Fatalf("failed to create file store: %v", err)
 	}
 
-	as := NewAssetService(fs)
+	as := NewAssetService(fs, nil)
 
 	tests := []struct {
 		name    string

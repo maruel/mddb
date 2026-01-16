@@ -13,11 +13,11 @@ import (
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
-func NewRouter(fileStore *storage.FileStore) http.Handler {
+func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService) http.Handler {
 	mux := &http.ServeMux{}
-	ph := handlers.NewPageHandler(fileStore)
-	dh := handlers.NewDatabaseHandler(fileStore)
-	ah := handlers.NewAssetHandler(fileStore)
+	ph := handlers.NewPageHandler(fileStore, gitService)
+	dh := handlers.NewDatabaseHandler(fileStore, gitService)
+	ah := handlers.NewAssetHandler(fileStore, gitService)
 	sh := handlers.NewSearchHandler(fileStore)
 
 	// Health check

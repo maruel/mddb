@@ -54,6 +54,11 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
 
+	gitService, err := storage.NewGitService(*dataDir)
+	if err != nil {
+		return fmt.Errorf("failed to initialize git service: %w", err)
+	}
+
 	// Create context that cancels on SIGTERM and SIGINT
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
@@ -61,7 +66,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:        addr,
-		Handler:     server.NewRouter(fileStore),
+		Handler:     server.NewRouter(fileStore, gitService),
 		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
 

@@ -10,12 +10,16 @@ import (
 
 // DatabaseService handles database business logic.
 type DatabaseService struct {
-	fileStore *FileStore
+	fileStore  *FileStore
+	gitService *GitService
 }
 
 // NewDatabaseService creates a new database service.
-func NewDatabaseService(fileStore *FileStore) *DatabaseService {
-	return &DatabaseService{fileStore: fileStore}
+func NewDatabaseService(fileStore *FileStore, gitService *GitService) *DatabaseService {
+	return &DatabaseService{
+		fileStore:  fileStore,
+		gitService: gitService,
+	}
 }
 
 // GetDatabase retrieves a database by ID.
@@ -63,6 +67,12 @@ func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) 
 		return nil, err
 	}
 
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange("create", "database", id, title); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
 	return db, nil
 }
 
@@ -91,6 +101,12 @@ func (s *DatabaseService) UpdateDatabase(id, title string, columns []models.Colu
 		return nil, err
 	}
 
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange("update", "database", id, "Updated schema"); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
 	return db, nil
 }
 
@@ -99,7 +115,17 @@ func (s *DatabaseService) DeleteDatabase(id string) error {
 	if id == "" {
 		return fmt.Errorf("database id cannot be empty")
 	}
-	return s.fileStore.DeleteDatabase(id)
+	if err := s.fileStore.DeleteDatabase(id); err != nil {
+		return err
+	}
+
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange("delete", "database", id, "Deleted database"); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
+	return nil
 }
 
 // ListDatabases returns all databases.
@@ -134,6 +160,12 @@ func (s *DatabaseService) CreateRecord(databaseID string, data map[string]interf
 
 	if err := s.fileStore.AppendRecord(databaseID, record); err != nil {
 		return nil, err
+	}
+
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange("create", "record", id, fmt.Sprintf("in database %s", databaseID)); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
 	}
 
 	return record, nil

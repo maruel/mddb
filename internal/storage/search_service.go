@@ -14,8 +14,8 @@ type SearchService struct {
 // NewSearchService creates a new search service.
 func NewSearchService(fileStore *FileStore) *SearchService {
 	return &SearchService{
-		pageService:     NewPageService(fileStore),
-		databaseService: NewDatabaseService(fileStore),
+		pageService:     NewPageService(fileStore, nil),
+		databaseService: NewDatabaseService(fileStore, nil),
 	}
 }
 

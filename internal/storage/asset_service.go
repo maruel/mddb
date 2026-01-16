@@ -10,12 +10,16 @@ import (
 
 // AssetService handles asset business logic.
 type AssetService struct {
-	fileStore *FileStore
+	fileStore  *FileStore
+	gitService *GitService
 }
 
 // NewAssetService creates a new asset service.
-func NewAssetService(fileStore *FileStore) *AssetService {
-	return &AssetService{fileStore: fileStore}
+func NewAssetService(fileStore *FileStore, gitService *GitService) *AssetService {
+	return &AssetService{
+		fileStore:  fileStore,
+		gitService: gitService,
+	}
 }
 
 // SaveAsset saves an asset file to a page's directory.
@@ -54,6 +58,12 @@ func (s *AssetService) SaveAsset(pageID, fileName string, data []byte) (*models.
 		Path:     path,
 	}
 
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange("create", "asset", fileName, fmt.Sprintf("in page %s", pageID)); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
 	return asset, nil
 }
 
@@ -78,7 +88,17 @@ func (s *AssetService) DeleteAsset(pageID, assetName string) error {
 		return fmt.Errorf("asset name cannot be empty")
 	}
 
-	return s.fileStore.DeleteAsset(pageID, assetName)
+	if err := s.fileStore.DeleteAsset(pageID, assetName); err != nil {
+		return err
+	}
+
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange("delete", "asset", assetName, fmt.Sprintf("in page %s", pageID)); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
+	return nil
 }
 
 // ListAssets lists all assets in a page's directory.

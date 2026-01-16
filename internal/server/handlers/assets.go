@@ -21,9 +21,9 @@ type AssetHandler struct {
 }
 
 // NewAssetHandler creates a new asset handler
-func NewAssetHandler(fileStore *storage.FileStore) *AssetHandler {
+func NewAssetHandler(fileStore *storage.FileStore, gitService *storage.GitService) *AssetHandler {
 	return &AssetHandler{
-		assetService: storage.NewAssetService(fileStore),
+		assetService: storage.NewAssetService(fileStore, gitService),
 	}
 }
 
