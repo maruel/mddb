@@ -14,16 +14,20 @@ type Node struct {
 	Modified   time.Time `json:"modified"`
 	Tags       []string  `json:"tags,omitempty"`
 	FaviconURL string    `json:"favicon_url,omitempty"`
-	Type       NodeType  `json:"type"` // document, database, or both
+	Type       NodeType  `json:"type"`               // document, database, or both
+	Children   []*Node   `json:"children,omitempty"` // Nested nodes
 }
 
 // NodeType defines what features are enabled for a node
 type NodeType string
 
 const (
+	// NodeTypeDocument represents a markdown document
 	NodeTypeDocument NodeType = "document"
+	// NodeTypeDatabase represents a structured database
 	NodeTypeDatabase NodeType = "database"
-	NodeTypeHybrid   NodeType = "hybrid"
+	// NodeTypeHybrid represents an entity that is both a document and a database
+	NodeTypeHybrid NodeType = "hybrid"
 )
 
 // Column represents a database column

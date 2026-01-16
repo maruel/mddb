@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+
 	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"

@@ -144,6 +144,7 @@ func populateQueryParams(r *http.Request, input any) {
 		}
 
 		// Set the field value based on its type
+		//nolint:exhaustive // Only string and int are supported for query params currently
 		switch field.Type.Kind() {
 		case reflect.String:
 			elem.Field(i).SetString(paramValue)
@@ -151,6 +152,8 @@ func populateQueryParams(r *http.Request, input any) {
 			if intVal, err := strconv.Atoi(paramValue); err == nil {
 				elem.Field(i).SetInt(int64(intVal))
 			}
+		default:
+			// Other types are not supported for query params yet
 		}
 	}
 }
@@ -172,12 +175,9 @@ func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code apie
 		},
 	}
 
-	if details != nil && len(details) > 0 {
-		response["error"].(map[string]any)["details"] = details
+	if len(details) > 0 {
+		response["details"] = details
 	}
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		// Error is already written to client, log only
-		_ = err
-	}
+	_ = json.NewEncoder(w).Encode(response)
 }

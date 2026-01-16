@@ -1,55 +1,54 @@
 package storage
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 	"time"
+
+	"github.com/maruel/mddb/internal/models"
 )
 
-// SearchService provides full-text search across pages and databases.
+// SearchResult represents a single search result
+type SearchResult struct {
+	Type     string            `json:"type"` // "page" or "record"
+	NodeID   string            `json:"node_id"`
+	RecordID string            `json:"record_id,omitempty"`
+	Title    string            `json:"title"`
+	Snippet  string            `json:"snippet"`
+	Score    float64           `json:"score"`
+	Matches  map[string]string `json:"matches"`
+	Modified time.Time         `json:"modified"`
+}
+
+// SearchOptions defines parameters for a search
+type SearchOptions struct {
+	Query       string
+	Limit       int
+	MatchTitle  bool
+	MatchBody   bool
+	MatchFields bool
+}
+
+// SearchService handles full-text search across nodes.
 type SearchService struct {
-	pageService     *PageService
-	databaseService *DatabaseService
+	fileStore *FileStore
 }
 
 // NewSearchService creates a new search service.
 func NewSearchService(fileStore *FileStore) *SearchService {
 	return &SearchService{
-		pageService:     NewPageService(fileStore, nil),
-		databaseService: NewDatabaseService(fileStore, nil),
+		fileStore: fileStore,
 	}
 }
 
-// SearchResult represents a single search result.
-type SearchResult struct {
-	Type     string    `json:"type"`      // "page" or "database" or "record"
-	ID       string    `json:"id"`        // Page ID or Database ID
-	RecordID *string   `json:"record_id"` // Only for records
-	Title    string    `json:"title"`
-	Content  string    `json:"content"` // Preview or snippet
-	Matches  int       `json:"matches"` // Number of matches found
-	Score    float64   `json:"score"`   // Relevance score (0-1)
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
-}
-
-// SearchOptions controls search behavior.
-type SearchOptions struct {
-	Query       string // Search query (case-insensitive)
-	Limit       int    // Max results (0 = no limit)
-	MatchTitle  bool   // Search in titles (default: true)
-	MatchBody   bool   // Search in body/content (default: true)
-	MatchFields bool   // Search in record fields (default: true)
-}
-
-// Search performs a full-text search across pages and databases.
-// Returns results sorted by relevance score (highest first).
+// Search performs a full-text search across all nodes.
 func (s *SearchService) Search(opts SearchOptions) ([]SearchResult, error) {
 	if opts.Query == "" {
-		return []SearchResult{}, nil
+		return nil, nil
 	}
 
-	// Default options
-	if opts.MatchTitle == false && opts.MatchBody == false && opts.MatchFields == false {
+	if !opts.MatchTitle && !opts.MatchBody && !opts.MatchFields {
 		opts.MatchTitle = true
 		opts.MatchBody = true
 		opts.MatchFields = true
@@ -65,12 +64,12 @@ func (s *SearchService) Search(opts SearchOptions) ([]SearchResult, error) {
 	}
 
 	// Search databases
-	if opts.MatchTitle || opts.MatchFields {
+	if opts.MatchFields {
 		dbResults := s.searchDatabases(query, opts)
 		results = append(results, dbResults...)
 	}
 
-	// Sort by score (descending)
+	// Sort by score
 	sortResultsByScore(results)
 
 	// Apply limit
@@ -81,266 +80,143 @@ func (s *SearchService) Search(opts SearchOptions) ([]SearchResult, error) {
 	return results, nil
 }
 
-// searchPages searches through all pages.
 func (s *SearchService) searchPages(query string, opts SearchOptions) []SearchResult {
-	pages, err := s.pageService.ListPages()
-	if err != nil {
-		return []SearchResult{}
-	}
-
-	var results []SearchResult
-	for _, page := range pages {
-		matches := 0
-		score := 0.0
-
-		// Search title
-		if opts.MatchTitle {
-			titleMatches := countMatches(strings.ToLower(page.Title), query)
-			if titleMatches > 0 {
-				matches += titleMatches
-				score += 0.5 * float64(titleMatches) // Title matches weighted higher
-			}
-		}
-
-		// Search content
-		if opts.MatchBody {
-			contentMatches := countMatches(strings.ToLower(page.Content), query)
-			if contentMatches > 0 {
-				matches += contentMatches
-				score += 0.1 * float64(contentMatches)
-			}
-		}
-
-		if matches > 0 {
-			// Normalize score to 0-1
-			score = min(score, 1.0)
-
-			// Create preview snippet from content
-			preview := createPreview(page.Content, query, 100)
-
-			results = append(results, SearchResult{
-				Type:     "page",
-				ID:       page.ID,
-				Title:    page.Title,
-				Content:  preview,
-				Matches:  matches,
-				Score:    score,
-				Created:  page.Created,
-				Modified: page.Modified,
-			})
-		}
-	}
-
-	return results
-}
-
-// searchDatabases searches through all databases and their records.
-func (s *SearchService) searchDatabases(query string, opts SearchOptions) []SearchResult {
-	databases, err := s.databaseService.ListDatabases()
-	if err != nil {
-		return []SearchResult{}
-	}
-
+	nodes, _ := s.fileStore.ReadNodeTree()
 	var results []SearchResult
 
-	for _, db := range databases {
-		dbMatches := 0
-
-		// Search database title
-		if opts.MatchTitle {
-			titleMatches := countMatches(strings.ToLower(db.Title), query)
-			if titleMatches > 0 {
-				dbMatches += titleMatches
-				// Add database itself as result
-				results = append(results, SearchResult{
-					Type:     "database",
-					ID:       db.ID,
-					Title:    db.Title,
-					Content:  "Database schema",
-					Matches:  titleMatches,
-					Score:    0.5 * float64(titleMatches),
-					Created:  db.Created,
-					Modified: db.Modified,
-				})
-			}
-		}
-
-		// Search records in database
-		if opts.MatchFields {
-			records, err := s.databaseService.GetRecords(db.ID)
-			if err != nil {
-				continue
-			}
-
-			for _, record := range records {
-				recordMatches := 0
+	var processNodes func([]*models.Node)
+	processNodes = func(list []*models.Node) {
+		for _, node := range list {
+			if node.Type != models.NodeTypeDatabase {
 				score := 0.0
+				matches := make(map[string]string)
+				snippet := ""
 
-				// Search all fields in the record
-				for _, fieldValue := range record.Data {
-					valueStr := valueToString(fieldValue)
-					fieldMatches := countMatches(strings.ToLower(valueStr), query)
-					if fieldMatches > 0 {
-						recordMatches += fieldMatches
-						score += 0.2 * float64(fieldMatches)
-					}
+				if opts.MatchTitle && strings.Contains(strings.ToLower(node.Title), query) {
+					score += 10.0
+					matches["title"] = node.Title
 				}
 
-				if recordMatches > 0 {
-					score = min(score, 1.0)
+				if opts.MatchBody && strings.Contains(strings.ToLower(node.Content), query) {
+					score += 5.0
+					matches["content"] = query
+					snippet = s.createSnippet(node.Content, query)
+				}
 
-					// Create preview from record data
-					preview := createRecordPreview(record.Data, query)
-
+				if score > 0 {
 					results = append(results, SearchResult{
-						Type:     "record",
-						ID:       db.ID,
-						RecordID: &record.ID,
-						Title:    db.Title,
-						Content:  preview,
-						Matches:  recordMatches,
-						Score:    score,
-						Created:  record.Created,
-						Modified: record.Modified,
+						Type:     "page",
+						NodeID:   node.ID,
+						Title:    node.Title,
+						Snippet:  snippet,
+						Score:    min(score, 100.0),
+						Matches:  matches,
+						Modified: node.Modified,
 					})
 				}
 			}
+			if len(node.Children) > 0 {
+				processNodes(node.Children)
+			}
 		}
 	}
-
+	processNodes(nodes)
 	return results
 }
 
-// countMatches counts how many times query appears in text.
-func countMatches(text, query string) int {
-	count := 0
-	for {
-		index := strings.Index(text, query)
-		if index == -1 {
-			break
+func (s *SearchService) searchDatabases(query string, opts SearchOptions) []SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
+	nodes, _ := s.fileStore.ReadNodeTree()
+	var results []SearchResult
+
+	var processNodes func([]*models.Node)
+	processNodes = func(list []*models.Node) {
+		for _, node := range list {
+			if node.Type != models.NodeTypeDocument {
+				records, _ := s.fileStore.ReadRecords(node.ID)
+				for _, record := range records {
+					score := 0.0
+					matches := make(map[string]string)
+					matchedField := ""
+
+					for key, val := range record.Data {
+						strVal := valueToString(val)
+						if strings.Contains(strings.ToLower(strVal), query) {
+							score += 2.0
+							matches[key] = strVal
+							matchedField = key
+						}
+					}
+
+					if score > 0 {
+						results = append(results, SearchResult{
+							Type:     "record",
+							NodeID:   node.ID,
+							RecordID: record.ID,
+							Title:    node.Title,
+							Snippet:  fmt.Sprintf("%s: %s", matchedField, matches[matchedField]),
+							Score:    min(score, 100.0),
+							Matches:  matches,
+							Modified: record.Modified,
+						})
+					}
+				}
+			}
+			if len(node.Children) > 0 {
+				processNodes(node.Children)
+			}
 		}
-		count++
-		text = text[index+len(query):]
 	}
-	return count
+	processNodes(nodes)
+	return results
 }
 
-// createPreview creates a snippet around the first match.
-func createPreview(text, query string, maxLen int) string {
-	text = strings.ToLower(text)
-	index := strings.Index(text, query)
-	if index == -1 {
-		// No match found, return first part of text
-		if len(text) > maxLen {
-			return text[:maxLen] + "..."
-		}
-		return text
+func (s *SearchService) createSnippet(content, query string) string {
+	idx := strings.Index(strings.ToLower(content), query)
+	if idx == -1 {
+		return truncate(content, 100)
 	}
 
-	// Create snippet with context
-	start := index - 20
+	start := idx - 50
 	if start < 0 {
 		start = 0
 	}
-
-	end := index + len(query) + 30
-	if end > len(text) {
-		end = len(text)
+	end := idx + len(query) + 50
+	if end > len(content) {
+		end = len(content)
 	}
 
-	snippet := text[start:end]
-
-	// Add ellipsis if truncated
-	prefix := ""
-	suffix := ""
+	snippet := content[start:end]
 	if start > 0 {
-		prefix = "..."
+		snippet = "..." + snippet
 	}
-	if end < len(text) {
-		suffix = "..."
+	if end < len(content) {
+		snippet += "..."
 	}
-
-	return prefix + snippet + suffix
+	return snippet
 }
 
-// createRecordPreview creates a preview of record fields.
-func createRecordPreview(data map[string]any, query string) string {
-	var preview strings.Builder
-	count := 0
-
-	for fieldName, fieldValue := range data {
-		if count >= 2 {
-			break
-		}
-		valueStr := valueToString(fieldValue)
-		if strings.Contains(strings.ToLower(valueStr), query) {
-			if preview.Len() > 0 {
-				preview.WriteString(", ")
-			}
-			preview.WriteString(fieldName + ": " + truncate(valueStr, 30))
-			count++
-		}
-	}
-
-	if preview.Len() == 0 {
-		// Just show first field
-		for fieldName, fieldValue := range data {
-			valueStr := valueToString(fieldValue)
-			return fieldName + ": " + truncate(valueStr, 50)
-		}
-	}
-
-	return preview.String()
-}
-
-// valueToString converts any value to a string for searching.
 func valueToString(v any) string {
+	if v == nil {
+		return ""
+	}
 	switch val := v.(type) {
 	case string:
 		return val
+	case int, int64:
+		return fmt.Sprintf("%d", val)
 	case float64:
-		return formatFloat(val)
+		return fmt.Sprintf("%.2f", val)
 	case bool:
 		return formatBool(val)
-	case nil:
-		return ""
+	case []any:
+		var parts []string
+		for _, item := range val {
+			parts = append(parts, valueToString(item))
+		}
+		return strings.Join(parts, ", ")
 	default:
-		return ""
+		return fmt.Sprintf("%v", v)
 	}
-}
-
-// formatFloat formats a float for display.
-func formatFloat(f float64) string {
-	if f == float64(int64(f)) {
-		return formatInt(int64(f))
-	}
-	return string(rune(int(f)))
-}
-
-// formatInt formats an int as a string.
-func formatInt(i int64) string {
-	if i == 0 {
-		return "0"
-	}
-	var result strings.Builder
-	negative := i < 0
-	if negative {
-		i = -i
-	}
-	for i > 0 {
-		result.WriteRune(rune('0' + i%10))
-		i /= 10
-	}
-	if negative {
-		result.WriteRune('-')
-	}
-	// Reverse
-	s := result.String()
-	runes := make([]rune, len(s))
-	for i, r := range s {
-		runes[len(s)-1-i] = r
-	}
-	return string(runes)
 }
 
 // formatBool formats a boolean as a string.
@@ -349,6 +225,16 @@ func formatBool(b bool) string {
 		return "true"
 	}
 	return "false"
+}
+
+// countMatches counts occurrences of query in text (case-insensitive).
+func countMatches(text, query string) int {
+	if query == "" {
+		return 0
+	}
+	text = strings.ToLower(text)
+	query = strings.ToLower(query)
+	return strings.Count(text, query)
 }
 
 // truncate limits string length with ellipsis.
@@ -361,20 +247,7 @@ func truncate(s string, maxLen int) string {
 
 // sortResultsByScore sorts results by score in descending order.
 func sortResultsByScore(results []SearchResult) {
-	// Simple bubble sort (could use sort.Slice for production)
-	for i := 0; i < len(results); i++ {
-		for j := i + 1; j < len(results); j++ {
-			if results[j].Score > results[i].Score {
-				results[i], results[j] = results[j], results[i]
-			}
-		}
-	}
-}
-
-// min returns the minimum of two values.
-func min(a, b float64) float64 {
-	if a < b {
-		return a
-	}
-	return b
+	sort.Slice(results, func(i, j int) bool {
+		return results[i].Score > results[j].Score
+	})
 }

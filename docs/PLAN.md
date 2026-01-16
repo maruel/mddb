@@ -107,11 +107,13 @@ See `README.md` and `ASSET_API.md` for details.
 - [x] **Page History UI**: View and restore previous versions (leveraging Git).
 - [x] **Performance**: Optimization of large lists/databases (pagination, streaming).
 - [ ] **In-Memory Caching**: High-efficiency caching of metadata and frequently accessed content.
-- [x] **Seamless UI Overhaul**:
+- [x] Phase 5.7: Seamless UI Overhaul (Unified Sidebar & Integrated Views)
     - [x] Unify Pages and Databases into a single "Node" concept.
-    - [x] Replace tabbed sidebar with a hierarchical list.
+    - [x] Hierarchical sidebar with recursive nesting.
+    - [x] Breadcrumbs navigation.
     - [x] Integrated view: Show database records within the page context.
-    - [ ] Database "Views" as a first-class UI concept (Board, Gallery, etc.).
+    - [x] Database "Views" as a first-class UI concept (Table, Grid).
+    - [ ] Advanced Database Views (Gallery, Board).
 
 ### Phase 6: Multi-user & RBAC (Planned)
 

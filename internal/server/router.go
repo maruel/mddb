@@ -76,8 +76,8 @@ type EmbeddedSPAHandler struct {
 }
 
 // NewEmbeddedSPAHandler creates a handler for the embedded frontend.
-func NewEmbeddedSPAHandler(fs embed.FS) *EmbeddedSPAHandler {
-	return &EmbeddedSPAHandler{fs: fs}
+func NewEmbeddedSPAHandler(f embed.FS) *EmbeddedSPAHandler {
+	return &EmbeddedSPAHandler{fs: f}
 }
 
 // ServeHTTP implements http.Handler for embedded SPA routing.

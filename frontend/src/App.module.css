@@ -322,7 +322,7 @@ body {
 
 .editorContent {
   display: flex;
-  height: 60vh; /* Fixed height for editor when combined with database */
+  height: 60vh;
   min-height: 400px;
   overflow: hidden;
   gap: 1px;
@@ -332,6 +332,99 @@ body {
 .databaseView {
   border-top: 4px solid #f0f0f0;
   padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.databaseHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.viewToggle {
+  display: flex;
+  background: #eee;
+  padding: 2px;
+  border-radius: 6px;
+}
+
+.viewToggle button {
+  padding: 4px 12px;
+  border: none;
+  background: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.viewToggle button.active {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sidebarNodeWrapper {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.childList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pageTitleText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expandIcon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  font-size: 8px;
+  line-height: 16px;
+  text-align: center;
+  transition: transform 0.2s;
+  cursor: pointer;
+  color: #666;
+}
+
+.expandIcon.expanded {
+  transform: rotate(90deg);
+}
+
+.expandIcon.hidden {
+  visibility: hidden;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  color: #666;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.breadcrumbItem {
+  cursor: pointer;
+}
+
+.breadcrumbItem:hover {
+  text-decoration: underline;
+  color: #333;
+}
+
+.breadcrumbSeparator {
+  color: #ccc;
 }
 
 .contentInput {
@@ -351,25 +444,6 @@ body {
   width: 100%;
   padding: 1rem;
   font-size: 1rem;
-}
-
-.databaseView {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  flex: 1;
-}
-
-.databaseHeader {
-  padding: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
-  background: white;
-}
-
-.databaseHeader h2 {
-  font-size: 1.5rem;
-  color: #333;
-  margin: 0;
 }
 
 .historyPanel {

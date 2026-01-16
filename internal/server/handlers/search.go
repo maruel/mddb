@@ -28,11 +28,9 @@ type SearchRequest struct {
 	MatchFields bool   `json:"match_fields,omitempty"`
 }
 
-// SearchResponse is a response containing search results
+// SearchResponse is the response to a search request
 type SearchResponse struct {
-	Results []SearchResultDTO `json:"results"`
-	Total   int               `json:"total"`
-	Query   string            `json:"query"`
+	Results []*storage.SearchResult `json:"results"`
 }
 
 // SearchResultDTO is the DTO version of SearchResult for API responses
@@ -55,41 +53,27 @@ func (h *SearchHandler) Search(ctx context.Context, req SearchRequest) (*SearchR
 	}
 
 	// Set defaults if not specified
-	matchTitle := req.MatchTitle || (req.MatchTitle == false && req.MatchBody == false && req.MatchFields == false)
-	matchBody := req.MatchBody || (req.MatchBody == false && req.MatchTitle == false && req.MatchFields == false)
-	matchFields := req.MatchFields || (req.MatchFields == false && req.MatchTitle == false && req.MatchBody == false)
+	matchTitle := req.MatchTitle || (!req.MatchTitle && !req.MatchBody && !req.MatchFields)
+	matchBody := req.MatchBody || (!req.MatchBody && !req.MatchTitle && !req.MatchFields)
+	matchFields := req.MatchFields || (!req.MatchFields && !req.MatchTitle && !req.MatchBody)
 
 	results, err := h.searchService.Search(storage.SearchOptions{
 		Query:       req.Query,
-		Limit:       req.Limit,
 		MatchTitle:  matchTitle,
 		MatchBody:   matchBody,
 		MatchFields: matchFields,
 	})
-
 	if err != nil {
 		return nil, errors.InternalWithError("Search failed", err)
 	}
 
-	// Convert results to DTOs
-	resultDTOs := make([]SearchResultDTO, len(results))
-	for i, result := range results {
-		resultDTOs[i] = SearchResultDTO{
-			Type:     result.Type,
-			ID:       result.ID,
-			RecordID: result.RecordID,
-			Title:    result.Title,
-			Content:  result.Content,
-			Matches:  result.Matches,
-			Score:    result.Score,
-			Created:  result.Created.Format("2006-01-02T15:04:05Z07:00"),
-			Modified: result.Modified.Format("2006-01-02T15:04:05Z07:00"),
-		}
+	response := &SearchResponse{
+		Results: make([]*storage.SearchResult, len(results)),
 	}
 
-	return &SearchResponse{
-		Results: resultDTOs,
-		Total:   len(resultDTOs),
-		Query:   req.Query,
-	}, nil
+	for i := range results {
+		response.Results[i] = &results[i]
+	}
+
+	return response, nil
 }

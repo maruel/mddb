@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/maruel/mddb/internal/models"
@@ -112,9 +113,9 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	db, _ := dbService.CreateDatabase("Tasks", columns)
 
 	// Create records
-	dbService.CreateRecord(db.ID, map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"})
-	dbService.CreateRecord(db.ID, map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"})
-	dbService.CreateRecord(db.ID, map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"})
+	_, _ = dbService.CreateRecord(db.ID, map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"})
+	_, _ = dbService.CreateRecord(db.ID, map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"})
+	_, _ = dbService.CreateRecord(db.ID, map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"})
 
 	tests := []struct {
 		name          string
@@ -168,7 +169,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 				if result.Type != "record" {
 					t.Errorf("Expected type 'record', got '%s'", result.Type)
 				}
-				if result.RecordID == nil {
+				if result.RecordID == "" {
 					t.Error("Expected RecordID to be set for record results")
 				}
 			}
@@ -186,8 +187,8 @@ func TestSearchService_Scoring(t *testing.T) {
 
 	// Create pages where title match should score higher
 	pageService := NewPageService(fileStore, nil)
-	pageService.CreatePage("Python Programming", "This is about Java not Python")
-	pageService.CreatePage("Java Basics", "Learn Python programming fundamentals")
+	_, _ = pageService.CreatePage("Python Programming", "This is about Java not Python")
+	_, _ = pageService.CreatePage("Java Basics", "Learn Python programming fundamentals")
 
 	results, err := searchService.Search(SearchOptions{
 		Query:      "python",
@@ -223,8 +224,8 @@ func TestSearchService_Limit(t *testing.T) {
 
 	// Create multiple pages
 	pageService := NewPageService(fileStore, nil)
-	for i := 0; i < 5; i++ {
-		pageService.CreatePage("Test Page", "This is test content")
+	for i := range 10 {
+		_, _ = pageService.CreatePage(fmt.Sprintf("Test Page %d", i), "This is test content")
 	}
 
 	results, err := searchService.Search(SearchOptions{
@@ -313,7 +314,7 @@ func TestSearchService_Integration(t *testing.T) {
 
 	// Create mixed content
 	pageService := NewPageService(fileStore, nil)
-	pageService.CreatePage("Blog Post", "Article about searchable content and web development")
+	_, _ = pageService.CreatePage("Blog Post", "Article about searchable content and web development")
 
 	dbService := NewDatabaseService(fileStore, nil)
 	columns := []models.Column{
@@ -321,7 +322,7 @@ func TestSearchService_Integration(t *testing.T) {
 		{Name: "content", Type: "text"},
 	}
 	db, _ := dbService.CreateDatabase("Articles", columns)
-	dbService.CreateRecord(db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
+	_, _ = dbService.CreateRecord(db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
 
 	// Search should find both page and record
 	results, err := searchService.Search(SearchOptions{

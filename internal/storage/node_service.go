@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+
 	"github.com/maruel/mddb/internal/models"
 )
 
@@ -27,9 +28,9 @@ func (s *NodeService) GetNode(id string) (*models.Node, error) {
 	return s.fileStore.ReadNode(id)
 }
 
-// ListNodes returns all nodes.
+// ListNodes returns all nodes as a hierarchical tree.
 func (s *NodeService) ListNodes() ([]*models.Node, error) {
-	return s.fileStore.ListNodes()
+	return s.fileStore.ReadNodeTree()
 }
 
 // CreateNode creates a new unified node.
@@ -55,7 +56,10 @@ func (s *NodeService) CreateNode(title string, nodeType models.NodeType) (*model
 	}
 
 	if s.gitService != nil {
-		s.gitService.CommitChange("create", "node", id, title)
+		if err := s.gitService.CommitChange("create", "node", id, title); err != nil {
+			// Log error but don't fail node creation
+			fmt.Printf("Warning: failed to commit change: %v\n", err)
+		}
 	}
 
 	return s.fileStore.ReadNode(id)

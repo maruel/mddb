@@ -278,11 +278,15 @@ func (fs *FileStore) ReadNode(id string) (*models.Node, error) {
 	return node, nil
 }
 
-// ListNodes returns all nodes in the storage.
-func (fs *FileStore) ListNodes() ([]*models.Node, error) {
-	entries, err := os.ReadDir(fs.pagesDir)
+// ReadNodeTree returns the full hierarchical tree of nodes.
+func (fs *FileStore) ReadNodeTree() ([]*models.Node, error) {
+	return fs.readNodesRecursive(fs.pagesDir, "")
+}
+
+func (fs *FileStore) readNodesRecursive(dir, parentID string) ([]*models.Node, error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read nodes: %w", err)
+		return nil, err
 	}
 
 	var nodes []*models.Node
@@ -290,19 +294,76 @@ func (fs *FileStore) ListNodes() ([]*models.Node, error) {
 		if !entry.IsDir() {
 			continue
 		}
+
 		id := entry.Name()
+		// Only process numeric IDs or nested folders containing numeric IDs
 		if _, err := strconv.Atoi(id); err != nil {
-			continue // Only numeric directories
+			// If it's not a numeric ID, it might be a grouping folder,
+			// we can support recursion through it if needed,
+			// but based on AGENTS.md, pages are numbered directories.
+			continue
 		}
 
-		node, err := fs.ReadNode(id)
+		node, err := fs.ReadNodeFromPath(filepath.Join(dir, id), id, parentID)
 		if err != nil {
 			continue
 		}
+
+		// Recurse for children
+		children, _ := fs.readNodesRecursive(filepath.Join(dir, id), id)
+		node.Children = children
+
 		nodes = append(nodes, node)
 	}
-
 	return nodes, nil
+}
+
+// ReadNodeFromPath reads a node from a specific path.
+func (fs *FileStore) ReadNodeFromPath(path, id, parentID string) (*models.Node, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	node := &models.Node{
+		ID:       id,
+		ParentID: parentID,
+		Created:  info.ModTime(),
+		Modified: info.ModTime(),
+	}
+
+	// Read index.md
+	indexFile := filepath.Join(path, "index.md")
+	if _, err := os.Stat(indexFile); err == nil {
+		page, err := fs.ReadPage(id) // ReadPage might need path adjustment if it assumes top-level
+		if err == nil {
+			node.Title = page.Title
+			node.Content = page.Content
+			node.Created = page.Created
+			node.Modified = page.Modified
+			node.Tags = page.Tags
+			node.Type = models.NodeTypeDocument
+		}
+	}
+
+	// Read metadata.json
+	schemaFile := filepath.Join(path, "metadata.json")
+	if _, err := os.Stat(schemaFile); err == nil {
+		db, err := fs.ReadDatabase(id)
+		if err == nil {
+			if node.Type == models.NodeTypeDocument {
+				node.Type = models.NodeTypeHybrid
+			} else {
+				node.Type = models.NodeTypeDatabase
+				node.Title = db.Title
+				node.Created = db.Created
+				node.Modified = db.Modified
+			}
+			node.Columns = db.Columns
+		}
+	}
+
+	return node, nil
 }
 
 // pageDir returns the directory path for a page ID.

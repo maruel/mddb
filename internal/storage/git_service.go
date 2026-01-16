@@ -98,7 +98,6 @@ func (gs *GitService) GetHistory(resourceType, resourceID string) ([]*Commit, er
 		}
 
 		hash := parts[0]
-		// author := parts[1] // Currently not used in Commit struct
 		timestampStr := parts[2]
 		message := parts[3]
 
@@ -191,11 +190,7 @@ func (gs *GitService) execGit(args ...string) error {
 func (gs *GitService) gitOutput(args ...string) (string, error) {
 	cmd := gs.newGitCmd(args...)
 	output, err := cmd.CombinedOutput()
-	if err != nil {
-		// Some git commands exit with error even on success (e.g., grep with no matches)
-		// Return output anyway for the caller to handle
-	}
-	return string(output), nil
+	return string(output), err
 }
 
 // gitOutputBytes executes a git command and returns the output as bytes.

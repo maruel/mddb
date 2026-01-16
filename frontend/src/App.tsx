@@ -1,6 +1,8 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
+import SidebarNode from './components/SidebarNode';
 import MarkdownPreview from './components/MarkdownPreview';
 import DatabaseTable from './components/DatabaseTable';
+import DatabaseGrid from './components/DatabaseGrid';
 import { debounce } from './utils/debounce';
 import styles from './App.module.css';
 
@@ -40,6 +42,7 @@ export default function App() {
   const [nodes, setNodes] = createSignal<Node[]>([]);
   const [records, setRecords] = createSignal<Record[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
+  const [viewMode, setViewMode] = createSignal<'table' | 'grid'>('table');
   const [title, setTitle] = createSignal('');
   const [content, setContent] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -249,6 +252,28 @@ export default function App() {
     loadNode(node.id);
   };
 
+  const getBreadcrumbs = (nodeId: string | null): Node[] => {
+    if (!nodeId) return [];
+    const path: Node[] = [];
+    
+    const findPath = (currentNodes: Node[], targetId: string): boolean => {
+      for (const node of currentNodes) {
+        if (node.id === targetId) {
+          path.push(node);
+          return true;
+        }
+        if (node.children && findPath(node.children, targetId)) {
+          path.unshift(node);
+          return true;
+        }
+      }
+      return false;
+    };
+    
+    findPath(nodes(), nodeId);
+    return path;
+  };
+
   async function handleAddRecord(data: Record<string, unknown>) {
     const nodeId = selectedNodeId();
     if (!nodeId) return;
@@ -343,23 +368,38 @@ export default function App() {
           <ul class={styles.pageList}>
             <For each={nodes()}>
               {(node) => (
-                <li
-                  class={styles.pageItem}
-                  classList={{ [styles.active]: selectedNodeId() === node.id }}
-                  onClick={() => handleNodeClick(node)}
-                >
-                  <div class={styles.pageTitle}>
-                    <span class={styles.nodeIcon}>{node.type === 'database' ? '📊' : '📄'}</span>
-                    {node.title}
-                  </div>
-                  <div class={styles.pageDate}>{new Date(node.modified).toLocaleDateString()}</div>
-                </li>
+                <SidebarNode
+                  node={node}
+                  selectedId={selectedNodeId()}
+                  onSelect={handleNodeClick}
+                  depth={0}
+                />
               )}
             </For>
           </ul>
         </aside>
 
         <main class={styles.main}>
+          <Show when={selectedNodeId()}>
+            <nav class={styles.breadcrumbs}>
+              <For each={getBreadcrumbs(selectedNodeId())}>
+                {(crumb, i) => (
+                  <>
+                    <Show when={i() > 0}>
+                      <span class={styles.breadcrumbSeparator}>/</span>
+                    </Show>
+                    <span 
+                      class={styles.breadcrumbItem} 
+                      onClick={() => handleNodeClick(crumb)}
+                    >
+                      {crumb.title}
+                    </span>
+                  </>
+                )}
+              </For>
+            </nav>
+          </Show>
+
           <Show when={error()} fallback={null}>
             <div class={styles.error}>{error()}</div>
           </Show>
@@ -477,16 +517,41 @@ export default function App() {
                   <div class={styles.databaseView}>
                     <div class={styles.databaseHeader}>
                       <h3>Database Records</h3>
+                      <div class={styles.viewToggle}>
+                        <button 
+                          classList={{ [styles.active]: viewMode() === 'table' }}
+                          onClick={() => setViewMode('table')}
+                        >
+                          Table
+                        </button>
+                        <button 
+                          classList={{ [styles.active]: viewMode() === 'grid' }}
+                          onClick={() => setViewMode('grid')}
+                        >
+                          Grid
+                        </button>
+                      </div>
                     </div>
-                    <DatabaseTable
-                      databaseId={selectedNodeId() || ''}
-                      columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
-                      records={records()}
-                      onAddRecord={handleAddRecord}
-                      onDeleteRecord={handleDeleteRecord}
-                      onLoadMore={loadMoreRecords}
-                      hasMore={hasMore()}
-                    />
+                    <Show 
+                      when={viewMode() === 'table'} 
+                      fallback={
+                        <DatabaseGrid 
+                          records={records()} 
+                          columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
+                          onDeleteRecord={handleDeleteRecord}
+                        />
+                      }
+                    >
+                      <DatabaseTable
+                        databaseId={selectedNodeId() || ''}
+                        columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
+                        records={records()}
+                        onAddRecord={handleAddRecord}
+                        onDeleteRecord={handleDeleteRecord}
+                        onLoadMore={loadMoreRecords}
+                        hasMore={hasMore()}
+                      />
+                    </Show>
                   </div>
                 </Show>
               </div>

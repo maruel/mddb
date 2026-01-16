@@ -10,25 +10,31 @@ import (
 type ErrorCode string
 
 const (
-	// Validation errors
+	// ErrValidationFailed is returned when input data fails validation
 	ErrValidationFailed ErrorCode = "VALIDATION_FAILED"
-	ErrMissingField     ErrorCode = "MISSING_FIELD"
-	ErrInvalidFormat    ErrorCode = "INVALID_FORMAT"
+	// ErrMissingField is returned when a required field is missing
+	ErrMissingField ErrorCode = "MISSING_FIELD"
+	// ErrInvalidFormat is returned when a field has an invalid format
+	ErrInvalidFormat ErrorCode = "INVALID_FORMAT"
 
-	// Resource errors
-	ErrNotFound      ErrorCode = "NOT_FOUND"
-	ErrAlreadyExists ErrorCode = "ALREADY_EXISTS"
-	ErrConflict      ErrorCode = "CONFLICT"
+	// ErrNotFound is returned when a resource is not found
+	ErrNotFound ErrorCode = "NOT_FOUND"
+	// ErrPageNotFound is returned when a page is not found
+	ErrPageNotFound ErrorCode = "PAGE_NOT_FOUND"
+	// ErrDatabaseNotFound is returned when a database is not found
+	ErrDatabaseNotFound ErrorCode = "DATABASE_NOT_FOUND"
 
-	// File operation errors
-	ErrFileNotFound  ErrorCode = "FILE_NOT_FOUND"
-	ErrFileReadFail  ErrorCode = "FILE_READ_FAILED"
-	ErrFileWriteFail ErrorCode = "FILE_WRITE_FAILED"
-	ErrPathTraversal ErrorCode = "PATH_TRAVERSAL_ATTEMPT"
+	// ErrFileNotFound is returned when a file is not found
+	ErrFileNotFound ErrorCode = "FILE_NOT_FOUND"
+	// ErrStorageError is returned when a storage operation fails
+	ErrStorageError ErrorCode = "STORAGE_ERROR"
 
-	// Server errors
-	ErrInternal       ErrorCode = "INTERNAL_ERROR"
+	// ErrInternal is returned when an unexpected server error occurs
+	ErrInternal ErrorCode = "INTERNAL_ERROR"
+	// ErrNotImplemented is returned when a feature is not implemented
 	ErrNotImplemented ErrorCode = "NOT_IMPLEMENTED"
+	// ErrConflict is returned when there is a resource conflict
+	ErrConflict ErrorCode = "CONFLICT"
 )
 
 // ErrorWithStatus is an error that includes an HTTP status code and error code.
@@ -60,10 +66,11 @@ func NewAPIError(statusCode int, code ErrorCode, message string) *APIError {
 
 // WithDetails adds details to the error.
 func (e *APIError) WithDetails(details map[string]any) *APIError {
-	if details != nil {
-		for k, v := range details {
-			e.details[k] = v
-		}
+	if e.details == nil {
+		e.details = make(map[string]any)
+	}
+	for k, v := range details {
+		e.details[k] = v
 	}
 	return e
 }
