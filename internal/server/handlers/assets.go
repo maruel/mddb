@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"net/http"
+	"context"
 
+	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/storage"
-	"github.com/maruel/mddb/internal/utils"
 )
 
 // AssetHandler handles asset/file-related HTTP requests
@@ -17,30 +17,54 @@ func NewAssetHandler(fileStore *storage.FileStore) *AssetHandler {
 	return &AssetHandler{fileStore: fileStore}
 }
 
+// Request/Response types for assets
+type ListAssetsRequest struct{}
+
+type ListAssetsResponse struct {
+	Assets []any `json:"assets"`
+}
+
+type UploadAssetRequest struct{}
+
+type UploadAssetResponse struct {
+	ID string `json:"id"`
+}
+
+type ServeAssetRequest struct {
+	ID string `path:"id"`
+}
+
+type ServeAssetResponse struct {
+	Data string `json:"data"`
+}
+
+type DeleteAssetRequest struct {
+	ID string `path:"id"`
+}
+
+type DeleteAssetResponse struct{}
+
 // ListAssets returns a list of all assets
-func (h *AssetHandler) ListAssets(w http.ResponseWriter, r *http.Request) {
+func (h *AssetHandler) ListAssets(ctx context.Context, req ListAssetsRequest) (*ListAssetsResponse, error) {
 	// TODO: Implement listing assets
-	utils.RespondSuccess(w, http.StatusOK, []interface{}{})
+	return &ListAssetsResponse{Assets: []any{}}, nil
 }
 
 // UploadAsset handles file uploads
-func (h *AssetHandler) UploadAsset(w http.ResponseWriter, r *http.Request) {
+// Note: Multipart form handling needs custom logic, will be implemented separately
+func (h *AssetHandler) UploadAsset(ctx context.Context, req UploadAssetRequest) (*UploadAssetResponse, error) {
 	// TODO: Implement uploading assets
-	utils.RespondSuccess(w, http.StatusCreated, map[string]string{"id": "placeholder"})
+	return &UploadAssetResponse{ID: "placeholder"}, nil
 }
 
 // ServeAsset serves an asset file
-func (h *AssetHandler) ServeAsset(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	// TODO: Implement serving assets
-	utils.RespondError(w, http.StatusNotFound, "Asset not found", "NOT_FOUND")
-	_ = id
+func (h *AssetHandler) ServeAsset(ctx context.Context, req ServeAssetRequest) (*ServeAssetResponse, error) {
+	// TODO: Implement serving assets (req.ID is populated from path parameter)
+	return nil, errors.NewAPIError(404, "Asset not found")
 }
 
 // DeleteAsset deletes an asset
-func (h *AssetHandler) DeleteAsset(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	// TODO: Implement deleting assets
-	utils.RespondSuccess(w, http.StatusNoContent, nil)
-	_ = id
+func (h *AssetHandler) DeleteAsset(ctx context.Context, req DeleteAssetRequest) (*DeleteAssetResponse, error) {
+	// TODO: Implement deleting assets (req.ID is populated from path parameter)
+	return &DeleteAssetResponse{}, nil
 }

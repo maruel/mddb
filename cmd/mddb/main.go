@@ -32,8 +32,22 @@ func mainImpl() error {
 	if len(flag.Args()) > 0 {
 		return fmt.Errorf("unknown arguments: %v", flag.Args())
 	}
-	logger := initLogger(*logLevel)
-	slog.SetDefault(logger)
+
+	var ll slog.Level
+	switch *logLevel {
+	case "debug":
+		ll = slog.LevelDebug
+	case "info":
+		ll = slog.LevelInfo
+	case "warn":
+		ll = slog.LevelWarn
+	case "error":
+		ll = slog.LevelError
+	default:
+		return fmt.Errorf("unknown log level: %q", *logLevel)
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: ll})))
+
 	fileStore, err := storage.NewFileStore(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
@@ -53,7 +67,7 @@ func mainImpl() error {
 	// Run server in goroutine
 	serverErr := make(chan error, 1)
 	go func() {
-		slog.Info("Starting server", "addr", addr)
+		slog.InfoContext(ctx, "Starting server", "addr", addr)
 		serverErr <- httpServer.ListenAndServe()
 	}()
 
@@ -65,38 +79,14 @@ func mainImpl() error {
 		}
 	case <-ctx.Done():
 		// Graceful shutdown
-		slog.Info("Shutting down server")
+		slog.InfoContext(ctx, "Shutting down server")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			return fmt.Errorf("shutdown error: %w", err)
 		}
-		slog.Info("Server stopped")
+		slog.InfoContext(ctx, "Server stopped")
 	}
 	return nil
-}
-
-// initLogger initializes a structured logger with the given level
-func initLogger(level string) *slog.Logger {
-	var logLevel slog.Level
-	switch level {
-	case "debug":
-		logLevel = slog.LevelDebug
-	case "info":
-		logLevel = slog.LevelInfo
-	case "warn":
-		logLevel = slog.LevelWarn
-	case "error":
-		logLevel = slog.LevelError
-	default:
-		logLevel = slog.LevelInfo
-	}
-
-	opts := &slog.HandlerOptions{
-		Level: logLevel,
-	}
-
-	handler := slog.NewTextHandler(os.Stdout, opts)
-	return slog.New(handler)
 }

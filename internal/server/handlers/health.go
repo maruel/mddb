@@ -1,20 +1,16 @@
 package handlers
 
-import (
-	"net/http"
+import "context"
 
-	"github.com/maruel/mddb/internal/utils"
-)
+// HealthRequest is the request type for health check (empty).
+type HealthRequest struct{}
 
-// HealthHandler handles health check endpoints
-type HealthHandler struct{}
-
-// NewHealthHandler creates a new health handler
-func NewHealthHandler() *HealthHandler {
-	return &HealthHandler{}
+// HealthResponse is the response for health check.
+type HealthResponse struct {
+	Status string `json:"status"`
 }
 
-// Health returns the health status of the server
-func (h *HealthHandler) Health(w http.ResponseWriter, r *http.Request) {
-	utils.RespondSuccess(w, http.StatusOK, map[string]string{"status": "ok"})
+// Health returns the health status of the server.
+func Health(ctx context.Context, req HealthRequest) (*HealthResponse, error) {
+	return &HealthResponse{Status: "ok"}, nil
 }

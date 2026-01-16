@@ -1,11 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
-	"net/http"
+	"context"
 
+	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/storage"
-	"github.com/maruel/mddb/internal/utils"
 )
 
 // PageHandler handles page-related HTTP requests
@@ -18,48 +17,74 @@ func NewPageHandler(fileStore *storage.FileStore) *PageHandler {
 	return &PageHandler{fileStore: fileStore}
 }
 
+// Request/Response types for pages
+type ListPagesRequest struct{}
+
+type ListPagesResponse struct {
+	Pages []any `json:"pages"`
+}
+
+type GetPageRequest struct {
+	ID string `path:"id"`
+}
+
+type GetPageResponse struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+type CreatePageRequest struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+type CreatePageResponse struct {
+	ID string `json:"id"`
+}
+
+type UpdatePageRequest struct {
+	ID      string `path:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+type UpdatePageResponse struct {
+	ID string `json:"id"`
+}
+
+type DeletePageRequest struct {
+	ID string `path:"id"`
+}
+
+type DeletePageResponse struct{}
+
 // ListPages returns a list of all pages
-func (h *PageHandler) ListPages(w http.ResponseWriter, r *http.Request) {
+func (h *PageHandler) ListPages(ctx context.Context, req ListPagesRequest) (*ListPagesResponse, error) {
 	// TODO: Implement listing pages from filesystem
-	utils.RespondSuccess(w, http.StatusOK, []interface{}{})
+	return &ListPagesResponse{Pages: []any{}}, nil
 }
 
 // GetPage returns a specific page by ID
-func (h *PageHandler) GetPage(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	// TODO: Implement getting a page
-	utils.RespondError(w, http.StatusNotFound, "Page not found", "NOT_FOUND")
-	_ = id
+func (h *PageHandler) GetPage(ctx context.Context, req GetPageRequest) (*GetPageResponse, error) {
+	// TODO: Implement getting a page (req.ID is populated from path parameter)
+	return nil, errors.NewAPIError(404, "Page not found")
 }
 
 // CreatePage creates a new page
-func (h *PageHandler) CreatePage(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Title   string `json:"title"`
-		Content string `json:"content"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		utils.RespondError(w, http.StatusBadRequest, "Invalid request body", "INVALID_REQUEST")
-		return
-	}
-
+func (h *PageHandler) CreatePage(ctx context.Context, req CreatePageRequest) (*CreatePageResponse, error) {
 	// TODO: Implement creating a page
-	utils.RespondSuccess(w, http.StatusCreated, map[string]string{"id": "placeholder"})
+	return &CreatePageResponse{ID: "placeholder"}, nil
 }
 
 // UpdatePage updates an existing page
-func (h *PageHandler) UpdatePage(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	// TODO: Implement updating a page
-	utils.RespondError(w, http.StatusNotFound, "Page not found", "NOT_FOUND")
-	_ = id
+func (h *PageHandler) UpdatePage(ctx context.Context, req UpdatePageRequest) (*UpdatePageResponse, error) {
+	// TODO: Implement updating a page (req.ID is populated from path parameter)
+	return nil, errors.NewAPIError(404, "Page not found")
 }
 
 // DeletePage deletes a page
-func (h *PageHandler) DeletePage(w http.ResponseWriter, r *http.Request) {
-	id := r.PathValue("id")
-	// TODO: Implement deleting a page
-	utils.RespondSuccess(w, http.StatusNoContent, nil)
-	_ = id
+func (h *PageHandler) DeletePage(ctx context.Context, req DeletePageRequest) (*DeletePageResponse, error) {
+	// TODO: Implement deleting a page (req.ID is populated from path parameter)
+	return &DeletePageResponse{}, nil
 }

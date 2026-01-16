@@ -10,42 +10,39 @@ import (
 
 // NewRouter creates and configures the HTTP router
 func NewRouter(fileStore *storage.FileStore) http.Handler {
-	mux := http.NewServeMux()
-
-	// Initialize handlers
-	pageHandler := handlers.NewPageHandler(fileStore)
-	databaseHandler := handlers.NewDatabaseHandler(fileStore)
-	assetHandler := handlers.NewAssetHandler(fileStore)
-	healthHandler := handlers.NewHealthHandler()
+	mux := &http.ServeMux{}
+	ph := handlers.NewPageHandler(fileStore)
+	dh := handlers.NewDatabaseHandler(fileStore)
+	ah := handlers.NewAssetHandler(fileStore)
 
 	// Health check
-	mux.HandleFunc("/api/health", healthHandler.Health)
+	mux.Handle("/api/health", Wrap(handlers.Health))
 
 	// Pages endpoints
-	mux.HandleFunc("GET /api/pages", pageHandler.ListPages)
-	mux.HandleFunc("GET /api/pages/{id}", pageHandler.GetPage)
-	mux.HandleFunc("POST /api/pages", pageHandler.CreatePage)
-	mux.HandleFunc("PUT /api/pages/{id}", pageHandler.UpdatePage)
-	mux.HandleFunc("DELETE /api/pages/{id}", pageHandler.DeletePage)
+	mux.Handle("GET /api/pages", Wrap(ph.ListPages))
+	mux.Handle("GET /api/pages/{id}", Wrap(ph.GetPage))
+	mux.Handle("POST /api/pages", Wrap(ph.CreatePage))
+	mux.Handle("PUT /api/pages/{id}", Wrap(ph.UpdatePage))
+	mux.Handle("DELETE /api/pages/{id}", Wrap(ph.DeletePage))
 
 	// Database endpoints
-	mux.HandleFunc("GET /api/databases", databaseHandler.ListDatabases)
-	mux.HandleFunc("GET /api/databases/{id}", databaseHandler.GetDatabase)
-	mux.HandleFunc("POST /api/databases", databaseHandler.CreateDatabase)
-	mux.HandleFunc("PUT /api/databases/{id}", databaseHandler.UpdateDatabase)
-	mux.HandleFunc("DELETE /api/databases/{id}", databaseHandler.DeleteDatabase)
+	mux.Handle("GET /api/databases", Wrap(dh.ListDatabases))
+	mux.Handle("GET /api/databases/{id}", Wrap(dh.GetDatabase))
+	mux.Handle("POST /api/databases", Wrap(dh.CreateDatabase))
+	mux.Handle("PUT /api/databases/{id}", Wrap(dh.UpdateDatabase))
+	mux.Handle("DELETE /api/databases/{id}", Wrap(dh.DeleteDatabase))
 
 	// Records endpoints
-	mux.HandleFunc("GET /api/databases/{id}/records", databaseHandler.ListRecords)
-	mux.HandleFunc("POST /api/databases/{id}/records", databaseHandler.CreateRecord)
-	mux.HandleFunc("PUT /api/databases/{id}/records/{rid}", databaseHandler.UpdateRecord)
-	mux.HandleFunc("DELETE /api/databases/{id}/records/{rid}", databaseHandler.DeleteRecord)
+	mux.Handle("GET /api/databases/{id}/records", Wrap(dh.ListRecords))
+	mux.Handle("POST /api/databases/{id}/records", Wrap(dh.CreateRecord))
+	mux.Handle("PUT /api/databases/{id}/records/{rid}", Wrap(dh.UpdateRecord))
+	mux.Handle("DELETE /api/databases/{id}/records/{rid}", Wrap(dh.DeleteRecord))
 
 	// Assets endpoints
-	mux.HandleFunc("GET /api/assets", assetHandler.ListAssets)
-	mux.HandleFunc("POST /api/assets", assetHandler.UploadAsset)
-	mux.HandleFunc("DELETE /api/assets/{id}", assetHandler.DeleteAsset)
-	mux.HandleFunc("GET /assets/{id}", assetHandler.ServeAsset)
+	mux.Handle("GET /api/assets", Wrap(ah.ListAssets))
+	mux.Handle("POST /api/assets", Wrap(ah.UploadAsset))
+	mux.Handle("DELETE /api/assets/{id}", Wrap(ah.DeleteAsset))
+	mux.Handle("GET /assets/{id}", Wrap(ah.ServeAsset))
 
 	// Serve static files for SolidJS frontend
 	mux.Handle("/", http.FileServer(http.Dir(filepath.Join(fileStore.RootDir(), "public"))))
