@@ -50,10 +50,15 @@ That's it! All your data is stored in a `data/` folder.
 - Add/delete rows easily
 - All data stays local
 
+### Search
+- Full-text search across documents and databases
+- Fast, relevant results
+- Search by title, content, or record fields
+
 ### Storage
 - Everything stored as files on your computer
+- **Automatic Git Versioning**: Every change is committed to a local git repo in `data/`
 - Easy to backup - just copy the `data/` folder
-- Version control friendly (Git-compatible)
 - No account or internet connection required
 
 ## Configuration

@@ -18,6 +18,11 @@ Welcome to mddb! Here's a guide to all available documentation.
    - File structure
    - FAQ
 
+3. [EMBEDDED_BUILD.md](EMBEDDED_BUILD.md) - Building and distribution
+   - Single binary build process
+   - Technical details
+   - Development vs Distribution
+
 ## Understanding the Project
 
 **Want to understand requirements, architecture, and plan?**
@@ -43,21 +48,10 @@ Welcome to mddb! Here's a guide to all available documentation.
   - Testing practices
   - Git workflow
 
-## Development Tools
-
-**Code quality, linting, and standards:**
+## Reference
 
 - [LINTERS.md](LINTERS.md) - Code quality standards
-  - Go linting with golangci-lint
-  - Frontend linting with ESLint + Prettier
-  - Pre-commit hooks setup
-  - Code style rules and common fixes
-
-- [MIGRATION_PNPM.md](MIGRATION_PNPM.md) - Package manager migration
-  - Why we use pnpm
-  - What changed
-  - Performance improvements
-  - Verification steps
+- [ASSET_API.md](ASSET_API.md) - Asset management API reference
 
 ## Quick Commands
 
@@ -110,120 +104,15 @@ Benefits:
 - **Organization**: Natural hierarchical structure
 - **Version control**: Directories are git-friendly
 
-## File Formats
-
-**Documents (index.md)**
-```markdown
----
-id: uuid
-title: Page Title
-created: 2024-01-15T10:00:00Z
-modified: 2024-01-15T10:00:00Z
----
-
-Content in markdown...
-```
-
-**Databases (metadata.json + data.jsonl)**
-
-`metadata.json`:
-```json
-{
-  "id": "uuid",
-  "title": "Database Title",
-  "columns": [
-    { "id": "col_1", "name": "Name", "type": "text" },
-    { "id": "col_2", "name": "Status", "type": "select", "options": ["todo", "done"] }
-  ],
-  "created": "2024-01-15T10:00:00Z",
-  "modified": "2024-01-15T10:00:00Z"
-}
-```
-
-`data.jsonl` (one record per line):
-```jsonl
-{"id":"rec_1","data":{"Name":"Task A","Status":"todo"},"created":"2024-01-15T10:05:00Z","modified":"2024-01-15T10:05:00Z"}
-{"id":"rec_2","data":{"Name":"Task B","Status":"done"},"created":"2024-01-15T10:06:00Z","modified":"2024-01-15T10:06:00Z"}
-```
-
 ## Documentation Structure
 
 ```
 docs/
 ├── INDEX.md              # You are here - Documentation index
 ├── REQUIREMENTS.md       # What the system must do
-├── PLAN.md              # How we'll build it (roadmap & design)
-├── COMPLETED.md         # What's been completed
-├── QUICKSTART.md        # Get started in 2 minutes
-├── LINTERS.md           # Code quality standards
-└── MIGRATION_PNPM.md    # Package manager details
+├── PLAN.md               # How we'll build it (roadmap & design)
+├── QUICKSTART.md         # Get started in 2 minutes
+├── EMBEDDED_BUILD.md     # Single binary build guide
+├── ASSET_API.md          # Asset API reference
+└── LINTERS.md            # Code quality standards
 ```
-
-## Project Status
-
-**Phase 3: Databases ✓ Complete**
-
-- [x] Phase 1: Core foundation (routing, page CRUD, error handling)
-- [x] Phase 1.5: Code quality (linters, pre-commit hooks)
-- [x] Phase 2: Page editor (markdown editor, live preview, auto-save)
-- [x] Phase 3: Databases (schema, records, table UI, CRUD)
-- [ ] Phase 4: Assets & Media (file uploads, image handling)
-- [ ] Phase 5: Polish (search, history, optimization)
-
-See [PLAN.md](PLAN.md) for full implementation roadmap.
-
-## Technology Stack
-
-**Backend**
-- Go 1.25.5+
-- Standard library (no external dependencies for core features)
-- File-based persistence
-
-**Frontend**
-- SolidJS 1.9+
-- TypeScript 5.9+
-- Vite 5.4+
-- pnpm package manager
-
-**Tools**
-- Make for development automation
-- golangci-lint for Go code quality
-- ESLint + Prettier for TypeScript/SolidJS quality
-
-## API Overview
-
-```
-GET  /api/health              # Health check
-GET  /api/pages               # List pages
-GET  /api/pages/{id}          # Get page
-POST /api/pages               # Create page
-PUT  /api/pages/{id}          # Update page
-DELETE /api/pages/{id}        # Delete page
-
-GET  /api/databases           # List databases
-POST /api/databases           # Create database
-GET  /api/databases/{id}      # Get database schema
-PUT  /api/databases/{id}      # Update schema
-DELETE /api/databases/{id}    # Delete database
-
-GET  /api/databases/{id}/records              # List records
-POST /api/databases/{id}/records              # Create record
-GET  /api/databases/{id}/records/{rid}        # Get record
-PUT  /api/databases/{id}/records/{rid}        # Update record
-DELETE /api/databases/{id}/records/{rid}      # Delete record
-```
-
-See [README.md](../README.md) for full API documentation.
-
-## Next Steps
-
-1. **New?** → [QUICKSTART.md](QUICKSTART.md)
-2. **What must be built?** → [REQUIREMENTS.md](REQUIREMENTS.md)
-3. **How will it be built?** → [PLAN.md](PLAN.md)
-4. **Developing?** → [AGENTS.md](../AGENTS.md)
-5. **Need standards?** → [LINTERS.md](LINTERS.md)
-6. **Overview?** → [README.md](../README.md)
-
----
-
-**mddb** is a local-first document and database system. All data stays on your computer, organized in simple directories and markdown files.

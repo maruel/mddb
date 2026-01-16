@@ -8,7 +8,7 @@ mddb is a Notion-like document and database system. Frontend built with SolidJS,
 as markdown files and images.
 
 **Storage Model:**
-- All content lives in the `pages/` directory as numbered directories (1, 2, 3, etc.)
+- All content lives in the `data/pages/` directory as numbered directories (1, 2, 3, etc.)
 - Each directory is a "page" containing:
   - `index.md` - Content with YAML front matter for metadata (title, tags, etc.)
   - `favicon.ico` (optional) - Icon for the page (can be .ico, .avif, or .png)
@@ -18,7 +18,7 @@ as markdown files and images.
 - Each page/database is a directory with its own namespace for contained assets
 - Hierarchical organization via nested directories (e.g., `1/subfolder/2/index.md`)
 
-See README.md for project overview and PLAN.md for implementation roadmap.
+See README.md for project overview and docs/PLAN.md for implementation roadmap.
 
 ## Directory Structure
 
@@ -29,51 +29,43 @@ mddb/
 ├── internal/
 │   ├── server/                  # HTTP server and routing
 │   │   ├── router.go           # Route definitions and SPA handler
+│   │   ├── embedded.go         # Embedded frontend handler
 │   │   ├── handler_wrapper.go  # Generic handler wrapper with path param extraction
 │   │   └── handlers/           # HTTP request handlers by feature
 │   │       ├── pages.go        # Page CRUD operations
 │   │       ├── databases.go    # Database CRUD + record operations
 │   │       ├── assets.go       # Asset management
+│   │       ├── search.go       # Search operations
 │   │       └── health.go       # Health check
 │   ├── storage/                # File system operations
 │   │   ├── filestore.go        # Low-level file operations for pages/databases/records
-│   │   ├── filestore_test.go   # FileStore unit tests (pages)
-│   │   ├── filestore_database_test.go # FileStore database/record tests
+│   │   ├── git_service.go      # Git version control integration
 │   │   ├── page_service.go     # Page business logic
 │   │   ├── database_service.go # Database business logic
-│   │   └── database_service_test.go  # DatabaseService unit tests
+│   │   ├── asset_service.go    # Asset business logic
+│   │   └── search_service.go   # Full-text search logic
 │   ├── models/                 # Data models
 │   │   └── models.go           # Page, Database, Column, Record, Asset structs
 │   ├── errors/                 # Error types
 │   │   └── errors.go           # ErrorWithStatus interface and APIError
 │   └── utils/                  # Utilities
-│       ├── uuid.go             # UUID generation
-│       └── response.go         # Response formatting (if used)
-├── web/                        # SolidJS frontend
+├── frontend/                   # SolidJS frontend (renamed from web/)
 │   ├── src/                    # Frontend source code
 │   │   ├── index.tsx           # App entry point
-│   │   ├── App.tsx             # Main app component (pages + databases)
-│   │   ├── App.module.css      # App styling
-│   │   └── components/
-│   │       ├── MarkdownPreview.tsx        # Markdown live preview
-│   │       ├── MarkdownPreview.module.css
-│   │       ├── DatabaseTable.tsx          # Database table UI with inline editing
-│   │       └── DatabaseTable.module.css
-│   ├── public/                 # Static files (index.html for SPA)
-│   ├── index.html              # Vite HTML template
+│   │   ├── App.tsx             # Main app component
+│   │   └── components/         # UI components
+│   ├── dist/                   # Compiled frontend (embedded in binary)
 │   ├── vite.config.ts          # Vite build configuration
-│   ├── tsconfig.json           # TypeScript configuration
 │   └── package.json            # Frontend dependencies
 ├── data/                       # Runtime data directory
-│   └── pages/                  # All content as numbered directories (1, 2, 3, etc.)
+│   └── pages/                  # All content as numbered directories
 ├── docs/                       # Documentation
 │   ├── INDEX.md                # Documentation index
 │   ├── REQUIREMENTS.md         # Functional & non-functional requirements
-│   ├── PLAN.md                 # Implementation roadmap and technical design
-│   ├── COMPLETED.md            # What's been implemented
+│   ├── PLAN.md                 # Implementation roadmap
 │   ├── QUICKSTART.md           # Quick start guide
-│   ├── LINTERS.md              # Linting rules and code quality
-│   └── MIGRATION_PNPM.md       # Package manager migration details
+│   ├── EMBEDDED_BUILD.md       # Embedded build guide
+│   └── LINTERS.md              # Linting rules
 ├── Makefile                    # Common development commands
 ├── AGENTS.md                   # This file - Development guidelines
 └── README.md                   # Project overview and API documentation
@@ -92,19 +84,7 @@ mddb/
 func(context.Context, RequestType) (*ResponseType, error)
 ```
 
-**Path Parameters**: Use struct field tags `path:"paramName"` for automatic extraction:
-```go
-type GetRequest struct {
-    ID string `path:"id"`
-}
-```
-
-**Service Pattern**: Create a service layer (e.g., `PageService`, `DatabaseService`) that uses `FileStore` for business logic.
-
-**Database Service**: `DatabaseService` handles all database and record operations:
-- Validates input before FileStore operations
-- Auto-generates IDs for databases, records, and columns
-- Separates business logic from HTTP handlers
+**Git Integration**: `GitService` automatically commits changes to the `data/` directory. Ensure `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` are ignored (set to `/dev/null`) to prevent user config interference.
 
 **Testing**: Use table-driven tests. Store tests in `*_test.go` files next to implementation. Target 100% coverage for service layers.
 
@@ -112,29 +92,10 @@ type GetRequest struct {
 
 ### Code Organization
 
-- Components in `web/src/components/` (reusable, single-responsibility)
-- Page layouts in `web/src/pages/`
-- Global state in `web/src/stores/`
-- Utilities in `web/src/utils/`
-
-### Naming Conventions
-
-- Components: PascalCase (e.g., `PageEditor.tsx`, `DatabaseTable.tsx`)
-- Stores: camelCase (e.g., `pageStore.ts`, `editorStore.ts`)
-- Props interfaces: `{ComponentName}Props`
-- Event handlers: `handleXyz` pattern
-
-### SolidJS Patterns
-
-- Use `createSignal` for reactive state
-- Use `createEffect` for side effects
-- Use Context API for global state
-- Prefer stores over props drilling
-- Keep components as functions returning JSX
+- Components in `frontend/src/components/`
+- Global state in `frontend/src/stores/` (if needed) or Context
 
 ### Build & Distribution
-
-### Single Binary with Embedded Frontend
 
 mddb uses `go:embed` to include the frontend in the binary:
 
@@ -145,7 +106,7 @@ make build-all
 # Result: ./mddb (single executable, self-contained)
 ```
 
-The compiled `web/dist/` folder is tracked in git for reproducible builds.
+The compiled `frontend/dist/` folder is tracked in git for reproducible builds.
 
 ### Development Workflow
 
@@ -162,45 +123,14 @@ make build            # Build Go binary
 ./mddb                # Run with embedded frontend
 ```
 
-### Frontend Build Configuration
-
-The Vite config (`web/vite.config.ts`) ensures deterministic builds:
-- Terser minification for consistent output
-- No source maps
-- Deterministic chunk naming
-- Results are reproducible across different machines/times
-
-**Key**: `web/dist/` is committed to git so builds are fast and reproducible.
-
 ## API Development
 
 ### Endpoint Conventions
 
 - RESTful: Use HTTP verbs (GET, POST, PUT, DELETE) correctly
 - Response format: Always JSON
-- Error responses: Include `error` field with message
-- Success responses: Include `data` field with result
-- Status codes: 200 OK, 201 Created, 400 Bad Request, 404 Not Found, 500 Server Error
-
-### Error Response Format
-
-```json
-{
-  "error": "Descriptive error message",
-  "code": "ERROR_CODE"
-}
-```
-
-### Success Response Format
-
-```json
-{
-  "data": {
-    "id": "...",
-    "...": "..."
-  }
-}
-```
+- Error responses: Include `error` field with structured details (code, message)
+- Success responses: Include `data` field with result (except for list endpoints which may return array directly under key like `pages`)
 
 ## File Operations
 
@@ -212,44 +142,9 @@ The Vite config (`web/vite.config.ts`) ensures deterministic builds:
 
 ### Database Storage Format
 
-**Schema files (`.db.json`):**
-- JSON format with database metadata
-- Contains columns array with type, options, required flags
-- Auto-generate column IDs if not provided
-- Supports nested paths (e.g., `folder/subfolder/database-name`)
-
-**Record files (`.db.jsonl`):**
-- JSON Lines format (one record per line)
-- Append-only writes for new records
-- Enables streaming and pagination
-- Each line is a complete Record JSON object
-
-**Column Types (MVP):**
-- `text` - Plain text input
-- `number` - Numeric values
-- `select` - Single-choice dropdown with options
-- `multi_select` - Multi-choice selections with options
-- `checkbox` - Boolean toggle
-- `date` - Date picker input
-
-**Example database structure:**
-```
-data/pages/
-├── tasks.db.json       # Schema: {id, title, columns, created, modified}
-└── tasks.db.jsonl      # Records: one per line
-```
-
-## Testing
-
-### Go Tests
-
-- Use table-driven tests for multiple cases
-
-### Frontend Tests
-
-- Use Vitest
-- Filename: `{component}.test.tsx`
-- Test component rendering and interactions
+- **Schema**: `metadata.json`
+- **Records**: `data.jsonl` (one JSON object per line)
+- **Column Types**: text, number, select, multi_select, checkbox, date
 
 ## Git Workflow
 
@@ -257,93 +152,24 @@ data/pages/
 
 - Format: `{type}: {description}`
 - Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
-- Keep commits focused and atomic
-- Write descriptive messages
 
 ### Documentation Changes
 
-- **Do NOT** create a markdown file listing changes you made
-- Git history is the source of truth for what changed and why
-- Write descriptive commit messages instead
-- Let `git log` and `git show` tell the story
-
-## Performance Considerations
-
-### Go Backend
-
-- Use file caching for frequently accessed pages
-- Implement pagination for large result sets
-- Optimize markdown parsing (consider pre-processing)
-- Monitor file I/O operations
-
-### Frontend
-
-- Code splitting for routes
-- Lazy load components
-- Debounce auto-save operations
-- Cache rendered markdown
-
-## Documentation
-
-### Code Comments
-
-- Explain the "why", not the "what"
-- Document complex algorithms
-- Add examples for tricky functions
-- Keep comments up-to-date
-
-### API Documentation
-
-- Document endpoint purpose and parameters
-- Include request/response examples
-- Document error cases
-- Keep in-sync with implementation
-
-## Deployment
-
-### Build Process
-
-1. Ensure tests pass: `go test ./...`
-2. Build frontend: `cd web && npm run build`
-3. Embed frontend in Go binary (if applicable)
-4. Build Go binary: `go build -o mddb ./cmd/mddb`
-5. Test binary with sample data
-
-### Configuration
-
-- Use environment variables for configuration
-- Support config file (optional)
-- Document all config options
-- Provide sensible defaults
-
-## Development Checklist
-
-When implementing features:
-
-- [ ] Update PLAN.md (in docs/) if requirements change
-- [ ] Write tests first or alongside code
-- [ ] Follow naming conventions (see above)
-- [ ] Run linters and fix issues: `make lint-fix`
-- [ ] Run tests: `make test`
-- [ ] Document complex logic with comments
-- [ ] Test error cases and edge cases
-- [ ] Update relevant README sections
-- [ ] Commit with descriptive message (runs pre-commit hooks automatically)
-- [ ] Ensure path parameter extraction works for nested resources
-- [ ] Use context-aware logging (slog.InfoContext, slog.ErrorContext)
+- **Do NOT** create a markdown file listing changes you made.
+- Update `docs/PLAN.md` to reflect status changes.
+- Keep `docs/INDEX.md` up to date.
 
 ## Code Quality & Linting
 
-**All code must pass linting before commits.** See [docs/LINTERS.md](docs/LINTERS.md) for detailed rules.
+**All code must pass linting before commits.**
 
-Quick commands:
 - `make lint` - Run all linters (Go + Frontend)
 - `make lint-fix` - Auto-fix all linting issues
-- `make git-hooks` - Install pre-commit hooks (required once per repo clone)
+- `make git-hooks` - Install pre-commit hooks
 
 ## Useful Resources
 
 - [Go Effective Go](https://golang.org/doc/effective_go)
 - [SolidJS Docs](https://docs.solidjs.com)
-- [mddb PLAN.md](PLAN.md) - Implementation roadmap
-- [mddb README.md](README.md) - Project overview
+- [mddb PLAN.md](docs/PLAN.md)
+- [mddb README.md](README.md)
