@@ -97,9 +97,15 @@ See `README.md` and `ASSET_API.md` for details.
 - Single binary distribution
 - Frontend embedded via `go:embed`
 
-### Phase 5: Polish & Features (In Progress)
+### Phase 5: Polish & Features ✓
+*Completed.*
 - [x] **Better Error Handling**: Structured error responses, validation.
 - [x] **Full-Text Search**: Search service for pages and databases.
 - [x] **Git Versioning**: Automatic commit of data changes.
 - [x] **Page History UI**: View and restore previous versions (leveraging Git).
-- [ ] **Performance**: Optimization of large lists/databases.
+- [x] **Performance**: Optimization of large lists/databases (pagination, streaming).
+
+## Future Considerations
+- **Multi-user Support**: Authentication and permissions.
+- **Real-time Collaboration**: WebSocket-based sync.
+- **Mobile App**: Native mobile clients using the REST API.
