@@ -3,12 +3,15 @@ package server
 import (
 	"net/http"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/maruel/mddb/internal/server/handlers"
 	"github.com/maruel/mddb/internal/storage"
 )
 
-// NewRouter creates and configures the HTTP router
+// NewRouter creates and configures the HTTP router.
+// Serves API endpoints at /api/* and static SolidJS frontend at /.
 func NewRouter(fileStore *storage.FileStore) http.Handler {
 	mux := &http.ServeMux{}
 	ph := handlers.NewPageHandler(fileStore)
@@ -44,8 +47,47 @@ func NewRouter(fileStore *storage.FileStore) http.Handler {
 	mux.Handle("DELETE /api/assets/{id}", Wrap(ah.DeleteAsset))
 	mux.Handle("GET /assets/{id}", Wrap(ah.ServeAsset))
 
-	// Serve static files for SolidJS frontend
-	mux.Handle("/", http.FileServer(http.Dir(filepath.Join(fileStore.RootDir(), "public"))))
+	// Serve static files for SolidJS frontend with SPA fallback
+	publicDir := filepath.Join(fileStore.RootDir(), "public")
+	mux.Handle("/", NewSPAHandler(http.Dir(publicDir)))
 
 	return mux
+}
+
+// SPAHandler serves a single-page application, falling back to index.html for unknown routes.
+type SPAHandler struct {
+	fs http.FileSystem
+}
+
+// NewSPAHandler creates a new SPA handler.
+func NewSPAHandler(fs http.FileSystem) *SPAHandler {
+	return &SPAHandler{fs: fs}
+}
+
+// ServeHTTP implements http.Handler for SPA routing.
+func (h *SPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Try to serve the exact file
+	file, err := h.fs.Open(r.URL.Path)
+	if err == nil {
+		file.Close()
+		// File exists, serve it
+		fs := http.FileServer(h.fs)
+		// Set cache headers for static assets with extensions
+		if strings.Contains(r.URL.Path, ".") {
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+		}
+		fs.ServeHTTP(w, r)
+		return
+	}
+
+	// File not found - fall back to index.html for SPA routing
+	file, err = h.fs.Open("/index.html")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer file.Close()
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	http.ServeContent(w, r, "/index.html", time.Now(), file)
 }

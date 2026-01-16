@@ -209,11 +209,16 @@ internal/
 ## Implementation Phases
 
 ### Phase 1: Core Foundation
-- [ ] Go server setup with basic routing
-- [ ] File system abstraction layer
-- [ ] Basic page CRUD operations
-- [ ] Static file serving (assets, SolidJS build)
-- [ ] Basic SolidJS frontend structure
+- [x] Go server setup with basic routing
+- [x] HTTP handler wrapper with automatic path parameter extraction
+- [x] Structured logging with context support
+- [x] Error handling with ErrorWithStatus interface
+- [x] Request/Response typing for all API endpoints
+- [x] File system abstraction layer (FileStore with CRUD operations)
+- [x] Basic page CRUD operations (PageService with full implementation)
+- [x] Tests for FileStore operations (unit tests passing)
+- [x] Basic SolidJS frontend structure (App.tsx with page management UI)
+- [ ] Static file serving (SPA handler with fallback to index.html - ready for built frontend)
 
 ### Phase 2: Page Editor
 - [ ] Markdown editor component (SolidJS)
@@ -272,6 +277,14 @@ internal/
 - Simple deployment (single binary)
 - Strong standard library
 - Good concurrent request handling
+
+### Handler Design Pattern (Wrap)
+- All HTTP handlers wrapped with `Wrap()` function for consistent behavior
+- Handler signature: `func(context.Context, In) (*Out, error)`
+- Automatic path parameter extraction via struct tags: `path:"paramName"`
+- Request/Response types for all endpoints ensure type safety
+- Errors implementing `ErrorWithStatus` automatically get correct HTTP status codes
+- Context passed through entire handler chain for logging and cancellation
 
 ## Dependencies
 

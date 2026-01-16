@@ -1,1 +1,12 @@
+# Go
 /bin/
+
+# Frontend
+web/node_modules/
+web/dist/
+web/.env.local
+web/.env.*.local
+web/.npmrc
+
+# Data directory
+/data/

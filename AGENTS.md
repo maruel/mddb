@@ -18,11 +18,71 @@ See README.md for project overview and PLAN.md for implementation roadmap.
 
 ## Directory Structure
 
-TODO: add when files are created.
+```
+mddb/
+├── cmd/mddb/                    # Application entry point
+│   └── main.go                  # Server startup and configuration
+├── internal/
+│   ├── server/                  # HTTP server and routing
+│   │   ├── router.go           # Route definitions and SPA handler
+│   │   ├── handler_wrapper.go  # Generic handler wrapper with path param extraction
+│   │   └── handlers/           # HTTP request handlers by feature
+│   │       ├── pages.go        # Page CRUD operations
+│   │       ├── databases.go    # Database operations
+│   │       ├── assets.go       # Asset management
+│   │       └── health.go       # Health check
+│   ├── storage/                # File system operations
+│   │   ├── filestore.go        # Low-level file operations
+│   │   ├── filestore_test.go   # FileStore unit tests
+│   │   └── page_service.go     # Page business logic
+│   ├── models/                 # Data models
+│   │   └── models.go           # Page, Database, Record, Asset structs
+│   ├── errors/                 # Error types
+│   │   └── errors.go           # ErrorWithStatus interface and APIError
+│   └── utils/                  # Utilities
+│       ├── uuid.go             # UUID generation
+│       └── response.go         # Response formatting (if used)
+├── web/                        # SolidJS frontend
+│   ├── src/                    # Frontend source code
+│   │   ├── index.tsx           # App entry point
+│   │   ├── App.tsx             # Main app component
+│   │   └── App.module.css      # App styling
+│   ├── public/                 # Static files (index.html for SPA)
+│   ├── index.html              # Vite HTML template
+│   ├── vite.config.ts          # Vite build configuration
+│   ├── tsconfig.json           # TypeScript configuration
+│   └── package.json            # Frontend dependencies
+├── data/                       # Runtime data directory
+│   └── pages/                  # All markdown content (created dynamically)
+├── Makefile                    # Common development commands
+├── PLAN.md                     # Implementation roadmap
+├── AGENTS.md                   # This file - Development guidelines
+└── README.md                   # Project overview and API documentation
+```
 
 ## Go Development
 
-Use Go best practices.
+### Standard Patterns
+
+**Errors**: Use `errors.NewAPIError(statusCode, message)` from internal/errors for HTTP errors. Implement `ErrorWithStatus` interface.
+
+**Logging**: Use context-aware slog methods: `slog.InfoContext()`, `slog.ErrorContext()`, etc. Error fields should use `"err"` not `"error"`.
+
+**Handler Signature**: All HTTP handlers wrapped with `Wrap()` must have signature:
+```go
+func(context.Context, RequestType) (*ResponseType, error)
+```
+
+**Path Parameters**: Use struct field tags `path:"paramName"` for automatic extraction:
+```go
+type GetRequest struct {
+    ID string `path:"id"`
+}
+```
+
+**Service Pattern**: Create a service layer (e.g., `PageService`) that uses `FileStore` for business logic.
+
+**Testing**: Use table-driven tests. Store tests in `*_test.go` files next to implementation.
 
 ## Frontend Development (SolidJS)
 
