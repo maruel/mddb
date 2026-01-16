@@ -1,19 +1,9 @@
 import { For, Show } from 'solid-js';
+import type { DataRecord, Column } from '../types';
 import styles from './DatabaseGallery.module.css';
 
-interface Column {
-  id: string;
-  name: string;
-  type: string;
-}
-
-interface Record {
-  id: string;
-  data: Record<string, unknown>;
-}
-
 interface DatabaseGalleryProps {
-  records: Record[];
+  records: DataRecord[];
   columns: Column[];
   onDeleteRecord: (id: string) => void;
 }
@@ -29,25 +19,29 @@ export default function DatabaseGallery(props: DatabaseGalleryProps) {
   return (
     <div class={styles.gallery}>
       <For each={props.records}>
-        {(record) => (
-          <div class={styles.card}>
-            <Show when={imageColumn()}>
-              <div class={styles.imageContainer}>
-                <Show 
-                  when={record.data[imageColumn()!.name]} 
-                  fallback={<div class={styles.imagePlaceholder}>No Image</div>}
-                >
-                  <img 
-                    src={String(record.data[imageColumn()!.name])} 
-                    alt={String(record.data[props.columns[0]?.name] || 'Record')} 
-                    class={styles.image}
-                  />
-                </Show>
-              </div>
-            </Show>
-            <div class={styles.cardContent}>
+        {(record) => {
+          const imgCol = imageColumn();
+          return (
+            <div class={styles.card}>
+              <Show when={imgCol}>
+                {(col) => (
+                  <div class={styles.imageContainer}>
+                    <Show 
+                      when={record.data[col().name]} 
+                      fallback={<div class={styles.imagePlaceholder}>No Image</div>}
+                    >
+                      <img 
+                        src={String(record.data[col().name])} 
+                        alt={String((props.columns[0] ? record.data[props.columns[0].name] : null) || 'Record')} 
+                        class={styles.image}
+                      />
+                    </Show>
+                  </div>
+                )}
+              </Show>
+              <div class={styles.cardContent}>
               <div class={styles.cardHeader}>
-                <strong>{String(record.data[props.columns[0]?.name] || 'Untitled')}</strong>
+                <strong>{String((props.columns[0] ? record.data[props.columns[0].name] : null) || 'Untitled')}</strong>
                 <button 
                   class={styles.deleteBtn}
                   onClick={() => props.onDeleteRecord(record.id)}
@@ -67,7 +61,8 @@ export default function DatabaseGallery(props: DatabaseGalleryProps) {
               </div>
             </div>
           </div>
-        )}
+          );
+        }}
       </For>
     </div>
   );

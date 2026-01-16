@@ -15,6 +15,7 @@ export default function MarkdownPreview(props: MarkdownPreviewProps) {
   const html = () => md.render(props.content);
 
   return (
+    // eslint-disable-next-line solid/no-innerhtml
     <div class={styles.preview} innerHTML={html()} role="region" aria-label="Markdown preview" />
   );
 }

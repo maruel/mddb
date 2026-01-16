@@ -5,12 +5,16 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:solid/typescript',
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
     jsx: true,
+    project: './tsconfig.json',
+    tsconfigRootDir: __dirname,
   },
   plugins: [
     '@typescript-eslint',
@@ -25,14 +29,19 @@ module.exports = {
         varsIgnorePattern: '^_',
       },
     ],
-    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-explicit-any': 'error',
+    '@typescript-eslint/no-non-null-assertion': 'error',
+    '@typescript-eslint/consistent-type-imports': [
+      'error',
+      { prefer: 'type-imports' },
+    ],
     'no-console': [
-      'warn',
+      'error',
       {
         allow: ['warn', 'error'],
       },
     ],
-    'no-debugger': 'warn',
+    'no-debugger': 'error',
     'eqeqeq': ['error', 'always'],
     'no-var': 'error',
     'prefer-const': 'error',

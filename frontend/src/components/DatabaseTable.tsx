@@ -1,25 +1,11 @@
 import { createSignal, For, Show } from 'solid-js';
+import type { DataRecord, Column } from '../types';
 import styles from './DatabaseTable.module.css';
-
-interface Column {
-  id: string;
-  name: string;
-  type: string;
-  options?: string[];
-  required?: boolean;
-}
-
-interface RecordData {
-  id: string;
-  data: Record<string, unknown>;
-  created: string;
-  modified: string;
-}
 
 interface DatabaseTableProps {
   databaseId: string;
   columns: Column[];
-  records: RecordData[];
+  records: DataRecord[];
   onAddRecord?: (data: Record<string, unknown>) => void;
   onUpdateRecord?: (recordId: string, data: Record<string, unknown>) => void;
   onDeleteRecord?: (recordId: string) => void;
@@ -35,16 +21,17 @@ export default function DatabaseTable(props: DatabaseTableProps) {
   const [editValue, setEditValue] = createSignal('');
   const [newRowData, setNewRowData] = createSignal<Record<string, unknown>>({});
 
-  const getCellValue = (record: RecordData, columnId: string) => {
+  const getCellValue = (record: DataRecord, columnId: string) => {
     const column = props.columns.find((c) => c.id === columnId);
     if (!column) return '';
     return record.data[column.name] ?? '';
   };
 
   const handleCellClick = (recordId: string, columnId: string) => {
+    const col = props.columns.find((c) => c.id === columnId);
     const value =
       props.records.find((r) => r.id === recordId)?.data[
-        props.columns.find((c) => c.id === columnId)?.name ?? ''
+        col?.name ?? ''
       ] ?? '';
 
     setEditingCell({ recordId, columnId });
@@ -76,7 +63,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
     }
   };
 
-  const renderCellContent = (record: Record, column: Column) => {
+  const renderCellContent = (record: DataRecord, column: Column) => {
     const value = getCellValue(record, column.id);
 
     switch (column.type) {
@@ -191,7 +178,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
                       return (
                         <td
                           class={styles.cell}
-                          classList={{ [styles.editing]: isEditing() }}
+                          classList={{ [`${styles.editing}`]: isEditing() }}
                           onClick={() => handleCellClick(record.id, column.id)}
                         >
                           <Show
@@ -237,7 +224,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
                 <For each={props.columns}>
                   {(column) => (
                     <td class={styles.cell}>
-                      {renderCellInput(column, newRowData()[column.name] ?? '')}
+                      {renderCellInput(column, String(newRowData()[column.name] ?? ''))}
                     </td>
                   )}
                 </For>

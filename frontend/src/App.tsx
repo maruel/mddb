@@ -6,43 +6,12 @@ import DatabaseGrid from './components/DatabaseGrid';
 import DatabaseGallery from './components/DatabaseGallery';
 import DatabaseBoard from './components/DatabaseBoard';
 import { debounce } from './utils/debounce';
+import type { AppNode, DataRecord, Commit } from './types';
 import styles from './App.module.css';
 
-interface Node {
-  id: string;
-  parent_id?: string;
-  title: string;
-  content?: string;
-  columns?: Column[];
-  created: string;
-  modified: string;
-  type: 'document' | 'database' | 'hybrid';
-}
-
-interface Column {
-  id: string;
-  name: string;
-  type: string;
-  options?: string[];
-  required?: boolean;
-}
-
-interface Record {
-  id: string;
-  data: Record<string, unknown>;
-  created: string;
-  modified: string;
-}
-
-interface Commit {
-  hash: string;
-  message: string;
-  timestamp: string;
-}
-
 export default function App() {
-  const [nodes, setNodes] = createSignal<Node[]>([]);
-  const [records, setRecords] = createSignal<Record[]>([]);
+  const [nodes, setNodes] = createSignal<AppNode[]>([]);
+  const [records, setRecords] = createSignal<DataRecord[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
   const [viewMode, setViewMode] = createSignal<'table' | 'grid' | 'gallery' | 'board'>('table');
   const [title, setTitle] = createSignal('');
@@ -61,6 +30,7 @@ export default function App() {
   const PAGE_SIZE = 50;
 
   // Debounced auto-save function
+  // eslint-disable-next-line solid/reactivity
   const debouncedAutoSave = debounce(async () => {
     const nodeId = selectedNodeId();
     if (!nodeId || !hasUnsavedChanges()) return;
@@ -250,15 +220,15 @@ export default function App() {
     }
   }
 
-  const handleNodeClick = (node: Node) => {
+  const handleNodeClick = (node: AppNode) => {
     loadNode(node.id);
   };
 
-  const getBreadcrumbs = (nodeId: string | null): Node[] => {
+  const getBreadcrumbs = (nodeId: string | null): AppNode[] => {
     if (!nodeId) return [];
-    const path: Node[] = [];
+    const path: AppNode[] = [];
     
-    const findPath = (currentNodes: Node[], targetId: string): boolean => {
+    const findPath = (currentNodes: AppNode[], targetId: string): boolean => {
       for (const node of currentNodes) {
         if (node.id === targetId) {
           path.push(node);
@@ -457,7 +427,10 @@ export default function App() {
                   </Show>
                 </div>
                 <div class={styles.editorActions}>
-                  <button onClick={() => loadHistory(selectedNodeId()!)} disabled={loading()}>
+                  <button onClick={() => {
+                    const id = selectedNodeId();
+                    if (id) loadHistory(id);
+                  }} disabled={loading()}>
                     {showHistory() ? 'Hide History' : 'History'}
                   </button>
                   <button onClick={saveNode} disabled={loading()}>
@@ -477,7 +450,10 @@ export default function App() {
                       {(commit) => (
                         <li
                           class={styles.historyItem}
-                          onClick={() => loadVersion(selectedNodeId()!, commit.hash)}
+                          onClick={() => {
+                            const id = selectedNodeId();
+                            if (id) loadVersion(id, commit.hash);
+                          }}
                         >
                           <div class={styles.historyMeta}>
                             <span class={styles.historyDate}>
@@ -521,25 +497,25 @@ export default function App() {
                         <h3>Database Records</h3>
                         <div class={styles.viewToggle}>
                           <button 
-                            classList={{ [styles.active]: viewMode() === 'table' }}
+                            classList={{ [`${styles.active}`]: viewMode() === 'table' }}
                             onClick={() => setViewMode('table')}
                           >
                             Table
                           </button>
                           <button 
-                            classList={{ [styles.active]: viewMode() === 'grid' }}
+                            classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
                             onClick={() => setViewMode('grid')}
                           >
                             Grid
                           </button>
                           <button 
-                            classList={{ [styles.active]: viewMode() === 'gallery' }}
+                            classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
                             onClick={() => setViewMode('gallery')}
                           >
                             Gallery
                           </button>
                           <button 
-                            classList={{ [styles.active]: viewMode() === 'board' }}
+                            classList={{ [`${styles.active}`]: viewMode() === 'board' }}
                             onClick={() => setViewMode('board')}
                           >
                             Board

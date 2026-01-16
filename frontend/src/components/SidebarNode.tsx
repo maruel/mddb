@@ -1,18 +1,11 @@
 import { createSignal, For, Show } from 'solid-js';
+import type { AppNode } from '../types';
 import styles from '../App.module.css';
 
-interface Node {
-  id: string;
-  parent_id?: string;
-  title: string;
-  type: 'document' | 'database' | 'hybrid';
-  children?: Node[];
-}
-
 interface SidebarNodeProps {
-  node: Node;
+  node: AppNode;
   selectedId: string | null;
-  onSelect: (node: Node) => void;
+  onSelect: (node: AppNode) => void;
   depth: number;
 }
 
@@ -28,13 +21,13 @@ export default function SidebarNode(props: SidebarNodeProps) {
     <li class={styles.sidebarNodeWrapper}>
       <div
         class={styles.pageItem}
-        classList={{ [styles.active]: props.selectedId === props.node.id }}
+        classList={{ [`${styles.active}`]: props.selectedId === props.node.id }}
         style={{ 'padding-left': `${props.depth * 12 + 8}px` }}
         onClick={() => props.onSelect(props.node)}
       >
         <span 
           class={styles.expandIcon} 
-          classList={{ [styles.expanded]: isExpanded(), [styles.hidden]: !props.node.children?.length }}
+          classList={{ [`${styles.expanded}`]: isExpanded(), [`${styles.hidden}`]: !props.node.children?.length }}
           onClick={toggleExpand}
         >
           ▶

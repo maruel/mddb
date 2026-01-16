@@ -1,20 +1,9 @@
 import { For, Show, createMemo } from 'solid-js';
+import type { DataRecord, Column } from '../types';
 import styles from './DatabaseBoard.module.css';
 
-interface Column {
-  id: string;
-  name: string;
-  type: string;
-  options?: string[];
-}
-
-interface Record {
-  id: string;
-  data: Record<string, unknown>;
-}
-
 interface DatabaseBoardProps {
-  records: Record[];
+  records: DataRecord[];
   columns: Column[];
   onDeleteRecord: (id: string) => void;
 }
@@ -28,7 +17,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
     if (!col) return [{ name: 'All Records', records: props.records }];
 
     const options = col.options || [];
-    const grouped: Record<string, { name: string, records: Record[] }> = {};
+    const grouped: Record<string, { name: string, records: DataRecord[] }> = {};
 
     // Initialize groups for each option
     options.forEach(opt => {
@@ -40,9 +29,15 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
     props.records.forEach(record => {
       const val = record.data[col.name];
       if (val && typeof val === 'string' && options.includes(val)) {
-        grouped[val].records.push(record);
+        const target = grouped[val];
+        if (target) {
+          target.records.push(record);
+        }
       } else {
-        grouped['__none__'].records.push(record);
+        const target = grouped['__none__'];
+        if (target) {
+          target.records.push(record);
+        }
       }
     });
 
@@ -68,7 +63,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
                     {(record) => (
                       <div class={styles.card}>
                         <div class={styles.cardHeader}>
-                          <strong>{String(record.data[props.columns[0]?.name] || 'Untitled')}</strong>
+                          <strong>{String((props.columns[0] ? record.data[props.columns[0].name] : null) || 'Untitled')}</strong>
                           <button 
                             class={styles.deleteBtn}
                             onClick={() => props.onDeleteRecord(record.id)}
