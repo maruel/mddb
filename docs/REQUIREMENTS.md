@@ -26,7 +26,10 @@ Most core functional requirements for a local-first markdown and database system
 - [x] **Formats**: Support common formats (PNG, JPG, GIF, WebP, SVG, PDF, etc.).
 - [ ] **Gallery**: Dedicated asset management and gallery view.
 
-### 4. User Experience
+### 4. User Experience (Notion-like)
+- [ ] **Unified Sidebar**: Single hierarchical tree view for all content (pages and databases).
+- [ ] **Seamless Databases**: Databases are integrated into pages; every database is a page, and every page can contain database views.
+- [ ] **Database Views**: Flexible views (Table, and future Board/Gallery) that can be embedded or viewed as full pages.
 - [x] **Auto-save**: Automatic background saving of documents (2s debounce).
 - [x] **Search**: Full-text search across all documents and databases with relevance scoring.
 - [x] **History**: View and restore previous versions of pages (leveraging Git).

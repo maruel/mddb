@@ -106,8 +106,14 @@ See `README.md` and `ASSET_API.md` for details.
 - [x] **Page History UI**: View and restore previous versions (leveraging Git).
 - [x] **Performance**: Optimization of large lists/databases (pagination, streaming).
 - [ ] **In-Memory Caching**: High-efficiency caching of metadata and frequently accessed content.
+- [ ] **Seamless UI Overhaul**:
+    - Unify Pages and Databases into a single "Node" concept.
+    - Replace tabbed sidebar with a hierarchical tree.
+    - Integrated view: Show database records within the page context.
+    - Database "Views" as a first-class UI concept.
 
 ### Phase 6: Multi-user & RBAC (Planned)
+
 - [ ] **Auth System**: User registration, login, and JWT-based authentication.
 - [ ] **OAuth2 Integration**: Support for Google and Microsoft login flows.
 - [ ] **Organizations**: Workspace isolation and shared access.

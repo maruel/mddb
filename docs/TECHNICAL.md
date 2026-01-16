@@ -38,6 +38,23 @@ Database records are stored in JSONL format, allowing for line-by-line streaming
 ### API Pagination
 Record retrieval supports `offset` and `limit` parameters to handle large datasets efficiently.
 
+## Unified Node Architecture (Planned)
+
+To achieve a Notion-like experience, mddb is moving towards a unified "Node" concept.
+
+### Data Model Unification
+A Node is a directory that can contain:
+- `index.md`: Descriptive content (Page).
+- `metadata.json`: Structured schema (Database).
+- `data.jsonl`: Database records.
+- Assets and sub-directories (Sub-pages).
+
+### Hierarchical Tree
+The API will provide a tree structure of all nodes, allowing the frontend to render a single, unified sidebar. This replaces the distinct "Pages" and "Databases" silos.
+
+### Component-based Views
+The UI will be refactored into modular "Views". A single Page can display its markdown content followed by one or more views (Table, etc.) of its own database records or even linked records from other nodes.
+
 ## Multi-user Architecture (Planned)
 
 ### Identity & Authentication
