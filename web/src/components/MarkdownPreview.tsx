@@ -15,11 +15,6 @@ export default function MarkdownPreview(props: MarkdownPreviewProps) {
   const html = () => md.render(props.content);
 
   return (
-    <div
-      class={styles.preview}
-      innerHTML={html()}
-      role="region"
-      aria-label="Markdown preview"
-    />
+    <div class={styles.preview} innerHTML={html()} role="region" aria-label="Markdown preview" />
   );
 }

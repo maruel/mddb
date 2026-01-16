@@ -1,5 +1,6 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
 import MarkdownPreview from './components/MarkdownPreview';
+import DatabaseTable from './components/DatabaseTable';
 import { debounce } from './utils/debounce';
 import styles from './App.module.css';
 
@@ -10,9 +11,36 @@ interface Page {
   modified: string;
 }
 
+interface Column {
+  id: string;
+  name: string;
+  type: string;
+  options?: string[];
+  required?: boolean;
+}
+
+interface Database {
+  id: string;
+  title: string;
+  columns: Column[];
+  created: string;
+  modified: string;
+}
+
+interface Record {
+  id: string;
+  data: Record<string, unknown>;
+  created: string;
+  modified: string;
+}
+
 export default function App() {
   const [pages, setPages] = createSignal<Page[]>([]);
+  const [databases, setDatabases] = createSignal<Database[]>([]);
+  const [records, setRecords] = createSignal<Record[]>([]);
   const [selectedPageId, setSelectedPageId] = createSignal<string | null>(null);
+  const [selectedDatabaseId, setSelectedDatabaseId] = createSignal<string | null>(null);
+  const [activeTab, setActiveTab] = createSignal<'pages' | 'databases'>('pages');
   const [title, setTitle] = createSignal('');
   const [content, setContent] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -45,9 +73,10 @@ export default function App() {
     }
   }, 2000);
 
-  // Load pages on mount
+  // Load pages and databases on mount
   createEffect(() => {
     loadPages();
+    loadDatabases();
   });
 
   async function loadPages() {
@@ -157,6 +186,91 @@ export default function App() {
     loadPage(page.id);
   };
 
+  // Database operations
+  async function loadDatabases() {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/databases');
+      const data = await res.json();
+      setDatabases(data.databases || []);
+      setError(null);
+    } catch (err) {
+      setError('Failed to load databases: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadDatabase(id: string) {
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/databases/${id}`);
+      const data = await res.json();
+      setTitle(data.title);
+      setError(null);
+
+      // Load records
+      const recordsRes = await fetch(`/api/databases/${id}/records`);
+      const recordsData = await recordsRes.json();
+      setRecords(recordsData.records || []);
+    } catch (err) {
+      setError('Failed to load database: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAddRecord(data: Record<string, unknown>) {
+    const dbId = selectedDatabaseId();
+    if (!dbId) return;
+
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/databases/${dbId}/records`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data }),
+      });
+
+      if (!res.ok) {
+        setError('Failed to create record');
+        return;
+      }
+
+      // Reload records
+      await loadDatabase(dbId);
+      setError(null);
+    } catch (err) {
+      setError('Failed to add record: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDeleteRecord(recordId: string) {
+    const dbId = selectedDatabaseId();
+    if (!dbId) return;
+
+    if (!confirm('Delete this record?')) return;
+
+    try {
+      setLoading(true);
+      await fetch(`/api/databases/${dbId}/records/${recordId}`, { method: 'DELETE' });
+      await loadDatabase(dbId);
+      setError(null);
+    } catch (err) {
+      setError('Failed to delete record: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleDatabaseClick = (db: Database) => {
+    setSelectedDatabaseId(db.id);
+    setSelectedPageId(null);
+    loadDatabase(db.id);
+  };
+
   return (
     <div class={styles.app}>
       <header class={styles.header}>
@@ -166,33 +280,84 @@ export default function App() {
 
       <div class={styles.container}>
         <aside class={styles.sidebar}>
-          <div class={styles.sidebarHeader}>
-            <h2>Pages</h2>
-            <button onClick={createPage} disabled={loading()}>
-              {loading() ? 'Creating...' : 'New Page'}
+          <div class={styles.tabBar}>
+            <button
+              class={styles.tab}
+              classList={{ [styles.active]: activeTab() === 'pages' }}
+              onClick={() => {
+                setActiveTab('pages');
+                setSelectedDatabaseId(null);
+              }}
+            >
+              Pages
+            </button>
+            <button
+              class={styles.tab}
+              classList={{ [styles.active]: activeTab() === 'databases' }}
+              onClick={() => {
+                setActiveTab('databases');
+                setSelectedPageId(null);
+              }}
+            >
+              Databases
             </button>
           </div>
 
-          <Show when={loading()} fallback={null}>
-            <p class={styles.loading}>Loading...</p>
+          <Show when={activeTab() === 'pages'}>
+            <div class={styles.sidebarHeader}>
+              <h2>Pages</h2>
+              <button onClick={createPage} disabled={loading()}>
+                {loading() ? 'Creating...' : 'New Page'}
+              </button>
+            </div>
+
+            <Show when={loading()} fallback={null}>
+              <p class={styles.loading}>Loading...</p>
+            </Show>
+
+            <ul class={styles.pageList}>
+              <For each={pages()}>
+                {(page) => (
+                  <li
+                    class={styles.pageItem}
+                    classList={{ [styles.active]: selectedPageId() === page.id }}
+                    onClick={() => handlePageClick(page)}
+                  >
+                    <div class={styles.pageTitle}>{page.title}</div>
+                    <div class={styles.pageDate}>{new Date(page.modified).toLocaleDateString()}</div>
+                  </li>
+                )}
+              </For>
+            </ul>
           </Show>
 
-          <ul class={styles.pageList}>
-            <For each={pages()}>
-              {(page) => (
-                <li
-                  class={styles.pageItem}
-                  classList={{ [styles.active]: selectedPageId() === page.id }}
-                  onClick={() => handlePageClick(page)}
-                >
-                  <div class={styles.pageTitle}>{page.title}</div>
-                  <div class={styles.pageDate}>
-                    {new Date(page.modified).toLocaleDateString()}
-                  </div>
-                </li>
-              )}
-            </For>
-          </ul>
+          <Show when={activeTab() === 'databases'}>
+            <div class={styles.sidebarHeader}>
+              <h2>Databases</h2>
+              <button disabled={loading()}>
+                {loading() ? 'Creating...' : 'New DB'}
+              </button>
+            </div>
+
+            <Show when={loading()} fallback={null}>
+              <p class={styles.loading}>Loading...</p>
+            </Show>
+
+            <ul class={styles.pageList}>
+              <For each={databases()}>
+                {(db) => (
+                  <li
+                    class={styles.pageItem}
+                    classList={{ [styles.active]: selectedDatabaseId() === db.id }}
+                    onClick={() => handleDatabaseClick(db)}
+                  >
+                    <div class={styles.pageTitle}>{db.title}</div>
+                    <div class={styles.pageDate}>{new Date(db.modified).toLocaleDateString()}</div>
+                  </li>
+                )}
+              </For>
+            </ul>
+          </Show>
         </aside>
 
         <main class={styles.main}>
@@ -200,8 +365,25 @@ export default function App() {
             <div class={styles.error}>{error()}</div>
           </Show>
 
+          <Show when={selectedDatabaseId()}>
+            <div class={styles.databaseView}>
+              <div class={styles.databaseHeader}>
+                <h2>{title()}</h2>
+              </div>
+              <DatabaseTable
+                databaseId={selectedDatabaseId() || ''}
+                columns={
+                  databases().find((db) => db.id === selectedDatabaseId())?.columns || []
+                }
+                records={records()}
+                onAddRecord={handleAddRecord}
+                onDeleteRecord={handleDeleteRecord}
+              />
+            </div>
+          </Show>
+
           <Show
-            when={!selectedPageId()}
+            when={!selectedPageId() && !selectedDatabaseId()}
             fallback={
               <div class={styles.editor}>
                 <div class={styles.editorHeader}>

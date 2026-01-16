@@ -37,6 +37,7 @@ func NewRouter(fileStore *storage.FileStore) http.Handler {
 
 	// Records endpoints
 	mux.Handle("GET /api/databases/{id}/records", Wrap(dh.ListRecords))
+	mux.Handle("GET /api/databases/{id}/records/{rid}", Wrap(dh.GetRecord))
 	mux.Handle("POST /api/databases/{id}/records", Wrap(dh.CreateRecord))
 	mux.Handle("PUT /api/databases/{id}/records/{rid}", Wrap(dh.UpdateRecord))
 	mux.Handle("DELETE /api/databases/{id}/records/{rid}", Wrap(dh.DeleteRecord))

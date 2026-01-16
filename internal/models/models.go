@@ -16,9 +16,11 @@ type Database struct {
 
 // Column represents a database column
 type Column struct {
-	Name    string   `json:"name"`
-	Type    string   `json:"type"` // text, select, date, number, checkbox
-	Options []string `json:"options,omitempty"`
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	Type     string   `json:"type"` // text, number, select, multi_select, checkbox, date
+	Options  []string `json:"options,omitempty"`
+	Required bool     `json:"required,omitempty"`
 }
 
 // Record represents a database record

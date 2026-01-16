@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -241,4 +242,181 @@ func formatMarkdownFile(page *models.Page) []byte {
 	buf.WriteString("---\n\n")
 	buf.WriteString(page.Content)
 	return buf.Bytes()
+}
+
+// Database operations
+
+// DatabaseExists checks if a database schema file exists.
+func (fs *FileStore) DatabaseExists(id string) bool {
+	path := fs.databaseSchemaPath(id)
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+// ReadDatabase reads a database schema from disk.
+func (fs *FileStore) ReadDatabase(id string) (*models.Database, error) {
+	filePath := fs.databaseSchemaPath(id)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("database not found")
+		}
+		return nil, fmt.Errorf("failed to read database: %w", err)
+	}
+
+	var db models.Database
+	if err := json.Unmarshal(data, &db); err != nil {
+		return nil, fmt.Errorf("failed to parse database: %w", err)
+	}
+
+	return &db, nil
+}
+
+// WriteDatabase writes a database schema to disk.
+func (fs *FileStore) WriteDatabase(db *models.Database) error {
+	filePath := fs.databaseSchemaPath(db.ID)
+
+	// Create parent directory if needed
+	if dir := filepath.Dir(filePath); dir != fs.pagesDir {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
+
+	data, err := json.MarshalIndent(db, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal database: %w", err)
+	}
+
+	if err := os.WriteFile(filePath, data, 0o644); err != nil {
+		return fmt.Errorf("failed to write database: %w", err)
+	}
+
+	return nil
+}
+
+// DeleteDatabase deletes a database schema and records files.
+func (fs *FileStore) DeleteDatabase(id string) error {
+	schemaPath := fs.databaseSchemaPath(id)
+	recordsPath := fs.databaseRecordsPath(id)
+
+	if err := os.Remove(schemaPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to delete database schema: %w", err)
+	}
+
+	if err := os.Remove(recordsPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to delete database records: %w", err)
+	}
+
+	return nil
+}
+
+// ListDatabases returns all databases in the pages directory.
+func (fs *FileStore) ListDatabases() ([]*models.Database, error) {
+	var databases []*models.Database
+
+	err := filepath.Walk(fs.pagesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Only process .db.json files
+		if info.IsDir() || !strings.HasSuffix(path, ".db.json") {
+			return nil
+		}
+
+		// Get database ID from filename
+		relPath, _ := filepath.Rel(fs.pagesDir, path)
+		id := strings.TrimSuffix(relPath, ".db.json")
+		id = filepath.ToSlash(id) // Normalize path separators
+
+		db, err := fs.ReadDatabase(id)
+		if err != nil {
+			// Log but continue
+			return nil
+		}
+		databases = append(databases, db)
+		return nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list databases: %w", err)
+	}
+
+	return databases, nil
+}
+
+// AppendRecord appends a record to the JSONL records file.
+func (fs *FileStore) AppendRecord(id string, record *models.Record) error {
+	filePath := fs.databaseRecordsPath(id)
+
+	// Create parent directory if needed
+	if dir := filepath.Dir(filePath); dir != fs.pagesDir {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+	}
+
+	data, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("failed to marshal record: %w", err)
+	}
+
+	// Open file in append mode, create if doesn't exist
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to open records file: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	// Write JSON and newline
+	if _, err := f.Write(data); err != nil {
+		return fmt.Errorf("failed to write record: %w", err)
+	}
+	if _, err := f.WriteString("\n"); err != nil {
+		return fmt.Errorf("failed to write newline: %w", err)
+	}
+
+	return nil
+}
+
+// ReadRecords reads all records from a database JSONL file.
+// Returns records and a map of record ID to line position for updates.
+func (fs *FileStore) ReadRecords(id string) ([]*models.Record, error) {
+	filePath := fs.databaseRecordsPath(id)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []*models.Record{}, nil // Empty database
+		}
+		return nil, fmt.Errorf("failed to read records: %w", err)
+	}
+
+	var records []*models.Record
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		var record models.Record
+		if err := json.Unmarshal([]byte(line), &record); err != nil {
+			return nil, fmt.Errorf("failed to parse record: %w", err)
+		}
+		records = append(records, &record)
+	}
+
+	return records, nil
+}
+
+// databaseSchemaPath constructs the path for a database schema file (.db.json).
+// ID can include path separators for nested databases.
+func (fs *FileStore) databaseSchemaPath(id string) string {
+	return filepath.Join(fs.pagesDir, id+".db.json")
+}
+
+// databaseRecordsPath constructs the path for a database records file (.db.jsonl).
+// ID can include path separators for nested databases.
+func (fs *FileStore) databaseRecordsPath(id string) string {
+	return filepath.Join(fs.pagesDir, id+".db.jsonl")
 }

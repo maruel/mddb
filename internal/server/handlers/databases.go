@@ -2,19 +2,23 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/maruel/mddb/internal/errors"
+	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
 
 // DatabaseHandler handles database-related HTTP requests
 type DatabaseHandler struct {
-	fileStore *storage.FileStore
+	databaseService *storage.DatabaseService
 }
 
 // NewDatabaseHandler creates a new database handler
 func NewDatabaseHandler(fileStore *storage.FileStore) *DatabaseHandler {
-	return &DatabaseHandler{fileStore: fileStore}
+	return &DatabaseHandler{
+		databaseService: storage.NewDatabaseService(fileStore),
+	}
 }
 
 // ListDatabasesRequest is a request to list all databases.
@@ -32,15 +36,17 @@ type GetDatabaseRequest struct {
 
 // GetDatabaseResponse is a response containing a database.
 type GetDatabaseResponse struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Columns []any  `json:"columns"`
+	ID       string          `json:"id"`
+	Title    string          `json:"title"`
+	Columns  []models.Column `json:"columns"`
+	Created  string          `json:"created"`
+	Modified string          `json:"modified"`
 }
 
 // CreateDatabaseRequest is a request to create a database.
 type CreateDatabaseRequest struct {
-	Title   string `json:"title"`
-	Columns []any  `json:"columns"`
+	Title   string          `json:"title"`
+	Columns []models.Column `json:"columns"`
 }
 
 // CreateDatabaseResponse is a response from creating a database.
@@ -50,9 +56,9 @@ type CreateDatabaseResponse struct {
 
 // UpdateDatabaseRequest is a request to update a database.
 type UpdateDatabaseRequest struct {
-	ID      string `path:"id"`
-	Title   string `json:"title"`
-	Columns []any  `json:"columns"`
+	ID      string          `path:"id"`
+	Title   string          `json:"title"`
+	Columns []models.Column `json:"columns"`
 }
 
 // UpdateDatabaseResponse is a response from updating a database.
@@ -75,7 +81,7 @@ type ListRecordsRequest struct {
 
 // ListRecordsResponse is a response containing a list of records.
 type ListRecordsResponse struct {
-	Records []any `json:"records"`
+	Records []map[string]any `json:"records"`
 }
 
 // CreateRecordRequest is a request to create a record.
@@ -101,6 +107,20 @@ type UpdateRecordResponse struct {
 	ID string `json:"id"`
 }
 
+// GetRecordRequest is a request to get a record.
+type GetRecordRequest struct {
+	ID  string `path:"id"`
+	RID string `path:"rid"`
+}
+
+// GetRecordResponse is a response containing a record.
+type GetRecordResponse struct {
+	ID       string         `json:"id"`
+	Data     map[string]any `json:"data"`
+	Created  string         `json:"created"`
+	Modified string         `json:"modified"`
+}
+
 // DeleteRecordRequest is a request to delete a record.
 type DeleteRecordRequest struct {
 	ID  string `path:"id"`
@@ -112,60 +132,141 @@ type DeleteRecordResponse struct{}
 
 // ListDatabases returns a list of all databases
 func (h *DatabaseHandler) ListDatabases(ctx context.Context, req ListDatabasesRequest) (*ListDatabasesResponse, error) {
-	// TODO: Implement listing databases
-	return &ListDatabasesResponse{Databases: []any{}}, nil
+	databases, err := h.databaseService.ListDatabases()
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to list databases", "err", err)
+		return nil, errors.NewAPIError(500, "Failed to list databases")
+	}
+
+	dbList := make([]any, len(databases))
+	for i, db := range databases {
+		dbList[i] = map[string]any{
+			"id":       db.ID,
+			"title":    db.Title,
+			"created":  db.Created,
+			"modified": db.Modified,
+		}
+	}
+
+	return &ListDatabasesResponse{Databases: dbList}, nil
 }
 
 // GetDatabase returns a specific database by ID
 func (h *DatabaseHandler) GetDatabase(ctx context.Context, req GetDatabaseRequest) (*GetDatabaseResponse, error) {
-	// TODO: Implement getting a database (req.ID is populated from path parameter)
-	return nil, errors.NewAPIError(404, "Database not found")
+	db, err := h.databaseService.GetDatabase(req.ID)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to get database", "id", req.ID, "err", err)
+		return nil, errors.NewAPIError(404, "Database not found")
+	}
+
+	return &GetDatabaseResponse{
+		ID:       db.ID,
+		Title:    db.Title,
+		Columns:  db.Columns,
+		Created:  db.Created.Format("2006-01-02T15:04:05Z07:00"),
+		Modified: db.Modified.Format("2006-01-02T15:04:05Z07:00"),
+	}, nil
 }
 
 // CreateDatabase creates a new database.
 func (h *DatabaseHandler) CreateDatabase(ctx context.Context,
 	req CreateDatabaseRequest,
 ) (*CreateDatabaseResponse, error) {
-	// TODO: Implement creating a database
-	return &CreateDatabaseResponse{ID: "placeholder"}, nil
+	db, err := h.databaseService.CreateDatabase(req.Title, req.Columns)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to create database", "err", err)
+		return nil, errors.NewAPIError(400, "Failed to create database")
+	}
+
+	return &CreateDatabaseResponse{ID: db.ID}, nil
 }
 
 // UpdateDatabase updates a database schema.
 func (h *DatabaseHandler) UpdateDatabase(ctx context.Context,
 	req UpdateDatabaseRequest,
 ) (*UpdateDatabaseResponse, error) {
-	// TODO: Implement updating a database (req.ID is populated from path parameter)
-	return nil, errors.NewAPIError(404, "Database not found")
+	db, err := h.databaseService.UpdateDatabase(req.ID, req.Title, req.Columns)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to update database", "id", req.ID, "err", err)
+		return nil, errors.NewAPIError(404, "Database not found")
+	}
+
+	return &UpdateDatabaseResponse{ID: db.ID}, nil
 }
 
 // DeleteDatabase deletes a database.
 func (h *DatabaseHandler) DeleteDatabase(ctx context.Context,
 	req DeleteDatabaseRequest,
 ) (*DeleteDatabaseResponse, error) {
-	// TODO: Implement deleting a database (req.ID is populated from path parameter)
+	err := h.databaseService.DeleteDatabase(req.ID)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to delete database", "id", req.ID, "err", err)
+		return nil, errors.NewAPIError(404, "Database not found")
+	}
+
 	return &DeleteDatabaseResponse{}, nil
 }
 
 // ListRecords returns records from a database
 func (h *DatabaseHandler) ListRecords(ctx context.Context, req ListRecordsRequest) (*ListRecordsResponse, error) {
-	// TODO: Implement listing records (req.ID is populated from path parameter)
-	return &ListRecordsResponse{Records: []any{}}, nil
+	records, err := h.databaseService.GetRecords(req.ID)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to list records", "databaseID", req.ID, "err", err)
+		return nil, errors.NewAPIError(404, "Database not found")
+	}
+
+	recordList := make([]map[string]any, len(records))
+	for i, r := range records {
+		recordList[i] = map[string]any{
+			"id":       r.ID,
+			"data":     r.Data,
+			"created":  r.Created,
+			"modified": r.Modified,
+		}
+	}
+
+	return &ListRecordsResponse{Records: recordList}, nil
+}
+
+// GetRecord returns a specific record
+func (h *DatabaseHandler) GetRecord(ctx context.Context, req GetRecordRequest) (*GetRecordResponse, error) {
+	record, err := h.databaseService.GetRecord(req.ID, req.RID)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to get record", "databaseID", req.ID, "recordID", req.RID, "err", err)
+		return nil, errors.NewAPIError(404, "Record not found")
+	}
+
+	return &GetRecordResponse{
+		ID:       record.ID,
+		Data:     record.Data,
+		Created:  record.Created.Format("2006-01-02T15:04:05Z07:00"),
+		Modified: record.Modified.Format("2006-01-02T15:04:05Z07:00"),
+	}, nil
 }
 
 // CreateRecord creates a new record in a database
 func (h *DatabaseHandler) CreateRecord(ctx context.Context, req CreateRecordRequest) (*CreateRecordResponse, error) {
-	// TODO: Implement creating a record (req.ID is populated from path parameter)
-	return &CreateRecordResponse{ID: "placeholder"}, nil
+	record, err := h.databaseService.CreateRecord(req.ID, req.Data)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to create record", "databaseID", req.ID, "err", err)
+		return nil, errors.NewAPIError(404, "Database not found")
+	}
+
+	return &CreateRecordResponse{ID: record.ID}, nil
 }
 
 // UpdateRecord updates an existing record
 func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req UpdateRecordRequest) (*UpdateRecordResponse, error) {
-	// TODO: Implement updating a record (req.ID and req.RID are populated from path parameters)
-	return nil, errors.NewAPIError(404, "Record not found")
+	// Note: JSONL format doesn't support efficient updates. For now, require re-writing the entire JSONL file.
+	// This is a limitation we can improve later.
+	slog.WarnContext(ctx, "record update not yet implemented", "databaseID", req.ID, "recordID", req.RID)
+	return nil, errors.NewAPIError(501, "Record update not yet implemented")
 }
 
 // DeleteRecord deletes a record
 func (h *DatabaseHandler) DeleteRecord(ctx context.Context, req DeleteRecordRequest) (*DeleteRecordResponse, error) {
-	// TODO: Implement deleting a record (req.ID and req.RID are populated from path parameters)
-	return &DeleteRecordResponse{}, nil
+	// Note: JSONL format doesn't support efficient deletes. For now, require re-writing the entire JSONL file.
+	// This is a limitation we can improve later.
+	slog.WarnContext(ctx, "record delete not yet implemented", "databaseID", req.ID, "recordID", req.RID)
+	return nil, errors.NewAPIError(501, "Record delete not yet implemented")
 }

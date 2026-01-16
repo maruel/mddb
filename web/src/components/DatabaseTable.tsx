@@ -1,0 +1,239 @@
+import { createSignal, For, Show } from 'solid-js';
+import styles from './DatabaseTable.module.css';
+
+interface Column {
+  id: string;
+  name: string;
+  type: string;
+  options?: string[];
+  required?: boolean;
+}
+
+interface RecordData {
+  id: string;
+  data: Record<string, unknown>;
+  created: string;
+  modified: string;
+}
+
+interface DatabaseTableProps {
+  databaseId: string;
+  columns: Column[];
+  records: RecordData[];
+  onAddRecord?: (data: Record<string, unknown>) => void;
+  onUpdateRecord?: (recordId: string, data: Record<string, unknown>) => void;
+  onDeleteRecord?: (recordId: string) => void;
+}
+
+export default function DatabaseTable(props: DatabaseTableProps) {
+  const [editingCell, setEditingCell] = createSignal<{
+    recordId: string;
+    columnId: string;
+  } | null>(null);
+  const [editValue, setEditValue] = createSignal('');
+  const [newRowData, setNewRowData] = createSignal<Record<string, unknown>>({});
+
+  const getCellValue = (record: RecordData, columnId: string) => {
+    const column = props.columns.find((c) => c.id === columnId);
+    if (!column) return '';
+    return record.data[column.name] ?? '';
+  };
+
+  const handleCellClick = (recordId: string, columnId: string) => {
+    const value = props.records
+      .find((r) => r.id === recordId)
+      ?.data[props.columns.find((c) => c.id === columnId)?.name ?? ''] ?? '';
+
+    setEditingCell({ recordId, columnId });
+    setEditValue(String(value));
+  };
+
+  const handleCellChange = (value: string) => {
+    setEditValue(value);
+  };
+
+  const handleCellSave = (recordId: string, columnId: string) => {
+    const column = props.columns.find((c) => c.id === columnId);
+    if (!column || !props.onUpdateRecord) return;
+
+    const record = props.records.find((r) => r.id === recordId);
+    if (!record) return;
+
+    const updatedData = { ...record.data };
+    updatedData[column.name] = editValue();
+
+    props.onUpdateRecord(recordId, updatedData);
+    setEditingCell(null);
+  };
+
+  const handleAddRecord = () => {
+    if (props.onAddRecord && Object.keys(newRowData()).length > 0) {
+      props.onAddRecord(newRowData());
+      setNewRowData({});
+    }
+  };
+
+  const renderCellContent = (record: Record, column: Column) => {
+    const value = getCellValue(record, column.id);
+
+    switch (column.type) {
+      case 'checkbox':
+        return value ? '✓' : '';
+      case 'select':
+      case 'multi_select':
+        return String(value);
+      case 'date':
+        return value ? new Date(value as string).toLocaleDateString() : '';
+      case 'number':
+        return String(value);
+      default:
+        return String(value);
+    }
+  };
+
+  const renderCellInput = (column: Column, initialValue: string) => {
+    switch (column.type) {
+      case 'checkbox':
+        return (
+          <input
+            type="checkbox"
+            checked={Boolean(initialValue)}
+            onChange={(e) => handleCellChange(String(e.target.checked))}
+            class={styles.input}
+          />
+        );
+      case 'select':
+        return (
+          <select value={initialValue} onChange={(e) => handleCellChange(e.target.value)} class={styles.input}>
+            <option value="">--</option>
+            <For each={column.options ?? []}>
+              {(option) => <option value={option}>{option}</option>}
+            </For>
+          </select>
+        );
+      case 'number':
+        return (
+          <input
+            type="number"
+            value={initialValue}
+            onInput={(e) => handleCellChange(e.target.value)}
+            class={styles.input}
+          />
+        );
+      case 'date':
+        return (
+          <input
+            type="date"
+            value={initialValue}
+            onInput={(e) => handleCellChange(e.target.value)}
+            class={styles.input}
+          />
+        );
+      default:
+        return (
+          <input
+            type="text"
+            value={initialValue}
+            onInput={(e) => handleCellChange(e.target.value)}
+            class={styles.input}
+          />
+        );
+    }
+  };
+
+  return (
+    <div class={styles.container}>
+      <div class={styles.tableWrapper}>
+        <table class={styles.table}>
+          <thead>
+            <tr class={styles.headerRow}>
+              <th class={styles.headerCell}>Actions</th>
+              <For each={props.columns}>
+                {(column) => (
+                  <th class={styles.headerCell}>
+                    {column.name}
+                    <Show when={column.required}>
+                      <span class={styles.required}>*</span>
+                    </Show>
+                  </th>
+                )}
+              </For>
+            </tr>
+          </thead>
+          <tbody>
+            <For each={props.records}>
+              {(record) => (
+                <tr class={styles.row}>
+                  <td class={styles.actionsCell}>
+                    <Show when={props.onDeleteRecord}>
+                      <button
+                        class={styles.deleteBtn}
+                        onClick={() => props.onDeleteRecord?.(record.id)}
+                        title="Delete record"
+                      >
+                        ✕
+                      </button>
+                    </Show>
+                  </td>
+                  <For each={props.columns}>
+                    {(column) => {
+                      const isEditing = () => editingCell()?.recordId === record.id && editingCell()?.columnId === column.id;
+
+                      return (
+                        <td
+                          class={styles.cell}
+                          classList={{ [styles.editing]: isEditing() }}
+                          onClick={() => handleCellClick(record.id, column.id)}
+                        >
+                          <Show
+                            when={isEditing()}
+                            fallback={<div class={styles.cellContent}>{renderCellContent(record, column)}</div>}
+                          >
+                            <div class={styles.editContainer}>
+                              {renderCellInput(column, editValue())}
+                              <div class={styles.editActions}>
+                                <button
+                                  class={styles.saveBtn}
+                                  onClick={() => handleCellSave(record.id, column.id)}
+                                >
+                                  ✓
+                                </button>
+                                <button class={styles.cancelBtn} onClick={() => setEditingCell(null)}>
+                                  ✕
+                                </button>
+                              </div>
+                            </div>
+                          </Show>
+                        </td>
+                      );
+                    }}
+                  </For>
+                </tr>
+              )}
+            </For>
+            <Show when={props.onAddRecord}>
+              <tr class={styles.newRow}>
+                <td class={styles.actionsCell}>
+                  <button class={styles.addBtn} onClick={handleAddRecord}>
+                    +
+                  </button>
+                </td>
+                <For each={props.columns}>
+                  {(column) => (
+                    <td class={styles.cell}>
+                      {renderCellInput(column, newRowData()[column.name] ?? '')}
+                    </td>
+                  )}
+                </For>
+              </tr>
+            </Show>
+          </tbody>
+        </table>
+      </div>
+
+      <Show when={props.records.length === 0}>
+        <div class={styles.empty}>No records. Click + to add one.</div>
+      </Show>
+    </div>
+  );
+}

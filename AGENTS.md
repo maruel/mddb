@@ -10,8 +10,10 @@ as markdown files and images.
 **Storage Model:**
 - All content lives in the `pages/` directory
 - Pages: Files ending with `.md` (e.g., `getting-started.md`)
-- Databases: Files ending with `.db.md` (e.g., `tasks.db.md`, `contacts.db.md`)
-- Assets: Any file that doesn't end with `.md` (e.g., `diagram.png`, `chart.svg`)
+- Databases: Two-file format per database:
+  - `.db.json` - Schema + column metadata (e.g., `tasks.db.json`)
+  - `.db.jsonl` - Records, one per line (e.g., `tasks.db.jsonl`)
+- Assets: Any file that doesn't end with `.md` or `.db.*` (e.g., `diagram.png`, `chart.svg`)
 - Everything can be organized in subdirectories for hierarchical organization
 
 See README.md for project overview and PLAN.md for implementation roadmap.
@@ -28,15 +30,18 @@ mddb/
 │   │   ├── handler_wrapper.go  # Generic handler wrapper with path param extraction
 │   │   └── handlers/           # HTTP request handlers by feature
 │   │       ├── pages.go        # Page CRUD operations
-│   │       ├── databases.go    # Database operations
+│   │       ├── databases.go    # Database CRUD + record operations
 │   │       ├── assets.go       # Asset management
 │   │       └── health.go       # Health check
 │   ├── storage/                # File system operations
-│   │   ├── filestore.go        # Low-level file operations
-│   │   ├── filestore_test.go   # FileStore unit tests
-│   │   └── page_service.go     # Page business logic
+│   │   ├── filestore.go        # Low-level file operations for pages/databases/records
+│   │   ├── filestore_test.go   # FileStore unit tests (pages)
+│   │   ├── filestore_database_test.go # FileStore database/record tests
+│   │   ├── page_service.go     # Page business logic
+│   │   ├── database_service.go # Database business logic
+│   │   └── database_service_test.go  # DatabaseService unit tests
 │   ├── models/                 # Data models
-│   │   └── models.go           # Page, Database, Record, Asset structs
+│   │   └── models.go           # Page, Database, Column, Record, Asset structs
 │   ├── errors/                 # Error types
 │   │   └── errors.go           # ErrorWithStatus interface and APIError
 │   └── utils/                  # Utilities
@@ -45,17 +50,25 @@ mddb/
 ├── web/                        # SolidJS frontend
 │   ├── src/                    # Frontend source code
 │   │   ├── index.tsx           # App entry point
-│   │   ├── App.tsx             # Main app component
-│   │   └── App.module.css      # App styling
+│   │   ├── App.tsx             # Main app component (pages + databases)
+│   │   ├── App.module.css      # App styling
+│   │   └── components/
+│   │       ├── MarkdownPreview.tsx        # Markdown live preview
+│   │       ├── MarkdownPreview.module.css
+│   │       ├── DatabaseTable.tsx          # Database table UI with inline editing
+│   │       └── DatabaseTable.module.css
 │   ├── public/                 # Static files (index.html for SPA)
 │   ├── index.html              # Vite HTML template
 │   ├── vite.config.ts          # Vite build configuration
 │   ├── tsconfig.json           # TypeScript configuration
 │   └── package.json            # Frontend dependencies
 ├── data/                       # Runtime data directory
-│   └── pages/                  # All markdown content (created dynamically)
+│   └── pages/                  # All content (pages, databases, assets)
+├── docs/                       # Documentation
+│   ├── PLAN.md                 # Implementation roadmap
+│   ├── PHASE2_IMPLEMENTATION.md# Phase 2 details
+│   └── LINTERS.md              # Linting rules
 ├── Makefile                    # Common development commands
-├── PLAN.md                     # Implementation roadmap
 ├── AGENTS.md                   # This file - Development guidelines
 └── README.md                   # Project overview and API documentation
 ```
@@ -80,9 +93,14 @@ type GetRequest struct {
 }
 ```
 
-**Service Pattern**: Create a service layer (e.g., `PageService`) that uses `FileStore` for business logic.
+**Service Pattern**: Create a service layer (e.g., `PageService`, `DatabaseService`) that uses `FileStore` for business logic.
 
-**Testing**: Use table-driven tests. Store tests in `*_test.go` files next to implementation.
+**Database Service**: `DatabaseService` handles all database and record operations:
+- Validates input before FileStore operations
+- Auto-generates IDs for databases, records, and columns
+- Separates business logic from HTTP handlers
+
+**Testing**: Use table-driven tests. Store tests in `*_test.go` files next to implementation. Target 100% coverage for service layers.
 
 ## Frontend Development (SolidJS)
 
@@ -160,11 +178,40 @@ npm run typecheck
 
 ## File Operations
 
-### Markdown Handling
+### Markdown Handling (Pages)
 
 - Front matter (YAML) for metadata
 - UTF-8 encoding always
 - Normalize line endings (LF)
+
+### Database Storage Format
+
+**Schema files (`.db.json`):**
+- JSON format with database metadata
+- Contains columns array with type, options, required flags
+- Auto-generate column IDs if not provided
+- Supports nested paths (e.g., `folder/subfolder/database-name`)
+
+**Record files (`.db.jsonl`):**
+- JSON Lines format (one record per line)
+- Append-only writes for new records
+- Enables streaming and pagination
+- Each line is a complete Record JSON object
+
+**Column Types (MVP):**
+- `text` - Plain text input
+- `number` - Numeric values
+- `select` - Single-choice dropdown with options
+- `multi_select` - Multi-choice selections with options
+- `checkbox` - Boolean toggle
+- `date` - Date picker input
+
+**Example database structure:**
+```
+data/pages/
+├── tasks.db.json       # Schema: {id, title, columns, created, modified}
+└── tasks.db.jsonl      # Records: one per line
+```
 
 ## Testing
 
@@ -240,15 +287,17 @@ npm run typecheck
 
 When implementing features:
 
-- [ ] Update PLAN.md if requirements change
+- [ ] Update PLAN.md (in docs/) if requirements change
 - [ ] Write tests first or alongside code
-- [ ] Follow naming conventions
+- [ ] Follow naming conventions (see above)
 - [ ] Run linters and fix issues: `make lint-fix`
 - [ ] Run tests: `make test`
-- [ ] Document complex logic
-- [ ] Test error cases
+- [ ] Document complex logic with comments
+- [ ] Test error cases and edge cases
 - [ ] Update relevant README sections
 - [ ] Commit with descriptive message (runs pre-commit hooks automatically)
+- [ ] Ensure path parameter extraction works for nested resources
+- [ ] Use context-aware logging (slog.InfoContext, slog.ErrorContext)
 
 ## Code Quality & Linting
 
