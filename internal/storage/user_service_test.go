@@ -14,7 +14,12 @@ func TestUserService(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	service, err := NewUserService(tempDir)
+	memService, err := NewMembershipService(tempDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	service, err := NewUserService(tempDir, memService)
 	if err != nil {
 		t.Fatal(err)
 	}

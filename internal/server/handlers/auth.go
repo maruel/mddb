@@ -56,7 +56,7 @@ func (h *AuthHandler) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 		return nil, errors.NewAPIError(401, errors.ErrUnauthorized, "Invalid credentials")
 	}
 
-	token, err := h.generateToken(user)
+	token, err := h.GenerateToken(user)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to generate token", err)
 	}
@@ -114,7 +114,7 @@ func (h *AuthHandler) Register(ctx context.Context, req RegisterRequest) (*Login
 		return nil, errors.InternalWithError("Failed to update user organization", err)
 	}
 
-	token, err := h.generateToken(user)
+	token, err := h.GenerateToken(user)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to generate token", err)
 	}
@@ -125,7 +125,7 @@ func (h *AuthHandler) Register(ctx context.Context, req RegisterRequest) (*Login
 	}, nil
 }
 
-func (h *AuthHandler) generateToken(user *models.User) (string, error) {
+func (h *AuthHandler) GenerateToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":   user.ID,
 		"email": user.Email,

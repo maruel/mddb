@@ -134,33 +134,22 @@ func BadRequest(message string) *APIError {
 	return NewAPIError(http.StatusBadRequest, ErrValidationFailed, message)
 }
 
-// Forbidden creates a 403 Forbidden error.
-func Forbidden(message string) *APIError {
-	if message == "" {
-		message = "Forbidden: insufficient permissions"
-	}
-	return NewAPIError(http.StatusForbidden, ErrForbidden, message)
-}
-
-// MissingField creates a 400 error for a missing required field.
+// MissingField creates a 400 Bad Request error for a missing field.
 func MissingField(fieldName string) *APIError {
-	return NewAPIError(http.StatusBadRequest, ErrMissingField, fmt.Sprintf("Missing required field: %s", fieldName)).
-		WithDetail("field", fieldName)
+	return NewAPIError(http.StatusBadRequest, ErrMissingField, fmt.Sprintf("Missing required field: %s", fieldName))
 }
 
-// InvalidFormat creates a 400 error for invalid input format.
-func InvalidFormat(fieldName, expected string) *APIError {
-	return NewAPIError(http.StatusBadRequest, ErrInvalidFormat, fmt.Sprintf("Invalid format for %s: expected %s", fieldName, expected)).
-		WithDetail("field", fieldName).
-		WithDetail("expected", expected)
+// Forbidden returns a 403 Forbidden error.
+func Forbidden(message string) error {
+	return NewAPIError(403, ErrForbidden, message)
 }
 
-// Conflict creates a 409 Conflict error.
-func Conflict(message string) *APIError {
-	return NewAPIError(http.StatusConflict, ErrConflict, message)
+// Unauthorized returns a 401 Unauthorized error.
+func Unauthorized() error {
+	return NewAPIError(401, ErrUnauthorized, "Unauthorized")
 }
 
-// Internal creates a 500 Internal Server Error.
+// Internal returns a 500 Internal Server Error.
 func Internal(message string) *APIError {
 	return NewAPIError(http.StatusInternalServerError, ErrInternal, message)
 }

@@ -61,13 +61,31 @@ type Record struct {
 
 // User represents a system user.
 type User struct {
-	ID             string    `json:"id"`
-	Email          string    `json:"email"`
-	Name           string    `json:"name"`
+	ID             string          `json:"id"`
+	Email          string          `json:"email"`
+	Name           string          `json:"name"`
+	OrganizationID string           `json:"organization_id"` // Active organization
+	Role           UserRole         `json:"role"`            // Role in active organization
+	Memberships    []Membership     `json:"memberships,omitempty"`
+	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty"`
+	Created        time.Time       `json:"created"`
+	Modified       time.Time       `json:"modified"`
+}
+
+// OAuthIdentity represents a link between a local user and an OAuth2 provider.
+type OAuthIdentity struct {
+	Provider   string    `json:"provider"` // google, microsoft
+	ProviderID string    `json:"provider_id"`
+	Email      string    `json:"email"`
+	LastLogin  time.Time `json:"last_login"`
+}
+
+// Membership represents a user's relationship with an organization.
+type Membership struct {
+	UserID         string    `json:"user_id"`
 	OrganizationID string    `json:"organization_id"`
 	Role           UserRole  `json:"role"`
 	Created        time.Time `json:"created"`
-	Modified       time.Time `json:"modified"`
 }
 
 // UserRole defines the permissions for a user.
@@ -86,7 +104,26 @@ const (
 type Organization struct {
 	ID      string    `json:"id"`
 	Name    string    `json:"name"`
+	Quotas  Quota     `json:"quotas"`
 	Created time.Time `json:"created"`
+}
+
+// Quota defines limits for an organization.
+type Quota struct {
+	MaxPages   int   `json:"max_pages"`
+	MaxStorage int64 `json:"max_storage"` // in bytes
+	MaxUsers   int   `json:"max_users"`
+}
+
+// Invitation represents a request for a user to join an organization.
+type Invitation struct {
+	ID             string    `json:"id"`
+	Email          string    `json:"email"`
+	OrganizationID string    `json:"organization_id"`
+	Role           UserRole  `json:"role"`
+	Token          string    `json:"token"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	Created        time.Time `json:"created"`
 }
 
 // Session represents an active user session.

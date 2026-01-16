@@ -15,7 +15,7 @@ import (
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
-func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, jwtSecret string) http.Handler {
+func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, jwtSecret string, googleClientID, googleClientSecret string) http.Handler {
 	cache := storage.NewCache()
 	mux := &http.ServeMux{}
 	ph := handlers.NewPageHandler(fileStore, gitService, cache)
@@ -25,6 +25,8 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	sh := handlers.NewSearchHandler(fileStore)
 	authh := handlers.NewAuthHandler(userService, orgService, jwtSecret)
 	uh := handlers.NewUserHandler(userService)
+	ih := handlers.NewInvitationHandler(invService, userService, orgService)
+	mh := handlers.NewMembershipHandler(memService, userService, authh)
 
 	// Health check
 	mux.Handle("/api/health", Wrap(handlers.Health))
@@ -33,10 +35,23 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	mux.Handle("POST /api/auth/login", Wrap(authh.Login))
 	mux.Handle("POST /api/auth/register", Wrap(authh.Register))
 	mux.Handle("GET /api/auth/me", Wrap(authh.Me))
+	mux.Handle("POST /api/auth/invitations/accept", Wrap(ih.AcceptInvitation))
+	mux.Handle("POST /api/auth/switch-org", Wrap(mh.SwitchOrg))
+
+	// OAuth endpoints
+	if googleClientID != "" && googleClientSecret != "" {
+		oh := handlers.NewOAuthHandler(userService, orgService, authh, googleClientID, googleClientSecret, "/api/auth/oauth/google/callback")
+		mux.HandleFunc("GET /api/auth/oauth/google", oh.LoginRedirect)
+		mux.HandleFunc("GET /api/auth/oauth/google/callback", oh.Callback)
+	}
 
 	// User management endpoints
 	mux.Handle("GET /api/{orgID}/users", RequireRole(models.RoleAdmin)(Wrap(uh.ListUsers)))
 	mux.Handle("PUT /api/{orgID}/users/role", RequireRole(models.RoleAdmin)(Wrap(uh.UpdateUserRole)))
+
+	// Invitation endpoints
+	mux.Handle("GET /api/{orgID}/invitations", RequireRole(models.RoleAdmin)(Wrap(ih.ListInvitations)))
+	mux.Handle("POST /api/{orgID}/invitations", RequireRole(models.RoleAdmin)(Wrap(ih.CreateInvitation)))
 
 	// Unified Nodes endpoints
 	mux.Handle("GET /api/{orgID}/nodes", RequireRole(models.RoleViewer)(Wrap(nh.ListNodes)))

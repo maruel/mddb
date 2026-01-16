@@ -6,3 +6,8 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	golang.org/x/crypto v0.47.0
 )
+
+require (
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
+	golang.org/x/oauth2 v0.34.0
+)

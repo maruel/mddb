@@ -13,20 +13,22 @@ import (
 
 // UserService handles user management and authentication.
 type UserService struct {
-	rootDir  string
-	usersDir string
+	rootDir    string
+	usersDir   string
+	memService *MembershipService
 }
 
 // NewUserService creates a new user service.
-func NewUserService(rootDir string) (*UserService, error) {
+func NewUserService(rootDir string, memService *MembershipService) (*UserService, error) {
 	usersDir := filepath.Join(rootDir, "db", "users")
 	if err := os.MkdirAll(usersDir, 0o700); err != nil {
 		return nil, fmt.Errorf("failed to create users directory: %w", err)
 	}
 
 	return &UserService{
-		rootDir:  rootDir,
-		usersDir: usersDir,
+		rootDir:    rootDir,
+		usersDir:   usersDir,
+		memService: memService,
 	}, nil
 }
 
@@ -59,12 +61,12 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 
 	now := time.Now()
 	user := &models.User{
-		ID:           id,
-		Email:        email,
-		Name:         name,
-		Role:         role,
-		Created:      now,
-		Modified:     now,
+		ID:       id,
+		Email:    email,
+		Name:     name,
+		Role:     role,
+		Created:  now,
+		Modified: now,
 	}
 
 	if err := s.saveUser(user, string(hash)); err != nil {
@@ -90,7 +92,7 @@ func (s *UserService) CountUsers() (int, error) {
 	return count, nil
 }
 
-// UpdateUserRole updates the role of a user.
+// UpdateUserRole updates the role of a user in their active organization.
 func (s *UserService) UpdateUserRole(id string, role models.UserRole) error {
 	user, hash, err := s.getUserWithHash(id)
 	if err != nil {
@@ -99,10 +101,19 @@ func (s *UserService) UpdateUserRole(id string, role models.UserRole) error {
 
 	user.Role = role
 	user.Modified = time.Now()
+
+	// Update membership if organization is set
+	if user.OrganizationID != "" && s.memService != nil {
+		if err := s.memService.UpdateRole(user.ID, user.OrganizationID, role); err != nil {
+			// If membership doesn't exist, create it
+			_, _ = s.memService.CreateMembership(user.ID, user.OrganizationID, role)
+		}
+	}
+
 	return s.saveUser(user, hash)
 }
 
-// UpdateUserOrg updates the organization of a user.
+// UpdateUserOrg updates the organization of a user and ensures membership exists.
 func (s *UserService) UpdateUserOrg(id string, orgID string) error {
 	user, hash, err := s.getUserWithHash(id)
 	if err != nil {
@@ -111,13 +122,42 @@ func (s *UserService) UpdateUserOrg(id string, orgID string) error {
 
 	user.OrganizationID = orgID
 	user.Modified = time.Now()
+
+	// Ensure membership exists
+	if orgID != "" && s.memService != nil {
+		m, err := s.memService.GetMembership(user.ID, orgID)
+		if err != nil {
+			// Create membership if it doesn't exist
+			_, err = s.memService.CreateMembership(user.ID, orgID, user.Role)
+			if err != nil {
+				return fmt.Errorf("failed to create membership: %w", err)
+			}
+		} else {
+			// Sync user role with membership role for the active org
+			user.Role = m.Role
+		}
+	}
+
 	return s.saveUser(user, hash)
 }
 
 // GetUser retrieves a user by ID.
 func (s *UserService) GetUser(id string) (*models.User, error) {
 	user, _, err := s.getUserWithHash(id)
-	return user, err
+	if err != nil {
+		return nil, err
+	}
+	s.populateMemberships(user)
+	return user, nil
+}
+
+func (s *UserService) populateMemberships(user *models.User) {
+	if s.memService != nil {
+		mems, err := s.memService.ListByUser(user.ID)
+		if err == nil {
+			user.Memberships = mems
+		}
+	}
 }
 
 func (s *UserService) getUserWithHash(id string) (*models.User, string, error) {
@@ -174,11 +214,57 @@ func (s *UserService) Authenticate(email, password string) (*models.User, error)
 			if err != nil {
 				return nil, fmt.Errorf("invalid credentials")
 			}
+			s.populateMemberships(user)
 			return user, nil
 		}
 	}
 
 	return nil, fmt.Errorf("invalid credentials")
+}
+
+// GetUserByOAuth retrieves a user by their OAuth identity.
+func (s *UserService) GetUserByOAuth(provider, providerID string) (*models.User, error) {
+	entries, err := os.ReadDir(s.usersDir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
+			continue
+		}
+
+		user, err := s.GetUser(entry.Name()[:len(entry.Name())-5])
+		if err == nil {
+			for _, identity := range user.OAuthIdentities {
+				if identity.Provider == provider && identity.ProviderID == providerID {
+					return user, nil
+				}
+			}
+		}
+	}
+
+	return nil, fmt.Errorf("user not found")
+}
+
+// LinkOAuthIdentity links an OAuth identity to a user.
+func (s *UserService) LinkOAuthIdentity(userID string, identity models.OAuthIdentity) error {
+	user, hash, err := s.getUserWithHash(userID)
+	if err != nil {
+		return err
+	}
+
+	// Check if already linked
+	for i, id := range user.OAuthIdentities {
+		if id.Provider == identity.Provider && id.ProviderID == identity.ProviderID {
+			user.OAuthIdentities[i].LastLogin = time.Now()
+			return s.saveUser(user, hash)
+		}
+	}
+
+	user.OAuthIdentities = append(user.OAuthIdentities, identity)
+	user.Modified = time.Now()
+	return s.saveUser(user, hash)
 }
 
 func (s *UserService) saveUser(user *models.User, passwordHash string) error {
