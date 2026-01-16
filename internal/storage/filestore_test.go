@@ -15,26 +15,26 @@ func TestFileStorePageOperations(t *testing.T) {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
 
-	// Test WritePage
-	page, err := fs.WritePage("test-page", "Test Title", "# Test Content")
+	// Test WritePage (with numeric ID)
+	page, err := fs.WritePage("1", "Test Title", "# Test Content")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
 	}
 
-	if page.ID != "test-page" {
-		t.Errorf("expected ID 'test-page', got %q", page.ID)
+	if page.ID != "1" {
+		t.Errorf("expected ID '1', got %q", page.ID)
 	}
 	if page.Title != "Test Title" {
 		t.Errorf("expected title 'Test Title', got %q", page.Title)
 	}
 
 	// Test PageExists
-	if !fs.PageExists("test-page") {
+	if !fs.PageExists("1") {
 		t.Error("page should exist after WritePage")
 	}
 
 	// Test ReadPage
-	readPage, err := fs.ReadPage("test-page")
+	readPage, err := fs.ReadPage("1")
 	if err != nil {
 		t.Fatalf("failed to read page: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test UpdatePage
-	updated, err := fs.UpdatePage("test-page", "Updated Title", "# Updated Content")
+	updated, err := fs.UpdatePage("1", "Updated Title", "# Updated Content")
 	if err != nil {
 		t.Fatalf("failed to update page: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Verify update persisted
-	readUpdated, err := fs.ReadPage("test-page")
+	readUpdated, err := fs.ReadPage("1")
 	if err != nil {
 		t.Fatalf("failed to read updated page: %v", err)
 	}
@@ -67,17 +67,17 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test DeletePage
-	err = fs.DeletePage("test-page")
+	err = fs.DeletePage("1")
 	if err != nil {
 		t.Fatalf("failed to delete page: %v", err)
 	}
 
-	if fs.PageExists("test-page") {
+	if fs.PageExists("1") {
 		t.Error("page should not exist after DeletePage")
 	}
 
 	// Test error handling for non-existent page
-	_, err = fs.ReadPage("non-existent")
+	_, err = fs.ReadPage("999")
 	if err == nil {
 		t.Error("expected error reading non-existent page")
 	}
@@ -90,14 +90,14 @@ func TestFileStoreListPages(t *testing.T) {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
 
-	// Create multiple pages
+	// Create multiple pages with numeric IDs
 	pages := []struct {
 		id    string
 		title string
 	}{
-		{"page-one", "First Page"},
-		{"page-two", "Second Page"},
-		{"nested/page", "Nested Page"},
+		{"1", "First Page"},
+		{"2", "Second Page"},
+		{"3", "Third Page"},
 	}
 
 	for _, p := range pages {
@@ -117,15 +117,15 @@ func TestFileStoreListPages(t *testing.T) {
 		t.Errorf("expected %d pages, got %d", len(pages), len(listed))
 	}
 
-	// Verify file structure
-	expectedFile := filepath.Join(fs.pagesDir, "page-one.md")
-	if _, err := os.Stat(expectedFile); err != nil {
-		t.Errorf("expected file %s to exist: %v", expectedFile, err)
+	// Verify directory structure
+	expectedDir := filepath.Join(fs.pagesDir, "1")
+	if _, err := os.Stat(expectedDir); err != nil {
+		t.Errorf("expected page directory %s to exist: %v", expectedDir, err)
 	}
 
-	nestedFile := filepath.Join(fs.pagesDir, "nested", "page.md")
-	if _, err := os.Stat(nestedFile); err != nil {
-		t.Errorf("expected nested file %s to exist: %v", nestedFile, err)
+	expectedFile := filepath.Join(expectedDir, "index.md")
+	if _, err := os.Stat(expectedFile); err != nil {
+		t.Errorf("expected file %s to exist: %v", expectedFile, err)
 	}
 }
 
@@ -137,13 +137,13 @@ func TestMarkdownFormatting(t *testing.T) {
 	}
 
 	// Write page with specific content
-	_, err = fs.WritePage("format-test", "Format Test", "# Content\n\nWith multiple lines")
+	_, err = fs.WritePage("1", "Format Test", "# Content\n\nWith multiple lines")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
 	}
 
 	// Read the file directly to verify format
-	filePath := filepath.Join(fs.pagesDir, "format-test.md")
+	filePath := filepath.Join(fs.pagesDir, "1", "index.md")
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatalf("failed to read file: %v", err)
@@ -155,7 +155,7 @@ func TestMarkdownFormatting(t *testing.T) {
 	if !contains(content, "---") {
 		t.Error("expected front matter delimiters")
 	}
-	if !contains(content, "id: format-test") {
+	if !contains(content, "id: 1") {
 		t.Error("expected id in front matter")
 	}
 	if !contains(content, "title: Format Test") {

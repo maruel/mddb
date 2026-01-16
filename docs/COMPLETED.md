@@ -75,13 +75,37 @@
 - Numeric IDs for all pages and records
 - Nested path support for hierarchical organization
 
+## Phase 3.5: Storage Migration ✓
+
+**What was done:**
+- Migrated from UUID-based file storage to directory-based numeric IDs
+- Implemented monotonic ID generation with FileStore.NextID()
+- Updated page storage: {id}/index.md with YAML front matter
+- Updated database storage: {id}/metadata.json + {id}/data.jsonl
+- Refactored all tests to use numeric IDs (28+ tests)
+- Verified application fully functional with new storage model
+
+**Key benefits:**
+- Each page directory is its own namespace for assets
+- Cleaner organization: pages are clearly directories
+- Monotonic IDs avoid collisions and support unlimited scaling
+- Version control friendly
+- Future-proof for per-page settings/metadata
+
+**Test results:**
+- All 28+ tests passing
+- Build: clean
+- Linting: zero errors
+- Application: fully functional with live API testing
+
 ## What's Next
 
 **Phase 4: Assets & Media**
 - File upload endpoint
-- Image storage and serving
+- Image storage and serving within page directories
 - Asset gallery UI
 - Image embedding in pages
+- Favicon support per page
 
 **Phase 5: Polish & Features**
 - Full-text search

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/maruel/mddb/internal/models"
-	"github.com/maruel/mddb/internal/utils"
 )
 
 // PageService handles page business logic.
@@ -26,17 +25,14 @@ func (s *PageService) GetPage(id string) (*models.Page, error) {
 	return s.fileStore.ReadPage(id)
 }
 
-// CreatePage creates a new page with a generated ID.
+// CreatePage creates a new page with a generated numeric ID.
 func (s *PageService) CreatePage(title, content string) (*models.Page, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
 
-	// Generate ID using UUID
-	id, err := utils.GenerateID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate page id: %w", err)
-	}
+	// Generate numeric ID (monotonically increasing)
+	id := s.fileStore.NextID()
 
 	return s.fileStore.WritePage(id, title, content)
 }

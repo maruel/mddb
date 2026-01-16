@@ -2,18 +2,20 @@
 
 ## Status
 
-**Current Phase: Phase 3 (Databases) ✓ COMPLETE**
+**Current Phase: Phase 3.5 (Storage Migration) ✓ COMPLETE**
 
 - Phase 1 ✓: Core foundation with routing, error handling, page CRUD
 - Phase 1.5 ✓: Code quality & linters (golangci-lint, ESLint, Prettier)
 - Phase 2 ✓: Page editor with live preview and auto-save
 - Phase 3 ✓: Databases with dual-format storage and table UI
+- Phase 3.5 ✓: Storage migration to directory-based numeric IDs
 - Phase 4 → Next: Assets & Media (file uploads, image handling)
 
 **Key Stats:**
 - Backend: 28 comprehensive tests (100% passing), zero linting errors
 - Frontend: Production-grade TypeScript/SolidJS, zero linting errors
 - Total implementation: ~2500 lines Go, ~500 lines TypeScript
+- Storage: Migrated from UUID files to directory-based numeric IDs (1, 2, 3, etc.)
 
 ## Overview
 
@@ -270,6 +272,24 @@ internal/
 **Storage Format:**
 - `.db.json`: Schema + column metadata (instant load)
 - `.db.jsonl`: Records one per line (stream/paginate without loading all)
+
+### Phase 3.5: Storage Migration ✓ COMPLETE
+**Migrated from UUID-based files to directory-based numeric IDs:**
+- [x] Refactored FileStore to use numeric directory IDs (1, 2, 3, etc.)
+- [x] Updated page storage: {id}/index.md with YAML front matter
+- [x] Updated database storage: {id}/metadata.json + {id}/data.jsonl
+- [x] Implemented NextID() method for monotonic ID generation
+- [x] Updated all tests to use numeric IDs and new directory structure
+- [x] All 28+ tests passing with new storage model
+- [x] Application fully functional with new directory-based storage
+- [x] Verified directory structure and file organization
+
+**Key changes:**
+- Pages now stored as directories with index.md files
+- Databases now stored as directories with metadata.json + data.jsonl
+- FileStore.NextID() provides monotonic ID generation
+- Each page directory is its own namespace for assets
+- No UUID generation needed for pages/databases
 
 ### Phase 4: Assets & Media
 - [ ] File upload endpoint

@@ -26,7 +26,7 @@ func (s *DatabaseService) GetDatabase(id string) (*models.Database, error) {
 	return s.fileStore.ReadDatabase(id)
 }
 
-// CreateDatabase creates a new database with a generated ID.
+// CreateDatabase creates a new database with a generated numeric ID.
 func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) (*models.Database, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
@@ -35,11 +35,8 @@ func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) 
 		return nil, fmt.Errorf("at least one column is required")
 	}
 
-	// Generate ID using UUID
-	id, err := utils.GenerateID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate database id: %w", err)
-	}
+	// Generate numeric ID (monotonically increasing)
+	id := s.fileStore.NextID()
 
 	// Ensure each column has an ID
 	for i := range columns {
@@ -59,7 +56,7 @@ func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) 
 		Columns:  columns,
 		Created:  now,
 		Modified: now,
-		Path:     id + ".db.json",
+		Path:     "metadata.json",
 	}
 
 	if err := s.fileStore.WriteDatabase(db); err != nil {
