@@ -1,3 +1,5 @@
+//go:generate sh -c "pnpm install && pnpm build"
+
 package frontend
 
 import "embed"

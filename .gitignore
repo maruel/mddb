@@ -1,11 +1,2 @@
-/mddb
-/bin/
-
-# Frontend
-/frontend/node_modules/
-/frontend/.env.local
-/frontend/.env.*.local
-/frontend/.npmrc
-
-# Data directory
 /data/
+/mddb
