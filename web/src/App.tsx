@@ -8,16 +8,9 @@ interface Page {
   modified: string;
 }
 
-interface PageDetail {
-  id: string;
-  title: string;
-  content: string;
-}
-
 export default function App() {
   const [pages, setPages] = createSignal<Page[]>([]);
   const [selectedPageId, setSelectedPageId] = createSignal<string | null>(null);
-  const [selectedPage, setSelectedPage] = createSignal<PageDetail | null>(null);
   const [title, setTitle] = createSignal('');
   const [content, setContent] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -46,10 +39,9 @@ export default function App() {
     try {
       setLoading(true);
       const res = await fetch(`/api/pages/${id}`);
-      const data = await res.json();
-      setSelectedPage(data);
-      setTitle(data.title);
-      setContent(data.content);
+      const pageData = await res.json();
+      setTitle(pageData.title);
+      setContent(pageData.content);
       setError(null);
     } catch (err) {
       setError('Failed to load page: ' + err);
@@ -66,12 +58,11 @@ export default function App() {
 
     try {
       setLoading(true);
-      const res = await fetch('/api/pages', {
+      await fetch('/api/pages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title(), content: content() }),
       });
-      const data = await res.json();
       await loadPages();
       setTitle('');
       setContent('');
@@ -89,7 +80,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/pages/${pageId}`, {
+      await fetch(`/api/pages/${pageId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title(), content: content() }),
@@ -115,7 +106,6 @@ export default function App() {
       await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
       await loadPages();
       setSelectedPageId(null);
-      setSelectedPage(null);
       setTitle('');
       setContent('');
       setError(null);

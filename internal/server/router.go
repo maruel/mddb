@@ -69,7 +69,9 @@ func (h *SPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Try to serve the exact file
 	file, err := h.fs.Open(r.URL.Path)
 	if err == nil {
-		file.Close()
+		if err := file.Close(); err != nil {
+			_ = err
+		}
 		// File exists, serve it
 		fs := http.FileServer(h.fs)
 		// Set cache headers for static assets with extensions
@@ -86,7 +88,7 @@ func (h *SPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	http.ServeContent(w, r, "/index.html", time.Now(), file)

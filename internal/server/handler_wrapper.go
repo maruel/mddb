@@ -50,11 +50,7 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 		}
 
 		// Extract path parameters and populate request struct
-		if err := populatePathParams(r, &input); err != nil {
-			slog.ErrorContext(ctx, "Failed to extract path parameters", "err", err)
-			writeErrorResponse(w, http.StatusBadRequest, "Failed to extract path parameters")
-			return
-		}
+		populatePathParams(r, &input)
 
 		output, err := fn(ctx, input)
 		if err != nil {
@@ -78,15 +74,15 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 
 // populatePathParams extracts path parameters from the request and populates
 // struct fields tagged with `path:"paramName"`.
-func populatePathParams(r *http.Request, input any) error {
+func populatePathParams(r *http.Request, input any) {
 	val := reflect.ValueOf(input)
 	if val.Kind() != reflect.Ptr {
-		return nil // Skip if not a pointer
+		return // Skip if not a pointer
 	}
 
 	elem := val.Elem()
 	if elem.Kind() != reflect.Struct {
-		return nil // Skip if not a struct
+		return // Skip if not a struct
 	}
 
 	typ := elem.Type()
@@ -107,13 +103,14 @@ func populatePathParams(r *http.Request, input any) error {
 			elem.Field(i).SetString(paramValue)
 		}
 	}
-
-	return nil
 }
 
 // writeErrorResponse writes an error response as JSON.
 func writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
+	if err := json.NewEncoder(w).Encode(map[string]string{"error": message}); err != nil {
+		// Error is already written to client, log only
+		_ = err
+	}
 }

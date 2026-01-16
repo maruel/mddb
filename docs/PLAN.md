@@ -218,7 +218,14 @@ internal/
 - [x] Basic page CRUD operations (PageService with full implementation)
 - [x] Tests for FileStore operations (unit tests passing)
 - [x] Basic SolidJS frontend structure (App.tsx with page management UI)
-- [ ] Static file serving (SPA handler with fallback to index.html - ready for built frontend)
+- [x] Static file serving (SPA handler with fallback to index.html - ready for built frontend)
+
+### Phase 1.5: Code Quality & Linters
+- [x] Go linters (golangci-lint with strict rules)
+- [x] Frontend linters (ESLint + Prettier)
+- [x] Pre-commit hooks to enforce linting on commits
+- [x] All code passes linting (0 errors, 0 warnings)
+- [x] Makefile targets: `make lint`, `make lint-go`, `make lint-frontend`, `make lint-fix`
 
 ### Phase 2: Page Editor
 - [ ] Markdown editor component (SolidJS)

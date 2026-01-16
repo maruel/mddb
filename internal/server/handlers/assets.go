@@ -17,31 +17,38 @@ func NewAssetHandler(fileStore *storage.FileStore) *AssetHandler {
 	return &AssetHandler{fileStore: fileStore}
 }
 
-// Request/Response types for assets
+// ListAssetsRequest is a request to list all assets.
 type ListAssetsRequest struct{}
 
+// ListAssetsResponse is a response containing a list of assets.
 type ListAssetsResponse struct {
 	Assets []any `json:"assets"`
 }
 
+// UploadAssetRequest is a request to upload an asset.
 type UploadAssetRequest struct{}
 
+// UploadAssetResponse is a response from uploading an asset.
 type UploadAssetResponse struct {
 	ID string `json:"id"`
 }
 
+// ServeAssetRequest is a request to serve an asset.
 type ServeAssetRequest struct {
 	ID string `path:"id"`
 }
 
+// ServeAssetResponse is a response when serving an asset.
 type ServeAssetResponse struct {
 	Data string `json:"data"`
 }
 
+// DeleteAssetRequest is a request to delete an asset.
 type DeleteAssetRequest struct {
 	ID string `path:"id"`
 }
 
+// DeleteAssetResponse is a response from deleting an asset.
 type DeleteAssetResponse struct{}
 
 // ListAssets returns a list of all assets

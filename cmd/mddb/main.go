@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -17,7 +18,7 @@ import (
 )
 
 func main() {
-	if err := mainImpl(); err != nil && err != context.Canceled {
+	if err := mainImpl(); err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintf(os.Stderr, "mddb: %v\n", err)
 		os.Exit(1)
 	}
@@ -74,7 +75,7 @@ func mainImpl() error {
 	// Wait for either context cancellation or server error
 	select {
 	case err := <-serverErr:
-		if err != http.ErrServerClosed {
+		if !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("server error: %w", err)
 		}
 	case <-ctx.Done():

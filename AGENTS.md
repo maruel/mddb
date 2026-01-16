@@ -243,11 +243,21 @@ When implementing features:
 - [ ] Update PLAN.md if requirements change
 - [ ] Write tests first or alongside code
 - [ ] Follow naming conventions
-- [ ] Run formatters and linters
+- [ ] Run linters and fix issues: `make lint-fix`
+- [ ] Run tests: `make test`
 - [ ] Document complex logic
 - [ ] Test error cases
 - [ ] Update relevant README sections
-- [ ] Commit with descriptive message
+- [ ] Commit with descriptive message (runs pre-commit hooks automatically)
+
+## Code Quality & Linting
+
+**All code must pass linting before commits.** See [docs/LINTERS.md](docs/LINTERS.md) for detailed rules.
+
+Quick commands:
+- `make lint` - Run all linters (Go + Frontend)
+- `make lint-fix` - Auto-fix all linting issues
+- `make git-hooks` - Install pre-commit hooks (required once per repo clone)
 
 ## Useful Resources
 

@@ -1,0 +1,43 @@
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  enable:
+    - errcheck       # unchecked errors
+    - errname        # error naming conventions
+    - errorlint      # improper error wrapping/formatting
+    - exhaustive     # missing enum cases
+    - gocritic       # opinionated checks
+    - gofmt          # formatting
+    - goimports      # import organization
+    - govet          # vet issues
+    - ineffassign    # unused assignments
+    - lll            # long lines
+    - misspell       # spelling mistakes
+    - nolintlint     # nolint comment correctness
+    - revive         # style issues
+    - staticcheck    # static analysis bugs
+    - typecheck      # type checking
+    - unconvert      # redundant type conversions
+    - unparam        # unused parameters
+    - unused         # unused variables
+  disable-all: false
+
+linters-settings:
+  lll:
+    line-length: 120
+  revive:
+    rules:
+      - name: exported
+        disabled: false
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+
+issues:
+  exclude:
+    - "should have a package comment"
+  exclude-use-default: false

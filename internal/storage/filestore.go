@@ -25,7 +25,7 @@ type FileStore struct {
 // Creates pages/ subdirectory where all content is stored.
 func NewFileStore(rootDir string) (*FileStore, error) {
 	// Create root directory if it doesn't exist
-	if err := os.MkdirAll(rootDir, 0755); err != nil {
+	if err := os.MkdirAll(rootDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create root directory: %w", err)
 	}
 
@@ -35,7 +35,7 @@ func NewFileStore(rootDir string) (*FileStore, error) {
 	}
 
 	// Create pages directory
-	if err := os.MkdirAll(fs.pagesDir, 0755); err != nil {
+	if err := os.MkdirAll(fs.pagesDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create directory %s: %w", fs.pagesDir, err)
 	}
 
@@ -78,7 +78,7 @@ func (fs *FileStore) ReadPage(id string) (*models.Page, error) {
 }
 
 // WritePage writes a page to disk with metadata and content.
-func (fs *FileStore) WritePage(id string, title, content string) (*models.Page, error) {
+func (fs *FileStore) WritePage(id, title, content string) (*models.Page, error) {
 	now := time.Now()
 	page := &models.Page{
 		ID:       id,
@@ -93,14 +93,14 @@ func (fs *FileStore) WritePage(id string, title, content string) (*models.Page, 
 
 	// Create parent directory if needed
 	if dir := filepath.Dir(filePath); dir != fs.pagesDir {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}
 	}
 
 	// Format with YAML front matter
 	data := formatMarkdownFile(page)
-	if err := os.WriteFile(filePath, data, 0644); err != nil {
+	if err := os.WriteFile(filePath, data, 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 
@@ -128,7 +128,7 @@ func (fs *FileStore) UpdatePage(id, title, content string) (*models.Page, error)
 	page.Modified = time.Now()
 
 	updatedData := formatMarkdownFile(page)
-	if err := os.WriteFile(filePath, updatedData, 0644); err != nil {
+	if err := os.WriteFile(filePath, updatedData, 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 

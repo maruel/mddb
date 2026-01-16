@@ -1,4 +1,4 @@
-.PHONY: help dev build test clean frontend
+.PHONY: help dev build test clean frontend lint lint-fix format
 
 # Variables
 BINARY_NAME=mddb
@@ -14,10 +14,16 @@ help:
 	@echo "  make dev            - Run the server in development mode"
 	@echo "  make test           - Run all tests"
 	@echo "  make test-backend   - Run backend tests only"
-	@echo "  make test-frontend  - Run frontend tests (requires npm)"
+	@echo "  make test-frontend  - Run frontend tests (requires pnpm)"
+	@echo "  make lint           - Run all linters (go + frontend)"
+	@echo "  make lint-go        - Run Go linter (golangci-lint)"
+	@echo "  make lint-frontend  - Run frontend linter (eslint)"
+	@echo "  make lint-fix       - Fix all linting issues automatically"
+	@echo "  make format         - Format code with prettier"
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make frontend-dev   - Run frontend dev server"
 	@echo "  make frontend-build - Build frontend for production"
+	@echo "  make git-hooks      - Install git pre-commit hooks"
 	@echo "  make help           - Show this help message"
 	@echo ""
 	@echo "Environment variables:"
@@ -37,6 +43,30 @@ test-backend:
 
 test-frontend:
 	cd web && pnpm test || echo "Frontend tests skipped (pnpm not installed)"
+
+lint: lint-go lint-frontend
+	@echo "✓ All linting passed"
+
+lint-go:
+	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
+	golangci-lint run ./...
+
+lint-frontend: frontend-install
+	cd web && pnpm lint
+
+lint-fix:
+	golangci-lint run ./... --fix || true
+	cd web && pnpm lint:fix
+
+format:
+	cd web && pnpm format
+
+git-hooks:
+	@echo "Installing git pre-commit hooks..."
+	@mkdir -p .git/hooks
+	@cp ./scripts/pre-commit .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "✓ Git hooks installed"
 
 clean:
 	rm -f $(BINARY_NAME)

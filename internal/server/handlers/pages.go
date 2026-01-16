@@ -19,46 +19,55 @@ func NewPageHandler(fileStore *storage.FileStore) *PageHandler {
 	}
 }
 
-// Request/Response types for pages
+// ListPagesRequest is a request to list all pages.
 type ListPagesRequest struct{}
 
+// ListPagesResponse is a response containing a list of pages.
 type ListPagesResponse struct {
 	Pages []any `json:"pages"`
 }
 
+// GetPageRequest is a request to get a page.
 type GetPageRequest struct {
 	ID string `path:"id"`
 }
 
+// GetPageResponse is a response containing a page.
 type GetPageResponse struct {
 	ID      string `json:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
 
+// CreatePageRequest is a request to create a page.
 type CreatePageRequest struct {
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
 
+// CreatePageResponse is a response from creating a page.
 type CreatePageResponse struct {
 	ID string `json:"id"`
 }
 
+// UpdatePageRequest is a request to update a page.
 type UpdatePageRequest struct {
 	ID      string `path:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
 
+// UpdatePageResponse is a response from updating a page.
 type UpdatePageResponse struct {
 	ID string `json:"id"`
 }
 
+// DeletePageRequest is a request to delete a page.
 type DeletePageRequest struct {
 	ID string `path:"id"`
 }
 
+// DeletePageResponse is a response from deleting a page.
 type DeletePageResponse struct{}
 
 // ListPages returns a list of all pages

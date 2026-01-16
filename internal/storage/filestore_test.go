@@ -186,7 +186,7 @@ func contains(s, substr string) bool {
 
 func splitN(s, sep string, n int) []string {
 	var result []string
-	for i := 0; i < n && len(s) > 0; i++ {
+	for i := 0; i < n && s != ""; i++ {
 		idx := -1
 		for j := range len(s) - len(sep) + 1 {
 			if s[j:j+len(sep)] == sep {
