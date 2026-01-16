@@ -20,11 +20,15 @@ Welcome to mddb! Here's a guide to all available documentation.
 
 ## Understanding the Project
 
-**Want to understand the architecture and plan?**
+**Want to understand requirements, architecture, and plan?**
+
+- [REQUIREMENTS.md](REQUIREMENTS.md) - Complete requirements document
+  - Functional requirements
+  - Non-functional requirements
+  - Storage model requirements
 
 - [PLAN.md](PLAN.md) - Implementation roadmap and technical design
   - Overview and principles
-  - Requirements (functional & non-functional)
   - Data model and storage format
   - API architecture
   - Implementation phases
@@ -142,6 +146,19 @@ Content in markdown...
 {"id":"rec_2","data":{"Name":"Task B","Status":"done"},"created":"2024-01-15T10:06:00Z","modified":"2024-01-15T10:06:00Z"}
 ```
 
+## Documentation Structure
+
+```
+docs/
+├── INDEX.md              # You are here - Documentation index
+├── REQUIREMENTS.md       # What the system must do
+├── PLAN.md              # How we'll build it (roadmap & design)
+├── COMPLETED.md         # What's been completed
+├── QUICKSTART.md        # Get started in 2 minutes
+├── LINTERS.md           # Code quality standards
+└── MIGRATION_PNPM.md    # Package manager details
+```
+
 ## Project Status
 
 **Phase 3: Databases ✓ Complete**
@@ -153,7 +170,7 @@ Content in markdown...
 - [ ] Phase 4: Assets & Media (file uploads, image handling)
 - [ ] Phase 5: Polish (search, history, optimization)
 
-See [PLAN.md](PLAN.md) for full details.
+See [PLAN.md](PLAN.md) for full implementation roadmap.
 
 ## Technology Stack
 
@@ -201,10 +218,11 @@ See [README.md](../README.md) for full API documentation.
 ## Next Steps
 
 1. **New?** → [QUICKSTART.md](QUICKSTART.md)
-2. **Understanding?** → [PLAN.md](PLAN.md)
-3. **Developing?** → [AGENTS.md](../AGENTS.md)
-4. **Need standards?** → [LINTERS.md](LINTERS.md)
-5. **Overview?** → [README.md](../README.md)
+2. **What must be built?** → [REQUIREMENTS.md](REQUIREMENTS.md)
+3. **How will it be built?** → [PLAN.md](PLAN.md)
+4. **Developing?** → [AGENTS.md](../AGENTS.md)
+5. **Need standards?** → [LINTERS.md](LINTERS.md)
+6. **Overview?** → [README.md](../README.md)
 
 ---
 

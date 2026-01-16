@@ -23,47 +23,7 @@ mddb is a Notion-like document and database system where all data is persisted a
 
 ## Requirements
 
-### Functional Requirements
-
-1. **Document Management**
-   - Create, read, update, delete pages
-   - Hierarchical page organization (folders/nested structure)
-   - Full markdown editing with preview
-   - Rich text formatting support
-   - Link between pages
-
-2. **Database/Tables**
-   - Define database schemas (columns with types)
-   - Store database records as markdown
-   - Query and filter records
-   - Sort and pagination support
-   - Import/export data
-
-3. **Media Management**
-   - Upload and store images
-   - Reference images in documents
-   - Asset gallery view
-   - Support common formats (PNG, JPG, GIF, WebP)
-
-4. **User Experience**
-   - Real-time document editing
-   - Auto-save functionality
-   - Search across pages and databases
-   - Full-text search capability
-   - Undo/redo support
-
-5. **API & Integration**
-   - RESTful API for all operations
-   - Clean error handling and validation
-   - Rate limiting (optional)
-
-### Non-Functional Requirements
-
-- Fast startup and load times
-- Scalable to thousands of pages/records
-- Single-user or small team use case initially
-- File-system based (no external database required)
-- Cross-platform (Linux, macOS, Windows)
+See [REQUIREMENTS.md](REQUIREMENTS.md) for complete functional and non-functional requirements.
 
 ## Design Fundamentals
 

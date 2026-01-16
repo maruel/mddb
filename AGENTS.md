@@ -68,7 +68,8 @@ mddb/
 │   └── pages/                  # All content as numbered directories (1, 2, 3, etc.)
 ├── docs/                       # Documentation
 │   ├── INDEX.md                # Documentation index
-│   ├── PLAN.md                 # Implementation roadmap
+│   ├── REQUIREMENTS.md         # Functional & non-functional requirements
+│   ├── PLAN.md                 # Implementation roadmap and technical design
 │   ├── COMPLETED.md            # What's been implemented
 │   ├── QUICKSTART.md           # Quick start guide
 │   ├── LINTERS.md              # Linting rules and code quality
@@ -238,6 +239,13 @@ data/pages/
 - Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 - Keep commits focused and atomic
 - Write descriptive messages
+
+### Documentation Changes
+
+- **Do NOT** create a markdown file listing changes you made
+- Git history is the source of truth for what changed and why
+- Write descriptive commit messages instead
+- Let `git log` and `git show` tell the story
 
 ## Performance Considerations
 
