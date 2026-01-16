@@ -1,3 +1,4 @@
+// Package errors defines structured error types for the API.
 package errors
 
 import (

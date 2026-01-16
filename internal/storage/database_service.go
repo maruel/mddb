@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/internal/models"
-	"github.com/maruel/mddb/internal/utils"
 )
 
 // DatabaseService handles database business logic.
@@ -45,7 +44,7 @@ func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) 
 	// Ensure each column has an ID
 	for i := range columns {
 		if columns[i].ID == "" {
-			colID, err := utils.GenerateID()
+			colID, err := generateID()
 			if err != nil {
 				return nil, fmt.Errorf("failed to generate column id: %w", err)
 			}
@@ -145,7 +144,7 @@ func (s *DatabaseService) CreateRecord(databaseID string, data map[string]interf
 	}
 
 	// Generate record ID
-	id, err := utils.GenerateID()
+	id, err := generateID()
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate record id: %w", err)
 	}

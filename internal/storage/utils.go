@@ -1,12 +1,12 @@
-package utils
+package storage
 
 import (
 	"crypto/rand"
 	"fmt"
 )
 
-// GenerateID generates a UUID v4 string
-func GenerateID() (string, error) {
+// generateID generates a UUID v4 string.
+func generateID() (string, error) {
 	b := make([]byte, 16)
 	_, err := rand.Read(b)
 	if err != nil {

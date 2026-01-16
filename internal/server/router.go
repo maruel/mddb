@@ -1,3 +1,4 @@
+// Package server implements the HTTP server and routing logic.
 package server
 
 import (

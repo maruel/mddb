@@ -1,3 +1,7 @@
+// Package main is the entry point for the mddb application.
+//
+// mddb is a local-first markdown database that stores content as files
+// and provides a web interface for management.
 package main
 
 import (

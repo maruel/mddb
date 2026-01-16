@@ -1,3 +1,4 @@
+// Package storage implements the file system storage layer and business logic services.
 package storage
 
 import (
