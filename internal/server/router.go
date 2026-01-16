@@ -18,11 +18,17 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService) htt
 	mux := &http.ServeMux{}
 	ph := handlers.NewPageHandler(fileStore, gitService)
 	dh := handlers.NewDatabaseHandler(fileStore, gitService)
+	nh := handlers.NewNodeHandler(fileStore, gitService)
 	ah := handlers.NewAssetHandler(fileStore, gitService)
 	sh := handlers.NewSearchHandler(fileStore)
 
 	// Health check
 	mux.Handle("/api/health", Wrap(handlers.Health))
+
+	// Unified Nodes endpoints
+	mux.Handle("GET /api/nodes", Wrap(nh.ListNodes))
+	mux.Handle("GET /api/nodes/{id}", Wrap(nh.GetNode))
+	mux.Handle("POST /api/nodes", Wrap(nh.CreateNode))
 
 	// Pages endpoints
 	mux.Handle("GET /api/pages", Wrap(ph.ListPages))

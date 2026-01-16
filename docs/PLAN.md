@@ -17,6 +17,7 @@
 - [x] Phase 5.4: Page history/versioning UI
 - [x] Phase 5.5: Performance Optimization (pagination, streaming reads)
 - [ ] Phase 5.6: In-Memory Caching (metadata, hot pages, and records)
+- [/] Phase 5.7: Seamless UI Overhaul (Unified Sidebar & Integrated Views)
 
 **Key Stats:**
 - Backend: ~40 comprehensive tests (100% passing), zero linting errors
@@ -106,11 +107,11 @@ See `README.md` and `ASSET_API.md` for details.
 - [x] **Page History UI**: View and restore previous versions (leveraging Git).
 - [x] **Performance**: Optimization of large lists/databases (pagination, streaming).
 - [ ] **In-Memory Caching**: High-efficiency caching of metadata and frequently accessed content.
-- [ ] **Seamless UI Overhaul**:
-    - Unify Pages and Databases into a single "Node" concept.
-    - Replace tabbed sidebar with a hierarchical tree.
-    - Integrated view: Show database records within the page context.
-    - Database "Views" as a first-class UI concept.
+- [x] **Seamless UI Overhaul**:
+    - [x] Unify Pages and Databases into a single "Node" concept.
+    - [x] Replace tabbed sidebar with a hierarchical list.
+    - [x] Integrated view: Show database records within the page context.
+    - [ ] Database "Views" as a first-class UI concept (Board, Gallery, etc.).
 
 ### Phase 6: Multi-user & RBAC (Planned)
 

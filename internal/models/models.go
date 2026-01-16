@@ -3,17 +3,28 @@ package models
 
 import "time"
 
-// Database
-
-// Database represents a database with schema
-type Database struct {
-	ID       string    `json:"id"`
-	Title    string    `json:"title"`
-	Columns  []Column  `json:"columns"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
-	Path     string    `json:"path"`
+// Node represents the unified content entity (can be a Page, a Database, or both)
+type Node struct {
+	ID         string    `json:"id"`
+	ParentID   string    `json:"parent_id,omitempty"` // For hierarchical structure
+	Title      string    `json:"title"`
+	Content    string    `json:"content,omitempty"` // Markdown content (Page part)
+	Columns    []Column  `json:"columns,omitempty"` // Schema (Database part)
+	Created    time.Time `json:"created"`
+	Modified   time.Time `json:"modified"`
+	Tags       []string  `json:"tags,omitempty"`
+	FaviconURL string    `json:"favicon_url,omitempty"`
+	Type       NodeType  `json:"type"` // document, database, or both
 }
+
+// NodeType defines what features are enabled for a node
+type NodeType string
+
+const (
+	NodeTypeDocument NodeType = "document"
+	NodeTypeDatabase NodeType = "database"
+	NodeTypeHybrid   NodeType = "hybrid"
+)
 
 // Column represents a database column
 type Column struct {
@@ -24,7 +35,7 @@ type Column struct {
 	Required bool     `json:"required,omitempty"`
 }
 
-// Record represents a database record
+// Record represents a database record associated with a node
 type Record struct {
 	ID       string                 `json:"id"`
 	Data     map[string]interface{} `json:"data"`
@@ -32,21 +43,20 @@ type Record struct {
 	Modified time.Time              `json:"modified"`
 }
 
-// Assets
-
-// Asset represents an uploaded file/image
+// Asset represents an uploaded file/image associated with a node
 type Asset struct {
 	ID       string    `json:"id"`
 	Name     string    `json:"name"`
 	MimeType string    `json:"mime_type"`
 	Size     int64     `json:"size"`
 	Created  time.Time `json:"created"`
-	Path     string    `json:"path"` // Relative path in assets directory
+	Path     string    `json:"path"`
 }
 
-// Pages
+// Legacy types for compatibility during migration (optional to keep or remove)
+// For now, we refactor them to use the new Node concept or keep them if needed by existing code.
 
-// Page represents a markdown document
+// Page is kept for backward compatibility with existing storage methods
 type Page struct {
 	ID         string    `json:"id"`
 	Title      string    `json:"title"`
@@ -54,15 +64,16 @@ type Page struct {
 	Created    time.Time `json:"created"`
 	Modified   time.Time `json:"modified"`
 	Tags       []string  `json:"tags,omitempty"`
-	Path       string    `json:"path"`                  // Relative path from pages directory
-	FaviconURL string    `json:"favicon_url,omitempty"` // URL to favicon in page directory
+	Path       string    `json:"path"`
+	FaviconURL string    `json:"favicon_url,omitempty"`
 }
 
-// PageMetadata contains the YAML front matter of a page
-type PageMetadata struct {
-	ID       string    `yaml:"id"`
-	Title    string    `yaml:"title"`
-	Created  time.Time `yaml:"created"`
-	Modified time.Time `yaml:"modified"`
-	Tags     []string  `yaml:"tags"`
+// Database is kept for backward compatibility
+type Database struct {
+	ID       string    `json:"id"`
+	Title    string    `json:"title"`
+	Columns  []Column  `json:"columns"`
+	Created  time.Time `json:"created"`
+	Modified time.Time `json:"modified"`
+	Path     string    `json:"path"`
 }

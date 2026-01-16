@@ -223,6 +223,88 @@ func (fs *FileStore) ListPages() ([]*models.Page, error) {
 	return pages, nil
 }
 
+// ReadNode reads a unified node from disk.
+func (fs *FileStore) ReadNode(id string) (*models.Node, error) {
+	nodeDir := fs.pageDir(id)
+	info, err := os.Stat(nodeDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("node not found")
+		}
+		return nil, fmt.Errorf("failed to access node: %w", err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("node is not a directory")
+	}
+
+	node := &models.Node{
+		ID:       id,
+		Created:  info.ModTime(),
+		Modified: info.ModTime(),
+	}
+
+	// Try reading as a document
+	indexFile := fs.pageIndexFile(id)
+	if _, err := os.Stat(indexFile); err == nil {
+		page, err := fs.ReadPage(id)
+		if err == nil {
+			node.Title = page.Title
+			node.Content = page.Content
+			node.Created = page.Created
+			node.Modified = page.Modified
+			node.Tags = page.Tags
+			node.Type = models.NodeTypeDocument
+		}
+	}
+
+	// Try reading as a database
+	schemaFile := fs.databaseSchemaFile(id)
+	if _, err := os.Stat(schemaFile); err == nil {
+		db, err := fs.ReadDatabase(id)
+		if err == nil {
+			// If it's already a document, it becomes a hybrid
+			if node.Type == models.NodeTypeDocument {
+				node.Type = models.NodeTypeHybrid
+			} else {
+				node.Type = models.NodeTypeDatabase
+				node.Title = db.Title
+				node.Created = db.Created
+				node.Modified = db.Modified
+			}
+			node.Columns = db.Columns
+		}
+	}
+
+	return node, nil
+}
+
+// ListNodes returns all nodes in the storage.
+func (fs *FileStore) ListNodes() ([]*models.Node, error) {
+	entries, err := os.ReadDir(fs.pagesDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read nodes: %w", err)
+	}
+
+	var nodes []*models.Node
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		id := entry.Name()
+		if _, err := strconv.Atoi(id); err != nil {
+			continue // Only numeric directories
+		}
+
+		node, err := fs.ReadNode(id)
+		if err != nil {
+			continue
+		}
+		nodes = append(nodes, node)
+	}
+
+	return nodes, nil
+}
+
 // pageDir returns the directory path for a page ID.
 func (fs *FileStore) pageDir(id string) string {
 	return filepath.Join(fs.pagesDir, id)

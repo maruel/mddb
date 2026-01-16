@@ -283,12 +283,55 @@ body {
   cursor: not-allowed;
 }
 
+.sidebarActions {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.sidebarActions button {
+  padding: 0.25rem 0.5rem;
+  background: #eee;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.sidebarActions button:hover {
+  background: #ddd;
+}
+
+.nodeIcon {
+  margin-right: 0.5rem;
+  font-size: 1rem;
+}
+
+.welcomeActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.nodeContent {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+}
+
 .editorContent {
   display: flex;
-  flex: 1;
+  height: 60vh; /* Fixed height for editor when combined with database */
+  min-height: 400px;
   overflow: hidden;
   gap: 1px;
   background: #e0e0e0;
+}
+
+.databaseView {
+  border-top: 4px solid #f0f0f0;
+  padding: 1.5rem;
 }
 
 .contentInput {

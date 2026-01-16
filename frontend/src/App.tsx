@@ -4,11 +4,15 @@ import DatabaseTable from './components/DatabaseTable';
 import { debounce } from './utils/debounce';
 import styles from './App.module.css';
 
-interface Page {
+interface Node {
   id: string;
+  parent_id?: string;
   title: string;
+  content?: string;
+  columns?: Column[];
   created: string;
   modified: string;
+  type: 'document' | 'database' | 'hybrid';
 }
 
 interface Column {
@@ -17,14 +21,6 @@ interface Column {
   type: string;
   options?: string[];
   required?: boolean;
-}
-
-interface Database {
-  id: string;
-  title: string;
-  columns: Column[];
-  created: string;
-  modified: string;
 }
 
 interface Record {
@@ -41,33 +37,32 @@ interface Commit {
 }
 
 export default function App() {
-  const [pages, setPages] = createSignal<Page[]>([]);
-  const [databases, setDatabases] = createSignal<Database[]>([]);
+  const [nodes, setNodes] = createSignal<Node[]>([]);
   const [records, setRecords] = createSignal<Record[]>([]);
-  const [selectedPageId, setSelectedPageId] = createSignal<string | null>(null);
-  const [selectedDatabaseId, setSelectedDatabaseId] = createSignal<string | null>(null);
-  const [activeTab, setActiveTab] = createSignal<'pages' | 'databases'>('pages');
+  const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
   const [title, setTitle] = createSignal('');
   const [content, setContent] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
-  const [hasMore, setHasMore] = createSignal(false);
-  const PAGE_SIZE = 50;
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
   const [history, setHistory] = createSignal<Commit[]>([]);
 
+  // Pagination
+  const [hasMore, setHasMore] = createSignal(false);
+  const PAGE_SIZE = 50;
+
   // Debounced auto-save function
   const debouncedAutoSave = debounce(async () => {
-    const pageId = selectedPageId();
-    if (!pageId || !hasUnsavedChanges()) return;
+    const nodeId = selectedNodeId();
+    if (!nodeId || !hasUnsavedChanges()) return;
 
     try {
       setAutoSaveStatus('saving');
-      await fetch(`/api/pages/${pageId}`, {
+      await fetch(`/api/pages/${nodeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title(), content: content() }),
@@ -85,45 +80,58 @@ export default function App() {
     }
   }, 2000);
 
-  // Load pages and databases on mount
+  // Load nodes on mount
   createEffect(() => {
-    loadPages();
-    loadDatabases();
+    loadNodes();
   });
 
-  async function loadPages() {
+  async function loadNodes() {
     try {
       setLoading(true);
-      const res = await fetch('/api/pages');
+      const res = await fetch('/api/nodes');
       const data = await res.json();
-      setPages(data.pages || []);
+      setNodes(data.nodes || []);
       setError(null);
     } catch (err) {
-      setError('Failed to load pages: ' + err);
+      setError('Failed to load nodes: ' + err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadPage(id: string) {
+  async function loadNode(id: string) {
     try {
       setLoading(true);
       setShowHistory(false);
-      const res = await fetch(`/api/pages/${id}`);
-      const pageData = await res.json();
-      setTitle(pageData.title);
-      setContent(pageData.content);
+      const res = await fetch(`/api/nodes/${id}`);
+      const nodeData = await res.json();
+
+      setSelectedNodeId(nodeData.id);
+      setTitle(nodeData.title);
+      setContent(nodeData.content || '');
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
+
+      // If it's a database or hybrid, load records
+      if (nodeData.type === 'database' || nodeData.type === 'hybrid') {
+        const recordsRes = await fetch(`/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`);
+        const recordsData = await recordsRes.json();
+        const loadedRecords = recordsData.records || [];
+        setRecords(loadedRecords);
+        setHasMore(loadedRecords.length === PAGE_SIZE);
+      } else {
+        setRecords([]);
+        setHasMore(false);
+      }
     } catch (err) {
-      setError('Failed to load page: ' + err);
+      setError('Failed to load node: ' + err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadHistory(pageId: string) {
+  async function loadHistory(nodeId: string) {
     if (showHistory()) {
       setShowHistory(false);
       return;
@@ -131,7 +139,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/pages/${pageId}/history`);
+      const res = await fetch(`/api/pages/${nodeId}/history`);
       const data = await res.json();
       setHistory(data.history || []);
       setShowHistory(true);
@@ -142,7 +150,7 @@ export default function App() {
     }
   }
 
-  async function loadVersion(pageId: string, hash: string) {
+  async function loadVersion(nodeId: string, hash: string) {
     if (
       !confirm(
         'This will replace current editor content with the selected version. Unsaved changes will be lost. Continue?'
@@ -152,7 +160,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/pages/${pageId}/history/${hash}`);
+      const res = await fetch(`/api/pages/${nodeId}/history/${hash}`);
       const data = await res.json();
       setContent(data.content);
       setHasUnsavedChanges(true); // Mark as modified
@@ -164,7 +172,7 @@ export default function App() {
     }
   }
 
-  async function createPage() {
+  async function createNode(type: 'document' | 'database' = 'document') {
     if (!title().trim()) {
       setError('Title is required');
       return;
@@ -172,136 +180,82 @@ export default function App() {
 
     try {
       setLoading(true);
-      await fetch('/api/pages', {
+      const res = await fetch('/api/nodes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title(), content: content() }),
+        body: JSON.stringify({ title: title(), type }),
       });
-      await loadPages();
+      const newNode = await res.json();
+      await loadNodes();
+      loadNode(newNode.id);
       setTitle('');
       setContent('');
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
     } catch (err) {
-      setError('Failed to create page: ' + err);
+      setError('Failed to create node: ' + err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function savePage() {
-    const pageId = selectedPageId();
-    if (!pageId) return;
+  async function saveNode() {
+    const nodeId = selectedNodeId();
+    if (!nodeId) return;
 
     try {
       setLoading(true);
-      await fetch(`/api/pages/${pageId}`, {
+      await fetch(`/api/pages/${nodeId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title(), content: content() }),
       });
-      await loadPages();
+      await loadNodes();
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
     } catch (err) {
-      setError('Failed to save page: ' + err);
+      setError('Failed to save node: ' + err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function deleteCurrentPage() {
-    const pageId = selectedPageId();
-    if (!pageId) return;
+  async function deleteCurrentNode() {
+    const nodeId = selectedNodeId();
+    if (!nodeId) return;
 
-    if (!confirm('Are you sure you want to delete this page?')) return;
+    if (!confirm('Are you sure you want to delete this node?')) return;
 
     try {
       setLoading(true);
-      await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
-      await loadPages();
-      setSelectedPageId(null);
+      await fetch(`/api/pages/${nodeId}`, { method: 'DELETE' });
+      await loadNodes();
+      setSelectedNodeId(null);
       setTitle('');
       setContent('');
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
     } catch (err) {
-      setError('Failed to delete page: ' + err);
+      setError('Failed to delete node: ' + err);
     } finally {
       setLoading(false);
     }
   }
 
-  const handlePageClick = (page: Page) => {
-    setSelectedPageId(page.id);
-    loadPage(page.id);
+  const handleNodeClick = (node: Node) => {
+    loadNode(node.id);
   };
 
-  // Database operations
-  async function loadDatabases() {
-    try {
-      setLoading(true);
-      const res = await fetch('/api/databases');
-      const data = await res.json();
-      setDatabases(data.databases || []);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load databases: ' + err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadDatabase(id: string) {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/databases/${id}`);
-      const data = await res.json();
-      setTitle(data.title);
-      setError(null);
-
-      // Load first page of records
-      const recordsRes = await fetch(`/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`);
-      const recordsData = await recordsRes.json();
-      const loadedRecords = recordsData.records || [];
-      setRecords(loadedRecords);
-      setHasMore(loadedRecords.length === PAGE_SIZE);
-    } catch (err) {
-      setError('Failed to load database: ' + err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadMoreRecords() {
-    const dbId = selectedDatabaseId();
-    if (!dbId || loading()) return;
-
-    try {
-      setLoading(true);
-      const offset = records().length;
-      const res = await fetch(`/api/databases/${dbId}/records?offset=${offset}&limit=${PAGE_SIZE}`);
-      const data = await res.json();
-      const newRecords = data.records || [];
-      setRecords([...records(), ...newRecords]);
-      setHasMore(newRecords.length === PAGE_SIZE);
-    } catch (err) {
-      setError('Failed to load more records: ' + err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleAddRecord(data: Record<string, unknown>) {
-    const dbId = selectedDatabaseId();
-    if (!dbId) return;
+    const nodeId = selectedNodeId();
+    if (!nodeId) return;
 
     try {
       setLoading(true);
-      const res = await fetch(`/api/databases/${dbId}/records`, {
+      const res = await fetch(`/api/databases/${nodeId}/records`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data }),
@@ -313,7 +267,7 @@ export default function App() {
       }
 
       // Reload records
-      await loadDatabase(dbId);
+      loadNode(nodeId);
       setError(null);
     } catch (err) {
       setError('Failed to add record: ' + err);
@@ -323,15 +277,15 @@ export default function App() {
   }
 
   async function handleDeleteRecord(recordId: string) {
-    const dbId = selectedDatabaseId();
-    if (!dbId) return;
+    const nodeId = selectedNodeId();
+    if (!nodeId) return;
 
     if (!confirm('Delete this record?')) return;
 
     try {
       setLoading(true);
-      await fetch(`/api/databases/${dbId}/records/${recordId}`, { method: 'DELETE' });
-      await loadDatabase(dbId);
+      await fetch(`/api/databases/${nodeId}/records/${recordId}`, { method: 'DELETE' });
+      loadNode(nodeId);
       setError(null);
     } catch (err) {
       setError('Failed to delete record: ' + err);
@@ -340,99 +294,69 @@ export default function App() {
     }
   }
 
-  const handleDatabaseClick = (db: Database) => {
-    setSelectedDatabaseId(db.id);
-    setSelectedPageId(null);
-    loadDatabase(db.id);
-  };
+  async function loadMoreRecords() {
+    const nodeId = selectedNodeId();
+    if (!nodeId || loading()) return;
+
+    try {
+      setLoading(true);
+      const offset = records().length;
+      const res = await fetch(
+        `/api/databases/${nodeId}/records?offset=${offset}&limit=${PAGE_SIZE}`
+      );
+      const data = await res.json();
+      const newRecords = data.records || [];
+      setRecords([...records(), ...newRecords]);
+      setHasMore(newRecords.length === PAGE_SIZE);
+    } catch (err) {
+      setError('Failed to load more records: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div class={styles.app}>
       <header class={styles.header}>
         <h1>mddb</h1>
-        <p>A markdown-based document and database system</p>
+        <p>A seamless markdown-based document and database system</p>
       </header>
 
       <div class={styles.container}>
         <aside class={styles.sidebar}>
-          <div class={styles.tabBar}>
-            <button
-              class={styles.tab}
-              classList={{ [styles.active]: activeTab() === 'pages' }}
-              onClick={() => {
-                setActiveTab('pages');
-                setSelectedDatabaseId(null);
-              }}
-            >
-              Pages
-            </button>
-            <button
-              class={styles.tab}
-              classList={{ [styles.active]: activeTab() === 'databases' }}
-              onClick={() => {
-                setActiveTab('databases');
-                setSelectedPageId(null);
-              }}
-            >
-              Databases
-            </button>
-          </div>
-
-          <Show when={activeTab() === 'pages'}>
-            <div class={styles.sidebarHeader}>
-              <h2>Pages</h2>
-              <button onClick={createPage} disabled={loading()}>
-                {loading() ? 'Creating...' : 'New Page'}
+          <div class={styles.sidebarHeader}>
+            <h2>Workspace</h2>
+            <div class={styles.sidebarActions}>
+              <button onClick={() => createNode('document')} title="New Page">
+                +P
+              </button>
+              <button onClick={() => createNode('database')} title="New Database">
+                +D
               </button>
             </div>
+          </div>
 
-            <Show when={loading()} fallback={null}>
-              <p class={styles.loading}>Loading...</p>
-            </Show>
-
-            <ul class={styles.pageList}>
-              <For each={pages()}>
-                {(page) => (
-                  <li
-                    class={styles.pageItem}
-                    classList={{ [styles.active]: selectedPageId() === page.id }}
-                    onClick={() => handlePageClick(page)}
-                  >
-                    <div class={styles.pageTitle}>{page.title}</div>
-                    <div class={styles.pageDate}>
-                      {new Date(page.modified).toLocaleDateString()}
-                    </div>
-                  </li>
-                )}
-              </For>
-            </ul>
+          <Show when={loading() && nodes().length === 0} fallback={null}>
+            <p class={styles.loading}>Loading...</p>
           </Show>
 
-          <Show when={activeTab() === 'databases'}>
-            <div class={styles.sidebarHeader}>
-              <h2>Databases</h2>
-              <button disabled={loading()}>{loading() ? 'Creating...' : 'New DB'}</button>
-            </div>
-
-            <Show when={loading()} fallback={null}>
-              <p class={styles.loading}>Loading...</p>
-            </Show>
-
-            <ul class={styles.pageList}>
-              <For each={databases()}>
-                {(db) => (
-                  <li
-                    class={styles.pageItem}
-                    classList={{ [styles.active]: selectedDatabaseId() === db.id }}
-                    onClick={() => handleDatabaseClick(db)}
-                  >
-                    <div class={styles.pageTitle}>{db.title}</div>
-                    <div class={styles.pageDate}>{new Date(db.modified).toLocaleDateString()}</div>
-                  </li>
-                )}
-              </For>
-            </ul>
-          </Show>
+          <ul class={styles.pageList}>
+            <For each={nodes()}>
+              {(node) => (
+                <li
+                  class={styles.pageItem}
+                  classList={{ [styles.active]: selectedNodeId() === node.id }}
+                  onClick={() => handleNodeClick(node)}
+                >
+                  <div class={styles.pageTitle}>
+                    <span class={styles.nodeIcon}>{node.type === 'database' ? '📊' : '📄'}</span>
+                    {node.title}
+                  </div>
+                  <div class={styles.pageDate}>{new Date(node.modified).toLocaleDateString()}</div>
+                </li>
+              )}
+            </For>
+          </ul>
         </aside>
 
         <main class={styles.main}>
@@ -440,125 +364,131 @@ export default function App() {
             <div class={styles.error}>{error()}</div>
           </Show>
 
-          <Show when={selectedDatabaseId()}>
-            <div class={styles.databaseView}>
-              <div class={styles.databaseHeader}>
-                <h2>{title()}</h2>
-              </div>
-              <DatabaseTable
-                databaseId={selectedDatabaseId() || ''}
-                columns={databases().find((db) => db.id === selectedDatabaseId())?.columns || []}
-                records={records()}
-                onAddRecord={handleAddRecord}
-                onDeleteRecord={handleDeleteRecord}
-                onLoadMore={loadMoreRecords}
-                hasMore={hasMore()}
-              />
-            </div>
-          </Show>
-
           <Show
-            when={!selectedPageId() && !selectedDatabaseId()}
+            when={selectedNodeId()}
             fallback={
-              <div class={styles.editor}>
-                <div class={styles.editorHeader}>
+              <div class={styles.welcome}>
+                <h2>Welcome to mddb</h2>
+                <p>Select a node from the sidebar or create a new one to get started.</p>
+                <div class={styles.createForm}>
                   <input
                     type="text"
-                    placeholder="Page title"
+                    placeholder="Title"
                     value={title()}
-                    onInput={(e) => {
-                      setTitle(e.target.value);
-                      setHasUnsavedChanges(true);
-                      debouncedAutoSave();
-                    }}
+                    onInput={(e) => setTitle(e.target.value)}
                     class={styles.titleInput}
                   />
-                  <div class={styles.editorStatus}>
-                    <Show when={hasUnsavedChanges()}>
-                      <span class={styles.unsavedIndicator}>● Unsaved</span>
-                    </Show>
-                    <Show when={autoSaveStatus() === 'saving'}>
-                      <span class={styles.savingIndicator}>⟳ Saving...</span>
-                    </Show>
-                    <Show when={autoSaveStatus() === 'saved'}>
-                      <span class={styles.savedIndicator}>✓ Saved</span>
-                    </Show>
-                  </div>
-                  <div class={styles.editorActions}>
-                    <button onClick={() => loadHistory(selectedPageId()!)} disabled={loading()}>
-                      {showHistory() ? 'Hide History' : 'History'}
+                  <div class={styles.welcomeActions}>
+                    <button onClick={() => createNode('document')} class={styles.createButton}>
+                      Create Page
                     </button>
-                    <button onClick={savePage} disabled={loading()}>
-                      {loading() ? 'Saving...' : 'Save'}
-                    </button>
-                    <button onClick={deleteCurrentPage} disabled={loading()}>
-                      Delete
+                    <button onClick={() => createNode('database')} class={styles.createButton}>
+                      Create Database
                     </button>
                   </div>
-                </div>
-
-                <Show when={showHistory()}>
-                  <div class={styles.historyPanel}>
-                    <h3>Version History</h3>
-                    <ul class={styles.historyList}>
-                      <For each={history()}>
-                        {(commit) => (
-                          <li
-                            class={styles.historyItem}
-                            onClick={() => loadVersion(selectedPageId()!, commit.hash)}
-                          >
-                            <div class={styles.historyMeta}>
-                              <span class={styles.historyDate}>
-                                {new Date(commit.timestamp).toLocaleString()}
-                              </span>
-                              <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
-                            </div>
-                            <div class={styles.historyMessage}>{commit.message}</div>
-                          </li>
-                        )}
-                      </For>
-                      <Show when={history().length === 0}>
-                        <li class={styles.historyItem}>No history available</li>
-                      </Show>
-                    </ul>
-                  </div>
-                </Show>
-
-                <div class={styles.editorContent}>
-                  <textarea
-                    value={content()}
-                    onInput={(e) => {
-                      setContent(e.target.value);
-                      setHasUnsavedChanges(true);
-                      debouncedAutoSave();
-                    }}
-                    placeholder="Write your content in markdown..."
-                    class={styles.contentInput}
-                  />
-                  <MarkdownPreview content={content()} />
                 </div>
               </div>
             }
           >
-            <div class={styles.welcome}>
-              <h2>Create Your First Page</h2>
-              <div class={styles.createForm}>
+            <div class={styles.editor}>
+              <div class={styles.editorHeader}>
                 <input
                   type="text"
-                  placeholder="Page title"
+                  placeholder="Title"
                   value={title()}
-                  onInput={(e) => setTitle(e.target.value)}
+                  onInput={(e) => {
+                    setTitle(e.target.value);
+                    setHasUnsavedChanges(true);
+                    debouncedAutoSave();
+                  }}
                   class={styles.titleInput}
                 />
-                <textarea
-                  value={content()}
-                  onInput={(e) => setContent(e.target.value)}
-                  placeholder="Write your content in markdown..."
-                  class={styles.contentInput}
-                />
-                <button onClick={createPage} disabled={loading()} class={styles.createButton}>
-                  {loading() ? 'Creating...' : 'Create Page'}
-                </button>
+                <div class={styles.editorStatus}>
+                  <Show when={hasUnsavedChanges()}>
+                    <span class={styles.unsavedIndicator}>● Unsaved</span>
+                  </Show>
+                  <Show when={autoSaveStatus() === 'saving'}>
+                    <span class={styles.savingIndicator}>⟳ Saving...</span>
+                  </Show>
+                  <Show when={autoSaveStatus() === 'saved'}>
+                    <span class={styles.savedIndicator}>✓ Saved</span>
+                  </Show>
+                </div>
+                <div class={styles.editorActions}>
+                  <button onClick={() => loadHistory(selectedNodeId()!)} disabled={loading()}>
+                    {showHistory() ? 'Hide History' : 'History'}
+                  </button>
+                  <button onClick={saveNode} disabled={loading()}>
+                    {loading() ? 'Saving...' : 'Save'}
+                  </button>
+                  <button onClick={deleteCurrentNode} disabled={loading()}>
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <Show when={showHistory()}>
+                <div class={styles.historyPanel}>
+                  <h3>Version History</h3>
+                  <ul class={styles.historyList}>
+                    <For each={history()}>
+                      {(commit) => (
+                        <li
+                          class={styles.historyItem}
+                          onClick={() => loadVersion(selectedNodeId()!, commit.hash)}
+                        >
+                          <div class={styles.historyMeta}>
+                            <span class={styles.historyDate}>
+                              {new Date(commit.timestamp).toLocaleString()}
+                            </span>
+                            <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
+                          </div>
+                          <div class={styles.historyMessage}>{commit.message}</div>
+                        </li>
+                      )}
+                    </For>
+                    <Show when={history().length === 0}>
+                      <li class={styles.historyItem}>No history available</li>
+                    </Show>
+                  </ul>
+                </div>
+              </Show>
+
+              <div class={styles.nodeContent}>
+                {/* Always show markdown content if it exists or if node is document/hybrid */}
+                <Show when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'database'}>
+                  <div class={styles.editorContent}>
+                    <textarea
+                      value={content()}
+                      onInput={(e) => {
+                        setContent(e.target.value);
+                        setHasUnsavedChanges(true);
+                        debouncedAutoSave();
+                      }}
+                      placeholder="Write your content in markdown..."
+                      class={styles.contentInput}
+                    />
+                    <MarkdownPreview content={content()} />
+                  </div>
+                </Show>
+
+                {/* Show database table if node is database or hybrid */}
+                <Show when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'document'}>
+                  <div class={styles.databaseView}>
+                    <div class={styles.databaseHeader}>
+                      <h3>Database Records</h3>
+                    </div>
+                    <DatabaseTable
+                      databaseId={selectedNodeId() || ''}
+                      columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
+                      records={records()}
+                      onAddRecord={handleAddRecord}
+                      onDeleteRecord={handleDeleteRecord}
+                      onLoadMore={loadMoreRecords}
+                      hasMore={hasMore()}
+                    />
+                  </div>
+                </Show>
               </div>
             </div>
           </Show>
