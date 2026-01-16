@@ -16,6 +16,7 @@
 - [x] Phase 5.3: Automatic Git Versioning (data directory tracking)
 - [x] Phase 5.4: Page history/versioning UI
 - [x] Phase 5.5: Performance Optimization (pagination, streaming reads)
+- [ ] Phase 5.6: In-Memory Caching (metadata, hot pages, and records)
 
 **Key Stats:**
 - Backend: ~40 comprehensive tests (100% passing), zero linting errors
@@ -104,8 +105,16 @@ See `README.md` and `ASSET_API.md` for details.
 - [x] **Git Versioning**: Automatic commit of data changes.
 - [x] **Page History UI**: View and restore previous versions (leveraging Git).
 - [x] **Performance**: Optimization of large lists/databases (pagination, streaming).
+- [ ] **In-Memory Caching**: High-efficiency caching of metadata and frequently accessed content.
+
+### Phase 6: Multi-user & RBAC (Planned)
+- [ ] **Auth System**: User registration, login, and JWT-based authentication.
+- [ ] **OAuth2 Integration**: Support for Google and Microsoft login flows.
+- [ ] **Organizations**: Workspace isolation and shared access.
+- [ ] **RBAC Implementation**: Enforce roles (Admin, Editor, Viewer) in middleware.
+- [ ] **Quota Enforcement**: Track and limit resource usage (storage, pages) per organization.
+- [ ] **User UI**: Management of users, permissions, and quotas in the frontend.
 
 ## Future Considerations
-- **Multi-user Support**: Authentication and permissions.
 - **Real-time Collaboration**: WebSocket-based sync.
 - **Mobile App**: Native mobile clients using the REST API.
