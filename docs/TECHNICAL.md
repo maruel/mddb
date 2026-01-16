@@ -2,21 +2,33 @@
 
 ## Storage Model
 
-mddb uses a directory-per-page structure. Every page (document or database) is assigned a monotonically increasing numeric ID.
+mddb uses a multi-tenant directory structure where each organization owns its own data and Git history, managed via submodules.
+
+### Directory Layout
+- **Root Repository**: `data/`
+  - The `data/` directory is itself a Git repository that manages organizations as **Git submodules**.
+  - `data/db/`: System-wide information (Users, Organizations, Memberships) stored in JSON/SQLite.
+- **Organization Submodules**: `data/{orgID}/`
+  - Each organization directory is an independent Git repository linked as a submodule to the root.
+  - `data/{orgID}/pages/`: Hierarchical page structure using numeric IDs.
+  - `data/{orgID}/assets/`: Organization-specific assets.
 
 ```
-data/pages/
-├── 1/                    # Page ID 1
-│   ├── index.md          # Content + YAML Front Matter
-│   └── photo.jpg         # Asset local to this page
-└── 2/                    # Page ID 2 (Database)
-    ├── index.md
-    ├── metadata.json     # Schema
-    └── data.jsonl        # Records (JSON Lines)
+data/                     # Root Git Repository
+├── .gitmodules           # Submodule definitions
+├── db/                   # System Metadata (Global)
+│   ├── users.json
+│   └── ...
+└── {orgID}/              # Organization Submodule (Independent Git Repo)
+    └── pages/
+        ├── 1/            # Page ID 1
+        └── ...
 ```
 
 ### Automatic Versioning
-The `data/` directory is an initialized Git repository. Every change (create/update/delete) triggers an automatic commit via the `GitService`. This provides a built-in audit trail and history/restore capability.
+mddb employs a hierarchical versioning strategy:
+1. **Organization Level**: Changes within `data/{orgID}/` trigger commits to that organization's independent repository.
+2. **Root Level**: The `data/` repository tracks the state of all organizations by updating its submodule pointers. This allows for global backups and state-in-time recovery across the entire system while maintaining tenant isolation.
 
 ## Embedded Build Process
 
@@ -38,6 +50,17 @@ Database records are stored in JSONL format, allowing for line-by-line streaming
 ### API Pagination
 Record retrieval supports `offset` and `limit` parameters to handle large datasets efficiently.
 
+## System Metadata Schema
+
+The following tables are managed in `data/db/` (eventually SQLite).
+
+| Table Name     | Go Symbol (internal/models) | Description                                     |
+|----------------|-----------------------------|-------------------------------------------------|
+| `users`        | `User`                      | Core identity and global settings               |
+| `organizations`| `Organization`              | Workspace/tenant definitions                    |
+| `memberships`  | `Membership`                | User-Org relationship, roles, and status       |
+| `sessions`     | `Session`                   | Active user sessions and revocation             |
+
 ## Unified Node Architecture (Planned)
 
 To achieve a Notion-like experience, mddb is moving towards a unified "Node" concept.
@@ -58,7 +81,9 @@ The UI will be refactored into modular "Views". A single Page can display its ma
 ## Multi-user Architecture (Planned)
 
 ### Identity & Authentication
-Authentication will be handled via JWT. User credentials and profile information will be stored in `data/users.json` (encrypted).
+Authentication is handled via JWT. User credentials, profile information, and organization memberships are stored in the `data/db/` directory as JSON files.
+
+**Future Note**: There is a planned migration of the `data/db/` contents to **SQLite** to improve query performance and relational integrity.
 
 ### OAuth2 Integration
 mddb will support OpenID Connect (OIDC) flows for Google and Microsoft.

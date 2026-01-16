@@ -39,10 +39,13 @@ Most core functional requirements for a local-first markdown and database system
 - [x] **Error Handling**: Structured error codes and detailed responses.
 
 ### 6. Multi-User & Organization
-- [ ] **Identity**: User accounts and authentication (JWT/Sessions).
+- [x] **Identity**: User accounts and authentication (JWT/Sessions). Supporting the **Linear Model** (one user account, multiple organizations).
 - [ ] **OAuth2**: Login via Google or Microsoft accounts.
-- [ ] **Organizations**: Groups of users with shared workspace access.
-- [ ] **RBAC**: Role-Based Access Control (Admin, Editor, Viewer) at organization and page levels.
+- [x] **Organizations**: Workspace isolation and shared access.
+- [ ] **Membership Model**: Many-to-many relationship between Users and Organizations to store organization-specific roles and settings.
+- [x] **RBAC**: Role-Based Access Control (Admin, Editor, Viewer) at the organization level.
+- [ ] **Invitations**: Invite users to organizations via email; support assigning resources to "Pending Memberships" before user registration.
+- [ ] **Tiered Settings**: Support for Global User settings, Membership-specific settings (per-org), and Organization-wide settings.
 - [ ] **Quotas**: Resource limits per organization (storage space, number of pages, max asset size).
 
 ## Non-Functional Requirements

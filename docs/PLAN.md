@@ -37,39 +37,13 @@ See [REQUIREMENTS.md](REQUIREMENTS.md) for complete functional and non-functiona
 
 ## Design Fundamentals
 
-### Data Model
-
-```
-Project Root/
-└── pages/
-    ├── 1/                    # First page (document)
-    │   ├── index.md
-    │   ├── favicon.ico
-    │   └── image-1.png       # Page assets
-    ├── 2/                    # Second page (database)
-    │   ├── index.md
-    │   ├── metadata.json
-    │   ├── data.jsonl
-    │   └── favicon.ico
-    └── ...
-```
-
-### Storage Format
-
-**Pages (Markdown with YAML Front Matter)**
-Stored as `index.md` with YAML front matter for metadata (title, created, modified, tags).
-
-**Databases (Directory with metadata.json + data.jsonl)**
-- `metadata.json`: Schema definition (columns, types).
-- `data.jsonl`: Records, one per line.
-
-**Assets**
-Stored directly in the page directory.
-
 ### API Architecture
 
-Standard RESTful API for Pages, Databases, Records, and Assets.
-See `README.md` and `ASSET_API.md` for details.
+Standard RESTful API for Pages, Databases, Records, and Assets. 
+**Multi-tenant routing**: Data-acting endpoints follow the pattern `/api/{orgID}/resource/...`. 
+The backend validates that the `orgID` in the path matches the user's authenticated session.
+
+See `README.md` and `API.md` for details.
 
 ## Implementation Phases
 
@@ -115,15 +89,40 @@ See `README.md` and `ASSET_API.md` for details.
     - [x] Database "Views" as a first-class UI concept (Table, Grid).
     - [x] Advanced Database Views (Gallery, Board).
 
-### Phase 6: Multi-user & RBAC (Planned)
+### Phase 6: Multi-tenant Foundation ✓
+*In Progress.*
 
 - [x] **Auth System**: User registration, login, and JWT-based authentication.
+- [x] **Initial Organizations**: Workspace isolation and shared access.
+- [x] **Initial RBAC**: Enforce roles (Admin, Editor, Viewer) in middleware.
+- [ ] **Storage Restructuring**: Move page data to `data/{orgID}/pages/` and system metadata to `data/db/`.
+- [ ] **Path Resolution Refactor**: Update services (`PageService`, `DatabaseService`, etc.) to derive paths from `orgID`.
+- [ ] **Context-Propagated OrgID**: Standardize extraction of `orgID` from `context.Context` across service layers.
+- [ ] **GitService Refactoring**:
+    - [ ] Support multiple repository roots (root `data/` and submodule `data/{orgID}/`).
+    - [ ] Implement submodule management (init, add, update).
+    - [ ] Update `CommitChange` to route commits to the correct repository based on `orgID`.
+    - [ ] Implement automatic "Root Sync" for submodule pointer updates in the root repository.
+- [ ] **Per-Organization Git**: Initialize/manage separate Git repositories for each `data/{orgID}/` as submodules.
+- [ ] **Organization Lifecycle**: Bootstrapping logic for new organizations (dirs, git, welcome content).
+- [ ] **Isolation Verification**: Integration tests for cross-tenant access prevention.
+
+### Phase 7: Relational Metadata & Identity
+
+- [ ] **Membership Service**: Implement the "Linear" access model (many-to-many User/Org) via the `Membership` bridge.
+- [ ] **Invitation Flow**: Email-based invites for pending memberships and resource assignment.
 - [ ] **OAuth2 Integration**: Support for Google and Microsoft login flows.
-- [x] **Organizations**: Workspace isolation and shared access.
-- [x] **RBAC Implementation**: Enforce roles (Admin, Editor, Viewer) in middleware.
+- [ ] **Tiered Settings**: Global User, Membership-specific, and Organization-wide settings.
+
+### Phase 8: Experience & Scaling
+
+- [ ] **Frontend Multi-tenancy UX**:
+    - [ ] **Organization Switcher**: UI component for switching between active memberships.
+    - [ ] **Org-Aware Search**: Scope search results strictly to the active organization.
 - [ ] **Quota Enforcement**: Track and limit resource usage (storage, pages) per organization.
-- [x] **User UI**: Management of users, permissions, and quotas in the frontend. (API and basic UI implemented)
+- [x] **User UI**: Management of users, permissions, and quotas in the frontend. (Initial version implemented)
 
 ## Future Considerations
+- **SQLite Migration**: Migrate `data/db/*.json` to SQLite for better relational integrity and query performance.
 - **Real-time Collaboration**: WebSocket-based sync.
 - **Mobile App**: Native mobile clients using the REST API.
