@@ -189,3 +189,24 @@
   color: var(--text-secondary, #999);
   font-style: italic;
 }
+
+.loadMore {
+  padding: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.loadMore button {
+  padding: 8px 24px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.loadMore button:hover {
+  background: #f0f0f0;
+  border-color: #ccc;
+}

@@ -75,7 +75,9 @@ type DeleteDatabaseResponse struct{}
 
 // ListRecordsRequest is a request to list records in a database.
 type ListRecordsRequest struct {
-	ID string `path:"id"`
+	ID     string `path:"id"`
+	Offset int    `query:"offset"`
+	Limit  int    `query:"limit"`
 }
 
 // ListRecordsResponse is a response containing a list of records.
@@ -207,7 +209,14 @@ func (h *DatabaseHandler) DeleteDatabase(ctx context.Context,
 
 // ListRecords returns records from a database
 func (h *DatabaseHandler) ListRecords(ctx context.Context, req ListRecordsRequest) (*ListRecordsResponse, error) {
-	records, err := h.databaseService.GetRecords(req.ID)
+	// If limit is not provided, we could either return all or set a default.
+	// For performance, let's set a default large limit if not specified, or just call GetRecordsPage.
+	limit := req.Limit
+	if limit == 0 {
+		limit = 1000 // Default limit to prevent huge responses
+	}
+
+	records, err := h.databaseService.GetRecordsPage(req.ID, req.Offset, limit)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}

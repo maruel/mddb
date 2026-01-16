@@ -184,6 +184,20 @@ func (s *DatabaseService) GetRecords(databaseID string) ([]*models.Record, error
 	return s.fileStore.ReadRecords(databaseID)
 }
 
+// GetRecordsPage retrieves a subset of records from a database.
+func (s *DatabaseService) GetRecordsPage(databaseID string, offset, limit int) ([]*models.Record, error) {
+	if databaseID == "" {
+		return nil, fmt.Errorf("database id cannot be empty")
+	}
+
+	// Verify database exists
+	if !s.fileStore.DatabaseExists(databaseID) {
+		return nil, fmt.Errorf("database not found")
+	}
+
+	return s.fileStore.ReadRecordsPage(databaseID, offset, limit)
+}
+
 // GetRecord retrieves a specific record by ID.
 func (s *DatabaseService) GetRecord(databaseID, recordID string) (*models.Record, error) {
 	if databaseID == "" {

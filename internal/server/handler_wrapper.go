@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"reflect"
+	"strconv"
 
 	apierrors "github.com/maruel/mddb/internal/errors"
 )
@@ -51,6 +52,8 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 
 		// Extract path parameters and populate request struct
 		populatePathParams(r, &input)
+		// Extract query parameters and populate request struct
+		populateQueryParams(r, &input)
 
 		output, err := fn(ctx, input)
 		if err != nil {
@@ -109,6 +112,45 @@ func populatePathParams(r *http.Request, input any) {
 		// Set the field value if it's a string field
 		if field.Type.Kind() == reflect.String {
 			elem.Field(i).SetString(paramValue)
+		}
+	}
+}
+
+// populateQueryParams extracts query parameters from the request and populates
+// struct fields tagged with `query:"paramName"`.
+func populateQueryParams(r *http.Request, input any) {
+	val := reflect.ValueOf(input)
+	if val.Kind() != reflect.Ptr {
+		return // Skip if not a pointer
+	}
+
+	elem := val.Elem()
+	if elem.Kind() != reflect.Struct {
+		return // Skip if not a struct
+	}
+
+	query := r.URL.Query()
+	typ := elem.Type()
+	for i := range typ.NumField() {
+		field := typ.Field(i)
+		tag := field.Tag.Get("query")
+		if tag == "" {
+			continue
+		}
+
+		paramValue := query.Get(tag)
+		if paramValue == "" {
+			continue
+		}
+
+		// Set the field value based on its type
+		switch field.Type.Kind() {
+		case reflect.String:
+			elem.Field(i).SetString(paramValue)
+		case reflect.Int:
+			if intVal, err := strconv.Atoi(paramValue); err == nil {
+				elem.Field(i).SetInt(int64(intVal))
+			}
 		}
 	}
 }

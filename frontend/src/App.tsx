@@ -53,6 +53,8 @@ export default function App() {
   const [error, setError] = createSignal<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+  const [hasMore, setHasMore] = createSignal(false);
+  const PAGE_SIZE = 50;
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
@@ -261,12 +263,33 @@ export default function App() {
       setTitle(data.title);
       setError(null);
 
-      // Load records
-      const recordsRes = await fetch(`/api/databases/${id}/records`);
+      // Load first page of records
+      const recordsRes = await fetch(`/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`);
       const recordsData = await recordsRes.json();
-      setRecords(recordsData.records || []);
+      const loadedRecords = recordsData.records || [];
+      setRecords(loadedRecords);
+      setHasMore(loadedRecords.length === PAGE_SIZE);
     } catch (err) {
       setError('Failed to load database: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadMoreRecords() {
+    const dbId = selectedDatabaseId();
+    if (!dbId || loading()) return;
+
+    try {
+      setLoading(true);
+      const offset = records().length;
+      const res = await fetch(`/api/databases/${dbId}/records?offset=${offset}&limit=${PAGE_SIZE}`);
+      const data = await res.json();
+      const newRecords = data.records || [];
+      setRecords([...records(), ...newRecords]);
+      setHasMore(newRecords.length === PAGE_SIZE);
+    } catch (err) {
+      setError('Failed to load more records: ' + err);
     } finally {
       setLoading(false);
     }
@@ -428,6 +451,8 @@ export default function App() {
                 records={records()}
                 onAddRecord={handleAddRecord}
                 onDeleteRecord={handleDeleteRecord}
+                onLoadMore={loadMoreRecords}
+                hasMore={hasMore()}
               />
             </div>
           </Show>

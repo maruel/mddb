@@ -23,6 +23,8 @@ interface DatabaseTableProps {
   onAddRecord?: (data: Record<string, unknown>) => void;
   onUpdateRecord?: (recordId: string, data: Record<string, unknown>) => void;
   onDeleteRecord?: (recordId: string) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
 }
 
 export default function DatabaseTable(props: DatabaseTableProps) {
@@ -247,6 +249,12 @@ export default function DatabaseTable(props: DatabaseTableProps) {
 
       <Show when={props.records.length === 0}>
         <div class={styles.empty}>No records. Click + to add one.</div>
+      </Show>
+
+      <Show when={props.hasMore}>
+        <div class={styles.loadMore}>
+          <button onClick={() => props.onLoadMore?.()}>Load More</button>
+        </div>
       </Show>
     </div>
   );
