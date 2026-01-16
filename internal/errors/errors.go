@@ -35,6 +35,8 @@ const (
 	ErrNotImplemented ErrorCode = "NOT_IMPLEMENTED"
 	// ErrConflict is returned when there is a resource conflict
 	ErrConflict ErrorCode = "CONFLICT"
+	// ErrUnauthorized is returned when authentication is missing or invalid
+	ErrUnauthorized ErrorCode = "UNAUTHORIZED"
 )
 
 // ErrorWithStatus is an error that includes an HTTP status code and error code.

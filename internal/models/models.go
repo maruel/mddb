@@ -47,6 +47,52 @@ type Record struct {
 	Modified time.Time              `json:"modified"`
 }
 
+// User represents a system user.
+type User struct {
+	ID             string    `json:"id"`
+	Email          string    `json:"email"`
+	PasswordHash   string    `json:"-"` // Never export password hash
+	Name           string    `json:"name"`
+	OrganizationID string    `json:"organization_id"`
+	Role           UserRole  `json:"role"`
+	Created        time.Time `json:"created"`
+	Modified       time.Time `json:"modified"`
+}
+
+// UserRole defines the permissions for a user.
+type UserRole string
+
+const (
+	// RoleAdmin has full access to all resources and settings.
+	RoleAdmin UserRole = "admin"
+	// RoleEditor can create and modify content but cannot manage users.
+	RoleEditor UserRole = "editor"
+	// RoleViewer can only read content.
+	RoleViewer UserRole = "viewer"
+)
+
+// Organization represents a workspace or group of users.
+type Organization struct {
+	ID      string    `json:"id"`
+	Name    string    `json:"name"`
+	Created time.Time `json:"created"`
+}
+
+// Session represents an active user session.
+type Session struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"user_id"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// ContextKey is a custom type for context keys to avoid collisions.
+type ContextKey string
+
+const (
+	// UserKey is the context key for the authenticated user.
+	UserKey ContextKey = "user"
+)
+
 // Asset represents an uploaded file/image associated with a node
 type Asset struct {
 	ID       string    `json:"id"`

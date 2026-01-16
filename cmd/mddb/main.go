@@ -32,6 +32,7 @@ func mainImpl() error {
 	port := flag.String("port", "8080", "Port to listen on")
 	dataDir := flag.String("data-dir", "./data", "Data directory")
 	logLevel := flag.String("log-level", "info", "Log level (debug, info, warn, error)")
+	jwtSecret := flag.String("jwt-secret", "dev-secret-keep-it-safe", "JWT secret for authentication")
 	flag.Parse()
 
 	if len(flag.Args()) > 0 {
@@ -63,6 +64,11 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize git service: %w", err)
 	}
 
+	userService, err := storage.NewUserService(*dataDir)
+	if err != nil {
+		return fmt.Errorf("failed to initialize user service: %w", err)
+	}
+
 	// Create context that cancels on SIGTERM and SIGINT
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
@@ -70,7 +76,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:        addr,
-		Handler:     server.NewRouter(fileStore, gitService),
+		Handler:     server.NewRouter(fileStore, gitService, userService, *jwtSecret),
 		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
 

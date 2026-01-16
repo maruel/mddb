@@ -16,8 +16,8 @@
 - [x] Phase 5.3: Automatic Git Versioning (data directory tracking)
 - [x] Phase 5.4: Page history/versioning UI
 - [x] Phase 5.5: Performance Optimization (pagination, streaming reads)
-- [ ] Phase 5.6: In-Memory Caching (metadata, hot pages, and records)
-- [/] Phase 5.7: Seamless UI Overhaul (Unified Sidebar & Integrated Views)
+- [x] Phase 5.6: In-Memory Caching (metadata, hot pages, and records)
+- [x] Phase 5.7: Seamless UI Overhaul (Unified Sidebar & Integrated Views)
 
 **Key Stats:**
 - Backend: ~40 comprehensive tests (100% passing), zero linting errors
@@ -113,11 +113,11 @@ See `README.md` and `ASSET_API.md` for details.
     - [x] Breadcrumbs navigation.
     - [x] Integrated view: Show database records within the page context.
     - [x] Database "Views" as a first-class UI concept (Table, Grid).
-    - [ ] Advanced Database Views (Gallery, Board).
+    - [x] Advanced Database Views (Gallery, Board).
 
 ### Phase 6: Multi-user & RBAC (Planned)
 
-- [ ] **Auth System**: User registration, login, and JWT-based authentication.
+- [x] **Auth System**: User registration, login, and JWT-based authentication.
 - [ ] **OAuth2 Integration**: Support for Google and Microsoft login flows.
 - [ ] **Organizations**: Workspace isolation and shared access.
 - [ ] **RBAC Implementation**: Enforce roles (Admin, Editor, Viewer) in middleware.

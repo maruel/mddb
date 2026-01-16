@@ -3,6 +3,8 @@ import SidebarNode from './components/SidebarNode';
 import MarkdownPreview from './components/MarkdownPreview';
 import DatabaseTable from './components/DatabaseTable';
 import DatabaseGrid from './components/DatabaseGrid';
+import DatabaseGallery from './components/DatabaseGallery';
+import DatabaseBoard from './components/DatabaseBoard';
 import { debounce } from './utils/debounce';
 import styles from './App.module.css';
 
@@ -42,7 +44,7 @@ export default function App() {
   const [nodes, setNodes] = createSignal<Node[]>([]);
   const [records, setRecords] = createSignal<Record[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
-  const [viewMode, setViewMode] = createSignal<'table' | 'grid'>('table');
+  const [viewMode, setViewMode] = createSignal<'table' | 'grid' | 'gallery' | 'board'>('table');
   const [title, setTitle] = createSignal('');
   const [content, setContent] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -514,45 +516,69 @@ export default function App() {
 
                 {/* Show database table if node is database or hybrid */}
                 <Show when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'document'}>
-                  <div class={styles.databaseView}>
-                    <div class={styles.databaseHeader}>
-                      <h3>Database Records</h3>
-                      <div class={styles.viewToggle}>
-                        <button 
-                          classList={{ [styles.active]: viewMode() === 'table' }}
-                          onClick={() => setViewMode('table')}
-                        >
-                          Table
-                        </button>
-                        <button 
-                          classList={{ [styles.active]: viewMode() === 'grid' }}
-                          onClick={() => setViewMode('grid')}
-                        >
-                          Grid
-                        </button>
+                    <div class={styles.databaseView}>
+                      <div class={styles.databaseHeader}>
+                        <h3>Database Records</h3>
+                        <div class={styles.viewToggle}>
+                          <button 
+                            classList={{ [styles.active]: viewMode() === 'table' }}
+                            onClick={() => setViewMode('table')}
+                          >
+                            Table
+                          </button>
+                          <button 
+                            classList={{ [styles.active]: viewMode() === 'grid' }}
+                            onClick={() => setViewMode('grid')}
+                          >
+                            Grid
+                          </button>
+                          <button 
+                            classList={{ [styles.active]: viewMode() === 'gallery' }}
+                            onClick={() => setViewMode('gallery')}
+                          >
+                            Gallery
+                          </button>
+                          <button 
+                            classList={{ [styles.active]: viewMode() === 'board' }}
+                            onClick={() => setViewMode('board')}
+                          >
+                            Board
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <Show 
-                      when={viewMode() === 'table'} 
-                      fallback={
+                      <Show when={viewMode() === 'table'}>
+                        <DatabaseTable
+                          databaseId={selectedNodeId() || ''}
+                          columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
+                          records={records()}
+                          onAddRecord={handleAddRecord}
+                          onDeleteRecord={handleDeleteRecord}
+                          onLoadMore={loadMoreRecords}
+                          hasMore={hasMore()}
+                        />
+                      </Show>
+                      <Show when={viewMode() === 'grid'}>
                         <DatabaseGrid 
                           records={records()} 
                           columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
                           onDeleteRecord={handleDeleteRecord}
                         />
-                      }
-                    >
-                      <DatabaseTable
-                        databaseId={selectedNodeId() || ''}
-                        columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
-                        records={records()}
-                        onAddRecord={handleAddRecord}
-                        onDeleteRecord={handleDeleteRecord}
-                        onLoadMore={loadMoreRecords}
-                        hasMore={hasMore()}
-                      />
-                    </Show>
-                  </div>
+                      </Show>
+                      <Show when={viewMode() === 'gallery'}>
+                        <DatabaseGallery 
+                          records={records()} 
+                          columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
+                          onDeleteRecord={handleDeleteRecord}
+                        />
+                      </Show>
+                      <Show when={viewMode() === 'board'}>
+                        <DatabaseBoard 
+                          records={records()} 
+                          columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
+                          onDeleteRecord={handleDeleteRecord}
+                        />
+                      </Show>
+                    </div>
                 </Show>
               </div>
             </div>

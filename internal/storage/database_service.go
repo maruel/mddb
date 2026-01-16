@@ -11,13 +11,15 @@ import (
 type DatabaseService struct {
 	fileStore  *FileStore
 	gitService *GitService
+	cache      *Cache
 }
 
 // NewDatabaseService creates a new database service.
-func NewDatabaseService(fileStore *FileStore, gitService *GitService) *DatabaseService {
+func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cache) *DatabaseService {
 	return &DatabaseService{
 		fileStore:  fileStore,
 		gitService: gitService,
+		cache:      cache,
 	}
 }
 
@@ -66,6 +68,9 @@ func (s *DatabaseService) CreateDatabase(title string, columns []models.Column) 
 		return nil, err
 	}
 
+	// Invalidate cache
+	s.cache.InvalidateNodeTree()
+
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange("create", "database", id, title); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -100,6 +105,9 @@ func (s *DatabaseService) UpdateDatabase(id, title string, columns []models.Colu
 		return nil, err
 	}
 
+	// Invalidate cache
+	s.cache.InvalidateNodeTree()
+
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange("update", "database", id, "Updated schema"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -117,6 +125,10 @@ func (s *DatabaseService) DeleteDatabase(id string) error {
 	if err := s.fileStore.DeleteDatabase(id); err != nil {
 		return err
 	}
+
+	// Invalidate cache
+	s.cache.InvalidateRecords(id)
+	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange("delete", "database", id, "Deleted database"); err != nil {
@@ -161,6 +173,9 @@ func (s *DatabaseService) CreateRecord(databaseID string, data map[string]interf
 		return nil, err
 	}
 
+	// Invalidate records cache
+	s.cache.InvalidateRecords(databaseID)
+
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange("create", "record", id, fmt.Sprintf("in database %s", databaseID)); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -176,12 +191,22 @@ func (s *DatabaseService) GetRecords(databaseID string) ([]*models.Record, error
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
 
+	if records, ok := s.cache.GetRecords(databaseID); ok {
+		return records, nil
+	}
+
 	// Verify database exists
 	if !s.fileStore.DatabaseExists(databaseID) {
 		return nil, fmt.Errorf("database not found")
 	}
 
-	return s.fileStore.ReadRecords(databaseID)
+	records, err := s.fileStore.ReadRecords(databaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	s.cache.SetRecords(databaseID, records)
+	return records, nil
 }
 
 // GetRecordsPage retrieves a subset of records from a database.

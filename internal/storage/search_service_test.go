@@ -16,7 +16,8 @@ func TestSearchService_SearchPages(t *testing.T) {
 	searchService := NewSearchService(fileStore)
 
 	// Create test pages
-	pageService := NewPageService(fileStore, nil)
+	cache := NewCache()
+	pageService := NewPageService(fileStore, nil, cache)
 	_, _ = pageService.CreatePage("Getting Started", "This is a guide to get started with mddb project")
 	_, _ = pageService.CreatePage("Advanced Topics", "Learn about advanced mddb configuration and optimization")
 	_, _ = pageService.CreatePage("API Reference", "Complete mddb API documentation for developers")
@@ -103,7 +104,8 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	searchService := NewSearchService(fileStore)
 
 	// Create test database with records
-	dbService := NewDatabaseService(fileStore, nil)
+	cache := NewCache()
+	dbService := NewDatabaseService(fileStore, nil, cache)
 	columns := []models.Column{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "status", Type: "select", Options: []string{"todo", "done"}},
@@ -186,7 +188,8 @@ func TestSearchService_Scoring(t *testing.T) {
 	searchService := NewSearchService(fileStore)
 
 	// Create pages where title match should score higher
-	pageService := NewPageService(fileStore, nil)
+	cache := NewCache()
+	pageService := NewPageService(fileStore, nil, cache)
 	_, _ = pageService.CreatePage("Python Programming", "This is about Java not Python")
 	_, _ = pageService.CreatePage("Java Basics", "Learn Python programming fundamentals")
 
@@ -223,7 +226,8 @@ func TestSearchService_Limit(t *testing.T) {
 	searchService := NewSearchService(fileStore)
 
 	// Create multiple pages
-	pageService := NewPageService(fileStore, nil)
+	cache := NewCache()
+	pageService := NewPageService(fileStore, nil, cache)
 	for i := range 10 {
 		_, _ = pageService.CreatePage(fmt.Sprintf("Test Page %d", i), "This is test content")
 	}
@@ -313,10 +317,11 @@ func TestSearchService_Integration(t *testing.T) {
 	searchService := NewSearchService(fileStore)
 
 	// Create mixed content
-	pageService := NewPageService(fileStore, nil)
+	cache := NewCache()
+	pageService := NewPageService(fileStore, nil, cache)
 	_, _ = pageService.CreatePage("Blog Post", "Article about searchable content and web development")
 
-	dbService := NewDatabaseService(fileStore, nil)
+	dbService := NewDatabaseService(fileStore, nil, cache)
 	columns := []models.Column{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "content", Type: "text"},

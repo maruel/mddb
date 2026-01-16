@@ -14,16 +14,23 @@ import (
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
-func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService) http.Handler {
+func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, jwtSecret string) http.Handler {
+	cache := storage.NewCache()
 	mux := &http.ServeMux{}
-	ph := handlers.NewPageHandler(fileStore, gitService)
-	dh := handlers.NewDatabaseHandler(fileStore, gitService)
-	nh := handlers.NewNodeHandler(fileStore, gitService)
+	ph := handlers.NewPageHandler(fileStore, gitService, cache)
+	dh := handlers.NewDatabaseHandler(fileStore, gitService, cache)
+	nh := handlers.NewNodeHandler(fileStore, gitService, cache)
 	ah := handlers.NewAssetHandler(fileStore, gitService)
 	sh := handlers.NewSearchHandler(fileStore)
+	authh := handlers.NewAuthHandler(userService, jwtSecret)
 
 	// Health check
 	mux.Handle("/api/health", Wrap(handlers.Health))
+
+	// Auth endpoints
+	mux.Handle("POST /api/auth/login", Wrap(authh.Login))
+	mux.Handle("POST /api/auth/register", Wrap(authh.Register))
+	mux.Handle("GET /api/auth/me", Wrap(authh.Me))
 
 	// Unified Nodes endpoints
 	mux.Handle("GET /api/nodes", Wrap(nh.ListNodes))
@@ -67,7 +74,8 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService) htt
 	// Serve embedded SolidJS frontend with SPA fallback
 	mux.Handle("/", NewEmbeddedSPAHandler(frontend.Files))
 
-	return mux
+	// Apply Auth Middleware to all API requests
+	return AuthMiddleware(userService, []byte(jwtSecret))(mux)
 }
 
 // EmbeddedSPAHandler serves an embedded single-page application with fallback to index.html.

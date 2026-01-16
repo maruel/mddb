@@ -11,13 +11,15 @@ import (
 type PageService struct {
 	fileStore  *FileStore
 	gitService *GitService
+	cache      *Cache
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *FileStore, gitService *GitService) *PageService {
+func NewPageService(fileStore *FileStore, gitService *GitService, cache *Cache) *PageService {
 	return &PageService{
 		fileStore:  fileStore,
 		gitService: gitService,
+		cache:      cache,
 	}
 }
 
@@ -26,7 +28,18 @@ func (s *PageService) GetPage(id string) (*models.Page, error) {
 	if id == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
-	return s.fileStore.ReadPage(id)
+
+	if page, ok := s.cache.GetPage(id); ok {
+		return page, nil
+	}
+
+	page, err := s.fileStore.ReadPage(id)
+	if err != nil {
+		return nil, err
+	}
+
+	s.cache.SetPage(page)
+	return page, nil
 }
 
 // CreatePage creates a new page with a generated numeric ID.
@@ -42,6 +55,10 @@ func (s *PageService) CreatePage(title, content string) (*models.Page, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Invalidate node tree cache
+	s.cache.InvalidateNodeTree()
+	s.cache.SetPage(page)
 
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange("create", "page", id, title); err != nil {
@@ -67,6 +84,10 @@ func (s *PageService) UpdatePage(id, title, content string) (*models.Page, error
 		return nil, err
 	}
 
+	// Update cache
+	s.cache.SetPage(page)
+	s.cache.InvalidateNodeTree() // Title might have changed
+
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange("update", "page", id, "Updated content"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -84,6 +105,10 @@ func (s *PageService) DeletePage(id string) error {
 	if err := s.fileStore.DeletePage(id); err != nil {
 		return err
 	}
+
+	// Invalidate cache
+	s.cache.InvalidatePage(id)
+	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange("delete", "page", id, "Deleted page"); err != nil {
