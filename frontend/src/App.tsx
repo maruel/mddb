@@ -34,11 +34,21 @@ export default function App() {
 
   // Helper for authenticated fetch
   const authFetch = async (url: string, options: RequestInit = {}) => {
+    let finalUrl = url;
+    // Automatically prepend organization ID for data-acting API calls
+    if (url.startsWith('/api/') && !url.startsWith('/api/auth/') && !url.startsWith('/api/health')) {
+      const orgID = user()?.organization_id;
+      if (orgID) {
+        // Convert /api/nodes to /api/{orgID}/nodes
+        finalUrl = `/api/${orgID}${url.substring(4)}`;
+      }
+    }
+
     const headers = {
       ...options.headers,
       'Authorization': `Bearer ${token()}`,
     };
-    const res = await fetch(url, { ...options, headers });
+    const res = await fetch(finalUrl, { ...options, headers });
     if (res.status === 401) {
       logout();
       throw new Error('Session expired');

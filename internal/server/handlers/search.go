@@ -22,6 +22,7 @@ func NewSearchHandler(fileStore *storage.FileStore) *SearchHandler {
 
 // SearchRequest is a request to search pages and databases
 type SearchRequest struct {
+	OrgID       string `path:"orgID"`
 	Query       string `json:"query"`
 	Limit       int    `json:"limit,omitempty"`
 	MatchTitle  bool   `json:"match_title,omitempty"`
@@ -50,6 +51,9 @@ type SearchResultDTO struct {
 // Search performs a full-text search across all nodes.
 func (h *SearchHandler) Search(ctx context.Context, req SearchRequest) (*SearchResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	results, err := h.searchService.Search(orgID, storage.SearchOptions{
 		Query: req.Query,
 	})

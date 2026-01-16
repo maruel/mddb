@@ -35,44 +35,44 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	mux.Handle("GET /api/auth/me", Wrap(authh.Me))
 
 	// User management endpoints
-	mux.Handle("GET /api/users", RequireRole(models.RoleAdmin)(Wrap(uh.ListUsers)))
-	mux.Handle("PUT /api/users/role", RequireRole(models.RoleAdmin)(Wrap(uh.UpdateUserRole)))
+	mux.Handle("GET /api/{orgID}/users", RequireRole(models.RoleAdmin)(Wrap(uh.ListUsers)))
+	mux.Handle("PUT /api/{orgID}/users/role", RequireRole(models.RoleAdmin)(Wrap(uh.UpdateUserRole)))
 
 	// Unified Nodes endpoints
-	mux.Handle("GET /api/nodes", RequireRole(models.RoleViewer)(Wrap(nh.ListNodes)))
-	mux.Handle("GET /api/nodes/{id}", RequireRole(models.RoleViewer)(Wrap(nh.GetNode)))
-	mux.Handle("POST /api/nodes", RequireRole(models.RoleEditor)(Wrap(nh.CreateNode)))
+	mux.Handle("GET /api/{orgID}/nodes", RequireRole(models.RoleViewer)(Wrap(nh.ListNodes)))
+	mux.Handle("GET /api/{orgID}/nodes/{id}", RequireRole(models.RoleViewer)(Wrap(nh.GetNode)))
+	mux.Handle("POST /api/{orgID}/nodes", RequireRole(models.RoleEditor)(Wrap(nh.CreateNode)))
 
 	// Pages endpoints
-	mux.Handle("GET /api/pages", RequireRole(models.RoleViewer)(Wrap(ph.ListPages)))
-	mux.Handle("GET /api/pages/{id}", RequireRole(models.RoleViewer)(Wrap(ph.GetPage)))
-	mux.Handle("GET /api/pages/{id}/history", RequireRole(models.RoleViewer)(Wrap(ph.GetPageHistory)))
-	mux.Handle("GET /api/pages/{id}/history/{hash}", RequireRole(models.RoleViewer)(Wrap(ph.GetPageVersion)))
-	mux.Handle("POST /api/pages", RequireRole(models.RoleEditor)(Wrap(ph.CreatePage)))
-	mux.Handle("PUT /api/pages/{id}", RequireRole(models.RoleEditor)(Wrap(ph.UpdatePage)))
-	mux.Handle("DELETE /api/pages/{id}", RequireRole(models.RoleEditor)(Wrap(ph.DeletePage)))
+	mux.Handle("GET /api/{orgID}/pages", RequireRole(models.RoleViewer)(Wrap(ph.ListPages)))
+	mux.Handle("GET /api/{orgID}/pages/{id}", RequireRole(models.RoleViewer)(Wrap(ph.GetPage)))
+	mux.Handle("GET /api/{orgID}/pages/{id}/history", RequireRole(models.RoleViewer)(Wrap(ph.GetPageHistory)))
+	mux.Handle("GET /api/{orgID}/pages/{id}/history/{hash}", RequireRole(models.RoleViewer)(Wrap(ph.GetPageVersion)))
+	mux.Handle("POST /api/{orgID}/pages", RequireRole(models.RoleEditor)(Wrap(ph.CreatePage)))
+	mux.Handle("PUT /api/{orgID}/pages/{id}", RequireRole(models.RoleEditor)(Wrap(ph.UpdatePage)))
+	mux.Handle("DELETE /api/{orgID}/pages/{id}", RequireRole(models.RoleEditor)(Wrap(ph.DeletePage)))
 
 	// Database endpoints
-	mux.Handle("GET /api/databases", RequireRole(models.RoleViewer)(Wrap(dh.ListDatabases)))
-	mux.Handle("GET /api/databases/{id}", RequireRole(models.RoleViewer)(Wrap(dh.GetDatabase)))
-	mux.Handle("POST /api/databases", RequireRole(models.RoleEditor)(Wrap(dh.CreateDatabase)))
-	mux.Handle("PUT /api/databases/{id}", RequireRole(models.RoleEditor)(Wrap(dh.UpdateDatabase)))
-	mux.Handle("DELETE /api/databases/{id}", RequireRole(models.RoleEditor)(Wrap(dh.DeleteDatabase)))
+	mux.Handle("GET /api/{orgID}/databases", RequireRole(models.RoleViewer)(Wrap(dh.ListDatabases)))
+	mux.Handle("GET /api/{orgID}/databases/{id}", RequireRole(models.RoleViewer)(Wrap(dh.GetDatabase)))
+	mux.Handle("POST /api/{orgID}/databases", RequireRole(models.RoleEditor)(Wrap(dh.CreateDatabase)))
+	mux.Handle("PUT /api/{orgID}/databases/{id}", RequireRole(models.RoleEditor)(Wrap(dh.UpdateDatabase)))
+	mux.Handle("DELETE /api/{orgID}/databases/{id}", RequireRole(models.RoleEditor)(Wrap(dh.DeleteDatabase)))
 
 	// Records endpoints
-	mux.Handle("GET /api/databases/{id}/records", RequireRole(models.RoleViewer)(Wrap(dh.ListRecords)))
-	mux.Handle("GET /api/databases/{id}/records/{rid}", RequireRole(models.RoleViewer)(Wrap(dh.GetRecord)))
-	mux.Handle("POST /api/databases/{id}/records", RequireRole(models.RoleEditor)(Wrap(dh.CreateRecord)))
-	mux.Handle("PUT /api/databases/{id}/records/{rid}", RequireRole(models.RoleEditor)(Wrap(dh.UpdateRecord)))
-	mux.Handle("DELETE /api/databases/{id}/records/{rid}", RequireRole(models.RoleEditor)(Wrap(dh.DeleteRecord)))
+	mux.Handle("GET /api/{orgID}/databases/{id}/records", RequireRole(models.RoleViewer)(Wrap(dh.ListRecords)))
+	mux.Handle("GET /api/{orgID}/databases/{id}/records/{rid}", RequireRole(models.RoleViewer)(Wrap(dh.GetRecord)))
+	mux.Handle("POST /api/{orgID}/databases/{id}/records", RequireRole(models.RoleEditor)(Wrap(dh.CreateRecord)))
+	mux.Handle("PUT /api/{orgID}/databases/{id}/records/{rid}", RequireRole(models.RoleEditor)(Wrap(dh.UpdateRecord)))
+	mux.Handle("DELETE /api/{orgID}/databases/{id}/records/{rid}", RequireRole(models.RoleEditor)(Wrap(dh.DeleteRecord)))
 
 	// Assets endpoints (page-based)
-	mux.Handle("GET /api/pages/{id}/assets", RequireRole(models.RoleViewer)(Wrap(ah.ListPageAssets)))
-	mux.Handle("POST /api/pages/{id}/assets", RequireRole(models.RoleEditor)(http.HandlerFunc(ah.UploadPageAssetHandler)))
-	mux.Handle("DELETE /api/pages/{id}/assets/{name}", RequireRole(models.RoleEditor)(Wrap(ah.DeletePageAsset)))
+	mux.Handle("GET /api/{orgID}/pages/{id}/assets", RequireRole(models.RoleViewer)(Wrap(ah.ListPageAssets)))
+	mux.Handle("POST /api/{orgID}/pages/{id}/assets", RequireRole(models.RoleEditor)(http.HandlerFunc(ah.UploadPageAssetHandler)))
+	mux.Handle("DELETE /api/{orgID}/pages/{id}/assets/{name}", RequireRole(models.RoleEditor)(Wrap(ah.DeletePageAsset)))
 
 	// Search endpoint
-	mux.Handle("POST /api/search", RequireRole(models.RoleViewer)(Wrap(sh.Search)))
+	mux.Handle("POST /api/{orgID}/search", RequireRole(models.RoleViewer)(Wrap(sh.Search)))
 
 	// File serving (raw asset files)
 	mux.HandleFunc("GET /assets/{orgID}/{id}/{name}", ah.ServeAssetFile)

@@ -22,7 +22,9 @@ func NewPageHandler(fileStore *storage.FileStore, gitService *storage.GitService
 }
 
 // ListPagesRequest is a request to list all pages.
-type ListPagesRequest struct{}
+type ListPagesRequest struct {
+	OrgID string `path:"orgID"`
+}
 
 // ListPagesResponse is a response containing a list of pages.
 type ListPagesResponse struct {
@@ -31,7 +33,8 @@ type ListPagesResponse struct {
 
 // GetPageRequest is a request to get a page.
 type GetPageRequest struct {
-	ID string `path:"id"`
+	OrgID string `path:"orgID"`
+	ID    string `path:"id"`
 }
 
 // GetPageResponse is a response containing a page.
@@ -43,6 +46,7 @@ type GetPageResponse struct {
 
 // CreatePageRequest is a request to create a page.
 type CreatePageRequest struct {
+	OrgID   string `path:"orgID"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
@@ -54,6 +58,7 @@ type CreatePageResponse struct {
 
 // UpdatePageRequest is a request to update a page.
 type UpdatePageRequest struct {
+	OrgID   string `path:"orgID"`
 	ID      string `path:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
@@ -66,7 +71,8 @@ type UpdatePageResponse struct {
 
 // DeletePageRequest is a request to delete a page.
 type DeletePageRequest struct {
-	ID string `path:"id"`
+	OrgID string `path:"orgID"`
+	ID    string `path:"id"`
 }
 
 // DeletePageResponse is a response from deleting a page.
@@ -74,7 +80,8 @@ type DeletePageResponse struct{}
 
 // GetPageHistoryRequest is a request to get page history.
 type GetPageHistoryRequest struct {
-	ID string `path:"id"`
+	OrgID string `path:"orgID"`
+	ID    string `path:"id"`
 }
 
 // GetPageHistoryResponse is a response containing page history.
@@ -84,8 +91,9 @@ type GetPageHistoryResponse struct {
 
 // GetPageVersionRequest is a request to get a specific page version.
 type GetPageVersionRequest struct {
-	ID   string `path:"id"`
-	Hash string `path:"hash"`
+	OrgID string `path:"orgID"`
+	ID    string `path:"id"`
+	Hash  string `path:"hash"`
 }
 
 // GetPageVersionResponse is a response containing page content at a version.
@@ -96,6 +104,9 @@ type GetPageVersionResponse struct {
 // ListPages returns a list of all pages
 func (h *PageHandler) ListPages(ctx context.Context, req ListPagesRequest) (*ListPagesResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	pages, err := h.pageService.ListPages(orgID)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to list pages", err)
@@ -117,6 +128,9 @@ func (h *PageHandler) ListPages(ctx context.Context, req ListPagesRequest) (*Lis
 // GetPage returns a specific page by ID
 func (h *PageHandler) GetPage(ctx context.Context, req GetPageRequest) (*GetPageResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	page, err := h.pageService.GetPage(orgID, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("page")
@@ -136,6 +150,9 @@ func (h *PageHandler) CreatePage(ctx context.Context, req CreatePageRequest) (*C
 	}
 
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	page, err := h.pageService.CreatePage(orgID, req.Title, req.Content)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create page", err)
@@ -147,6 +164,9 @@ func (h *PageHandler) CreatePage(ctx context.Context, req CreatePageRequest) (*C
 // UpdatePage updates an existing page
 func (h *PageHandler) UpdatePage(ctx context.Context, req UpdatePageRequest) (*UpdatePageResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	page, err := h.pageService.UpdatePage(orgID, req.ID, req.Title, req.Content)
 	if err != nil {
 		return nil, errors.NotFound("page")
@@ -158,6 +178,9 @@ func (h *PageHandler) UpdatePage(ctx context.Context, req UpdatePageRequest) (*U
 // DeletePage deletes a page
 func (h *PageHandler) DeletePage(ctx context.Context, req DeletePageRequest) (*DeletePageResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	err := h.pageService.DeletePage(orgID, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("page")
@@ -169,6 +192,9 @@ func (h *PageHandler) DeletePage(ctx context.Context, req DeletePageRequest) (*D
 // GetPageHistory returns the history of a page
 func (h *PageHandler) GetPageHistory(ctx context.Context, req GetPageHistoryRequest) (*GetPageHistoryResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	history, err := h.pageService.GetPageHistory(orgID, req.ID)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to get page history", err)
@@ -180,6 +206,9 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, req GetPageHistoryRequ
 // GetPageVersion returns a specific version of a page
 func (h *PageHandler) GetPageVersion(ctx context.Context, req GetPageVersionRequest) (*GetPageVersionResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	content, err := h.pageService.GetPageVersion(orgID, req.ID, req.Hash)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to get page version", err)

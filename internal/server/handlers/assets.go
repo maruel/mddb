@@ -9,7 +9,6 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
-	"strings"
 
 	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
@@ -30,6 +29,7 @@ func NewAssetHandler(fileStore *storage.FileStore, gitService *storage.GitServic
 
 // ListPageAssetsRequest is a request to list assets in a page.
 type ListPageAssetsRequest struct {
+	OrgID  string `path:"orgID"`
 	PageID string `path:"id"`
 }
 
@@ -41,6 +41,7 @@ type ListPageAssetsResponse struct {
 // UploadPageAssetRequest is a request to upload an asset to a page.
 // Note: File data is handled separately via multipart form, this is a placeholder for the Wrap handler.
 type UploadPageAssetRequest struct {
+	OrgID  string `path:"orgID"`
 	PageID string `path:"id"`
 }
 
@@ -54,6 +55,7 @@ type UploadPageAssetResponse struct {
 
 // DeletePageAssetRequest is a request to delete an asset from a page.
 type DeletePageAssetRequest struct {
+	OrgID     string `path:"orgID"`
 	PageID    string `path:"id"`
 	AssetName string `path:"name"`
 }
@@ -63,6 +65,7 @@ type DeletePageAssetResponse struct{}
 
 // ServeAssetRequest is a request to serve an asset file directly.
 type ServeAssetRequest struct {
+	OrgID     string `path:"orgID"`
 	PageID    string `path:"id"`
 	AssetName string `path:"name"`
 }
@@ -76,6 +79,9 @@ type ServeAssetResponse struct {
 // ListPageAssets returns a list of all assets in a page
 func (h *AssetHandler) ListPageAssets(ctx context.Context, req ListPageAssetsRequest) (*ListPageAssetsResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	assets, err := h.assetService.ListAssets(orgID, req.PageID)
 	if err != nil {
 		return nil, errors.NotFound("page")
@@ -100,6 +106,9 @@ func (h *AssetHandler) DeletePageAsset(
 	req DeletePageAssetRequest,
 ) (*DeletePageAssetResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	err := h.assetService.DeleteAsset(orgID, req.PageID, req.AssetName)
 	if err != nil {
 		return nil, errors.NotFound("asset")
@@ -113,15 +122,14 @@ func (h *AssetHandler) DeletePageAsset(
 func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 	// Extract org ID, page ID and asset name from URL path
 	// Pattern: /assets/{orgID}/{id}/{name}
-	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/assets/"), "/")
-	if len(parts) < 3 {
+	orgID := r.PathValue("orgID")
+	pageID := r.PathValue("id")
+	assetName := r.PathValue("name")
+
+	if orgID == "" || pageID == "" || assetName == "" {
 		http.NotFound(w, r)
 		return
 	}
-
-	orgID := parts[0]
-	pageID := parts[1]
-	assetName := parts[2]
 
 	// Read asset data
 	data, err := h.assetService.GetAsset(orgID, pageID, assetName)
@@ -145,20 +153,24 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // UploadPageAssetHandler handles file uploads with multipart form data.
-// Handles POST /api/pages/{id}/assets
+// Handles POST /api/{orgID}/pages/{id}/assets
 // Needs custom http.Handler since Wrap doesn't support multipart file handling.
 func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Request) {
 	orgID := models.GetOrgID(r.Context())
-	// Extract page ID from URL path
-	// Pattern: /api/pages/{id}/assets
-	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/pages/"), "/")
-	if len(parts) < 2 {
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request path"})
+	pathOrgID := r.PathValue("orgID")
+	pageID := r.PathValue("id")
+
+	if pathOrgID != orgID {
+		w.WriteHeader(http.StatusForbidden)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Organization mismatch"})
 		return
 	}
 
-	pageID := parts[0]
+	if pageID == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Missing page ID"})
+		return
+	}
 
 	// Parse multipart form (32 << 20) max)
 	if err := r.ParseMultipartForm(32 << 20); err != nil {

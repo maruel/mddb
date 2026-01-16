@@ -21,7 +21,9 @@ func NewNodeHandler(fileStore *storage.FileStore, gitService *storage.GitService
 }
 
 // ListNodesRequest is a request to list all nodes.
-type ListNodesRequest struct{}
+type ListNodesRequest struct {
+	OrgID string `path:"orgID"`
+}
 
 // ListNodesResponse is a response containing a list of nodes.
 type ListNodesResponse struct {
@@ -30,11 +32,13 @@ type ListNodesResponse struct {
 
 // GetNodeRequest is a request to get a node.
 type GetNodeRequest struct {
-	ID string `path:"id"`
+	OrgID string `path:"orgID"`
+	ID    string `path:"id"`
 }
 
 // CreateNodeRequest is a request to create a node.
 type CreateNodeRequest struct {
+	OrgID string          `path:"orgID"`
 	Title string          `json:"title"`
 	Type  models.NodeType `json:"type"`
 }
@@ -42,6 +46,9 @@ type CreateNodeRequest struct {
 // ListNodes returns a list of all nodes
 func (h *NodeHandler) ListNodes(ctx context.Context, req ListNodesRequest) (*ListNodesResponse, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	nodes, err := h.nodeService.ListNodes(orgID)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to list nodes", err)
@@ -52,6 +59,9 @@ func (h *NodeHandler) ListNodes(ctx context.Context, req ListNodesRequest) (*Lis
 // GetNode returns a specific node by ID
 func (h *NodeHandler) GetNode(ctx context.Context, req GetNodeRequest) (*models.Node, error) {
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	node, err := h.nodeService.GetNode(orgID, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("node")
@@ -65,6 +75,9 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req CreateNodeRequest) (*m
 		return nil, errors.MissingField("title")
 	}
 	orgID := models.GetOrgID(ctx)
+	if req.OrgID != orgID {
+		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	}
 	// CreateNode now takes parentID as 4th arg, defaulting to empty for now
 	node, err := h.nodeService.CreateNode(orgID, req.Title, req.Type, "")
 	if err != nil {
