@@ -1,12 +1,15 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/maruel/mddb/internal/models"
 )
 
 // GitService handles version control operations using git.
@@ -15,74 +18,109 @@ type GitService struct {
 	repoDir string // Root directory (contains .git/)
 }
 
-// NewGitService initializes git repository in the given directory.
-// If repo doesn't exist, it will be initialized.
+// NewGitService initializes git service for the given root directory.
 func NewGitService(rootDir string) (*GitService, error) {
 	gs := &GitService{repoDir: rootDir}
 
-	// Check if .git exists
-	gitDir := filepath.Join(rootDir, ".git")
-	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
-		// Initialize repo
-		if err := gs.execGit("init"); err != nil {
-			return nil, fmt.Errorf("failed to initialize git repo: %w", err)
-		}
-
-		// Configure git user (required for commits)
-		_ = gs.execGit("config", "user.email", "mddb@localhost")
-		_ = gs.execGit("config", "user.name", "mddb")
+	// Check if root .git exists, initialize if not
+	if err := gs.InitRepository(rootDir); err != nil {
+		return nil, err
 	}
 
 	return gs, nil
 }
 
+// InitRepository initializes a git repository in the target directory if it doesn't exist.
+func (gs *GitService) InitRepository(dir string) error {
+	gitDir := filepath.Join(dir, ".git")
+	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
+		// Initialize repo
+		cmd := exec.Command("git", "init")
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(),
+			"GIT_CONFIG_GLOBAL=/dev/null",
+			"GIT_CONFIG_SYSTEM=/dev/null",
+		)
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to initialize git repo in %s: %w", dir, err)
+		}
+
+		// Configure git user
+		configCmd := func(args ...string) {
+			c := exec.Command("git", args...)
+			c.Dir = dir
+			c.Env = append(os.Environ(),
+				"GIT_CONFIG_GLOBAL=/dev/null",
+				"GIT_CONFIG_SYSTEM=/dev/null",
+			)
+			_ = c.Run()
+		}
+		configCmd("config", "user.email", "mddb@localhost")
+		configCmd("config", "user.name", "mddb")
+	}
+	return nil
+}
+
 // CommitChange stages and commits a change to the repository.
-// Pattern: "operation: resource_type resource_id - description"
-// Example: "create: page 1 - Getting Started"
-func (gs *GitService) CommitChange(operation, resourceType, resourceID, description string) error {
-	// Stage all changes in pages directory
-	if err := gs.execGit("add", "pages"); err != nil {
-		return fmt.Errorf("failed to stage changes: %w", err)
+// If orgID is present in context, it commits to the organization's repository.
+func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType, resourceID, description string) error {
+	orgID := models.GetOrgID(ctx)
+	targetDir := gs.repoDir
+	relPath := "pages"
+
+	if orgID != "" {
+		targetDir = filepath.Join(gs.repoDir, orgID)
+		relPath = "pages" // Inside org dir, it's also pages/
+	}
+
+	// Stage changes in the target directory
+	if err := gs.execGitInDir(targetDir, "add", relPath); err != nil {
+		// If relPath doesn't exist yet, it might fail. Try adding everything.
+		_ = gs.execGitInDir(targetDir, "add", ".")
 	}
 
 	// Check if there are staged changes
-	status, err := gs.gitOutput("status", "--porcelain")
+	status, err := gs.gitOutputInDir(targetDir, "status", "--porcelain")
 	if err != nil {
 		return err
 	}
 
 	if strings.TrimSpace(status) == "" {
-		// No changes to commit
 		return nil
 	}
 
 	// Build commit message
 	message := fmt.Sprintf("%s: %s %s - %s", operation, resourceType, resourceID, description)
 
-	if err := gs.execGit("commit", "-m", message); err != nil {
-		return fmt.Errorf("failed to commit: %w", err)
+	if err := gs.execGitInDir(targetDir, "commit", "-m", message); err != nil {
+		return fmt.Errorf("failed to commit in %s: %w", targetDir, err)
+	}
+
+	// If we committed to an organization repo, we should also update the root repo
+	// if it's tracking the org as a submodule or directory
+	if orgID != "" && targetDir != gs.repoDir {
+		if err := gs.execGitInDir(gs.repoDir, "add", orgID); err == nil {
+			_ = gs.execGitInDir(gs.repoDir, "commit", "-m", fmt.Sprintf("sync: org %s update", orgID))
+		}
 	}
 
 	return nil
 }
 
 // GetHistory returns commit history for a specific resource.
-// Returns list of commits (hash, author, timestamp, message).
-func (gs *GitService) GetHistory(resourceType, resourceID string) ([]*Commit, error) {
-	// Filter by path
-	// resourceType is usually "page" or "database", but both are stored in pages/
+func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID string) ([]*Commit, error) {
+	orgID := models.GetOrgID(ctx)
+	targetDir := gs.repoDir
 	path := filepath.Join("pages", resourceID)
 
-	// Use git log with custom format to get all details in one go
-	// Format: hash|author|timestamp|message
-	// %H: commit hash
-	// %an: author name
-	// %ai: author date, ISO 8601-like format
-	// %s: subject
+	if orgID != "" {
+		targetDir = filepath.Join(gs.repoDir, orgID)
+		// Path is already relative to targetDir
+	}
+
 	format := "%H|%an|%ai|%s"
-	output, err := gs.gitOutput("log", "--pretty=format:"+format, "--", path)
+	output, err := gs.gitOutputInDir(targetDir, "log", "--pretty=format:"+format, "--", path)
 	if err != nil {
-		// git log returns error if no matches or path doesn't exist in git yet
 		return []*Commit{}, nil
 	}
 
@@ -117,9 +155,14 @@ func (gs *GitService) GetHistory(resourceType, resourceID string) ([]*Commit, er
 }
 
 // GetCommit retrieves a specific commit with full details.
-func (gs *GitService) GetCommit(hash string) (*CommitDetail, error) {
-	// Get commit details
-	output, err := gs.gitOutput("show", "-s", "--format=%H%n%ai%n%an%n%ae%n%s%n%b", hash)
+func (gs *GitService) GetCommit(ctx context.Context, hash string) (*CommitDetail, error) {
+	orgID := models.GetOrgID(ctx)
+	targetDir := gs.repoDir
+	if orgID != "" {
+		targetDir = filepath.Join(gs.repoDir, orgID)
+	}
+
+	output, err := gs.gitOutputInDir(targetDir, "show", "-s", "--format=%H%n%ai%n%an%n%ae%n%s%n%b", hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get commit: %w", err)
 	}
@@ -150,15 +193,24 @@ func (gs *GitService) GetCommit(hash string) (*CommitDetail, error) {
 }
 
 // GetFileAtCommit retrieves the content of a file at a specific commit.
-// Returns the file content as bytes.
-func (gs *GitService) GetFileAtCommit(hash, filePath string) ([]byte, error) {
-	// Use git show to get file at commit
-	fullPath := fmt.Sprintf("%s:%s", hash, filePath)
-	content, err := gs.gitOutputBytes("show", fullPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get file at commit: %w", err)
+func (gs *GitService) GetFileAtCommit(ctx context.Context, hash, filePath string) ([]byte, error) {
+	orgID := models.GetOrgID(ctx)
+	targetDir := gs.repoDir
+	if orgID != "" {
+		targetDir = filepath.Join(gs.repoDir, orgID)
+		// filePath is already relative to targetDir in most cases
+		// if it was passed as {orgID}/pages/... we need to strip it
+		if strings.HasPrefix(filePath, orgID+"/") {
+			filePath = strings.TrimPrefix(filePath, orgID+"/")
+		}
 	}
-	return content, nil
+
+	fullPath := fmt.Sprintf("%s:%s", hash, filePath)
+	output, err := gs.gitOutputBytesInDir(targetDir, "show", fullPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get file at commit in %s: %w", targetDir, err)
+	}
+	return output, nil
 }
 
 // Commit represents a commit in git history.
@@ -178,39 +230,36 @@ type CommitDetail struct {
 	Body      string    `json:"body"`
 }
 
-// execGit executes a git command in the repo directory.
-func (gs *GitService) execGit(args ...string) error {
-	cmd := gs.newGitCmd(args...)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	return cmd.Run()
-}
-
-// gitOutput executes a git command and returns the output as string.
-func (gs *GitService) gitOutput(args ...string) (string, error) {
-	cmd := gs.newGitCmd(args...)
-	output, err := cmd.CombinedOutput()
-	return string(output), err
-}
-
-// gitOutputBytes executes a git command and returns the output as bytes.
-func (gs *GitService) gitOutputBytes(args ...string) ([]byte, error) {
-	cmd := gs.newGitCmd(args...)
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, err
-	}
-	return output, nil
-}
-
-// newGitCmd creates a git command with isolated environment.
-func (gs *GitService) newGitCmd(args ...string) *exec.Cmd {
+// execGitInDir executes a git command in a specific directory.
+func (gs *GitService) execGitInDir(dir string, args ...string) error {
 	cmd := exec.Command("git", args...)
-	cmd.Dir = gs.repoDir
-	// Ignore system and global git config to ensure reproducibility and isolation
+	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
 		"GIT_CONFIG_GLOBAL=/dev/null",
 		"GIT_CONFIG_SYSTEM=/dev/null",
 	)
-	return cmd
+	return cmd.Run()
+}
+
+// gitOutputInDir executes a git command and returns output.
+func (gs *GitService) gitOutputInDir(dir string, args ...string) (string, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_SYSTEM=/dev/null",
+	)
+	output, err := cmd.CombinedOutput()
+	return string(output), err
+}
+
+// gitOutputBytesInDir executes a git command and returns output as bytes.
+func (gs *GitService) gitOutputBytesInDir(dir string, args ...string) ([]byte, error) {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_SYSTEM=/dev/null",
+	)
+	return cmd.Output()
 }

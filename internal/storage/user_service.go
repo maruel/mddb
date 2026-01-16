@@ -19,7 +19,7 @@ type UserService struct {
 
 // NewUserService creates a new user service.
 func NewUserService(rootDir string) (*UserService, error) {
-	usersDir := filepath.Join(rootDir, "users")
+	usersDir := filepath.Join(rootDir, "db", "users")
 	if err := os.MkdirAll(usersDir, 0o700); err != nil {
 		return nil, fmt.Errorf("failed to create users directory: %w", err)
 	}

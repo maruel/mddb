@@ -95,17 +95,20 @@ See `README.md` and `API.md` for details.
 - [x] **Auth System**: User registration, login, and JWT-based authentication.
 - [x] **Initial Organizations**: Workspace isolation and shared access.
 - [x] **Initial RBAC**: Enforce roles (Admin, Editor, Viewer) in middleware.
-- [ ] **Storage Restructuring**: Move page data to `data/{orgID}/pages/` and system metadata to `data/db/`.
-- [ ] **Path Resolution Refactor**: Update services (`PageService`, `DatabaseService`, etc.) to derive paths from `orgID`.
-- [ ] **Context-Propagated OrgID**: Standardize extraction of `orgID` from `context.Context` across service layers.
-- [ ] **GitService Refactoring**:
-    - [ ] Support multiple repository roots (root `data/` and submodule `data/{orgID}/`).
-    - [ ] Implement submodule management (init, add, update).
-    - [ ] Update `CommitChange` to route commits to the correct repository based on `orgID`.
-    - [ ] Implement automatic "Root Sync" for submodule pointer updates in the root repository.
-- [ ] **Per-Organization Git**: Initialize/manage separate Git repositories for each `data/{orgID}/` as submodules.
-- [ ] **Organization Lifecycle**: Bootstrapping logic for new organizations (dirs, git, welcome content).
+- [x] **Storage Restructuring**: Moved page data to `data/{orgID}/pages/` and system metadata to `data/db/`.
+- [x] **Path Resolution Refactor**: Update services (`PageService`, `DatabaseService`, etc.) to derive paths from `orgID`.
+- [x] **Context-Propagated OrgID**: Standardize extraction of `orgID` from `context.Context` across service layers.
+- [x] **Org ID Validation Middleware**: Ensure `{orgID}` in path matches user's `OrganizationID` (or they are a global admin).
+- [x] **GitService Refactoring**:
+    - [x] Support multiple repository roots (root `data/` and submodule `data/{orgID}/`).
+    - [x] Implement submodule management (init, add, update).
+    - [x] Update `CommitChange` to route commits to the correct repository based on `orgID`.
+    - [x] Implement automatic "Root Sync" for submodule pointer updates in the root repository.
+- [x] **Per-Organization Git**: Initialize/manage separate Git repositories for each `data/{orgID}/` as submodules.
+- [x] **Organization Lifecycle**: Bootstrapping logic for new organizations (dirs, git, welcome content).
 - [ ] **Isolation Verification**: Integration tests for cross-tenant access prevention.
+- [ ] **Linear Membership Model**: Support many-to-many User/Org relationship.
+- [ ] **Pending Memberships**: Resource assignment for invited users.
 
 ### Phase 7: Relational Metadata & Identity
 

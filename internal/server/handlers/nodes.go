@@ -45,11 +45,7 @@ type CreateNodeRequest struct {
 
 // ListNodes returns a list of all nodes
 func (h *NodeHandler) ListNodes(ctx context.Context, req ListNodesRequest) (*ListNodesResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	nodes, err := h.nodeService.ListNodes(orgID)
+	nodes, err := h.nodeService.ListNodes(ctx)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to list nodes", err)
 	}
@@ -58,11 +54,7 @@ func (h *NodeHandler) ListNodes(ctx context.Context, req ListNodesRequest) (*Lis
 
 // GetNode returns a specific node by ID
 func (h *NodeHandler) GetNode(ctx context.Context, req GetNodeRequest) (*models.Node, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	node, err := h.nodeService.GetNode(orgID, req.ID)
+	node, err := h.nodeService.GetNode(ctx, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("node")
 	}
@@ -74,12 +66,8 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req CreateNodeRequest) (*m
 	if req.Title == "" {
 		return nil, errors.MissingField("title")
 	}
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
 	// CreateNode now takes parentID as 4th arg, defaulting to empty for now
-	node, err := h.nodeService.CreateNode(orgID, req.Title, req.Type, "")
+	node, err := h.nodeService.CreateNode(ctx, req.Title, req.Type, "")
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create node", err)
 	}

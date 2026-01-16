@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -24,15 +25,16 @@ func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cac
 }
 
 // GetDatabase retrieves a database by ID.
-func (s *DatabaseService) GetDatabase(orgID, id string) (*models.Database, error) {
+func (s *DatabaseService) GetDatabase(ctx context.Context, id string) (*models.Database, error) {
 	if id == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
+	orgID := models.GetOrgID(ctx)
 	return s.fileStore.ReadDatabase(orgID, id)
 }
 
 // CreateDatabase creates a new database with a generated numeric ID.
-func (s *DatabaseService) CreateDatabase(orgID, title string, columns []models.Column) (*models.Database, error) {
+func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, columns []models.Column) (*models.Database, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
@@ -40,6 +42,7 @@ func (s *DatabaseService) CreateDatabase(orgID, title string, columns []models.C
 		return nil, fmt.Errorf("at least one column is required")
 	}
 
+	orgID := models.GetOrgID(ctx)
 	// Generate numeric ID (monotonically increasing)
 	id := s.fileStore.NextID(orgID)
 
@@ -72,7 +75,7 @@ func (s *DatabaseService) CreateDatabase(orgID, title string, columns []models.C
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange("create", "database", id, title); err != nil {
+		if err := s.gitService.CommitChange(ctx, "create", "database", id, title); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -81,7 +84,7 @@ func (s *DatabaseService) CreateDatabase(orgID, title string, columns []models.C
 }
 
 // UpdateDatabase updates an existing database's schema.
-func (s *DatabaseService) UpdateDatabase(orgID, id, title string, columns []models.Column) (*models.Database, error) {
+func (s *DatabaseService) UpdateDatabase(ctx context.Context, id, title string, columns []models.Column) (*models.Database, error) {
 	if id == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -92,6 +95,7 @@ func (s *DatabaseService) UpdateDatabase(orgID, id, title string, columns []mode
 		return nil, fmt.Errorf("at least one column is required")
 	}
 
+	orgID := models.GetOrgID(ctx)
 	db, err := s.fileStore.ReadDatabase(orgID, id)
 	if err != nil {
 		return nil, err
@@ -109,7 +113,7 @@ func (s *DatabaseService) UpdateDatabase(orgID, id, title string, columns []mode
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange("update", "database", id, "Updated schema"); err != nil {
+		if err := s.gitService.CommitChange(ctx, "update", "database", id, "Updated schema"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -118,10 +122,11 @@ func (s *DatabaseService) UpdateDatabase(orgID, id, title string, columns []mode
 }
 
 // DeleteDatabase deletes a database and all its records.
-func (s *DatabaseService) DeleteDatabase(orgID, id string) error {
+func (s *DatabaseService) DeleteDatabase(ctx context.Context, id string) error {
 	if id == "" {
 		return fmt.Errorf("database id cannot be empty")
 	}
+	orgID := models.GetOrgID(ctx)
 	if err := s.fileStore.DeleteDatabase(orgID, id); err != nil {
 		return err
 	}
@@ -131,7 +136,7 @@ func (s *DatabaseService) DeleteDatabase(orgID, id string) error {
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange("delete", "database", id, "Deleted database"); err != nil {
+		if err := s.gitService.CommitChange(ctx, "delete", "database", id, "Deleted database"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -140,16 +145,18 @@ func (s *DatabaseService) DeleteDatabase(orgID, id string) error {
 }
 
 // ListDatabases returns all databases.
-func (s *DatabaseService) ListDatabases(orgID string) ([]*models.Database, error) {
+func (s *DatabaseService) ListDatabases(ctx context.Context) ([]*models.Database, error) {
+	orgID := models.GetOrgID(ctx)
 	return s.fileStore.ListDatabases(orgID)
 }
 
 // CreateRecord creates a new record in a database.
-func (s *DatabaseService) CreateRecord(orgID, databaseID string, data map[string]interface{}) (*models.Record, error) {
+func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, data map[string]interface{}) (*models.Record, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
 
+	orgID := models.GetOrgID(ctx)
 	// Verify database exists
 	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
@@ -177,7 +184,7 @@ func (s *DatabaseService) CreateRecord(orgID, databaseID string, data map[string
 	s.cache.InvalidateRecords(databaseID)
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange("create", "record", id, fmt.Sprintf("in database %s", databaseID)); err != nil {
+		if err := s.gitService.CommitChange(ctx, "create", "record", id, fmt.Sprintf("in database %s", databaseID)); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -186,7 +193,7 @@ func (s *DatabaseService) CreateRecord(orgID, databaseID string, data map[string
 }
 
 // GetRecords retrieves all records from a database.
-func (s *DatabaseService) GetRecords(orgID, databaseID string) ([]*models.Record, error) {
+func (s *DatabaseService) GetRecords(ctx context.Context, databaseID string) ([]*models.Record, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -195,6 +202,7 @@ func (s *DatabaseService) GetRecords(orgID, databaseID string) ([]*models.Record
 		return records, nil
 	}
 
+	orgID := models.GetOrgID(ctx)
 	// Verify database exists
 	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
@@ -210,11 +218,12 @@ func (s *DatabaseService) GetRecords(orgID, databaseID string) ([]*models.Record
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
-func (s *DatabaseService) GetRecordsPage(orgID, databaseID string, offset, limit int) ([]*models.Record, error) {
+func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseID string, offset, limit int) ([]*models.Record, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
 
+	orgID := models.GetOrgID(ctx)
 	// Verify database exists
 	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
@@ -224,7 +233,7 @@ func (s *DatabaseService) GetRecordsPage(orgID, databaseID string, offset, limit
 }
 
 // GetRecord retrieves a specific record by ID.
-func (s *DatabaseService) GetRecord(orgID, databaseID, recordID string) (*models.Record, error) {
+func (s *DatabaseService) GetRecord(ctx context.Context, databaseID, recordID string) (*models.Record, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -232,6 +241,7 @@ func (s *DatabaseService) GetRecord(orgID, databaseID, recordID string) (*models
 		return nil, fmt.Errorf("record id cannot be empty")
 	}
 
+	orgID := models.GetOrgID(ctx)
 	records, err := s.fileStore.ReadRecords(orgID, databaseID)
 	if err != nil {
 		return nil, err

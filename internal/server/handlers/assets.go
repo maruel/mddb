@@ -78,11 +78,7 @@ type ServeAssetResponse struct {
 
 // ListPageAssets returns a list of all assets in a page
 func (h *AssetHandler) ListPageAssets(ctx context.Context, req ListPageAssetsRequest) (*ListPageAssetsResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	assets, err := h.assetService.ListAssets(orgID, req.PageID)
+	assets, err := h.assetService.ListAssets(ctx, req.PageID)
 	if err != nil {
 		return nil, errors.NotFound("page")
 	}
@@ -105,11 +101,7 @@ func (h *AssetHandler) DeletePageAsset(
 	ctx context.Context,
 	req DeletePageAssetRequest,
 ) (*DeletePageAssetResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	err := h.assetService.DeleteAsset(orgID, req.PageID, req.AssetName)
+	err := h.assetService.DeleteAsset(ctx, req.PageID, req.AssetName)
 	if err != nil {
 		return nil, errors.NotFound("asset")
 	}
@@ -131,10 +123,18 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// For asset serving, we might not have a full user session if it's via <img> tag without credentials
+	// but we still want to provide the orgID to the service.
+	// We create a minimal user with the orgID if not authenticated.
+	ctx := r.Context()
+	if models.GetOrgID(ctx) == "" {
+		ctx = context.WithValue(ctx, models.UserKey, &models.User{OrganizationID: orgID})
+	}
+
 	// Read asset data
-	data, err := h.assetService.GetAsset(orgID, pageID, assetName)
+	data, err := h.assetService.GetAsset(ctx, pageID, assetName)
 	if err != nil {
-		slog.ErrorContext(r.Context(), "failed to read asset", "orgID", orgID, "pageID", pageID, "assetName", assetName, "err", err)
+		slog.ErrorContext(ctx, "failed to read asset", "orgID", orgID, "pageID", pageID, "assetName", assetName, "err", err)
 		http.NotFound(w, r)
 		return
 	}
@@ -156,15 +156,9 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 // Handles POST /api/{orgID}/pages/{id}/assets
 // Needs custom http.Handler since Wrap doesn't support multipart file handling.
 func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Request) {
-	orgID := models.GetOrgID(r.Context())
-	pathOrgID := r.PathValue("orgID")
+	ctx := r.Context()
+	orgID := models.GetOrgID(ctx)
 	pageID := r.PathValue("id")
-
-	if pathOrgID != orgID {
-		w.WriteHeader(http.StatusForbidden)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Organization mismatch"})
-		return
-	}
 
 	if pageID == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -197,9 +191,9 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Save asset
-	asset, err := h.assetService.SaveAsset(orgID, pageID, fileHeader.Filename, data)
+	asset, err := h.assetService.SaveAsset(ctx, pageID, fileHeader.Filename, data)
 	if err != nil {
-		slog.ErrorContext(r.Context(), "failed to save asset", "orgID", orgID, "pageID", pageID, "err", err)
+		slog.ErrorContext(ctx, "failed to save asset", "orgID", orgID, "pageID", pageID, "err", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Failed to save asset"})
 		return

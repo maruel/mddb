@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -24,10 +25,12 @@ func NewNodeService(fileStore *FileStore, gitService *GitService, cache *Cache) 
 }
 
 // GetNode retrieves a unified node by ID.
-func (s *NodeService) GetNode(orgID, id string) (*models.Node, error) {
+func (s *NodeService) GetNode(ctx context.Context, id string) (*models.Node, error) {
 	if id == "" {
 		return nil, fmt.Errorf("node id cannot be empty")
 	}
+
+	orgID := models.GetOrgID(ctx)
 
 	// For GetNode, we don't currently cache individual nodes but we could
 	// If we have a cached node tree, we could search in it
@@ -41,7 +44,8 @@ func (s *NodeService) GetNode(orgID, id string) (*models.Node, error) {
 }
 
 // ListNodes returns the full hierarchical tree of nodes.
-func (s *NodeService) ListNodes(orgID string) ([]*models.Node, error) {
+func (s *NodeService) ListNodes(ctx context.Context) ([]*models.Node, error) {
+	orgID := models.GetOrgID(ctx)
 	if nodes := s.cache.GetNodeTree(); nodes != nil {
 		return nodes, nil
 	}
@@ -56,7 +60,8 @@ func (s *NodeService) ListNodes(orgID string) ([]*models.Node, error) {
 }
 
 // CreateNode creates a new node (can be document, database, or hybrid)
-func (s *NodeService) CreateNode(orgID string, title string, nodeType models.NodeType, parentID string) (*models.Node, error) {
+func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType models.NodeType, parentID string) (*models.Node, error) {
+	orgID := models.GetOrgID(ctx)
 	id := s.fileStore.NextID(orgID)
 	now := time.Now()
 

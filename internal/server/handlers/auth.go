@@ -89,7 +89,7 @@ func (h *AuthHandler) Register(ctx context.Context, req RegisterRequest) (*Login
 	orgID := ""
 	if count == 0 {
 		role = models.RoleAdmin
-		org, err := h.orgService.CreateOrganization("Default Organization")
+		org, err := h.orgService.CreateOrganization(ctx, "Default Organization")
 		if err != nil {
 			return nil, errors.InternalWithError("Failed to create default organization", err)
 		}

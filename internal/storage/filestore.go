@@ -84,7 +84,7 @@ func (fs *FileStore) orgPagesDir(orgID string) string {
 	if orgID == "" {
 		return fs.pagesDir
 	}
-	dir := filepath.Join(fs.rootDir, "orgs", orgID, "pages")
+	dir := filepath.Join(fs.rootDir, orgID, "pages")
 	_ = os.MkdirAll(dir, 0o755)
 	return dir
 }

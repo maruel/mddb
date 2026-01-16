@@ -69,7 +69,7 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize user service: %w", err)
 	}
 
-	orgService, err := storage.NewOrganizationService(*dataDir)
+	orgService, err := storage.NewOrganizationService(*dataDir, fileStore, gitService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize organization service: %w", err)
 	}

@@ -81,6 +81,13 @@ func RequireRole(requiredRole models.UserRole) func(http.Handler) http.Handler {
 				return
 			}
 
+			// Check organization isolation
+			orgID := r.PathValue("orgID")
+			if orgID != "" && orgID != user.OrganizationID {
+				http.Error(w, "Forbidden: cross-organization access denied", http.StatusForbidden)
+				return
+			}
+
 			if !hasPermission(user.Role, requiredRole) {
 				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
 				return

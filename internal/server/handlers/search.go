@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/internal/errors"
-	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
 
@@ -50,11 +49,7 @@ type SearchResultDTO struct {
 
 // Search performs a full-text search across all nodes.
 func (h *SearchHandler) Search(ctx context.Context, req SearchRequest) (*SearchResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	results, err := h.searchService.Search(orgID, storage.SearchOptions{
+	results, err := h.searchService.Search(ctx, storage.SearchOptions{
 		Query: req.Query,
 	})
 	if err != nil {

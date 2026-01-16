@@ -24,7 +24,7 @@ func TestAssetService_SaveAsset(t *testing.T) {
 
 	// Save an asset
 	testData := []byte("test image data")
-	asset, err := as.SaveAsset("", "1", "test.png", testData)
+	asset, err := as.SaveAsset(t.Context(), "1", "test.png", testData)
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
 	}
@@ -72,13 +72,13 @@ func TestAssetService_GetAsset(t *testing.T) {
 
 	as := NewAssetService(fs, nil)
 	testData := []byte("test image data")
-	_, err = as.SaveAsset("", "1", "test.png", testData)
+	_, err = as.SaveAsset(t.Context(), "1", "test.png", testData)
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
 	}
 
 	// Retrieve asset
-	data, err := as.GetAsset("", "1", "test.png")
+	data, err := as.GetAsset(t.Context(), "1", "test.png")
 	if err != nil {
 		t.Fatalf("failed to get asset: %v", err)
 	}
@@ -102,7 +102,7 @@ func TestAssetService_DeleteAsset(t *testing.T) {
 	}
 
 	as := NewAssetService(fs, nil)
-	_, err = as.SaveAsset("", "1", "test.png", []byte("test data"))
+	_, err = as.SaveAsset(t.Context(), "1", "test.png", []byte("test data"))
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
 	}
@@ -114,7 +114,7 @@ func TestAssetService_DeleteAsset(t *testing.T) {
 	}
 
 	// Delete asset
-	err = as.DeleteAsset("", "1", "test.png")
+	err = as.DeleteAsset(t.Context(), "1", "test.png")
 	if err != nil {
 		t.Fatalf("failed to delete asset: %v", err)
 	}
@@ -143,14 +143,14 @@ func TestAssetService_ListAssets(t *testing.T) {
 	// Save multiple assets
 	assets := []string{"image1.png", "image2.jpg", "document.pdf"}
 	for _, name := range assets {
-		_, err := as.SaveAsset("", "1", name, []byte("test data"))
+		_, err := as.SaveAsset(t.Context(), "1", name, []byte("test data"))
 		if err != nil {
 			t.Fatalf("failed to save asset %s: %v", name, err)
 		}
 	}
 
 	// List assets
-	listed, err := as.ListAssets("", "1")
+	listed, err := as.ListAssets(t.Context(), "1")
 	if err != nil {
 		t.Fatalf("failed to list assets: %v", err)
 	}
@@ -189,7 +189,7 @@ func TestAssetService_Validation(t *testing.T) {
 		{
 			name: "empty page id on save",
 			fn: func() error {
-				_, err := as.SaveAsset("", "", "test.png", []byte("data"))
+				_, err := as.SaveAsset(t.Context(), "", "test.png", []byte("data"))
 				return err
 			},
 			wantErr: true,
@@ -197,7 +197,7 @@ func TestAssetService_Validation(t *testing.T) {
 		{
 			name: "empty file name on save",
 			fn: func() error {
-				_, err := as.SaveAsset("", "1", "", []byte("data"))
+				_, err := as.SaveAsset(t.Context(), "1", "", []byte("data"))
 				return err
 			},
 			wantErr: true,
@@ -205,7 +205,7 @@ func TestAssetService_Validation(t *testing.T) {
 		{
 			name: "empty data on save",
 			fn: func() error {
-				_, err := as.SaveAsset("", "1", "test.png", []byte(""))
+				_, err := as.SaveAsset(t.Context(), "1", "test.png", []byte(""))
 				return err
 			},
 			wantErr: true,
@@ -213,7 +213,7 @@ func TestAssetService_Validation(t *testing.T) {
 		{
 			name: "empty page id on get",
 			fn: func() error {
-				_, err := as.GetAsset("", "", "test.png")
+				_, err := as.GetAsset(t.Context(), "", "test.png")
 				return err
 			},
 			wantErr: true,
@@ -221,7 +221,7 @@ func TestAssetService_Validation(t *testing.T) {
 		{
 			name: "empty asset name on get",
 			fn: func() error {
-				_, err := as.GetAsset("", "1", "")
+				_, err := as.GetAsset(t.Context(), "1", "")
 				return err
 			},
 			wantErr: true,
@@ -229,7 +229,7 @@ func TestAssetService_Validation(t *testing.T) {
 		{
 			name: "empty page id on list",
 			fn: func() error {
-				_, err := as.ListAssets("", "")
+				_, err := as.ListAssets(t.Context(), "")
 				return err
 			},
 			wantErr: true,

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,25 +13,29 @@ import (
 
 // OrganizationService handles organization management.
 type OrganizationService struct {
-	rootDir string
-	orgsDir string
+	rootDir    string
+	orgsDir    string
+	fileStore  *FileStore
+	gitService *GitService
 }
 
 // NewOrganizationService creates a new organization service.
-func NewOrganizationService(rootDir string) (*OrganizationService, error) {
-	orgsDir := filepath.Join(rootDir, "organizations")
+func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *GitService) (*OrganizationService, error) {
+	orgsDir := filepath.Join(rootDir, "db", "organizations")
 	if err := os.MkdirAll(orgsDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create organizations directory: %w", err)
 	}
 
 	return &OrganizationService{
-		rootDir: rootDir,
-		orgsDir: orgsDir,
+		rootDir:    rootDir,
+		orgsDir:    orgsDir,
+		fileStore:  fileStore,
+		gitService: gitService,
 	}, nil
 }
 
 // CreateOrganization creates a new organization.
-func (s *OrganizationService) CreateOrganization(name string) (*models.Organization, error) {
+func (s *OrganizationService) CreateOrganization(ctx context.Context, name string) (*models.Organization, error) {
 	if name == "" {
 		return nil, fmt.Errorf("organization name is required")
 	}
@@ -48,9 +53,34 @@ func (s *OrganizationService) CreateOrganization(name string) (*models.Organizat
 	}
 
 	// Create organization content directory
-	orgContentDir := filepath.Join(s.rootDir, "orgs", id, "pages")
-	if err := os.MkdirAll(orgContentDir, 0o755); err != nil {
+	orgDir := filepath.Join(s.rootDir, id)
+	orgPagesDir := filepath.Join(orgDir, "pages")
+	if err := os.MkdirAll(orgPagesDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create organization content directory: %w", err)
+	}
+
+	// Initialize git repository for the organization
+	if s.gitService != nil {
+		if err := s.gitService.InitRepository(orgDir); err != nil {
+			fmt.Printf("failed to initialize git repo for org %s: %v\n", id, err)
+		}
+	}
+
+	// Create welcome page
+	if s.fileStore != nil {
+		welcomeTitle := "Welcome to " + name
+		welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
+		_, _ = s.fileStore.WritePage(id, "1", welcomeTitle, welcomeContent)
+
+		// Commit the welcome page
+		if s.gitService != nil {
+			// Create a context with the new org ID if not already present
+			orgCtx := ctx
+			if models.GetOrgID(orgCtx) == "" {
+				orgCtx = context.WithValue(ctx, models.UserKey, &models.User{OrganizationID: id})
+			}
+			_ = s.gitService.CommitChange(orgCtx, "create", "page", "1", "Initial welcome page")
+		}
 	}
 
 	return org, nil

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -43,10 +44,12 @@ func NewSearchService(fileStore *FileStore) *SearchService {
 }
 
 // Search performs a full-text search across all nodes.
-func (s *SearchService) Search(orgID string, opts SearchOptions) ([]SearchResult, error) {
+func (s *SearchService) Search(ctx context.Context, opts SearchOptions) ([]SearchResult, error) {
 	if opts.Query == "" {
 		return nil, nil
 	}
+
+	orgID := models.GetOrgID(ctx)
 
 	if !opts.MatchTitle && !opts.MatchBody && !opts.MatchFields {
 		opts.MatchTitle = true

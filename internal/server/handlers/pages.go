@@ -5,7 +5,6 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/internal/errors"
-	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
 
@@ -103,11 +102,7 @@ type GetPageVersionResponse struct {
 
 // ListPages returns a list of all pages
 func (h *PageHandler) ListPages(ctx context.Context, req ListPagesRequest) (*ListPagesResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	pages, err := h.pageService.ListPages(orgID)
+	pages, err := h.pageService.ListPages(ctx)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to list pages", err)
 	}
@@ -127,11 +122,7 @@ func (h *PageHandler) ListPages(ctx context.Context, req ListPagesRequest) (*Lis
 
 // GetPage returns a specific page by ID
 func (h *PageHandler) GetPage(ctx context.Context, req GetPageRequest) (*GetPageResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	page, err := h.pageService.GetPage(orgID, req.ID)
+	page, err := h.pageService.GetPage(ctx, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("page")
 	}
@@ -149,11 +140,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, req CreatePageRequest) (*C
 		return nil, errors.MissingField("title")
 	}
 
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	page, err := h.pageService.CreatePage(orgID, req.Title, req.Content)
+	page, err := h.pageService.CreatePage(ctx, req.Title, req.Content)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create page", err)
 	}
@@ -163,11 +150,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, req CreatePageRequest) (*C
 
 // UpdatePage updates an existing page
 func (h *PageHandler) UpdatePage(ctx context.Context, req UpdatePageRequest) (*UpdatePageResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	page, err := h.pageService.UpdatePage(orgID, req.ID, req.Title, req.Content)
+	page, err := h.pageService.UpdatePage(ctx, req.ID, req.Title, req.Content)
 	if err != nil {
 		return nil, errors.NotFound("page")
 	}
@@ -177,11 +160,7 @@ func (h *PageHandler) UpdatePage(ctx context.Context, req UpdatePageRequest) (*U
 
 // DeletePage deletes a page
 func (h *PageHandler) DeletePage(ctx context.Context, req DeletePageRequest) (*DeletePageResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	err := h.pageService.DeletePage(orgID, req.ID)
+	err := h.pageService.DeletePage(ctx, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("page")
 	}
@@ -191,11 +170,7 @@ func (h *PageHandler) DeletePage(ctx context.Context, req DeletePageRequest) (*D
 
 // GetPageHistory returns the history of a page
 func (h *PageHandler) GetPageHistory(ctx context.Context, req GetPageHistoryRequest) (*GetPageHistoryResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	history, err := h.pageService.GetPageHistory(orgID, req.ID)
+	history, err := h.pageService.GetPageHistory(ctx, req.ID)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to get page history", err)
 	}
@@ -205,11 +180,7 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, req GetPageHistoryRequ
 
 // GetPageVersion returns a specific version of a page
 func (h *PageHandler) GetPageVersion(ctx context.Context, req GetPageVersionRequest) (*GetPageVersionResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	content, err := h.pageService.GetPageVersion(orgID, req.ID, req.Hash)
+	content, err := h.pageService.GetPageVersion(ctx, req.ID, req.Hash)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to get page version", err)
 	}

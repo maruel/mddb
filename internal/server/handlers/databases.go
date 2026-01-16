@@ -144,11 +144,7 @@ type DeleteRecordResponse struct{}
 
 // ListDatabases returns a list of all databases
 func (h *DatabaseHandler) ListDatabases(ctx context.Context, req ListDatabasesRequest) (*ListDatabasesResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	databases, err := h.databaseService.ListDatabases(orgID)
+	databases, err := h.databaseService.ListDatabases(ctx)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to list databases", err)
 	}
@@ -168,11 +164,7 @@ func (h *DatabaseHandler) ListDatabases(ctx context.Context, req ListDatabasesRe
 
 // GetDatabase returns a specific database by ID
 func (h *DatabaseHandler) GetDatabase(ctx context.Context, req GetDatabaseRequest) (*GetDatabaseResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	db, err := h.databaseService.GetDatabase(orgID, req.ID)
+	db, err := h.databaseService.GetDatabase(ctx, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}
@@ -194,11 +186,7 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context,
 		return nil, errors.MissingField("title")
 	}
 
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	db, err := h.databaseService.CreateDatabase(orgID, req.Title, req.Columns)
+	db, err := h.databaseService.CreateDatabase(ctx, req.Title, req.Columns)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create database", err)
 	}
@@ -210,11 +198,7 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context,
 func (h *DatabaseHandler) UpdateDatabase(ctx context.Context,
 	req UpdateDatabaseRequest,
 ) (*UpdateDatabaseResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	db, err := h.databaseService.UpdateDatabase(orgID, req.ID, req.Title, req.Columns)
+	db, err := h.databaseService.UpdateDatabase(ctx, req.ID, req.Title, req.Columns)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}
@@ -226,11 +210,7 @@ func (h *DatabaseHandler) UpdateDatabase(ctx context.Context,
 func (h *DatabaseHandler) DeleteDatabase(ctx context.Context,
 	req DeleteDatabaseRequest,
 ) (*DeleteDatabaseResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	err := h.databaseService.DeleteDatabase(orgID, req.ID)
+	err := h.databaseService.DeleteDatabase(ctx, req.ID)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}
@@ -247,11 +227,7 @@ func (h *DatabaseHandler) ListRecords(ctx context.Context, req ListRecordsReques
 		limit = 1000 // Default limit to prevent huge responses
 	}
 
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	records, err := h.databaseService.GetRecordsPage(orgID, req.ID, req.Offset, limit)
+	records, err := h.databaseService.GetRecordsPage(ctx, req.ID, req.Offset, limit)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}
@@ -271,11 +247,7 @@ func (h *DatabaseHandler) ListRecords(ctx context.Context, req ListRecordsReques
 
 // GetRecord returns a specific record
 func (h *DatabaseHandler) GetRecord(ctx context.Context, req GetRecordRequest) (*GetRecordResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	record, err := h.databaseService.GetRecord(orgID, req.ID, req.RID)
+	record, err := h.databaseService.GetRecord(ctx, req.ID, req.RID)
 	if err != nil {
 		return nil, errors.NotFound("record")
 	}
@@ -290,11 +262,7 @@ func (h *DatabaseHandler) GetRecord(ctx context.Context, req GetRecordRequest) (
 
 // CreateRecord creates a new record in a database
 func (h *DatabaseHandler) CreateRecord(ctx context.Context, req CreateRecordRequest) (*CreateRecordResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
-	record, err := h.databaseService.CreateRecord(orgID, req.ID, req.Data)
+	record, err := h.databaseService.CreateRecord(ctx, req.ID, req.Data)
 	if err != nil {
 		return nil, errors.NotFound("database")
 	}
@@ -304,18 +272,10 @@ func (h *DatabaseHandler) CreateRecord(ctx context.Context, req CreateRecordRequ
 
 // UpdateRecord updates an existing record
 func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req UpdateRecordRequest) (*UpdateRecordResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
 	return nil, errors.NotImplemented("record update")
 }
 
 // DeleteRecord deletes a record
 func (h *DatabaseHandler) DeleteRecord(ctx context.Context, req DeleteRecordRequest) (*DeleteRecordResponse, error) {
-	orgID := models.GetOrgID(ctx)
-	if req.OrgID != orgID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
-	}
 	return nil, errors.NotImplemented("record delete")
 }

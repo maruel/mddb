@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"mime"
 	"path/filepath"
@@ -23,7 +24,7 @@ func NewAssetService(fileStore *FileStore, gitService *GitService) *AssetService
 }
 
 // SaveAsset saves an asset file to a page's directory.
-func (s *AssetService) SaveAsset(orgID, pageID, fileName string, data []byte) (*models.Asset, error) {
+func (s *AssetService) SaveAsset(ctx context.Context, pageID, fileName string, data []byte) (*models.Asset, error) {
 	if pageID == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
@@ -34,6 +35,7 @@ func (s *AssetService) SaveAsset(orgID, pageID, fileName string, data []byte) (*
 		return nil, fmt.Errorf("file data cannot be empty")
 	}
 
+	orgID := models.GetOrgID(ctx)
 	// Verify page exists
 	if !s.fileStore.PageExists(orgID, pageID) {
 		return nil, fmt.Errorf("page not found")
@@ -59,7 +61,7 @@ func (s *AssetService) SaveAsset(orgID, pageID, fileName string, data []byte) (*
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange("create", "asset", fileName, fmt.Sprintf("in page %s", pageID)); err != nil {
+		if err := s.gitService.CommitChange(ctx, "create", "asset", fileName, fmt.Sprintf("in page %s", pageID)); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -68,7 +70,7 @@ func (s *AssetService) SaveAsset(orgID, pageID, fileName string, data []byte) (*
 }
 
 // GetAsset retrieves asset file data.
-func (s *AssetService) GetAsset(orgID, pageID, assetName string) ([]byte, error) {
+func (s *AssetService) GetAsset(ctx context.Context, pageID, assetName string) ([]byte, error) {
 	if pageID == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
@@ -76,11 +78,12 @@ func (s *AssetService) GetAsset(orgID, pageID, assetName string) ([]byte, error)
 		return nil, fmt.Errorf("asset name cannot be empty")
 	}
 
+	orgID := models.GetOrgID(ctx)
 	return s.fileStore.ReadAsset(orgID, pageID, assetName)
 }
 
 // DeleteAsset deletes an asset file from a page's directory.
-func (s *AssetService) DeleteAsset(orgID, pageID, assetName string) error {
+func (s *AssetService) DeleteAsset(ctx context.Context, pageID, assetName string) error {
 	if pageID == "" {
 		return fmt.Errorf("page id cannot be empty")
 	}
@@ -88,12 +91,13 @@ func (s *AssetService) DeleteAsset(orgID, pageID, assetName string) error {
 		return fmt.Errorf("asset name cannot be empty")
 	}
 
+	orgID := models.GetOrgID(ctx)
 	if err := s.fileStore.DeleteAsset(orgID, pageID, assetName); err != nil {
 		return err
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange("delete", "asset", assetName, fmt.Sprintf("in page %s", pageID)); err != nil {
+		if err := s.gitService.CommitChange(ctx, "delete", "asset", assetName, fmt.Sprintf("in page %s", pageID)); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -102,10 +106,11 @@ func (s *AssetService) DeleteAsset(orgID, pageID, assetName string) error {
 }
 
 // ListAssets lists all assets in a page's directory.
-func (s *AssetService) ListAssets(orgID, pageID string) ([]*models.Asset, error) {
+func (s *AssetService) ListAssets(ctx context.Context, pageID string) ([]*models.Asset, error) {
 	if pageID == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
 
+	orgID := models.GetOrgID(ctx)
 	return s.fileStore.ListAssets(orgID, pageID)
 }
