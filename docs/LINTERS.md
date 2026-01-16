@@ -17,7 +17,6 @@ Configured in `.golangci.yml` at the project root.
 - **goimports** - Organizes imports
 - **govet** - Catches suspicious constructs
 - **ineffassign** - Detects unused assignments
-- **lll** - Enforces max line length (120 characters)
 - **misspell** - Finds common spelling mistakes
 - **nolintlint** - Validates `//nolint` directives
 - **revive** - Style enforcement
@@ -39,7 +38,6 @@ make lint-fix         # Auto-fix linting issues
 - Use octal literals with `0o` prefix (e.g., `0o755` not `0755`)
 - Use `errors.Is()` instead of `==` for error comparison
 - No unchecked error returns (suppress with `_ = err` or `if err != nil { ... }`)
-- Max line length: 120 characters
 - Proper export comments on all public symbols
 
 ## Frontend (ESLint + Prettier)
