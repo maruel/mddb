@@ -125,6 +125,16 @@ make build            # Build Go binary
 
 ## API Development
 
+### Type Generation (Single Source of Truth)
+
+mddb uses [tygo](https://github.com/gzuidhof/tygo) to generate TypeScript interfaces from Go structs. This ensures the frontend and backend stay in sync automatically.
+
+- **Source of Truth**: Go structs in `internal/models/`, `internal/storage/`, and `internal/server/handlers/`.
+- **Generated File**: `frontend/src/types.ts` (DO NOT EDIT MANUALLY).
+- **Command**: `make types` (included in `make build`).
+
+When you add or modify a Request/Response struct or a model in Go, run `make types` to update the frontend.
+
 ### Endpoint Conventions
 
 - RESTful: Use HTTP verbs (GET, POST, PUT, DELETE) correctly

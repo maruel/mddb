@@ -125,6 +125,7 @@ See `README.md` and `API.md` for details.
 - [x] **Org-Aware Search**: Scope search results strictly to the active organization. (Implemented in SearchService)
 - [x] **Frontend Multi-tenancy UX**:
     - [x] **Organization Switcher**: UI component for switching between active memberships.
+- [x] **Unified API Type Generation (tygo)**: Go as single source of truth for frontend types.
 - [x] **Quota Enforcement**: Track and limit resource usage (storage, pages) per organization.
 - [x] **User UI**: Management of users, permissions, and quotas in the frontend.
 

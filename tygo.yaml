@@ -1,0 +1,30 @@
+packages:
+  - path: "github.com/maruel/mddb/internal/models"
+    type_mappings:
+      "time.Time": "string"
+      "NodeType": "'document' | 'database' | 'hybrid'"
+      "UserRole": "'admin' | 'editor' | 'viewer'"
+    output_path: "frontend/src/models.gen.ts"
+
+  - path: "github.com/maruel/mddb/internal/storage"
+    type_mappings:
+      "time.Time": "string"
+    output_path: "frontend/src/storage.gen.ts"
+
+  - path: "github.com/maruel/mddb/internal/server/handlers"
+    type_mappings:
+      "time.Time": "string"
+      "models.Node": "Node"
+      "models.NodeType": "'document' | 'database' | 'hybrid'"
+      "models.Column": "Column"
+      "models.Record": "Record"
+      "models.User": "User"
+      "models.UserRole": "'admin' | 'editor' | 'viewer'"
+      "models.Membership": "Membership"
+      "models.Invitation": "Invitation"
+      "models.Organization": "Organization"
+      "models.Asset": "Asset"
+      "storage.Commit": "Commit"
+      "storage.SearchResult": "SearchResult"
+    output_path: "frontend/src/handlers.gen.ts"
+    indent: "  "
