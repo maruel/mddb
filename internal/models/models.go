@@ -61,15 +61,15 @@ type Record struct {
 
 // User represents a system user.
 type User struct {
-	ID             string          `json:"id"`
-	Email          string          `json:"email"`
-	Name           string          `json:"name"`
-	OrganizationID string           `json:"organization_id"` // Active organization
-	Role           UserRole         `json:"role"`            // Role in active organization
-	Memberships    []Membership     `json:"memberships,omitempty"`
+	ID              string          `json:"id"`
+	Email           string          `json:"email"`
+	Name            string          `json:"name"`
+	OrganizationID  string          `json:"organization_id"` // Active organization
+	Role            UserRole        `json:"role"`            // Role in active organization
+	Memberships     []Membership    `json:"memberships,omitempty"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty"`
-	Created        time.Time       `json:"created"`
-	Modified       time.Time       `json:"modified"`
+	Created         time.Time       `json:"created"`
+	Modified        time.Time       `json:"modified"`
 }
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.

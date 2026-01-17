@@ -230,16 +230,6 @@ func formatBool(b bool) string {
 	return "false"
 }
 
-// countMatches counts occurrences of query in text (case-insensitive).
-func countMatches(text, query string) int {
-	if query == "" {
-		return 0
-	}
-	text = strings.ToLower(text)
-	query = strings.ToLower(query)
-	return strings.Count(text, query)
-}
-
 // truncate limits string length with ellipsis.
 func truncate(s string, maxLen int) string {
 	if len(s) > maxLen {

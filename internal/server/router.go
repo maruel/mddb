@@ -15,7 +15,7 @@ import (
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
-func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, jwtSecret string, googleClientID, googleClientSecret string) http.Handler {
+func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, jwtSecret, googleClientID, googleClientSecret string) http.Handler {
 	cache := storage.NewCache()
 	mux := &http.ServeMux{}
 	ph := handlers.NewPageHandler(fileStore, gitService, cache)

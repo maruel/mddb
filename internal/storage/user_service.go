@@ -114,7 +114,7 @@ func (s *UserService) UpdateUserRole(id string, role models.UserRole) error {
 }
 
 // UpdateUserOrg updates the organization of a user and ensures membership exists.
-func (s *UserService) UpdateUserOrg(id string, orgID string) error {
+func (s *UserService) UpdateUserOrg(id, orgID string) error {
 	user, hash, err := s.getUserWithHash(id)
 	if err != nil {
 		return err

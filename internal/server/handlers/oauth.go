@@ -64,7 +64,9 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to get user info", http.StatusInternalServerError)
 		return
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	var googleUser struct {
 		ID    string `json:"id"`

@@ -90,7 +90,7 @@ See `README.md` and `API.md` for details.
     - [x] Advanced Database Views (Gallery, Board).
 
 ### Phase 6: Multi-tenant Foundation ✓
-*In Progress.*
+*Completed.*
 
 - [x] **Auth System**: User registration, login, and JWT-based authentication.
 - [x] **Initial Organizations**: Workspace isolation and shared access.
@@ -106,22 +106,25 @@ See `README.md` and `API.md` for details.
     - [x] Implement automatic "Root Sync" for submodule pointer updates in the root repository.
 - [x] **Per-Organization Git**: Initialize/manage separate Git repositories for each `data/{orgID}/` as submodules.
 - [x] **Organization Lifecycle**: Bootstrapping logic for new organizations (dirs, git, welcome content).
-- [ ] **Isolation Verification**: Integration tests for cross-tenant access prevention.
-- [ ] **Linear Membership Model**: Support many-to-many User/Org relationship.
-- [ ] **Pending Memberships**: Resource assignment for invited users.
+- [x] **Isolation Verification**: Integration tests for cross-tenant access prevention.
+- [x] **Linear Membership Model**: Support many-to-many User/Org relationship.
+- [x] **Pending Memberships**: Resource assignment for invited users.
 
-### Phase 7: Relational Metadata & Identity
+### Phase 7: Relational Metadata & Identity ✓
+*Completed.*
 
-- [ ] **Membership Service**: Implement the "Linear" access model (many-to-many User/Org) via the `Membership` bridge.
-- [ ] **Invitation Flow**: Email-based invites for pending memberships and resource assignment.
-- [ ] **OAuth2 Integration**: Support for Google and Microsoft login flows.
+- [x] **Membership Service**: Implement the "Linear" access model (many-to-many User/Org) via the `Membership` bridge.
+- [x] **Invitation Flow**: Email-based invites for pending memberships and resource assignment.
+- [x] **OAuth2 Integration**: Support for Google login flow.
+- [ ] **OAuth2 Integration (Microsoft)**: Support for Microsoft login flows.
 - [ ] **Tiered Settings**: Global User, Membership-specific, and Organization-wide settings.
 
 ### Phase 8: Experience & Scaling
+*In Progress.*
 
+- [x] **Org-Aware Search**: Scope search results strictly to the active organization. (Implemented in SearchService)
 - [ ] **Frontend Multi-tenancy UX**:
     - [ ] **Organization Switcher**: UI component for switching between active memberships.
-    - [ ] **Org-Aware Search**: Scope search results strictly to the active organization.
 - [ ] **Quota Enforcement**: Track and limit resource usage (storage, pages) per organization.
 - [x] **User UI**: Management of users, permissions, and quotas in the frontend. (Initial version implemented)
 

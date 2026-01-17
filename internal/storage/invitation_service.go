@@ -12,7 +12,7 @@ import (
 
 // InvitationService handles organization invitations.
 type InvitationService struct {
-	rootDir       string
+	rootDir        string
 	invitationsDir string
 }
 
@@ -24,7 +24,7 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	}
 
 	return &InvitationService{
-		rootDir:       rootDir,
+		rootDir:        rootDir,
 		invitationsDir: invitationsDir,
 	}, nil
 }

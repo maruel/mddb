@@ -95,17 +95,22 @@ export default function App() {
   }, 2000);
 
   // Load user on mount
-  createEffect(async () => {
-    if (token() && !user()) {
-      try {
-        const res = await authFetch('/api/auth/me');
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
+  createEffect(() => {
+    const t = token();
+    const u = user();
+    if (t && !u) {
+      const fetchUser = async () => {
+        try {
+          const res = await authFetch('/api/auth/me');
+          if (res.ok) {
+            const data = await res.json();
+            setUser(data);
+          }
+        } catch (err) {
+          console.error('Failed to load user', err);
         }
-      } catch (err) {
-        console.error('Failed to load user', err);
-      }
+      };
+      fetchUser();
     }
   });
 

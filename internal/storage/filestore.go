@@ -23,7 +23,7 @@ import (
 // - Assets: files within each page's directory namespace
 type FileStore struct {
 	rootDir  string
-	pagesDir string // Legacy default pages dir
+	pagesDir string         // Legacy default pages dir
 	nextIDs  map[string]int // Next available numeric ID per organization
 	mu       sync.Mutex
 }
@@ -345,12 +345,14 @@ func (fs *FileStore) pageIndexFile(orgID, id string) string {
 
 // Database operations
 
+// DatabaseExists checks if a database exists for the given organization and ID.
 func (fs *FileStore) DatabaseExists(orgID, id string) bool {
 	path := fs.databaseSchemaFile(orgID, id)
 	_, err := os.Stat(path)
 	return err == nil
 }
 
+// ReadDatabase reads a database definition for the given organization and ID.
 func (fs *FileStore) ReadDatabase(orgID, id string) (*models.Database, error) {
 	filePath := fs.databaseSchemaFile(orgID, id)
 	data, err := os.ReadFile(filePath)
@@ -369,6 +371,7 @@ func (fs *FileStore) ReadDatabase(orgID, id string) (*models.Database, error) {
 	return &db, nil
 }
 
+// WriteDatabase writes a database definition for the given organization.
 func (fs *FileStore) WriteDatabase(orgID string, db *models.Database) error {
 	pageDir := fs.pageDir(orgID, db.ID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil {
@@ -388,6 +391,7 @@ func (fs *FileStore) WriteDatabase(orgID string, db *models.Database) error {
 	return nil
 }
 
+// DeleteDatabase deletes a database and all its records.
 func (fs *FileStore) DeleteDatabase(orgID, id string) error {
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.RemoveAll(pageDir); err != nil && !os.IsNotExist(err) {
@@ -396,6 +400,7 @@ func (fs *FileStore) DeleteDatabase(orgID, id string) error {
 	return nil
 }
 
+// ListDatabases returns all databases for the given organization.
 func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
 	var databases []*models.Database
 	dir := fs.orgPagesDir(orgID)
@@ -427,6 +432,7 @@ func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
 	return databases, nil
 }
 
+// AppendRecord appends a record to a database.
 func (fs *FileStore) AppendRecord(orgID, id string, record *models.Record) error {
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil {
@@ -455,6 +461,7 @@ func (fs *FileStore) AppendRecord(orgID, id string, record *models.Record) error
 	return nil
 }
 
+// ReadRecords reads all records for a database.
 func (fs *FileStore) ReadRecords(orgID, id string) ([]*models.Record, error) {
 	filePath := fs.databaseRecordsFile(orgID, id)
 	f, err := os.Open(filePath)
@@ -482,6 +489,7 @@ func (fs *FileStore) ReadRecords(orgID, id string) ([]*models.Record, error) {
 	return records, nil
 }
 
+// ReadRecordsPage reads a page of records for a database.
 func (fs *FileStore) ReadRecordsPage(orgID, id string, offset, limit int) ([]*models.Record, error) {
 	filePath := fs.databaseRecordsFile(orgID, id)
 	f, err := os.Open(filePath)
@@ -530,6 +538,7 @@ func (fs *FileStore) databaseRecordsFile(orgID, id string) string {
 
 // Asset operations
 
+// SaveAsset saves an asset associated with a page.
 func (fs *FileStore) SaveAsset(orgID, pageID, assetName string, data []byte) (string, error) {
 	pageDir := fs.pageDir(orgID, pageID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil {
@@ -544,6 +553,7 @@ func (fs *FileStore) SaveAsset(orgID, pageID, assetName string, data []byte) (st
 	return assetName, nil
 }
 
+// ReadAsset reads an asset associated with a page.
 func (fs *FileStore) ReadAsset(orgID, pageID, assetName string) ([]byte, error) {
 	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
 	data, err := os.ReadFile(assetPath)
@@ -556,6 +566,7 @@ func (fs *FileStore) ReadAsset(orgID, pageID, assetName string) ([]byte, error) 
 	return data, nil
 }
 
+// DeleteAsset deletes an asset associated with a page.
 func (fs *FileStore) DeleteAsset(orgID, pageID, assetName string) error {
 	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
 	if err := os.Remove(assetPath); err != nil {
@@ -567,6 +578,7 @@ func (fs *FileStore) DeleteAsset(orgID, pageID, assetName string) error {
 	return nil
 }
 
+// ListAssets lists all assets associated with a page.
 func (fs *FileStore) ListAssets(orgID, pageID string) ([]*models.Asset, error) {
 	pageDir := fs.pageDir(orgID, pageID)
 	entries, err := os.ReadDir(pageDir)

@@ -47,7 +47,7 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 			middleware := RequireRole(models.RoleViewer)(next)
 
 			// Create request
-			req := httptest.NewRequest("GET", "/api/"+tt.requestOrgID+"/nodes", nil)
+			req := httptest.NewRequest("GET", "/api/"+tt.requestOrgID+"/nodes", http.NoBody)
 			if tt.requestOrgID != "" {
 				req.SetPathValue("orgID", tt.requestOrgID)
 			}
@@ -119,7 +119,7 @@ func TestRolePermissions(t *testing.T) {
 
 			middleware := RequireRole(tt.requiredRole)(next)
 
-			req := httptest.NewRequest("GET", "/api/org1/nodes", nil)
+			req := httptest.NewRequest("GET", "/api/org1/nodes", http.NoBody)
 			req.SetPathValue("orgID", "org1")
 
 			user := &models.User{

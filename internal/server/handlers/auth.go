@@ -125,6 +125,7 @@ func (h *AuthHandler) Register(ctx context.Context, req RegisterRequest) (*Login
 	}, nil
 }
 
+// GenerateToken generates a JWT token for the given user.
 func (h *AuthHandler) GenerateToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":   user.ID,

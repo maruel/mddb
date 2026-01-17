@@ -12,31 +12,33 @@ const md = new MarkdownIt({
   typographer: true,
 });
 
-export default function MarkdownPreview(props: MarkdownPreviewProps) {
-  // Custom renderer for images to support organization-aware asset URLs
-  const originalImageRenderer = md.renderer.rules.image || function(tokens, idx, options, _env, self) {
-    return self.renderToken(tokens, idx, options);
-  };
+// Custom renderer for images to support organization-aware asset URLs
+const originalImageRenderer = md.renderer.rules.image || function(tokens, idx, options, _env, self) {
+  return self.renderToken(tokens, idx, options);
+};
 
-  md.renderer.rules.image = (tokens, idx, options, env, self) => {
-    const token = tokens[idx];
-    const srcIndex = token.attrIndex('src');
-    if (srcIndex >= 0 && props.orgId) {
-      let src = token.attrs![srcIndex][1];
-      // If it's a relative path starting with assets/, rewrite it
-      if (src.startsWith('assets/')) {
-        const parts = src.split('/');
-        if (parts.length >= 2) {
-          // Change assets/1/img.png to /assets/{orgId}/1/img.png
-          src = `/assets/${props.orgId}/${parts.slice(1).join('/')}`;
-          token.attrs![srcIndex][1] = src;
-        }
+md.renderer.rules.image = (tokens, idx, options, env, self) => {
+  const token = tokens[idx];
+  const srcIndex = token.attrIndex('src');
+  const attrs = token.attrs;
+  const orgId = env?.orgId;
+  if (attrs && srcIndex >= 0 && orgId) {
+    let src = attrs[srcIndex][1];
+    // If it's a relative path starting with assets/, rewrite it
+    if (src.startsWith('assets/')) {
+      const parts = src.split('/');
+      if (parts.length >= 2) {
+        // Change assets/1/img.png to /assets/{orgId}/1/img.png
+        src = `/assets/${orgId}/${parts.slice(1).join('/')}`;
+        attrs[srcIndex][1] = src;
       }
     }
-    return originalImageRenderer(tokens, idx, options, env, self);
-  };
+  }
+  return originalImageRenderer(tokens, idx, options, env, self);
+};
 
-  const html = () => md.render(props.content);
+export default function MarkdownPreview(props: MarkdownPreviewProps) {
+  const html = () => md.render(props.content, { orgId: props.orgId });
 
   return (
     // eslint-disable-next-line solid/no-innerhtml
