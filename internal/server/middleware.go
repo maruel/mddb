@@ -71,8 +71,8 @@ func AuthMiddleware(userService *storage.UserService, jwtSecret []byte) func(htt
 	}
 }
 
-// RequireRole ensures the authenticated user has at least the required role.
-func RequireRole(requiredRole models.UserRole) func(http.Handler) http.Handler {
+// RequireRole ensures the authenticated user has at least the required role in the target organization.
+func RequireRole(memService *storage.MembershipService, requiredRole models.UserRole) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := r.Context().Value(models.UserKey).(*models.User)
@@ -81,19 +81,29 @@ func RequireRole(requiredRole models.UserRole) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Check organization isolation
+			// Get organization from path
 			orgID := r.PathValue("orgID")
-			if orgID != "" && orgID != user.OrganizationID {
-				http.Error(w, "Forbidden: cross-organization access denied", http.StatusForbidden)
+			if orgID == "" {
+				// Some global endpoints might not have orgID
+				next.ServeHTTP(w, r)
 				return
 			}
 
-			if !hasPermission(user.Role, requiredRole) {
+			// Verify membership and get role
+			membership, err := memService.GetMembership(user.ID, orgID)
+			if err != nil {
+				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
+				return
+			}
+
+			if !hasPermission(membership.Role, requiredRole) {
 				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
 				return
 			}
 
-			next.ServeHTTP(w, r)
+			// Add org to context for handlers
+			ctx := context.WithValue(r.Context(), models.OrgKey, orgID)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }

@@ -58,23 +58,22 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, req CreateInvi
 		return nil, errors.MissingField("email or role")
 	}
 
-	// Permission check (only Admin can invite)
-	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
-	if !ok || currentUser.Role != models.RoleAdmin {
-		return nil, errors.Forbidden("Only admins can create invitations")
+	orgID := models.GetOrgID(ctx)
+	if orgID == "" {
+		return nil, errors.Forbidden("Organization context missing")
 	}
 
 	// Check Quota
-	org, err := h.orgService.GetOrganization(req.OrgID)
+	org, err := h.orgService.GetOrganization(orgID)
 	if err == nil && org.Quotas.MaxUsers > 0 {
-		members, _ := h.memService.ListByOrganization(req.OrgID)
-		pending, _ := h.invService.ListByOrganization(req.OrgID)
+		members, _ := h.memService.ListByOrganization(orgID)
+		pending, _ := h.invService.ListByOrganization(orgID)
 		if len(members)+len(pending) >= org.Quotas.MaxUsers {
 			return nil, errors.NewAPIError(403, "quota_exceeded", fmt.Sprintf("User quota exceeded (%d/%d)", len(members)+len(pending), org.Quotas.MaxUsers))
 		}
 	}
 
-	return h.invService.CreateInvitation(req.Email, req.OrgID, req.Role)
+	return h.invService.CreateInvitation(req.Email, orgID, req.Role)
 }
 
 // ListInvitations returns all active invitations for the organization.
@@ -108,9 +107,9 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req AcceptInvi
 		return nil, errors.InternalWithError("Failed to create user", err)
 	}
 
-	// Set organization
-	if err := h.userService.UpdateUserOrg(user.ID, inv.OrganizationID); err != nil {
-		return nil, errors.InternalWithError("Failed to set user organization", err)
+	// Set organization membership
+	if err := h.userService.UpdateUserRole(user.ID, inv.OrganizationID, inv.Role); err != nil {
+		return nil, errors.InternalWithError("Failed to set user organization membership", err)
 	}
 
 	// Delete invitation

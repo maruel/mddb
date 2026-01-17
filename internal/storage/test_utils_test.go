@@ -14,9 +14,8 @@ func newTestContext(orgID string) context.Context {
 		orgID = "test-org"
 	}
 	user := &models.User{
-		ID:             "test-user",
-		OrganizationID: orgID,
-		Role:           models.RoleAdmin,
+		ID: "test-user",
 	}
-	return context.WithValue(context.Background(), models.UserKey, user)
+	ctx := context.WithValue(context.Background(), models.UserKey, user)
+	return context.WithValue(ctx, models.OrgKey, orgID)
 }

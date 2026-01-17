@@ -162,7 +162,9 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "Failed to create user", http.StatusInternalServerError)
 				return
 			}
-			_ = h.userService.UpdateUserOrg(user.ID, orgID)
+			if orgID != "" {
+				_ = h.userService.UpdateUserRole(user.ID, orgID, role)
+			}
 		}
 
 		// Link OAuth identity

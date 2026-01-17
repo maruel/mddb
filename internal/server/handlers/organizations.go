@@ -35,12 +35,12 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, req struct {
 
 // UpdateSettings updates organization-wide settings.
 func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req UpdateOrgSettingsRequest) (*models.Organization, error) {
-	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
-	if !ok || currentUser.Role != models.RoleAdmin {
-		return nil, errors.Forbidden("Only admins can update organization settings")
+	orgID := models.GetOrgID(ctx)
+	if orgID == "" {
+		return nil, errors.Forbidden("Organization context missing")
 	}
 
-	if req.OrgID != currentUser.OrganizationID {
+	if req.OrgID != orgID {
 		return nil, errors.Forbidden("Organization mismatch")
 	}
 

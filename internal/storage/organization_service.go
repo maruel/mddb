@@ -93,11 +93,8 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 
 		// Commit the welcome page
 		if s.gitService != nil {
-			// Create a context with the new org ID if not already present
-			orgCtx := ctx
-			if models.GetOrgID(orgCtx) == "" {
-				orgCtx = context.WithValue(ctx, models.UserKey, &models.User{OrganizationID: id})
-			}
+			// Create a context with the new org ID
+			orgCtx := context.WithValue(ctx, models.OrgKey, id)
 			_ = s.gitService.CommitChange(orgCtx, "create", "page", "1", "Initial welcome page")
 		}
 	}

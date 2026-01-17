@@ -40,14 +40,20 @@ func TestRegister(t *testing.T) {
 	if resp1.User.Name != "Joe" {
 		t.Errorf("Expected name Joe, got %s", resp1.User.Name)
 	}
-	if resp1.User.OrganizationID == "" {
-		t.Error("Expected Joe to have an organization ID")
+
+	// Check Joe's membership
+	if len(resp1.User.Memberships) == 0 {
+		t.Error("Expected Joe to have a membership")
 	}
-	if resp1.User.Role != models.RoleAdmin {
-		t.Errorf("Expected Joe to be admin, got %s", resp1.User.Role)
+	resp1OrgID := resp1.User.Memberships[0].OrganizationID
+	if resp1OrgID == "" {
+		t.Error("Expected Joe's membership to have an organization ID")
+	}
+	if resp1.User.Memberships[0].Role != models.RoleAdmin {
+		t.Errorf("Expected Joe to be admin in his org, got %s", resp1.User.Memberships[0].Role)
 	}
 
-	org1, err := orgService.GetOrganization(resp1.User.OrganizationID)
+	org1, err := orgService.GetOrganization(resp1OrgID)
 	if err != nil {
 		t.Fatalf("Failed to get Joe's organization: %v", err)
 	}
@@ -69,17 +75,23 @@ func TestRegister(t *testing.T) {
 	if resp2.User.Name != "Alice" {
 		t.Errorf("Expected name Alice, got %s", resp2.User.Name)
 	}
-	if resp2.User.OrganizationID == "" {
-		t.Error("Expected Alice to have an organization ID")
+
+	// Check Alice's membership
+	if len(resp2.User.Memberships) == 0 {
+		t.Error("Expected Alice to have a membership")
 	}
-	if resp2.User.OrganizationID == resp1.User.OrganizationID {
+	resp2OrgID := resp2.User.Memberships[0].OrganizationID
+	if resp2OrgID == "" {
+		t.Error("Expected Alice's membership to have an organization ID")
+	}
+	if resp2OrgID == resp1OrgID {
 		t.Error("Expected Alice to have a different organization ID than Joe")
 	}
-	if resp2.User.Role != models.RoleAdmin {
-		t.Errorf("Expected Alice to be admin, got %s", resp2.User.Role)
+	if resp2.User.Memberships[0].Role != models.RoleAdmin {
+		t.Errorf("Expected Alice to be admin in her org, got %s", resp2.User.Memberships[0].Role)
 	}
 
-	org2, err := orgService.GetOrganization(resp2.User.OrganizationID)
+	org2, err := orgService.GetOrganization(resp2OrgID)
 	if err != nil {
 		t.Fatalf("Failed to get Alice's organization: %v", err)
 	}

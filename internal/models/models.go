@@ -7,12 +7,14 @@ import (
 )
 
 // GetOrgID extracts the organization ID from the context.
+// Note: This is now a convenience helper that should be used cautiously as we
+// transition to explicit path-based organization IDs.
 func GetOrgID(ctx context.Context) string {
-	user, ok := ctx.Value(UserKey).(*User)
-	if !ok {
-		return ""
+	val := ctx.Value(OrgKey)
+	if id, ok := val.(string); ok {
+		return id
 	}
-	return user.OrganizationID
+	return ""
 }
 
 // Node represents the unified content entity (can be a Page, a Database, or both)
@@ -64,8 +66,6 @@ type User struct {
 	ID              string          `json:"id"`
 	Email           string          `json:"email"`
 	Name            string          `json:"name"`
-	OrganizationID  string          `json:"organization_id"` // Active organization
-	Role            UserRole        `json:"role"`            // Role in active organization
 	Memberships     []Membership    `json:"memberships,omitempty"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty"`
 	Settings        UserSettings    `json:"settings"`
@@ -160,6 +160,8 @@ type ContextKey string
 const (
 	// UserKey is the context key for the authenticated user.
 	UserKey ContextKey = "user"
+	// OrgKey is the context key for the active organization ID.
+	OrgKey ContextKey = "org"
 )
 
 // Asset represents an uploaded file/image associated with a node

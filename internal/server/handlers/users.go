@@ -39,14 +39,10 @@ type ListUsersResponse struct {
 
 // ListUsers returns all users in the organization.
 func (h *UserHandler) ListUsers(ctx context.Context, req ListUsersRequest) (*ListUsersResponse, error) {
-	// Only admins should reach this if middleware is applied correctly
-	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
-	if !ok || currentUser.Role != models.RoleAdmin {
-		return nil, errors.Forbidden("Only admins can list users")
-	}
-
-	if req.OrgID != currentUser.OrganizationID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	// Active org ID is verified by middleware and injected into context
+	orgID := models.GetOrgID(ctx)
+	if orgID == "" {
+		return nil, errors.Forbidden("Organization context missing")
 	}
 
 	allUsers, err := h.userService.ListUsers()
@@ -54,11 +50,14 @@ func (h *UserHandler) ListUsers(ctx context.Context, req ListUsersRequest) (*Lis
 		return nil, errors.InternalWithError("Failed to list users", err)
 	}
 
-	// Filter by organization
+	// Filter by organization membership
 	var users []*models.User
 	for _, u := range allUsers {
-		if u.OrganizationID == req.OrgID {
-			users = append(users, u)
+		for _, m := range u.Memberships {
+			if m.OrganizationID == orgID {
+				users = append(users, u)
+				break
+			}
 		}
 	}
 
@@ -67,29 +66,16 @@ func (h *UserHandler) ListUsers(ctx context.Context, req ListUsersRequest) (*Lis
 
 // UpdateUserRole updates a user's role.
 func (h *UserHandler) UpdateUserRole(ctx context.Context, req UpdateRoleRequest) (*models.User, error) {
-	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
-	if !ok || currentUser.Role != models.RoleAdmin {
-		return nil, errors.Forbidden("Only admins can update roles")
-	}
-
-	if req.OrgID != currentUser.OrganizationID {
-		return nil, errors.NewAPIError(403, errors.ErrForbidden, "Organization mismatch")
+	orgID := models.GetOrgID(ctx)
+	if orgID == "" {
+		return nil, errors.Forbidden("Organization context missing")
 	}
 
 	if req.UserID == "" || req.Role == "" {
 		return nil, errors.MissingField("user_id or role")
 	}
 
-	// Verify target user belongs to the same organization
-	targetUser, err := h.userService.GetUser(req.UserID)
-	if err != nil {
-		return nil, errors.NotFound("user")
-	}
-	if targetUser.OrganizationID != req.OrgID {
-		return nil, errors.Forbidden("Cannot update user from different organization")
-	}
-
-	if err := h.userService.UpdateUserRole(req.UserID, req.Role); err != nil {
+	if err := h.userService.UpdateUserRole(req.UserID, orgID, req.Role); err != nil {
 		return nil, errors.InternalWithError("Failed to update user role", err)
 	}
 

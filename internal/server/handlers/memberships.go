@@ -36,6 +36,8 @@ type SwitchOrgResponse struct {
 }
 
 // SwitchOrg switches the user's active organization and returns a new token.
+// Note: In the new multi-tenant model, this is less critical as orgID is in the URL,
+// but it remains useful for the frontend to know the "intended" active org.
 func (h *MembershipHandler) SwitchOrg(ctx context.Context, req SwitchOrgRequest) (*SwitchOrgResponse, error) {
 	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {
@@ -47,14 +49,9 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req SwitchOrgRequest)
 	}
 
 	// Verify membership
-	m, err := h.memService.GetMembership(currentUser.ID, req.OrgID)
+	_, err := h.memService.GetMembership(currentUser.ID, req.OrgID)
 	if err != nil {
 		return nil, errors.Forbidden("You are not a member of this organization")
-	}
-
-	// Update active organization and role in user profile
-	if err := h.userService.UpdateUserOrg(currentUser.ID, req.OrgID); err != nil {
-		return nil, errors.InternalWithError("Failed to switch organization", err)
 	}
 
 	// Get updated user
@@ -62,7 +59,6 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req SwitchOrgRequest)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to retrieve updated user", err)
 	}
-	user.Role = m.Role // Ensure role from membership is used
 
 	// Generate new token
 	token, err := h.authHandler.GenerateToken(user)

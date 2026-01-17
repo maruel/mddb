@@ -125,10 +125,9 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 
 	// For asset serving, we might not have a full user session if it's via <img> tag without credentials
 	// but we still want to provide the orgID to the service.
-	// We create a minimal user with the orgID if not authenticated.
 	ctx := r.Context()
 	if models.GetOrgID(ctx) == "" {
-		ctx = context.WithValue(ctx, models.UserKey, &models.User{OrganizationID: orgID})
+		ctx = context.WithValue(ctx, models.OrgKey, orgID)
 	}
 
 	// Read asset data

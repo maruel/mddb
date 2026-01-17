@@ -26,7 +26,7 @@ func TestUserService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Test CreateUser (First user should be Admin in handler logic, but service just takes the role)
+	// Test CreateUser
 	user, err := service.CreateUser("test@example.com", "password123", "Test User", models.RoleAdmin)
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
@@ -34,9 +34,6 @@ func TestUserService(t *testing.T) {
 
 	if user.Email != "test@example.com" {
 		t.Errorf("Expected email test@example.com, got %s", user.Email)
-	}
-	if user.Role != models.RoleAdmin {
-		t.Errorf("Expected role admin, got %s", user.Role)
 	}
 
 	// Test Authenticate
@@ -73,7 +70,8 @@ func TestUserService(t *testing.T) {
 	}
 
 	// Test UpdateUserRole
-	err = service.UpdateUserRole(user.ID, models.RoleEditor)
+	orgID := "org123"
+	err = service.UpdateUserRole(user.ID, orgID, models.RoleEditor)
 	if err != nil {
 		t.Fatalf("Failed to update user role: %v", err)
 	}
@@ -82,7 +80,16 @@ func TestUserService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updatedUser.Role != models.RoleEditor {
-		t.Errorf("Expected role editor, got %s", updatedUser.Role)
+
+	// Check membership for role
+	found := false
+	for _, m := range updatedUser.Memberships {
+		if m.OrganizationID == orgID && m.Role == models.RoleEditor {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("Expected role editor in membership for org %s", orgID)
 	}
 }

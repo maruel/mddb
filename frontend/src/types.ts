@@ -63,8 +63,6 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  organization_id: string; // Active organization
-  role: UserRole; // Role in active organization
   memberships?: Membership[];
   oauth_identities?: OAuthIdentity[];
   settings: UserSettings;
@@ -173,6 +171,10 @@ export type ContextKey = string;
  * UserKey is the context key for the authenticated user.
  */
 export const UserKey: ContextKey = "user";
+/**
+ * OrgKey is the context key for the active organization ID.
+ */
+export const OrgKey: ContextKey = "org";
 /**
  * Asset represents an uploaded file/image associated with a node
  */
@@ -923,12 +925,6 @@ export interface UpdateRoleRequest {
  */
 export interface ListUsersResponse {
   users: (User | undefined)[];
-}
-/**
- * ListInvitationsResponse is a response containing a list of invitations.
- */
-export interface ListInvitationsResponse {
-  invitations: (Invitation | undefined)[];
 }
 /**
  * UpdateUserSettingsRequest is a request to update user global settings.

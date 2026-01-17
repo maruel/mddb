@@ -86,17 +86,21 @@ func (h *AuthHandler) Register(ctx context.Context, req RegisterRequest) (*Login
 		return nil, errors.InternalWithError("Failed to create organization", err)
 	}
 	orgID := org.ID
-	role := models.RoleAdmin
 
-	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name, role)
+	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name, models.RoleAdmin)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create user", err)
 	}
 
-	// Update user with organization ID
-	user.OrganizationID = orgID
-	if err := h.userService.UpdateUserOrg(user.ID, orgID); err != nil {
-		return nil, errors.InternalWithError("Failed to update user organization", err)
+	// Create initial membership (admin of their own org)
+	if err := h.userService.UpdateUserRole(user.ID, orgID, models.RoleAdmin); err != nil {
+		return nil, errors.InternalWithError("Failed to create initial membership", err)
+	}
+
+	// Re-fetch user to get populated memberships
+	user, err = h.userService.GetUser(user.ID)
+	if err != nil {
+		return nil, errors.InternalWithError("Failed to re-fetch user", err)
 	}
 
 	token, err := h.GenerateToken(user)
@@ -115,8 +119,6 @@ func (h *AuthHandler) GenerateToken(user *models.User) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":   user.ID,
 		"email": user.Email,
-		"role":  user.Role,
-		"org":   user.OrganizationID,
 		"exp":   time.Now().Add(time.Hour * 24).Unix(), // 24 hours
 		"iat":   time.Now().Unix(),
 	}

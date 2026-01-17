@@ -58,10 +58,6 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 		return nil, fmt.Errorf("email and password are required")
 	}
 
-	if role == "" {
-		role = models.RoleViewer
-	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -82,7 +78,6 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 		ID:       id,
 		Email:    email,
 		Name:     name,
-		Role:     role,
 		Created:  now,
 		Modified: now,
 	}
@@ -97,7 +92,6 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 	}
 
 	// Update local cache
-	// Note: table.Append appends to its own slice, so we need to get the pointer to the last element
 	s.table.mu.RLock()
 	newStored := &s.table.rows[len(s.table.rows)-1]
 	s.table.mu.RUnlock()
@@ -115,59 +109,23 @@ func (s *UserService) CountUsers() (int, error) {
 	return len(s.byID), nil
 }
 
-// UpdateUserRole updates the role of a user in their active organization.
-func (s *UserService) UpdateUserRole(id string, role models.UserRole) error {
+// UpdateUserRole updates the role of a user in a specific organization.
+func (s *UserService) UpdateUserRole(userID, orgID string, role models.UserRole) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	stored, ok := s.byID[id]
-	if !ok {
-		return fmt.Errorf("user not found")
+	if s.memService == nil {
+		return fmt.Errorf("membership service not initialized")
 	}
 
-	stored.Role = role
-	stored.Modified = time.Now()
-
-	// Update membership if organization is set
-	if stored.OrganizationID != "" && s.memService != nil {
-		if err := s.memService.UpdateRole(stored.ID, stored.OrganizationID, role); err != nil {
-			// If membership doesn't exist, create it
-			_, _ = s.memService.CreateMembership(stored.ID, stored.OrganizationID, role)
-		}
+	// Update membership
+	if err := s.memService.UpdateRole(userID, orgID, role); err != nil {
+		// If membership doesn't exist, create it
+		_, err = s.memService.CreateMembership(userID, orgID, role)
+		return err
 	}
 
-	return s.table.Replace(s.getAllFromCache())
-}
-
-// UpdateUserOrg updates the organization of a user and ensures membership exists.
-func (s *UserService) UpdateUserOrg(id, orgID string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	stored, ok := s.byID[id]
-	if !ok {
-		return fmt.Errorf("user not found")
-	}
-
-	stored.OrganizationID = orgID
-	stored.Modified = time.Now()
-
-	// Ensure membership exists
-	if orgID != "" && s.memService != nil {
-		m, err := s.memService.GetMembership(stored.ID, orgID)
-		if err != nil {
-			// Create membership if it doesn't exist
-			_, err = s.memService.CreateMembership(stored.ID, orgID, stored.Role)
-			if err != nil {
-				return fmt.Errorf("failed to create membership: %w", err)
-			}
-		} else {
-			// Sync user role with membership role for the active org
-			stored.Role = m.Role
-		}
-	}
-
-	return s.table.Replace(s.getAllFromCache())
+	return nil
 }
 
 // GetUser retrieves a user by ID.
