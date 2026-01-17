@@ -17,7 +17,7 @@ packages:
       "models.Node": "Node"
       "models.NodeType": "'document' | 'database' | 'hybrid'"
       "models.Column": "Column"
-      "models.Record": "Record"
+      "models.DataRecord": "DataRecord"
       "models.User": "User"
       "models.UserRole": "'admin' | 'editor' | 'viewer'"
       "models.Membership": "Membership"

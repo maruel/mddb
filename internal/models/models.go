@@ -51,8 +51,8 @@ type Column struct {
 	Required bool     `json:"required,omitempty"`
 }
 
-// Record represents a database record associated with a node
-type Record struct {
+// DataRecord represents a database record associated with a node
+type DataRecord struct {
 	ID       string                 `json:"id"`
 	Data     map[string]interface{} `json:"data"`
 	Created  time.Time              `json:"created"`

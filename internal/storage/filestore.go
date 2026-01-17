@@ -455,7 +455,7 @@ func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
 }
 
 // AppendRecord appends a record to a database.
-func (fs *FileStore) AppendRecord(orgID, id string, record *models.Record) error {
+func (fs *FileStore) AppendRecord(orgID, id string, record *models.DataRecord) error {
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -484,25 +484,25 @@ func (fs *FileStore) AppendRecord(orgID, id string, record *models.Record) error
 }
 
 // ReadRecords reads all records for a database.
-func (fs *FileStore) ReadRecords(orgID, id string) ([]*models.Record, error) {
+func (fs *FileStore) ReadRecords(orgID, id string) ([]*models.DataRecord, error) {
 	filePath := fs.databaseRecordsFile(orgID, id)
 	f, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []*models.Record{}, nil
+			return []*models.DataRecord{}, nil
 		}
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 
-	var records []*models.Record
+	var records []*models.DataRecord
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		if len(line) == 0 {
 			continue
 		}
-		var record models.Record
+		var record models.DataRecord
 		if err := json.Unmarshal(line, &record); err != nil {
 			return nil, fmt.Errorf("failed to parse record: %w", err)
 		}
@@ -512,18 +512,18 @@ func (fs *FileStore) ReadRecords(orgID, id string) ([]*models.Record, error) {
 }
 
 // ReadRecordsPage reads a page of records for a database.
-func (fs *FileStore) ReadRecordsPage(orgID, id string, offset, limit int) ([]*models.Record, error) {
+func (fs *FileStore) ReadRecordsPage(orgID, id string, offset, limit int) ([]*models.DataRecord, error) {
 	filePath := fs.databaseRecordsFile(orgID, id)
 	f, err := os.Open(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []*models.Record{}, nil
+			return []*models.DataRecord{}, nil
 		}
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
 	defer func() { _ = f.Close() }()
 
-	var records []*models.Record
+	var records []*models.DataRecord
 	scanner := bufio.NewScanner(f)
 	currentIndex := 0
 	count := 0
@@ -539,7 +539,7 @@ func (fs *FileStore) ReadRecordsPage(orgID, id string, offset, limit int) ([]*mo
 		if len(line) == 0 {
 			continue
 		}
-		var record models.Record
+		var record models.DataRecord
 		if err := json.Unmarshal(line, &record); err != nil {
 			return nil, fmt.Errorf("failed to parse record: %w", err)
 		}

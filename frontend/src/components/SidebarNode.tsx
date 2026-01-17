@@ -1,11 +1,11 @@
 import { createSignal, For, Show } from 'solid-js';
-import type { AppNode } from '../types';
+import type { Node } from '../types';
 import styles from '../App.module.css';
 
 interface SidebarNodeProps {
-  node: AppNode;
+  node: Node;
   selectedId: string | null;
-  onSelect: (node: AppNode) => void;
+  onSelect: (node: Node) => void;
   depth: number;
 }
 

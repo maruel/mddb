@@ -1,18 +1,11 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
-import type { User } from '../types';
+import type { User, Invitation, ListUsersResponse, ListInvitationsResponse } from '../types';
 import styles from './WorkspaceSettings.module.css';
 
 interface WorkspaceSettingsProps {
   user: User;
   token: string;
   onClose: () => void;
-}
-
-interface Invitation {
-  id: string;
-  email: string;
-  role: string;
-  created: string;
 }
 
 export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
@@ -51,11 +44,11 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         authFetch('/api/invitations')
       ]);
       
-      const membersData = await membersRes.json();
-      const invsData = await invsRes.json();
+      const membersData = (await membersRes.json()) as ListUsersResponse;
+      const invsData = (await invsRes.json()) as ListInvitationsResponse;
       
-      setMembers(membersData.users || []);
-      setInvitations(invsData.invitations || []);
+      setMembers((membersData.users?.filter(Boolean) as User[]) || []);
+      setInvitations((invsData.invitations?.filter(Boolean) as Invitation[]) || []);
     } catch (err) {
       setError('Failed to load settings: ' + err);
     } finally {

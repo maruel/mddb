@@ -8,13 +8,21 @@ import DatabaseBoard from './components/DatabaseBoard';
 import WorkspaceSettings from './components/WorkspaceSettings';
 import Auth from './components/Auth';
 import { debounce } from './utils/debounce';
-import type { AppNode, DataRecord, Commit, User } from './types';
+import type {
+  Node,
+  DataRecord,
+  Commit,
+  User,
+  ListNodesResponse,
+  ListRecordsResponse,
+  GetPageHistoryResponse,
+} from './types';
 import styles from './App.module.css';
 
 export default function App() {
   const [user, setUser] = createSignal<User | null>(null);
   const [token, setToken] = createSignal<string | null>(localStorage.getItem('mddb_token'));
-  const [nodes, setNodes] = createSignal<AppNode[]>([]);
+  const [nodes, setNodes] = createSignal<Node[]>([]);
   const [records, setRecords] = createSignal<DataRecord[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
   const [showSettings, setShowSettings] = createSignal(false);
@@ -146,8 +154,8 @@ export default function App() {
     try {
       setLoading(true);
       const res = await authFetch('/api/nodes');
-      const data = await res.json();
-      setNodes(data.nodes || []);
+      const data = (await res.json()) as ListNodesResponse;
+      setNodes((data.nodes?.filter(Boolean) as Node[]) || []);
       setError(null);
     } catch (err) {
       setError('Failed to load nodes: ' + err);
@@ -173,8 +181,8 @@ export default function App() {
       // If it's a database or hybrid, load records
       if (nodeData.type === 'database' || nodeData.type === 'hybrid') {
         const recordsRes = await authFetch(`/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`);
-        const recordsData = await recordsRes.json();
-        const loadedRecords = recordsData.records || [];
+        const recordsData = (await recordsRes.json()) as ListRecordsResponse;
+        const loadedRecords = (recordsData.records || []) as DataRecord[];
         setRecords(loadedRecords);
         setHasMore(loadedRecords.length === PAGE_SIZE);
       } else {
@@ -197,8 +205,8 @@ export default function App() {
     try {
       setLoading(true);
       const res = await authFetch(`/api/pages/${nodeId}/history`);
-      const data = await res.json();
-      setHistory(data.history || []);
+      const data = (await res.json()) as GetPageHistoryResponse;
+      setHistory((data.history?.filter(Boolean) as Commit[]) || []);
       setShowHistory(true);
     } catch (err) {
       setError('Failed to load history: ' + err);
@@ -302,15 +310,15 @@ export default function App() {
     }
   }
 
-  const handleNodeClick = (node: AppNode) => {
+  const handleNodeClick = (node: Node) => {
     loadNode(node.id);
   };
 
-  const getBreadcrumbs = (nodeId: string | null): AppNode[] => {
+  const getBreadcrumbs = (nodeId: string | null): Node[] => {
     if (!nodeId) return [];
-    const path: AppNode[] = [];
+    const path: Node[] = [];
     
-    const findPath = (currentNodes: AppNode[], targetId: string): boolean => {
+    const findPath = (currentNodes: Node[], targetId: string): boolean => {
       for (const node of currentNodes) {
         if (node.id === targetId) {
           path.push(node);

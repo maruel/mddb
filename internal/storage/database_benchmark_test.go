@@ -40,7 +40,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// Benchmark Record Creation (Append)
 	b.Run("CreateRecord", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			record := &models.Record{
+			record := &models.DataRecord{
 				ID:       fmt.Sprintf("r%d", i),
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -66,7 +66,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 			b.Fatal(err)
 		}
 		for i := 0; i < 1000; i++ {
-			record := &models.Record{
+			record := &models.DataRecord{
 				ID:       fmt.Sprintf("r%d", i),
 				Data:     map[string]interface{}{"c1": "test"},
 				Created:  time.Now(),
@@ -98,7 +98,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		}
 		// Write 10,000 records
 		for i := 0; i < 10000; i++ {
-			record := &models.Record{
+			record := &models.DataRecord{
 				ID:       fmt.Sprintf("r%d", i),
 				Data:     map[string]interface{}{"c1": "test"},
 				Created:  time.Now(),

@@ -17,7 +17,7 @@ type Cache struct {
 	pages map[string]*models.Page
 
 	// Hot records (map of database ID to list of records)
-	records map[string][]*models.Record
+	records map[string][]*models.DataRecord
 
 	// Max size for LRU-like behavior (simplified for now)
 	maxPages   int
@@ -28,7 +28,7 @@ type Cache struct {
 func NewCache() *Cache {
 	return &Cache{
 		pages:      make(map[string]*models.Page),
-		records:    make(map[string][]*models.Record),
+		records:    make(map[string][]*models.DataRecord),
 		maxPages:   100,
 		maxRecords: 100,
 	}
@@ -83,7 +83,7 @@ func (c *Cache) InvalidatePage(id string) {
 }
 
 // GetRecords returns cached records for a database.
-func (c *Cache) GetRecords(databaseID string) ([]*models.Record, bool) {
+func (c *Cache) GetRecords(databaseID string) ([]*models.DataRecord, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	records, ok := c.records[databaseID]
@@ -91,12 +91,12 @@ func (c *Cache) GetRecords(databaseID string) ([]*models.Record, bool) {
 }
 
 // SetRecords caches records for a database.
-func (c *Cache) SetRecords(databaseID string, records []*models.Record) {
+func (c *Cache) SetRecords(databaseID string, records []*models.DataRecord) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if len(c.records) >= c.maxRecords {
-		c.records = make(map[string][]*models.Record)
+		c.records = make(map[string][]*models.DataRecord)
 	}
 	c.records[databaseID] = records
 }
@@ -114,5 +114,5 @@ func (c *Cache) InvalidateAll() {
 	defer c.mu.Unlock()
 	c.nodeTree = nil
 	c.pages = make(map[string]*models.Page)
-	c.records = make(map[string][]*models.Record)
+	c.records = make(map[string][]*models.DataRecord)
 }

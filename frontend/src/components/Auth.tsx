@@ -1,6 +1,6 @@
 import { createSignal, Show } from 'solid-js';
 import styles from './Auth.module.css';
-import type { User } from '../types';
+import type { User, LoginResponse, LoginRequest, RegisterRequest } from '../types';
 
 interface AuthProps {
   onLogin: (token: string, user: User) => void;
@@ -20,7 +20,7 @@ export default function Auth(props: AuthProps) {
     setLoading(true);
 
     const endpoint = isRegister() ? '/api/auth/register' : '/api/auth/login';
-    const body = isRegister() 
+    const body: LoginRequest | RegisterRequest = isRegister() 
       ? { email: email(), password: password(), name: name() }
       : { email: email(), password: password() };
 
@@ -31,14 +31,18 @@ export default function Auth(props: AuthProps) {
         body: JSON.stringify(body),
       });
 
-      const data = await res.json();
+      const data = (await res.json()) as LoginResponse;
 
       if (!res.ok) {
-        setError(data.error?.message || 'Authentication failed');
+        setError((data as any).error?.message || 'Authentication failed');
         return;
       }
 
-      props.onLogin(data.token, data.user);
+      if (data.token && data.user) {
+        props.onLogin(data.token, data.user);
+      } else {
+        setError('Invalid response from server');
+      }
     } catch (err) {
       setError('An error occurred. Please try again.');
     } finally {

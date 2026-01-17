@@ -165,7 +165,7 @@ func (s *DatabaseService) ListDatabases(ctx context.Context) ([]*models.Database
 }
 
 // CreateRecord creates a new record in a database.
-func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, data map[string]interface{}) (*models.Record, error) {
+func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, data map[string]interface{}) (*models.DataRecord, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -183,7 +183,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, d
 	}
 
 	now := time.Now()
-	record := &models.Record{
+	record := &models.DataRecord{
 		ID:       id,
 		Data:     data,
 		Created:  now,
@@ -207,7 +207,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, d
 }
 
 // GetRecords retrieves all records from a database.
-func (s *DatabaseService) GetRecords(ctx context.Context, databaseID string) ([]*models.Record, error) {
+func (s *DatabaseService) GetRecords(ctx context.Context, databaseID string) ([]*models.DataRecord, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -232,7 +232,7 @@ func (s *DatabaseService) GetRecords(ctx context.Context, databaseID string) ([]
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
-func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseID string, offset, limit int) ([]*models.Record, error) {
+func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseID string, offset, limit int) ([]*models.DataRecord, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -247,7 +247,7 @@ func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseID string,
 }
 
 // GetRecord retrieves a specific record by ID.
-func (s *DatabaseService) GetRecord(ctx context.Context, databaseID, recordID string) (*models.Record, error) {
+func (s *DatabaseService) GetRecord(ctx context.Context, databaseID, recordID string) (*models.DataRecord, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}

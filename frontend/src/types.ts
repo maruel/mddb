@@ -48,9 +48,9 @@ export interface Column {
   required?: boolean;
 }
 /**
- * Record represents a database record associated with a node
+ * DataRecord represents a database record associated with a node
  */
-export interface Record {
+export interface DataRecord {
   id: string;
   data: { [key: string]: any};
   created: string;
@@ -872,6 +872,3 @@ export interface ListUsersResponse {
   users: (User | undefined)[];
 }
 
-// Compatibility aliases
-export type AppNode = Node;
-export type DataRecord = Record;

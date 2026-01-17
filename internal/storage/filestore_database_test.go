@@ -250,7 +250,7 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 
 	// Append records
-	records := []*models.Record{
+	records := []*models.DataRecord{
 		{
 			ID:       "rec_1",
 			Data:     map[string]interface{}{"name": "Record 1"},
