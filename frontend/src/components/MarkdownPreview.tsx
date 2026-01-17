@@ -13,9 +13,11 @@ const md = new MarkdownIt({
 });
 
 // Custom renderer for images to support organization-aware asset URLs
-const originalImageRenderer = md.renderer.rules.image || function(tokens, idx, options, _env, self) {
-  return self.renderToken(tokens, idx, options);
-};
+const originalImageRenderer =
+  md.renderer.rules.image ||
+  function (tokens, idx, options, _env, self) {
+    return self.renderToken(tokens, idx, options);
+  };
 
 md.renderer.rules.image = (tokens, idx, options, env, self) => {
   const token = tokens[idx];

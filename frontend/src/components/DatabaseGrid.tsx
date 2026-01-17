@@ -15,11 +15,12 @@ export default function DatabaseGrid(props: DatabaseGridProps) {
         {(record) => (
           <div class={styles.card}>
             <div class={styles.cardHeader}>
-              <strong>{String((props.columns[0] ? record.data[props.columns[0].name] : null) || 'Untitled')}</strong>
-              <button 
-                class={styles.deleteBtn}
-                onClick={() => props.onDeleteRecord(record.id)}
-              >
+              <strong>
+                {String(
+                  (props.columns[0] ? record.data[props.columns[0].name] : null) || 'Untitled'
+                )}
+              </strong>
+              <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>
                 ×
               </button>
             </div>

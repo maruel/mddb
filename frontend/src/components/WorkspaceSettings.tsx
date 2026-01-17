@@ -26,7 +26,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       ...options,
       headers: {
         ...options.headers,
-        'Authorization': `Bearer ${props.token}`,
+        Authorization: `Bearer ${props.token}`,
       },
     });
     if (!res.ok) {
@@ -41,12 +41,12 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       setLoading(true);
       const [membersRes, invsRes] = await Promise.all([
         authFetch('/api/users'),
-        authFetch('/api/invitations')
+        authFetch('/api/invitations'),
       ]);
-      
+
       const membersData = (await membersRes.json()) as ListUsersResponse;
       const invsData = (await invsRes.json()) as ListInvitationsResponse;
-      
+
       setMembers((membersData.users?.filter(Boolean) as User[]) || []);
       setInvitations((invsData.invitations?.filter(Boolean) as Invitation[]) || []);
     } catch (err) {
@@ -100,7 +100,9 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     <div class={styles.settings}>
       <header class={styles.header}>
         <h2>Workspace Settings</h2>
-        <button onClick={() => props.onClose()} class={styles.closeButton}>&times;</button>
+        <button onClick={() => props.onClose()} class={styles.closeButton}>
+          &times;
+        </button>
       </header>
 
       <Show when={error()}>
@@ -124,9 +126,12 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                   <td>{member.name}</td>
                   <td>{member.email}</td>
                   <td>
-                    <Show when={props.user.role === 'admin' && member.id !== props.user.id} fallback={member.role}>
-                      <select 
-                        value={member.role} 
+                    <Show
+                      when={props.user.role === 'admin' && member.id !== props.user.id}
+                      fallback={member.role}
+                    >
+                      <select
+                        value={member.role}
                         onChange={(e) => handleUpdateRole(member.id, e.target.value)}
                         class={styles.roleSelect}
                       >
@@ -172,7 +177,9 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
           <form onSubmit={handleInvite} class={styles.inviteForm}>
             <h4>Invite new member</h4>
             <div class={styles.formGroup}>
-              <label for="invite-email" class="sr-only">Email address</label>
+              <label for="invite-email" class="sr-only">
+                Email address
+              </label>
               <input
                 id="invite-email"
                 name="email"
@@ -183,8 +190,8 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                 required
                 autocomplete="email"
               />
-              <select 
-                value={inviteRole()} 
+              <select
+                value={inviteRole()}
                 onChange={(e) => setInviteRole(e.target.value as 'admin' | 'editor' | 'viewer')}
               >
                 <option value="admin">Admin</option>

@@ -264,6 +264,14 @@ export interface InvitationService {
 //////////
 
 /**
+ * JSONLTable handles storage and in-memory caching for a single table in JSONL format.
+ */
+export interface JSONLTable<T extends any> {
+}
+
+//////////
+
+/**
  * MembershipService handles user-organization relationships.
  */
 export interface MembershipService {

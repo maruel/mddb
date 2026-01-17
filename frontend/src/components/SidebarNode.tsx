@@ -25,19 +25,20 @@ export default function SidebarNode(props: SidebarNodeProps) {
         style={{ 'padding-left': `${props.depth * 12 + 8}px` }}
         onClick={() => props.onSelect(props.node)}
       >
-        <span 
-          class={styles.expandIcon} 
-          classList={{ [`${styles.expanded}`]: isExpanded(), [`${styles.hidden}`]: !props.node.children?.length }}
+        <span
+          class={styles.expandIcon}
+          classList={{
+            [`${styles.expanded}`]: isExpanded(),
+            [`${styles.hidden}`]: !props.node.children?.length,
+          }}
           onClick={toggleExpand}
         >
           ▶
         </span>
-        <span class={styles.nodeIcon}>
-          {props.node.type === 'database' ? '📊' : '📄'}
-        </span>
+        <span class={styles.nodeIcon}>{props.node.type === 'database' ? '📊' : '📄'}</span>
         <span class={styles.pageTitleText}>{props.node.title}</span>
       </div>
-      
+
       <Show when={isExpanded() && props.node.children?.length}>
         <ul class={styles.childList}>
           <For each={props.node.children}>

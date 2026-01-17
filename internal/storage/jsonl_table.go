@@ -14,7 +14,7 @@ type JSONLTable[T any] struct {
 	path string
 	mu   sync.RWMutex
 
-rows []T
+	rows []T
 }
 
 // NewJSONLTable creates a new JSONLTable and loads all data from the file.

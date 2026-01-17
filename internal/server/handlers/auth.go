@@ -79,29 +79,14 @@ func (h *AuthHandler) Register(ctx context.Context, req RegisterRequest) (*Login
 		return nil, errors.NewAPIError(409, errors.ErrConflict, "User already exists")
 	}
 
-	// If this is the first user, create a default organization and make them an admin
-	count, err := h.userService.CountUsers()
+	// Create an organization only for this user
+	orgName := req.Name + "'s Organization"
+	org, err := h.orgService.CreateOrganization(ctx, orgName)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to count users", err)
+		return nil, errors.InternalWithError("Failed to create organization", err)
 	}
-
-	role := models.RoleViewer
-	orgID := ""
-	if count == 0 {
-		role = models.RoleAdmin
-		org, err := h.orgService.CreateOrganization(ctx, "Default Organization")
-		if err != nil {
-			return nil, errors.InternalWithError("Failed to create default organization", err)
-		}
-		orgID = org.ID
-	} else {
-		// For now, new users join the first organization or none
-		// In a real app, we'd have invitations or org selection
-		orgs, err := h.orgService.ListOrganizations()
-		if err == nil && len(orgs) > 0 {
-			orgID = orgs[0].ID
-		}
-	}
+	orgID := org.ID
+	role := models.RoleAdmin
 
 	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name, role)
 	if err != nil {

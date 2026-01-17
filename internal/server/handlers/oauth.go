@@ -85,22 +85,14 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		user, err = h.userService.GetUserByEmail(googleUser.Email)
 		if err != nil {
 			// Create new user if not found
-			// For now, new OAuth users get a default organization like Register
-			count, _ := h.userService.CountUsers()
-			role := models.RoleViewer
+			// Create an organization only for this user
+			orgName := googleUser.Name + "'s Organization"
+			org, _ := h.orgService.CreateOrganization(r.Context(), orgName)
 			orgID := ""
-			if count == 0 {
-				role = models.RoleAdmin
-				org, _ := h.orgService.CreateOrganization(r.Context(), "Default Organization")
-				if org != nil {
-					orgID = org.ID
-				}
-			} else {
-				orgs, _ := h.orgService.ListOrganizations()
-				if len(orgs) > 0 {
-					orgID = orgs[0].ID
-				}
+			if org != nil {
+				orgID = org.ID
 			}
+			role := models.RoleAdmin
 
 			// Password is not used for OAuth users
 			password, _ := storage.GenerateToken(32)

@@ -46,7 +46,11 @@ export default function App() {
   const authFetch = async (url: string, options: RequestInit = {}) => {
     let finalUrl = url;
     // Automatically prepend organization ID for data-acting API calls
-    if (url.startsWith('/api/') && !url.startsWith('/api/auth/') && !url.startsWith('/api/health')) {
+    if (
+      url.startsWith('/api/') &&
+      !url.startsWith('/api/auth/') &&
+      !url.startsWith('/api/health')
+    ) {
       const orgID = user()?.organization_id;
       if (orgID) {
         // Convert /api/nodes to /api/{orgID}/nodes
@@ -56,7 +60,7 @@ export default function App() {
 
     const headers = {
       ...options.headers,
-      'Authorization': `Bearer ${token()}`,
+      Authorization: `Bearer ${token()}`,
     };
     const res = await fetch(finalUrl, { ...options, headers });
     if (res.status === 401) {
@@ -180,7 +184,9 @@ export default function App() {
 
       // If it's a database or hybrid, load records
       if (nodeData.type === 'database' || nodeData.type === 'hybrid') {
-        const recordsRes = await authFetch(`/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`);
+        const recordsRes = await authFetch(
+          `/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`
+        );
         const recordsData = (await recordsRes.json()) as ListRecordsResponse;
         const loadedRecords = (recordsData.records || []) as DataRecord[];
         setRecords(loadedRecords);
@@ -317,7 +323,7 @@ export default function App() {
   const getBreadcrumbs = (nodeId: string | null): Node[] => {
     if (!nodeId) return [];
     const path: Node[] = [];
-    
+
     const findPath = (currentNodes: Node[], targetId: string): boolean => {
       for (const node of currentNodes) {
         if (node.id === targetId) {
@@ -331,7 +337,7 @@ export default function App() {
       }
       return false;
     };
-    
+
     findPath(nodes(), nodeId);
     return path;
   };
@@ -412,7 +418,7 @@ export default function App() {
           </div>
           <div class={styles.userInfo}>
             <Show when={(user()?.memberships?.length ?? 0) > 1}>
-              <select 
+              <select
                 class={styles.orgSwitcher}
                 value={user()?.organization_id}
                 onChange={(e) => switchOrg(e.target.value)}
@@ -431,8 +437,12 @@ export default function App() {
                 {user()?.memberships?.[0]?.organization_name || 'My Org'}
               </span>
             </Show>
-            <span>{user()?.name} ({user()?.role})</span>
-            <button onClick={logout} class={styles.logoutButton}>Logout</button>
+            <span>
+              {user()?.name} ({user()?.role})
+            </span>
+            <button onClick={logout} class={styles.logoutButton}>
+              Logout
+            </button>
           </div>
         </header>
 
@@ -441,22 +451,31 @@ export default function App() {
             <div class={styles.sidebarHeader}>
               <h2>Workspace</h2>
               <div class={styles.sidebarActions}>
-                <button onClick={() => {
-                  setShowSettings(true);
-                  setSelectedNodeId(null);
-                }} title="Workspace Settings">
+                <button
+                  onClick={() => {
+                    setShowSettings(true);
+                    setSelectedNodeId(null);
+                  }}
+                  title="Workspace Settings"
+                >
                   ⚙
                 </button>
-                <button onClick={() => {
-                  setShowSettings(false);
-                  createNode('document');
-                }} title="New Page">
+                <button
+                  onClick={() => {
+                    setShowSettings(false);
+                    createNode('document');
+                  }}
+                  title="New Page"
+                >
                   +P
                 </button>
-                <button onClick={() => {
-                  setShowSettings(false);
-                  createNode('database');
-                }} title="New Database">
+                <button
+                  onClick={() => {
+                    setShowSettings(false);
+                    createNode('database');
+                  }}
+                  title="New Database"
+                >
                   +D
                 </button>
               </div>
@@ -482,10 +501,10 @@ export default function App() {
 
           <main class={styles.main}>
             <Show when={showSettings() && user() && token()}>
-              <WorkspaceSettings 
-                user={user() as User} 
-                token={token() as string} 
-                onClose={() => setShowSettings(false)} 
+              <WorkspaceSettings
+                user={user() as User}
+                token={token() as string}
+                onClose={() => setShowSettings(false)}
               />
             </Show>
 
@@ -498,10 +517,7 @@ export default function App() {
                         <Show when={i() > 0}>
                           <span class={styles.breadcrumbSeparator}>/</span>
                         </Show>
-                        <span 
-                          class={styles.breadcrumbItem} 
-                          onClick={() => handleNodeClick(crumb)}
-                        >
+                        <span class={styles.breadcrumbItem} onClick={() => handleNodeClick(crumb)}>
                           {crumb.title}
                         </span>
                       </>
@@ -565,10 +581,13 @@ export default function App() {
                       </Show>
                     </div>
                     <div class={styles.editorActions}>
-                      <button onClick={() => {
-                        const id = selectedNodeId();
-                        if (id) loadHistory(id);
-                      }} disabled={loading()}>
+                      <button
+                        onClick={() => {
+                          const id = selectedNodeId();
+                          if (id) loadHistory(id);
+                        }}
+                        disabled={loading()}
+                      >
                         {showHistory() ? 'Hide History' : 'History'}
                       </button>
                       <button onClick={saveNode} disabled={loading()}>
@@ -597,7 +616,9 @@ export default function App() {
                                 <span class={styles.historyDate}>
                                   {new Date(commit.timestamp).toLocaleString()}
                                 </span>
-                                <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
+                                <span class={styles.historyHash}>
+                                  {commit.hash.substring(0, 7)}
+                                </span>
                               </div>
                               <div class={styles.historyMessage}>{commit.message}</div>
                             </li>
@@ -612,7 +633,9 @@ export default function App() {
 
                   <div class={styles.nodeContent}>
                     {/* Always show markdown content if it exists or if node is document/hybrid */}
-                    <Show when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'database'}>
+                    <Show
+                      when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'database'}
+                    >
                       <div class={styles.editorContent}>
                         <textarea
                           value={content()}
@@ -629,70 +652,72 @@ export default function App() {
                     </Show>
 
                     {/* Show database table if node is database or hybrid */}
-                    <Show when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'document'}>
-                        <div class={styles.databaseView}>
-                          <div class={styles.databaseHeader}>
-                            <h3>Database Records</h3>
-                            <div class={styles.viewToggle}>
-                              <button 
-                                classList={{ [`${styles.active}`]: viewMode() === 'table' }}
-                                onClick={() => setViewMode('table')}
-                              >
-                                Table
-                              </button>
-                              <button 
-                                classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
-                                onClick={() => setViewMode('grid')}
-                              >
-                                Grid
-                              </button>
-                              <button 
-                                classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
-                                onClick={() => setViewMode('gallery')}
-                              >
-                                Gallery
-                              </button>
-                              <button 
-                                classList={{ [`${styles.active}`]: viewMode() === 'board' }}
-                                onClick={() => setViewMode('board')}
-                              >
-                                Board
-                              </button>
-                            </div>
+                    <Show
+                      when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'document'}
+                    >
+                      <div class={styles.databaseView}>
+                        <div class={styles.databaseHeader}>
+                          <h3>Database Records</h3>
+                          <div class={styles.viewToggle}>
+                            <button
+                              classList={{ [`${styles.active}`]: viewMode() === 'table' }}
+                              onClick={() => setViewMode('table')}
+                            >
+                              Table
+                            </button>
+                            <button
+                              classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
+                              onClick={() => setViewMode('grid')}
+                            >
+                              Grid
+                            </button>
+                            <button
+                              classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
+                              onClick={() => setViewMode('gallery')}
+                            >
+                              Gallery
+                            </button>
+                            <button
+                              classList={{ [`${styles.active}`]: viewMode() === 'board' }}
+                              onClick={() => setViewMode('board')}
+                            >
+                              Board
+                            </button>
                           </div>
-                          <Show when={viewMode() === 'table'}>
-                            <DatabaseTable
-                              databaseId={selectedNodeId() || ''}
-                              columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
-                              records={records()}
-                              onAddRecord={handleAddRecord}
-                              onDeleteRecord={handleDeleteRecord}
-                              onLoadMore={loadMoreRecords}
-                              hasMore={hasMore()}
-                            />
-                          </Show>
-                          <Show when={viewMode() === 'grid'}>
-                            <DatabaseGrid 
-                              records={records()} 
-                              columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
-                              onDeleteRecord={handleDeleteRecord}
-                            />
-                          </Show>
-                          <Show when={viewMode() === 'gallery'}>
-                            <DatabaseGallery 
-                              records={records()} 
-                              columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
-                              onDeleteRecord={handleDeleteRecord}
-                            />
-                          </Show>
-                          <Show when={viewMode() === 'board'}>
-                            <DatabaseBoard 
-                              records={records()} 
-                              columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []} 
-                              onDeleteRecord={handleDeleteRecord}
-                            />
-                          </Show>
                         </div>
+                        <Show when={viewMode() === 'table'}>
+                          <DatabaseTable
+                            databaseId={selectedNodeId() || ''}
+                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
+                            records={records()}
+                            onAddRecord={handleAddRecord}
+                            onDeleteRecord={handleDeleteRecord}
+                            onLoadMore={loadMoreRecords}
+                            hasMore={hasMore()}
+                          />
+                        </Show>
+                        <Show when={viewMode() === 'grid'}>
+                          <DatabaseGrid
+                            records={records()}
+                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
+                            onDeleteRecord={handleDeleteRecord}
+                          />
+                        </Show>
+                        <Show when={viewMode() === 'gallery'}>
+                          <DatabaseGallery
+                            records={records()}
+                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
+                            onDeleteRecord={handleDeleteRecord}
+                          />
+                        </Show>
+                        <Show when={viewMode() === 'board'}>
+                          <DatabaseBoard
+                            records={records()}
+                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
+                            onDeleteRecord={handleDeleteRecord}
+                          />
+                        </Show>
+                      </div>
                     </Show>
                   </div>
                 </div>

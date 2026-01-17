@@ -20,7 +20,7 @@ export default function Auth(props: AuthProps) {
     setLoading(true);
 
     const endpoint = isRegister() ? '/api/auth/register' : '/api/auth/login';
-    const body: LoginRequest | RegisterRequest = isRegister() 
+    const body: LoginRequest | RegisterRequest = isRegister()
       ? { email: email(), password: password(), name: name() }
       : { email: email(), password: password() };
 
@@ -34,7 +34,7 @@ export default function Auth(props: AuthProps) {
       const data = (await res.json()) as LoginResponse;
 
       if (!res.ok) {
-        const errorData = (data as unknown) as ErrorResponse;
+        const errorData = data as unknown as ErrorResponse;
         setError(errorData.error?.message || 'Authentication failed');
         return;
       }
@@ -55,7 +55,7 @@ export default function Auth(props: AuthProps) {
     <div class={styles.authContainer}>
       <form class={styles.authForm} onSubmit={handleSubmit}>
         <h2>{isRegister() ? 'Create Account' : 'Login to mddb'}</h2>
-        
+
         {error() && <div class={styles.error}>{error()}</div>}
 
         <Show when={isRegister()}>
@@ -100,7 +100,7 @@ export default function Auth(props: AuthProps) {
         </div>
 
         <button type="submit" disabled={loading()}>
-          {loading() ? 'Please wait...' : (isRegister() ? 'Register' : 'Login')}
+          {loading() ? 'Please wait...' : isRegister() ? 'Register' : 'Login'}
         </button>
 
         <p class={styles.toggle}>

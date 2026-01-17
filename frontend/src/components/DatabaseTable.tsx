@@ -29,10 +29,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
 
   const handleCellClick = (recordId: string, columnId: string) => {
     const col = props.columns.find((c) => c.id === columnId);
-    const value =
-      props.records.find((r) => r.id === recordId)?.data[
-        col?.name ?? ''
-      ] ?? '';
+    const value = props.records.find((r) => r.id === recordId)?.data[col?.name ?? ''] ?? '';
 
     setEditingCell({ recordId, columnId });
     setEditValue(String(value));
