@@ -872,3 +872,88 @@ export interface ListUsersResponse {
   users: (User | undefined)[];
 }
 
+//////////
+/*
+Package errors defines structured error types for the API.
+*/
+
+/**
+ * ErrorCode defines specific error types for the API.
+ */
+export type ErrorCode = string;
+/**
+ * ErrValidationFailed is returned when input data fails validation
+ */
+export const ErrValidationFailed: ErrorCode = "VALIDATION_FAILED";
+/**
+ * ErrMissingField is returned when a required field is missing
+ */
+export const ErrMissingField: ErrorCode = "MISSING_FIELD";
+/**
+ * ErrInvalidFormat is returned when a field has an invalid format
+ */
+export const ErrInvalidFormat: ErrorCode = "INVALID_FORMAT";
+/**
+ * ErrNotFound is returned when a resource is not found
+ */
+export const ErrNotFound: ErrorCode = "NOT_FOUND";
+/**
+ * ErrPageNotFound is returned when a page is not found
+ */
+export const ErrPageNotFound: ErrorCode = "PAGE_NOT_FOUND";
+/**
+ * ErrDatabaseNotFound is returned when a database is not found
+ */
+export const ErrDatabaseNotFound: ErrorCode = "DATABASE_NOT_FOUND";
+/**
+ * ErrFileNotFound is returned when a file is not found
+ */
+export const ErrFileNotFound: ErrorCode = "FILE_NOT_FOUND";
+/**
+ * ErrStorageError is returned when a storage operation fails
+ */
+export const ErrStorageError: ErrorCode = "STORAGE_ERROR";
+/**
+ * ErrInternal is returned when an unexpected server error occurs
+ */
+export const ErrInternal: ErrorCode = "INTERNAL_ERROR";
+/**
+ * ErrNotImplemented is returned when a feature is not implemented
+ */
+export const ErrNotImplemented: ErrorCode = "NOT_IMPLEMENTED";
+/**
+ * ErrConflict is returned when there is a resource conflict
+ */
+export const ErrConflict: ErrorCode = "CONFLICT";
+/**
+ * ErrUnauthorized is returned when authentication is missing or invalid
+ */
+export const ErrUnauthorized: ErrorCode = "UNAUTHORIZED";
+/**
+ * ErrForbidden is returned when a user has insufficient permissions
+ */
+export const ErrForbidden: ErrorCode = "FORBIDDEN";
+/**
+ * ErrorDetails defines the structured error information in a response.
+ */
+export interface ErrorDetails {
+  code: ErrorCode;
+  message: string;
+}
+/**
+ * ErrorResponse is the standard API error response.
+ */
+export interface ErrorResponse {
+  error: ErrorDetails;
+  details?: { [key: string]: any};
+}
+/**
+ * ErrorWithStatus is an error that includes an HTTP status code and error code.
+ */
+export type ErrorWithStatus = any;
+/**
+ * APIError is a concrete error type with status code, code, and optional details.
+ */
+export interface APIError {
+}
+

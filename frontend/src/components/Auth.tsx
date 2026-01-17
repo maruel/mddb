@@ -1,6 +1,6 @@
 import { createSignal, Show } from 'solid-js';
 import styles from './Auth.module.css';
-import type { User, LoginResponse, LoginRequest, RegisterRequest } from '../types';
+import type { User, LoginResponse, LoginRequest, RegisterRequest, ErrorResponse } from '../types';
 
 interface AuthProps {
   onLogin: (token: string, user: User) => void;
@@ -34,7 +34,8 @@ export default function Auth(props: AuthProps) {
       const data = (await res.json()) as LoginResponse;
 
       if (!res.ok) {
-        setError((data as any).error?.message || 'Authentication failed');
+        const errorData = (data as unknown) as ErrorResponse;
+        setError(errorData.error?.message || 'Authentication failed');
         return;
       }
 
@@ -59,8 +60,10 @@ export default function Auth(props: AuthProps) {
 
         <Show when={isRegister()}>
           <div class={styles.formGroup}>
-            <label>Name</label>
+            <label for="name">Name</label>
             <input
+              id="name"
+              name="name"
               type="text"
               value={name()}
               onInput={(e) => setName(e.target.value)}
@@ -71,8 +74,10 @@ export default function Auth(props: AuthProps) {
         </Show>
 
         <div class={styles.formGroup}>
-          <label>Email</label>
+          <label for="email">Email</label>
           <input
+            id="email"
+            name="email"
             type="email"
             value={email()}
             onInput={(e) => setEmail(e.target.value)}
@@ -82,8 +87,10 @@ export default function Auth(props: AuthProps) {
         </div>
 
         <div class={styles.formGroup}>
-          <label>Password</label>
+          <label for="password">Password</label>
           <input
+            id="password"
+            name="password"
             type="password"
             value={password()}
             onInput={(e) => setPassword(e.target.value)}

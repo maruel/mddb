@@ -4,11 +4,15 @@ packages:
       "time.Time": "string"
       "NodeType": "'document' | 'database' | 'hybrid'"
       "UserRole": "'admin' | 'editor' | 'viewer'"
+      "interface{}": "unknown"
+      "any": "unknown"
     output_path: "frontend/src/models.gen.ts"
 
   - path: "github.com/maruel/mddb/internal/storage"
     type_mappings:
       "time.Time": "string"
+      "interface{}": "unknown"
+      "any": "unknown"
     output_path: "frontend/src/storage.gen.ts"
 
   - path: "github.com/maruel/mddb/internal/server/handlers"
@@ -26,5 +30,13 @@ packages:
       "models.Asset": "Asset"
       "storage.Commit": "Commit"
       "storage.SearchResult": "SearchResult"
+      "interface{}": "unknown"
+      "any": "unknown"
     output_path: "frontend/src/handlers.gen.ts"
     indent: "  "
+
+  - path: "github.com/maruel/mddb/internal/errors"
+    type_mappings:
+      "interface{}": "unknown"
+      "any": "unknown"
+    output_path: "frontend/src/errors.gen.ts"

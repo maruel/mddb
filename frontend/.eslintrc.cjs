@@ -16,6 +16,7 @@ module.exports = {
     project: './tsconfig.json',
     tsconfigRootDir: __dirname,
   },
+  ignorePatterns: ['src/types.ts'],
   plugins: [
     '@typescript-eslint',
     'solid',

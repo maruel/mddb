@@ -168,15 +168,12 @@ func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code apie
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
-	response := map[string]any{
-		"error": map[string]any{
-			"code":    code,
-			"message": message,
+	response := apierrors.ErrorResponse{
+		Error: apierrors.ErrorDetails{
+			Code:    code,
+			Message: message,
 		},
-	}
-
-	if len(details) > 0 {
-		response["details"] = details
+		Details: details,
 	}
 
 	_ = json.NewEncoder(w).Encode(response)

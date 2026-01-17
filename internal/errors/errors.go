@@ -41,6 +41,18 @@ const (
 	ErrForbidden ErrorCode = "FORBIDDEN"
 )
 
+// ErrorDetails defines the structured error information in a response.
+type ErrorDetails struct {
+	Code    ErrorCode `json:"code"`
+	Message string    `json:"message"`
+}
+
+// ErrorResponse is the standard API error response.
+type ErrorResponse struct {
+	Error   ErrorDetails   `json:"error"`
+	Details map[string]any `json:"details,omitempty"`
+}
+
 // ErrorWithStatus is an error that includes an HTTP status code and error code.
 type ErrorWithStatus interface {
 	Error() string

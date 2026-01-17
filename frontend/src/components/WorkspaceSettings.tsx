@@ -172,7 +172,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
           <form onSubmit={handleInvite} class={styles.inviteForm}>
             <h4>Invite new member</h4>
             <div class={styles.formGroup}>
+              <label for="invite-email" class="sr-only">Email address</label>
               <input
+                id="invite-email"
+                name="email"
                 type="email"
                 placeholder="Email address"
                 value={inviteEmail()}
