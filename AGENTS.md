@@ -75,7 +75,7 @@ mddb/
 
 ### Standard Patterns
 
-**Errors**: Use `errors.NewAPIError(statusCode, message)` from internal/errors for HTTP errors. Implement `ErrorWithStatus` interface.
+**Errors**: Use `errors.NewAPIError(statusCode, code, message)` from internal/errors for HTTP errors. Implement `ErrorWithStatus` interface.
 
 **Logging**: Use context-aware slog methods: `slog.InfoContext()`, `slog.ErrorContext()`, etc. Error fields should use `"err"` not `"error"`.
 

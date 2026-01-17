@@ -6,20 +6,20 @@ mddb uses a multi-tenant directory structure where each organization owns its ow
 
 ### Directory Layout
 - **Root Repository**: `data/`
-  - The `data/` directory is itself a Git repository that manages organizations as **Git submodules**.
-  - `data/db/`: System-wide information (Users, Organizations, Memberships) stored in JSON/SQLite.
-- **Organization Submodules**: `data/{orgID}/`
-  - Each organization directory is an independent Git repository linked as a submodule to the root.
-  - `data/{orgID}/pages/`: Hierarchical page structure using numeric IDs.
+  - The `data/` directory is itself a Git repository that tracks organization directories.
+  - `data/db/`: System-wide information (Users, Organizations, Memberships) stored in JSON.
+- **Organization Repositories**: `data/{orgID}/`
+  - Each organization directory is an independent Git repository.
+  - Changes in an organization directory are committed to its local repository, and the state of these repositories is tracked in the root `data/` repository via Git. (Note: Currently implemented as nested repositories rather than formal Git submodules with `.gitmodules`).
+  - `data/{orgID}/pages/`: Page storage using flat numeric IDs.
   - `data/{orgID}/assets/`: Organization-specific assets.
 
 ```
 data/                     # Root Git Repository
-├── .gitmodules           # Submodule definitions
 ├── db/                   # System Metadata (Global)
 │   ├── users.json
 │   └── ...
-└── {orgID}/              # Organization Submodule (Independent Git Repo)
+└── {orgID}/              # Organization Repository (Independent Git Repo)
     └── pages/
         ├── 1/            # Page ID 1
         └── ...
@@ -28,7 +28,7 @@ data/                     # Root Git Repository
 ### Automatic Versioning
 mddb employs a hierarchical versioning strategy:
 1. **Organization Level**: Changes within `data/{orgID}/` trigger commits to that organization's independent repository.
-2. **Root Level**: The `data/` repository tracks the state of all organizations by updating its submodule pointers. This allows for global backups and state-in-time recovery across the entire system while maintaining tenant isolation.
+2. **Root Level**: The `data/` repository tracks the state of all organizations by staging and committing the organization directory changes. This allows for global backups and state-in-time recovery across the entire system while maintaining tenant isolation.
 
 ## Embedded Build Process
 
@@ -94,7 +94,7 @@ Authentication is handled via JWT. User credentials, profile information, and or
 
 ### OAuth2 Integration
 mddb will support OpenID Connect (OIDC) flows for Google and Microsoft.
-- **Callback Handling**: Dedicated `/api/auth/callback/{provider}` endpoints.
+- **Callback Handling**: Dedicated `/api/auth/oauth/{provider}/callback` endpoints.
 - **Account Linking**: Ability to link local accounts with OAuth identities.
 - **State Management**: CSRF protection using signed `state` parameters.
 

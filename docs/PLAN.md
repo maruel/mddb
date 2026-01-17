@@ -56,8 +56,12 @@ See `README.md` and `API.md` for details.
 ### Phase 2: Page Editor ✓
 *Completed.*
 
-### Phase 3: Databases ✓
-*Completed.*
+### Phase 3: Databases [/]
+*Partially completed.*
+- [x] Schema definition and storage
+- [x] Record creation and JSONL storage
+- [x] Record listing with pagination
+- [ ] Record update and deletion (API placeholders exist but return NotImplemented)
 
 ### Phase 3.5: Storage Migration ✓
 *Completed.*

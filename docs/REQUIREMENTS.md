@@ -9,7 +9,7 @@ Most core functional requirements for a local-first markdown and database system
 
 ### 1. Document Management
 - [x] **CRUD**: Create, read, update, delete pages.
-- [x] **Organization**: Hierarchical page organization (directory-based numeric IDs).
+- [/] **Organization**: Logical hierarchical page organization (currently uses flat physical storage with numeric IDs; persistence of hierarchy is partial).
 - [x] **Editor**: Full markdown editing with live preview.
 - [x] **Assets**: Attach images and files directly to pages.
 - [ ] **Interlinking**: Specialized UI for linking between pages (currently manual markdown links).

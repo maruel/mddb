@@ -25,13 +25,13 @@ Server will be available at `http://localhost:8080/api/health`
 
 ### 3. Test It
 ```bash
-# Create a page
-curl -X POST http://localhost:8080/api/pages \
+# Create a page (replace {orgID} with actual organization ID, e.g., 1)
+curl -X POST http://localhost:8080/api/1/nodes \
   -H "Content-Type: application/json" \
-  -d '{"title":"My First Page","content":"# Hello\n\nWelcome to mddb!"}'
+  -d '{"title":"My First Page","content":"# Hello\n\nWelcome to mddb!","type":"page"}'
 
-# List pages
-curl http://localhost:8080/api/pages
+# List nodes
+curl http://localhost:8080/api/1/nodes
 
 # Delete (optional)
 make clean
@@ -80,24 +80,24 @@ make frontend-build # Build frontend for production
 
 ## API Endpoints
 
-### Pages
+### Nodes (Pages & Databases)
 ```bash
-# List all pages
-GET /api/pages
+# List all nodes
+GET /api/{orgID}/nodes
 
-# Get a specific page
-GET /api/pages/{id}
+# Get a specific node
+GET /api/{orgID}/nodes/{id}
 
-# Create a new page
-POST /api/pages
+# Create a new node
+POST /api/{orgID}/nodes
+Body: {"title":"...", "content":"...", "type":"page|database"}
+
+# Update a node
+PUT /api/{orgID}/nodes/{id}
 Body: {"title":"...", "content":"..."}
 
-# Update a page
-PUT /api/pages/{id}
-Body: {"title":"...", "content":"..."}
-
-# Delete a page
-DELETE /api/pages/{id}
+# Delete a node
+DELETE /api/{orgID}/nodes/{id}
 
 # Health check
 GET /api/health
@@ -105,19 +105,20 @@ GET /api/health
 
 ## Data Storage
 
-All data is stored in `./data/pages/` as numbered directories:
+All data is stored in `./data/{orgID}/pages/` as numbered directories:
 
 ```
 data/
-└── pages/
-    ├── 1/
-    │   └── index.md
-    ├── 2/
-    │   ├── index.md
-    │   ├── metadata.json
-    │   └── data.jsonl
-    └── 3/subfolder/4/
-        └── index.md
+└── {orgID}/
+    └── pages/
+        ├── 1/
+        │   └── index.md
+        ├── 2/
+        │   ├── index.md
+        │   ├── metadata.json
+        │   └── data.jsonl
+        └── 3/
+            └── index.md
 ```
 
 Each page directory contains `index.md` with YAML front matter:
@@ -141,23 +142,24 @@ Databases (in any page directory) include:
 
 ### Create a Page via API
 ```bash
-curl -X POST http://localhost:8080/api/pages \
+curl -X POST http://localhost:8080/api/{orgID}/nodes \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Introduction",
-    "content": "# Welcome\n\nStart editing!"
+    "content": "# Welcome\n\nStart editing!",
+    "type": "page"
   }'
 ```
 
 ### Get a Page
 ```bash
 # Replace {id} with actual page ID
-curl http://localhost:8080/api/pages/{id}
+curl http://localhost:8080/api/{orgID}/nodes/{id}
 ```
 
 ### Update a Page
 ```bash
-curl -X PUT http://localhost:8080/api/pages/{id} \
+curl -X PUT http://localhost:8080/api/{orgID}/nodes/{id} \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Updated Title",
