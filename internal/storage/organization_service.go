@@ -2,10 +2,10 @@ package storage
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/maruel/mddb/internal/models"
@@ -14,24 +14,34 @@ import (
 // OrganizationService handles organization management.
 type OrganizationService struct {
 	rootDir    string
-	orgsDir    string
+	table      *JSONLTable[models.Organization]
 	fileStore  *FileStore
 	gitService *GitService
+	mu         sync.RWMutex
+	byID       map[string]*models.Organization
 }
 
 // NewOrganizationService creates a new organization service.
 func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *GitService) (*OrganizationService, error) {
-	orgsDir := filepath.Join(rootDir, "db", "organizations")
-	if err := os.MkdirAll(orgsDir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create organizations directory: %w", err)
+	tablePath := filepath.Join(rootDir, "db", "organizations.jsonl")
+	table, err := NewJSONLTable[models.Organization](tablePath)
+	if err != nil {
+		return nil, err
 	}
 
-	return &OrganizationService{
+	s := &OrganizationService{
 		rootDir:    rootDir,
-		orgsDir:    orgsDir,
+		table:      table,
 		fileStore:  fileStore,
 		gitService: gitService,
-	}, nil
+		byID:       make(map[string]*models.Organization),
+	}
+
+	for i, org := range table.rows {
+		s.byID[org.ID] = &table.rows[i]
+	}
+
+	return s, nil
 }
 
 // CreateOrganization creates a new organization.
@@ -39,6 +49,9 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	if name == "" {
 		return nil, fmt.Errorf("organization name is required")
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	id := generateShortID()
 	now := time.Now()
@@ -48,9 +61,15 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 		Created: now,
 	}
 
-	if err := s.saveOrganization(org); err != nil {
+	if err := s.table.Append(*org); err != nil {
 		return nil, err
 	}
+
+	// Update local cache
+	s.table.mu.RLock()
+	newOrg := &s.table.rows[len(s.table.rows)-1]
+	s.table.mu.RUnlock()
+	s.byID[id] = newOrg
 
 	// Create organization content directory
 	orgDir := filepath.Join(s.rootDir, id)
@@ -88,47 +107,25 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 
 // GetOrganization retrieves an organization by ID.
 func (s *OrganizationService) GetOrganization(id string) (*models.Organization, error) {
-	filePath := filepath.Join(s.orgsDir, id+".json")
-	data, err := os.ReadFile(filePath)
-	if err != nil {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	org, ok := s.byID[id]
+	if !ok {
 		return nil, fmt.Errorf("organization not found")
 	}
 
-	var org models.Organization
-	if err := json.Unmarshal(data, &org); err != nil {
-		return nil, fmt.Errorf("failed to parse organization: %w", err)
-	}
-
-	return &org, nil
+	return org, nil
 }
 
 // ListOrganizations returns all organizations.
 func (s *OrganizationService) ListOrganizations() ([]*models.Organization, error) {
-	entries, err := os.ReadDir(s.orgsDir)
-	if err != nil {
-		return nil, err
-	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
-	var orgs []*models.Organization
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".json" {
-			continue
-		}
-
-		org, err := s.GetOrganization(entry.Name()[:len(entry.Name())-5])
-		if err == nil {
-			orgs = append(orgs, org)
-		}
+	orgs := make([]*models.Organization, 0, len(s.byID))
+	for _, org := range s.byID {
+		orgs = append(orgs, org)
 	}
 	return orgs, nil
-}
-
-func (s *OrganizationService) saveOrganization(org *models.Organization) error {
-	data, err := json.MarshalIndent(org, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	filePath := filepath.Join(s.orgsDir, org.ID+".json")
-	return os.WriteFile(filePath, data, 0o644)
 }

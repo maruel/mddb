@@ -1,10 +1,9 @@
 package storage
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/maruel/mddb/internal/models"
@@ -12,25 +11,43 @@ import (
 
 // MembershipService handles user-organization relationships.
 type MembershipService struct {
-	rootDir        string
-	membershipsDir string
+	rootDir string
+	table   *JSONLTable[models.Membership]
+	mu      sync.RWMutex
+	byID    map[string]*models.Membership // key: userID_orgID
 }
 
 // NewMembershipService creates a new membership service.
 func NewMembershipService(rootDir string) (*MembershipService, error) {
-	membershipsDir := filepath.Join(rootDir, "db", "memberships")
-	if err := os.MkdirAll(membershipsDir, 0o700); err != nil {
-		return nil, fmt.Errorf("failed to create memberships directory: %w", err)
+	tablePath := filepath.Join(rootDir, "db", "memberships.jsonl")
+	table, err := NewJSONLTable[models.Membership](tablePath)
+	if err != nil {
+		return nil, err
 	}
 
-	return &MembershipService{
-		rootDir:        rootDir,
-		membershipsDir: membershipsDir,
-	}, nil
+	s := &MembershipService{
+		rootDir: rootDir,
+		table:   table,
+		byID:    make(map[string]*models.Membership),
+	}
+
+	for i, m := range table.rows {
+		s.byID[m.UserID+"_"+m.OrganizationID] = &table.rows[i]
+	}
+
+	return s, nil
 }
 
 // CreateMembership adds a user to an organization.
 func (s *MembershipService) CreateMembership(userID, orgID string, role models.UserRole) (*models.Membership, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	key := userID + "_" + orgID
+	if _, ok := s.byID[key]; ok {
+		return nil, fmt.Errorf("membership already exists")
+	}
+
 	membership := &models.Membership{
 		UserID:         userID,
 		OrganizationID: orgID,
@@ -38,47 +55,42 @@ func (s *MembershipService) CreateMembership(userID, orgID string, role models.U
 		Created:        time.Now(),
 	}
 
-	if err := s.saveMembership(membership); err != nil {
+	if err := s.table.Append(*membership); err != nil {
 		return nil, err
 	}
+
+	// Update local cache
+	s.table.mu.RLock()
+	newM := &s.table.rows[len(s.table.rows)-1]
+	s.table.mu.RUnlock()
+	s.byID[key] = newM
 
 	return membership, nil
 }
 
 // GetMembership retrieves a specific user-org relationship.
 func (s *MembershipService) GetMembership(userID, orgID string) (*models.Membership, error) {
-	filePath := filepath.Join(s.membershipsDir, fmt.Sprintf("%s_%s.json", userID, orgID))
-	data, err := os.ReadFile(filePath)
-	if err != nil {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	key := userID + "_" + orgID
+	m, ok := s.byID[key]
+	if !ok {
 		return nil, fmt.Errorf("membership not found")
 	}
 
-	var m models.Membership
-	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, err
-	}
-
-	return &m, nil
+	return m, nil
 }
 
 // ListByUser returns all organizations a user belongs to.
 func (s *MembershipService) ListByUser(userID string) ([]models.Membership, error) {
-	entries, err := os.ReadDir(s.membershipsDir)
-	if err != nil {
-		return nil, err
-	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	var memberships []models.Membership
-	prefix := userID + "_"
-	for _, entry := range entries {
-		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" && len(entry.Name()) > len(prefix) && entry.Name()[:len(prefix)] == prefix {
-			data, err := os.ReadFile(filepath.Join(s.membershipsDir, entry.Name()))
-			if err == nil {
-				var m models.Membership
-				if err := json.Unmarshal(data, &m); err == nil {
-					memberships = append(memberships, m)
-				}
-			}
+	for _, m := range s.byID {
+		if m.UserID == userID {
+			memberships = append(memberships, *m)
 		}
 	}
 	return memberships, nil
@@ -86,22 +98,13 @@ func (s *MembershipService) ListByUser(userID string) ([]models.Membership, erro
 
 // ListByOrganization returns all users in an organization.
 func (s *MembershipService) ListByOrganization(orgID string) ([]models.Membership, error) {
-	entries, err := os.ReadDir(s.membershipsDir)
-	if err != nil {
-		return nil, err
-	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	var memberships []models.Membership
-	suffix := "_" + orgID + ".json"
-	for _, entry := range entries {
-		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".json" && len(entry.Name()) > len(suffix) && entry.Name()[len(entry.Name())-len(suffix):] == suffix {
-			data, err := os.ReadFile(filepath.Join(s.membershipsDir, entry.Name()))
-			if err == nil {
-				var m models.Membership
-				if err := json.Unmarshal(data, &m); err == nil {
-					memberships = append(memberships, m)
-				}
-			}
+	for _, m := range s.byID {
+		if m.OrganizationID == orgID {
+			memberships = append(memberships, *m)
 		}
 	}
 	return memberships, nil
@@ -109,27 +112,37 @@ func (s *MembershipService) ListByOrganization(orgID string) ([]models.Membershi
 
 // UpdateRole updates a user's role in an organization.
 func (s *MembershipService) UpdateRole(userID, orgID string, role models.UserRole) error {
-	m, err := s.GetMembership(userID, orgID)
-	if err != nil {
-		return err
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	key := userID + "_" + orgID
+	m, ok := s.byID[key]
+	if !ok {
+		return fmt.Errorf("membership not found")
 	}
 
 	m.Role = role
-	return s.saveMembership(m)
+	return s.table.Replace(s.getAllFromCache())
 }
 
 // DeleteMembership removes a user from an organization.
 func (s *MembershipService) DeleteMembership(userID, orgID string) error {
-	filePath := filepath.Join(s.membershipsDir, fmt.Sprintf("%s_%s.json", userID, orgID))
-	return os.Remove(filePath)
-}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-func (s *MembershipService) saveMembership(m *models.Membership) error {
-	data, err := json.MarshalIndent(m, "", "  ")
-	if err != nil {
-		return err
+	key := userID + "_" + orgID
+	if _, ok := s.byID[key]; !ok {
+		return fmt.Errorf("membership not found")
 	}
 
-	filePath := filepath.Join(s.membershipsDir, fmt.Sprintf("%s_%s.json", m.UserID, m.OrganizationID))
-	return os.WriteFile(filePath, data, 0o600)
+	delete(s.byID, key)
+	return s.table.Replace(s.getAllFromCache())
+}
+
+func (s *MembershipService) getAllFromCache() []models.Membership {
+	rows := make([]models.Membership, 0, len(s.byID))
+	for _, v := range s.byID {
+		rows = append(rows, *v)
+	}
+	return rows
 }
