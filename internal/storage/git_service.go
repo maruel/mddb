@@ -66,16 +66,16 @@ func (gs *GitService) InitRepository(dir string) error {
 func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType, resourceID, description string) error {
 	orgID := models.GetOrgID(ctx)
 	targetDir := gs.repoDir
-	relPath := "pages"
+	relPath := "." // Default to root
 
 	if orgID != "" {
 		targetDir = filepath.Join(gs.repoDir, orgID)
-		relPath = "pages" // Inside org dir, it's also pages/
+		relPath = "pages" // Inside org dir, it's pages/
 	}
 
 	// Stage changes in the target directory
 	if err := gs.execGitInDir(targetDir, "add", relPath); err != nil {
-		// If relPath doesn't exist yet, it might fail. Try adding everything.
+		// Fallback to adding everything if specific path fails
 		_ = gs.execGitInDir(targetDir, "add", ".")
 	}
 
@@ -111,11 +111,17 @@ func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType,
 func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID string) ([]*Commit, error) {
 	orgID := models.GetOrgID(ctx)
 	targetDir := gs.repoDir
-	path := filepath.Join("pages", resourceID)
+	path := ""
 
 	if orgID != "" {
 		targetDir = filepath.Join(gs.repoDir, orgID)
-		// Path is already relative to targetDir
+		path = filepath.Join("pages", resourceID)
+	} else {
+		// Legacy path or system-wide resource
+		path = filepath.Join("pages", resourceID)
+		if _, err := os.Stat(filepath.Join(targetDir, path)); err != nil {
+			path = resourceID // Try without pages/ prefix
+		}
 	}
 
 	format := "%H|%an|%ai|%s"

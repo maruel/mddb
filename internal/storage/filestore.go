@@ -22,10 +22,9 @@ import (
 // - Databases: numeric directory containing metadata.json + data.jsonl
 // - Assets: files within each page's directory namespace
 type FileStore struct {
-	rootDir  string
-	pagesDir string         // Legacy default pages dir
-	nextIDs  map[string]int // Next available numeric ID per organization
-	mu       sync.Mutex
+	rootDir string
+	nextIDs map[string]int // Next available numeric ID per organization
+	mu      sync.Mutex
 }
 
 // NewFileStore initializes a FileStore with the given root directory.
@@ -34,15 +33,9 @@ func NewFileStore(rootDir string) (*FileStore, error) {
 		return nil, fmt.Errorf("failed to create root directory: %w", err)
 	}
 
-	pagesDir := filepath.Join(rootDir, "pages")
-	if err := os.MkdirAll(pagesDir, 0o755); err != nil {
-		return nil, fmt.Errorf("failed to create directory %s: %w", pagesDir, err)
-	}
-
 	return &FileStore{
-		rootDir:  rootDir,
-		pagesDir: pagesDir,
-		nextIDs:  make(map[string]int),
+		rootDir: rootDir,
+		nextIDs: make(map[string]int),
 	}, nil
 }
 
@@ -82,7 +75,7 @@ func (fs *FileStore) findNextID(orgID string) int {
 
 func (fs *FileStore) orgPagesDir(orgID string) string {
 	if orgID == "" {
-		return fs.pagesDir
+		return ""
 	}
 	dir := filepath.Join(fs.rootDir, orgID, "pages")
 	_ = os.MkdirAll(dir, 0o755)
@@ -91,6 +84,9 @@ func (fs *FileStore) orgPagesDir(orgID string) string {
 
 // PageExists checks if a page directory exists.
 func (fs *FileStore) PageExists(orgID, id string) bool {
+	if orgID == "" {
+		return false
+	}
 	path := fs.pageDir(orgID, id)
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
@@ -98,6 +94,9 @@ func (fs *FileStore) PageExists(orgID, id string) bool {
 
 // ReadPage reads a page from disk.
 func (fs *FileStore) ReadPage(orgID, id string) (*models.Page, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	filePath := fs.pageIndexFile(orgID, id)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -113,6 +112,9 @@ func (fs *FileStore) ReadPage(orgID, id string) (*models.Page, error) {
 
 // WritePage writes a page to disk.
 func (fs *FileStore) WritePage(orgID, id, title, content string) (*models.Page, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	now := time.Now()
 	page := &models.Page{
 		ID:       id,
@@ -139,6 +141,9 @@ func (fs *FileStore) WritePage(orgID, id, title, content string) (*models.Page, 
 
 // UpdatePage updates an existing page.
 func (fs *FileStore) UpdatePage(orgID, id, title, content string) (*models.Page, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	filePath := fs.pageIndexFile(orgID, id)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
@@ -163,6 +168,9 @@ func (fs *FileStore) UpdatePage(orgID, id, title, content string) (*models.Page,
 
 // DeletePage deletes a page directory.
 func (fs *FileStore) DeletePage(orgID, id string) error {
+	if orgID == "" {
+		return fmt.Errorf("organization ID is required")
+	}
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.RemoveAll(pageDir); err != nil {
 		if os.IsNotExist(err) {
@@ -175,6 +183,9 @@ func (fs *FileStore) DeletePage(orgID, id string) error {
 
 // ListPages returns all pages for an organization.
 func (fs *FileStore) ListPages(orgID string) ([]*models.Page, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	var pages []*models.Page
 	dir := fs.orgPagesDir(orgID)
 
@@ -207,6 +218,9 @@ func (fs *FileStore) ListPages(orgID string) ([]*models.Page, error) {
 
 // ReadNode reads a unified node from disk.
 func (fs *FileStore) ReadNode(orgID, id string) (*models.Node, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	nodeDir := fs.pageDir(orgID, id)
 	info, err := os.Stat(nodeDir)
 	if err != nil {
@@ -256,6 +270,9 @@ func (fs *FileStore) ReadNode(orgID, id string) (*models.Node, error) {
 
 // ReadNodeTree returns the full hierarchical tree of nodes.
 func (fs *FileStore) ReadNodeTree(orgID string) ([]*models.Node, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	return fs.readNodesRecursive(orgID, fs.orgPagesDir(orgID), "")
 }
 
@@ -337,6 +354,9 @@ func (fs *FileStore) ReadNodeFromPath(orgID, path, id, parentID string) (*models
 
 // GetOrganizationUsage calculates the total number of pages and storage usage (in bytes) for an organization.
 func (fs *FileStore) GetOrganizationUsage(orgID string) (pageCount int, storageUsage int64, err error) {
+	if orgID == "" {
+		return 0, 0, fmt.Errorf("organization ID is required")
+	}
 	dir := fs.orgPagesDir(orgID)
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -395,6 +415,9 @@ func (fs *FileStore) ReadDatabase(orgID, id string) (*models.Database, error) {
 
 // WriteDatabase writes a database definition for the given organization.
 func (fs *FileStore) WriteDatabase(orgID string, db *models.Database) error {
+	if orgID == "" {
+		return fmt.Errorf("organization ID is required")
+	}
 	pageDir := fs.pageDir(orgID, db.ID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -415,6 +438,9 @@ func (fs *FileStore) WriteDatabase(orgID string, db *models.Database) error {
 
 // DeleteDatabase deletes a database and all its records.
 func (fs *FileStore) DeleteDatabase(orgID, id string) error {
+	if orgID == "" {
+		return fmt.Errorf("organization ID is required")
+	}
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.RemoveAll(pageDir); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to delete database: %w", err)
@@ -424,6 +450,9 @@ func (fs *FileStore) DeleteDatabase(orgID, id string) error {
 
 // ListDatabases returns all databases for the given organization.
 func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	var databases []*models.Database
 	dir := fs.orgPagesDir(orgID)
 
@@ -456,6 +485,9 @@ func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
 
 // AppendRecord appends a record to a database.
 func (fs *FileStore) AppendRecord(orgID, id string, record *models.DataRecord) error {
+	if orgID == "" {
+		return fmt.Errorf("organization ID is required")
+	}
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -485,6 +517,9 @@ func (fs *FileStore) AppendRecord(orgID, id string, record *models.DataRecord) e
 
 // ReadRecords reads all records for a database.
 func (fs *FileStore) ReadRecords(orgID, id string) ([]*models.DataRecord, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	filePath := fs.databaseRecordsFile(orgID, id)
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -513,6 +548,9 @@ func (fs *FileStore) ReadRecords(orgID, id string) ([]*models.DataRecord, error)
 
 // ReadRecordsPage reads a page of records for a database.
 func (fs *FileStore) ReadRecordsPage(orgID, id string, offset, limit int) ([]*models.DataRecord, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	filePath := fs.databaseRecordsFile(orgID, id)
 	f, err := os.Open(filePath)
 	if err != nil {
@@ -562,6 +600,9 @@ func (fs *FileStore) databaseRecordsFile(orgID, id string) string {
 
 // SaveAsset saves an asset associated with a page.
 func (fs *FileStore) SaveAsset(orgID, pageID, assetName string, data []byte) (string, error) {
+	if orgID == "" {
+		return "", fmt.Errorf("organization ID is required")
+	}
 	pageDir := fs.pageDir(orgID, pageID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create page directory: %w", err)
@@ -577,6 +618,9 @@ func (fs *FileStore) SaveAsset(orgID, pageID, assetName string, data []byte) (st
 
 // ReadAsset reads an asset associated with a page.
 func (fs *FileStore) ReadAsset(orgID, pageID, assetName string) ([]byte, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
 	data, err := os.ReadFile(assetPath)
 	if err != nil {
@@ -590,6 +634,9 @@ func (fs *FileStore) ReadAsset(orgID, pageID, assetName string) ([]byte, error) 
 
 // DeleteAsset deletes an asset associated with a page.
 func (fs *FileStore) DeleteAsset(orgID, pageID, assetName string) error {
+	if orgID == "" {
+		return fmt.Errorf("organization ID is required")
+	}
 	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
 	if err := os.Remove(assetPath); err != nil {
 		if os.IsNotExist(err) {
@@ -602,6 +649,9 @@ func (fs *FileStore) DeleteAsset(orgID, pageID, assetName string) error {
 
 // ListAssets lists all assets associated with a page.
 func (fs *FileStore) ListAssets(orgID, pageID string) ([]*models.Asset, error) {
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
 	pageDir := fs.pageDir(orgID, pageID)
 	entries, err := os.ReadDir(pageDir)
 	if err != nil {
