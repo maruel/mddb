@@ -14,9 +14,9 @@ type PageHandler struct {
 }
 
 // NewPageHandler creates a new page handler
-func NewPageHandler(fileStore *storage.FileStore, gitService *storage.GitService, cache *storage.Cache) *PageHandler {
+func NewPageHandler(fileStore *storage.FileStore, gitService *storage.GitService, cache *storage.Cache, orgService *storage.OrganizationService) *PageHandler {
 	return &PageHandler{
-		pageService: storage.NewPageService(fileStore, gitService, cache),
+		pageService: storage.NewPageService(fileStore, gitService, cache, orgService),
 	}
 }
 

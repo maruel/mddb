@@ -59,6 +59,28 @@ body {
   background: rgba(255, 255, 255, 0.3);
 }
 
+.orgSwitcher {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.orgSwitcher option {
+  color: #333;
+}
+
+.orgName {
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+}
+
 .container {
   display: flex;
   flex: 1;

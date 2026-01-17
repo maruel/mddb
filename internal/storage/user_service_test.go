@@ -21,7 +21,7 @@ func TestUserService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	service, err := NewUserService(tempDir, memService)
+	service, err := NewUserService(tempDir, memService, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

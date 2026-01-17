@@ -13,14 +13,16 @@ type NodeService struct {
 	fileStore  *FileStore
 	gitService *GitService
 	cache      *Cache
+	orgService *OrganizationService
 }
 
 // NewNodeService creates a new node service.
-func NewNodeService(fileStore *FileStore, gitService *GitService, cache *Cache) *NodeService {
+func NewNodeService(fileStore *FileStore, gitService *GitService, cache *Cache, orgService *OrganizationService) *NodeService {
 	return &NodeService{
 		fileStore:  fileStore,
 		gitService: gitService,
 		cache:      cache,
+		orgService: orgService,
 	}
 }
 
@@ -62,6 +64,18 @@ func (s *NodeService) ListNodes(ctx context.Context) ([]*models.Node, error) {
 // CreateNode creates a new node (can be document, database, or hybrid)
 func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType models.NodeType, parentID string) (*models.Node, error) {
 	orgID := models.GetOrgID(ctx)
+
+	// Check Quota
+	if s.orgService != nil {
+		org, err := s.orgService.GetOrganization(orgID)
+		if err == nil && org.Quotas.MaxPages > 0 {
+			count, _, err := s.fileStore.GetOrganizationUsage(orgID)
+			if err == nil && count >= org.Quotas.MaxPages {
+				return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, org.Quotas.MaxPages)
+			}
+		}
+	}
+
 	id := s.fileStore.NextID(orgID)
 	now := time.Now()
 

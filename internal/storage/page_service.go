@@ -13,14 +13,16 @@ type PageService struct {
 	fileStore  *FileStore
 	gitService *GitService
 	cache      *Cache
+	orgService *OrganizationService
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *FileStore, gitService *GitService, cache *Cache) *PageService {
+func NewPageService(fileStore *FileStore, gitService *GitService, cache *Cache, orgService *OrganizationService) *PageService {
 	return &PageService{
 		fileStore:  fileStore,
 		gitService: gitService,
 		cache:      cache,
+		orgService: orgService,
 	}
 }
 
@@ -51,6 +53,18 @@ func (s *PageService) CreatePage(ctx context.Context, title, content string) (*m
 	}
 
 	orgID := models.GetOrgID(ctx)
+
+	// Check Quota
+	if s.orgService != nil {
+		org, err := s.orgService.GetOrganization(orgID)
+		if err == nil && org.Quotas.MaxPages > 0 {
+			count, _, err := s.fileStore.GetOrganizationUsage(orgID)
+			if err == nil && count >= org.Quotas.MaxPages {
+				return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, org.Quotas.MaxPages)
+			}
+		}
+	}
+
 	// Generate numeric ID (monotonically increasing)
 	id := s.fileStore.NextID(orgID)
 

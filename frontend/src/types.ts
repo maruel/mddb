@@ -31,10 +31,19 @@ export interface Commit {
   timestamp: string;
 }
 
+export interface Membership {
+  user_id: string;
+  organization_id: string;
+  organization_name?: string;
+  role: 'admin' | 'editor' | 'viewer';
+  created: string;
+}
+
 export interface User {
   id: string;
   email: string;
   name: string;
   organization_id: string;
   role: 'admin' | 'editor' | 'viewer';
+  memberships?: Membership[];
 }

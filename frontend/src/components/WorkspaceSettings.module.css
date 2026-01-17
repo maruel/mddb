@@ -1,0 +1,109 @@
+.settings {
+  padding: 2rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 1rem;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  cursor: pointer;
+  color: #999;
+}
+
+.closeButton:hover {
+  color: #333;
+}
+
+.section {
+  margin-bottom: 3rem;
+}
+
+.section h3 {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th, .table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.table th {
+  font-weight: 600;
+  color: #666;
+  background: #fafafa;
+}
+
+.roleSelect {
+  padding: 0.4rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.error {
+  padding: 1rem;
+  background: #fee;
+  color: #c33;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+}
+
+.inviteForm {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.inviteForm h4 {
+  margin-bottom: 1rem;
+}
+
+.formGroup {
+  display: flex;
+  gap: 1rem;
+}
+
+.formGroup input {
+  flex: 1;
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.formGroup select {
+  padding: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.formGroup button {
+  padding: 0.6rem 1.5rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.formGroup button:hover {
+  background: #5568d3;
+}

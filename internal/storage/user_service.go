@@ -16,10 +16,11 @@ type UserService struct {
 	rootDir    string
 	usersDir   string
 	memService *MembershipService
+	orgService *OrganizationService
 }
 
 // NewUserService creates a new user service.
-func NewUserService(rootDir string, memService *MembershipService) (*UserService, error) {
+func NewUserService(rootDir string, memService *MembershipService, orgService *OrganizationService) (*UserService, error) {
 	usersDir := filepath.Join(rootDir, "db", "users")
 	if err := os.MkdirAll(usersDir, 0o700); err != nil {
 		return nil, fmt.Errorf("failed to create users directory: %w", err)
@@ -29,6 +30,7 @@ func NewUserService(rootDir string, memService *MembershipService) (*UserService
 		rootDir:    rootDir,
 		usersDir:   usersDir,
 		memService: memService,
+		orgService: orgService,
 	}, nil
 }
 
@@ -155,6 +157,14 @@ func (s *UserService) populateMemberships(user *models.User) {
 	if s.memService != nil {
 		mems, err := s.memService.ListByUser(user.ID)
 		if err == nil {
+			if s.orgService != nil {
+				for i := range mems {
+					org, err := s.orgService.GetOrganization(mems[i].OrganizationID)
+					if err == nil {
+						mems[i].OrganizationName = org.Name
+					}
+				}
+			}
 			user.Memberships = mems
 		}
 	}

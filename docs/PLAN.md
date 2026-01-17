@@ -119,14 +119,14 @@ See `README.md` and `API.md` for details.
 - [ ] **OAuth2 Integration (Microsoft)**: Support for Microsoft login flows.
 - [ ] **Tiered Settings**: Global User, Membership-specific, and Organization-wide settings.
 
-### Phase 8: Experience & Scaling
-*In Progress.*
+### Phase 8: Experience & Scaling ✓
+*Completed.*
 
 - [x] **Org-Aware Search**: Scope search results strictly to the active organization. (Implemented in SearchService)
-- [ ] **Frontend Multi-tenancy UX**:
-    - [ ] **Organization Switcher**: UI component for switching between active memberships.
-- [ ] **Quota Enforcement**: Track and limit resource usage (storage, pages) per organization.
-- [x] **User UI**: Management of users, permissions, and quotas in the frontend. (Initial version implemented)
+- [x] **Frontend Multi-tenancy UX**:
+    - [x] **Organization Switcher**: UI component for switching between active memberships.
+- [x] **Quota Enforcement**: Track and limit resource usage (storage, pages) per organization.
+- [x] **User UI**: Management of users, permissions, and quotas in the frontend.
 
 ## Future Considerations
 - **SQLite Migration**: Migrate `data/db/*.json` to SQLite for better relational integrity and query performance.

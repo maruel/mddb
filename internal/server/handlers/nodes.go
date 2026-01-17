@@ -14,9 +14,9 @@ type NodeHandler struct {
 }
 
 // NewNodeHandler creates a new node handler
-func NewNodeHandler(fileStore *storage.FileStore, gitService *storage.GitService, cache *storage.Cache) *NodeHandler {
+func NewNodeHandler(fileStore *storage.FileStore, gitService *storage.GitService, cache *storage.Cache, orgService *storage.OrganizationService) *NodeHandler {
 	return &NodeHandler{
-		nodeService: storage.NewNodeService(fileStore, gitService, cache),
+		nodeService: storage.NewNodeService(fileStore, gitService, cache, orgService),
 	}
 }
 

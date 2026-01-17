@@ -13,14 +13,16 @@ type DatabaseService struct {
 	fileStore  *FileStore
 	gitService *GitService
 	cache      *Cache
+	orgService *OrganizationService
 }
 
 // NewDatabaseService creates a new database service.
-func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cache) *DatabaseService {
+func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cache, orgService *OrganizationService) *DatabaseService {
 	return &DatabaseService{
 		fileStore:  fileStore,
 		gitService: gitService,
 		cache:      cache,
+		orgService: orgService,
 	}
 }
 
@@ -43,6 +45,18 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 	}
 
 	orgID := models.GetOrgID(ctx)
+
+	// Check Quota
+	if s.orgService != nil {
+		org, err := s.orgService.GetOrganization(orgID)
+		if err == nil && org.Quotas.MaxPages > 0 {
+			count, _, err := s.fileStore.GetOrganizationUsage(orgID)
+			if err == nil && count >= org.Quotas.MaxPages {
+				return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, org.Quotas.MaxPages)
+			}
+		}
+	}
+
 	// Generate numeric ID (monotonically increasing)
 	id := s.fileStore.NextID(orgID)
 

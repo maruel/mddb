@@ -82,10 +82,11 @@ type OAuthIdentity struct {
 
 // Membership represents a user's relationship with an organization.
 type Membership struct {
-	UserID         string    `json:"user_id"`
-	OrganizationID string    `json:"organization_id"`
-	Role           UserRole  `json:"role"`
-	Created        time.Time `json:"created"`
+	UserID           string    `json:"user_id"`
+	OrganizationID   string    `json:"organization_id"`
+	OrganizationName string    `json:"organization_name,omitempty"`
+	Role             UserRole  `json:"role"`
+	Created          time.Time `json:"created"`
 }
 
 // UserRole defines the permissions for a user.

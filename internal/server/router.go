@@ -18,14 +18,14 @@ import (
 func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, jwtSecret, googleClientID, googleClientSecret string) http.Handler {
 	cache := storage.NewCache()
 	mux := &http.ServeMux{}
-	ph := handlers.NewPageHandler(fileStore, gitService, cache)
-	dh := handlers.NewDatabaseHandler(fileStore, gitService, cache)
-	nh := handlers.NewNodeHandler(fileStore, gitService, cache)
-	ah := handlers.NewAssetHandler(fileStore, gitService)
+	ph := handlers.NewPageHandler(fileStore, gitService, cache, orgService)
+	dh := handlers.NewDatabaseHandler(fileStore, gitService, cache, orgService)
+	nh := handlers.NewNodeHandler(fileStore, gitService, cache, orgService)
+	ah := handlers.NewAssetHandler(fileStore, gitService, orgService)
 	sh := handlers.NewSearchHandler(fileStore)
 	authh := handlers.NewAuthHandler(userService, orgService, jwtSecret)
 	uh := handlers.NewUserHandler(userService)
-	ih := handlers.NewInvitationHandler(invService, userService, orgService)
+	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
 	mh := handlers.NewMembershipHandler(memService, userService, authh)
 
 	// Health check

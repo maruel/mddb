@@ -335,6 +335,28 @@ func (fs *FileStore) ReadNodeFromPath(orgID, path, id, parentID string) (*models
 	return node, nil
 }
 
+// GetOrganizationUsage calculates the total number of pages and storage usage (in bytes) for an organization.
+func (fs *FileStore) GetOrganizationUsage(orgID string) (pageCount int, storageUsage int64, err error) {
+	dir := fs.orgPagesDir(orgID)
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			storageUsage += info.Size()
+			if info.Name() == "index.md" || info.Name() == "metadata.json" {
+				// We count unique directories that have index.md or metadata.json
+				// But Walk is recursive. Let's simplify and just count index.md as "pages"
+				if info.Name() == "index.md" {
+					pageCount++
+				}
+			}
+		}
+		return nil
+	})
+	return
+}
+
 func (fs *FileStore) pageDir(orgID, id string) string {
 	return filepath.Join(fs.orgPagesDir(orgID), id)
 }

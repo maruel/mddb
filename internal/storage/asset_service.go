@@ -13,13 +13,15 @@ import (
 type AssetService struct {
 	fileStore  *FileStore
 	gitService *GitService
+	orgService *OrganizationService
 }
 
 // NewAssetService creates a new asset service.
-func NewAssetService(fileStore *FileStore, gitService *GitService) *AssetService {
+func NewAssetService(fileStore *FileStore, gitService *GitService, orgService *OrganizationService) *AssetService {
 	return &AssetService{
 		fileStore:  fileStore,
 		gitService: gitService,
+		orgService: orgService,
 	}
 }
 
@@ -36,6 +38,18 @@ func (s *AssetService) SaveAsset(ctx context.Context, pageID, fileName string, d
 	}
 
 	orgID := models.GetOrgID(ctx)
+
+	// Check Quota
+	if s.orgService != nil {
+		org, err := s.orgService.GetOrganization(orgID)
+		if err == nil && org.Quotas.MaxStorage > 0 {
+			_, usage, err := s.fileStore.GetOrganizationUsage(orgID)
+			if err == nil && usage+int64(len(data)) > org.Quotas.MaxStorage {
+				return nil, fmt.Errorf("storage quota exceeded (%d/%d bytes)", usage+int64(len(data)), org.Quotas.MaxStorage)
+			}
+		}
+	}
+
 	// Verify page exists
 	if !s.fileStore.PageExists(orgID, pageID) {
 		return nil, fmt.Errorf("page not found")

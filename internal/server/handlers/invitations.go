@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/maruel/mddb/internal/errors"
@@ -14,14 +15,16 @@ type InvitationHandler struct {
 	invService  *storage.InvitationService
 	userService *storage.UserService
 	orgService  *storage.OrganizationService
+	memService  *storage.MembershipService
 }
 
 // NewInvitationHandler creates a new invitation handler.
-func NewInvitationHandler(invService *storage.InvitationService, userService *storage.UserService, orgService *storage.OrganizationService) *InvitationHandler {
+func NewInvitationHandler(invService *storage.InvitationService, userService *storage.UserService, orgService *storage.OrganizationService, memService *storage.MembershipService) *InvitationHandler {
 	return &InvitationHandler{
 		invService:  invService,
 		userService: userService,
 		orgService:  orgService,
+		memService:  memService,
 	}
 }
 
@@ -56,9 +59,19 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, req CreateInvi
 	}
 
 	// Permission check (only Admin can invite)
-	currentUser := ctx.Value(models.UserKey).(*models.User)
-	if currentUser.Role != models.RoleAdmin {
+	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
+	if !ok || currentUser.Role != models.RoleAdmin {
 		return nil, errors.Forbidden("Only admins can create invitations")
+	}
+
+	// Check Quota
+	org, err := h.orgService.GetOrganization(req.OrgID)
+	if err == nil && org.Quotas.MaxUsers > 0 {
+		members, _ := h.memService.ListByOrganization(req.OrgID)
+		pending, _ := h.invService.ListByOrganization(req.OrgID)
+		if len(members)+len(pending) >= org.Quotas.MaxUsers {
+			return nil, errors.NewAPIError(403, "quota_exceeded", fmt.Sprintf("User quota exceeded (%d/%d)", len(members)+len(pending), org.Quotas.MaxUsers))
+		}
 	}
 
 	return h.invService.CreateInvitation(req.Email, req.OrgID, req.Role)
