@@ -313,3 +313,88 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 		t.Errorf("Data mismatch: got %q, want %q", got.Data["name"], "Test Record")
 	}
 }
+
+func TestDatabaseService_UpdateRecord(t *testing.T) {
+	tmpDir := t.TempDir()
+	fs, err := NewFileStore(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to create FileStore: %v", err)
+	}
+
+	cache := NewCache()
+	service := NewDatabaseService(fs, nil, cache, nil)
+
+	// Create a database
+	columns := []models.Column{{Name: "name", Type: "text"}}
+	db, err := service.CreateDatabase(newTestContext("org1"), "Test DB", columns)
+	if err != nil {
+		t.Fatalf("Failed to create database: %v", err)
+	}
+
+	// Create a record
+	data := map[string]interface{}{"name": "Original Name"}
+	created, err := service.CreateRecord(newTestContext("org1"), db.ID, data)
+	if err != nil {
+		t.Fatalf("Failed to create record: %v", err)
+	}
+
+	// Update it
+	newData := map[string]interface{}{"name": "Updated Name"}
+	updated, err := service.UpdateRecord(newTestContext("org1"), db.ID, created.ID, newData)
+	if err != nil {
+		t.Fatalf("Failed to update record: %v", err)
+	}
+
+	if updated.ID != created.ID {
+		t.Errorf("ID mismatch: got %q, want %q", updated.ID, created.ID)
+	}
+	if updated.Data["name"] != "Updated Name" {
+		t.Errorf("Data mismatch: got %q, want %q", updated.Data["name"], "Updated Name")
+	}
+
+	// Verify persistence
+	got, err := service.GetRecord(newTestContext("org1"), db.ID, created.ID)
+	if err != nil {
+		t.Fatalf("Failed to get record: %v", err)
+	}
+	if got.Data["name"] != "Updated Name" {
+		t.Errorf("Data mismatch in storage: got %q, want %q", got.Data["name"], "Updated Name")
+	}
+}
+
+func TestDatabaseService_DeleteRecord(t *testing.T) {
+	tmpDir := t.TempDir()
+	fs, err := NewFileStore(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to create FileStore: %v", err)
+	}
+
+	cache := NewCache()
+	service := NewDatabaseService(fs, nil, cache, nil)
+
+	// Create a database
+	columns := []models.Column{{Name: "name", Type: "text"}}
+	db, err := service.CreateDatabase(newTestContext("org1"), "Test DB", columns)
+	if err != nil {
+		t.Fatalf("Failed to create database: %v", err)
+	}
+
+	// Create a record
+	data := map[string]interface{}{"name": "To be deleted"}
+	created, err := service.CreateRecord(newTestContext("org1"), db.ID, data)
+	if err != nil {
+		t.Fatalf("Failed to create record: %v", err)
+	}
+
+	// Delete it
+	err = service.DeleteRecord(newTestContext("org1"), db.ID, created.ID)
+	if err != nil {
+		t.Fatalf("Failed to delete record: %v", err)
+	}
+
+	// Verify it's gone
+	_, err = service.GetRecord(newTestContext("org1"), db.ID, created.ID)
+	if err == nil {
+		t.Error("Record should not exist after deletion")
+	}
+}

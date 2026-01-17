@@ -269,3 +269,70 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseID, recordID st
 
 	return nil, fmt.Errorf("record not found")
 }
+
+// UpdateRecord updates an existing record in a database.
+func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseID string, recordID string, data map[string]interface{}) (*models.DataRecord, error) {
+	if databaseID == "" {
+		return nil, fmt.Errorf("database id cannot be empty")
+	}
+	if recordID == "" {
+		return nil, fmt.Errorf("record id cannot be empty")
+	}
+
+	orgID := models.GetOrgID(ctx)
+	
+	// Retrieve existing record to preserve Created time and ensure it exists
+	existing, err := s.GetRecord(ctx, databaseID, recordID)
+	if err != nil {
+		return nil, err
+	}
+
+	record := &models.DataRecord{
+		ID:       recordID,
+		Data:     data,
+		Created:  existing.Created,
+		Modified: time.Now(),
+	}
+
+	if err := s.fileStore.UpdateRecord(orgID, databaseID, record); err != nil {
+		return nil, err
+	}
+
+	// Invalidate records cache
+	s.cache.InvalidateRecords(databaseID)
+
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange(ctx, "update", "record", recordID, fmt.Sprintf("in database %s", databaseID)); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
+	return record, nil
+}
+
+// DeleteRecord deletes a record from a database.
+func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseID, recordID string) error {
+	if databaseID == "" {
+		return fmt.Errorf("database id cannot be empty")
+	}
+	if recordID == "" {
+		return fmt.Errorf("record id cannot be empty")
+	}
+
+	orgID := models.GetOrgID(ctx)
+	
+	if err := s.fileStore.DeleteRecord(orgID, databaseID, recordID); err != nil {
+		return err
+	}
+
+	// Invalidate records cache
+	s.cache.InvalidateRecords(databaseID)
+
+	if s.gitService != nil {
+		if err := s.gitService.CommitChange(ctx, "delete", "record", recordID, fmt.Sprintf("from database %s", databaseID)); err != nil {
+			fmt.Printf("failed to commit change: %v\n", err)
+		}
+	}
+
+	return nil
+}

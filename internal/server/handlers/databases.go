@@ -272,10 +272,20 @@ func (h *DatabaseHandler) CreateRecord(ctx context.Context, req CreateRecordRequ
 
 // UpdateRecord updates an existing record
 func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req UpdateRecordRequest) (*UpdateRecordResponse, error) {
-	return nil, errors.NotImplemented("record update")
+	record, err := h.databaseService.UpdateRecord(ctx, req.ID, req.RID, req.Data)
+	if err != nil {
+		return nil, errors.NotFound("record")
+	}
+
+	return &UpdateRecordResponse{ID: record.ID}, nil
 }
 
 // DeleteRecord deletes a record
 func (h *DatabaseHandler) DeleteRecord(ctx context.Context, req DeleteRecordRequest) (*DeleteRecordResponse, error) {
-	return nil, errors.NotImplemented("record delete")
+	err := h.databaseService.DeleteRecord(ctx, req.ID, req.RID)
+	if err != nil {
+		return nil, errors.NotFound("record")
+	}
+
+	return &DeleteRecordResponse{}, nil
 }

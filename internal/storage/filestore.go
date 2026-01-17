@@ -588,6 +588,86 @@ func (fs *FileStore) ReadRecordsPage(orgID, id string, offset, limit int) ([]*mo
 	return records, nil
 }
 
+// UpdateRecord updates an existing record in a database.
+func (fs *FileStore) UpdateRecord(orgID, databaseID string, record *models.DataRecord) error {
+	if orgID == "" {
+		return fmt.Errorf("organization ID is required")
+	}
+	records, err := fs.ReadRecords(orgID, databaseID)
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for i, r := range records {
+		if r.ID == record.ID {
+			records[i] = record
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("record not found")
+	}
+
+	return fs.writeRecords(orgID, databaseID, records)
+}
+
+// DeleteRecord deletes a record from a database.
+func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID string) error {
+	if orgID == "" {
+		return fmt.Errorf("organization ID is required")
+	}
+	records, err := fs.ReadRecords(orgID, databaseID)
+	if err != nil {
+		return err
+	}
+
+	newRecords := make([]*models.DataRecord, 0, len(records))
+	found := false
+	for _, r := range records {
+		if r.ID == recordID {
+			found = true
+			continue
+		}
+		newRecords = append(newRecords, r)
+	}
+
+	if !found {
+		return fmt.Errorf("record not found")
+	}
+
+	return fs.writeRecords(orgID, databaseID, newRecords)
+}
+
+func (fs *FileStore) writeRecords(orgID, databaseID string, records []*models.DataRecord) error {
+	filePath := fs.databaseRecordsFile(orgID, databaseID)
+	
+	var buf bytes.Buffer
+	for _, record := range records {
+		data, err := json.Marshal(record)
+		if err != nil {
+			return fmt.Errorf("failed to marshal record: %w", err)
+		}
+		buf.Write(data)
+		buf.WriteByte('\n')
+	}
+
+	// Create a temporary file to ensure atomic write
+	tempPath := filePath + ".tmp"
+	if err := os.WriteFile(tempPath, buf.Bytes(), 0o644); err != nil {
+		return fmt.Errorf("failed to write temp records file: %w", err)
+	}
+
+	if err := os.Rename(tempPath, filePath); err != nil {
+		_ = os.Remove(tempPath)
+		return fmt.Errorf("failed to replace records file: %w", err)
+	}
+
+	return nil
+}
+
 func (fs *FileStore) databaseSchemaFile(orgID, id string) string {
 	return filepath.Join(fs.pageDir(orgID, id), "metadata.json")
 }
