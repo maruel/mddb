@@ -178,6 +178,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                 value={inviteEmail()}
                 onInput={(e) => setInviteEmail(e.target.value)}
                 required
+                autocomplete="email"
               />
               <select 
                 value={inviteRole()} 

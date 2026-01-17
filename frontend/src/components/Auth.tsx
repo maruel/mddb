@@ -65,6 +65,7 @@ export default function Auth(props: AuthProps) {
               value={name()}
               onInput={(e) => setName(e.target.value)}
               required
+              autocomplete="name"
             />
           </div>
         </Show>
@@ -76,6 +77,7 @@ export default function Auth(props: AuthProps) {
             value={email()}
             onInput={(e) => setEmail(e.target.value)}
             required
+            autocomplete="email"
           />
         </div>
 
@@ -86,6 +88,7 @@ export default function Auth(props: AuthProps) {
             value={password()}
             onInput={(e) => setPassword(e.target.value)}
             required
+            autocomplete={isRegister() ? 'new-password' : 'current-password'}
           />
         </div>
 
