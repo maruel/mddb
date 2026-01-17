@@ -67,8 +67,16 @@ export interface User {
   role: UserRole; // Role in active organization
   memberships?: Membership[];
   oauth_identities?: OAuthIdentity[];
+  settings: UserSettings;
   created: string;
   modified: string;
+}
+/**
+ * UserSettings represents global user preferences.
+ */
+export interface UserSettings {
+  theme: string; // light, dark, system
+  language: string; // en, fr, etc.
 }
 /**
  * OAuthIdentity represents a link between a local user and an OAuth2 provider.
@@ -87,7 +95,14 @@ export interface Membership {
   organization_id: string;
   organization_name?: string;
   role: UserRole;
+  settings: MembershipSettings;
   created: string;
+}
+/**
+ * MembershipSettings represents user preferences within a specific organization.
+ */
+export interface MembershipSettings {
+  notifications: boolean;
 }
 /**
  * UserRole defines the permissions for a user.
@@ -112,7 +127,15 @@ export interface Organization {
   id: string;
   name: string;
   quotas: Quota;
+  settings: OrganizationSettings;
   created: string;
+}
+/**
+ * OrganizationSettings represents organization-wide settings.
+ */
+export interface OrganizationSettings {
+  allowed_domains?: string[];
+  public_access: boolean;
 }
 /**
  * Quota defines limits for an organization.
@@ -663,6 +686,13 @@ export interface SwitchOrgResponse {
   token: string;
   user?: User;
 }
+/**
+ * UpdateMembershipSettingsRequest is a request to update membership settings.
+ */
+export interface UpdateMembershipSettingsRequest {
+  OrgID: string;
+  settings: any /* models.MembershipSettings */;
+}
 
 //////////
 
@@ -702,9 +732,24 @@ export interface CreateNodeRequest {
 //////////
 
 /**
- * OAuthHandler handles OAuth2 authentication.
+ * OAuthHandler handles OAuth2 authentication for multiple providers.
  */
 export interface OAuthHandler {
+}
+
+//////////
+
+/**
+ * OrganizationHandler handles organization management.
+ */
+export interface OrganizationHandler {
+}
+/**
+ * UpdateOrgSettingsRequest is a request to update organization settings.
+ */
+export interface UpdateOrgSettingsRequest {
+  OrgID: string;
+  settings: any /* models.OrganizationSettings */;
 }
 
 //////////
@@ -878,6 +923,18 @@ export interface UpdateRoleRequest {
  */
 export interface ListUsersResponse {
   users: (User | undefined)[];
+}
+/**
+ * ListInvitationsResponse is a response containing a list of invitations.
+ */
+export interface ListInvitationsResponse {
+  invitations: (Invitation | undefined)[];
+}
+/**
+ * UpdateUserSettingsRequest is a request to update user global settings.
+ */
+export interface UpdateUserSettingsRequest {
+  settings: any /* models.UserSettings */;
 }
 
 //////////

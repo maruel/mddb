@@ -120,8 +120,8 @@ See `README.md` and `API.md` for details.
 - [x] **Membership Service**: Implement the "Linear" access model (many-to-many User/Org) via the `Membership` bridge.
 - [x] **Invitation Flow**: Email-based invites for pending memberships and resource assignment.
 - [x] **OAuth2 Integration**: Support for Google login flow.
-- [ ] **OAuth2 Integration (Microsoft)**: Support for Microsoft login flows.
-- [ ] **Tiered Settings**: Global User, Membership-specific, and Organization-wide settings.
+- [x] **OAuth2 Integration (Microsoft)**: Support for Microsoft login flows.
+- [x] **Tiered Settings**: Global User, Membership-specific, and Organization-wide settings.
 
 ### Phase 8: Experience & Scaling ✓
 *Completed.*

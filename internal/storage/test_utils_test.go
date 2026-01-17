@@ -7,6 +7,8 @@ import (
 )
 
 // newTestContext returns a context with a test user and organization.
+//
+//nolint:unparam // keep for future use even if currently always "org1"
 func newTestContext(orgID string) context.Context {
 	if orgID == "" {
 		orgID = "test-org"

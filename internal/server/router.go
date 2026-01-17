@@ -15,7 +15,7 @@ import (
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
-func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, jwtSecret, googleClientID, googleClientSecret string) http.Handler {
+func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, jwtSecret, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
 	cache := storage.NewCache()
 	mux := &http.ServeMux{}
 	ph := handlers.NewPageHandler(fileStore, gitService, cache, orgService)
@@ -27,6 +27,7 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	uh := handlers.NewUserHandler(userService)
 	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
 	mh := handlers.NewMembershipHandler(memService, userService, authh)
+	orgh := handlers.NewOrganizationHandler(orgService)
 
 	// Health check
 	mux.Handle("/api/health", Wrap(handlers.Health))
@@ -38,11 +39,23 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	mux.Handle("POST /api/auth/invitations/accept", Wrap(ih.AcceptInvitation))
 	mux.Handle("POST /api/auth/switch-org", Wrap(mh.SwitchOrg))
 
+	// Settings endpoints
+	mux.Handle("PUT /api/auth/settings", Wrap(uh.UpdateUserSettings))
+	mux.Handle("PUT /api/{orgID}/settings/membership", RequireRole(models.RoleViewer)(Wrap(mh.UpdateMembershipSettings)))
+	mux.Handle("GET /api/{orgID}/settings/organization", RequireRole(models.RoleViewer)(Wrap(orgh.GetOrganization)))
+	mux.Handle("PUT /api/{orgID}/settings/organization", RequireRole(models.RoleAdmin)(Wrap(orgh.UpdateSettings)))
+
 	// OAuth endpoints
-	if googleClientID != "" && googleClientSecret != "" {
-		oh := handlers.NewOAuthHandler(userService, orgService, authh, googleClientID, googleClientSecret, "/api/auth/oauth/google/callback")
-		mux.HandleFunc("GET /api/auth/oauth/google", oh.LoginRedirect)
-		mux.HandleFunc("GET /api/auth/oauth/google/callback", oh.Callback)
+	if (googleClientID != "" && googleClientSecret != "") || (msClientID != "" && msClientSecret != "") {
+		oh := handlers.NewOAuthHandler(userService, orgService, authh)
+		if googleClientID != "" && googleClientSecret != "" {
+			oh.AddProvider("google", googleClientID, googleClientSecret, "/api/auth/oauth/google/callback")
+		}
+		if msClientID != "" && msClientSecret != "" {
+			oh.AddProvider("microsoft", msClientID, msClientSecret, "/api/auth/oauth/microsoft/callback")
+		}
+		mux.HandleFunc("GET /api/auth/oauth/{provider}", oh.LoginRedirect)
+		mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", oh.Callback)
 	}
 
 	// User management endpoints

@@ -33,9 +33,10 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 		byToken: make(map[string]*models.Invitation),
 	}
 
-	for i, inv := range table.rows {
-		s.byID[inv.ID] = &table.rows[i]
-		s.byToken[inv.Token] = &table.rows[i]
+	for i := range table.rows {
+		inv := &table.rows[i]
+		s.byID[inv.ID] = inv
+		s.byToken[inv.Token] = inv
 	}
 
 	return s, nil

@@ -271,7 +271,7 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseID, recordID st
 }
 
 // UpdateRecord updates an existing record in a database.
-func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseID string, recordID string, data map[string]interface{}) (*models.DataRecord, error) {
+func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseID, recordID string, data map[string]interface{}) (*models.DataRecord, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -280,7 +280,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseID string, r
 	}
 
 	orgID := models.GetOrgID(ctx)
-	
+
 	// Retrieve existing record to preserve Created time and ensure it exists
 	existing, err := s.GetRecord(ctx, databaseID, recordID)
 	if err != nil {
@@ -320,7 +320,7 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseID, recordID
 	}
 
 	orgID := models.GetOrgID(ctx)
-	
+
 	if err := s.fileStore.DeleteRecord(orgID, databaseID, recordID); err != nil {
 		return err
 	}

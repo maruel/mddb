@@ -129,3 +129,25 @@ func (s *OrganizationService) ListOrganizations() ([]*models.Organization, error
 	}
 	return orgs, nil
 }
+
+// UpdateSettings updates organization-wide settings.
+func (s *OrganizationService) UpdateSettings(id string, settings models.OrganizationSettings) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	org, ok := s.byID[id]
+	if !ok {
+		return fmt.Errorf("organization not found")
+	}
+
+	org.Settings = settings
+	return s.table.Replace(s.getAllFromCache())
+}
+
+func (s *OrganizationService) getAllFromCache() []models.Organization {
+	rows := make([]models.Organization, 0, len(s.byID))
+	for _, v := range s.byID {
+		rows = append(rows, *v)
+	}
+	return rows
+}

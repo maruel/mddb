@@ -38,10 +38,10 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 		byEmail:    make(map[string]*userStorage),
 	}
 
-	for i, user := range table.rows {
+	for i := range table.rows {
 		ptr := &table.rows[i]
-		s.byID[user.ID] = ptr
-		s.byEmail[user.Email] = ptr
+		s.byID[ptr.ID] = ptr
+		s.byEmail[ptr.Email] = ptr
 	}
 
 	return s, nil
@@ -280,6 +280,22 @@ func (s *UserService) LinkOAuthIdentity(userID string, identity models.OAuthIden
 	}
 
 	stored.Modified = time.Now()
+	return s.table.Replace(s.getAllFromCache())
+}
+
+// UpdateSettings updates user global settings.
+func (s *UserService) UpdateSettings(id string, settings models.UserSettings) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	stored, ok := s.byID[id]
+	if !ok {
+		return fmt.Errorf("user not found")
+	}
+
+	stored.Settings = settings
+	stored.Modified = time.Now()
+
 	return s.table.Replace(s.getAllFromCache())
 }
 

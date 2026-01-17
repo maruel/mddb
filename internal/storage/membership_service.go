@@ -125,6 +125,21 @@ func (s *MembershipService) UpdateRole(userID, orgID string, role models.UserRol
 	return s.table.Replace(s.getAllFromCache())
 }
 
+// UpdateSettings updates user preferences within a specific organization.
+func (s *MembershipService) UpdateSettings(userID, orgID string, settings models.MembershipSettings) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	key := userID + "_" + orgID
+	m, ok := s.byID[key]
+	if !ok {
+		return fmt.Errorf("membership not found")
+	}
+
+	m.Settings = settings
+	return s.table.Replace(s.getAllFromCache())
+}
+
 // DeleteMembership removes a user from an organization.
 func (s *MembershipService) DeleteMembership(userID, orgID string) error {
 	s.mu.Lock()

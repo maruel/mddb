@@ -95,3 +95,22 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, req UpdateRoleRequest)
 
 	return h.userService.GetUser(req.UserID)
 }
+
+// UpdateUserSettingsRequest is a request to update user global settings.
+type UpdateUserSettingsRequest struct {
+	Settings models.UserSettings `json:"settings"`
+}
+
+// UpdateUserSettings updates user global settings.
+func (h *UserHandler) UpdateUserSettings(ctx context.Context, req UpdateUserSettingsRequest) (*models.User, error) {
+	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
+	if !ok {
+		return nil, errors.Unauthorized()
+	}
+
+	if err := h.userService.UpdateSettings(currentUser.ID, req.Settings); err != nil {
+		return nil, errors.InternalWithError("Failed to update settings", err)
+	}
+
+	return h.userService.GetUser(currentUser.ID)
+}

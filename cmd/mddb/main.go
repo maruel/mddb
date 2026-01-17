@@ -35,6 +35,8 @@ func mainImpl() error {
 	jwtSecret := flag.String("jwt-secret", "dev-secret-keep-it-safe", "JWT secret for authentication")
 	googleClientID := flag.String("google-client-id", os.Getenv("GOOGLE_CLIENT_ID"), "Google OAuth client ID")
 	googleClientSecret := flag.String("google-client-secret", os.Getenv("GOOGLE_CLIENT_SECRET"), "Google OAuth client secret")
+	msClientID := flag.String("ms-client-id", os.Getenv("MS_CLIENT_ID"), "Microsoft OAuth client ID")
+	msClientSecret := flag.String("ms-client-secret", os.Getenv("MS_CLIENT_SECRET"), "Microsoft OAuth client secret")
 	flag.Parse()
 
 	if len(flag.Args()) > 0 {
@@ -93,7 +95,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:        addr,
-		Handler:     server.NewRouter(fileStore, gitService, userService, orgService, invService, memService, *jwtSecret, *googleClientID, *googleClientSecret),
+		Handler:     server.NewRouter(fileStore, gitService, userService, orgService, invService, memService, *jwtSecret, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
 		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
 

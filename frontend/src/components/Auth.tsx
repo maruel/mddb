@@ -103,6 +103,20 @@ export default function Auth(props: AuthProps) {
           {loading() ? 'Please wait...' : isRegister() ? 'Register' : 'Login'}
         </button>
 
+        <div class={styles.oauthSection}>
+          <div class={styles.divider}>
+            <span>or</span>
+          </div>
+          <div class={styles.oauthButtons}>
+            <a href="/api/auth/oauth/google" class={styles.googleButton}>
+              Login with Google
+            </a>
+            <a href="/api/auth/oauth/microsoft" class={styles.microsoftButton}>
+              Login with Microsoft
+            </a>
+          </div>
+        </div>
+
         <p class={styles.toggle}>
           {isRegister() ? 'Already have an account?' : "Don't have an account?"}
           <button type="button" onClick={() => setIsRegister(!isRegister())}>

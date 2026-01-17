@@ -75,3 +75,23 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req SwitchOrgRequest)
 		User:  user,
 	}, nil
 }
+
+// UpdateMembershipSettingsRequest is a request to update membership settings.
+type UpdateMembershipSettingsRequest struct {
+	OrgID    string                    `path:"orgID"`
+	Settings models.MembershipSettings `json:"settings"`
+}
+
+// UpdateMembershipSettings updates user preferences within a specific organization.
+func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req UpdateMembershipSettingsRequest) (*models.Membership, error) {
+	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
+	if !ok {
+		return nil, errors.Unauthorized()
+	}
+
+	if err := h.memService.UpdateSettings(currentUser.ID, req.OrgID, req.Settings); err != nil {
+		return nil, errors.InternalWithError("Failed to update membership settings", err)
+	}
+
+	return h.memService.GetMembership(currentUser.ID, req.OrgID)
+}

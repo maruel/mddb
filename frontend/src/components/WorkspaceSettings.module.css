@@ -67,6 +67,111 @@
   margin-bottom: 1.5rem;
 }
 
+.success {
+  padding: 1rem;
+  background: #eff;
+  color: #088;
+  border-radius: 4px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #0bb;
+}
+
+.tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.tabs button {
+  background: none;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: #666;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tabs button:hover {
+  color: #333;
+}
+
+.tabs button.activeTab {
+  color: #667eea;
+  border-bottom-color: #667eea;
+}
+
+.settingsForm {
+  background: #fff;
+  padding: 1.5rem;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.formItem {
+  margin-bottom: 1.5rem;
+}
+
+.formItem label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #444;
+}
+
+.formItem input[type='text'],
+.formItem select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.checkboxLabel {
+  display: flex !important;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: normal !important;
+}
+
+.checkboxLabel input {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.saveButton {
+  padding: 0.75rem 2rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.saveButton:hover {
+  background: #5568d3;
+}
+
+.saveButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 0.4rem;
+}
+
+.inviteSection {
+  margin-top: 2rem;
+}
+
 .inviteForm {
   margin-top: 2rem;
   padding: 1.5rem;

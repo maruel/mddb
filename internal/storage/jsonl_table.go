@@ -46,7 +46,9 @@ func (t *JSONLTable[T]) load() error {
 		}
 		return fmt.Errorf("failed to open table file %s: %w", t.path, err)
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	var rows []T
 	scanner := bufio.NewScanner(f)
@@ -93,7 +95,9 @@ func (t *JSONLTable[T]) Append(row T) error {
 	if err != nil {
 		return fmt.Errorf("failed to open table file for append: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	if _, err := f.Write(data); err != nil {
 		return fmt.Errorf("failed to write row: %w", err)
@@ -115,7 +119,9 @@ func (t *JSONLTable[T]) Replace(rows []T) error {
 	if err != nil {
 		return fmt.Errorf("failed to create table file: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	writer := bufio.NewWriter(f)
 	for _, row := range rows {

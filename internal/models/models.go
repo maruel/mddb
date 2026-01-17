@@ -68,8 +68,15 @@ type User struct {
 	Role            UserRole        `json:"role"`            // Role in active organization
 	Memberships     []Membership    `json:"memberships,omitempty"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty"`
+	Settings        UserSettings    `json:"settings"`
 	Created         time.Time       `json:"created"`
 	Modified        time.Time       `json:"modified"`
+}
+
+// UserSettings represents global user preferences.
+type UserSettings struct {
+	Theme    string `json:"theme"`    // light, dark, system
+	Language string `json:"language"` // en, fr, etc.
 }
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
@@ -82,11 +89,17 @@ type OAuthIdentity struct {
 
 // Membership represents a user's relationship with an organization.
 type Membership struct {
-	UserID           string    `json:"user_id"`
-	OrganizationID   string    `json:"organization_id"`
-	OrganizationName string    `json:"organization_name,omitempty"`
-	Role             UserRole  `json:"role"`
-	Created          time.Time `json:"created"`
+	UserID           string             `json:"user_id"`
+	OrganizationID   string             `json:"organization_id"`
+	OrganizationName string             `json:"organization_name,omitempty"`
+	Role             UserRole           `json:"role"`
+	Settings         MembershipSettings `json:"settings"`
+	Created          time.Time          `json:"created"`
+}
+
+// MembershipSettings represents user preferences within a specific organization.
+type MembershipSettings struct {
+	Notifications bool `json:"notifications"`
 }
 
 // UserRole defines the permissions for a user.
@@ -103,10 +116,17 @@ const (
 
 // Organization represents a workspace or group of users.
 type Organization struct {
-	ID      string    `json:"id"`
-	Name    string    `json:"name"`
-	Quotas  Quota     `json:"quotas"`
-	Created time.Time `json:"created"`
+	ID       string               `json:"id"`
+	Name     string               `json:"name"`
+	Quotas   Quota                `json:"quotas"`
+	Settings OrganizationSettings `json:"settings"`
+	Created  time.Time            `json:"created"`
+}
+
+// OrganizationSettings represents organization-wide settings.
+type OrganizationSettings struct {
+	AllowedDomains []string `json:"allowed_domains,omitempty"`
+	PublicAccess   bool     `json:"public_access"`
 }
 
 // Quota defines limits for an organization.

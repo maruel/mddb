@@ -643,7 +643,7 @@ func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID string) error {
 
 func (fs *FileStore) writeRecords(orgID, databaseID string, records []*models.DataRecord) error {
 	filePath := fs.databaseRecordsFile(orgID, databaseID)
-	
+
 	var buf bytes.Buffer
 	for _, record := range records {
 		data, err := json.Marshal(record)

@@ -129,6 +129,16 @@ export default function App() {
 
   // Load user on mount
   createEffect(() => {
+    // Check URL for OAuth token
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+    if (urlToken) {
+      localStorage.setItem('mddb_token', urlToken);
+      setToken(urlToken);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     const t = token();
     const u = user();
     if (t && !u) {
