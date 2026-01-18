@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/internal/errors"
+	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
 
@@ -31,7 +32,7 @@ type SearchRequest struct {
 
 // SearchResponse is the response to a search request
 type SearchResponse struct {
-	Results []storage.SearchResult `json:"results"`
+	Results []models.SearchResult `json:"results"`
 }
 
 // SearchResultDTO is the DTO version of SearchResult for API responses
@@ -49,8 +50,12 @@ type SearchResultDTO struct {
 
 // Search performs a full-text search across all nodes.
 func (h *SearchHandler) Search(ctx context.Context, req SearchRequest) (*SearchResponse, error) {
-	results, err := h.searchService.Search(ctx, storage.SearchOptions{
-		Query: req.Query,
+	results, err := h.searchService.Search(ctx, models.SearchOptions{
+		Query:       req.Query,
+		Limit:       req.Limit,
+		MatchTitle:  req.MatchTitle,
+		MatchBody:   req.MatchBody,
+		MatchFields: req.MatchFields,
 	})
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to perform search", err)

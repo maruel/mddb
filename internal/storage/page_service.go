@@ -170,9 +170,9 @@ func (s *PageService) SearchPages(ctx context.Context, query string) ([]*models.
 }
 
 // GetPageHistory returns the commit history for a page.
-func (s *PageService) GetPageHistory(ctx context.Context, id string) ([]*Commit, error) {
+func (s *PageService) GetPageHistory(ctx context.Context, id string) ([]*models.Commit, error) {
 	if s.gitService == nil {
-		return []*Commit{}, nil
+		return []*models.Commit{}, nil
 	}
 	return s.gitService.GetHistory(ctx, "page", id)
 }

@@ -8,19 +8,6 @@ packages:
       "any": "unknown"
     output_path: "frontend/src/models.gen.ts"
 
-  - path: "github.com/maruel/mddb/internal/storage"
-    type_mappings:
-      "time.Time": "string"
-      "interface{}": "unknown"
-      "any": "unknown"
-    output_path: "frontend/src/storage.gen.ts"
-
-  - path: "github.com/maruel/mddb/internal/jsonldb"
-    type_mappings:
-      "interface{}": "unknown"
-      "any": "unknown"
-    output_path: "frontend/src/jsonldb.gen.ts"
-
   - path: "github.com/maruel/mddb/internal/server/handlers"
     type_mappings:
       "time.Time": "string"
@@ -34,8 +21,10 @@ packages:
       "models.Invitation": "Invitation"
       "models.Organization": "Organization"
       "models.Asset": "Asset"
-      "storage.Commit": "Commit"
-      "storage.SearchResult": "SearchResult"
+      "models.Commit": "Commit"
+      "models.CommitDetail": "CommitDetail"
+      "models.SearchResult": "SearchResult"
+      "models.SearchOptions": "SearchOptions"
       "interface{}": "unknown"
       "any": "unknown"
     output_path: "frontend/src/handlers.gen.ts"

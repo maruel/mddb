@@ -210,54 +210,6 @@ export interface Database {
   modified: string;
   path: string;
 }
-
-//////////
-
-/**
- * AssetService handles asset business logic.
- */
-export interface AssetService {
-}
-
-//////////
-
-/**
- * Cache handles in-memory caching of metadata, hot pages, and records.
- */
-export interface Cache {
-}
-
-//////////
-
-/**
- * DatabaseService handles database business logic.
- */
-export interface DatabaseService {
-}
-
-//////////
-/*
-Package storage implements the file system storage layer and business logic services.
-*/
-
-/**
- * FileStore handles all file system operations using directory-based storage.
- * Storage model: Each page (document or database) is a numeric directory (1, 2, 3, etc.)
- * - Pages: numeric directory containing index.md with YAML front matter
- * - Databases: numeric directory containing metadata.json + data.jsonl
- * - Assets: files within each page's directory namespace
- */
-export interface FileStore {
-}
-
-//////////
-
-/**
- * GitService handles version control operations using git.
- * All changes to pages and databases are automatically committed.
- */
-export interface GitService {
-}
 /**
  * Commit represents a commit in git history.
  */
@@ -277,49 +229,6 @@ export interface CommitDetail {
   subject: string;
   body: string;
 }
-
-//////////
-
-/**
- * InvitationService handles organization invitations.
- */
-export interface InvitationService {
-}
-
-//////////
-
-/**
- * MembershipService handles user-organization relationships.
- */
-export interface MembershipService {
-}
-
-//////////
-
-/**
- * NodeService handles unified node business logic.
- */
-export interface NodeService {
-}
-
-//////////
-
-/**
- * OrganizationService handles organization management.
- */
-export interface OrganizationService {
-}
-
-//////////
-
-/**
- * PageService handles page business logic.
- */
-export interface PageService {
-}
-
-//////////
-
 /**
  * SearchResult represents a single search result
  */
@@ -337,34 +246,11 @@ export interface SearchResult {
  * SearchOptions defines parameters for a search
  */
 export interface SearchOptions {
-  Query: string;
-  Limit: number /* int */;
-  MatchTitle: boolean;
-  MatchBody: boolean;
-  MatchFields: boolean;
-}
-/**
- * SearchService handles full-text search across nodes.
- */
-export interface SearchService {
-}
-
-//////////
-
-/**
- * UserService handles user management and authentication.
- */
-export interface UserService {
-}
-
-//////////
-
-/**
- * Table handles storage and in-memory caching for a single table in JSONL format.
- */
-export interface Table<T extends any> {
-  Mu: any /* sync.RWMutex */;
-  Rows: T[];
+  query: string;
+  limit?: number /* int */;
+  match_title?: boolean;
+  match_body?: boolean;
+  match_fields?: boolean;
 }
 
 //////////

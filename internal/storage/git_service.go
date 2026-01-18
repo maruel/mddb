@@ -108,7 +108,7 @@ func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType,
 }
 
 // GetHistory returns commit history for a specific resource.
-func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID string) ([]*Commit, error) {
+func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID string) ([]*models.Commit, error) {
 	orgID := models.GetOrgID(ctx)
 	targetDir := gs.repoDir
 	path := ""
@@ -127,10 +127,10 @@ func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID s
 	format := "%H|%an|%ai|%s"
 	output, err := gs.gitOutputInDir(targetDir, "log", "--pretty=format:"+format, "--", path)
 	if err != nil {
-		return []*Commit{}, nil
+		return []*models.Commit{}, nil
 	}
 
-	var commits []*Commit
+	var commits []*models.Commit
 	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
 		if line == "" {
 			continue
@@ -150,7 +150,7 @@ func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID s
 			timestamp = time.Now()
 		}
 
-		commits = append(commits, &Commit{
+		commits = append(commits, &models.Commit{
 			Hash:      hash,
 			Message:   message,
 			Timestamp: timestamp,
@@ -161,7 +161,7 @@ func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID s
 }
 
 // GetCommit retrieves a specific commit with full details.
-func (gs *GitService) GetCommit(ctx context.Context, hash string) (*CommitDetail, error) {
+func (gs *GitService) GetCommit(ctx context.Context, hash string) (*models.CommitDetail, error) {
 	orgID := models.GetOrgID(ctx)
 	targetDir := gs.repoDir
 	if orgID != "" {
@@ -188,7 +188,7 @@ func (gs *GitService) GetCommit(ctx context.Context, hash string) (*CommitDetail
 		body = strings.Join(lines[5:], "\n")
 	}
 
-	return &CommitDetail{
+	return &models.CommitDetail{
 		Hash:      lines[0],
 		Timestamp: timestamp,
 		Author:    lines[2],
@@ -217,23 +217,6 @@ func (gs *GitService) GetFileAtCommit(ctx context.Context, hash, filePath string
 		return nil, fmt.Errorf("failed to get file at commit in %s: %w", targetDir, err)
 	}
 	return output, nil
-}
-
-// Commit represents a commit in git history.
-type Commit struct {
-	Hash      string    `json:"hash"`
-	Message   string    `json:"message"`
-	Timestamp time.Time `json:"timestamp"`
-}
-
-// CommitDetail contains full commit information.
-type CommitDetail struct {
-	Hash      string    `json:"hash"`
-	Timestamp time.Time `json:"timestamp"`
-	Author    string    `json:"author"`
-	Email     string    `json:"email"`
-	Subject   string    `json:"subject"`
-	Body      string    `json:"body"`
 }
 
 // execGitInDir executes a git command in a specific directory.

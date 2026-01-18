@@ -5,31 +5,9 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/maruel/mddb/internal/models"
 )
-
-// SearchResult represents a single search result
-type SearchResult struct {
-	Type     string            `json:"type"` // "page" or "record"
-	NodeID   string            `json:"node_id"`
-	RecordID string            `json:"record_id,omitempty"`
-	Title    string            `json:"title"`
-	Snippet  string            `json:"snippet"`
-	Score    float64           `json:"score"`
-	Matches  map[string]string `json:"matches"`
-	Modified time.Time         `json:"modified"`
-}
-
-// SearchOptions defines parameters for a search
-type SearchOptions struct {
-	Query       string
-	Limit       int
-	MatchTitle  bool
-	MatchBody   bool
-	MatchFields bool
-}
 
 // SearchService handles full-text search across nodes.
 type SearchService struct {
@@ -44,7 +22,7 @@ func NewSearchService(fileStore *FileStore) *SearchService {
 }
 
 // Search performs a full-text search across all nodes.
-func (s *SearchService) Search(ctx context.Context, opts SearchOptions) ([]SearchResult, error) {
+func (s *SearchService) Search(ctx context.Context, opts models.SearchOptions) ([]models.SearchResult, error) {
 	if opts.Query == "" {
 		return nil, nil
 	}
@@ -58,7 +36,7 @@ func (s *SearchService) Search(ctx context.Context, opts SearchOptions) ([]Searc
 	}
 
 	query := strings.ToLower(opts.Query)
-	var results []SearchResult
+	var results []models.SearchResult
 
 	// Search pages
 	if opts.MatchTitle || opts.MatchBody {
@@ -83,9 +61,9 @@ func (s *SearchService) Search(ctx context.Context, opts SearchOptions) ([]Searc
 	return results, nil
 }
 
-func (s *SearchService) searchPages(orgID, query string, opts SearchOptions) []SearchResult {
+func (s *SearchService) searchPages(orgID, query string, opts models.SearchOptions) []models.SearchResult {
 	nodes, _ := s.fileStore.ReadNodeTree(orgID)
-	var results []SearchResult
+	var results []models.SearchResult
 
 	var processNodes func([]*models.Node)
 	processNodes = func(list []*models.Node) {
@@ -107,7 +85,7 @@ func (s *SearchService) searchPages(orgID, query string, opts SearchOptions) []S
 				}
 
 				if score > 0 {
-					results = append(results, SearchResult{
+					results = append(results, models.SearchResult{
 						Type:     "page",
 						NodeID:   node.ID,
 						Title:    node.Title,
@@ -127,9 +105,9 @@ func (s *SearchService) searchPages(orgID, query string, opts SearchOptions) []S
 	return results
 }
 
-func (s *SearchService) searchDatabases(orgID, query string, opts SearchOptions) []SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
+func (s *SearchService) searchDatabases(orgID, query string, opts models.SearchOptions) []models.SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
 	nodes, _ := s.fileStore.ReadNodeTree(orgID)
-	var results []SearchResult
+	var results []models.SearchResult
 
 	var processNodes func([]*models.Node)
 	processNodes = func(list []*models.Node) {
@@ -151,7 +129,7 @@ func (s *SearchService) searchDatabases(orgID, query string, opts SearchOptions)
 					}
 
 					if score > 0 {
-						results = append(results, SearchResult{
+						results = append(results, models.SearchResult{
 							Type:     "record",
 							NodeID:   node.ID,
 							RecordID: record.ID,
@@ -239,7 +217,7 @@ func truncate(s string, maxLen int) string {
 }
 
 // sortResultsByScore sorts results by score in descending order.
-func sortResultsByScore(results []SearchResult) {
+func sortResultsByScore(results []models.SearchResult) {
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Score > results[j].Score
 	})

@@ -198,3 +198,41 @@ type Database struct {
 	Modified time.Time `json:"modified"`
 	Path     string    `json:"path"`
 }
+
+// Commit represents a commit in git history.
+type Commit struct {
+	Hash      string    `json:"hash"`
+	Message   string    `json:"message"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+// CommitDetail contains full commit information.
+type CommitDetail struct {
+	Hash      string    `json:"hash"`
+	Timestamp time.Time `json:"timestamp"`
+	Author    string    `json:"author"`
+	Email     string    `json:"email"`
+	Subject   string    `json:"subject"`
+	Body      string    `json:"body"`
+}
+
+// SearchResult represents a single search result
+type SearchResult struct {
+	Type     string            `json:"type"` // "page" or "record"
+	NodeID   string            `json:"node_id"`
+	RecordID string            `json:"record_id,omitempty"`
+	Title    string            `json:"title"`
+	Snippet  string            `json:"snippet"`
+	Score    float64           `json:"score"`
+	Matches  map[string]string `json:"matches"`
+	Modified time.Time         `json:"modified"`
+}
+
+// SearchOptions defines parameters for a search
+type SearchOptions struct {
+	Query       string `json:"query"`
+	Limit       int    `json:"limit,omitempty"`
+	MatchTitle  bool   `json:"match_title,omitempty"`
+	MatchBody   bool   `json:"match_body,omitempty"`
+	MatchFields bool   `json:"match_fields,omitempty"`
+}

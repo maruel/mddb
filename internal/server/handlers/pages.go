@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/internal/errors"
+	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
 
@@ -85,7 +86,7 @@ type GetPageHistoryRequest struct {
 
 // GetPageHistoryResponse is a response containing page history.
 type GetPageHistoryResponse struct {
-	History []*storage.Commit `json:"history"`
+	History []*models.Commit `json:"history"`
 }
 
 // GetPageVersionRequest is a request to get a specific page version.
