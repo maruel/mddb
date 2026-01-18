@@ -122,6 +122,7 @@ Most core functional requirements for a local-first markdown and database system
 - [ ] **Sanitization**: Improved markdown sanitization (currently permits HTML).
 
 ### Storage Model
-- [x] **Numeric IDs**: Directory-based organization (1, 2, 3...) for stable paths.
+- [ ] **Base64 IDs**: Directory-based organization using monotonically increasing Base64 URL-encoded characters (without padding) for stable paths (replacing decimal 1, 2, 3...).
+- [ ] **Reserved Separators**: Use `+` instead of `-` as a separator where applicable, as `-` is part of the Base64 URL alphabet.
 - [x] **Human Readable**: Transparent storage (Markdown, JSON, JSONL).
 - [x] **Portable**: Zero-config "copy and paste" portability.

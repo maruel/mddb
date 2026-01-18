@@ -29,7 +29,7 @@
 
 mddb is a Notion-like document and database system where all data is persisted as markdown files and JSON in a directory-based structure. The frontend (SolidJS) provides a rich user experience while the backend (Go) handles file operations, API endpoints, and business logic.
 
-**Key Principle**: Every page—whether a document or database—is a directory with a monotonically increasing numeric ID. This provides a clean namespace for assets and supports unlimited scaling.
+**Key Principle**: Every page—whether a document or database—is a directory with a monotonically increasing Base64 URL-encoded ID (without padding). This provides a clean namespace for assets and supports unlimited scaling.
 
 ## Requirements
 
@@ -175,6 +175,11 @@ See `README.md` and `API.md` for details.
     - [ ] Add versioning and column definitions to the first row of JSONL files.
     - [ ] Deprecate and remove `metadata.json` for databases.
 - [ ] **Sharding**: Add support for sharding in JSONLDB to handle extremely large datasets.
+
+### Phase 14: URL Standardization
+- [ ] **URL Namespace**: Prefix page URLs with `/p/` to ensure clean routing (e.g., `mddb.app/p/<orgID>/<pageID>`).
+- [ ] **Base64 ID Encoding**: Use Base64 URL-encoded characters (without padding) instead of raw numbers for `orgID` and page/note IDs to provide more compact and professional identifiers.
+- [ ] **Separator Migration**: Change the ID/path separator from `-` to `+` because `-` is a reserved character in Base64 URL-encoding.
 
 ## Future Considerations
 - **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
