@@ -15,7 +15,7 @@ import (
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
-func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, jwtSecret, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
+func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, remoteService *storage.GitRemoteService, jwtSecret, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
 	cache := storage.NewCache()
 	mux := &http.ServeMux{}
 	ph := handlers.NewPageHandler(fileStore, gitService, cache, orgService)
@@ -28,6 +28,7 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
 	mh := handlers.NewMembershipHandler(memService, userService, authh)
 	orgh := handlers.NewOrganizationHandler(orgService)
+	grh := handlers.NewGitRemoteHandler(remoteService, gitService, orgService.RootDir()) // Added rootDir accessor
 
 	// Health check
 	hh := handlers.NewHealthHandler("1.0.0")
@@ -45,6 +46,14 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	mux.Handle("PUT /api/{orgID}/settings/membership", RequireRole(memService, models.UserRoleViewer)(Wrap(mh.UpdateMembershipSettings)))
 	mux.Handle("GET /api/{orgID}/settings/organization", RequireRole(memService, models.UserRoleViewer)(Wrap(orgh.GetOrganization)))
 	mux.Handle("PUT /api/{orgID}/settings/organization", RequireRole(memService, models.UserRoleAdmin)(Wrap(orgh.UpdateSettings)))
+	mux.Handle("GET /api/{orgID}/onboarding", RequireRole(memService, models.UserRoleViewer)(Wrap(orgh.GetOnboarding)))
+	mux.Handle("PUT /api/{orgID}/onboarding", RequireRole(memService, models.UserRoleAdmin)(Wrap(orgh.UpdateOnboarding)))
+
+	// Git Remote endpoints
+	mux.Handle("GET /api/{orgID}/settings/git/remotes", RequireRole(memService, models.UserRoleAdmin)(Wrap(grh.ListRemotes)))
+	mux.Handle("POST /api/{orgID}/settings/git/remotes", RequireRole(memService, models.UserRoleAdmin)(Wrap(grh.CreateRemote)))
+	mux.Handle("POST /api/{orgID}/settings/git/remotes/{remoteID}/push", RequireRole(memService, models.UserRoleAdmin)(Wrap(grh.Push)))
+	mux.Handle("DELETE /api/{orgID}/settings/git/remotes/{remoteID}", RequireRole(memService, models.UserRoleAdmin)(Wrap(grh.DeleteRemote)))
 
 	// OAuth endpoints
 	if (googleClientID != "" && googleClientSecret != "") || (msClientID != "" && msClientSecret != "") {

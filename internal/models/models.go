@@ -71,6 +71,11 @@ type User struct {
 	Settings        UserSettings    `json:"settings"`
 	Created         time.Time       `json:"created"`
 	Modified        time.Time       `json:"modified"`
+
+	// Active context (populated in API responses)
+	OrganizationID string           `json:"organization_id,omitempty"`
+	Role           UserRole         `json:"role,omitempty"`
+	Onboarding     *OnboardingState `json:"onboarding,omitempty"`
 }
 
 // UserSettings represents global user preferences.
@@ -116,17 +121,43 @@ const (
 
 // Organization represents a workspace or group of users.
 type Organization struct {
-	ID       string               `json:"id"`
-	Name     string               `json:"name"`
-	Quotas   Quota                `json:"quotas"`
-	Settings OrganizationSettings `json:"settings"`
-	Created  time.Time            `json:"created"`
+	ID         string               `json:"id"`
+	Name       string               `json:"name"`
+	Quotas     Quota                `json:"quotas"`
+	Settings   OrganizationSettings `json:"settings"`
+	Onboarding OnboardingState      `json:"onboarding"`
+	Created    time.Time            `json:"created"`
+}
+
+// OnboardingState tracks the progress of an organization's initial setup.
+type OnboardingState struct {
+	Completed bool      `json:"completed"`
+	Step      string    `json:"step"` // e.g., "name", "members", "git", "done"
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // OrganizationSettings represents organization-wide settings.
 type OrganizationSettings struct {
-	AllowedDomains []string `json:"allowed_domains,omitempty"`
-	PublicAccess   bool     `json:"public_access"`
+	AllowedDomains []string    `json:"allowed_domains,omitempty"`
+	PublicAccess   bool        `json:"public_access"`
+	Git            GitSettings `json:"git"`
+}
+
+// GitSettings contains configuration for Git remotes and synchronization.
+type GitSettings struct {
+	AutoPush bool `json:"auto_push"`
+}
+
+// GitRemote represents a remote repository for an organization.
+type GitRemote struct {
+	ID             string    `json:"id"`
+	OrganizationID string    `json:"organization_id"`
+	Name           string    `json:"name"` // e.g., "origin"
+	URL            string    `json:"url"`
+	Type           string    `json:"type"`      // "github", "gitlab", "custom"
+	AuthType       string    `json:"auth_type"` // "token", "ssh"
+	Created        time.Time `json:"created"`
+	LastSync       time.Time `json:"last_sync,omitempty"`
 }
 
 // Quota defines limits for an organization.

@@ -9,6 +9,8 @@ import type {
   MembershipSettings,
   OrganizationSettings,
   UserRole,
+  GitRemote,
+  ListGitRemotesResponse,
 } from '../types';
 import styles from './WorkspaceSettings.module.css';
 
@@ -18,12 +20,18 @@ interface WorkspaceSettingsProps {
   onClose: () => void;
 }
 
-type Tab = 'members' | 'personal' | 'workspace';
+type Tab = 'members' | 'personal' | 'workspace' | 'sync';
 
 export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const [activeTab, setActiveTab] = createSignal<Tab>('members');
   const [members, setMembers] = createSignal<User[]>([]);
   const [invitations, setInvitations] = createSignal<Invitation[]>([]);
+
+  // Git Remotes states
+  const [remotes, setRemotes] = createSignal<GitRemote[]>([]);
+  const [newRemoteName, setNewRemoteName] = createSignal('origin');
+  const [newRemoteURL, setNewRemoteURL] = createSignal('');
+  const [newRemoteToken, setNewRemoteToken] = createSignal('');
 
   // Form states
   const [inviteEmail, setInviteEmail] = createSignal('');
@@ -84,6 +92,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         promises.push(authFetch('/api/settings/organization'));
       }
 
+      if (activeTab() === 'sync' && props.user.role === 'admin') {
+        promises.push(authFetch('/api/settings/git/remotes'));
+      }
+
       if (promises.length === 0) return;
 
       const results = await Promise.all(promises);
@@ -100,6 +112,11 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         setOrgName(orgData.name);
         setPublicAccess(orgData.settings?.public_access || false);
         setAllowedDomains(orgData.settings?.allowed_domains?.join(', ') || '');
+      }
+
+      if (activeTab() === 'sync' && props.user.role === 'admin') {
+        const remoteData = (await results[results.length - 1].json()) as ListGitRemotesResponse;
+        setRemotes(remoteData.remotes || []);
       }
 
       // Load membership settings (notifications)
@@ -225,6 +242,67 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     }
   };
 
+  const handleAddRemote = async (e: Event) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      setError(null);
+      await authFetch('/api/settings/git/remotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newRemoteName(),
+          url: newRemoteURL(),
+          token: newRemoteToken(),
+          type: 'custom',
+          auth_type: newRemoteToken() ? 'token' : 'none',
+        }),
+      });
+      setSuccess('Remote added');
+      setNewRemoteURL('');
+      setNewRemoteToken('');
+      loadData();
+    } catch (err) {
+      setError('Failed to add remote: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePush = async (remoteId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+      await authFetch(`/api/settings/git/remotes/${remoteId}/push`, {
+        method: 'POST',
+      });
+      setSuccess('Push successful');
+      loadData();
+    } catch (err) {
+      setError('Push failed: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteRemote = async (remoteId: string) => {
+    if (!confirm('Are you sure you want to remove this remote?')) return;
+    try {
+      setLoading(true);
+      setError(null);
+      await authFetch(`/api/settings/git/remotes/${remoteId}`, {
+        method: 'DELETE',
+      });
+      setSuccess('Remote removed');
+      loadData();
+    } catch (err) {
+      setError('Failed to remove remote: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div class={styles.settings}>
       <header class={styles.header}>
@@ -253,6 +331,14 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         >
           Workspace
         </button>
+        <Show when={props.user.role === 'admin'}>
+          <button
+            class={activeTab() === 'sync' ? styles.activeTab : ''}
+            onClick={() => setActiveTab('sync')}
+          >
+            Git Sync
+          </button>
+        </Show>
       </div>
 
       <Show when={error()}>
@@ -436,6 +522,96 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
               </button>
             </form>
           </Show>
+        </section>
+      </Show>
+
+      <Show when={activeTab() === 'sync'}>
+        <section class={styles.section}>
+          <h3>Git Synchronization</h3>
+          <p class={styles.hint}>
+            Synchronize your workspace data with an external Git repository.
+          </p>
+
+          <Show when={remotes().length > 0}>
+            <table class={styles.table}>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>URL</th>
+                  <th>Last Sync</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <For each={remotes()}>
+                  {(remote) => (
+                    <tr>
+                      <td>{remote.name}</td>
+                      <td>{remote.url}</td>
+                      <td>
+                        {remote.last_sync ? new Date(remote.last_sync).toLocaleString() : 'Never'}
+                      </td>
+                      <td class={styles.actions}>
+                        <button
+                          onClick={() => handlePush(remote.id)}
+                          disabled={loading()}
+                          class={styles.smallButton}
+                        >
+                          Push
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRemote(remote.id)}
+                          disabled={loading()}
+                          class={styles.deleteButtonSmall}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                </For>
+              </tbody>
+            </table>
+          </Show>
+
+          <div class={styles.addRemoteSection}>
+            <h4>Add New Remote</h4>
+            <form onSubmit={handleAddRemote} class={styles.settingsForm}>
+              <div class={styles.formItem}>
+                <label>Remote Name</label>
+                <input
+                  type="text"
+                  value={newRemoteName()}
+                  onInput={(e) => setNewRemoteName(e.target.value)}
+                  placeholder="origin"
+                  required
+                />
+              </div>
+              <div class={styles.formItem}>
+                <label>Repository URL</label>
+                <input
+                  type="url"
+                  value={newRemoteURL()}
+                  onInput={(e) => setNewRemoteURL(e.target.value)}
+                  placeholder="https://github.com/user/repo.git"
+                  required
+                />
+              </div>
+              <div class={styles.formItem}>
+                <label>Personal Access Token (optional)</label>
+                <input
+                  type="password"
+                  value={newRemoteToken()}
+                  onInput={(e) => setNewRemoteToken(e.target.value)}
+                  placeholder="ghp_..."
+                />
+                <p class={styles.hint}>Used for authentication when pushing.</p>
+              </div>
+              <button type="submit" class={styles.saveButton} disabled={loading()}>
+                Add Remote
+              </button>
+            </form>
+          </div>
         </section>
       </Show>
     </div>

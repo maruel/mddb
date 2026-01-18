@@ -38,8 +38,8 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 		byID:       make(map[string]*models.Organization),
 	}
 
-	for i, org := range table.Rows {
-		s.byID[org.ID] = &table.Rows[i]
+	for i := range table.Rows {
+		s.byID[table.Rows[i].ID] = &table.Rows[i]
 	}
 
 	return s, nil
@@ -60,6 +60,11 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 		ID:      id,
 		Name:    name,
 		Created: now,
+		Onboarding: models.OnboardingState{
+			Completed: false,
+			Step:      "name",
+			UpdatedAt: now,
+		},
 	}
 
 	if err := s.table.Append(*org); err != nil {
@@ -142,10 +147,30 @@ func (s *OrganizationService) UpdateSettings(id string, settings models.Organiza
 	return s.table.Replace(s.getAllFromCache())
 }
 
+// UpdateOnboarding updates the onboarding state of an organization.
+func (s *OrganizationService) UpdateOnboarding(id string, state models.OnboardingState) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	org, ok := s.byID[id]
+	if !ok {
+		return fmt.Errorf("organization not found")
+	}
+
+	org.Onboarding = state
+	org.Onboarding.UpdatedAt = time.Now()
+	return s.table.Replace(s.getAllFromCache())
+}
+
 func (s *OrganizationService) getAllFromCache() []models.Organization {
 	rows := make([]models.Organization, 0, len(s.byID))
 	for _, v := range s.byID {
 		rows = append(rows, *v)
 	}
 	return rows
+}
+
+// RootDir returns the root directory of the organization service.
+func (s *OrganizationService) RootDir() string {
+	return s.rootDir
 }

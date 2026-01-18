@@ -421,6 +421,66 @@ export interface UpdateOrgSettingsRequest {
   settings: OrganizationSettings;
 }
 /**
+ * GetOnboardingRequest is a request to get onboarding status.
+ */
+export interface GetOnboardingRequest {
+  OrgID: string;
+}
+/**
+ * UpdateOnboardingRequest is a request to update onboarding status.
+ */
+export interface UpdateOnboardingRequest {
+  OrgID: string;
+  state: OnboardingState;
+}
+/**
+ * ListGitRemotesRequest is a request to list git remotes.
+ */
+export interface ListGitRemotesRequest {
+  OrgID: string;
+}
+/**
+ * ListGitRemotesResponse is a response containing a list of git remotes.
+ */
+export interface ListGitRemotesResponse {
+  remotes: (GitRemote | undefined)[];
+}
+/**
+ * CreateGitRemoteRequest is a request to create a git remote.
+ */
+export interface CreateGitRemoteRequest {
+  OrgID: string;
+  name: string;
+  url: string;
+  type: string; // github, gitlab, custom
+  auth_type: string; // token, ssh
+  token?: string;
+}
+/**
+ * UpdateGitRemoteRequest is a request to update a git remote.
+ */
+export interface UpdateGitRemoteRequest {
+  OrgID: string;
+  RemoteID: string;
+  name: string;
+  url: string;
+  token?: string;
+}
+/**
+ * DeleteGitRemoteRequest is a request to delete a git remote.
+ */
+export interface DeleteGitRemoteRequest {
+  OrgID: string;
+  RemoteID: string;
+}
+/**
+ * PushGitRemoteRequest is a request to push to a git remote.
+ */
+export interface PushGitRemoteRequest {
+  OrgID: string;
+  RemoteID: string;
+}
+/**
  * HealthRequest is a request to check system health.
  */
 export interface HealthRequest {}
@@ -681,7 +741,16 @@ export interface Organization {
   name: string;
   quotas: Quota;
   settings: OrganizationSettings;
+  onboarding: OnboardingState;
   created: string;
+}
+/**
+ * OnboardingState tracks the progress of an organization's initial setup.
+ */
+export interface OnboardingState {
+  completed: boolean;
+  step: string; // e.g., "name", "members", "git", "done"
+  updated_at: string;
 }
 /**
  * OrganizationSettings represents organization-wide settings.
@@ -689,6 +758,26 @@ export interface Organization {
 export interface OrganizationSettings {
   allowed_domains?: string[];
   public_access: boolean;
+  git: GitSettings;
+}
+/**
+ * GitSettings contains configuration for Git remotes and synchronization.
+ */
+export interface GitSettings {
+  auto_push: boolean;
+}
+/**
+ * GitRemote represents a remote repository for an organization.
+ */
+export interface GitRemote {
+  id: string;
+  organization_id: string;
+  name: string; // e.g., "origin"
+  url: string;
+  type: string; // "github", "gitlab", "custom"
+  auth_type: string; // "token", "ssh"
+  created: string;
+  last_sync?: string;
 }
 /**
  * Quota defines limits for an organization.

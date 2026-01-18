@@ -376,6 +376,60 @@ type UpdateOrgSettingsRequest struct {
 	Settings OrganizationSettings `json:"settings"`
 }
 
+// GetOnboardingRequest is a request to get onboarding status.
+type GetOnboardingRequest struct {
+	OrgID string `path:"orgID"`
+}
+
+// UpdateOnboardingRequest is a request to update onboarding status.
+type UpdateOnboardingRequest struct {
+	OrgID string          `path:"orgID"`
+	State OnboardingState `json:"state"`
+}
+
+// --- Git Remotes ---
+
+// ListGitRemotesRequest is a request to list git remotes.
+type ListGitRemotesRequest struct {
+	OrgID string `path:"orgID"`
+}
+
+// ListGitRemotesResponse is a response containing a list of git remotes.
+type ListGitRemotesResponse struct {
+	Remotes []*GitRemote `json:"remotes"`
+}
+
+// CreateGitRemoteRequest is a request to create a git remote.
+type CreateGitRemoteRequest struct {
+	OrgID    string `path:"orgID"`
+	Name     string `json:"name"`
+	URL      string `json:"url"`
+	Type     string `json:"type"`      // github, gitlab, custom
+	AuthType string `json:"auth_type"` // token, ssh
+	Token    string `json:"token,omitempty"`
+}
+
+// UpdateGitRemoteRequest is a request to update a git remote.
+type UpdateGitRemoteRequest struct {
+	OrgID    string `path:"orgID"`
+	RemoteID string `path:"remoteID"`
+	Name     string `json:"name"`
+	URL      string `json:"url"`
+	Token    string `json:"token,omitempty"`
+}
+
+// DeleteGitRemoteRequest is a request to delete a git remote.
+type DeleteGitRemoteRequest struct {
+	OrgID    string `path:"orgID"`
+	RemoteID string `path:"remoteID"`
+}
+
+// PushGitRemoteRequest is a request to push to a git remote.
+type PushGitRemoteRequest struct {
+	OrgID    string `path:"orgID"`
+	RemoteID string `path:"remoteID"`
+}
+
 // --- Health ---
 
 // HealthRequest is a request to check system health.

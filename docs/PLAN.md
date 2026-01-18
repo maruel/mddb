@@ -136,15 +136,15 @@ See `README.md` and `API.md` for details.
 ### Phase 9: Advanced Sync & Onboarding
 *In Progress.*
 
-- [ ] **Advanced Git Remotes**:
-    - [ ] **Remote Configuration UI**: Interface for organization admins to set up Git remotes.
+- [x] **Advanced Git Remotes**:
+    - [x] **Remote Configuration UI**: Interface for organization admins to set up Git remotes.
     - [ ] **GitHub App Integration**: Support for GitHub App installation to manage organization repository access.
-    - [ ] **Remote Push Service**: Background worker to push organization submodule changes to their configured remotes.
-    - [ ] **Secret Management**: Secure storage of Git credentials/tokens per organization.
-- [ ] **Organization Onboarding**:
-    - [ ] **Onboarding State Tracking**: Track if an organization has completed the onboarding process.
-    - [ ] **Onboarding UI**: Guided multi-step modal or wizard for initial configuration (Org name, members, Git remote).
-    - [ ] **Settings Integration**: Ensure all onboarding options are accessible and editable in Workspace Settings.
+    - [x] **Remote Push Service**: Background worker to push organization submodule changes to their configured remotes. (Implemented manual push)
+    - [x] **Secret Management**: Secure storage of Git credentials/tokens per organization.
+- [x] **Organization Onboarding**:
+    - [x] **Onboarding State Tracking**: Track if an organization has completed the onboarding process.
+    - [x] **Onboarding UI**: Guided multi-step modal or wizard for initial configuration (Org name, members, Git remote).
+    - [x] **Settings Integration**: Ensure all onboarding options are accessible and editable in Workspace Settings.
 
 ### Phase 10: Connectivity & Relations
 - [ ] **Backlinks Indexing**: Efficient background indexing of internal markdown links to provide backlink lists.

@@ -252,3 +252,33 @@ func (gs *GitService) gitOutputBytesInDir(dir string, args ...string) ([]byte, e
 	)
 	return cmd.Output()
 }
+
+// AddRemote adds a remote to the repository in the target directory.
+func (gs *GitService) AddRemote(dir, name, url string) error {
+	// Check if remote already exists
+	remotes, err := gs.gitOutputInDir(dir, "remote")
+	if err == nil {
+		for _, r := range strings.Split(remotes, "\n") {
+			if strings.TrimSpace(r) == name {
+				// Remote exists, update URL
+				return gs.execGitInDir(dir, "remote", "set-url", name, url)
+			}
+		}
+	}
+
+	return gs.execGitInDir(dir, "remote", "add", name, url)
+}
+
+// Push pushes changes to a remote repository.
+func (gs *GitService) Push(dir, remoteName, branch string) error {
+	if branch == "" {
+		branch = "master" // Default to master
+		// Check if current branch is main
+		curr, err := gs.gitOutputInDir(dir, "rev-parse", "--abbrev-ref", "HEAD")
+		if err == nil {
+			branch = strings.TrimSpace(curr)
+		}
+	}
+
+	return gs.execGitInDir(dir, "push", remoteName, branch)
+}

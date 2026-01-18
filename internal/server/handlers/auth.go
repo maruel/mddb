@@ -41,6 +41,10 @@ func (h *AuthHandler) Login(ctx context.Context, req models.LoginRequest) (*mode
 		return nil, models.InternalWithError("Failed to generate token", err)
 	}
 
+	if len(user.Memberships) > 0 {
+		h.PopulateActiveContext(user, user.Memberships[0].OrganizationID)
+	}
+
 	return &models.LoginResponse{
 		Token: token,
 		User:  user,
@@ -88,6 +92,10 @@ func (h *AuthHandler) Register(ctx context.Context, req models.RegisterRequest) 
 		return nil, models.InternalWithError("Failed to generate token", err)
 	}
 
+	if len(user.Memberships) > 0 {
+		h.PopulateActiveContext(user, user.Memberships[0].OrganizationID)
+	}
+
 	return &models.LoginResponse{
 		Token: token,
 		User:  user,
@@ -114,5 +122,28 @@ func (h *AuthHandler) Me(ctx context.Context, req models.MeRequest) (*models.Use
 	if !ok {
 		return nil, models.NewAPIError(401, models.ErrorCodeUnauthorized, "Unauthorized")
 	}
+
+	// For /api/auth/me, we need to decide which org is "active"
+	// For now, use the first membership if not specified
+	if len(user.Memberships) > 0 {
+		h.PopulateActiveContext(user, user.Memberships[0].OrganizationID)
+	}
+
 	return user, nil
+}
+
+// PopulateActiveContext populates organization-specific fields in the User struct.
+func (h *AuthHandler) PopulateActiveContext(user *models.User, orgID string) {
+	user.OrganizationID = orgID
+	for _, m := range user.Memberships {
+		if m.OrganizationID == orgID {
+			user.Role = m.Role
+			break
+		}
+	}
+
+	// Fetch onboarding state
+	if org, err := h.orgService.GetOrganization(orgID); err == nil {
+		user.Onboarding = &org.Onboarding
+	}
 }

@@ -6,6 +6,7 @@ import DatabaseGrid from './components/DatabaseGrid';
 import DatabaseGallery from './components/DatabaseGallery';
 import DatabaseBoard from './components/DatabaseBoard';
 import WorkspaceSettings from './components/WorkspaceSettings';
+import Onboarding from './components/Onboarding';
 import Auth from './components/Auth';
 import { debounce } from './utils/debounce';
 import type {
@@ -518,6 +519,23 @@ export default function App() {
 
   return (
     <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
+      <Show when={user()?.role === 'admin' && !user()?.onboarding?.completed}>
+        <Onboarding
+          user={user() as User}
+          token={token() as string}
+          onComplete={() => {
+            // Re-fetch user to get updated onboarding state
+            const fetchUser = async () => {
+              const res = await authFetch('/api/auth/me');
+              if (res.ok) {
+                const data = await res.json();
+                setUser(data);
+              }
+            };
+            fetchUser();
+          }}
+        />
+      </Show>
       <div class={styles.app}>
         <header class={styles.header}>
           <div class={styles.headerTitle}>

@@ -29,6 +29,24 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*mo
 	return h.orgService.GetOrganization(orgID)
 }
 
+// GetOnboarding retrieves organization onboarding status.
+func (h *OrganizationHandler) GetOnboarding(ctx context.Context, req models.GetOnboardingRequest) (*models.OnboardingState, error) {
+	org, err := h.orgService.GetOrganization(req.OrgID)
+	if err != nil {
+		return nil, err
+	}
+	return &org.Onboarding, nil
+}
+
+// UpdateOnboarding updates organization onboarding status.
+func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, req models.UpdateOnboardingRequest) (*models.OnboardingState, error) {
+	if err := h.orgService.UpdateOnboarding(req.OrgID, req.State); err != nil {
+		return nil, models.InternalWithError("Failed to update onboarding state", err)
+	}
+	org, _ := h.orgService.GetOrganization(req.OrgID)
+	return &org.Onboarding, nil
+}
+
 // UpdateSettings updates organization-wide settings.
 func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req models.UpdateOrgSettingsRequest) (*models.Organization, error) {
 	orgID := models.GetOrgID(ctx)

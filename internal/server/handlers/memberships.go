@@ -47,6 +47,8 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req models.SwitchOrgR
 		return nil, models.InternalWithError("Failed to generate token", err)
 	}
 
+	h.authHandler.PopulateActiveContext(user, req.OrgID)
+
 	return &models.SwitchOrgResponse{
 		Token: token,
 		User:  user,

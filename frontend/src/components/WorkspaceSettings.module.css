@@ -214,6 +214,59 @@
   background: #5568d3;
 }
 
+.addRemoteSection {
+  margin-top: 3rem;
+  padding: 1.5rem;
+  background: #fcfcfc;
+  border-radius: 8px;
+  border: 1px dashed #ccc;
+}
+
+.addRemoteSection h4 {
+  margin-bottom: 1rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.smallButton {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.smallButton:hover {
+  background: #5568d3;
+}
+
+.deleteButtonSmall {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  background: #fee;
+  color: #c33;
+  border: 1px solid #fcc;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.deleteButtonSmall:hover {
+  background: #fdd;
+}
+
+.formItem input[type='password'] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
