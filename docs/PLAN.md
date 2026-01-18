@@ -158,6 +158,7 @@ See `README.md` and `API.md` for details.
 - [ ] **In-Editor AI Actions**: Context-aware AI commands for content generation and summarization.
 
 ## Future Considerations
+- **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
 - **Publishing & Extensibility**: Public pages, custom domains, webhooks, and per-organization API keys.
 - **Google Drive Integration**: Bi-directional sync/import/export for Google Docs (Markdown) and Google Sheets (JSONL).
 - **SQLite Migration**: Migrate `data/db/*.json` to SQLite for better relational integrity and query performance.
