@@ -279,8 +279,3 @@ func (s *UserService) ListUsers() ([]*models.User, error) {
 	}
 	return users, nil
 }
-
-// generateShortID is a placeholder for a real ID generator if not available in utils.go
-func generateShortID() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
-}

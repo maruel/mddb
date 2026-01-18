@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -50,7 +49,7 @@ func (fs *FileStore) NextID(orgID string) string {
 	}
 
 	fs.nextIDs[orgID] = id + 1
-	return strconv.Itoa(id)
+	return EncodeID(uint64(id))
 }
 
 func (fs *FileStore) findNextID(orgID string) int {
@@ -65,8 +64,8 @@ func (fs *FileStore) findNextID(orgID string) int {
 		if !entry.IsDir() {
 			continue
 		}
-		if id, err := strconv.Atoi(entry.Name()); err == nil && id > maxID {
-			maxID = id
+		if id, err := DecodeID(entry.Name()); err == nil && int(id) > maxID {
+			maxID = int(id)
 		}
 	}
 
@@ -200,7 +199,7 @@ func (fs *FileStore) ListPages(orgID string) ([]*models.Page, error) {
 		}
 
 		id := entry.Name()
-		if _, err := strconv.Atoi(id); err != nil {
+		if _, err := DecodeID(id); err != nil {
 			continue
 		}
 
@@ -289,7 +288,7 @@ func (fs *FileStore) readNodesRecursive(orgID, dir, parentID string) ([]*models.
 		}
 
 		id := entry.Name()
-		if _, err := strconv.Atoi(id); err != nil {
+		if _, err := DecodeID(id); err != nil {
 			continue
 		}
 
@@ -467,7 +466,7 @@ func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
 		}
 
 		id := entry.Name()
-		if _, err := strconv.Atoi(id); err != nil {
+		if _, err := DecodeID(id); err != nil {
 			continue
 		}
 

@@ -15,26 +15,27 @@ func TestFileStorePageOperations(t *testing.T) {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
 
-	// Test WritePage (with numeric ID)
-	page, err := fs.WritePage("org1", "1", "Test Title", "# Test Content")
+	// Test WritePage (with numeric ID encoded as base64)
+	pageID := EncodeID(1)
+	page, err := fs.WritePage("org1", pageID, "Test Title", "# Test Content")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
 	}
 
-	if page.ID != "1" {
-		t.Errorf("expected ID '1', got %q", page.ID)
+	if page.ID != pageID {
+		t.Errorf("expected ID %q, got %q", pageID, page.ID)
 	}
 	if page.Title != "Test Title" {
 		t.Errorf("expected title 'Test Title', got %q", page.Title)
 	}
 
 	// Test PageExists
-	if !fs.PageExists("org1", "1") {
+	if !fs.PageExists("org1", pageID) {
 		t.Error("page should exist after WritePage")
 	}
 
 	// Test ReadPage
-	readPage, err := fs.ReadPage("org1", "1")
+	readPage, err := fs.ReadPage("org1", pageID)
 	if err != nil {
 		t.Fatalf("failed to read page: %v", err)
 	}
@@ -47,7 +48,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test UpdatePage
-	updated, err := fs.UpdatePage("org1", "1", "Updated Title", "# Updated Content")
+	updated, err := fs.UpdatePage("org1", pageID, "Updated Title", "# Updated Content")
 	if err != nil {
 		t.Fatalf("failed to update page: %v", err)
 	}
@@ -57,7 +58,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Verify update persisted
-	readUpdated, err := fs.ReadPage("org1", "1")
+	readUpdated, err := fs.ReadPage("org1", pageID)
 	if err != nil {
 		t.Fatalf("failed to read updated page: %v", err)
 	}
@@ -67,17 +68,17 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test DeletePage
-	err = fs.DeletePage("org1", "1")
+	err = fs.DeletePage("org1", pageID)
 	if err != nil {
 		t.Fatalf("failed to delete page: %v", err)
 	}
 
-	if fs.PageExists("org1", "1") {
+	if fs.PageExists("org1", pageID) {
 		t.Error("page should not exist after DeletePage")
 	}
 
 	// Test error handling for non-existent page
-	_, err = fs.ReadPage("org1", "999")
+	_, err = fs.ReadPage("org1", "AQ") // Use a valid base64 but non-existent
 	if err == nil {
 		t.Error("expected error reading non-existent page")
 	}
@@ -95,9 +96,9 @@ func TestFileStoreListPages(t *testing.T) {
 		id    string
 		title string
 	}{
-		{"1", "First Page"},
-		{"2", "Second Page"},
-		{"3", "Third Page"},
+		{EncodeID(1), "First Page"},
+		{EncodeID(2), "Second Page"},
+		{EncodeID(3), "Third Page"},
 	}
 
 	for _, p := range pages {
@@ -118,7 +119,7 @@ func TestFileStoreListPages(t *testing.T) {
 	}
 
 	// Verify directory structure
-	expectedDir := filepath.Join(tmpDir, "org1", "pages", "1")
+	expectedDir := filepath.Join(tmpDir, "org1", "pages", EncodeID(1))
 	if _, err := os.Stat(expectedDir); err != nil {
 		t.Errorf("expected page directory %s to exist: %v", expectedDir, err)
 	}
@@ -137,13 +138,14 @@ func TestMarkdownFormatting(t *testing.T) {
 	}
 
 	// Write page with specific content
-	_, err = fs.WritePage("org1", "1", "Format Test", "# Content\n\nWith multiple lines")
+	pageID := EncodeID(1)
+	_, err = fs.WritePage("org1", pageID, "Format Test", "# Content\n\nWith multiple lines")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
 	}
 
 	// Read the file directly to verify format
-	filePath := filepath.Join(tmpDir, "org1", "pages", "1", "index.md")
+	filePath := filepath.Join(tmpDir, "org1", "pages", pageID, "index.md")
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		t.Fatalf("failed to read file: %v", err)
@@ -155,7 +157,7 @@ func TestMarkdownFormatting(t *testing.T) {
 	if !contains(content, "---") {
 		t.Error("expected front matter delimiters")
 	}
-	if !contains(content, "id: 1") {
+	if !contains(content, "id: "+pageID) {
 		t.Error("expected id in front matter")
 	}
 	if !contains(content, "title: Format Test") {

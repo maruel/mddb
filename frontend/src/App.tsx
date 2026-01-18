@@ -207,7 +207,7 @@ export default function App() {
     setIsTermsPage(false);
 
     // Check for /orgID/nodeID
-    const matchWithOrg = path.match(/^\/([^/]+)\/(\d+)(?:-.*)?$/);
+    const matchWithOrg = path.match(/^\/([^/]+)\/([a-zA-Z0-9_-]+)(?:-.*)?$/);
     if (matchWithOrg) {
       const orgId = matchWithOrg[1];
       const nodeId = matchWithOrg[2];
@@ -410,9 +410,12 @@ export default function App() {
       // Update URL if title changed
       const slug = slugify(title());
       const currentPath = window.location.pathname;
-      const newPath = `/${nodeId}${slug ? '-' + slug : ''}`;
-      if (currentPath !== newPath) {
-        window.history.replaceState(null, '', newPath);
+      const orgId = user()?.organization_id;
+      if (orgId) {
+        const newPath = `/${orgId}/${nodeId}${slug ? '-' + slug : ''}`;
+        if (currentPath !== newPath) {
+          window.history.replaceState(null, '', newPath);
+        }
       }
     } catch (err) {
       setError('Failed to save node: ' + err);

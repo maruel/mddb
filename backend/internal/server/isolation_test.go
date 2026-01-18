@@ -25,21 +25,21 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 	}{
 		{
 			name:           "Access own organization",
-			membershipOrg:  "org1",
+			membershipOrg:  storage.EncodeID(1),
 			membershipRole: models.UserRoleViewer,
-			requestOrgID:   "org1",
+			requestOrgID:   storage.EncodeID(1),
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Access different organization",
-			membershipOrg:  "org1",
+			membershipOrg:  storage.EncodeID(1),
 			membershipRole: models.UserRoleViewer,
-			requestOrgID:   "org2",
+			requestOrgID:   storage.EncodeID(2),
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Access with no org context in request",
-			membershipOrg:  "org1",
+			membershipOrg:  storage.EncodeID(1),
 			membershipRole: models.UserRoleViewer,
 			requestOrgID:   "",
 			expectedStatus: http.StatusOK,
@@ -50,8 +50,8 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			userID := "user1"
 			// Clear and setup membership for each test case
-			_ = memService.DeleteMembership(userID, "org1")
-			_ = memService.DeleteMembership(userID, "org2")
+			_ = memService.DeleteMembership(userID, storage.EncodeID(1))
+			_ = memService.DeleteMembership(userID, storage.EncodeID(2))
 
 			if tt.membershipOrg != "" {
 				_, _ = memService.CreateMembership(userID, tt.membershipOrg, tt.membershipRole)
@@ -128,7 +128,7 @@ func TestRolePermissions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userID := "user-role-test"
-			orgID := "org1"
+			orgID := storage.EncodeID(1)
 			// Clear and setup membership for each test case
 			_ = memService.DeleteMembership(userID, orgID)
 			_, _ = memService.CreateMembership(userID, orgID, tt.userRole)
@@ -139,7 +139,7 @@ func TestRolePermissions(t *testing.T) {
 
 			middleware := RequireRole(memService, tt.requiredRole)(next)
 
-			req := httptest.NewRequest("GET", "/api/org1/nodes", http.NoBody)
+			req := httptest.NewRequest("GET", "/api/"+orgID+"/nodes", http.NoBody)
 			req.SetPathValue("orgID", orgID)
 
 			user := &models.User{ID: userID}

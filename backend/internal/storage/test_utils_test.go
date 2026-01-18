@@ -11,7 +11,7 @@ import (
 //nolint:unparam // keep for future use even if currently always "org1"
 func newTestContext(orgID string) context.Context {
 	if orgID == "" {
-		orgID = "test-org"
+		orgID = EncodeID(999) // "6Oc" for 999
 	}
 	user := &models.User{
 		ID: "test-user",
