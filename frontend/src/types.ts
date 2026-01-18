@@ -683,6 +683,12 @@ export interface User {
   settings: UserSettings;
   created: string;
   modified: string;
+  /**
+   * Active context (populated in API responses)
+   */
+  organization_id?: string;
+  role?: UserRole;
+  onboarding?: OnboardingState;
 }
 /**
  * UserSettings represents global user preferences.

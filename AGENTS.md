@@ -24,48 +24,28 @@ See README.md for project overview and docs/PLAN.md for implementation roadmap.
 
 ```
 mddb/
-├── cmd/mddb/                    # Application entry point
-│   └── main.go                  # Server startup and configuration
-├── internal/
-│   ├── server/                  # HTTP server and routing
-│   │   ├── router.go           # Route definitions and SPA handler
-│   │   ├── embedded.go         # Embedded frontend handler
-│   │   ├── handler_wrapper.go  # Generic handler wrapper with path param extraction
-│   │   └── handlers/           # HTTP request handlers by feature
-│   │       ├── pages.go        # Page CRUD operations
-│   │       ├── databases.go    # Database CRUD + record operations
-│   │       ├── assets.go       # Asset management
-│   │       ├── search.go       # Search operations
-│   │       └── health.go       # Health check
-│   ├── storage/                # File system operations
-│   │   ├── filestore.go        # Low-level file operations for pages/databases/records
-│   │   ├── git_service.go      # Git version control integration
-│   │   ├── page_service.go     # Page business logic
-│   │   ├── database_service.go # Database business logic
-│   │   ├── asset_service.go    # Asset business logic
-│   │   └── search_service.go   # Full-text search logic
-│   ├── models/                 # Data models
-│   │   └── models.go           # Page, Database, Column, Record, Asset structs
-│   ├── errors/                 # Error types
-│   │   └── errors.go           # ErrorWithStatus interface and APIError
-│   └── utils/                  # Utilities
-├── frontend/                   # SolidJS frontend (renamed from web/)
+├── backend/                    # Go backend code
+│   ├── cmd/mddb/               # Application entry point
+│   │   └── main.go             # Server startup and configuration
+│   ├── internal/
+│   │   ├── models/             # Data models
+│   │   ├── server/             # HTTP server and routing
+│   │   │   ├── router.go       # Route definitions and SPA handler
+│   │   │   ├── embedded.go     # Embedded frontend handler
+│   │   │   ├── handler_wrapper.go # Generic handler wrapper with path param extraction
+│   │   │   └── handlers/       # HTTP request handlers by feature
+│   │   ├── storage/            # File system operations
+│   │   └── utils/              # Utilities
+│   └── frontend/               # Go embedding for frontend assets
+├── frontend/                   # SolidJS frontend
 │   ├── src/                    # Frontend source code
 │   │   ├── index.tsx           # App entry point
 │   │   ├── App.tsx             # Main app component
 │   │   └── components/         # UI components
-│   ├── dist/                   # Compiled frontend (embedded in binary)
+│   ├── dist/                   # Compiled frontend
 │   ├── vite.config.ts          # Vite build configuration
 │   └── package.json            # Frontend dependencies
-├── data/                       # Runtime data directory
-│   └── pages/                  # All content as numbered directories
-├── docs/                       # Documentation
-│   ├── README.md                # Documentation index
-│   ├── REQUIREMENTS.md         # Functional & non-functional requirements
-│   ├── PLAN.md                 # Implementation roadmap
-│   ├── QUICKSTART.md           # Quick start guide
-│   ├── TECHNICAL.md            # Storage model and build guide
-│   └── API.md                  # API Reference
+├── docs/                       # Project Documentation like PLAN.md and REQUIREMENTS.md
 ├── Makefile                    # Common development commands
 ├── AGENTS.md                   # This file - Development guidelines
 └── README.md                   # Project overview and API documentation

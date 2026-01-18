@@ -3,4 +3,4 @@ packages:
     enum_style: "union"
     type_mappings:
       "time.Time": "string"
-    output_path: "frontend/src/models.gen.ts"
+    output_path: "../frontend/src/models.gen.ts"
