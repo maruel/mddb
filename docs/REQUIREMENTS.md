@@ -76,6 +76,8 @@ Most core functional requirements for a local-first markdown and database system
 ### Deployment & Architecture
 - [x] **Self-Contained**: Single executable binary with embedded frontend (`go:embed`).
 - [x] **Local-First**: Filesystem-based storage with no external database dependencies.
+- [x] **API Contract Centralization**: All Request, Response, and DTO structures are centralized in the `internal/models` package as the single source of truth for the frontend.
+- [x] **Encapsulation**: Handlers and storage implementation details are isolated from the API contract.
 - [x] **Cross-Platform**: Compatible with Linux, macOS, and Windows.
 
 ### Data & Security

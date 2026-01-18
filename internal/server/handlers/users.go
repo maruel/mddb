@@ -20,25 +20,8 @@ func NewUserHandler(userService *storage.UserService) *UserHandler {
 	}
 }
 
-// ListUsersRequest is a request to list users.
-type ListUsersRequest struct {
-	OrgID string `path:"orgID"`
-}
-
-// UpdateRoleRequest is a request to update a user's role.
-type UpdateRoleRequest struct {
-	OrgID  string          `path:"orgID"`
-	UserID string          `json:"user_id"`
-	Role   models.UserRole `json:"role"`
-}
-
-// ListUsersResponse is a response containing a list of users.
-type ListUsersResponse struct {
-	Users []*models.User `json:"users"`
-}
-
 // ListUsers returns all users in the organization.
-func (h *UserHandler) ListUsers(ctx context.Context, req ListUsersRequest) (*ListUsersResponse, error) {
+func (h *UserHandler) ListUsers(ctx context.Context, req models.ListUsersRequest) (*models.ListUsersResponse, error) {
 	// Active org ID is verified by middleware and injected into context
 	orgID := models.GetOrgID(ctx)
 	if orgID == "" {
@@ -61,11 +44,11 @@ func (h *UserHandler) ListUsers(ctx context.Context, req ListUsersRequest) (*Lis
 		}
 	}
 
-	return &ListUsersResponse{Users: users}, nil
+	return &models.ListUsersResponse{Users: users}, nil
 }
 
 // UpdateUserRole updates a user's role.
-func (h *UserHandler) UpdateUserRole(ctx context.Context, req UpdateRoleRequest) (*models.User, error) {
+func (h *UserHandler) UpdateUserRole(ctx context.Context, req models.UpdateRoleRequest) (*models.User, error) {
 	orgID := models.GetOrgID(ctx)
 	if orgID == "" {
 		return nil, errors.Forbidden("Organization context missing")
@@ -82,13 +65,8 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, req UpdateRoleRequest)
 	return h.userService.GetUser(req.UserID)
 }
 
-// UpdateUserSettingsRequest is a request to update user global settings.
-type UpdateUserSettingsRequest struct {
-	Settings models.UserSettings `json:"settings"`
-}
-
 // UpdateUserSettings updates user global settings.
-func (h *UserHandler) UpdateUserSettings(ctx context.Context, req UpdateUserSettingsRequest) (*models.User, error) {
+func (h *UserHandler) UpdateUserSettings(ctx context.Context, req models.UpdateUserSettingsRequest) (*models.User, error) {
 	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {
 		return nil, errors.Unauthorized()

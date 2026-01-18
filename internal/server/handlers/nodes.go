@@ -8,68 +8,119 @@ import (
 	"github.com/maruel/mddb/internal/storage"
 )
 
-// NodeHandler handles unified node HTTP requests
+// NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
-	nodeService *storage.NodeService
+	fileStore  *storage.FileStore
+	gitService *storage.GitService
+	cache      *storage.Cache
+	orgService *storage.OrganizationService
 }
 
-// NewNodeHandler creates a new node handler
+// NewNodeHandler creates a new node handler.
 func NewNodeHandler(fileStore *storage.FileStore, gitService *storage.GitService, cache *storage.Cache, orgService *storage.OrganizationService) *NodeHandler {
 	return &NodeHandler{
-		nodeService: storage.NewNodeService(fileStore, gitService, cache, orgService),
+		fileStore:  fileStore,
+		gitService: gitService,
+		cache:      cache,
+		orgService: orgService,
 	}
 }
 
-// ListNodesRequest is a request to list all nodes.
-type ListNodesRequest struct {
-	OrgID string `path:"orgID"`
-}
-
-// ListNodesResponse is a response containing a list of nodes.
-type ListNodesResponse struct {
-	Nodes []*models.Node `json:"nodes"`
-}
-
-// GetNodeRequest is a request to get a node.
-type GetNodeRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
-}
-
-// CreateNodeRequest is a request to create a node.
-type CreateNodeRequest struct {
-	OrgID string          `path:"orgID"`
-	Title string          `json:"title"`
-	Type  models.NodeType `json:"type"`
-}
-
-// ListNodes returns a list of all nodes
-func (h *NodeHandler) ListNodes(ctx context.Context, req ListNodesRequest) (*ListNodesResponse, error) {
-	nodes, err := h.nodeService.ListNodes(ctx)
+// ListNodes returns the hierarchical node tree.
+func (h *NodeHandler) ListNodes(ctx context.Context, req models.ListNodesRequest) (*models.ListNodesResponse, error) {
+	orgID := models.GetOrgID(ctx)
+	nodes, err := h.fileStore.ReadNodeTree(orgID)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to list nodes", err)
+		return nil, errors.InternalWithError("Failed to read node tree", err)
 	}
-	return &ListNodesResponse{Nodes: nodes}, nil
+
+	return &models.ListNodesResponse{Nodes: nodes}, nil
 }
 
-// GetNode returns a specific node by ID
-func (h *NodeHandler) GetNode(ctx context.Context, req GetNodeRequest) (*models.Node, error) {
-	node, err := h.nodeService.GetNode(ctx, req.ID)
+// GetNode retrieves a single node's metadata.
+func (h *NodeHandler) GetNode(ctx context.Context, req models.GetNodeRequest) (*models.Node, error) {
+	orgID := models.GetOrgID(ctx)
+	nodes, err := h.fileStore.ReadNodeTree(orgID)
 	if err != nil {
+		return nil, errors.InternalWithError("Failed to read node tree", err)
+	}
+
+	node := findNode(nodes, req.ID)
+	if node == nil {
 		return nil, errors.NotFound("node")
 	}
+
 	return node, nil
 }
 
-// CreateNode creates a new node
-func (h *NodeHandler) CreateNode(ctx context.Context, req CreateNodeRequest) (*models.Node, error) {
-	if req.Title == "" {
-		return nil, errors.MissingField("title")
+// CreateNode creates a new node (page, database, or hybrid).
+func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeRequest) (*models.Node, error) {
+	if req.Title == "" || req.Type == "" {
+		return nil, errors.MissingField("title or type")
 	}
-	// CreateNode now takes parentID as 4th arg, defaulting to empty for now
-	node, err := h.nodeService.CreateNode(ctx, req.Title, req.Type, "")
+
+	orgID := models.GetOrgID(ctx)
+	id := h.fileStore.NextID(orgID)
+
+	var node *models.Node
+	var err error
+
+	switch req.Type {
+	case models.NodeTypeDocument:
+		var page *models.Page
+		page, err = h.fileStore.WritePage(orgID, id, req.Title, "")
+		if err == nil {
+			node = &models.Node{
+				ID:       page.ID,
+				Title:    page.Title,
+				Content:  page.Content,
+				Type:     models.NodeTypeDocument,
+				Created:  page.Created,
+				Modified: page.Modified,
+			}
+		}
+	case models.NodeTypeDatabase:
+		// We use databaseService here for better encapsulation
+		ds := storage.NewDatabaseService(h.fileStore, h.gitService, h.cache, h.orgService)
+		var db *models.Database
+		db, err = ds.CreateDatabase(ctx, req.Title, []models.Column{})
+		if err == nil {
+			node = &models.Node{
+				ID:       db.ID,
+				Title:    db.Title,
+				Columns:  db.Columns,
+				Type:     models.NodeTypeDatabase,
+				Created:  db.Created,
+				Modified: db.Modified,
+			}
+		}
+	default:
+		return nil, errors.BadRequest("Invalid node type")
+	}
+
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create node", err)
 	}
+
+	// Commit if git is enabled
+	if h.gitService != nil {
+		_ = h.gitService.CommitChange(ctx, "create", string(req.Type), id, req.Title)
+	}
+
+	// Invalidate cache
+	h.cache.InvalidateNodeTree()
+
 	return node, nil
+}
+
+func findNode(nodes []*models.Node, id string) *models.Node {
+	for _, n := range nodes {
+		if n.ID == id {
+			return n
+		}
+		if child := findNode(n.Children, id); child != nil {
+			return child
+		}
+	}
+	return nil
 }

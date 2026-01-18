@@ -8,7 +8,7 @@ import (
 	"github.com/maruel/mddb/internal/storage"
 )
 
-// OrganizationHandler handles organization management.
+// OrganizationHandler handles organization management requests.
 type OrganizationHandler struct {
 	orgService *storage.OrganizationService
 }
@@ -20,33 +20,26 @@ func NewOrganizationHandler(orgService *storage.OrganizationService) *Organizati
 	}
 }
 
-// UpdateOrgSettingsRequest is a request to update organization settings.
-type UpdateOrgSettingsRequest struct {
-	OrgID    string                      `path:"orgID"`
-	Settings models.OrganizationSettings `json:"settings"`
-}
-
-// GetOrganization returns an organization by ID.
-func (h *OrganizationHandler) GetOrganization(ctx context.Context, req struct {
-	OrgID string `path:"orgID"`
-}) (*models.Organization, error) {
-	return h.orgService.GetOrganization(req.OrgID)
-}
-
-// UpdateSettings updates organization-wide settings.
-func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req UpdateOrgSettingsRequest) (*models.Organization, error) {
+// GetOrganization retrieves current organization details.
+func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*models.Organization, error) {
 	orgID := models.GetOrgID(ctx)
 	if orgID == "" {
 		return nil, errors.Forbidden("Organization context missing")
 	}
 
-	if req.OrgID != orgID {
-		return nil, errors.Forbidden("Organization mismatch")
+	return h.orgService.GetOrganization(orgID)
+}
+
+// UpdateSettings updates organization-wide settings.
+func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req models.UpdateOrgSettingsRequest) (*models.Organization, error) {
+	orgID := models.GetOrgID(ctx)
+	if orgID == "" {
+		return nil, errors.Forbidden("Organization context missing")
 	}
 
-	if err := h.orgService.UpdateSettings(req.OrgID, req.Settings); err != nil {
+	if err := h.orgService.UpdateSettings(orgID, req.Settings); err != nil {
 		return nil, errors.InternalWithError("Failed to update organization settings", err)
 	}
 
-	return h.orgService.GetOrganization(req.OrgID)
+	return h.orgService.GetOrganization(orgID)
 }

@@ -26,27 +26,8 @@ func NewAuthHandler(userService *storage.UserService, orgService *storage.Organi
 	}
 }
 
-// LoginRequest is a request to log in.
-type LoginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-// LoginResponse is a response from logging in.
-type LoginResponse struct {
-	Token string       `json:"token"`
-	User  *models.User `json:"user"`
-}
-
-// RegisterRequest is a request to register a new user.
-type RegisterRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Name     string `json:"name"`
-}
-
 // Login handles user login and returns a JWT token.
-func (h *AuthHandler) Login(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
+func (h *AuthHandler) Login(ctx context.Context, req models.LoginRequest) (*models.LoginResponse, error) {
 	if req.Email == "" || req.Password == "" {
 		return nil, errors.MissingField("email or password")
 	}
@@ -61,14 +42,14 @@ func (h *AuthHandler) Login(ctx context.Context, req LoginRequest) (*LoginRespon
 		return nil, errors.InternalWithError("Failed to generate token", err)
 	}
 
-	return &LoginResponse{
+	return &models.LoginResponse{
 		Token: token,
 		User:  user,
 	}, nil
 }
 
 // Register handles user registration.
-func (h *AuthHandler) Register(ctx context.Context, req RegisterRequest) (*LoginResponse, error) {
+func (h *AuthHandler) Register(ctx context.Context, req models.RegisterRequest) (*models.LoginResponse, error) {
 	if req.Email == "" || req.Password == "" || req.Name == "" {
 		return nil, errors.MissingField("email, password, or name")
 	}
@@ -108,7 +89,7 @@ func (h *AuthHandler) Register(ctx context.Context, req RegisterRequest) (*Login
 		return nil, errors.InternalWithError("Failed to generate token", err)
 	}
 
-	return &LoginResponse{
+	return &models.LoginResponse{
 		Token: token,
 		User:  user,
 	}, nil
@@ -127,11 +108,8 @@ func (h *AuthHandler) GenerateToken(user *models.User) (string, error) {
 	return token.SignedString(h.jwtSecret)
 }
 
-// MeRequest is a request to get current user info.
-type MeRequest struct{}
-
 // Me returns the current user info from the context.
-func (h *AuthHandler) Me(ctx context.Context, req MeRequest) (*models.User, error) {
+func (h *AuthHandler) Me(ctx context.Context, req models.MeRequest) (*models.User, error) {
 	// User info should be in context if authenticated via middleware
 	user, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {

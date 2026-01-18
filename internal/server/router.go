@@ -30,7 +30,8 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	orgh := handlers.NewOrganizationHandler(orgService)
 
 	// Health check
-	mux.Handle("/api/health", Wrap(handlers.Health))
+	hh := handlers.NewHealthHandler("1.0.0")
+	mux.Handle("/api/health", Wrap(hh.Health))
 
 	// Auth endpoints
 	mux.Handle("POST /api/auth/login", Wrap(authh.Login))

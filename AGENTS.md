@@ -129,11 +129,12 @@ make build            # Build Go binary
 
 mddb uses [tygo](https://github.com/gzuidhof/tygo) to generate TypeScript interfaces from Go structs. This ensures the frontend and backend stay in sync automatically.
 
-- **Source of Truth**: Go structs in `internal/models/`, `internal/storage/`, and `internal/server/handlers/`.
+- **Source of Truth**: All Request, Response, and DTO structs MUST be defined in `internal/models/` (typically in `api.go`).
+- **Encapsulation**: Structs in `internal/storage/` and `internal/server/handlers/` are internal implementation details and are NOT exported to the frontend.
 - **Generated File**: `frontend/src/types.ts` (DO NOT EDIT MANUALLY).
 - **Command**: `make types` (included in `make build`).
 
-When you add or modify a Request/Response struct or a model in Go, run `make types` to update the frontend.
+When you add or modify an API endpoint, add the Request/Response structs to `internal/models/api.go`, then run `make types` to update the frontend.
 
 ### Endpoint Conventions
 

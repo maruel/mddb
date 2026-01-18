@@ -8,28 +8,6 @@ packages:
       "any": "unknown"
     output_path: "frontend/src/models.gen.ts"
 
-  - path: "github.com/maruel/mddb/internal/server/handlers"
-    type_mappings:
-      "time.Time": "string"
-      "models.Node": "Node"
-      "models.NodeType": "'document' | 'database' | 'hybrid'"
-      "models.Column": "Column"
-      "models.DataRecord": "DataRecord"
-      "models.User": "User"
-      "models.UserRole": "'admin' | 'editor' | 'viewer'"
-      "models.Membership": "Membership"
-      "models.Invitation": "Invitation"
-      "models.Organization": "Organization"
-      "models.Asset": "Asset"
-      "models.Commit": "Commit"
-      "models.CommitDetail": "CommitDetail"
-      "models.SearchResult": "SearchResult"
-      "models.SearchOptions": "SearchOptions"
-      "interface{}": "unknown"
-      "any": "unknown"
-    output_path: "frontend/src/handlers.gen.ts"
-    indent: "  "
-
   - path: "github.com/maruel/mddb/internal/errors"
     type_mappings:
       "interface{}": "unknown"

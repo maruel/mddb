@@ -12,7 +12,7 @@ import (
 type MembershipHandler struct {
 	memService  *storage.MembershipService
 	userService *storage.UserService
-	authHandler *AuthHandler // To generate new tokens when switching orgs
+	authHandler *AuthHandler
 }
 
 // NewMembershipHandler creates a new membership handler.
@@ -24,70 +24,47 @@ func NewMembershipHandler(memService *storage.MembershipService, userService *st
 	}
 }
 
-// SwitchOrgRequest is a request to switch the active organization.
-type SwitchOrgRequest struct {
-	OrgID string `json:"org_id"`
-}
-
-// SwitchOrgResponse is the response after switching organizations.
-type SwitchOrgResponse struct {
-	Token string       `json:"token"`
-	User  *models.User `json:"user"`
-}
-
 // SwitchOrg switches the user's active organization and returns a new token.
-// Note: In the new multi-tenant model, this is less critical as orgID is in the URL,
-// but it remains useful for the frontend to know the "intended" active org.
-func (h *MembershipHandler) SwitchOrg(ctx context.Context, req SwitchOrgRequest) (*SwitchOrgResponse, error) {
+func (h *MembershipHandler) SwitchOrg(ctx context.Context, req models.SwitchOrgRequest) (*models.SwitchOrgResponse, error) {
 	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {
 		return nil, errors.Unauthorized()
-	}
-
-	if req.OrgID == "" {
-		return nil, errors.MissingField("org_id")
 	}
 
 	// Verify membership
 	_, err := h.memService.GetMembership(currentUser.ID, req.OrgID)
 	if err != nil {
-		return nil, errors.Forbidden("You are not a member of this organization")
+		return nil, errors.Forbidden("User is not a member of this organization")
 	}
 
-	// Get updated user
+	// Re-fetch user to ensure we have memberships for the token
 	user, err := h.userService.GetUser(currentUser.ID)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to retrieve updated user", err)
+		return nil, errors.InternalWithError("Failed to fetch user", err)
 	}
 
-	// Generate new token
 	token, err := h.authHandler.GenerateToken(user)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to generate new token", err)
+		return nil, errors.InternalWithError("Failed to generate token", err)
 	}
 
-	return &SwitchOrgResponse{
+	return &models.SwitchOrgResponse{
 		Token: token,
 		User:  user,
 	}, nil
 }
 
-// UpdateMembershipSettingsRequest is a request to update membership settings.
-type UpdateMembershipSettingsRequest struct {
-	OrgID    string                    `path:"orgID"`
-	Settings models.MembershipSettings `json:"settings"`
-}
-
-// UpdateMembershipSettings updates user preferences within a specific organization.
-func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req UpdateMembershipSettingsRequest) (*models.Membership, error) {
+// UpdateMembershipSettings updates user preferences within an organization.
+func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req models.UpdateMembershipSettingsRequest) (*models.Membership, error) {
 	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {
 		return nil, errors.Unauthorized()
 	}
 
-	if err := h.memService.UpdateSettings(currentUser.ID, req.OrgID, req.Settings); err != nil {
+	orgID := models.GetOrgID(ctx)
+	if err := h.memService.UpdateSettings(currentUser.ID, orgID, req.Settings); err != nil {
 		return nil, errors.InternalWithError("Failed to update membership settings", err)
 	}
 
-	return h.memService.GetMembership(currentUser.ID, req.OrgID)
+	return h.memService.GetMembership(currentUser.ID, orgID)
 }

@@ -27,7 +27,7 @@ func TestRegister(t *testing.T) {
 	ctx := context.Background()
 
 	// Register Joe
-	req1 := RegisterRequest{
+	req1 := models.RegisterRequest{
 		Email:    "joe@example.com",
 		Password: "password",
 		Name:     "Joe",
@@ -62,7 +62,7 @@ func TestRegister(t *testing.T) {
 	}
 
 	// Register Alice
-	req2 := RegisterRequest{
+	req2 := models.RegisterRequest{
 		Email:    "alice@example.com",
 		Password: "password",
 		Name:     "Alice",
