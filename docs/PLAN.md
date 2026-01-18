@@ -144,9 +144,9 @@ See `README.md` and `API.md` for details.
 - [x] **Organization Onboarding**:
     - [x] **Onboarding State Tracking**: Track if an organization has completed the onboarding process.
     - [x] **Onboarding UI**: Guided multi-step modal or wizard for initial configuration (Org name, members, Git remote).
-    - [ ] **CLI Onboarding**: Implement a simple configuration wizard in the CLI.
-    - [ ] **CLI Versioning**: Implement `mddb -version` to display build metadata (Git commit, dirty state) using Go's build info.
-    - [ ] **Local Config**: Store CLI configuration in an unversioned `.env` file in `data/` (added to `.gitignore`).
+    - [x] **CLI Onboarding**: Implement a simple configuration wizard in the CLI.
+    - [x] **CLI Versioning**: Implement `mddb -version` to display build metadata (Git commit, dirty state) using Go's build info.
+    - [x] **Local Config**: Store CLI configuration in an unversioned `.env` file in `data/` (added to `.gitignore`).
     - [x] **Settings Integration**: Ensure all onboarding options are accessible and editable in Workspace Settings.
 
 ### Phase 10: Connectivity & Relations
