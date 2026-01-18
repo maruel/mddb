@@ -63,7 +63,7 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 		http.Error(w, "File is required", http.StatusBadRequest)
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	data, err := io.ReadAll(file)
 	if err != nil {
@@ -79,7 +79,7 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, `{"id":"%s","name":"%s"}`, asset.ID, asset.Name)
+	_, _ = fmt.Fprintf(w, `{"id":"%s","name":"%s"}`, asset.ID, asset.Name)
 }
 
 // ServeAssetFile serves the binary data of an asset.

@@ -16,7 +16,7 @@ func TestTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create temp dir: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	path := filepath.Join(tmpDir, "test.jsonl")
 

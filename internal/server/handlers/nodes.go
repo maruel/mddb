@@ -93,6 +93,8 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeReque
 				Modified: db.Modified,
 			}
 		}
+	case models.NodeTypeHybrid:
+		return nil, models.NotImplemented("hybrid nodes")
 	default:
 		return nil, models.BadRequest("Invalid node type")
 	}
