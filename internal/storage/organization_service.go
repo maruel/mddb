@@ -8,13 +8,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/internal/jsonldb"
 	"github.com/maruel/mddb/internal/models"
 )
 
 // OrganizationService handles organization management.
 type OrganizationService struct {
 	rootDir    string
-	table      *JSONLTable[models.Organization]
+	table      *jsonldb.Table[models.Organization]
 	fileStore  *FileStore
 	gitService *GitService
 	mu         sync.RWMutex
@@ -24,7 +25,7 @@ type OrganizationService struct {
 // NewOrganizationService creates a new organization service.
 func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *GitService) (*OrganizationService, error) {
 	tablePath := filepath.Join(rootDir, "db", "organizations.jsonl")
-	table, err := NewJSONLTable[models.Organization](tablePath)
+	table, err := jsonldb.NewTable[models.Organization](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -37,8 +38,8 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 		byID:       make(map[string]*models.Organization),
 	}
 
-	for i, org := range table.rows {
-		s.byID[org.ID] = &table.rows[i]
+	for i, org := range table.Rows {
+		s.byID[org.ID] = &table.Rows[i]
 	}
 
 	return s, nil
@@ -66,9 +67,9 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	}
 
 	// Update local cache
-	s.table.mu.RLock()
-	newOrg := &s.table.rows[len(s.table.rows)-1]
-	s.table.mu.RUnlock()
+	s.table.Mu.RLock()
+	newOrg := &s.table.Rows[len(s.table.Rows)-1]
+	s.table.Mu.RUnlock()
 	s.byID[id] = newOrg
 
 	// Create organization content directory

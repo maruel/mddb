@@ -15,6 +15,12 @@ packages:
       "any": "unknown"
     output_path: "frontend/src/storage.gen.ts"
 
+  - path: "github.com/maruel/mddb/internal/jsonldb"
+    type_mappings:
+      "interface{}": "unknown"
+      "any": "unknown"
+    output_path: "frontend/src/jsonldb.gen.ts"
+
   - path: "github.com/maruel/mddb/internal/server/handlers"
     type_mappings:
       "time.Time": "string"

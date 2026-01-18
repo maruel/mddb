@@ -1,4 +1,4 @@
-package storage
+package jsonldb
 
 import (
 	"bufio"
@@ -9,21 +9,21 @@ import (
 	"sync"
 )
 
-// JSONLTable handles storage and in-memory caching for a single table in JSONL format.
-type JSONLTable[T any] struct {
+// Table handles storage and in-memory caching for a single table in JSONL format.
+type Table[T any] struct {
 	path string
-	mu   sync.RWMutex
+	Mu   sync.RWMutex
 
-	rows []T
+	Rows []T
 }
 
-// NewJSONLTable creates a new JSONLTable and loads all data from the file.
-func NewJSONLTable[T any](path string) (*JSONLTable[T], error) {
+// NewTable creates a new Table and loads all data from the file.
+func NewTable[T any](path string) (*Table[T], error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create directory for %s: %w", path, err)
 	}
 
-	table := &JSONLTable[T]{
+	table := &Table[T]{
 		path: path,
 	}
 
@@ -34,14 +34,14 @@ func NewJSONLTable[T any](path string) (*JSONLTable[T], error) {
 	return table, nil
 }
 
-func (t *JSONLTable[T]) load() error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+func (t *Table[T]) load() error {
+	t.Mu.Lock()
+	defer t.Mu.Unlock()
 
 	f, err := os.Open(t.path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			t.rows = []T{}
+			t.Rows = []T{}
 			return nil
 		}
 		return fmt.Errorf("failed to open table file %s: %w", t.path, err)
@@ -68,23 +68,23 @@ func (t *JSONLTable[T]) load() error {
 		return fmt.Errorf("failed to read table file %s: %w", t.path, err)
 	}
 
-	t.rows = rows
+	t.Rows = rows
 	return nil
 }
 
 // All returns a copy of all rows.
-func (t *JSONLTable[T]) All() []T {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	rows := make([]T, len(t.rows))
-	copy(rows, t.rows)
+func (t *Table[T]) All() []T {
+	t.Mu.RLock()
+	defer t.Mu.RUnlock()
+	rows := make([]T, len(t.Rows))
+	copy(rows, t.Rows)
 	return rows
 }
 
 // Append adds a new row to the table and persists it.
-func (t *JSONLTable[T]) Append(row T) error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+func (t *Table[T]) Append(row T) error {
+	t.Mu.Lock()
+	defer t.Mu.Unlock()
 
 	data, err := json.Marshal(row)
 	if err != nil {
@@ -106,14 +106,14 @@ func (t *JSONLTable[T]) Append(row T) error {
 		return fmt.Errorf("failed to write newline: %w", err)
 	}
 
-	t.rows = append(t.rows, row)
+	t.Rows = append(t.Rows, row)
 	return nil
 }
 
 // Replace replaces all rows with the provided slice and persists it.
-func (t *JSONLTable[T]) Replace(rows []T) error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+func (t *Table[T]) Replace(rows []T) error {
+	t.Mu.Lock()
+	defer t.Mu.Unlock()
 
 	f, err := os.Create(t.path)
 	if err != nil {
@@ -141,6 +141,6 @@ func (t *JSONLTable[T]) Replace(rows []T) error {
 		return fmt.Errorf("failed to flush writer: %w", err)
 	}
 
-	t.rows = rows
+	t.Rows = rows
 	return nil
 }

@@ -6,13 +6,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/internal/jsonldb"
 	"github.com/maruel/mddb/internal/models"
 )
 
 // MembershipService handles user-organization relationships.
 type MembershipService struct {
 	rootDir string
-	table   *JSONLTable[models.Membership]
+	table   *jsonldb.Table[models.Membership]
 	mu      sync.RWMutex
 	byID    map[string]*models.Membership // key: userID_orgID
 }
@@ -20,7 +21,7 @@ type MembershipService struct {
 // NewMembershipService creates a new membership service.
 func NewMembershipService(rootDir string) (*MembershipService, error) {
 	tablePath := filepath.Join(rootDir, "db", "memberships.jsonl")
-	table, err := NewJSONLTable[models.Membership](tablePath)
+	table, err := jsonldb.NewTable[models.Membership](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -31,8 +32,8 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 		byID:    make(map[string]*models.Membership),
 	}
 
-	for i, m := range table.rows {
-		s.byID[m.UserID+"_"+m.OrganizationID] = &table.rows[i]
+	for i, m := range table.Rows {
+		s.byID[m.UserID+"_"+m.OrganizationID] = &table.Rows[i]
 	}
 
 	return s, nil
@@ -60,9 +61,9 @@ func (s *MembershipService) CreateMembership(userID, orgID string, role models.U
 	}
 
 	// Update local cache
-	s.table.mu.RLock()
-	newM := &s.table.rows[len(s.table.rows)-1]
-	s.table.mu.RUnlock()
+	s.table.Mu.RLock()
+	newM := &s.table.Rows[len(s.table.Rows)-1]
+	s.table.Mu.RUnlock()
 	s.byID[key] = newM
 
 	return membership, nil

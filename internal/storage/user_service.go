@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/internal/jsonldb"
 	"github.com/maruel/mddb/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -13,7 +14,7 @@ import (
 // UserService handles user management and authentication.
 type UserService struct {
 	rootDir    string
-	table      *JSONLTable[userStorage]
+	table      *jsonldb.Table[userStorage]
 	memService *MembershipService
 	orgService *OrganizationService
 	mu         sync.RWMutex
@@ -24,7 +25,7 @@ type UserService struct {
 // NewUserService creates a new user service.
 func NewUserService(rootDir string, memService *MembershipService, orgService *OrganizationService) (*UserService, error) {
 	tablePath := filepath.Join(rootDir, "db", "users.jsonl")
-	table, err := NewJSONLTable[userStorage](tablePath)
+	table, err := jsonldb.NewTable[userStorage](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -38,8 +39,8 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 		byEmail:    make(map[string]*userStorage),
 	}
 
-	for i := range table.rows {
-		ptr := &table.rows[i]
+	for i := range table.Rows {
+		ptr := &table.Rows[i]
 		s.byID[ptr.ID] = ptr
 		s.byEmail[ptr.Email] = ptr
 	}
@@ -92,9 +93,9 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 	}
 
 	// Update local cache
-	s.table.mu.RLock()
-	newStored := &s.table.rows[len(s.table.rows)-1]
-	s.table.mu.RUnlock()
+	s.table.Mu.RLock()
+	newStored := &s.table.Rows[len(s.table.Rows)-1]
+	s.table.Mu.RUnlock()
 
 	s.byID[id] = newStored
 	s.byEmail[email] = newStored

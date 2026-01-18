@@ -289,14 +289,6 @@ export interface InvitationService {
 //////////
 
 /**
- * JSONLTable handles storage and in-memory caching for a single table in JSONL format.
- */
-export interface JSONLTable<T extends any> {
-}
-
-//////////
-
-/**
  * MembershipService handles user-organization relationships.
  */
 export interface MembershipService {
@@ -363,6 +355,16 @@ export interface SearchService {
  * UserService handles user management and authentication.
  */
 export interface UserService {
+}
+
+//////////
+
+/**
+ * Table handles storage and in-memory caching for a single table in JSONL format.
+ */
+export interface Table<T extends any> {
+  Mu: any /* sync.RWMutex */;
+  Rows: T[];
 }
 
 //////////

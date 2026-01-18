@@ -6,13 +6,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/internal/jsonldb"
 	"github.com/maruel/mddb/internal/models"
 )
 
 // InvitationService handles organization invitations.
 type InvitationService struct {
 	rootDir string
-	table   *JSONLTable[models.Invitation]
+	table   *jsonldb.Table[models.Invitation]
 	mu      sync.RWMutex
 	byID    map[string]*models.Invitation
 	byToken map[string]*models.Invitation
@@ -21,7 +22,7 @@ type InvitationService struct {
 // NewInvitationService creates a new invitation service.
 func NewInvitationService(rootDir string) (*InvitationService, error) {
 	tablePath := filepath.Join(rootDir, "db", "invitations.jsonl")
-	table, err := NewJSONLTable[models.Invitation](tablePath)
+	table, err := jsonldb.NewTable[models.Invitation](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +34,8 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 		byToken: make(map[string]*models.Invitation),
 	}
 
-	for i := range table.rows {
-		inv := &table.rows[i]
+	for i := range table.Rows {
+		inv := &table.Rows[i]
 		s.byID[inv.ID] = inv
 		s.byToken[inv.Token] = inv
 	}
@@ -76,9 +77,9 @@ func (s *InvitationService) CreateInvitation(email, orgID string, role models.Us
 	}
 
 	// Update local cache
-	s.table.mu.RLock()
-	newInv := &s.table.rows[len(s.table.rows)-1]
-	s.table.mu.RUnlock()
+	s.table.Mu.RLock()
+	newInv := &s.table.Rows[len(s.table.Rows)-1]
+	s.table.Mu.RUnlock()
 	s.byID[id] = newInv
 	s.byToken[token] = newInv
 
