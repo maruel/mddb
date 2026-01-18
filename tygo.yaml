@@ -3,6 +3,4 @@ packages:
     enum_style: "union"
     type_mappings:
       "time.Time": "string"
-      "interface{}": "unknown"
-      "any": "unknown"
     output_path: "frontend/src/models.gen.ts"
