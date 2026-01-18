@@ -1,9 +1,5 @@
 # mddb Documentation Index
 
-## For Users
-- [QUICKSTART.md](QUICKSTART.md) - Get running in 2 minutes.
-- [README.md](../README.md) - Project overview and usage.
-
 ## For Developers
 - [API.md](API.md) - REST API reference for pages, databases, and assets.
 - [TECHNICAL.md](TECHNICAL.md) - Storage model, build process, and optimizations.

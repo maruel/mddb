@@ -17,8 +17,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/maruel/mddb/internal/server"
-	"github.com/maruel/mddb/internal/storage"
+	"github.com/maruel/mddb/backend/internal/server"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 func main() {

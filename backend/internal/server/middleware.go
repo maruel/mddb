@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/maruel/mddb/internal/models"
-	"github.com/maruel/mddb/internal/storage"
+	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // AuthMiddleware validates JWT tokens and adds user info to the context.

@@ -117,13 +117,9 @@ A: Not simultaneously - designed for single-user or small team with manual sync.
 **Q: Can I import/export my data?**
 A: Yes! Since everything is markdown and JSON, you can import/export easily.
 
-Q: What if I need help?
-A: Check the [Quick Start guide](docs/QUICKSTART.md) or review [the documentation index](docs/README.md).
-
 ## Advanced Users
 
 For developers or advanced setup:
-- See [QUICKSTART.md](docs/QUICKSTART.md) for detailed instructions
 - Review [AGENTS.md](AGENTS.md) for development guidelines
 - Check [the documentation index](docs/README.md) for more details
 

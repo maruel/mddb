@@ -7,10 +7,10 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/maruel/mddb/frontend"
-	"github.com/maruel/mddb/internal/models"
-	"github.com/maruel/mddb/internal/server/handlers"
-	"github.com/maruel/mddb/internal/storage"
+	"github.com/maruel/mddb/backend/frontend"
+	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/server/handlers"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // NewRouter creates and configures the HTTP router.

@@ -17,11 +17,10 @@ Frontend runs on http://localhost:5173 and proxies API calls to http://localhost
 pnpm build
 ```
 
-Builds optimized frontend to `dist/` which is embedded in the Go binary via `go:embed`.
+Builds optimized frontend to `../backend/frontend/dist/` which is embedded in the Go binary via `go:embed`.
 
 ## Files
 
 - `src/` - TypeScript/SolidJS source code
-- `dist/` - Compiled output (embedded in Go binary)
 - `vite.config.ts` - Vite build configuration (deterministic builds)
 - `tsconfig.json` - TypeScript configuration

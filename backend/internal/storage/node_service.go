@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/maruel/mddb/internal/models"
+	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // NodeService handles unified node business logic.

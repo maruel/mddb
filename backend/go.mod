@@ -1,4 +1,4 @@
-module github.com/maruel/mddb
+module github.com/maruel/mddb/backend
 
 go 1.25.5
 

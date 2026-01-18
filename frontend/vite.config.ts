@@ -4,7 +4,7 @@ import solid from 'vite-plugin-solid';
 export default defineConfig({
   plugins: [solid()],
   build: {
-    outDir: 'dist',
+    outDir: '../backend/frontend/dist',
     emptyOutDir: true,
     minify: 'terser',
     sourcemap: false,

@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/maruel/mddb/internal/models"
-	"github.com/maruel/mddb/internal/storage"
+	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 func TestOrgIsolationMiddleware(t *testing.T) {

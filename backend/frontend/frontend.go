@@ -1,4 +1,4 @@
-//go:generate sh -c "cd ../../frontend && pnpm install && pnpm build && rm -rf ../backend/frontend/dist && cp -r dist ../backend/frontend/dist"
+//go:generate sh -c "cd ../../frontend && pnpm install && pnpm build"
 
 // Package frontend provides the embedded SolidJS frontend assets.
 package frontend

@@ -6,7 +6,7 @@ import (
 	"mime"
 	"path/filepath"
 
-	"github.com/maruel/mddb/internal/models"
+	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // AssetService handles asset business logic.

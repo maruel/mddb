@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/maruel/mddb/internal/models"
+	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // newTestContext returns a context with a test user and organization.

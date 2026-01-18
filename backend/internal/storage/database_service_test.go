@@ -3,7 +3,7 @@ package storage
 import (
 	"testing"
 
-	"github.com/maruel/mddb/internal/models"
+	"github.com/maruel/mddb/backend/internal/models"
 )
 
 func TestDatabaseService_Create(t *testing.T) {

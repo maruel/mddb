@@ -18,7 +18,7 @@ make build-all
 # Result: ./mddb (single executable, self-contained)
 ```
 
-The compiled `frontend/dist/` folder is tracked in git for reproducible builds.
+The compiled `../backend/frontend/dist/` folder is tracked in git for reproducible builds.
 
 ### Development Workflow
 

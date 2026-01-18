@@ -1,5 +1,4 @@
-node_modules
-dist
+*.md
 build
 coverage
-*.md
+node_modules

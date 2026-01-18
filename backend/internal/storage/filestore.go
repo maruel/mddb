@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/maruel/mddb/internal/models"
+	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // FileStore handles all file system operations using directory-based storage.

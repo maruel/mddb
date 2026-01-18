@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/maruel/mddb/internal/models"
-	"github.com/maruel/mddb/internal/storage"
+	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // AssetHandler handles asset/file-related HTTP requests

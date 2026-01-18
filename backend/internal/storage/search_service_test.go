@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/maruel/mddb/internal/models"
+	"github.com/maruel/mddb/backend/internal/models"
 )
 
 func TestSearchService_SearchPages(t *testing.T) {
@@ -70,7 +70,6 @@ func TestSearchService_SearchPages(t *testing.T) {
 				MatchTitle: true,
 				MatchBody:  true,
 			})
-
 			if err != nil {
 				t.Fatalf("Search failed: %v", err)
 			}
@@ -157,7 +156,6 @@ func TestSearchService_SearchRecords(t *testing.T) {
 				Query:       tt.query,
 				MatchFields: true,
 			})
-
 			if err != nil {
 				t.Fatalf("Search failed: %v", err)
 			}
@@ -197,7 +195,6 @@ func TestSearchService_Scoring(t *testing.T) {
 		MatchTitle: true,
 		MatchBody:  true,
 	})
-
 	if err != nil {
 		t.Fatalf("Search failed: %v", err)
 	}
@@ -237,7 +234,6 @@ func TestSearchService_Limit(t *testing.T) {
 		MatchTitle: true,
 		MatchBody:  true,
 	})
-
 	if err != nil {
 		t.Fatalf("Search failed: %v", err)
 	}
@@ -275,7 +271,6 @@ func TestSearchService_Integration(t *testing.T) {
 		MatchBody:   true,
 		MatchFields: true,
 	})
-
 	if err != nil {
 		t.Fatalf("Search failed: %v", err)
 	}

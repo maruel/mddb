@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/maruel/mddb/internal/jsonldb"
-	"github.com/maruel/mddb/internal/models"
+	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // OrganizationService handles organization management.
