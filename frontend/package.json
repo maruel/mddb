@@ -7,7 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src --ext .ts,.tsx",
+    "lint": "eslint src --ext .ts,.tsx && prettier --check src",
     "lint:fix": "eslint src --ext .ts,.tsx --fix && prettier --write src",
     "format": "prettier --write src"
   },

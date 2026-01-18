@@ -9,7 +9,7 @@ Most core functional requirements for a local-first markdown and database system
 
 ### 1. Document Management
 - [x] **CRUD**: Create, read, update, delete pages.
-- [/] **Organization**: Logical hierarchical page organization (currently uses flat physical storage with numeric IDs; persistence of hierarchy is partial).
+- [x] **Organization**: Logical hierarchical page organization (stored via nested numeric directories).
 - [x] **Editor**: Full markdown editing with live preview.
 - [x] **Assets**: Attach images and files directly to pages.
 - [ ] **Interlinking**: Specialized UI for linking between pages (currently manual markdown links).
@@ -31,25 +31,45 @@ Most core functional requirements for a local-first markdown and database system
 - [ ] **Gallery**: Dedicated asset management and gallery view.
 
 ### 4. User Experience (Notion-like)
+
 - [ ] **Unified Sidebar**: Single hierarchical tree view for all content (pages and databases).
-- [ ] **Seamless Databases**: Databases are integrated into pages; every database is a page, and every page can contain database views.
+
+- [/] **Seamless Databases**: Databases are integrated into pages; every database is a page, and every page can contain database views (supported via `NodeTypeHybrid`).
+
 - [ ] **Database Views**: Flexible views (Table, and future Board/Gallery) that can be embedded or viewed as full pages.
+
 - [x] **Auto-save**: Automatic background saving of documents (2s debounce).
+
 - [x] **Search**: Full-text search across all documents and databases with relevance scoring.
+
 - [x] **History**: View and restore previous versions of pages (leveraging Git).
+
 - [ ] **Real-time**: WebSocket-based real-time sync (future consideration).
+
 ### 5. API & Integration
+
 - [x] **REST API**: Comprehensive API for all operations (Pages, DBs, Records, Assets).
-- [x] **Error Handling**: Structured error codes and detailed responses.
+
+- [x] **Error Handling**: Structured error codes and detailed responses (Centralized `ErrorCode` union).
+
+
 
 ### 6. Multi-User & Organization
+
 - [x] **Identity**: User accounts and authentication (JWT/Sessions). Supporting the **Linear Model** (one user account, multiple organizations).
-- [ ] **OAuth2**: Login via Google or Microsoft accounts.
+
+- [x] **OAuth2**: Login via Google or Microsoft accounts.
+
 - [x] **Organizations**: Workspace isolation and shared access.
-- [ ] **Membership Model**: Many-to-many relationship between Users and Organizations to store organization-specific roles and settings.
+
+- [x] **Membership Model**: Many-to-many relationship between Users and Organizations to store organization-specific roles and settings.
+
 - [x] **RBAC**: Role-Based Access Control (Admin, Editor, Viewer) at the organization level.
-- [ ] **Invitations**: Invite users to organizations via email; support assigning resources to "Pending Memberships" before user registration.
-- [ ] **Tiered Settings**: Support for Global User settings, Membership-specific settings (per-org), and Organization-wide settings.
+
+- [x] **Invitations**: Invite users to organizations via email; support assigning roles.
+
+- [x] **Tiered Settings**: Support for Global User settings, Membership-specific settings (per-org), and Organization-wide settings.
+
 - [ ] **Quotas**: Resource limits per organization (storage space, number of pages, max asset size).
 - [ ] **Org-Controlled Git**: Allow organizations to configure their own Git remote for data persistence.
     - **Custom Remotes**: Support for GitHub (via App/Personal Access Token), GitLab, and generic SSH/HTTPS remotes.

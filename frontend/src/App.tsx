@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For, Show } from 'solid-js';
+import { createSignal, createEffect, For, Show, onMount, onCleanup } from 'solid-js';
 import SidebarNode from './components/SidebarNode';
 import MarkdownPreview from './components/MarkdownPreview';
 import DatabaseTable from './components/DatabaseTable';
@@ -18,6 +18,16 @@ import type {
   GetPageHistoryResponse,
 } from './types';
 import styles from './App.module.css';
+
+const slugify = (text: string) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-');
+};
 
 export default function App() {
   const [user, setUser] = createSignal<User | null>(null);
@@ -74,6 +84,7 @@ export default function App() {
     localStorage.removeItem('mddb_token');
     setToken(null);
     setUser(null);
+    window.history.pushState(null, '', '/');
   };
 
   const handleLogin = (newToken: string, userData: User) => {
@@ -82,7 +93,7 @@ export default function App() {
     setUser(userData);
   };
 
-  async function switchOrg(orgId: string) {
+  async function switchOrg(orgId: string, redirect = true) {
     try {
       setLoading(true);
       const res = await authFetch('/api/auth/switch-org', {
@@ -93,9 +104,13 @@ export default function App() {
       const data = await res.json();
       handleLogin(data.token, data.user);
       setSelectedNodeId(null);
+      if (redirect) {
+        window.history.pushState(null, '', '/');
+      }
       await loadNodes();
     } catch (err) {
       setError('Failed to switch organization: ' + err);
+      throw err; // Propagate error for callers
     } finally {
       setLoading(false);
     }
@@ -116,6 +131,18 @@ export default function App() {
       });
       setHasUnsavedChanges(false);
       setAutoSaveStatus('saved');
+
+      // Update URL if title changed
+      const slug = slugify(title());
+      const orgId = user()?.organization_id;
+      if (orgId) {
+        const currentPath = window.location.pathname;
+        const newPath = `/${orgId}/${nodeId}${slug ? '-' + slug : ''}`;
+        if (currentPath !== newPath) {
+          window.history.replaceState(null, '', newPath);
+        }
+      }
+
       setTimeout(() => {
         if (autoSaveStatus() === 'saved') {
           setAutoSaveStatus('idle');
@@ -135,7 +162,7 @@ export default function App() {
     if (urlToken) {
       localStorage.setItem('mddb_token', urlToken);
       setToken(urlToken);
-      // Clean up URL
+      // Clean up URL query params but keep pathname
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
@@ -157,10 +184,54 @@ export default function App() {
     }
   });
 
-  // Load nodes when user is available
+  // Handle browser back/forward and initial URL
+  const handlePopState = async () => {
+    const path = window.location.pathname;
+
+    // Check for /orgID/nodeID
+    const matchWithOrg = path.match(/^\/([^/]+)\/(\d+)(?:-.*)?$/);
+    if (matchWithOrg) {
+      const orgId = matchWithOrg[1];
+      const nodeId = matchWithOrg[2];
+
+      // If we are logged in but in wrong org, switch
+      if (user() && user()?.organization_id !== orgId) {
+        try {
+          // Check if we are member of this org
+          const isMember = user()?.memberships?.some((m) => m.organization_id === orgId);
+          if (isMember) {
+            await switchOrg(orgId, false); // Don't redirect to /
+          } else {
+            setError(`You do not have access to organization ${orgId}`);
+            return;
+          }
+        } catch (e) {
+          return;
+        }
+      }
+
+      if (nodeId !== selectedNodeId()) {
+        loadNode(nodeId, false);
+      }
+      return;
+    }
+
+    setSelectedNodeId(null);
+    setTitle('');
+    setContent('');
+  };
+
+  onMount(() => {
+    window.addEventListener('popstate', handlePopState);
+    onCleanup(() => window.removeEventListener('popstate', handlePopState));
+  });
+
+  // Load nodes and initial route when user is available
   createEffect(() => {
     if (user()) {
       loadNodes();
+      // Check URL
+      handlePopState();
     }
   });
 
@@ -178,11 +249,12 @@ export default function App() {
     }
   }
 
-  async function loadNode(id: string) {
+  async function loadNode(id: string, pushState = true) {
     try {
       setLoading(true);
       setShowHistory(false);
       const res = await authFetch(`/api/nodes/${id}`);
+      if (!res.ok) throw new Error('Node not found');
       const nodeData = await res.json();
 
       setSelectedNodeId(nodeData.id);
@@ -191,6 +263,23 @@ export default function App() {
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
+
+      // Update URL to include OrgID
+      const slug = slugify(nodeData.title);
+      const orgId = user()?.organization_id;
+      if (orgId) {
+        const url = `/${orgId}/${nodeData.id}${slug ? '-' + slug : ''}`;
+        if (pushState) {
+          if (window.location.pathname !== url) {
+            window.history.pushState(null, '', url);
+          }
+        } else {
+          // Canonicalize URL
+          if (window.location.pathname !== url) {
+            window.history.replaceState(null, '', url);
+          }
+        }
+      }
 
       // If it's a database or hybrid, load records
       if (nodeData.type === 'database' || nodeData.type === 'hybrid') {
@@ -296,6 +385,14 @@ export default function App() {
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
+
+      // Update URL if title changed
+      const slug = slugify(title());
+      const currentPath = window.location.pathname;
+      const newPath = `/${nodeId}${slug ? '-' + slug : ''}`;
+      if (currentPath !== newPath) {
+        window.history.replaceState(null, '', newPath);
+      }
     } catch (err) {
       setError('Failed to save node: ' + err);
     } finally {
@@ -319,6 +416,7 @@ export default function App() {
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
+      window.history.pushState(null, '', '/');
     } catch (err) {
       setError('Failed to delete node: ' + err);
     } finally {

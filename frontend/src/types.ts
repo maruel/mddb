@@ -27,8 +27,7 @@ export interface RegisterRequest {
 /**
  * MeRequest is a request to get current user info.
  */
-export interface MeRequest {
-}
+export interface MeRequest {}
 /**
  * ListPagesRequest is a request to list all pages.
  */
@@ -95,8 +94,7 @@ export interface DeletePageRequest {
 /**
  * DeletePageResponse is a response from deleting a page.
  */
-export interface DeletePageResponse {
-}
+export interface DeletePageResponse {}
 /**
  * GetPageHistoryRequest is a request to get page history.
  */
@@ -192,8 +190,7 @@ export interface DeleteDatabaseRequest {
 /**
  * DeleteDatabaseResponse is a response from deleting a database.
  */
-export interface DeleteDatabaseResponse {
-}
+export interface DeleteDatabaseResponse {}
 /**
  * ListRecordsRequest is a request to list records in a database.
  */
@@ -207,7 +204,7 @@ export interface ListRecordsRequest {
  * ListRecordsResponse is a response containing a list of records.
  */
 export interface ListRecordsResponse {
-  records: { [key: string]: any}[];
+  records: { [key: string]: any }[];
 }
 /**
  * CreateRecordRequest is a request to create a record.
@@ -215,7 +212,7 @@ export interface ListRecordsResponse {
 export interface CreateRecordRequest {
   OrgID: string;
   ID: string;
-  data: { [key: string]: any};
+  data: { [key: string]: any };
 }
 /**
  * CreateRecordResponse is a response from creating a record.
@@ -230,7 +227,7 @@ export interface UpdateRecordRequest {
   OrgID: string;
   ID: string;
   RID: string;
-  data: { [key: string]: any};
+  data: { [key: string]: any };
 }
 /**
  * UpdateRecordResponse is a response from updating a record.
@@ -251,7 +248,7 @@ export interface GetRecordRequest {
  */
 export interface GetRecordResponse {
   id: string;
-  data: { [key: string]: any};
+  data: { [key: string]: any };
   created: string;
   modified: string;
 }
@@ -266,8 +263,7 @@ export interface DeleteRecordRequest {
 /**
  * DeleteRecordResponse is a response from deleting a record.
  */
-export interface DeleteRecordResponse {
-}
+export interface DeleteRecordResponse {}
 /**
  * ListNodesRequest is a request to list nodes.
  */
@@ -336,8 +332,7 @@ export interface DeletePageAssetRequest {
 /**
  * DeletePageAssetResponse is a response from deleting an asset.
  */
-export interface DeletePageAssetResponse {
-}
+export interface DeletePageAssetResponse {}
 /**
  * ServeAssetRequest is a request to serve an asset file directly.
  */
@@ -428,8 +423,7 @@ export interface UpdateOrgSettingsRequest {
 /**
  * HealthRequest is a request to check system health.
  */
-export interface HealthRequest {
-}
+export interface HealthRequest {}
 /**
  * HealthResponse is a response from a health check.
  */
@@ -475,56 +469,69 @@ Package models defines the core data structures used throughout the application.
 /**
  * ErrorCodeValidationFailed is returned when input data fails validation
  */
-export const ErrorCodeValidationFailed = "VALIDATION_FAILED";
+export const ErrorCodeValidationFailed = 'VALIDATION_FAILED';
 /**
  * ErrorCodeMissingField is returned when a required field is missing
  */
-export const ErrorCodeMissingField = "MISSING_FIELD";
+export const ErrorCodeMissingField = 'MISSING_FIELD';
 /**
  * ErrorCodeInvalidFormat is returned when a field has an invalid format
  */
-export const ErrorCodeInvalidFormat = "INVALID_FORMAT";
+export const ErrorCodeInvalidFormat = 'INVALID_FORMAT';
 /**
  * ErrorCodeNotFound is returned when a resource is not found
  */
-export const ErrorCodeNotFound = "NOT_FOUND";
+export const ErrorCodeNotFound = 'NOT_FOUND';
 /**
  * ErrorCodePageNotFound is returned when a page is not found
  */
-export const ErrorCodePageNotFound = "PAGE_NOT_FOUND";
+export const ErrorCodePageNotFound = 'PAGE_NOT_FOUND';
 /**
  * ErrorCodeDatabaseNotFound is returned when a database is not found
  */
-export const ErrorCodeDatabaseNotFound = "DATABASE_NOT_FOUND";
+export const ErrorCodeDatabaseNotFound = 'DATABASE_NOT_FOUND';
 /**
  * ErrorCodeFileNotFound is returned when a file is not found
  */
-export const ErrorCodeFileNotFound = "FILE_NOT_FOUND";
+export const ErrorCodeFileNotFound = 'FILE_NOT_FOUND';
 /**
  * ErrorCodeStorageError is returned when a storage operation fails
  */
-export const ErrorCodeStorageError = "STORAGE_ERROR";
+export const ErrorCodeStorageError = 'STORAGE_ERROR';
 /**
  * ErrorCodeInternal is returned when an unexpected server error occurs
  */
-export const ErrorCodeInternal = "INTERNAL_ERROR";
+export const ErrorCodeInternal = 'INTERNAL_ERROR';
 /**
  * ErrorCodeNotImplemented is returned when a feature is not implemented
  */
-export const ErrorCodeNotImplemented = "NOT_IMPLEMENTED";
+export const ErrorCodeNotImplemented = 'NOT_IMPLEMENTED';
 /**
  * ErrorCodeConflict is returned when there is a resource conflict
  */
-export const ErrorCodeConflict = "CONFLICT";
+export const ErrorCodeConflict = 'CONFLICT';
 /**
  * ErrorCodeUnauthorized is returned when authentication is missing or invalid
  */
-export const ErrorCodeUnauthorized = "UNAUTHORIZED";
+export const ErrorCodeUnauthorized = 'UNAUTHORIZED';
 /**
  * ErrorCodeForbidden is returned when a user has insufficient permissions
  */
-export const ErrorCodeForbidden = "FORBIDDEN";
-export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodePageNotFound | typeof ErrorCodeDatabaseNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden;
+export const ErrorCodeForbidden = 'FORBIDDEN';
+export type ErrorCode =
+  | typeof ErrorCodeValidationFailed
+  | typeof ErrorCodeMissingField
+  | typeof ErrorCodeInvalidFormat
+  | typeof ErrorCodeNotFound
+  | typeof ErrorCodePageNotFound
+  | typeof ErrorCodeDatabaseNotFound
+  | typeof ErrorCodeFileNotFound
+  | typeof ErrorCodeStorageError
+  | typeof ErrorCodeInternal
+  | typeof ErrorCodeNotImplemented
+  | typeof ErrorCodeConflict
+  | typeof ErrorCodeUnauthorized
+  | typeof ErrorCodeForbidden;
 /**
  * ErrorDetails defines the structured error information in a response.
  */
@@ -537,7 +544,7 @@ export interface ErrorDetails {
  */
 export interface ErrorResponse {
   error: ErrorDetails;
-  details?: { [key: string]: any};
+  details?: { [key: string]: any };
 }
 /**
  * ErrorWithStatus is an error that includes an HTTP status code and error code.
@@ -546,8 +553,7 @@ export type ErrorWithStatus = any;
 /**
  * APIError is a concrete error type with status code, code, and optional details.
  */
-export interface APIError {
-}
+export interface APIError {}
 
 //////////
 /*
@@ -576,15 +582,15 @@ export interface Node {
 /**
  * NodeTypeDocument represents a markdown document
  */
-export const NodeTypeDocument = "document";
+export const NodeTypeDocument = 'document';
 /**
  * NodeTypeDatabase represents a structured database
  */
-export const NodeTypeDatabase = "database";
+export const NodeTypeDatabase = 'database';
 /**
  * NodeTypeHybrid represents an entity that is both a document and a database
  */
-export const NodeTypeHybrid = "hybrid";
+export const NodeTypeHybrid = 'hybrid';
 export type NodeType = typeof NodeTypeDocument | typeof NodeTypeDatabase | typeof NodeTypeHybrid;
 /**
  * Column represents a database column
@@ -601,7 +607,7 @@ export interface Column {
  */
 export interface DataRecord {
   id: string;
-  data: { [key: string]: any};
+  data: { [key: string]: any };
   created: string;
   modified: string;
 }
@@ -657,15 +663,15 @@ export interface MembershipSettings {
 /**
  * UserRoleAdmin has full access to all resources and settings.
  */
-export const UserRoleAdmin = "admin";
+export const UserRoleAdmin = 'admin';
 /**
  * UserRoleEditor can create and modify content but cannot manage users.
  */
-export const UserRoleEditor = "editor";
+export const UserRoleEditor = 'editor';
 /**
  * UserRoleViewer can only read content.
  */
-export const UserRoleViewer = "viewer";
+export const UserRoleViewer = 'viewer';
 export type UserRole = typeof UserRoleAdmin | typeof UserRoleEditor | typeof UserRoleViewer;
 /**
  * Organization represents a workspace or group of users.
@@ -719,11 +725,11 @@ export type ContextKey = string;
 /**
  * UserKey is the context key for the authenticated user.
  */
-export const UserKey: ContextKey = "user";
+export const UserKey: ContextKey = 'user';
 /**
  * OrgKey is the context key for the active organization ID.
  */
-export const OrgKey: ContextKey = "org";
+export const OrgKey: ContextKey = 'org';
 /**
  * Asset represents an uploaded file/image associated with a node
  */
@@ -788,7 +794,7 @@ export interface SearchResult {
   title: string;
   snippet: string;
   score: number /* float64 */;
-  matches: { [key: string]: string};
+  matches: { [key: string]: string };
   modified: string;
 }
 /**
@@ -801,4 +807,3 @@ export interface SearchOptions {
   match_body?: boolean;
   match_fields?: boolean;
 }
-

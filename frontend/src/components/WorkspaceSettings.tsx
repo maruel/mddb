@@ -265,7 +265,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'members'}>
         <section class={styles.section}>
           <h3>Members</h3>
-          <Show when={props.user.role === 'admin'} fallback={<p>Only admins can view member list.</p>}>
+          <Show
+            when={props.user.role === 'admin'}
+            fallback={<p>Only admins can view member list.</p>}
+          >
             <table class={styles.table}>
               <thead>
                 <tr>
@@ -281,10 +284,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                       <td>{member.name}</td>
                       <td>{member.email}</td>
                       <td>
-                        <Show
-                          when={member.id !== props.user.id}
-                          fallback={member.role}
-                        >
+                        <Show when={member.id !== props.user.id} fallback={member.role}>
                           <select
                             value={member.role}
                             onChange={(e) => handleUpdateRole(member.id, e.target.value)}
@@ -396,7 +396,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'workspace'}>
         <section class={styles.section}>
           <h3>Workspace Settings</h3>
-          <Show when={props.user.role === 'admin'} fallback={<p>Only admins can modify workspace settings.</p>}>
+          <Show
+            when={props.user.role === 'admin'}
+            fallback={<p>Only admins can modify workspace settings.</p>}
+          >
             <form onSubmit={saveWorkspaceSettings} class={styles.settingsForm}>
               <div class={styles.formItem}>
                 <label>Organization Name</label>
