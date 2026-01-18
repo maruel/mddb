@@ -67,7 +67,7 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 		return nil, fmt.Errorf("user already exists")
 	}
 
-	id := generateShortID()
+	id := s.nextID()
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -264,6 +264,16 @@ func (s *UserService) getAllFromCache() []userStorage {
 		rows = append(rows, *v)
 	}
 	return rows
+}
+
+func (s *UserService) nextID() string {
+	var max uint64
+	for id := range s.byID {
+		if n, err := DecodeID(id); err == nil && n > max {
+			max = n
+		}
+	}
+	return EncodeID(max + 1)
 }
 
 // ListUsers returns all users.

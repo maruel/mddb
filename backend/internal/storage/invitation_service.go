@@ -54,13 +54,10 @@ func (s *InvitationService) CreateInvitation(email, orgID string, role models.Us
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	id, err := generateID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate ID: %w", err)
-	}
-
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	id := s.nextID()
 
 	invitation := &models.Invitation{
 		ID:             id,
@@ -135,4 +132,14 @@ func (s *InvitationService) getAllFromCache() []models.Invitation {
 		rows = append(rows, *v)
 	}
 	return rows
+}
+
+func (s *InvitationService) nextID() string {
+	var max uint64
+	for id := range s.byID {
+		if n, err := DecodeID(id); err == nil && n > max {
+			max = n
+		}
+	}
+	return EncodeID(max + 1)
 }

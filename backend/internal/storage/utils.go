@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"time"
 )
 
 // EncodeID converts a uint64 to a base64 string without padding.
@@ -33,11 +32,6 @@ func DecodeID(s string) (uint64, error) {
 		n = (n << 8) | uint64(x)
 	}
 	return n, nil
-}
-
-// generateShortID generates a compact base64 encoded ID based on current time.
-func generateShortID() string {
-	return EncodeID(uint64(time.Now().UnixNano()))
 }
 
 // generateID generates a UUID v4 string.

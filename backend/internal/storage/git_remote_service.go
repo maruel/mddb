@@ -65,8 +65,8 @@ func (s *GitRemoteService) CreateRemote(orgID, name, url, remoteType, authType, 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := generateShortID()
-	remote := &models.GitRemote{
+	id := s.nextID()
+	newRemote := &models.GitRemote{
 		ID:             id,
 		OrganizationID: orgID,
 		Name:           name,
@@ -76,15 +76,15 @@ func (s *GitRemoteService) CreateRemote(orgID, name, url, remoteType, authType, 
 		Created:        time.Now(),
 	}
 
-	if err := s.remoteTable.Append(*remote); err != nil {
+	if err := s.remoteTable.Append(*newRemote); err != nil {
 		return nil, err
 	}
 
 	// Update cache
 	s.remoteTable.Mu.RLock()
-	newRemote := &s.remoteTable.Rows[len(s.remoteTable.Rows)-1]
+	cachedRemote := &s.remoteTable.Rows[len(s.remoteTable.Rows)-1]
 	s.remoteTable.Mu.RUnlock()
-	s.remotesByOrg[orgID] = append(s.remotesByOrg[orgID], newRemote)
+	s.remotesByOrg[orgID] = append(s.remotesByOrg[orgID], cachedRemote)
 
 	// Save secret if provided
 	if token != "" {
@@ -93,7 +93,7 @@ func (s *GitRemoteService) CreateRemote(orgID, name, url, remoteType, authType, 
 		}
 	}
 
-	return newRemote, nil
+	return cachedRemote, nil
 }
 
 // GetRemote retrieves a remote by ID.
@@ -149,25 +149,37 @@ func (s *GitRemoteService) DeleteRemote(orgID, remoteID string) error {
 
 	// Remove secret
 	var newSecrets []remoteSecret
-	for _, sec := range s.secretTable.Rows {
-		if sec.RemoteID == remoteID {
-			continue
+	for i := range s.secretTable.Rows {
+		if s.secretTable.Rows[i].RemoteID != remoteID {
+			newSecrets = append(newSecrets, s.secretTable.Rows[i])
 		}
-		newSecrets = append(newSecrets, sec)
 	}
-	_ = s.secretTable.Replace(newSecrets)
+	if len(newSecrets) != len(s.secretTable.Rows) {
+		_ = s.secretTable.Replace(newSecrets)
+	}
 
 	// Update cache
-	var newCache []*models.GitRemote
+	newCache := make([]*models.GitRemote, 0, len(s.remotesByOrg[orgID]))
 	for _, r := range s.remotesByOrg[orgID] {
-		if r.ID == remoteID {
-			continue
+		if r.ID != remoteID {
+			newCache = append(newCache, r)
 		}
-		newCache = append(newCache, r)
 	}
 	s.remotesByOrg[orgID] = newCache
 
 	return nil
+}
+
+func (s *GitRemoteService) nextID() string {
+	var max uint64
+	for _, remotes := range s.remotesByOrg {
+		for _, r := range remotes {
+			if n, err := DecodeID(r.ID); err == nil && n > max {
+				max = n
+			}
+		}
+	}
+	return EncodeID(max + 1)
 }
 
 // UpdateLastSync updates the last sync time for a remote.

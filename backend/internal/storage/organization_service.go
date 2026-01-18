@@ -54,7 +54,7 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := generateShortID()
+	id := s.nextID()
 	now := time.Now()
 	org := &models.Organization{
 		ID:      id,
@@ -168,6 +168,16 @@ func (s *OrganizationService) getAllFromCache() []models.Organization {
 		rows = append(rows, *v)
 	}
 	return rows
+}
+
+func (s *OrganizationService) nextID() string {
+	var max uint64
+	for id := range s.byID {
+		if n, err := DecodeID(id); err == nil && n > max {
+			max = n
+		}
+	}
+	return EncodeID(max + 1)
 }
 
 // RootDir returns the root directory of the organization service.
