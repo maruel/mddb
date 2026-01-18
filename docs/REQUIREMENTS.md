@@ -46,6 +46,10 @@ Most core functional requirements for a local-first markdown and database system
 
 - [ ] **Real-time**: WebSocket-based real-time sync (future consideration).
 
+- [ ] **Theme Support**: Customizable UI themes.
+    - **Inspiration**: Investigate Hugo (https://gohugo.io) theme support for potential architectural patterns (optional).
+    - **Customization**: Allow users/organizations to customize colors, fonts, and layout elements.
+
 ### 5. API & Integration
 
 - [x] **REST API**: Comprehensive API for all operations (Pages, DBs, Records, Assets).
@@ -78,9 +82,18 @@ Most core functional requirements for a local-first markdown and database system
 - [ ] **Onboarding**: Streamlined setup process for new organizations.
     - **First-Login Onboarding**: Optional guided setup when a user first accesses their default organization.
     - **Configuration Questions**: Ask for organization name, initial members, and optional Git remote configuration.
+    - **CLI Onboarding**: Simple configuration onboarding in the CLI, storing settings in an unversioned `.env` file in `data/`.
     - **Deferrable**: Users can skip onboarding and configure settings later via the workspace settings.
 
-### 7. AI & Intelligence
+### 8. Globalization & Platform
+- [ ] **i18n & l10n**: Support for multiple languages and regional formatting.
+- [ ] **PWA**: Progressive Web App support for installability and mobile-like experience.
+- [ ] **Offline Support**: Ability to work offline with robust data reconciliation upon reconnection.
+
+### 9. Agent Readiness
+- [ ] **Agent Context**: Inclusion of `AGENTS.md` in data repositories to provide context for AI agents.
+
+### 10. AI & Intelligence
 - [ ] **Semantic Search (RAG)**: Vector-based search allowing for natural language queries across the entire organization.
 - [ ] **AI Writing Assistant**: In-editor tool for summarization, expansion, and content generation.
 - [ ] **MCP Server**: Implement the Model Context Protocol (MCP) to allow LLMs and AI agents to safely browse, read, and edit the organization's data.
@@ -90,12 +103,14 @@ Most core functional requirements for a local-first markdown and database system
 ### Performance & Scalability
 - [x] **Streaming**: Efficient line-by-line reading of records via `bufio.Scanner`.
 - [x] **Scalability**: Designed to handle thousands of pages and large databases via pagination.
+- [ ] **JSONLDB Sharding**: Support for sharding large databases in the JSONLDB storage engine.
 - [x] **Lightweight**: Fast startup and low memory footprint.
-- [ ] **Caching**: Internal high-efficiency caching for frequently accessed pages, metadata, and database records to minimize disk I/O.
+- [x] **Caching**: Internal high-efficiency caching for frequently accessed pages, metadata, and database records to minimize disk I/O.
 
 ### Deployment & Architecture
 - [x] **Self-Contained**: Single executable binary with embedded frontend (`go:embed`).
 - [x] **Local-First**: Filesystem-based storage with no external database dependencies.
+- [x] **Simplified Storage**: Unified JSONLDB format with versioning and column definitions in the first row, removing the need for separate `metadata.json`.
 - [x] **API Contract Centralization**: All Request, Response, and DTO structures are centralized in the `internal/models` package as the single source of truth for the frontend.
 - [x] **Encapsulation**: Handlers and storage implementation details are isolated from the API contract.
 - [x] **Cross-Platform**: Compatible with Linux, macOS, and Windows.

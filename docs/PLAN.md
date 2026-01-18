@@ -144,6 +144,8 @@ See `README.md` and `API.md` for details.
 - [x] **Organization Onboarding**:
     - [x] **Onboarding State Tracking**: Track if an organization has completed the onboarding process.
     - [x] **Onboarding UI**: Guided multi-step modal or wizard for initial configuration (Org name, members, Git remote).
+    - [ ] **CLI Onboarding**: Implement a simple configuration wizard in the CLI.
+    - [ ] **Local Config**: Store CLI configuration in an unversioned `.env` file in `data/` (added to `.gitignore`).
     - [x] **Settings Integration**: Ensure all onboarding options are accessible and editable in Workspace Settings.
 
 ### Phase 10: Connectivity & Relations
@@ -151,11 +153,28 @@ See `README.md` and `API.md` for details.
 - [ ] **Relational Data Model**: Update metadata schema to support record-level relations between databases.
 - [ ] **Relational UI**: UI components for selecting related records and displaying Rollups.
 - [ ] **Graph View**: Interactive visualization of page and database connections.
+- [ ] **Notion Research**: Document product design insights from Notion documentation in `docs/notion/`.
 
 ### Phase 11: AI Intelligence
 - [ ] **MCP Server**: Full implementation of the Model Context Protocol to expose documents/databases to AI agents.
 - [ ] **Vector Search Integration**: Embedding generation for documents and records to support semantic search.
 - [ ] **In-Editor AI Actions**: Context-aware AI commands for content generation and summarization.
+- [ ] **Data Repository Context**: Automatically add `AGENTS.md` to organization repositories for agent guidance.
+
+### Phase 12: Globalization, Mobile & Theming
+- [ ] **i18n and l10n**: Implement internationalization and localization framework.
+- [ ] **PWA Support**: Configure manifest and service workers for Progressive Web App support.
+- [ ] **Offline Mode**: Implement client-side storage and reconciliation logic for offline use.
+- [ ] **Theme System**: 
+    - [ ] Research Hugo theme engine for inspiration.
+    - [ ] Implement a flexible theming system (CSS variables/tokens).
+    - [ ] Add support for custom organization themes.
+
+### Phase 13: Advanced Data Architecture
+- [ ] **JSONLDB Evolution**: 
+    - [ ] Add versioning and column definitions to the first row of JSONL files.
+    - [ ] Deprecate and remove `metadata.json` for databases.
+- [ ] **Sharding**: Add support for sharding in JSONLDB to handle extremely large datasets.
 
 ## Future Considerations
 - **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
