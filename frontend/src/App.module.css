@@ -172,6 +172,23 @@ body {
   flex: 1;
 }
 
+.sidebarFooter {
+  padding: 1rem;
+  border-top: 1px solid #e0e0e0;
+  text-align: center;
+}
+
+.sidebarFooter a {
+  color: #999;
+  font-size: 0.75rem;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.sidebarFooter a:hover {
+  color: #667eea;
+}
+
 .pageItem {
   padding: 1rem 1.5rem;
   border-bottom: 1px solid #f0f0f0;

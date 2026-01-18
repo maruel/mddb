@@ -8,6 +8,7 @@ import DatabaseBoard from './components/DatabaseBoard';
 import WorkspaceSettings from './components/WorkspaceSettings';
 import Onboarding from './components/Onboarding';
 import Auth from './components/Auth';
+import Privacy from './components/Privacy';
 import { debounce } from './utils/debounce';
 import type {
   Node,
@@ -37,6 +38,7 @@ export default function App() {
   const [records, setRecords] = createSignal<DataRecord[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
   const [showSettings, setShowSettings] = createSignal(false);
+  const [isPrivacyPage, setIsPrivacyPage] = createSignal(false);
   const [viewMode, setViewMode] = createSignal<'table' | 'grid' | 'gallery' | 'board'>('table');
   const [title, setTitle] = createSignal('');
   const [content, setContent] = createSignal('');
@@ -189,6 +191,12 @@ export default function App() {
   const handlePopState = async () => {
     const path = window.location.pathname;
 
+    if (path === '/privacy') {
+      setIsPrivacyPage(true);
+      return;
+    }
+    setIsPrivacyPage(false);
+
     // Check for /orgID/nodeID
     const matchWithOrg = path.match(/^\/([^/]+)\/(\d+)(?:-.*)?$/);
     if (matchWithOrg) {
@@ -232,6 +240,9 @@ export default function App() {
     if (user()) {
       loadNodes();
       // Check URL
+      handlePopState();
+    } else {
+      // If not logged in, we still need to check for /privacy
       handlePopState();
     }
   });
@@ -518,340 +529,374 @@ export default function App() {
   }
 
   return (
-    <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
-      <Show when={user()?.role === 'admin' && !user()?.onboarding?.completed}>
-        <Onboarding
-          user={user() as User}
-          token={token() as string}
-          onComplete={() => {
-            // Re-fetch user to get updated onboarding state
-            const fetchUser = async () => {
-              const res = await authFetch('/api/auth/me');
-              if (res.ok) {
-                const data = await res.json();
-                setUser(data);
-              }
-            };
-            fetchUser();
-          }}
-        />
-      </Show>
-      <div class={styles.app}>
-        <header class={styles.header}>
-          <div class={styles.headerTitle}>
-            <h1>mddb</h1>
-            <p>A seamless markdown-based document and database system</p>
-          </div>
-          <div class={styles.userInfo}>
-            <Show when={(user()?.memberships?.length ?? 0) > 1}>
-              <select
-                class={styles.orgSwitcher}
-                value={user()?.organization_id}
-                onChange={(e) => switchOrg(e.target.value)}
-              >
-                <For each={user()?.memberships}>
-                  {(m) => (
-                    <option value={m.organization_id}>
-                      {m.organization_name || m.organization_id}
-                    </option>
-                  )}
-                </For>
-              </select>
-            </Show>
-            <Show when={user()?.memberships?.length === 1}>
-              <span class={styles.orgName}>
-                {user()?.memberships?.[0]?.organization_name || 'My Org'}
-              </span>
-            </Show>
-            <span>
-              {user()?.name} ({user()?.role})
-            </span>
-            <button onClick={logout} class={styles.logoutButton}>
-              Logout
-            </button>
-          </div>
-        </header>
-
-        <div class={styles.container}>
-          <aside class={styles.sidebar}>
-            <div class={styles.sidebarHeader}>
-              <h2>Workspace</h2>
-              <div class={styles.sidebarActions}>
-                <button
-                  onClick={() => {
-                    setShowSettings(true);
-                    setSelectedNodeId(null);
-                  }}
-                  title="Workspace Settings"
-                >
-                  ⚙
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    createNode('document');
-                  }}
-                  title="New Page"
-                >
-                  +P
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSettings(false);
-                    createNode('database');
-                  }}
-                  title="New Database"
-                >
-                  +D
+    <Show when={!isPrivacyPage()} fallback={<Privacy />}>
+      <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
+        <>
+          <Show when={user()?.role === 'admin' && !user()?.onboarding?.completed}>
+            <Onboarding
+              user={user() as User}
+              token={token() as string}
+              onComplete={() => {
+                // Re-fetch user to get updated onboarding state
+                const fetchUser = async () => {
+                  const res = await authFetch('/api/auth/me');
+                  if (res.ok) {
+                    const data = await res.json();
+                    setUser(data);
+                  }
+                };
+                fetchUser();
+              }}
+            />
+          </Show>
+          <div class={styles.app}>
+            <header class={styles.header}>
+              <div class={styles.headerTitle}>
+                <h1>mddb</h1>
+                <p>A seamless markdown-based document and database system</p>
+              </div>
+              <div class={styles.userInfo}>
+                <Show when={(user()?.memberships?.length ?? 0) > 1}>
+                  <select
+                    class={styles.orgSwitcher}
+                    value={user()?.organization_id}
+                    onChange={(e) => switchOrg(e.target.value)}
+                  >
+                    <For each={user()?.memberships}>
+                      {(m) => (
+                        <option value={m.organization_id}>
+                          {m.organization_name || m.organization_id}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </Show>
+                <Show when={user()?.memberships?.length === 1}>
+                  <span class={styles.orgName}>
+                    {user()?.memberships?.[0]?.organization_name || 'My Org'}
+                  </span>
+                </Show>
+                <span>
+                  {user()?.name} ({user()?.role})
+                </span>
+                <button onClick={logout} class={styles.logoutButton}>
+                  Logout
                 </button>
               </div>
-            </div>
+            </header>
 
-            <Show when={loading() && nodes().length === 0} fallback={null}>
-              <p class={styles.loading}>Loading...</p>
-            </Show>
+            <div class={styles.container}>
+              <aside class={styles.sidebar}>
+                <div class={styles.sidebarHeader}>
+                  <h2>Workspace</h2>
+                  <div class={styles.sidebarActions}>
+                    <button
+                      onClick={() => {
+                        setShowSettings(true);
+                        setSelectedNodeId(null);
+                      }}
+                      title="Workspace Settings"
+                    >
+                      ⚙
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowSettings(false);
+                        createNode('document');
+                      }}
+                      title="New Page"
+                    >
+                      +P
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowSettings(false);
+                        createNode('database');
+                      }}
+                      title="New Database"
+                    >
+                      +D
+                    </button>
+                  </div>
+                </div>
 
-            <ul class={styles.pageList}>
-              <For each={nodes()}>
-                {(node) => (
-                  <SidebarNode
-                    node={node}
-                    selectedId={selectedNodeId()}
-                    onSelect={handleNodeClick}
-                    depth={0}
-                  />
-                )}
-              </For>
-            </ul>
-          </aside>
+                <Show when={loading() && nodes().length === 0} fallback={null}>
+                  <p class={styles.loading}>Loading...</p>
+                </Show>
 
-          <main class={styles.main}>
-            <Show when={showSettings() && user() && token()}>
-              <WorkspaceSettings
-                user={user() as User}
-                token={token() as string}
-                onClose={() => setShowSettings(false)}
-              />
-            </Show>
-
-            <Show when={!showSettings()}>
-              <Show when={selectedNodeId()}>
-                <nav class={styles.breadcrumbs}>
-                  <For each={getBreadcrumbs(selectedNodeId())}>
-                    {(crumb, i) => (
-                      <>
-                        <Show when={i() > 0}>
-                          <span class={styles.breadcrumbSeparator}>/</span>
-                        </Show>
-                        <span class={styles.breadcrumbItem} onClick={() => handleNodeClick(crumb)}>
-                          {crumb.title}
-                        </span>
-                      </>
+                <ul class={styles.pageList}>
+                  <For each={nodes()}>
+                    {(node) => (
+                      <SidebarNode
+                        node={node}
+                        selectedId={selectedNodeId()}
+                        onSelect={handleNodeClick}
+                        depth={0}
+                      />
                     )}
                   </For>
-                </nav>
-              </Show>
+                </ul>
 
-              <Show when={error()} fallback={null}>
-                <div class={styles.error}>{error()}</div>
-              </Show>
+                <div class={styles.sidebarFooter}>
+                  <a
+                    href="/privacy"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.history.pushState(null, '', '/privacy');
+                      window.dispatchEvent(new PopStateEvent('popstate'));
+                    }}
+                  >
+                    Privacy Policy
+                  </a>
+                </div>
+              </aside>
 
-              <Show
-                when={selectedNodeId()}
-                fallback={
-                  <div class={styles.welcome}>
-                    <h2>Welcome to mddb</h2>
-                    <p>Select a node from the sidebar or create a new one to get started.</p>
-                    <div class={styles.createForm}>
-                      <input
-                        type="text"
-                        placeholder="Title"
-                        value={title()}
-                        onInput={(e) => setTitle(e.target.value)}
-                        class={styles.titleInput}
-                      />
-                      <div class={styles.welcomeActions}>
-                        <button onClick={() => createNode('document')} class={styles.createButton}>
-                          Create Page
-                        </button>
-                        <button onClick={() => createNode('database')} class={styles.createButton}>
-                          Create Database
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                }
-              >
-                <div class={styles.editor}>
-                  <div class={styles.editorHeader}>
-                    <input
-                      type="text"
-                      placeholder="Title"
-                      value={title()}
-                      onInput={(e) => {
-                        setTitle(e.target.value);
-                        setHasUnsavedChanges(true);
-                        debouncedAutoSave();
-                      }}
-                      class={styles.titleInput}
-                    />
-                    <div class={styles.editorStatus}>
-                      <Show when={hasUnsavedChanges()}>
-                        <span class={styles.unsavedIndicator}>● Unsaved</span>
-                      </Show>
-                      <Show when={autoSaveStatus() === 'saving'}>
-                        <span class={styles.savingIndicator}>⟳ Saving...</span>
-                      </Show>
-                      <Show when={autoSaveStatus() === 'saved'}>
-                        <span class={styles.savedIndicator}>✓ Saved</span>
-                      </Show>
-                    </div>
-                    <div class={styles.editorActions}>
-                      <button
-                        onClick={() => {
-                          const id = selectedNodeId();
-                          if (id) loadHistory(id);
-                        }}
-                        disabled={loading()}
-                      >
-                        {showHistory() ? 'Hide History' : 'History'}
-                      </button>
-                      <button onClick={saveNode} disabled={loading()}>
-                        {loading() ? 'Saving...' : 'Save'}
-                      </button>
-                      <button onClick={deleteCurrentNode} disabled={loading()}>
-                        Delete
-                      </button>
-                    </div>
-                  </div>
+              <main class={styles.main}>
+                <Show when={showSettings() && user() && token()}>
+                  <WorkspaceSettings
+                    user={user() as User}
+                    token={token() as string}
+                    onClose={() => setShowSettings(false)}
+                  />
+                </Show>
 
-                  <Show when={showHistory()}>
-                    <div class={styles.historyPanel}>
-                      <h3>Version History</h3>
-                      <ul class={styles.historyList}>
-                        <For each={history()}>
-                          {(commit) => (
-                            <li
-                              class={styles.historyItem}
-                              onClick={() => {
-                                const id = selectedNodeId();
-                                if (id) loadVersion(id, commit.hash);
-                              }}
+                <Show when={!showSettings()}>
+                  <Show when={selectedNodeId()}>
+                    <nav class={styles.breadcrumbs}>
+                      <For each={getBreadcrumbs(selectedNodeId())}>
+                        {(crumb, i) => (
+                          <>
+                            <Show when={i() > 0}>
+                              <span class={styles.breadcrumbSeparator}>/</span>
+                            </Show>
+                            <span
+                              class={styles.breadcrumbItem}
+                              onClick={() => handleNodeClick(crumb)}
                             >
-                              <div class={styles.historyMeta}>
-                                <span class={styles.historyDate}>
-                                  {new Date(commit.timestamp).toLocaleString()}
-                                </span>
-                                <span class={styles.historyHash}>
-                                  {commit.hash.substring(0, 7)}
-                                </span>
-                              </div>
-                              <div class={styles.historyMessage}>{commit.message}</div>
-                            </li>
-                          )}
-                        </For>
-                        <Show when={history().length === 0}>
-                          <li class={styles.historyItem}>No history available</li>
-                        </Show>
-                      </ul>
-                    </div>
+                              {crumb.title}
+                            </span>
+                          </>
+                        )}
+                      </For>
+                    </nav>
                   </Show>
 
-                  <div class={styles.nodeContent}>
-                    {/* Always show markdown content if it exists or if node is document/hybrid */}
-                    <Show
-                      when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'database'}
-                    >
-                      <div class={styles.editorContent}>
-                        <textarea
-                          value={content()}
-                          onInput={(e) => {
-                            setContent(e.target.value);
-                            setHasUnsavedChanges(true);
-                            debouncedAutoSave();
-                          }}
-                          placeholder="Write your content in markdown..."
-                          class={styles.contentInput}
-                        />
-                        <MarkdownPreview content={content()} orgId={user()?.organization_id} />
-                      </div>
-                    </Show>
+                  <Show when={error()} fallback={null}>
+                    <div class={styles.error}>{error()}</div>
+                  </Show>
 
-                    {/* Show database table if node is database or hybrid */}
-                    <Show
-                      when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'document'}
-                    >
-                      <div class={styles.databaseView}>
-                        <div class={styles.databaseHeader}>
-                          <h3>Database Records</h3>
-                          <div class={styles.viewToggle}>
+                  <Show
+                    when={selectedNodeId()}
+                    fallback={
+                      <div class={styles.welcome}>
+                        <h2>Welcome to mddb</h2>
+                        <p>Select a node from the sidebar or create a new one to get started.</p>
+                        <div class={styles.createForm}>
+                          <input
+                            type="text"
+                            placeholder="Title"
+                            value={title()}
+                            onInput={(e) => setTitle(e.target.value)}
+                            class={styles.titleInput}
+                          />
+                          <div class={styles.welcomeActions}>
                             <button
-                              classList={{ [`${styles.active}`]: viewMode() === 'table' }}
-                              onClick={() => setViewMode('table')}
+                              onClick={() => createNode('document')}
+                              class={styles.createButton}
                             >
-                              Table
+                              Create Page
                             </button>
                             <button
-                              classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
-                              onClick={() => setViewMode('grid')}
+                              onClick={() => createNode('database')}
+                              class={styles.createButton}
                             >
-                              Grid
-                            </button>
-                            <button
-                              classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
-                              onClick={() => setViewMode('gallery')}
-                            >
-                              Gallery
-                            </button>
-                            <button
-                              classList={{ [`${styles.active}`]: viewMode() === 'board' }}
-                              onClick={() => setViewMode('board')}
-                            >
-                              Board
+                              Create Database
                             </button>
                           </div>
                         </div>
-                        <Show when={viewMode() === 'table'}>
-                          <DatabaseTable
-                            databaseId={selectedNodeId() || ''}
-                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
-                            records={records()}
-                            onAddRecord={handleAddRecord}
-                            onDeleteRecord={handleDeleteRecord}
-                            onLoadMore={loadMoreRecords}
-                            hasMore={hasMore()}
-                          />
+                      </div>
+                    }
+                  >
+                    <div class={styles.editor}>
+                      <div class={styles.editorHeader}>
+                        <input
+                          type="text"
+                          placeholder="Title"
+                          value={title()}
+                          onInput={(e) => {
+                            setTitle(e.target.value);
+                            setHasUnsavedChanges(true);
+                            debouncedAutoSave();
+                          }}
+                          class={styles.titleInput}
+                        />
+                        <div class={styles.editorStatus}>
+                          <Show when={hasUnsavedChanges()}>
+                            <span class={styles.unsavedIndicator}>● Unsaved</span>
+                          </Show>
+                          <Show when={autoSaveStatus() === 'saving'}>
+                            <span class={styles.savingIndicator}>⟳ Saving...</span>
+                          </Show>
+                          <Show when={autoSaveStatus() === 'saved'}>
+                            <span class={styles.savedIndicator}>✓ Saved</span>
+                          </Show>
+                        </div>
+                        <div class={styles.editorActions}>
+                          <button
+                            onClick={() => {
+                              const id = selectedNodeId();
+                              if (id) loadHistory(id);
+                            }}
+                            disabled={loading()}
+                          >
+                            {showHistory() ? 'Hide History' : 'History'}
+                          </button>
+                          <button onClick={saveNode} disabled={loading()}>
+                            {loading() ? 'Saving...' : 'Save'}
+                          </button>
+                          <button onClick={deleteCurrentNode} disabled={loading()}>
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+
+                      <Show when={showHistory()}>
+                        <div class={styles.historyPanel}>
+                          <h3>Version History</h3>
+                          <ul class={styles.historyList}>
+                            <For each={history()}>
+                              {(commit) => (
+                                <li
+                                  class={styles.historyItem}
+                                  onClick={() => {
+                                    const id = selectedNodeId();
+                                    if (id) loadVersion(id, commit.hash);
+                                  }}
+                                >
+                                  <div class={styles.historyMeta}>
+                                    <span class={styles.historyDate}>
+                                      {new Date(commit.timestamp).toLocaleString()}
+                                    </span>
+                                    <span class={styles.historyHash}>
+                                      {commit.hash.substring(0, 7)}
+                                    </span>
+                                  </div>
+                                  <div class={styles.historyMessage}>{commit.message}</div>
+                                </li>
+                              )}
+                            </For>
+                            <Show when={history().length === 0}>
+                              <li class={styles.historyItem}>No history available</li>
+                            </Show>
+                          </ul>
+                        </div>
+                      </Show>
+
+                      <div class={styles.nodeContent}>
+                        {/* Always show markdown content if it exists or if node is document/hybrid */}
+                        <Show
+                          when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'database'}
+                        >
+                          <div class={styles.editorContent}>
+                            <textarea
+                              value={content()}
+                              onInput={(e) => {
+                                setContent(e.target.value);
+                                setHasUnsavedChanges(true);
+                                debouncedAutoSave();
+                              }}
+                              placeholder="Write your content in markdown..."
+                              class={styles.contentInput}
+                            />
+                            <MarkdownPreview content={content()} orgId={user()?.organization_id} />
+                          </div>
                         </Show>
-                        <Show when={viewMode() === 'grid'}>
-                          <DatabaseGrid
-                            records={records()}
-                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
-                            onDeleteRecord={handleDeleteRecord}
-                          />
-                        </Show>
-                        <Show when={viewMode() === 'gallery'}>
-                          <DatabaseGallery
-                            records={records()}
-                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
-                            onDeleteRecord={handleDeleteRecord}
-                          />
-                        </Show>
-                        <Show when={viewMode() === 'board'}>
-                          <DatabaseBoard
-                            records={records()}
-                            columns={nodes().find((n) => n.id === selectedNodeId())?.columns || []}
-                            onDeleteRecord={handleDeleteRecord}
-                          />
+
+                        {/* Show database table if node is database or hybrid */}
+                        <Show
+                          when={nodes().find((n) => n.id === selectedNodeId())?.type !== 'document'}
+                        >
+                          <div class={styles.databaseView}>
+                            <div class={styles.databaseHeader}>
+                              <h3>Database Records</h3>
+                              <div class={styles.viewToggle}>
+                                <button
+                                  classList={{ [`${styles.active}`]: viewMode() === 'table' }}
+                                  onClick={() => setViewMode('table')}
+                                >
+                                  Table
+                                </button>
+                                <button
+                                  classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
+                                  onClick={() => setViewMode('grid')}
+                                >
+                                  Grid
+                                </button>
+                                <button
+                                  classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
+                                  onClick={() => setViewMode('gallery')}
+                                >
+                                  Gallery
+                                </button>
+                                <button
+                                  classList={{ [`${styles.active}`]: viewMode() === 'board' }}
+                                  onClick={() => setViewMode('board')}
+                                >
+                                  Board
+                                </button>
+                              </div>
+                            </div>
+                            <Show when={viewMode() === 'table'}>
+                              <DatabaseTable
+                                databaseId={selectedNodeId() || ''}
+                                columns={
+                                  nodes().find((n) => n.id === selectedNodeId())?.columns || []
+                                }
+                                records={records()}
+                                onAddRecord={handleAddRecord}
+                                onDeleteRecord={handleDeleteRecord}
+                                onLoadMore={loadMoreRecords}
+                                hasMore={hasMore()}
+                              />
+                            </Show>
+                            <Show when={viewMode() === 'grid'}>
+                              <DatabaseGrid
+                                records={records()}
+                                columns={
+                                  nodes().find((n) => n.id === selectedNodeId())?.columns || []
+                                }
+                                onDeleteRecord={handleDeleteRecord}
+                              />
+                            </Show>
+                            <Show when={viewMode() === 'gallery'}>
+                              <DatabaseGallery
+                                records={records()}
+                                columns={
+                                  nodes().find((n) => n.id === selectedNodeId())?.columns || []
+                                }
+                                onDeleteRecord={handleDeleteRecord}
+                              />
+                            </Show>
+                            <Show when={viewMode() === 'board'}>
+                              <DatabaseBoard
+                                records={records()}
+                                columns={
+                                  nodes().find((n) => n.id === selectedNodeId())?.columns || []
+                                }
+                                onDeleteRecord={handleDeleteRecord}
+                              />
+                            </Show>
+                          </div>
                         </Show>
                       </div>
-                    </Show>
-                  </div>
-                </div>
-              </Show>
-            </Show>
-          </main>
-        </div>
-      </div>
+                    </div>
+                  </Show>
+                </Show>
+              </main>
+            </div>
+          </div>
+        </>
+      </Show>
     </Show>
   );
 }

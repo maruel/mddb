@@ -123,6 +123,19 @@ export default function Auth(props: AuthProps) {
             {isRegister() ? 'Login' : 'Register'}
           </button>
         </p>
+
+        <div class={styles.authFooter}>
+          <a
+            href="/privacy"
+            onClick={(e) => {
+              e.preventDefault();
+              window.history.pushState(null, '', '/privacy');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+          >
+            Privacy Policy
+          </a>
+        </div>
       </form>
     </div>
   );

@@ -88,7 +88,25 @@
 }
 
 .toggle button:hover {
-  color: #0056b3;
+  text-decoration: underline;
+}
+
+.authFooter {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #eee;
+  text-align: center;
+}
+
+.authFooter a {
+  color: #999;
+  font-size: 0.8rem;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.authFooter a:hover {
+  color: #667eea;
 }
 
 .oauthSection {
