@@ -153,7 +153,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			if org != nil {
 				orgID = org.ID
 			}
-			role := models.RoleAdmin
+			role := models.UserRoleAdmin
 
 			// Password is not used for OAuth users
 			password, _ := storage.GenerateToken(32)

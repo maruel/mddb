@@ -16,7 +16,7 @@ func TestInvitationService(t *testing.T) {
 
 	orgID := "org1"
 	email := "invitee@example.com"
-	role := models.RoleEditor
+	role := models.UserRoleEditor
 
 	// Test CreateInvitation
 	inv, err := service.CreateInvitation(email, orgID, role)

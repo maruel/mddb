@@ -27,7 +27,7 @@ func TestUserService(t *testing.T) {
 	}
 
 	// Test CreateUser
-	user, err := service.CreateUser("test@example.com", "password123", "Test User", models.RoleAdmin)
+	user, err := service.CreateUser("test@example.com", "password123", "Test User", models.UserRoleAdmin)
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestUserService(t *testing.T) {
 
 	// Test UpdateUserRole
 	orgID := "org123"
-	err = service.UpdateUserRole(user.ID, orgID, models.RoleEditor)
+	err = service.UpdateUserRole(user.ID, orgID, models.UserRoleEditor)
 	if err != nil {
 		t.Fatalf("Failed to update user role: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestUserService(t *testing.T) {
 	// Check membership for role
 	found := false
 	for _, m := range updatedUser.Memberships {
-		if m.OrganizationID == orgID && m.Role == models.RoleEditor {
+		if m.OrganizationID == orgID && m.Role == models.UserRoleEditor {
 			found = true
 			break
 		}

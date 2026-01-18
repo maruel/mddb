@@ -106,12 +106,12 @@ type MembershipSettings struct {
 type UserRole string
 
 const (
-	// RoleAdmin has full access to all resources and settings.
-	RoleAdmin UserRole = "admin"
-	// RoleEditor can create and modify content but cannot manage users.
-	RoleEditor UserRole = "editor"
-	// RoleViewer can only read content.
-	RoleViewer UserRole = "viewer"
+	// UserRoleAdmin has full access to all resources and settings.
+	UserRoleAdmin UserRole = "admin"
+	// UserRoleEditor can create and modify content but cannot manage users.
+	UserRoleEditor UserRole = "editor"
+	// UserRoleViewer can only read content.
+	UserRoleViewer UserRole = "viewer"
 )
 
 // Organization represents a workspace or group of users.

@@ -1,9 +1,8 @@
 packages:
   - path: "github.com/maruel/mddb/internal/models"
+    enum_style: "union"
     type_mappings:
       "time.Time": "string"
-      "NodeType": "'document' | 'database' | 'hybrid'"
-      "UserRole": "'admin' | 'editor' | 'viewer'"
       "interface{}": "unknown"
       "any": "unknown"
     output_path: "frontend/src/models.gen.ts"

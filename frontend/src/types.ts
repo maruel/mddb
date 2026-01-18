@@ -488,19 +488,19 @@ export interface Node {
 /**
  * NodeType defines what features are enabled for a node
  */
-export type NodeType = string;
 /**
  * NodeTypeDocument represents a markdown document
  */
-export const NodeTypeDocument: NodeType = "document";
+export const NodeTypeDocument = "document";
 /**
  * NodeTypeDatabase represents a structured database
  */
-export const NodeTypeDatabase: NodeType = "database";
+export const NodeTypeDatabase = "database";
 /**
  * NodeTypeHybrid represents an entity that is both a document and a database
  */
-export const NodeTypeHybrid: NodeType = "hybrid";
+export const NodeTypeHybrid = "hybrid";
+export type NodeType = typeof NodeTypeDocument | typeof NodeTypeDatabase | typeof NodeTypeHybrid;
 /**
  * Column represents a database column
  */
@@ -569,19 +569,19 @@ export interface MembershipSettings {
 /**
  * UserRole defines the permissions for a user.
  */
-export type UserRole = string;
 /**
- * RoleAdmin has full access to all resources and settings.
+ * UserRoleAdmin has full access to all resources and settings.
  */
-export const RoleAdmin: UserRole = "admin";
+export const UserRoleAdmin = "admin";
 /**
- * RoleEditor can create and modify content but cannot manage users.
+ * UserRoleEditor can create and modify content but cannot manage users.
  */
-export const RoleEditor: UserRole = "editor";
+export const UserRoleEditor = "editor";
 /**
- * RoleViewer can only read content.
+ * UserRoleViewer can only read content.
  */
-export const RoleViewer: UserRole = "viewer";
+export const UserRoleViewer = "viewer";
+export type UserRole = typeof UserRoleAdmin | typeof UserRoleEditor | typeof UserRoleViewer;
 /**
  * Organization represents a workspace or group of users.
  */

@@ -110,9 +110,9 @@ func RequireRole(memService *storage.MembershipService, requiredRole models.User
 
 func hasPermission(userRole, requiredRole models.UserRole) bool {
 	weights := map[models.UserRole]int{
-		models.RoleViewer: 1,
-		models.RoleEditor: 2,
-		models.RoleAdmin:  3,
+		models.UserRoleViewer: 1,
+		models.UserRoleEditor: 2,
+		models.UserRoleAdmin:  3,
 	}
 
 	return weights[userRole] >= weights[requiredRole]

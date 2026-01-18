@@ -26,21 +26,21 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 		{
 			name:           "Access own organization",
 			membershipOrg:  "org1",
-			membershipRole: models.RoleViewer,
+			membershipRole: models.UserRoleViewer,
 			requestOrgID:   "org1",
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Access different organization",
 			membershipOrg:  "org1",
-			membershipRole: models.RoleViewer,
+			membershipRole: models.UserRoleViewer,
 			requestOrgID:   "org2",
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Access with no org context in request",
 			membershipOrg:  "org1",
-			membershipRole: models.RoleViewer,
+			membershipRole: models.UserRoleViewer,
 			requestOrgID:   "",
 			expectedStatus: http.StatusOK,
 		},
@@ -61,7 +61,7 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			middleware := RequireRole(memService, models.RoleViewer)(next)
+			middleware := RequireRole(memService, models.UserRoleViewer)(next)
 
 			req := httptest.NewRequest("GET", "/api/"+tt.requestOrgID+"/nodes", http.NoBody)
 			if tt.requestOrgID != "" {
@@ -95,32 +95,32 @@ func TestRolePermissions(t *testing.T) {
 	}{
 		{
 			name:           "Viewer accessing Viewer endpoint",
-			userRole:       models.RoleViewer,
-			requiredRole:   models.RoleViewer,
+			userRole:       models.UserRoleViewer,
+			requiredRole:   models.UserRoleViewer,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Viewer accessing Editor endpoint",
-			userRole:       models.RoleViewer,
-			requiredRole:   models.RoleEditor,
+			userRole:       models.UserRoleViewer,
+			requiredRole:   models.UserRoleEditor,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Editor accessing Viewer endpoint",
-			userRole:       models.RoleEditor,
-			requiredRole:   models.RoleViewer,
+			userRole:       models.UserRoleEditor,
+			requiredRole:   models.UserRoleViewer,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Editor accessing Admin endpoint",
-			userRole:       models.RoleEditor,
-			requiredRole:   models.RoleAdmin,
+			userRole:       models.UserRoleEditor,
+			requiredRole:   models.UserRoleAdmin,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Admin accessing Editor endpoint",
-			userRole:       models.RoleAdmin,
-			requiredRole:   models.RoleEditor,
+			userRole:       models.UserRoleAdmin,
+			requiredRole:   models.UserRoleEditor,
 			expectedStatus: http.StatusOK,
 		},
 	}

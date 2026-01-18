@@ -68,13 +68,13 @@ func (h *AuthHandler) Register(ctx context.Context, req models.RegisterRequest) 
 	}
 	orgID := org.ID
 
-	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name, models.RoleAdmin)
+	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name, models.UserRoleAdmin)
 	if err != nil {
 		return nil, errors.InternalWithError("Failed to create user", err)
 	}
 
 	// Create initial membership (admin of their own org)
-	if err := h.userService.UpdateUserRole(user.ID, orgID, models.RoleAdmin); err != nil {
+	if err := h.userService.UpdateUserRole(user.ID, orgID, models.UserRoleAdmin); err != nil {
 		return nil, errors.InternalWithError("Failed to create initial membership", err)
 	}
 
