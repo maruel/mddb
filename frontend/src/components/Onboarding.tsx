@@ -1,4 +1,4 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, Show, untrack } from 'solid-js';
 import type { User } from '../types';
 import styles from './Onboarding.module.css';
 
@@ -9,11 +9,13 @@ interface OnboardingProps {
 }
 
 export default function Onboarding(props: OnboardingProps) {
-  const [step, setStep] = createSignal(props.user.onboarding?.step || 'name');
+  const [step, setStep] = createSignal(untrack(() => props.user.onboarding?.step || 'name'));
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
-  const [orgName, setOrgName] = createSignal(props.user.memberships?.[0]?.organization_name || '');
+  const [orgName, setOrgName] = createSignal(
+    untrack(() => props.user.memberships?.[0]?.organization_name || '')
+  );
 
   // Git states
   const [remoteURL, setRemoteURL] = createSignal('');
