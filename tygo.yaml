@@ -6,9 +6,3 @@ packages:
       "interface{}": "unknown"
       "any": "unknown"
     output_path: "frontend/src/models.gen.ts"
-
-  - path: "github.com/maruel/mddb/internal/errors"
-    type_mappings:
-      "interface{}": "unknown"
-      "any": "unknown"
-    output_path: "frontend/src/errors.gen.ts"

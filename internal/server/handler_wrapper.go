@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"strconv"
 
-	apierrors "github.com/maruel/mddb/internal/errors"
+	"github.com/maruel/mddb/internal/models"
 )
 
 // Wrap wraps a handler function to work as an http.Handler.
@@ -58,10 +58,10 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 		output, err := fn(ctx, input)
 		if err != nil {
 			statusCode := http.StatusInternalServerError
-			errorCode := apierrors.ErrInternal
+			errorCode := models.ErrorCodeInternal
 			details := make(map[string]any)
 
-			var ewsErr apierrors.ErrorWithStatus
+			var ewsErr models.ErrorWithStatus
 			if errors.As(err, &ewsErr) {
 				statusCode = ewsErr.StatusCode()
 				errorCode = ewsErr.Code()
@@ -160,16 +160,16 @@ func populateQueryParams(r *http.Request, input any) {
 
 // writeErrorResponse writes an error response as JSON.
 func writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
-	writeErrorResponseWithCode(w, statusCode, apierrors.ErrInternal, message, nil)
+	writeErrorResponseWithCode(w, statusCode, models.ErrorCodeInternal, message, nil)
 }
 
 // writeErrorResponseWithCode writes a detailed error response as JSON with code and details.
-func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code apierrors.ErrorCode, message string, details map[string]any) {
+func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code models.ErrorCode, message string, details map[string]any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
-	response := apierrors.ErrorResponse{
-		Error: apierrors.ErrorDetails{
+	response := models.ErrorResponse{
+		Error: models.ErrorDetails{
 			Code:    code,
 			Message: message,
 		},

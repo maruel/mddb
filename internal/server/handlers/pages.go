@@ -4,7 +4,6 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
@@ -25,7 +24,7 @@ func NewPageHandler(fileStore *storage.FileStore, gitService *storage.GitService
 func (h *PageHandler) ListPages(ctx context.Context, req models.ListPagesRequest) (*models.ListPagesResponse, error) {
 	pages, err := h.pageService.ListPages(ctx)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to list pages", err)
+		return nil, models.InternalWithError("Failed to list pages", err)
 	}
 
 	pageList := make([]any, len(pages))
@@ -45,7 +44,7 @@ func (h *PageHandler) ListPages(ctx context.Context, req models.ListPagesRequest
 func (h *PageHandler) GetPage(ctx context.Context, req models.GetPageRequest) (*models.GetPageResponse, error) {
 	page, err := h.pageService.GetPage(ctx, req.ID)
 	if err != nil {
-		return nil, errors.NotFound("page")
+		return nil, models.NotFound("page")
 	}
 
 	return &models.GetPageResponse{
@@ -58,12 +57,12 @@ func (h *PageHandler) GetPage(ctx context.Context, req models.GetPageRequest) (*
 // CreatePage creates a new page
 func (h *PageHandler) CreatePage(ctx context.Context, req models.CreatePageRequest) (*models.CreatePageResponse, error) {
 	if req.Title == "" {
-		return nil, errors.MissingField("title")
+		return nil, models.MissingField("title")
 	}
 
 	page, err := h.pageService.CreatePage(ctx, req.Title, req.Content)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to create page", err)
+		return nil, models.InternalWithError("Failed to create page", err)
 	}
 
 	return &models.CreatePageResponse{ID: page.ID}, nil
@@ -73,7 +72,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, req models.CreatePageReque
 func (h *PageHandler) UpdatePage(ctx context.Context, req models.UpdatePageRequest) (*models.UpdatePageResponse, error) {
 	page, err := h.pageService.UpdatePage(ctx, req.ID, req.Title, req.Content)
 	if err != nil {
-		return nil, errors.NotFound("page")
+		return nil, models.NotFound("page")
 	}
 
 	return &models.UpdatePageResponse{ID: page.ID}, nil
@@ -83,7 +82,7 @@ func (h *PageHandler) UpdatePage(ctx context.Context, req models.UpdatePageReque
 func (h *PageHandler) DeletePage(ctx context.Context, req models.DeletePageRequest) (*models.DeletePageResponse, error) {
 	err := h.pageService.DeletePage(ctx, req.ID)
 	if err != nil {
-		return nil, errors.NotFound("page")
+		return nil, models.NotFound("page")
 	}
 
 	return &models.DeletePageResponse{}, nil
@@ -93,7 +92,7 @@ func (h *PageHandler) DeletePage(ctx context.Context, req models.DeletePageReque
 func (h *PageHandler) GetPageHistory(ctx context.Context, req models.GetPageHistoryRequest) (*models.GetPageHistoryResponse, error) {
 	history, err := h.pageService.GetPageHistory(ctx, req.ID)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to get page history", err)
+		return nil, models.InternalWithError("Failed to get page history", err)
 	}
 
 	return &models.GetPageHistoryResponse{History: history}, nil
@@ -103,7 +102,7 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, req models.GetPageHist
 func (h *PageHandler) GetPageVersion(ctx context.Context, req models.GetPageVersionRequest) (*models.GetPageVersionResponse, error) {
 	content, err := h.pageService.GetPageVersion(ctx, req.ID, req.Hash)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to get page version", err)
+		return nil, models.InternalWithError("Failed to get page version", err)
 	}
 
 	return &models.GetPageVersionResponse{Content: content}, nil

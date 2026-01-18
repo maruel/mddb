@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
@@ -24,7 +23,7 @@ func NewOrganizationHandler(orgService *storage.OrganizationService) *Organizati
 func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*models.Organization, error) {
 	orgID := models.GetOrgID(ctx)
 	if orgID == "" {
-		return nil, errors.Forbidden("Organization context missing")
+		return nil, models.Forbidden("Organization context missing")
 	}
 
 	return h.orgService.GetOrganization(orgID)
@@ -34,11 +33,11 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*mo
 func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req models.UpdateOrgSettingsRequest) (*models.Organization, error) {
 	orgID := models.GetOrgID(ctx)
 	if orgID == "" {
-		return nil, errors.Forbidden("Organization context missing")
+		return nil, models.Forbidden("Organization context missing")
 	}
 
 	if err := h.orgService.UpdateSettings(orgID, req.Settings); err != nil {
-		return nil, errors.InternalWithError("Failed to update organization settings", err)
+		return nil, models.InternalWithError("Failed to update organization settings", err)
 	}
 
 	return h.orgService.GetOrganization(orgID)

@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
@@ -25,12 +24,12 @@ func (h *UserHandler) ListUsers(ctx context.Context, req models.ListUsersRequest
 	// Active org ID is verified by middleware and injected into context
 	orgID := models.GetOrgID(ctx)
 	if orgID == "" {
-		return nil, errors.Forbidden("Organization context missing")
+		return nil, models.Forbidden("Organization context missing")
 	}
 
 	allUsers, err := h.userService.ListUsers()
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to list users", err)
+		return nil, models.InternalWithError("Failed to list users", err)
 	}
 
 	// Filter by organization membership
@@ -51,15 +50,15 @@ func (h *UserHandler) ListUsers(ctx context.Context, req models.ListUsersRequest
 func (h *UserHandler) UpdateUserRole(ctx context.Context, req models.UpdateRoleRequest) (*models.User, error) {
 	orgID := models.GetOrgID(ctx)
 	if orgID == "" {
-		return nil, errors.Forbidden("Organization context missing")
+		return nil, models.Forbidden("Organization context missing")
 	}
 
 	if req.UserID == "" || req.Role == "" {
-		return nil, errors.MissingField("user_id or role")
+		return nil, models.MissingField("user_id or role")
 	}
 
 	if err := h.userService.UpdateUserRole(req.UserID, orgID, req.Role); err != nil {
-		return nil, errors.InternalWithError("Failed to update user role", err)
+		return nil, models.InternalWithError("Failed to update user role", err)
 	}
 
 	return h.userService.GetUser(req.UserID)
@@ -69,11 +68,11 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, req models.UpdateRoleR
 func (h *UserHandler) UpdateUserSettings(ctx context.Context, req models.UpdateUserSettingsRequest) (*models.User, error) {
 	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {
-		return nil, errors.Unauthorized()
+		return nil, models.Unauthorized()
 	}
 
 	if err := h.userService.UpdateSettings(currentUser.ID, req.Settings); err != nil {
-		return nil, errors.InternalWithError("Failed to update settings", err)
+		return nil, models.InternalWithError("Failed to update settings", err)
 	}
 
 	return h.userService.GetUser(currentUser.ID)

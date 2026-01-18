@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
@@ -32,7 +31,7 @@ func (h *AssetHandler) ListPageAssets(ctx context.Context, req models.ListPageAs
 	orgID := models.GetOrgID(ctx)
 	assets, err := h.fileStore.ListAssets(orgID, req.PageID)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to list assets", err)
+		return nil, models.InternalWithError("Failed to list assets", err)
 	}
 
 	assetList := make([]any, len(assets))
@@ -107,7 +106,7 @@ func (h *AssetHandler) DeletePageAsset(ctx context.Context, req models.DeletePag
 	orgID := models.GetOrgID(ctx)
 	err := h.fileStore.DeleteAsset(orgID, req.PageID, req.AssetName)
 	if err != nil {
-		return nil, errors.NotFound("asset")
+		return nil, models.NotFound("asset")
 	}
 
 	if h.git != nil {

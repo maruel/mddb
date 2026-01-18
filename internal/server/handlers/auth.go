@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
@@ -29,17 +28,17 @@ func NewAuthHandler(userService *storage.UserService, orgService *storage.Organi
 // Login handles user login and returns a JWT token.
 func (h *AuthHandler) Login(ctx context.Context, req models.LoginRequest) (*models.LoginResponse, error) {
 	if req.Email == "" || req.Password == "" {
-		return nil, errors.MissingField("email or password")
+		return nil, models.MissingField("email or password")
 	}
 
 	user, err := h.userService.Authenticate(req.Email, req.Password)
 	if err != nil {
-		return nil, errors.NewAPIError(401, errors.ErrUnauthorized, "Invalid credentials")
+		return nil, models.NewAPIError(401, models.ErrorCodeUnauthorized, "Invalid credentials")
 	}
 
 	token, err := h.GenerateToken(user)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to generate token", err)
+		return nil, models.InternalWithError("Failed to generate token", err)
 	}
 
 	return &models.LoginResponse{
@@ -51,42 +50,42 @@ func (h *AuthHandler) Login(ctx context.Context, req models.LoginRequest) (*mode
 // Register handles user registration.
 func (h *AuthHandler) Register(ctx context.Context, req models.RegisterRequest) (*models.LoginResponse, error) {
 	if req.Email == "" || req.Password == "" || req.Name == "" {
-		return nil, errors.MissingField("email, password, or name")
+		return nil, models.MissingField("email, password, or name")
 	}
 
 	// Check if user already exists
 	_, err := h.userService.GetUserByEmail(req.Email)
 	if err == nil {
-		return nil, errors.NewAPIError(409, errors.ErrConflict, "User already exists")
+		return nil, models.NewAPIError(409, models.ErrorCodeConflict, "User already exists")
 	}
 
 	// Create an organization only for this user
 	orgName := req.Name + "'s Organization"
 	org, err := h.orgService.CreateOrganization(ctx, orgName)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to create organization", err)
+		return nil, models.InternalWithError("Failed to create organization", err)
 	}
 	orgID := org.ID
 
 	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name, models.UserRoleAdmin)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to create user", err)
+		return nil, models.InternalWithError("Failed to create user", err)
 	}
 
 	// Create initial membership (admin of their own org)
 	if err := h.userService.UpdateUserRole(user.ID, orgID, models.UserRoleAdmin); err != nil {
-		return nil, errors.InternalWithError("Failed to create initial membership", err)
+		return nil, models.InternalWithError("Failed to create initial membership", err)
 	}
 
 	// Re-fetch user to get populated memberships
 	user, err = h.userService.GetUser(user.ID)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to re-fetch user", err)
+		return nil, models.InternalWithError("Failed to re-fetch user", err)
 	}
 
 	token, err := h.GenerateToken(user)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to generate token", err)
+		return nil, models.InternalWithError("Failed to generate token", err)
 	}
 
 	return &models.LoginResponse{
@@ -113,7 +112,7 @@ func (h *AuthHandler) Me(ctx context.Context, req models.MeRequest) (*models.Use
 	// User info should be in context if authenticated via middleware
 	user, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {
-		return nil, errors.NewAPIError(401, errors.ErrUnauthorized, "Unauthorized")
+		return nil, models.NewAPIError(401, models.ErrorCodeUnauthorized, "Unauthorized")
 	}
 	return user, nil
 }

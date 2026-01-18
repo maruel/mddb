@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
@@ -31,7 +30,7 @@ func (h *NodeHandler) ListNodes(ctx context.Context, req models.ListNodesRequest
 	orgID := models.GetOrgID(ctx)
 	nodes, err := h.fileStore.ReadNodeTree(orgID)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to read node tree", err)
+		return nil, models.InternalWithError("Failed to read node tree", err)
 	}
 
 	return &models.ListNodesResponse{Nodes: nodes}, nil
@@ -42,12 +41,12 @@ func (h *NodeHandler) GetNode(ctx context.Context, req models.GetNodeRequest) (*
 	orgID := models.GetOrgID(ctx)
 	nodes, err := h.fileStore.ReadNodeTree(orgID)
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to read node tree", err)
+		return nil, models.InternalWithError("Failed to read node tree", err)
 	}
 
 	node := findNode(nodes, req.ID)
 	if node == nil {
-		return nil, errors.NotFound("node")
+		return nil, models.NotFound("node")
 	}
 
 	return node, nil
@@ -56,7 +55,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, req models.GetNodeRequest) (*
 // CreateNode creates a new node (page, database, or hybrid).
 func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeRequest) (*models.Node, error) {
 	if req.Title == "" || req.Type == "" {
-		return nil, errors.MissingField("title or type")
+		return nil, models.MissingField("title or type")
 	}
 
 	orgID := models.GetOrgID(ctx)
@@ -95,11 +94,11 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeReque
 			}
 		}
 	default:
-		return nil, errors.BadRequest("Invalid node type")
+		return nil, models.BadRequest("Invalid node type")
 	}
 
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to create node", err)
+		return nil, models.InternalWithError("Failed to create node", err)
 	}
 
 	// Commit if git is enabled

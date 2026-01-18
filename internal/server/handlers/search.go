@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/internal/errors"
 	"github.com/maruel/mddb/internal/models"
 	"github.com/maruel/mddb/internal/storage"
 )
@@ -30,7 +29,7 @@ func (h *SearchHandler) Search(ctx context.Context, req models.SearchRequest) (*
 		MatchFields: req.MatchFields,
 	})
 	if err != nil {
-		return nil, errors.InternalWithError("Failed to perform search", err)
+		return nil, models.InternalWithError("Failed to perform search", err)
 	}
 
 	return &models.SearchResponse{Results: results}, nil

@@ -1,5 +1,5 @@
-// Package errors defines structured error types for the API.
-package errors
+// Package models defines the core data structures used throughout the application.
+package models
 
 import (
 	"fmt"
@@ -10,35 +10,35 @@ import (
 type ErrorCode string
 
 const (
-	// ErrValidationFailed is returned when input data fails validation
-	ErrValidationFailed ErrorCode = "VALIDATION_FAILED"
-	// ErrMissingField is returned when a required field is missing
-	ErrMissingField ErrorCode = "MISSING_FIELD"
-	// ErrInvalidFormat is returned when a field has an invalid format
-	ErrInvalidFormat ErrorCode = "INVALID_FORMAT"
+	// ErrorCodeValidationFailed is returned when input data fails validation
+	ErrorCodeValidationFailed ErrorCode = "VALIDATION_FAILED"
+	// ErrorCodeMissingField is returned when a required field is missing
+	ErrorCodeMissingField ErrorCode = "MISSING_FIELD"
+	// ErrorCodeInvalidFormat is returned when a field has an invalid format
+	ErrorCodeInvalidFormat ErrorCode = "INVALID_FORMAT"
 
-	// ErrNotFound is returned when a resource is not found
-	ErrNotFound ErrorCode = "NOT_FOUND"
-	// ErrPageNotFound is returned when a page is not found
-	ErrPageNotFound ErrorCode = "PAGE_NOT_FOUND"
-	// ErrDatabaseNotFound is returned when a database is not found
-	ErrDatabaseNotFound ErrorCode = "DATABASE_NOT_FOUND"
+	// ErrorCodeNotFound is returned when a resource is not found
+	ErrorCodeNotFound ErrorCode = "NOT_FOUND"
+	// ErrorCodePageNotFound is returned when a page is not found
+	ErrorCodePageNotFound ErrorCode = "PAGE_NOT_FOUND"
+	// ErrorCodeDatabaseNotFound is returned when a database is not found
+	ErrorCodeDatabaseNotFound ErrorCode = "DATABASE_NOT_FOUND"
 
-	// ErrFileNotFound is returned when a file is not found
-	ErrFileNotFound ErrorCode = "FILE_NOT_FOUND"
-	// ErrStorageError is returned when a storage operation fails
-	ErrStorageError ErrorCode = "STORAGE_ERROR"
+	// ErrorCodeFileNotFound is returned when a file is not found
+	ErrorCodeFileNotFound ErrorCode = "FILE_NOT_FOUND"
+	// ErrorCodeStorageError is returned when a storage operation fails
+	ErrorCodeStorageError ErrorCode = "STORAGE_ERROR"
 
-	// ErrInternal is returned when an unexpected server error occurs
-	ErrInternal ErrorCode = "INTERNAL_ERROR"
-	// ErrNotImplemented is returned when a feature is not implemented
-	ErrNotImplemented ErrorCode = "NOT_IMPLEMENTED"
-	// ErrConflict is returned when there is a resource conflict
-	ErrConflict ErrorCode = "CONFLICT"
-	// ErrUnauthorized is returned when authentication is missing or invalid
-	ErrUnauthorized ErrorCode = "UNAUTHORIZED"
-	// ErrForbidden is returned when a user has insufficient permissions
-	ErrForbidden ErrorCode = "FORBIDDEN"
+	// ErrorCodeInternal is returned when an unexpected server error occurs
+	ErrorCodeInternal ErrorCode = "INTERNAL_ERROR"
+	// ErrorCodeNotImplemented is returned when a feature is not implemented
+	ErrorCodeNotImplemented ErrorCode = "NOT_IMPLEMENTED"
+	// ErrorCodeConflict is returned when there is a resource conflict
+	ErrorCodeConflict ErrorCode = "CONFLICT"
+	// ErrorCodeUnauthorized is returned when authentication is missing or invalid
+	ErrorCodeUnauthorized ErrorCode = "UNAUTHORIZED"
+	// ErrorCodeForbidden is returned when a user has insufficient permissions
+	ErrorCodeForbidden ErrorCode = "FORBIDDEN"
 )
 
 // ErrorDetails defines the structured error information in a response.
@@ -138,32 +138,32 @@ func (e *APIError) Unwrap() error {
 
 // NotFound creates a 404 Not Found error.
 func NotFound(resource string) *APIError {
-	return NewAPIError(http.StatusNotFound, ErrNotFound, fmt.Sprintf("%s not found", resource))
+	return NewAPIError(http.StatusNotFound, ErrorCodeNotFound, fmt.Sprintf("%s not found", resource))
 }
 
 // BadRequest creates a 400 Bad Request error.
 func BadRequest(message string) *APIError {
-	return NewAPIError(http.StatusBadRequest, ErrValidationFailed, message)
+	return NewAPIError(http.StatusBadRequest, ErrorCodeValidationFailed, message)
 }
 
 // MissingField creates a 400 Bad Request error for a missing field.
 func MissingField(fieldName string) *APIError {
-	return NewAPIError(http.StatusBadRequest, ErrMissingField, fmt.Sprintf("Missing required field: %s", fieldName))
+	return NewAPIError(http.StatusBadRequest, ErrorCodeMissingField, fmt.Sprintf("Missing required field: %s", fieldName))
 }
 
 // Forbidden returns a 403 Forbidden error.
 func Forbidden(message string) error {
-	return NewAPIError(403, ErrForbidden, message)
+	return NewAPIError(403, ErrorCodeForbidden, message)
 }
 
 // Unauthorized returns a 401 Unauthorized error.
 func Unauthorized() error {
-	return NewAPIError(401, ErrUnauthorized, "Unauthorized")
+	return NewAPIError(401, ErrorCodeUnauthorized, "Unauthorized")
 }
 
 // Internal returns a 500 Internal Server Error.
 func Internal(message string) *APIError {
-	return NewAPIError(http.StatusInternalServerError, ErrInternal, message)
+	return NewAPIError(http.StatusInternalServerError, ErrorCodeInternal, message)
 }
 
 // InternalWithError creates a 500 error wrapping an underlying error.
@@ -173,5 +173,5 @@ func InternalWithError(message string, err error) *APIError {
 
 // NotImplemented creates a 501 Not Implemented error.
 func NotImplemented(feature string) *APIError {
-	return NewAPIError(http.StatusNotImplemented, ErrNotImplemented, fmt.Sprintf("%s is not yet implemented", feature))
+	return NewAPIError(http.StatusNotImplemented, ErrorCodeNotImplemented, fmt.Sprintf("%s is not yet implemented", feature))
 }
