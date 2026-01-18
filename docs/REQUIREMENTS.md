@@ -74,15 +74,15 @@ Most core functional requirements for a local-first markdown and database system
     - **CLI Onboarding**: Simple configuration onboarding in the CLI, storing settings in an unversioned `.env` file in `data/`.
     - **Deferrable**: Users can skip onboarding and configure settings later via the workspace settings.
 
-### 8. Globalization & Platform
+### 7. Globalization & Platform
 - [ ] **i18n & l10n**: Support for multiple languages and regional formatting.
 - [ ] **PWA**: Progressive Web App support for installability and mobile-like experience.
 - [ ] **Offline Support**: Ability to work offline with robust data reconciliation upon reconnection.
 
-### 9. Agent Readiness
+### 8. Agent Readiness
 - [ ] **Agent Context**: Inclusion of `AGENTS.md` in data repositories to provide context for AI agents.
 
-### 10. AI & Intelligence
+### 9. AI & Intelligence
 - [ ] **Semantic Search (RAG)**: Vector-based search allowing for natural language queries across the entire organization.
 - [ ] **AI Writing Assistant**: In-editor tool for summarization, expansion, and content generation.
 - [ ] **MCP Server**: Implement the Model Context Protocol (MCP) to allow LLMs and AI agents to safely browse, read, and edit the organization's data.
