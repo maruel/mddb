@@ -13,12 +13,16 @@ Most core functional requirements for a local-first markdown and database system
 - [x] **Editor**: Full markdown editing with live preview.
 - [x] **Assets**: Attach images and files directly to pages.
 - [ ] **Interlinking**: Specialized UI for linking between pages (currently manual markdown links).
+- [ ] **Backlinks**: Automatically track and display which pages link to the current page.
+- [ ] **Graph View**: Visual representation of the organization's knowledge graph.
 
 ### 2. Database/Tables
 - [x] **Schema**: Define database schemas (columns with types: text, number, select, multi_select, checkbox, date).
 - [x] **Records**: Store and manage database records in JSONL format.
 - [x] **Pagination**: Support for `offset` and `limit` to handle large datasets.
 - [ ] **Advanced Query**: Complex filtering and multi-column sorting.
+- [ ] **Relations**: Support for "Relation" column type to link records between different databases.
+- [ ] **Rollups**: Aggregate data from linked records (e.g., sum of related "Cost" fields).
 
 ### 3. Media Management
 - [x] **Storage**: Upload and store assets in page-specific namespaces.
@@ -47,6 +51,19 @@ Most core functional requirements for a local-first markdown and database system
 - [ ] **Invitations**: Invite users to organizations via email; support assigning resources to "Pending Memberships" before user registration.
 - [ ] **Tiered Settings**: Support for Global User settings, Membership-specific settings (per-org), and Organization-wide settings.
 - [ ] **Quotas**: Resource limits per organization (storage space, number of pages, max asset size).
+- [ ] **Org-Controlled Git**: Allow organizations to configure their own Git remote for data persistence.
+    - **Custom Remotes**: Support for GitHub (via App/Personal Access Token), GitLab, and generic SSH/HTTPS remotes.
+    - **Private Repositories**: Secure handling of credentials for pushing to private organization repositories.
+    - **Automated Pushing**: Configurable "push on commit" or scheduled sync to the remote repository.
+- [ ] **Onboarding**: Streamlined setup process for new organizations.
+    - **First-Login Onboarding**: Optional guided setup when a user first accesses their default organization.
+    - **Configuration Questions**: Ask for organization name, initial members, and optional Git remote configuration.
+    - **Deferrable**: Users can skip onboarding and configure settings later via the workspace settings.
+
+### 7. AI & Intelligence
+- [ ] **Semantic Search (RAG)**: Vector-based search allowing for natural language queries across the entire organization.
+- [ ] **AI Writing Assistant**: In-editor tool for summarization, expansion, and content generation.
+- [ ] **MCP Server**: Implement the Model Context Protocol (MCP) to allow LLMs and AI agents to safely browse, read, and edit the organization's data.
 
 ## Non-Functional Requirements
 

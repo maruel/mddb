@@ -133,7 +133,33 @@ See `README.md` and `API.md` for details.
 - [x] **Quota Enforcement**: Track and limit resource usage (storage, pages) per organization.
 - [x] **User UI**: Management of users, permissions, and quotas in the frontend.
 
+### Phase 9: Advanced Sync & Onboarding
+*In Progress.*
+
+- [ ] **Advanced Git Remotes**:
+    - [ ] **Remote Configuration UI**: Interface for organization admins to set up Git remotes.
+    - [ ] **GitHub App Integration**: Support for GitHub App installation to manage organization repository access.
+    - [ ] **Remote Push Service**: Background worker to push organization submodule changes to their configured remotes.
+    - [ ] **Secret Management**: Secure storage of Git credentials/tokens per organization.
+- [ ] **Organization Onboarding**:
+    - [ ] **Onboarding State Tracking**: Track if an organization has completed the onboarding process.
+    - [ ] **Onboarding UI**: Guided multi-step modal or wizard for initial configuration (Org name, members, Git remote).
+    - [ ] **Settings Integration**: Ensure all onboarding options are accessible and editable in Workspace Settings.
+
+### Phase 10: Connectivity & Relations
+- [ ] **Backlinks Indexing**: Efficient background indexing of internal markdown links to provide backlink lists.
+- [ ] **Relational Data Model**: Update metadata schema to support record-level relations between databases.
+- [ ] **Relational UI**: UI components for selecting related records and displaying Rollups.
+- [ ] **Graph View**: Interactive visualization of page and database connections.
+
+### Phase 11: AI Intelligence
+- [ ] **MCP Server**: Full implementation of the Model Context Protocol to expose documents/databases to AI agents.
+- [ ] **Vector Search Integration**: Embedding generation for documents and records to support semantic search.
+- [ ] **In-Editor AI Actions**: Context-aware AI commands for content generation and summarization.
+
 ## Future Considerations
+- **Publishing & Extensibility**: Public pages, custom domains, webhooks, and per-organization API keys.
+- **Google Drive Integration**: Bi-directional sync/import/export for Google Docs (Markdown) and Google Sheets (JSONL).
 - **SQLite Migration**: Migrate `data/db/*.json` to SQLite for better relational integrity and query performance.
 - **Real-time Collaboration**: WebSocket-based sync.
 - **Mobile App**: Native mobile clients using the REST API.
