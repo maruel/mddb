@@ -145,13 +145,14 @@ See `README.md` and `API.md` for details.
     - [x] **Onboarding State Tracking**: Track if an organization has completed the onboarding process.
     - [x] **Onboarding UI**: Guided multi-step modal or wizard for initial configuration (Org name, members, Git remote).
     - [ ] **CLI Onboarding**: Implement a simple configuration wizard in the CLI.
+    - [ ] **CLI Versioning**: Implement `mddb -version` to display build metadata (Git commit, dirty state) using Go's build info.
     - [ ] **Local Config**: Store CLI configuration in an unversioned `.env` file in `data/` (added to `.gitignore`).
     - [x] **Settings Integration**: Ensure all onboarding options are accessible and editable in Workspace Settings.
 
 ### Phase 10: Connectivity & Relations
 - [ ] **Backlinks Indexing**: Efficient background indexing of internal markdown links to provide backlink lists.
-- [ ] **Relational Data Model**: Update metadata schema to support record-level relations between databases.
-- [ ] **Relational UI**: UI components for selecting related records and displaying Rollups.
+- [ ] **Relational Data Model**: Update metadata schema to support record-level relations (foreign keys) between databases.
+- [ ] **Relational UI**: UI components for selecting related records (popover/search) and displaying Rollups (aggregated data from linked records).
 - [ ] **Graph View**: Interactive visualization of page and database connections.
 - [ ] **Notion Research**: Document product design insights from Notion documentation in `docs/notion/`.
 
@@ -165,13 +166,13 @@ See `README.md` and `API.md` for details.
 - [ ] **i18n and l10n**: Implement internationalization and localization framework.
 - [ ] **PWA Support**: Configure manifest and service workers for Progressive Web App support.
 - [ ] **Offline Mode**: Implement client-side storage and reconciliation logic for offline use.
-- [ ] **Theme System**: 
+- [ ] **Theme System**:
     - [ ] Research Hugo theme engine for inspiration.
     - [ ] Implement a flexible theming system (CSS variables/tokens).
     - [ ] Add support for custom organization themes.
 
 ### Phase 13: Advanced Data Architecture
-- [ ] **JSONLDB Evolution**: 
+- [ ] **JSONLDB Evolution**:
     - [ ] Add versioning and column definitions to the first row of JSONL files.
     - [ ] Deprecate and remove `metadata.json` for databases.
 - [ ] **Sharding**: Add support for sharding in JSONLDB to handle extremely large datasets.
@@ -181,8 +182,20 @@ See `README.md` and `API.md` for details.
 - [ ] **Base64 ID Encoding**: Use Base64 URL-encoded characters (without padding) instead of raw numbers for `orgID` and page/note IDs to provide more compact and professional identifiers.
 - [ ] **Separator Migration**: Change the ID/path separator from `-` to `+` because `-` is a reserved character in Base64 URL-encoding.
 
-## Future Considerations
-- **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
+### Phase 15: CI/CD & Automation
+- [ ] **CI Workflow**: GitHub Actions workflow for linting (backend/frontend) and testing on every push.
+- [ ] **Release Workflow**: GitHub Actions workflow to build and release binaries (Linux, macOS, Windows) on new tags.
+
+### Phase 16: Advanced Database UX & Power Features
+- [ ] **Advanced Filtering & Sorting**: UI for multi-condition filters (AND/OR) and multi-column persistent sorting.
+- [ ] **Property Management**: In-app UI for adding, renaming, and changing column types with data migration safety.
+- [ ] **Inline Editing & Navigation**: Spreadsheet-like keyboard navigation (Tab/Arrows) and rapid inline cell editing.
+- [ ] **View Customization**: Per-view column visibility toggle, column resizing, and drag-and-drop reordering.
+- [ ] **Formulas**: Simple calculated properties based on other columns in the same record.
+- [ ] **Bulk Actions**: Multi-select records for deletion or property updates.
+- [ ] **Undo/Redo**: Global undo/redo support for document edits and database record changes.
+
+## Future Considerations- **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
 - **Publishing & Extensibility**: Public pages, custom domains, webhooks, and per-organization API keys.
 - **Google Drive Integration**: Bi-directional sync/import/export for Google Docs (Markdown) and Google Sheets (JSONL).
 - **SQLite Migration**: Migrate `data/db/*.json` to SQLite for better relational integrity and query performance.

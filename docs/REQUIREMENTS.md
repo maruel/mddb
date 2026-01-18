@@ -20,9 +20,11 @@ Most core functional requirements for a local-first markdown and database system
 - [x] **Schema**: Define database schemas (columns with types: text, number, select, multi_select, checkbox, date).
 - [x] **Records**: Store and manage database records in JSONL format.
 - [x] **Pagination**: Support for `offset` and `limit` to handle large datasets.
-- [ ] **Advanced Query**: Complex filtering and multi-column sorting.
-- [ ] **Relations**: Support for "Relation" column type to link records between different databases.
-- [ ] **Rollups**: Aggregate data from linked records (e.g., sum of related "Cost" fields).
+- [ ] **Advanced Query**: Complex filtering (nested AND/OR logic) and multi-column persistent sorting.
+- [ ] **Property Editing**: Dynamic UI for schema modifications (adding/deleting columns, renaming, type conversion).
+- [ ] **Relations**: Support for "Relation" column type to link records between different databases (Foreign Keys).
+- [ ] **Rollups**: Aggregate data from linked records (e.g., sum of related "Cost" fields, count of linked tasks).
+- [ ] **Formulas**: Calculated columns using simple expressions (e.g., `Price * Quantity`).
 
 ### 3. Media Management
 - [x] **Storage**: Upload and store assets in page-specific namespaces.
@@ -33,19 +35,15 @@ Most core functional requirements for a local-first markdown and database system
 ### 4. User Experience (Notion-like)
 
 - [ ] **Unified Sidebar**: Single hierarchical tree view for all content (pages and databases).
-
 - [/] **Seamless Databases**: Databases are integrated into pages; every database is a page, and every page can contain database views (supported via `NodeTypeHybrid`).
-
 - [ ] **Database Views**: Flexible views (Table, and future Board/Gallery) that can be embedded or viewed as full pages.
-
+- [ ] **View Customization**: Toggleable columns, adjustable column widths, and drag-and-drop reordering.
+- [ ] **Interaction Polish**: Keyboard shortcuts for navigation, spreadsheet-like cell selection, and context menus for rows/columns.
+- [ ] **Undo/Redo**: Support for undoing and redoing actions (document edits, record changes).
 - [x] **Auto-save**: Automatic background saving of documents (2s debounce).
-
 - [x] **Search**: Full-text search across all documents and databases with relevance scoring.
-
 - [x] **History**: View and restore previous versions of pages (leveraging Git).
-
 - [ ] **Real-time**: WebSocket-based real-time sync (future consideration).
-
 - [ ] **Theme Support**: Customizable UI themes.
     - **Inspiration**: Investigate Hugo (https://gohugo.io) theme support for potential architectural patterns (optional).
     - **Customization**: Allow users/organizations to customize colors, fonts, and layout elements.
@@ -53,27 +51,18 @@ Most core functional requirements for a local-first markdown and database system
 ### 5. API & Integration
 
 - [x] **REST API**: Comprehensive API for all operations (Pages, DBs, Records, Assets).
-
 - [x] **Error Handling**: Structured error codes and detailed responses (Centralized `ErrorCode` union).
-
 
 
 ### 6. Multi-User & Organization
 
 - [x] **Identity**: User accounts and authentication (JWT/Sessions). Supporting the **Linear Model** (one user account, multiple organizations).
-
 - [x] **OAuth2**: Login via Google or Microsoft accounts.
-
 - [x] **Organizations**: Workspace isolation and shared access.
-
 - [x] **Membership Model**: Many-to-many relationship between Users and Organizations to store organization-specific roles and settings.
-
 - [x] **RBAC**: Role-Based Access Control (Admin, Editor, Viewer) at the organization level.
-
 - [x] **Invitations**: Invite users to organizations via email; support assigning roles.
-
 - [x] **Tiered Settings**: Support for Global User settings, Membership-specific settings (per-org), and Organization-wide settings.
-
 - [ ] **Quotas**: Resource limits per organization (storage space, number of pages, max asset size).
 - [ ] **Org-Controlled Git**: Allow organizations to configure their own Git remote for data persistence.
     - **Custom Remotes**: Support for GitHub (via App/Personal Access Token), GitLab, and generic SSH/HTTPS remotes.
@@ -109,6 +98,8 @@ Most core functional requirements for a local-first markdown and database system
 
 ### Deployment & Architecture
 - [x] **Self-Contained**: Single executable binary with embedded frontend (`go:embed`).
+- [ ] **CLI Versioning**: Support `mddb -version` to output build metadata (Git commit, build time) leveraging Go's `debug.ReadBuildInfo`.
+- [ ] **CI/CD Workflows**: Automated GitHub Actions for CI (test/lint) and Release (cross-platform builds).
 - [x] **Local-First**: Filesystem-based storage with no external database dependencies.
 - [x] **Simplified Storage**: Unified JSONLDB format with versioning and column definitions in the first row, removing the need for separate `metadata.json`.
 - [x] **API Contract Centralization**: All Request, Response, and DTO structures are centralized in the `internal/models` package as the single source of truth for the frontend.
