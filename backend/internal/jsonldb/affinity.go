@@ -26,60 +26,60 @@ import (
 //
 // See https://www.sqlite.org/datatype3.html for the SQLite specification.
 
-// Affinity represents SQLite-compatible type affinity for columns.
-type Affinity int
+// affinity represents SQLite-compatible type affinity for columns.
+type affinity int
 
 const (
-	// AffinityBLOB has no type preference; values stored as-is.
-	AffinityBLOB Affinity = iota
-	// AffinityTEXT converts numeric values to string representation.
-	AffinityTEXT
-	// AffinityINTEGER forces integer representation.
-	AffinityINTEGER
-	// AffinityREAL forces floating point representation.
-	AffinityREAL
-	// AffinityNUMERIC stores as INTEGER if whole number, REAL otherwise.
-	AffinityNUMERIC
+	// affinityBLOB has no type preference; values stored as-is.
+	affinityBLOB affinity = iota
+	// affinityTEXT converts numeric values to string representation.
+	affinityTEXT
+	// affinityINTEGER forces integer representation.
+	affinityINTEGER
+	// affinityREAL forces floating point representation.
+	affinityREAL
+	// affinityNUMERIC stores as INTEGER if whole number, REAL otherwise.
+	affinityNUMERIC
 )
 
-// Affinity returns the SQLite affinity for this column type.
-func (ct ColumnType) Affinity() Affinity {
+// affinity returns the SQLite affinity for this column type.
+func (ct ColumnType) affinity() affinity {
 	switch ct {
 	case ColumnTypeText:
-		return AffinityTEXT
+		return affinityTEXT
 	case ColumnTypeNumber:
-		return AffinityNUMERIC
+		return affinityNUMERIC
 	case ColumnTypeBool:
-		return AffinityINTEGER
+		return affinityINTEGER
 	case ColumnTypeDate:
 		// ISO8601 string format
-		return AffinityTEXT
+		return affinityTEXT
 	case ColumnTypeBlob, ColumnTypeJSONB:
 		// No coercion for blob/jsonb - stored as-is
-		return AffinityBLOB
+		return affinityBLOB
 	default:
 		// Unknown types default to BLOB (no coercion)
-		return AffinityBLOB
+		return affinityBLOB
 	}
 }
 
 // coerceValue applies SQLite-compatible type coercion to a value based on affinity.
 // Returns the coerced value. Nil values pass through unchanged.
-func coerceValue(value any, affinity Affinity) any {
+func coerceValue(value any, affinity affinity) any {
 	if value == nil {
 		return nil
 	}
 
 	switch affinity {
-	case AffinityTEXT:
+	case affinityTEXT:
 		return coerceToText(value)
-	case AffinityINTEGER:
+	case affinityINTEGER:
 		return coerceToInteger(value)
-	case AffinityREAL:
+	case affinityREAL:
 		return coerceToReal(value)
-	case AffinityNUMERIC:
+	case affinityNUMERIC:
 		return coerceToNumeric(value)
-	case AffinityBLOB:
+	case affinityBLOB:
 		// No coercion for BLOB affinity
 		return value
 	default:
@@ -242,7 +242,7 @@ func CoerceDataWithTypes(data map[string]any, colTypes map[string]ColumnType) ma
 			result[key] = value
 			continue
 		}
-		result[key] = coerceValue(value, colType.Affinity())
+		result[key] = coerceValue(value, colType.affinity())
 	}
 	return result
 }
