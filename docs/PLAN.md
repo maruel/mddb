@@ -136,6 +136,7 @@ See `README.md` and `API.md` for details.
     - [x] Updated all callers of `NewDatabase` in `filestore.go` to use `Table[DataRecord]`.
     - [x] Added public `Schema()` and `UpdateSchema()` methods to `Table[T]` for schema access/modification.
     - [x] Added `byID map[ID]int` index for O(1) lookups via `Get(id)` and duplicate detection on load/append/replace.
+    - [x] Added `Delete(id)` and `Update(row)` methods for single-row mutations with persistence.
     - [x] Database metadata (Title, Created, Modified) now stored in separate `metadata.json` file per page.
     - **Future**: Extend schema discovery to support nested structs (object type) and slices (list type).
 - [/] **JSONLDB Type Coercion (Part 3)**: SQLite-compatible type affinity for consistent storage.
@@ -163,7 +164,90 @@ See `README.md` and `API.md` for details.
         - [x] Update frontend components (DatabaseTable, DatabaseBoard) to use options for select dropdowns
         - [ ] Store column options in metadata.json (currently only in-memory via API)
         - [ ] Add validation for select values against defined options
-- [ ] **JSONLDB Sharding (Part 4)**: Add support for sharding in JSONLDB to handle extremely large datasets.
+- [ ] **Rich Property System (Part 4)**: Notion-style property types with clear layer separation.
+
+    **Architecture Layers:**
+
+    | Layer | Responsibility | Property Knowledge |
+    |-------|---------------|-------------------|
+    | `jsonldb` | Raw storage, type coercion | Primitives only: text, number, bool, date, blob, jsonb |
+    | `models` | Domain types, API contracts | Full property types with configs |
+    | `storage` | Business logic, validation | Computes derived values, validates against configs |
+
+    **Property Type Hierarchy:**
+    ```
+    Primitive (stored directly in JSONL):
+    ├── text      → jsonldb.text
+    ├── number    → jsonldb.number
+    ├── checkbox  → jsonldb.bool
+    └── date      → jsonldb.date
+
+    Enumerated (text storage + options config):
+    ├── select       → jsonldb.text + options[]
+    └── multi_select → jsonldb.jsonb + options[]
+
+    Reference (ID storage + target config):
+    ├── relation → jsonldb.jsonb (array of IDs) + target_database_id
+    └── person   → jsonldb.jsonb (array of user IDs)
+
+    Computed (no storage, calculated on read):
+    ├── formula  → expression config, evaluated from other properties
+    ├── rollup   → relation + target_property + aggregation
+    ├── created_time    → auto from record.Created
+    ├── last_edited_time → auto from record.Modified
+    ├── created_by      → auto from audit log (future)
+    └── last_edited_by  → auto from audit log (future)
+
+    Rich Text (jsonb storage):
+    ├── title → jsonldb.jsonb (rich text blocks)
+    ├── rich_text → jsonldb.jsonb (rich text blocks)
+    ├── url   → jsonldb.text + URL validation
+    ├── email → jsonldb.text + email validation
+    └── phone → jsonldb.text + phone validation
+
+    Media (external storage reference):
+    └── files → jsonldb.jsonb (array of asset references)
+    ```
+
+    **Storage Structure:**
+    ```
+    pages/{id}/
+    ├── page.md           # Markdown content
+    ├── metadata.json     # Title, timestamps, property configs
+    │   {
+    │     "title": "Tasks",
+    │     "properties": {
+    │       "Status": {
+    │         "type": "select",
+    │         "options": [
+    │           {"id": "abc", "name": "Todo", "color": "gray"},
+    │           {"id": "def", "name": "Done", "color": "green"}
+    │         ]
+    │       },
+    │       "Assignee": {
+    │         "type": "person"
+    │       },
+    │       "Due": {
+    │         "type": "date"
+    │       },
+    │       "Related": {
+    │         "type": "relation",
+    │         "target_database_id": "xyz"
+    │       }
+    │     }
+    │   }
+    └── data.jsonl        # Row data (primitives only in schema header)
+        {"version":"1.0","columns":[{"name":"Status","type":"text"},{"name":"Assignee","type":"jsonb"},...]}
+        {"id":1,"data":{"Status":"abc","Assignee":["user1"],"Due":"2024-01-15"}}
+    ```
+
+    **Key Design Decisions:**
+    - Select values stored as option IDs (not display names) for rename safety
+    - Property configs in metadata.json, primitive schema in JSONL header
+    - Computed properties never stored, always derived on read
+    - Relations store target record IDs as jsonb arrays (supports multi-relation)
+    - Validation happens in storage layer before write, using property configs
+- [ ] **JSONLDB Sharding (Part 5)**: Add support for sharding in JSONLDB to handle extremely large datasets.
 
 ### Phase 14: URL Standardization
 - [ ] **URL Namespace**: Prefix page URLs with `/p/` to ensure clean routing (e.g., `mddb.app/p/<orgID>/<pageID>`).
