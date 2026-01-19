@@ -67,6 +67,52 @@ func (t *Table[T]) Get(id ID) (T, bool) {
 	return zero, false
 }
 
+// Delete removes a row by ID and persists the change. Returns true if deleted.
+func (t *Table[T]) Delete(id ID) (bool, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	idx, ok := t.byID[id]
+	if !ok {
+		return false, nil
+	}
+
+	// Remove from slice
+	t.rows = append(t.rows[:idx], t.rows[idx+1:]...)
+
+	// Rebuild index (indices shifted after removal)
+	t.byID = make(map[ID]int, len(t.rows))
+	for i, row := range t.rows {
+		t.byID[row.GetID()] = i
+	}
+
+	if err := t.save(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// Update replaces an existing row and persists the change. Returns true if updated.
+func (t *Table[T]) Update(row T) (bool, error) {
+	if err := row.Validate(); err != nil {
+		return false, fmt.Errorf("invalid row: %w", err)
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	idx, ok := t.byID[row.GetID()]
+	if !ok {
+		return false, nil
+	}
+
+	t.rows[idx] = row
+	if err := t.save(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // NewTable creates a new Table and loads all data from the file.
 // If the file doesn't exist, the schema is auto-discovered from type T via reflection.
 func NewTable[T Row[T]](path string) (*Table[T], error) {
