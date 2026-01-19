@@ -7,11 +7,11 @@
 package jsonldb
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
+
+	"github.com/invopop/jsonschema"
 )
 
 // currentVersion is the current version of the JSONL database format.
@@ -31,9 +31,10 @@ const (
 
 // column represents a database column in storage.
 type column struct {
-	Name     string     `json:"name"`
-	Type     columnType `json:"type"`
-	Required bool       `json:"required,omitempty"`
+	Name        string     `json:"name"`
+	Type        columnType `json:"type"`
+	Required    bool       `json:"required,omitempty"`
+	Description string     `json:"description,omitempty"`
 }
 
 // schemaHeader is the first row of a JSONL data file containing schema and metadata.
@@ -60,103 +61,81 @@ func (h *schemaHeader) Validate() error {
 	return nil
 }
 
-// schemaFromType[T any] extracts column definitions by marshaling a zero instance to JSON.
-// This ensures the schema matches what is actually written to disk.
+// schemaFromType extracts column definitions using JSON Schema reflection.
+//
+// It uses github.com/invopop/jsonschema to extract field descriptions from
+// `jsonschema:"description=..."` tags and required fields from the schema.
 func schemaFromType[T any]() ([]column, error) {
 	t := reflect.TypeFor[T]()
-	var val any
 
+	// Validate type
 	switch t.Kind() { //nolint:exhaustive // Only Ptr and Struct are valid; default handles the rest
 	case reflect.Ptr:
 		if t.Elem().Kind() != reflect.Struct {
 			return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
 		}
-		// Create a new instance of the underlying struct
-		val = reflect.New(t.Elem()).Interface()
 	case reflect.Struct:
-		var zero T
-		val = zero
+		// ok
 	default:
 		return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
 	}
 
-	data, err := json.Marshal(val)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal zero instance: %w", err)
+	// Generate JSON Schema from type
+	reflector := &jsonschema.Reflector{}
+	schema := reflector.Reflect(new(T))
+
+	// Build required set for quick lookup
+	required := make(map[string]bool)
+	for _, name := range schema.Required {
+		required[name] = true
 	}
 
-	var m map[string]any
-	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal to map: %w", err)
-	}
-
-	// Get the actual struct type for fallback type inference
+	// Get the struct type for Go type mapping
+	structType := t
 	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
+		structType = t.Elem()
 	}
 
-	// Build field lookup by JSON name
-	fieldByJSONName := make(map[string]reflect.StructField)
-	for i := range t.NumField() {
-		field := t.Field(i)
-		if !field.IsExported() {
-			continue
-		}
-		jsonTag := field.Tag.Get("json")
-		if jsonTag == "-" {
-			continue
-		}
-		jsonName := field.Name
-		if jsonTag != "" {
-			jsonName = strings.Split(jsonTag, ",")[0]
-		}
-		fieldByJSONName[jsonName] = field
-	}
-
-	// Create columns from JSON keys in deterministic order
+	// Build columns from schema properties
 	var columns []column
-	for jsonName := range m {
-		field, ok := fieldByJSONName[jsonName]
-		if !ok {
-			// Field in JSON but not found in struct, infer type from value
-			colType := inferTypeFromValue(m[jsonName])
-			columns = append(columns, column{
-				Name: jsonName,
-				Type: colType,
-			})
-			continue
+	for pair := schema.Properties.Oldest(); pair != nil; pair = pair.Next() {
+		name := pair.Key
+		prop := pair.Value
+
+		// Find the Go field for type inference
+		colType := columnTypeText
+		for i := range structType.NumField() {
+			field := structType.Field(i)
+			if jsonFieldName(&field) == name {
+				colType = goTypeToColumnType(field.Type)
+				break
+			}
 		}
 
-		// Use struct field info for type inference
-		colType := goTypeToColumnType(field.Type)
 		columns = append(columns, column{
-			Name: jsonName,
-			Type: colType,
+			Name:        name,
+			Type:        colType,
+			Required:    required[name],
+			Description: prop.Description,
 		})
 	}
 
 	return columns, nil
 }
 
-// inferTypeFromValue infers a column type from a JSON value.
-func inferTypeFromValue(v any) columnType {
-	if v == nil {
-		return columnTypeText
+// jsonFieldName returns the JSON field name for a struct field.
+func jsonFieldName(field *reflect.StructField) string {
+	tag := field.Tag.Get("json")
+	if tag == "" || tag == "-" {
+		return field.Name
 	}
-	switch v.(type) {
-	case bool:
-		return columnTypeBool
-	case float64:
-		return columnTypeNumber
-	case string:
-		return columnTypeText
-	case []byte:
-		return columnTypeBlob
-	case []any, map[string]any:
-		return columnTypeJSONB
-	default:
-		return columnTypeText
+	// Handle "name,omitempty" format
+	for i, c := range tag {
+		if c == ',' {
+			return tag[:i]
+		}
 	}
+	return tag
 }
 
 // goTypeToColumnType maps Go types to JSONL column types.
