@@ -14,7 +14,7 @@ import (
 // InvitationService handles organization invitations.
 type InvitationService struct {
 	rootDir string
-	table   *jsonldb.Table[models.Invitation]
+	table   *jsonldb.Table[*models.Invitation]
 	mu      sync.RWMutex
 	byID    map[jsonldb.ID]*models.Invitation
 	byToken map[string]*models.Invitation
@@ -28,7 +28,7 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	}
 
 	tablePath := filepath.Join(dbDir, "invitations.jsonl")
-	table, err := jsonldb.NewTable[models.Invitation](tablePath)
+	table, err := jsonldb.NewTable[*models.Invitation](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -41,9 +41,8 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	}
 
 	for inv := range table.All() {
-		invCopy := inv
-		s.byID[inv.ID] = &invCopy
-		s.byToken[inv.Token] = &invCopy
+		s.byID[inv.ID] = inv
+		s.byToken[inv.Token] = inv
 	}
 
 	return s, nil
@@ -80,14 +79,14 @@ func (s *InvitationService) CreateInvitation(email, orgIDStr string, role models
 		Created:        time.Now(),
 	}
 
-	if err := s.table.Append(*invitation); err != nil {
+	if err := s.table.Append(invitation); err != nil {
 		return nil, err
 	}
 
 	// Update local cache
 	newInv, _ := s.table.Last()
-	s.byID[id] = &newInv
-	s.byToken[token] = &newInv
+	s.byID[id] = newInv
+	s.byToken[token] = newInv
 
 	return invitation, nil
 }
@@ -145,10 +144,10 @@ func (s *InvitationService) ListByOrganization(orgIDStr string) ([]*models.Invit
 	return invitations, nil
 }
 
-func (s *InvitationService) getAllFromCache() []models.Invitation {
-	rows := make([]models.Invitation, 0, len(s.byID))
+func (s *InvitationService) getAllFromCache() []*models.Invitation {
+	rows := make([]*models.Invitation, 0, len(s.byID))
 	for _, v := range s.byID {
-		rows = append(rows, *v)
+		rows = append(rows, v)
 	}
 	return rows
 }

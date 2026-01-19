@@ -15,7 +15,7 @@ import (
 // OrganizationService handles organization management.
 type OrganizationService struct {
 	rootDir    string
-	table      *jsonldb.Table[models.Organization]
+	table      *jsonldb.Table[*models.Organization]
 	fileStore  *FileStore
 	gitService *GitService
 	mu         sync.RWMutex
@@ -30,7 +30,7 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 	}
 
 	tablePath := filepath.Join(dbDir, "organizations.jsonl")
-	table, err := jsonldb.NewTable[models.Organization](tablePath)
+	table, err := jsonldb.NewTable[*models.Organization](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -44,8 +44,7 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 	}
 
 	for org := range table.All() {
-		orgCopy := org
-		s.byID[org.ID] = &orgCopy
+		s.byID[org.ID] = org
 	}
 
 	return s, nil
@@ -73,13 +72,13 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 		},
 	}
 
-	if err := s.table.Append(*org); err != nil {
+	if err := s.table.Append(org); err != nil {
 		return nil, err
 	}
 
 	// Update local cache
 	newOrg, _ := s.table.Last()
-	s.byID[id] = &newOrg
+	s.byID[id] = newOrg
 
 	// Create organization content directory
 	orgDir := filepath.Join(s.rootDir, id.String())
@@ -167,10 +166,10 @@ func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state models.Onboa
 	return s.table.Replace(s.getAllFromCache())
 }
 
-func (s *OrganizationService) getAllFromCache() []models.Organization {
-	rows := make([]models.Organization, 0, len(s.byID))
+func (s *OrganizationService) getAllFromCache() []*models.Organization {
+	rows := make([]*models.Organization, 0, len(s.byID))
 	for _, v := range s.byID {
-		rows = append(rows, *v)
+		rows = append(rows, v)
 	}
 	return rows
 }

@@ -15,7 +15,7 @@ import (
 // UserService handles user management and authentication.
 type UserService struct {
 	rootDir    string
-	table      *jsonldb.Table[userStorage]
+	table      *jsonldb.Table[*userStorage]
 	memService *MembershipService
 	orgService *OrganizationService
 	mu         sync.RWMutex
@@ -31,7 +31,7 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 	}
 
 	tablePath := filepath.Join(dbDir, "users.jsonl")
-	table, err := jsonldb.NewTable[userStorage](tablePath)
+	table, err := jsonldb.NewTable[*userStorage](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -46,9 +46,8 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 	}
 
 	for u := range table.All() {
-		uCopy := u
-		s.byID[u.ID] = &uCopy
-		s.byEmail[u.Email] = &uCopy
+		s.byID[u.ID] = u
+		s.byEmail[u.Email] = u
 	}
 
 	return s, nil
@@ -59,8 +58,8 @@ type userStorage struct {
 	PasswordHash string `json:"password_hash"`
 }
 
-func (u userStorage) Clone() userStorage { //nolint:gocritic // Value receiver required by Cloner interface.
-	c := u
+func (u *userStorage) Clone() *userStorage {
+	c := *u
 	if u.Memberships != nil {
 		c.Memberships = make([]models.Membership, len(u.Memberships))
 		copy(c.Memberships, u.Memberships)
@@ -69,11 +68,11 @@ func (u userStorage) Clone() userStorage { //nolint:gocritic // Value receiver r
 		c.OAuthIdentities = make([]models.OAuthIdentity, len(u.OAuthIdentities))
 		copy(c.OAuthIdentities, u.OAuthIdentities)
 	}
-	return c
+	return &c
 }
 
 // GetID returns the userStorage's ID.
-func (u userStorage) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+func (u *userStorage) GetID() jsonldb.ID {
 	return u.ID
 }
 
@@ -107,7 +106,7 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 		Modified: now,
 	}
 
-	stored := userStorage{
+	stored := &userStorage{
 		User:         *user,
 		PasswordHash: string(hash),
 	}
@@ -118,8 +117,8 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 
 	// Update local cache
 	newStored, _ := s.table.Last()
-	s.byID[id] = &newStored
-	s.byEmail[email] = &newStored
+	s.byID[id] = newStored
+	s.byEmail[email] = newStored
 
 	return user, nil
 }
@@ -294,10 +293,10 @@ func (s *UserService) UpdateSettings(idStr string, settings models.UserSettings)
 	return s.table.Replace(s.getAllFromCache())
 }
 
-func (s *UserService) getAllFromCache() []userStorage {
-	rows := make([]userStorage, 0, len(s.byID))
+func (s *UserService) getAllFromCache() []*userStorage {
+	rows := make([]*userStorage, 0, len(s.byID))
 	for _, v := range s.byID {
-		rows = append(rows, *v)
+		rows = append(rows, v)
 	}
 	return rows
 }

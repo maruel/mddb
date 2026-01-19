@@ -61,8 +61,23 @@ func (h *schemaHeader) Validate() error {
 // schemaFromType[T any] extracts column definitions by marshaling a zero instance to JSON.
 // This ensures the schema matches what is actually written to disk.
 func schemaFromType[T any]() ([]Column, error) {
-	var zero T
-	data, err := json.Marshal(zero)
+	t := reflect.TypeFor[T]()
+	var val any
+
+	if t.Kind() == reflect.Ptr {
+		if t.Elem().Kind() != reflect.Struct {
+			return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
+		}
+		// Create a new instance of the underlying struct
+		val = reflect.New(t.Elem()).Interface()
+	} else if t.Kind() == reflect.Struct {
+		var zero T
+		val = zero
+	} else {
+		return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
+	}
+
+	data, err := json.Marshal(val)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal zero instance: %w", err)
 	}
@@ -73,12 +88,8 @@ func schemaFromType[T any]() ([]Column, error) {
 	}
 
 	// Get the actual struct type for fallback type inference
-	t := reflect.TypeOf(zero)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
-	}
-	if t.Kind() != reflect.Struct {
-		return nil, fmt.Errorf("type must be a struct, got %s", t.Kind())
 	}
 
 	// Build field lookup by JSON name

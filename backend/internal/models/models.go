@@ -67,19 +67,19 @@ type DataRecord struct {
 }
 
 // Clone returns a deep copy of the DataRecord.
-func (r DataRecord) Clone() DataRecord {
-	c := r
+func (r *DataRecord) Clone() *DataRecord {
+	c := *r
 	if r.Data != nil {
 		c.Data = make(map[string]any, len(r.Data))
 		for k, v := range r.Data {
 			c.Data[k] = v
 		}
 	}
-	return c
+	return &c
 }
 
 // GetID returns the DataRecord's ID.
-func (r DataRecord) GetID() jsonldb.ID {
+func (r *DataRecord) GetID() jsonldb.ID {
 	return r.ID
 }
 
@@ -101,7 +101,7 @@ type User struct {
 }
 
 // GetID returns the User's ID.
-func (u User) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+func (u *User) GetID() jsonldb.ID {
 	return u.ID
 }
 
@@ -130,13 +130,14 @@ type Membership struct {
 }
 
 // Clone returns a copy of the Membership.
-func (m Membership) Clone() Membership { //nolint:gocritic // Value receiver required by Cloner interface.
-	return m
+func (m *Membership) Clone() *Membership {
+	c := *m
+	return &c
 }
 
 // GetID returns zero for Membership (composite key not ID-based).
 // Use All() with filtering for Membership lookups.
-func (m Membership) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+func (m *Membership) GetID() jsonldb.ID {
 	return 0
 }
 
@@ -168,17 +169,17 @@ type Organization struct {
 }
 
 // Clone returns a deep copy of the Organization.
-func (o Organization) Clone() Organization { //nolint:gocritic // Value receiver required by Cloner interface.
-	c := o
+func (o *Organization) Clone() *Organization {
+	c := *o
 	if o.Settings.AllowedDomains != nil {
 		c.Settings.AllowedDomains = make([]string, len(o.Settings.AllowedDomains))
 		copy(c.Settings.AllowedDomains, o.Settings.AllowedDomains)
 	}
-	return c
+	return &c
 }
 
 // GetID returns the Organization's ID.
-func (o Organization) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+func (o *Organization) GetID() jsonldb.ID {
 	return o.ID
 }
 
@@ -214,12 +215,13 @@ type GitRemote struct {
 }
 
 // Clone returns a copy of the GitRemote.
-func (g GitRemote) Clone() GitRemote { //nolint:gocritic // Value receiver required by Cloner interface.
-	return g
+func (g *GitRemote) Clone() *GitRemote {
+	c := *g
+	return &c
 }
 
 // GetID returns the GitRemote's ID.
-func (g GitRemote) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+func (g *GitRemote) GetID() jsonldb.ID {
 	return g.ID
 }
 
@@ -242,12 +244,13 @@ type Invitation struct {
 }
 
 // Clone returns a copy of the Invitation.
-func (i Invitation) Clone() Invitation { //nolint:gocritic // Value receiver required by Cloner interface.
-	return i
+func (i *Invitation) Clone() *Invitation {
+	c := *i
+	return &c
 }
 
 // GetID returns the Invitation's ID.
-func (i Invitation) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+func (i *Invitation) GetID() jsonldb.ID {
 	return i.ID
 }
 

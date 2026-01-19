@@ -15,8 +15,8 @@ import (
 // GitRemoteService handles git remote configuration and secrets.
 type GitRemoteService struct {
 	rootDir      string
-	remoteTable  *jsonldb.Table[models.GitRemote]
-	secretTable  *jsonldb.Table[remoteSecret]
+	remoteTable  *jsonldb.Table[*models.GitRemote]
+	secretTable  *jsonldb.Table[*remoteSecret]
 	mu           sync.RWMutex
 	remotesByOrg map[jsonldb.ID][]*models.GitRemote
 }
@@ -26,13 +26,14 @@ type remoteSecret struct {
 	Token    string `json:"token"`
 }
 
-func (r remoteSecret) Clone() remoteSecret {
-	return r
+func (r *remoteSecret) Clone() *remoteSecret {
+	c := *r
+	return &c
 }
 
 // GetID returns zero for remoteSecret (no direct ID).
 // Use GetToken(remoteID) to look up secrets by RemoteID.
-func (r remoteSecret) GetID() jsonldb.ID {
+func (r *remoteSecret) GetID() jsonldb.ID {
 	return 0
 }
 
@@ -44,13 +45,13 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 	}
 
 	remotePath := filepath.Join(dbDir, "git_remotes.jsonl")
-	remoteTable, err := jsonldb.NewTable[models.GitRemote](remotePath)
+	remoteTable, err := jsonldb.NewTable[*models.GitRemote](remotePath)
 	if err != nil {
 		return nil, err
 	}
 
 	secretPath := filepath.Join(dbDir, "git_remote_secrets.jsonl")
-	secretTable, err := jsonldb.NewTable[remoteSecret](secretPath)
+	secretTable, err := jsonldb.NewTable[*remoteSecret](secretPath)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +64,7 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 	}
 
 	for r := range remoteTable.All() {
-		rCopy := r
-		s.remotesByOrg[r.OrganizationID] = append(s.remotesByOrg[r.OrganizationID], &rCopy)
+		s.remotesByOrg[r.OrganizationID] = append(s.remotesByOrg[r.OrganizationID], r)
 	}
 
 	return s, nil
@@ -102,22 +102,22 @@ func (s *GitRemoteService) CreateRemote(orgIDStr, name, url, remoteType, authTyp
 		Created:        time.Now(),
 	}
 
-	if err := s.remoteTable.Append(*newRemote); err != nil {
+	if err := s.remoteTable.Append(newRemote); err != nil {
 		return nil, err
 	}
 
 	// Update cache
 	cachedRemote, _ := s.remoteTable.Last()
-	s.remotesByOrg[orgID] = append(s.remotesByOrg[orgID], &cachedRemote)
+	s.remotesByOrg[orgID] = append(s.remotesByOrg[orgID], cachedRemote)
 
 	// Save secret if provided
 	if token != "" {
-		if err := s.secretTable.Append(remoteSecret{RemoteID: id.String(), Token: token}); err != nil {
+		if err := s.secretTable.Append(&remoteSecret{RemoteID: id.String(), Token: token}); err != nil {
 			return nil, err
 		}
 	}
 
-	return &cachedRemote, nil
+	return cachedRemote, nil
 }
 
 // GetRemote retrieves a remote by ID.
@@ -165,7 +165,7 @@ func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
 	defer s.mu.Unlock()
 
 	// Remove from table
-	var newRows []models.GitRemote
+	var newRows []*models.GitRemote
 	found := false
 	for r := range s.remoteTable.All() {
 		if r.ID == remoteID {
@@ -184,7 +184,7 @@ func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
 
 	// Remove secret
 	allSecrets := slices.Collect(s.secretTable.All())
-	var newSecrets []remoteSecret
+	var newSecrets []*remoteSecret
 	for _, sec := range allSecrets {
 		if sec.RemoteID != remoteIDStr {
 			newSecrets = append(newSecrets, sec)

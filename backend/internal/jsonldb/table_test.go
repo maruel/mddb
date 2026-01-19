@@ -12,11 +12,12 @@ type testRow struct {
 	Name string `json:"name"`
 }
 
-func (r testRow) Clone() testRow {
-	return r
+func (r *testRow) Clone() *testRow {
+	c := *r
+	return &c
 }
 
-func (r testRow) GetID() ID {
+func (r *testRow) GetID() ID {
 	return ID(r.ID)
 }
 
@@ -30,7 +31,7 @@ func TestTable(t *testing.T) {
 	path := filepath.Join(tmpDir, "test.jsonl")
 
 	// Test NewTable and Append
-	table, err := NewTable[testRow](path)
+	table, err := NewTable[*testRow](path)
 	if err != nil {
 		t.Fatalf("NewTable failed: %v", err)
 	}
@@ -41,7 +42,13 @@ func TestTable(t *testing.T) {
 	}
 
 	for _, r := range rows {
-		if err := table.Append(r); err != nil {
+		// Pass address of r (creates a copy implicitly if we take address of loop var?
+		// No, we should take address of a copy to be safe, though Append clones immediately
+		// if implementation stores clones, but here we pass *testRow.
+		// Table.Append takes *testRow.
+		// We need to be careful with loop variable reuse in Go < 1.22, but we are on 1.25.
+		rCopy := r
+		if err := table.Append(&rCopy); err != nil {
 			t.Fatalf("Append failed: %v", err)
 		}
 	}
@@ -57,7 +64,7 @@ func TestTable(t *testing.T) {
 	}
 
 	// Test persistence (re-load)
-	table2, err := NewTable[testRow](path)
+	table2, err := NewTable[*testRow](path)
 	if err != nil {
 		t.Fatalf("re-loading table failed: %v", err)
 	}
@@ -72,7 +79,7 @@ func TestTable(t *testing.T) {
 	}
 
 	// Test Replace
-	newRows := []testRow{
+	newRows := []*testRow{
 		{ID: 3, Name: "Three"},
 	}
 	if err := table.Replace(newRows); err != nil {
@@ -84,7 +91,7 @@ func TestTable(t *testing.T) {
 		t.Errorf("Replace failed to update in-memory rows: len=%d", table.Len())
 	}
 
-	table3, err := NewTable[testRow](path)
+	table3, err := NewTable[*testRow](path)
 	if err != nil {
 		t.Fatalf("re-loading table after replace failed: %v", err)
 	}
@@ -95,7 +102,7 @@ func TestTable(t *testing.T) {
 
 	// Test Iter
 	// Reset table with known sorted data
-	iterRows := []testRow{
+	iterRows := []*testRow{
 		{ID: 10, Name: "Ten"},
 		{ID: 20, Name: "Twenty"},
 		{ID: 30, Name: "Thirty"},

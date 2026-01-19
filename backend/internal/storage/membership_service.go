@@ -14,7 +14,7 @@ import (
 // MembershipService handles user-organization relationships.
 type MembershipService struct {
 	rootDir string
-	table   *jsonldb.Table[models.Membership]
+	table   *jsonldb.Table[*models.Membership]
 	mu      sync.RWMutex
 	byID    map[string]*models.Membership // key: userID_orgID (as strings)
 }
@@ -27,7 +27,7 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 	}
 
 	tablePath := filepath.Join(dbDir, "memberships.jsonl")
-	table, err := jsonldb.NewTable[models.Membership](tablePath)
+	table, err := jsonldb.NewTable[*models.Membership](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -39,8 +39,7 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 	}
 
 	for m := range table.All() {
-		mCopy := m
-		s.byID[m.UserID.String()+"_"+m.OrganizationID.String()] = &mCopy
+		s.byID[m.UserID.String()+"_"+m.OrganizationID.String()] = m
 	}
 
 	return s, nil
@@ -72,13 +71,13 @@ func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role mo
 		Created:        time.Now(),
 	}
 
-	if err := s.table.Append(*membership); err != nil {
+	if err := s.table.Append(membership); err != nil {
 		return nil, err
 	}
 
 	// Update local cache
 	newM, _ := s.table.Last()
-	s.byID[key] = &newM
+	s.byID[key] = newM
 
 	return membership, nil
 }
@@ -179,10 +178,10 @@ func (s *MembershipService) DeleteMembership(userIDStr, orgIDStr string) error {
 	return s.table.Replace(s.getAllFromCache())
 }
 
-func (s *MembershipService) getAllFromCache() []models.Membership {
-	rows := make([]models.Membership, 0, len(s.byID))
+func (s *MembershipService) getAllFromCache() []*models.Membership {
+	rows := make([]*models.Membership, 0, len(s.byID))
 	for _, v := range s.byID {
-		rows = append(rows, *v)
+		rows = append(rows, v)
 	}
 	return rows
 }
