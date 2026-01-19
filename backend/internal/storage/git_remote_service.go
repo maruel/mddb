@@ -22,8 +22,9 @@ type GitRemoteService struct {
 }
 
 type remoteSecret struct {
-	RemoteID string `json:"remote_id"`
-	Token    string `json:"token"`
+	ID       jsonldb.ID `json:"id"`
+	RemoteID jsonldb.ID `json:"remote_id"`
+	Token    string     `json:"token"`
 }
 
 func (r *remoteSecret) Clone() *remoteSecret {
@@ -31,10 +32,20 @@ func (r *remoteSecret) Clone() *remoteSecret {
 	return &c
 }
 
-// GetID returns zero for remoteSecret (no direct ID).
-// Use GetToken(remoteID) to look up secrets by RemoteID.
+// GetID returns the remoteSecret's ID.
 func (r *remoteSecret) GetID() jsonldb.ID {
-	return 0
+	return r.ID
+}
+
+// Validate checks that the remoteSecret is valid.
+func (r *remoteSecret) Validate() error {
+	if r.ID.IsZero() {
+		return fmt.Errorf("id is required")
+	}
+	if r.RemoteID.IsZero() {
+		return fmt.Errorf("remote_id is required")
+	}
+	return nil
 }
 
 // NewGitRemoteService creates a new git remote service.
@@ -112,7 +123,7 @@ func (s *GitRemoteService) CreateRemote(orgIDStr, name, url, remoteType, authTyp
 
 	// Save secret if provided
 	if token != "" {
-		if err := s.secretTable.Append(&remoteSecret{RemoteID: id.String(), Token: token}); err != nil {
+		if err := s.secretTable.Append(&remoteSecret{ID: jsonldb.NewID(), RemoteID: id, Token: token}); err != nil {
 			return nil, err
 		}
 	}
@@ -141,7 +152,11 @@ func (s *GitRemoteService) GetRemote(idStr string) (*models.GitRemote, error) {
 }
 
 // GetToken retrieves the token for a remote.
-func (s *GitRemoteService) GetToken(remoteID string) (string, error) {
+func (s *GitRemoteService) GetToken(remoteIDStr string) (string, error) {
+	remoteID, err := jsonldb.DecodeID(remoteIDStr)
+	if err != nil {
+		return "", fmt.Errorf("invalid remote id: %w", err)
+	}
 	for sec := range s.secretTable.All() {
 		if sec.RemoteID == remoteID {
 			return sec.Token, nil
@@ -186,7 +201,7 @@ func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
 	allSecrets := slices.Collect(s.secretTable.All())
 	var newSecrets []*remoteSecret
 	for _, sec := range allSecrets {
-		if sec.RemoteID != remoteIDStr {
+		if sec.RemoteID != remoteID {
 			newSecrets = append(newSecrets, sec)
 		}
 	}

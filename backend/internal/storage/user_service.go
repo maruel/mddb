@@ -76,6 +76,17 @@ func (u *userStorage) GetID() jsonldb.ID {
 	return u.ID
 }
 
+// Validate checks that the userStorage is valid.
+func (u *userStorage) Validate() error {
+	if u.ID.IsZero() {
+		return fmt.Errorf("id is required")
+	}
+	if u.Email == "" {
+		return fmt.Errorf("email is required")
+	}
+	return nil
+}
+
 // CreateUser creates a new user.
 func (s *UserService) CreateUser(email, password, name string, role models.UserRole) (*models.User, error) {
 	if email == "" || password == "" {

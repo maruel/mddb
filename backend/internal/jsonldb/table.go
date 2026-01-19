@@ -12,10 +12,13 @@ import (
 )
 
 // Row is implemented by types that can be stored in a Table.
-// Clone() is used for in-memory copies and GetID() for unique identification.
 type Row[T any] interface {
+	// Clone returns a deep copy of the row for safe in-memory storage.
 	Clone() T
+	// GetID returns the unique identifier for this row.
 	GetID() ID
+	// Validate checks data integrity; called on load and before write.
+	Validate() error
 }
 
 // Table handles storage and in-memory caching for a single table in JSONL format.
@@ -110,6 +113,12 @@ func (t *Table[T]) load() error {
 		if err := json.Unmarshal(line, &row); err != nil {
 			return fmt.Errorf("failed to unmarshal row in %s: %w", t.path, err)
 		}
+		if err := row.Validate(); err != nil {
+			return fmt.Errorf("invalid row in %s line %d: %w", t.path, lineNum, err)
+		}
+		if row.GetID().IsZero() {
+			return fmt.Errorf("row in %s line %d has zero ID", t.path, lineNum)
+		}
 		t.rows = append(t.rows, row)
 	}
 	return nil
@@ -158,6 +167,13 @@ func (t *Table[T]) Iter(startID ID) iter.Seq[T] {
 
 // Append adds a new row to the table and persists it.
 func (t *Table[T]) Append(row T) error {
+	if err := row.Validate(); err != nil {
+		return fmt.Errorf("invalid row: %w", err)
+	}
+	if row.GetID().IsZero() {
+		return fmt.Errorf("row has zero ID")
+	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 

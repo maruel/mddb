@@ -65,6 +65,7 @@ func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role mo
 	}
 
 	membership := &models.Membership{
+		ID:             jsonldb.NewID(),
 		UserID:         userID,
 		OrganizationID: orgID,
 		Role:           role,

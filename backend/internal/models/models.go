@@ -6,6 +6,7 @@ package models
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -125,6 +126,14 @@ func (r *DataRecord) GetID() jsonldb.ID {
 	return r.ID
 }
 
+// Validate checks that the DataRecord is valid.
+func (r *DataRecord) Validate() error {
+	if r.ID.IsZero() {
+		return fmt.Errorf("id is required")
+	}
+	return nil
+}
+
 // User represents a system user.
 type User struct {
 	ID              jsonldb.ID      `json:"id"`
@@ -163,6 +172,7 @@ type OAuthIdentity struct {
 
 // Membership represents a user's relationship with an organization.
 type Membership struct {
+	ID               jsonldb.ID         `json:"id"`
 	UserID           jsonldb.ID         `json:"user_id"`
 	OrganizationID   jsonldb.ID         `json:"organization_id"`
 	OrganizationName string             `json:"organization_name,omitempty"`
@@ -177,10 +187,26 @@ func (m *Membership) Clone() *Membership {
 	return &c
 }
 
-// GetID returns zero for Membership (composite key not ID-based).
-// Use All() with filtering for Membership lookups.
+// GetID returns the Membership's ID.
 func (m *Membership) GetID() jsonldb.ID {
-	return 0
+	return m.ID
+}
+
+// Validate checks that the Membership is valid.
+func (m *Membership) Validate() error {
+	if m.ID.IsZero() {
+		return fmt.Errorf("id is required")
+	}
+	if m.UserID.IsZero() {
+		return fmt.Errorf("user_id is required")
+	}
+	if m.OrganizationID.IsZero() {
+		return fmt.Errorf("organization_id is required")
+	}
+	if m.Role == "" {
+		return fmt.Errorf("role is required")
+	}
+	return nil
 }
 
 // MembershipSettings represents user preferences within a specific organization.
@@ -225,6 +251,17 @@ func (o *Organization) GetID() jsonldb.ID {
 	return o.ID
 }
 
+// Validate checks that the Organization is valid.
+func (o *Organization) Validate() error {
+	if o.ID.IsZero() {
+		return fmt.Errorf("id is required")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("name is required")
+	}
+	return nil
+}
+
 // OnboardingState tracks the progress of an organization's initial setup.
 type OnboardingState struct {
 	Completed bool      `json:"completed"`
@@ -267,6 +304,20 @@ func (g *GitRemote) GetID() jsonldb.ID {
 	return g.ID
 }
 
+// Validate checks that the GitRemote is valid.
+func (g *GitRemote) Validate() error {
+	if g.ID.IsZero() {
+		return fmt.Errorf("id is required")
+	}
+	if g.OrganizationID.IsZero() {
+		return fmt.Errorf("organization_id is required")
+	}
+	if g.URL == "" {
+		return fmt.Errorf("url is required")
+	}
+	return nil
+}
+
 // Quota defines limits for an organization.
 type Quota struct {
 	MaxPages   int   `json:"max_pages"`
@@ -294,6 +345,23 @@ func (i *Invitation) Clone() *Invitation {
 // GetID returns the Invitation's ID.
 func (i *Invitation) GetID() jsonldb.ID {
 	return i.ID
+}
+
+// Validate checks that the Invitation is valid.
+func (i *Invitation) Validate() error {
+	if i.ID.IsZero() {
+		return fmt.Errorf("id is required")
+	}
+	if i.Email == "" {
+		return fmt.Errorf("email is required")
+	}
+	if i.OrganizationID.IsZero() {
+		return fmt.Errorf("organization_id is required")
+	}
+	if i.Token == "" {
+		return fmt.Errorf("token is required")
+	}
+	return nil
 }
 
 // Session represents an active user session.
