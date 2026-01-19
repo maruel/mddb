@@ -393,11 +393,12 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseIDStr, recor
 	return nil
 }
 
-// columnTypeMap builds a map of column name to type from a slice of models.Column.
+// columnTypeMap builds a map of column name to storage type from a slice of models.Column.
+// High-level types (select, multi_select) are mapped to their underlying storage types.
 func columnTypeMap(columns []models.Column) map[string]jsonldb.ColumnType {
 	m := make(map[string]jsonldb.ColumnType, len(columns))
 	for _, col := range columns {
-		m[col.Name] = col.Type
+		m[col.Name] = col.Type.StorageType()
 	}
 	return m
 }

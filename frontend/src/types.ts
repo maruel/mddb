@@ -671,12 +671,52 @@ export const NodeTypeDatabase = 'database';
 export const NodeTypeHybrid = 'hybrid';
 export type NodeType = typeof NodeTypeDocument | typeof NodeTypeDatabase | typeof NodeTypeHybrid;
 /**
+ * ColumnType represents the type of a database column at the application level.
+ * This includes both primitive storage types and higher-level semantic types.
+ */
+/**
+ * ColumnTypeText stores text values.
+ */
+export const ColumnTypeText = 'text';
+/**
+ * ColumnTypeNumber stores numeric values (integer or float).
+ */
+export const ColumnTypeNumber = 'number';
+/**
+ * ColumnTypeCheckbox stores boolean values as 0/1.
+ */
+export const ColumnTypeCheckbox = 'checkbox';
+/**
+ * ColumnTypeDate stores ISO8601 date strings.
+ */
+export const ColumnTypeDate = 'date';
+/**
+ * ColumnTypeSelect stores a single selection from predefined options.
+ */
+export const ColumnTypeSelect = 'select';
+/**
+ * ColumnTypeMultiSelect stores multiple selections as a JSON array string.
+ */
+export const ColumnTypeMultiSelect = 'multi_select';
+export type ColumnType =
+  | typeof ColumnTypeText
+  | typeof ColumnTypeNumber
+  | typeof ColumnTypeCheckbox
+  | typeof ColumnTypeDate
+  | typeof ColumnTypeSelect
+  | typeof ColumnTypeMultiSelect;
+/**
  * Column represents a database column
  */
 export interface Column {
   name: string;
-  type: any /* jsonldb.ColumnType */;
+  type: ColumnType;
   required?: boolean;
+  /**
+   * Options contains the allowed values for select and multi_select column types.
+   * Ignored for other column types.
+   */
+  options?: string[];
 }
 /**
  * DataRecord represents a record in a database.

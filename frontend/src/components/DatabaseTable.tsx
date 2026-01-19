@@ -1,5 +1,12 @@
 import { createSignal, For, Show } from 'solid-js';
-import type { DataRecord, Column } from '../types';
+import {
+  type DataRecord,
+  type Column,
+  ColumnTypeCheckbox,
+  ColumnTypeSelect,
+  ColumnTypeNumber,
+  ColumnTypeDate,
+} from '../types';
 import styles from './DatabaseTable.module.css';
 import { useI18n } from '../i18n';
 
@@ -82,7 +89,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
 
   const renderCellInput = (column: Column, initialValue: string) => {
     switch (column.type) {
-      case 'checkbox':
+      case ColumnTypeCheckbox:
         return (
           <input
             type="checkbox"
@@ -91,7 +98,22 @@ export default function DatabaseTable(props: DatabaseTableProps) {
             class={styles.input}
           />
         );
-      case 'select':
+      case ColumnTypeSelect:
+        // Use dropdown if options are defined, otherwise text input
+        if (column.options && column.options.length > 0) {
+          return (
+            <select
+              value={initialValue}
+              onChange={(e) => handleCellChange(e.target.value)}
+              class={styles.input}
+            >
+              <option value="">--</option>
+              <For each={column.options}>
+                {(option) => <option value={option}>{option}</option>}
+              </For>
+            </select>
+          );
+        }
         return (
           <input
             type="text"
@@ -100,7 +122,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
             class={styles.input}
           />
         );
-      case 'number':
+      case ColumnTypeNumber:
         return (
           <input
             type="number"
@@ -109,7 +131,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
             class={styles.input}
           />
         );
-      case 'date':
+      case ColumnTypeDate:
         return (
           <input
             type="date"

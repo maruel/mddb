@@ -49,7 +49,7 @@ func (ct ColumnType) Affinity() Affinity {
 		return AffinityTEXT
 	case ColumnTypeNumber:
 		return AffinityNUMERIC
-	case ColumnTypeCheckbox:
+	case ColumnTypeBool:
 		return AffinityINTEGER
 	case ColumnTypeDate:
 		// ISO8601 string format

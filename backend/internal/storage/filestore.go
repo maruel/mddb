@@ -821,13 +821,15 @@ func formatMarkdownFile(page *models.Page) []byte {
 
 // Converters between jsonldb and models types
 
-// columnsToJSONLDB converts models.Column to jsonldb.Column.
+// columnsToJSONLDB converts models.Column to jsonldb.Column for storage.
+// High-level types (select, multi_select) are mapped to their storage types (text).
+// Options are not stored in jsonldb schema - they must be stored separately.
 func columnsToJSONLDB(cols []models.Column) []jsonldb.Column {
 	result := make([]jsonldb.Column, len(cols))
 	for i, col := range cols {
 		result[i] = jsonldb.Column{
 			Name:     col.Name,
-			Type:     col.Type,
+			Type:     col.Type.StorageType(),
 			Required: col.Required,
 		}
 	}
@@ -835,14 +837,33 @@ func columnsToJSONLDB(cols []models.Column) []jsonldb.Column {
 }
 
 // columnsFromJSONLDB converts jsonldb.Column to models.Column.
+// This only recovers primitive types - high-level types (select, multi_select)
+// and their options must be merged from metadata storage.
 func columnsFromJSONLDB(cols []jsonldb.Column) []models.Column {
 	result := make([]models.Column, len(cols))
 	for i, col := range cols {
 		result[i] = models.Column{
 			Name:     col.Name,
-			Type:     col.Type,
+			Type:     storageTypeToModelType(col.Type),
 			Required: col.Required,
 		}
 	}
 	return result
+}
+
+// storageTypeToModelType converts a jsonldb storage type to a models column type.
+// Since select/multi_select are stored as text, this only returns primitive types.
+func storageTypeToModelType(st jsonldb.ColumnType) models.ColumnType {
+	switch st {
+	case jsonldb.ColumnTypeText:
+		return models.ColumnTypeText
+	case jsonldb.ColumnTypeNumber:
+		return models.ColumnTypeNumber
+	case jsonldb.ColumnTypeBool:
+		return models.ColumnTypeCheckbox
+	case jsonldb.ColumnTypeDate:
+		return models.ColumnTypeDate
+	default:
+		return models.ColumnTypeText
+	}
 }

@@ -12,7 +12,7 @@ func TestColumnType_Affinity(t *testing.T) {
 	}{
 		{ColumnTypeText, AffinityTEXT},
 		{ColumnTypeNumber, AffinityNUMERIC},
-		{ColumnTypeCheckbox, AffinityINTEGER},
+		{ColumnTypeBool, AffinityINTEGER},
 		{ColumnTypeDate, AffinityTEXT},
 		{ColumnType("unknown"), AffinityBLOB},
 		{ColumnType(""), AffinityBLOB},
@@ -199,7 +199,7 @@ func TestCoerceData(t *testing.T) {
 	columns := []Column{
 		{Name: "name", Type: ColumnTypeText},
 		{Name: "age", Type: ColumnTypeNumber},
-		{Name: "active", Type: ColumnTypeCheckbox},
+		{Name: "active", Type: ColumnTypeBool},
 		{Name: "score", Type: ColumnTypeNumber},
 		{Name: "tags", Type: ColumnTypeText},
 	}

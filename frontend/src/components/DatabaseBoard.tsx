@@ -1,5 +1,5 @@
 import { For, Show, createMemo } from 'solid-js';
-import type { DataRecord, Column } from '../types';
+import { type DataRecord, type Column, ColumnTypeSelect, ColumnTypeMultiSelect } from '../types';
 import styles from './DatabaseBoard.module.css';
 import { useI18n } from '../i18n';
 
@@ -13,13 +13,20 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
   const { t } = useI18n();
   // Find the first select column to group by
   const groupColumn = () =>
-    props.columns.find((c) => c.type === 'select' || c.type === 'multi_select');
+    props.columns.find((c) => c.type === ColumnTypeSelect || c.type === ColumnTypeMultiSelect);
 
   const groups = createMemo(() => {
     const col = groupColumn();
     if (!col) return [{ name: 'All Records', records: props.records }];
 
     const grouped: Record<string, { name: string; records: DataRecord[] }> = {};
+
+    // Initialize groups from column options if available
+    if (col.options) {
+      col.options.forEach((opt) => {
+        grouped[opt] = { name: opt, records: [] };
+      });
+    }
 
     // Add "No Group" for records without a value
     grouped['__none__'] = { name: t('database.noGroup') || 'No Group', records: [] };
@@ -36,7 +43,9 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
       }
     });
 
-    return Object.values(grouped).filter((g) => g.records.length > 0);
+    // Filter to show groups with records, plus empty groups from options
+    const options = col.options || [];
+    return Object.values(grouped).filter((g) => g.records.length > 0 || options.includes(g.name));
   });
 
   return (

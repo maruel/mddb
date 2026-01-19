@@ -20,7 +20,7 @@ func TestDatabaseService_Create(t *testing.T) {
 
 	columns := []models.Column{
 		{Name: "title", Type: "text"},
-		{Name: "status", Type: jsonldb.ColumnTypeText},
+		{Name: "status", Type: models.ColumnTypeText},
 	}
 
 	db, err := service.CreateDatabase(ctx, "Test DB", columns)
@@ -214,7 +214,7 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 	// Create a database
 	columns := []models.Column{
 		{Name: "title", Type: "text"},
-		{Name: "status", Type: jsonldb.ColumnTypeText},
+		{Name: "status", Type: models.ColumnTypeText},
 	}
 	db, err := service.CreateDatabase(ctx, "Test DB", columns)
 	if err != nil {
@@ -421,7 +421,7 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 		{Name: "count", Type: "number"},
 		{Name: "price", Type: "number"},
 		{Name: "active", Type: "checkbox"},
-		{Name: "category", Type: jsonldb.ColumnTypeText},
+		{Name: "category", Type: models.ColumnTypeText},
 	}
 	db, err := service.CreateDatabase(ctx, "Type Test DB", columns)
 	if err != nil {

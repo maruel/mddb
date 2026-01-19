@@ -25,8 +25,8 @@ const (
 	ColumnTypeText ColumnType = "text"
 	// ColumnTypeNumber stores numeric values (integer or float).
 	ColumnTypeNumber ColumnType = "number"
-	// ColumnTypeCheckbox stores boolean values as 0/1.
-	ColumnTypeCheckbox ColumnType = "checkbox"
+	// ColumnTypeBool stores boolean values as true/false.
+	ColumnTypeBool ColumnType = "bool"
 	// ColumnTypeDate stores ISO8601 date strings.
 	ColumnTypeDate ColumnType = "date"
 )
@@ -147,7 +147,7 @@ func inferTypeFromValue(v any) ColumnType {
 	}
 	switch v.(type) {
 	case bool:
-		return ColumnTypeCheckbox
+		return ColumnTypeBool
 	case float64:
 		return ColumnTypeNumber
 	case string:
@@ -177,7 +177,7 @@ func goTypeToColumnType(t reflect.Type) ColumnType {
 		reflect.Float32, reflect.Float64:
 		return ColumnTypeNumber
 	case reflect.Bool:
-		return ColumnTypeCheckbox
+		return ColumnTypeBool
 	default:
 		// Default to text for all other types
 		return ColumnTypeText

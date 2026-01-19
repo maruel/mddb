@@ -154,11 +154,14 @@ See `README.md` and `API.md` for details.
     - [x] **Write Path Integration**: Apply coercion in `DatabaseService.CreateRecord()` and `DatabaseService.UpdateRecord()`.
     - [ ] **Comparison Semantics**: Apply affinity rules during filtering/comparison operations.
     - [ ] **Migration Tool**: Optional migration script to coerce existing records to new type rules.
-    - [ ] **Higher-Level Column Types**: Implement `select` and `multi_select` column types in the models/storage layer (not jsonldb). These are UI/application concepts that map to TEXT affinity at storage level. Requires:
-        - Define `ColumnTypeSelect` and `ColumnTypeMultiSelect` in `models` package
-        - Store options metadata separately (in database metadata or column definition extension)
-        - Update frontend to handle select rendering/editing with options
-        - Add validation for select values against defined options
+    - [x] **Higher-Level Column Types**: Implement `select` and `multi_select` column types in the models/storage layer (not jsonldb). These are UI/application concepts that map to TEXT affinity at storage level.
+        - [x] Define `models.ColumnType` with both primitive types (text, number, checkbox, date) and high-level types (select, multi_select)
+        - [x] Add `StorageType()` method to map high-level types to jsonldb storage types
+        - [x] Add `Options []string` field to `models.Column` for select/multi_select options
+        - [x] Update converters in filestore.go to handle type mapping between layers
+        - [x] Update frontend components (DatabaseTable, DatabaseBoard) to use options for select dropdowns
+        - [ ] Store column options in metadata.json (currently only in-memory via API)
+        - [ ] Add validation for select values against defined options
 - [ ] **JSONLDB Sharding (Part 4)**: Add support for sharding in JSONLDB to handle extremely large datasets.
 
 ### Phase 14: URL Standardization
