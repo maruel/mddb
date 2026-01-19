@@ -77,7 +77,7 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	}
 
 	// Update local cache
-	newOrg, _ := s.table.Last()
+	newOrg := s.table.Last()
 	s.byID[id] = newOrg
 
 	// Create organization content directory

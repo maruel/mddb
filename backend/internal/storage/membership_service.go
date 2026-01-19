@@ -77,7 +77,7 @@ func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role mo
 	}
 
 	// Update local cache
-	newM, _ := s.table.Last()
+	newM := s.table.Last()
 	s.byID[key] = newM
 
 	return membership, nil

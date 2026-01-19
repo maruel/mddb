@@ -55,30 +55,26 @@ func (t *Table[T]) Len() int {
 	return len(t.rows)
 }
 
-// Last returns a clone of the most recently appended row.
-//
-// Returns false if the table is empty.
-func (t *Table[T]) Last() (T, bool) {
+// Last returns a clone of the most recently appended row, or nil if empty.
+func (t *Table[T]) Last() T {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if len(t.rows) == 0 {
 		var zero T
-		return zero, false
+		return zero
 	}
-	return t.rows[len(t.rows)-1].Clone(), true
+	return t.rows[len(t.rows)-1].Clone()
 }
 
-// Get returns a clone of the row with the given ID.
-//
-// Returns false if no row with that ID exists.
-func (t *Table[T]) Get(id ID) (T, bool) {
+// Get returns a clone of the row with the given ID, or nil if not found.
+func (t *Table[T]) Get(id ID) T {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if idx, ok := t.byID[id]; ok {
-		return t.rows[idx].Clone(), true
+		return t.rows[idx].Clone()
 	}
 	var zero T
-	return zero, false
+	return zero
 }
 
 // Delete removes a row by ID and persists the change.
@@ -111,11 +107,12 @@ func (t *Table[T]) Delete(id ID) (bool, error) {
 
 // Update replaces an existing row (matched by ID) and persists the change.
 //
-// Returns true if the row existed and was updated, false if no row with that ID exists.
+// Returns the previous row value, or nil if no row with that ID exists.
 // Returns an error if validation fails. The entire table is rewritten to disk on success.
-func (t *Table[T]) Update(row T) (bool, error) {
+func (t *Table[T]) Update(row T) (T, error) {
+	var zero T
 	if err := row.Validate(); err != nil {
-		return false, fmt.Errorf("invalid row: %w", err)
+		return zero, fmt.Errorf("invalid row: %w", err)
 	}
 
 	t.mu.Lock()
@@ -123,14 +120,15 @@ func (t *Table[T]) Update(row T) (bool, error) {
 
 	idx, ok := t.byID[row.GetID()]
 	if !ok {
-		return false, nil
+		return zero, nil
 	}
 
+	prev := t.rows[idx].Clone()
 	t.rows[idx] = row
 	if err := t.save(); err != nil {
-		return false, err
+		return zero, err
 	}
-	return true, nil
+	return prev, nil
 }
 
 // NewTable creates a Table and loads existing data from the JSONL file at path.

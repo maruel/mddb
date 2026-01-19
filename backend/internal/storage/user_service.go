@@ -127,7 +127,7 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 	}
 
 	// Update local cache
-	newStored, _ := s.table.Last()
+	newStored := s.table.Last()
 	s.byID[id] = newStored
 	s.byEmail[email] = newStored
 

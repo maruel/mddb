@@ -84,7 +84,7 @@ func (s *InvitationService) CreateInvitation(email, orgIDStr string, role models
 	}
 
 	// Update local cache
-	newInv, _ := s.table.Last()
+	newInv := s.table.Last()
 	s.byID[id] = newInv
 	s.byToken[token] = newInv
 

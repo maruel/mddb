@@ -118,7 +118,7 @@ func (s *GitRemoteService) CreateRemote(orgIDStr, name, url, remoteType, authTyp
 	}
 
 	// Update cache
-	cachedRemote, _ := s.remoteTable.Last()
+	cachedRemote := s.remoteTable.Last()
 	s.remotesByOrg[orgID] = append(s.remotesByOrg[orgID], cachedRemote)
 
 	// Save secret if provided
