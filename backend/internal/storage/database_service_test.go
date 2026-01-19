@@ -237,7 +237,7 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 		t.Fatalf("Failed to create record: %v", err)
 	}
 
-	if record.ID.IsZero() {
+	if record.ID == "" {
 		t.Error("Record ID should not be empty")
 	}
 	if record.Data["title"] != "My Task" {
@@ -310,7 +310,7 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 	}
 
 	// Retrieve it
-	got, err := service.GetRecord(ctx, db.ID.String(), created.ID.String())
+	got, err := service.GetRecord(ctx, db.ID.String(), created.ID)
 	if err != nil {
 		t.Fatalf("Failed to get record: %v", err)
 	}
@@ -350,7 +350,7 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 
 	// Update it
 	newData := map[string]any{"name": "Updated Name"}
-	updated, err := service.UpdateRecord(ctx, db.ID.String(), created.ID.String(), newData)
+	updated, err := service.UpdateRecord(ctx, db.ID.String(), created.ID, newData)
 	if err != nil {
 		t.Fatalf("Failed to update record: %v", err)
 	}
@@ -363,7 +363,7 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 	}
 
 	// Verify persistence
-	got, err := service.GetRecord(ctx, db.ID.String(), created.ID.String())
+	got, err := service.GetRecord(ctx, db.ID.String(), created.ID)
 	if err != nil {
 		t.Fatalf("Failed to get record: %v", err)
 	}
@@ -398,13 +398,13 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 	}
 
 	// Delete it
-	err = service.DeleteRecord(ctx, db.ID.String(), created.ID.String())
+	err = service.DeleteRecord(ctx, db.ID.String(), created.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete record: %v", err)
 	}
 
 	// Verify it's gone
-	_, err = service.GetRecord(ctx, db.ID.String(), created.ID.String())
+	_, err = service.GetRecord(ctx, db.ID.String(), created.ID)
 	if err == nil {
 		t.Error("Record should not exist after deletion")
 	}

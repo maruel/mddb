@@ -130,10 +130,11 @@ func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts mod
 					}
 
 					if score > 0 {
+						recordID, _ := jsonldb.DecodeID(record.ID)
 						results = append(results, models.SearchResult{
 							Type:     "record",
 							NodeID:   node.ID,
-							RecordID: record.ID,
+							RecordID: recordID,
 							Title:    node.Title,
 							Snippet:  fmt.Sprintf("%s: %s", matchedField, matches[matchedField]),
 							Score:    min(score, 100.0),

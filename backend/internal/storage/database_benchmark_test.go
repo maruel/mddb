@@ -42,8 +42,8 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// Benchmark Record Creation (Append)
 	b.Run("CreateRecord", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			record := &models.DataRecord{
-				ID:       testID(uint64(1000 + i)),
+			record := &jsonldb.DataRecord{
+				ID:       jsonldb.NewID().String(),
 				Created:  time.Now(),
 				Modified: time.Now(),
 				Data: map[string]any{
@@ -68,8 +68,8 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 			b.Fatal(err)
 		}
 		for i := 0; i < 1000; i++ {
-			record := &models.DataRecord{
-				ID:       testID(uint64(2000 + i)),
+			record := &jsonldb.DataRecord{
+				ID:       jsonldb.NewID().String(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -100,8 +100,8 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		}
 		// Write 10,000 records
 		for i := 0; i < 10000; i++ {
-			record := &models.DataRecord{
-				ID:       testID(uint64(3000 + i)),
+			record := &jsonldb.DataRecord{
+				ID:       jsonldb.NewID().String(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  time.Now(),
 				Modified: time.Now(),

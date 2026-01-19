@@ -204,7 +204,7 @@ export interface ListRecordsRequest {
  * ListRecordsResponse is a response containing a list of records.
  */
 export interface ListRecordsResponse {
-  records: { [key: string]: any }[];
+  records: DataRecord[];
 }
 /**
  * CreateRecordRequest is a request to create a record.
@@ -681,7 +681,7 @@ export interface Column {
   required?: boolean;
 }
 /**
- * DataRecord represents a database record associated with a node
+ * DataRecord represents a record in a database.
  */
 export interface DataRecord {
   id: string;

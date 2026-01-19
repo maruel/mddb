@@ -96,10 +96,14 @@ func (h *DatabaseHandler) ListRecords(ctx context.Context, req models.ListRecord
 		return nil, models.InternalWithError("Failed to list records", err)
 	}
 
-	recordList := make([]map[string]any, len(records))
+	recordList := make([]models.DataRecord, len(records))
 	for i, record := range records {
-		recordList[i] = record.Data
-		recordList[i]["_id"] = record.ID.String()
+		recordList[i] = models.DataRecord{
+			ID:       record.ID,
+			Data:     record.Data,
+			Created:  record.Created,
+			Modified: record.Modified,
+		}
 	}
 
 	return &models.ListRecordsResponse{Records: recordList}, nil
@@ -112,7 +116,7 @@ func (h *DatabaseHandler) CreateRecord(ctx context.Context, req models.CreateRec
 		return nil, models.InternalWithError("Failed to create record", err)
 	}
 
-	return &models.CreateRecordResponse{ID: record.ID.String()}, nil
+	return &models.CreateRecordResponse{ID: record.ID}, nil
 }
 
 // UpdateRecord updates an existing record in a database.
@@ -122,7 +126,7 @@ func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req models.UpdateRec
 		return nil, models.NotFound("record")
 	}
 
-	return &models.UpdateRecordResponse{ID: record.ID.String()}, nil
+	return &models.UpdateRecordResponse{ID: record.ID}, nil
 }
 
 // GetRecord retrieves a single record from a database.
@@ -133,7 +137,7 @@ func (h *DatabaseHandler) GetRecord(ctx context.Context, req models.GetRecordReq
 	}
 
 	return &models.GetRecordResponse{
-		ID:       record.ID.String(),
+		ID:       record.ID,
 		Data:     record.Data,
 		Created:  record.Created.Format("2006-01-02T15:04:05Z07:00"),
 		Modified: record.Modified.Format("2006-01-02T15:04:05Z07:00"),

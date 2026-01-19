@@ -115,5 +115,5 @@ func (c *Cache) InvalidateAll() {
 	defer c.mu.Unlock()
 	c.nodeTree = nil
 	c.pages = make(map[jsonldb.ID]*models.Page)
-	c.records = make(map[jsonldb.ID][]*models.DataRecord)
+	c.records = make(map[jsonldb.ID][]*jsonldb.DataRecord)
 }

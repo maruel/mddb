@@ -280,10 +280,6 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordID
 	if err != nil {
 		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
-	recordID, err := jsonldb.DecodeID(recordIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid record id: %w", err)
-	}
 
 	orgID := models.GetOrgID(ctx)
 	records, err := s.fileStore.ReadRecords(orgID, databaseID)

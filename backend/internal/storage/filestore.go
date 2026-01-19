@@ -868,5 +868,3 @@ func columnsFromJSONLDB(cols []jsonldb.Column) []models.Column {
 	}
 	return result
 }
-
-

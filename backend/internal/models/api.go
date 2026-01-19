@@ -177,7 +177,7 @@ type ListRecordsRequest struct {
 
 // ListRecordsResponse is a response containing a list of records.
 type ListRecordsResponse struct {
-	Records []map[string]any `json:"records"`
+	Records []DataRecord `json:"records"`
 }
 
 // CreateRecordRequest is a request to create a record.

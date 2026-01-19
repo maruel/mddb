@@ -58,6 +58,14 @@ type Column struct {
 	Required bool       `json:"required,omitempty"`
 }
 
+// DataRecord represents a record in a database.
+type DataRecord struct {
+	ID       string         `json:"id"`
+	Data     map[string]any `json:"data"`
+	Created  time.Time      `json:"created"`
+	Modified time.Time      `json:"modified"`
+}
+
 // User represents a system user.
 type User struct {
 	ID              jsonldb.ID      `json:"id"`
