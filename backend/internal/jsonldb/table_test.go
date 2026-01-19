@@ -69,19 +69,18 @@ func (r *alwaysInvalidRow) Validate() error {
 	return errors.New("always invalid")
 }
 
+// setupTable creates a table in the test's temp directory.
+func setupTable(t *testing.T) (*Table[*testRow], string) {
+	path := filepath.Join(t.TempDir(), "test.jsonl")
+	table, err := NewTable[*testRow](path)
+	if err != nil {
+		t.Fatalf("NewTable failed: %v", err)
+	}
+	return table, path
+}
+
 // TestTable tests all Table methods using table-driven tests.
 func TestTable(t *testing.T) {
-	// Helper to create a table in the test's temp directory
-	setupTable := func(t *testing.T) (*Table[*testRow], string) {
-		t.Helper()
-		path := filepath.Join(t.TempDir(), "test.jsonl")
-		table, err := NewTable[*testRow](path)
-		if err != nil {
-			t.Fatalf("NewTable failed: %v", err)
-		}
-		return table, path
-	}
-
 	t.Run("Len", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			table, _ := setupTable(t)
