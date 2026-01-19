@@ -12,7 +12,8 @@ import type { Dictionary, Locale } from './types';
 import type { ErrorCode } from '../types';
 
 // Flatten the dictionary for dot-notation access
-type FlatDict = i18n.Flatten<Dictionary>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type FlatDict = i18n.Flatten<Dictionary & Record<string, any>>;
 
 // Dynamic import for dictionaries
 async function fetchDictionary(locale: Locale): Promise<FlatDict> {

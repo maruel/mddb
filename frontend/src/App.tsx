@@ -220,7 +220,7 @@ export default function App() {
 
     // Check for /orgID/nodeID
     const matchWithOrg = path.match(/^\/([^/]+)\/([a-zA-Z0-9_-]+)(?:-.*)?$/);
-    if (matchWithOrg) {
+    if (matchWithOrg && matchWithOrg[1] && matchWithOrg[2]) {
       const orgId = matchWithOrg[1];
       const nodeId = matchWithOrg[2];
 
@@ -472,7 +472,13 @@ export default function App() {
           path.push(node);
           return true;
         }
-        if (node.children && findPath(node.children, targetId)) {
+        if (
+          node.children &&
+          findPath(
+            node.children.filter((c): c is Node => !!c),
+            targetId
+          )
+        ) {
           path.unshift(node);
           return true;
         }

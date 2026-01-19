@@ -102,23 +102,24 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
       const results = await Promise.all(promises);
 
-      if (activeTab() === 'members' && props.user.role === 'admin') {
+      if (activeTab() === 'members' && props.user.role === 'admin' && results[0] && results[1]) {
         const membersData = (await results[0].json()) as ListUsersResponse;
         const invsData = (await results[1].json()) as ListInvitationsResponse;
-        setMembers((membersData.users?.filter(Boolean) as User[]) || []);
-        setInvitations((invsData.invitations?.filter(Boolean) as Invitation[]) || []);
+        setMembers(membersData.users?.filter((u): u is User => !!u) || []);
+        setInvitations(invsData.invitations?.filter((i): i is Invitation => !!i) || []);
       }
 
-      if (activeTab() === 'workspace') {
-        const orgData = (await results[results.length - 1].json()) as Organization;
+      const lastResult = results[results.length - 1];
+      if (activeTab() === 'workspace' && lastResult) {
+        const orgData = (await lastResult.json()) as Organization;
         setOrgName(orgData.name);
         setPublicAccess(orgData.settings?.public_access || false);
         setAllowedDomains(orgData.settings?.allowed_domains?.join(', ') || '');
       }
 
-      if (activeTab() === 'sync' && props.user.role === 'admin') {
-        const remoteData = (await results[results.length - 1].json()) as ListGitRemotesResponse;
-        setRemotes(remoteData.remotes || []);
+      if (activeTab() === 'sync' && props.user.role === 'admin' && lastResult) {
+        const remoteData = (await lastResult.json()) as ListGitRemotesResponse;
+        setRemotes(remoteData.remotes?.filter((r): r is GitRemote => !!r) || []);
       }
 
       // Load membership settings (notifications)
@@ -221,7 +222,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       setError(null);
       setSuccess(null);
 
-      const orgSettings: OrganizationSettings = {
+      const orgSettings: Partial<OrganizationSettings> = {
         public_access: publicAccess(),
         allowed_domains: allowedDomains()
           ? allowedDomains()

@@ -41,7 +41,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
 
       <Show when={isExpanded() && props.node.children?.length}>
         <ul class={styles.childList}>
-          <For each={props.node.children}>
+          <For each={props.node.children?.filter((c): c is Node => !!c)}>
             {(child) => (
               <SidebarNode
                 node={child}

@@ -188,9 +188,9 @@ export default function Onboarding(props: OnboardingProps) {
 
         <div class={styles.footer}>
           <div class={styles.progress}>
-            <div classList={{ [styles.dot]: true, [styles.active]: step() === 'name' }} />
-            <div classList={{ [styles.dot]: true, [styles.active]: step() === 'members' }} />
-            <div classList={{ [styles.dot]: true, [styles.active]: step() === 'git' }} />
+            <div class={`${styles.dot} ${step() === 'name' ? styles.active : ''}`} />
+            <div class={`${styles.dot} ${step() === 'members' ? styles.active : ''}`} />
+            <div class={`${styles.dot} ${step() === 'git' ? styles.active : ''}`} />
           </div>
         </div>
       </div>
