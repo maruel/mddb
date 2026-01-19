@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-// CurrentVersion is the current version of the JSONL database format.
-const CurrentVersion = "1.0"
+// currentVersion is the current version of the JSONL database format.
+const currentVersion = "1.0"
 
 // Column represents a database column in storage.
 type Column struct {
@@ -64,16 +64,17 @@ func schemaFromType[T any]() ([]Column, error) {
 	t := reflect.TypeFor[T]()
 	var val any
 
-	if t.Kind() == reflect.Ptr {
+	switch t.Kind() { //nolint:exhaustive // Only Ptr and Struct are valid; default handles the rest
+	case reflect.Ptr:
 		if t.Elem().Kind() != reflect.Struct {
 			return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
 		}
 		// Create a new instance of the underlying struct
 		val = reflect.New(t.Elem()).Interface()
-	} else if t.Kind() == reflect.Struct {
+	case reflect.Struct:
 		var zero T
 		val = zero
-	} else {
+	default:
 		return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
 	}
 

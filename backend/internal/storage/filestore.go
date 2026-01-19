@@ -389,7 +389,7 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*models.Database, error
 	var title string
 	var dbCreated, dbModified time.Time
 	if data, err := os.ReadFile(metadataFile); err == nil {
-		var metadata map[string]interface{}
+		var metadata map[string]any
 		if err := json.Unmarshal(data, &metadata); err == nil {
 			if t, ok := metadata["title"].(string); ok {
 				title = t
@@ -448,7 +448,7 @@ func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, db *models.Database) error 
 
 	// Write metadata.json with title and other db metadata
 	metadataFile := filepath.Join(pageDir, "metadata.json")
-	metadata := map[string]interface{}{
+	metadata := map[string]any{
 		"title":    db.Title,
 		"version":  db.Version,
 		"created":  db.Created,

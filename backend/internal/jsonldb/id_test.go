@@ -11,8 +11,8 @@ func TestNewID(t *testing.T) {
 	if id == 0 {
 		t.Error("NewID returned zero")
 	}
-	if id.Version() != int(IDVersion) {
-		t.Errorf("Version = %d, want %d", id.Version(), IDVersion)
+	if id.Version() != int(idVersion) {
+		t.Errorf("Version = %d, want %d", id.Version(), idVersion)
 	}
 }
 
