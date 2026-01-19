@@ -1,11 +1,16 @@
 import { For, Show, createMemo } from 'solid-js';
-import { type DataRecord, type Column, ColumnTypeSelect, ColumnTypeMultiSelect } from '../types';
+import {
+  type DataRecord,
+  type Property,
+  PropertyTypeSelect,
+  PropertyTypeMultiSelect,
+} from '../types';
 import styles from './DatabaseBoard.module.css';
 import { useI18n } from '../i18n';
 
 interface DatabaseBoardProps {
   records: DataRecord[];
-  columns: Column[];
+  columns: Property[];
   onDeleteRecord: (id: string) => void;
 }
 
@@ -13,7 +18,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
   const { t } = useI18n();
   // Find the first select column to group by
   const groupColumn = () =>
-    props.columns.find((c) => c.type === ColumnTypeSelect || c.type === ColumnTypeMultiSelect);
+    props.columns.find((c) => c.type === PropertyTypeSelect || c.type === PropertyTypeMultiSelect);
 
   const groups = createMemo(() => {
     const col = groupColumn();
@@ -24,7 +29,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
     // Initialize groups from column options if available
     if (col.options) {
       col.options.forEach((opt) => {
-        grouped[opt] = { name: opt, records: [] };
+        grouped[opt.id] = { name: opt.name, records: [] };
       });
     }
 
@@ -44,8 +49,10 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
     });
 
     // Filter to show groups with records, plus empty groups from options
-    const options = col.options || [];
-    return Object.values(grouped).filter((g) => g.records.length > 0 || options.includes(g.name));
+    const optionNames = (col.options || []).map((opt) => opt.name);
+    return Object.values(grouped).filter(
+      (g) => g.records.length > 0 || optionNames.includes(g.name)
+    );
   });
 
   return (

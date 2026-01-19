@@ -27,9 +27,9 @@ func TestDatabase_ReadWrite(t *testing.T) {
 				ID:      testID(1),
 				Title:   "Test Database",
 				Version: "1.0",
-				Columns: []models.Column{
+				Properties: []models.Property{
 					{Name: "title", Type: "text"},
-					{Name: "status", Type: models.ColumnTypeText},
+					{Name: "status", Type: models.PropertyTypeText},
 				},
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -41,11 +41,11 @@ func TestDatabase_ReadWrite(t *testing.T) {
 				ID:      testID(2),
 				Title:   "Complex Database",
 				Version: "1.0",
-				Columns: []models.Column{
+				Properties: []models.Property{
 					{Name: "text_field", Type: "text", Required: true},
 					{Name: "number_field", Type: "number"},
-					{Name: "select_field", Type: models.ColumnTypeText},
-					{Name: "multi_select", Type: models.ColumnTypeText},
+					{Name: "select_field", Type: models.PropertyTypeText},
+					{Name: "multi_select", Type: models.PropertyTypeText},
 					{Name: "checkbox_field", Type: "checkbox"},
 					{Name: "date_field", Type: "date"},
 				},
@@ -76,13 +76,13 @@ func TestDatabase_ReadWrite(t *testing.T) {
 			if got.Title != tt.database.Title {
 				t.Errorf("Title mismatch: got %q, want %q", got.Title, tt.database.Title)
 			}
-			if len(got.Columns) != len(tt.database.Columns) {
-				t.Errorf("Column count mismatch: got %d, want %d", len(got.Columns), len(tt.database.Columns))
+			if len(got.Properties) != len(tt.database.Properties) {
+				t.Errorf("Column count mismatch: got %d, want %d", len(got.Properties), len(tt.database.Properties))
 			}
 
 			// Verify columns
-			for i, col := range got.Columns {
-				expCol := tt.database.Columns[i]
+			for i, col := range got.Properties {
+				expCol := tt.database.Properties[i]
 				if col.Name != expCol.Name {
 					t.Errorf("Column[%d] Name mismatch: got %q, want %q", i, col.Name, expCol.Name)
 				}
@@ -112,7 +112,7 @@ func TestDatabase_Exists(t *testing.T) {
 		ID:      testID(1),
 		Title:   "Test",
 		Version: "1.0",
-		Columns: []models.Column{
+		Properties: []models.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -151,7 +151,7 @@ func TestDatabase_List(t *testing.T) {
 			ID:      id,
 			Title:   "Database " + id.String(),
 			Version: "1.0",
-			Columns: []models.Column{
+			Properties: []models.Property{
 				{Name: "name", Type: "text"},
 			},
 			Created:  time.Now(),
@@ -198,7 +198,7 @@ func TestDatabase_Delete(t *testing.T) {
 		ID:      testID(1),
 		Title:   "Test",
 		Version: "1.0",
-		Columns: []models.Column{
+		Properties: []models.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -243,7 +243,7 @@ func TestRecord_AppendRead(t *testing.T) {
 		ID:      dbID,
 		Title:   "Test",
 		Version: "1.0",
-		Columns: []models.Column{
+		Properties: []models.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -325,7 +325,7 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 		ID:      dbID,
 		Title:   "Empty DB",
 		Version: "1.0",
-		Columns: []models.Column{
+		Properties: []models.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -361,7 +361,7 @@ func TestDatabase_NestedPath(t *testing.T) {
 		ID:      dbID,
 		Title:   "Database 42",
 		Version: "1.0",
-		Columns: []models.Column{
+		Properties: []models.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),

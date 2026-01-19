@@ -105,9 +105,9 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	// Create test database with records
 	cache := NewCache()
 	dbService := NewDatabaseService(fileStore, nil, cache, nil)
-	columns := []models.Column{
+	columns := []models.Property{
 		{Name: "title", Type: "text", Required: true},
-		{Name: "status", Type: models.ColumnTypeText},
+		{Name: "status", Type: models.PropertyTypeText},
 		{Name: "description", Type: "text"},
 	}
 
@@ -257,7 +257,7 @@ func TestSearchService_Integration(t *testing.T) {
 	_, _ = pageService.CreatePage(newTestContext("org1"), "Blog Post", "Article about searchable content and web development")
 
 	dbService := NewDatabaseService(fileStore, nil, cache, nil)
-	columns := []models.Column{
+	columns := []models.Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "content", Type: "text"},
 	}

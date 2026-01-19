@@ -901,7 +901,8 @@ export default function App() {
                                   <DatabaseTable
                                     databaseId={selectedNodeId() || ''}
                                     columns={
-                                      nodes().find((n) => n.id === selectedNodeId())?.columns || []
+                                      nodes().find((n) => n.id === selectedNodeId())?.properties ||
+                                      []
                                     }
                                     records={records()}
                                     onAddRecord={handleAddRecord}
@@ -914,7 +915,8 @@ export default function App() {
                                   <DatabaseGrid
                                     records={records()}
                                     columns={
-                                      nodes().find((n) => n.id === selectedNodeId())?.columns || []
+                                      nodes().find((n) => n.id === selectedNodeId())?.properties ||
+                                      []
                                     }
                                     onDeleteRecord={handleDeleteRecord}
                                   />
@@ -923,7 +925,8 @@ export default function App() {
                                   <DatabaseGallery
                                     records={records()}
                                     columns={
-                                      nodes().find((n) => n.id === selectedNodeId())?.columns || []
+                                      nodes().find((n) => n.id === selectedNodeId())?.properties ||
+                                      []
                                     }
                                     onDeleteRecord={handleDeleteRecord}
                                   />
@@ -932,7 +935,8 @@ export default function App() {
                                   <DatabaseBoard
                                     records={records()}
                                     columns={
-                                      nodes().find((n) => n.id === selectedNodeId())?.columns || []
+                                      nodes().find((n) => n.id === selectedNodeId())?.properties ||
+                                      []
                                     }
                                     onDeleteRecord={handleDeleteRecord}
                                   />

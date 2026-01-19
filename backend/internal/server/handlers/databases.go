@@ -47,11 +47,11 @@ func (h *DatabaseHandler) GetDatabase(ctx context.Context, req models.GetDatabas
 	}
 
 	return &models.GetDatabaseResponse{
-		ID:       db.ID.String(),
-		Title:    db.Title,
-		Columns:  db.Columns,
-		Created:  db.Created.Format("2006-01-02T15:04:05Z07:00"),
-		Modified: db.Modified.Format("2006-01-02T15:04:05Z07:00"),
+		ID:         db.ID.String(),
+		Title:      db.Title,
+		Properties: db.Properties,
+		Created:    db.Created.Format("2006-01-02T15:04:05Z07:00"),
+		Modified:   db.Modified.Format("2006-01-02T15:04:05Z07:00"),
 	}, nil
 }
 
@@ -61,7 +61,7 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context, req models.CreateD
 		return nil, models.MissingField("title")
 	}
 
-	db, err := h.databaseService.CreateDatabase(ctx, req.Title, req.Columns)
+	db, err := h.databaseService.CreateDatabase(ctx, req.Title, req.Properties)
 	if err != nil {
 		return nil, models.InternalWithError("Failed to create database", err)
 	}
@@ -71,7 +71,7 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context, req models.CreateD
 
 // UpdateDatabase updates a database schema.
 func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, req models.UpdateDatabaseRequest) (*models.UpdateDatabaseResponse, error) {
-	db, err := h.databaseService.UpdateDatabase(ctx, req.ID, req.Title, req.Columns)
+	db, err := h.databaseService.UpdateDatabase(ctx, req.ID, req.Title, req.Properties)
 	if err != nil {
 		return nil, models.NotFound("database")
 	}

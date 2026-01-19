@@ -126,18 +126,18 @@ type GetDatabaseRequest struct {
 
 // GetDatabaseResponse is a response containing a database.
 type GetDatabaseResponse struct {
-	ID       string   `json:"id"`
-	Title    string   `json:"title"`
-	Columns  []Column `json:"columns"`
-	Created  string   `json:"created"`
-	Modified string   `json:"modified"`
+	ID         string     `json:"id"`
+	Title      string     `json:"title"`
+	Properties []Property `json:"properties"`
+	Created    string     `json:"created"`
+	Modified   string     `json:"modified"`
 }
 
 // CreateDatabaseRequest is a request to create a database.
 type CreateDatabaseRequest struct {
-	OrgID   string   `path:"orgID"`
-	Title   string   `json:"title"`
-	Columns []Column `json:"columns"`
+	OrgID      string     `path:"orgID"`
+	Title      string     `json:"title"`
+	Properties []Property `json:"properties"`
 }
 
 // CreateDatabaseResponse is a response from creating a database.
@@ -147,10 +147,10 @@ type CreateDatabaseResponse struct {
 
 // UpdateDatabaseRequest is a request to update a database.
 type UpdateDatabaseRequest struct {
-	OrgID   string   `path:"orgID"`
-	ID      string   `path:"id"`
-	Title   string   `json:"title"`
-	Columns []Column `json:"columns"`
+	OrgID      string     `path:"orgID"`
+	ID         string     `path:"id"`
+	Title      string     `json:"title"`
+	Properties []Property `json:"properties"`
 }
 
 // UpdateDatabaseResponse is a response from updating a database.

@@ -29,7 +29,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		Version:  "1.0",
 		Created:  time.Now(),
 		Modified: time.Now(),
-		Columns: []models.Column{
+		Properties: []models.Property{
 			{Name: "Title", Type: "text"},
 			{Name: "Value", Type: "number"},
 		},

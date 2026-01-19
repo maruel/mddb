@@ -41,7 +41,7 @@ func (s *DatabaseService) GetDatabase(ctx context.Context, idStr string) (*model
 }
 
 // CreateDatabase creates a new database with a generated numeric ID.
-func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, columns []models.Column) (*models.Database, error) {
+func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, columns []models.Property) (*models.Database, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
@@ -65,12 +65,12 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 	id := jsonldb.NewID()
 	now := time.Now()
 	db := &models.Database{
-		ID:       id,
-		Title:    title,
-		Columns:  columns,
-		Created:  now,
-		Modified: now,
-		Version:  "1.0",
+		ID:         id,
+		Title:      title,
+		Properties: columns,
+		Created:    now,
+		Modified:   now,
+		Version:    "1.0",
 	}
 
 	if err := s.fileStore.WriteDatabase(orgID, db); err != nil {
@@ -90,7 +90,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 }
 
 // UpdateDatabase updates an existing database's schema.
-func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title string, columns []models.Column) (*models.Database, error) {
+func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title string, columns []models.Property) (*models.Database, error) {
 	if idStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -113,7 +113,7 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title strin
 	}
 
 	db.Title = title
-	db.Columns = columns
+	db.Properties = columns
 	db.Modified = time.Now()
 
 	if err := s.fileStore.WriteDatabase(orgID, db); err != nil {
@@ -186,7 +186,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 	}
 
 	// Coerce data types based on column schema
-	coercedData := jsonldb.CoerceDataWithTypes(data, columnTypeMap(db.Columns))
+	coercedData := jsonldb.CoerceDataWithTypes(data, propertyTypeMap(db.Properties))
 
 	// Generate record ID
 	id := jsonldb.NewID()
@@ -332,7 +332,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 	}
 
 	// Coerce data types based on column schema
-	coercedData := jsonldb.CoerceDataWithTypes(data, columnTypeMap(db.Columns))
+	coercedData := jsonldb.CoerceDataWithTypes(data, propertyTypeMap(db.Properties))
 
 	record := &models.DataRecord{
 		ID:       recordID,
@@ -393,12 +393,12 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseIDStr, recor
 	return nil
 }
 
-// columnTypeMap builds a map of column name to storage type from a slice of models.Column.
+// propertyTypeMap builds a map of property name to storage type from a slice of models.Property.
 // High-level types (select, multi_select) are mapped to their underlying storage types.
-func columnTypeMap(columns []models.Column) map[string]jsonldb.ColumnType {
-	m := make(map[string]jsonldb.ColumnType, len(columns))
-	for _, col := range columns {
-		m[col.Name] = col.Type.StorageType()
+func propertyTypeMap(props []models.Property) map[string]jsonldb.ColumnType {
+	m := make(map[string]jsonldb.ColumnType, len(props))
+	for _, p := range props {
+		m[p.Name] = p.Type.StorageType()
 	}
 	return m
 }

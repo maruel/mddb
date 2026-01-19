@@ -1,18 +1,18 @@
 import { createSignal, For, Show } from 'solid-js';
 import {
   type DataRecord,
-  type Column,
-  ColumnTypeCheckbox,
-  ColumnTypeSelect,
-  ColumnTypeNumber,
-  ColumnTypeDate,
+  type Property,
+  PropertyTypeCheckbox,
+  PropertyTypeSelect,
+  PropertyTypeNumber,
+  PropertyTypeDate,
 } from '../types';
 import styles from './DatabaseTable.module.css';
 import { useI18n } from '../i18n';
 
 interface DatabaseTableProps {
   databaseId: string;
-  columns: Column[];
+  columns: Property[];
   records: DataRecord[];
   onAddRecord?: (data: Record<string, unknown>) => void;
   onUpdateRecord?: (recordId: string, data: Record<string, unknown>) => void;
@@ -69,7 +69,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
     }
   };
 
-  const renderCellContent = (record: DataRecord, column: Column) => {
+  const renderCellContent = (record: DataRecord, column: Property) => {
     const value = getCellValue(record, column.name);
 
     switch (column.type) {
@@ -87,9 +87,9 @@ export default function DatabaseTable(props: DatabaseTableProps) {
     }
   };
 
-  const renderCellInput = (column: Column, initialValue: string) => {
+  const renderCellInput = (column: Property, initialValue: string) => {
     switch (column.type) {
-      case ColumnTypeCheckbox:
+      case PropertyTypeCheckbox:
         return (
           <input
             type="checkbox"
@@ -98,7 +98,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
             class={styles.input}
           />
         );
-      case ColumnTypeSelect:
+      case PropertyTypeSelect:
         // Use dropdown if options are defined, otherwise text input
         if (column.options && column.options.length > 0) {
           return (
@@ -109,7 +109,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
             >
               <option value="">--</option>
               <For each={column.options}>
-                {(option) => <option value={option}>{option}</option>}
+                {(option) => <option value={option.id}>{option.name}</option>}
               </For>
             </select>
           );
@@ -122,7 +122,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
             class={styles.input}
           />
         );
-      case ColumnTypeNumber:
+      case PropertyTypeNumber:
         return (
           <input
             type="number"
@@ -131,7 +131,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
             class={styles.input}
           />
         );
-      case ColumnTypeDate:
+      case PropertyTypeDate:
         return (
           <input
             type="date"

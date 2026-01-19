@@ -147,7 +147,7 @@ export interface GetDatabaseRequest {
 export interface GetDatabaseResponse {
   id: string;
   title: string;
-  columns: Column[];
+  properties: Property[];
   created: string;
   modified: string;
 }
@@ -157,7 +157,7 @@ export interface GetDatabaseResponse {
 export interface CreateDatabaseRequest {
   OrgID: string;
   title: string;
-  columns: Column[];
+  properties: Property[];
 }
 /**
  * CreateDatabaseResponse is a response from creating a database.
@@ -172,7 +172,7 @@ export interface UpdateDatabaseRequest {
   OrgID: string;
   ID: string;
   title: string;
-  columns: Column[];
+  properties: Property[];
 }
 /**
  * UpdateDatabaseResponse is a response from updating a database.
@@ -646,7 +646,7 @@ export interface Node {
   parent_id?: string; // For hierarchical structure
   title: string;
   content?: string; // Markdown content (Page part)
-  columns?: Column[]; // Schema (Database part)
+  properties?: Property[]; // Schema (Database part)
   created: string;
   modified: string;
   tags?: string[];
@@ -670,54 +670,6 @@ export const NodeTypeDatabase = 'database';
  */
 export const NodeTypeHybrid = 'hybrid';
 export type NodeType = typeof NodeTypeDocument | typeof NodeTypeDatabase | typeof NodeTypeHybrid;
-/**
- * ColumnType represents the type of a database column at the application level.
- * This includes both primitive storage types and higher-level semantic types.
- */
-/**
- * ColumnTypeText stores text values.
- */
-export const ColumnTypeText = 'text';
-/**
- * ColumnTypeNumber stores numeric values (integer or float).
- */
-export const ColumnTypeNumber = 'number';
-/**
- * ColumnTypeCheckbox stores boolean values as 0/1.
- */
-export const ColumnTypeCheckbox = 'checkbox';
-/**
- * ColumnTypeDate stores ISO8601 date strings.
- */
-export const ColumnTypeDate = 'date';
-/**
- * ColumnTypeSelect stores a single selection from predefined options.
- */
-export const ColumnTypeSelect = 'select';
-/**
- * ColumnTypeMultiSelect stores multiple selections as a JSON array string.
- */
-export const ColumnTypeMultiSelect = 'multi_select';
-export type ColumnType =
-  | typeof ColumnTypeText
-  | typeof ColumnTypeNumber
-  | typeof ColumnTypeCheckbox
-  | typeof ColumnTypeDate
-  | typeof ColumnTypeSelect
-  | typeof ColumnTypeMultiSelect;
-/**
- * Column represents a database column
- */
-export interface Column {
-  name: string;
-  type: ColumnType;
-  required?: boolean;
-  /**
-   * Options contains the allowed values for select and multi_select column types.
-   * Ignored for other column types.
-   */
-  options?: string[];
-}
 /**
  * DataRecord represents a record in a database.
  */
@@ -766,6 +718,7 @@ export interface OAuthIdentity {
  * Membership represents a user's relationship with an organization.
  */
 export interface Membership {
+  id: string;
   user_id: string;
   organization_id: string;
   organization_name?: string;
@@ -912,7 +865,7 @@ export interface Page {
 export interface Database {
   id: string;
   title: string;
-  columns: Column[];
+  properties: Property[];
   created: string;
   modified: string;
   version: string; // JSONL format version (e.g., "1.0")
@@ -958,4 +911,77 @@ export interface SearchOptions {
   match_title?: boolean;
   match_body?: boolean;
   match_fields?: boolean;
+}
+
+//////////
+
+/**
+ * PropertyType represents the type of a database property.
+ */
+/**
+ * PropertyTypeText stores plain text values.
+ */
+export const PropertyTypeText = 'text';
+/**
+ * PropertyTypeNumber stores numeric values (integer or float).
+ */
+export const PropertyTypeNumber = 'number';
+/**
+ * PropertyTypeCheckbox stores boolean values.
+ */
+export const PropertyTypeCheckbox = 'checkbox';
+/**
+ * PropertyTypeDate stores ISO8601 date strings.
+ */
+export const PropertyTypeDate = 'date';
+/**
+ * PropertyTypeSelect stores a single selection from predefined options.
+ */
+export const PropertyTypeSelect = 'select';
+/**
+ * PropertyTypeMultiSelect stores multiple selections from predefined options.
+ */
+export const PropertyTypeMultiSelect = 'multi_select';
+/**
+ * PropertyTypeURL stores URLs with validation.
+ */
+export const PropertyTypeURL = 'url';
+/**
+ * PropertyTypeEmail stores email addresses with validation.
+ */
+export const PropertyTypeEmail = 'email';
+/**
+ * PropertyTypePhone stores phone numbers with validation.
+ */
+export const PropertyTypePhone = 'phone';
+export type PropertyType =
+  | typeof PropertyTypeText
+  | typeof PropertyTypeNumber
+  | typeof PropertyTypeCheckbox
+  | typeof PropertyTypeDate
+  | typeof PropertyTypeSelect
+  | typeof PropertyTypeMultiSelect
+  | typeof PropertyTypeURL
+  | typeof PropertyTypeEmail
+  | typeof PropertyTypePhone;
+/**
+ * SelectOption represents an option for select/multi_select properties.
+ */
+export interface SelectOption {
+  id: string;
+  name: string;
+  color?: string;
+}
+/**
+ * Property represents a database property (column) with its configuration.
+ */
+export interface Property {
+  name: string;
+  type: PropertyType;
+  required?: boolean;
+  /**
+   * Options contains the allowed values for select and multi_select properties.
+   * Each option has an ID (used in storage), name (display), and optional color.
+   */
+  options?: SelectOption[];
 }

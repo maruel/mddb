@@ -1,11 +1,11 @@
 import { For, Show } from 'solid-js';
-import type { DataRecord, Column } from '../types';
+import type { DataRecord, Property } from '../types';
 import styles from './DatabaseGallery.module.css';
 import { useI18n } from '../i18n';
 
 interface DatabaseGalleryProps {
   records: DataRecord[];
-  columns: Column[];
+  columns: Property[];
   onDeleteRecord: (id: string) => void;
 }
 

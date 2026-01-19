@@ -226,7 +226,7 @@ func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*models.Node, error) {
 				node.Created = db.Created
 				node.Modified = db.Modified
 			}
-			node.Columns = db.Columns
+			node.Properties = db.Properties
 		}
 	}
 
@@ -310,7 +310,7 @@ func (fs *FileStore) ReadNodeFromPath(orgID jsonldb.ID, path string, id, parentI
 				node.Created = db.Created
 				node.Modified = db.Modified
 			}
-			node.Columns = db.Columns
+			node.Properties = db.Properties
 		}
 	}
 
@@ -398,10 +398,10 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*models.Database, error
 
 	// Convert from jsonldb to models
 	return &models.Database{
-		ID:      id,
-		Title:   title,
-		Columns: columnsFromJSONLDB(schema.Columns),
-		Version: schema.Version,
+		ID:         id,
+		Title:      title,
+		Properties: propertiesFromJSONLDB(schema.Columns),
+		Version:    schema.Version,
 	}, nil
 }
 
@@ -419,7 +419,7 @@ func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, db *models.Database) error 
 	filePath := fs.databaseRecordsFile(orgID, db.ID)
 
 	// Convert columns to jsonldb format
-	jsonldbCols := columnsToJSONLDB(db.Columns)
+	jsonldbCols := propertiesToJSONLDB(db.Properties)
 
 	// Load existing database using jsonldb Table
 	table, err := jsonldb.NewTable[*models.DataRecord](filePath)
@@ -821,53 +821,53 @@ func formatMarkdownFile(page *models.Page) []byte {
 
 // Converters between jsonldb and models types
 
-// columnsToJSONLDB converts models.Column to jsonldb.Column for storage.
-// High-level types (select, multi_select) are mapped to their storage types (text).
+// propertiesToJSONLDB converts models.Property to jsonldb.Column for storage.
+// High-level types (select, multi_select) are mapped to their storage types.
 // Options are not stored in jsonldb schema - they must be stored separately.
-func columnsToJSONLDB(cols []models.Column) []jsonldb.Column {
-	result := make([]jsonldb.Column, len(cols))
-	for i, col := range cols {
+func propertiesToJSONLDB(props []models.Property) []jsonldb.Column {
+	result := make([]jsonldb.Column, len(props))
+	for i, p := range props {
 		result[i] = jsonldb.Column{
-			Name:     col.Name,
-			Type:     col.Type.StorageType(),
-			Required: col.Required,
+			Name:     p.Name,
+			Type:     p.Type.StorageType(),
+			Required: p.Required,
 		}
 	}
 	return result
 }
 
-// columnsFromJSONLDB converts jsonldb.Column to models.Column.
+// propertiesFromJSONLDB converts jsonldb.Column to models.Property.
 // This only recovers primitive types - high-level types (select, multi_select)
 // and their options must be merged from metadata storage.
-func columnsFromJSONLDB(cols []jsonldb.Column) []models.Column {
-	result := make([]models.Column, len(cols))
+func propertiesFromJSONLDB(cols []jsonldb.Column) []models.Property {
+	result := make([]models.Property, len(cols))
 	for i, col := range cols {
-		result[i] = models.Column{
+		result[i] = models.Property{
 			Name:     col.Name,
-			Type:     storageTypeToModelType(col.Type),
+			Type:     storageTypeToPropertyType(col.Type),
 			Required: col.Required,
 		}
 	}
 	return result
 }
 
-// storageTypeToModelType converts a jsonldb storage type to a models column type.
-// Since select/multi_select are stored as text, this only returns primitive types.
+// storageTypeToPropertyType converts a jsonldb storage type to a models property type.
+// Since select/multi_select are stored as text/jsonb, this only returns primitive types.
 // Blob and JSONB storage types don't have high-level equivalents yet.
-func storageTypeToModelType(st jsonldb.ColumnType) models.ColumnType {
+func storageTypeToPropertyType(st jsonldb.ColumnType) models.PropertyType {
 	switch st {
 	case jsonldb.ColumnTypeText:
-		return models.ColumnTypeText
+		return models.PropertyTypeText
 	case jsonldb.ColumnTypeNumber:
-		return models.ColumnTypeNumber
+		return models.PropertyTypeNumber
 	case jsonldb.ColumnTypeBool:
-		return models.ColumnTypeCheckbox
+		return models.PropertyTypeCheckbox
 	case jsonldb.ColumnTypeDate:
-		return models.ColumnTypeDate
+		return models.PropertyTypeDate
 	case jsonldb.ColumnTypeBlob, jsonldb.ColumnTypeJSONB:
 		// No high-level equivalent yet, treat as text
-		return models.ColumnTypeText
+		return models.PropertyTypeText
 	default:
-		return models.ColumnTypeText
+		return models.PropertyTypeText
 	}
 }

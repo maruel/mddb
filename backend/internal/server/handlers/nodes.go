@@ -88,15 +88,15 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeReque
 		// We use databaseService here for better encapsulation
 		ds := storage.NewDatabaseService(h.fileStore, h.gitService, h.cache, h.orgService)
 		var db *models.Database
-		db, err = ds.CreateDatabase(ctx, req.Title, []models.Column{})
+		db, err = ds.CreateDatabase(ctx, req.Title, []models.Property{})
 		if err == nil {
 			node = &models.Node{
-				ID:       db.ID,
-				Title:    db.Title,
-				Columns:  db.Columns,
-				Type:     models.NodeTypeDatabase,
-				Created:  db.Created,
-				Modified: db.Modified,
+				ID:         db.ID,
+				Title:      db.Title,
+				Properties: db.Properties,
+				Type:       models.NodeTypeDatabase,
+				Created:    db.Created,
+				Modified:   db.Modified,
 			}
 		}
 	case models.NodeTypeHybrid:

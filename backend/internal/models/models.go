@@ -28,8 +28,8 @@ type Node struct {
 	ID         jsonldb.ID `json:"id"`
 	ParentID   jsonldb.ID `json:"parent_id,omitempty"` // For hierarchical structure
 	Title      string     `json:"title"`
-	Content    string     `json:"content,omitempty"` // Markdown content (Page part)
-	Columns    []Column   `json:"columns,omitempty"` // Schema (Database part)
+	Content    string     `json:"content,omitempty"`    // Markdown content (Page part)
+	Properties []Property `json:"properties,omitempty"` // Schema (Database part)
 	Created    time.Time  `json:"created"`
 	Modified   time.Time  `json:"modified"`
 	Tags       []string   `json:"tags,omitempty"`
@@ -49,57 +49,6 @@ const (
 	// NodeTypeHybrid represents an entity that is both a document and a database
 	NodeTypeHybrid NodeType = "hybrid"
 )
-
-// ColumnType represents the type of a database column at the application level.
-// This includes both primitive storage types and higher-level semantic types.
-type ColumnType string
-
-const (
-	// Primitive types (map directly to jsonldb storage types)
-
-	// ColumnTypeText stores text values.
-	ColumnTypeText ColumnType = "text"
-	// ColumnTypeNumber stores numeric values (integer or float).
-	ColumnTypeNumber ColumnType = "number"
-	// ColumnTypeCheckbox stores boolean values as 0/1.
-	ColumnTypeCheckbox ColumnType = "checkbox"
-	// ColumnTypeDate stores ISO8601 date strings.
-	ColumnTypeDate ColumnType = "date"
-
-	// High-level semantic types (stored as text in jsonldb)
-
-	// ColumnTypeSelect stores a single selection from predefined options.
-	ColumnTypeSelect ColumnType = "select"
-	// ColumnTypeMultiSelect stores multiple selections as a JSON array string.
-	ColumnTypeMultiSelect ColumnType = "multi_select"
-)
-
-// StorageType returns the underlying jsonldb storage type for this column type.
-// High-level types like select and multi_select map to text storage.
-func (ct ColumnType) StorageType() jsonldb.ColumnType {
-	switch ct {
-	case ColumnTypeText, ColumnTypeSelect, ColumnTypeMultiSelect:
-		return jsonldb.ColumnTypeText
-	case ColumnTypeNumber:
-		return jsonldb.ColumnTypeNumber
-	case ColumnTypeCheckbox:
-		return jsonldb.ColumnTypeBool
-	case ColumnTypeDate:
-		return jsonldb.ColumnTypeDate
-	default:
-		return jsonldb.ColumnTypeText
-	}
-}
-
-// Column represents a database column
-type Column struct {
-	Name     string     `json:"name"`
-	Type     ColumnType `json:"type"`
-	Required bool       `json:"required,omitempty"`
-	// Options contains the allowed values for select and multi_select column types.
-	// Ignored for other column types.
-	Options []string `json:"options,omitempty"`
-}
 
 // DataRecord represents a record in a database.
 type DataRecord struct {
@@ -409,12 +358,12 @@ type Page struct {
 
 // Database represents a structured database with schema and metadata.
 type Database struct {
-	ID       jsonldb.ID `json:"id"`
-	Title    string     `json:"title"`
-	Columns  []Column   `json:"columns"`
-	Created  time.Time  `json:"created"`
-	Modified time.Time  `json:"modified"`
-	Version  string     `json:"version"` // JSONL format version (e.g., "1.0")
+	ID         jsonldb.ID `json:"id"`
+	Title      string     `json:"title"`
+	Properties []Property `json:"properties"`
+	Created    time.Time  `json:"created"`
+	Modified   time.Time  `json:"modified"`
+	Version    string     `json:"version"` // JSONL format version (e.g., "1.0")
 }
 
 // Commit represents a commit in git history.
