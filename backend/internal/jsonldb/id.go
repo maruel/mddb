@@ -11,13 +11,13 @@ import (
 
 // ID structure (64 bits):
 // - Bit 63: sign (always 0, keeps int64 positive)
-// - Bits 62-20: milliseconds since Epoch (43 bits = ~278 years)
+// - Bits 62-20: milliseconds since epoch (43 bits = ~278 years)
 // - Bits 19-4: random (16 bits = 65536 values per ms)
 // - Bits 3-0: version (4 bits)
 
 const (
-	// Epoch is 2024-01-01 00:00:00 UTC in milliseconds.
-	Epoch int64 = 1704067200000
+	// epoch is 2026-01-01 00:00:00 UTC in milliseconds.
+	epoch int64 = 1767225600000
 
 	// IDVersion is the current ID schema version.
 	// Bump this when the ID format changes in a breaking way.
@@ -59,10 +59,7 @@ func NewID() ID {
 	idMu.Lock()
 	defer idMu.Unlock()
 
-	ms := time.Now().UnixMilli() - Epoch
-	if ms < 0 {
-		ms = 0
-	}
+	ms := max(0, time.Now().UnixMilli()-epoch)
 
 	var randBits uint16
 	if ms == idLastMs {
@@ -168,7 +165,7 @@ func DecodeID(s string) (ID, error) {
 
 // Time extracts the timestamp from an ID.
 func (id ID) Time() time.Time {
-	ms := int64(id>>20) + Epoch
+	ms := int64(id>>20) + epoch
 	return time.UnixMilli(ms)
 }
 

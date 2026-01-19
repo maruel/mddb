@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"iter"
 	"os"
+	"sort"
 	"sync"
 	"time"
 )
@@ -124,12 +125,40 @@ func (t *Table[T]) load() error {
 }
 
 // All returns an iterator over clones of all rows.
+//
+// Warning: The reader lock is held during iteration.
 func (t *Table[T]) All() iter.Seq[T] {
 	return func(yield func(T) bool) {
 		t.mu.RLock()
 		defer t.mu.RUnlock()
 		for _, row := range t.rows {
 			if !yield(row.Clone()) {
+				return
+			}
+		}
+	}
+}
+
+// Iter returns an iterator over clones of rows with ID strictly greater than startID.
+// This is efficient for pagination when used with sorted IDs.
+//
+// Warning: The reader lock is held during iteration.
+func (t *Table[T]) Iter(startID ID) iter.Seq[T] {
+	return func(yield func(T) bool) {
+		t.mu.RLock()
+		defer t.mu.RUnlock()
+
+		startIdx := 0
+		if !startID.IsZero() {
+			// Find the first row with ID > startID.
+			// This assumes t.rows is sorted by ID.
+			startIdx = sort.Search(len(t.rows), func(i int) bool {
+				return t.rows[i].GetID().Compare(startID) > 0
+			})
+		}
+
+		for i := startIdx; i < len(t.rows); i++ {
+			if !yield(t.rows[i].Clone()) {
 				return
 			}
 		}
