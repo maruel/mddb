@@ -1,7 +1,6 @@
 package jsonldb
 
 import (
-	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -112,13 +111,7 @@ func TestSchemaFromType(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		// Test that NewTable successfully creates schema for testRow type
 		t.Run("creates schema through table with pointer type", func(t *testing.T) {
-			tmpDir, err := os.MkdirTemp("", "jsonl-schema-*")
-			if err != nil {
-				t.Fatalf("failed to create temp dir: %v", err)
-			}
-			defer os.RemoveAll(tmpDir)
-
-			path := filepath.Join(tmpDir, "schema.jsonl")
+			path := filepath.Join(t.TempDir(), "schema.jsonl")
 			table, err := NewTable[*testRow](path)
 			if err != nil {
 				t.Fatalf("NewTable error: %v", err)
@@ -147,13 +140,7 @@ func TestSchemaFromType(t *testing.T) {
 
 		// Test with value type (non-pointer struct)
 		t.Run("creates schema for value type", func(t *testing.T) {
-			tmpDir, err := os.MkdirTemp("", "jsonl-schema-*")
-			if err != nil {
-				t.Fatalf("failed to create temp dir: %v", err)
-			}
-			defer os.RemoveAll(tmpDir)
-
-			path := filepath.Join(tmpDir, "value.jsonl")
+			path := filepath.Join(t.TempDir(), "value.jsonl")
 			table, err := NewTable[schemaTestStruct](path)
 			if err != nil {
 				t.Fatalf("NewTable error: %v", err)
@@ -166,13 +153,7 @@ func TestSchemaFromType(t *testing.T) {
 
 		// Test with validatingRow type
 		t.Run("creates schema for validating row type", func(t *testing.T) {
-			tmpDir, err := os.MkdirTemp("", "jsonl-schema-*")
-			if err != nil {
-				t.Fatalf("failed to create temp dir: %v", err)
-			}
-			defer os.RemoveAll(tmpDir)
-
-			path := filepath.Join(tmpDir, "validating.jsonl")
+			path := filepath.Join(t.TempDir(), "validating.jsonl")
 			table, err := NewTable[*validatingRow](path)
 			if err != nil {
 				t.Fatalf("NewTable error: %v", err)

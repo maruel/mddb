@@ -71,27 +71,20 @@ func (r *alwaysInvalidRow) Validate() error {
 
 // TestTable tests all Table methods using table-driven tests.
 func TestTable(t *testing.T) {
-	// Helper to create a temporary directory and table
-	setupTable := func(t *testing.T) (*Table[*testRow], string, func()) {
+	// Helper to create a table in the test's temp directory
+	setupTable := func(t *testing.T) (*Table[*testRow], string) {
 		t.Helper()
-		tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-		if err != nil {
-			t.Fatalf("failed to create temp dir: %v", err)
-		}
-		path := filepath.Join(tmpDir, "test.jsonl")
+		path := filepath.Join(t.TempDir(), "test.jsonl")
 		table, err := NewTable[*testRow](path)
 		if err != nil {
-			os.RemoveAll(tmpDir)
 			t.Fatalf("NewTable failed: %v", err)
 		}
-		cleanup := func() { os.RemoveAll(tmpDir) }
-		return table, path, cleanup
+		return table, path
 	}
 
 	t.Run("Len", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			table, _, cleanup := setupTable(t)
-			defer cleanup()
+			table, _ := setupTable(t)
 
 			tests := []struct {
 				name    string
@@ -120,8 +113,7 @@ func TestTable(t *testing.T) {
 
 	t.Run("Last", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			table, _, cleanup := setupTable(t)
-			defer cleanup()
+			table, _ := setupTable(t)
 
 			// Test empty table returns zero value
 			t.Run("empty table", func(t *testing.T) {
@@ -162,8 +154,7 @@ func TestTable(t *testing.T) {
 
 	t.Run("Get", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			table, _, cleanup := setupTable(t)
-			defer cleanup()
+			table, _ := setupTable(t)
 
 			// Add test data
 			table.Append(&testRow{ID: 10, Name: "Ten"})
@@ -198,8 +189,7 @@ func TestTable(t *testing.T) {
 		})
 
 		t.Run("returns clone", func(t *testing.T) {
-			table, _, cleanup := setupTable(t)
-			defer cleanup()
+			table, _ := setupTable(t)
 
 			table.Append(&testRow{ID: 1, Name: "Original"})
 			got := table.Get(ID(1))
@@ -214,8 +204,7 @@ func TestTable(t *testing.T) {
 
 	t.Run("Delete", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			table, path, cleanup := setupTable(t)
-			defer cleanup()
+			table, path := setupTable(t)
 
 			// Add test data
 			table.Append(&testRow{ID: 1, Name: "One"})
@@ -264,8 +253,7 @@ func TestTable(t *testing.T) {
 		})
 
 		t.Run("delete first row", func(t *testing.T) {
-			table, _, cleanup := setupTable(t)
-			defer cleanup()
+			table, _ := setupTable(t)
 
 			table.Append(&testRow{ID: 1, Name: "One"})
 			table.Append(&testRow{ID: 2, Name: "Two"})
@@ -286,8 +274,7 @@ func TestTable(t *testing.T) {
 		})
 
 		t.Run("delete last row", func(t *testing.T) {
-			table, _, cleanup := setupTable(t)
-			defer cleanup()
+			table, _ := setupTable(t)
 
 			table.Append(&testRow{ID: 1, Name: "One"})
 			table.Append(&testRow{ID: 2, Name: "Two"})
@@ -310,8 +297,7 @@ func TestTable(t *testing.T) {
 
 	t.Run("Update", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			table, path, cleanup := setupTable(t)
-			defer cleanup()
+			table, path := setupTable(t)
 
 			// Add test data
 			table.Append(&testRow{ID: 1, Name: "Original"})
@@ -354,13 +340,7 @@ func TestTable(t *testing.T) {
 		})
 
 		t.Run("errors", func(t *testing.T) {
-			tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-			if err != nil {
-				t.Fatalf("failed to create temp dir: %v", err)
-			}
-			defer os.RemoveAll(tmpDir)
-
-			path := filepath.Join(tmpDir, "test.jsonl")
+			path := filepath.Join(t.TempDir(), "test.jsonl")
 			table, err := NewTable[*validatingRow](path)
 			if err != nil {
 				t.Fatalf("NewTable failed: %v", err)
@@ -380,13 +360,7 @@ func TestTable(t *testing.T) {
 	t.Run("NewTable", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			t.Run("creates new table", func(t *testing.T) {
-				tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-				if err != nil {
-					t.Fatalf("failed to create temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
-				path := filepath.Join(tmpDir, "new.jsonl")
+				path := filepath.Join(t.TempDir(), "new.jsonl")
 				table, err := NewTable[*testRow](path)
 				if err != nil {
 					t.Fatalf("NewTable error: %v", err)
@@ -397,8 +371,7 @@ func TestTable(t *testing.T) {
 			})
 
 			t.Run("loads existing table", func(t *testing.T) {
-				table, path, cleanup := setupTable(t)
-				defer cleanup()
+				table, path := setupTable(t)
 
 				table.Append(&testRow{ID: 1, Name: "One"})
 				table.Append(&testRow{ID: 2, Name: "Two"})
@@ -415,125 +388,83 @@ func TestTable(t *testing.T) {
 
 		t.Run("errors", func(t *testing.T) {
 			t.Run("unreadable file", func(t *testing.T) {
-				tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-				if err != nil {
-					t.Fatalf("failed to create temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
 				// Create a directory where we expect a file
-				path := filepath.Join(tmpDir, "not-a-file")
+				path := filepath.Join(t.TempDir(), "not-a-file")
 				os.Mkdir(path, 0o755)
 
-				_, err = NewTable[*testRow](path)
+				_, err := NewTable[*testRow](path)
 				if err == nil {
 					t.Error("NewTable() expected error for directory, got nil")
 				}
 			})
 
 			t.Run("invalid schema header", func(t *testing.T) {
-				tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-				if err != nil {
-					t.Fatalf("failed to create temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
-				path := filepath.Join(tmpDir, "bad-schema.jsonl")
+				path := filepath.Join(t.TempDir(), "bad-schema.jsonl")
 				os.WriteFile(path, []byte("not valid json\n"), 0o644)
 
-				_, err = NewTable[*testRow](path)
+				_, err := NewTable[*testRow](path)
 				if err == nil {
 					t.Error("NewTable() expected error for invalid schema, got nil")
 				}
 			})
 
 			t.Run("invalid row data", func(t *testing.T) {
-				tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-				if err != nil {
-					t.Fatalf("failed to create temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
-				path := filepath.Join(tmpDir, "bad-row.jsonl")
+				path := filepath.Join(t.TempDir(), "bad-row.jsonl")
 				// Valid schema header, invalid row
 				os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 not valid json
 `), 0o644)
 
-				_, err = NewTable[*testRow](path)
+				_, err := NewTable[*testRow](path)
 				if err == nil {
 					t.Error("NewTable() expected error for invalid row, got nil")
 				}
 			})
 
 			t.Run("row with zero ID", func(t *testing.T) {
-				tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-				if err != nil {
-					t.Fatalf("failed to create temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
-				path := filepath.Join(tmpDir, "zero-id.jsonl")
+				path := filepath.Join(t.TempDir(), "zero-id.jsonl")
 				os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 {"id":0,"name":"Zero"}
 `), 0o644)
 
-				_, err = NewTable[*testRow](path)
+				_, err := NewTable[*testRow](path)
 				if err == nil {
 					t.Error("NewTable() expected error for zero ID row, got nil")
 				}
 			})
 
 			t.Run("duplicate ID", func(t *testing.T) {
-				tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-				if err != nil {
-					t.Fatalf("failed to create temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
-				path := filepath.Join(tmpDir, "dup-id.jsonl")
+				path := filepath.Join(t.TempDir(), "dup-id.jsonl")
 				os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 {"id":1,"name":"First"}
 {"id":1,"name":"Duplicate"}
 `), 0o644)
 
-				_, err = NewTable[*testRow](path)
+				_, err := NewTable[*testRow](path)
 				if err == nil {
 					t.Error("NewTable() expected error for duplicate ID, got nil")
 				}
 			})
 
 			t.Run("invalid schema version", func(t *testing.T) {
-				tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-				if err != nil {
-					t.Fatalf("failed to create temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
-				path := filepath.Join(tmpDir, "bad-version.jsonl")
+				path := filepath.Join(t.TempDir(), "bad-version.jsonl")
 				os.WriteFile(path, []byte(`{"version":"","columns":[]}
 `), 0o644)
 
-				_, err = NewTable[*testRow](path)
+				_, err := NewTable[*testRow](path)
 				if err == nil {
 					t.Error("NewTable() expected error for empty version, got nil")
 				}
 			})
 
 			t.Run("row fails validation on load", func(t *testing.T) {
-				tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-				if err != nil {
-					t.Fatalf("failed to create temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
 				// Use alwaysInvalidRow which always fails validation
-				path := filepath.Join(tmpDir, "invalid-row.jsonl")
+				path := filepath.Join(t.TempDir(), "invalid-row.jsonl")
 				os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 {"id":1,"name":"Test"}
 `), 0o644)
 
-				_, err = NewTable[*alwaysInvalidRow](path)
+				_, err := NewTable[*alwaysInvalidRow](path)
 				if err == nil {
 					t.Error("NewTable() expected error for invalid row, got nil")
 				}
@@ -543,8 +474,7 @@ not valid json
 
 	t.Run("Iter", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			table, _, cleanup := setupTable(t)
-			defer cleanup()
+			table, _ := setupTable(t)
 
 			iterRows := []*testRow{
 				{ID: 10, Name: "Ten"},
@@ -583,8 +513,7 @@ not valid json
 		})
 
 		t.Run("early termination", func(t *testing.T) {
-			table, _, cleanup := setupTable(t)
-			defer cleanup()
+			table, _ := setupTable(t)
 
 			for i := 1; i <= 10; i++ {
 				table.Append(&testRow{ID: i, Name: "Row"})
@@ -604,8 +533,7 @@ not valid json
 		})
 
 		t.Run("returns clones", func(t *testing.T) {
-			table, _, cleanup := setupTable(t)
-			defer cleanup()
+			table, _ := setupTable(t)
 
 			table.Append(&testRow{ID: 1, Name: "Original"})
 
@@ -622,8 +550,7 @@ not valid json
 
 	t.Run("Append", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			table, path, cleanup := setupTable(t)
-			defer cleanup()
+			table, path := setupTable(t)
 
 			t.Run("append to empty table", func(t *testing.T) {
 				err := table.Append(&testRow{ID: 1, Name: "First"})
@@ -658,8 +585,7 @@ not valid json
 
 		t.Run("errors", func(t *testing.T) {
 			t.Run("zero ID", func(t *testing.T) {
-				table, _, cleanup := setupTable(t)
-				defer cleanup()
+				table, _ := setupTable(t)
 
 				err := table.Append(&testRow{ID: 0, Name: "Zero"})
 				if err == nil {
@@ -668,8 +594,7 @@ not valid json
 			})
 
 			t.Run("duplicate ID", func(t *testing.T) {
-				table, _, cleanup := setupTable(t)
-				defer cleanup()
+				table, _ := setupTable(t)
 
 				table.Append(&testRow{ID: 1, Name: "First"})
 				err := table.Append(&testRow{ID: 1, Name: "Duplicate"})
@@ -679,13 +604,7 @@ not valid json
 			})
 
 			t.Run("validation error", func(t *testing.T) {
-				tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
-				if err != nil {
-					t.Fatalf("failed to create temp dir: %v", err)
-				}
-				defer os.RemoveAll(tmpDir)
-
-				path := filepath.Join(tmpDir, "test.jsonl")
+				path := filepath.Join(t.TempDir(), "test.jsonl")
 				table, err := NewTable[*validatingRow](path)
 				if err != nil {
 					t.Fatalf("NewTable failed: %v", err)
@@ -701,8 +620,7 @@ not valid json
 
 	t.Run("Replace", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			table, path, cleanup := setupTable(t)
-			defer cleanup()
+			table, path := setupTable(t)
 
 			// Add initial data
 			table.Append(&testRow{ID: 1, Name: "One"})
@@ -763,8 +681,7 @@ not valid json
 
 		t.Run("errors", func(t *testing.T) {
 			t.Run("duplicate ID in replacement", func(t *testing.T) {
-				table, _, cleanup := setupTable(t)
-				defer cleanup()
+				table, _ := setupTable(t)
 
 				err := table.Replace([]*testRow{
 					{ID: 1, Name: "First"},
