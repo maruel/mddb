@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-// CurrentVersion is the current version of the JSONL database format.
-const CurrentVersion = "1.0"
+// currentVersion is the current version of the JSONL database format.
+const currentVersion = "1.0"
 
 // Column represents a database column in storage.
 type Column struct {

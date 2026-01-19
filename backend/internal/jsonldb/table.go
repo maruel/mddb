@@ -73,7 +73,7 @@ func NewTable[T Row[T]](path string) (*Table[T], error) {
 		}
 		now := time.Now()
 		table.schema = schemaHeader{
-			Version:  CurrentVersion,
+			Version:  currentVersion,
 			Columns:  columns,
 			Created:  now,
 			Modified: now,

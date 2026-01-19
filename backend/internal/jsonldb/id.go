@@ -19,9 +19,9 @@ const (
 	// epoch is 2026-01-01 00:00:00 UTC in milliseconds.
 	epoch int64 = 1767225600000
 
-	// IDVersion is the current ID schema version.
+	// idVersion is the current ID schema version.
 	// Bump this when the ID format changes in a breaking way.
-	IDVersion uint64 = 1
+	idVersion uint64 = 1
 
 	// idEncodedLen is the fixed length of encoded IDs.
 	// 64 bits / 6 bits per char = 10.67, rounded up to 11.
@@ -75,7 +75,7 @@ func NewID() ID {
 		randBits = idCounter
 	}
 
-	return newIDFromParts(uint64(ms), uint64(randBits), IDVersion)
+	return newIDFromParts(uint64(ms), uint64(randBits), idVersion)
 }
 
 func newIDFromParts(ms, randBits, version uint64) ID {
