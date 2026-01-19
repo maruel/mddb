@@ -138,7 +138,7 @@ func TestIDCompare(t *testing.T) {
 }
 
 func BenchmarkNewID(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		NewID()
 	}
 }
@@ -146,7 +146,7 @@ func BenchmarkNewID(b *testing.B) {
 func BenchmarkIDEncode(b *testing.B) {
 	id := NewID()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = id.String()
 	}
 }
@@ -155,7 +155,7 @@ func BenchmarkDecodeID(b *testing.B) {
 	id := NewID()
 	encoded := id.String()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = DecodeID(encoded)
 	}
 }

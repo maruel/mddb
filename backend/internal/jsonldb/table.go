@@ -157,8 +157,8 @@ func (t *Table[T]) Iter(startID ID) iter.Seq[T] {
 			})
 		}
 
-		for i := startIdx; i < len(t.rows); i++ {
-			if !yield(t.rows[i].Clone()) {
+		for _, row := range t.rows[startIdx:] {
+			if !yield(row.Clone()) {
 				return
 			}
 		}

@@ -103,7 +103,7 @@ func (id ID) String() string {
 		v >>= 6
 	}
 	// Strip leading '-' (zeros)
-	for i := 0; i < idEncodedLen; i++ {
+	for i := range idEncodedLen {
 		if buf[i] != '-' {
 			return string(buf[i:])
 		}
@@ -149,7 +149,7 @@ func DecodeID(s string) (ID, error) {
 		s = "-" + s
 	}
 	var v uint64
-	for i := 0; i < idEncodedLen; i++ {
+	for i := range idEncodedLen {
 		c := s[i]
 		if c >= 128 {
 			return 0, fmt.Errorf("invalid ID character at position %d: %c", i, c)

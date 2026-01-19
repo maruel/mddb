@@ -265,7 +265,7 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 
 	// Create multiple records
 	recordCount := 3
-	for i := 0; i < recordCount; i++ {
+	for i := range recordCount {
 		data := map[string]any{"name": "Record " + string(rune(i))}
 		_, err := service.CreateRecord(ctx, db.ID.String(), data)
 		if err != nil {

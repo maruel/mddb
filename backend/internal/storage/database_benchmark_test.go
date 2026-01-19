@@ -41,7 +41,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 
 	// Benchmark Record Creation (Append)
 	b.Run("CreateRecord", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for i := range b.N {
 			record := &models.DataRecord{
 				ID:       jsonldb.NewID(),
 				Created:  time.Now(),
@@ -67,7 +67,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		if err := fs.WriteDatabase(orgID, readDB); err != nil {
 			b.Fatal(err)
 		}
-		for i := 0; i < 1000; i++ {
+		for range 1000 {
 			record := &models.DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"c1": "test"},
@@ -80,7 +80,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			records, err := fs.ReadRecords(orgID, readDBID)
 			if err != nil {
 				b.Fatal(err)
@@ -99,7 +99,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 			b.Fatal(err)
 		}
 		// Write 10,000 records
-		for i := 0; i < 10000; i++ {
+		for range 10000 {
 			record := &models.DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"c1": "test"},
@@ -112,7 +112,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		}
 
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			// Read 50 records from middle
 			records, err := fs.ReadRecordsPage(orgID, readDBID, 5000, 50)
 			if err != nil {
