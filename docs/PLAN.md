@@ -89,8 +89,12 @@ See `README.md` and `API.md` for details.
 - [ ] **Notion Research**: Document product design insights from Notion documentation in `docs/notion/`.
 
 ### Phase 11: AI Intelligence
+- [ ] **Advanced Search**:
+    - [ ] **BM25 Full-Text Search**: High-quality keyword search implementation.
+    - [ ] **Vector Semantic Search**: Embedding generation for documents and records to support semantic search.
+    - [ ] **LLM Reranking**: Use LLM to rerank search results for relevance.
+    - **Inspiration**: https://github.com/tobi/qmd for search implementation patterns.
 - [ ] **MCP Server**: Full implementation of the Model Context Protocol to expose documents/databases to AI agents.
-- [ ] **Vector Search Integration**: Embedding generation for documents and records to support semantic search.
 - [ ] **In-Editor AI Actions**: Context-aware AI commands for content generation and summarization.
 - [ ] **Data Repository Context**: Automatically add `AGENTS.md` to organization repositories for agent guidance.
 
