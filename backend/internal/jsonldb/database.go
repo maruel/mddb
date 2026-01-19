@@ -29,6 +29,10 @@ const (
 	ColumnTypeBool ColumnType = "bool"
 	// ColumnTypeDate stores ISO8601 date strings.
 	ColumnTypeDate ColumnType = "date"
+	// ColumnTypeBlob stores binary data as base64-encoded string.
+	ColumnTypeBlob ColumnType = "blob"
+	// ColumnTypeJSONB stores structured data (struct, slice, map) as JSON.
+	ColumnTypeJSONB ColumnType = "jsonb"
 )
 
 // Column represents a database column in storage.
@@ -152,6 +156,10 @@ func inferTypeFromValue(v any) ColumnType {
 		return ColumnTypeNumber
 	case string:
 		return ColumnTypeText
+	case []byte:
+		return ColumnTypeBlob
+	case []any, map[string]any:
+		return ColumnTypeJSONB
 	default:
 		return ColumnTypeText
 	}
@@ -169,17 +177,29 @@ func goTypeToColumnType(t reflect.Type) ColumnType {
 		return ColumnTypeDate
 	}
 
-	switch t.Kind() { //nolint:exhaustive // Other kinds default to text
+	// Check for []byte (blob)
+	if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Uint8 {
+		return ColumnTypeBlob
+	}
+
+	switch t.Kind() {
 	case reflect.String:
 		return ColumnTypeText
+	case reflect.Bool:
+		return ColumnTypeBool
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 		reflect.Float32, reflect.Float64:
 		return ColumnTypeNumber
-	case reflect.Bool:
-		return ColumnTypeBool
-	default:
-		// Default to text for all other types
+	case reflect.Struct, reflect.Slice, reflect.Array, reflect.Map:
+		return ColumnTypeJSONB
+	case reflect.Complex64, reflect.Complex128:
+		// Complex numbers stored as JSON array [real, imag]
+		return ColumnTypeJSONB
+	case reflect.Invalid, reflect.Uintptr, reflect.Chan, reflect.Func,
+		reflect.Interface, reflect.Pointer, reflect.UnsafePointer:
+		// Unsupported types default to text
 		return ColumnTypeText
 	}
+	return ColumnTypeText
 }

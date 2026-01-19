@@ -853,6 +853,7 @@ func columnsFromJSONLDB(cols []jsonldb.Column) []models.Column {
 
 // storageTypeToModelType converts a jsonldb storage type to a models column type.
 // Since select/multi_select are stored as text, this only returns primitive types.
+// Blob and JSONB storage types don't have high-level equivalents yet.
 func storageTypeToModelType(st jsonldb.ColumnType) models.ColumnType {
 	switch st {
 	case jsonldb.ColumnTypeText:
@@ -863,6 +864,9 @@ func storageTypeToModelType(st jsonldb.ColumnType) models.ColumnType {
 		return models.ColumnTypeCheckbox
 	case jsonldb.ColumnTypeDate:
 		return models.ColumnTypeDate
+	case jsonldb.ColumnTypeBlob, jsonldb.ColumnTypeJSONB:
+		// No high-level equivalent yet, treat as text
+		return models.ColumnTypeText
 	default:
 		return models.ColumnTypeText
 	}

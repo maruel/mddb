@@ -54,6 +54,9 @@ func (ct ColumnType) Affinity() Affinity {
 	case ColumnTypeDate:
 		// ISO8601 string format
 		return AffinityTEXT
+	case ColumnTypeBlob, ColumnTypeJSONB:
+		// No coercion for blob/jsonb - stored as-is
+		return AffinityBLOB
 	default:
 		// Unknown types default to BLOB (no coercion)
 		return AffinityBLOB
