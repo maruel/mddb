@@ -126,14 +126,16 @@ See `README.md` and `API.md` for details.
 - [x] **JSONLDB Evolution (Part 1)**:
     - [x] Add versioning and column definitions to the first row of JSONL files.
     - [x] Deprecate and remove `metadata.json` for databases.
-- [ ] **JSONLDB Unification (Part 2)**:
-    - [ ] Merge `Database` and `Table` into a single `Table[T]` struct.
+- [x] **JSONLDB Unification (Part 2)**:
+    - [x] Merge `Database` and `Table` into a single `Table[T]` struct.
     - [x] Add `Row[T]` interface: `Cloner[T]` + `GetID() ID`. Table[T] now requires Row[T] constraint.
     - [x] Header (SchemaHeader) required on all tables, unexported field with auto-discovery from JSON.
-    - [ ] Delete `Database` type and `DataRecord` with `map[string]any`.
-    - [x] Add `GetID() ID` method to: `Organization`, `GitRemote`, `Invitation`, `User`/`userStorage`, `remoteSecret`.
+    - [x] Delete `Database` type and all its methods. `DataRecord` now implements `Row[DataRecord]` for use with `Table[DataRecord]`.
+    - [x] Add `GetID() ID` method to: `Organization`, `GitRemote`, `Invitation`, `User`/`userStorage`, `remoteSecret`, `DataRecord`.
     - [x] `Membership` keeps composite key (`UserID`, `OrganizationID`), `GetID()` returns zero - no ID-based lookups, use `All()` with filtering.
-    - [ ] Update all callers of `NewTable` and `NewDatabase`.
+    - [x] Updated all callers of `NewDatabase` in `filestore.go` to use `Table[DataRecord]`.
+    - [x] Added public `Schema()` and `UpdateSchema()` methods to `Table[T]` for schema access/modification.
+    - [x] Database metadata (Title, Created, Modified) now stored in separate `metadata.json` file per page.
     - **Future**: Extend schema discovery to support nested structs (object type) and slices (list type).
 - [ ] **JSONLDB Sharding (Part 3)**: Add support for sharding in JSONLDB to handle extremely large datasets.
 

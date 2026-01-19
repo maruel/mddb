@@ -174,7 +174,7 @@ func (s *DatabaseService) ListDatabases(ctx context.Context) ([]*models.Database
 }
 
 // CreateRecord creates a new record in a database.
-func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string, data map[string]any) (*models.DataRecord, error) {
+func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string, data map[string]any) (*jsonldb.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -194,8 +194,8 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 	id := jsonldb.NewID()
 
 	now := time.Now()
-	record := &models.DataRecord{
-		ID:       id,
+	record := &jsonldb.DataRecord{
+		ID:       id.String(),
 		Data:     data,
 		Created:  now,
 		Modified: now,
@@ -218,7 +218,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 }
 
 // GetRecords retrieves all records from a database.
-func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) ([]*models.DataRecord, error) {
+func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) ([]*jsonldb.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -248,7 +248,7 @@ func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) 
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
-func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr string, offset, limit int) ([]*models.DataRecord, error) {
+func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr string, offset, limit int) ([]*jsonldb.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -268,7 +268,7 @@ func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr stri
 }
 
 // GetRecord retrieves a specific record by ID.
-func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordIDStr string) (*models.DataRecord, error) {
+func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordIDStr string) (*jsonldb.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -292,7 +292,7 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordID
 	}
 
 	for _, record := range records {
-		if record.ID == recordID {
+		if record.ID == recordIDStr {
 			return record, nil
 		}
 	}
@@ -301,7 +301,7 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordID
 }
 
 // UpdateRecord updates an existing record in a database.
-func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recordIDStr string, data map[string]any) (*models.DataRecord, error) {
+func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recordIDStr string, data map[string]any) (*jsonldb.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -313,10 +313,6 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 	if err != nil {
 		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
-	recordID, err := jsonldb.DecodeID(recordIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid record id: %w", err)
-	}
 
 	orgID := models.GetOrgID(ctx)
 
@@ -326,8 +322,8 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 		return nil, err
 	}
 
-	record := &models.DataRecord{
-		ID:       recordID,
+	record := &jsonldb.DataRecord{
+		ID:       recordIDStr,
 		Data:     data,
 		Created:  existing.Created,
 		Modified: time.Now(),
