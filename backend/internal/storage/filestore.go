@@ -373,7 +373,7 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*models.Database, error
 	}
 
 	// Load using jsonldb abstraction
-	table, err := jsonldb.NewTable[jsonldb.DataRecord](filePath)
+	table, err := jsonldb.NewTable[models.DataRecord](filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read database: %w", err)
 	}
@@ -436,7 +436,7 @@ func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, db *models.Database) error 
 	jsonldbCols := columnsToJSONLDB(db.Columns)
 
 	// Load existing database using jsonldb Table
-	table, err := jsonldb.NewTable[jsonldb.DataRecord](filePath)
+	table, err := jsonldb.NewTable[models.DataRecord](filePath)
 	if err != nil {
 		return fmt.Errorf("failed to load database: %w", err)
 	}
@@ -514,7 +514,7 @@ func (fs *FileStore) ListDatabases(orgID jsonldb.ID) ([]*models.Database, error)
 }
 
 // AppendRecord appends a record to a database using jsonldb abstraction.
-func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *jsonldb.DataRecord) error {
+func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *models.DataRecord) error {
 	if orgID == 0 {
 		return fmt.Errorf("organization ID is required")
 	}
@@ -526,7 +526,7 @@ func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *jsonldb.DataReco
 	filePath := fs.databaseRecordsFile(orgID, id)
 
 	// Load or create table using jsonldb
-	table, err := jsonldb.NewTable[jsonldb.DataRecord](filePath)
+	table, err := jsonldb.NewTable[models.DataRecord](filePath)
 	if err != nil {
 		return fmt.Errorf("failed to load database: %w", err)
 	}
@@ -540,7 +540,7 @@ func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *jsonldb.DataReco
 }
 
 // ReadRecords reads all records for a database using jsonldb abstraction.
-func (fs *FileStore) ReadRecords(orgID, id jsonldb.ID) ([]*jsonldb.DataRecord, error) {
+func (fs *FileStore) ReadRecords(orgID, id jsonldb.ID) ([]*models.DataRecord, error) {
 	if orgID == 0 {
 		return nil, fmt.Errorf("organization ID is required")
 	}
@@ -548,17 +548,17 @@ func (fs *FileStore) ReadRecords(orgID, id jsonldb.ID) ([]*jsonldb.DataRecord, e
 
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return []*jsonldb.DataRecord{}, nil
+		return []*models.DataRecord{}, nil
 	}
 
 	// Load using jsonldb abstraction
-	table, err := jsonldb.NewTable[jsonldb.DataRecord](filePath)
+	table, err := jsonldb.NewTable[models.DataRecord](filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
 
 	// Collect all records from table
-	var records []*jsonldb.DataRecord
+	var records []*models.DataRecord
 	for r := range table.All() {
 		r := r // capture loop var
 		records = append(records, &r)
@@ -567,7 +567,7 @@ func (fs *FileStore) ReadRecords(orgID, id jsonldb.ID) ([]*jsonldb.DataRecord, e
 }
 
 // ReadRecordsPage reads a page of records for a database using jsonldb abstraction.
-func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([]*jsonldb.DataRecord, error) {
+func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([]*models.DataRecord, error) {
 	if orgID == 0 {
 		return nil, fmt.Errorf("organization ID is required")
 	}
@@ -575,11 +575,11 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 
 	// Check if file exists
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return []*jsonldb.DataRecord{}, nil
+		return []*models.DataRecord{}, nil
 	}
 
 	// Load using jsonldb abstraction
-	table, err := jsonldb.NewTable[jsonldb.DataRecord](filePath)
+	table, err := jsonldb.NewTable[models.DataRecord](filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
@@ -589,7 +589,7 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 		offset = 0
 	}
 	if offset >= table.Len() {
-		return []*jsonldb.DataRecord{}, nil
+		return []*models.DataRecord{}, nil
 	}
 
 	end := offset + limit
@@ -598,7 +598,7 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 	}
 
 	// Collect paginated records from table
-	var records []*jsonldb.DataRecord
+	var records []*models.DataRecord
 	idx := 0
 	for r := range table.All() {
 		if idx >= offset && idx < end {
@@ -614,7 +614,7 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 }
 
 // UpdateRecord updates an existing record in a database using jsonldb abstraction.
-func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *jsonldb.DataRecord) error {
+func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *models.DataRecord) error {
 	if orgID == 0 {
 		return fmt.Errorf("organization ID is required")
 	}
@@ -622,13 +622,13 @@ func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *jsonldb.
 	filePath := fs.databaseRecordsFile(orgID, databaseID)
 
 	// Load using jsonldb abstraction
-	table, err := jsonldb.NewTable[jsonldb.DataRecord](filePath)
+	table, err := jsonldb.NewTable[models.DataRecord](filePath)
 	if err != nil {
 		return fmt.Errorf("failed to load database: %w", err)
 	}
 
 	// Find and update the record
-	var updated []jsonldb.DataRecord
+	var updated []models.DataRecord
 	found := false
 	for r := range table.All() {
 		if r.ID == record.ID {
@@ -655,17 +655,16 @@ func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID jsonldb.ID) error 
 	filePath := fs.databaseRecordsFile(orgID, databaseID)
 
 	// Load using jsonldb abstraction
-	table, err := jsonldb.NewTable[jsonldb.DataRecord](filePath)
+	table, err := jsonldb.NewTable[models.DataRecord](filePath)
 	if err != nil {
 		return fmt.Errorf("failed to load database: %w", err)
 	}
 
 	// Find and remove the record
-	recordIDStr := recordID.String()
-	var updated []jsonldb.DataRecord
+	var updated []models.DataRecord
 	found := false
 	for r := range table.All() {
-		if r.ID == recordIDStr {
+		if r.ID == recordID {
 			found = true
 		} else {
 			updated = append(updated, r)

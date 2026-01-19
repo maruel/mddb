@@ -60,10 +60,27 @@ type Column struct {
 
 // DataRecord represents a record in a database.
 type DataRecord struct {
-	ID       string         `json:"id"`
+	ID       jsonldb.ID     `json:"id"`
 	Data     map[string]any `json:"data"`
 	Created  time.Time      `json:"created"`
 	Modified time.Time      `json:"modified"`
+}
+
+// Clone returns a deep copy of the DataRecord.
+func (r DataRecord) Clone() DataRecord {
+	c := r
+	if r.Data != nil {
+		c.Data = make(map[string]any, len(r.Data))
+		for k, v := range r.Data {
+			c.Data[k] = v
+		}
+	}
+	return c
+}
+
+// GetID returns the DataRecord's ID.
+func (r DataRecord) GetID() jsonldb.ID {
+	return r.ID
 }
 
 // User represents a system user.

@@ -18,7 +18,7 @@ type Cache struct {
 	pages map[jsonldb.ID]*models.Page
 
 	// Hot records (map of database ID to list of records)
-	records map[jsonldb.ID][]*jsonldb.DataRecord
+	records map[jsonldb.ID][]*models.DataRecord
 
 	// Max size for LRU-like behavior (simplified for now)
 	maxPages   int
@@ -29,7 +29,7 @@ type Cache struct {
 func NewCache() *Cache {
 	return &Cache{
 		pages:      make(map[jsonldb.ID]*models.Page),
-		records:    make(map[jsonldb.ID][]*jsonldb.DataRecord),
+		records:    make(map[jsonldb.ID][]*models.DataRecord),
 		maxPages:   100,
 		maxRecords: 100,
 	}
@@ -84,7 +84,7 @@ func (c *Cache) InvalidatePage(id jsonldb.ID) {
 }
 
 // GetRecords returns cached records for a database.
-func (c *Cache) GetRecords(databaseID jsonldb.ID) ([]*jsonldb.DataRecord, bool) {
+func (c *Cache) GetRecords(databaseID jsonldb.ID) ([]*models.DataRecord, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	records, ok := c.records[databaseID]
@@ -92,12 +92,12 @@ func (c *Cache) GetRecords(databaseID jsonldb.ID) ([]*jsonldb.DataRecord, bool) 
 }
 
 // SetRecords caches records for a database.
-func (c *Cache) SetRecords(databaseID jsonldb.ID, records []*jsonldb.DataRecord) {
+func (c *Cache) SetRecords(databaseID jsonldb.ID, records []*models.DataRecord) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if len(c.records) >= c.maxRecords {
-		c.records = make(map[jsonldb.ID][]*jsonldb.DataRecord)
+		c.records = make(map[jsonldb.ID][]*models.DataRecord)
 	}
 	c.records[databaseID] = records
 }
@@ -115,5 +115,5 @@ func (c *Cache) InvalidateAll() {
 	defer c.mu.Unlock()
 	c.nodeTree = nil
 	c.pages = make(map[jsonldb.ID]*models.Page)
-	c.records = make(map[jsonldb.ID][]*jsonldb.DataRecord)
+	c.records = make(map[jsonldb.ID][]*models.DataRecord)
 }

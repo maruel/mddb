@@ -257,21 +257,21 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 
 	// Append records
-	records := []*jsonldb.DataRecord{
+	records := []*models.DataRecord{
 		{
-			ID:       jsonldb.NewID().String(),
+			ID:       jsonldb.NewID(),
 			Data:     map[string]any{"name": "Record 1"},
 			Created:  time.Now(),
 			Modified: time.Now(),
 		},
 		{
-			ID:       jsonldb.NewID().String(),
+			ID:       jsonldb.NewID(),
 			Data:     map[string]any{"name": "Record 2"},
 			Created:  time.Now(),
 			Modified: time.Now(),
 		},
 		{
-			ID:       jsonldb.NewID().String(),
+			ID:       jsonldb.NewID(),
 			Data:     map[string]any{"name": "Record 3"},
 			Created:  time.Now(),
 			Modified: time.Now(),

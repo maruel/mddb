@@ -26,32 +26,6 @@ type Column struct {
 	Required bool     `json:"required,omitempty"`
 }
 
-// DataRecord represents a database record in storage.
-type DataRecord struct {
-	ID       string         `json:"id"`
-	Data     map[string]any `json:"data"`
-	Created  time.Time      `json:"created"`
-	Modified time.Time      `json:"modified"`
-}
-
-// Clone returns a copy of the DataRecord.
-func (r DataRecord) Clone() DataRecord {
-	c := r
-	if r.Data != nil {
-		c.Data = make(map[string]any, len(r.Data))
-		for k, v := range r.Data {
-			c.Data[k] = v
-		}
-	}
-	return c
-}
-
-// GetID returns the DataRecord's ID.
-func (r DataRecord) GetID() ID {
-	id, _ := DecodeID(r.ID)
-	return id
-}
-
 // schemaHeader is the first row of a JSONL data file containing schema and metadata.
 // Used by Table[T] for generic schema storage.
 type schemaHeader struct {
@@ -193,8 +167,3 @@ func goTypeToColumnType(t reflect.Type) string {
 		return "text"
 	}
 }
-
-// Note: Database type has been deprecated in favor of Table[DataRecord].
-// See PLAN.md Phase 13 (JSONLDB Unification Part 2) for details.
-// This type and databaseHeader are kept only for historical reference if needed.
-// All new code should use Table[DataRecord] which implements Row interface.

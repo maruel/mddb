@@ -130,7 +130,7 @@ func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts mod
 					}
 
 					if score > 0 {
-						recordID, _ := jsonldb.DecodeID(record.ID)
+						recordID := record.ID
 						results = append(results, models.SearchResult{
 							Type:     "record",
 							NodeID:   node.ID,
