@@ -844,7 +844,8 @@ export const UserKey: ContextKey = 'user';
  */
 export const OrgKey: ContextKey = 'org';
 /**
- * Asset represents an uploaded file/image associated with a node
+ * Asset represents an uploaded file/image associated with a node.
+ * Asset IDs are filenames, not generated IDs, hence the string type.
  */
 export interface Asset {
   id: string;

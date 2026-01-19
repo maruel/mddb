@@ -100,7 +100,10 @@ func newIDFromParts(ms, randBits, version uint64) ID {
 	return ID((ms << 20) | (randBits << 4) | (version & 0xF))
 }
 
-// String returns a variable-length encoding using a sortable alphabet.
+// String returns a big-endian base64 encoding using a sortable alphabet.
+//
+// Big-endian ensures lexicographic string order matches numeric order,
+// making IDs sortable as strings in databases and file systems.
 // Leading zeros are stripped for compactness. Zero IDs return "-".
 func (id ID) String() string {
 	if id == 0 {

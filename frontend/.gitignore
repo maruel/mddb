@@ -1,4 +1,5 @@
 /node_modules/
+/src/*.gen.ts
 /.env.local
 /.env.*.local
 /.npmrc
