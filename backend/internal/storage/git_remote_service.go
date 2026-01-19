@@ -22,9 +22,9 @@ type GitRemoteService struct {
 }
 
 type remoteSecret struct {
-	ID       jsonldb.ID `json:"id"`
-	RemoteID jsonldb.ID `json:"remote_id"`
-	Token    string     `json:"token"`
+	ID       jsonldb.ID `json:"id" jsonschema:"description=Unique secret identifier"`
+	RemoteID jsonldb.ID `json:"remote_id" jsonschema:"description=Git remote this secret belongs to"`
+	Token    string     `json:"token" jsonschema:"description=Authentication token value"`
 }
 
 func (r *remoteSecret) Clone() *remoteSecret {
