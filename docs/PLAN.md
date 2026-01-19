@@ -258,11 +258,314 @@ See `README.md` and `API.md` for details.
 - [ ] **CI Workflow**: GitHub Actions workflow for linting (backend/frontend) and testing on every push.
 - [ ] **Release Workflow**: GitHub Actions workflow to build and release binaries (Linux, macOS, Windows) on new tags.
 
-### Phase 16: Advanced Database UX & Power Features
-- [ ] **Advanced Filtering & Sorting**: UI for multi-condition filters (AND/OR) and multi-column persistent sorting.
+### Phase 16: Database Views System
+
+A comprehensive view system allowing multiple configurable views per database, with persistent filters, sorts, and layout customization.
+
+#### Design Overview
+
+**Core Concept**: A View is a saved configuration for displaying database records. Each database can have multiple views, each with its own type, filters, sorts, and column settings.
+
+**Current State Analysis**:
+- Frontend has 4 view types implemented: `table`, `grid`, `gallery`, `board`
+- View mode is stored only in UI state (`viewMode` signal in App.tsx:47)
+- No persistence layer for view configurations
+- No filtering or sorting UI implemented
+- Board view hardcodes grouping by first select column
+
+#### View Data Model
+
+```go
+// View represents a saved view configuration for a database.
+type View struct {
+    ID          jsonldb.ID       `json:"id"`
+    DatabaseID  jsonldb.ID       `json:"database_id"`   // Parent database
+    Name        string           `json:"name"`          // User-defined name (e.g., "Active Tasks")
+    Type        ViewType         `json:"type"`          // table, board, gallery, grid, calendar, timeline
+    IsDefault   bool             `json:"is_default"`    // First view shown when opening database
+
+    // Display Configuration
+    Filters     FilterGroup      `json:"filters,omitempty"`      // Root filter group (AND/OR)
+    Sorts       []SortConfig     `json:"sorts,omitempty"`        // Multi-column sorting
+    Columns     []ColumnConfig   `json:"columns,omitempty"`      // Column visibility, order, width
+
+    // View-type-specific settings
+    Settings    ViewSettings     `json:"settings,omitempty"`
+
+    Created     time.Time        `json:"created"`
+    Modified    time.Time        `json:"modified"`
+}
+
+type ViewType string
+const (
+    ViewTypeTable    ViewType = "table"
+    ViewTypeBoard    ViewType = "board"
+    ViewTypeGallery  ViewType = "gallery"
+    ViewTypeGrid     ViewType = "grid"
+    ViewTypeCalendar ViewType = "calendar"  // Future
+    ViewTypeTimeline ViewType = "timeline"  // Future
+)
+```
+
+#### Filter System
+
+```go
+// FilterGroup represents a group of filters combined with AND or OR logic.
+// Supports nested groups for complex expressions like: (A AND B) OR (C AND D)
+type FilterGroup struct {
+    Operator   FilterOperator `json:"operator"`   // "and" or "or"
+    Conditions []FilterItem   `json:"conditions"` // Filters or nested groups
+}
+
+type FilterOperator string
+const (
+    FilterOperatorAnd FilterOperator = "and"
+    FilterOperatorOr  FilterOperator = "or"
+)
+
+// FilterItem is either a Filter or a nested FilterGroup (discriminated union)
+type FilterItem struct {
+    Type   string       `json:"type"`   // "filter" or "group"
+    Filter *Filter      `json:"filter,omitempty"`
+    Group  *FilterGroup `json:"group,omitempty"`
+}
+
+// Filter represents a single filter condition on a property.
+type Filter struct {
+    Property string         `json:"property"` // Column name
+    Operator FilterCondition `json:"operator"` // Comparison operator
+    Value    any            `json:"value"`    // Comparison value (type depends on property)
+}
+
+type FilterCondition string
+const (
+    // Universal
+    FilterEquals          FilterCondition = "equals"
+    FilterNotEquals       FilterCondition = "not_equals"
+    FilterIsEmpty         FilterCondition = "is_empty"
+    FilterIsNotEmpty      FilterCondition = "is_not_empty"
+
+    // Text
+    FilterContains        FilterCondition = "contains"
+    FilterNotContains     FilterCondition = "not_contains"
+    FilterStartsWith      FilterCondition = "starts_with"
+    FilterEndsWith        FilterCondition = "ends_with"
+
+    // Number
+    FilterGreaterThan     FilterCondition = "greater_than"
+    FilterLessThan        FilterCondition = "less_than"
+    FilterGreaterOrEqual  FilterCondition = "greater_or_equal"
+    FilterLessOrEqual     FilterCondition = "less_or_equal"
+
+    // Date
+    FilterBefore          FilterCondition = "before"
+    FilterAfter           FilterCondition = "after"
+    FilterOnOrBefore      FilterCondition = "on_or_before"
+    FilterOnOrAfter       FilterCondition = "on_or_after"
+    FilterPastWeek        FilterCondition = "past_week"
+    FilterPastMonth       FilterCondition = "past_month"
+    FilterNextWeek        FilterCondition = "next_week"
+    FilterNextMonth       FilterCondition = "next_month"
+
+    // Select/Multi-select
+    FilterIn              FilterCondition = "in"       // Value is in list
+    FilterNotIn           FilterCondition = "not_in"   // Value not in list
+)
+```
+
+#### Sort Configuration
+
+```go
+// SortConfig defines sorting for a single column.
+type SortConfig struct {
+    Property  string        `json:"property"`  // Column name
+    Direction SortDirection `json:"direction"` // asc or desc
+}
+
+type SortDirection string
+const (
+    SortAsc  SortDirection = "asc"
+    SortDesc SortDirection = "desc"
+)
+```
+
+#### Column Configuration
+
+```go
+// ColumnConfig stores per-view column display settings.
+type ColumnConfig struct {
+    Property string `json:"property"`          // Column name (matches Property.Name)
+    Visible  bool   `json:"visible"`           // Whether column is shown
+    Width    int    `json:"width,omitempty"`   // Width in pixels (table view)
+    Order    int    `json:"order"`             // Display order (0-indexed)
+}
+```
+
+#### View-Type-Specific Settings
+
+```go
+// ViewSettings contains type-specific configuration.
+type ViewSettings struct {
+    // Board view
+    GroupByProperty string   `json:"group_by_property,omitempty"` // Column to group cards by
+    HiddenGroups    []string `json:"hidden_groups,omitempty"`     // Option IDs to hide
+
+    // Gallery view
+    CardSize        string   `json:"card_size,omitempty"`         // "small", "medium", "large"
+    CoverProperty   string   `json:"cover_property,omitempty"`    // Image column for card cover
+
+    // Grid view
+    CardPreview     string   `json:"card_preview,omitempty"`      // "none", "content", "page"
+
+    // Calendar view (future)
+    DateProperty    string   `json:"date_property,omitempty"`     // Column for calendar placement
+
+    // Timeline view (future)
+    StartProperty   string   `json:"start_property,omitempty"`    // Start date column
+    EndProperty     string   `json:"end_property,omitempty"`      // End date column
+}
+```
+
+#### Storage Strategy
+
+**Location**: Views are stored in `metadata.json` alongside database properties.
+
+```
+pages/{nodeID}/
+├── index.md           # Markdown content (if hybrid)
+├── metadata.json      # Extended with views array
+│   {
+│     "title": "Tasks",
+│     "created": "...",
+│     "modified": "...",
+│     "properties": [...],
+│     "views": [
+│       {
+│         "id": "abc123",
+│         "name": "All Tasks",
+│         "type": "table",
+│         "is_default": true,
+│         "filters": { "operator": "and", "conditions": [] },
+│         "sorts": [{ "property": "Created", "direction": "desc" }],
+│         "columns": [
+│           { "property": "Name", "visible": true, "order": 0, "width": 300 },
+│           { "property": "Status", "visible": true, "order": 1, "width": 120 }
+│         ]
+│       },
+│       {
+│         "id": "def456",
+│         "name": "By Status",
+│         "type": "board",
+│         "settings": { "group_by_property": "Status" }
+│       }
+│     ]
+│   }
+└── data.jsonl         # Record data (unchanged)
+```
+
+**Rationale**:
+- Views are tightly coupled to database schema (reference property names)
+- Simplifies atomic updates (single file read/write)
+- Views travel with database when exported/moved
+- No separate file management complexity
+
+#### API Endpoints
+
+```
+# List views for a database
+GET /api/{orgID}/databases/{dbID}/views
+Response: { "views": [View, ...] }
+
+# Get single view
+GET /api/{orgID}/databases/{dbID}/views/{viewID}
+Response: View
+
+# Create view
+POST /api/{orgID}/databases/{dbID}/views
+Body: { "name": "...", "type": "table", ... }
+Response: View
+
+# Update view
+PUT /api/{orgID}/databases/{dbID}/views/{viewID}
+Body: { "name": "...", "filters": {...}, ... }
+Response: View
+
+# Delete view
+DELETE /api/{orgID}/databases/{dbID}/views/{viewID}
+Response: 204 No Content
+
+# Set default view
+POST /api/{orgID}/databases/{dbID}/views/{viewID}/set-default
+Response: View
+
+# Reorder views
+POST /api/{orgID}/databases/{dbID}/views/reorder
+Body: { "view_ids": ["id1", "id2", "id3"] }
+Response: { "views": [View, ...] }
+
+# Get filtered/sorted records (view applied server-side)
+GET /api/{orgID}/databases/{dbID}/records?view={viewID}&offset=0&limit=50
+Response: { "records": [...], "total": 150 }
+```
+
+#### Implementation Tasks
+
+- [ ] **Backend: View Model & Storage**
+    - [ ] Define `View`, `Filter`, `FilterGroup`, `SortConfig`, `ColumnConfig`, `ViewSettings` in `models/view.go`
+    - [ ] Update `DatabaseMetadata` struct to include `Views []View`
+    - [ ] Add view CRUD methods to `DatabaseService`
+    - [ ] Implement default view creation when database is created (table view showing all columns)
+
+- [ ] **Backend: Filter & Sort Engine**
+    - [ ] Implement `FilterEngine` in `storage/filter.go` for in-memory filtering
+    - [ ] Support all filter conditions per property type
+    - [ ] Implement nested FilterGroup evaluation (AND/OR trees)
+    - [ ] Implement multi-column sorting with `sort.SliceStable`
+    - [ ] Integrate with `GetRecordsPage()` to apply view config
+
+- [ ] **Backend: API Handlers**
+    - [ ] Add view CRUD handlers in `handlers/views.go`
+    - [ ] Add `?view=` query param support to records endpoint
+    - [ ] Return `total` count in filtered results for pagination UI
+
+- [ ] **Frontend: View Management UI**
+    - [ ] Add view tabs/dropdown in database header
+    - [ ] Implement "Add View" modal with type selection
+    - [ ] Add view rename/delete context menu
+    - [ ] Persist selected view in URL or localStorage
+
+- [ ] **Frontend: Filter Builder UI**
+    - [ ] Create `FilterBuilder` component with add/remove conditions
+    - [ ] Support nested groups with visual nesting indication
+    - [ ] Property type-aware value inputs (text, number, date picker, select dropdown)
+    - [ ] Real-time preview of filtered record count
+
+- [ ] **Frontend: Sort Builder UI**
+    - [ ] Create `SortBuilder` component with multi-column support
+    - [ ] Drag-and-drop sort priority reordering
+    - [ ] Quick-sort by clicking column headers (single-column shortcut)
+
+- [ ] **Frontend: Column Configuration UI**
+    - [ ] Column visibility toggle popover
+    - [ ] Drag-and-drop column reordering
+    - [ ] Column width resizing (table view)
+    - [ ] Save column config on change
+
+#### Design Decisions
+
+1. **Server-side vs Client-side Filtering**: Filters are applied server-side to support pagination correctly. Total count is returned for UI pagination controls.
+
+2. **View ID in URL**: Views can be referenced via URL query param (`?view=abc123`) for shareable links. If no view specified, use default view.
+
+3. **Automatic Column Config**: When a new view is created, all columns are visible in schema order. Users customize from there.
+
+4. **Filter Value Serialization**: Filter values are stored as `any` and coerced based on property type at evaluation time (consistent with existing type coercion in Part 3).
+
+5. **View Migration**: When properties are renamed/deleted, views referencing them should gracefully degrade (ignore invalid filters/sorts/columns).
+
+### Phase 17: Advanced Database UX & Power Features
 - [ ] **Property Management**: In-app UI for adding, renaming, and changing column types with data migration safety.
 - [ ] **Inline Editing & Navigation**: Spreadsheet-like keyboard navigation (Tab/Arrows) and rapid inline cell editing.
-- [ ] **View Customization**: Per-view column visibility toggle, column resizing, and drag-and-drop reordering.
 - [ ] **Formulas**: Simple calculated properties based on other columns in the same record.
 - [ ] **Bulk Actions**: Multi-select records for deletion or property updates.
 - [ ] **Undo/Redo**: Global undo/redo support for document edits and database record changes.
