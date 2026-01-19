@@ -34,7 +34,7 @@ func (h *PageHandler) ListPages(ctx context.Context, req models.ListPagesRequest
 	pageList := make([]any, len(pages))
 	for i, p := range pages {
 		pageList[i] = map[string]any{
-			"id":       p.ID,
+			"id":       p.ID.String(),
 			"title":    p.Title,
 			"created":  p.Created,
 			"modified": p.Modified,
@@ -52,7 +52,7 @@ func (h *PageHandler) GetPage(ctx context.Context, req models.GetPageRequest) (*
 	}
 
 	return &models.GetPageResponse{
-		ID:      page.ID,
+		ID:      page.ID.String(),
 		Title:   page.Title,
 		Content: page.Content,
 	}, nil
@@ -69,7 +69,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, req models.CreatePageReque
 		return nil, models.InternalWithError("Failed to create page", err)
 	}
 
-	return &models.CreatePageResponse{ID: page.ID}, nil
+	return &models.CreatePageResponse{ID: page.ID.String()}, nil
 }
 
 // UpdatePage updates an existing page
@@ -79,7 +79,7 @@ func (h *PageHandler) UpdatePage(ctx context.Context, req models.UpdatePageReque
 		return nil, models.NotFound("page")
 	}
 
-	return &models.UpdatePageResponse{ID: page.ID}, nil
+	return &models.UpdatePageResponse{ID: page.ID.String()}, nil
 }
 
 // DeletePage deletes a page

@@ -40,12 +40,17 @@ func (h *NodeHandler) ListNodes(ctx context.Context, req models.ListNodesRequest
 // GetNode retrieves a single node's metadata.
 func (h *NodeHandler) GetNode(ctx context.Context, req models.GetNodeRequest) (*models.Node, error) {
 	orgID := models.GetOrgID(ctx)
+	id, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, models.BadRequest("invalid_node_id")
+	}
+
 	nodes, err := h.fileStore.ReadNodeTree(orgID)
 	if err != nil {
 		return nil, models.InternalWithError("Failed to read node tree", err)
 	}
 
-	node := findNode(nodes, req.ID)
+	node := findNode(nodes, id)
 	if node == nil {
 		return nil, models.NotFound("node")
 	}
@@ -60,7 +65,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeReque
 	}
 
 	orgID := models.GetOrgID(ctx)
-	id := jsonldb.NewID().String()
+	id := jsonldb.NewID()
 
 	var node *models.Node
 	var err error
@@ -106,7 +111,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeReque
 
 	// Commit if git is enabled
 	if h.gitService != nil {
-		_ = h.gitService.CommitChange(ctx, "create", string(req.Type), id, req.Title)
+		_ = h.gitService.CommitChange(ctx, "create", string(req.Type), id.String(), req.Title)
 	}
 
 	// Invalidate cache
@@ -115,7 +120,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeReque
 	return node, nil
 }
 
-func findNode(nodes []*models.Node, id string) *models.Node {
+func findNode(nodes []*models.Node, id jsonldb.ID) *models.Node {
 	for _, n := range nodes {
 		if n.ID == id {
 			return n

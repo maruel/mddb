@@ -149,10 +149,6 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			// Create new user if not found
 			orgName := userInfo.Name + "'s Organization"
 			org, _ := h.orgService.CreateOrganization(r.Context(), orgName)
-			orgID := ""
-			if org != nil {
-				orgID = org.ID
-			}
 			role := models.UserRoleAdmin
 
 			// Password is not used for OAuth users
@@ -162,13 +158,13 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				writeErrorResponse(w, models.Internal("user_creation"))
 				return
 			}
-			if orgID != "" {
-				_ = h.userService.UpdateUserRole(user.ID, orgID, role)
+			if org != nil && !org.ID.IsZero() {
+				_ = h.userService.UpdateUserRole(user.ID.String(), org.ID.String(), role)
 			}
 		}
 
 		// Link OAuth identity
-		_ = h.userService.LinkOAuthIdentity(user.ID, models.OAuthIdentity{
+		_ = h.userService.LinkOAuthIdentity(user.ID.String(), models.OAuthIdentity{
 			Provider:   provider,
 			ProviderID: userInfo.ID,
 			Email:      userInfo.Email,
@@ -177,7 +173,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get fully populated user
-	user, _ = h.userService.GetUser(user.ID)
+	user, _ = h.userService.GetUser(user.ID.String())
 
 	// Generate JWT token
 	jwtToken, err := h.authHandler.GenerateToken(user)

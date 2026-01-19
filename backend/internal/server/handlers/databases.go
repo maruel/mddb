@@ -47,7 +47,7 @@ func (h *DatabaseHandler) GetDatabase(ctx context.Context, req models.GetDatabas
 	}
 
 	return &models.GetDatabaseResponse{
-		ID:       db.ID,
+		ID:       db.ID.String(),
 		Title:    db.Title,
 		Columns:  db.Columns,
 		Created:  db.Created.Format("2006-01-02T15:04:05Z07:00"),
@@ -66,7 +66,7 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context, req models.CreateD
 		return nil, models.InternalWithError("Failed to create database", err)
 	}
 
-	return &models.CreateDatabaseResponse{ID: db.ID}, nil
+	return &models.CreateDatabaseResponse{ID: db.ID.String()}, nil
 }
 
 // UpdateDatabase updates a database schema.
@@ -76,7 +76,7 @@ func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, req models.UpdateD
 		return nil, models.NotFound("database")
 	}
 
-	return &models.UpdateDatabaseResponse{ID: db.ID}, nil
+	return &models.UpdateDatabaseResponse{ID: db.ID.String()}, nil
 }
 
 // DeleteDatabase deletes a database.
@@ -99,7 +99,7 @@ func (h *DatabaseHandler) ListRecords(ctx context.Context, req models.ListRecord
 	recordList := make([]map[string]any, len(records))
 	for i, record := range records {
 		recordList[i] = record.Data
-		recordList[i]["_id"] = record.ID
+		recordList[i]["_id"] = record.ID.String()
 	}
 
 	return &models.ListRecordsResponse{Records: recordList}, nil
@@ -112,7 +112,7 @@ func (h *DatabaseHandler) CreateRecord(ctx context.Context, req models.CreateRec
 		return nil, models.InternalWithError("Failed to create record", err)
 	}
 
-	return &models.CreateRecordResponse{ID: record.ID}, nil
+	return &models.CreateRecordResponse{ID: record.ID.String()}, nil
 }
 
 // UpdateRecord updates an existing record in a database.
@@ -122,7 +122,7 @@ func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req models.UpdateRec
 		return nil, models.NotFound("record")
 	}
 
-	return &models.UpdateRecordResponse{ID: record.ID}, nil
+	return &models.UpdateRecordResponse{ID: record.ID.String()}, nil
 }
 
 // GetRecord retrieves a single record from a database.
@@ -133,7 +133,7 @@ func (h *DatabaseHandler) GetRecord(ctx context.Context, req models.GetRecordReq
 	}
 
 	return &models.GetRecordResponse{
-		ID:       record.ID,
+		ID:       record.ID.String(),
 		Data:     record.Data,
 		Created:  record.Created.Format("2006-01-02T15:04:05Z07:00"),
 		Modified: record.Modified.Format("2006-01-02T15:04:05Z07:00"),

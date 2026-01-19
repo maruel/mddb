@@ -68,8 +68,8 @@ func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType,
 	targetDir := gs.repoDir
 	relPath := "." // Default to root
 
-	if orgID != "" {
-		targetDir = filepath.Join(gs.repoDir, orgID)
+	if !orgID.IsZero() {
+		targetDir = filepath.Join(gs.repoDir, orgID.String())
 		relPath = "pages" // Inside org dir, it's pages/
 	}
 
@@ -98,9 +98,9 @@ func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType,
 
 	// If we committed to an organization repo, we should also update the root repo
 	// if it's tracking the org as a submodule or directory
-	if orgID != "" && targetDir != gs.repoDir {
-		if err := gs.execGitInDir(gs.repoDir, "add", orgID); err == nil {
-			_ = gs.execGitInDir(gs.repoDir, "commit", "-m", fmt.Sprintf("sync: org %s update", orgID))
+	if !orgID.IsZero() && targetDir != gs.repoDir {
+		if err := gs.execGitInDir(gs.repoDir, "add", orgID.String()); err == nil {
+			_ = gs.execGitInDir(gs.repoDir, "commit", "-m", fmt.Sprintf("sync: org %s update", orgID.String()))
 		}
 	}
 
@@ -113,8 +113,8 @@ func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID s
 	targetDir := gs.repoDir
 	path := ""
 
-	if orgID != "" {
-		targetDir = filepath.Join(gs.repoDir, orgID)
+	if !orgID.IsZero() {
+		targetDir = filepath.Join(gs.repoDir, orgID.String())
 		path = filepath.Join("pages", resourceID)
 	} else {
 		// Legacy path or system-wide resource
@@ -164,8 +164,8 @@ func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID s
 func (gs *GitService) GetCommit(ctx context.Context, hash string) (*models.CommitDetail, error) {
 	orgID := models.GetOrgID(ctx)
 	targetDir := gs.repoDir
-	if orgID != "" {
-		targetDir = filepath.Join(gs.repoDir, orgID)
+	if !orgID.IsZero() {
+		targetDir = filepath.Join(gs.repoDir, orgID.String())
 	}
 
 	output, err := gs.gitOutputInDir(targetDir, "show", "-s", "--format=%H%n%ai%n%an%n%ae%n%s%n%b", hash)
@@ -202,12 +202,13 @@ func (gs *GitService) GetCommit(ctx context.Context, hash string) (*models.Commi
 func (gs *GitService) GetFileAtCommit(ctx context.Context, hash, filePath string) ([]byte, error) {
 	orgID := models.GetOrgID(ctx)
 	targetDir := gs.repoDir
-	if orgID != "" {
-		targetDir = filepath.Join(gs.repoDir, orgID)
+	if !orgID.IsZero() {
+		orgIDStr := orgID.String()
+		targetDir = filepath.Join(gs.repoDir, orgIDStr)
 		// filePath is already relative to targetDir in most cases
 		// if it was passed as {orgID}/pages/... we need to strip it
-		if strings.HasPrefix(filePath, orgID+"/") {
-			filePath = strings.TrimPrefix(filePath, orgID+"/")
+		if strings.HasPrefix(filePath, orgIDStr+"/") {
+			filePath = strings.TrimPrefix(filePath, orgIDStr+"/")
 		}
 	}
 

@@ -18,7 +18,7 @@ type UserService struct {
 	memService *MembershipService
 	orgService *OrganizationService
 	mu         sync.RWMutex
-	byID       map[string]*userStorage
+	byID       map[jsonldb.ID]*userStorage
 	byEmail    map[string]*userStorage
 }
 
@@ -35,7 +35,7 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 		table:      table,
 		memService: memService,
 		orgService: orgService,
-		byID:       make(map[string]*userStorage),
+		byID:       make(map[jsonldb.ID]*userStorage),
 		byEmail:    make(map[string]*userStorage),
 	}
 
@@ -67,7 +67,7 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 		return nil, fmt.Errorf("user already exists")
 	}
 
-	id := jsonldb.NewID().String()
+	id := jsonldb.NewID()
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -130,7 +130,12 @@ func (s *UserService) UpdateUserRole(userID, orgID string, role models.UserRole)
 }
 
 // GetUser retrieves a user by ID.
-func (s *UserService) GetUser(id string) (*models.User, error) {
+func (s *UserService) GetUser(idStr string) (*models.User, error) {
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user id: %w", err)
+	}
+
 	s.mu.RLock()
 	stored, ok := s.byID[id]
 	s.mu.RUnlock()
@@ -146,7 +151,7 @@ func (s *UserService) GetUser(id string) (*models.User, error) {
 
 func (s *UserService) populateMemberships(user *models.User) {
 	if s.memService != nil {
-		mems, err := s.memService.ListByUser(user.ID)
+		mems, err := s.memService.ListByUser(user.ID.String())
 		if err == nil {
 			if s.orgService != nil {
 				for i := range mems {
@@ -215,7 +220,12 @@ func (s *UserService) GetUserByOAuth(provider, providerID string) (*models.User,
 }
 
 // LinkOAuthIdentity links an OAuth identity to a user.
-func (s *UserService) LinkOAuthIdentity(userID string, identity models.OAuthIdentity) error {
+func (s *UserService) LinkOAuthIdentity(userIDStr string, identity models.OAuthIdentity) error {
+	userID, err := jsonldb.DecodeID(userIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %w", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -243,7 +253,12 @@ func (s *UserService) LinkOAuthIdentity(userID string, identity models.OAuthIden
 }
 
 // UpdateSettings updates user global settings.
-func (s *UserService) UpdateSettings(id string, settings models.UserSettings) error {
+func (s *UserService) UpdateSettings(idStr string, settings models.UserSettings) error {
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return fmt.Errorf("invalid user id: %w", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

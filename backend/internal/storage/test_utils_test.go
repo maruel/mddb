@@ -7,21 +7,21 @@ import (
 	"github.com/maruel/mddb/backend/internal/models"
 )
 
-// testID returns an encoded LUCI-style ID for the given number.
+// testID returns a LUCI-style ID for the given number.
 // Use for deterministic test IDs.
-func testID(n uint64) string {
-	return jsonldb.ID(n).String()
+func testID(n uint64) jsonldb.ID {
+	return jsonldb.ID(n)
 }
 
 // newTestContext returns a context with a test user and organization.
-//
-//nolint:unparam // keep for future use even if currently always "org1"
-func newTestContext(orgID string) context.Context {
-	if orgID == "" {
+func newTestContext(orgIDStr string) context.Context {
+	orgID, err := jsonldb.DecodeID(orgIDStr)
+	if err != nil {
+		// For backward compat, if it's not a valid ID, use a deterministic one
 		orgID = testID(999)
 	}
 	user := &models.User{
-		ID: "test-user",
+		ID: testID(1000),
 	}
 	ctx := context.WithValue(context.Background(), models.UserKey, user)
 	return context.WithValue(ctx, models.OrgKey, orgID)

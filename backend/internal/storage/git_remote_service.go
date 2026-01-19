@@ -16,7 +16,7 @@ type GitRemoteService struct {
 	remoteTable  *jsonldb.Table[models.GitRemote]
 	secretTable  *jsonldb.Table[remoteSecret]
 	mu           sync.RWMutex
-	remotesByOrg map[string][]*models.GitRemote
+	remotesByOrg map[jsonldb.ID][]*models.GitRemote
 }
 
 type remoteSecret struct {
@@ -42,7 +42,7 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 		rootDir:      rootDir,
 		remoteTable:  remoteTable,
 		secretTable:  secretTable,
-		remotesByOrg: make(map[string][]*models.GitRemote),
+		remotesByOrg: make(map[jsonldb.ID][]*models.GitRemote),
 	}
 
 	for i := range remoteTable.Rows {
@@ -54,18 +54,27 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 }
 
 // ListRemotes returns all remotes for an organization.
-func (s *GitRemoteService) ListRemotes(orgID string) ([]*models.GitRemote, error) {
+func (s *GitRemoteService) ListRemotes(orgIDStr string) ([]*models.GitRemote, error) {
+	orgID, err := jsonldb.DecodeID(orgIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid organization id: %w", err)
+	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.remotesByOrg[orgID], nil
 }
 
 // CreateRemote creates a new git remote.
-func (s *GitRemoteService) CreateRemote(orgID, name, url, remoteType, authType, token string) (*models.GitRemote, error) {
+func (s *GitRemoteService) CreateRemote(orgIDStr, name, url, remoteType, authType, token string) (*models.GitRemote, error) {
+	orgID, err := jsonldb.DecodeID(orgIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid organization id: %w", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := jsonldb.NewID().String()
+	id := jsonldb.NewID()
 	newRemote := &models.GitRemote{
 		ID:             id,
 		OrganizationID: orgID,
@@ -88,7 +97,7 @@ func (s *GitRemoteService) CreateRemote(orgID, name, url, remoteType, authType, 
 
 	// Save secret if provided
 	if token != "" {
-		if err := s.secretTable.Append(remoteSecret{RemoteID: id, Token: token}); err != nil {
+		if err := s.secretTable.Append(remoteSecret{RemoteID: id.String(), Token: token}); err != nil {
 			return nil, err
 		}
 	}
@@ -97,7 +106,12 @@ func (s *GitRemoteService) CreateRemote(orgID, name, url, remoteType, authType, 
 }
 
 // GetRemote retrieves a remote by ID.
-func (s *GitRemoteService) GetRemote(id string) (*models.GitRemote, error) {
+func (s *GitRemoteService) GetRemote(idStr string) (*models.GitRemote, error) {
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid remote id: %w", err)
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -125,7 +139,16 @@ func (s *GitRemoteService) GetToken(remoteID string) (string, error) {
 }
 
 // DeleteRemote deletes a git remote.
-func (s *GitRemoteService) DeleteRemote(orgID, remoteID string) error {
+func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
+	orgID, err := jsonldb.DecodeID(orgIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid organization id: %w", err)
+	}
+	remoteID, err := jsonldb.DecodeID(remoteIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid remote id: %w", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -150,7 +173,7 @@ func (s *GitRemoteService) DeleteRemote(orgID, remoteID string) error {
 	// Remove secret
 	var newSecrets []remoteSecret
 	for i := range s.secretTable.Rows {
-		if s.secretTable.Rows[i].RemoteID != remoteID {
+		if s.secretTable.Rows[i].RemoteID != remoteIDStr {
 			newSecrets = append(newSecrets, s.secretTable.Rows[i])
 		}
 	}
@@ -171,7 +194,12 @@ func (s *GitRemoteService) DeleteRemote(orgID, remoteID string) error {
 }
 
 // UpdateLastSync updates the last sync time for a remote.
-func (s *GitRemoteService) UpdateLastSync(remoteID string) error {
+func (s *GitRemoteService) UpdateLastSync(remoteIDStr string) error {
+	remoteID, err := jsonldb.DecodeID(remoteIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid remote id: %w", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

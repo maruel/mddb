@@ -20,8 +20,8 @@ func TestIDEncodeDecode(t *testing.T) {
 	id := NewID()
 	encoded := id.String()
 
-	if len(encoded) != idEncodedLen {
-		t.Errorf("Encode length = %d, want %d", len(encoded), idEncodedLen)
+	if len(encoded) > idEncodedLen {
+		t.Errorf("Encode length = %d, want <= %d", len(encoded), idEncodedLen)
 	}
 
 	decoded, err := DecodeID(encoded)
@@ -30,6 +30,26 @@ func TestIDEncodeDecode(t *testing.T) {
 	}
 	if decoded != id {
 		t.Errorf("DecodeID = %d, want %d", decoded, id)
+	}
+
+	// Test zero ID
+	if ID(0).String() != "-" {
+		t.Errorf("Zero ID string = %q, want %q", ID(0).String(), "-")
+	}
+	zeroDecoded, err := DecodeID("-")
+	if err != nil || zeroDecoded != 0 {
+		t.Errorf("DecodeID(-) = %d, %v; want 0, nil", zeroDecoded, err)
+	}
+
+	// Test small ID (variable length)
+	smallID := ID(1)
+	smallEncoded := smallID.String()
+	if len(smallEncoded) >= idEncodedLen {
+		t.Errorf("Small ID length = %d, want < %d", len(smallEncoded), idEncodedLen)
+	}
+	smallDecoded, err := DecodeID(smallEncoded)
+	if err != nil || smallDecoded != smallID {
+		t.Errorf("DecodeID(%s) = %d, %v; want %d, nil", smallEncoded, smallDecoded, err, smallID)
 	}
 }
 
@@ -98,9 +118,8 @@ func TestDecodeIDErrors(t *testing.T) {
 		name  string
 		input string
 	}{
-		{"too short", "abc"},
 		{"too long", "abcdefghijklm"},
-		{"invalid base64", "!!!!!!!!!!!!"},
+		{"invalid char", "!!!"},
 	}
 
 	for _, tt := range tests {

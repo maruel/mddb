@@ -33,7 +33,7 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, req models.Cre
 	}
 
 	orgID := models.GetOrgID(ctx)
-	invitation, err := h.invService.CreateInvitation(req.Email, orgID, req.Role)
+	invitation, err := h.invService.CreateInvitation(req.Email, orgID.String(), req.Role)
 	if err != nil {
 		return nil, models.InternalWithError("Failed to create invitation", err)
 	}
@@ -44,7 +44,7 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, req models.Cre
 // ListInvitations returns all pending invitations for an organization.
 func (h *InvitationHandler) ListInvitations(ctx context.Context, req models.ListInvitationsRequest) (*models.ListInvitationsResponse, error) {
 	orgID := models.GetOrgID(ctx)
-	invitations, err := h.invService.ListByOrganization(orgID)
+	invitations, err := h.invService.ListByOrganization(orgID.String())
 	if err != nil {
 		return nil, models.InternalWithError("Failed to list invitations", err)
 	}
@@ -81,13 +81,13 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req models.Acc
 	}
 
 	// Create membership
-	_, err = h.memService.CreateMembership(user.ID, inv.OrganizationID, inv.Role)
+	_, err = h.memService.CreateMembership(user.ID.String(), inv.OrganizationID.String(), inv.Role)
 	if err != nil {
 		return nil, models.InternalWithError("Failed to create membership", err)
 	}
 
 	// Delete invitation
-	_ = h.invService.DeleteInvitation(inv.ID)
+	_ = h.invService.DeleteInvitation(inv.ID.String())
 
 	// Return a new token for the user
 	// Note: We need the AuthHandler to generate the token, or move the logic.

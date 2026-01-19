@@ -23,7 +23,7 @@ func NewUserHandler(userService *storage.UserService) *UserHandler {
 func (h *UserHandler) ListUsers(ctx context.Context, req models.ListUsersRequest) (*models.ListUsersResponse, error) {
 	// Active org ID is verified by middleware and injected into context
 	orgID := models.GetOrgID(ctx)
-	if orgID == "" {
+	if orgID.IsZero() {
 		return nil, models.Forbidden("Organization context missing")
 	}
 
@@ -49,7 +49,7 @@ func (h *UserHandler) ListUsers(ctx context.Context, req models.ListUsersRequest
 // UpdateUserRole updates a user's role.
 func (h *UserHandler) UpdateUserRole(ctx context.Context, req models.UpdateRoleRequest) (*models.User, error) {
 	orgID := models.GetOrgID(ctx)
-	if orgID == "" {
+	if orgID.IsZero() {
 		return nil, models.Forbidden("Organization context missing")
 	}
 
@@ -57,7 +57,7 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, req models.UpdateRoleR
 		return nil, models.MissingField("user_id or role")
 	}
 
-	if err := h.userService.UpdateUserRole(req.UserID, orgID, req.Role); err != nil {
+	if err := h.userService.UpdateUserRole(req.UserID, orgID.String(), req.Role); err != nil {
 		return nil, models.InternalWithError("Failed to update user role", err)
 	}
 
@@ -71,9 +71,9 @@ func (h *UserHandler) UpdateUserSettings(ctx context.Context, req models.UpdateU
 		return nil, models.Unauthorized()
 	}
 
-	if err := h.userService.UpdateSettings(currentUser.ID, req.Settings); err != nil {
+	if err := h.userService.UpdateSettings(currentUser.ID.String(), req.Settings); err != nil {
 		return nil, models.InternalWithError("Failed to update settings", err)
 	}
 
-	return h.userService.GetUser(currentUser.ID)
+	return h.userService.GetUser(currentUser.ID.String())
 }

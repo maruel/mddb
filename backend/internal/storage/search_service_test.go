@@ -114,9 +114,9 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	db, _ := dbService.CreateDatabase(newTestContext("org1"), "Tasks", columns)
 
 	// Create records
-	_, _ = dbService.CreateRecord(newTestContext("org1"), db.ID, map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"})
-	_, _ = dbService.CreateRecord(newTestContext("org1"), db.ID, map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"})
-	_, _ = dbService.CreateRecord(newTestContext("org1"), db.ID, map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"})
+	_, _ = dbService.CreateRecord(newTestContext("org1"), db.ID.String(), map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"})
+	_, _ = dbService.CreateRecord(newTestContext("org1"), db.ID.String(), map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"})
+	_, _ = dbService.CreateRecord(newTestContext("org1"), db.ID.String(), map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"})
 
 	tests := []struct {
 		name          string
@@ -167,7 +167,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 			// Verify all results are marked as records
 			for _, result := range results {
 				if result.Type == "record" {
-					if result.RecordID == "" {
+					if result.RecordID.IsZero() {
 						t.Error("Expected RecordID to be set for record results")
 					}
 				}
@@ -262,7 +262,7 @@ func TestSearchService_Integration(t *testing.T) {
 		{Name: "content", Type: "text"},
 	}
 	db, _ := dbService.CreateDatabase(newTestContext("org1"), "Articles", columns)
-	_, _ = dbService.CreateRecord(newTestContext("org1"), db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
+	_, _ = dbService.CreateRecord(newTestContext("org1"), db.ID.String(), map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
 
 	// Search should find both page and record
 	results, err := searchService.Search(newTestContext("org1"), models.SearchOptions{

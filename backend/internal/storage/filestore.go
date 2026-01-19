@@ -684,9 +684,9 @@ func (fs *FileStore) ListAssets(orgID, pageID jsonldb.ID) ([]*models.Asset, erro
 
 // Helpers
 
-func parseMarkdownFile(id string, data []byte) *models.Page {
+func parseMarkdownFile(id jsonldb.ID, data []byte) *models.Page {
 	content := string(data)
-	title := id
+	title := id.String()
 	var created, modified time.Time
 
 	if strings.HasPrefix(content, "---") {
@@ -733,7 +733,7 @@ func parseMarkdownFile(id string, data []byte) *models.Page {
 func formatMarkdownFile(page *models.Page) []byte {
 	var buf bytes.Buffer
 	buf.WriteString("---")
-	buf.WriteString("\nid: " + page.ID + "\n")
+	buf.WriteString("\nid: " + page.ID.String() + "\n")
 	buf.WriteString("title: " + page.Title + "\n")
 	buf.WriteString("created: " + page.Created.Format(time.RFC3339) + "\n")
 	buf.WriteString("modified: " + page.Modified.Format(time.RFC3339) + "\n")
@@ -753,7 +753,7 @@ func columnsToJSONLDB(cols []models.Column) []jsonldb.Column {
 	result := make([]jsonldb.Column, len(cols))
 	for i, col := range cols {
 		result[i] = jsonldb.Column{
-			ID:       col.ID,
+			ID:       col.ID.String(),
 			Name:     col.Name,
 			Type:     col.Type,
 			Options:  col.Options,
@@ -767,8 +767,9 @@ func columnsToJSONLDB(cols []models.Column) []jsonldb.Column {
 func columnsFromJSONLDB(cols []jsonldb.Column) []models.Column {
 	result := make([]models.Column, len(cols))
 	for i, col := range cols {
+		id, _ := jsonldb.DecodeID(col.ID)
 		result[i] = models.Column{
-			ID:       col.ID,
+			ID:       id,
 			Name:     col.Name,
 			Type:     col.Type,
 			Options:  col.Options,
@@ -781,7 +782,7 @@ func columnsFromJSONLDB(cols []jsonldb.Column) []models.Column {
 // recordToJSONLDB converts models.DataRecord to jsonldb.DataRecord.
 func recordToJSONLDB(rec *models.DataRecord) jsonldb.DataRecord {
 	return jsonldb.DataRecord{
-		ID:       rec.ID,
+		ID:       rec.ID.String(),
 		Data:     rec.Data,
 		Created:  rec.Created,
 		Modified: rec.Modified,
@@ -790,8 +791,9 @@ func recordToJSONLDB(rec *models.DataRecord) jsonldb.DataRecord {
 
 // recordFromJSONLDB converts jsonldb.DataRecord to models.DataRecord.
 func recordFromJSONLDB(rec jsonldb.DataRecord) *models.DataRecord {
+	id, _ := jsonldb.DecodeID(rec.ID)
 	return &models.DataRecord{
-		ID:       rec.ID,
+		ID:       id,
 		Data:     rec.Data,
 		Created:  rec.Created,
 		Modified: rec.Modified,

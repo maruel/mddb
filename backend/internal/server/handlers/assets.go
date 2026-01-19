@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -29,7 +30,12 @@ func NewAssetHandler(fileStore *storage.FileStore, git *storage.GitService, orgs
 // ListPageAssets returns a list of assets associated with a page.
 func (h *AssetHandler) ListPageAssets(ctx context.Context, req models.ListPageAssetsRequest) (*models.ListPageAssetsResponse, error) {
 	orgID := models.GetOrgID(ctx)
-	assets, err := h.fileStore.ListAssets(orgID, req.PageID)
+	pageID, err := jsonldb.DecodeID(req.PageID)
+	if err != nil {
+		return nil, models.BadRequest("invalid_page_id")
+	}
+
+	assets, err := h.fileStore.ListAssets(orgID, pageID)
 	if err != nil {
 		return nil, models.InternalWithError("Failed to list assets", err)
 	}
@@ -42,7 +48,7 @@ func (h *AssetHandler) ListPageAssets(ctx context.Context, req models.ListPageAs
 			"size":      a.Size,
 			"mime_type": a.MimeType,
 			"created":   a.Created,
-			"url":       fmt.Sprintf("/api/%s/assets/%s/%s", orgID, req.PageID, a.Name),
+			"url":       fmt.Sprintf("/api/%s/assets/%s/%s", orgID.String(), req.PageID, a.Name),
 		}
 	}
 
@@ -84,9 +90,20 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 
 // ServeAssetFile serves the binary data of an asset.
 func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
-	orgID := r.PathValue("orgID")
-	pageID := r.PathValue("id")
+	orgIDStr := r.PathValue("orgID")
+	pageIDStr := r.PathValue("id")
 	assetName := r.PathValue("name")
+
+	orgID, err := jsonldb.DecodeID(orgIDStr)
+	if err != nil {
+		writeErrorResponse(w, models.BadRequest("invalid_org_id"))
+		return
+	}
+	pageID, err := jsonldb.DecodeID(pageIDStr)
+	if err != nil {
+		writeErrorResponse(w, models.BadRequest("invalid_page_id"))
+		return
+	}
 
 	data, err := h.fileStore.ReadAsset(orgID, pageID, assetName)
 	if err != nil {
@@ -104,7 +121,12 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 // DeletePageAsset deletes an asset.
 func (h *AssetHandler) DeletePageAsset(ctx context.Context, req models.DeletePageAssetRequest) (*models.DeletePageAssetResponse, error) {
 	orgID := models.GetOrgID(ctx)
-	err := h.fileStore.DeleteAsset(orgID, req.PageID, req.AssetName)
+	pageID, err := jsonldb.DecodeID(req.PageID)
+	if err != nil {
+		return nil, models.BadRequest("invalid_page_id")
+	}
+
+	err = h.fileStore.DeleteAsset(orgID, pageID, req.AssetName)
 	if err != nil {
 		return nil, models.NotFound("asset")
 	}

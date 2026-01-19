@@ -28,9 +28,14 @@ func NewNodeService(fileStore *FileStore, gitService *GitService, cache *Cache, 
 }
 
 // GetNode retrieves a unified node by ID.
-func (s *NodeService) GetNode(ctx context.Context, id string) (*models.Node, error) {
-	if id == "" {
+func (s *NodeService) GetNode(ctx context.Context, idStr string) (*models.Node, error) {
+	if idStr == "" {
 		return nil, fmt.Errorf("node id cannot be empty")
+	}
+
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid node id: %w", err)
 	}
 
 	orgID := models.GetOrgID(ctx)
@@ -63,7 +68,7 @@ func (s *NodeService) ListNodes(ctx context.Context) ([]*models.Node, error) {
 }
 
 // CreateNode creates a new node (can be document, database, or hybrid)
-func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType models.NodeType, parentID string) (*models.Node, error) {
+func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType models.NodeType, parentIDStr string) (*models.Node, error) {
 	orgID := models.GetOrgID(ctx)
 
 	// Check Quota
@@ -77,7 +82,8 @@ func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType mod
 		}
 	}
 
-	id := jsonldb.NewID().String()
+	id := jsonldb.NewID()
+	parentID, _ := jsonldb.DecodeID(parentIDStr) // Empty string decodes to zero ID
 	now := time.Now()
 
 	node := &models.Node{
@@ -120,7 +126,7 @@ func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType mod
 	return node, nil
 }
 
-func findNodeInTree(nodes []*models.Node, id string) *models.Node {
+func findNodeInTree(nodes []*models.Node, id jsonldb.ID) *models.Node {
 	for _, node := range nodes {
 		if node.ID == id {
 			return node

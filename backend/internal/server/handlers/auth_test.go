@@ -46,7 +46,7 @@ func TestRegister(t *testing.T) {
 		t.Error("Expected Joe to have a membership")
 	}
 	resp1OrgID := resp1.User.Memberships[0].OrganizationID
-	if resp1OrgID == "" {
+	if resp1OrgID.IsZero() {
 		t.Error("Expected Joe's membership to have an organization ID")
 	}
 	if resp1.User.Memberships[0].Role != models.UserRoleAdmin {
@@ -81,7 +81,7 @@ func TestRegister(t *testing.T) {
 		t.Error("Expected Alice to have a membership")
 	}
 	resp2OrgID := resp2.User.Memberships[0].OrganizationID
-	if resp2OrgID == "" {
+	if resp2OrgID.IsZero() {
 		t.Error("Expected Alice's membership to have an organization ID")
 	}
 	if resp2OrgID == resp1OrgID {

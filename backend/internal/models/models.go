@@ -200,14 +200,15 @@ const (
 	OrgKey ContextKey = "org"
 )
 
-// Asset represents an uploaded file/image associated with a node
+// Asset represents an uploaded file/image associated with a node.
+// Asset IDs are filenames, not generated IDs, hence the string type.
 type Asset struct {
-	ID       jsonldb.ID `json:"id"`
-	Name     string     `json:"name"`
-	MimeType string     `json:"mime_type"`
-	Size     int64      `json:"size"`
-	Created  time.Time  `json:"created"`
-	Path     string     `json:"path"`
+	ID       string    `json:"id"`
+	Name     string    `json:"name"`
+	MimeType string    `json:"mime_type"`
+	Size     int64     `json:"size"`
+	Created  time.Time `json:"created"`
+	Path     string    `json:"path"`
 }
 
 // Legacy types for compatibility during migration (optional to keep or remove)

@@ -28,9 +28,14 @@ func NewPageService(fileStore *FileStore, gitService *GitService, cache *Cache, 
 }
 
 // GetPage retrieves a page by ID.
-func (s *PageService) GetPage(ctx context.Context, id string) (*models.Page, error) {
-	if id == "" {
+func (s *PageService) GetPage(ctx context.Context, idStr string) (*models.Page, error) {
+	if idStr == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
+	}
+
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid page id: %w", err)
 	}
 
 	orgID := models.GetOrgID(ctx)
@@ -66,7 +71,7 @@ func (s *PageService) CreatePage(ctx context.Context, title, content string) (*m
 		}
 	}
 
-	id := jsonldb.NewID().String()
+	id := jsonldb.NewID()
 
 	page, err := s.fileStore.WritePage(orgID, id, title, content)
 	if err != nil {
@@ -78,7 +83,7 @@ func (s *PageService) CreatePage(ctx context.Context, title, content string) (*m
 	s.cache.SetPage(page)
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "create", "page", id, title); err != nil {
+		if err := s.gitService.CommitChange(ctx, "create", "page", id.String(), title); err != nil {
 			// Log error but don't fail the operation
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
@@ -88,12 +93,17 @@ func (s *PageService) CreatePage(ctx context.Context, title, content string) (*m
 }
 
 // UpdatePage updates an existing page.
-func (s *PageService) UpdatePage(ctx context.Context, id, title, content string) (*models.Page, error) {
-	if id == "" {
+func (s *PageService) UpdatePage(ctx context.Context, idStr, title, content string) (*models.Page, error) {
+	if idStr == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
+	}
+
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid page id: %w", err)
 	}
 
 	orgID := models.GetOrgID(ctx)
@@ -107,7 +117,7 @@ func (s *PageService) UpdatePage(ctx context.Context, id, title, content string)
 	s.cache.InvalidateNodeTree() // Title might have changed
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "update", "page", id, "Updated content"); err != nil {
+		if err := s.gitService.CommitChange(ctx, "update", "page", idStr, "Updated content"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -116,9 +126,13 @@ func (s *PageService) UpdatePage(ctx context.Context, id, title, content string)
 }
 
 // DeletePage deletes a page.
-func (s *PageService) DeletePage(ctx context.Context, id string) error {
-	if id == "" {
+func (s *PageService) DeletePage(ctx context.Context, idStr string) error {
+	if idStr == "" {
 		return fmt.Errorf("page id cannot be empty")
+	}
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return fmt.Errorf("invalid page id: %w", err)
 	}
 	orgID := models.GetOrgID(ctx)
 	if err := s.fileStore.DeletePage(orgID, id); err != nil {
@@ -130,7 +144,7 @@ func (s *PageService) DeletePage(ctx context.Context, id string) error {
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "delete", "page", id, "Deleted page"); err != nil {
+		if err := s.gitService.CommitChange(ctx, "delete", "page", idStr, "Deleted page"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -185,8 +199,8 @@ func (s *PageService) GetPageVersion(ctx context.Context, id, commitHash string)
 
 	orgID := models.GetOrgID(ctx)
 	// New storage path: {orgID}/pages/{id}/index.md
-	path := fmt.Sprintf("%s/pages/%s/index.md", orgID, id)
-	if orgID == "" {
+	path := fmt.Sprintf("%s/pages/%s/index.md", orgID.String(), id)
+	if orgID.IsZero() {
 		path = fmt.Sprintf("pages/%s/index.md", id)
 	}
 

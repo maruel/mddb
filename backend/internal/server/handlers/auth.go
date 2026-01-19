@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -77,12 +78,12 @@ func (h *AuthHandler) Register(ctx context.Context, req models.RegisterRequest) 
 	}
 
 	// Create initial membership (admin of their own org)
-	if err := h.userService.UpdateUserRole(user.ID, orgID, models.UserRoleAdmin); err != nil {
+	if err := h.userService.UpdateUserRole(user.ID.String(), orgID.String(), models.UserRoleAdmin); err != nil {
 		return nil, models.InternalWithError("Failed to create initial membership", err)
 	}
 
 	// Re-fetch user to get populated memberships
-	user, err = h.userService.GetUser(user.ID)
+	user, err = h.userService.GetUser(user.ID.String())
 	if err != nil {
 		return nil, models.InternalWithError("Failed to re-fetch user", err)
 	}
@@ -133,7 +134,7 @@ func (h *AuthHandler) Me(ctx context.Context, req models.MeRequest) (*models.Use
 }
 
 // PopulateActiveContext populates organization-specific fields in the User struct.
-func (h *AuthHandler) PopulateActiveContext(user *models.User, orgID string) {
+func (h *AuthHandler) PopulateActiveContext(user *models.User, orgID jsonldb.ID) {
 	user.OrganizationID = orgID
 	for _, m := range user.Memberships {
 		if m.OrganizationID == orgID {

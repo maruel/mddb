@@ -70,13 +70,13 @@ func TestUserService(t *testing.T) {
 	}
 
 	// Test UpdateUserRole
-	orgID := "org123"
-	err = service.UpdateUserRole(user.ID, orgID, models.UserRoleEditor)
+	orgID := testID(100)
+	err = service.UpdateUserRole(user.ID.String(), orgID.String(), models.UserRoleEditor)
 	if err != nil {
 		t.Fatalf("Failed to update user role: %v", err)
 	}
 
-	updatedUser, err := service.GetUser(user.ID)
+	updatedUser, err := service.GetUser(user.ID.String())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,6 +90,6 @@ func TestUserService(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Errorf("Expected role editor in membership for org %s", orgID)
+		t.Errorf("Expected role editor in membership for org %v", orgID)
 	}
 }

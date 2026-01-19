@@ -28,9 +28,13 @@ func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cac
 }
 
 // GetDatabase retrieves a database by ID.
-func (s *DatabaseService) GetDatabase(ctx context.Context, id string) (*models.Database, error) {
-	if id == "" {
+func (s *DatabaseService) GetDatabase(ctx context.Context, idStr string) (*models.Database, error) {
+	if idStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
+	}
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
 	orgID := models.GetOrgID(ctx)
 	return s.fileStore.ReadDatabase(orgID, id)
@@ -58,12 +62,12 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 		}
 	}
 
-	id := jsonldb.NewID().String()
+	id := jsonldb.NewID()
 
 	// Ensure each column has an ID
 	for i := range columns {
-		if columns[i].ID == "" {
-			columns[i].ID = jsonldb.NewID().String()
+		if columns[i].ID.IsZero() {
+			columns[i].ID = jsonldb.NewID()
 		}
 	}
 
@@ -85,7 +89,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "create", "database", id, title); err != nil {
+		if err := s.gitService.CommitChange(ctx, "create", "database", id.String(), title); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -94,8 +98,8 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 }
 
 // UpdateDatabase updates an existing database's schema.
-func (s *DatabaseService) UpdateDatabase(ctx context.Context, id, title string, columns []models.Column) (*models.Database, error) {
-	if id == "" {
+func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title string, columns []models.Column) (*models.Database, error) {
+	if idStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
 	if title == "" {
@@ -103,6 +107,11 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, id, title string, 
 	}
 	if len(columns) == 0 {
 		return nil, fmt.Errorf("at least one column is required")
+	}
+
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
 
 	orgID := models.GetOrgID(ctx)
@@ -123,7 +132,7 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, id, title string, 
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "update", "database", id, "Updated schema"); err != nil {
+		if err := s.gitService.CommitChange(ctx, "update", "database", idStr, "Updated schema"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -132,9 +141,13 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, id, title string, 
 }
 
 // DeleteDatabase deletes a database and all its records.
-func (s *DatabaseService) DeleteDatabase(ctx context.Context, id string) error {
-	if id == "" {
+func (s *DatabaseService) DeleteDatabase(ctx context.Context, idStr string) error {
+	if idStr == "" {
 		return fmt.Errorf("database id cannot be empty")
+	}
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return fmt.Errorf("invalid database id: %w", err)
 	}
 	orgID := models.GetOrgID(ctx)
 	if err := s.fileStore.DeleteDatabase(orgID, id); err != nil {
@@ -146,7 +159,7 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, id string) error {
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "delete", "database", id, "Deleted database"); err != nil {
+		if err := s.gitService.CommitChange(ctx, "delete", "database", idStr, "Deleted database"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -161,9 +174,14 @@ func (s *DatabaseService) ListDatabases(ctx context.Context) ([]*models.Database
 }
 
 // CreateRecord creates a new record in a database.
-func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, data map[string]any) (*models.DataRecord, error) {
-	if databaseID == "" {
+func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string, data map[string]any) (*models.DataRecord, error) {
+	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
+	}
+
+	databaseID, err := jsonldb.DecodeID(databaseIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
 
 	orgID := models.GetOrgID(ctx)
@@ -173,7 +191,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, d
 	}
 
 	// Generate record ID
-	id := jsonldb.NewID().String()
+	id := jsonldb.NewID()
 
 	now := time.Now()
 	record := &models.DataRecord{
@@ -191,7 +209,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, d
 	s.cache.InvalidateRecords(databaseID)
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "create", "record", id, fmt.Sprintf("in database %s", databaseID)); err != nil {
+		if err := s.gitService.CommitChange(ctx, "create", "record", id.String(), fmt.Sprintf("in database %s", databaseIDStr)); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -200,9 +218,14 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, d
 }
 
 // GetRecords retrieves all records from a database.
-func (s *DatabaseService) GetRecords(ctx context.Context, databaseID string) ([]*models.DataRecord, error) {
-	if databaseID == "" {
+func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) ([]*models.DataRecord, error) {
+	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
+	}
+
+	databaseID, err := jsonldb.DecodeID(databaseIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
 
 	if records, ok := s.cache.GetRecords(databaseID); ok {
@@ -225,9 +248,14 @@ func (s *DatabaseService) GetRecords(ctx context.Context, databaseID string) ([]
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
-func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseID string, offset, limit int) ([]*models.DataRecord, error) {
-	if databaseID == "" {
+func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr string, offset, limit int) ([]*models.DataRecord, error) {
+	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
+	}
+
+	databaseID, err := jsonldb.DecodeID(databaseIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
 
 	orgID := models.GetOrgID(ctx)
@@ -240,12 +268,21 @@ func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseID string,
 }
 
 // GetRecord retrieves a specific record by ID.
-func (s *DatabaseService) GetRecord(ctx context.Context, databaseID, recordID string) (*models.DataRecord, error) {
-	if databaseID == "" {
+func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordIDStr string) (*models.DataRecord, error) {
+	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
-	if recordID == "" {
+	if recordIDStr == "" {
 		return nil, fmt.Errorf("record id cannot be empty")
+	}
+
+	databaseID, err := jsonldb.DecodeID(databaseIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid database id: %w", err)
+	}
+	recordID, err := jsonldb.DecodeID(recordIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid record id: %w", err)
 	}
 
 	orgID := models.GetOrgID(ctx)
@@ -264,18 +301,27 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseID, recordID st
 }
 
 // UpdateRecord updates an existing record in a database.
-func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseID, recordID string, data map[string]any) (*models.DataRecord, error) {
-	if databaseID == "" {
+func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recordIDStr string, data map[string]any) (*models.DataRecord, error) {
+	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
-	if recordID == "" {
+	if recordIDStr == "" {
 		return nil, fmt.Errorf("record id cannot be empty")
+	}
+
+	databaseID, err := jsonldb.DecodeID(databaseIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid database id: %w", err)
+	}
+	recordID, err := jsonldb.DecodeID(recordIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid record id: %w", err)
 	}
 
 	orgID := models.GetOrgID(ctx)
 
 	// Retrieve existing record to preserve Created time and ensure it exists
-	existing, err := s.GetRecord(ctx, databaseID, recordID)
+	existing, err := s.GetRecord(ctx, databaseIDStr, recordIDStr)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +341,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseID, recordID
 	s.cache.InvalidateRecords(databaseID)
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "update", "record", recordID, fmt.Sprintf("in database %s", databaseID)); err != nil {
+		if err := s.gitService.CommitChange(ctx, "update", "record", recordIDStr, fmt.Sprintf("in database %s", databaseIDStr)); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -304,12 +350,21 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseID, recordID
 }
 
 // DeleteRecord deletes a record from a database.
-func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseID, recordID string) error {
-	if databaseID == "" {
+func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseIDStr, recordIDStr string) error {
+	if databaseIDStr == "" {
 		return fmt.Errorf("database id cannot be empty")
 	}
-	if recordID == "" {
+	if recordIDStr == "" {
 		return fmt.Errorf("record id cannot be empty")
+	}
+
+	databaseID, err := jsonldb.DecodeID(databaseIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid database id: %w", err)
+	}
+	recordID, err := jsonldb.DecodeID(recordIDStr)
+	if err != nil {
+		return fmt.Errorf("invalid record id: %w", err)
 	}
 
 	orgID := models.GetOrgID(ctx)
@@ -322,7 +377,7 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseID, recordID
 	s.cache.InvalidateRecords(databaseID)
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "delete", "record", recordID, fmt.Sprintf("from database %s", databaseID)); err != nil {
+		if err := s.gitService.CommitChange(ctx, "delete", "record", recordIDStr, fmt.Sprintf("from database %s", databaseIDStr)); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}

@@ -100,14 +100,13 @@ func newIDFromParts(ms, randBits, version uint64) ID {
 	return ID((ms << 20) | (randBits << 4) | (version & 0xF))
 }
 
-// String returns the fixed-width 11-character encoding using a sortable alphabet.
-// The encoding is lexicographically sortable: if id1 < id2, then id1.String() < id2.String().
-// Zero IDs return "-".
+// String returns a variable-length encoding using a sortable alphabet.
+// Leading zeros are stripped for compactness. Zero IDs return "-".
 func (id ID) String() string {
 	if id == 0 {
 		return "-"
 	}
-	// Encode 64 bits into 11 characters (6 bits each, last char uses 4 bits)
+	// Encode 64 bits into up to 11 characters (6 bits each)
 	var buf [idEncodedLen]byte
 	v := uint64(id)
 	// Process from right to left, 6 bits at a time
@@ -115,7 +114,13 @@ func (id ID) String() string {
 		buf[i] = sortableAlphabet[v&0x3F]
 		v >>= 6
 	}
-	return string(buf[:])
+	// Strip leading '-' (zeros)
+	for i := 0; i < idEncodedLen; i++ {
+		if buf[i] != '-' {
+			return string(buf[i:])
+		}
+	}
+	return "-"
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -142,14 +147,18 @@ func (id ID) IsZero() bool {
 	return id == 0
 }
 
-// DecodeID parses an encoded string back to an ID.
-// "-" decodes to zero ID.
+// DecodeID parses a variable-length encoded string back to an ID.
+// "-" or "" decodes to zero ID. Strings are left-padded with zeros.
 func DecodeID(s string) (ID, error) {
-	if s == "-" {
+	if s == "-" || s == "" {
 		return 0, nil
 	}
-	if len(s) != idEncodedLen {
-		return 0, fmt.Errorf("invalid ID length: got %d, want %d", len(s), idEncodedLen)
+	if len(s) > idEncodedLen {
+		return 0, fmt.Errorf("invalid ID length: got %d, max %d", len(s), idEncodedLen)
+	}
+	// Left-pad with '-' (zero char) to full length
+	for len(s) < idEncodedLen {
+		s = "-" + s
 	}
 	var v uint64
 	for i := 0; i < idEncodedLen; i++ {

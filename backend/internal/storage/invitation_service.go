@@ -15,7 +15,7 @@ type InvitationService struct {
 	rootDir string
 	table   *jsonldb.Table[models.Invitation]
 	mu      sync.RWMutex
-	byID    map[string]*models.Invitation
+	byID    map[jsonldb.ID]*models.Invitation
 	byToken map[string]*models.Invitation
 }
 
@@ -30,7 +30,7 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	s := &InvitationService{
 		rootDir: rootDir,
 		table:   table,
-		byID:    make(map[string]*models.Invitation),
+		byID:    make(map[jsonldb.ID]*models.Invitation),
 		byToken: make(map[string]*models.Invitation),
 	}
 
@@ -44,9 +44,14 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 }
 
 // CreateInvitation creates a new invitation.
-func (s *InvitationService) CreateInvitation(email, orgID string, role models.UserRole) (*models.Invitation, error) {
-	if email == "" || orgID == "" {
+func (s *InvitationService) CreateInvitation(email, orgIDStr string, role models.UserRole) (*models.Invitation, error) {
+	if email == "" || orgIDStr == "" {
 		return nil, fmt.Errorf("email and organization ID are required")
+	}
+
+	orgID, err := jsonldb.DecodeID(orgIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid organization id: %w", err)
 	}
 
 	token, err := GenerateToken(32)
@@ -57,7 +62,7 @@ func (s *InvitationService) CreateInvitation(email, orgID string, role models.Us
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := jsonldb.NewID().String()
+	id := jsonldb.NewID()
 
 	invitation := &models.Invitation{
 		ID:             id,
@@ -97,7 +102,12 @@ func (s *InvitationService) GetInvitationByToken(token string) (*models.Invitati
 }
 
 // DeleteInvitation deletes an invitation.
-func (s *InvitationService) DeleteInvitation(id string) error {
+func (s *InvitationService) DeleteInvitation(idStr string) error {
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return fmt.Errorf("invalid invitation id: %w", err)
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -113,7 +123,12 @@ func (s *InvitationService) DeleteInvitation(id string) error {
 }
 
 // ListByOrganization returns all invitations for an organization.
-func (s *InvitationService) ListByOrganization(orgID string) ([]*models.Invitation, error) {
+func (s *InvitationService) ListByOrganization(orgIDStr string) ([]*models.Invitation, error) {
+	orgID, err := jsonldb.DecodeID(orgIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid organization id: %w", err)
+	}
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

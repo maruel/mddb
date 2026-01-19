@@ -12,8 +12,8 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
-func testID(n uint64) string {
-	return jsonldb.ID(n).String()
+func testID(n uint64) jsonldb.ID {
+	return jsonldb.ID(n)
 }
 
 func TestOrgIsolationMiddleware(t *testing.T) {
@@ -30,21 +30,21 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 	}{
 		{
 			name:           "Access own organization",
-			membershipOrg:  testID(1),
+			membershipOrg:  testID(1).String(),
 			membershipRole: models.UserRoleViewer,
-			requestOrgID:   testID(1),
+			requestOrgID:   testID(1).String(),
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Access different organization",
-			membershipOrg:  testID(1),
+			membershipOrg:  testID(1).String(),
 			membershipRole: models.UserRoleViewer,
-			requestOrgID:   testID(2),
+			requestOrgID:   testID(2).String(),
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Access with no org context in request",
-			membershipOrg:  testID(1),
+			membershipOrg:  testID(1).String(),
 			membershipRole: models.UserRoleViewer,
 			requestOrgID:   "",
 			expectedStatus: http.StatusOK,
@@ -53,13 +53,13 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userID := "user1"
+			userID := testID(100)
 			// Clear and setup membership for each test case
-			_ = memService.DeleteMembership(userID, testID(1))
-			_ = memService.DeleteMembership(userID, testID(2))
+			_ = memService.DeleteMembership(userID.String(), testID(1).String())
+			_ = memService.DeleteMembership(userID.String(), testID(2).String())
 
 			if tt.membershipOrg != "" {
-				_, _ = memService.CreateMembership(userID, tt.membershipOrg, tt.membershipRole)
+				_, _ = memService.CreateMembership(userID.String(), tt.membershipOrg, tt.membershipRole)
 			}
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -132,11 +132,11 @@ func TestRolePermissions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userID := "user-role-test"
+			userID := testID(200)
 			orgID := testID(1)
 			// Clear and setup membership for each test case
-			_ = memService.DeleteMembership(userID, orgID)
-			_, _ = memService.CreateMembership(userID, orgID, tt.userRole)
+			_ = memService.DeleteMembership(userID.String(), orgID.String())
+			_, _ = memService.CreateMembership(userID.String(), orgID.String(), tt.userRole)
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
@@ -144,8 +144,8 @@ func TestRolePermissions(t *testing.T) {
 
 			middleware := RequireRole(memService, tt.requiredRole)(next)
 
-			req := httptest.NewRequest("GET", "/api/"+orgID+"/nodes", http.NoBody)
-			req.SetPathValue("orgID", orgID)
+			req := httptest.NewRequest("GET", "/api/"+orgID.String()+"/nodes", http.NoBody)
+			req.SetPathValue("orgID", orgID.String())
 
 			user := &models.User{ID: userID}
 			ctx := context.WithValue(req.Context(), models.UserKey, user)

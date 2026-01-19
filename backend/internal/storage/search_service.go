@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 )
 
@@ -61,7 +62,7 @@ func (s *SearchService) Search(ctx context.Context, opts models.SearchOptions) (
 	return results, nil
 }
 
-func (s *SearchService) searchPages(orgID, query string, opts models.SearchOptions) []models.SearchResult {
+func (s *SearchService) searchPages(orgID jsonldb.ID, query string, opts models.SearchOptions) []models.SearchResult {
 	nodes, _ := s.fileStore.ReadNodeTree(orgID)
 	var results []models.SearchResult
 
@@ -105,7 +106,7 @@ func (s *SearchService) searchPages(orgID, query string, opts models.SearchOptio
 	return results
 }
 
-func (s *SearchService) searchDatabases(orgID, query string, opts models.SearchOptions) []models.SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
+func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts models.SearchOptions) []models.SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
 	nodes, _ := s.fileStore.ReadNodeTree(orgID)
 	var results []models.SearchResult
 

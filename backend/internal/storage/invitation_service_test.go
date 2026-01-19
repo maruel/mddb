@@ -14,12 +14,12 @@ func TestInvitationService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	orgID := "org1"
+	orgID := testID(100)
 	email := "invitee@example.com"
 	role := models.UserRoleEditor
 
 	// Test CreateInvitation
-	inv, err := service.CreateInvitation(email, orgID, role)
+	inv, err := service.CreateInvitation(email, orgID.String(), role)
 	if err != nil {
 		t.Fatalf("Failed to create invitation: %v", err)
 	}
@@ -28,7 +28,7 @@ func TestInvitationService(t *testing.T) {
 		t.Errorf("Expected email %s, got %s", email, inv.Email)
 	}
 	if inv.OrganizationID != orgID {
-		t.Errorf("Expected orgID %s, got %s", orgID, inv.OrganizationID)
+		t.Errorf("Expected orgID %v, got %v", orgID, inv.OrganizationID)
 	}
 	if inv.Role != role {
 		t.Errorf("Expected role %s, got %s", role, inv.Role)
@@ -43,11 +43,11 @@ func TestInvitationService(t *testing.T) {
 		t.Fatalf("Failed to find invitation by token: %v", err)
 	}
 	if found.ID != inv.ID {
-		t.Errorf("Expected ID %s, got %s", inv.ID, found.ID)
+		t.Errorf("Expected ID %v, got %v", inv.ID, found.ID)
 	}
 
 	// Test ListByOrganization
-	list, err := service.ListByOrganization(orgID)
+	list, err := service.ListByOrganization(orgID.String())
 	if err != nil {
 		t.Fatalf("Failed to list invitations: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestInvitationService(t *testing.T) {
 	}
 
 	// Test DeleteInvitation
-	err = service.DeleteInvitation(inv.ID)
+	err = service.DeleteInvitation(inv.ID.String())
 	if err != nil {
 		t.Fatalf("Failed to delete invitation: %v", err)
 	}

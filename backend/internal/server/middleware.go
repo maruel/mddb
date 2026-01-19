@@ -90,7 +90,7 @@ func RequireRole(memService *storage.MembershipService, requiredRole models.User
 			}
 
 			// Verify membership and get role
-			membership, err := memService.GetMembership(user.ID, orgID)
+			membership, err := memService.GetMembership(user.ID.String(), orgID)
 			if err != nil {
 				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
 				return

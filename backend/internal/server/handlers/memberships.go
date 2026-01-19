@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -31,13 +32,13 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req models.SwitchOrgR
 	}
 
 	// Verify membership
-	_, err := h.memService.GetMembership(currentUser.ID, req.OrgID)
+	_, err := h.memService.GetMembership(currentUser.ID.String(), req.OrgID)
 	if err != nil {
 		return nil, models.Forbidden("User is not a member of this organization")
 	}
 
 	// Re-fetch user to ensure we have memberships for the token
-	user, err := h.userService.GetUser(currentUser.ID)
+	user, err := h.userService.GetUser(currentUser.ID.String())
 	if err != nil {
 		return nil, models.InternalWithError("Failed to fetch user", err)
 	}
@@ -47,7 +48,8 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req models.SwitchOrgR
 		return nil, models.InternalWithError("Failed to generate token", err)
 	}
 
-	h.authHandler.PopulateActiveContext(user, req.OrgID)
+	orgID, _ := jsonldb.DecodeID(req.OrgID)
+	h.authHandler.PopulateActiveContext(user, orgID)
 
 	return &models.SwitchOrgResponse{
 		Token: token,
@@ -63,9 +65,9 @@ func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req mo
 	}
 
 	orgID := models.GetOrgID(ctx)
-	if err := h.memService.UpdateSettings(currentUser.ID, orgID, req.Settings); err != nil {
+	if err := h.memService.UpdateSettings(currentUser.ID.String(), orgID.String(), req.Settings); err != nil {
 		return nil, models.InternalWithError("Failed to update membership settings", err)
 	}
 
-	return h.memService.GetMembership(currentUser.ID, orgID)
+	return h.memService.GetMembership(currentUser.ID.String(), orgID.String())
 }

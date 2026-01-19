@@ -23,7 +23,7 @@ func TestGitRemoteService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	orgID := "org1"
+	orgID := testID(100).String()
 	name := "origin"
 	url := "https://github.com/user/repo.git"
 	token := "ghp_test_token"
@@ -45,18 +45,18 @@ func TestGitRemoteService(t *testing.T) {
 	}
 
 	// Get token
-	savedToken, err := s.GetToken(remote.ID)
+	savedToken, err := s.GetToken(remote.ID.String())
 	if err != nil || savedToken != token {
 		t.Errorf("Failed to get token: %v, got=%s", err, savedToken)
 	}
 
 	// Update sync
-	if err := s.UpdateLastSync(remote.ID); err != nil {
+	if err := s.UpdateLastSync(remote.ID.String()); err != nil {
 		t.Errorf("Failed to update sync: %v", err)
 	}
 
 	// Delete
-	if err := s.DeleteRemote(orgID, remote.ID); err != nil {
+	if err := s.DeleteRemote(orgID, remote.ID.String()); err != nil {
 		t.Fatalf("Failed to delete remote: %v", err)
 	}
 
