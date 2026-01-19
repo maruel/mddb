@@ -3,6 +3,7 @@ package jsonldb
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -117,18 +118,18 @@ func (id ID) String() string {
 // Zero IDs are marshaled as empty strings.
 func (id ID) MarshalJSON() ([]byte, error) {
 	if id == 0 {
-		return []byte(`""`), nil
+		return json.Marshal("")
 	}
-	return []byte(`"` + id.String() + `"`), nil
+	return json.Marshal(id.String())
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 // Empty strings are unmarshaled as zero IDs.
 func (id *ID) UnmarshalJSON(data []byte) error {
-	if len(data) < 2 || data[0] != '"' || data[len(data)-1] != '"' {
-		return fmt.Errorf("invalid ID JSON: expected quoted string")
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
 	}
-	s := string(data[1 : len(data)-1])
 	if s == "" {
 		*id = 0
 		return nil
