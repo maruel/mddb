@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -20,7 +21,12 @@ type MembershipService struct {
 
 // NewMembershipService creates a new membership service.
 func NewMembershipService(rootDir string) (*MembershipService, error) {
-	tablePath := filepath.Join(rootDir, "db", "memberships.jsonl")
+	dbDir := filepath.Join(rootDir, "db")
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create db directory: %w", err)
+	}
+
+	tablePath := filepath.Join(dbDir, "memberships.jsonl")
 	table, err := jsonldb.NewTable[models.Membership](tablePath)
 	if err != nil {
 		return nil, err

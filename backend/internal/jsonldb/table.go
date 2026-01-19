@@ -51,6 +51,7 @@ func (t *Table[T]) Last() (T, bool) {
 }
 
 // NewTable creates a new Table and loads all data from the file.
+// If the file doesn't exist, the schema is auto-discovered from type T via reflection.
 func NewTable[T Row[T]](path string) (*Table[T], error) {
 	table := &Table[T]{path: path}
 	if err := table.load(); err != nil {
@@ -58,9 +59,17 @@ func NewTable[T Row[T]](path string) (*Table[T], error) {
 	}
 	// Initialize schema if not loaded (new table)
 	if table.schema.Version == "" {
-		table.schema.Version = CurrentVersion
-		table.schema.Created = time.Now()
-		table.schema.Modified = time.Now()
+		columns, err := schemaFromType[T]()
+		if err != nil {
+			return nil, fmt.Errorf("failed to discover schema from type: %w", err)
+		}
+		now := time.Now()
+		table.schema = schemaHeader{
+			Version:  CurrentVersion,
+			Columns:  columns,
+			Created:  now,
+			Modified: now,
+		}
 	}
 	return table, nil
 }
@@ -124,10 +133,19 @@ func (t *Table[T]) All() iter.Seq[T] {
 func (t *Table[T]) Append(row T) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	// If file doesn't exist, write schema header first
+	if _, err := os.Stat(t.path); os.IsNotExist(err) {
+		if err := t.saveSchemaHeaderLocked(); err != nil {
+			return fmt.Errorf("failed to write schema header: %w", err)
+		}
+	}
+
 	data, err := json.Marshal(row)
 	if err != nil {
 		return fmt.Errorf("failed to marshal row: %w", err)
 	}
+
 	f, err := os.OpenFile(t.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to open table file for append: %w", err)
@@ -148,6 +166,33 @@ func (t *Table[T]) Replace(rows []T) error {
 	defer t.mu.Unlock()
 	t.rows = rows
 	return t.save()
+}
+
+// saveSchemaHeaderLocked writes just the schema header as the first line. Caller must hold t.mu.
+func (t *Table[T]) saveSchemaHeaderLocked() error {
+	f, err := os.Create(t.path)
+	if err != nil {
+		return fmt.Errorf("failed to create table file: %w", err)
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+
+	writer := bufio.NewWriter(f)
+	headerData, err := json.Marshal(t.schema)
+	if err != nil {
+		return fmt.Errorf("failed to marshal schema header: %w", err)
+	}
+	if _, err := writer.Write(headerData); err != nil {
+		return fmt.Errorf("failed to write schema header: %w", err)
+	}
+	if err := writer.WriteByte('\n'); err != nil {
+		return fmt.Errorf("failed to write newline: %w", err)
+	}
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("failed to flush writer: %w", err)
+	}
+	return nil
 }
 
 // save writes the schema header and all rows to the file. Caller must hold t.mu.

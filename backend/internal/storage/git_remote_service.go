@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"sync"
@@ -37,13 +38,18 @@ func (r remoteSecret) GetID() jsonldb.ID {
 
 // NewGitRemoteService creates a new git remote service.
 func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
-	remotePath := filepath.Join(rootDir, "db", "git_remotes.jsonl")
+	dbDir := filepath.Join(rootDir, "db")
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create db directory: %w", err)
+	}
+
+	remotePath := filepath.Join(dbDir, "git_remotes.jsonl")
 	remoteTable, err := jsonldb.NewTable[models.GitRemote](remotePath)
 	if err != nil {
 		return nil, err
 	}
 
-	secretPath := filepath.Join(rootDir, "db", "git_remote_secrets.jsonl")
+	secretPath := filepath.Join(dbDir, "git_remote_secrets.jsonl")
 	secretTable, err := jsonldb.NewTable[remoteSecret](secretPath)
 	if err != nil {
 		return nil, err

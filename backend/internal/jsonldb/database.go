@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"reflect"
+	"strings"
 	"sync"
 	"time"
 )
@@ -35,7 +37,17 @@ type DataRecord struct {
 }
 
 // schemaHeader is the first row of a JSONL data file containing schema and metadata.
+// Used by Table[T] for generic schema storage.
 type schemaHeader struct {
+	Version  string    `json:"version"`
+	Columns  []Column  `json:"columns"`
+	Created  time.Time `json:"created"`
+	Modified time.Time `json:"modified"`
+}
+
+// databaseHeader is the first row of a JSONL database file with ID and Title metadata.
+// Used by the legacy Database type.
+type databaseHeader struct {
 	Version  string    `json:"version"`
 	ID       string    `json:"id"`
 	Title    string    `json:"title"`
@@ -67,12 +79,122 @@ func (h *schemaHeader) Validate() error {
 	return nil
 }
 
+// schemaFromType[T any] extracts column definitions by marshaling a zero instance to JSON.
+// This ensures the schema matches what is actually written to disk.
+func schemaFromType[T any]() ([]Column, error) {
+	var zero T
+	data, err := json.Marshal(zero)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal zero instance: %w", err)
+	}
+
+	var m map[string]any
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal to map: %w", err)
+	}
+
+	// Get the actual struct type for fallback type inference
+	t := reflect.TypeOf(zero)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("type must be a struct, got %s", t.Kind())
+	}
+
+	// Build field lookup by JSON name
+	fieldByJSONName := make(map[string]reflect.StructField)
+	for i := range t.NumField() {
+		field := t.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+		jsonTag := field.Tag.Get("json")
+		if jsonTag == "-" {
+			continue
+		}
+		jsonName := field.Name
+		if jsonTag != "" {
+			jsonName = strings.Split(jsonTag, ",")[0]
+		}
+		fieldByJSONName[jsonName] = field
+	}
+
+	// Create columns from JSON keys in deterministic order
+	var columns []Column
+	for jsonName := range m {
+		field, ok := fieldByJSONName[jsonName]
+		if !ok {
+			// Field in JSON but not found in struct, infer type from value
+			colType := inferTypeFromValue(m[jsonName])
+			columns = append(columns, Column{
+				Name: jsonName,
+				Type: colType,
+			})
+			continue
+		}
+
+		// Use struct field info for type inference
+		colType := goTypeToColumnType(field.Type)
+		columns = append(columns, Column{
+			Name: jsonName,
+			Type: colType,
+		})
+	}
+
+	return columns, nil
+}
+
+// inferTypeFromValue infers a column type from a JSON value.
+func inferTypeFromValue(v any) string {
+	if v == nil {
+		return "text"
+	}
+	switch v.(type) {
+	case bool:
+		return "checkbox"
+	case float64:
+		return "number"
+	case string:
+		return "text"
+	default:
+		return "text"
+	}
+}
+
+// goTypeToColumnType maps Go types to JSONL column types.
+func goTypeToColumnType(t reflect.Type) string {
+	// Dereference pointers
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	// Check for time.Time first (before switch)
+	if t == reflect.TypeOf(time.Time{}) {
+		return "date"
+	}
+
+	switch t.Kind() { //nolint:exhaustive // Other kinds default to "text"
+	case reflect.String:
+		return "text"
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return "number"
+	case reflect.Bool:
+		return "checkbox"
+	default:
+		// Default to text for all other types
+		return "text"
+	}
+}
+
 // Database handles JSONL-based database storage with schema header in the first row.
 type Database struct {
 	path string
 	Mu   sync.RWMutex
 
-	Header  *schemaHeader
+	Header  *databaseHeader
 	Records []DataRecord
 }
 
@@ -92,7 +214,7 @@ func NewDatabase(path, id, title string, columns []Column) (*Database, error) {
 	// If new database or schema not yet initialized
 	if db.Header == nil {
 		now := time.Now()
-		db.Header = &schemaHeader{
+		db.Header = &databaseHeader{
 			Version:  CurrentVersion,
 			ID:       id,
 			Title:    title,
@@ -134,7 +256,7 @@ func (db *Database) load() error {
 
 		// First line is the schema header
 		if lineNum == 1 {
-			var header schemaHeader
+			var header databaseHeader
 			if err := json.Unmarshal(line, &header); err != nil {
 				return fmt.Errorf("failed to parse schema header: %w", err)
 			}

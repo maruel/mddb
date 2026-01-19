@@ -129,11 +129,12 @@ See `README.md` and `API.md` for details.
 - [ ] **JSONLDB Unification (Part 2)**:
     - [ ] Merge `Database` and `Table` into a single `Table[T]` struct.
     - [x] Add `Row[T]` interface: `Cloner[T]` + `GetID() ID`. Table[T] now requires Row[T] constraint.
-    - [ ] Header (SchemaHeader) required on all tables, unexported field.
+    - [x] Header (SchemaHeader) required on all tables, unexported field with auto-discovery from JSON.
     - [ ] Delete `Database` type and `DataRecord` with `map[string]any`.
     - [x] Add `GetID() ID` method to: `Organization`, `GitRemote`, `Invitation`, `User`/`userStorage`, `remoteSecret`.
     - [x] `Membership` keeps composite key (`UserID`, `OrganizationID`), `GetID()` returns zero - no ID-based lookups, use `All()` with filtering.
     - [ ] Update all callers of `NewTable` and `NewDatabase`.
+    - **Future**: Extend schema discovery to support nested structs (object type) and slices (list type).
 - [ ] **JSONLDB Sharding (Part 3)**: Add support for sharding in JSONLDB to handle extremely large datasets.
 
 ### Phase 14: URL Standardization

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -21,7 +22,12 @@ type InvitationService struct {
 
 // NewInvitationService creates a new invitation service.
 func NewInvitationService(rootDir string) (*InvitationService, error) {
-	tablePath := filepath.Join(rootDir, "db", "invitations.jsonl")
+	dbDir := filepath.Join(rootDir, "db")
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create db directory: %w", err)
+	}
+
+	tablePath := filepath.Join(dbDir, "invitations.jsonl")
 	table, err := jsonldb.NewTable[models.Invitation](tablePath)
 	if err != nil {
 		return nil, err

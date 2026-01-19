@@ -24,7 +24,12 @@ type OrganizationService struct {
 
 // NewOrganizationService creates a new organization service.
 func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *GitService) (*OrganizationService, error) {
-	tablePath := filepath.Join(rootDir, "db", "organizations.jsonl")
+	dbDir := filepath.Join(rootDir, "db")
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+		return nil, fmt.Errorf("failed to create db directory: %w", err)
+	}
+
+	tablePath := filepath.Join(dbDir, "organizations.jsonl")
 	table, err := jsonldb.NewTable[models.Organization](tablePath)
 	if err != nil {
 		return nil, err
