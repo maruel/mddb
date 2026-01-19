@@ -17,28 +17,22 @@ import (
 // currentVersion is the current version of the JSONL database format.
 const currentVersion = "1.0"
 
-// ColumnType represents the type of a database column.
-type ColumnType string
+// columnType represents the type of a database column.
+type columnType string
 
 const (
-	// ColumnTypeText stores text values.
-	ColumnTypeText ColumnType = "text"
-	// ColumnTypeNumber stores numeric values (integer or float).
-	ColumnTypeNumber ColumnType = "number"
-	// ColumnTypeBool stores boolean values as true/false.
-	ColumnTypeBool ColumnType = "bool"
-	// ColumnTypeDate stores ISO8601 date strings.
-	ColumnTypeDate ColumnType = "date"
-	// ColumnTypeBlob stores binary data as base64-encoded string.
-	ColumnTypeBlob ColumnType = "blob"
-	// ColumnTypeJSONB stores structured data (struct, slice, map) as JSON.
-	ColumnTypeJSONB ColumnType = "jsonb"
+	columnTypeText   columnType = "text"
+	columnTypeNumber columnType = "number"
+	columnTypeBool   columnType = "bool"
+	columnTypeDate   columnType = "date"
+	columnTypeBlob   columnType = "blob"
+	columnTypeJSONB  columnType = "jsonb"
 )
 
 // column represents a database column in storage.
 type column struct {
 	Name     string     `json:"name"`
-	Type     ColumnType `json:"type"`
+	Type     columnType `json:"type"`
 	Required bool       `json:"required,omitempty"`
 }
 
@@ -145,28 +139,28 @@ func schemaFromType[T any]() ([]column, error) {
 }
 
 // inferTypeFromValue infers a column type from a JSON value.
-func inferTypeFromValue(v any) ColumnType {
+func inferTypeFromValue(v any) columnType {
 	if v == nil {
-		return ColumnTypeText
+		return columnTypeText
 	}
 	switch v.(type) {
 	case bool:
-		return ColumnTypeBool
+		return columnTypeBool
 	case float64:
-		return ColumnTypeNumber
+		return columnTypeNumber
 	case string:
-		return ColumnTypeText
+		return columnTypeText
 	case []byte:
-		return ColumnTypeBlob
+		return columnTypeBlob
 	case []any, map[string]any:
-		return ColumnTypeJSONB
+		return columnTypeJSONB
 	default:
-		return ColumnTypeText
+		return columnTypeText
 	}
 }
 
 // goTypeToColumnType maps Go types to JSONL column types.
-func goTypeToColumnType(t reflect.Type) ColumnType {
+func goTypeToColumnType(t reflect.Type) columnType {
 	// Dereference pointers
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -174,32 +168,32 @@ func goTypeToColumnType(t reflect.Type) ColumnType {
 
 	// Check for time.Time first (before switch)
 	if t == reflect.TypeOf(time.Time{}) {
-		return ColumnTypeDate
+		return columnTypeDate
 	}
 
 	// Check for []byte (blob)
 	if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Uint8 {
-		return ColumnTypeBlob
+		return columnTypeBlob
 	}
 
 	switch t.Kind() {
 	case reflect.String:
-		return ColumnTypeText
+		return columnTypeText
 	case reflect.Bool:
-		return ColumnTypeBool
+		return columnTypeBool
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 		reflect.Float32, reflect.Float64:
-		return ColumnTypeNumber
+		return columnTypeNumber
 	case reflect.Struct, reflect.Slice, reflect.Array, reflect.Map:
-		return ColumnTypeJSONB
+		return columnTypeJSONB
 	case reflect.Complex64, reflect.Complex128:
 		// Complex numbers stored as JSON array [real, imag]
-		return ColumnTypeJSONB
+		return columnTypeJSONB
 	case reflect.Invalid, reflect.Uintptr, reflect.Chan, reflect.Func,
 		reflect.Interface, reflect.Pointer, reflect.UnsafePointer:
 		// Unsupported types default to text
-		return ColumnTypeText
+		return columnTypeText
 	}
-	return ColumnTypeText
+	return columnTypeText
 }
