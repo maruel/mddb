@@ -108,7 +108,7 @@ See `README.md` and `API.md` for details.
         - `DatabaseTable.tsx`, `DatabaseGrid.tsx`, `DatabaseGallery.tsx`, `DatabaseBoard.tsx`
     - [x] Locale persistence via `localStorage` and sync with user settings.
     - [x] English dictionary (`dictionaries/en.ts`) - ready for additional locales (fr, de, es).
-- [ ] **l10n**: Add French, German, Spanish translations.
+- [x] **l10n**: Added French (`fr.ts`), German (`de.ts`), Spanish (`es.ts`) translations.
 - [ ] **PWA Support**: Configure manifest and service workers for Progressive Web App support.
 - [ ] **Offline Mode**: Implement client-side storage and reconciliation logic for offline use.
 - [ ] **Theme System**:
