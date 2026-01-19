@@ -578,6 +578,18 @@ export const ErrorCodeUnauthorized = 'UNAUTHORIZED';
  * ErrorCodeForbidden is returned when a user has insufficient permissions
  */
 export const ErrorCodeForbidden = 'FORBIDDEN';
+/**
+ * ErrorCodeInvalidProvider is returned when an OAuth provider is unknown
+ */
+export const ErrorCodeInvalidProvider = 'INVALID_PROVIDER';
+/**
+ * ErrorCodeOAuthError is returned when an OAuth operation fails
+ */
+export const ErrorCodeOAuthError = 'OAUTH_ERROR';
+/**
+ * ErrorCodeExpired is returned when a resource has expired
+ */
+export const ErrorCodeExpired = 'EXPIRED';
 export type ErrorCode =
   | typeof ErrorCodeValidationFailed
   | typeof ErrorCodeMissingField
@@ -591,7 +603,10 @@ export type ErrorCode =
   | typeof ErrorCodeNotImplemented
   | typeof ErrorCodeConflict
   | typeof ErrorCodeUnauthorized
-  | typeof ErrorCodeForbidden;
+  | typeof ErrorCodeForbidden
+  | typeof ErrorCodeInvalidProvider
+  | typeof ErrorCodeOAuthError
+  | typeof ErrorCodeExpired;
 /**
  * ErrorDetails defines the structured error information in a response.
  */
@@ -617,7 +632,10 @@ export interface APIError {}
 
 //////////
 /*
-Package models defines the core data structures used throughout the application.
+Package models defines the core domain types and API contracts.
+
+It includes domain entities (Node, User, Organization, Membership),
+API request/response types, and structured error handling with APIError.
 */
 
 /**
