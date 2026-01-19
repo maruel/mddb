@@ -12,6 +12,7 @@
     "format": "prettier --write src"
   },
   "dependencies": {
+    "@solid-primitives/i18n": "^2.2.1",
     "markdown-it": "^13.0.0",
     "solid-js": "^1.8.0",
     "terser": "^5.46.0"

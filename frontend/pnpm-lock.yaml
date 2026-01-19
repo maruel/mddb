@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@solid-primitives/i18n':
+        specifier: ^2.2.1
+        version: 2.2.1(solid-js@1.9.10)
       markdown-it:
         specifier: ^13.0.0
         version: 13.0.2
@@ -496,6 +499,11 @@ packages:
 
   '@sinclair/typebox@0.27.8':
     resolution: {integrity: sha512-+Fj43pSMwJs4KRrH/938Uf+uAELIgVBmQzg/q1YG10djyfA3TnrU8N8XzqCh/okZdszqBQTZf96idMfE5lnwTA==}
+
+  '@solid-primitives/i18n@2.2.1':
+    resolution: {integrity: sha512-TnTnE2Ku11MGYZ1JzhJ8pYscwg1fr9MteoYxPwsfxWfh9Jp5K7RRJncJn9BhOHvNLwROjqOHZ46PT7sPHqbcXw==}
+    peerDependencies:
+      solid-js: ^1.6.12
 
   '@solidjs/testing-library@0.8.10':
     resolution: {integrity: sha512-qdeuIerwyq7oQTIrrKvV0aL9aFeuwTd86VYD3afdq5HYEwoox1OBTJy4y8A3TFZr8oAR0nujYgCzY/8wgHGfeQ==}
@@ -1875,6 +1883,10 @@ snapshots:
     optional: true
 
   '@sinclair/typebox@0.27.8': {}
+
+  '@solid-primitives/i18n@2.2.1(solid-js@1.9.10)':
+    dependencies:
+      solid-js: 1.9.10
 
   '@solidjs/testing-library@0.8.10(solid-js@1.9.10)':
     dependencies:

@@ -1,6 +1,7 @@
 import { For, Show, createMemo } from 'solid-js';
 import type { DataRecord, Column } from '../types';
 import styles from './DatabaseBoard.module.css';
+import { useI18n } from '../i18n';
 
 interface DatabaseBoardProps {
   records: DataRecord[];
@@ -9,6 +10,7 @@ interface DatabaseBoardProps {
 }
 
 export default function DatabaseBoard(props: DatabaseBoardProps) {
+  const { t } = useI18n();
   // Find the first select column to group by
   const groupColumn = () =>
     props.columns.find((c) => c.type === 'select' || c.type === 'multi_select');
@@ -25,7 +27,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
       grouped[opt] = { name: opt, records: [] };
     });
     // Add "No Group" for records without a value
-    grouped['__none__'] = { name: 'No ' + col.name, records: [] };
+    grouped['__none__'] = { name: t('database.noGroup') || 'No Group', records: [] };
 
     props.records.forEach((record) => {
       const val = record.data[col.name];
@@ -49,7 +51,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
     <div class={styles.board}>
       <Show
         when={groupColumn()}
-        fallback={<div class={styles.noGroup}>Add a "select" column to group by status.</div>}
+        fallback={<div class={styles.noGroup}>{t('database.addSelectColumn')}</div>}
       >
         <div class={styles.columns}>
           <For each={groups()}>
@@ -67,7 +69,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
                           <strong>
                             {String(
                               (props.columns[0] ? record.data[props.columns[0].name] : null) ||
-                                'Untitled'
+                                t('database.untitled')
                             )}
                           </strong>
                           <button

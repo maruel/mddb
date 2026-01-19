@@ -1,6 +1,7 @@
 import { For, Show } from 'solid-js';
 import type { DataRecord, Column } from '../types';
 import styles from './DatabaseGallery.module.css';
+import { useI18n } from '../i18n';
 
 interface DatabaseGalleryProps {
   records: DataRecord[];
@@ -9,6 +10,7 @@ interface DatabaseGalleryProps {
 }
 
 export default function DatabaseGallery(props: DatabaseGalleryProps) {
+  const { t } = useI18n();
   // Try to find an image column
   const imageColumn = () =>
     props.columns.find(
@@ -30,7 +32,7 @@ export default function DatabaseGallery(props: DatabaseGalleryProps) {
                   <div class={styles.imageContainer}>
                     <Show
                       when={record.data[col().name]}
-                      fallback={<div class={styles.imagePlaceholder}>No Image</div>}
+                      fallback={<div class={styles.imagePlaceholder}>{t('database.noImage')}</div>}
                     >
                       <img
                         src={String(record.data[col().name])}
@@ -47,7 +49,8 @@ export default function DatabaseGallery(props: DatabaseGalleryProps) {
                 <div class={styles.cardHeader}>
                   <strong>
                     {String(
-                      (props.columns[0] ? record.data[props.columns[0].name] : null) || 'Untitled'
+                      (props.columns[0] ? record.data[props.columns[0].name] : null) ||
+                        t('database.untitled')
                     )}
                   </strong>
                   <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>

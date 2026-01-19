@@ -1,6 +1,7 @@
 import { createSignal, Show, untrack } from 'solid-js';
 import type { User } from '../types';
 import styles from './Onboarding.module.css';
+import { useI18n } from '../i18n';
 
 interface OnboardingProps {
   user: User;
@@ -9,6 +10,7 @@ interface OnboardingProps {
 }
 
 export default function Onboarding(props: OnboardingProps) {
+  const { t } = useI18n();
   const [step, setStep] = createSignal(untrack(() => props.user.onboarding?.step || 'name'));
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -102,8 +104,8 @@ export default function Onboarding(props: OnboardingProps) {
     <div class={styles.overlay}>
       <div class={styles.modal}>
         <header class={styles.header}>
-          <h2>Welcome to mddb!</h2>
-          <p>Let's get your workspace ready.</p>
+          <h2>{t('onboarding.welcome')}</h2>
+          <p>{t('onboarding.letsGetStarted')}</p>
         </header>
 
         <Show when={error()}>
@@ -113,68 +115,70 @@ export default function Onboarding(props: OnboardingProps) {
         <div class={styles.content}>
           <Show when={step() === 'name'}>
             <div class={styles.step}>
-              <h3>Confirm Workspace Name</h3>
+              <h3>{t('onboarding.confirmWorkspaceName')}</h3>
               <div class={styles.formGroup}>
-                <label>Workspace Name</label>
+                <label>{t('onboarding.workspaceName')}</label>
                 <input
                   type="text"
                   value={orgName()}
                   onInput={(e) => setOrgName(e.target.value)}
                   disabled
                 />
-                <p class={styles.hint}>This is derived from your registration name.</p>
+                <p class={styles.hint}>{t('onboarding.workspaceNameHint')}</p>
               </div>
               <button class={styles.primaryButton} onClick={() => updateStep('members')}>
-                Next: Invite Team
+                {t('onboarding.nextInviteTeam')}
               </button>
             </div>
           </Show>
 
           <Show when={step() === 'members'}>
             <div class={styles.step}>
-              <h3>Team Collaboration</h3>
-              <p>You can invite your team members now or later in settings.</p>
+              <h3>{t('onboarding.teamCollaboration')}</h3>
+              <p>{t('onboarding.teamCollaborationHint')}</p>
               <div class={styles.illustration}>👥</div>
               <button class={styles.primaryButton} onClick={() => updateStep('git')}>
-                Next: Git Sync
+                {t('onboarding.nextGitSync')}
               </button>
             </div>
           </Show>
 
           <Show when={step() === 'git'}>
             <div class={styles.step}>
-              <h3>Advanced Sync (Optional)</h3>
-              <p>Keep your data safe by synchronizing with a private Git repository.</p>
+              <h3>{t('onboarding.advancedSyncTitle')}</h3>
+              <p>{t('onboarding.advancedSyncHint')}</p>
 
               <form onSubmit={handleSetupGit} class={styles.gitForm}>
                 <div class={styles.formGroup}>
-                  <label>GitHub/GitLab Repository URL</label>
+                  <label>{t('onboarding.repoUrl')}</label>
                   <input
                     type="url"
-                    placeholder="https://github.com/user/repo.git"
+                    placeholder={
+                      t('onboarding.repoUrlPlaceholder') || 'https://github.com/user/repo.git'
+                    }
                     value={remoteURL()}
                     onInput={(e) => setRemoteURL(e.target.value)}
                   />
                 </div>
                 <div class={styles.formGroup}>
-                  <label>Personal Access Token</label>
+                  <label>{t('onboarding.patLabel')}</label>
                   <input
                     type="password"
-                    placeholder="ghp_..."
+                    placeholder={t('onboarding.patPlaceholder') || 'ghp_...'}
                     value={remoteToken()}
                     onInput={(e) => setRemoteToken(e.target.value)}
                   />
                 </div>
                 <div class={styles.actions}>
                   <button type="button" class={styles.secondaryButton} onClick={handleSkipGit}>
-                    Skip for now
+                    {t('onboarding.skipForNow')}
                   </button>
                   <button
                     type="submit"
                     class={styles.primaryButton}
                     disabled={!remoteURL() || loading()}
                   >
-                    {loading() ? 'Saving...' : 'Setup & Finish'}
+                    {loading() ? t('common.saving') : t('onboarding.setupAndFinish')}
                   </button>
                 </div>
               </form>

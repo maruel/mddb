@@ -1,12 +1,14 @@
 import { createSignal, Show } from 'solid-js';
 import styles from './Auth.module.css';
 import type { User, LoginResponse, LoginRequest, RegisterRequest, ErrorResponse } from '../types';
+import { useI18n } from '../i18n';
 
 interface AuthProps {
   onLogin: (token: string, user: User) => void;
 }
 
 export default function Auth(props: AuthProps) {
+  const { t } = useI18n();
   const [isRegister, setIsRegister] = createSignal(false);
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
@@ -54,13 +56,13 @@ export default function Auth(props: AuthProps) {
   return (
     <div class={styles.authContainer}>
       <form class={styles.authForm} onSubmit={handleSubmit}>
-        <h2>{isRegister() ? 'Create Account' : 'Login to mddb'}</h2>
+        <h2>{isRegister() ? t('auth.createAccount') : t('auth.loginTitle')}</h2>
 
         {error() && <div class={styles.error}>{error()}</div>}
 
         <Show when={isRegister()}>
           <div class={styles.formGroup}>
-            <label for="name">Name</label>
+            <label for="name">{t('auth.name')}</label>
             <input
               id="name"
               name="name"
@@ -74,7 +76,7 @@ export default function Auth(props: AuthProps) {
         </Show>
 
         <div class={styles.formGroup}>
-          <label for="email">Email</label>
+          <label for="email">{t('auth.email')}</label>
           <input
             id="email"
             name="email"
@@ -87,7 +89,7 @@ export default function Auth(props: AuthProps) {
         </div>
 
         <div class={styles.formGroup}>
-          <label for="password">Password</label>
+          <label for="password">{t('auth.password')}</label>
           <input
             id="password"
             name="password"
@@ -100,27 +102,27 @@ export default function Auth(props: AuthProps) {
         </div>
 
         <button type="submit" disabled={loading()}>
-          {loading() ? 'Please wait...' : isRegister() ? 'Register' : 'Login'}
+          {loading() ? t('auth.pleaseWait') : isRegister() ? t('auth.register') : t('auth.login')}
         </button>
 
         <div class={styles.oauthSection}>
           <div class={styles.divider}>
-            <span>or</span>
+            <span>{t('auth.or')}</span>
           </div>
           <div class={styles.oauthButtons}>
             <a href="/api/auth/oauth/google" class={styles.googleButton}>
-              Login with Google
+              {t('auth.loginWithGoogle')}
             </a>
             <a href="/api/auth/oauth/microsoft" class={styles.microsoftButton}>
-              Login with Microsoft
+              {t('auth.loginWithMicrosoft')}
             </a>
           </div>
         </div>
 
         <p class={styles.toggle}>
-          {isRegister() ? 'Already have an account?' : "Don't have an account?"}
+          {isRegister() ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}
           <button type="button" onClick={() => setIsRegister(!isRegister())}>
-            {isRegister() ? 'Login' : 'Register'}
+            {isRegister() ? t('auth.login') : t('auth.register')}
           </button>
         </p>
 
@@ -133,7 +135,7 @@ export default function Auth(props: AuthProps) {
               window.dispatchEvent(new PopStateEvent('popstate'));
             }}
           >
-            Privacy Policy
+            {t('app.privacyPolicy')}
           </a>
         </div>
       </form>

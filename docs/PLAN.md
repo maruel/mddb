@@ -99,7 +99,16 @@ See `README.md` and `API.md` for details.
 - [ ] **Data Repository Context**: Automatically add `AGENTS.md` to organization repositories for agent guidance.
 
 ### Phase 12: Globalization, Mobile & Theming
-- [ ] **i18n and l10n**: Implement internationalization and localization framework.
+- [x] **i18n Infrastructure**: Implemented internationalization framework.
+    - [x] Created `frontend/src/i18n/` with `@solid-primitives/i18n` integration.
+    - [x] Defined `Dictionary` type interface (`types.ts`) covering all UI sections.
+    - [x] Implemented `I18nProvider` context with `useI18n` hook and `translateError` helper.
+    - [x] Migrated all user-facing components to use `t()` translator:
+        - `App.tsx`, `Auth.tsx`, `WorkspaceSettings.tsx`, `Onboarding.tsx`
+        - `DatabaseTable.tsx`, `DatabaseGrid.tsx`, `DatabaseGallery.tsx`, `DatabaseBoard.tsx`
+    - [x] Locale persistence via `localStorage` and sync with user settings.
+    - [x] English dictionary (`dictionaries/en.ts`) - ready for additional locales (fr, de, es).
+- [ ] **l10n**: Add French, German, Spanish translations.
 - [ ] **PWA Support**: Configure manifest and service workers for Progressive Web App support.
 - [ ] **Offline Mode**: Implement client-side storage and reconciliation logic for offline use.
 - [ ] **Theme System**:

@@ -1,6 +1,7 @@
 import { createSignal, For, Show } from 'solid-js';
 import type { DataRecord, Column } from '../types';
 import styles from './DatabaseTable.module.css';
+import { useI18n } from '../i18n';
 
 interface DatabaseTableProps {
   databaseId: string;
@@ -14,6 +15,7 @@ interface DatabaseTableProps {
 }
 
 export default function DatabaseTable(props: DatabaseTableProps) {
+  const { t } = useI18n();
   const [editingCell, setEditingCell] = createSignal<{
     recordId: string;
     columnId: string;
@@ -138,7 +140,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
         <table class={styles.table}>
           <thead>
             <tr class={styles.headerRow}>
-              <th class={styles.headerCell}>Actions</th>
+              <th class={styles.headerCell}>{t('common.actions')}</th>
               <For each={props.columns}>
                 {(column) => (
                   <th class={styles.headerCell}>
@@ -160,7 +162,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
                       <button
                         class={styles.deleteBtn}
                         onClick={() => props.onDeleteRecord?.(record.id)}
-                        title="Delete record"
+                        title={t('database.deleteRecord') || 'Delete record'}
                       >
                         ✕
                       </button>
@@ -232,12 +234,12 @@ export default function DatabaseTable(props: DatabaseTableProps) {
       </div>
 
       <Show when={props.records.length === 0}>
-        <div class={styles.empty}>No records. Click + to add one.</div>
+        <div class={styles.empty}>{t('database.noRecords')}</div>
       </Show>
 
       <Show when={props.hasMore}>
         <div class={styles.loadMore}>
-          <button onClick={() => props.onLoadMore?.()}>Load More</button>
+          <button onClick={() => props.onLoadMore?.()}>{t('database.loadMore')}</button>
         </div>
       </Show>
     </div>

@@ -11,6 +11,7 @@ import Auth from './components/Auth';
 import Privacy from './components/Privacy';
 import Terms from './components/Terms';
 import { debounce } from './utils/debounce';
+import { useI18n, type Locale } from './i18n';
 import type {
   Node,
   DataRecord,
@@ -33,6 +34,7 @@ const slugify = (text: string) => {
 };
 
 export default function App() {
+  const { t, locale, setLocale } = useI18n();
   const [user, setUser] = createSignal<User | null>(null);
   const [token, setToken] = createSignal<string | null>(localStorage.getItem('mddb_token'));
   const [nodes, setNodes] = createSignal<Node[]>([]);
@@ -80,7 +82,7 @@ export default function App() {
     const res = await fetch(finalUrl, { ...options, headers });
     if (res.status === 401) {
       logout();
-      throw new Error('Session expired');
+      throw new Error(t('errors.sessionExpired') || 'Session expired');
     }
     return res;
   };
@@ -114,7 +116,7 @@ export default function App() {
       }
       await loadNodes();
     } catch (err) {
-      setError('Failed to switch organization: ' + err);
+      setError(`${t('errors.failedToSwitch')}: ${err}`);
       throw err; // Propagate error for callers
     } finally {
       setLoading(false);
@@ -153,10 +155,20 @@ export default function App() {
         }
       }, 2000);
     } catch (err) {
-      setError('Auto-save failed: ' + err);
+      setError(`${t('errors.autoSaveFailed')}: ${err}`);
       setAutoSaveStatus('idle');
     }
   }, 2000);
+
+  // Sync locale with user settings
+  createEffect(() => {
+    const u = user();
+    const userLang = u?.settings?.language as Locale | undefined;
+    if (userLang && ['en', 'fr', 'de', 'es'].includes(userLang) && userLang !== locale()) {
+      setLocale(userLang);
+      localStorage.setItem('mddb_locale', userLang);
+    }
+  });
 
   // Load user on mount
   createEffect(() => {
@@ -219,7 +231,7 @@ export default function App() {
           if (isMember) {
             await switchOrg(orgId, false); // Don't redirect to /
           } else {
-            setError(`You do not have access to organization ${orgId}`);
+            setError(t('errors.noAccessToOrg') || 'You do not have access to this organization');
             return;
           }
         } catch {
@@ -263,7 +275,7 @@ export default function App() {
       setNodes((data.nodes?.filter(Boolean) as Node[]) || []);
       setError(null);
     } catch (err) {
-      setError('Failed to load nodes: ' + err);
+      setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -315,7 +327,7 @@ export default function App() {
         setHasMore(false);
       }
     } catch (err) {
-      setError('Failed to load node: ' + err);
+      setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -334,7 +346,7 @@ export default function App() {
       setHistory((data.history?.filter(Boolean) as Commit[]) || []);
       setShowHistory(true);
     } catch (err) {
-      setError('Failed to load history: ' + err);
+      setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -342,9 +354,7 @@ export default function App() {
 
   async function loadVersion(nodeId: string, hash: string) {
     if (
-      !confirm(
-        'This will replace current editor content with the selected version. Unsaved changes will be lost. Continue?'
-      )
+      !confirm(t('editor.restoreConfirm') || 'This will replace current editor content. Continue?')
     )
       return;
 
@@ -356,7 +366,7 @@ export default function App() {
       setHasUnsavedChanges(true); // Mark as modified
       setShowHistory(false);
     } catch (err) {
-      setError('Failed to load version: ' + err);
+      setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -364,7 +374,7 @@ export default function App() {
 
   async function createNode(type: 'document' | 'database' = 'document') {
     if (!title().trim()) {
-      setError('Title is required');
+      setError(t('errors.titleRequired') || 'Title is required');
       return;
     }
 
@@ -384,7 +394,7 @@ export default function App() {
       setAutoSaveStatus('idle');
       setError(null);
     } catch (err) {
-      setError('Failed to create node: ' + err);
+      setError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -417,7 +427,7 @@ export default function App() {
         }
       }
     } catch (err) {
-      setError('Failed to save node: ' + err);
+      setError(`${t('errors.failedToSave')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -427,7 +437,7 @@ export default function App() {
     const nodeId = selectedNodeId();
     if (!nodeId) return;
 
-    if (!confirm('Are you sure you want to delete this node?')) return;
+    if (!confirm(t('database.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
       setLoading(true);
@@ -441,7 +451,7 @@ export default function App() {
       setError(null);
       window.history.pushState(null, '', '/');
     } catch (err) {
-      setError('Failed to delete node: ' + err);
+      setError(`${t('errors.failedToDelete')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -486,7 +496,7 @@ export default function App() {
       });
 
       if (!res.ok) {
-        setError('Failed to create record');
+        setError(t('errors.failedToCreate') || 'Failed to create record');
         return;
       }
 
@@ -494,7 +504,7 @@ export default function App() {
       loadNode(nodeId);
       setError(null);
     } catch (err) {
-      setError('Failed to add record: ' + err);
+      setError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -504,7 +514,7 @@ export default function App() {
     const nodeId = selectedNodeId();
     if (!nodeId) return;
 
-    if (!confirm('Delete this record?')) return;
+    if (!confirm(t('database.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
       setLoading(true);
@@ -512,7 +522,7 @@ export default function App() {
       loadNode(nodeId);
       setError(null);
     } catch (err) {
-      setError('Failed to delete record: ' + err);
+      setError(`${t('errors.failedToDelete')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -533,7 +543,7 @@ export default function App() {
       setRecords([...records(), ...newRecords]);
       setHasMore(newRecords.length === PAGE_SIZE);
     } catch (err) {
-      setError('Failed to load more records: ' + err);
+      setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -564,8 +574,8 @@ export default function App() {
             <div class={styles.app}>
               <header class={styles.header}>
                 <div class={styles.headerTitle}>
-                  <h1>mddb</h1>
-                  <p>A seamless markdown-based document and database system</p>
+                  <h1>{t('app.title')}</h1>
+                  <p>{t('app.tagline')}</p>
                 </div>
                 <div class={styles.userInfo}>
                   <Show when={(user()?.memberships?.length ?? 0) > 1}>
@@ -585,14 +595,14 @@ export default function App() {
                   </Show>
                   <Show when={user()?.memberships?.length === 1}>
                     <span class={styles.orgName}>
-                      {user()?.memberships?.[0]?.organization_name || 'My Org'}
+                      {user()?.memberships?.[0]?.organization_name || t('app.myOrg')}
                     </span>
                   </Show>
                   <span>
                     {user()?.name} ({user()?.role})
                   </span>
                   <button onClick={logout} class={styles.logoutButton}>
-                    Logout
+                    {t('app.logout')}
                   </button>
                 </div>
               </header>
@@ -600,14 +610,14 @@ export default function App() {
               <div class={styles.container}>
                 <aside class={styles.sidebar}>
                   <div class={styles.sidebarHeader}>
-                    <h2>Workspace</h2>
+                    <h2>{t('app.workspace')}</h2>
                     <div class={styles.sidebarActions}>
                       <button
                         onClick={() => {
                           setShowSettings(true);
                           setSelectedNodeId(null);
                         }}
-                        title="Workspace Settings"
+                        title={t('app.settings') || 'Workspace Settings'}
                       >
                         ⚙
                       </button>
@@ -616,7 +626,7 @@ export default function App() {
                           setShowSettings(false);
                           createNode('document');
                         }}
-                        title="New Page"
+                        title={t('app.newPage') || 'New Page'}
                       >
                         +P
                       </button>
@@ -625,7 +635,7 @@ export default function App() {
                           setShowSettings(false);
                           createNode('database');
                         }}
-                        title="New Database"
+                        title={t('app.newDatabase') || 'New Database'}
                       >
                         +D
                       </button>
@@ -633,7 +643,7 @@ export default function App() {
                   </div>
 
                   <Show when={loading() && nodes().length === 0} fallback={null}>
-                    <p class={styles.loading}>Loading...</p>
+                    <p class={styles.loading}>{t('common.loading')}</p>
                   </Show>
 
                   <ul class={styles.pageList}>
@@ -658,7 +668,7 @@ export default function App() {
                         window.dispatchEvent(new PopStateEvent('popstate'));
                       }}
                     >
-                      Privacy Policy
+                      {t('app.privacyPolicy')}
                     </a>
                     <span style={{ margin: '0 0.5rem', color: '#ccc' }}>|</span>
                     <a
@@ -669,7 +679,7 @@ export default function App() {
                         window.dispatchEvent(new PopStateEvent('popstate'));
                       }}
                     >
-                      Terms
+                      {t('app.terms')}
                     </a>
                   </div>
                 </aside>
@@ -712,12 +722,12 @@ export default function App() {
                       when={selectedNodeId()}
                       fallback={
                         <div class={styles.welcome}>
-                          <h2>Welcome to mddb</h2>
-                          <p>Select a node from the sidebar or create a new one to get started.</p>
+                          <h2>{t('welcome.title')}</h2>
+                          <p>{t('welcome.subtitle')}</p>
                           <div class={styles.createForm}>
                             <input
                               type="text"
-                              placeholder="Title"
+                              placeholder={t('editor.titlePlaceholder') || 'Title'}
                               value={title()}
                               onInput={(e) => setTitle(e.target.value)}
                               class={styles.titleInput}
@@ -727,13 +737,13 @@ export default function App() {
                                 onClick={() => createNode('document')}
                                 class={styles.createButton}
                               >
-                                Create Page
+                                {t('welcome.createPage')}
                               </button>
                               <button
                                 onClick={() => createNode('database')}
                                 class={styles.createButton}
                               >
-                                Create Database
+                                {t('welcome.createDatabase')}
                               </button>
                             </div>
                           </div>
@@ -744,7 +754,7 @@ export default function App() {
                         <div class={styles.editorHeader}>
                           <input
                             type="text"
-                            placeholder="Title"
+                            placeholder={t('editor.titlePlaceholder') || 'Title'}
                             value={title()}
                             onInput={(e) => {
                               setTitle(e.target.value);
@@ -755,13 +765,13 @@ export default function App() {
                           />
                           <div class={styles.editorStatus}>
                             <Show when={hasUnsavedChanges()}>
-                              <span class={styles.unsavedIndicator}>● Unsaved</span>
+                              <span class={styles.unsavedIndicator}>● {t('editor.unsaved')}</span>
                             </Show>
                             <Show when={autoSaveStatus() === 'saving'}>
-                              <span class={styles.savingIndicator}>⟳ Saving...</span>
+                              <span class={styles.savingIndicator}>⟳ {t('common.saving')}</span>
                             </Show>
                             <Show when={autoSaveStatus() === 'saved'}>
-                              <span class={styles.savedIndicator}>✓ Saved</span>
+                              <span class={styles.savedIndicator}>✓ {t('common.saved')}</span>
                             </Show>
                           </div>
                           <div class={styles.editorActions}>
@@ -772,20 +782,20 @@ export default function App() {
                               }}
                               disabled={loading()}
                             >
-                              {showHistory() ? 'Hide History' : 'History'}
+                              {showHistory() ? t('editor.hideHistory') : t('editor.history')}
                             </button>
                             <button onClick={saveNode} disabled={loading()}>
-                              {loading() ? 'Saving...' : 'Save'}
+                              {loading() ? t('common.saving') : t('common.save')}
                             </button>
                             <button onClick={deleteCurrentNode} disabled={loading()}>
-                              Delete
+                              {t('common.delete')}
                             </button>
                           </div>
                         </div>
 
                         <Show when={showHistory()}>
                           <div class={styles.historyPanel}>
-                            <h3>Version History</h3>
+                            <h3>{t('editor.versionHistory')}</h3>
                             <ul class={styles.historyList}>
                               <For each={history()}>
                                 {(commit) => (
@@ -809,7 +819,7 @@ export default function App() {
                                 )}
                               </For>
                               <Show when={history().length === 0}>
-                                <li class={styles.historyItem}>No history available</li>
+                                <li class={styles.historyItem}>{t('editor.noHistory')}</li>
                               </Show>
                             </ul>
                           </div>
@@ -830,7 +840,10 @@ export default function App() {
                                   setHasUnsavedChanges(true);
                                   debouncedAutoSave();
                                 }}
-                                placeholder="Write your content in markdown..."
+                                placeholder={
+                                  t('editor.contentPlaceholder') ||
+                                  'Write your content in markdown...'
+                                }
                                 class={styles.contentInput}
                               />
                               <MarkdownPreview
@@ -848,31 +861,31 @@ export default function App() {
                           >
                             <div class={styles.databaseView}>
                               <div class={styles.databaseHeader}>
-                                <h3>Database Records</h3>
+                                <h3>{t('database.records')}</h3>
                                 <div class={styles.viewToggle}>
                                   <button
                                     classList={{ [`${styles.active}`]: viewMode() === 'table' }}
                                     onClick={() => setViewMode('table')}
                                   >
-                                    Table
+                                    {t('database.table')}
                                   </button>
                                   <button
                                     classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
                                     onClick={() => setViewMode('grid')}
                                   >
-                                    Grid
+                                    {t('database.grid')}
                                   </button>
                                   <button
                                     classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
                                     onClick={() => setViewMode('gallery')}
                                   >
-                                    Gallery
+                                    {t('database.gallery')}
                                   </button>
                                   <button
                                     classList={{ [`${styles.active}`]: viewMode() === 'board' }}
                                     onClick={() => setViewMode('board')}
                                   >
-                                    Board
+                                    {t('database.board')}
                                   </button>
                                 </div>
                               </div>

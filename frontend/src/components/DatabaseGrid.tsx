@@ -1,6 +1,7 @@
 import { For } from 'solid-js';
 import type { DataRecord, Column } from '../types';
 import styles from './DatabaseGrid.module.css';
+import { useI18n } from '../i18n';
 
 interface DatabaseGridProps {
   records: DataRecord[];
@@ -9,6 +10,7 @@ interface DatabaseGridProps {
 }
 
 export default function DatabaseGrid(props: DatabaseGridProps) {
+  const { t } = useI18n();
   return (
     <div class={styles.grid}>
       <For each={props.records}>
@@ -17,7 +19,8 @@ export default function DatabaseGrid(props: DatabaseGridProps) {
             <div class={styles.cardHeader}>
               <strong>
                 {String(
-                  (props.columns[0] ? record.data[props.columns[0].name] : null) || 'Untitled'
+                  (props.columns[0] ? record.data[props.columns[0].name] : null) ||
+                    t('database.untitled')
                 )}
               </strong>
               <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>

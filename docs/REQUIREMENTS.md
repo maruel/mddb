@@ -75,7 +75,7 @@ Most core functional requirements for a local-first markdown and database system
     - **Deferrable**: Users can skip onboarding and configure settings later via the workspace settings.
 
 ### 7. Globalization & Platform
-- [ ] **i18n & l10n**: Support for multiple languages and regional formatting.
+- [ ] **i18n & l10n**: Frontend supports multiple languages and regional formatting; backend remains language and locale agnostic (returns error codes, not localized messages).
 - [ ] **PWA**: Progressive Web App support for installability and mobile-like experience.
 - [ ] **Offline Support**: Ability to work offline with robust data reconciliation upon reconnection.
 
