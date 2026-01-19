@@ -675,7 +675,7 @@ export type NodeType = typeof NodeTypeDocument | typeof NodeTypeDatabase | typeo
  */
 export interface Column {
   name: string;
-  type: string; // text, number, select, multi_select, checkbox, date
+  type: any /* jsonldb.ColumnType */;
   required?: boolean;
 }
 /**
