@@ -1,0 +1,2 @@
+# Generated frontend assets - keep ours on merge conflicts
+backend/frontend/dist/** merge=ours

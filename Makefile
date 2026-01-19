@@ -59,6 +59,7 @@ git-hooks:
 	@mkdir -p .git/hooks
 	@cp ./scripts/pre-commit .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
+	@git config merge.ours.driver true
 	@echo "✓ Git hooks installed"
 
 frontend-dev:
