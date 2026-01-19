@@ -64,7 +64,7 @@ func schemaFromType[T any]() ([]Column, error) {
 	t := reflect.TypeFor[T]()
 	var val any
 
-	switch t.Kind() {
+	switch t.Kind() { //nolint:exhaustive // Only Ptr and Struct are valid; default handles the rest
 	case reflect.Ptr:
 		if t.Elem().Kind() != reflect.Struct {
 			return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
