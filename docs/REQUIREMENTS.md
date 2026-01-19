@@ -20,6 +20,23 @@ Most core functional requirements for a local-first markdown and database system
 - [x] **Schema**: Define database schemas (columns with types: text, number, select, multi_select, checkbox, date).
 - [x] **Records**: Store and manage database records in JSONL format.
 - [x] **Pagination**: Support for `offset` and `limit` to handle large datasets.
+- [ ] **Type Coercion**: SQLite-compatible type affinity system for consistent storage.
+    - **Storage Classes**: Map all values to SQLite's 5 storage classes: NULL, INTEGER, REAL, TEXT, BLOB.
+    - **Type Mapping**:
+        - `text` → TEXT affinity (stores as TEXT)
+        - `number` → NUMERIC affinity (stores as INTEGER if whole number, REAL otherwise)
+        - `select` → TEXT affinity (stores as TEXT)
+        - `multi_select` → TEXT affinity (stores as JSON array string)
+        - `checkbox` → INTEGER affinity (stores as 0 or 1)
+        - `date` → TEXT affinity (stores as ISO8601 string "YYYY-MM-DD" or "YYYY-MM-DD HH:MM:SS.SSS")
+    - **Coercion Rules** (applied on write):
+        - NUMERIC: Well-formed integer text → INTEGER; well-formed real text → REAL; float equal to integer → INTEGER; non-numeric text → TEXT.
+        - INTEGER: Same as NUMERIC but forces integer representation.
+        - REAL: Like NUMERIC but forces floating point.
+        - TEXT: Numeric values converted to string representation.
+        - BLOB: No coercion; stored as-is.
+    - **NULL Handling**: Absent JSON keys represent NULL; use `omitzero`/`omitempty` struct tags.
+    - **Future**: Enables seamless migration to SQLite backend.
 - [ ] **Advanced Query**: Complex filtering (nested AND/OR logic) and multi-column persistent sorting.
 - [ ] **Property Editing**: Dynamic UI for schema modifications (adding/deleting columns, renaming, type conversion).
 - [ ] **Relations**: Support for "Relation" column type to link records between different databases (Foreign Keys).

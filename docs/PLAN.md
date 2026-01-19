@@ -137,7 +137,26 @@ See `README.md` and `API.md` for details.
     - [x] Added public `Schema()` and `UpdateSchema()` methods to `Table[T]` for schema access/modification.
     - [x] Database metadata (Title, Created, Modified) now stored in separate `metadata.json` file per page.
     - **Future**: Extend schema discovery to support nested structs (object type) and slices (list type).
-- [ ] **JSONLDB Sharding (Part 3)**: Add support for sharding in JSONLDB to handle extremely large datasets.
+- [ ] **JSONLDB Type Coercion (Part 3)**: SQLite-compatible type affinity for consistent storage.
+    - [ ] **Storage Classes**: Define 5 storage classes matching SQLite: NULL, INTEGER, REAL, TEXT, BLOB.
+    - [ ] **Affinity Mapping**: Map existing column types to affinities:
+        - `text` → TEXT (string storage)
+        - `number` → NUMERIC (INTEGER if whole, REAL otherwise)
+        - `select` → TEXT (string storage)
+        - `multi_select` → TEXT (JSON array string)
+        - `checkbox` → INTEGER (0/1)
+        - `date` → TEXT (ISO8601 format)
+    - [ ] **Coercion Logic**: Implement `coerceValue(value any, affinity Affinity) any` function:
+        - NUMERIC: Parse text to number; float-equal-to-int becomes INTEGER; non-numeric stays TEXT.
+        - INTEGER: Force integer representation (truncate decimals).
+        - REAL: Force float64 representation.
+        - TEXT: Convert numbers to string.
+        - BLOB: Pass through unchanged.
+        - NULL: Omitted fields via `omitzero`/`omitempty` struct tags; absent JSON keys = NULL.
+    - [ ] **Write Path Integration**: Apply coercion in `Table.Create()` and `Table.Update()`.
+    - [ ] **Comparison Semantics**: Apply affinity rules during filtering/comparison operations.
+    - [ ] **Migration Tool**: Optional migration script to coerce existing records to new type rules.
+- [ ] **JSONLDB Sharding (Part 4)**: Add support for sharding in JSONLDB to handle extremely large datasets.
 
 ### Phase 14: URL Standardization
 - [ ] **URL Namespace**: Prefix page URLs with `/p/` to ensure clean routing (e.g., `mddb.app/p/<orgID>/<pageID>`).
@@ -157,9 +176,10 @@ See `README.md` and `API.md` for details.
 - [ ] **Bulk Actions**: Multi-select records for deletion or property updates.
 - [ ] **Undo/Redo**: Global undo/redo support for document edits and database record changes.
 
-## Future Considerations- **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
+## Future Considerations
+- **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
 - **Publishing & Extensibility**: Public pages, custom domains, webhooks, and per-organization API keys.
 - **Google Drive Integration**: Bi-directional sync/import/export for Google Docs (Markdown) and Google Sheets (JSONL).
-- **SQLite Migration**: Migrate `data/db/*.json` to SQLite for better relational integrity and query performance.
+- **SQLite Migration**: Migrate `data/db/*.json` to SQLite for better relational integrity and query performance. Type coercion (Phase 13 Part 3) ensures seamless migration by aligning JSONLDB storage with SQLite's type affinity system.
 - **Real-time Collaboration**: WebSocket-based sync.
 - **Mobile App**: Native mobile clients using the REST API.
