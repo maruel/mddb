@@ -23,17 +23,17 @@ export default function DatabaseTable(props: DatabaseTableProps) {
   const [editValue, setEditValue] = createSignal('');
   const [newRowData, setNewRowData] = createSignal<Record<string, unknown>>({});
 
-  const getCellValue = (record: DataRecord, columnId: string) => {
-    const column = props.columns.find((c) => c.id === columnId);
+  const getCellValue = (record: DataRecord, columnName: string) => {
+    const column = props.columns.find((c) => c.name === columnName);
     if (!column) return '';
     return record.data[column.name] ?? '';
   };
 
-  const handleCellClick = (recordId: string, columnId: string) => {
-    const col = props.columns.find((c) => c.id === columnId);
+  const handleCellClick = (recordId: string, columnName: string) => {
+    const col = props.columns.find((c) => c.name === columnName);
     const value = props.records.find((r) => r.id === recordId)?.data[col?.name ?? ''] ?? '';
 
-    setEditingCell({ recordId, columnId });
+    setEditingCell({ recordId, columnId: columnName });
     setEditValue(String(value));
   };
 
@@ -41,8 +41,8 @@ export default function DatabaseTable(props: DatabaseTableProps) {
     setEditValue(value);
   };
 
-  const handleCellSave = (recordId: string, columnId: string) => {
-    const column = props.columns.find((c) => c.id === columnId);
+  const handleCellSave = (recordId: string, columnName: string) => {
+    const column = props.columns.find((c) => c.name === columnName);
     if (!column || !props.onUpdateRecord) return;
 
     const record = props.records.find((r) => r.id === recordId);
@@ -63,7 +63,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
   };
 
   const renderCellContent = (record: DataRecord, column: Column) => {
-    const value = getCellValue(record, column.id);
+    const value = getCellValue(record, column.name);
 
     switch (column.type) {
       case 'checkbox':
@@ -93,16 +93,12 @@ export default function DatabaseTable(props: DatabaseTableProps) {
         );
       case 'select':
         return (
-          <select
+          <input
+            type="text"
             value={initialValue}
-            onChange={(e) => handleCellChange(e.target.value)}
+            onInput={(e) => handleCellChange(e.target.value)}
             class={styles.input}
-          >
-            <option value="">--</option>
-            <For each={column.options ?? []}>
-              {(option) => <option value={option}>{option}</option>}
-            </For>
-          </select>
+          />
         );
       case 'number':
         return (
@@ -172,13 +168,13 @@ export default function DatabaseTable(props: DatabaseTableProps) {
                     {(column) => {
                       const isEditing = () =>
                         editingCell()?.recordId === record.id &&
-                        editingCell()?.columnId === column.id;
+                        editingCell()?.columnId === column.name;
 
                       return (
                         <td
                           class={styles.cell}
                           classList={{ [`${styles.editing}`]: isEditing() }}
-                          onClick={() => handleCellClick(record.id, column.id)}
+                          onClick={() => handleCellClick(record.id, column.name)}
                         >
                           <Show
                             when={isEditing()}
@@ -193,7 +189,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
                               <div class={styles.editActions}>
                                 <button
                                   class={styles.saveBtn}
-                                  onClick={() => handleCellSave(record.id, column.id)}
+                                  onClick={() => handleCellSave(record.id, column.name)}
                                 >
                                   ✓
                                 </button>

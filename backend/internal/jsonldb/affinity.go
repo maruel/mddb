@@ -3,7 +3,6 @@ package jsonldb
 import (
 	"math"
 	"strconv"
-	"strings"
 )
 
 // Type coercion maps JSON wire types through Go types to SQLite storage classes.
@@ -43,19 +42,19 @@ const (
 	AffinityNUMERIC
 )
 
-// ColumnTypeAffinity returns the SQLite affinity for a column type.
-func ColumnTypeAffinity(colType string) Affinity {
-	switch strings.ToLower(colType) {
-	case "text", "select":
+// Affinity returns the SQLite affinity for this column type.
+func (ct ColumnType) Affinity() Affinity {
+	switch ct {
+	case ColumnTypeText, ColumnTypeSelect:
 		return AffinityTEXT
-	case "multi_select":
+	case ColumnTypeMultiSelect:
 		// multi_select stores as JSON array string
 		return AffinityTEXT
-	case "number":
+	case ColumnTypeNumber:
 		return AffinityNUMERIC
-	case "checkbox":
+	case ColumnTypeCheckbox:
 		return AffinityINTEGER
-	case "date":
+	case ColumnTypeDate:
 		// ISO8601 string format
 		return AffinityTEXT
 	default:
@@ -220,7 +219,7 @@ func CoerceData(data map[string]any, columns []Column) map[string]any {
 	}
 
 	// Build column type lookup
-	colTypes := make(map[string]string, len(columns))
+	colTypes := make(map[string]ColumnType, len(columns))
 	for _, col := range columns {
 		colTypes[col.Name] = col.Type
 	}
@@ -228,9 +227,9 @@ func CoerceData(data map[string]any, columns []Column) map[string]any {
 	return CoerceDataWithTypes(data, colTypes)
 }
 
-// CoerceDataWithTypes applies type coercion using a map of column name to type string.
+// CoerceDataWithTypes applies type coercion using a map of column name to type.
 // Columns not in the map are passed through unchanged (BLOB affinity).
-func CoerceDataWithTypes(data map[string]any, colTypes map[string]string) map[string]any {
+func CoerceDataWithTypes(data map[string]any, colTypes map[string]ColumnType) map[string]any {
 	if data == nil {
 		return nil
 	}
@@ -243,8 +242,7 @@ func CoerceDataWithTypes(data map[string]any, colTypes map[string]string) map[st
 			result[key] = value
 			continue
 		}
-		affinity := ColumnTypeAffinity(colType)
-		result[key] = CoerceValue(value, affinity)
+		result[key] = CoerceValue(value, colType.Affinity())
 	}
 	return result
 }

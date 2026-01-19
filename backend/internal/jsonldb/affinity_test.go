@@ -5,27 +5,26 @@ import (
 	"testing"
 )
 
-func TestColumnTypeAffinity(t *testing.T) {
+func TestColumnType_Affinity(t *testing.T) {
 	tests := []struct {
-		colType  string
+		colType  ColumnType
 		expected Affinity
 	}{
-		{"text", AffinityTEXT},
-		{"TEXT", AffinityTEXT},
-		{"select", AffinityTEXT},
-		{"multi_select", AffinityTEXT},
-		{"number", AffinityNUMERIC},
-		{"checkbox", AffinityINTEGER},
-		{"date", AffinityTEXT},
-		{"unknown", AffinityBLOB},
-		{"", AffinityBLOB},
+		{ColumnTypeText, AffinityTEXT},
+		{ColumnTypeSelect, AffinityTEXT},
+		{ColumnTypeMultiSelect, AffinityTEXT},
+		{ColumnTypeNumber, AffinityNUMERIC},
+		{ColumnTypeCheckbox, AffinityINTEGER},
+		{ColumnTypeDate, AffinityTEXT},
+		{ColumnType("unknown"), AffinityBLOB},
+		{ColumnType(""), AffinityBLOB},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.colType, func(t *testing.T) {
-			got := ColumnTypeAffinity(tt.colType)
+		t.Run(string(tt.colType), func(t *testing.T) {
+			got := tt.colType.Affinity()
 			if got != tt.expected {
-				t.Errorf("ColumnTypeAffinity(%q) = %v, want %v", tt.colType, got, tt.expected)
+				t.Errorf("ColumnType(%q).Affinity() = %v, want %v", tt.colType, got, tt.expected)
 			}
 		})
 	}

@@ -19,32 +19,24 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
     const col = groupColumn();
     if (!col) return [{ name: 'All Records', records: props.records }];
 
-    const options = col.options || [];
     const grouped: Record<string, { name: string; records: DataRecord[] }> = {};
 
-    // Initialize groups for each option
-    options.forEach((opt) => {
-      grouped[opt] = { name: opt, records: [] };
-    });
     // Add "No Group" for records without a value
     grouped['__none__'] = { name: t('database.noGroup') || 'No Group', records: [] };
 
     props.records.forEach((record) => {
       const val = record.data[col.name];
-      if (val && typeof val === 'string' && options.includes(val)) {
-        const target = grouped[val];
-        if (target) {
-          target.records.push(record);
+      if (val && typeof val === 'string') {
+        if (!grouped[val]) {
+          grouped[val] = { name: val, records: [] };
         }
+        grouped[val].records.push(record);
       } else {
-        const target = grouped['__none__'];
-        if (target) {
-          target.records.push(record);
-        }
+        grouped['__none__']?.records.push(record);
       }
     });
 
-    return Object.values(grouped).filter((g) => g.records.length > 0 || options.includes(g.name));
+    return Object.values(grouped).filter((g) => g.records.length > 0);
   });
 
   return (
@@ -83,7 +75,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
                           <For
                             each={props.columns
                               .slice(1, 4)
-                              .filter((c) => c.id !== groupColumn()?.id)}
+                              .filter((c) => c.name !== groupColumn()?.name)}
                           >
                             {(col) => (
                               <div class={styles.field}>

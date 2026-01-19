@@ -51,9 +51,9 @@ const (
 
 // Column represents a database column
 type Column struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"` // text, number, select, multi_select, checkbox, date
-	Required bool   `json:"required,omitempty"`
+	Name     string             `json:"name"`
+	Type     jsonldb.ColumnType `json:"type"`
+	Required bool               `json:"required,omitempty"`
 }
 
 // DataRecord represents a record in a database.

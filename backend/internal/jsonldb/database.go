@@ -17,11 +17,29 @@ import (
 // currentVersion is the current version of the JSONL database format.
 const currentVersion = "1.0"
 
+// ColumnType represents the type of a database column.
+type ColumnType string
+
+const (
+	// ColumnTypeText stores text values.
+	ColumnTypeText ColumnType = "text"
+	// ColumnTypeNumber stores numeric values (integer or float).
+	ColumnTypeNumber ColumnType = "number"
+	// ColumnTypeCheckbox stores boolean values as 0/1.
+	ColumnTypeCheckbox ColumnType = "checkbox"
+	// ColumnTypeDate stores ISO8601 date strings.
+	ColumnTypeDate ColumnType = "date"
+	// ColumnTypeSelect stores a single selection from predefined options.
+	ColumnTypeSelect ColumnType = "select"
+	// ColumnTypeMultiSelect stores multiple selections as a JSON array string.
+	ColumnTypeMultiSelect ColumnType = "multi_select"
+)
+
 // Column represents a database column in storage.
 type Column struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Required bool   `json:"required,omitempty"`
+	Name     string     `json:"name"`
+	Type     ColumnType `json:"type"`
+	Required bool       `json:"required,omitempty"`
 }
 
 // schemaHeader is the first row of a JSONL data file containing schema and metadata.
@@ -127,24 +145,24 @@ func schemaFromType[T any]() ([]Column, error) {
 }
 
 // inferTypeFromValue infers a column type from a JSON value.
-func inferTypeFromValue(v any) string {
+func inferTypeFromValue(v any) ColumnType {
 	if v == nil {
-		return "text"
+		return ColumnTypeText
 	}
 	switch v.(type) {
 	case bool:
-		return "checkbox"
+		return ColumnTypeCheckbox
 	case float64:
-		return "number"
+		return ColumnTypeNumber
 	case string:
-		return "text"
+		return ColumnTypeText
 	default:
-		return "text"
+		return ColumnTypeText
 	}
 }
 
 // goTypeToColumnType maps Go types to JSONL column types.
-func goTypeToColumnType(t reflect.Type) string {
+func goTypeToColumnType(t reflect.Type) ColumnType {
 	// Dereference pointers
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -152,20 +170,20 @@ func goTypeToColumnType(t reflect.Type) string {
 
 	// Check for time.Time first (before switch)
 	if t == reflect.TypeOf(time.Time{}) {
-		return "date"
+		return ColumnTypeDate
 	}
 
-	switch t.Kind() { //nolint:exhaustive // Other kinds default to "text"
+	switch t.Kind() { //nolint:exhaustive // Other kinds default to text
 	case reflect.String:
-		return "text"
+		return ColumnTypeText
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 		reflect.Float32, reflect.Float64:
-		return "number"
+		return ColumnTypeNumber
 	case reflect.Bool:
-		return "checkbox"
+		return ColumnTypeCheckbox
 	default:
 		// Default to text for all other types
-		return "text"
+		return ColumnTypeText
 	}
 }

@@ -394,8 +394,8 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseIDStr, recor
 }
 
 // columnTypeMap builds a map of column name to type from a slice of models.Column.
-func columnTypeMap(columns []models.Column) map[string]string {
-	m := make(map[string]string, len(columns))
+func columnTypeMap(columns []models.Column) map[string]jsonldb.ColumnType {
+	m := make(map[string]jsonldb.ColumnType, len(columns))
 	for _, col := range columns {
 		m[col.Name] = col.Type
 	}
