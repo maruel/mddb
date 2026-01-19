@@ -28,16 +28,16 @@ func TestColumnType_Affinity(t *testing.T) {
 	}
 }
 
-func TestCoerceValue_Nil(t *testing.T) {
+func Test_coerceValue_Nil(t *testing.T) {
 	for _, affinity := range []Affinity{AffinityBLOB, AffinityTEXT, AffinityINTEGER, AffinityREAL, AffinityNUMERIC} {
-		got := CoerceValue(nil, affinity)
+		got := coerceValue(nil, affinity)
 		if got != nil {
-			t.Errorf("CoerceValue(nil, %v) = %v, want nil", affinity, got)
+			t.Errorf("coerceValue(nil, %v) = %v, want nil", affinity, got)
 		}
 	}
 }
 
-func TestCoerceValue_TEXT(t *testing.T) {
+func Test_coerceValue_TEXT(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -55,11 +55,11 @@ func TestCoerceValue_TEXT(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CoerceValue(tt.input, AffinityTEXT)
+			got := coerceValue(tt.input, AffinityTEXT)
 			switch g := got.(type) {
 			case string:
 				if e, ok := tt.expected.(string); ok && g != e {
-					t.Errorf("CoerceValue(%v, TEXT) = %v, want %v", tt.input, got, tt.expected)
+					t.Errorf("coerceValue(%v, TEXT) = %v, want %v", tt.input, got, tt.expected)
 				}
 			default:
 				// For non-string results, just check they're not nil when expected
@@ -68,7 +68,7 @@ func TestCoerceValue_TEXT(t *testing.T) {
 	}
 }
 
-func TestCoerceValue_INTEGER(t *testing.T) {
+func Test_coerceValue_INTEGER(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -87,15 +87,15 @@ func TestCoerceValue_INTEGER(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CoerceValue(tt.input, AffinityINTEGER)
+			got := coerceValue(tt.input, AffinityINTEGER)
 			if got != tt.expected {
-				t.Errorf("CoerceValue(%v, INTEGER) = %v (%T), want %v (%T)", tt.input, got, got, tt.expected, tt.expected)
+				t.Errorf("coerceValue(%v, INTEGER) = %v (%T), want %v (%T)", tt.input, got, got, tt.expected, tt.expected)
 			}
 		})
 	}
 }
 
-func TestCoerceValue_REAL(t *testing.T) {
+func Test_coerceValue_REAL(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -113,15 +113,15 @@ func TestCoerceValue_REAL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CoerceValue(tt.input, AffinityREAL)
+			got := coerceValue(tt.input, AffinityREAL)
 			if got != tt.expected {
-				t.Errorf("CoerceValue(%v, REAL) = %v (%T), want %v (%T)", tt.input, got, got, tt.expected, tt.expected)
+				t.Errorf("coerceValue(%v, REAL) = %v (%T), want %v (%T)", tt.input, got, got, tt.expected, tt.expected)
 			}
 		})
 	}
 }
 
-func TestCoerceValue_NUMERIC(t *testing.T) {
+func Test_coerceValue_NUMERIC(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    any
@@ -142,29 +142,29 @@ func TestCoerceValue_NUMERIC(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CoerceValue(tt.input, AffinityNUMERIC)
+			got := coerceValue(tt.input, AffinityNUMERIC)
 			if got != tt.expected {
-				t.Errorf("CoerceValue(%v, NUMERIC) = %v (%T), want %v (%T)", tt.input, got, got, tt.expected, tt.expected)
+				t.Errorf("coerceValue(%v, NUMERIC) = %v (%T), want %v (%T)", tt.input, got, got, tt.expected, tt.expected)
 			}
 		})
 	}
 }
 
-func TestCoerceValue_NUMERIC_EdgeCases(t *testing.T) {
+func Test_coerceValue_NUMERIC_EdgeCases(t *testing.T) {
 	// Infinity stays as float64
-	inf := CoerceValue(math.Inf(1), AffinityNUMERIC)
+	inf := coerceValue(math.Inf(1), AffinityNUMERIC)
 	if _, ok := inf.(float64); !ok {
 		t.Errorf("Inf should stay as float64, got %T", inf)
 	}
 
 	// NaN stays as float64
-	nan := CoerceValue(math.NaN(), AffinityNUMERIC)
+	nan := coerceValue(math.NaN(), AffinityNUMERIC)
 	if _, ok := nan.(float64); !ok {
 		t.Errorf("NaN should stay as float64, got %T", nan)
 	}
 }
 
-func TestCoerceValue_BLOB(t *testing.T) {
+func Test_coerceValue_BLOB(t *testing.T) {
 	// Test comparable types
 	comparableTests := []any{
 		"hello",
@@ -174,24 +174,24 @@ func TestCoerceValue_BLOB(t *testing.T) {
 	}
 
 	for _, input := range comparableTests {
-		got := CoerceValue(input, AffinityBLOB)
+		got := coerceValue(input, AffinityBLOB)
 		if got != input {
-			t.Errorf("CoerceValue(%v, BLOB) should pass through unchanged, got %v", input, got)
+			t.Errorf("coerceValue(%v, BLOB) should pass through unchanged, got %v", input, got)
 		}
 	}
 
 	// Test slice passthrough (use reflect for comparison)
 	slice := []string{"a", "b"}
-	gotSlice := CoerceValue(slice, AffinityBLOB)
+	gotSlice := coerceValue(slice, AffinityBLOB)
 	if s, ok := gotSlice.([]string); !ok || len(s) != 2 || s[0] != "a" || s[1] != "b" {
-		t.Errorf("CoerceValue(slice, BLOB) should pass through unchanged")
+		t.Errorf("coerceValue(slice, BLOB) should pass through unchanged")
 	}
 
 	// Test map passthrough
 	m := map[string]any{"key": "value"}
-	gotMap := CoerceValue(m, AffinityBLOB)
+	gotMap := coerceValue(m, AffinityBLOB)
 	if mp, ok := gotMap.(map[string]any); !ok || mp["key"] != "value" {
-		t.Errorf("CoerceValue(map, BLOB) should pass through unchanged")
+		t.Errorf("coerceValue(map, BLOB) should pass through unchanged")
 	}
 }
 

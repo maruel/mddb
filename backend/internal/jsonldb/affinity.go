@@ -63,9 +63,9 @@ func (ct ColumnType) Affinity() Affinity {
 	}
 }
 
-// CoerceValue applies SQLite-compatible type coercion to a value based on affinity.
+// coerceValue applies SQLite-compatible type coercion to a value based on affinity.
 // Returns the coerced value. Nil values pass through unchanged.
-func CoerceValue(value any, affinity Affinity) any {
+func coerceValue(value any, affinity Affinity) any {
 	if value == nil {
 		return nil
 	}
@@ -242,7 +242,7 @@ func CoerceDataWithTypes(data map[string]any, colTypes map[string]ColumnType) ma
 			result[key] = value
 			continue
 		}
-		result[key] = CoerceValue(value, colType.Affinity())
+		result[key] = coerceValue(value, colType.Affinity())
 	}
 	return result
 }

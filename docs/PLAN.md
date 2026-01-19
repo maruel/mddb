@@ -128,13 +128,14 @@ See `README.md` and `API.md` for details.
     - [x] Deprecate and remove `metadata.json` for databases.
 - [x] **JSONLDB Unification (Part 2)**:
     - [x] Merge `Database` and `Table` into a single `Table[T]` struct.
-    - [x] Add `Row[T]` interface: `Cloner[T]` + `GetID() ID`. Table[T] now requires Row[T] constraint.
+    - [x] Add `Row[T]` interface: `Clone() T` + `GetID() ID` + `Validate() error`. Table[T] requires Row[T] constraint.
     - [x] Header (SchemaHeader) required on all tables, unexported field with auto-discovery from JSON.
     - [x] Delete `Database` type and all its methods. `DataRecord` now implements `Row[DataRecord]` for use with `Table[DataRecord]`.
-    - [x] Add `GetID() ID` method to: `Organization`, `GitRemote`, `Invitation`, `User`/`userStorage`, `remoteSecret`, `DataRecord`.
-    - [x] `Membership` keeps composite key (`UserID`, `OrganizationID`), `GetID()` returns zero - no ID-based lookups, use `All()` with filtering.
+    - [x] Add `GetID() ID` and `Validate() error` methods to all Row types: `Organization`, `GitRemote`, `Invitation`, `User`/`userStorage`, `remoteSecret`, `Membership`, `DataRecord`.
+    - [x] All Row types must have non-zero IDs. `Membership` and `remoteSecret` now have proper ID fields (no longer composite-key only).
     - [x] Updated all callers of `NewDatabase` in `filestore.go` to use `Table[DataRecord]`.
     - [x] Added public `Schema()` and `UpdateSchema()` methods to `Table[T]` for schema access/modification.
+    - [x] Added `byID map[ID]int` index for O(1) lookups via `Get(id)` and duplicate detection on load/append/replace.
     - [x] Database metadata (Title, Created, Modified) now stored in separate `metadata.json` file per page.
     - **Future**: Extend schema discovery to support nested structs (object type) and slices (list type).
 - [/] **JSONLDB Type Coercion (Part 3)**: SQLite-compatible type affinity for consistent storage.
