@@ -16,6 +16,10 @@ func (r testRow) Clone() testRow {
 	return r
 }
 
+func (r testRow) GetID() ID {
+	return ID(r.ID)
+}
+
 func TestTable(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "jsonl-test-*")
 	if err != nil {

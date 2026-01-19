@@ -83,6 +83,11 @@ type User struct {
 	Onboarding     *OnboardingState `json:"onboarding,omitempty"`
 }
 
+// GetID returns the User's ID.
+func (u User) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+	return u.ID
+}
+
 // UserSettings represents global user preferences.
 type UserSettings struct {
 	Theme    string `json:"theme"`    // light, dark, system
@@ -110,6 +115,12 @@ type Membership struct {
 // Clone returns a copy of the Membership.
 func (m Membership) Clone() Membership { //nolint:gocritic // Value receiver required by Cloner interface.
 	return m
+}
+
+// GetID returns zero for Membership (composite key not ID-based).
+// Use All() with filtering for Membership lookups.
+func (m Membership) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+	return 0
 }
 
 // MembershipSettings represents user preferences within a specific organization.
@@ -149,6 +160,11 @@ func (o Organization) Clone() Organization { //nolint:gocritic // Value receiver
 	return c
 }
 
+// GetID returns the Organization's ID.
+func (o Organization) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+	return o.ID
+}
+
 // OnboardingState tracks the progress of an organization's initial setup.
 type OnboardingState struct {
 	Completed bool      `json:"completed"`
@@ -185,6 +201,11 @@ func (g GitRemote) Clone() GitRemote { //nolint:gocritic // Value receiver requi
 	return g
 }
 
+// GetID returns the GitRemote's ID.
+func (g GitRemote) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+	return g.ID
+}
+
 // Quota defines limits for an organization.
 type Quota struct {
 	MaxPages   int   `json:"max_pages"`
@@ -206,6 +227,11 @@ type Invitation struct {
 // Clone returns a copy of the Invitation.
 func (i Invitation) Clone() Invitation { //nolint:gocritic // Value receiver required by Cloner interface.
 	return i
+}
+
+// GetID returns the Invitation's ID.
+func (i Invitation) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+	return i.ID
 }
 
 // Session represents an active user session.

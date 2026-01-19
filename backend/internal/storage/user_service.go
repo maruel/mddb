@@ -66,6 +66,11 @@ func (u userStorage) Clone() userStorage { //nolint:gocritic // Value receiver r
 	return c
 }
 
+// GetID returns the userStorage's ID.
+func (u userStorage) GetID() jsonldb.ID { //nolint:gocritic // Value receiver required by Row interface.
+	return u.ID
+}
+
 // CreateUser creates a new user.
 func (s *UserService) CreateUser(email, password, name string, role models.UserRole) (*models.User, error) {
 	if email == "" || password == "" {

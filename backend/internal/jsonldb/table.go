@@ -8,6 +8,7 @@ import (
 	"iter"
 	"os"
 	"sync"
+	"time"
 )
 
 // Cloner is implemented by types that can clone themselves.
@@ -15,12 +16,20 @@ type Cloner[T any] interface {
 	Clone() T
 }
 
-// Table handles storage and in-memory caching for a single table in JSONL format.
-type Table[T Cloner[T]] struct {
-	path string
-	mu   sync.RWMutex
+// Row is implemented by types that can be stored in a Table.
+// It combines Cloner (for in-memory copies) and GetID (for unique identification).
+type Row[T any] interface {
+	Cloner[T]
+	GetID() ID
+}
 
-	rows []T
+// Table handles storage and in-memory caching for a single table in JSONL format.
+// The first row in the file is a schema header containing version and column definitions.
+type Table[T Row[T]] struct {
+	path   string
+	mu     sync.RWMutex
+	schema schemaHeader
+	rows   []T
 }
 
 // Len returns the number of rows.
@@ -42,10 +51,16 @@ func (t *Table[T]) Last() (T, bool) {
 }
 
 // NewTable creates a new Table and loads all data from the file.
-func NewTable[T Cloner[T]](path string) (*Table[T], error) {
+func NewTable[T Row[T]](path string) (*Table[T], error) {
 	table := &Table[T]{path: path}
 	if err := table.load(); err != nil {
 		return nil, err
+	}
+	// Initialize schema if not loaded (new table)
+	if table.schema.Version == "" {
+		table.schema.Version = CurrentVersion
+		table.schema.Created = time.Now()
+		table.schema.Modified = time.Now()
 	}
 	return table, nil
 }
@@ -64,10 +79,25 @@ func (t *Table[T]) load() error {
 
 	n := bytes.Count(data, []byte{'\n'})
 	t.rows = make([]T, 0, n)
+	lineNum := 0
 	for line := range bytes.SplitSeq(data, []byte{'\n'}) {
 		if len(line) == 0 {
 			continue
 		}
+		lineNum++
+
+		// First line is the schema header
+		if lineNum == 1 {
+			if err := json.Unmarshal(line, &t.schema); err != nil {
+				return fmt.Errorf("failed to unmarshal schema header in %s: %w", t.path, err)
+			}
+			if err := t.schema.Validate(); err != nil {
+				return fmt.Errorf("invalid schema header in %s: %w", t.path, err)
+			}
+			continue
+		}
+
+		// Subsequent lines are rows
 		var row T
 		if err := json.Unmarshal(line, &row); err != nil {
 			return fmt.Errorf("failed to unmarshal row in %s: %w", t.path, err)
@@ -120,7 +150,7 @@ func (t *Table[T]) Replace(rows []T) error {
 	return t.save()
 }
 
-// save writes all rows to the file. Caller must hold t.mu.
+// save writes the schema header and all rows to the file. Caller must hold t.mu.
 func (t *Table[T]) save() error {
 	f, err := os.Create(t.path)
 	if err != nil {
@@ -131,6 +161,20 @@ func (t *Table[T]) save() error {
 	}()
 
 	writer := bufio.NewWriter(f)
+
+	// Write schema header as first line
+	headerData, err := json.Marshal(t.schema)
+	if err != nil {
+		return fmt.Errorf("failed to marshal schema header: %w", err)
+	}
+	if _, err := writer.Write(headerData); err != nil {
+		return fmt.Errorf("failed to write schema header: %w", err)
+	}
+	if err := writer.WriteByte('\n'); err != nil {
+		return fmt.Errorf("failed to write newline: %w", err)
+	}
+
+	// Write rows
 	for _, row := range t.rows {
 		data, err := json.Marshal(row)
 		if err != nil {

@@ -29,6 +29,12 @@ func (r remoteSecret) Clone() remoteSecret {
 	return r
 }
 
+// GetID returns zero for remoteSecret (no direct ID).
+// Use GetToken(remoteID) to look up secrets by RemoteID.
+func (r remoteSecret) GetID() jsonldb.ID {
+	return 0
+}
+
 // NewGitRemoteService creates a new git remote service.
 func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 	remotePath := filepath.Join(rootDir, "db", "git_remotes.jsonl")

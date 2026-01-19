@@ -44,6 +44,29 @@ type schemaHeader struct {
 	Modified time.Time `json:"modified"`
 }
 
+// Validate checks that the schema header is well-formed.
+func (h *schemaHeader) Validate() error {
+	if h.Version == "" {
+		return fmt.Errorf("schema version is required")
+	}
+	if h.Created.IsZero() {
+		return fmt.Errorf("schema created timestamp is required")
+	}
+	if h.Modified.IsZero() {
+		return fmt.Errorf("schema modified timestamp is required")
+	}
+	// Validate each column
+	for i, col := range h.Columns {
+		if col.Name == "" {
+			return fmt.Errorf("column %d: name is required", i)
+		}
+		if col.Type == "" {
+			return fmt.Errorf("column %d: type is required", i)
+		}
+	}
+	return nil
+}
+
 // Database handles JSONL-based database storage with schema header in the first row.
 type Database struct {
 	path string

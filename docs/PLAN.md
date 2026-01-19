@@ -126,7 +126,15 @@ See `README.md` and `API.md` for details.
 - [x] **JSONLDB Evolution (Part 1)**:
     - [x] Add versioning and column definitions to the first row of JSONL files.
     - [x] Deprecate and remove `metadata.json` for databases.
-- [ ] **JSONLDB Sharding (Part 2)**: Add support for sharding in JSONLDB to handle extremely large datasets.
+- [ ] **JSONLDB Unification (Part 2)**:
+    - [ ] Merge `Database` and `Table` into a single `Table[T]` struct.
+    - [x] Add `Row[T]` interface: `Cloner[T]` + `GetID() ID`. Table[T] now requires Row[T] constraint.
+    - [ ] Header (SchemaHeader) required on all tables, unexported field.
+    - [ ] Delete `Database` type and `DataRecord` with `map[string]any`.
+    - [x] Add `GetID() ID` method to: `Organization`, `GitRemote`, `Invitation`, `User`/`userStorage`, `remoteSecret`.
+    - [x] `Membership` keeps composite key (`UserID`, `OrganizationID`), `GetID()` returns zero - no ID-based lookups, use `All()` with filtering.
+    - [ ] Update all callers of `NewTable` and `NewDatabase`.
+- [ ] **JSONLDB Sharding (Part 3)**: Add support for sharding in JSONLDB to handle extremely large datasets.
 
 ### Phase 14: URL Standardization
 - [ ] **URL Namespace**: Prefix page URLs with `/p/` to ensure clean routing (e.g., `mddb.app/p/<orgID>/<pageID>`).
