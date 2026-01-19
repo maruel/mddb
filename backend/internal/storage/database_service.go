@@ -63,14 +63,6 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 	}
 
 	id := jsonldb.NewID()
-
-	// Ensure each column has an ID
-	for i := range columns {
-		if columns[i].ID.IsZero() {
-			columns[i].ID = jsonldb.NewID()
-		}
-	}
-
 	now := time.Now()
 	db := &models.Database{
 		ID:       id,

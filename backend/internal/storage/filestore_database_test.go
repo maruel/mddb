@@ -28,8 +28,8 @@ func TestDatabase_ReadWrite(t *testing.T) {
 				Title:   "Test Database",
 				Version: "1.0",
 				Columns: []models.Column{
-					{ID: testID(101), Name: "title", Type: "text"},
-					{ID: testID(102), Name: "status", Type: "select", Options: []string{"todo", "done"}},
+					{Name: "title", Type: "text"},
+					{Name: "status", Type: "select"},
 				},
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -42,12 +42,12 @@ func TestDatabase_ReadWrite(t *testing.T) {
 				Title:   "Complex Database",
 				Version: "1.0",
 				Columns: []models.Column{
-					{ID: testID(201), Name: "text_field", Type: "text", Required: true},
-					{ID: testID(202), Name: "number_field", Type: "number"},
-					{ID: testID(203), Name: "select_field", Type: "select", Options: []string{"a", "b", "c"}},
-					{ID: testID(204), Name: "multi_select", Type: "multi_select", Options: []string{"x", "y", "z"}},
-					{ID: testID(205), Name: "checkbox_field", Type: "checkbox"},
-					{ID: testID(206), Name: "date_field", Type: "date"},
+					{Name: "text_field", Type: "text", Required: true},
+					{Name: "number_field", Type: "number"},
+					{Name: "select_field", Type: "select"},
+					{Name: "multi_select", Type: "multi_select"},
+					{Name: "checkbox_field", Type: "checkbox"},
+					{Name: "date_field", Type: "date"},
 				},
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -83,9 +83,6 @@ func TestDatabase_ReadWrite(t *testing.T) {
 			// Verify columns
 			for i, col := range got.Columns {
 				expCol := tt.database.Columns[i]
-				if col.ID != expCol.ID {
-					t.Errorf("Column[%d] ID mismatch: got %v, want %v", i, col.ID, expCol.ID)
-				}
 				if col.Name != expCol.Name {
 					t.Errorf("Column[%d] Name mismatch: got %q, want %q", i, col.Name, expCol.Name)
 				}
@@ -116,7 +113,7 @@ func TestDatabase_Exists(t *testing.T) {
 		Title:   "Test",
 		Version: "1.0",
 		Columns: []models.Column{
-			{ID: testID(101), Name: "name", Type: "text"},
+			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
@@ -149,13 +146,13 @@ func TestDatabase_List(t *testing.T) {
 
 	// Create multiple databases
 	dbIDs := []jsonldb.ID{testID(1), testID(2), testID(3)}
-	for i, id := range dbIDs {
+	for _, id := range dbIDs {
 		db := &models.Database{
 			ID:      id,
 			Title:   "Database " + id.String(),
 			Version: "1.0",
 			Columns: []models.Column{
-				{ID: testID(uint64(101 + i)), Name: "name", Type: "text"},
+				{Name: "name", Type: "text"},
 			},
 			Created:  time.Now(),
 			Modified: time.Now(),
@@ -202,7 +199,7 @@ func TestDatabase_Delete(t *testing.T) {
 		Title:   "Test",
 		Version: "1.0",
 		Columns: []models.Column{
-			{ID: testID(101), Name: "name", Type: "text"},
+			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
@@ -247,7 +244,7 @@ func TestRecord_AppendRead(t *testing.T) {
 		Title:   "Test",
 		Version: "1.0",
 		Columns: []models.Column{
-			{ID: testID(101), Name: "name", Type: "text"},
+			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
@@ -329,7 +326,7 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 		Title:   "Empty DB",
 		Version: "1.0",
 		Columns: []models.Column{
-			{ID: testID(101), Name: "name", Type: "text"},
+			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
@@ -365,7 +362,7 @@ func TestDatabase_NestedPath(t *testing.T) {
 		Title:   "Database 42",
 		Version: "1.0",
 		Columns: []models.Column{
-			{ID: testID(101), Name: "name", Type: "text"},
+			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),

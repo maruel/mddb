@@ -20,7 +20,7 @@ func TestDatabaseService_Create(t *testing.T) {
 
 	columns := []models.Column{
 		{Name: "title", Type: "text"},
-		{Name: "status", Type: "select", Options: []string{"todo", "done"}},
+		{Name: "status", Type: "select"},
 	}
 
 	db, err := service.CreateDatabase(ctx, "Test DB", columns)
@@ -38,12 +38,6 @@ func TestDatabaseService_Create(t *testing.T) {
 		t.Errorf("Column count mismatch: got %d, want 2", len(db.Columns))
 	}
 
-	// Verify each column has an ID
-	for i, col := range db.Columns {
-		if col.ID.IsZero() {
-			t.Errorf("Column[%d] should have an ID", i)
-		}
-	}
 }
 
 func TestDatabaseService_CreateValidation(t *testing.T) {
@@ -437,11 +431,11 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 	// Create a record with types that need coercion
 	// JSON decodes numbers as float64, booleans as bool
 	data := map[string]any{
-		"name":     123,           // number → text: "123"
-		"count":    float64(42),   // float64 whole → number: int64(42)
+		"name":     123,            // number → text: "123"
+		"count":    float64(42),    // float64 whole → number: int64(42)
 		"price":    float64(19.99), // float64 decimal → number: float64(19.99)
-		"active":   true,          // bool → checkbox: int64(1)
-		"category": "electronics", // string → select: "electronics"
+		"active":   true,           // bool → checkbox: int64(1)
+		"category": "electronics",  // string → select: "electronics"
 	}
 	record, err := service.CreateRecord(ctx, db.ID.String(), data)
 	if err != nil {
@@ -468,9 +462,9 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 	// Test update coercion
 	updateData := map[string]any{
 		"name":     456,
-		"count":    "100", // string → number: int64(100)
+		"count":    "100",   // string → number: int64(100)
 		"price":    "29.99", // string → number: float64(29.99)
-		"active":   false,  // bool → checkbox: int64(0)
+		"active":   false,   // bool → checkbox: int64(0)
 		"category": "books",
 	}
 	updated, err := service.UpdateRecord(ctx, db.ID.String(), record.ID.String(), updateData)

@@ -19,32 +19,22 @@ const currentVersion = "1.0"
 
 // Column represents a database column in storage.
 type Column struct {
-	ID       string   `json:"id"`
-	Name     string   `json:"name"`
-	Type     string   `json:"type"`
-	Options  []string `json:"options,omitempty"`
-	Required bool     `json:"required,omitempty"`
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Required bool   `json:"required,omitempty"`
 }
 
 // schemaHeader is the first row of a JSONL data file containing schema and metadata.
 // Used by Table[T] for generic schema storage.
 type schemaHeader struct {
-	Version  string    `json:"version"`
-	Columns  []Column  `json:"columns"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
+	Version string   `json:"version"`
+	Columns []Column `json:"columns"`
 }
 
 // Validate checks that the schema header is well-formed.
 func (h *schemaHeader) Validate() error {
 	if h.Version == "" {
 		return fmt.Errorf("schema version is required")
-	}
-	if h.Created.IsZero() {
-		return fmt.Errorf("schema created timestamp is required")
-	}
-	if h.Modified.IsZero() {
-		return fmt.Errorf("schema modified timestamp is required")
 	}
 	// Validate each column
 	for i, col := range h.Columns {

@@ -9,7 +9,6 @@ import (
 	"os"
 	"sort"
 	"sync"
-	"time"
 )
 
 // Cloner is implemented by types that can clone themselves.
@@ -71,12 +70,9 @@ func NewTable[T Row[T]](path string) (*Table[T], error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to discover schema from type: %w", err)
 		}
-		now := time.Now()
 		table.schema = schemaHeader{
-			Version:  currentVersion,
-			Columns:  columns,
-			Created:  now,
-			Modified: now,
+			Version: currentVersion,
+			Columns: columns,
 		}
 	}
 	return table, nil
@@ -209,7 +205,6 @@ func (t *Table[T]) UpdateSchema(columns []Column) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.schema.Columns = columns
-	t.schema.Modified = time.Now()
 	return t.save()
 }
 

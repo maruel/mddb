@@ -387,35 +387,21 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*models.Database, error
 	pageDir := fs.pageDir(orgID, id)
 	metadataFile := filepath.Join(pageDir, "metadata.json")
 	var title string
-	var dbCreated, dbModified time.Time
 	if data, err := os.ReadFile(metadataFile); err == nil {
 		var metadata map[string]any
 		if err := json.Unmarshal(data, &metadata); err == nil {
 			if t, ok := metadata["title"].(string); ok {
 				title = t
 			}
-			// Parse timestamps if they exist
-			dbCreated = schema.Created
-			dbModified = schema.Modified
 		}
-	}
-
-	// Use schema timestamps if metadata doesn't have them
-	if dbCreated.IsZero() {
-		dbCreated = schema.Created
-	}
-	if dbModified.IsZero() {
-		dbModified = schema.Modified
 	}
 
 	// Convert from jsonldb to models
 	return &models.Database{
-		ID:       id,
-		Title:    title,
-		Columns:  columnsFromJSONLDB(schema.Columns),
-		Created:  dbCreated,
-		Modified: dbModified,
-		Version:  schema.Version,
+		ID:      id,
+		Title:   title,
+		Columns: columnsFromJSONLDB(schema.Columns),
+		Version: schema.Version,
 	}, nil
 }
 
@@ -840,10 +826,8 @@ func columnsToJSONLDB(cols []models.Column) []jsonldb.Column {
 	result := make([]jsonldb.Column, len(cols))
 	for i, col := range cols {
 		result[i] = jsonldb.Column{
-			ID:       col.ID.String(),
 			Name:     col.Name,
 			Type:     col.Type,
-			Options:  col.Options,
 			Required: col.Required,
 		}
 	}
@@ -854,12 +838,9 @@ func columnsToJSONLDB(cols []models.Column) []jsonldb.Column {
 func columnsFromJSONLDB(cols []jsonldb.Column) []models.Column {
 	result := make([]models.Column, len(cols))
 	for i, col := range cols {
-		id, _ := jsonldb.DecodeID(col.ID)
 		result[i] = models.Column{
-			ID:       id,
 			Name:     col.Name,
 			Type:     col.Type,
-			Options:  col.Options,
 			Required: col.Required,
 		}
 	}

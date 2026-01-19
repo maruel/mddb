@@ -674,10 +674,8 @@ export type NodeType = typeof NodeTypeDocument | typeof NodeTypeDatabase | typeo
  * Column represents a database column
  */
 export interface Column {
-  id: string;
   name: string;
   type: string; // text, number, select, multi_select, checkbox, date
-  options?: string[];
   required?: boolean;
 }
 /**

@@ -107,7 +107,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	dbService := NewDatabaseService(fileStore, nil, cache, nil)
 	columns := []models.Column{
 		{Name: "title", Type: "text", Required: true},
-		{Name: "status", Type: "select", Options: []string{"todo", "done"}},
+		{Name: "status", Type: "select"},
 		{Name: "description", Type: "text"},
 	}
 

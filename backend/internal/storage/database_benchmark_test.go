@@ -30,8 +30,8 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		Created:  time.Now(),
 		Modified: time.Now(),
 		Columns: []models.Column{
-			{ID: testID(1), Name: "Title", Type: "text"},
-			{ID: testID(2), Name: "Value", Type: "number"},
+			{Name: "Title", Type: "text"},
+			{Name: "Value", Type: "number"},
 		},
 	}
 
