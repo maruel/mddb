@@ -29,7 +29,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 				Version: "1.0",
 				Columns: []models.Column{
 					{Name: "title", Type: "text"},
-					{Name: "status", Type: "select"},
+					{Name: "status", Type: jsonldb.ColumnTypeText},
 				},
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -44,8 +44,8 @@ func TestDatabase_ReadWrite(t *testing.T) {
 				Columns: []models.Column{
 					{Name: "text_field", Type: "text", Required: true},
 					{Name: "number_field", Type: "number"},
-					{Name: "select_field", Type: "select"},
-					{Name: "multi_select", Type: "multi_select"},
+					{Name: "select_field", Type: jsonldb.ColumnTypeText},
+					{Name: "multi_select", Type: jsonldb.ColumnTypeText},
 					{Name: "checkbox_field", Type: "checkbox"},
 					{Name: "date_field", Type: "date"},
 				},

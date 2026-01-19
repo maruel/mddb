@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 )
 
@@ -107,7 +108,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	dbService := NewDatabaseService(fileStore, nil, cache, nil)
 	columns := []models.Column{
 		{Name: "title", Type: "text", Required: true},
-		{Name: "status", Type: "select"},
+		{Name: "status", Type: jsonldb.ColumnTypeText},
 		{Name: "description", Type: "text"},
 	}
 

@@ -139,11 +139,9 @@ See `README.md` and `API.md` for details.
     - **Future**: Extend schema discovery to support nested structs (object type) and slices (list type).
 - [/] **JSONLDB Type Coercion (Part 3)**: SQLite-compatible type affinity for consistent storage.
     - [x] **Storage Classes**: Define 5 storage classes matching SQLite: NULL, INTEGER, REAL, TEXT, BLOB.
-    - [x] **Affinity Mapping**: Map existing column types to affinities:
+    - [x] **Affinity Mapping**: Map column types to affinities (jsonldb only handles primitive types):
         - `text` → TEXT (string storage)
         - `number` → NUMERIC (INTEGER if whole, REAL otherwise)
-        - `select` → TEXT (string storage)
-        - `multi_select` → TEXT (JSON array string)
         - `checkbox` → INTEGER (0/1)
         - `date` → TEXT (ISO8601 format)
     - [x] **Coercion Logic**: Implement `CoerceValue(value any, affinity Affinity) any` function in `jsonldb/affinity.go`:
@@ -156,6 +154,11 @@ See `README.md` and `API.md` for details.
     - [x] **Write Path Integration**: Apply coercion in `DatabaseService.CreateRecord()` and `DatabaseService.UpdateRecord()`.
     - [ ] **Comparison Semantics**: Apply affinity rules during filtering/comparison operations.
     - [ ] **Migration Tool**: Optional migration script to coerce existing records to new type rules.
+    - [ ] **Higher-Level Column Types**: Implement `select` and `multi_select` column types in the models/storage layer (not jsonldb). These are UI/application concepts that map to TEXT affinity at storage level. Requires:
+        - Define `ColumnTypeSelect` and `ColumnTypeMultiSelect` in `models` package
+        - Store options metadata separately (in database metadata or column definition extension)
+        - Update frontend to handle select rendering/editing with options
+        - Add validation for select values against defined options
 - [ ] **JSONLDB Sharding (Part 4)**: Add support for sharding in JSONLDB to handle extremely large datasets.
 
 ### Phase 14: URL Standardization

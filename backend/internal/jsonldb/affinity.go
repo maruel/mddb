@@ -45,10 +45,7 @@ const (
 // Affinity returns the SQLite affinity for this column type.
 func (ct ColumnType) Affinity() Affinity {
 	switch ct {
-	case ColumnTypeText, ColumnTypeSelect:
-		return AffinityTEXT
-	case ColumnTypeMultiSelect:
-		// multi_select stores as JSON array string
+	case ColumnTypeText:
 		return AffinityTEXT
 	case ColumnTypeNumber:
 		return AffinityNUMERIC

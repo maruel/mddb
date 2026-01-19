@@ -11,8 +11,6 @@ func TestColumnType_Affinity(t *testing.T) {
 		expected Affinity
 	}{
 		{ColumnTypeText, AffinityTEXT},
-		{ColumnTypeSelect, AffinityTEXT},
-		{ColumnTypeMultiSelect, AffinityTEXT},
 		{ColumnTypeNumber, AffinityNUMERIC},
 		{ColumnTypeCheckbox, AffinityINTEGER},
 		{ColumnTypeDate, AffinityTEXT},
@@ -199,11 +197,11 @@ func TestCoerceValue_BLOB(t *testing.T) {
 
 func TestCoerceData(t *testing.T) {
 	columns := []Column{
-		{Name: "name", Type: "text"},
-		{Name: "age", Type: "number"},
-		{Name: "active", Type: "checkbox"},
-		{Name: "score", Type: "number"},
-		{Name: "tags", Type: "multi_select"},
+		{Name: "name", Type: ColumnTypeText},
+		{Name: "age", Type: ColumnTypeNumber},
+		{Name: "active", Type: ColumnTypeCheckbox},
+		{Name: "score", Type: ColumnTypeNumber},
+		{Name: "tags", Type: ColumnTypeText},
 	}
 
 	data := map[string]any{

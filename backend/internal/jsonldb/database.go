@@ -29,10 +29,6 @@ const (
 	ColumnTypeCheckbox ColumnType = "checkbox"
 	// ColumnTypeDate stores ISO8601 date strings.
 	ColumnTypeDate ColumnType = "date"
-	// ColumnTypeSelect stores a single selection from predefined options.
-	ColumnTypeSelect ColumnType = "select"
-	// ColumnTypeMultiSelect stores multiple selections as a JSON array string.
-	ColumnTypeMultiSelect ColumnType = "multi_select"
 )
 
 // Column represents a database column in storage.
