@@ -171,15 +171,15 @@ func (s *GitRemoteService) DeleteRemote(orgID, remoteID string) error {
 }
 
 func (s *GitRemoteService) nextID() string {
-	var max uint64
+	var maxID uint64
 	for _, remotes := range s.remotesByOrg {
 		for _, r := range remotes {
-			if n, err := DecodeID(r.ID); err == nil && n > max {
-				max = n
+			if n, err := DecodeID(r.ID); err == nil && n > maxID {
+				maxID = n
 			}
 		}
 	}
-	return EncodeID(max + 1)
+	return EncodeID(maxID + 1)
 }
 
 // UpdateLastSync updates the last sync time for a remote.

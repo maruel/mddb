@@ -135,11 +135,11 @@ func (s *InvitationService) getAllFromCache() []models.Invitation {
 }
 
 func (s *InvitationService) nextID() string {
-	var max uint64
+	var maxID uint64
 	for id := range s.byID {
-		if n, err := DecodeID(id); err == nil && n > max {
-			max = n
+		if n, err := DecodeID(id); err == nil && n > maxID {
+			maxID = n
 		}
 	}
-	return EncodeID(max + 1)
+	return EncodeID(maxID + 1)
 }

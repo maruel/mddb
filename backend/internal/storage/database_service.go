@@ -78,7 +78,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 		Columns:  columns,
 		Created:  now,
 		Modified: now,
-		Path:     "metadata.json",
+		Version:  "1.0",
 	}
 
 	if err := s.fileStore.WriteDatabase(orgID, db); err != nil {
@@ -165,7 +165,7 @@ func (s *DatabaseService) ListDatabases(ctx context.Context) ([]*models.Database
 }
 
 // CreateRecord creates a new record in a database.
-func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, data map[string]interface{}) (*models.DataRecord, error) {
+func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, data map[string]any) (*models.DataRecord, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -271,7 +271,7 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseID, recordID st
 }
 
 // UpdateRecord updates an existing record in a database.
-func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseID, recordID string, data map[string]interface{}) (*models.DataRecord, error) {
+func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseID, recordID string, data map[string]any) (*models.DataRecord, error) {
 	if databaseID == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}

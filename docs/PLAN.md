@@ -104,10 +104,10 @@ See `README.md` and `API.md` for details.
     - [ ] Add support for custom organization themes.
 
 ### Phase 13: Advanced Data Architecture
-- [ ] **JSONLDB Evolution**:
-    - [ ] Add versioning and column definitions to the first row of JSONL files.
-    - [ ] Deprecate and remove `metadata.json` for databases.
-- [ ] **Sharding**: Add support for sharding in JSONLDB to handle extremely large datasets.
+- [x] **JSONLDB Evolution (Part 1)**:
+    - [x] Add versioning and column definitions to the first row of JSONL files.
+    - [x] Deprecate and remove `metadata.json` for databases.
+- [ ] **JSONLDB Sharding (Part 2)**: Add support for sharding in JSONLDB to handle extremely large datasets.
 
 ### Phase 14: URL Standardization
 - [ ] **URL Namespace**: Prefix page URLs with `/p/` to ensure clean routing (e.g., `mddb.app/p/<orgID>/<pageID>`).

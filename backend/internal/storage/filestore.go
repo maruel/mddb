@@ -2,9 +2,7 @@
 package storage
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,13 +10,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // FileStore handles all file system operations using directory-based storage.
 // Storage model: Each page (document or database) is a numeric directory (1, 2, 3, etc.)
 // - Pages: numeric directory containing index.md with YAML front matter
-// - Databases: numeric directory containing metadata.json + data.jsonl
+// - Databases: numeric directory containing data.jsonl (with schema header in first row)
 // - Assets: files within each page's directory namespace
 type FileStore struct {
 	rootDir string
@@ -248,8 +247,8 @@ func (fs *FileStore) ReadNode(orgID, id string) (*models.Node, error) {
 		}
 	}
 
-	schemaFile := fs.databaseSchemaFile(orgID, id)
-	if _, err := os.Stat(schemaFile); err == nil {
+	recordsFile := fs.databaseRecordsFile(orgID, id)
+	if _, err := os.Stat(recordsFile); err == nil {
 		db, err := fs.ReadDatabase(orgID, id)
 		if err == nil {
 			if node.Type == models.NodeTypeDocument {
@@ -363,8 +362,8 @@ func (fs *FileStore) GetOrganizationUsage(orgID string) (pageCount int, storageU
 		}
 		if !info.IsDir() {
 			storageUsage += info.Size()
-			if info.Name() == "index.md" || info.Name() == "metadata.json" {
-				// We count unique directories that have index.md or metadata.json
+			if info.Name() == "index.md" || info.Name() == "data.jsonl" {
+				// We count unique directories that have index.md or data.jsonl
 				// But Walk is recursive. Let's simplify and just count index.md as "pages"
 				if info.Name() == "index.md" {
 					pageCount++
@@ -388,48 +387,65 @@ func (fs *FileStore) pageIndexFile(orgID, id string) string {
 
 // DatabaseExists checks if a database exists for the given organization and ID.
 func (fs *FileStore) DatabaseExists(orgID, id string) bool {
-	path := fs.databaseSchemaFile(orgID, id)
+	path := fs.databaseRecordsFile(orgID, id)
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// ReadDatabase reads a database definition for the given organization and ID.
+// ReadDatabase reads a database definition from the JSONL file using jsonldb abstraction.
 func (fs *FileStore) ReadDatabase(orgID, id string) (*models.Database, error) {
-	filePath := fs.databaseSchemaFile(orgID, id)
-	data, err := os.ReadFile(filePath)
+	if orgID == "" {
+		return nil, fmt.Errorf("organization ID is required")
+	}
+
+	filePath := fs.databaseRecordsFile(orgID, id)
+
+	// Load using jsonldb abstraction
+	db, err := jsonldb.NewDatabase(filePath, id, "", nil)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("database not found")
-		}
 		return nil, fmt.Errorf("failed to read database: %w", err)
 	}
 
-	var db models.Database
-	if err := json.Unmarshal(data, &db); err != nil {
-		return nil, fmt.Errorf("failed to parse database: %w", err)
+	if db.Header == nil {
+		return nil, fmt.Errorf("database file is empty or invalid")
 	}
 
-	return &db, nil
+	// Convert from jsonldb to models
+	return &models.Database{
+		ID:       db.Header.ID,
+		Title:    db.Header.Title,
+		Columns:  columnsFromJSONLDB(db.Header.Columns),
+		Created:  db.Header.Created,
+		Modified: db.Header.Modified,
+		Version:  db.Header.Version,
+	}, nil
 }
 
-// WriteDatabase writes a database definition for the given organization.
+// WriteDatabase updates a database schema in the JSONL file using jsonldb abstraction.
 func (fs *FileStore) WriteDatabase(orgID string, db *models.Database) error {
 	if orgID == "" {
 		return fmt.Errorf("organization ID is required")
 	}
+
 	pageDir := fs.pageDir(orgID, db.ID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	data, err := json.MarshalIndent(db, "", "  ")
+	filePath := fs.databaseRecordsFile(orgID, db.ID)
+
+	// Convert columns to jsonldb format
+	jsonldbCols := columnsToJSONLDB(db.Columns)
+
+	// Load existing database using jsonldb
+	jsonDb, err := jsonldb.NewDatabase(filePath, db.ID, db.Title, jsonldbCols)
 	if err != nil {
-		return fmt.Errorf("failed to marshal database: %w", err)
+		return fmt.Errorf("failed to load database: %w", err)
 	}
 
-	filePath := fs.databaseSchemaFile(orgID, db.ID)
-	if err := os.WriteFile(filePath, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write database: %w", err)
+	// Update schema
+	if err := jsonDb.UpdateSchema(db.Title, jsonldbCols); err != nil {
+		return fmt.Errorf("failed to update schema: %w", err)
 	}
 
 	return nil
@@ -470,8 +486,9 @@ func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
 			continue
 		}
 
-		schemaFile := fs.databaseSchemaFile(orgID, id)
-		if _, err := os.Stat(schemaFile); err == nil {
+		// Check if this is a database (has data.jsonl file)
+		recordsFile := fs.databaseRecordsFile(orgID, id)
+		if _, err := os.Stat(recordsFile); err == nil {
 			db, err := fs.ReadDatabase(orgID, id)
 			if err == nil {
 				databases = append(databases, db)
@@ -482,7 +499,7 @@ func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
 	return databases, nil
 }
 
-// AppendRecord appends a record to a database.
+// AppendRecord appends a record to a database using jsonldb abstraction.
 func (fs *FileStore) AppendRecord(orgID, id string, record *models.DataRecord) error {
 	if orgID == "" {
 		return fmt.Errorf("organization ID is required")
@@ -492,183 +509,118 @@ func (fs *FileStore) AppendRecord(orgID, id string, record *models.DataRecord) e
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	data, err := json.Marshal(record)
-	if err != nil {
-		return fmt.Errorf("failed to marshal record: %w", err)
-	}
-
 	filePath := fs.databaseRecordsFile(orgID, id)
-	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("failed to open records file: %w", err)
-	}
-	defer func() { _ = f.Close() }()
 
-	if _, err := f.Write(data); err != nil {
-		return fmt.Errorf("failed to write record: %w", err)
+	// Load or create database using jsonldb
+	db, err := jsonldb.NewDatabase(filePath, id, "", nil)
+	if err != nil {
+		return fmt.Errorf("failed to load database: %w", err)
 	}
-	if _, err := f.WriteString("\n"); err != nil {
-		return fmt.Errorf("failed to write newline: %w", err)
+
+	// Append record (convert to jsonldb format)
+	if err := db.AppendRecord(recordToJSONLDB(record)); err != nil {
+		return fmt.Errorf("failed to append record: %w", err)
 	}
 
 	return nil
 }
 
-// ReadRecords reads all records for a database.
+// ReadRecords reads all records for a database using jsonldb abstraction.
 func (fs *FileStore) ReadRecords(orgID, id string) ([]*models.DataRecord, error) {
 	if orgID == "" {
 		return nil, fmt.Errorf("organization ID is required")
 	}
 	filePath := fs.databaseRecordsFile(orgID, id)
-	f, err := os.Open(filePath)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return []*models.DataRecord{}, nil
+	}
+
+	// Load using jsonldb abstraction
+	db, err := jsonldb.NewDatabase(filePath, id, "", nil)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return []*models.DataRecord{}, nil
-		}
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
-	defer func() { _ = f.Close() }()
 
-	var records []*models.DataRecord
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
-		}
-		var record models.DataRecord
-		if err := json.Unmarshal(line, &record); err != nil {
-			return nil, fmt.Errorf("failed to parse record: %w", err)
-		}
-		records = append(records, &record)
+	records := db.GetRecords()
+	// Convert jsonldb records to models records
+	result := make([]*models.DataRecord, len(records))
+	for i := range records {
+		result[i] = recordFromJSONLDB(records[i])
 	}
-	return records, nil
+	return result, nil
 }
 
-// ReadRecordsPage reads a page of records for a database.
+// ReadRecordsPage reads a page of records for a database using jsonldb abstraction.
 func (fs *FileStore) ReadRecordsPage(orgID, id string, offset, limit int) ([]*models.DataRecord, error) {
 	if orgID == "" {
 		return nil, fmt.Errorf("organization ID is required")
 	}
 	filePath := fs.databaseRecordsFile(orgID, id)
-	f, err := os.Open(filePath)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return []*models.DataRecord{}, nil
+	}
+
+	// Load using jsonldb abstraction
+	db, err := jsonldb.NewDatabase(filePath, id, "", nil)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return []*models.DataRecord{}, nil
-		}
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
-	defer func() { _ = f.Close() }()
 
-	var records []*models.DataRecord
-	scanner := bufio.NewScanner(f)
-	currentIndex := 0
-	count := 0
-	for scanner.Scan() {
-		if currentIndex < offset {
-			currentIndex++
-			continue
-		}
-		if limit > 0 && count >= limit {
-			break
-		}
-		line := scanner.Bytes()
-		if len(line) == 0 {
-			continue
-		}
-		var record models.DataRecord
-		if err := json.Unmarshal(line, &record); err != nil {
-			return nil, fmt.Errorf("failed to parse record: %w", err)
-		}
-		records = append(records, &record)
-		currentIndex++
-		count++
+	records := db.GetRecordsPage(offset, limit)
+	// Convert jsonldb records to models records
+	result := make([]*models.DataRecord, len(records))
+	for i := range records {
+		result[i] = recordFromJSONLDB(records[i])
 	}
-	return records, nil
+	return result, nil
 }
 
-// UpdateRecord updates an existing record in a database.
+// UpdateRecord updates an existing record in a database using jsonldb abstraction.
 func (fs *FileStore) UpdateRecord(orgID, databaseID string, record *models.DataRecord) error {
 	if orgID == "" {
 		return fmt.Errorf("organization ID is required")
 	}
-	records, err := fs.ReadRecords(orgID, databaseID)
-	if err != nil {
-		return err
-	}
 
-	found := false
-	for i, r := range records {
-		if r.ID == record.ID {
-			records[i] = record
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("record not found")
-	}
-
-	return fs.writeRecords(orgID, databaseID, records)
-}
-
-// DeleteRecord deletes a record from a database.
-func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID string) error {
-	if orgID == "" {
-		return fmt.Errorf("organization ID is required")
-	}
-	records, err := fs.ReadRecords(orgID, databaseID)
-	if err != nil {
-		return err
-	}
-
-	newRecords := make([]*models.DataRecord, 0, len(records))
-	found := false
-	for _, r := range records {
-		if r.ID == recordID {
-			found = true
-			continue
-		}
-		newRecords = append(newRecords, r)
-	}
-
-	if !found {
-		return fmt.Errorf("record not found")
-	}
-
-	return fs.writeRecords(orgID, databaseID, newRecords)
-}
-
-func (fs *FileStore) writeRecords(orgID, databaseID string, records []*models.DataRecord) error {
 	filePath := fs.databaseRecordsFile(orgID, databaseID)
 
-	var buf bytes.Buffer
-	for _, record := range records {
-		data, err := json.Marshal(record)
-		if err != nil {
-			return fmt.Errorf("failed to marshal record: %w", err)
-		}
-		buf.Write(data)
-		buf.WriteByte('\n')
+	// Load using jsonldb abstraction
+	db, err := jsonldb.NewDatabase(filePath, databaseID, "", nil)
+	if err != nil {
+		return fmt.Errorf("failed to load database: %w", err)
 	}
 
-	// Create a temporary file to ensure atomic write
-	tempPath := filePath + ".tmp"
-	if err := os.WriteFile(tempPath, buf.Bytes(), 0o644); err != nil {
-		return fmt.Errorf("failed to write temp records file: %w", err)
-	}
-
-	if err := os.Rename(tempPath, filePath); err != nil {
-		_ = os.Remove(tempPath)
-		return fmt.Errorf("failed to replace records file: %w", err)
+	// Update record (convert to jsonldb format)
+	if err := db.UpdateRecord(recordToJSONLDB(record)); err != nil {
+		return fmt.Errorf("failed to update record: %w", err)
 	}
 
 	return nil
 }
 
-func (fs *FileStore) databaseSchemaFile(orgID, id string) string {
-	return filepath.Join(fs.pageDir(orgID, id), "metadata.json")
+// DeleteRecord deletes a record from a database using jsonldb abstraction.
+func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID string) error {
+	if orgID == "" {
+		return fmt.Errorf("organization ID is required")
+	}
+
+	filePath := fs.databaseRecordsFile(orgID, databaseID)
+
+	// Load using jsonldb abstraction
+	db, err := jsonldb.NewDatabase(filePath, databaseID, "", nil)
+	if err != nil {
+		return fmt.Errorf("failed to load database: %w", err)
+	}
+
+	// Delete record
+	if err := db.DeleteRecord(recordID); err != nil {
+		return fmt.Errorf("failed to delete record: %w", err)
+	}
+
+	return nil
 }
 
 func (fs *FileStore) databaseRecordsFile(orgID, id string) string {
@@ -746,7 +698,7 @@ func (fs *FileStore) ListAssets(orgID, pageID string) ([]*models.Asset, error) {
 			continue
 		}
 		name := entry.Name()
-		if name == "index.md" || name == "metadata.json" || name == "data.jsonl" {
+		if name == "index.md" || name == "data.jsonl" {
 			continue
 		}
 		info, err := entry.Info()
@@ -826,4 +778,56 @@ func formatMarkdownFile(page *models.Page) []byte {
 	buf.WriteString("\n\n")
 	buf.WriteString(page.Content)
 	return buf.Bytes()
+}
+
+// Converters between jsonldb and models types
+
+// columnsToJSONLDB converts models.Column to jsonldb.Column.
+func columnsToJSONLDB(cols []models.Column) []jsonldb.Column {
+	result := make([]jsonldb.Column, len(cols))
+	for i, col := range cols {
+		result[i] = jsonldb.Column{
+			ID:       col.ID,
+			Name:     col.Name,
+			Type:     col.Type,
+			Options:  col.Options,
+			Required: col.Required,
+		}
+	}
+	return result
+}
+
+// columnsFromJSONLDB converts jsonldb.Column to models.Column.
+func columnsFromJSONLDB(cols []jsonldb.Column) []models.Column {
+	result := make([]models.Column, len(cols))
+	for i, col := range cols {
+		result[i] = models.Column{
+			ID:       col.ID,
+			Name:     col.Name,
+			Type:     col.Type,
+			Options:  col.Options,
+			Required: col.Required,
+		}
+	}
+	return result
+}
+
+// recordToJSONLDB converts models.DataRecord to jsonldb.DataRecord.
+func recordToJSONLDB(rec *models.DataRecord) jsonldb.DataRecord {
+	return jsonldb.DataRecord{
+		ID:       rec.ID,
+		Data:     rec.Data,
+		Created:  rec.Created,
+		Modified: rec.Modified,
+	}
+}
+
+// recordFromJSONLDB converts jsonldb.DataRecord to models.DataRecord.
+func recordFromJSONLDB(rec jsonldb.DataRecord) *models.DataRecord {
+	return &models.DataRecord{
+		ID:       rec.ID,
+		Data:     rec.Data,
+		Created:  rec.Created,
+		Modified: rec.Modified,
+	}
 }

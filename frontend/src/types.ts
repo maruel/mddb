@@ -850,7 +850,7 @@ export interface Page {
   favicon_url?: string;
 }
 /**
- * Database is kept for backward compatibility
+ * Database represents a structured database with schema and metadata.
  */
 export interface Database {
   id: string;
@@ -858,7 +858,7 @@ export interface Database {
   columns: Column[];
   created: string;
   modified: string;
-  path: string;
+  version: string; // JSONL format version (e.g., "1.0")
 }
 /**
  * Commit represents a commit in git history.

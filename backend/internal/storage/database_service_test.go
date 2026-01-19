@@ -221,7 +221,7 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 	}
 
 	// Create a record
-	data := map[string]interface{}{
+	data := map[string]any{
 		"title":  "My Task",
 		"status": "todo",
 	}
@@ -258,7 +258,7 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 	// Create multiple records
 	recordCount := 3
 	for i := 0; i < recordCount; i++ {
-		data := map[string]interface{}{"name": "Record " + string(rune(i))}
+		data := map[string]any{"name": "Record " + string(rune(i))}
 		_, err := service.CreateRecord(newTestContext("org1"), db.ID, data)
 		if err != nil {
 			t.Fatalf("Failed to create record: %v", err)
@@ -294,7 +294,7 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 	}
 
 	// Create a record
-	data := map[string]interface{}{"name": "Test Record"}
+	data := map[string]any{"name": "Test Record"}
 	created, err := service.CreateRecord(newTestContext("org1"), db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)
@@ -332,14 +332,14 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 	}
 
 	// Create a record
-	data := map[string]interface{}{"name": "Original Name"}
+	data := map[string]any{"name": "Original Name"}
 	created, err := service.CreateRecord(newTestContext("org1"), db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)
 	}
 
 	// Update it
-	newData := map[string]interface{}{"name": "Updated Name"}
+	newData := map[string]any{"name": "Updated Name"}
 	updated, err := service.UpdateRecord(newTestContext("org1"), db.ID, created.ID, newData)
 	if err != nil {
 		t.Fatalf("Failed to update record: %v", err)
@@ -380,7 +380,7 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 	}
 
 	// Create a record
-	data := map[string]interface{}{"name": "To be deleted"}
+	data := map[string]any{"name": "To be deleted"}
 	created, err := service.CreateRecord(newTestContext("org1"), db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)

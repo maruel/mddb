@@ -22,22 +22,23 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		{
 			name: "simple database",
 			database: &models.Database{
-				ID:    EncodeID(1),
-				Title: "Test Database",
+				ID:      EncodeID(1),
+				Title:   "Test Database",
+				Version: "1.0",
 				Columns: []models.Column{
 					{ID: "col_1", Name: "title", Type: "text"},
 					{ID: "col_2", Name: "status", Type: "select", Options: []string{"todo", "done"}},
 				},
 				Created:  time.Now(),
 				Modified: time.Now(),
-				Path:     "metadata.json",
 			},
 		},
 		{
 			name: "database with all column types",
 			database: &models.Database{
-				ID:    EncodeID(2),
-				Title: "Complex Database",
+				ID:      EncodeID(2),
+				Title:   "Complex Database",
+				Version: "1.0",
 				Columns: []models.Column{
 					{ID: "col_1", Name: "text_field", Type: "text", Required: true},
 					{ID: "col_2", Name: "number_field", Type: "number"},
@@ -48,7 +49,6 @@ func TestDatabase_ReadWrite(t *testing.T) {
 				},
 				Created:  time.Now(),
 				Modified: time.Now(),
-				Path:     "metadata.json",
 			},
 		},
 	}
@@ -93,7 +93,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 			}
 
 			// Verify file exists
-			filePath := fs.databaseSchemaFile("org1", tt.database.ID)
+			filePath := fs.databaseRecordsFile("org1", tt.database.ID)
 			if _, err := os.Stat(filePath); err != nil {
 				t.Errorf("Database file not found: %s", filePath)
 			}
@@ -109,14 +109,14 @@ func TestDatabase_Exists(t *testing.T) {
 	}
 
 	db := &models.Database{
-		ID:    EncodeID(1),
-		Title: "Test",
+		ID:      EncodeID(1),
+		Title:   "Test",
+		Version: "1.0",
 		Columns: []models.Column{
 			{ID: "col_1", Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
-		Path:     "metadata.json",
 	}
 
 	// Should not exist initially
@@ -146,14 +146,14 @@ func TestDatabase_List(t *testing.T) {
 	dbIDs := []string{EncodeID(1), EncodeID(2), EncodeID(3)}
 	for _, id := range dbIDs {
 		db := &models.Database{
-			ID:    id,
-			Title: "Database " + id,
+			ID:      id,
+			Title:   "Database " + id,
+			Version: "1.0",
 			Columns: []models.Column{
 				{ID: "col_1", Name: "name", Type: "text"},
 			},
 			Created:  time.Now(),
 			Modified: time.Now(),
-			Path:     "metadata.json",
 		}
 		if err := fs.WriteDatabase("org1", db); err != nil {
 			t.Fatalf("Failed to write database %s: %v", id, err)
@@ -192,14 +192,14 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	db := &models.Database{
-		ID:    "1",
-		Title: "Test",
+		ID:      "1",
+		Title:   "Test",
+		Version: "1.0",
 		Columns: []models.Column{
 			{ID: "col_1", Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
-		Path:     "metadata.json",
 	}
 
 	// Write database
@@ -208,9 +208,9 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	// Verify file exists
-	schemaPath := fs.databaseSchemaFile("org1", db.ID)
-	if _, err := os.Stat(schemaPath); err != nil {
-		t.Fatalf("Database schema file not found: %v", err)
+	recordsPath := fs.databaseRecordsFile("org1", db.ID)
+	if _, err := os.Stat(recordsPath); err != nil {
+		t.Fatalf("Database records file not found: %v", err)
 	}
 
 	// Delete database
@@ -220,8 +220,8 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	// Verify file is deleted
-	if _, err := os.Stat(schemaPath); err == nil {
-		t.Error("Database schema file should be deleted")
+	if _, err := os.Stat(recordsPath); err == nil {
+		t.Error("Database records file should be deleted")
 	}
 }
 
@@ -236,14 +236,14 @@ func TestRecord_AppendRead(t *testing.T) {
 
 	// Create database first
 	db := &models.Database{
-		ID:    dbID,
-		Title: "Test",
+		ID:      dbID,
+		Title:   "Test",
+		Version: "1.0",
 		Columns: []models.Column{
 			{ID: "col_1", Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
-		Path:     "metadata.json",
 	}
 	if err := fs.WriteDatabase("org1", db); err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -253,19 +253,19 @@ func TestRecord_AppendRead(t *testing.T) {
 	records := []*models.DataRecord{
 		{
 			ID:       "rec_1",
-			Data:     map[string]interface{}{"name": "Record 1"},
+			Data:     map[string]any{"name": "Record 1"},
 			Created:  time.Now(),
 			Modified: time.Now(),
 		},
 		{
 			ID:       "rec_2",
-			Data:     map[string]interface{}{"name": "Record 2"},
+			Data:     map[string]any{"name": "Record 2"},
 			Created:  time.Now(),
 			Modified: time.Now(),
 		},
 		{
 			ID:       "rec_3",
-			Data:     map[string]interface{}{"name": "Record 3"},
+			Data:     map[string]any{"name": "Record 3"},
 			Created:  time.Now(),
 			Modified: time.Now(),
 		},
@@ -317,14 +317,14 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 
 	// Create database
 	db := &models.Database{
-		ID:    dbID,
-		Title: "Empty DB",
+		ID:      dbID,
+		Title:   "Empty DB",
+		Version: "1.0",
 		Columns: []models.Column{
 			{ID: "col_1", Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
-		Path:     "metadata.json",
 	}
 	if err := fs.WriteDatabase("org1", db); err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -351,14 +351,14 @@ func TestDatabase_NestedPath(t *testing.T) {
 	// Create database with base64 encoded ID
 	dbID := EncodeID(42)
 	db := &models.Database{
-		ID:    dbID,
-		Title: "Database 42",
+		ID:      dbID,
+		Title:   "Database 42",
+		Version: "1.0",
 		Columns: []models.Column{
 			{ID: "col_1", Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
-		Path:     "metadata.json",
 	}
 
 	if err := fs.WriteDatabase("org1", db); err != nil {
@@ -376,7 +376,7 @@ func TestDatabase_NestedPath(t *testing.T) {
 	}
 
 	// Verify file exists at correct path
-	expectedPath := fs.databaseSchemaFile("org1", dbID)
+	expectedPath := fs.databaseRecordsFile("org1", dbID)
 	if _, err := os.Stat(expectedPath); err != nil {
 		t.Errorf("Database file not found at expected path: %s", expectedPath)
 	}

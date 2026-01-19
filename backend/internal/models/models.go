@@ -55,10 +55,10 @@ type Column struct {
 
 // DataRecord represents a database record associated with a node
 type DataRecord struct {
-	ID       string                 `json:"id"`
-	Data     map[string]interface{} `json:"data"`
-	Created  time.Time              `json:"created"`
-	Modified time.Time              `json:"modified"`
+	ID       string         `json:"id"`
+	Data     map[string]any `json:"data"`
+	Created  time.Time      `json:"created"`
+	Modified time.Time      `json:"modified"`
 }
 
 // User represents a system user.
@@ -220,14 +220,14 @@ type Page struct {
 	FaviconURL string    `json:"favicon_url,omitempty"`
 }
 
-// Database is kept for backward compatibility
+// Database represents a structured database with schema and metadata.
 type Database struct {
 	ID       string    `json:"id"`
 	Title    string    `json:"title"`
 	Columns  []Column  `json:"columns"`
 	Created  time.Time `json:"created"`
 	Modified time.Time `json:"modified"`
-	Path     string    `json:"path"`
+	Version  string    `json:"version"` // JSONL format version (e.g., "1.0")
 }
 
 // Commit represents a commit in git history.

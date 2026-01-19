@@ -267,13 +267,13 @@ func (s *UserService) getAllFromCache() []userStorage {
 }
 
 func (s *UserService) nextID() string {
-	var max uint64
+	var maxID uint64
 	for id := range s.byID {
-		if n, err := DecodeID(id); err == nil && n > max {
-			max = n
+		if n, err := DecodeID(id); err == nil && n > maxID {
+			maxID = n
 		}
 	}
-	return EncodeID(max + 1)
+	return EncodeID(maxID + 1)
 }
 
 // ListUsers returns all users.

@@ -25,6 +25,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	db := &models.Database{
 		ID:       dbID,
 		Title:    "Benchmark Database",
+		Version:  "1.0",
 		Created:  time.Now(),
 		Modified: time.Now(),
 		Columns: []models.Column{
@@ -44,7 +45,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 				ID:       fmt.Sprintf("r%d", i),
 				Created:  time.Now(),
 				Modified: time.Now(),
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"c1": fmt.Sprintf("Item %d", i),
 					"c2": i,
 				},
@@ -61,14 +62,14 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a database with 1000 records
 		readDBID := fs.NextID("")
-		readDB := &models.Database{ID: readDBID, Title: "Read Bench", Created: time.Now(), Modified: time.Now()}
+		readDB := &models.Database{ID: readDBID, Title: "Read Bench", Version: "1.0", Created: time.Now(), Modified: time.Now()}
 		if err := fs.WriteDatabase("", readDB); err != nil {
 			b.Fatal(err)
 		}
 		for i := 0; i < 1000; i++ {
 			record := &models.DataRecord{
 				ID:       fmt.Sprintf("r%d", i),
-				Data:     map[string]interface{}{"c1": "test"},
+				Data:     map[string]any{"c1": "test"},
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
@@ -92,7 +93,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := EncodeID(100)
-		readDB := &models.Database{ID: readDBID, Title: "Read Bench Page", Created: time.Now(), Modified: time.Now()}
+		readDB := &models.Database{ID: readDBID, Title: "Read Bench Page", Version: "1.0", Created: time.Now(), Modified: time.Now()}
 		if err := fs.WriteDatabase("", readDB); err != nil {
 			b.Fatal(err)
 		}
@@ -100,7 +101,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		for i := 0; i < 10000; i++ {
 			record := &models.DataRecord{
 				ID:       fmt.Sprintf("r%d", i),
-				Data:     map[string]interface{}{"c1": "test"},
+				Data:     map[string]any{"c1": "test"},
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
