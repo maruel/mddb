@@ -81,18 +81,6 @@ func NewID() ID {
 	return newIDFromParts(uint64(ms), uint64(randBits), IDVersion)
 }
 
-// NewIDAt generates an ID at a specific time. Useful for testing and migration.
-func NewIDAt(t time.Time) ID {
-	ms := t.UnixMilli() - Epoch
-	if ms < 0 {
-		ms = 0
-	}
-	var b [2]byte
-	_, _ = rand.Read(b[:])
-	randBits := binary.BigEndian.Uint16(b[:])
-	return newIDFromParts(uint64(ms), uint64(randBits), IDVersion)
-}
-
 func newIDFromParts(ms, randBits, version uint64) ID {
 	// ms: 43 bits, shifted to bits 62-20
 	// randBits: 16 bits, shifted to bits 19-4

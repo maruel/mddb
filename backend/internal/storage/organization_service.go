@@ -38,8 +38,9 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 		byID:       make(map[jsonldb.ID]*models.Organization),
 	}
 
-	for i := range table.Rows {
-		s.byID[table.Rows[i].ID] = &table.Rows[i]
+	for i := range table.Len() {
+		org := table.At(i)
+		s.byID[org.ID] = org
 	}
 
 	return s, nil
@@ -72,9 +73,9 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	}
 
 	// Update local cache
-	s.table.Mu.RLock()
-	newOrg := &s.table.Rows[len(s.table.Rows)-1]
-	s.table.Mu.RUnlock()
+	s.table.RLock()
+	newOrg := s.table.At(s.table.Len() - 1)
+	s.table.RUnlock()
 	s.byID[id] = newOrg
 
 	// Create organization content directory

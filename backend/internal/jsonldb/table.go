@@ -12,10 +12,22 @@ import (
 // Table handles storage and in-memory caching for a single table in JSONL format.
 type Table[T any] struct {
 	path string
-	Mu   sync.RWMutex
+	mu   sync.RWMutex
 
-	Rows []T
+	rows []T
 }
+
+// RLock acquires a read lock.
+func (t *Table[T]) RLock() { t.mu.RLock() }
+
+// RUnlock releases a read lock.
+func (t *Table[T]) RUnlock() { t.mu.RUnlock() }
+
+// Len returns the number of rows. Caller must hold at least a read lock.
+func (t *Table[T]) Len() int { return len(t.rows) }
+
+// At returns a pointer to the row at index i. Caller must hold at least a read lock.
+func (t *Table[T]) At(i int) *T { return &t.rows[i] }
 
 // NewTable creates a new Table and loads all data from the file.
 func NewTable[T any](path string) (*Table[T], error) {
@@ -35,13 +47,13 @@ func NewTable[T any](path string) (*Table[T], error) {
 }
 
 func (t *Table[T]) load() error {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
 	f, err := os.Open(t.path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			t.Rows = []T{}
+			t.rows = []T{}
 			return nil
 		}
 		return fmt.Errorf("failed to open table file %s: %w", t.path, err)
@@ -68,23 +80,23 @@ func (t *Table[T]) load() error {
 		return fmt.Errorf("failed to read table file %s: %w", t.path, err)
 	}
 
-	t.Rows = rows
+	t.rows = rows
 	return nil
 }
 
 // All returns a copy of all rows.
 func (t *Table[T]) All() []T {
-	t.Mu.RLock()
-	defer t.Mu.RUnlock()
-	rows := make([]T, len(t.Rows))
-	copy(rows, t.Rows)
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	rows := make([]T, len(t.rows))
+	copy(rows, t.rows)
 	return rows
 }
 
 // Append adds a new row to the table and persists it.
 func (t *Table[T]) Append(row T) error {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
 	data, err := json.Marshal(row)
 	if err != nil {
@@ -106,14 +118,14 @@ func (t *Table[T]) Append(row T) error {
 		return fmt.Errorf("failed to write newline: %w", err)
 	}
 
-	t.Rows = append(t.Rows, row)
+	t.rows = append(t.rows, row)
 	return nil
 }
 
 // Replace replaces all rows with the provided slice and persists it.
 func (t *Table[T]) Replace(rows []T) error {
-	t.Mu.Lock()
-	defer t.Mu.Unlock()
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
 	f, err := os.Create(t.path)
 	if err != nil {
@@ -141,6 +153,6 @@ func (t *Table[T]) Replace(rows []T) error {
 		return fmt.Errorf("failed to flush writer: %w", err)
 	}
 
-	t.Rows = rows
+	t.rows = rows
 	return nil
 }

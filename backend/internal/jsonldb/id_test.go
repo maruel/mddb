@@ -103,16 +103,6 @@ func TestIDTime(t *testing.T) {
 	}
 }
 
-func TestNewIDAt(t *testing.T) {
-	testTime := time.Date(2025, 6, 15, 12, 0, 0, 0, time.UTC)
-	id := NewIDAt(testTime)
-
-	idTime := id.Time()
-	if idTime.UnixMilli() != testTime.UnixMilli() {
-		t.Errorf("IDAt time = %v, want %v", idTime, testTime)
-	}
-}
-
 func TestDecodeIDErrors(t *testing.T) {
 	tests := []struct {
 		name  string

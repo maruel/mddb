@@ -39,8 +39,8 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 		byEmail:    make(map[string]*userStorage),
 	}
 
-	for i := range table.Rows {
-		ptr := &table.Rows[i]
+	for i := range table.Len() {
+		ptr := table.At(i)
 		s.byID[ptr.ID] = ptr
 		s.byEmail[ptr.Email] = ptr
 	}
@@ -93,9 +93,9 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 	}
 
 	// Update local cache
-	s.table.Mu.RLock()
-	newStored := &s.table.Rows[len(s.table.Rows)-1]
-	s.table.Mu.RUnlock()
+	s.table.RLock()
+	newStored := s.table.At(s.table.Len() - 1)
+	s.table.RUnlock()
 
 	s.byID[id] = newStored
 	s.byEmail[email] = newStored

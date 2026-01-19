@@ -45,8 +45,8 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 		remotesByOrg: make(map[jsonldb.ID][]*models.GitRemote),
 	}
 
-	for i := range remoteTable.Rows {
-		r := &remoteTable.Rows[i]
+	for i := range remoteTable.Len() {
+		r := remoteTable.At(i)
 		s.remotesByOrg[r.OrganizationID] = append(s.remotesByOrg[r.OrganizationID], r)
 	}
 
@@ -90,9 +90,9 @@ func (s *GitRemoteService) CreateRemote(orgIDStr, name, url, remoteType, authTyp
 	}
 
 	// Update cache
-	s.remoteTable.Mu.RLock()
-	cachedRemote := &s.remoteTable.Rows[len(s.remoteTable.Rows)-1]
-	s.remoteTable.Mu.RUnlock()
+	s.remoteTable.RLock()
+	cachedRemote := s.remoteTable.At(s.remoteTable.Len() - 1)
+	s.remoteTable.RUnlock()
 	s.remotesByOrg[orgID] = append(s.remotesByOrg[orgID], cachedRemote)
 
 	// Save secret if provided
@@ -127,12 +127,12 @@ func (s *GitRemoteService) GetRemote(idStr string) (*models.GitRemote, error) {
 
 // GetToken retrieves the token for a remote.
 func (s *GitRemoteService) GetToken(remoteID string) (string, error) {
-	s.secretTable.Mu.RLock()
-	defer s.secretTable.Mu.RUnlock()
+	s.secretTable.RLock()
+	defer s.secretTable.RUnlock()
 
-	for i := range s.secretTable.Rows {
-		if s.secretTable.Rows[i].RemoteID == remoteID {
-			return s.secretTable.Rows[i].Token, nil
+	for i := range s.secretTable.Len() {
+		if s.secretTable.At(i).RemoteID == remoteID {
+			return s.secretTable.At(i).Token, nil
 		}
 	}
 	return "", nil
@@ -153,14 +153,15 @@ func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
 	defer s.mu.Unlock()
 
 	// Remove from table
+	allRemotes := s.remoteTable.All()
 	var newRows []models.GitRemote
 	found := false
-	for i := range s.remoteTable.Rows {
-		if s.remoteTable.Rows[i].ID == remoteID {
+	for i := range allRemotes {
+		if allRemotes[i].ID == remoteID {
 			found = true
 			continue
 		}
-		newRows = append(newRows, s.remoteTable.Rows[i])
+		newRows = append(newRows, allRemotes[i])
 	}
 	if !found {
 		return fmt.Errorf("remote not found")
@@ -171,13 +172,14 @@ func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
 	}
 
 	// Remove secret
+	allSecrets := s.secretTable.All()
 	var newSecrets []remoteSecret
-	for i := range s.secretTable.Rows {
-		if s.secretTable.Rows[i].RemoteID != remoteIDStr {
-			newSecrets = append(newSecrets, s.secretTable.Rows[i])
+	for _, sec := range allSecrets {
+		if sec.RemoteID != remoteIDStr {
+			newSecrets = append(newSecrets, sec)
 		}
 	}
-	if len(newSecrets) != len(s.secretTable.Rows) {
+	if len(newSecrets) != len(allSecrets) {
 		_ = s.secretTable.Replace(newSecrets)
 	}
 
@@ -203,10 +205,11 @@ func (s *GitRemoteService) UpdateLastSync(remoteIDStr string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for i := range s.remoteTable.Rows {
-		if s.remoteTable.Rows[i].ID == remoteID {
-			s.remoteTable.Rows[i].LastSync = time.Now()
-			return s.remoteTable.Replace(s.remoteTable.Rows)
+	allRemotes := s.remoteTable.All()
+	for i := range allRemotes {
+		if allRemotes[i].ID == remoteID {
+			allRemotes[i].LastSync = time.Now()
+			return s.remoteTable.Replace(allRemotes)
 		}
 	}
 	return fmt.Errorf("remote not found")

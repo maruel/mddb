@@ -37,8 +37,8 @@ func TestTable(t *testing.T) {
 		}
 	}
 
-	if len(table.Rows) != 2 {
-		t.Errorf("expected 2 rows, got %d", len(table.Rows))
+	if table.Len() != 2 {
+		t.Errorf("expected 2 rows, got %d", table.Len())
 	}
 
 	// Test All
@@ -53,12 +53,12 @@ func TestTable(t *testing.T) {
 		t.Fatalf("re-loading table failed: %v", err)
 	}
 
-	if len(table2.Rows) != 2 {
-		t.Errorf("re-loaded table expected 2 rows, got %d", len(table2.Rows))
+	if table2.Len() != 2 {
+		t.Errorf("re-loaded table expected 2 rows, got %d", table2.Len())
 	}
 
-	if table2.Rows[0].Name != "One" || table2.Rows[1].Name != "Two" {
-		t.Errorf("re-loaded data mismatch: %+v", table2.Rows)
+	if table2.At(0).Name != "One" || table2.At(1).Name != "Two" {
+		t.Errorf("re-loaded data mismatch: %v, %v", table2.At(0), table2.At(1))
 	}
 
 	// Test Replace
@@ -69,15 +69,15 @@ func TestTable(t *testing.T) {
 		t.Fatalf("Replace failed: %v", err)
 	}
 
-	if len(table.Rows) != 1 || table.Rows[0].ID != 3 {
-		t.Errorf("Replace failed to update in-memory rows: %+v", table.Rows)
+	if table.Len() != 1 || table.At(0).ID != 3 {
+		t.Errorf("Replace failed to update in-memory rows: len=%d", table.Len())
 	}
 
 	table3, err := NewTable[testRow](path)
 	if err != nil {
 		t.Fatalf("re-loading table after replace failed: %v", err)
 	}
-	if len(table3.Rows) != 1 || table3.Rows[0].ID != 3 {
-		t.Errorf("Replace failed to update file: %+v", table3.Rows)
+	if table3.Len() != 1 || table3.At(0).ID != 3 {
+		t.Errorf("Replace failed to update file: len=%d", table3.Len())
 	}
 }

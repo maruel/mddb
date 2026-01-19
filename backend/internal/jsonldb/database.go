@@ -34,8 +34,8 @@ type DataRecord struct {
 	Modified time.Time      `json:"modified"`
 }
 
-// SchemaHeader represents the first row of a JSONL data file containing schema and metadata.
-type SchemaHeader struct {
+// schemaHeader is the first row of a JSONL data file containing schema and metadata.
+type schemaHeader struct {
 	Version  string    `json:"version"`
 	ID       string    `json:"id"`
 	Title    string    `json:"title"`
@@ -49,7 +49,7 @@ type Database struct {
 	path string
 	Mu   sync.RWMutex
 
-	Header  *SchemaHeader
+	Header  *schemaHeader
 	Records []DataRecord
 }
 
@@ -69,7 +69,7 @@ func NewDatabase(path, id, title string, columns []Column) (*Database, error) {
 	// If new database or schema not yet initialized
 	if db.Header == nil {
 		now := time.Now()
-		db.Header = &SchemaHeader{
+		db.Header = &schemaHeader{
 			Version:  CurrentVersion,
 			ID:       id,
 			Title:    title,
@@ -111,7 +111,7 @@ func (db *Database) load() error {
 
 		// First line is the schema header
 		if lineNum == 1 {
-			var header SchemaHeader
+			var header schemaHeader
 			if err := json.Unmarshal(line, &header); err != nil {
 				return fmt.Errorf("failed to parse schema header: %w", err)
 			}

@@ -34,8 +34,8 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 		byToken: make(map[string]*models.Invitation),
 	}
 
-	for i := range table.Rows {
-		inv := &table.Rows[i]
+	for i := range table.Len() {
+		inv := table.At(i)
 		s.byID[inv.ID] = inv
 		s.byToken[inv.Token] = inv
 	}
@@ -79,9 +79,9 @@ func (s *InvitationService) CreateInvitation(email, orgIDStr string, role models
 	}
 
 	// Update local cache
-	s.table.Mu.RLock()
-	newInv := &s.table.Rows[len(s.table.Rows)-1]
-	s.table.Mu.RUnlock()
+	s.table.RLock()
+	newInv := s.table.At(s.table.Len() - 1)
+	s.table.RUnlock()
 	s.byID[id] = newInv
 	s.byToken[token] = newInv
 
