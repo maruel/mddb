@@ -11,15 +11,10 @@ import (
 	"sync"
 )
 
-// Cloner is implemented by types that can clone themselves.
-type Cloner[T any] interface {
-	Clone() T
-}
-
 // Row is implemented by types that can be stored in a Table.
-// It combines Cloner (for in-memory copies) and GetID (for unique identification).
+// Clone() is used for in-memory copies and GetID() for unique identification.
 type Row[T any] interface {
-	Cloner[T]
+	Clone() T
 	GetID() ID
 }
 

@@ -2,7 +2,7 @@
 //
 // It offers Table[T] for generic type-safe row storage with schema support.
 // All data types stored in Table[T] must implement the Row interface
-// (combining Cloner and GetID methods). Table uses read-write locks for
+// (implementing Clone and GetID methods). Table uses read-write locks for
 // concurrent access and atomic file operations.
 package jsonldb
 
