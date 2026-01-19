@@ -40,7 +40,7 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 		byToken: make(map[string]*models.Invitation),
 	}
 
-	for inv := range table.All() {
+	for inv := range table.Iter(0) {
 		s.byID[inv.ID] = inv
 		s.byToken[inv.Token] = inv
 	}

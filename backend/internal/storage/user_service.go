@@ -45,7 +45,7 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 		byEmail:    make(map[string]*userStorage),
 	}
 
-	for u := range table.All() {
+	for u := range table.Iter(0) {
 		s.byID[u.ID] = u
 		s.byEmail[u.Email] = u
 	}

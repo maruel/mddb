@@ -38,7 +38,7 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 		byID:    make(map[string]*models.Membership),
 	}
 
-	for m := range table.All() {
+	for m := range table.Iter(0) {
 		s.byID[m.UserID.String()+"_"+m.OrganizationID.String()] = m
 	}
 

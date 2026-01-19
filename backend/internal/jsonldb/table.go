@@ -182,21 +182,6 @@ func (t *Table[T]) load() error {
 	return nil
 }
 
-// All returns an iterator over clones of all rows.
-//
-// Warning: The reader lock is held during iteration.
-func (t *Table[T]) All() iter.Seq[T] {
-	return func(yield func(T) bool) {
-		t.mu.RLock()
-		defer t.mu.RUnlock()
-		for _, row := range t.rows {
-			if !yield(row.Clone()) {
-				return
-			}
-		}
-	}
-}
-
 // Iter returns an iterator over clones of rows with ID strictly greater than startID.
 // This is efficient for pagination when used with sorted IDs.
 //

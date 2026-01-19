@@ -43,7 +43,7 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 		byID:       make(map[jsonldb.ID]*models.Organization),
 	}
 
-	for org := range table.All() {
+	for org := range table.Iter(0) {
 		s.byID[org.ID] = org
 	}
 

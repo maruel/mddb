@@ -516,7 +516,7 @@ func (fs *FileStore) ReadRecords(orgID, id jsonldb.ID) ([]*models.DataRecord, er
 
 	// Collect all records from table
 	var records []*models.DataRecord
-	for r := range table.All() {
+	for r := range table.Iter(0) {
 		records = append(records, r)
 	}
 	return records, nil
@@ -556,7 +556,7 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 	// Collect paginated records from table
 	var records []*models.DataRecord
 	idx := 0
-	for r := range table.All() {
+	for r := range table.Iter(0) {
 		if idx >= offset && idx < end {
 			records = append(records, r)
 		}
@@ -585,7 +585,7 @@ func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *models.D
 	// Find and update the record
 	var updated []*models.DataRecord
 	found := false
-	for r := range table.All() {
+	for r := range table.Iter(0) {
 		if r.ID == record.ID {
 			updated = append(updated, record)
 			found = true
@@ -618,7 +618,7 @@ func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID jsonldb.ID) error 
 	// Find and remove the record
 	var updated []*models.DataRecord
 	found := false
-	for r := range table.All() {
+	for r := range table.Iter(0) {
 		if r.ID == recordID {
 			found = true
 		} else {

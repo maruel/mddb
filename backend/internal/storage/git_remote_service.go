@@ -74,7 +74,7 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 		remotesByOrg: make(map[jsonldb.ID][]*models.GitRemote),
 	}
 
-	for r := range remoteTable.All() {
+	for r := range remoteTable.Iter(0) {
 		s.remotesByOrg[r.OrganizationID] = append(s.remotesByOrg[r.OrganizationID], r)
 	}
 
@@ -157,7 +157,7 @@ func (s *GitRemoteService) GetToken(remoteIDStr string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid remote id: %w", err)
 	}
-	for sec := range s.secretTable.All() {
+	for sec := range s.secretTable.Iter(0) {
 		if sec.RemoteID == remoteID {
 			return sec.Token, nil
 		}
@@ -182,7 +182,7 @@ func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
 	// Remove from table
 	var newRows []*models.GitRemote
 	found := false
-	for r := range s.remoteTable.All() {
+	for r := range s.remoteTable.Iter(0) {
 		if r.ID == remoteID {
 			found = true
 			continue
@@ -198,7 +198,7 @@ func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
 	}
 
 	// Remove secret
-	allSecrets := slices.Collect(s.secretTable.All())
+	allSecrets := slices.Collect(s.secretTable.Iter(0))
 	var newSecrets []*remoteSecret
 	for _, sec := range allSecrets {
 		if sec.RemoteID != remoteID {
@@ -231,7 +231,7 @@ func (s *GitRemoteService) UpdateLastSync(remoteIDStr string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	allRemotes := slices.Collect(s.remoteTable.All())
+	allRemotes := slices.Collect(s.remoteTable.Iter(0))
 	for i := range allRemotes {
 		if allRemotes[i].ID == remoteID {
 			allRemotes[i].LastSync = time.Now()
