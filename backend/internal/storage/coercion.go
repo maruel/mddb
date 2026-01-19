@@ -1,8 +1,10 @@
-package jsonldb
+package storage
 
 import (
 	"math"
 	"strconv"
+
+	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // Type coercion maps JSON wire types through Go types to SQLite storage classes.
@@ -42,20 +44,23 @@ const (
 	affinityNUMERIC
 )
 
-// affinity returns the SQLite affinity for this column type.
-func (ct ColumnType) affinity() affinity {
-	switch ct {
-	case ColumnTypeText:
+// propertyAffinity returns the SQLite affinity for a property type.
+func propertyAffinity(pt models.PropertyType) affinity {
+	switch pt {
+	case models.PropertyTypeText, models.PropertyTypeURL, models.PropertyTypeEmail, models.PropertyTypePhone:
 		return affinityTEXT
-	case ColumnTypeNumber:
+	case models.PropertyTypeNumber:
 		return affinityNUMERIC
-	case ColumnTypeBool:
+	case models.PropertyTypeCheckbox:
 		return affinityINTEGER
-	case ColumnTypeDate:
+	case models.PropertyTypeDate:
 		// ISO8601 string format
 		return affinityTEXT
-	case ColumnTypeBlob, ColumnTypeJSONB:
-		// No coercion for blob/jsonb - stored as-is
+	case models.PropertyTypeSelect:
+		// Select stores option ID as text
+		return affinityTEXT
+	case models.PropertyTypeMultiSelect:
+		// Multi-select stores as JSON array, no coercion
 		return affinityBLOB
 	default:
 		// Unknown types default to BLOB (no coercion)
@@ -65,12 +70,12 @@ func (ct ColumnType) affinity() affinity {
 
 // coerceValue applies SQLite-compatible type coercion to a value based on affinity.
 // Returns the coerced value. Nil values pass through unchanged.
-func coerceValue(value any, affinity affinity) any {
+func coerceValue(value any, aff affinity) any {
 	if value == nil {
 		return nil
 	}
 
-	switch affinity {
+	switch aff {
 	case affinityTEXT:
 		return coerceToText(value)
 	case affinityINTEGER:
@@ -211,38 +216,28 @@ func coerceToNumeric(value any) any {
 	}
 }
 
-// CoerceData applies type coercion to all values in a data map based on column definitions.
-// Columns not in the schema are passed through unchanged (BLOB affinity).
-func CoerceData(data map[string]any, columns []Column) map[string]any {
+// coerceRecordData applies type coercion to all values in a data map based on property definitions.
+// Properties not in the schema are passed through unchanged (BLOB affinity).
+func coerceRecordData(data map[string]any, properties []models.Property) map[string]any {
 	if data == nil {
 		return nil
 	}
 
-	// Build column type lookup
-	colTypes := make(map[string]ColumnType, len(columns))
-	for _, col := range columns {
-		colTypes[col.Name] = col.Type
-	}
-
-	return CoerceDataWithTypes(data, colTypes)
-}
-
-// CoerceDataWithTypes applies type coercion using a map of column name to type.
-// Columns not in the map are passed through unchanged (BLOB affinity).
-func CoerceDataWithTypes(data map[string]any, colTypes map[string]ColumnType) map[string]any {
-	if data == nil {
-		return nil
+	// Build property type lookup
+	propTypes := make(map[string]models.PropertyType, len(properties))
+	for _, prop := range properties {
+		propTypes[prop.Name] = prop.Type
 	}
 
 	result := make(map[string]any, len(data))
 	for key, value := range data {
-		colType, ok := colTypes[key]
+		propType, ok := propTypes[key]
 		if !ok {
-			// Unknown column, pass through unchanged
+			// Unknown property, pass through unchanged
 			result[key] = value
 			continue
 		}
-		result[key] = coerceValue(value, colType.affinity())
+		result[key] = coerceValue(value, propertyAffinity(propType))
 	}
 	return result
 }

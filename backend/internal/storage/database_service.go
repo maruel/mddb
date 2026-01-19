@@ -185,8 +185,8 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 		return nil, fmt.Errorf("database not found")
 	}
 
-	// Coerce data types based on column schema
-	coercedData := jsonldb.CoerceDataWithTypes(data, propertyTypeMap(db.Properties))
+	// Coerce data types based on property schema
+	coercedData := coerceRecordData(data, db.Properties)
 
 	// Generate record ID
 	id := jsonldb.NewID()
@@ -331,8 +331,8 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 		return nil, err
 	}
 
-	// Coerce data types based on column schema
-	coercedData := jsonldb.CoerceDataWithTypes(data, propertyTypeMap(db.Properties))
+	// Coerce data types based on property schema
+	coercedData := coerceRecordData(data, db.Properties)
 
 	record := &models.DataRecord{
 		ID:       recordID,
@@ -391,14 +391,4 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseIDStr, recor
 	}
 
 	return nil
-}
-
-// propertyTypeMap builds a map of property name to storage type from a slice of models.Property.
-// High-level types (select, multi_select) are mapped to their underlying storage types.
-func propertyTypeMap(props []models.Property) map[string]jsonldb.ColumnType {
-	m := make(map[string]jsonldb.ColumnType, len(props))
-	for _, p := range props {
-		m[p.Name] = p.Type.StorageType()
-	}
-	return m
 }
