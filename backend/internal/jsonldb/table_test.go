@@ -3,12 +3,17 @@ package jsonldb
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
 type testRow struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
+}
+
+func (r testRow) Clone() testRow {
+	return r
 }
 
 func TestTable(t *testing.T) {
@@ -42,7 +47,7 @@ func TestTable(t *testing.T) {
 	}
 
 	// Test All
-	all := table.All()
+	all := slices.Collect(table.All())
 	if len(all) != 2 {
 		t.Errorf("All() expected 2 rows, got %d", len(all))
 	}
@@ -57,8 +62,9 @@ func TestTable(t *testing.T) {
 		t.Errorf("re-loaded table expected 2 rows, got %d", table2.Len())
 	}
 
-	if table2.At(0).Name != "One" || table2.At(1).Name != "Two" {
-		t.Errorf("re-loaded data mismatch: %v, %v", table2.At(0), table2.At(1))
+	all2 := slices.Collect(table2.All())
+	if all2[0].Name != "One" || all2[1].Name != "Two" {
+		t.Errorf("re-loaded data mismatch: %v, %v", all2[0], all2[1])
 	}
 
 	// Test Replace
@@ -69,7 +75,8 @@ func TestTable(t *testing.T) {
 		t.Fatalf("Replace failed: %v", err)
 	}
 
-	if table.Len() != 1 || table.At(0).ID != 3 {
+	allAfterReplace := slices.Collect(table.All())
+	if table.Len() != 1 || allAfterReplace[0].ID != 3 {
 		t.Errorf("Replace failed to update in-memory rows: len=%d", table.Len())
 	}
 
@@ -77,7 +84,8 @@ func TestTable(t *testing.T) {
 	if err != nil {
 		t.Fatalf("re-loading table after replace failed: %v", err)
 	}
-	if table3.Len() != 1 || table3.At(0).ID != 3 {
+	all3 := slices.Collect(table3.All())
+	if table3.Len() != 1 || all3[0].ID != 3 {
 		t.Errorf("Replace failed to update file: len=%d", table3.Len())
 	}
 }

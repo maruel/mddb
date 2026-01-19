@@ -39,10 +39,10 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 		byEmail:    make(map[string]*userStorage),
 	}
 
-	for i := range table.Len() {
-		ptr := table.At(i)
-		s.byID[ptr.ID] = ptr
-		s.byEmail[ptr.Email] = ptr
+	for u := range table.All() {
+		uCopy := u
+		s.byID[u.ID] = &uCopy
+		s.byEmail[u.Email] = &uCopy
 	}
 
 	return s, nil
@@ -51,6 +51,19 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 type userStorage struct {
 	models.User
 	PasswordHash string `json:"password_hash"`
+}
+
+func (u userStorage) Clone() userStorage { //nolint:gocritic // Value receiver required by Cloner interface.
+	c := u
+	if u.Memberships != nil {
+		c.Memberships = make([]models.Membership, len(u.Memberships))
+		copy(c.Memberships, u.Memberships)
+	}
+	if u.OAuthIdentities != nil {
+		c.OAuthIdentities = make([]models.OAuthIdentity, len(u.OAuthIdentities))
+		copy(c.OAuthIdentities, u.OAuthIdentities)
+	}
+	return c
 }
 
 // CreateUser creates a new user.
@@ -93,12 +106,9 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 	}
 
 	// Update local cache
-	s.table.RLock()
-	newStored := s.table.At(s.table.Len() - 1)
-	s.table.RUnlock()
-
-	s.byID[id] = newStored
-	s.byEmail[email] = newStored
+	newStored, _ := s.table.Last()
+	s.byID[id] = &newStored
+	s.byEmail[email] = &newStored
 
 	return user, nil
 }

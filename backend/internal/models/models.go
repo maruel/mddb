@@ -107,6 +107,11 @@ type Membership struct {
 	Created          time.Time          `json:"created"`
 }
 
+// Clone returns a copy of the Membership.
+func (m Membership) Clone() Membership { //nolint:gocritic // Value receiver required by Cloner interface.
+	return m
+}
+
 // MembershipSettings represents user preferences within a specific organization.
 type MembershipSettings struct {
 	Notifications bool `json:"notifications"`
@@ -132,6 +137,16 @@ type Organization struct {
 	Settings   OrganizationSettings `json:"settings"`
 	Onboarding OnboardingState      `json:"onboarding"`
 	Created    time.Time            `json:"created"`
+}
+
+// Clone returns a deep copy of the Organization.
+func (o Organization) Clone() Organization { //nolint:gocritic // Value receiver required by Cloner interface.
+	c := o
+	if o.Settings.AllowedDomains != nil {
+		c.Settings.AllowedDomains = make([]string, len(o.Settings.AllowedDomains))
+		copy(c.Settings.AllowedDomains, o.Settings.AllowedDomains)
+	}
+	return c
 }
 
 // OnboardingState tracks the progress of an organization's initial setup.
@@ -165,6 +180,11 @@ type GitRemote struct {
 	LastSync       time.Time  `json:"last_sync,omitempty"`
 }
 
+// Clone returns a copy of the GitRemote.
+func (g GitRemote) Clone() GitRemote { //nolint:gocritic // Value receiver required by Cloner interface.
+	return g
+}
+
 // Quota defines limits for an organization.
 type Quota struct {
 	MaxPages   int   `json:"max_pages"`
@@ -181,6 +201,11 @@ type Invitation struct {
 	Token          string     `json:"token"`
 	ExpiresAt      time.Time  `json:"expires_at"`
 	Created        time.Time  `json:"created"`
+}
+
+// Clone returns a copy of the Invitation.
+func (i Invitation) Clone() Invitation { //nolint:gocritic // Value receiver required by Cloner interface.
+	return i
 }
 
 // Session represents an active user session.

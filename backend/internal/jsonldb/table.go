@@ -4,33 +4,45 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 	"sync"
 )
 
+// Cloner is implemented by types that can clone themselves.
+type Cloner[T any] interface {
+	Clone() T
+}
+
 // Table handles storage and in-memory caching for a single table in JSONL format.
-type Table[T any] struct {
+type Table[T Cloner[T]] struct {
 	path string
 	mu   sync.RWMutex
 
 	rows []T
 }
 
-// RLock acquires a read lock.
-func (t *Table[T]) RLock() { t.mu.RLock() }
+// Len returns the number of rows.
+func (t *Table[T]) Len() int {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return len(t.rows)
+}
 
-// RUnlock releases a read lock.
-func (t *Table[T]) RUnlock() { t.mu.RUnlock() }
-
-// Len returns the number of rows. Caller must hold at least a read lock.
-func (t *Table[T]) Len() int { return len(t.rows) }
-
-// At returns a pointer to the row at index i. Caller must hold at least a read lock.
-func (t *Table[T]) At(i int) *T { return &t.rows[i] }
+// Last returns a clone of the last row, or false if empty.
+func (t *Table[T]) Last() (T, bool) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if len(t.rows) == 0 {
+		var zero T
+		return zero, false
+	}
+	return t.rows[len(t.rows)-1].Clone(), true
+}
 
 // NewTable creates a new Table and loads all data from the file.
-func NewTable[T any](path string) (*Table[T], error) {
+func NewTable[T Cloner[T]](path string) (*Table[T], error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create directory for %s: %w", path, err)
 	}
@@ -84,13 +96,17 @@ func (t *Table[T]) load() error {
 	return nil
 }
 
-// All returns a copy of all rows.
-func (t *Table[T]) All() []T {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	rows := make([]T, len(t.rows))
-	copy(rows, t.rows)
-	return rows
+// All returns an iterator over clones of all rows.
+func (t *Table[T]) All() iter.Seq[T] {
+	return func(yield func(T) bool) {
+		t.mu.RLock()
+		defer t.mu.RUnlock()
+		for _, row := range t.rows {
+			if !yield(row.Clone()) {
+				return
+			}
+		}
+	}
 }
 
 // Append adds a new row to the table and persists it.

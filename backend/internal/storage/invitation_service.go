@@ -34,10 +34,10 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 		byToken: make(map[string]*models.Invitation),
 	}
 
-	for i := range table.Len() {
-		inv := table.At(i)
-		s.byID[inv.ID] = inv
-		s.byToken[inv.Token] = inv
+	for inv := range table.All() {
+		invCopy := inv
+		s.byID[inv.ID] = &invCopy
+		s.byToken[inv.Token] = &invCopy
 	}
 
 	return s, nil
@@ -79,11 +79,9 @@ func (s *InvitationService) CreateInvitation(email, orgIDStr string, role models
 	}
 
 	// Update local cache
-	s.table.RLock()
-	newInv := s.table.At(s.table.Len() - 1)
-	s.table.RUnlock()
-	s.byID[id] = newInv
-	s.byToken[token] = newInv
+	newInv, _ := s.table.Last()
+	s.byID[id] = &newInv
+	s.byToken[token] = &newInv
 
 	return invitation, nil
 }

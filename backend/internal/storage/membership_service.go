@@ -32,9 +32,9 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 		byID:    make(map[string]*models.Membership),
 	}
 
-	for i := range table.Len() {
-		m := table.At(i)
-		s.byID[m.UserID.String()+"_"+m.OrganizationID.String()] = m
+	for m := range table.All() {
+		mCopy := m
+		s.byID[m.UserID.String()+"_"+m.OrganizationID.String()] = &mCopy
 	}
 
 	return s, nil
@@ -71,10 +71,8 @@ func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role mo
 	}
 
 	// Update local cache
-	s.table.RLock()
-	newM := s.table.At(s.table.Len() - 1)
-	s.table.RUnlock()
-	s.byID[key] = newM
+	newM, _ := s.table.Last()
+	s.byID[key] = &newM
 
 	return membership, nil
 }
