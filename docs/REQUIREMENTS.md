@@ -20,7 +20,7 @@ Most core functional requirements for a local-first markdown and database system
 - [x] **Schema**: Define database schemas (columns with types: text, number, select, multi_select, checkbox, date).
 - [x] **Records**: Store and manage database records in JSONL format.
 - [x] **Pagination**: Support for `offset` and `limit` to handle large datasets.
-- [ ] **Type Coercion**: SQLite-compatible type affinity system for consistent storage.
+- [/] **Type Coercion**: SQLite-compatible type affinity system for consistent storage.
     - **Storage Classes**: Map all values to SQLite's 5 storage classes: NULL, INTEGER, REAL, TEXT, BLOB.
     - **Type Mapping**:
         - `text` → TEXT affinity (stores as TEXT)

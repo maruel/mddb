@@ -409,3 +409,85 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 		t.Error("Record should not exist after deletion")
 	}
 }
+
+func TestDatabaseService_TypeCoercion(t *testing.T) {
+	tmpDir := t.TempDir()
+	fs, err := NewFileStore(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to create FileStore: %v", err)
+	}
+
+	cache := NewCache()
+	service := NewDatabaseService(fs, nil, cache, nil)
+	ctx := newTestContext(testID(100).String())
+
+	// Create a database with various column types
+	columns := []models.Column{
+		{Name: "name", Type: "text"},
+		{Name: "count", Type: "number"},
+		{Name: "price", Type: "number"},
+		{Name: "active", Type: "checkbox"},
+		{Name: "category", Type: "select"},
+	}
+	db, err := service.CreateDatabase(ctx, "Type Test DB", columns)
+	if err != nil {
+		t.Fatalf("Failed to create database: %v", err)
+	}
+
+	// Create a record with types that need coercion
+	// JSON decodes numbers as float64, booleans as bool
+	data := map[string]any{
+		"name":     123,           // number → text: "123"
+		"count":    float64(42),   // float64 whole → number: int64(42)
+		"price":    float64(19.99), // float64 decimal → number: float64(19.99)
+		"active":   true,          // bool → checkbox: int64(1)
+		"category": "electronics", // string → select: "electronics"
+	}
+	record, err := service.CreateRecord(ctx, db.ID.String(), data)
+	if err != nil {
+		t.Fatalf("Failed to create record: %v", err)
+	}
+
+	// Verify coercion results
+	if name, ok := record.Data["name"].(string); !ok || name != "123" {
+		t.Errorf("name coercion: got %v (%T), want '123' (string)", record.Data["name"], record.Data["name"])
+	}
+	if count, ok := record.Data["count"].(int64); !ok || count != 42 {
+		t.Errorf("count coercion: got %v (%T), want 42 (int64)", record.Data["count"], record.Data["count"])
+	}
+	if price, ok := record.Data["price"].(float64); !ok || price != 19.99 {
+		t.Errorf("price coercion: got %v (%T), want 19.99 (float64)", record.Data["price"], record.Data["price"])
+	}
+	if active, ok := record.Data["active"].(int64); !ok || active != 1 {
+		t.Errorf("active coercion: got %v (%T), want 1 (int64)", record.Data["active"], record.Data["active"])
+	}
+	if category, ok := record.Data["category"].(string); !ok || category != "electronics" {
+		t.Errorf("category coercion: got %v (%T), want 'electronics' (string)", record.Data["category"], record.Data["category"])
+	}
+
+	// Test update coercion
+	updateData := map[string]any{
+		"name":     456,
+		"count":    "100", // string → number: int64(100)
+		"price":    "29.99", // string → number: float64(29.99)
+		"active":   false,  // bool → checkbox: int64(0)
+		"category": "books",
+	}
+	updated, err := service.UpdateRecord(ctx, db.ID.String(), record.ID.String(), updateData)
+	if err != nil {
+		t.Fatalf("Failed to update record: %v", err)
+	}
+
+	if name, ok := updated.Data["name"].(string); !ok || name != "456" {
+		t.Errorf("updated name coercion: got %v (%T), want '456' (string)", updated.Data["name"], updated.Data["name"])
+	}
+	if count, ok := updated.Data["count"].(int64); !ok || count != 100 {
+		t.Errorf("updated count coercion: got %v (%T), want 100 (int64)", updated.Data["count"], updated.Data["count"])
+	}
+	if price, ok := updated.Data["price"].(float64); !ok || price != 29.99 {
+		t.Errorf("updated price coercion: got %v (%T), want 29.99 (float64)", updated.Data["price"], updated.Data["price"])
+	}
+	if active, ok := updated.Data["active"].(int64); !ok || active != 0 {
+		t.Errorf("updated active coercion: got %v (%T), want 0 (int64)", updated.Data["active"], updated.Data["active"])
+	}
+}

@@ -137,23 +137,23 @@ See `README.md` and `API.md` for details.
     - [x] Added public `Schema()` and `UpdateSchema()` methods to `Table[T]` for schema access/modification.
     - [x] Database metadata (Title, Created, Modified) now stored in separate `metadata.json` file per page.
     - **Future**: Extend schema discovery to support nested structs (object type) and slices (list type).
-- [ ] **JSONLDB Type Coercion (Part 3)**: SQLite-compatible type affinity for consistent storage.
-    - [ ] **Storage Classes**: Define 5 storage classes matching SQLite: NULL, INTEGER, REAL, TEXT, BLOB.
-    - [ ] **Affinity Mapping**: Map existing column types to affinities:
+- [/] **JSONLDB Type Coercion (Part 3)**: SQLite-compatible type affinity for consistent storage.
+    - [x] **Storage Classes**: Define 5 storage classes matching SQLite: NULL, INTEGER, REAL, TEXT, BLOB.
+    - [x] **Affinity Mapping**: Map existing column types to affinities:
         - `text` → TEXT (string storage)
         - `number` → NUMERIC (INTEGER if whole, REAL otherwise)
         - `select` → TEXT (string storage)
         - `multi_select` → TEXT (JSON array string)
         - `checkbox` → INTEGER (0/1)
         - `date` → TEXT (ISO8601 format)
-    - [ ] **Coercion Logic**: Implement `coerceValue(value any, affinity Affinity) any` function:
+    - [x] **Coercion Logic**: Implement `CoerceValue(value any, affinity Affinity) any` function in `jsonldb/affinity.go`:
         - NUMERIC: Parse text to number; float-equal-to-int becomes INTEGER; non-numeric stays TEXT.
         - INTEGER: Force integer representation (truncate decimals).
         - REAL: Force float64 representation.
         - TEXT: Convert numbers to string.
         - BLOB: Pass through unchanged.
         - NULL: Omitted fields via `omitzero`/`omitempty` struct tags; absent JSON keys = NULL.
-    - [ ] **Write Path Integration**: Apply coercion in `Table.Create()` and `Table.Update()`.
+    - [x] **Write Path Integration**: Apply coercion in `DatabaseService.CreateRecord()` and `DatabaseService.UpdateRecord()`.
     - [ ] **Comparison Semantics**: Apply affinity rules during filtering/comparison operations.
     - [ ] **Migration Tool**: Optional migration script to coerce existing records to new type rules.
 - [ ] **JSONLDB Sharding (Part 4)**: Add support for sharding in JSONLDB to handle extremely large datasets.

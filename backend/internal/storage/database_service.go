@@ -174,6 +174,7 @@ func (s *DatabaseService) ListDatabases(ctx context.Context) ([]*models.Database
 }
 
 // CreateRecord creates a new record in a database.
+// Data values are coerced to SQLite-compatible types based on column schema.
 func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string, data map[string]any) (*models.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
@@ -185,10 +186,15 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 	}
 
 	orgID := models.GetOrgID(ctx)
-	// Verify database exists
-	if !s.fileStore.DatabaseExists(orgID, databaseID) {
+
+	// Read database to get columns for type coercion
+	db, err := s.fileStore.ReadDatabase(orgID, databaseID)
+	if err != nil {
 		return nil, fmt.Errorf("database not found")
 	}
+
+	// Coerce data types based on column schema
+	coercedData := jsonldb.CoerceDataWithTypes(data, columnTypeMap(db.Columns))
 
 	// Generate record ID
 	id := jsonldb.NewID()
@@ -196,7 +202,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 	now := time.Now()
 	record := &models.DataRecord{
 		ID:       id,
-		Data:     data,
+		Data:     coercedData,
 		Created:  now,
 		Modified: now,
 	}
@@ -301,6 +307,7 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordID
 }
 
 // UpdateRecord updates an existing record in a database.
+// Data values are coerced to SQLite-compatible types based on column schema.
 func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recordIDStr string, data map[string]any) (*models.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
@@ -320,15 +327,24 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 
 	orgID := models.GetOrgID(ctx)
 
+	// Read database to get columns for type coercion
+	db, err := s.fileStore.ReadDatabase(orgID, databaseID)
+	if err != nil {
+		return nil, fmt.Errorf("database not found")
+	}
+
 	// Retrieve existing record to preserve Created time and ensure it exists
 	existing, err := s.GetRecord(ctx, databaseIDStr, recordIDStr)
 	if err != nil {
 		return nil, err
 	}
 
+	// Coerce data types based on column schema
+	coercedData := jsonldb.CoerceDataWithTypes(data, columnTypeMap(db.Columns))
+
 	record := &models.DataRecord{
 		ID:       recordID,
-		Data:     data,
+		Data:     coercedData,
 		Created:  existing.Created,
 		Modified: time.Now(),
 	}
@@ -383,4 +399,13 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseIDStr, recor
 	}
 
 	return nil
+}
+
+// columnTypeMap builds a map of column name to type from a slice of models.Column.
+func columnTypeMap(columns []models.Column) map[string]string {
+	m := make(map[string]string, len(columns))
+	for _, col := range columns {
+		m[col.Name] = col.Type
+	}
+	return m
 }
