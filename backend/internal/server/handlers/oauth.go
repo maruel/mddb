@@ -64,7 +64,7 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	provider := r.PathValue("provider")
 	config, ok := h.providers[provider]
 	if !ok {
-		http.Error(w, "Unknown provider", http.StatusNotFound)
+		writeErrorResponse(w, models.InvalidProvider())
 		return
 	}
 
@@ -79,19 +79,19 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	provider := r.PathValue("provider")
 	config, ok := h.providers[provider]
 	if !ok {
-		http.Error(w, "Unknown provider", http.StatusNotFound)
+		writeErrorResponse(w, models.InvalidProvider())
 		return
 	}
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		http.Error(w, "Code missing", http.StatusBadRequest)
+		writeErrorResponse(w, models.MissingField("code"))
 		return
 	}
 
 	token, err := config.Exchange(r.Context(), code)
 	if err != nil {
-		http.Error(w, "Failed to exchange token", http.StatusInternalServerError)
+		writeErrorResponse(w, models.OAuthError("token_exchange"))
 		return
 	}
 
@@ -106,18 +106,18 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	case "google":
 		resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 		if err != nil {
-			http.Error(w, "Failed to get user info", http.StatusInternalServerError)
+			writeErrorResponse(w, models.OAuthError("user_info"))
 			return
 		}
 		defer func() { _ = resp.Body.Close() }()
 		if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-			http.Error(w, "Failed to decode user info", http.StatusInternalServerError)
+			writeErrorResponse(w, models.OAuthError("decode"))
 			return
 		}
 	case "microsoft":
 		resp, err := client.Get("https://graph.microsoft.com/v1.0/me")
 		if err != nil {
-			http.Error(w, "Failed to get user info", http.StatusInternalServerError)
+			writeErrorResponse(w, models.OAuthError("user_info"))
 			return
 		}
 		defer func() { _ = resp.Body.Close() }()
@@ -129,7 +129,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			Mail              string `json:"mail"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&msUser); err != nil {
-			http.Error(w, "Failed to decode user info", http.StatusInternalServerError)
+			writeErrorResponse(w, models.OAuthError("decode"))
 			return
 		}
 		userInfo.ID = msUser.ID
@@ -159,7 +159,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			password, _ := storage.GenerateToken(32)
 			user, err = h.userService.CreateUser(userInfo.Email, password, userInfo.Name, role)
 			if err != nil {
-				http.Error(w, "Failed to create user", http.StatusInternalServerError)
+				writeErrorResponse(w, models.Internal("user_creation"))
 				return
 			}
 			if orgID != "" {
@@ -182,7 +182,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT token
 	jwtToken, err := h.authHandler.GenerateToken(user)
 	if err != nil {
-		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+		writeErrorResponse(w, models.Internal("token_generation"))
 		return
 	}
 

@@ -64,7 +64,7 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req models.Acc
 	}
 
 	if time.Now().After(inv.ExpiresAt) {
-		return nil, models.NewAPIError(400, "Invitation expired", "Invitation expired")
+		return nil, models.Expired("invitation")
 	}
 
 	// Create user or link to existing

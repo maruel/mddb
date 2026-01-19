@@ -158,7 +158,7 @@ func populateQueryParams(r *http.Request, input any) {
 	}
 }
 
-// writeErrorResponse writes an error response as JSON.
+// writeErrorResponse writes an error response as JSON (internal use).
 func writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
 	writeErrorResponseWithCode(w, statusCode, models.ErrorCodeInternal, message, nil)
 }

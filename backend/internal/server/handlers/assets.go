@@ -54,27 +54,27 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 	pageID := r.PathValue("id")
 
 	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB
-		http.Error(w, "Failed to parse form", http.StatusBadRequest)
+		writeErrorResponse(w, models.BadRequest("form_parse"))
 		return
 	}
 
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "File is required", http.StatusBadRequest)
+		writeErrorResponse(w, models.MissingField("file"))
 		return
 	}
 	defer func() { _ = file.Close() }()
 
 	data, err := io.ReadAll(file)
 	if err != nil {
-		http.Error(w, "Failed to read file", http.StatusInternalServerError)
+		writeErrorResponse(w, models.Internal("file_read"))
 		return
 	}
 
 	as := storage.NewAssetService(h.fileStore, h.git, h.orgs)
 	asset, err := as.SaveAsset(r.Context(), pageID, header.Filename, data)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeErrorResponse(w, models.Internal("asset_save"))
 		return
 	}
 
@@ -90,7 +90,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 
 	data, err := h.fileStore.ReadAsset(orgID, pageID, assetName)
 	if err != nil {
-		http.Error(w, "Asset not found", http.StatusNotFound)
+		writeErrorResponse(w, models.NotFound("asset"))
 		return
 	}
 

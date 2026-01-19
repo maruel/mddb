@@ -39,6 +39,13 @@ const (
 	ErrorCodeUnauthorized ErrorCode = "UNAUTHORIZED"
 	// ErrorCodeForbidden is returned when a user has insufficient permissions
 	ErrorCodeForbidden ErrorCode = "FORBIDDEN"
+
+	// ErrorCodeInvalidProvider is returned when an OAuth provider is unknown
+	ErrorCodeInvalidProvider ErrorCode = "INVALID_PROVIDER"
+	// ErrorCodeOAuthError is returned when an OAuth operation fails
+	ErrorCodeOAuthError ErrorCode = "OAUTH_ERROR"
+	// ErrorCodeExpired is returned when a resource has expired
+	ErrorCodeExpired ErrorCode = "EXPIRED"
 )
 
 // ErrorDetails defines the structured error information in a response.
@@ -174,4 +181,19 @@ func InternalWithError(message string, err error) *APIError {
 // NotImplemented creates a 501 Not Implemented error.
 func NotImplemented(feature string) *APIError {
 	return NewAPIError(http.StatusNotImplemented, ErrorCodeNotImplemented, fmt.Sprintf("%s is not yet implemented", feature))
+}
+
+// InvalidProvider creates a 404 error for unknown OAuth providers.
+func InvalidProvider() *APIError {
+	return NewAPIError(http.StatusNotFound, ErrorCodeInvalidProvider, "unknown provider")
+}
+
+// OAuthError creates a 500 error for OAuth operation failures.
+func OAuthError(operation string) *APIError {
+	return NewAPIError(http.StatusInternalServerError, ErrorCodeOAuthError, operation)
+}
+
+// Expired creates a 400 error for expired resources.
+func Expired(resource string) *APIError {
+	return NewAPIError(http.StatusBadRequest, ErrorCodeExpired, fmt.Sprintf("%s expired", resource))
 }
