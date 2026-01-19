@@ -15,7 +15,7 @@ func TestAssetService_SaveAsset(t *testing.T) {
 	}
 
 	// Create a page first
-	pageID := EncodeID(1)
+	pageID := testID(1)
 	_, err = fs.WritePage("org1", pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
@@ -66,7 +66,7 @@ func TestAssetService_GetAsset(t *testing.T) {
 	}
 
 	// Create a page and save asset
-	pageID := EncodeID(1)
+	pageID := testID(1)
 	_, err = fs.WritePage("org1", pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
@@ -98,7 +98,7 @@ func TestAssetService_DeleteAsset(t *testing.T) {
 	}
 
 	// Create a page and save asset
-	pageID := EncodeID(1)
+	pageID := testID(1)
 	_, err = fs.WritePage("org1", pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
@@ -136,7 +136,7 @@ func TestAssetService_ListAssets(t *testing.T) {
 	}
 
 	// Create a page
-	pageID := EncodeID(1)
+	pageID := testID(1)
 	_, err = fs.WritePage("org1", pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
@@ -201,7 +201,7 @@ func TestAssetService_Validation(t *testing.T) {
 		{
 			name: "empty file name on save",
 			fn: func() error {
-				_, err := as.SaveAsset(newTestContext("org1"), EncodeID(1), "", []byte("data"))
+				_, err := as.SaveAsset(newTestContext("org1"), testID(1), "", []byte("data"))
 				return err
 			},
 			wantErr: true,
@@ -209,7 +209,7 @@ func TestAssetService_Validation(t *testing.T) {
 		{
 			name: "empty data on save",
 			fn: func() error {
-				_, err := as.SaveAsset(newTestContext("org1"), EncodeID(1), "test.png", []byte(""))
+				_, err := as.SaveAsset(newTestContext("org1"), testID(1), "test.png", []byte(""))
 				return err
 			},
 			wantErr: true,
@@ -225,7 +225,7 @@ func TestAssetService_Validation(t *testing.T) {
 		{
 			name: "empty asset name on get",
 			fn: func() error {
-				_, err := as.GetAsset(newTestContext("org1"), EncodeID(1), "")
+				_, err := as.GetAsset(newTestContext("org1"), testID(1), "")
 				return err
 			},
 			wantErr: true,

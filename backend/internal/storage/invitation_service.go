@@ -57,7 +57,7 @@ func (s *InvitationService) CreateInvitation(email, orgID string, role models.Us
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := s.nextID()
+	id := jsonldb.NewID().Encode()
 
 	invitation := &models.Invitation{
 		ID:             id,
@@ -134,12 +134,3 @@ func (s *InvitationService) getAllFromCache() []models.Invitation {
 	return rows
 }
 
-func (s *InvitationService) nextID() string {
-	var maxID uint64
-	for id := range s.byID {
-		if n, err := DecodeID(id); err == nil && n > maxID {
-			maxID = n
-		}
-	}
-	return EncodeID(maxID + 1)
-}

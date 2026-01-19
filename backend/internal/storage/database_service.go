@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 )
 
@@ -63,7 +64,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 	// Ensure each column has an ID
 	for i := range columns {
 		if columns[i].ID == "" {
-			columns[i].ID = GenerateID()
+			columns[i].ID = jsonldb.NewID().Encode()
 		}
 	}
 
@@ -173,7 +174,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, d
 	}
 
 	// Generate record ID
-	id := GenerateID()
+	id := jsonldb.NewID().Encode()
 
 	now := time.Now()
 	record := &models.DataRecord{

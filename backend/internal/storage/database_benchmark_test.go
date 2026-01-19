@@ -92,7 +92,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
-		readDBID := EncodeID(100)
+		readDBID := testID(100)
 		readDB := &models.Database{ID: readDBID, Title: "Read Bench Page", Version: "1.0", Created: time.Now(), Modified: time.Now()}
 		if err := fs.WriteDatabase("", readDB); err != nil {
 			b.Fatal(err)

@@ -22,7 +22,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		{
 			name: "simple database",
 			database: &models.Database{
-				ID:      EncodeID(1),
+				ID:      testID(1),
 				Title:   "Test Database",
 				Version: "1.0",
 				Columns: []models.Column{
@@ -36,7 +36,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		{
 			name: "database with all column types",
 			database: &models.Database{
-				ID:      EncodeID(2),
+				ID:      testID(2),
 				Title:   "Complex Database",
 				Version: "1.0",
 				Columns: []models.Column{
@@ -109,7 +109,7 @@ func TestDatabase_Exists(t *testing.T) {
 	}
 
 	db := &models.Database{
-		ID:      EncodeID(1),
+		ID:      testID(1),
 		Title:   "Test",
 		Version: "1.0",
 		Columns: []models.Column{
@@ -143,7 +143,7 @@ func TestDatabase_List(t *testing.T) {
 	}
 
 	// Create multiple databases
-	dbIDs := []string{EncodeID(1), EncodeID(2), EncodeID(3)}
+	dbIDs := []string{testID(1), testID(2), testID(3)}
 	for _, id := range dbIDs {
 		db := &models.Database{
 			ID:      id,
@@ -232,7 +232,7 @@ func TestRecord_AppendRead(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	dbID := EncodeID(1)
+	dbID := testID(1)
 
 	// Create database first
 	db := &models.Database{
@@ -313,7 +313,7 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	dbID := EncodeID(1)
+	dbID := testID(1)
 
 	// Create database
 	db := &models.Database{
@@ -349,7 +349,7 @@ func TestDatabase_NestedPath(t *testing.T) {
 	}
 
 	// Create database with base64 encoded ID
-	dbID := EncodeID(42)
+	dbID := testID(42)
 	db := &models.Database{
 		ID:      dbID,
 		Title:   "Database 42",

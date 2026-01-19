@@ -16,7 +16,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test WritePage (with numeric ID encoded as base64)
-	pageID := EncodeID(1)
+	pageID := testID(1)
 	page, err := fs.WritePage("org1", pageID, "Test Title", "# Test Content")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
@@ -96,9 +96,9 @@ func TestFileStoreListPages(t *testing.T) {
 		id    string
 		title string
 	}{
-		{EncodeID(1), "First Page"},
-		{EncodeID(2), "Second Page"},
-		{EncodeID(3), "Third Page"},
+		{testID(1), "First Page"},
+		{testID(2), "Second Page"},
+		{testID(3), "Third Page"},
 	}
 
 	for _, p := range pages {
@@ -119,7 +119,7 @@ func TestFileStoreListPages(t *testing.T) {
 	}
 
 	// Verify directory structure
-	expectedDir := filepath.Join(tmpDir, "org1", "pages", EncodeID(1))
+	expectedDir := filepath.Join(tmpDir, "org1", "pages", testID(1))
 	if _, err := os.Stat(expectedDir); err != nil {
 		t.Errorf("expected page directory %s to exist: %v", expectedDir, err)
 	}
@@ -138,7 +138,7 @@ func TestMarkdownFormatting(t *testing.T) {
 	}
 
 	// Write page with specific content
-	pageID := EncodeID(1)
+	pageID := testID(1)
 	_, err = fs.WritePage("org1", pageID, "Format Test", "# Content\n\nWith multiple lines")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)

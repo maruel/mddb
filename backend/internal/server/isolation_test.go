@@ -7,9 +7,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
+
+func testID(n uint64) string {
+	return jsonldb.ID(n).Encode()
+}
 
 func TestOrgIsolationMiddleware(t *testing.T) {
 	tempDir, _ := os.MkdirTemp("", "mddb-isolation-test-*")
@@ -25,21 +30,21 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 	}{
 		{
 			name:           "Access own organization",
-			membershipOrg:  storage.EncodeID(1),
+			membershipOrg:  testID(1),
 			membershipRole: models.UserRoleViewer,
-			requestOrgID:   storage.EncodeID(1),
+			requestOrgID:   testID(1),
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Access different organization",
-			membershipOrg:  storage.EncodeID(1),
+			membershipOrg:  testID(1),
 			membershipRole: models.UserRoleViewer,
-			requestOrgID:   storage.EncodeID(2),
+			requestOrgID:   testID(2),
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Access with no org context in request",
-			membershipOrg:  storage.EncodeID(1),
+			membershipOrg:  testID(1),
 			membershipRole: models.UserRoleViewer,
 			requestOrgID:   "",
 			expectedStatus: http.StatusOK,
@@ -50,8 +55,8 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			userID := "user1"
 			// Clear and setup membership for each test case
-			_ = memService.DeleteMembership(userID, storage.EncodeID(1))
-			_ = memService.DeleteMembership(userID, storage.EncodeID(2))
+			_ = memService.DeleteMembership(userID, testID(1))
+			_ = memService.DeleteMembership(userID, testID(2))
 
 			if tt.membershipOrg != "" {
 				_, _ = memService.CreateMembership(userID, tt.membershipOrg, tt.membershipRole)
@@ -128,7 +133,7 @@ func TestRolePermissions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			userID := "user-role-test"
-			orgID := storage.EncodeID(1)
+			orgID := testID(1)
 			// Clear and setup membership for each test case
 			_ = memService.DeleteMembership(userID, orgID)
 			_, _ = memService.CreateMembership(userID, orgID, tt.userRole)

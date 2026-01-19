@@ -40,7 +40,7 @@ func NewFileStore(rootDir string) (*FileStore, error) {
 // NextID returns a new unique ID for pages/databases.
 // IDs are time-based and lexicographically sortable.
 func (fs *FileStore) NextID(_ string) string {
-	return GenerateID()
+	return jsonldb.NewID().Encode()
 }
 
 func (fs *FileStore) orgPagesDir(orgID string) string {

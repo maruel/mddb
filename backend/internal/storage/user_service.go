@@ -67,7 +67,7 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 		return nil, fmt.Errorf("user already exists")
 	}
 
-	id := s.nextID()
+	id := jsonldb.NewID().Encode()
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
@@ -264,10 +264,6 @@ func (s *UserService) getAllFromCache() []userStorage {
 		rows = append(rows, *v)
 	}
 	return rows
-}
-
-func (s *UserService) nextID() string {
-	return GenerateID()
 }
 
 // ListUsers returns all users.

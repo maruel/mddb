@@ -65,7 +65,7 @@ func (s *GitRemoteService) CreateRemote(orgID, name, url, remoteType, authType, 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := s.nextID()
+	id := jsonldb.NewID().Encode()
 	newRemote := &models.GitRemote{
 		ID:             id,
 		OrganizationID: orgID,
@@ -168,18 +168,6 @@ func (s *GitRemoteService) DeleteRemote(orgID, remoteID string) error {
 	s.remotesByOrg[orgID] = newCache
 
 	return nil
-}
-
-func (s *GitRemoteService) nextID() string {
-	var maxID uint64
-	for _, remotes := range s.remotesByOrg {
-		for _, r := range remotes {
-			if n, err := DecodeID(r.ID); err == nil && n > maxID {
-				maxID = n
-			}
-		}
-	}
-	return EncodeID(maxID + 1)
 }
 
 // UpdateLastSync updates the last sync time for a remote.

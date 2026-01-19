@@ -54,7 +54,7 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := s.nextID()
+	id := jsonldb.NewID().Encode()
 	now := time.Now()
 	org := &models.Organization{
 		ID:      id,
@@ -168,16 +168,6 @@ func (s *OrganizationService) getAllFromCache() []models.Organization {
 		rows = append(rows, *v)
 	}
 	return rows
-}
-
-func (s *OrganizationService) nextID() string {
-	var maxID uint64
-	for id := range s.byID {
-		if n, err := DecodeID(id); err == nil && n > maxID {
-			maxID = n
-		}
-	}
-	return EncodeID(maxID + 1)
 }
 
 // RootDir returns the root directory of the organization service.
