@@ -60,7 +60,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeReque
 	}
 
 	orgID := models.GetOrgID(ctx)
-	id := jsonldb.NewID().Encode()
+	id := jsonldb.NewID().String()
 
 	var node *models.Node
 	var err error

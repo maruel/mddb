@@ -22,7 +22,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	dbID := jsonldb.NewID().Encode()
+	dbID := jsonldb.NewID().String()
 	db := &models.Database{
 		ID:       dbID,
 		Title:    "Benchmark Database",
@@ -62,7 +62,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// To make this isolated, we can pre-populate a DB with N records
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a database with 1000 records
-		readDBID := jsonldb.NewID().Encode()
+		readDBID := jsonldb.NewID().String()
 		readDB := &models.Database{ID: readDBID, Title: "Read Bench", Version: "1.0", Created: time.Now(), Modified: time.Now()}
 		if err := fs.WriteDatabase("", readDB); err != nil {
 			b.Fatal(err)

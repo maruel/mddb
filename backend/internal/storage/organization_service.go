@@ -19,7 +19,7 @@ type OrganizationService struct {
 	fileStore  *FileStore
 	gitService *GitService
 	mu         sync.RWMutex
-	byID       map[string]*models.Organization
+	byID       map[jsonldb.ID]*models.Organization
 }
 
 // NewOrganizationService creates a new organization service.
@@ -35,7 +35,7 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 		table:      table,
 		fileStore:  fileStore,
 		gitService: gitService,
-		byID:       make(map[string]*models.Organization),
+		byID:       make(map[jsonldb.ID]*models.Organization),
 	}
 
 	for i := range table.Rows {
@@ -54,7 +54,7 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := jsonldb.NewID().Encode()
+	id := jsonldb.NewID()
 	now := time.Now()
 	org := &models.Organization{
 		ID:      id,
@@ -78,7 +78,7 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	s.byID[id] = newOrg
 
 	// Create organization content directory
-	orgDir := filepath.Join(s.rootDir, id)
+	orgDir := filepath.Join(s.rootDir, id.String())
 	orgPagesDir := filepath.Join(orgDir, "pages")
 	if err := os.MkdirAll(orgPagesDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create organization content directory: %w", err)
@@ -95,13 +95,14 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	if s.fileStore != nil {
 		welcomeTitle := "Welcome to " + name
 		welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
-		_, _ = s.fileStore.WritePage(id, "1", welcomeTitle, welcomeContent)
+		welcomeID := jsonldb.NewID()
+		_, _ = s.fileStore.WritePage(id, welcomeID, welcomeTitle, welcomeContent)
 
 		// Commit the welcome page
 		if s.gitService != nil {
 			// Create a context with the new org ID
 			orgCtx := context.WithValue(ctx, models.OrgKey, id)
-			_ = s.gitService.CommitChange(orgCtx, "create", "page", "1", "Initial welcome page")
+			_ = s.gitService.CommitChange(orgCtx, "create", "page", welcomeID, "Initial welcome page")
 		}
 	}
 
@@ -109,7 +110,7 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 }
 
 // GetOrganization retrieves an organization by ID.
-func (s *OrganizationService) GetOrganization(id string) (*models.Organization, error) {
+func (s *OrganizationService) GetOrganization(id jsonldb.ID) (*models.Organization, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -134,7 +135,7 @@ func (s *OrganizationService) ListOrganizations() ([]*models.Organization, error
 }
 
 // UpdateSettings updates organization-wide settings.
-func (s *OrganizationService) UpdateSettings(id string, settings models.OrganizationSettings) error {
+func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings models.OrganizationSettings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -148,7 +149,7 @@ func (s *OrganizationService) UpdateSettings(id string, settings models.Organiza
 }
 
 // UpdateOnboarding updates the onboarding state of an organization.
-func (s *OrganizationService) UpdateOnboarding(id string, state models.OnboardingState) error {
+func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state models.OnboardingState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 

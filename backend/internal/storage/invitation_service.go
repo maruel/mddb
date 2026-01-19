@@ -57,7 +57,7 @@ func (s *InvitationService) CreateInvitation(email, orgID string, role models.Us
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := jsonldb.NewID().Encode()
+	id := jsonldb.NewID().String()
 
 	invitation := &models.Invitation{
 		ID:             id,

@@ -10,7 +10,7 @@ import (
 // testID returns an encoded LUCI-style ID for the given number.
 // Use for deterministic test IDs.
 func testID(n uint64) string {
-	return jsonldb.ID(n).Encode()
+	return jsonldb.ID(n).String()
 }
 
 // newTestContext returns a context with a test user and organization.

@@ -67,7 +67,7 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 		return nil, fmt.Errorf("user already exists")
 	}
 
-	id := jsonldb.NewID().Encode()
+	id := jsonldb.NewID().String()
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {

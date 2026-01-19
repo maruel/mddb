@@ -3,6 +3,7 @@ package storage
 import (
 	"sync"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 )
 
@@ -14,10 +15,10 @@ type Cache struct {
 	nodeTree []*models.Node
 
 	// Hot pages (map of page ID to page)
-	pages map[string]*models.Page
+	pages map[jsonldb.ID]*models.Page
 
 	// Hot records (map of database ID to list of records)
-	records map[string][]*models.DataRecord
+	records map[jsonldb.ID][]*models.DataRecord
 
 	// Max size for LRU-like behavior (simplified for now)
 	maxPages   int
@@ -27,8 +28,8 @@ type Cache struct {
 // NewCache initializes a new cache.
 func NewCache() *Cache {
 	return &Cache{
-		pages:      make(map[string]*models.Page),
-		records:    make(map[string][]*models.DataRecord),
+		pages:      make(map[jsonldb.ID]*models.Page),
+		records:    make(map[jsonldb.ID][]*models.DataRecord),
 		maxPages:   100,
 		maxRecords: 100,
 	}
@@ -56,7 +57,7 @@ func (c *Cache) InvalidateNodeTree() {
 }
 
 // GetPage returns a cached page by ID.
-func (c *Cache) GetPage(id string) (*models.Page, bool) {
+func (c *Cache) GetPage(id jsonldb.ID) (*models.Page, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	page, ok := c.pages[id]
@@ -70,20 +71,20 @@ func (c *Cache) SetPage(page *models.Page) {
 
 	// Simple size limiting: clear if it grows too large
 	if len(c.pages) >= c.maxPages {
-		c.pages = make(map[string]*models.Page)
+		c.pages = make(map[jsonldb.ID]*models.Page)
 	}
 	c.pages[page.ID] = page
 }
 
 // InvalidatePage removes a page from cache.
-func (c *Cache) InvalidatePage(id string) {
+func (c *Cache) InvalidatePage(id jsonldb.ID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.pages, id)
 }
 
 // GetRecords returns cached records for a database.
-func (c *Cache) GetRecords(databaseID string) ([]*models.DataRecord, bool) {
+func (c *Cache) GetRecords(databaseID jsonldb.ID) ([]*models.DataRecord, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	records, ok := c.records[databaseID]
@@ -91,18 +92,18 @@ func (c *Cache) GetRecords(databaseID string) ([]*models.DataRecord, bool) {
 }
 
 // SetRecords caches records for a database.
-func (c *Cache) SetRecords(databaseID string, records []*models.DataRecord) {
+func (c *Cache) SetRecords(databaseID jsonldb.ID, records []*models.DataRecord) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if len(c.records) >= c.maxRecords {
-		c.records = make(map[string][]*models.DataRecord)
+		c.records = make(map[jsonldb.ID][]*models.DataRecord)
 	}
 	c.records[databaseID] = records
 }
 
 // InvalidateRecords removes records for a database from cache.
-func (c *Cache) InvalidateRecords(databaseID string) {
+func (c *Cache) InvalidateRecords(databaseID jsonldb.ID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.records, databaseID)
@@ -113,6 +114,6 @@ func (c *Cache) InvalidateAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.nodeTree = nil
-	c.pages = make(map[string]*models.Page)
-	c.records = make(map[string][]*models.DataRecord)
+	c.pages = make(map[jsonldb.ID]*models.Page)
+	c.records = make(map[jsonldb.ID][]*models.DataRecord)
 }

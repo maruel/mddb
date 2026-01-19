@@ -65,7 +65,7 @@ func (s *GitRemoteService) CreateRemote(orgID, name, url, remoteType, authType, 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := jsonldb.NewID().Encode()
+	id := jsonldb.NewID().String()
 	newRemote := &models.GitRemote{
 		ID:             id,
 		OrganizationID: orgID,

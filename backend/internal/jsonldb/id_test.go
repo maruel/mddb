@@ -18,7 +18,7 @@ func TestNewID(t *testing.T) {
 
 func TestIDEncodeDecode(t *testing.T) {
 	id := NewID()
-	encoded := id.Encode()
+	encoded := id.String()
 
 	if len(encoded) != idEncodedLen {
 		t.Errorf("Encode length = %d, want %d", len(encoded), idEncodedLen)
@@ -54,7 +54,7 @@ func TestIDLexicographicOrder(t *testing.T) {
 
 	encoded := make([]string, len(ids))
 	for i, id := range ids {
-		encoded[i] = id.Encode()
+		encoded[i] = id.String()
 	}
 
 	// Check that string sorting preserves ID order
@@ -138,13 +138,13 @@ func BenchmarkIDEncode(b *testing.B) {
 	id := NewID()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = id.Encode()
+		_ = id.String()
 	}
 }
 
 func BenchmarkDecodeID(b *testing.B) {
 	id := NewID()
-	encoded := id.Encode()
+	encoded := id.String()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, _ = DecodeID(encoded)

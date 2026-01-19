@@ -66,7 +66,7 @@ func (s *PageService) CreatePage(ctx context.Context, title, content string) (*m
 		}
 	}
 
-	id := jsonldb.NewID().Encode()
+	id := jsonldb.NewID().String()
 
 	page, err := s.fileStore.WritePage(orgID, id, title, content)
 	if err != nil {

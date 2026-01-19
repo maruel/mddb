@@ -77,7 +77,7 @@ func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType mod
 		}
 	}
 
-	id := jsonldb.NewID().Encode()
+	id := jsonldb.NewID().String()
 	now := time.Now()
 
 	node := &models.Node{

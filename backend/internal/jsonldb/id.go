@@ -99,9 +99,9 @@ func newIDFromParts(ms, randBits, version uint64) ID {
 	return ID((ms << 20) | (randBits << 4) | (version & 0xF))
 }
 
-// Encode returns the fixed-width 11-character encoding using a sortable alphabet.
-// The encoding is lexicographically sortable: if id1 < id2, then id1.Encode() < id2.Encode().
-func (id ID) Encode() string {
+// String returns the fixed-width 11-character encoding using a sortable alphabet.
+// The encoding is lexicographically sortable: if id1 < id2, then id1.String() < id2.String().
+func (id ID) String() string {
 	// Encode 64 bits into 11 characters (6 bits each, last char uses 4 bits)
 	var buf [idEncodedLen]byte
 	v := uint64(id)
@@ -113,9 +113,38 @@ func (id ID) Encode() string {
 	return string(buf[:])
 }
 
-// String implements fmt.Stringer.
-func (id ID) String() string {
-	return id.Encode()
+// MarshalJSON implements json.Marshaler.
+// Zero IDs are marshaled as empty strings.
+func (id ID) MarshalJSON() ([]byte, error) {
+	if id == 0 {
+		return []byte(`""`), nil
+	}
+	return []byte(`"` + id.String() + `"`), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+// Empty strings are unmarshaled as zero IDs.
+func (id *ID) UnmarshalJSON(data []byte) error {
+	if len(data) < 2 || data[0] != '"' || data[len(data)-1] != '"' {
+		return fmt.Errorf("invalid ID JSON: expected quoted string")
+	}
+	s := string(data[1 : len(data)-1])
+	if s == "" {
+		*id = 0
+		return nil
+	}
+	parsed, err := DecodeID(s)
+	if err != nil {
+		return err
+	}
+	*id = parsed
+	return nil
+}
+
+// IsZero returns true if the ID is the zero value.
+// This is useful for omitempty JSON tags.
+func (id ID) IsZero() bool {
+	return id == 0
 }
 
 // DecodeID parses an 11-character encoded string back to an ID.

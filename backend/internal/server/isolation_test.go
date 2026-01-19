@@ -13,7 +13,7 @@ import (
 )
 
 func testID(n uint64) string {
-	return jsonldb.ID(n).Encode()
+	return jsonldb.ID(n).String()
 }
 
 func TestOrgIsolationMiddleware(t *testing.T) {

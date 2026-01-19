@@ -58,12 +58,12 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 		}
 	}
 
-	id := jsonldb.NewID().Encode()
+	id := jsonldb.NewID().String()
 
 	// Ensure each column has an ID
 	for i := range columns {
 		if columns[i].ID == "" {
-			columns[i].ID = jsonldb.NewID().Encode()
+			columns[i].ID = jsonldb.NewID().String()
 		}
 	}
 
@@ -173,7 +173,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, d
 	}
 
 	// Generate record ID
-	id := jsonldb.NewID().Encode()
+	id := jsonldb.NewID().String()
 
 	now := time.Now()
 	record := &models.DataRecord{

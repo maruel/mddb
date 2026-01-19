@@ -7,32 +7,34 @@ package models
 import (
 	"context"
 	"time"
+
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
 // GetOrgID extracts the organization ID from the context.
 // Note: This is now a convenience helper that should be used cautiously as we
 // transition to explicit path-based organization IDs.
-func GetOrgID(ctx context.Context) string {
+func GetOrgID(ctx context.Context) jsonldb.ID {
 	val := ctx.Value(OrgKey)
-	if id, ok := val.(string); ok {
+	if id, ok := val.(jsonldb.ID); ok {
 		return id
 	}
-	return ""
+	return 0
 }
 
 // Node represents the unified content entity (can be a Page, a Database, or both)
 type Node struct {
-	ID         string    `json:"id"`
-	ParentID   string    `json:"parent_id,omitempty"` // For hierarchical structure
-	Title      string    `json:"title"`
-	Content    string    `json:"content,omitempty"` // Markdown content (Page part)
-	Columns    []Column  `json:"columns,omitempty"` // Schema (Database part)
-	Created    time.Time `json:"created"`
-	Modified   time.Time `json:"modified"`
-	Tags       []string  `json:"tags,omitempty"`
-	FaviconURL string    `json:"favicon_url,omitempty"`
-	Type       NodeType  `json:"type"`               // document, database, or both
-	Children   []*Node   `json:"children,omitempty"` // Nested nodes
+	ID         jsonldb.ID `json:"id"`
+	ParentID   jsonldb.ID `json:"parent_id,omitempty"` // For hierarchical structure
+	Title      string     `json:"title"`
+	Content    string     `json:"content,omitempty"` // Markdown content (Page part)
+	Columns    []Column   `json:"columns,omitempty"` // Schema (Database part)
+	Created    time.Time  `json:"created"`
+	Modified   time.Time  `json:"modified"`
+	Tags       []string   `json:"tags,omitempty"`
+	FaviconURL string     `json:"favicon_url,omitempty"`
+	Type       NodeType   `json:"type"`               // document, database, or both
+	Children   []*Node    `json:"children,omitempty"` // Nested nodes
 }
 
 // NodeType defines what features are enabled for a node
@@ -49,16 +51,16 @@ const (
 
 // Column represents a database column
 type Column struct {
-	ID       string   `json:"id"`
-	Name     string   `json:"name"`
-	Type     string   `json:"type"` // text, number, select, multi_select, checkbox, date
-	Options  []string `json:"options,omitempty"`
-	Required bool     `json:"required,omitempty"`
+	ID       jsonldb.ID `json:"id"`
+	Name     string     `json:"name"`
+	Type     string     `json:"type"` // text, number, select, multi_select, checkbox, date
+	Options  []string   `json:"options,omitempty"`
+	Required bool       `json:"required,omitempty"`
 }
 
 // DataRecord represents a database record associated with a node
 type DataRecord struct {
-	ID       string         `json:"id"`
+	ID       jsonldb.ID     `json:"id"`
 	Data     map[string]any `json:"data"`
 	Created  time.Time      `json:"created"`
 	Modified time.Time      `json:"modified"`
@@ -66,7 +68,7 @@ type DataRecord struct {
 
 // User represents a system user.
 type User struct {
-	ID              string          `json:"id"`
+	ID              jsonldb.ID      `json:"id"`
 	Email           string          `json:"email"`
 	Name            string          `json:"name"`
 	Memberships     []Membership    `json:"memberships,omitempty"`
@@ -76,7 +78,7 @@ type User struct {
 	Modified        time.Time       `json:"modified"`
 
 	// Active context (populated in API responses)
-	OrganizationID string           `json:"organization_id,omitempty"`
+	OrganizationID jsonldb.ID       `json:"organization_id,omitempty"`
 	Role           UserRole         `json:"role,omitempty"`
 	Onboarding     *OnboardingState `json:"onboarding,omitempty"`
 }
@@ -97,8 +99,8 @@ type OAuthIdentity struct {
 
 // Membership represents a user's relationship with an organization.
 type Membership struct {
-	UserID           string             `json:"user_id"`
-	OrganizationID   string             `json:"organization_id"`
+	UserID           jsonldb.ID         `json:"user_id"`
+	OrganizationID   jsonldb.ID         `json:"organization_id"`
 	OrganizationName string             `json:"organization_name,omitempty"`
 	Role             UserRole           `json:"role"`
 	Settings         MembershipSettings `json:"settings"`
@@ -124,7 +126,7 @@ const (
 
 // Organization represents a workspace or group of users.
 type Organization struct {
-	ID         string               `json:"id"`
+	ID         jsonldb.ID           `json:"id"`
 	Name       string               `json:"name"`
 	Quotas     Quota                `json:"quotas"`
 	Settings   OrganizationSettings `json:"settings"`
@@ -153,14 +155,14 @@ type GitSettings struct {
 
 // GitRemote represents a remote repository for an organization.
 type GitRemote struct {
-	ID             string    `json:"id"`
-	OrganizationID string    `json:"organization_id"`
-	Name           string    `json:"name"` // e.g., "origin"
-	URL            string    `json:"url"`
-	Type           string    `json:"type"`      // "github", "gitlab", "custom"
-	AuthType       string    `json:"auth_type"` // "token", "ssh"
-	Created        time.Time `json:"created"`
-	LastSync       time.Time `json:"last_sync,omitempty"`
+	ID             jsonldb.ID `json:"id"`
+	OrganizationID jsonldb.ID `json:"organization_id"`
+	Name           string     `json:"name"` // e.g., "origin"
+	URL            string     `json:"url"`
+	Type           string     `json:"type"`      // "github", "gitlab", "custom"
+	AuthType       string     `json:"auth_type"` // "token", "ssh"
+	Created        time.Time  `json:"created"`
+	LastSync       time.Time  `json:"last_sync,omitempty"`
 }
 
 // Quota defines limits for an organization.
@@ -172,20 +174,20 @@ type Quota struct {
 
 // Invitation represents a request for a user to join an organization.
 type Invitation struct {
-	ID             string    `json:"id"`
-	Email          string    `json:"email"`
-	OrganizationID string    `json:"organization_id"`
-	Role           UserRole  `json:"role"`
-	Token          string    `json:"token"`
-	ExpiresAt      time.Time `json:"expires_at"`
-	Created        time.Time `json:"created"`
+	ID             jsonldb.ID `json:"id"`
+	Email          string     `json:"email"`
+	OrganizationID jsonldb.ID `json:"organization_id"`
+	Role           UserRole   `json:"role"`
+	Token          string     `json:"token"`
+	ExpiresAt      time.Time  `json:"expires_at"`
+	Created        time.Time  `json:"created"`
 }
 
 // Session represents an active user session.
 type Session struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	ExpiresAt time.Time `json:"expires_at"`
+	ID        jsonldb.ID `json:"id"`
+	UserID    jsonldb.ID `json:"user_id"`
+	ExpiresAt time.Time  `json:"expires_at"`
 }
 
 // ContextKey is a custom type for context keys to avoid collisions.
@@ -200,12 +202,12 @@ const (
 
 // Asset represents an uploaded file/image associated with a node
 type Asset struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	MimeType string    `json:"mime_type"`
-	Size     int64     `json:"size"`
-	Created  time.Time `json:"created"`
-	Path     string    `json:"path"`
+	ID       jsonldb.ID `json:"id"`
+	Name     string     `json:"name"`
+	MimeType string     `json:"mime_type"`
+	Size     int64      `json:"size"`
+	Created  time.Time  `json:"created"`
+	Path     string     `json:"path"`
 }
 
 // Legacy types for compatibility during migration (optional to keep or remove)
@@ -213,24 +215,24 @@ type Asset struct {
 
 // Page is kept for backward compatibility with existing storage methods
 type Page struct {
-	ID         string    `json:"id"`
-	Title      string    `json:"title"`
-	Content    string    `json:"content"`
-	Created    time.Time `json:"created"`
-	Modified   time.Time `json:"modified"`
-	Tags       []string  `json:"tags,omitempty"`
-	Path       string    `json:"path"`
-	FaviconURL string    `json:"favicon_url,omitempty"`
+	ID         jsonldb.ID `json:"id"`
+	Title      string     `json:"title"`
+	Content    string     `json:"content"`
+	Created    time.Time  `json:"created"`
+	Modified   time.Time  `json:"modified"`
+	Tags       []string   `json:"tags,omitempty"`
+	Path       string     `json:"path"`
+	FaviconURL string     `json:"favicon_url,omitempty"`
 }
 
 // Database represents a structured database with schema and metadata.
 type Database struct {
-	ID       string    `json:"id"`
-	Title    string    `json:"title"`
-	Columns  []Column  `json:"columns"`
-	Created  time.Time `json:"created"`
-	Modified time.Time `json:"modified"`
-	Version  string    `json:"version"` // JSONL format version (e.g., "1.0")
+	ID       jsonldb.ID `json:"id"`
+	Title    string     `json:"title"`
+	Columns  []Column   `json:"columns"`
+	Created  time.Time  `json:"created"`
+	Modified time.Time  `json:"modified"`
+	Version  string     `json:"version"` // JSONL format version (e.g., "1.0")
 }
 
 // Commit represents a commit in git history.
@@ -253,8 +255,8 @@ type CommitDetail struct {
 // SearchResult represents a single search result
 type SearchResult struct {
 	Type     string            `json:"type"` // "page" or "record"
-	NodeID   string            `json:"node_id"`
-	RecordID string            `json:"record_id,omitempty"`
+	NodeID   jsonldb.ID        `json:"node_id"`
+	RecordID jsonldb.ID        `json:"record_id,omitempty"`
 	Title    string            `json:"title"`
 	Snippet  string            `json:"snippet"`
 	Score    float64           `json:"score"`
