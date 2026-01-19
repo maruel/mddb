@@ -1,7 +1,9 @@
-// Package main is the entry point for the mddb application.
+// Package main is the entry point for the mddb server.
 //
-// mddb is a local-first markdown database that stores content as files
-// and provides a web interface for management.
+// mddb is a local-first markdown database that stores content as files,
+// provides OAuth authentication (Google/Microsoft), and exposes a RESTful
+// HTTP API. Configuration is read from CLI flags and a .env file, with
+// interactive onboarding on first run.
 package main
 
 import (

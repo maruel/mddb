@@ -1,4 +1,7 @@
-// Package models defines the core data structures used throughout the application.
+// Package models defines the core domain types and API contracts.
+//
+// It includes domain entities (Node, User, Organization, Membership),
+// API request/response types, and structured error handling with APIError.
 package models
 
 import (

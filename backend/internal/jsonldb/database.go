@@ -1,3 +1,8 @@
+// Package jsonldb provides thread-safe JSONL file storage with schema management.
+//
+// It offers two abstractions: Database for schema-aware record storage with
+// column definitions, and Table[T] for generic type-safe row storage. Both use
+// read-write locks for concurrent access and atomic file operations.
 package jsonldb
 
 import (

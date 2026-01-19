@@ -1,4 +1,8 @@
-// Package storage implements the file system storage layer and business logic services.
+// Package storage implements the file-system persistence layer and business services.
+//
+// It provides services for nodes, pages, databases, users, organizations, and
+// assets. Data is stored as markdown files and JSONL databases with optional
+// git versioning. The package handles caching, quota management, and search.
 package storage
 
 import (

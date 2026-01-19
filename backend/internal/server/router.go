@@ -1,4 +1,8 @@
-// Package server implements the HTTP server and routing logic.
+// Package server implements HTTP routing, middleware, and request handling.
+//
+// It provides handler composition utilities (Wrap, RequireRole, AuthMiddleware)
+// for type-safe routes with JWT authentication, role-based access control, and
+// automatic JSON marshaling. It also serves the embedded SolidJS frontend.
 package server
 
 import (

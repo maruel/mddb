@@ -1,4 +1,8 @@
-// Package handlers provides HTTP request handlers for the API.
+// Package handlers provides HTTP request handlers for the REST API.
+//
+// Each handler type wraps storage services, validates inputs, and returns
+// standardized responses. Handlers accept request models and delegate business
+// logic to the storage package.
 package handlers
 
 import (
