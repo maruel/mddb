@@ -102,7 +102,11 @@ func newIDFromParts(ms, randBits, version uint64) ID {
 
 // String returns the fixed-width 11-character encoding using a sortable alphabet.
 // The encoding is lexicographically sortable: if id1 < id2, then id1.String() < id2.String().
+// Zero IDs return "-".
 func (id ID) String() string {
+	if id == 0 {
+		return "-"
+	}
 	// Encode 64 bits into 11 characters (6 bits each, last char uses 4 bits)
 	var buf [idEncodedLen]byte
 	v := uint64(id)
@@ -115,24 +119,15 @@ func (id ID) String() string {
 }
 
 // MarshalJSON implements json.Marshaler.
-// Zero IDs are marshaled as empty strings.
 func (id ID) MarshalJSON() ([]byte, error) {
-	if id == 0 {
-		return json.Marshal("")
-	}
 	return json.Marshal(id.String())
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-// Empty strings are unmarshaled as zero IDs.
 func (id *ID) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err != nil {
 		return err
-	}
-	if s == "" {
-		*id = 0
-		return nil
 	}
 	parsed, err := DecodeID(s)
 	if err != nil {
@@ -143,13 +138,16 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 }
 
 // IsZero returns true if the ID is the zero value.
-// This is useful for omitempty JSON tags.
 func (id ID) IsZero() bool {
 	return id == 0
 }
 
-// DecodeID parses an 11-character encoded string back to an ID.
+// DecodeID parses an encoded string back to an ID.
+// "-" decodes to zero ID.
 func DecodeID(s string) (ID, error) {
+	if s == "-" {
+		return 0, nil
+	}
 	if len(s) != idEncodedLen {
 		return 0, fmt.Errorf("invalid ID length: got %d, want %d", len(s), idEncodedLen)
 	}
