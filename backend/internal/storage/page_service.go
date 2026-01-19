@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 )
 
@@ -65,8 +66,7 @@ func (s *PageService) CreatePage(ctx context.Context, title, content string) (*m
 		}
 	}
 
-	// Generate numeric ID (monotonically increasing)
-	id := s.fileStore.NextID(orgID)
+	id := jsonldb.NewID().Encode()
 
 	page, err := s.fileStore.WritePage(orgID, id, title, content)
 	if err != nil {

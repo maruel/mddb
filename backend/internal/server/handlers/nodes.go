@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -59,7 +60,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeReque
 	}
 
 	orgID := models.GetOrgID(ctx)
-	id := h.fileStore.NextID(orgID)
+	id := jsonldb.NewID().Encode()
 
 	var node *models.Node
 	var err error

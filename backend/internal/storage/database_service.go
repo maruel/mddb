@@ -58,8 +58,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 		}
 	}
 
-	// Generate numeric ID (monotonically increasing)
-	id := s.fileStore.NextID(orgID)
+	id := jsonldb.NewID().Encode()
 
 	// Ensure each column has an ID
 	for i := range columns {

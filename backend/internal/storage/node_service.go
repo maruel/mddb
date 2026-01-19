@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 )
 
@@ -76,7 +77,7 @@ func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType mod
 		}
 	}
 
-	id := s.fileStore.NextID(orgID)
+	id := jsonldb.NewID().Encode()
 	now := time.Now()
 
 	node := &models.Node{
