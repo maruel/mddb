@@ -214,8 +214,8 @@ func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*models.Node, error) {
 		}
 	}
 
-	recordsFile := fs.databaseRecordsFile(orgID, id)
-	if _, err := os.Stat(recordsFile); err == nil {
+	metadataFile := fs.databaseMetadataFile(orgID, id)
+	if _, err := os.Stat(metadataFile); err == nil {
 		db, err := fs.ReadDatabase(orgID, id)
 		if err == nil {
 			if node.Type == models.NodeTypeDocument {
@@ -354,91 +354,62 @@ func (fs *FileStore) pageIndexFile(orgID, id jsonldb.ID) string {
 
 // DatabaseExists checks if a database exists for the given organization and ID.
 func (fs *FileStore) DatabaseExists(orgID, id jsonldb.ID) bool {
-	path := fs.databaseRecordsFile(orgID, id)
+	path := fs.databaseMetadataFile(orgID, id)
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// ReadDatabase reads a database definition from the JSONL file using jsonldb abstraction.
+// ReadDatabase reads a database definition from metadata.json.
 func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*models.Database, error) {
 	if orgID == 0 {
 		return nil, fmt.Errorf("organization ID is required")
 	}
 
-	filePath := fs.databaseRecordsFile(orgID, id)
-
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("database not found")
-	}
-
-	// Load using jsonldb abstraction
-	table, err := jsonldb.NewTable[*models.DataRecord](filePath)
+	metadataFile := fs.databaseMetadataFile(orgID, id)
+	data, err := os.ReadFile(metadataFile)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read database: %w", err)
-	}
-
-	schema := table.Schema()
-	if schema.Version == "" {
-		return nil, fmt.Errorf("database file is empty or invalid")
-	}
-
-	// Read metadata.json for title and other fields
-	pageDir := fs.pageDir(orgID, id)
-	metadataFile := filepath.Join(pageDir, "metadata.json")
-	var title string
-	if data, err := os.ReadFile(metadataFile); err == nil {
-		var metadata map[string]any
-		if err := json.Unmarshal(data, &metadata); err == nil {
-			if t, ok := metadata["title"].(string); ok {
-				title = t
-			}
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("database not found")
 		}
+		return nil, fmt.Errorf("failed to read database metadata: %w", err)
 	}
 
-	// Convert from jsonldb to models
+	var metadata struct {
+		Title      string            `json:"title"`
+		Version    string            `json:"version"`
+		Properties []models.Property `json:"properties"`
+	}
+	if err := json.Unmarshal(data, &metadata); err != nil {
+		return nil, fmt.Errorf("failed to parse database metadata: %w", err)
+	}
+
 	return &models.Database{
 		ID:         id,
-		Title:      title,
-		Properties: propertiesFromJSONLDB(schema.Columns),
-		Version:    schema.Version,
+		Title:      metadata.Title,
+		Properties: metadata.Properties,
+		Version:    metadata.Version,
 	}, nil
 }
 
-// WriteDatabase updates a database schema in the JSONL file using jsonldb abstraction.
+// WriteDatabase writes database metadata (including properties) to metadata.json.
+// The JSONL records file is created lazily when the first record is added.
 func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, db *models.Database) error {
 	if orgID == 0 {
 		return fmt.Errorf("organization ID is required")
 	}
 
-	pageDir := fs.pageDir(orgID, db.ID)
-	if err := os.MkdirAll(pageDir, 0o755); err != nil {
+	if err := os.MkdirAll(fs.pageDir(orgID, db.ID), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	filePath := fs.databaseRecordsFile(orgID, db.ID)
-
-	// Convert columns to jsonldb format
-	jsonldbCols := propertiesToJSONLDB(db.Properties)
-
-	// Load existing database using jsonldb Table
-	table, err := jsonldb.NewTable[*models.DataRecord](filePath)
-	if err != nil {
-		return fmt.Errorf("failed to load database: %w", err)
-	}
-
-	// Update schema
-	if err := table.UpdateSchema(jsonldbCols); err != nil {
-		return fmt.Errorf("failed to update schema: %w", err)
-	}
-
-	// Write metadata.json with title and other db metadata
-	metadataFile := filepath.Join(pageDir, "metadata.json")
+	// Write metadata.json with all database metadata including properties
+	metadataFile := fs.databaseMetadataFile(orgID, db.ID)
 	metadata := map[string]any{
-		"title":    db.Title,
-		"version":  db.Version,
-		"created":  db.Created,
-		"modified": db.Modified,
+		"title":      db.Title,
+		"version":    db.Version,
+		"created":    db.Created,
+		"modified":   db.Modified,
+		"properties": db.Properties,
 	}
 	data, err := json.Marshal(metadata)
 	if err != nil {
@@ -486,9 +457,9 @@ func (fs *FileStore) ListDatabases(orgID jsonldb.ID) ([]*models.Database, error)
 			continue
 		}
 
-		// Check if this is a database (has data.jsonl file)
-		recordsFile := fs.databaseRecordsFile(orgID, id)
-		if _, err := os.Stat(recordsFile); err == nil {
+		// Check if this is a database (has metadata.json file)
+		metadataFile := fs.databaseMetadataFile(orgID, id)
+		if _, err := os.Stat(metadataFile); err == nil {
 			db, err := fs.ReadDatabase(orgID, id)
 			if err == nil {
 				databases = append(databases, db)
@@ -666,6 +637,10 @@ func (fs *FileStore) databaseRecordsFile(orgID, id jsonldb.ID) string {
 	return filepath.Join(fs.pageDir(orgID, id), "data.jsonl")
 }
 
+func (fs *FileStore) databaseMetadataFile(orgID, id jsonldb.ID) string {
+	return filepath.Join(fs.pageDir(orgID, id), "metadata.json")
+}
+
 // Asset operations
 
 // SaveAsset saves an asset associated with a page.
@@ -817,57 +792,4 @@ func formatMarkdownFile(page *models.Page) []byte {
 	buf.WriteString("\n\n")
 	buf.WriteString(page.Content)
 	return buf.Bytes()
-}
-
-// Converters between jsonldb and models types
-
-// propertiesToJSONLDB converts models.Property to jsonldb.Column for storage.
-// High-level types (select, multi_select) are mapped to their storage types.
-// Options are not stored in jsonldb schema - they must be stored separately.
-func propertiesToJSONLDB(props []models.Property) []jsonldb.Column {
-	result := make([]jsonldb.Column, len(props))
-	for i, p := range props {
-		result[i] = jsonldb.Column{
-			Name:     p.Name,
-			Type:     p.Type.StorageType(),
-			Required: p.Required,
-		}
-	}
-	return result
-}
-
-// propertiesFromJSONLDB converts jsonldb.Column to models.Property.
-// This only recovers primitive types - high-level types (select, multi_select)
-// and their options must be merged from metadata storage.
-func propertiesFromJSONLDB(cols []jsonldb.Column) []models.Property {
-	result := make([]models.Property, len(cols))
-	for i, col := range cols {
-		result[i] = models.Property{
-			Name:     col.Name,
-			Type:     storageTypeToPropertyType(col.Type),
-			Required: col.Required,
-		}
-	}
-	return result
-}
-
-// storageTypeToPropertyType converts a jsonldb storage type to a models property type.
-// Since select/multi_select are stored as text/jsonb, this only returns primitive types.
-// Blob and JSONB storage types don't have high-level equivalents yet.
-func storageTypeToPropertyType(st jsonldb.ColumnType) models.PropertyType {
-	switch st {
-	case jsonldb.ColumnTypeText:
-		return models.PropertyTypeText
-	case jsonldb.ColumnTypeNumber:
-		return models.PropertyTypeNumber
-	case jsonldb.ColumnTypeBool:
-		return models.PropertyTypeCheckbox
-	case jsonldb.ColumnTypeDate:
-		return models.PropertyTypeDate
-	case jsonldb.ColumnTypeBlob, jsonldb.ColumnTypeJSONB:
-		// No high-level equivalent yet, treat as text
-		return models.PropertyTypeText
-	default:
-		return models.PropertyTypeText
-	}
 }

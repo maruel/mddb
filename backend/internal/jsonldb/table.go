@@ -31,13 +31,6 @@ type Table[T Row[T]] struct {
 	byID   map[ID]int // maps ID to index in rows
 }
 
-// Schema returns a copy of the table's schema header.
-func (t *Table[T]) Schema() schemaHeader {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	return t.schema
-}
-
 // Len returns the number of rows.
 func (t *Table[T]) Len() int {
 	t.mu.RLock()
@@ -290,14 +283,6 @@ func (t *Table[T]) Replace(rows []T) error {
 	}
 	t.byID = byID
 	t.rows = rows
-	return t.save()
-}
-
-// UpdateSchema updates the schema columns and persists it. Caller should hold lock if needed.
-func (t *Table[T]) UpdateSchema(columns []Column) error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.schema.Columns = columns
 	return t.save()
 }
 

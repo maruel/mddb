@@ -35,8 +35,8 @@ const (
 	ColumnTypeJSONB ColumnType = "jsonb"
 )
 
-// Column represents a database column in storage.
-type Column struct {
+// column represents a database column in storage.
+type column struct {
 	Name     string     `json:"name"`
 	Type     ColumnType `json:"type"`
 	Required bool       `json:"required,omitempty"`
@@ -46,7 +46,7 @@ type Column struct {
 // Used by Table[T] for generic schema storage.
 type schemaHeader struct {
 	Version string   `json:"version"`
-	Columns []Column `json:"columns"`
+	Columns []column `json:"columns"`
 }
 
 // Validate checks that the schema header is well-formed.
@@ -68,7 +68,7 @@ func (h *schemaHeader) Validate() error {
 
 // schemaFromType[T any] extracts column definitions by marshaling a zero instance to JSON.
 // This ensures the schema matches what is actually written to disk.
-func schemaFromType[T any]() ([]Column, error) {
+func schemaFromType[T any]() ([]column, error) {
 	t := reflect.TypeFor[T]()
 	var val any
 
@@ -120,13 +120,13 @@ func schemaFromType[T any]() ([]Column, error) {
 	}
 
 	// Create columns from JSON keys in deterministic order
-	var columns []Column
+	var columns []column
 	for jsonName := range m {
 		field, ok := fieldByJSONName[jsonName]
 		if !ok {
 			// Field in JSON but not found in struct, infer type from value
 			colType := inferTypeFromValue(m[jsonName])
-			columns = append(columns, Column{
+			columns = append(columns, column{
 				Name: jsonName,
 				Type: colType,
 			})
@@ -135,7 +135,7 @@ func schemaFromType[T any]() ([]Column, error) {
 
 		// Use struct field info for type inference
 		colType := goTypeToColumnType(field.Type)
-		columns = append(columns, Column{
+		columns = append(columns, column{
 			Name: jsonName,
 			Type: colType,
 		})

@@ -91,10 +91,10 @@ func TestDatabase_ReadWrite(t *testing.T) {
 				}
 			}
 
-			// Verify file exists
-			filePath := fs.databaseRecordsFile(orgID, tt.database.ID)
+			// Verify metadata file exists
+			filePath := fs.databaseMetadataFile(orgID, tt.database.ID)
 			if _, err := os.Stat(filePath); err != nil {
-				t.Errorf("Database file not found: %s", filePath)
+				t.Errorf("Database metadata file not found: %s", filePath)
 			}
 		})
 	}
@@ -210,10 +210,10 @@ func TestDatabase_Delete(t *testing.T) {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 
-	// Verify file exists
-	recordsPath := fs.databaseRecordsFile(orgID, db.ID)
-	if _, err := os.Stat(recordsPath); err != nil {
-		t.Fatalf("Database records file not found: %v", err)
+	// Verify metadata file exists
+	metadataPath := fs.databaseMetadataFile(orgID, db.ID)
+	if _, err := os.Stat(metadataPath); err != nil {
+		t.Fatalf("Database metadata file not found: %v", err)
 	}
 
 	// Delete database
@@ -223,8 +223,8 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	// Verify file is deleted
-	if _, err := os.Stat(recordsPath); err == nil {
-		t.Error("Database records file should be deleted")
+	if _, err := os.Stat(metadataPath); err == nil {
+		t.Error("Database metadata file should be deleted")
 	}
 }
 
@@ -382,9 +382,9 @@ func TestDatabase_NestedPath(t *testing.T) {
 		t.Errorf("ID mismatch: got %v, want %v", got.ID, dbID)
 	}
 
-	// Verify file exists at correct path
-	expectedPath := fs.databaseRecordsFile(orgID, dbID)
+	// Verify metadata file exists at correct path
+	expectedPath := fs.databaseMetadataFile(orgID, dbID)
 	if _, err := os.Stat(expectedPath); err != nil {
-		t.Errorf("Database file not found at expected path: %s", expectedPath)
+		t.Errorf("Database metadata file not found at expected path: %s", expectedPath)
 	}
 }
