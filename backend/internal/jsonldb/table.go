@@ -11,18 +11,35 @@ import (
 	"sync"
 )
 
-// Row is implemented by types that can be stored in a Table.
+// Row is implemented by types that can be stored in a [Table].
 type Row[T any] interface {
-	// Clone returns a deep copy of the row for safe in-memory storage.
+	// Clone returns a deep copy of the row.
+	//
+	// Used to prevent mutations to cached data.
 	Clone() T
+
 	// GetID returns the unique identifier for this row.
+	//
+	// Must be non-zero.
 	GetID() ID
-	// Validate checks data integrity; called on load and before write.
+
+	// Validate checks data integrity.
+	//
+	// Called on load and before every write. Return an error to reject invalid data.
 	Validate() error
 }
 
-// Table handles storage and in-memory caching for a single table in JSONL format.
-// The first row in the file is a schema header containing version and column definitions.
+// Table is a concurrent-safe, generic JSONL-backed data store with in-memory caching.
+//
+// All read and write operations are protected by a read-write mutex, making Table
+// safe for concurrent use by multiple goroutines. Write operations (Append, Update,
+// Delete, Replace) are atomic and immediately persisted to disk.
+//
+// The JSONL file format uses the first line as a schema header containing version
+// and column definitions. Subsequent lines are JSON-encoded rows.
+//
+// Rows are stored in insertion order and indexed by ID for O(1) lookups.
+// All returned rows are clones to prevent accidental mutation of cached data.
 type Table[T Row[T]] struct {
 	path   string
 	mu     sync.RWMutex
@@ -31,14 +48,16 @@ type Table[T Row[T]] struct {
 	byID   map[ID]int // maps ID to index in rows
 }
 
-// Len returns the number of rows.
+// Len returns the number of rows in the table.
 func (t *Table[T]) Len() int {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return len(t.rows)
 }
 
-// Last returns a clone of the last row, or false if empty.
+// Last returns a clone of the most recently appended row.
+//
+// Returns false if the table is empty.
 func (t *Table[T]) Last() (T, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -49,7 +68,9 @@ func (t *Table[T]) Last() (T, bool) {
 	return t.rows[len(t.rows)-1].Clone(), true
 }
 
-// Get returns a clone of the row with the given ID, or false if not found.
+// Get returns a clone of the row with the given ID.
+//
+// Returns false if no row with that ID exists.
 func (t *Table[T]) Get(id ID) (T, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
@@ -60,7 +81,10 @@ func (t *Table[T]) Get(id ID) (T, bool) {
 	return zero, false
 }
 
-// Delete removes a row by ID and persists the change. Returns true if deleted.
+// Delete removes a row by ID and persists the change.
+//
+// Returns true if the row existed and was deleted, false if no row with that ID exists.
+// The entire table is rewritten to disk on success.
 func (t *Table[T]) Delete(id ID) (bool, error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -85,7 +109,10 @@ func (t *Table[T]) Delete(id ID) (bool, error) {
 	return true, nil
 }
 
-// Update replaces an existing row and persists the change. Returns true if updated.
+// Update replaces an existing row (matched by ID) and persists the change.
+//
+// Returns true if the row existed and was updated, false if no row with that ID exists.
+// Returns an error if validation fails. The entire table is rewritten to disk on success.
 func (t *Table[T]) Update(row T) (bool, error) {
 	if err := row.Validate(); err != nil {
 		return false, fmt.Errorf("invalid row: %w", err)
@@ -106,8 +133,11 @@ func (t *Table[T]) Update(row T) (bool, error) {
 	return true, nil
 }
 
-// NewTable creates a new Table and loads all data from the file.
-// If the file doesn't exist, the schema is auto-discovered from type T via reflection.
+// NewTable creates a Table and loads existing data from the JSONL file at path.
+//
+// If the file doesn't exist, an empty table is created and the schema is
+// auto-discovered from type T via reflection.
+// Returns an error if the file exists but cannot be read or contains invalid data.
 func NewTable[T Row[T]](path string) (*Table[T], error) {
 	table := &Table[T]{path: path}
 	if err := table.load(); err != nil {
@@ -183,9 +213,10 @@ func (t *Table[T]) load() error {
 }
 
 // Iter returns an iterator over clones of rows with ID strictly greater than startID.
-// This is efficient for pagination when used with sorted IDs.
 //
-// Warning: The reader lock is held during iteration.
+// Pass 0 to iterate over all rows from the beginning.
+// The reader lock is held for the duration of iteration; avoid long-running
+// operations inside the loop to prevent blocking writers.
 func (t *Table[T]) Iter(startID ID) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		t.mu.RLock()
@@ -208,7 +239,10 @@ func (t *Table[T]) Iter(startID ID) iter.Seq[T] {
 	}
 }
 
-// Append adds a new row to the table and persists it.
+// Append adds a new row to the table and persists it by appending to the file.
+//
+// Returns an error if the row fails validation, has a zero ID, or has a duplicate ID.
+// If the file doesn't exist, it is created with a schema header first.
 func (t *Table[T]) Append(row T) error {
 	if err := row.Validate(); err != nil {
 		return fmt.Errorf("invalid row: %w", err)
@@ -252,7 +286,10 @@ func (t *Table[T]) Append(row T) error {
 	return nil
 }
 
-// Replace replaces all rows with the provided slice and persists it.
+// Replace atomically replaces all rows with the provided slice and rewrites the file.
+//
+// Returns an error if any row has a duplicate ID.
+// Use this for bulk updates or when row order needs to change.
 func (t *Table[T]) Replace(rows []T) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()

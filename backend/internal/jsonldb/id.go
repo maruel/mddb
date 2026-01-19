@@ -44,7 +44,12 @@ func init() {
 	}
 }
 
-// ID is a LUCI-style 64-bit identifier that is time-sortable.
+// ID is a time-sortable 64-bit identifier inspired by LUCI IDs.
+//
+// IDs encode a millisecond timestamp, random bits for collision avoidance,
+// and a version number. They are lexicographically sortable when encoded
+// as strings, making them suitable for use as database keys and filenames.
+// The zero value (0) represents an invalid/unset ID.
 type ID uint64
 
 var (
@@ -53,8 +58,10 @@ var (
 	idCounter uint16
 )
 
-// NewID generates a new time-based ID with collision avoidance.
-// IDs are monotonically increasing within a process.
+// NewID generates a new time-based ID.
+//
+// IDs are guaranteed to be unique and monotonically increasing within a process.
+// Multiple calls in the same millisecond use an incrementing counter.
 func NewID() ID {
 	idMu.Lock()
 	defer idMu.Unlock()
@@ -135,8 +142,9 @@ func (id ID) IsZero() bool {
 	return id == 0
 }
 
-// DecodeID parses a variable-length encoded string back to an ID.
-// "-" or "" decodes to zero ID. Strings are left-padded with zeros.
+// DecodeID parses an encoded string back to an ID.
+//
+// Empty string or "-" decode to zero ID. Returns an error for invalid input.
 func DecodeID(s string) (ID, error) {
 	if s == "-" || s == "" {
 		return 0, nil
