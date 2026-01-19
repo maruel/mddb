@@ -64,16 +64,17 @@ func schemaFromType[T any]() ([]Column, error) {
 	t := reflect.TypeFor[T]()
 	var val any
 
-	if t.Kind() == reflect.Ptr {
+	switch t.Kind() {
+	case reflect.Ptr:
 		if t.Elem().Kind() != reflect.Struct {
 			return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
 		}
 		// Create a new instance of the underlying struct
 		val = reflect.New(t.Elem()).Interface()
-	} else if t.Kind() == reflect.Struct {
+	case reflect.Struct:
 		var zero T
 		val = zero
-	} else {
+	default:
 		return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
 	}
 
