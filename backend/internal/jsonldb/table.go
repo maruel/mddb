@@ -28,6 +28,7 @@ type Table[T Row[T]] struct {
 	mu     sync.RWMutex
 	schema schemaHeader
 	rows   []T
+	byID   map[ID]int // maps ID to index in rows
 }
 
 // Schema returns a copy of the table's schema header.
@@ -53,6 +54,17 @@ func (t *Table[T]) Last() (T, bool) {
 		return zero, false
 	}
 	return t.rows[len(t.rows)-1].Clone(), true
+}
+
+// Get returns a clone of the row with the given ID, or false if not found.
+func (t *Table[T]) Get(id ID) (T, bool) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	if idx, ok := t.byID[id]; ok {
+		return t.rows[idx].Clone(), true
+	}
+	var zero T
+	return zero, false
 }
 
 // NewTable creates a new Table and loads all data from the file.
@@ -83,6 +95,7 @@ func (t *Table[T]) load() error {
 	data, err := os.ReadFile(t.path)
 	if err != nil {
 		if os.IsNotExist(err) {
+			t.byID = make(map[ID]int)
 			return nil
 		}
 		return fmt.Errorf("failed to read table file %s: %w", t.path, err)
@@ -90,6 +103,7 @@ func (t *Table[T]) load() error {
 
 	n := bytes.Count(data, []byte{'\n'})
 	t.rows = make([]T, 0, n)
+	t.byID = make(map[ID]int, n)
 	lineNum := 0
 	for line := range bytes.SplitSeq(data, []byte{'\n'}) {
 		if len(line) == 0 {
@@ -116,9 +130,14 @@ func (t *Table[T]) load() error {
 		if err := row.Validate(); err != nil {
 			return fmt.Errorf("invalid row in %s line %d: %w", t.path, lineNum, err)
 		}
-		if row.GetID().IsZero() {
+		id := row.GetID()
+		if id.IsZero() {
 			return fmt.Errorf("row in %s line %d has zero ID", t.path, lineNum)
 		}
+		if _, exists := t.byID[id]; exists {
+			return fmt.Errorf("duplicate ID %s in %s line %d", id, t.path, lineNum)
+		}
+		t.byID[id] = len(t.rows)
 		t.rows = append(t.rows, row)
 	}
 	return nil
@@ -170,12 +189,17 @@ func (t *Table[T]) Append(row T) error {
 	if err := row.Validate(); err != nil {
 		return fmt.Errorf("invalid row: %w", err)
 	}
-	if row.GetID().IsZero() {
+	id := row.GetID()
+	if id.IsZero() {
 		return fmt.Errorf("row has zero ID")
 	}
 
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	if _, exists := t.byID[id]; exists {
+		return fmt.Errorf("duplicate ID %s", id)
+	}
 
 	// If file doesn't exist, write schema header first
 	if _, err := os.Stat(t.path); os.IsNotExist(err) {
@@ -199,6 +223,7 @@ func (t *Table[T]) Append(row T) error {
 	if _, err := f.Write(append(data, '\n')); err != nil {
 		return fmt.Errorf("failed to write row: %w", err)
 	}
+	t.byID[id] = len(t.rows)
 	t.rows = append(t.rows, row)
 	return nil
 }
@@ -207,6 +232,17 @@ func (t *Table[T]) Append(row T) error {
 func (t *Table[T]) Replace(rows []T) error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+
+	// Rebuild the index, checking for duplicates
+	byID := make(map[ID]int, len(rows))
+	for i, row := range rows {
+		id := row.GetID()
+		if _, exists := byID[id]; exists {
+			return fmt.Errorf("duplicate ID %s", id)
+		}
+		byID[id] = i
+	}
+	t.byID = byID
 	t.rows = rows
 	return t.save()
 }
