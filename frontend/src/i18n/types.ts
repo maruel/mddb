@@ -201,4 +201,11 @@ export interface Dictionary {
     remoteRemoved: string;
     pushSuccessful: string;
   };
+
+  pwa: {
+    installTitle: string;
+    installMessage: string;
+    installButton: string;
+    dismissButton: string;
+  };
 }

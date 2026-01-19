@@ -109,7 +109,13 @@ See `README.md` and `API.md` for details.
     - [x] Locale persistence via `localStorage` and sync with user settings.
     - [x] English dictionary (`dictionaries/en.ts`) - ready for additional locales (fr, de, es).
 - [x] **l10n**: Added French (`fr.ts`), German (`de.ts`), Spanish (`es.ts`) translations.
-- [ ] **PWA Support**: Configure manifest and service workers for Progressive Web App support.
+- [x] **PWA Support**: Configure manifest and service workers for Progressive Web App support.
+    - [x] App icons (192x192, 512x512, apple-touch-icon, favicon.png)
+    - [x] Web app manifest with standalone display mode
+    - [x] Service worker with Workbox for offline caching
+    - [x] Runtime caching for API calls (NetworkFirst) and assets (CacheFirst)
+    - [x] iOS/Safari meta tags for home screen installation
+    - [x] Install prompt UX with `beforeinstallprompt` event and dismissal persistence
 - [ ] **Offline Mode**: Implement client-side storage and reconciliation logic for offline use.
 - [ ] **Theme System**:
     - [ ] Research Hugo theme engine for inspiration.

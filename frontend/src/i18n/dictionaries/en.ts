@@ -200,4 +200,11 @@ export const dict: Dictionary = {
     remoteRemoved: 'Remote removed',
     pushSuccessful: 'Push successful',
   },
+
+  pwa: {
+    installTitle: 'Install mddb',
+    installMessage: 'Add mddb to your home screen for quick access',
+    installButton: 'Install',
+    dismissButton: 'Not now',
+  },
 };

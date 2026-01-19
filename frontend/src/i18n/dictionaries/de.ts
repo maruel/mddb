@@ -202,4 +202,11 @@ export const dict: Dictionary = {
     remoteRemoved: 'Remote entfernt',
     pushSuccessful: 'Push erfolgreich',
   },
+
+  pwa: {
+    installTitle: 'mddb installieren',
+    installMessage: 'Fügen Sie mddb zu Ihrem Startbildschirm hinzu',
+    installButton: 'Installieren',
+    dismissButton: 'Nicht jetzt',
+  },
 };

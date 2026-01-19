@@ -203,4 +203,11 @@ export const dict: Dictionary = {
     remoteRemoved: 'Dépôt distant supprimé',
     pushSuccessful: 'Push réussi',
   },
+
+  pwa: {
+    installTitle: 'Installer mddb',
+    installMessage: "Ajoutez mddb à votre écran d'accueil pour un accès rapide",
+    installButton: 'Installer',
+    dismissButton: 'Pas maintenant',
+  },
 };
