@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -19,14 +18,12 @@ import (
 )
 
 // FileStore handles all file system operations using directory-based storage.
-// Storage model: Each page (document or database) is a numeric directory (1, 2, 3, etc.)
-// - Pages: numeric directory containing index.md with YAML front matter
-// - Databases: numeric directory containing data.jsonl (with schema header in first row)
+// Storage model: Each page (document or database) is an ID-based directory.
+// - Pages: ID directory containing index.md with YAML front matter
+// - Databases: ID directory containing data.jsonl (with schema header in first row)
 // - Assets: files within each page's directory namespace
 type FileStore struct {
 	rootDir string
-	nextIDs map[string]int // Next available numeric ID per organization
-	mu      sync.Mutex
 }
 
 // NewFileStore initializes a FileStore with the given root directory.
@@ -37,42 +34,13 @@ func NewFileStore(rootDir string) (*FileStore, error) {
 
 	return &FileStore{
 		rootDir: rootDir,
-		nextIDs: make(map[string]int),
 	}, nil
 }
 
-// NextID returns the next available numeric ID for an organization.
-func (fs *FileStore) NextID(orgID string) string {
-	fs.mu.Lock()
-	defer fs.mu.Unlock()
-
-	id, ok := fs.nextIDs[orgID]
-	if !ok {
-		id = fs.findNextID(orgID)
-	}
-
-	fs.nextIDs[orgID] = id + 1
-	return EncodeID(uint64(id))
-}
-
-func (fs *FileStore) findNextID(orgID string) int {
-	dir := fs.orgPagesDir(orgID)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return 1
-	}
-
-	maxID := 0
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		if id, err := DecodeID(entry.Name()); err == nil && int(id) > maxID {
-			maxID = int(id)
-		}
-	}
-
-	return maxID + 1
+// NextID returns a new unique ID for pages/databases.
+// IDs are time-based and lexicographically sortable.
+func (fs *FileStore) NextID(_ string) string {
+	return GenerateID()
 }
 
 func (fs *FileStore) orgPagesDir(orgID string) string {
@@ -202,7 +170,7 @@ func (fs *FileStore) ListPages(orgID string) ([]*models.Page, error) {
 		}
 
 		id := entry.Name()
-		if _, err := DecodeID(id); err != nil {
+		if _, err := jsonldb.DecodeID(id); err != nil {
 			continue
 		}
 
@@ -291,7 +259,7 @@ func (fs *FileStore) readNodesRecursive(orgID, dir, parentID string) ([]*models.
 		}
 
 		id := entry.Name()
-		if _, err := DecodeID(id); err != nil {
+		if _, err := jsonldb.DecodeID(id); err != nil {
 			continue
 		}
 
@@ -486,7 +454,7 @@ func (fs *FileStore) ListDatabases(orgID string) ([]*models.Database, error) {
 		}
 
 		id := entry.Name()
-		if _, err := DecodeID(id); err != nil {
+		if _, err := jsonldb.DecodeID(id); err != nil {
 			continue
 		}
 

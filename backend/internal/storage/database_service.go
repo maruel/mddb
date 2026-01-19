@@ -63,11 +63,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 	// Ensure each column has an ID
 	for i := range columns {
 		if columns[i].ID == "" {
-			colID, err := generateID()
-			if err != nil {
-				return nil, fmt.Errorf("failed to generate column id: %w", err)
-			}
-			columns[i].ID = colID
+			columns[i].ID = GenerateID()
 		}
 	}
 
@@ -177,10 +173,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseID string, d
 	}
 
 	// Generate record ID
-	id, err := generateID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate record id: %w", err)
-	}
+	id := GenerateID()
 
 	now := time.Now()
 	record := &models.DataRecord{
