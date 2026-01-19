@@ -44,7 +44,7 @@ export default function Auth(props: AuthProps) {
       } else {
         setError('Invalid response from server');
       }
-    } catch (err) {
+    } catch {
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);

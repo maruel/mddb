@@ -117,7 +117,7 @@ func TestIDCompare(t *testing.T) {
 	id1 := NewID()
 	id2 := NewID()
 
-	if id1.Compare(id1) != 0 {
+	if id1.Compare(id1) != 0 { //nolint:gocritic // Intentional self-comparison test
 		t.Error("Compare(self) != 0")
 	}
 	if id1.Compare(id2) >= 0 {

@@ -122,7 +122,6 @@ export default function App() {
   }
 
   // Debounced auto-save function
-  // eslint-disable-next-line solid/reactivity
   const debouncedAutoSave = debounce(async () => {
     const nodeId = selectedNodeId();
     if (!nodeId || !hasUnsavedChanges()) return;
@@ -223,7 +222,7 @@ export default function App() {
             setError(`You do not have access to organization ${orgId}`);
             return;
           }
-        } catch (e) {
+        } catch {
           return;
         }
       }

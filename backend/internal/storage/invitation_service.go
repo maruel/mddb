@@ -133,4 +133,3 @@ func (s *InvitationService) getAllFromCache() []models.Invitation {
 	}
 	return rows
 }
-
