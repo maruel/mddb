@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"context"
-	"os"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -10,21 +8,13 @@ import (
 )
 
 func TestRegister(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-auth-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
-
+	tempDir := t.TempDir()
 	fileStore, _ := storage.NewFileStore(tempDir)
 	memService, _ := storage.NewMembershipService(tempDir)
 	orgService, _ := storage.NewOrganizationService(tempDir, fileStore, nil)
 	userService, _ := storage.NewUserService(tempDir, memService, orgService)
 	authHandler := NewAuthHandler(userService, orgService, "secret")
-
-	ctx := context.Background()
+	ctx := t.Context()
 
 	// Register Joe
 	req1 := dto.RegisterRequest{

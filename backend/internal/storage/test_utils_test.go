@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
@@ -14,15 +15,12 @@ func testID(n uint64) jsonldb.ID {
 }
 
 // newTestContext returns a context with a test user and organization.
-func newTestContext(orgIDStr string) context.Context {
+func newTestContext(t testing.TB, orgIDStr string) context.Context {
+	t.Helper()
 	orgID, err := jsonldb.DecodeID(orgIDStr)
 	if err != nil {
-		// For backward compat, if it's not a valid ID, use a deterministic one
 		orgID = testID(999)
 	}
-	user := &entity.User{
-		ID: testID(1000),
-	}
-	ctx := context.WithValue(context.Background(), entity.UserKey, user)
+	ctx := context.WithValue(t.Context(), entity.UserKey, &entity.User{ID: testID(1000)})
 	return context.WithValue(ctx, entity.OrgKey, orgID)
 }
