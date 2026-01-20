@@ -13,7 +13,7 @@
 func(context.Context, RequestType) (*ResponseType, error)
 ```
 
-**Git Integration**: `GitService` automatically commits changes to the `data/` directory. Ensure `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` are ignored (set to `/dev/null`) to prevent user config interference.
+**Git Integration**: `Git` automatically commits changes to the `data/` directory. Ensure `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` are ignored (set to `/dev/null`) to prevent user config interference.
 
 **Testing**: Use table-driven tests. Store tests in `*_test.go` files next to implementation. Target 100% coverage for service layers.
 

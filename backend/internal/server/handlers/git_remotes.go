@@ -17,12 +17,12 @@ import (
 // GitRemoteHandler handles git remote operations.
 type GitRemoteHandler struct {
 	remoteService *infra.GitRemoteService
-	gitService    *infra.GitService
+	gitService    *infra.Git
 	rootDir       string
 }
 
 // NewGitRemoteHandler creates a new git remote handler.
-func NewGitRemoteHandler(remoteService *infra.GitRemoteService, gitService *infra.GitService, rootDir string) *GitRemoteHandler {
+func NewGitRemoteHandler(remoteService *infra.GitRemoteService, gitService *infra.Git, rootDir string) *GitRemoteHandler {
 	return &GitRemoteHandler{
 		remoteService: remoteService,
 		gitService:    gitService,

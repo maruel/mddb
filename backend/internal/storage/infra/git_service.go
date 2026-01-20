@@ -13,15 +13,15 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
-// GitService handles version control operations using git.
+// Git handles version control operations using git.
 // All changes to pages and databases are automatically committed.
-type GitService struct {
+type Git struct {
 	repoDir string // Root directory (contains .git/)
 }
 
-// NewGitService initializes git service for the given root directory.
-func NewGitService(rootDir string) (*GitService, error) {
-	gs := &GitService{repoDir: rootDir}
+// NewGit initializes git service for the given root directory.
+func NewGit(rootDir string) (*Git, error) {
+	gs := &Git{repoDir: rootDir}
 
 	// Check if root .git exists, initialize if not
 	if err := gs.InitRepository(rootDir); err != nil {
@@ -32,7 +32,7 @@ func NewGitService(rootDir string) (*GitService, error) {
 }
 
 // InitRepository initializes a git repository in the target directory if it doesn't exist.
-func (gs *GitService) InitRepository(dir string) error {
+func (gs *Git) InitRepository(dir string) error {
 	gitDir := filepath.Join(dir, ".git")
 	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
 		// Initialize repo
@@ -64,7 +64,7 @@ func (gs *GitService) InitRepository(dir string) error {
 
 // CommitChange stages and commits a change to the repository.
 // If orgID is non-zero, it commits to the organization's repository.
-func (gs *GitService) CommitChange(ctx context.Context, orgID jsonldb.ID, operation, resourceType, resourceID, description string) error {
+func (gs *Git) CommitChange(ctx context.Context, orgID jsonldb.ID, operation, resourceType, resourceID, description string) error {
 	targetDir := gs.repoDir
 	relPath := "." // Default to root
 
@@ -108,7 +108,7 @@ func (gs *GitService) CommitChange(ctx context.Context, orgID jsonldb.ID, operat
 }
 
 // GetHistory returns commit history for a specific resource.
-func (gs *GitService) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, resourceID string) ([]*entity.Commit, error) {
+func (gs *Git) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, resourceID string) ([]*entity.Commit, error) {
 	targetDir := gs.repoDir
 	path := ""
 
@@ -160,7 +160,7 @@ func (gs *GitService) GetHistory(ctx context.Context, orgID jsonldb.ID, resource
 }
 
 // GetCommit retrieves a specific commit with full details.
-func (gs *GitService) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*entity.CommitDetail, error) {
+func (gs *Git) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*entity.CommitDetail, error) {
 	targetDir := gs.repoDir
 	if !orgID.IsZero() {
 		targetDir = filepath.Join(gs.repoDir, orgID.String())
@@ -197,7 +197,7 @@ func (gs *GitService) GetCommit(ctx context.Context, orgID jsonldb.ID, hash stri
 }
 
 // GetFileAtCommit retrieves the content of a file at a specific commit.
-func (gs *GitService) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash, filePath string) ([]byte, error) {
+func (gs *Git) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash, filePath string) ([]byte, error) {
 	targetDir := gs.repoDir
 	if !orgID.IsZero() {
 		orgIDStr := orgID.String()
@@ -218,7 +218,7 @@ func (gs *GitService) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, has
 }
 
 // execGitInDir executes a git command in a specific directory.
-func (gs *GitService) execGitInDir(dir string, args ...string) error {
+func (gs *Git) execGitInDir(dir string, args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
@@ -229,7 +229,7 @@ func (gs *GitService) execGitInDir(dir string, args ...string) error {
 }
 
 // gitOutputInDir executes a git command and returns output.
-func (gs *GitService) gitOutputInDir(dir string, args ...string) (string, error) {
+func (gs *Git) gitOutputInDir(dir string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
@@ -241,7 +241,7 @@ func (gs *GitService) gitOutputInDir(dir string, args ...string) (string, error)
 }
 
 // gitOutputBytesInDir executes a git command and returns output as bytes.
-func (gs *GitService) gitOutputBytesInDir(dir string, args ...string) ([]byte, error) {
+func (gs *Git) gitOutputBytesInDir(dir string, args ...string) ([]byte, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
@@ -252,7 +252,7 @@ func (gs *GitService) gitOutputBytesInDir(dir string, args ...string) ([]byte, e
 }
 
 // AddRemote adds a remote to the repository in the target directory.
-func (gs *GitService) AddRemote(dir, name, url string) error {
+func (gs *Git) AddRemote(dir, name, url string) error {
 	// Check if remote already exists
 	remotes, err := gs.gitOutputInDir(dir, "remote")
 	if err == nil {
@@ -268,7 +268,7 @@ func (gs *GitService) AddRemote(dir, name, url string) error {
 }
 
 // Push pushes changes to a remote repository.
-func (gs *GitService) Push(dir, remoteName, branch string) error {
+func (gs *Git) Push(dir, remoteName, branch string) error {
 	if branch == "" {
 		branch = "master" // Default to master
 		// Check if current branch is main

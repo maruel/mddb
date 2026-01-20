@@ -17,7 +17,7 @@ type DatabaseHandler struct {
 }
 
 // NewDatabaseHandler creates a new database handler
-func NewDatabaseHandler(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *DatabaseHandler {
+func NewDatabaseHandler(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *DatabaseHandler {
 	return &DatabaseHandler{
 		databaseService: content.NewDatabaseService(fileStore, gitService, cache, orgService),
 	}

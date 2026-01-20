@@ -15,12 +15,12 @@ import (
 // AssetService handles asset business logic.
 type AssetService struct {
 	fileStore  *infra.FileStore
-	gitService *infra.GitService
+	gitService *infra.Git
 	orgService *identity.OrganizationService
 }
 
 // NewAssetService creates a new asset service.
-func NewAssetService(fileStore *infra.FileStore, gitService *infra.GitService, orgService *identity.OrganizationService) *AssetService {
+func NewAssetService(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *AssetService {
 	return &AssetService{
 		fileStore:  fileStore,
 		gitService: gitService,

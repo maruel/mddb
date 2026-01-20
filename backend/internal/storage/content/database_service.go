@@ -14,13 +14,13 @@ import (
 // DatabaseService handles database business logic.
 type DatabaseService struct {
 	fileStore  *infra.FileStore
-	gitService *infra.GitService
+	gitService *infra.Git
 	cache      *infra.Cache
 	orgService *identity.OrganizationService
 }
 
 // NewDatabaseService creates a new database service.
-func NewDatabaseService(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *DatabaseService {
+func NewDatabaseService(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *DatabaseService {
 	return &DatabaseService{
 		fileStore:  fileStore,
 		gitService: gitService,

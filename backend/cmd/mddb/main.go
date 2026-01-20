@@ -150,7 +150,7 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
 
-	gitService, err := infra.NewGitService(*dataDir)
+	gitService, err := infra.NewGit(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize git service: %w", err)
 	}

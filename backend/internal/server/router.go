@@ -22,7 +22,7 @@ import (
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
-func NewRouter(fileStore *infra.FileStore, gitService *infra.GitService, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, remoteService *infra.GitRemoteService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
+func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, remoteService *infra.GitRemoteService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
 	cache := infra.NewCache()
 	mux := &http.ServeMux{}
 	jwtSecretBytes := []byte(jwtSecret)

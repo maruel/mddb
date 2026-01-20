@@ -14,13 +14,13 @@ import (
 // NodeService handles unified node business logic.
 type NodeService struct {
 	fileStore  *infra.FileStore
-	gitService *infra.GitService
+	gitService *infra.Git
 	cache      *infra.Cache
 	orgService *identity.OrganizationService
 }
 
 // NewNodeService creates a new node service.
-func NewNodeService(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *NodeService {
+func NewNodeService(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *NodeService {
 	return &NodeService{
 		fileStore:  fileStore,
 		gitService: gitService,

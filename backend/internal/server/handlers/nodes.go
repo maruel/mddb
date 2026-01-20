@@ -14,11 +14,11 @@ import (
 // NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
 	nodeService *content.NodeService
-	gitService  *infra.GitService
+	gitService  *infra.Git
 }
 
 // NewNodeHandler creates a new node handler.
-func NewNodeHandler(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *NodeHandler {
+func NewNodeHandler(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *NodeHandler {
 	return &NodeHandler{
 		nodeService: content.NewNodeService(fileStore, gitService, cache, orgService),
 		gitService:  gitService,

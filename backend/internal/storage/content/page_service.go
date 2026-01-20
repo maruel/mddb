@@ -22,13 +22,13 @@ import (
 // PageService handles page business logic.
 type PageService struct {
 	fileStore  *infra.FileStore
-	gitService *infra.GitService
+	gitService *infra.Git
 	cache      *infra.Cache
 	orgService *identity.OrganizationService
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *PageService {
+func NewPageService(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *PageService {
 	return &PageService{
 		fileStore:  fileStore,
 		gitService: gitService,

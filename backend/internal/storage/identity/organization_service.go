@@ -18,13 +18,13 @@ type OrganizationService struct {
 	rootDir    string
 	table      *jsonldb.Table[*entity.Organization]
 	fileStore  *infra.FileStore
-	gitService *infra.GitService
+	gitService *infra.Git
 	mu         sync.RWMutex
 	byID       map[jsonldb.ID]*entity.Organization
 }
 
 // NewOrganizationService creates a new organization service.
-func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitService *infra.GitService) (*OrganizationService, error) {
+func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitService *infra.Git) (*OrganizationService, error) {
 	dbDir := filepath.Join(rootDir, "db")
 	if err := os.MkdirAll(dbDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create db directory: %w", err)

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"sync"
 	"time"
 
@@ -19,6 +18,7 @@ type GitRemote struct {
 	URL            string     `json:"url" jsonschema:"description=Git repository URL"`
 	Type           string     `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
 	AuthType       string     `json:"auth_type" jsonschema:"description=Authentication method (token/ssh)"`
+	Token          string     `json:"token,omitempty" jsonschema:"description=Authentication token"`
 	Created        time.Time  `json:"created" jsonschema:"description=Remote creation timestamp"`
 	LastSync       time.Time  `json:"last_sync,omitempty" jsonschema:"description=Last synchronization timestamp"`
 }
@@ -48,40 +48,12 @@ func (g *GitRemote) Validate() error {
 	return nil
 }
 
-// GitRemoteService handles git remote configuration and secrets.
+// GitRemoteService handles git remote configuration.
 type GitRemoteService struct {
 	rootDir      string
 	remoteTable  *jsonldb.Table[*GitRemote]
-	secretTable  *jsonldb.Table[*remoteSecret]
 	mu           sync.RWMutex
 	remotesByOrg map[jsonldb.ID][]*GitRemote
-}
-
-type remoteSecret struct {
-	ID       jsonldb.ID `json:"id" jsonschema:"description=Unique secret identifier"`
-	RemoteID jsonldb.ID `json:"remote_id" jsonschema:"description=Git remote this secret belongs to"`
-	Token    string     `json:"token" jsonschema:"description=Authentication token value"`
-}
-
-func (r *remoteSecret) Clone() *remoteSecret {
-	c := *r
-	return &c
-}
-
-// GetID returns the remoteSecret's ID.
-func (r *remoteSecret) GetID() jsonldb.ID {
-	return r.ID
-}
-
-// Validate checks that the remoteSecret is valid.
-func (r *remoteSecret) Validate() error {
-	if r.ID.IsZero() {
-		return fmt.Errorf("id is required")
-	}
-	if r.RemoteID.IsZero() {
-		return fmt.Errorf("remote_id is required")
-	}
-	return nil
 }
 
 // NewGitRemoteService creates a new git remote service.
@@ -97,16 +69,9 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 		return nil, err
 	}
 
-	secretPath := filepath.Join(dbDir, "git_remote_secrets.jsonl")
-	secretTable, err := jsonldb.NewTable[*remoteSecret](secretPath)
-	if err != nil {
-		return nil, err
-	}
-
 	s := &GitRemoteService{
 		rootDir:      rootDir,
 		remoteTable:  remoteTable,
-		secretTable:  secretTable,
 		remotesByOrg: make(map[jsonldb.ID][]*GitRemote),
 	}
 
@@ -136,14 +101,14 @@ func (s *GitRemoteService) CreateRemote(orgID jsonldb.ID, name, url, remoteType,
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	id := jsonldb.NewID()
 	newRemote := &GitRemote{
-		ID:             id,
+		ID:             jsonldb.NewID(),
 		OrganizationID: orgID,
 		Name:           name,
 		URL:            url,
 		Type:           remoteType,
 		AuthType:       authType,
+		Token:          token,
 		Created:        time.Now(),
 	}
 
@@ -154,13 +119,6 @@ func (s *GitRemoteService) CreateRemote(orgID jsonldb.ID, name, url, remoteType,
 	// Update cache
 	cachedRemote := s.remoteTable.Last()
 	s.remotesByOrg[orgID] = append(s.remotesByOrg[orgID], cachedRemote)
-
-	// Save secret if provided
-	if token != "" {
-		if err := s.secretTable.Append(&remoteSecret{ID: jsonldb.NewID(), RemoteID: id, Token: token}); err != nil {
-			return nil, err
-		}
-	}
 
 	return cachedRemote, nil
 }
@@ -186,15 +144,11 @@ func (s *GitRemoteService) GetRemote(id jsonldb.ID) (*GitRemote, error) {
 
 // GetToken retrieves the token for a remote.
 func (s *GitRemoteService) GetToken(remoteID jsonldb.ID) (string, error) {
-	if remoteID.IsZero() {
-		return "", fmt.Errorf("remote id cannot be empty")
+	remote, err := s.GetRemote(remoteID)
+	if err != nil {
+		return "", err
 	}
-	for sec := range s.secretTable.Iter(0) {
-		if sec.RemoteID == remoteID {
-			return sec.Token, nil
-		}
-	}
-	return "", nil
+	return remote.Token, nil
 }
 
 // DeleteRemote deletes a git remote.
@@ -227,18 +181,6 @@ func (s *GitRemoteService) DeleteRemote(orgID, remoteID jsonldb.ID) error {
 		return err
 	}
 
-	// Remove secret
-	allSecrets := slices.Collect(s.secretTable.Iter(0))
-	var newSecrets []*remoteSecret
-	for _, sec := range allSecrets {
-		if sec.RemoteID != remoteID {
-			newSecrets = append(newSecrets, sec)
-		}
-	}
-	if len(newSecrets) != len(allSecrets) {
-		_ = s.secretTable.Replace(newSecrets)
-	}
-
 	// Update cache
 	newCache := make([]*GitRemote, 0, len(s.remotesByOrg[orgID]))
 	for _, r := range s.remotesByOrg[orgID] {
@@ -260,7 +202,10 @@ func (s *GitRemoteService) UpdateLastSync(remoteID jsonldb.ID) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	allRemotes := slices.Collect(s.remoteTable.Iter(0))
+	var allRemotes []*GitRemote
+	for r := range s.remoteTable.Iter(0) {
+		allRemotes = append(allRemotes, r)
+	}
 	for i := range allRemotes {
 		if allRemotes[i].ID == remoteID {
 			allRemotes[i].LastSync = time.Now()
