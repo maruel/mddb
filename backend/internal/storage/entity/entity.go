@@ -10,7 +10,6 @@
 //   - Organization: Workspaces with quotas and settings
 //   - Membership: User-organization relationships with roles
 //   - Invitation: Pending invitations to join organizations
-//   - GitRemote: Git repository configurations
 //   - DataRecord: Individual records within database nodes
 //
 // Types in this package are storage-oriented and use jsonldb.ID (uint64) for
@@ -227,43 +226,6 @@ type OrganizationSettings struct {
 // GitSettings contains configuration for Git remotes and synchronization.
 type GitSettings struct {
 	AutoPush bool `json:"auto_push" jsonschema:"description=Automatically push changes to remote"`
-}
-
-// GitRemote represents a remote repository for an organization.
-type GitRemote struct {
-	ID             jsonldb.ID `json:"id" jsonschema:"description=Unique git remote identifier"`
-	OrganizationID jsonldb.ID `json:"organization_id" jsonschema:"description=Organization this remote belongs to"`
-	Name           string     `json:"name" jsonschema:"description=Remote name (e.g. origin)"`
-	URL            string     `json:"url" jsonschema:"description=Git repository URL"`
-	Type           string     `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
-	AuthType       string     `json:"auth_type" jsonschema:"description=Authentication method (token/ssh)"`
-	Created        time.Time  `json:"created" jsonschema:"description=Remote creation timestamp"`
-	LastSync       time.Time  `json:"last_sync,omitempty" jsonschema:"description=Last synchronization timestamp"`
-}
-
-// Clone returns a copy of the GitRemote.
-func (g *GitRemote) Clone() *GitRemote {
-	c := *g
-	return &c
-}
-
-// GetID returns the GitRemote's ID.
-func (g *GitRemote) GetID() jsonldb.ID {
-	return g.ID
-}
-
-// Validate checks that the GitRemote is valid.
-func (g *GitRemote) Validate() error {
-	if g.ID.IsZero() {
-		return fmt.Errorf("id is required")
-	}
-	if g.OrganizationID.IsZero() {
-		return fmt.Errorf("organization_id is required")
-	}
-	if g.URL == "" {
-		return fmt.Errorf("url is required")
-	}
-	return nil
 }
 
 // Quota defines limits for an organization.

@@ -1,6 +1,6 @@
 import { createSignal, For, Show } from 'solid-js';
 import {
-  type DataRecord,
+  type DataRecordResponse,
   type Property,
   PropertyTypeCheckbox,
   PropertyTypeSelect,
@@ -13,7 +13,7 @@ import { useI18n } from '../i18n';
 interface DatabaseTableProps {
   databaseId: string;
   columns: Property[];
-  records: DataRecord[];
+  records: DataRecordResponse[];
   onAddRecord?: (data: Record<string, unknown>) => void;
   onUpdateRecord?: (recordId: string, data: Record<string, unknown>) => void;
   onDeleteRecord?: (recordId: string) => void;
@@ -30,7 +30,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
   const [editValue, setEditValue] = createSignal('');
   const [newRowData, setNewRowData] = createSignal<Record<string, unknown>>({});
 
-  const getCellValue = (record: DataRecord, columnName: string) => {
+  const getCellValue = (record: DataRecordResponse, columnName: string) => {
     const column = props.columns.find((c) => c.name === columnName);
     if (!column) return '';
     return record.data[column.name] ?? '';
@@ -69,7 +69,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
     }
   };
 
-  const renderCellContent = (record: DataRecord, column: Property) => {
+  const renderCellContent = (record: DataRecordResponse, column: Property) => {
     const value = getCellValue(record, column.name);
 
     switch (column.type) {

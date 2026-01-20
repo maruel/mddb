@@ -4,7 +4,7 @@ import type {
   InvitationResponse,
   ListUsersResponse,
   ListInvitationsResponse,
-  Organization,
+  OrganizationResponse,
   UserSettings,
   MembershipSettings,
   OrganizationSettings,
@@ -111,7 +111,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
       const lastResult = results[results.length - 1];
       if (activeTab() === 'workspace' && lastResult) {
-        const orgData = (await lastResult.json()) as Organization;
+        const orgData = (await lastResult.json()) as OrganizationResponse;
         setOrgName(orgData.name);
         setPublicAccess(orgData.settings?.public_access || false);
         setAllowedDomains(orgData.settings?.allowed_domains?.join(', ') || '');

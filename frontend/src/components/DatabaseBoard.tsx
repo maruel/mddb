@@ -1,6 +1,6 @@
 import { For, Show, createMemo } from 'solid-js';
 import {
-  type DataRecord,
+  type DataRecordResponse,
   type Property,
   PropertyTypeSelect,
   PropertyTypeMultiSelect,
@@ -9,7 +9,7 @@ import styles from './DatabaseBoard.module.css';
 import { useI18n } from '../i18n';
 
 interface DatabaseBoardProps {
-  records: DataRecord[];
+  records: DataRecordResponse[];
   columns: Property[];
   onDeleteRecord: (id: string) => void;
 }
@@ -24,7 +24,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
     const col = groupColumn();
     if (!col) return [{ name: 'All Records', records: props.records }];
 
-    const grouped: Record<string, { name: string; records: DataRecord[] }> = {};
+    const grouped: Record<string, { name: string; records: DataRecordResponse[] }> = {};
 
     // Initialize groups from column options if available
     if (col.options) {

@@ -14,8 +14,8 @@ import PWAInstallBanner from './components/PWAInstallBanner';
 import { debounce } from './utils/debounce';
 import { useI18n, type Locale } from './i18n';
 import type {
-  Node,
-  DataRecord,
+  NodeResponse,
+  DataRecordResponse,
   Commit,
   UserResponse,
   ListNodesResponse,
@@ -38,8 +38,8 @@ export default function App() {
   const { t, locale, setLocale } = useI18n();
   const [user, setUser] = createSignal<UserResponse | null>(null);
   const [token, setToken] = createSignal<string | null>(localStorage.getItem('mddb_token'));
-  const [nodes, setNodes] = createSignal<Node[]>([]);
-  const [records, setRecords] = createSignal<DataRecord[]>([]);
+  const [nodes, setNodes] = createSignal<NodeResponse[]>([]);
+  const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
   const [showSettings, setShowSettings] = createSignal(false);
   const [isPrivacyPage, setIsPrivacyPage] = createSignal(false);
@@ -273,7 +273,7 @@ export default function App() {
       setLoading(true);
       const res = await authFetch('/api/nodes');
       const data = (await res.json()) as ListNodesResponse;
-      setNodes((data.nodes?.filter(Boolean) as Node[]) || []);
+      setNodes((data.nodes?.filter(Boolean) as NodeResponse[]) || []);
       setError(null);
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
@@ -320,7 +320,7 @@ export default function App() {
           `/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`
         );
         const recordsData = (await recordsRes.json()) as ListRecordsResponse;
-        const loadedRecords = (recordsData.records || []) as DataRecord[];
+        const loadedRecords = (recordsData.records || []) as DataRecordResponse[];
         setRecords(loadedRecords);
         setHasMore(loadedRecords.length === PAGE_SIZE);
       } else {
@@ -458,19 +458,19 @@ export default function App() {
     }
   }
 
-  const handleNodeClick = (node: Node) => {
+  const handleNodeClick = (node: NodeResponse) => {
     loadNode(node.id);
   };
 
   // Recursively find a node by ID in the tree
-  const findNodeById = (nodeId: string | null): Node | undefined => {
+  const findNodeById = (nodeId: string | null): NodeResponse | undefined => {
     if (!nodeId) return undefined;
 
-    const search = (nodeList: Node[]): Node | undefined => {
+    const search = (nodeList: NodeResponse[]): NodeResponse | undefined => {
       for (const node of nodeList) {
         if (node.id === nodeId) return node;
         if (node.children) {
-          const found = search(node.children.filter((c): c is Node => !!c));
+          const found = search(node.children.filter((c): c is NodeResponse => !!c));
           if (found) return found;
         }
       }
@@ -480,11 +480,11 @@ export default function App() {
     return search(nodes());
   };
 
-  const getBreadcrumbs = (nodeId: string | null): Node[] => {
+  const getBreadcrumbs = (nodeId: string | null): NodeResponse[] => {
     if (!nodeId) return [];
-    const path: Node[] = [];
+    const path: NodeResponse[] = [];
 
-    const findPath = (currentNodes: Node[], targetId: string): boolean => {
+    const findPath = (currentNodes: NodeResponse[], targetId: string): boolean => {
       for (const node of currentNodes) {
         if (node.id === targetId) {
           path.push(node);
@@ -493,7 +493,7 @@ export default function App() {
         if (
           node.children &&
           findPath(
-            node.children.filter((c): c is Node => !!c),
+            node.children.filter((c): c is NodeResponse => !!c),
             targetId
           )
         ) {

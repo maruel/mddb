@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
@@ -62,4 +63,72 @@ func TestGitRemoteService(t *testing.T) {
 	if len(remotes) != 0 {
 		t.Errorf("Remote still exists after deletion")
 	}
+}
+
+func TestGitRemote(t *testing.T) {
+	t.Run("Clone", func(t *testing.T) {
+		original := &GitRemote{
+			ID:             jsonldb.ID(1),
+			OrganizationID: jsonldb.ID(2),
+			Name:           "origin",
+			URL:            "https://github.com/test/repo",
+			Type:           "github",
+			AuthType:       "token",
+			Created:        time.Now(),
+		}
+		clone := original.Clone()
+		if clone.ID != original.ID {
+			t.Errorf("Clone ID = %v, want %v", clone.ID, original.ID)
+		}
+		if clone.URL != original.URL {
+			t.Errorf("Clone URL = %v, want %v", clone.URL, original.URL)
+		}
+	})
+	t.Run("GetID", func(t *testing.T) {
+		if got := (&GitRemote{ID: jsonldb.ID(55)}).GetID(); got != jsonldb.ID(55) {
+			t.Errorf("GetID() = %v, want %v", got, jsonldb.ID(55))
+		}
+	})
+	t.Run("Validate", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			r := &GitRemote{
+				ID:             jsonldb.ID(1),
+				OrganizationID: jsonldb.ID(2),
+				URL:            "https://github.com/test/repo",
+			}
+			if err := r.Validate(); err != nil {
+				t.Errorf("Validate() unexpected error: %v", err)
+			}
+		})
+		t.Run("zero ID", func(t *testing.T) {
+			r := &GitRemote{
+				ID:             jsonldb.ID(0),
+				OrganizationID: jsonldb.ID(2),
+				URL:            "https://github.com/test/repo",
+			}
+			if err := r.Validate(); err == nil {
+				t.Error("Validate() expected error for zero ID")
+			}
+		})
+		t.Run("zero OrganizationID", func(t *testing.T) {
+			r := &GitRemote{
+				ID:             jsonldb.ID(1),
+				OrganizationID: jsonldb.ID(0),
+				URL:            "https://github.com/test/repo",
+			}
+			if err := r.Validate(); err == nil {
+				t.Error("Validate() expected error for zero OrganizationID")
+			}
+		})
+		t.Run("empty URL", func(t *testing.T) {
+			r := &GitRemote{
+				ID:             jsonldb.ID(1),
+				OrganizationID: jsonldb.ID(2),
+				URL:            "",
+			}
+			if err := r.Validate(); err == nil {
+				t.Error("Validate() expected error for empty URL")
+			}
+		})
+	})
 }

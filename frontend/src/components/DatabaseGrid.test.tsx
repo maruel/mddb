@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-li
 import type { JSX } from 'solid-js';
 import DatabaseGrid from './DatabaseGrid';
 import { I18nProvider } from '../i18n';
-import type { DataRecord, Property } from '../types';
+import type { DataRecordResponse, Property } from '../types';
 
 // Mock CSS module
 vi.mock('./DatabaseGrid.module.css', () => ({
@@ -35,7 +35,7 @@ describe('DatabaseGrid', () => {
     { name: 'Status', type: 'select' },
   ];
 
-  const mockRecords: DataRecord[] = [
+  const mockRecords: DataRecordResponse[] = [
     {
       id: 'rec-1',
       data: { Title: 'Product A', Description: 'A great product', Price: 99, Status: 'active' },
@@ -80,7 +80,7 @@ describe('DatabaseGrid', () => {
   });
 
   it('shows "Untitled" for records without first column value', async () => {
-    const recordsWithoutTitle: DataRecord[] = [
+    const recordsWithoutTitle: DataRecordResponse[] = [
       {
         id: 'rec-1',
         data: { Description: 'No title', Price: 50 },
@@ -129,7 +129,7 @@ describe('DatabaseGrid', () => {
   });
 
   it('shows "-" for missing field values', async () => {
-    const recordsWithMissingFields: DataRecord[] = [
+    const recordsWithMissingFields: DataRecordResponse[] = [
       {
         id: 'rec-1',
         data: { Title: 'Partial', Description: null },

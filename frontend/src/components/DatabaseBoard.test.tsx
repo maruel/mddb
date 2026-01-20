@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-li
 import type { JSX } from 'solid-js';
 import DatabaseBoard from './DatabaseBoard';
 import { I18nProvider } from '../i18n';
-import type { DataRecord, Property } from '../types';
+import type { DataRecordResponse, Property } from '../types';
 
 // Mock CSS module
 vi.mock('./DatabaseBoard.module.css', () => ({
@@ -67,7 +67,7 @@ describe('DatabaseBoard', () => {
     { name: 'Description', type: 'text' },
   ];
 
-  const mockRecords: DataRecord[] = [
+  const mockRecords: DataRecordResponse[] = [
     {
       id: 'rec-1',
       data: { Title: 'Task 1', Status: 'todo', Priority: 'High', Assignee: 'Alice' },
@@ -184,7 +184,7 @@ describe('DatabaseBoard', () => {
   });
 
   it('shows "Untitled" for records without first column value', async () => {
-    const recordsWithoutTitle: DataRecord[] = [
+    const recordsWithoutTitle: DataRecordResponse[] = [
       {
         id: 'rec-1',
         data: { Status: 'todo', Priority: 'High' },
@@ -272,7 +272,7 @@ describe('DatabaseBoard', () => {
   });
 
   it('works with multi_select columns', async () => {
-    const recordsWithTags: DataRecord[] = [
+    const recordsWithTags: DataRecordResponse[] = [
       {
         id: 'rec-1',
         data: { Name: 'Issue 1', Tags: 'bug' },
@@ -303,7 +303,7 @@ describe('DatabaseBoard', () => {
   });
 
   it('shows empty columns from options even when no records match', async () => {
-    const recordsOnlyTodo: DataRecord[] = [
+    const recordsOnlyTodo: DataRecordResponse[] = [
       {
         id: 'rec-1',
         data: { Title: 'Task 1', Status: 'todo', Priority: 'High' },
@@ -329,7 +329,7 @@ describe('DatabaseBoard', () => {
   });
 
   it('handles records with non-option status values', async () => {
-    const recordsWithCustomStatus: DataRecord[] = [
+    const recordsWithCustomStatus: DataRecordResponse[] = [
       {
         id: 'rec-1',
         data: { Title: 'Task 1', Status: 'custom_status', Priority: 'High' },

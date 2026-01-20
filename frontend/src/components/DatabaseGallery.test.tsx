@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-li
 import type { JSX } from 'solid-js';
 import DatabaseGallery from './DatabaseGallery';
 import { I18nProvider } from '../i18n';
-import type { DataRecord, Property } from '../types';
+import type { DataRecordResponse, Property } from '../types';
 
 // Mock CSS module
 vi.mock('./DatabaseGallery.module.css', () => ({
@@ -51,7 +51,7 @@ describe('DatabaseGallery', () => {
     { name: 'Price', type: 'number' },
   ];
 
-  const mockRecordsWithImage: DataRecord[] = [
+  const mockRecordsWithImage: DataRecordResponse[] = [
     {
       id: 'rec-1',
       data: {
@@ -114,7 +114,7 @@ describe('DatabaseGallery', () => {
   });
 
   it('detects image column by name containing "cover"', async () => {
-    const recordsWithCover: DataRecord[] = [
+    const recordsWithCover: DataRecordResponse[] = [
       {
         id: 'rec-1',
         data: {
@@ -173,7 +173,7 @@ describe('DatabaseGallery', () => {
   });
 
   it('shows "Untitled" for records without first column value', async () => {
-    const recordsWithoutTitle: DataRecord[] = [
+    const recordsWithoutTitle: DataRecordResponse[] = [
       {
         id: 'rec-1',
         data: { Image: 'https://example.com/img.jpg', Description: 'No title' },
@@ -278,7 +278,7 @@ describe('DatabaseGallery', () => {
   });
 
   it('handles database without image column', async () => {
-    const recordsNoImage: DataRecord[] = [
+    const recordsNoImage: DataRecordResponse[] = [
       {
         id: 'rec-1',
         data: { Title: 'Article A', Description: 'Some text', Price: 0 },

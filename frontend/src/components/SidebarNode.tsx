@@ -1,15 +1,15 @@
 import { createSignal, For, Show } from 'solid-js';
-import type { Node } from '../types';
+import type { NodeResponse } from '../types';
 import styles from '../App.module.css';
 
-interface SidebarNodeProps {
-  node: Node;
+interface SidebarNodeResponseProps {
+  node: NodeResponse;
   selectedId: string | null;
-  onSelect: (node: Node) => void;
+  onSelect: (node: NodeResponse) => void;
   depth: number;
 }
 
-export default function SidebarNode(props: SidebarNodeProps) {
+export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
   const [isExpanded, setIsExpanded] = createSignal(true);
 
   const toggleExpand = (e: MouseEvent) => {
@@ -18,7 +18,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
   };
 
   return (
-    <li class={styles.sidebarNodeWrapper}>
+    <li class={styles.sidebarNodeResponseWrapper}>
       <div
         class={styles.pageItem}
         classList={{ [`${styles.active}`]: props.selectedId === props.node.id }}
@@ -41,9 +41,9 @@ export default function SidebarNode(props: SidebarNodeProps) {
 
       <Show when={isExpanded() && props.node.children?.length}>
         <ul class={styles.childList}>
-          <For each={props.node.children?.filter((c): c is Node => !!c)}>
+          <For each={props.node.children?.filter((c): c is NodeResponse => !!c)}>
             {(child) => (
-              <SidebarNode
+              <SidebarNodeResponse
                 node={child}
                 selectedId={props.selectedId}
                 onSelect={props.onSelect}

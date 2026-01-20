@@ -1,10 +1,10 @@
 import { For } from 'solid-js';
-import type { DataRecord, Property } from '../types';
+import type { DataRecordResponse, Property } from '../types';
 import styles from './DatabaseGrid.module.css';
 import { useI18n } from '../i18n';
 
 interface DatabaseGridProps {
-  records: DataRecord[];
+  records: DataRecordResponse[];
   columns: Property[];
   onDeleteRecord: (id: string) => void;
 }

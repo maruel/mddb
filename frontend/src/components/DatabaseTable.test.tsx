@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-li
 import type { JSX } from 'solid-js';
 import DatabaseTable from './DatabaseTable';
 import { I18nProvider } from '../i18n';
-import type { DataRecord, Property } from '../types';
+import type { DataRecordResponse, Property } from '../types';
 
 // Mock CSS module
 vi.mock('./DatabaseTable.module.css', () => ({
@@ -56,7 +56,7 @@ describe('DatabaseTable', () => {
     },
   ];
 
-  const mockRecords: DataRecord[] = [
+  const mockRecords: DataRecordResponse[] = [
     {
       id: 'rec-1',
       data: { Name: 'Alice', Age: 30, Active: true, Birthday: '1994-05-15', Status: 'active' },
