@@ -55,7 +55,7 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 
 type userStorage struct {
 	models.User
-	PasswordHash string `json:"password_hash"`
+	PasswordHash string `json:"password_hash" jsonschema:"description=Bcrypt-hashed password"`
 }
 
 func (u *userStorage) Clone() *userStorage {

@@ -52,10 +52,10 @@ const (
 
 // DataRecord represents a record in a database.
 type DataRecord struct {
-	ID       jsonldb.ID     `json:"id"`
-	Data     map[string]any `json:"data"`
-	Created  time.Time      `json:"created"`
-	Modified time.Time      `json:"modified"`
+	ID       jsonldb.ID     `json:"id" jsonschema:"description=Unique record identifier"`
+	Data     map[string]any `json:"data" jsonschema:"description=Record field values keyed by property name"`
+	Created  time.Time      `json:"created" jsonschema:"description=Record creation timestamp"`
+	Modified time.Time      `json:"modified" jsonschema:"description=Last modification timestamp"`
 }
 
 // Clone returns a deep copy of the DataRecord.
@@ -85,19 +85,19 @@ func (r *DataRecord) Validate() error {
 
 // User represents a system user.
 type User struct {
-	ID              jsonldb.ID      `json:"id"`
-	Email           string          `json:"email"`
-	Name            string          `json:"name"`
-	Memberships     []Membership    `json:"memberships,omitempty"`
-	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty"`
-	Settings        UserSettings    `json:"settings"`
-	Created         time.Time       `json:"created"`
-	Modified        time.Time       `json:"modified"`
+	ID              jsonldb.ID      `json:"id" jsonschema:"description=Unique user identifier"`
+	Email           string          `json:"email" jsonschema:"description=User email address"`
+	Name            string          `json:"name" jsonschema:"description=User display name"`
+	Memberships     []Membership    `json:"memberships,omitempty" jsonschema:"description=Organization memberships (populated at runtime)"`
+	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
+	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
+	Created         time.Time       `json:"created" jsonschema:"description=Account creation timestamp"`
+	Modified        time.Time       `json:"modified" jsonschema:"description=Last modification timestamp"`
 
 	// Active context (populated in API responses)
-	OrganizationID jsonldb.ID       `json:"organization_id,omitempty"`
-	Role           UserRole         `json:"role,omitempty"`
-	Onboarding     *OnboardingState `json:"onboarding,omitempty"`
+	OrganizationID jsonldb.ID       `json:"organization_id,omitempty" jsonschema:"description=Current organization context (runtime)"`
+	Role           UserRole         `json:"role,omitempty" jsonschema:"description=Role in current organization (runtime)"`
+	Onboarding     *OnboardingState `json:"onboarding,omitempty" jsonschema:"description=Onboarding state for current org (runtime)"`
 }
 
 // GetID returns the User's ID.
@@ -107,27 +107,27 @@ func (u *User) GetID() jsonldb.ID {
 
 // UserSettings represents global user preferences.
 type UserSettings struct {
-	Theme    string `json:"theme"`    // light, dark, system
-	Language string `json:"language"` // en, fr, etc.
+	Theme    string `json:"theme" jsonschema:"description=UI theme preference (light/dark/system)"`
+	Language string `json:"language" jsonschema:"description=Preferred language code (en/fr/etc)"`
 }
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
 type OAuthIdentity struct {
-	Provider   string    `json:"provider"` // google, microsoft
-	ProviderID string    `json:"provider_id"`
-	Email      string    `json:"email"`
-	LastLogin  time.Time `json:"last_login"`
+	Provider   string    `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft)"`
+	ProviderID string    `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
+	Email      string    `json:"email" jsonschema:"description=Email address from OAuth provider"`
+	LastLogin  time.Time `json:"last_login" jsonschema:"description=Last login timestamp via this provider"`
 }
 
 // Membership represents a user's relationship with an organization.
 type Membership struct {
-	ID               jsonldb.ID         `json:"id"`
-	UserID           jsonldb.ID         `json:"user_id"`
-	OrganizationID   jsonldb.ID         `json:"organization_id"`
-	OrganizationName string             `json:"organization_name,omitempty"`
-	Role             UserRole           `json:"role"`
-	Settings         MembershipSettings `json:"settings"`
-	Created          time.Time          `json:"created"`
+	ID               jsonldb.ID         `json:"id" jsonschema:"description=Unique membership identifier"`
+	UserID           jsonldb.ID         `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
+	OrganizationID   jsonldb.ID         `json:"organization_id" jsonschema:"description=Organization ID the user is a member of"`
+	OrganizationName string             `json:"organization_name,omitempty" jsonschema:"description=Organization name (populated at runtime)"`
+	Role             UserRole           `json:"role" jsonschema:"description=User role within the organization (admin/editor/viewer)"`
+	Settings         MembershipSettings `json:"settings" jsonschema:"description=User preferences within this organization"`
+	Created          time.Time          `json:"created" jsonschema:"description=Membership creation timestamp"`
 }
 
 // Clone returns a copy of the Membership.
@@ -160,7 +160,7 @@ func (m *Membership) Validate() error {
 
 // MembershipSettings represents user preferences within a specific organization.
 type MembershipSettings struct {
-	Notifications bool `json:"notifications"`
+	Notifications bool `json:"notifications" jsonschema:"description=Whether email notifications are enabled"`
 }
 
 // UserRole defines the permissions for a user.
@@ -177,12 +177,12 @@ const (
 
 // Organization represents a workspace or group of users.
 type Organization struct {
-	ID         jsonldb.ID           `json:"id"`
-	Name       string               `json:"name"`
-	Quotas     Quota                `json:"quotas"`
-	Settings   OrganizationSettings `json:"settings"`
-	Onboarding OnboardingState      `json:"onboarding"`
-	Created    time.Time            `json:"created"`
+	ID         jsonldb.ID           `json:"id" jsonschema:"description=Unique organization identifier"`
+	Name       string               `json:"name" jsonschema:"description=Display name of the organization"`
+	Quotas     Quota                `json:"quotas" jsonschema:"description=Resource limits for the organization"`
+	Settings   OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
+	Onboarding OnboardingState      `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
+	Created    time.Time            `json:"created" jsonschema:"description=Organization creation timestamp"`
 }
 
 // Clone returns a deep copy of the Organization.
@@ -213,33 +213,33 @@ func (o *Organization) Validate() error {
 
 // OnboardingState tracks the progress of an organization's initial setup.
 type OnboardingState struct {
-	Completed bool      `json:"completed"`
-	Step      string    `json:"step"` // e.g., "name", "members", "git", "done"
-	UpdatedAt time.Time `json:"updated_at"`
+	Completed bool      `json:"completed" jsonschema:"description=Whether onboarding is complete"`
+	Step      string    `json:"step" jsonschema:"description=Current onboarding step (name/members/git/done)"`
+	UpdatedAt time.Time `json:"updated_at" jsonschema:"description=Last progress update timestamp"`
 }
 
 // OrganizationSettings represents organization-wide settings.
 type OrganizationSettings struct {
-	AllowedDomains []string    `json:"allowed_domains,omitempty"`
-	PublicAccess   bool        `json:"public_access"`
-	Git            GitSettings `json:"git"`
+	AllowedDomains []string    `json:"allowed_domains,omitempty" jsonschema:"description=Email domains allowed for membership"`
+	PublicAccess   bool        `json:"public_access" jsonschema:"description=Whether content is publicly accessible"`
+	Git            GitSettings `json:"git" jsonschema:"description=Git synchronization configuration"`
 }
 
 // GitSettings contains configuration for Git remotes and synchronization.
 type GitSettings struct {
-	AutoPush bool `json:"auto_push"`
+	AutoPush bool `json:"auto_push" jsonschema:"description=Automatically push changes to remote"`
 }
 
 // GitRemote represents a remote repository for an organization.
 type GitRemote struct {
-	ID             jsonldb.ID `json:"id"`
-	OrganizationID jsonldb.ID `json:"organization_id"`
-	Name           string     `json:"name"` // e.g., "origin"
-	URL            string     `json:"url"`
-	Type           string     `json:"type"`      // "github", "gitlab", "custom"
-	AuthType       string     `json:"auth_type"` // "token", "ssh"
-	Created        time.Time  `json:"created"`
-	LastSync       time.Time  `json:"last_sync,omitempty"`
+	ID             jsonldb.ID `json:"id" jsonschema:"description=Unique git remote identifier"`
+	OrganizationID jsonldb.ID `json:"organization_id" jsonschema:"description=Organization this remote belongs to"`
+	Name           string     `json:"name" jsonschema:"description=Remote name (e.g. origin)"`
+	URL            string     `json:"url" jsonschema:"description=Git repository URL"`
+	Type           string     `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
+	AuthType       string     `json:"auth_type" jsonschema:"description=Authentication method (token/ssh)"`
+	Created        time.Time  `json:"created" jsonschema:"description=Remote creation timestamp"`
+	LastSync       time.Time  `json:"last_sync,omitempty" jsonschema:"description=Last synchronization timestamp"`
 }
 
 // Clone returns a copy of the GitRemote.
@@ -269,20 +269,20 @@ func (g *GitRemote) Validate() error {
 
 // Quota defines limits for an organization.
 type Quota struct {
-	MaxPages   int   `json:"max_pages"`
-	MaxStorage int64 `json:"max_storage"` // in bytes
-	MaxUsers   int   `json:"max_users"`
+	MaxPages   int   `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
+	MaxStorage int64 `json:"max_storage" jsonschema:"description=Maximum storage in bytes"`
+	MaxUsers   int   `json:"max_users" jsonschema:"description=Maximum number of users allowed"`
 }
 
 // Invitation represents a request for a user to join an organization.
 type Invitation struct {
-	ID             jsonldb.ID `json:"id"`
-	Email          string     `json:"email"`
-	OrganizationID jsonldb.ID `json:"organization_id"`
-	Role           UserRole   `json:"role"`
-	Token          string     `json:"token"`
-	ExpiresAt      time.Time  `json:"expires_at"`
-	Created        time.Time  `json:"created"`
+	ID             jsonldb.ID `json:"id" jsonschema:"description=Unique invitation identifier"`
+	Email          string     `json:"email" jsonschema:"description=Email address of the invitee"`
+	OrganizationID jsonldb.ID `json:"organization_id" jsonschema:"description=Organization the user is invited to"`
+	Role           UserRole   `json:"role" jsonschema:"description=Role assigned upon acceptance"`
+	Token          string     `json:"token" jsonschema:"description=Secret token for invitation verification"`
+	ExpiresAt      time.Time  `json:"expires_at" jsonschema:"description=Invitation expiration timestamp"`
+	Created        time.Time  `json:"created" jsonschema:"description=Invitation creation timestamp"`
 }
 
 // Clone returns a copy of the Invitation.
