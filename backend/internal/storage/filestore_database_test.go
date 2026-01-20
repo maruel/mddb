@@ -18,15 +18,15 @@ func TestDatabase_ReadWrite(t *testing.T) {
 
 	orgID := testID(100)
 	tests := []struct {
-		name     string
-		database *entity.Database
+		name string
+		node *entity.Node
 	}{
 		{
 			name: "simple database",
-			database: &entity.Database{
-				ID:      testID(1),
-				Title:   "Test Database",
-				Version: "1.0",
+			node: &entity.Node{
+				ID:    testID(1),
+				Title: "Test Database",
+				Type:  entity.NodeTypeDatabase,
 				Properties: []entity.Property{
 					{Name: "title", Type: "text"},
 					{Name: "status", Type: entity.PropertyTypeText},
@@ -37,10 +37,10 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		},
 		{
 			name: "database with all column types",
-			database: &entity.Database{
-				ID:      testID(2),
-				Title:   "Complex Database",
-				Version: "1.0",
+			node: &entity.Node{
+				ID:    testID(2),
+				Title: "Complex Database",
+				Type:  entity.NodeTypeDatabase,
 				Properties: []entity.Property{
 					{Name: "text_field", Type: "text", Required: true},
 					{Name: "number_field", Type: "number"},
@@ -58,31 +58,31 @@ func TestDatabase_ReadWrite(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Write database
-			err := fs.WriteDatabase(orgID, tt.database)
+			err := fs.WriteDatabase(orgID, tt.node)
 			if err != nil {
 				t.Fatalf("Failed to write database: %v", err)
 			}
 
 			// Read database
-			got, err := fs.ReadDatabase(orgID, tt.database.ID)
+			got, err := fs.ReadDatabase(orgID, tt.node.ID)
 			if err != nil {
 				t.Fatalf("Failed to read database: %v", err)
 			}
 
 			// Verify basic fields
-			if got.ID != tt.database.ID {
-				t.Errorf("ID mismatch: got %v, want %v", got.ID, tt.database.ID)
+			if got.ID != tt.node.ID {
+				t.Errorf("ID mismatch: got %v, want %v", got.ID, tt.node.ID)
 			}
-			if got.Title != tt.database.Title {
-				t.Errorf("Title mismatch: got %q, want %q", got.Title, tt.database.Title)
+			if got.Title != tt.node.Title {
+				t.Errorf("Title mismatch: got %q, want %q", got.Title, tt.node.Title)
 			}
-			if len(got.Properties) != len(tt.database.Properties) {
-				t.Errorf("Column count mismatch: got %d, want %d", len(got.Properties), len(tt.database.Properties))
+			if len(got.Properties) != len(tt.node.Properties) {
+				t.Errorf("Column count mismatch: got %d, want %d", len(got.Properties), len(tt.node.Properties))
 			}
 
 			// Verify columns
 			for i, col := range got.Properties {
-				expCol := tt.database.Properties[i]
+				expCol := tt.node.Properties[i]
 				if col.Name != expCol.Name {
 					t.Errorf("Column[%d] Name mismatch: got %q, want %q", i, col.Name, expCol.Name)
 				}
@@ -92,7 +92,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 			}
 
 			// Verify metadata file exists
-			filePath := fs.databaseMetadataFile(orgID, tt.database.ID)
+			filePath := fs.databaseMetadataFile(orgID, tt.node.ID)
 			if _, err := os.Stat(filePath); err != nil {
 				t.Errorf("Database metadata file not found: %s", filePath)
 			}
@@ -108,10 +108,10 @@ func TestDatabase_Exists(t *testing.T) {
 	}
 
 	orgID := testID(100)
-	db := &entity.Database{
-		ID:      testID(1),
-		Title:   "Test",
-		Version: "1.0",
+	node := &entity.Node{
+		ID:    testID(1),
+		Title: "Test",
+		Type:  entity.NodeTypeDatabase,
 		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
@@ -120,17 +120,17 @@ func TestDatabase_Exists(t *testing.T) {
 	}
 
 	// Should not exist initially
-	if fs.DatabaseExists(orgID, db.ID) {
+	if fs.DatabaseExists(orgID, node.ID) {
 		t.Error("Database should not exist initially")
 	}
 
 	// Write database
-	if err := fs.WriteDatabase(orgID, db); err != nil {
+	if err := fs.WriteDatabase(orgID, node); err != nil {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 
 	// Should exist after write
-	if !fs.DatabaseExists(orgID, db.ID) {
+	if !fs.DatabaseExists(orgID, node.ID) {
 		t.Error("Database should exist after write")
 	}
 }
@@ -147,17 +147,17 @@ func TestDatabase_List(t *testing.T) {
 	// Create multiple databases
 	dbIDs := []jsonldb.ID{testID(1), testID(2), testID(3)}
 	for _, id := range dbIDs {
-		db := &entity.Database{
-			ID:      id,
-			Title:   "Database " + id.String(),
-			Version: "1.0",
+		node := &entity.Node{
+			ID:    id,
+			Title: "Database " + id.String(),
+			Type:  entity.NodeTypeDatabase,
 			Properties: []entity.Property{
 				{Name: "name", Type: "text"},
 			},
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.WriteDatabase(orgID, db); err != nil {
+		if err := fs.WriteDatabase(orgID, node); err != nil {
 			t.Fatalf("Failed to write database %v: %v", id, err)
 		}
 	}
@@ -194,10 +194,10 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	orgID := testID(100)
-	db := &entity.Database{
-		ID:      testID(1),
-		Title:   "Test",
-		Version: "1.0",
+	node := &entity.Node{
+		ID:    testID(1),
+		Title: "Test",
+		Type:  entity.NodeTypeDatabase,
 		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
@@ -206,18 +206,18 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	// Write database
-	if err := fs.WriteDatabase(orgID, db); err != nil {
+	if err := fs.WriteDatabase(orgID, node); err != nil {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 
 	// Verify metadata file exists
-	metadataPath := fs.databaseMetadataFile(orgID, db.ID)
+	metadataPath := fs.databaseMetadataFile(orgID, node.ID)
 	if _, err := os.Stat(metadataPath); err != nil {
 		t.Fatalf("Database metadata file not found: %v", err)
 	}
 
 	// Delete database
-	err = fs.DeleteDatabase(orgID, db.ID)
+	err = fs.DeleteDatabase(orgID, node.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete database: %v", err)
 	}
@@ -239,17 +239,17 @@ func TestRecord_AppendRead(t *testing.T) {
 	dbID := testID(1)
 
 	// Create database first
-	db := &entity.Database{
-		ID:      dbID,
-		Title:   "Test",
-		Version: "1.0",
+	node := &entity.Node{
+		ID:    dbID,
+		Title: "Test",
+		Type:  entity.NodeTypeDatabase,
 		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
 	}
-	if err := fs.WriteDatabase(orgID, db); err != nil {
+	if err := fs.WriteDatabase(orgID, node); err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
@@ -321,17 +321,17 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 	dbID := testID(1)
 
 	// Create database
-	db := &entity.Database{
-		ID:      dbID,
-		Title:   "Empty DB",
-		Version: "1.0",
+	node := &entity.Node{
+		ID:    dbID,
+		Title: "Empty DB",
+		Type:  entity.NodeTypeDatabase,
 		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
 	}
-	if err := fs.WriteDatabase(orgID, db); err != nil {
+	if err := fs.WriteDatabase(orgID, node); err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
@@ -357,10 +357,10 @@ func TestDatabase_NestedPath(t *testing.T) {
 
 	// Create database with base64 encoded ID
 	dbID := testID(42)
-	db := &entity.Database{
-		ID:      dbID,
-		Title:   "Database 42",
-		Version: "1.0",
+	node := &entity.Node{
+		ID:    dbID,
+		Title: "Database 42",
+		Type:  entity.NodeTypeDatabase,
 		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
@@ -368,7 +368,7 @@ func TestDatabase_NestedPath(t *testing.T) {
 		Modified: time.Now(),
 	}
 
-	if err := fs.WriteDatabase(orgID, db); err != nil {
+	if err := fs.WriteDatabase(orgID, node); err != nil {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 

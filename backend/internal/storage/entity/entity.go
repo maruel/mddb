@@ -340,29 +340,6 @@ type Asset struct {
 	Path     string    `json:"path" jsonschema:"description=Storage path on disk"`
 }
 
-// Legacy types for compatibility during migration
-
-// Page is kept for backward compatibility with existing storage methods
-type Page struct {
-	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique page identifier"`
-	Title      string     `json:"title" jsonschema:"description=Page title"`
-	Content    string     `json:"content" jsonschema:"description=Markdown content"`
-	Created    time.Time  `json:"created" jsonschema:"description=Page creation timestamp"`
-	Modified   time.Time  `json:"modified" jsonschema:"description=Last modification timestamp"`
-	Tags       []string   `json:"tags,omitempty" jsonschema:"description=Page tags"`
-	Path       string     `json:"path" jsonschema:"description=Storage path"`
-	FaviconURL string     `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
-}
-
-// Database represents a structured database with schema and metadata.
-type Database struct {
-	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique database identifier"`
-	Title      string     `json:"title" jsonschema:"description=Database title"`
-	Properties []Property `json:"properties" jsonschema:"description=Schema definition (columns)"`
-	Created    time.Time  `json:"created" jsonschema:"description=Database creation timestamp"`
-	Modified   time.Time  `json:"modified" jsonschema:"description=Last modification timestamp"`
-	Version    string     `json:"version" jsonschema:"description=JSONL format version"`
-}
 
 // Commit represents a commit in git history.
 type Commit struct {

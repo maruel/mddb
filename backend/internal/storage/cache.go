@@ -7,30 +7,23 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
-// Cache handles in-memory caching of metadata, hot pages, and records.
+// Cache handles in-memory caching of the node tree.
+// Per the simplification plan, this cache only stores the expensive node tree operation.
 type Cache struct {
 	mu sync.RWMutex
 
 	// Node tree metadata (full tree for sidebar)
 	nodeTree []*entity.Node
 
-	// Hot pages (map of page ID to page)
-	pages map[jsonldb.ID]*entity.Page
-
 	// Hot records (map of database ID to list of records)
-	records map[jsonldb.ID][]*entity.DataRecord
-
-	// Max size for LRU-like behavior (simplified for now)
-	maxPages   int
+	records    map[jsonldb.ID][]*entity.DataRecord
 	maxRecords int
 }
 
 // NewCache initializes a new cache.
 func NewCache() *Cache {
 	return &Cache{
-		pages:      make(map[jsonldb.ID]*entity.Page),
 		records:    make(map[jsonldb.ID][]*entity.DataRecord),
-		maxPages:   100,
 		maxRecords: 100,
 	}
 }
@@ -54,33 +47,6 @@ func (c *Cache) InvalidateNodeTree() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.nodeTree = nil
-}
-
-// GetPage returns a cached page by ID.
-func (c *Cache) GetPage(id jsonldb.ID) (*entity.Page, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	page, ok := c.pages[id]
-	return page, ok
-}
-
-// SetPage caches a page.
-func (c *Cache) SetPage(page *entity.Page) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// Simple size limiting: clear if it grows too large
-	if len(c.pages) >= c.maxPages {
-		c.pages = make(map[jsonldb.ID]*entity.Page)
-	}
-	c.pages[page.ID] = page
-}
-
-// InvalidatePage removes a page from cache.
-func (c *Cache) InvalidatePage(id jsonldb.ID) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.pages, id)
 }
 
 // GetRecords returns cached records for a database.
@@ -114,6 +80,5 @@ func (c *Cache) InvalidateAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.nodeTree = nil
-	c.pages = make(map[jsonldb.ID]*entity.Page)
 	c.records = make(map[jsonldb.ID][]*entity.DataRecord)
 }

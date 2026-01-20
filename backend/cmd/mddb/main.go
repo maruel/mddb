@@ -26,6 +26,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/utils"
 )
 
 func main() {
@@ -300,7 +301,7 @@ func runOnboarding(dataDir string) error {
 	env := make(map[string]string)
 
 	// JWT Secret
-	jwtSecret, _ := storage.GenerateToken(32)
+	jwtSecret, _ := utils.GenerateToken(32)
 	env["JWT_SECRET"] = jwtSecret
 
 	// Google OAuth

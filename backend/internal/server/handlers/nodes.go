@@ -11,19 +11,21 @@ import (
 
 // NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
-	fileStore  *storage.FileStore
-	gitService *storage.GitService
-	cache      *storage.Cache
-	orgService *storage.OrganizationService
+	nodeService *storage.NodeService
+	fileStore   *storage.FileStore
+	gitService  *storage.GitService
+	cache       *storage.Cache
+	orgService  *storage.OrganizationService
 }
 
 // NewNodeHandler creates a new node handler.
 func NewNodeHandler(fileStore *storage.FileStore, gitService *storage.GitService, cache *storage.Cache, orgService *storage.OrganizationService) *NodeHandler {
 	return &NodeHandler{
-		fileStore:  fileStore,
-		gitService: gitService,
-		cache:      cache,
-		orgService: orgService,
+		nodeService: storage.NewNodeService(fileStore, gitService, cache, orgService),
+		fileStore:   fileStore,
+		gitService:  gitService,
+		cache:       cache,
+		orgService:  orgService,
 	}
 }
 
@@ -33,7 +35,7 @@ func (h *NodeHandler) ListNodes(ctx context.Context, req dto.ListNodesRequest) (
 	if err != nil {
 		return nil, dto.BadRequest("invalid_org_id")
 	}
-	nodes, err := h.fileStore.ReadNodeTree(orgID)
+	nodes, err := h.nodeService.ListNodes(ctx, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to read node tree", err)
 	}
@@ -58,13 +60,8 @@ func (h *NodeHandler) GetNode(ctx context.Context, req dto.GetNodeRequest) (*dto
 		return nil, dto.BadRequest("invalid_node_id")
 	}
 
-	nodes, err := h.fileStore.ReadNodeTree(orgID)
+	node, err := h.nodeService.GetNode(ctx, orgID, id)
 	if err != nil {
-		return nil, dto.InternalWithError("Failed to read node tree", err)
-	}
-
-	node := findNode(nodes, id)
-	if node == nil {
 		return nil, dto.NotFound("node")
 	}
 
@@ -81,68 +78,29 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req dto.CreateNodeRequest)
 	if err != nil {
 		return nil, dto.BadRequest("invalid_org_id")
 	}
-	id := jsonldb.NewID()
 
-	var node *entity.Node
-
+	var nodeType entity.NodeType
 	switch req.Type {
 	case dto.NodeTypeDocument:
-		var page *entity.Page
-		page, err = h.fileStore.WritePage(orgID, id, req.Title, "")
-		if err == nil {
-			node = &entity.Node{
-				ID:       page.ID,
-				Title:    page.Title,
-				Content:  page.Content,
-				Type:     entity.NodeTypeDocument,
-				Created:  page.Created,
-				Modified: page.Modified,
-			}
-		}
+		nodeType = entity.NodeTypeDocument
 	case dto.NodeTypeDatabase:
-		// We use databaseService here for better encapsulation
-		ds := storage.NewDatabaseService(h.fileStore, h.gitService, h.cache, h.orgService)
-		var db *entity.Database
-		db, err = ds.CreateDatabase(ctx, orgID, req.Title, []entity.Property{})
-		if err == nil {
-			node = &entity.Node{
-				ID:         db.ID,
-				Title:      db.Title,
-				Properties: db.Properties,
-				Type:       entity.NodeTypeDatabase,
-				Created:    db.Created,
-				Modified:   db.Modified,
-			}
-		}
+		nodeType = entity.NodeTypeDatabase
 	case dto.NodeTypeHybrid:
-		return nil, dto.NotImplemented("hybrid nodes")
+		nodeType = entity.NodeTypeHybrid
 	default:
 		return nil, dto.BadRequest("Invalid node type")
 	}
 
+	node, err := h.nodeService.CreateNode(ctx, orgID, req.Title, nodeType, 0)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create node", err)
 	}
 
 	// Commit if git is enabled
 	if h.gitService != nil {
-		_ = h.gitService.CommitChange(ctx, orgID, "create", string(req.Type), id.String(), req.Title)
+		_ = h.gitService.CommitChange(ctx, orgID, "create", string(req.Type), node.ID.String(), req.Title)
 	}
-
-	// Invalidate cache
-	h.cache.InvalidateNodeTree()
 
 	return nodeToResponse(node), nil
 }
 
-func findNode(nodes []*entity.Node, id jsonldb.ID) *entity.Node {
-	for _, n := range nodes {
-		if n.ID == id {
-			return n
-		}
-		if child := findNode(n.Children, id); child != nil {
-			return child
-		}
-	}
-	return nil
-}

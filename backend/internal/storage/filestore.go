@@ -27,6 +27,18 @@ type FileStore struct {
 	rootDir string
 }
 
+// page is an internal type for reading/writing page markdown files.
+type page struct {
+	id         jsonldb.ID
+	title      string
+	content    string
+	created    time.Time
+	modified   time.Time
+	tags       []string
+	faviconURL string
+}
+
+
 // NewFileStore initializes a FileStore with the given root directory.
 func NewFileStore(rootDir string) (*FileStore, error) {
 	if err := os.MkdirAll(rootDir, 0o755); err != nil {
@@ -57,8 +69,8 @@ func (fs *FileStore) PageExists(orgID, id jsonldb.ID) bool {
 	return err == nil && info.IsDir()
 }
 
-// ReadPage reads a page from disk.
-func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*entity.Page, error) {
+// ReadPage reads a page from disk and returns it as a Node.
+func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*entity.Node, error) {
 	if orgID == 0 {
 		return nil, fmt.Errorf("organization ID is required")
 	}
@@ -71,23 +83,31 @@ func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*entity.Page, error) {
 		return nil, fmt.Errorf("failed to read page: %w", err)
 	}
 
-	page := parseMarkdownFile(id, data)
-	return page, nil
+	p := parseMarkdownFile(id, data)
+	return &entity.Node{
+		ID:         p.id,
+		Title:      p.title,
+		Content:    p.content,
+		Created:    p.created,
+		Modified:   p.modified,
+		Tags:       p.tags,
+		FaviconURL: p.faviconURL,
+		Type:       entity.NodeTypeDocument,
+	}, nil
 }
 
-// WritePage writes a page to disk.
-func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*entity.Page, error) {
+// WritePage writes a page to disk and returns it as a Node.
+func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*entity.Node, error) {
 	if orgID == 0 {
 		return nil, fmt.Errorf("organization ID is required")
 	}
 	now := time.Now()
-	page := &entity.Page{
-		ID:       id,
-		Title:    title,
-		Content:  content,
-		Created:  now,
-		Modified: now,
-		Path:     "index.md",
+	p := &page{
+		id:       id,
+		title:    title,
+		content:  content,
+		created:  now,
+		modified: now,
 	}
 
 	pageDir := fs.pageDir(orgID, id)
@@ -96,16 +116,24 @@ func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*en
 	}
 
 	filePath := fs.pageIndexFile(orgID, id)
-	data := formatMarkdownFile(page)
+	data := formatMarkdownFile(p)
 	if err := os.WriteFile(filePath, data, 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 
-	return page, nil
+	return &entity.Node{
+		ID:       p.id,
+		Title:    p.title,
+		Content:  p.content,
+		Created:  p.created,
+		Modified: p.modified,
+		Tags:     p.tags,
+		Type:     entity.NodeTypeDocument,
+	}, nil
 }
 
-// UpdatePage updates an existing page.
-func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*entity.Page, error) {
+// UpdatePage updates an existing page and returns it as a Node.
+func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*entity.Node, error) {
 	if orgID == 0 {
 		return nil, fmt.Errorf("organization ID is required")
 	}
@@ -118,17 +146,26 @@ func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*e
 		return nil, fmt.Errorf("failed to read page: %w", err)
 	}
 
-	page := parseMarkdownFile(id, data)
-	page.Title = title
-	page.Content = content
-	page.Modified = time.Now()
+	p := parseMarkdownFile(id, data)
+	p.title = title
+	p.content = content
+	p.modified = time.Now()
 
-	updatedData := formatMarkdownFile(page)
+	updatedData := formatMarkdownFile(p)
 	if err := os.WriteFile(filePath, updatedData, 0o644); err != nil {
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 
-	return page, nil
+	return &entity.Node{
+		ID:         p.id,
+		Title:      p.title,
+		Content:    p.content,
+		Created:    p.created,
+		Modified:   p.modified,
+		Tags:       p.tags,
+		FaviconURL: p.faviconURL,
+		Type:       entity.NodeTypeDocument,
+	}, nil
 }
 
 // DeletePage deletes a page directory.
@@ -146,12 +183,12 @@ func (fs *FileStore) DeletePage(orgID, id jsonldb.ID) error {
 	return nil
 }
 
-// ListPages returns all pages for an organization.
-func (fs *FileStore) ListPages(orgID jsonldb.ID) ([]*entity.Page, error) {
+// ListPages returns all pages for an organization as Nodes.
+func (fs *FileStore) ListPages(orgID jsonldb.ID) ([]*entity.Node, error) {
 	if orgID == 0 {
 		return nil, fmt.Errorf("organization ID is required")
 	}
-	var pages []*entity.Page
+	var nodes []*entity.Node
 	dir := fs.orgPagesDir(orgID)
 
 	entries, err := os.ReadDir(dir)
@@ -171,14 +208,14 @@ func (fs *FileStore) ListPages(orgID jsonldb.ID) ([]*entity.Page, error) {
 
 		indexFile := fs.pageIndexFile(orgID, id)
 		if _, err := os.Stat(indexFile); err == nil {
-			page, err := fs.ReadPage(orgID, id)
+			node, err := fs.ReadPage(orgID, id)
 			if err == nil {
-				pages = append(pages, page)
+				nodes = append(nodes, node)
 			}
 		}
 	}
 
-	return pages, nil
+	return nodes, nil
 }
 
 // ReadNode reads a unified node from disk.
@@ -359,8 +396,8 @@ func (fs *FileStore) DatabaseExists(orgID, id jsonldb.ID) bool {
 	return err == nil
 }
 
-// ReadDatabase reads a database definition from metadata.json.
-func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*entity.Database, error) {
+// ReadDatabase reads a database definition from metadata.json and returns it as a Node.
+func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*entity.Node, error) {
 	if orgID == 0 {
 		return nil, fmt.Errorf("organization ID is required")
 	}
@@ -377,39 +414,43 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*entity.Database, error
 	var metadata struct {
 		Title      string            `json:"title"`
 		Version    string            `json:"version"`
+		Created    time.Time         `json:"created"`
+		Modified   time.Time         `json:"modified"`
 		Properties []entity.Property `json:"properties"`
 	}
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		return nil, fmt.Errorf("failed to parse database metadata: %w", err)
 	}
 
-	return &entity.Database{
+	return &entity.Node{
 		ID:         id,
 		Title:      metadata.Title,
 		Properties: metadata.Properties,
-		Version:    metadata.Version,
+		Created:    metadata.Created,
+		Modified:   metadata.Modified,
+		Type:       entity.NodeTypeDatabase,
 	}, nil
 }
 
 // WriteDatabase writes database metadata (including properties) to metadata.json.
 // The JSONL records file is created lazily when the first record is added.
-func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, db *entity.Database) error {
+func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, node *entity.Node) error {
 	if orgID == 0 {
 		return fmt.Errorf("organization ID is required")
 	}
 
-	if err := os.MkdirAll(fs.pageDir(orgID, db.ID), 0o755); err != nil {
+	if err := os.MkdirAll(fs.pageDir(orgID, node.ID), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	// Write metadata.json with all database metadata including properties
-	metadataFile := fs.databaseMetadataFile(orgID, db.ID)
+	metadataFile := fs.databaseMetadataFile(orgID, node.ID)
 	metadata := map[string]any{
-		"title":      db.Title,
-		"version":    db.Version,
-		"created":    db.Created,
-		"modified":   db.Modified,
-		"properties": db.Properties,
+		"title":      node.Title,
+		"version":    "1.0",
+		"created":    node.Created,
+		"modified":   node.Modified,
+		"properties": node.Properties,
 	}
 	data, err := json.Marshal(metadata)
 	if err != nil {
@@ -434,12 +475,12 @@ func (fs *FileStore) DeleteDatabase(orgID, id jsonldb.ID) error {
 	return nil
 }
 
-// ListDatabases returns all databases for the given organization.
-func (fs *FileStore) ListDatabases(orgID jsonldb.ID) ([]*entity.Database, error) {
+// ListDatabases returns all databases for the given organization as Nodes.
+func (fs *FileStore) ListDatabases(orgID jsonldb.ID) ([]*entity.Node, error) {
 	if orgID == 0 {
 		return nil, fmt.Errorf("organization ID is required")
 	}
-	var databases []*entity.Database
+	var nodes []*entity.Node
 	dir := fs.orgPagesDir(orgID)
 
 	entries, err := os.ReadDir(dir)
@@ -460,14 +501,14 @@ func (fs *FileStore) ListDatabases(orgID jsonldb.ID) ([]*entity.Database, error)
 		// Check if this is a database (has metadata.json file)
 		metadataFile := fs.databaseMetadataFile(orgID, id)
 		if _, err := os.Stat(metadataFile); err == nil {
-			db, err := fs.ReadDatabase(orgID, id)
+			node, err := fs.ReadDatabase(orgID, id)
 			if err == nil {
-				databases = append(databases, db)
+				nodes = append(nodes, node)
 			}
 		}
 	}
 
-	return databases, nil
+	return nodes, nil
 }
 
 // AppendRecord appends a record to a database using jsonldb abstraction.
@@ -732,7 +773,7 @@ func (fs *FileStore) ListAssets(orgID, pageID jsonldb.ID) ([]*entity.Asset, erro
 
 // Helpers
 
-func parseMarkdownFile(id jsonldb.ID, data []byte) *entity.Page {
+func parseMarkdownFile(id jsonldb.ID, data []byte) *page {
 	content := string(data)
 	title := id.String()
 	var created, modified time.Time
@@ -768,28 +809,27 @@ func parseMarkdownFile(id jsonldb.ID, data []byte) *entity.Page {
 		modified = time.Now()
 	}
 
-	return &entity.Page{
-		ID:       id,
-		Title:    title,
-		Content:  content,
-		Created:  created,
-		Modified: modified,
-		Path:     "index.md",
+	return &page{
+		id:       id,
+		title:    title,
+		content:  content,
+		created:  created,
+		modified: modified,
 	}
 }
 
-func formatMarkdownFile(page *entity.Page) []byte {
+func formatMarkdownFile(p *page) []byte {
 	var buf bytes.Buffer
 	buf.WriteString("---")
-	buf.WriteString("\nid: " + page.ID.String() + "\n")
-	buf.WriteString("title: " + page.Title + "\n")
-	buf.WriteString("created: " + page.Created.Format(time.RFC3339) + "\n")
-	buf.WriteString("modified: " + page.Modified.Format(time.RFC3339) + "\n")
-	if len(page.Tags) > 0 {
-		buf.WriteString("tags: [" + strings.Join(page.Tags, ", ") + "]\n")
+	buf.WriteString("\nid: " + p.id.String() + "\n")
+	buf.WriteString("title: " + p.title + "\n")
+	buf.WriteString("created: " + p.created.Format(time.RFC3339) + "\n")
+	buf.WriteString("modified: " + p.modified.Format(time.RFC3339) + "\n")
+	if len(p.tags) > 0 {
+		buf.WriteString("tags: [" + strings.Join(p.tags, ", ") + "]\n")
 	}
 	buf.WriteString("---")
 	buf.WriteString("\n\n")
-	buf.WriteString(page.Content)
+	buf.WriteString(p.content)
 	return buf.Bytes()
 }

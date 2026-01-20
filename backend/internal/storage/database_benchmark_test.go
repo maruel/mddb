@@ -23,10 +23,10 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 
 	orgID := testID(0) // zero org for tests
 	dbID := jsonldb.NewID()
-	db := &entity.Database{
+	node := &entity.Node{
 		ID:       dbID,
 		Title:    "Benchmark Database",
-		Version:  "1.0",
+		Type:     entity.NodeTypeDatabase,
 		Created:  time.Now(),
 		Modified: time.Now(),
 		Properties: []entity.Property{
@@ -35,7 +35,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		},
 	}
 
-	if err := fs.WriteDatabase(orgID, db); err != nil {
+	if err := fs.WriteDatabase(orgID, node); err != nil {
 		b.Fatal(err)
 	}
 
@@ -63,8 +63,8 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a database with 1000 records
 		readDBID := jsonldb.NewID()
-		readDB := &entity.Database{ID: readDBID, Title: "Read Bench", Version: "1.0", Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteDatabase(orgID, readDB); err != nil {
+		readNode := &entity.Node{ID: readDBID, Title: "Read Bench", Type: entity.NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
+		if err := fs.WriteDatabase(orgID, readNode); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
@@ -94,8 +94,8 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := testID(100)
-		readDB := &entity.Database{ID: readDBID, Title: "Read Bench Page", Version: "1.0", Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteDatabase(orgID, readDB); err != nil {
+		readNode := &entity.Node{ID: readDBID, Title: "Read Bench Page", Type: entity.NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
+		if err := fs.WriteDatabase(orgID, readNode); err != nil {
 			b.Fatal(err)
 		}
 		// Write 10,000 records

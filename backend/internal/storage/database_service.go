@@ -27,16 +27,16 @@ func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cac
 	}
 }
 
-// GetDatabase retrieves a database by ID.
-func (s *DatabaseService) GetDatabase(ctx context.Context, orgID, id jsonldb.ID) (*entity.Database, error) {
+// GetDatabase retrieves a database by ID and returns it as a Node.
+func (s *DatabaseService) GetDatabase(ctx context.Context, orgID, id jsonldb.ID) (*entity.Node, error) {
 	if id.IsZero() {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
 	return s.fileStore.ReadDatabase(orgID, id)
 }
 
-// CreateDatabase creates a new database with a generated numeric ID.
-func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, title string, columns []entity.Property) (*entity.Database, error) {
+// CreateDatabase creates a new database with a generated numeric ID and returns it as a Node.
+func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, title string, columns []entity.Property) (*entity.Node, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
@@ -57,16 +57,16 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 
 	id := jsonldb.NewID()
 	now := time.Now()
-	db := &entity.Database{
+	node := &entity.Node{
 		ID:         id,
 		Title:      title,
 		Properties: columns,
 		Created:    now,
 		Modified:   now,
-		Version:    "1.0",
+		Type:       entity.NodeTypeDatabase,
 	}
 
-	if err := s.fileStore.WriteDatabase(orgID, db); err != nil {
+	if err := s.fileStore.WriteDatabase(orgID, node); err != nil {
 		return nil, err
 	}
 
@@ -79,11 +79,11 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 		}
 	}
 
-	return db, nil
+	return node, nil
 }
 
-// UpdateDatabase updates an existing database's schema.
-func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.ID, title string, columns []entity.Property) (*entity.Database, error) {
+// UpdateDatabase updates an existing database's schema and returns it as a Node.
+func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.ID, title string, columns []entity.Property) (*entity.Node, error) {
 	if id.IsZero() {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -94,16 +94,16 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.
 		return nil, fmt.Errorf("at least one column is required")
 	}
 
-	db, err := s.fileStore.ReadDatabase(orgID, id)
+	node, err := s.fileStore.ReadDatabase(orgID, id)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Title = title
-	db.Properties = columns
-	db.Modified = time.Now()
+	node.Title = title
+	node.Properties = columns
+	node.Modified = time.Now()
 
-	if err := s.fileStore.WriteDatabase(orgID, db); err != nil {
+	if err := s.fileStore.WriteDatabase(orgID, node); err != nil {
 		return nil, err
 	}
 
@@ -116,7 +116,7 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.
 		}
 	}
 
-	return db, nil
+	return node, nil
 }
 
 // DeleteDatabase deletes a database and all its records.
@@ -141,8 +141,8 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.
 	return nil
 }
 
-// ListDatabases returns all databases.
-func (s *DatabaseService) ListDatabases(ctx context.Context, orgID jsonldb.ID) ([]*entity.Database, error) {
+// ListDatabases returns all databases as Nodes.
+func (s *DatabaseService) ListDatabases(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
 	return s.fileStore.ListDatabases(orgID)
 }
 
@@ -154,13 +154,13 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID js
 	}
 
 	// Read database to get columns for type coercion
-	db, err := s.fileStore.ReadDatabase(orgID, databaseID)
+	node, err := s.fileStore.ReadDatabase(orgID, databaseID)
 	if err != nil {
 		return nil, fmt.Errorf("database not found")
 	}
 
 	// Coerce data types based on property schema
-	coercedData := coerceRecordData(data, db.Properties)
+	coercedData := coerceRecordData(data, node.Properties)
 
 	// Generate record ID
 	id := jsonldb.NewID()
@@ -259,7 +259,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, r
 	}
 
 	// Read database to get columns for type coercion
-	db, err := s.fileStore.ReadDatabase(orgID, databaseID)
+	node, err := s.fileStore.ReadDatabase(orgID, databaseID)
 	if err != nil {
 		return nil, fmt.Errorf("database not found")
 	}
@@ -271,7 +271,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, r
 	}
 
 	// Coerce data types based on property schema
-	coercedData := coerceRecordData(data, db.Properties)
+	coercedData := coerceRecordData(data, node.Properties)
 
 	record := &entity.DataRecord{
 		ID:       recordID,

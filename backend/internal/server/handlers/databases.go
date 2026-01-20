@@ -26,18 +26,18 @@ func (h *DatabaseHandler) ListDatabases(ctx context.Context, req dto.ListDatabas
 	if err != nil {
 		return nil, dto.BadRequest("invalid_org_id")
 	}
-	databases, err := h.databaseService.ListDatabases(ctx, orgID)
+	nodes, err := h.databaseService.ListDatabases(ctx, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list databases", err)
 	}
 
-	dbList := make([]any, len(databases))
-	for i, db := range databases {
+	dbList := make([]any, len(nodes))
+	for i, n := range nodes {
 		dbList[i] = map[string]any{
-			"id":       db.ID,
-			"title":    db.Title,
-			"created":  db.Created,
-			"modified": db.Modified,
+			"id":       n.ID.String(),
+			"title":    n.Title,
+			"created":  n.Created,
+			"modified": n.Modified,
 		}
 	}
 
@@ -54,17 +54,17 @@ func (h *DatabaseHandler) GetDatabase(ctx context.Context, req dto.GetDatabaseRe
 	if err != nil {
 		return nil, dto.BadRequest("invalid_database_id")
 	}
-	db, err := h.databaseService.GetDatabase(ctx, orgID, id)
+	node, err := h.databaseService.GetDatabase(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
 
 	return &dto.GetDatabaseResponse{
-		ID:         db.ID.String(),
-		Title:      db.Title,
-		Properties: propertiesToDTO(db.Properties),
-		Created:    db.Created.Format("2006-01-02T15:04:05Z07:00"),
-		Modified:   db.Modified.Format("2006-01-02T15:04:05Z07:00"),
+		ID:         node.ID.String(),
+		Title:      node.Title,
+		Properties: propertiesToDTO(node.Properties),
+		Created:    node.Created.Format("2006-01-02T15:04:05Z07:00"),
+		Modified:   node.Modified.Format("2006-01-02T15:04:05Z07:00"),
 	}, nil
 }
 
@@ -78,12 +78,12 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context, req dto.CreateData
 	if err != nil {
 		return nil, dto.BadRequest("invalid_org_id")
 	}
-	db, err := h.databaseService.CreateDatabase(ctx, orgID, req.Title, propertiesToEntity(req.Properties))
+	node, err := h.databaseService.CreateDatabase(ctx, orgID, req.Title, propertiesToEntity(req.Properties))
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create database", err)
 	}
 
-	return &dto.CreateDatabaseResponse{ID: db.ID.String()}, nil
+	return &dto.CreateDatabaseResponse{ID: node.ID.String()}, nil
 }
 
 // UpdateDatabase updates a database schema.
@@ -96,12 +96,12 @@ func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, req dto.UpdateData
 	if err != nil {
 		return nil, dto.BadRequest("invalid_database_id")
 	}
-	db, err := h.databaseService.UpdateDatabase(ctx, orgID, id, req.Title, propertiesToEntity(req.Properties))
+	node, err := h.databaseService.UpdateDatabase(ctx, orgID, id, req.Title, propertiesToEntity(req.Properties))
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
 
-	return &dto.UpdateDatabaseResponse{ID: db.ID.String()}, nil
+	return &dto.UpdateDatabaseResponse{ID: node.ID.String()}, nil
 }
 
 // DeleteDatabase deletes a database.

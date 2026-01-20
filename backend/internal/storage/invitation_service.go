@@ -9,6 +9,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/utils"
 )
 
 // InvitationService handles organization invitations.
@@ -57,7 +58,7 @@ func (s *InvitationService) CreateInvitation(email string, orgID jsonldb.ID, rol
 		return nil, fmt.Errorf("organization id cannot be empty")
 	}
 
-	token, err := GenerateToken(32)
+	token, err := utils.GenerateToken(32)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}

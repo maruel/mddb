@@ -1,4 +1,5 @@
-package storage
+// Package utils provides shared utility functions across the application.
+package utils
 
 import (
 	"crypto/rand"

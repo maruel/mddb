@@ -31,18 +31,18 @@ func (h *PageHandler) ListPages(ctx context.Context, req dto.ListPagesRequest) (
 	if err != nil {
 		return nil, dto.BadRequest("invalid_org_id")
 	}
-	pages, err := h.pageService.ListPages(ctx, orgID)
+	nodes, err := h.pageService.ListPages(ctx, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list pages", err)
 	}
 
-	pageList := make([]any, len(pages))
-	for i, p := range pages {
+	pageList := make([]any, len(nodes))
+	for i, n := range nodes {
 		pageList[i] = map[string]any{
-			"id":       p.ID.String(),
-			"title":    p.Title,
-			"created":  p.Created,
-			"modified": p.Modified,
+			"id":       n.ID.String(),
+			"title":    n.Title,
+			"created":  n.Created,
+			"modified": n.Modified,
 		}
 	}
 
@@ -59,15 +59,15 @@ func (h *PageHandler) GetPage(ctx context.Context, req dto.GetPageRequest) (*dto
 	if err != nil {
 		return nil, dto.BadRequest("invalid_page_id")
 	}
-	page, err := h.pageService.GetPage(ctx, orgID, id)
+	node, err := h.pageService.GetPage(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
 
 	return &dto.GetPageResponse{
-		ID:      page.ID.String(),
-		Title:   page.Title,
-		Content: page.Content,
+		ID:      node.ID.String(),
+		Title:   node.Title,
+		Content: node.Content,
 	}, nil
 }
 
@@ -81,12 +81,12 @@ func (h *PageHandler) CreatePage(ctx context.Context, req dto.CreatePageRequest)
 	if err != nil {
 		return nil, dto.BadRequest("invalid_org_id")
 	}
-	page, err := h.pageService.CreatePage(ctx, orgID, req.Title, req.Content)
+	node, err := h.pageService.CreatePage(ctx, orgID, req.Title, req.Content)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
 
-	return &dto.CreatePageResponse{ID: page.ID.String()}, nil
+	return &dto.CreatePageResponse{ID: node.ID.String()}, nil
 }
 
 // UpdatePage updates an existing page
@@ -99,12 +99,12 @@ func (h *PageHandler) UpdatePage(ctx context.Context, req dto.UpdatePageRequest)
 	if err != nil {
 		return nil, dto.BadRequest("invalid_page_id")
 	}
-	page, err := h.pageService.UpdatePage(ctx, orgID, id, req.Title, req.Content)
+	node, err := h.pageService.UpdatePage(ctx, orgID, id, req.Title, req.Content)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
 
-	return &dto.UpdatePageResponse{ID: page.ID.String()}, nil
+	return &dto.UpdatePageResponse{ID: node.ID.String()}, nil
 }
 
 // DeletePage deletes a page

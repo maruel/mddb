@@ -27,27 +27,17 @@ func NewPageService(fileStore *FileStore, gitService *GitService, cache *Cache, 
 	}
 }
 
-// GetPage retrieves a page by ID.
-func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*entity.Page, error) {
+// GetPage retrieves a page by ID and returns it as a Node.
+func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*entity.Node, error) {
 	if id.IsZero() {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
 
-	if page, ok := s.cache.GetPage(id); ok {
-		return page, nil
-	}
-
-	page, err := s.fileStore.ReadPage(orgID, id)
-	if err != nil {
-		return nil, err
-	}
-
-	s.cache.SetPage(page)
-	return page, nil
+	return s.fileStore.ReadPage(orgID, id)
 }
 
-// CreatePage creates a new page with a generated numeric ID.
-func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, content string) (*entity.Page, error) {
+// CreatePage creates a new page with a generated numeric ID and returns it as a Node.
+func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, content string) (*entity.Node, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
@@ -65,14 +55,13 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 
 	id := jsonldb.NewID()
 
-	page, err := s.fileStore.WritePage(orgID, id, title, content)
+	node, err := s.fileStore.WritePage(orgID, id, title, content)
 	if err != nil {
 		return nil, err
 	}
 
 	// Invalidate node tree cache
 	s.cache.InvalidateNodeTree()
-	s.cache.SetPage(page)
 
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "create", "page", id.String(), title); err != nil {
@@ -81,11 +70,11 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 		}
 	}
 
-	return page, nil
+	return node, nil
 }
 
-// UpdatePage updates an existing page.
-func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title, content string) (*entity.Page, error) {
+// UpdatePage updates an existing page and returns it as a Node.
+func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title, content string) (*entity.Node, error) {
 	if id.IsZero() {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
@@ -93,14 +82,13 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 		return nil, fmt.Errorf("title cannot be empty")
 	}
 
-	page, err := s.fileStore.UpdatePage(orgID, id, title, content)
+	node, err := s.fileStore.UpdatePage(orgID, id, title, content)
 	if err != nil {
 		return nil, err
 	}
 
-	// Update cache
-	s.cache.SetPage(page)
-	s.cache.InvalidateNodeTree() // Title might have changed
+	// Invalidate cache (title might have changed)
+	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "update", "page", id.String(), "Updated content"); err != nil {
@@ -108,7 +96,7 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 		}
 	}
 
-	return page, nil
+	return node, nil
 }
 
 // DeletePage deletes a page.
@@ -121,7 +109,6 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 	}
 
 	// Invalidate cache
-	s.cache.InvalidatePage(id)
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
@@ -133,29 +120,29 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 	return nil
 }
 
-// ListPages returns all pages.
-func (s *PageService) ListPages(ctx context.Context, orgID jsonldb.ID) ([]*entity.Page, error) {
+// ListPages returns all pages as Nodes.
+func (s *PageService) ListPages(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
 	return s.fileStore.ListPages(orgID)
 }
 
 // SearchPages performs a simple text search across pages.
-func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query string) ([]*entity.Page, error) {
+func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query string) ([]*entity.Node, error) {
 	if query == "" {
-		return []*entity.Page{}, nil
+		return []*entity.Node{}, nil
 	}
 
-	pages, err := s.fileStore.ListPages(orgID)
+	nodes, err := s.fileStore.ListPages(orgID)
 	if err != nil {
 		return nil, err
 	}
 
 	queryLower := strings.ToLower(query)
-	var results []*entity.Page
+	var results []*entity.Node
 
-	for _, page := range pages {
-		if strings.Contains(strings.ToLower(page.Title), queryLower) ||
-			strings.Contains(strings.ToLower(page.Content), queryLower) {
-			results = append(results, page)
+	for _, node := range nodes {
+		if strings.Contains(strings.ToLower(node.Title), queryLower) ||
+			strings.Contains(strings.ToLower(node.Content), queryLower) {
+			results = append(results, node)
 		}
 	}
 

@@ -33,8 +33,7 @@ func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*entit
 		return nil, fmt.Errorf("node id cannot be empty")
 	}
 
-	// For GetNode, we don't currently cache individual nodes but we could
-	// If we have a cached node tree, we could search in it
+	// Check cached node tree first
 	if tree := s.cache.GetNodeTree(); tree != nil {
 		if node := findNodeInTree(tree, id); node != nil {
 			return node, nil
@@ -61,7 +60,6 @@ func (s *NodeService) ListNodes(ctx context.Context, orgID jsonldb.ID) ([]*entit
 
 // CreateNode creates a new node (can be document, database, or hybrid)
 func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType entity.NodeType, parentID jsonldb.ID) (*entity.Node, error) {
-
 	// Check Quota
 	if s.orgService != nil {
 		org, err := s.orgService.GetOrganization(orgID)
@@ -85,11 +83,6 @@ func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title st
 		Modified: now,
 	}
 
-	// Create physical directory (FileStore handles this through WritePage/WriteDatabase)
-	// But we need to support ParentID structure.
-	// Currently FileStore uses flat directory for IDs.
-	// If ParentID is used, we might want to store it in metadata.
-
 	if nodeType == entity.NodeTypeDocument || nodeType == entity.NodeTypeHybrid {
 		_, err := s.fileStore.WritePage(orgID, id, title, "")
 		if err != nil {
@@ -98,13 +91,14 @@ func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title st
 	}
 
 	if nodeType == entity.NodeTypeDatabase || nodeType == entity.NodeTypeHybrid {
-		db := &entity.Database{
+		dbNode := &entity.Node{
 			ID:       id,
 			Title:    title,
 			Created:  now,
 			Modified: now,
+			Type:     entity.NodeTypeDatabase,
 		}
-		err := s.fileStore.WriteDatabase(orgID, db)
+		err := s.fileStore.WriteDatabase(orgID, dbNode)
 		if err != nil {
 			return nil, err
 		}

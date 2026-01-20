@@ -9,6 +9,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/utils"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/microsoft"
@@ -70,7 +71,7 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// In a real app, use a secure state from session/cookie
-	state, _ := storage.GenerateToken(16)
+	state, _ := utils.GenerateToken(16)
 	url := config.AuthCodeURL(state)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
@@ -153,7 +154,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			role := entity.UserRoleAdmin
 
 			// Password is not used for OAuth users
-			password, _ := storage.GenerateToken(32)
+			password, _ := utils.GenerateToken(32)
 			user, err = h.userService.CreateUser(userInfo.Email, password, userInfo.Name, role)
 			if err != nil {
 				writeErrorResponse(w, dto.Internal("user_creation"))
