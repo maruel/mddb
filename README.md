@@ -2,6 +2,8 @@
 
 A Notion-like document and database system for managing your information. Store everything locally as files, no external services required.
 
+[![codecov](https://codecov.io/gh/maruel/mddb/graph/badge.svg?token=Q4SYDP0B00)](https://codecov.io/gh/maruel/mddb)
+
 ## What is mddb?
 
 mddb lets you:
