@@ -2,8 +2,8 @@
 
 ## Status
 
-**Project State: Production Prototype**
-Most core functional requirements for a local-first markdown and database system are met.
+**Project State: Production Prototype (Maturing)**
+Most core functional requirements for a local-first markdown and database system are met. The architecture follows clean 3-layer separation (API/handlers → business logic/services → persistence/filestore+jsonldb) with no layering violations.
 
 ## Functional Requirements
 
@@ -37,7 +37,7 @@ Most core functional requirements for a local-first markdown and database system
         - BLOB: No coercion; stored as-is.
     - **NULL Handling**: Absent JSON keys represent NULL; use `omitzero`/`omitempty` struct tags.
     - **Future**: Enables seamless migration to SQLite backend.
-- [ ] **Advanced Query**: Complex filtering (nested AND/OR logic) and multi-column persistent sorting.
+- [/] **Advanced Query**: Complex filtering (nested AND/OR logic) and multi-column persistent sorting. Pagination with `offset`/`limit` implemented; complex filtering pending.
 - [ ] **Property Editing**: Dynamic UI for schema modifications (adding/deleting columns, renaming, type conversion).
 - [ ] **Relations**: Support for "Relation" column type to link records between different databases (Foreign Keys).
 - [ ] **Rollups**: Aggregate data from linked records (e.g., sum of related "Cost" fields, count of linked tasks).
@@ -53,7 +53,7 @@ Most core functional requirements for a local-first markdown and database system
 
 - [ ] **Unified Sidebar**: Single hierarchical tree view for all content (pages and databases).
 - [/] **Seamless Databases**: Databases are integrated into pages; every database is a page, and every page can contain database views (supported via `NodeTypeHybrid`).
-- [ ] **Database Views**: Flexible views (Table, and future Board/Gallery) that can be embedded or viewed as full pages.
+- [x] **Database Views**: Flexible views (Table, Board, Gallery, Grid) that can be embedded or viewed as full pages.
 - [ ] **View Customization**: Toggleable columns, adjustable column widths, and drag-and-drop reordering.
 - [ ] **Interaction Polish**: Keyboard shortcuts for navigation, spreadsheet-like cell selection, and context menus for rows/columns.
 - [ ] **Undo/Redo**: Support for undoing and redoing actions (document edits, record changes).
@@ -68,7 +68,8 @@ Most core functional requirements for a local-first markdown and database system
 ### 5. API & Integration
 
 - [x] **REST API**: Comprehensive API for all operations (Pages, DBs, Records, Assets).
-- [x] **Error Handling**: Structured error codes and detailed responses (Centralized `ErrorCode` union).
+- [x] **Error Handling**: Structured error codes and detailed responses (Centralized `ErrorCode` union with HTTP status mapping).
+- [x] **JSON Schema**: Schema generation for API types via `invopop/jsonschema` library.
 
 
 ### 6. Multi-User & Organization
@@ -81,11 +82,12 @@ Most core functional requirements for a local-first markdown and database system
 - [x] **Invitations**: Invite users to organizations via email; support assigning roles.
 - [x] **Tiered Settings**: Support for Global User settings, Membership-specific settings (per-org), and Organization-wide settings.
 - [ ] **Quotas**: Resource limits per organization (storage space, number of pages, max asset size).
-- [ ] **Org-Controlled Git**: Allow organizations to configure their own Git remote for data persistence.
+- [/] **Org-Controlled Git**: Allow organizations to configure their own Git remote for data persistence.
     - **Custom Remotes**: Support for GitHub (via App/Personal Access Token), GitLab, and generic SSH/HTTPS remotes.
     - **Private Repositories**: Secure handling of credentials for pushing to private organization repositories.
     - **Automated Pushing**: Configurable "push on commit" or scheduled sync to the remote repository.
-- [ ] **Onboarding**: Streamlined setup process for new organizations.
+    - **Status**: API endpoints implemented (`GET/POST/DELETE /api/{orgID}/settings/git/remotes`, `POST .../push`); UI integration pending.
+- [x] **Onboarding**: Streamlined setup process for new organizations.
     - **First-Login Onboarding**: Optional guided setup when a user first accesses their default organization.
     - **Configuration Questions**: Ask for organization name, initial members, and optional Git remote configuration.
     - **CLI Onboarding**: Simple configuration onboarding in the CLI, storing settings in an unversioned `.env` file in `data/`.
@@ -93,7 +95,7 @@ Most core functional requirements for a local-first markdown and database system
 
 ### 7. Globalization & Platform
 - [ ] **i18n & l10n**: Frontend supports multiple languages and regional formatting; backend remains language and locale agnostic (returns error codes, not localized messages).
-- [ ] **PWA**: Progressive Web App support for installability and mobile-like experience.
+- [/] **PWA**: Progressive Web App support for installability and mobile-like experience. Install banner implemented; full offline support pending.
 - [ ] **Offline Support**: Ability to work offline with robust data reconciliation upon reconnection.
 
 ### 8. Agent Readiness
@@ -115,13 +117,15 @@ Most core functional requirements for a local-first markdown and database system
 
 ### Deployment & Architecture
 - [x] **Self-Contained**: Single executable binary with embedded frontend (`go:embed`).
-- [ ] **CLI Versioning**: Support `mddb -version` to output build metadata (Git commit, build time) leveraging Go's `debug.ReadBuildInfo`.
+- [ ] **CLI Versioning**: Support `-version` flag to output build metadata (Git commit, build time) leveraging Go's `debug.ReadBuildInfo`.
 - [ ] **CI/CD Workflows**: Automated GitHub Actions for CI (test/lint) and Release (cross-platform builds).
 - [x] **Local-First**: Filesystem-based storage with no external database dependencies.
 - [x] **Simplified Storage**: Unified JSONLDB format with versioning and column definitions in the first row, removing the need for separate `metadata.json`.
 - [x] **API Contract Centralization**: All Request, Response, and DTO structures are centralized in the `internal/models` package as the single source of truth for the frontend.
 - [x] **Encapsulation**: Handlers and storage implementation details are isolated from the API contract.
 - [x] **Cross-Platform**: Compatible with Linux, macOS, and Windows.
+- [x] **Type Generation**: Automatic TypeScript type generation from Go models via `tygo`, ensuring API contract synchronization between backend and frontend.
+- [x] **Concurrent-Safe Storage**: JSONLDB uses RWMutex for concurrent reads, in-memory cache with cloning for mutation safety, and O(1) ID lookups.
 
 ### Data & Security
 - [x] **Versioning**: Automatic Git commits in the `data/` directory for every change.
@@ -130,7 +134,10 @@ Most core functional requirements for a local-first markdown and database system
 - [ ] **Sanitization**: Improved markdown sanitization (currently permits HTML).
 
 ### Storage Model
-- [ ] **Base64 IDs**: Directory-based organization using monotonically increasing Base64 URL-encoded characters (without padding) for stable paths (replacing decimal 1, 2, 3...).
-- [ ] **Reserved Separators**: Use `+` instead of `-` as a separator where applicable, as `-` is part of the Base64 URL alphabet.
+- [x] **Sortable IDs**: LUCI-inspired 64-bit IDs with time-sortable, collision-free properties.
+    - **Structure**: 48-bit timestamp (10µs intervals) + 11-bit slice counter + 4-bit version.
+    - **Encoding**: Custom sortable Base64 alphabet: `-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz`.
+    - **Properties**: Lexicographically sortable, monotonically increasing, ~89-year range from epoch (2026-01-01).
+- [x] **Reserved Separators**: Uses `-` as first character of Base64 alphabet; separators handled by directory structure.
 - [x] **Human Readable**: Transparent storage (Markdown, JSON, JSONL).
 - [x] **Portable**: Zero-config "copy and paste" portability.
