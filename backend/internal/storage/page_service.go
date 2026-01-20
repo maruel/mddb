@@ -28,17 +28,11 @@ func NewPageService(fileStore *FileStore, gitService *GitService, cache *Cache, 
 }
 
 // GetPage retrieves a page by ID.
-func (s *PageService) GetPage(ctx context.Context, idStr string) (*entity.Page, error) {
-	if idStr == "" {
+func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*entity.Page, error) {
+	if id.IsZero() {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
 
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid page id: %w", err)
-	}
-
-	orgID := entity.GetOrgID(ctx)
 	if page, ok := s.cache.GetPage(id); ok {
 		return page, nil
 	}
@@ -53,12 +47,10 @@ func (s *PageService) GetPage(ctx context.Context, idStr string) (*entity.Page, 
 }
 
 // CreatePage creates a new page with a generated numeric ID.
-func (s *PageService) CreatePage(ctx context.Context, title, content string) (*entity.Page, error) {
+func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, content string) (*entity.Page, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
-
-	orgID := entity.GetOrgID(ctx)
 
 	// Check Quota
 	if s.orgService != nil {
@@ -83,7 +75,7 @@ func (s *PageService) CreatePage(ctx context.Context, title, content string) (*e
 	s.cache.SetPage(page)
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "create", "page", id.String(), title); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "create", "page", id.String(), title); err != nil {
 			// Log error but don't fail the operation
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
@@ -93,20 +85,14 @@ func (s *PageService) CreatePage(ctx context.Context, title, content string) (*e
 }
 
 // UpdatePage updates an existing page.
-func (s *PageService) UpdatePage(ctx context.Context, idStr, title, content string) (*entity.Page, error) {
-	if idStr == "" {
+func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title, content string) (*entity.Page, error) {
+	if id.IsZero() {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
 
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid page id: %w", err)
-	}
-
-	orgID := entity.GetOrgID(ctx)
 	page, err := s.fileStore.UpdatePage(orgID, id, title, content)
 	if err != nil {
 		return nil, err
@@ -117,7 +103,7 @@ func (s *PageService) UpdatePage(ctx context.Context, idStr, title, content stri
 	s.cache.InvalidateNodeTree() // Title might have changed
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "update", "page", idStr, "Updated content"); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "update", "page", id.String(), "Updated content"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -126,15 +112,10 @@ func (s *PageService) UpdatePage(ctx context.Context, idStr, title, content stri
 }
 
 // DeletePage deletes a page.
-func (s *PageService) DeletePage(ctx context.Context, idStr string) error {
-	if idStr == "" {
+func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) error {
+	if id.IsZero() {
 		return fmt.Errorf("page id cannot be empty")
 	}
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return fmt.Errorf("invalid page id: %w", err)
-	}
-	orgID := entity.GetOrgID(ctx)
 	if err := s.fileStore.DeletePage(orgID, id); err != nil {
 		return err
 	}
@@ -144,7 +125,7 @@ func (s *PageService) DeletePage(ctx context.Context, idStr string) error {
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "delete", "page", idStr, "Deleted page"); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "delete", "page", id.String(), "Deleted page"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -153,18 +134,16 @@ func (s *PageService) DeletePage(ctx context.Context, idStr string) error {
 }
 
 // ListPages returns all pages.
-func (s *PageService) ListPages(ctx context.Context) ([]*entity.Page, error) {
-	orgID := entity.GetOrgID(ctx)
+func (s *PageService) ListPages(ctx context.Context, orgID jsonldb.ID) ([]*entity.Page, error) {
 	return s.fileStore.ListPages(orgID)
 }
 
 // SearchPages performs a simple text search across pages.
-func (s *PageService) SearchPages(ctx context.Context, query string) ([]*entity.Page, error) {
+func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query string) ([]*entity.Page, error) {
 	if query == "" {
 		return []*entity.Page{}, nil
 	}
 
-	orgID := entity.GetOrgID(ctx)
 	pages, err := s.fileStore.ListPages(orgID)
 	if err != nil {
 		return nil, err
@@ -184,27 +163,26 @@ func (s *PageService) SearchPages(ctx context.Context, query string) ([]*entity.
 }
 
 // GetPageHistory returns the commit history for a page.
-func (s *PageService) GetPageHistory(ctx context.Context, id string) ([]*entity.Commit, error) {
+func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) ([]*entity.Commit, error) {
 	if s.gitService == nil {
 		return []*entity.Commit{}, nil
 	}
-	return s.gitService.GetHistory(ctx, "page", id)
+	return s.gitService.GetHistory(ctx, orgID, "page", id.String())
 }
 
 // GetPageVersion returns the content of a page at a specific commit.
-func (s *PageService) GetPageVersion(ctx context.Context, id, commitHash string) (string, error) {
+func (s *PageService) GetPageVersion(ctx context.Context, orgID, id jsonldb.ID, commitHash string) (string, error) {
 	if s.gitService == nil {
 		return "", fmt.Errorf("git service not available")
 	}
 
-	orgID := entity.GetOrgID(ctx)
 	// New storage path: {orgID}/pages/{id}/index.md
-	path := fmt.Sprintf("%s/pages/%s/index.md", orgID.String(), id)
+	path := fmt.Sprintf("%s/pages/%s/index.md", orgID.String(), id.String())
 	if orgID.IsZero() {
-		path = fmt.Sprintf("pages/%s/index.md", id)
+		path = fmt.Sprintf("pages/%s/index.md", id.String())
 	}
 
-	contentBytes, err := s.gitService.GetFileAtCommit(ctx, commitHash, path)
+	contentBytes, err := s.gitService.GetFileAtCommit(ctx, orgID, commitHash, path)
 	if err != nil {
 		return "", err
 	}

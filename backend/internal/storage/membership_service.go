@@ -46,20 +46,18 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 }
 
 // CreateMembership adds a user to an organization.
-func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role entity.UserRole) (*entity.Membership, error) {
-	userID, err := jsonldb.DecodeID(userIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid user id: %w", err)
+func (s *MembershipService) CreateMembership(userID, orgID jsonldb.ID, role entity.UserRole) (*entity.Membership, error) {
+	if userID.IsZero() {
+		return nil, fmt.Errorf("user id cannot be empty")
 	}
-	orgID, err := jsonldb.DecodeID(orgIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid organization id: %w", err)
+	if orgID.IsZero() {
+		return nil, fmt.Errorf("organization id cannot be empty")
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	key := userIDStr + "_" + orgIDStr
+	key := userID.String() + "_" + orgID.String()
 	if _, ok := s.byID[key]; ok {
 		return nil, fmt.Errorf("membership already exists")
 	}
@@ -84,11 +82,11 @@ func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role en
 }
 
 // GetMembership retrieves a specific user-org relationship.
-func (s *MembershipService) GetMembership(userIDStr, orgIDStr string) (*entity.Membership, error) {
+func (s *MembershipService) GetMembership(userID, orgID jsonldb.ID) (*entity.Membership, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	key := userIDStr + "_" + orgIDStr
+	key := userID.String() + "_" + orgID.String()
 	m, ok := s.byID[key]
 	if !ok {
 		return nil, fmt.Errorf("membership not found")
@@ -98,10 +96,9 @@ func (s *MembershipService) GetMembership(userIDStr, orgIDStr string) (*entity.M
 }
 
 // ListByUser returns all organizations a user belongs to.
-func (s *MembershipService) ListByUser(userIDStr string) ([]entity.Membership, error) {
-	userID, err := jsonldb.DecodeID(userIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid user id: %w", err)
+func (s *MembershipService) ListByUser(userID jsonldb.ID) ([]entity.Membership, error) {
+	if userID.IsZero() {
+		return nil, fmt.Errorf("user id cannot be empty")
 	}
 
 	s.mu.RLock()
@@ -117,10 +114,9 @@ func (s *MembershipService) ListByUser(userIDStr string) ([]entity.Membership, e
 }
 
 // ListByOrganization returns all users in an organization.
-func (s *MembershipService) ListByOrganization(orgIDStr string) ([]entity.Membership, error) {
-	orgID, err := jsonldb.DecodeID(orgIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid organization id: %w", err)
+func (s *MembershipService) ListByOrganization(orgID jsonldb.ID) ([]entity.Membership, error) {
+	if orgID.IsZero() {
+		return nil, fmt.Errorf("organization id cannot be empty")
 	}
 
 	s.mu.RLock()
@@ -136,11 +132,11 @@ func (s *MembershipService) ListByOrganization(orgIDStr string) ([]entity.Member
 }
 
 // UpdateRole updates a user's role in an organization.
-func (s *MembershipService) UpdateRole(userIDStr, orgIDStr string, role entity.UserRole) error {
+func (s *MembershipService) UpdateRole(userID, orgID jsonldb.ID, role entity.UserRole) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	key := userIDStr + "_" + orgIDStr
+	key := userID.String() + "_" + orgID.String()
 	m, ok := s.byID[key]
 	if !ok {
 		return fmt.Errorf("membership not found")
@@ -151,11 +147,11 @@ func (s *MembershipService) UpdateRole(userIDStr, orgIDStr string, role entity.U
 }
 
 // UpdateSettings updates user preferences within a specific organization.
-func (s *MembershipService) UpdateSettings(userIDStr, orgIDStr string, settings entity.MembershipSettings) error {
+func (s *MembershipService) UpdateSettings(userID, orgID jsonldb.ID, settings entity.MembershipSettings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	key := userIDStr + "_" + orgIDStr
+	key := userID.String() + "_" + orgID.String()
 	m, ok := s.byID[key]
 	if !ok {
 		return fmt.Errorf("membership not found")
@@ -166,11 +162,11 @@ func (s *MembershipService) UpdateSettings(userIDStr, orgIDStr string, settings 
 }
 
 // DeleteMembership removes a user from an organization.
-func (s *MembershipService) DeleteMembership(userIDStr, orgIDStr string) error {
+func (s *MembershipService) DeleteMembership(userID, orgID jsonldb.ID) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	key := userIDStr + "_" + orgIDStr
+	key := userID.String() + "_" + orgID.String()
 	if _, ok := s.byID[key]; !ok {
 		return fmt.Errorf("membership not found")
 	}

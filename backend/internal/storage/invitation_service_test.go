@@ -19,7 +19,7 @@ func TestInvitationService(t *testing.T) {
 	role := entity.UserRoleEditor
 
 	// Test CreateInvitation
-	inv, err := service.CreateInvitation(email, orgID.String(), role)
+	inv, err := service.CreateInvitation(email, orgID, role)
 	if err != nil {
 		t.Fatalf("Failed to create invitation: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestInvitationService(t *testing.T) {
 	}
 
 	// Test ListByOrganization
-	list, err := service.ListByOrganization(orgID.String())
+	list, err := service.ListByOrganization(orgID)
 	if err != nil {
 		t.Fatalf("Failed to list invitations: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestInvitationService(t *testing.T) {
 	}
 
 	// Test DeleteInvitation
-	err = service.DeleteInvitation(inv.ID.String())
+	err = service.DeleteInvitation(inv.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete invitation: %v", err)
 	}

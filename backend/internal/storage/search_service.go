@@ -23,12 +23,10 @@ func NewSearchService(fileStore *FileStore) *SearchService {
 }
 
 // Search performs a full-text search across all nodes.
-func (s *SearchService) Search(ctx context.Context, opts entity.SearchOptions) ([]entity.SearchResult, error) {
+func (s *SearchService) Search(ctx context.Context, orgID jsonldb.ID, opts entity.SearchOptions) ([]entity.SearchResult, error) {
 	if opts.Query == "" {
 		return nil, nil
 	}
-
-	orgID := entity.GetOrgID(ctx)
 
 	if !opts.MatchTitle && !opts.MatchBody && !opts.MatchFields {
 		opts.MatchTitle = true

@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
 func TestAssetService_SaveAsset(t *testing.T) {
@@ -26,7 +28,7 @@ func TestAssetService_SaveAsset(t *testing.T) {
 
 	// Save an asset
 	testData := []byte("test image data")
-	asset, err := as.SaveAsset(newTestContext(t, orgID.String()), pageID.String(), "test.png", testData)
+	asset, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, pageID, "test.png", testData)
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
 	}
@@ -76,13 +78,13 @@ func TestAssetService_GetAsset(t *testing.T) {
 
 	as := NewAssetService(fs, nil, nil)
 	testData := []byte("test image data")
-	_, err = as.SaveAsset(newTestContext(t, orgID.String()), pageID.String(), "test.png", testData)
+	_, err = as.SaveAsset(newTestContext(t, orgID.String()), orgID, pageID, "test.png", testData)
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
 	}
 
 	// Retrieve asset
-	data, err := as.GetAsset(newTestContext(t, orgID.String()), pageID.String(), "test.png")
+	data, err := as.GetAsset(newTestContext(t, orgID.String()), orgID, pageID, "test.png")
 	if err != nil {
 		t.Fatalf("failed to get asset: %v", err)
 	}
@@ -108,7 +110,7 @@ func TestAssetService_DeleteAsset(t *testing.T) {
 	}
 
 	as := NewAssetService(fs, nil, nil)
-	_, err = as.SaveAsset(newTestContext(t, orgID.String()), pageID.String(), "test.png", []byte("test data"))
+	_, err = as.SaveAsset(newTestContext(t, orgID.String()), orgID, pageID, "test.png", []byte("test data"))
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
 	}
@@ -120,7 +122,7 @@ func TestAssetService_DeleteAsset(t *testing.T) {
 	}
 
 	// Delete asset
-	err = as.DeleteAsset(newTestContext(t, orgID.String()), pageID.String(), "test.png")
+	err = as.DeleteAsset(newTestContext(t, orgID.String()), orgID, pageID, "test.png")
 	if err != nil {
 		t.Fatalf("failed to delete asset: %v", err)
 	}
@@ -151,14 +153,14 @@ func TestAssetService_ListAssets(t *testing.T) {
 	// Save multiple assets
 	assets := []string{"image1.png", "image2.jpg", "document.pdf"}
 	for _, name := range assets {
-		_, err := as.SaveAsset(newTestContext(t, orgID.String()), pageID.String(), name, []byte("test data"))
+		_, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, pageID, name, []byte("test data"))
 		if err != nil {
 			t.Fatalf("failed to save asset %s: %v", name, err)
 		}
 	}
 
 	// List assets
-	listed, err := as.ListAssets(newTestContext(t, orgID.String()), pageID.String())
+	listed, err := as.ListAssets(newTestContext(t, orgID.String()), orgID, pageID)
 	if err != nil {
 		t.Fatalf("failed to list assets: %v", err)
 	}
@@ -188,33 +190,34 @@ func TestAssetService_Validation(t *testing.T) {
 	}
 	as := NewAssetService(fs, nil, nil)
 	orgID := testID(100)
+	var zeroID jsonldb.ID
 	t.Run("empty page id on save", func(t *testing.T) {
-		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), "", "test.png", []byte("data")); err == nil {
+		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, zeroID, "test.png", []byte("data")); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty file name on save", func(t *testing.T) {
-		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), testID(1).String(), "", []byte("data")); err == nil {
+		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, testID(1), "", []byte("data")); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty data on save", func(t *testing.T) {
-		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), testID(1).String(), "test.png", []byte("")); err == nil {
+		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, testID(1), "test.png", []byte("")); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty page id on get", func(t *testing.T) {
-		if _, err := as.GetAsset(newTestContext(t, orgID.String()), "", "test.png"); err == nil {
+		if _, err := as.GetAsset(newTestContext(t, orgID.String()), orgID, zeroID, "test.png"); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty asset name on get", func(t *testing.T) {
-		if _, err := as.GetAsset(newTestContext(t, orgID.String()), testID(1).String(), ""); err == nil {
+		if _, err := as.GetAsset(newTestContext(t, orgID.String()), orgID, testID(1), ""); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty page id on list", func(t *testing.T) {
-		if _, err := as.ListAssets(newTestContext(t, orgID.String()), ""); err == nil {
+		if _, err := as.ListAssets(newTestContext(t, orgID.String()), orgID, zeroID); err == nil {
 			t.Error("expected error")
 		}
 	})

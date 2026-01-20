@@ -23,28 +23,28 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		membershipOrg  string
+		membershipOrg  jsonldb.ID
 		membershipRole entity.UserRole
 		requestOrgID   string
 		expectedStatus int
 	}{
 		{
 			name:           "Access own organization",
-			membershipOrg:  testID(1).String(),
+			membershipOrg:  testID(1),
 			membershipRole: entity.UserRoleViewer,
 			requestOrgID:   testID(1).String(),
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Access different organization",
-			membershipOrg:  testID(1).String(),
+			membershipOrg:  testID(1),
 			membershipRole: entity.UserRoleViewer,
 			requestOrgID:   testID(2).String(),
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Access with no org context in request",
-			membershipOrg:  testID(1).String(),
+			membershipOrg:  testID(1),
 			membershipRole: entity.UserRoleViewer,
 			requestOrgID:   "",
 			expectedStatus: http.StatusOK,
@@ -55,11 +55,11 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			userID := testID(100)
 			// Clear and setup membership for each test case
-			_ = memService.DeleteMembership(userID.String(), testID(1).String())
-			_ = memService.DeleteMembership(userID.String(), testID(2).String())
+			_ = memService.DeleteMembership(userID, testID(1))
+			_ = memService.DeleteMembership(userID, testID(2))
 
-			if tt.membershipOrg != "" {
-				_, _ = memService.CreateMembership(userID.String(), tt.membershipOrg, tt.membershipRole)
+			if !tt.membershipOrg.IsZero() {
+				_, _ = memService.CreateMembership(userID, tt.membershipOrg, tt.membershipRole)
 			}
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -135,8 +135,8 @@ func TestRolePermissions(t *testing.T) {
 			userID := testID(200)
 			orgID := testID(1)
 			// Clear and setup membership for each test case
-			_ = memService.DeleteMembership(userID.String(), orgID.String())
-			_, _ = memService.CreateMembership(userID.String(), orgID.String(), tt.userRole)
+			_ = memService.DeleteMembership(userID, orgID)
+			_, _ = memService.CreateMembership(userID, orgID, tt.userRole)
 
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)

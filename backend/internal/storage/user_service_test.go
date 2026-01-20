@@ -71,13 +71,13 @@ func TestUserService(t *testing.T) {
 
 	// Test UpdateUserRole
 	orgID := testID(100)
-	err = service.UpdateUserRole(user.ID.String(), orgID.String(), entity.UserRoleEditor)
+	err = service.UpdateUserRole(user.ID, orgID, entity.UserRoleEditor)
 	if err != nil {
 		t.Fatalf("Failed to update user role: %v", err)
 	}
 
 	// Check membership for role using GetMembershipsForUser
-	memberships, err := service.GetMembershipsForUser(user.ID.String())
+	memberships, err := service.GetMembershipsForUser(user.ID)
 	if err != nil {
 		t.Fatal(err)
 	}

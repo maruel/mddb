@@ -8,6 +8,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -26,7 +27,11 @@ func NewPageHandler(fileStore *storage.FileStore, gitService *storage.GitService
 
 // ListPages returns a list of all pages
 func (h *PageHandler) ListPages(ctx context.Context, req dto.ListPagesRequest) (*dto.ListPagesResponse, error) {
-	pages, err := h.pageService.ListPages(ctx)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	pages, err := h.pageService.ListPages(ctx, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list pages", err)
 	}
@@ -46,7 +51,15 @@ func (h *PageHandler) ListPages(ctx context.Context, req dto.ListPagesRequest) (
 
 // GetPage returns a specific page by ID
 func (h *PageHandler) GetPage(ctx context.Context, req dto.GetPageRequest) (*dto.GetPageResponse, error) {
-	page, err := h.pageService.GetPage(ctx, req.ID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	id, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_page_id")
+	}
+	page, err := h.pageService.GetPage(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -64,7 +77,11 @@ func (h *PageHandler) CreatePage(ctx context.Context, req dto.CreatePageRequest)
 		return nil, dto.MissingField("title")
 	}
 
-	page, err := h.pageService.CreatePage(ctx, req.Title, req.Content)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	page, err := h.pageService.CreatePage(ctx, orgID, req.Title, req.Content)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
@@ -74,7 +91,15 @@ func (h *PageHandler) CreatePage(ctx context.Context, req dto.CreatePageRequest)
 
 // UpdatePage updates an existing page
 func (h *PageHandler) UpdatePage(ctx context.Context, req dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
-	page, err := h.pageService.UpdatePage(ctx, req.ID, req.Title, req.Content)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	id, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_page_id")
+	}
+	page, err := h.pageService.UpdatePage(ctx, orgID, id, req.Title, req.Content)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -84,7 +109,15 @@ func (h *PageHandler) UpdatePage(ctx context.Context, req dto.UpdatePageRequest)
 
 // DeletePage deletes a page
 func (h *PageHandler) DeletePage(ctx context.Context, req dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
-	err := h.pageService.DeletePage(ctx, req.ID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	id, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_page_id")
+	}
+	err = h.pageService.DeletePage(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -94,7 +127,15 @@ func (h *PageHandler) DeletePage(ctx context.Context, req dto.DeletePageRequest)
 
 // GetPageHistory returns the history of a page
 func (h *PageHandler) GetPageHistory(ctx context.Context, req dto.GetPageHistoryRequest) (*dto.GetPageHistoryResponse, error) {
-	history, err := h.pageService.GetPageHistory(ctx, req.ID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	id, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_page_id")
+	}
+	history, err := h.pageService.GetPageHistory(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page history", err)
 	}
@@ -104,7 +145,15 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, req dto.GetPageHistory
 
 // GetPageVersion returns a specific version of a page
 func (h *PageHandler) GetPageVersion(ctx context.Context, req dto.GetPageVersionRequest) (*dto.GetPageVersionResponse, error) {
-	content, err := h.pageService.GetPageVersion(ctx, req.ID, req.Hash)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	id, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_page_id")
+	}
+	content, err := h.pageService.GetPageVersion(ctx, orgID, id, req.Hash)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page version", err)
 	}

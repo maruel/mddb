@@ -28,28 +28,21 @@ func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cac
 }
 
 // GetDatabase retrieves a database by ID.
-func (s *DatabaseService) GetDatabase(ctx context.Context, idStr string) (*entity.Database, error) {
-	if idStr == "" {
+func (s *DatabaseService) GetDatabase(ctx context.Context, orgID, id jsonldb.ID) (*entity.Database, error) {
+	if id.IsZero() {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid database id: %w", err)
-	}
-	orgID := entity.GetOrgID(ctx)
 	return s.fileStore.ReadDatabase(orgID, id)
 }
 
 // CreateDatabase creates a new database with a generated numeric ID.
-func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, columns []entity.Property) (*entity.Database, error) {
+func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, title string, columns []entity.Property) (*entity.Database, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
 	if len(columns) == 0 {
 		return nil, fmt.Errorf("at least one column is required")
 	}
-
-	orgID := entity.GetOrgID(ctx)
 
 	// Check Quota
 	if s.orgService != nil {
@@ -81,7 +74,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "create", "database", id.String(), title); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "create", "database", id.String(), title); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -90,8 +83,8 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 }
 
 // UpdateDatabase updates an existing database's schema.
-func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title string, columns []entity.Property) (*entity.Database, error) {
-	if idStr == "" {
+func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.ID, title string, columns []entity.Property) (*entity.Database, error) {
+	if id.IsZero() {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
 	if title == "" {
@@ -101,12 +94,6 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title strin
 		return nil, fmt.Errorf("at least one column is required")
 	}
 
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid database id: %w", err)
-	}
-
-	orgID := entity.GetOrgID(ctx)
 	db, err := s.fileStore.ReadDatabase(orgID, id)
 	if err != nil {
 		return nil, err
@@ -124,7 +111,7 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title strin
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "update", "database", idStr, "Updated schema"); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "update", "database", id.String(), "Updated schema"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -133,15 +120,10 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title strin
 }
 
 // DeleteDatabase deletes a database and all its records.
-func (s *DatabaseService) DeleteDatabase(ctx context.Context, idStr string) error {
-	if idStr == "" {
+func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.ID) error {
+	if id.IsZero() {
 		return fmt.Errorf("database id cannot be empty")
 	}
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return fmt.Errorf("invalid database id: %w", err)
-	}
-	orgID := entity.GetOrgID(ctx)
 	if err := s.fileStore.DeleteDatabase(orgID, id); err != nil {
 		return err
 	}
@@ -151,7 +133,7 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, idStr string) erro
 	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "delete", "database", idStr, "Deleted database"); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "delete", "database", id.String(), "Deleted database"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -160,24 +142,16 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, idStr string) erro
 }
 
 // ListDatabases returns all databases.
-func (s *DatabaseService) ListDatabases(ctx context.Context) ([]*entity.Database, error) {
-	orgID := entity.GetOrgID(ctx)
+func (s *DatabaseService) ListDatabases(ctx context.Context, orgID jsonldb.ID) ([]*entity.Database, error) {
 	return s.fileStore.ListDatabases(orgID)
 }
 
 // CreateRecord creates a new record in a database.
 // Data values are coerced to SQLite-compatible types based on column schema.
-func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string, data map[string]any) (*entity.DataRecord, error) {
-	if databaseIDStr == "" {
+func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID jsonldb.ID, data map[string]any) (*entity.DataRecord, error) {
+	if databaseID.IsZero() {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
-
-	databaseID, err := jsonldb.DecodeID(databaseIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid database id: %w", err)
-	}
-
-	orgID := entity.GetOrgID(ctx)
 
 	// Read database to get columns for type coercion
 	db, err := s.fileStore.ReadDatabase(orgID, databaseID)
@@ -207,7 +181,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 	s.cache.InvalidateRecords(databaseID)
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "create", "record", id.String(), fmt.Sprintf("in database %s", databaseIDStr)); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "create", "record", id.String(), fmt.Sprintf("in database %s", databaseID.String())); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -216,21 +190,14 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 }
 
 // GetRecords retrieves all records from a database.
-func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) ([]*entity.DataRecord, error) {
-	if databaseIDStr == "" {
+func (s *DatabaseService) GetRecords(ctx context.Context, orgID, databaseID jsonldb.ID) ([]*entity.DataRecord, error) {
+	if databaseID.IsZero() {
 		return nil, fmt.Errorf("database id cannot be empty")
-	}
-
-	databaseID, err := jsonldb.DecodeID(databaseIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
 
 	if records, ok := s.cache.GetRecords(databaseID); ok {
 		return records, nil
 	}
-
-	orgID := entity.GetOrgID(ctx)
 	// Verify database exists
 	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
@@ -246,17 +213,10 @@ func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) 
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
-func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr string, offset, limit int) ([]*entity.DataRecord, error) {
-	if databaseIDStr == "" {
+func (s *DatabaseService) GetRecordsPage(ctx context.Context, orgID, databaseID jsonldb.ID, offset, limit int) ([]*entity.DataRecord, error) {
+	if databaseID.IsZero() {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
-
-	databaseID, err := jsonldb.DecodeID(databaseIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid database id: %w", err)
-	}
-
-	orgID := entity.GetOrgID(ctx)
 	// Verify database exists
 	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
@@ -266,24 +226,14 @@ func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr stri
 }
 
 // GetRecord retrieves a specific record by ID.
-func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordIDStr string) (*entity.DataRecord, error) {
-	if databaseIDStr == "" {
+func (s *DatabaseService) GetRecord(ctx context.Context, orgID, databaseID, recordID jsonldb.ID) (*entity.DataRecord, error) {
+	if databaseID.IsZero() {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
-	if recordIDStr == "" {
+	if recordID.IsZero() {
 		return nil, fmt.Errorf("record id cannot be empty")
 	}
 
-	databaseID, err := jsonldb.DecodeID(databaseIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid database id: %w", err)
-	}
-	recordID, err := jsonldb.DecodeID(recordIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid record id: %w", err)
-	}
-
-	orgID := entity.GetOrgID(ctx)
 	records, err := s.fileStore.ReadRecords(orgID, databaseID)
 	if err != nil {
 		return nil, err
@@ -300,24 +250,13 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordID
 
 // UpdateRecord updates an existing record in a database.
 // Data values are coerced to SQLite-compatible types based on column schema.
-func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recordIDStr string, data map[string]any) (*entity.DataRecord, error) {
-	if databaseIDStr == "" {
+func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, recordID jsonldb.ID, data map[string]any) (*entity.DataRecord, error) {
+	if databaseID.IsZero() {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
-	if recordIDStr == "" {
+	if recordID.IsZero() {
 		return nil, fmt.Errorf("record id cannot be empty")
 	}
-
-	databaseID, err := jsonldb.DecodeID(databaseIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid database id: %w", err)
-	}
-	recordID, err := jsonldb.DecodeID(recordIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid record id: %w", err)
-	}
-
-	orgID := entity.GetOrgID(ctx)
 
 	// Read database to get columns for type coercion
 	db, err := s.fileStore.ReadDatabase(orgID, databaseID)
@@ -326,7 +265,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 	}
 
 	// Retrieve existing record to preserve Created time and ensure it exists
-	existing, err := s.GetRecord(ctx, databaseIDStr, recordIDStr)
+	existing, err := s.GetRecord(ctx, orgID, databaseID, recordID)
 	if err != nil {
 		return nil, err
 	}
@@ -349,7 +288,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 	s.cache.InvalidateRecords(databaseID)
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "update", "record", recordIDStr, fmt.Sprintf("in database %s", databaseIDStr)); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "update", "record", recordID.String(), fmt.Sprintf("in database %s", databaseID.String())); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -358,24 +297,13 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 }
 
 // DeleteRecord deletes a record from a database.
-func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseIDStr, recordIDStr string) error {
-	if databaseIDStr == "" {
+func (s *DatabaseService) DeleteRecord(ctx context.Context, orgID, databaseID, recordID jsonldb.ID) error {
+	if databaseID.IsZero() {
 		return fmt.Errorf("database id cannot be empty")
 	}
-	if recordIDStr == "" {
+	if recordID.IsZero() {
 		return fmt.Errorf("record id cannot be empty")
 	}
-
-	databaseID, err := jsonldb.DecodeID(databaseIDStr)
-	if err != nil {
-		return fmt.Errorf("invalid database id: %w", err)
-	}
-	recordID, err := jsonldb.DecodeID(recordIDStr)
-	if err != nil {
-		return fmt.Errorf("invalid record id: %w", err)
-	}
-
-	orgID := entity.GetOrgID(ctx)
 
 	if err := s.fileStore.DeleteRecord(orgID, databaseID, recordID); err != nil {
 		return err
@@ -385,7 +313,7 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseIDStr, recor
 	s.cache.InvalidateRecords(databaseID)
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, "delete", "record", recordIDStr, fmt.Sprintf("from database %s", databaseIDStr)); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "delete", "record", recordID.String(), fmt.Sprintf("from database %s", databaseID.String())); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}

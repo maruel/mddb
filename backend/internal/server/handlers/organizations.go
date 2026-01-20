@@ -6,7 +6,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // OrganizationHandler handles organization management requests.
@@ -22,10 +21,10 @@ func NewOrganizationHandler(orgService *storage.OrganizationService) *Organizati
 }
 
 // GetOrganization retrieves current organization details.
-func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*dto.OrganizationResponse, error) {
-	orgID := entity.GetOrgID(ctx)
-	if orgID.IsZero() {
-		return nil, dto.Forbidden("Organization context missing")
+func (h *OrganizationHandler) GetOrganization(ctx context.Context, req dto.GetOnboardingRequest) (*dto.OrganizationResponse, error) {
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
 	}
 
 	org, err := h.orgService.GetOrganization(orgID)
@@ -66,9 +65,9 @@ func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, req dto.Upda
 
 // UpdateSettings updates organization-wide settings.
 func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req dto.UpdateOrgSettingsRequest) (*dto.OrganizationResponse, error) {
-	orgID := entity.GetOrgID(ctx)
-	if orgID.IsZero() {
-		return nil, dto.Forbidden("Organization context missing")
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
 	}
 
 	if err := h.orgService.UpdateSettings(orgID, organizationSettingsToEntity(req.Settings)); err != nil {

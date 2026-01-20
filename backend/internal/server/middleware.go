@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
@@ -52,9 +53,15 @@ func AuthMiddleware(userService *storage.UserService, jwtSecret []byte) func(htt
 				return
 			}
 
-			userID, ok := claims["sub"].(string)
+			userIDStr, ok := claims["sub"].(string)
 			if !ok {
 				http.Error(w, "Invalid user ID in token", http.StatusUnauthorized)
+				return
+			}
+
+			userID, err := jsonldb.DecodeID(userIDStr)
+			if err != nil {
+				http.Error(w, "Invalid user ID format", http.StatusUnauthorized)
 				return
 			}
 
@@ -82,15 +89,21 @@ func RequireRole(memService *storage.MembershipService, requiredRole entity.User
 			}
 
 			// Get organization from path
-			orgID := r.PathValue("orgID")
-			if orgID == "" {
+			orgIDStr := r.PathValue("orgID")
+			if orgIDStr == "" {
 				// Some global endpoints might not have orgID
 				next.ServeHTTP(w, r)
 				return
 			}
 
+			orgID, err := jsonldb.DecodeID(orgIDStr)
+			if err != nil {
+				http.Error(w, "Invalid organization ID format", http.StatusBadRequest)
+				return
+			}
+
 			// Verify membership and get role
-			membership, err := memService.GetMembership(user.ID.String(), orgID)
+			membership, err := memService.GetMembership(user.ID, orgID)
 			if err != nil {
 				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
 				return
@@ -102,7 +115,7 @@ func RequireRole(memService *storage.MembershipService, requiredRole entity.User
 			}
 
 			// Add org to context for handlers
-			ctx := context.WithValue(r.Context(), entity.OrgKey, orgID)
+			ctx := context.WithValue(r.Context(), entity.OrgKey, orgIDStr)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

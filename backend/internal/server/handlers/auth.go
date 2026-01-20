@@ -44,7 +44,7 @@ func (h *AuthHandler) Login(ctx context.Context, req dto.LoginRequest) (*dto.Log
 	}
 
 	// Build user response
-	uwm, err := h.userService.GetUserWithMemberships(user.ID.String())
+	uwm, err := h.userService.GetUserWithMemberships(user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -87,7 +87,7 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	}
 
 	// Create initial membership (admin of their own org)
-	if err := h.userService.UpdateUserRole(user.ID.String(), orgID.String(), entity.UserRoleAdmin); err != nil {
+	if err := h.userService.UpdateUserRole(user.ID, orgID, entity.UserRoleAdmin); err != nil {
 		return nil, dto.InternalWithError("Failed to create initial membership", err)
 	}
 
@@ -97,7 +97,7 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	}
 
 	// Build user response with memberships
-	uwm, err := h.userService.GetUserWithMemberships(user.ID.String())
+	uwm, err := h.userService.GetUserWithMemberships(user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -136,7 +136,7 @@ func (h *AuthHandler) Me(ctx context.Context, req dto.MeRequest) (*dto.UserRespo
 	}
 
 	// Build user response with memberships
-	uwm, err := h.userService.GetUserWithMemberships(user.ID.String())
+	uwm, err := h.userService.GetUserWithMemberships(user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}

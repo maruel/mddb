@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -21,7 +22,11 @@ func NewDatabaseHandler(fileStore *storage.FileStore, gitService *storage.GitSer
 
 // ListDatabases returns a list of all databases
 func (h *DatabaseHandler) ListDatabases(ctx context.Context, req dto.ListDatabasesRequest) (*dto.ListDatabasesResponse, error) {
-	databases, err := h.databaseService.ListDatabases(ctx)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	databases, err := h.databaseService.ListDatabases(ctx, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list databases", err)
 	}
@@ -41,7 +46,15 @@ func (h *DatabaseHandler) ListDatabases(ctx context.Context, req dto.ListDatabas
 
 // GetDatabase returns a specific database by ID
 func (h *DatabaseHandler) GetDatabase(ctx context.Context, req dto.GetDatabaseRequest) (*dto.GetDatabaseResponse, error) {
-	db, err := h.databaseService.GetDatabase(ctx, req.ID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	id, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_database_id")
+	}
+	db, err := h.databaseService.GetDatabase(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
@@ -61,7 +74,11 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context, req dto.CreateData
 		return nil, dto.MissingField("title")
 	}
 
-	db, err := h.databaseService.CreateDatabase(ctx, req.Title, propertiesToEntity(req.Properties))
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	db, err := h.databaseService.CreateDatabase(ctx, orgID, req.Title, propertiesToEntity(req.Properties))
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create database", err)
 	}
@@ -71,7 +88,15 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context, req dto.CreateData
 
 // UpdateDatabase updates a database schema.
 func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, req dto.UpdateDatabaseRequest) (*dto.UpdateDatabaseResponse, error) {
-	db, err := h.databaseService.UpdateDatabase(ctx, req.ID, req.Title, propertiesToEntity(req.Properties))
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	id, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_database_id")
+	}
+	db, err := h.databaseService.UpdateDatabase(ctx, orgID, id, req.Title, propertiesToEntity(req.Properties))
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
@@ -81,7 +106,15 @@ func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, req dto.UpdateData
 
 // DeleteDatabase deletes a database.
 func (h *DatabaseHandler) DeleteDatabase(ctx context.Context, req dto.DeleteDatabaseRequest) (*dto.DeleteDatabaseResponse, error) {
-	err := h.databaseService.DeleteDatabase(ctx, req.ID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	id, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_database_id")
+	}
+	err = h.databaseService.DeleteDatabase(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
@@ -91,7 +124,15 @@ func (h *DatabaseHandler) DeleteDatabase(ctx context.Context, req dto.DeleteData
 
 // ListRecords returns all records in a database.
 func (h *DatabaseHandler) ListRecords(ctx context.Context, req dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
-	records, err := h.databaseService.GetRecordsPage(ctx, req.ID, req.Offset, req.Limit)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	dbID, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_database_id")
+	}
+	records, err := h.databaseService.GetRecordsPage(ctx, orgID, dbID, req.Offset, req.Limit)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list records", err)
 	}
@@ -107,7 +148,15 @@ func (h *DatabaseHandler) ListRecords(ctx context.Context, req dto.ListRecordsRe
 
 // CreateRecord creates a new record in a database.
 func (h *DatabaseHandler) CreateRecord(ctx context.Context, req dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
-	record, err := h.databaseService.CreateRecord(ctx, req.ID, req.Data)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	dbID, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_database_id")
+	}
+	record, err := h.databaseService.CreateRecord(ctx, orgID, dbID, req.Data)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create record", err)
 	}
@@ -117,7 +166,19 @@ func (h *DatabaseHandler) CreateRecord(ctx context.Context, req dto.CreateRecord
 
 // UpdateRecord updates an existing record in a database.
 func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
-	record, err := h.databaseService.UpdateRecord(ctx, req.ID, req.RID, req.Data)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	dbID, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_database_id")
+	}
+	recordID, err := jsonldb.DecodeID(req.RID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_record_id")
+	}
+	record, err := h.databaseService.UpdateRecord(ctx, orgID, dbID, recordID, req.Data)
 	if err != nil {
 		return nil, dto.NotFound("record")
 	}
@@ -127,7 +188,19 @@ func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req dto.UpdateRecord
 
 // GetRecord retrieves a single record from a database.
 func (h *DatabaseHandler) GetRecord(ctx context.Context, req dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
-	record, err := h.databaseService.GetRecord(ctx, req.ID, req.RID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	dbID, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_database_id")
+	}
+	recordID, err := jsonldb.DecodeID(req.RID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_record_id")
+	}
+	record, err := h.databaseService.GetRecord(ctx, orgID, dbID, recordID)
 	if err != nil {
 		return nil, dto.NotFound("record")
 	}
@@ -142,7 +215,19 @@ func (h *DatabaseHandler) GetRecord(ctx context.Context, req dto.GetRecordReques
 
 // DeleteRecord deletes a record from a database.
 func (h *DatabaseHandler) DeleteRecord(ctx context.Context, req dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
-	err := h.databaseService.DeleteRecord(ctx, req.ID, req.RID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	dbID, err := jsonldb.DecodeID(req.ID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_database_id")
+	}
+	recordID, err := jsonldb.DecodeID(req.RID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_record_id")
+	}
+	err = h.databaseService.DeleteRecord(ctx, orgID, dbID, recordID)
 	if err != nil {
 		return nil, dto.NotFound("record")
 	}

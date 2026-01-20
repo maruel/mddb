@@ -3,6 +3,7 @@ package storage
 import (
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
@@ -32,15 +33,17 @@ func TestNodeService_GetNode(t *testing.T) {
 	service := NewNodeService(fileStore, nil, cache, nil)
 
 	ctx := newTestContext(t, "")
+	orgID := testID(999)
 
 	// Test with empty ID
-	_, err := service.GetNode(ctx, "")
+	var emptyID jsonldb.ID
+	_, err := service.GetNode(ctx, orgID, emptyID)
 	if err == nil {
 		t.Error("Expected error for empty node ID")
 	}
 
 	// Test with invalid ID (contains invalid character @)
-	_, err = service.GetNode(ctx, "invalid@id")
+	_, err = service.GetNode(ctx, orgID, jsonldb.ID(0))
 	if err == nil {
 		t.Error("Expected error for invalid node ID")
 	}
@@ -49,13 +52,14 @@ func TestNodeService_GetNode(t *testing.T) {
 func TestNodeService_CreateNode(t *testing.T) {
 	tempDir := t.TempDir()
 
-	ctx, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
 	cache := NewCache()
 	service := NewNodeService(fileStore, nil, cache, orgService)
 
 	// Test creating a document node
-	node, err := service.CreateNode(ctx, "Test Document", entity.NodeTypeDocument, "")
+	var emptyParentID jsonldb.ID
+	node, err := service.CreateNode(ctx, orgID, "Test Document", entity.NodeTypeDocument, emptyParentID)
 	if err != nil {
 		t.Fatalf("CreateNode (document) failed: %v", err)
 	}
@@ -74,7 +78,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 	}
 
 	// Test creating a database node
-	dbNode, err := service.CreateNode(ctx, "Test Database", entity.NodeTypeDatabase, "")
+	dbNode, err := service.CreateNode(ctx, orgID, "Test Database", entity.NodeTypeDatabase, emptyParentID)
 	if err != nil {
 		t.Fatalf("CreateNode (database) failed: %v", err)
 	}
@@ -84,7 +88,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 	}
 
 	// Test creating a hybrid node
-	hybridNode, err := service.CreateNode(ctx, "Test Hybrid", entity.NodeTypeHybrid, "")
+	hybridNode, err := service.CreateNode(ctx, orgID, "Test Hybrid", entity.NodeTypeHybrid, emptyParentID)
 	if err != nil {
 		t.Fatalf("CreateNode (hybrid) failed: %v", err)
 	}
@@ -94,7 +98,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 	}
 
 	// Test creating a child node with parentID
-	childNode, err := service.CreateNode(ctx, "Child Node", entity.NodeTypeDocument, node.ID.String())
+	childNode, err := service.CreateNode(ctx, orgID, "Child Node", entity.NodeTypeDocument, node.ID)
 	if err != nil {
 		t.Fatalf("CreateNode (child) failed: %v", err)
 	}
@@ -107,26 +111,27 @@ func TestNodeService_CreateNode(t *testing.T) {
 func TestNodeService_ListNodes(t *testing.T) {
 	tempDir := t.TempDir()
 
-	ctx, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
 	cache := NewCache()
 	service := NewNodeService(fileStore, nil, cache, orgService)
 
 	// List initial nodes (may include welcome page from org creation)
-	initialNodes, err := service.ListNodes(ctx)
+	initialNodes, err := service.ListNodes(ctx, orgID)
 	if err != nil {
 		t.Fatalf("ListNodes failed: %v", err)
 	}
 	initialCount := len(initialNodes)
 
 	// Create some nodes
-	_, _ = service.CreateNode(ctx, "Node 1", entity.NodeTypeDocument, "")
-	_, _ = service.CreateNode(ctx, "Node 2", entity.NodeTypeDocument, "")
+	var emptyParentID jsonldb.ID
+	_, _ = service.CreateNode(ctx, orgID, "Node 1", entity.NodeTypeDocument, emptyParentID)
+	_, _ = service.CreateNode(ctx, orgID, "Node 2", entity.NodeTypeDocument, emptyParentID)
 
 	// Need to clear cache to see new nodes from file system
 	cache.InvalidateNodeTree()
 
-	nodes, err := service.ListNodes(ctx)
+	nodes, err := service.ListNodes(ctx, orgID)
 	if err != nil {
 		t.Fatalf("ListNodes failed: %v", err)
 	}
@@ -135,7 +140,7 @@ func TestNodeService_ListNodes(t *testing.T) {
 	}
 
 	// Verify caching - second call should return cached results
-	nodes2, _ := service.ListNodes(ctx)
+	nodes2, _ := service.ListNodes(ctx, orgID)
 	if len(nodes2) != initialCount+2 {
 		t.Errorf("Expected %d nodes from cache, got %d", initialCount+2, len(nodes2))
 	}

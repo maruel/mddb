@@ -16,14 +16,15 @@ func TestDatabaseService_Create(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	columns := []entity.Property{
 		{Name: "title", Type: "text"},
 		{Name: "status", Type: entity.PropertyTypeText},
 	}
 
-	db, err := service.CreateDatabase(ctx, "Test DB", columns)
+	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -49,7 +50,8 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	tests := []struct {
 		name    string
@@ -79,7 +81,7 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := service.CreateDatabase(ctx, tt.title, tt.columns)
+			_, err := service.CreateDatabase(ctx, orgID, tt.title, tt.columns)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CreateDatabase() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -96,19 +98,20 @@ func TestDatabaseService_Get(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
 	columns := []entity.Property{
 		{Name: "name", Type: "text"},
 	}
-	created, err := service.CreateDatabase(ctx, "Test DB", columns)
+	created, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	// Retrieve it
-	got, err := service.GetDatabase(ctx, created.ID.String())
+	got, err := service.GetDatabase(ctx, orgID, created.ID)
 	if err != nil {
 		t.Fatalf("Failed to get database: %v", err)
 	}
@@ -130,7 +133,8 @@ func TestDatabaseService_List(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create multiple databases
 	titles := []string{"DB 1", "DB 2", "DB 3"}
@@ -138,7 +142,7 @@ func TestDatabaseService_List(t *testing.T) {
 
 	for _, title := range titles {
 		columns := []entity.Property{{Name: "col", Type: "text"}}
-		db, err := service.CreateDatabase(ctx, title, columns)
+		db, err := service.CreateDatabase(ctx, orgID, title, columns)
 		if err != nil {
 			t.Fatalf("Failed to create database: %v", err)
 		}
@@ -146,7 +150,7 @@ func TestDatabaseService_List(t *testing.T) {
 	}
 
 	// List databases
-	databases, err := service.ListDatabases(ctx)
+	databases, err := service.ListDatabases(ctx, orgID)
 	if err != nil {
 		t.Fatalf("Failed to list databases: %v", err)
 	}
@@ -178,23 +182,24 @@ func TestDatabaseService_Delete(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "col", Type: "text"}}
-	created, err := service.CreateDatabase(ctx, "Test DB", columns)
+	created, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	// Delete it
-	err = service.DeleteDatabase(ctx, created.ID.String())
+	err = service.DeleteDatabase(ctx, orgID, created.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete database: %v", err)
 	}
 
 	// Verify it's gone
-	_, err = service.GetDatabase(ctx, created.ID.String())
+	_, err = service.GetDatabase(ctx, orgID, created.ID)
 	if err == nil {
 		t.Error("Database should not exist after deletion")
 	}
@@ -209,14 +214,15 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
 	columns := []entity.Property{
 		{Name: "title", Type: "text"},
 		{Name: "status", Type: entity.PropertyTypeText},
 	}
-	db, err := service.CreateDatabase(ctx, "Test DB", columns)
+	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -226,7 +232,7 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 		"title":  "My Task",
 		"status": "todo",
 	}
-	record, err := service.CreateRecord(ctx, db.ID.String(), data)
+	record, err := service.CreateRecord(ctx, orgID, db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)
 	}
@@ -248,11 +254,12 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "name", Type: "text"}}
-	db, err := service.CreateDatabase(ctx, "Test DB", columns)
+	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -261,14 +268,14 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 	recordCount := 3
 	for i := range recordCount {
 		data := map[string]any{"name": "Record " + string(rune(i))}
-		_, err := service.CreateRecord(ctx, db.ID.String(), data)
+		_, err := service.CreateRecord(ctx, orgID, db.ID, data)
 		if err != nil {
 			t.Fatalf("Failed to create record: %v", err)
 		}
 	}
 
 	// Get all records
-	records, err := service.GetRecords(ctx, db.ID.String())
+	records, err := service.GetRecords(ctx, orgID, db.ID)
 	if err != nil {
 		t.Fatalf("Failed to get records: %v", err)
 	}
@@ -287,24 +294,25 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "name", Type: "text"}}
-	db, err := service.CreateDatabase(ctx, "Test DB", columns)
+	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	// Create a record
 	data := map[string]any{"name": "Test Record"}
-	created, err := service.CreateRecord(ctx, db.ID.String(), data)
+	created, err := service.CreateRecord(ctx, orgID, db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)
 	}
 
 	// Retrieve it
-	got, err := service.GetRecord(ctx, db.ID.String(), created.ID.String())
+	got, err := service.GetRecord(ctx, orgID, db.ID, created.ID)
 	if err != nil {
 		t.Fatalf("Failed to get record: %v", err)
 	}
@@ -326,25 +334,26 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "name", Type: "text"}}
-	db, err := service.CreateDatabase(ctx, "Test DB", columns)
+	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	// Create a record
 	data := map[string]any{"name": "Original Name"}
-	created, err := service.CreateRecord(ctx, db.ID.String(), data)
+	created, err := service.CreateRecord(ctx, orgID, db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)
 	}
 
 	// Update it
 	newData := map[string]any{"name": "Updated Name"}
-	updated, err := service.UpdateRecord(ctx, db.ID.String(), created.ID.String(), newData)
+	updated, err := service.UpdateRecord(ctx, orgID, db.ID, created.ID, newData)
 	if err != nil {
 		t.Fatalf("Failed to update record: %v", err)
 	}
@@ -357,7 +366,7 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 	}
 
 	// Verify persistence
-	got, err := service.GetRecord(ctx, db.ID.String(), created.ID.String())
+	got, err := service.GetRecord(ctx, orgID, db.ID, created.ID)
 	if err != nil {
 		t.Fatalf("Failed to get record: %v", err)
 	}
@@ -375,30 +384,31 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "name", Type: "text"}}
-	db, err := service.CreateDatabase(ctx, "Test DB", columns)
+	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
 	// Create a record
 	data := map[string]any{"name": "To be deleted"}
-	created, err := service.CreateRecord(ctx, db.ID.String(), data)
+	created, err := service.CreateRecord(ctx, orgID, db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)
 	}
 
 	// Delete it
-	err = service.DeleteRecord(ctx, db.ID.String(), created.ID.String())
+	err = service.DeleteRecord(ctx, orgID, db.ID, created.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete record: %v", err)
 	}
 
 	// Verify it's gone
-	_, err = service.GetRecord(ctx, db.ID.String(), created.ID.String())
+	_, err = service.GetRecord(ctx, orgID, db.ID, created.ID)
 	if err == nil {
 		t.Error("Record should not exist after deletion")
 	}
@@ -413,7 +423,8 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(t, testID(100).String())
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create a database with various column types
 	columns := []entity.Property{
@@ -423,7 +434,7 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 		{Name: "active", Type: "checkbox"},
 		{Name: "category", Type: entity.PropertyTypeText},
 	}
-	db, err := service.CreateDatabase(ctx, "Type Test DB", columns)
+	db, err := service.CreateDatabase(ctx, orgID, "Type Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
@@ -437,7 +448,7 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 		"active":   true,           // bool → checkbox: int64(1)
 		"category": "electronics",  // string → select: "electronics"
 	}
-	record, err := service.CreateRecord(ctx, db.ID.String(), data)
+	record, err := service.CreateRecord(ctx, orgID, db.ID, data)
 	if err != nil {
 		t.Fatalf("Failed to create record: %v", err)
 	}
@@ -467,7 +478,7 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 		"active":   false,   // bool → checkbox: int64(0)
 		"category": "books",
 	}
-	updated, err := service.UpdateRecord(ctx, db.ID.String(), record.ID.String(), updateData)
+	updated, err := service.UpdateRecord(ctx, orgID, db.ID, record.ID, updateData)
 	if err != nil {
 		t.Fatalf("Failed to update record: %v", err)
 	}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
@@ -22,10 +23,9 @@ func NewUserHandler(userService *storage.UserService) *UserHandler {
 
 // ListUsers returns all users in the organization.
 func (h *UserHandler) ListUsers(ctx context.Context, req dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
-	// Active org ID is verified by middleware and injected into context
-	orgID := entity.GetOrgID(ctx)
-	if orgID.IsZero() {
-		return nil, dto.Forbidden("Organization context missing")
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
 	}
 
 	allUsers, err := h.userService.ListUsersWithMemberships()
@@ -49,20 +49,25 @@ func (h *UserHandler) ListUsers(ctx context.Context, req dto.ListUsersRequest) (
 
 // UpdateUserRole updates a user's role.
 func (h *UserHandler) UpdateUserRole(ctx context.Context, req dto.UpdateRoleRequest) (*dto.UserResponse, error) {
-	orgID := entity.GetOrgID(ctx)
-	if orgID.IsZero() {
-		return nil, dto.Forbidden("Organization context missing")
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
 	}
 
 	if req.UserID == "" || req.Role == "" {
 		return nil, dto.MissingField("user_id or role")
 	}
 
-	if err := h.userService.UpdateUserRole(req.UserID, orgID.String(), userRoleToEntity(req.Role)); err != nil {
+	userID, err := jsonldb.DecodeID(req.UserID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_user_id")
+	}
+
+	if err := h.userService.UpdateUserRole(userID, orgID, userRoleToEntity(req.Role)); err != nil {
 		return nil, dto.InternalWithError("Failed to update user role", err)
 	}
 
-	uwm, err := h.userService.GetUserWithMemberships(req.UserID)
+	uwm, err := h.userService.GetUserWithMemberships(userID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}
@@ -76,11 +81,11 @@ func (h *UserHandler) UpdateUserSettings(ctx context.Context, req dto.UpdateUser
 		return nil, dto.Unauthorized()
 	}
 
-	if err := h.userService.UpdateSettings(currentUser.ID.String(), userSettingsToEntity(req.Settings)); err != nil {
+	if err := h.userService.UpdateSettings(currentUser.ID, userSettingsToEntity(req.Settings)); err != nil {
 		return nil, dto.InternalWithError("Failed to update settings", err)
 	}
 
-	uwm, err := h.userService.GetUserWithMemberships(currentUser.ID.String())
+	uwm, err := h.userService.GetUserWithMemberships(currentUser.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}

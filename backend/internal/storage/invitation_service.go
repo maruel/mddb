@@ -49,14 +49,12 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 }
 
 // CreateInvitation creates a new invitation.
-func (s *InvitationService) CreateInvitation(email, orgIDStr string, role entity.UserRole) (*entity.Invitation, error) {
-	if email == "" || orgIDStr == "" {
-		return nil, fmt.Errorf("email and organization ID are required")
+func (s *InvitationService) CreateInvitation(email string, orgID jsonldb.ID, role entity.UserRole) (*entity.Invitation, error) {
+	if email == "" {
+		return nil, fmt.Errorf("email is required")
 	}
-
-	orgID, err := jsonldb.DecodeID(orgIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid organization id: %w", err)
+	if orgID.IsZero() {
+		return nil, fmt.Errorf("organization id cannot be empty")
 	}
 
 	token, err := GenerateToken(32)
@@ -105,10 +103,9 @@ func (s *InvitationService) GetInvitationByToken(token string) (*entity.Invitati
 }
 
 // DeleteInvitation deletes an invitation.
-func (s *InvitationService) DeleteInvitation(idStr string) error {
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return fmt.Errorf("invalid invitation id: %w", err)
+func (s *InvitationService) DeleteInvitation(id jsonldb.ID) error {
+	if id.IsZero() {
+		return fmt.Errorf("invitation id cannot be empty")
 	}
 
 	s.mu.Lock()
@@ -126,10 +123,9 @@ func (s *InvitationService) DeleteInvitation(idStr string) error {
 }
 
 // ListByOrganization returns all invitations for an organization.
-func (s *InvitationService) ListByOrganization(orgIDStr string) ([]*entity.Invitation, error) {
-	orgID, err := jsonldb.DecodeID(orgIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid organization id: %w", err)
+func (s *InvitationService) ListByOrganization(orgID jsonldb.ID) ([]*entity.Invitation, error) {
+	if orgID.IsZero() {
+		return nil, fmt.Errorf("organization id cannot be empty")
 	}
 
 	s.mu.RLock()

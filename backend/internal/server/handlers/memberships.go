@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
@@ -31,14 +32,19 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req dto.SwitchOrgRequ
 		return nil, dto.Unauthorized()
 	}
 
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+
 	// Verify membership
-	_, err := h.memService.GetMembership(currentUser.ID.String(), req.OrgID)
+	_, err = h.memService.GetMembership(currentUser.ID, orgID)
 	if err != nil {
 		return nil, dto.Forbidden("User is not a member of this organization")
 	}
 
 	// Re-fetch user for token generation
-	user, err := h.userService.GetUser(currentUser.ID.String())
+	user, err := h.userService.GetUser(currentUser.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to fetch user", err)
 	}
@@ -49,7 +55,7 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req dto.SwitchOrgRequ
 	}
 
 	// Build user response with memberships
-	uwm, err := h.userService.GetUserWithMemberships(currentUser.ID.String())
+	uwm, err := h.userService.GetUserWithMemberships(currentUser.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -70,12 +76,15 @@ func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req dt
 		return nil, dto.Unauthorized()
 	}
 
-	orgID := entity.GetOrgID(ctx)
-	if err := h.memService.UpdateSettings(currentUser.ID.String(), orgID.String(), membershipSettingsToEntity(req.Settings)); err != nil {
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	if err := h.memService.UpdateSettings(currentUser.ID, orgID, membershipSettingsToEntity(req.Settings)); err != nil {
 		return nil, dto.InternalWithError("Failed to update membership settings", err)
 	}
 
-	m, err := h.memService.GetMembership(currentUser.ID.String(), orgID.String())
+	m, err := h.memService.GetMembership(currentUser.ID, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get membership", err)
 	}

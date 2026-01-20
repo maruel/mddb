@@ -1,30 +1,11 @@
 package entity
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
-
-func TestGetOrgID(t *testing.T) {
-	t.Run("context with org ID", func(t *testing.T) {
-		if got := GetOrgID(context.WithValue(t.Context(), OrgKey, jsonldb.ID(123))); got != jsonldb.ID(123) {
-			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(123))
-		}
-	})
-	t.Run("context without org ID", func(t *testing.T) {
-		if got := GetOrgID(t.Context()); got != jsonldb.ID(0) {
-			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(0))
-		}
-	})
-	t.Run("context with wrong type value", func(t *testing.T) {
-		if got := GetOrgID(context.WithValue(t.Context(), OrgKey, "not an ID")); got != jsonldb.ID(0) {
-			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(0))
-		}
-	})
-}
 
 func TestDataRecord(t *testing.T) {
 	t.Run("Clone", func(t *testing.T) {

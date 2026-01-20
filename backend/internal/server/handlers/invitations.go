@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // InvitationHandler handles invitation requests.
@@ -33,8 +33,11 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, req dto.Create
 		return nil, dto.MissingField("email or role")
 	}
 
-	orgID := entity.GetOrgID(ctx)
-	invitation, err := h.invService.CreateInvitation(req.Email, orgID.String(), userRoleToEntity(req.Role))
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	invitation, err := h.invService.CreateInvitation(req.Email, orgID, userRoleToEntity(req.Role))
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create invitation", err)
 	}
@@ -44,8 +47,11 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, req dto.Create
 
 // ListInvitations returns all pending invitations for an organization.
 func (h *InvitationHandler) ListInvitations(ctx context.Context, req dto.ListInvitationsRequest) (*dto.ListInvitationsResponse, error) {
-	orgID := entity.GetOrgID(ctx)
-	invitations, err := h.invService.ListByOrganization(orgID.String())
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	invitations, err := h.invService.ListByOrganization(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list invitations", err)
 	}
@@ -88,16 +94,16 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req dto.Accept
 	}
 
 	// Create membership
-	_, err = h.memService.CreateMembership(user.ID.String(), inv.OrganizationID.String(), inv.Role)
+	_, err = h.memService.CreateMembership(user.ID, inv.OrganizationID, inv.Role)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create membership", err)
 	}
 
 	// Delete invitation
-	_ = h.invService.DeleteInvitation(inv.ID.String())
+	_ = h.invService.DeleteInvitation(inv.ID)
 
 	// Build user response
-	uwm, err := h.userService.GetUserWithMemberships(user.ID.String())
+	uwm, err := h.userService.GetUserWithMemberships(user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}

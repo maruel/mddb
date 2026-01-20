@@ -82,10 +82,9 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 }
 
 // ListRemotes returns all remotes for an organization.
-func (s *GitRemoteService) ListRemotes(orgIDStr string) ([]*entity.GitRemote, error) {
-	orgID, err := jsonldb.DecodeID(orgIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid organization id: %w", err)
+func (s *GitRemoteService) ListRemotes(orgID jsonldb.ID) ([]*entity.GitRemote, error) {
+	if orgID.IsZero() {
+		return nil, fmt.Errorf("organization id cannot be empty")
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -93,10 +92,9 @@ func (s *GitRemoteService) ListRemotes(orgIDStr string) ([]*entity.GitRemote, er
 }
 
 // CreateRemote creates a new git remote.
-func (s *GitRemoteService) CreateRemote(orgIDStr, name, url, remoteType, authType, token string) (*entity.GitRemote, error) {
-	orgID, err := jsonldb.DecodeID(orgIDStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid organization id: %w", err)
+func (s *GitRemoteService) CreateRemote(orgID jsonldb.ID, name, url, remoteType, authType, token string) (*entity.GitRemote, error) {
+	if orgID.IsZero() {
+		return nil, fmt.Errorf("organization id cannot be empty")
 	}
 
 	s.mu.Lock()
@@ -132,10 +130,9 @@ func (s *GitRemoteService) CreateRemote(orgIDStr, name, url, remoteType, authTyp
 }
 
 // GetRemote retrieves a remote by ID.
-func (s *GitRemoteService) GetRemote(idStr string) (*entity.GitRemote, error) {
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid remote id: %w", err)
+func (s *GitRemoteService) GetRemote(id jsonldb.ID) (*entity.GitRemote, error) {
+	if id.IsZero() {
+		return nil, fmt.Errorf("remote id cannot be empty")
 	}
 
 	s.mu.RLock()
@@ -152,10 +149,9 @@ func (s *GitRemoteService) GetRemote(idStr string) (*entity.GitRemote, error) {
 }
 
 // GetToken retrieves the token for a remote.
-func (s *GitRemoteService) GetToken(remoteIDStr string) (string, error) {
-	remoteID, err := jsonldb.DecodeID(remoteIDStr)
-	if err != nil {
-		return "", fmt.Errorf("invalid remote id: %w", err)
+func (s *GitRemoteService) GetToken(remoteID jsonldb.ID) (string, error) {
+	if remoteID.IsZero() {
+		return "", fmt.Errorf("remote id cannot be empty")
 	}
 	for sec := range s.secretTable.Iter(0) {
 		if sec.RemoteID == remoteID {
@@ -166,14 +162,12 @@ func (s *GitRemoteService) GetToken(remoteIDStr string) (string, error) {
 }
 
 // DeleteRemote deletes a git remote.
-func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
-	orgID, err := jsonldb.DecodeID(orgIDStr)
-	if err != nil {
-		return fmt.Errorf("invalid organization id: %w", err)
+func (s *GitRemoteService) DeleteRemote(orgID, remoteID jsonldb.ID) error {
+	if orgID.IsZero() {
+		return fmt.Errorf("organization id cannot be empty")
 	}
-	remoteID, err := jsonldb.DecodeID(remoteIDStr)
-	if err != nil {
-		return fmt.Errorf("invalid remote id: %w", err)
+	if remoteID.IsZero() {
+		return fmt.Errorf("remote id cannot be empty")
 	}
 
 	s.mu.Lock()
@@ -222,10 +216,9 @@ func (s *GitRemoteService) DeleteRemote(orgIDStr, remoteIDStr string) error {
 }
 
 // UpdateLastSync updates the last sync time for a remote.
-func (s *GitRemoteService) UpdateLastSync(remoteIDStr string) error {
-	remoteID, err := jsonldb.DecodeID(remoteIDStr)
-	if err != nil {
-		return fmt.Errorf("invalid remote id: %w", err)
+func (s *GitRemoteService) UpdateLastSync(remoteID jsonldb.ID) error {
+	if remoteID.IsZero() {
+		return fmt.Errorf("remote id cannot be empty")
 	}
 
 	s.mu.Lock()

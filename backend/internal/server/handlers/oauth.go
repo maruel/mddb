@@ -160,12 +160,12 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if org != nil && !org.ID.IsZero() {
-				_ = h.userService.UpdateUserRole(user.ID.String(), org.ID.String(), role)
+				_ = h.userService.UpdateUserRole(user.ID, org.ID, role)
 			}
 		}
 
 		// Link OAuth identity
-		_ = h.userService.LinkOAuthIdentity(user.ID.String(), entity.OAuthIdentity{
+		_ = h.userService.LinkOAuthIdentity(user.ID, entity.OAuthIdentity{
 			Provider:   provider,
 			ProviderID: userInfo.ID,
 			Email:      userInfo.Email,
@@ -174,7 +174,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get fully populated user
-	user, _ = h.userService.GetUser(user.ID.String())
+	user, _ = h.userService.GetUser(user.ID)
 
 	// Generate JWT token
 	jwtToken, err := h.authHandler.GenerateToken(user)

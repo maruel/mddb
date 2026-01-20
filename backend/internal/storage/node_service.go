@@ -28,17 +28,10 @@ func NewNodeService(fileStore *FileStore, gitService *GitService, cache *Cache, 
 }
 
 // GetNode retrieves a unified node by ID.
-func (s *NodeService) GetNode(ctx context.Context, idStr string) (*entity.Node, error) {
-	if idStr == "" {
+func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*entity.Node, error) {
+	if id.IsZero() {
 		return nil, fmt.Errorf("node id cannot be empty")
 	}
-
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid node id: %w", err)
-	}
-
-	orgID := entity.GetOrgID(ctx)
 
 	// For GetNode, we don't currently cache individual nodes but we could
 	// If we have a cached node tree, we could search in it
@@ -52,8 +45,7 @@ func (s *NodeService) GetNode(ctx context.Context, idStr string) (*entity.Node, 
 }
 
 // ListNodes returns the full hierarchical tree of nodes.
-func (s *NodeService) ListNodes(ctx context.Context) ([]*entity.Node, error) {
-	orgID := entity.GetOrgID(ctx)
+func (s *NodeService) ListNodes(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
 	if nodes := s.cache.GetNodeTree(); nodes != nil {
 		return nodes, nil
 	}
@@ -68,8 +60,7 @@ func (s *NodeService) ListNodes(ctx context.Context) ([]*entity.Node, error) {
 }
 
 // CreateNode creates a new node (can be document, database, or hybrid)
-func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType entity.NodeType, parentIDStr string) (*entity.Node, error) {
-	orgID := entity.GetOrgID(ctx)
+func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType entity.NodeType, parentID jsonldb.ID) (*entity.Node, error) {
 
 	// Check Quota
 	if s.orgService != nil {
@@ -83,7 +74,6 @@ func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType ent
 	}
 
 	id := jsonldb.NewID()
-	parentID, _ := jsonldb.DecodeID(parentIDStr) // Empty string decodes to zero ID
 	now := time.Now()
 
 	node := &entity.Node{

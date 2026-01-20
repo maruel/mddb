@@ -29,7 +29,10 @@ func NewNodeHandler(fileStore *storage.FileStore, gitService *storage.GitService
 
 // ListNodes returns the hierarchical node tree.
 func (h *NodeHandler) ListNodes(ctx context.Context, req dto.ListNodesRequest) (*dto.ListNodesResponse, error) {
-	orgID := entity.GetOrgID(ctx)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
 	nodes, err := h.fileStore.ReadNodeTree(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to read node tree", err)
@@ -46,7 +49,10 @@ func (h *NodeHandler) ListNodes(ctx context.Context, req dto.ListNodesRequest) (
 
 // GetNode retrieves a single node's metadata.
 func (h *NodeHandler) GetNode(ctx context.Context, req dto.GetNodeRequest) (*dto.NodeResponse, error) {
-	orgID := entity.GetOrgID(ctx)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
 	id, err := jsonldb.DecodeID(req.ID)
 	if err != nil {
 		return nil, dto.BadRequest("invalid_node_id")
@@ -71,11 +77,13 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req dto.CreateNodeRequest)
 		return nil, dto.MissingField("title or type")
 	}
 
-	orgID := entity.GetOrgID(ctx)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
 	id := jsonldb.NewID()
 
 	var node *entity.Node
-	var err error
 
 	switch req.Type {
 	case dto.NodeTypeDocument:
@@ -95,7 +103,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req dto.CreateNodeRequest)
 		// We use databaseService here for better encapsulation
 		ds := storage.NewDatabaseService(h.fileStore, h.gitService, h.cache, h.orgService)
 		var db *entity.Database
-		db, err = ds.CreateDatabase(ctx, req.Title, []entity.Property{})
+		db, err = ds.CreateDatabase(ctx, orgID, req.Title, []entity.Property{})
 		if err == nil {
 			node = &entity.Node{
 				ID:         db.ID,
@@ -118,7 +126,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req dto.CreateNodeRequest)
 
 	// Commit if git is enabled
 	if h.gitService != nil {
-		_ = h.gitService.CommitChange(ctx, "create", string(req.Type), id.String(), req.Title)
+		_ = h.gitService.CommitChange(ctx, orgID, "create", string(req.Type), id.String(), req.Title)
 	}
 
 	// Invalidate cache

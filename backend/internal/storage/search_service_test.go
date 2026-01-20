@@ -14,13 +14,15 @@ func TestSearchService_SearchPages(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
+	orgID := testID(100)
 
 	// Create test pages
 	cache := NewCache()
 	pageService := NewPageService(fileStore, nil, cache, nil)
-	_, _ = pageService.CreatePage(newTestContext(t, "org1"), "Getting Started", "This is a guide to get started with mddb project")
-	_, _ = pageService.CreatePage(newTestContext(t, "org1"), "Advanced Topics", "Learn about advanced mddb configuration and optimization")
-	_, _ = pageService.CreatePage(newTestContext(t, "org1"), "API Reference", "Complete mddb API documentation for developers")
+	ctx := newTestContext(t, orgID.String())
+	_, _ = pageService.CreatePage(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project")
+	_, _ = pageService.CreatePage(ctx, orgID, "Advanced Topics", "Learn about advanced mddb configuration and optimization")
+	_, _ = pageService.CreatePage(ctx, orgID, "API Reference", "Complete mddb API documentation for developers")
 
 	tests := []struct {
 		name          string
@@ -65,7 +67,7 @@ func TestSearchService_SearchPages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := searchService.Search(newTestContext(t, "org1"), entity.SearchOptions{
+			results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
 				Query:      tt.query,
 				MatchTitle: true,
 				MatchBody:  true,
@@ -101,6 +103,8 @@ func TestSearchService_SearchRecords(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create test database with records
 	cache := NewCache()
@@ -111,12 +115,12 @@ func TestSearchService_SearchRecords(t *testing.T) {
 		{Name: "description", Type: "text"},
 	}
 
-	db, _ := dbService.CreateDatabase(newTestContext(t, "org1"), "Tasks", columns)
+	db, _ := dbService.CreateDatabase(ctx, orgID, "Tasks", columns)
 
 	// Create records
-	_, _ = dbService.CreateRecord(newTestContext(t, "org1"), db.ID.String(), map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"})
-	_, _ = dbService.CreateRecord(newTestContext(t, "org1"), db.ID.String(), map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"})
-	_, _ = dbService.CreateRecord(newTestContext(t, "org1"), db.ID.String(), map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"})
+	_, _ = dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"})
+	_, _ = dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"})
+	_, _ = dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"})
 
 	tests := []struct {
 		name          string
@@ -152,7 +156,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := searchService.Search(newTestContext(t, "org1"), entity.SearchOptions{
+			results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
 				Query:       tt.query,
 				MatchFields: true,
 			})
@@ -183,14 +187,16 @@ func TestSearchService_Scoring(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create pages where title match should score higher
 	cache := NewCache()
 	pageService := NewPageService(fileStore, nil, cache, nil)
-	_, _ = pageService.CreatePage(newTestContext(t, "org1"), "Python Programming", "This is about Java not Python")
-	_, _ = pageService.CreatePage(newTestContext(t, "org1"), "Java Basics", "Learn Python programming fundamentals")
+	_, _ = pageService.CreatePage(ctx, orgID, "Python Programming", "This is about Java not Python")
+	_, _ = pageService.CreatePage(ctx, orgID, "Java Basics", "Learn Python programming fundamentals")
 
-	results, err := searchService.Search(newTestContext(t, "org1"), entity.SearchOptions{
+	results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
 		Query:      "python",
 		MatchTitle: true,
 		MatchBody:  true,
@@ -220,15 +226,17 @@ func TestSearchService_Limit(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create multiple pages
 	cache := NewCache()
 	pageService := NewPageService(fileStore, nil, cache, nil)
 	for i := range 10 {
-		_, _ = pageService.CreatePage(newTestContext(t, "org1"), fmt.Sprintf("Test Page %d", i), "This is test content")
+		_, _ = pageService.CreatePage(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content")
 	}
 
-	results, err := searchService.Search(newTestContext(t, "org1"), entity.SearchOptions{
+	results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
 		Query:      "test",
 		Limit:      2,
 		MatchTitle: true,
@@ -250,22 +258,24 @@ func TestSearchService_Integration(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
+	orgID := testID(100)
+	ctx := newTestContext(t, orgID.String())
 
 	// Create mixed content
 	cache := NewCache()
 	pageService := NewPageService(fileStore, nil, cache, nil)
-	_, _ = pageService.CreatePage(newTestContext(t, "org1"), "Blog Post", "Article about searchable content and web development")
+	_, _ = pageService.CreatePage(ctx, orgID, "Blog Post", "Article about searchable content and web development")
 
 	dbService := NewDatabaseService(fileStore, nil, cache, nil)
 	columns := []entity.Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "content", Type: "text"},
 	}
-	db, _ := dbService.CreateDatabase(newTestContext(t, "org1"), "Articles", columns)
-	_, _ = dbService.CreateRecord(newTestContext(t, "org1"), db.ID.String(), map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
+	db, _ := dbService.CreateDatabase(ctx, orgID, "Articles", columns)
+	_, _ = dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
 
 	// Search should find both page and record
-	results, err := searchService.Search(newTestContext(t, "org1"), entity.SearchOptions{
+	results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
 		Query:       "searchable",
 		MatchTitle:  true,
 		MatchBody:   true,

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -30,7 +31,11 @@ func NewGitRemoteHandler(remoteService *storage.GitRemoteService, gitService *st
 
 // ListRemotes lists all git remotes for an organization.
 func (h *GitRemoteHandler) ListRemotes(ctx context.Context, req dto.ListGitRemotesRequest) (*dto.ListGitRemotesResponse, error) {
-	remotes, err := h.remoteService.ListRemotes(req.OrgID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	remotes, err := h.remoteService.ListRemotes(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,13 +51,17 @@ func (h *GitRemoteHandler) ListRemotes(ctx context.Context, req dto.ListGitRemot
 
 // CreateRemote creates a new git remote.
 func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *dto.CreateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	remote, err := h.remoteService.CreateRemote(req.OrgID, req.Name, req.URL, req.Type, req.AuthType, req.Token)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	remote, err := h.remoteService.CreateRemote(orgID, req.Name, req.URL, req.Type, req.AuthType, req.Token)
 	if err != nil {
 		return nil, err
 	}
 
 	// Actually add it to the local git repo
-	orgDir := filepath.Join(h.rootDir, req.OrgID)
+	orgDir := filepath.Join(h.rootDir, orgID.String())
 	url := req.URL
 
 	// If token-based auth, inject token into URL if it's GitHub/GitLab
@@ -73,14 +82,23 @@ func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *dto.CreateGitR
 
 // Push pushes changes to a git remote.
 func (h *GitRemoteHandler) Push(ctx context.Context, req dto.PushGitRemoteRequest) (*any, error) {
-	remote, err := h.remoteService.GetRemote(req.RemoteID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	remoteID, err := jsonldb.DecodeID(req.RemoteID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_remote_id")
+	}
+
+	remote, err := h.remoteService.GetRemote(remoteID)
 	if err != nil {
 		return nil, err
 	}
 
-	orgDir := filepath.Join(h.rootDir, req.OrgID)
+	orgDir := filepath.Join(h.rootDir, orgID.String())
 
-	token, _ := h.remoteService.GetToken(req.RemoteID)
+	token, _ := h.remoteService.GetToken(remoteID)
 	url := remote.URL
 	if remote.AuthType == "token" && token != "" {
 		if strings.Contains(url, "github.com") {
@@ -96,24 +114,33 @@ func (h *GitRemoteHandler) Push(ctx context.Context, req dto.PushGitRemoteReques
 		return nil, fmt.Errorf("failed to push to git remote: %w", err)
 	}
 
-	_ = h.remoteService.UpdateLastSync(req.RemoteID)
+	_ = h.remoteService.UpdateLastSync(remoteID)
 
 	return nil, nil
 }
 
 // DeleteRemote deletes a git remote.
 func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, req dto.DeleteGitRemoteRequest) (*any, error) {
-	remote, err := h.remoteService.GetRemote(req.RemoteID)
+	orgID, err := jsonldb.DecodeID(req.OrgID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_org_id")
+	}
+	remoteID, err := jsonldb.DecodeID(req.RemoteID)
+	if err != nil {
+		return nil, dto.BadRequest("invalid_remote_id")
+	}
+
+	remote, err := h.remoteService.GetRemote(remoteID)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := h.remoteService.DeleteRemote(req.OrgID, req.RemoteID); err != nil {
+	if err := h.remoteService.DeleteRemote(orgID, remoteID); err != nil {
 		return nil, err
 	}
 
 	// Also remove from local git repo
-	orgDir := filepath.Join(h.rootDir, req.OrgID)
+	orgDir := filepath.Join(h.rootDir, orgID.String())
 	_ = h.execGitInDir(orgDir, "remote", "remove", remote.Name)
 
 	return nil, nil

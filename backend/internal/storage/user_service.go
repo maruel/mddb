@@ -138,7 +138,14 @@ func (s *UserService) CountUsers() (int, error) {
 }
 
 // UpdateUserRole updates the role of a user in a specific organization.
-func (s *UserService) UpdateUserRole(userID, orgID string, role entity.UserRole) error {
+func (s *UserService) UpdateUserRole(userID, orgID jsonldb.ID, role entity.UserRole) error {
+	if userID.IsZero() {
+		return fmt.Errorf("user id cannot be empty")
+	}
+	if orgID.IsZero() {
+		return fmt.Errorf("organization id cannot be empty")
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -157,10 +164,9 @@ func (s *UserService) UpdateUserRole(userID, orgID string, role entity.UserRole)
 }
 
 // GetUser retrieves a user by ID.
-func (s *UserService) GetUser(idStr string) (*entity.User, error) {
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return nil, fmt.Errorf("invalid user id: %w", err)
+func (s *UserService) GetUser(id jsonldb.ID) (*entity.User, error) {
+	if id.IsZero() {
+		return nil, fmt.Errorf("user id cannot be empty")
 	}
 
 	s.mu.RLock()
@@ -182,12 +188,12 @@ type MembershipWithOrgName struct {
 }
 
 // GetMembershipsForUser returns memberships with organization names populated.
-func (s *UserService) GetMembershipsForUser(userIDStr string) ([]MembershipWithOrgName, error) {
+func (s *UserService) GetMembershipsForUser(userID jsonldb.ID) ([]MembershipWithOrgName, error) {
 	if s.memService == nil {
 		return nil, nil
 	}
 
-	mems, err := s.memService.ListByUser(userIDStr)
+	mems, err := s.memService.ListByUser(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -213,13 +219,13 @@ type UserWithMemberships struct {
 }
 
 // GetUserWithMemberships retrieves a user by ID with their memberships.
-func (s *UserService) GetUserWithMemberships(idStr string) (*UserWithMemberships, error) {
-	user, err := s.GetUser(idStr)
+func (s *UserService) GetUserWithMemberships(id jsonldb.ID) (*UserWithMemberships, error) {
+	user, err := s.GetUser(id)
 	if err != nil {
 		return nil, err
 	}
 
-	mems, _ := s.GetMembershipsForUser(idStr)
+	mems, _ := s.GetMembershipsForUser(id)
 
 	return &UserWithMemberships{
 		User:        user,
@@ -278,10 +284,9 @@ func (s *UserService) GetUserByOAuth(provider, providerID string) (*entity.User,
 }
 
 // LinkOAuthIdentity links an OAuth identity to a user.
-func (s *UserService) LinkOAuthIdentity(userIDStr string, identity entity.OAuthIdentity) error {
-	userID, err := jsonldb.DecodeID(userIDStr)
-	if err != nil {
-		return fmt.Errorf("invalid user id: %w", err)
+func (s *UserService) LinkOAuthIdentity(userID jsonldb.ID, identity entity.OAuthIdentity) error {
+	if userID.IsZero() {
+		return fmt.Errorf("user id cannot be empty")
 	}
 
 	s.mu.Lock()
@@ -311,10 +316,9 @@ func (s *UserService) LinkOAuthIdentity(userIDStr string, identity entity.OAuthI
 }
 
 // UpdateSettings updates user global settings.
-func (s *UserService) UpdateSettings(idStr string, settings entity.UserSettings) error {
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return fmt.Errorf("invalid user id: %w", err)
+func (s *UserService) UpdateSettings(id jsonldb.ID, settings entity.UserSettings) error {
+	if id.IsZero() {
+		return fmt.Errorf("user id cannot be empty")
 	}
 
 	s.mu.Lock()
@@ -361,7 +365,7 @@ func (s *UserService) ListUsersWithMemberships() ([]UserWithMemberships, error) 
 
 	results := make([]UserWithMemberships, 0, len(users))
 	for _, user := range users {
-		mems, _ := s.GetMembershipsForUser(user.ID.String())
+		mems, _ := s.GetMembershipsForUser(user.ID)
 		results = append(results, UserWithMemberships{
 			User:        user,
 			Memberships: mems,

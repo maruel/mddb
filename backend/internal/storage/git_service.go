@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
@@ -62,9 +63,8 @@ func (gs *GitService) InitRepository(dir string) error {
 }
 
 // CommitChange stages and commits a change to the repository.
-// If orgID is present in context, it commits to the organization's repository.
-func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType, resourceID, description string) error {
-	orgID := entity.GetOrgID(ctx)
+// If orgID is non-zero, it commits to the organization's repository.
+func (gs *GitService) CommitChange(ctx context.Context, orgID jsonldb.ID, operation, resourceType, resourceID, description string) error {
 	targetDir := gs.repoDir
 	relPath := "." // Default to root
 
@@ -108,8 +108,7 @@ func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType,
 }
 
 // GetHistory returns commit history for a specific resource.
-func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID string) ([]*entity.Commit, error) {
-	orgID := entity.GetOrgID(ctx)
+func (gs *GitService) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, resourceID string) ([]*entity.Commit, error) {
 	targetDir := gs.repoDir
 	path := ""
 
@@ -161,8 +160,7 @@ func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID s
 }
 
 // GetCommit retrieves a specific commit with full details.
-func (gs *GitService) GetCommit(ctx context.Context, hash string) (*entity.CommitDetail, error) {
-	orgID := entity.GetOrgID(ctx)
+func (gs *GitService) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*entity.CommitDetail, error) {
 	targetDir := gs.repoDir
 	if !orgID.IsZero() {
 		targetDir = filepath.Join(gs.repoDir, orgID.String())
@@ -199,8 +197,7 @@ func (gs *GitService) GetCommit(ctx context.Context, hash string) (*entity.Commi
 }
 
 // GetFileAtCommit retrieves the content of a file at a specific commit.
-func (gs *GitService) GetFileAtCommit(ctx context.Context, hash, filePath string) ([]byte, error) {
-	orgID := entity.GetOrgID(ctx)
+func (gs *GitService) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash, filePath string) ([]byte, error) {
 	targetDir := gs.repoDir
 	if !orgID.IsZero() {
 		orgIDStr := orgID.String()

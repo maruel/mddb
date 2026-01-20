@@ -23,23 +23,11 @@
 package entity
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
-
-// GetOrgID extracts the organization ID from the context.
-// Note: This is now a convenience helper that should be used cautiously as we
-// transition to explicit path-based organization IDs.
-func GetOrgID(ctx context.Context) jsonldb.ID {
-	val := ctx.Value(OrgKey)
-	if id, ok := val.(jsonldb.ID); ok {
-		return id
-	}
-	return 0
-}
 
 // Node represents the unified content entity (can be a Page, a Database, or both)
 type Node struct {
