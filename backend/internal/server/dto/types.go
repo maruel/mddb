@@ -4,7 +4,7 @@ package dto
 type PropertyType string
 
 const (
-	// Primitive types
+	// Primitive types.
 
 	// PropertyTypeText stores plain text values.
 	PropertyTypeText PropertyType = "text"
@@ -15,14 +15,14 @@ const (
 	// PropertyTypeDate stores ISO8601 date strings.
 	PropertyTypeDate PropertyType = "date"
 
-	// Enumerated types (with predefined options)
+	// Enumerated types (with predefined options).
 
 	// PropertyTypeSelect stores a single selection from predefined options.
 	PropertyTypeSelect PropertyType = "select"
 	// PropertyTypeMultiSelect stores multiple selections from predefined options.
 	PropertyTypeMultiSelect PropertyType = "multi_select"
 
-	// Validated text types
+	// Validated text types.
 
 	// PropertyTypeURL stores URLs with validation.
 	PropertyTypeURL PropertyType = "url"

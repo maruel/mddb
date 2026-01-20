@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,6 +10,13 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+)
+
+var (
+	errMemberUserIDEmpty  = errors.New("user id cannot be empty")
+	errMemberOrgIDEmpty   = errors.New("organization id cannot be empty")
+	errMembershipExists   = errors.New("membership already exists")
+	errMembershipNotFound = errors.New("membership not found")
 )
 
 // MembershipService handles user-organization relationships.
@@ -22,7 +30,7 @@ type MembershipService struct {
 // NewMembershipService creates a new membership service.
 func NewMembershipService(rootDir string) (*MembershipService, error) {
 	dbDir := filepath.Join(rootDir, "db")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
 	}
 
@@ -48,10 +56,10 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 // CreateMembership adds a user to an organization.
 func (s *MembershipService) CreateMembership(userID, orgID jsonldb.ID, role entity.UserRole) (*entity.Membership, error) {
 	if userID.IsZero() {
-		return nil, fmt.Errorf("user id cannot be empty")
+		return nil, errMemberUserIDEmpty
 	}
 	if orgID.IsZero() {
-		return nil, fmt.Errorf("organization id cannot be empty")
+		return nil, errMemberOrgIDEmpty
 	}
 
 	s.mu.Lock()
@@ -59,7 +67,7 @@ func (s *MembershipService) CreateMembership(userID, orgID jsonldb.ID, role enti
 
 	key := userID.String() + "_" + orgID.String()
 	if _, ok := s.byID[key]; ok {
-		return nil, fmt.Errorf("membership already exists")
+		return nil, errMembershipExists
 	}
 
 	membership := &entity.Membership{
@@ -89,7 +97,7 @@ func (s *MembershipService) GetMembership(userID, orgID jsonldb.ID) (*entity.Mem
 	key := userID.String() + "_" + orgID.String()
 	m, ok := s.byID[key]
 	if !ok {
-		return nil, fmt.Errorf("membership not found")
+		return nil, errMembershipNotFound
 	}
 
 	return m, nil
@@ -98,7 +106,7 @@ func (s *MembershipService) GetMembership(userID, orgID jsonldb.ID) (*entity.Mem
 // ListByUser returns all organizations a user belongs to.
 func (s *MembershipService) ListByUser(userID jsonldb.ID) ([]entity.Membership, error) {
 	if userID.IsZero() {
-		return nil, fmt.Errorf("user id cannot be empty")
+		return nil, errMemberUserIDEmpty
 	}
 
 	s.mu.RLock()
@@ -116,7 +124,7 @@ func (s *MembershipService) ListByUser(userID jsonldb.ID) ([]entity.Membership, 
 // ListByOrganization returns all users in an organization.
 func (s *MembershipService) ListByOrganization(orgID jsonldb.ID) ([]entity.Membership, error) {
 	if orgID.IsZero() {
-		return nil, fmt.Errorf("organization id cannot be empty")
+		return nil, errMemberOrgIDEmpty
 	}
 
 	s.mu.RLock()
@@ -139,7 +147,7 @@ func (s *MembershipService) UpdateRole(userID, orgID jsonldb.ID, role entity.Use
 	key := userID.String() + "_" + orgID.String()
 	m, ok := s.byID[key]
 	if !ok {
-		return fmt.Errorf("membership not found")
+		return errMembershipNotFound
 	}
 
 	m.Role = role
@@ -154,7 +162,7 @@ func (s *MembershipService) UpdateSettings(userID, orgID jsonldb.ID, settings en
 	key := userID.String() + "_" + orgID.String()
 	m, ok := s.byID[key]
 	if !ok {
-		return fmt.Errorf("membership not found")
+		return errMembershipNotFound
 	}
 
 	m.Settings = settings
@@ -168,7 +176,7 @@ func (s *MembershipService) DeleteMembership(userID, orgID jsonldb.ID) error {
 
 	key := userID.String() + "_" + orgID.String()
 	if _, ok := s.byID[key]; !ok {
-		return fmt.Errorf("membership not found")
+		return errMembershipNotFound
 	}
 
 	delete(s.byID, key)

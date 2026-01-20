@@ -4,12 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"iter"
 	"os"
 	"sort"
 	"sync"
 )
+
+var errZeroID = errors.New("row has zero ID")
 
 // Row is implemented by types that can be stored in a [Table].
 type Row[T any] interface {
@@ -247,7 +250,7 @@ func (t *Table[T]) Append(row T) (err error) {
 	}
 	id := row.GetID()
 	if id.IsZero() {
-		return fmt.Errorf("row has zero ID")
+		return errZeroID
 	}
 
 	t.mu.Lock()
@@ -269,7 +272,7 @@ func (t *Table[T]) Append(row T) (err error) {
 		return fmt.Errorf("failed to marshal row: %w", err)
 	}
 
-	f, err := os.OpenFile(t.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(t.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: 0o644 is intentional for user data files
 	if err != nil {
 		return fmt.Errorf("failed to open table file for append: %w", err)
 	}

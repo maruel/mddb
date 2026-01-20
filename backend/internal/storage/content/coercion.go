@@ -178,7 +178,7 @@ func coerceToReal(value any) any {
 // - Well-formed integer text → int64
 // - Well-formed real text → float64
 // - Float equal to integer → int64
-// - Non-numeric text → stays as string
+// - Non-numeric text → stays as string.
 func coerceToNumeric(value any) any {
 	switch v := value.(type) {
 	case float64:

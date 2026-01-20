@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,13 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/utils"
+)
+
+var (
+	errEmailRequired      = errors.New("email is required")
+	errOrgIDEmpty         = errors.New("organization id cannot be empty")
+	errInvitationNotFound = errors.New("invitation not found")
+	errInvitationIDEmpty  = errors.New("invitation id cannot be empty")
 )
 
 // InvitationService handles organization invitations.
@@ -24,7 +32,7 @@ type InvitationService struct {
 // NewInvitationService creates a new invitation service.
 func NewInvitationService(rootDir string) (*InvitationService, error) {
 	dbDir := filepath.Join(rootDir, "db")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
 	}
 
@@ -52,10 +60,10 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 // CreateInvitation creates a new invitation.
 func (s *InvitationService) CreateInvitation(email string, orgID jsonldb.ID, role entity.UserRole) (*entity.Invitation, error) {
 	if email == "" {
-		return nil, fmt.Errorf("email is required")
+		return nil, errEmailRequired
 	}
 	if orgID.IsZero() {
-		return nil, fmt.Errorf("organization id cannot be empty")
+		return nil, errOrgIDEmpty
 	}
 
 	token, err := utils.GenerateToken(32)
@@ -97,7 +105,7 @@ func (s *InvitationService) GetInvitationByToken(token string) (*entity.Invitati
 
 	inv, ok := s.byToken[token]
 	if !ok {
-		return nil, fmt.Errorf("invitation not found")
+		return nil, errInvitationNotFound
 	}
 
 	return inv, nil
@@ -106,7 +114,7 @@ func (s *InvitationService) GetInvitationByToken(token string) (*entity.Invitati
 // DeleteInvitation deletes an invitation.
 func (s *InvitationService) DeleteInvitation(id jsonldb.ID) error {
 	if id.IsZero() {
-		return fmt.Errorf("invitation id cannot be empty")
+		return errInvitationIDEmpty
 	}
 
 	s.mu.Lock()
@@ -114,7 +122,7 @@ func (s *InvitationService) DeleteInvitation(id jsonldb.ID) error {
 
 	inv, ok := s.byID[id]
 	if !ok {
-		return fmt.Errorf("invitation not found")
+		return errInvitationNotFound
 	}
 
 	delete(s.byToken, inv.Token)
@@ -126,7 +134,7 @@ func (s *InvitationService) DeleteInvitation(id jsonldb.ID) error {
 // ListByOrganization returns all invitations for an organization.
 func (s *InvitationService) ListByOrganization(orgID jsonldb.ID) ([]*entity.Invitation, error) {
 	if orgID.IsZero() {
-		return nil, fmt.Errorf("organization id cannot be empty")
+		return nil, errOrgIDEmpty
 	}
 
 	s.mu.RLock()

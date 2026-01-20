@@ -22,13 +22,23 @@
 package entity
 
 import (
-	"fmt"
+	"errors"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
-// Node represents the unified content entity (can be a Page, a Database, or both)
+var (
+	errIDRequired     = errors.New("id is required")
+	errUserIDRequired = errors.New("user_id is required")
+	errOrgIDRequired  = errors.New("organization_id is required")
+	errRoleRequired   = errors.New("role is required")
+	errNameRequired   = errors.New("name is required")
+	errEmailRequired  = errors.New("email is required")
+	errTokenRequired  = errors.New("token is required")
+)
+
+// Node represents the unified content entity (can be a Page, a Database, or both).
 type Node struct {
 	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique node identifier"`
 	ParentID   jsonldb.ID `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
@@ -43,15 +53,15 @@ type Node struct {
 	Children   []*Node    `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
 }
 
-// NodeType defines what features are enabled for a node
+// NodeType defines what features are enabled for a node.
 type NodeType string
 
 const (
-	// NodeTypeDocument represents a markdown document
+	// NodeTypeDocument represents a markdown document.
 	NodeTypeDocument NodeType = "document"
-	// NodeTypeDatabase represents a structured database
+	// NodeTypeDatabase represents a structured database.
 	NodeTypeDatabase NodeType = "database"
-	// NodeTypeHybrid represents an entity that is both a document and a database
+	// NodeTypeHybrid represents an entity that is both a document and a database.
 	NodeTypeHybrid NodeType = "hybrid"
 )
 
@@ -83,7 +93,7 @@ func (r *DataRecord) GetID() jsonldb.ID {
 // Validate checks that the DataRecord is valid.
 func (r *DataRecord) Validate() error {
 	if r.ID.IsZero() {
-		return fmt.Errorf("id is required")
+		return errIDRequired
 	}
 	return nil
 }
@@ -142,16 +152,16 @@ func (m *Membership) GetID() jsonldb.ID {
 // Validate checks that the Membership is valid.
 func (m *Membership) Validate() error {
 	if m.ID.IsZero() {
-		return fmt.Errorf("id is required")
+		return errIDRequired
 	}
 	if m.UserID.IsZero() {
-		return fmt.Errorf("user_id is required")
+		return errUserIDRequired
 	}
 	if m.OrganizationID.IsZero() {
-		return fmt.Errorf("organization_id is required")
+		return errOrgIDRequired
 	}
 	if m.Role == "" {
-		return fmt.Errorf("role is required")
+		return errRoleRequired
 	}
 	return nil
 }
@@ -201,10 +211,10 @@ func (o *Organization) GetID() jsonldb.ID {
 // Validate checks that the Organization is valid.
 func (o *Organization) Validate() error {
 	if o.ID.IsZero() {
-		return fmt.Errorf("id is required")
+		return errIDRequired
 	}
 	if o.Name == "" {
-		return fmt.Errorf("name is required")
+		return errNameRequired
 	}
 	return nil
 }
@@ -260,16 +270,16 @@ func (i *Invitation) GetID() jsonldb.ID {
 // Validate checks that the Invitation is valid.
 func (i *Invitation) Validate() error {
 	if i.ID.IsZero() {
-		return fmt.Errorf("id is required")
+		return errIDRequired
 	}
 	if i.Email == "" {
-		return fmt.Errorf("email is required")
+		return errEmailRequired
 	}
 	if i.OrganizationID.IsZero() {
-		return fmt.Errorf("organization_id is required")
+		return errOrgIDRequired
 	}
 	if i.Token == "" {
-		return fmt.Errorf("token is required")
+		return errTokenRequired
 	}
 	return nil
 }
@@ -309,7 +319,7 @@ type CommitDetail struct {
 	Body      string    `json:"body" jsonschema:"description=Commit body message"`
 }
 
-// SearchResult represents a single search result
+// SearchResult represents a single search result.
 type SearchResult struct {
 	Type     string            `json:"type" jsonschema:"description=Result type (page or record)"`
 	NodeID   jsonldb.ID        `json:"node_id" jsonschema:"description=Node containing the result"`
@@ -321,7 +331,7 @@ type SearchResult struct {
 	Modified time.Time         `json:"modified" jsonschema:"description=Last modification timestamp"`
 }
 
-// SearchOptions defines parameters for a search
+// SearchOptions defines parameters for a search.
 type SearchOptions struct {
 	Query       string `json:"query" jsonschema:"description=Search query string"`
 	Limit       int    `json:"limit,omitempty" jsonschema:"description=Maximum number of results"`

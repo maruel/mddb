@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -14,13 +15,13 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
-// AssetHandler handles asset/file-related HTTP requests
+// AssetHandler handles asset/file-related HTTP requests.
 type AssetHandler struct {
 	fileStore    *infra.FileStore
 	assetService *content.AssetService
 }
 
-// NewAssetHandler creates a new asset handler
+// NewAssetHandler creates a new asset handler.
 func NewAssetHandler(fileStore *infra.FileStore, git *infra.Git, orgs *identity.OrganizationService) *AssetHandler {
 	return &AssetHandler{
 		fileStore:    fileStore,
@@ -113,7 +114,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 	// Simple MIME detection
 	mime := "application/octet-stream"
 	w.Header().Set("Content-Type", mime)
-	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
+	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	_, _ = w.Write(data)
 }
 

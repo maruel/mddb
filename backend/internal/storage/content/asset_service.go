@@ -2,6 +2,7 @@ package content
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"mime"
 	"path/filepath"
@@ -10,6 +11,14 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
+)
+
+var (
+	errPageIDEmpty    = errors.New("page id cannot be empty")
+	errFileNameEmpty  = errors.New("file name cannot be empty")
+	errFileDataEmpty  = errors.New("file data cannot be empty")
+	errPageNotFound   = errors.New("page not found")
+	errAssetNameEmpty = errors.New("asset name cannot be empty")
 )
 
 // AssetService handles asset business logic.
@@ -31,13 +40,13 @@ func NewAssetService(fileStore *infra.FileStore, gitService *infra.Git, orgServi
 // SaveAsset saves an asset file to a page's directory.
 func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, fileName string, data []byte) (*entity.Asset, error) {
 	if pageID.IsZero() {
-		return nil, fmt.Errorf("page id cannot be empty")
+		return nil, errPageIDEmpty
 	}
 	if fileName == "" {
-		return nil, fmt.Errorf("file name cannot be empty")
+		return nil, errFileNameEmpty
 	}
 	if len(data) == 0 {
-		return nil, fmt.Errorf("file data cannot be empty")
+		return nil, errFileDataEmpty
 	}
 
 	// Check Quota
@@ -53,7 +62,7 @@ func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 
 	// Verify page exists
 	if !s.fileStore.PageExists(orgID, pageID) {
-		return nil, fmt.Errorf("page not found")
+		return nil, errPageNotFound
 	}
 
 	path, err := s.fileStore.SaveAsset(orgID, pageID, fileName, data)
@@ -76,7 +85,7 @@ func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "create", "asset", fileName, fmt.Sprintf("in page %s", pageID.String())); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "create", "asset", fileName, "in page "+pageID.String()); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -87,10 +96,10 @@ func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 // GetAsset retrieves asset file data.
 func (s *AssetService) GetAsset(ctx context.Context, orgID, pageID jsonldb.ID, assetName string) ([]byte, error) {
 	if pageID.IsZero() {
-		return nil, fmt.Errorf("page id cannot be empty")
+		return nil, errPageIDEmpty
 	}
 	if assetName == "" {
-		return nil, fmt.Errorf("asset name cannot be empty")
+		return nil, errAssetNameEmpty
 	}
 
 	return s.fileStore.ReadAsset(orgID, pageID, assetName)
@@ -99,10 +108,10 @@ func (s *AssetService) GetAsset(ctx context.Context, orgID, pageID jsonldb.ID, a
 // DeleteAsset deletes an asset file from a page's directory.
 func (s *AssetService) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID, assetName string) error {
 	if pageID.IsZero() {
-		return fmt.Errorf("page id cannot be empty")
+		return errPageIDEmpty
 	}
 	if assetName == "" {
-		return fmt.Errorf("asset name cannot be empty")
+		return errAssetNameEmpty
 	}
 
 	if err := s.fileStore.DeleteAsset(orgID, pageID, assetName); err != nil {
@@ -110,7 +119,7 @@ func (s *AssetService) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "delete", "asset", assetName, fmt.Sprintf("in page %s", pageID.String())); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID, "delete", "asset", assetName, "in page "+pageID.String()); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -121,7 +130,7 @@ func (s *AssetService) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID
 // ListAssets lists all assets in a page's directory.
 func (s *AssetService) ListAssets(ctx context.Context, orgID, pageID jsonldb.ID) ([]*entity.Asset, error) {
 	if pageID.IsZero() {
-		return nil, fmt.Errorf("page id cannot be empty")
+		return nil, errPageIDEmpty
 	}
 
 	return s.fileStore.ListAssets(orgID, pageID)

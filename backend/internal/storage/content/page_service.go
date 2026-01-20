@@ -10,6 +10,7 @@ package content
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -17,6 +18,11 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
+)
+
+var (
+	errPageTitleEmpty     = errors.New("title cannot be empty")
+	errGitServiceNotAvail = errors.New("git service not available")
 )
 
 // PageService handles page business logic.
@@ -40,7 +46,7 @@ func NewPageService(fileStore *infra.FileStore, gitService *infra.Git, cache *in
 // GetPage retrieves a page by ID and returns it as a Node.
 func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*entity.Node, error) {
 	if id.IsZero() {
-		return nil, fmt.Errorf("page id cannot be empty")
+		return nil, errPageIDEmpty
 	}
 
 	return s.fileStore.ReadPage(orgID, id)
@@ -49,7 +55,7 @@ func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*entit
 // CreatePage creates a new page with a generated numeric ID and returns it as a Node.
 func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, content string) (*entity.Node, error) {
 	if title == "" {
-		return nil, fmt.Errorf("title cannot be empty")
+		return nil, errPageTitleEmpty
 	}
 
 	// Check Quota
@@ -86,10 +92,10 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 // UpdatePage updates an existing page and returns it as a Node.
 func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title, content string) (*entity.Node, error) {
 	if id.IsZero() {
-		return nil, fmt.Errorf("page id cannot be empty")
+		return nil, errPageIDEmpty
 	}
 	if title == "" {
-		return nil, fmt.Errorf("title cannot be empty")
+		return nil, errPageTitleEmpty
 	}
 
 	node, err := s.fileStore.UpdatePage(orgID, id, title, content)
@@ -112,7 +118,7 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 // DeletePage deletes a page.
 func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) error {
 	if id.IsZero() {
-		return fmt.Errorf("page id cannot be empty")
+		return errPageIDEmpty
 	}
 	if err := s.fileStore.DeletePage(orgID, id); err != nil {
 		return err
@@ -170,7 +176,7 @@ func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) 
 // GetPageVersion returns the content of a page at a specific commit.
 func (s *PageService) GetPageVersion(ctx context.Context, orgID, id jsonldb.ID, commitHash string) (string, error) {
 	if s.gitService == nil {
-		return "", fmt.Errorf("git service not available")
+		return "", errGitServiceNotAvail
 	}
 
 	// New storage path: {orgID}/pages/{id}/index.md

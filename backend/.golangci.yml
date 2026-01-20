@@ -3,16 +3,33 @@ run:
   tests: true
 linters:
   enable:
+    - bodyclose
+    - contextcheck
+    - copyloopvar
+    - dupword
+    - durationcheck
     - errname
     - errorlint
     - exhaustive
     - gocritic
+    - gosec
+    - godot
     - misspell
+    - nilerr
+    - nilnil
     - nolintlint
+    - perfsprint
+    - prealloc
     - revive
+    - sqlclosecheck
     - unconvert
     - unparam
+    - unused
+    - usestdlibvars
+    - whitespace
   settings:
+    unused:
+      check-exported: true
     gocritic:
       enabled-tags:
         - diagnostic

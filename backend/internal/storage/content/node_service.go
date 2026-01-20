@@ -2,6 +2,7 @@ package content
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
+
+var errNodeIDEmpty = errors.New("node id cannot be empty")
 
 // NodeService handles unified node business logic.
 type NodeService struct {
@@ -32,7 +35,7 @@ func NewNodeService(fileStore *infra.FileStore, gitService *infra.Git, cache *in
 // GetNode retrieves a unified node by ID.
 func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*entity.Node, error) {
 	if id.IsZero() {
-		return nil, fmt.Errorf("node id cannot be empty")
+		return nil, errNodeIDEmpty
 	}
 
 	// Check cached node tree first
@@ -60,7 +63,7 @@ func (s *NodeService) ListNodes(ctx context.Context, orgID jsonldb.ID) ([]*entit
 	return nodes, nil
 }
 
-// CreateNode creates a new node (can be document, database, or hybrid)
+// CreateNode creates a new node (can be document, database, or hybrid).
 func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType entity.NodeType, parentID jsonldb.ID) (*entity.Node, error) {
 	// Check Quota
 	if s.orgService != nil {

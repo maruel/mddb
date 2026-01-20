@@ -31,6 +31,11 @@ import (
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
+var (
+	errNoEnvFile   = errors.New(".env file not found and stdin is not a TTY; cannot run onboarding")
+	errNoJWTSecret = errors.New("JWT_SECRET is required in .env file; run onboarding or create it manually")
+)
+
 func main() {
 	if err := mainImpl(); err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintf(os.Stderr, "mddb: %v\n", err)
@@ -64,7 +69,7 @@ func mainImpl() error {
 				return fmt.Errorf("onboarding failed: %w", err)
 			}
 		} else {
-			return fmt.Errorf(".env file not found and stdin is not a TTY; cannot run onboarding")
+			return errNoEnvFile
 		}
 	}
 
@@ -75,7 +80,7 @@ func mainImpl() error {
 
 	jwtSecret := env["JWT_SECRET"]
 	if jwtSecret == "" {
-		return fmt.Errorf("JWT_SECRET is required in .env file; run onboarding or create it manually")
+		return errNoJWTSecret
 	}
 
 	// Override with .env file values if not explicitly set via flags
@@ -186,9 +191,10 @@ func mainImpl() error {
 
 	addr := ":" + *port
 	httpServer := &http.Server{
-		Addr:        addr,
-		Handler:     server.NewRouter(fileStore, gitService, userService, orgService, invService, memService, remoteService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
-		BaseContext: func(_ net.Listener) context.Context { return ctx },
+		Addr:              addr,
+		Handler:           server.NewRouter(fileStore, gitService, userService, orgService, invService, memService, remoteService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
+		BaseContext:       func(_ net.Listener) context.Context { return ctx },
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// Run server in goroutine
@@ -252,7 +258,7 @@ func printVersion() {
 func loadDotEnv(dataDir string) (map[string]string, error) {
 	env := make(map[string]string)
 	path := filepath.Join(dataDir, ".env")
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from dataDir flag, not user input
 	if err != nil {
 		if os.IsNotExist(err) {
 			return env, nil
@@ -363,7 +369,7 @@ func runOnboarding(dataDir string) error {
 	}
 
 	fmt.Println("")
-	if err := os.MkdirAll(dataDir, 0o755); err != nil {
+	if err := os.MkdirAll(dataDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return fmt.Errorf("failed to create data directory: %w", err)
 	}
 

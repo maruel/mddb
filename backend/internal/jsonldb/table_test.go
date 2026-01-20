@@ -20,7 +20,7 @@ func (r *testRow) Clone() *testRow {
 }
 
 func (r *testRow) GetID() ID {
-	return ID(r.ID)
+	return ID(r.ID) //nolint:gosec // test code with small integers
 }
 
 func (r *testRow) Validate() error {
@@ -40,7 +40,7 @@ func (r *validatingRow) Clone() *validatingRow {
 }
 
 func (r *validatingRow) GetID() ID {
-	return ID(r.ID)
+	return ID(r.ID) //nolint:gosec // test code with small integers
 }
 
 func (r *validatingRow) Validate() error {
@@ -62,7 +62,7 @@ func (r *alwaysInvalidRow) Clone() *alwaysInvalidRow {
 }
 
 func (r *alwaysInvalidRow) GetID() ID {
-	return ID(r.ID)
+	return ID(r.ID) //nolint:gosec // test code with small integers
 }
 
 func (r *alwaysInvalidRow) Validate() error {
@@ -390,7 +390,7 @@ func TestTable(t *testing.T) {
 			t.Run("unreadable file", func(t *testing.T) {
 				// Create a directory where we expect a file
 				path := filepath.Join(t.TempDir(), "not-a-file")
-				_ = os.Mkdir(path, 0o755)
+				_ = os.Mkdir(path, 0o750)
 
 				_, err := NewTable[*testRow](path)
 				if err == nil {
@@ -400,7 +400,7 @@ func TestTable(t *testing.T) {
 
 			t.Run("invalid schema header", func(t *testing.T) {
 				path := filepath.Join(t.TempDir(), "bad-schema.jsonl")
-				_ = os.WriteFile(path, []byte("not valid json\n"), 0o644)
+				_ = os.WriteFile(path, []byte("not valid json\n"), 0o600)
 
 				_, err := NewTable[*testRow](path)
 				if err == nil {
@@ -413,7 +413,7 @@ func TestTable(t *testing.T) {
 				// Valid schema header, invalid row
 				_ = os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 not valid json
-`), 0o644)
+`), 0o600)
 
 				_, err := NewTable[*testRow](path)
 				if err == nil {
@@ -425,7 +425,7 @@ not valid json
 				path := filepath.Join(t.TempDir(), "zero-id.jsonl")
 				_ = os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 {"id":0,"name":"Zero"}
-`), 0o644)
+`), 0o600)
 
 				_, err := NewTable[*testRow](path)
 				if err == nil {
@@ -438,7 +438,7 @@ not valid json
 				_ = os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 {"id":1,"name":"First"}
 {"id":1,"name":"Duplicate"}
-`), 0o644)
+`), 0o600)
 
 				_, err := NewTable[*testRow](path)
 				if err == nil {
@@ -449,7 +449,7 @@ not valid json
 			t.Run("invalid schema version", func(t *testing.T) {
 				path := filepath.Join(t.TempDir(), "bad-version.jsonl")
 				_ = os.WriteFile(path, []byte(`{"version":"","columns":[]}
-`), 0o644)
+`), 0o600)
 
 				_, err := NewTable[*testRow](path)
 				if err == nil {
@@ -462,7 +462,7 @@ not valid json
 				path := filepath.Join(t.TempDir(), "invalid-row.jsonl")
 				_ = os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 {"id":1,"name":"Test"}
-`), 0o644)
+`), 0o600)
 
 				_, err := NewTable[*alwaysInvalidRow](path)
 				if err == nil {

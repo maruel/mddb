@@ -231,16 +231,26 @@ func WrapAuthRaw(
 	})
 }
 
+var (
+	errUnauthorized       = errors.New("unauthorized")
+	errInvalidAuthHdr     = errors.New("invalid authorization header")
+	errInvalidToken       = errors.New("invalid token")
+	errInvalidClaims      = errors.New("invalid claims")
+	errInvalidUserIDToken = errors.New("invalid user ID in token")
+	errInvalidUserIDFmt   = errors.New("invalid user ID format")
+	errUserNotFound       = errors.New("user not found")
+)
+
 // validateJWT extracts and validates the JWT token from the request.
 func validateJWT(r *http.Request, userService *identity.UserService, jwtSecret []byte) (*entity.User, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		return nil, fmt.Errorf("unauthorized")
+		return nil, errUnauthorized
 	}
 
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
-		return nil, fmt.Errorf("invalid authorization header")
+		return nil, errInvalidAuthHdr
 	}
 
 	tokenString := parts[1]
@@ -252,27 +262,27 @@ func validateJWT(r *http.Request, userService *identity.UserService, jwtSecret [
 	})
 
 	if err != nil || !token.Valid {
-		return nil, fmt.Errorf("invalid token")
+		return nil, errInvalidToken
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, fmt.Errorf("invalid claims")
+		return nil, errInvalidClaims
 	}
 
 	userIDStr, ok := claims["sub"].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid user ID in token")
+		return nil, errInvalidUserIDToken
 	}
 
 	userID, err := jsonldb.DecodeID(userIDStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid user ID format")
+		return nil, errInvalidUserIDFmt
 	}
 
 	user, err := userService.GetUser(userID)
 	if err != nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, errUserNotFound
 	}
 
 	return user, nil

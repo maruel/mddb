@@ -4,6 +4,7 @@ package infra
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,11 +15,20 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
+var (
+	errOrgIDRequired    = errors.New("organization ID is required")
+	errPageNotFound     = errors.New("page not found")
+	errNodeNotFound     = errors.New("node not found")
+	errDatabaseNotFound = errors.New("database not found")
+	errRecordNotFound   = errors.New("record not found")
+	errAssetNotFound    = errors.New("asset not found")
+)
+
 // FileStore handles all file system operations using directory-based storage.
 // Storage model: Each page (document or database) is an ID-based directory.
-// - Pages: ID directory containing index.md with YAML front matter
-// - Databases: ID directory containing data.jsonl (with schema header in first row)
-// - Assets: files within each page's directory namespace
+//   - Pages: ID directory containing index.md with YAML front matter.
+//   - Databases: ID directory containing data.jsonl (with schema header in first row).
+//   - Assets: files within each page's directory namespace.
 type FileStore struct {
 	rootDir string
 }
@@ -36,7 +46,7 @@ type page struct {
 
 // NewFileStore initializes a FileStore with the given root directory.
 func NewFileStore(rootDir string) (*FileStore, error) {
-	if err := os.MkdirAll(rootDir, 0o755); err != nil {
+	if err := os.MkdirAll(rootDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create root directory: %w", err)
 	}
 
@@ -50,7 +60,7 @@ func (fs *FileStore) orgPagesDir(orgID jsonldb.ID) string {
 		return ""
 	}
 	dir := filepath.Join(fs.rootDir, orgID.String(), "pages")
-	_ = os.MkdirAll(dir, 0o755)
+	_ = os.MkdirAll(dir, 0o755) //nolint:gosec // G301: 0o755 is intentional for user data directories
 	return dir
 }
 
@@ -67,13 +77,13 @@ func (fs *FileStore) PageExists(orgID, id jsonldb.ID) bool {
 // ReadPage reads a page from disk and returns it as a Node.
 func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*entity.Node, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	filePath := fs.pageIndexFile(orgID, id)
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) //nolint:gosec // G304: filePath is constructed from validated orgID and id
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("page not found")
+			return nil, errPageNotFound
 		}
 		return nil, fmt.Errorf("failed to read page: %w", err)
 	}
@@ -94,7 +104,7 @@ func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*entity.Node, error) {
 // WritePage writes a page to disk and returns it as a Node.
 func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*entity.Node, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	now := time.Now()
 	p := &page{
@@ -106,13 +116,13 @@ func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*en
 	}
 
 	pageDir := fs.pageDir(orgID, id)
-	if err := os.MkdirAll(pageDir, 0o755); err != nil {
+	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	filePath := fs.pageIndexFile(orgID, id)
 	data := formatMarkdownFile(p)
-	if err := os.WriteFile(filePath, data, 0o644); err != nil {
+	if err := os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 
@@ -130,13 +140,13 @@ func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*en
 // UpdatePage updates an existing page and returns it as a Node.
 func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*entity.Node, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	filePath := fs.pageIndexFile(orgID, id)
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) //nolint:gosec // G304: filePath is constructed from validated orgID and id
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("page not found")
+			return nil, errPageNotFound
 		}
 		return nil, fmt.Errorf("failed to read page: %w", err)
 	}
@@ -147,7 +157,7 @@ func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*e
 	p.modified = time.Now()
 
 	updatedData := formatMarkdownFile(p)
-	if err := os.WriteFile(filePath, updatedData, 0o644); err != nil {
+	if err := os.WriteFile(filePath, updatedData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 
@@ -166,12 +176,12 @@ func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*e
 // DeletePage deletes a page directory.
 func (fs *FileStore) DeletePage(orgID, id jsonldb.ID) error {
 	if orgID == 0 {
-		return fmt.Errorf("organization ID is required")
+		return errOrgIDRequired
 	}
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.RemoveAll(pageDir); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("page not found")
+			return errPageNotFound
 		}
 		return fmt.Errorf("failed to delete page: %w", err)
 	}
@@ -181,7 +191,7 @@ func (fs *FileStore) DeletePage(orgID, id jsonldb.ID) error {
 // ListPages returns all pages for an organization as Nodes.
 func (fs *FileStore) ListPages(orgID jsonldb.ID) ([]*entity.Node, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	var nodes []*entity.Node
 	dir := fs.orgPagesDir(orgID)
@@ -216,13 +226,13 @@ func (fs *FileStore) ListPages(orgID jsonldb.ID) ([]*entity.Node, error) {
 // ReadNode reads a unified node from disk.
 func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*entity.Node, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	nodeDir := fs.pageDir(orgID, id)
 	info, err := os.Stat(nodeDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("node not found")
+			return nil, errNodeNotFound
 		}
 		return nil, fmt.Errorf("failed to access node: %w", err)
 	}
@@ -268,7 +278,7 @@ func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*entity.Node, error) {
 // ReadNodeTree returns the full hierarchical tree of nodes.
 func (fs *FileStore) ReadNodeTree(orgID jsonldb.ID) ([]*entity.Node, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	return fs.readNodesRecursive(orgID, fs.orgPagesDir(orgID), 0)
 }
@@ -352,7 +362,7 @@ func (fs *FileStore) ReadNodeFromPath(orgID jsonldb.ID, path string, id, parentI
 // GetOrganizationUsage calculates the total number of pages and storage usage (in bytes) for an organization.
 func (fs *FileStore) GetOrganizationUsage(orgID jsonldb.ID) (pageCount int, storageUsage int64, err error) {
 	if orgID == 0 {
-		return 0, 0, fmt.Errorf("organization ID is required")
+		return 0, 0, errOrgIDRequired
 	}
 	dir := fs.orgPagesDir(orgID)
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -394,14 +404,14 @@ func (fs *FileStore) DatabaseExists(orgID, id jsonldb.ID) bool {
 // ReadDatabase reads a database definition from metadata.json and returns it as a Node.
 func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*entity.Node, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 
 	metadataFile := fs.databaseMetadataFile(orgID, id)
-	data, err := os.ReadFile(metadataFile)
+	data, err := os.ReadFile(metadataFile) //nolint:gosec // G304: metadataFile is constructed from validated orgID and id
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("database not found")
+			return nil, errDatabaseNotFound
 		}
 		return nil, fmt.Errorf("failed to read database metadata: %w", err)
 	}
@@ -431,10 +441,10 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*entity.Node, error) {
 // The JSONL records file is created lazily when the first record is added.
 func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, node *entity.Node) error {
 	if orgID == 0 {
-		return fmt.Errorf("organization ID is required")
+		return errOrgIDRequired
 	}
 
-	if err := os.MkdirAll(fs.pageDir(orgID, node.ID), 0o755); err != nil {
+	if err := os.MkdirAll(fs.pageDir(orgID, node.ID), 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -451,7 +461,7 @@ func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, node *entity.Node) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
-	if err := os.WriteFile(metadataFile, data, 0o644); err != nil {
+	if err := os.WriteFile(metadataFile, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
 		return fmt.Errorf("failed to write metadata: %w", err)
 	}
 
@@ -461,7 +471,7 @@ func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, node *entity.Node) error {
 // DeleteDatabase deletes a database and all its records.
 func (fs *FileStore) DeleteDatabase(orgID, id jsonldb.ID) error {
 	if orgID == 0 {
-		return fmt.Errorf("organization ID is required")
+		return errOrgIDRequired
 	}
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.RemoveAll(pageDir); err != nil && !os.IsNotExist(err) {
@@ -473,7 +483,7 @@ func (fs *FileStore) DeleteDatabase(orgID, id jsonldb.ID) error {
 // ListDatabases returns all databases for the given organization as Nodes.
 func (fs *FileStore) ListDatabases(orgID jsonldb.ID) ([]*entity.Node, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	var nodes []*entity.Node
 	dir := fs.orgPagesDir(orgID)
@@ -509,10 +519,10 @@ func (fs *FileStore) ListDatabases(orgID jsonldb.ID) ([]*entity.Node, error) {
 // AppendRecord appends a record to a database using jsonldb abstraction.
 func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *entity.DataRecord) error {
 	if orgID == 0 {
-		return fmt.Errorf("organization ID is required")
+		return errOrgIDRequired
 	}
 	pageDir := fs.pageDir(orgID, id)
-	if err := os.MkdirAll(pageDir, 0o755); err != nil {
+	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -535,7 +545,7 @@ func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *entity.DataRecor
 // ReadRecords reads all records for a database using jsonldb abstraction.
 func (fs *FileStore) ReadRecords(orgID, id jsonldb.ID) ([]*entity.DataRecord, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	filePath := fs.databaseRecordsFile(orgID, id)
 
@@ -561,7 +571,7 @@ func (fs *FileStore) ReadRecords(orgID, id jsonldb.ID) ([]*entity.DataRecord, er
 // ReadRecordsPage reads a page of records for a database using jsonldb abstraction.
 func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([]*entity.DataRecord, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	filePath := fs.databaseRecordsFile(orgID, id)
 
@@ -607,7 +617,7 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 // UpdateRecord updates an existing record in a database using jsonldb abstraction.
 func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *entity.DataRecord) error {
 	if orgID == 0 {
-		return fmt.Errorf("organization ID is required")
+		return errOrgIDRequired
 	}
 
 	filePath := fs.databaseRecordsFile(orgID, databaseID)
@@ -631,7 +641,7 @@ func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *entity.D
 	}
 
 	if !found {
-		return fmt.Errorf("record not found")
+		return errRecordNotFound
 	}
 
 	return table.Replace(updated)
@@ -640,7 +650,7 @@ func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *entity.D
 // DeleteRecord deletes a record from a database using jsonldb abstraction.
 func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID jsonldb.ID) error {
 	if orgID == 0 {
-		return fmt.Errorf("organization ID is required")
+		return errOrgIDRequired
 	}
 
 	filePath := fs.databaseRecordsFile(orgID, databaseID)
@@ -663,7 +673,7 @@ func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID jsonldb.ID) error 
 	}
 
 	if !found {
-		return fmt.Errorf("record not found")
+		return errRecordNotFound
 	}
 
 	return table.Replace(updated)
@@ -682,15 +692,15 @@ func (fs *FileStore) databaseMetadataFile(orgID, id jsonldb.ID) string {
 // SaveAsset saves an asset associated with a page.
 func (fs *FileStore) SaveAsset(orgID, pageID jsonldb.ID, assetName string, data []byte) (string, error) {
 	if orgID == 0 {
-		return "", fmt.Errorf("organization ID is required")
+		return "", errOrgIDRequired
 	}
 	pageDir := fs.pageDir(orgID, pageID)
-	if err := os.MkdirAll(pageDir, 0o755); err != nil {
+	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return "", fmt.Errorf("failed to create page directory: %w", err)
 	}
 
 	assetPath := filepath.Join(pageDir, assetName)
-	if err := os.WriteFile(assetPath, data, 0o644); err != nil {
+	if err := os.WriteFile(assetPath, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
 		return "", fmt.Errorf("failed to write asset: %w", err)
 	}
 
@@ -700,13 +710,13 @@ func (fs *FileStore) SaveAsset(orgID, pageID jsonldb.ID, assetName string, data 
 // ReadAsset reads an asset associated with a page.
 func (fs *FileStore) ReadAsset(orgID, pageID jsonldb.ID, assetName string) ([]byte, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
-	data, err := os.ReadFile(assetPath)
+	data, err := os.ReadFile(assetPath) //nolint:gosec // G304: assetPath is constructed from validated IDs and filename
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("asset not found")
+			return nil, errAssetNotFound
 		}
 		return nil, fmt.Errorf("failed to read asset: %w", err)
 	}
@@ -716,12 +726,12 @@ func (fs *FileStore) ReadAsset(orgID, pageID jsonldb.ID, assetName string) ([]by
 // DeleteAsset deletes an asset associated with a page.
 func (fs *FileStore) DeleteAsset(orgID, pageID jsonldb.ID, assetName string) error {
 	if orgID == 0 {
-		return fmt.Errorf("organization ID is required")
+		return errOrgIDRequired
 	}
 	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
 	if err := os.Remove(assetPath); err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("asset not found")
+			return errAssetNotFound
 		}
 		return fmt.Errorf("failed to delete asset: %w", err)
 	}
@@ -731,7 +741,7 @@ func (fs *FileStore) DeleteAsset(orgID, pageID jsonldb.ID, assetName string) err
 // ListAssets lists all assets associated with a page.
 func (fs *FileStore) ListAssets(orgID, pageID jsonldb.ID) ([]*entity.Asset, error) {
 	if orgID == 0 {
-		return nil, fmt.Errorf("organization ID is required")
+		return nil, errOrgIDRequired
 	}
 	pageDir := fs.pageDir(orgID, pageID)
 	entries, err := os.ReadDir(pageDir)

@@ -16,19 +16,19 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
-// PageHandler handles page-related HTTP requests
+// PageHandler handles page-related HTTP requests.
 type PageHandler struct {
 	pageService *content.PageService
 }
 
-// NewPageHandler creates a new page handler
+// NewPageHandler creates a new page handler.
 func NewPageHandler(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *PageHandler {
 	return &PageHandler{
 		pageService: content.NewPageService(fileStore, gitService, cache, orgService),
 	}
 }
 
-// ListPages returns a list of all pages
+// ListPages returns a list of all pages.
 func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListPagesRequest) (*dto.ListPagesResponse, error) {
 	pages, err := h.pageService.ListPages(ctx, orgID)
 	if err != nil {
@@ -37,7 +37,7 @@ func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *entity
 	return &dto.ListPagesResponse{Pages: pagesToSummaries(pages)}, nil
 }
 
-// GetPage returns a specific page by ID
+// GetPage returns a specific page by ID.
 func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.GetPageRequest) (*dto.GetPageResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
@@ -54,7 +54,7 @@ func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *entity.U
 	}, nil
 }
 
-// CreatePage creates a new page
+// CreatePage creates a new page.
 func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
@@ -66,7 +66,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, _ *entit
 	return &dto.CreatePageResponse{ID: page.ID.String()}, nil
 }
 
-// UpdatePage updates an existing page
+// UpdatePage updates an existing page.
 func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
@@ -79,7 +79,7 @@ func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, _ *entit
 	return &dto.UpdatePageResponse{ID: page.ID.String()}, nil
 }
 
-// DeletePage deletes a page
+// DeletePage deletes a page.
 func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
@@ -91,7 +91,7 @@ func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, _ *entit
 	return &dto.DeletePageResponse{Ok: true}, nil
 }
 
-// GetPageHistory returns the history of a page
+// GetPageHistory returns the history of a page.
 func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.GetPageHistoryRequest) (*dto.GetPageHistoryResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
@@ -104,7 +104,7 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *e
 	return &dto.GetPageHistoryResponse{History: commitsToDTO(history)}, nil
 }
 
-// GetPageVersion returns a specific version of a page
+// GetPageVersion returns a specific version of a page.
 func (h *PageHandler) GetPageVersion(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.GetPageVersionRequest) (*dto.GetPageVersionResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {

@@ -29,41 +29,41 @@ import (
 type ErrorCode string
 
 const (
-	// ErrorCodeValidationFailed is returned when input data fails validation
+	// ErrorCodeValidationFailed is returned when input data fails validation.
 	ErrorCodeValidationFailed ErrorCode = "VALIDATION_FAILED"
-	// ErrorCodeMissingField is returned when a required field is missing
+	// ErrorCodeMissingField is returned when a required field is missing.
 	ErrorCodeMissingField ErrorCode = "MISSING_FIELD"
-	// ErrorCodeInvalidFormat is returned when a field has an invalid format
+	// ErrorCodeInvalidFormat is returned when a field has an invalid format.
 	ErrorCodeInvalidFormat ErrorCode = "INVALID_FORMAT"
 
-	// ErrorCodeNotFound is returned when a resource is not found
+	// ErrorCodeNotFound is returned when a resource is not found.
 	ErrorCodeNotFound ErrorCode = "NOT_FOUND"
-	// ErrorCodePageNotFound is returned when a page is not found
+	// ErrorCodePageNotFound is returned when a page is not found.
 	ErrorCodePageNotFound ErrorCode = "PAGE_NOT_FOUND"
-	// ErrorCodeDatabaseNotFound is returned when a database is not found
+	// ErrorCodeDatabaseNotFound is returned when a database is not found.
 	ErrorCodeDatabaseNotFound ErrorCode = "DATABASE_NOT_FOUND"
 
-	// ErrorCodeFileNotFound is returned when a file is not found
+	// ErrorCodeFileNotFound is returned when a file is not found.
 	ErrorCodeFileNotFound ErrorCode = "FILE_NOT_FOUND"
-	// ErrorCodeStorageError is returned when a storage operation fails
+	// ErrorCodeStorageError is returned when a storage operation fails.
 	ErrorCodeStorageError ErrorCode = "STORAGE_ERROR"
 
-	// ErrorCodeInternal is returned when an unexpected server error occurs
+	// ErrorCodeInternal is returned when an unexpected server error occurs.
 	ErrorCodeInternal ErrorCode = "INTERNAL_ERROR"
-	// ErrorCodeNotImplemented is returned when a feature is not implemented
+	// ErrorCodeNotImplemented is returned when a feature is not implemented.
 	ErrorCodeNotImplemented ErrorCode = "NOT_IMPLEMENTED"
-	// ErrorCodeConflict is returned when there is a resource conflict
+	// ErrorCodeConflict is returned when there is a resource conflict.
 	ErrorCodeConflict ErrorCode = "CONFLICT"
-	// ErrorCodeUnauthorized is returned when authentication is missing or invalid
+	// ErrorCodeUnauthorized is returned when authentication is missing or invalid.
 	ErrorCodeUnauthorized ErrorCode = "UNAUTHORIZED"
-	// ErrorCodeForbidden is returned when a user has insufficient permissions
+	// ErrorCodeForbidden is returned when a user has insufficient permissions.
 	ErrorCodeForbidden ErrorCode = "FORBIDDEN"
 
-	// ErrorCodeInvalidProvider is returned when an OAuth provider is unknown
+	// ErrorCodeInvalidProvider is returned when an OAuth provider is unknown.
 	ErrorCodeInvalidProvider ErrorCode = "INVALID_PROVIDER"
-	// ErrorCodeOAuthError is returned when an OAuth operation fails
+	// ErrorCodeOAuthError is returned when an OAuth operation fails.
 	ErrorCodeOAuthError ErrorCode = "OAUTH_ERROR"
-	// ErrorCodeExpired is returned when a resource has expired
+	// ErrorCodeExpired is returned when a resource has expired.
 	ErrorCodeExpired ErrorCode = "EXPIRED"
 )
 
@@ -87,7 +87,7 @@ type ErrorWithStatus interface {
 	Details() map[string]any
 }
 
-// APIError is a concrete error type with status code, code, and optional details.
+// APIError is a concrete error type with status code and optional details.
 type APIError struct {
 	statusCode int
 	code       ErrorCode
@@ -162,7 +162,7 @@ func (e *APIError) Unwrap() error {
 
 // NotFound creates a 404 Not Found error.
 func NotFound(resource string) *APIError {
-	return NewAPIError(http.StatusNotFound, ErrorCodeNotFound, fmt.Sprintf("%s not found", resource))
+	return NewAPIError(http.StatusNotFound, ErrorCodeNotFound, resource+" not found")
 }
 
 // BadRequest creates a 400 Bad Request error.
@@ -172,7 +172,7 @@ func BadRequest(message string) *APIError {
 
 // MissingField creates a 400 Bad Request error for a missing field.
 func MissingField(fieldName string) *APIError {
-	return NewAPIError(http.StatusBadRequest, ErrorCodeMissingField, fmt.Sprintf("Missing required field: %s", fieldName))
+	return NewAPIError(http.StatusBadRequest, ErrorCodeMissingField, "Missing required field: "+fieldName)
 }
 
 // Forbidden returns a 403 Forbidden error.
@@ -197,7 +197,7 @@ func InternalWithError(message string, err error) *APIError {
 
 // NotImplemented creates a 501 Not Implemented error.
 func NotImplemented(feature string) *APIError {
-	return NewAPIError(http.StatusNotImplemented, ErrorCodeNotImplemented, fmt.Sprintf("%s is not yet implemented", feature))
+	return NewAPIError(http.StatusNotImplemented, ErrorCodeNotImplemented, feature+" is not yet implemented")
 }
 
 // InvalidProvider creates a 404 error for unknown OAuth providers.
@@ -212,5 +212,5 @@ func OAuthError(operation string) *APIError {
 
 // Expired creates a 400 error for expired resources.
 func Expired(resource string) *APIError {
-	return NewAPIError(http.StatusBadRequest, ErrorCodeExpired, fmt.Sprintf("%s expired", resource))
+	return NewAPIError(http.StatusBadRequest, ErrorCodeExpired, resource+" expired")
 }

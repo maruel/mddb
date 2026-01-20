@@ -7,12 +7,15 @@
 package jsonldb
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/invopop/jsonschema"
 )
+
+var errSchemaVersionRequired = errors.New("schema version is required")
 
 // currentVersion is the current version of the JSONL database format.
 const currentVersion = "1.0"
@@ -47,7 +50,7 @@ type schemaHeader struct {
 // Validate checks that the schema header is well-formed.
 func (h *schemaHeader) Validate() error {
 	if h.Version == "" {
-		return fmt.Errorf("schema version is required")
+		return errSchemaVersionRequired
 	}
 	// Validate each column
 	for i, col := range h.Columns {

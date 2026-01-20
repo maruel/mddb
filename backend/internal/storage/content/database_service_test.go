@@ -39,7 +39,6 @@ func TestDatabaseService_Create(t *testing.T) {
 	if len(db.Properties) != 2 {
 		t.Errorf("Column count mismatch: got %d, want 2", len(db.Properties))
 	}
-
 }
 
 func TestDatabaseService_CreateValidation(t *testing.T) {
@@ -139,7 +138,7 @@ func TestDatabaseService_List(t *testing.T) {
 
 	// Create multiple databases
 	titles := []string{"DB 1", "DB 2", "DB 3"}
-	createdIDs := []jsonldb.ID{}
+	createdIDs := make([]jsonldb.ID, 0, len(titles))
 
 	for _, title := range titles {
 		columns := []entity.Property{{Name: "col", Type: "text"}}

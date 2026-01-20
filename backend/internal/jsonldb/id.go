@@ -32,7 +32,7 @@ const (
 )
 
 // sortableAlphabet is a base64 alphabet in ASCII order for lexicographic sorting.
-// Characters: - (0x2D), 0-9 (0x30-39), A-Z (0x41-5A), _ (0x5F), a-z (0x61-7A)
+// Characters: - (0x2D), 0-9 (0x30-39), A-Z (0x41-5A), _ (0x5F), a-z (0x61-7A).
 const sortableAlphabet = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
 // decodeMap maps ASCII characters back to their 6-bit values.
@@ -76,7 +76,7 @@ func NewID() ID {
 			// New interval: reset slice to 0
 			idLastT10us = t10us
 			idSlice = 0
-			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion)
+			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion) //nolint:gosec // t10us is guaranteed non-negative by max(0, ...)
 			idMu.Unlock()
 			return id
 		}
@@ -84,7 +84,7 @@ func NewID() ID {
 		// Same 10µs interval: increment slice
 		idSlice++
 		if idSlice <= sliceMask {
-			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion)
+			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion) //nolint:gosec // t10us is guaranteed non-negative by max(0, ...)
 			idMu.Unlock()
 			return id
 		}
@@ -122,7 +122,7 @@ func (id ID) String() string {
 	}
 	// Strip leading '-' (zeros)
 	for i := range idEncodedLen {
-		if buf[i] != '-' {
+		if buf[i] != '-' { //nolint:gosec // i is bounded by idEncodedLen (11), buf has length idEncodedLen
 			return string(buf[i:])
 		}
 	}
@@ -186,18 +186,18 @@ func DecodeID(s string) (ID, error) {
 
 // Time extracts the timestamp from an ID.
 func (id ID) Time() time.Time {
-	t10us := int64(id>>15) + epoch
+	t10us := int64(id>>15) + epoch //nolint:gosec // bit 63 is always 0, so id>>15 fits in int64
 	return time.UnixMicro(t10us * 10)
 }
 
 // Version extracts the version bits from an ID.
 func (id ID) Version() int {
-	return int(id & 0xF)
+	return int(id & 0xF) //nolint:gosec // masked to 4 bits (0-15), always fits in int
 }
 
 // Slice extracts the slice counter from an ID.
 func (id ID) Slice() uint16 {
-	return uint16((id >> 4) & sliceMask)
+	return uint16((id >> 4) & sliceMask) //nolint:gosec // sliceMask is 0x7FF (11 bits), always fits in uint16
 }
 
 // Compare returns -1 if id < other, 0 if equal, 1 if id > other.

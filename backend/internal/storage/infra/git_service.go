@@ -2,6 +2,7 @@ package infra
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,6 +13,8 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
+
+var errInvalidCommitFmt = errors.New("invalid commit format")
 
 // Git handles version control operations using git.
 // All changes to pages and databases are automatically committed.
@@ -126,7 +129,7 @@ func (gs *Git) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, r
 	format := "%H|%an|%ai|%s"
 	output, err := gs.gitOutputInDir(targetDir, "log", "--pretty=format:"+format, "--", path)
 	if err != nil {
-		return []*entity.Commit{}, nil
+		return nil, nil //nolint:nilerr // git log returns error for paths with no history, which is not an error condition
 	}
 
 	var commits []*entity.Commit
@@ -173,7 +176,7 @@ func (gs *Git) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*e
 
 	lines := strings.Split(strings.TrimSpace(output), "\n")
 	if len(lines) < 5 {
-		return nil, fmt.Errorf("invalid commit format")
+		return nil, errInvalidCommitFmt
 	}
 
 	timestamp, err := time.Parse("2006-01-02 15:04:05 -0700", lines[1])

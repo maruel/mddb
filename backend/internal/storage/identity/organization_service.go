@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,6 +12,11 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
+)
+
+var (
+	errOrgNameRequired = errors.New("organization name is required")
+	errOrgNotFound     = errors.New("organization not found")
 )
 
 // OrganizationService handles organization management.
@@ -26,7 +32,7 @@ type OrganizationService struct {
 // NewOrganizationService creates a new organization service.
 func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitService *infra.Git) (*OrganizationService, error) {
 	dbDir := filepath.Join(rootDir, "db")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
 	}
 
@@ -54,7 +60,7 @@ func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitServi
 // CreateOrganization creates a new organization.
 func (s *OrganizationService) CreateOrganization(ctx context.Context, name string) (*entity.Organization, error) {
 	if name == "" {
-		return nil, fmt.Errorf("organization name is required")
+		return nil, errOrgNameRequired
 	}
 
 	s.mu.Lock()
@@ -84,7 +90,7 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	// Create organization content directory
 	orgDir := filepath.Join(s.rootDir, id.String())
 	orgPagesDir := filepath.Join(orgDir, "pages")
-	if err := os.MkdirAll(orgPagesDir, 0o755); err != nil {
+	if err := os.MkdirAll(orgPagesDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return nil, fmt.Errorf("failed to create organization content directory: %w", err)
 	}
 
@@ -118,7 +124,7 @@ func (s *OrganizationService) GetOrganization(id jsonldb.ID) (*entity.Organizati
 
 	org, ok := s.byID[id]
 	if !ok {
-		return nil, fmt.Errorf("organization not found")
+		return nil, errOrgNotFound
 	}
 
 	return org, nil
@@ -152,7 +158,7 @@ func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings entity.Orga
 
 	org, ok := s.byID[id]
 	if !ok {
-		return fmt.Errorf("organization not found")
+		return errOrgNotFound
 	}
 
 	org.Settings = settings
@@ -166,7 +172,7 @@ func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state entity.Onboa
 
 	org, ok := s.byID[id]
 	if !ok {
-		return fmt.Errorf("organization not found")
+		return errOrgNotFound
 	}
 
 	org.Onboarding = state

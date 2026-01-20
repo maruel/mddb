@@ -11,19 +11,19 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
-// DatabaseHandler handles database-related HTTP requests
+// DatabaseHandler handles database-related HTTP requests.
 type DatabaseHandler struct {
 	databaseService *content.DatabaseService
 }
 
-// NewDatabaseHandler creates a new database handler
+// NewDatabaseHandler creates a new database handler.
 func NewDatabaseHandler(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *DatabaseHandler {
 	return &DatabaseHandler{
 		databaseService: content.NewDatabaseService(fileStore, gitService, cache, orgService),
 	}
 }
 
-// ListDatabases returns a list of all databases
+// ListDatabases returns a list of all databases.
 func (h *DatabaseHandler) ListDatabases(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListDatabasesRequest) (*dto.ListDatabasesResponse, error) {
 	databases, err := h.databaseService.ListDatabases(ctx, orgID)
 	if err != nil {
@@ -32,7 +32,7 @@ func (h *DatabaseHandler) ListDatabases(ctx context.Context, orgID jsonldb.ID, _
 	return &dto.ListDatabasesResponse{Databases: databasesToSummaries(databases)}, nil
 }
 
-// GetDatabase returns a specific database by ID
+// GetDatabase returns a specific database by ID.
 func (h *DatabaseHandler) GetDatabase(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.GetDatabaseRequest) (*dto.GetDatabaseResponse, error) {
 	id, err := decodeID(req.ID, "database_id")
 	if err != nil {

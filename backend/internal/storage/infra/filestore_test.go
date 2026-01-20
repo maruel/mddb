@@ -154,7 +154,7 @@ func TestMarkdownFormatting(t *testing.T) {
 
 	// Read the file directly to verify format
 	filePath := filepath.Join(tmpDir, orgID.String(), "pages", pageID.String(), "index.md")
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(filePath) //nolint:gosec // G304: test code with controlled path
 	if err != nil {
 		t.Fatalf("failed to read file: %v", err)
 	}

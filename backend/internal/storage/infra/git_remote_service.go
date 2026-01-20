@@ -1,12 +1,22 @@
 package infra
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+)
+
+var (
+	errRemoteIDRequired  = errors.New("id is required")
+	errRemoteOrgRequired = errors.New("organization_id is required")
+	errRemoteURLRequired = errors.New("url is required")
+	errOrgIDEmptyRemote  = errors.New("organization id cannot be empty")
+	errRemoteIDEmpty     = errors.New("remote id cannot be empty")
+	errRemoteNotFound    = errors.New("remote not found")
 )
 
 // GitRemote represents a remote repository for an organization.
@@ -36,13 +46,13 @@ func (g *GitRemote) GetID() jsonldb.ID {
 // Validate checks that the GitRemote is valid.
 func (g *GitRemote) Validate() error {
 	if g.ID.IsZero() {
-		return fmt.Errorf("id is required")
+		return errRemoteIDRequired
 	}
 	if g.OrganizationID.IsZero() {
-		return fmt.Errorf("organization_id is required")
+		return errRemoteOrgRequired
 	}
 	if g.URL == "" {
-		return fmt.Errorf("url is required")
+		return errRemoteURLRequired
 	}
 	return nil
 }
@@ -55,7 +65,7 @@ type GitRemoteService struct {
 // NewGitRemoteService creates a new git remote service.
 func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 	dbDir := filepath.Join(rootDir, "db")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
 	}
 
@@ -70,7 +80,7 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 // ListRemotes returns all remotes for an organization.
 func (s *GitRemoteService) ListRemotes(orgID jsonldb.ID) ([]*GitRemote, error) {
 	if orgID.IsZero() {
-		return nil, fmt.Errorf("organization id cannot be empty")
+		return nil, errOrgIDEmptyRemote
 	}
 	var result []*GitRemote
 	for r := range s.table.Iter(0) {
@@ -84,7 +94,7 @@ func (s *GitRemoteService) ListRemotes(orgID jsonldb.ID) ([]*GitRemote, error) {
 // CreateRemote creates a new git remote.
 func (s *GitRemoteService) CreateRemote(orgID jsonldb.ID, name, url, remoteType, authType, token string) (*GitRemote, error) {
 	if orgID.IsZero() {
-		return nil, fmt.Errorf("organization id cannot be empty")
+		return nil, errOrgIDEmptyRemote
 	}
 
 	remote := &GitRemote{
@@ -107,23 +117,23 @@ func (s *GitRemoteService) CreateRemote(orgID jsonldb.ID, name, url, remoteType,
 // GetRemote retrieves a remote by ID.
 func (s *GitRemoteService) GetRemote(id jsonldb.ID) (*GitRemote, error) {
 	if id.IsZero() {
-		return nil, fmt.Errorf("remote id cannot be empty")
+		return nil, errRemoteIDEmpty
 	}
 	for r := range s.table.Iter(0) {
 		if r.ID == id {
 			return r, nil
 		}
 	}
-	return nil, fmt.Errorf("remote not found")
+	return nil, errRemoteNotFound
 }
 
 // DeleteRemote deletes a git remote.
 func (s *GitRemoteService) DeleteRemote(orgID, remoteID jsonldb.ID) error {
 	if orgID.IsZero() {
-		return fmt.Errorf("organization id cannot be empty")
+		return errOrgIDEmptyRemote
 	}
 	if remoteID.IsZero() {
-		return fmt.Errorf("remote id cannot be empty")
+		return errRemoteIDEmpty
 	}
 
 	var remaining []*GitRemote
@@ -136,7 +146,7 @@ func (s *GitRemoteService) DeleteRemote(orgID, remoteID jsonldb.ID) error {
 		remaining = append(remaining, r)
 	}
 	if !found {
-		return fmt.Errorf("remote not found")
+		return errRemoteNotFound
 	}
 	return s.table.Replace(remaining)
 }
@@ -144,7 +154,7 @@ func (s *GitRemoteService) DeleteRemote(orgID, remoteID jsonldb.ID) error {
 // UpdateLastSync updates the last sync time for a remote.
 func (s *GitRemoteService) UpdateLastSync(remoteID jsonldb.ID) error {
 	if remoteID.IsZero() {
-		return fmt.Errorf("remote id cannot be empty")
+		return errRemoteIDEmpty
 	}
 
 	var all []*GitRemote
@@ -157,5 +167,5 @@ func (s *GitRemoteService) UpdateLastSync(remoteID jsonldb.ID) error {
 			return s.table.Replace(all)
 		}
 	}
-	return fmt.Errorf("remote not found")
+	return errRemoteNotFound
 }

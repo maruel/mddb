@@ -8,6 +8,7 @@
 package identity
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,18 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	errUserIDRequired    = errors.New("id is required")
+	errUserEmailRequired = errors.New("email is required")
+	errEmailPwdRequired  = errors.New("email and password are required")
+	errUserExists        = errors.New("user already exists")
+	errUserIDEmpty       = errors.New("user id cannot be empty")
+	errUserOrgIDEmpty    = errors.New("organization id cannot be empty")
+	errMemSvcNotInit     = errors.New("membership service not initialized")
+	errUserNotFound      = errors.New("user not found")
+	errInvalidCreds      = errors.New("invalid credentials")
 )
 
 // UserService handles user management and authentication.
@@ -33,7 +46,7 @@ type UserService struct {
 // NewUserService creates a new user service.
 func NewUserService(rootDir string, memService *MembershipService, orgService *OrganizationService) (*UserService, error) {
 	dbDir := filepath.Join(rootDir, "db")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
 	}
 
@@ -82,10 +95,10 @@ func (u *userStorage) GetID() jsonldb.ID {
 // Validate checks that the userStorage is valid.
 func (u *userStorage) Validate() error {
 	if u.ID.IsZero() {
-		return fmt.Errorf("id is required")
+		return errUserIDRequired
 	}
 	if u.Email == "" {
-		return fmt.Errorf("email is required")
+		return errUserEmailRequired
 	}
 	return nil
 }
@@ -93,7 +106,7 @@ func (u *userStorage) Validate() error {
 // CreateUser creates a new user.
 func (s *UserService) CreateUser(email, password, name string, role entity.UserRole) (*entity.User, error) {
 	if email == "" || password == "" {
-		return nil, fmt.Errorf("email and password are required")
+		return nil, errEmailPwdRequired
 	}
 
 	s.mu.Lock()
@@ -101,7 +114,7 @@ func (s *UserService) CreateUser(email, password, name string, role entity.UserR
 
 	// Check if user already exists
 	if _, ok := s.byEmail[email]; ok {
-		return nil, fmt.Errorf("user already exists")
+		return nil, errUserExists
 	}
 
 	id := jsonldb.NewID()
@@ -147,17 +160,17 @@ func (s *UserService) CountUsers() (int, error) {
 // UpdateUserRole updates the role of a user in a specific organization.
 func (s *UserService) UpdateUserRole(userID, orgID jsonldb.ID, role entity.UserRole) error {
 	if userID.IsZero() {
-		return fmt.Errorf("user id cannot be empty")
+		return errUserIDEmpty
 	}
 	if orgID.IsZero() {
-		return fmt.Errorf("organization id cannot be empty")
+		return errUserOrgIDEmpty
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if s.memService == nil {
-		return fmt.Errorf("membership service not initialized")
+		return errMemSvcNotInit
 	}
 
 	// Update membership
@@ -173,7 +186,7 @@ func (s *UserService) UpdateUserRole(userID, orgID jsonldb.ID, role entity.UserR
 // GetUser retrieves a user by ID.
 func (s *UserService) GetUser(id jsonldb.ID) (*entity.User, error) {
 	if id.IsZero() {
-		return nil, fmt.Errorf("user id cannot be empty")
+		return nil, errUserIDEmpty
 	}
 
 	s.mu.RLock()
@@ -181,7 +194,7 @@ func (s *UserService) GetUser(id jsonldb.ID) (*entity.User, error) {
 	s.mu.RUnlock()
 
 	if !ok {
-		return nil, fmt.Errorf("user not found")
+		return nil, errUserNotFound
 	}
 
 	user := stored.User
@@ -247,7 +260,7 @@ func (s *UserService) GetUserByEmail(email string) (*entity.User, error) {
 	s.mu.RUnlock()
 
 	if !ok {
-		return nil, fmt.Errorf("user not found")
+		return nil, errUserNotFound
 	}
 
 	user := stored.User
@@ -261,12 +274,12 @@ func (s *UserService) Authenticate(email, password string) (*entity.User, error)
 	s.mu.RUnlock()
 
 	if !ok {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, errInvalidCreds
 	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(stored.PasswordHash), []byte(password))
 	if err != nil {
-		return nil, fmt.Errorf("invalid credentials")
+		return nil, errInvalidCreds
 	}
 
 	user := stored.User
@@ -287,13 +300,13 @@ func (s *UserService) GetUserByOAuth(provider, providerID string) (*entity.User,
 		}
 	}
 
-	return nil, fmt.Errorf("user not found")
+	return nil, errUserNotFound
 }
 
 // LinkOAuthIdentity links an OAuth identity to a user.
 func (s *UserService) LinkOAuthIdentity(userID jsonldb.ID, identity entity.OAuthIdentity) error {
 	if userID.IsZero() {
-		return fmt.Errorf("user id cannot be empty")
+		return errUserIDEmpty
 	}
 
 	s.mu.Lock()
@@ -301,7 +314,7 @@ func (s *UserService) LinkOAuthIdentity(userID jsonldb.ID, identity entity.OAuth
 
 	stored, ok := s.byID[userID]
 	if !ok {
-		return fmt.Errorf("user not found")
+		return errUserNotFound
 	}
 
 	// Check if already linked
@@ -325,7 +338,7 @@ func (s *UserService) LinkOAuthIdentity(userID jsonldb.ID, identity entity.OAuth
 // UpdateSettings updates user global settings.
 func (s *UserService) UpdateSettings(id jsonldb.ID, settings entity.UserSettings) error {
 	if id.IsZero() {
-		return fmt.Errorf("user id cannot be empty")
+		return errUserIDEmpty
 	}
 
 	s.mu.Lock()
@@ -333,7 +346,7 @@ func (s *UserService) UpdateSettings(id jsonldb.ID, settings entity.UserSettings
 
 	stored, ok := s.byID[id]
 	if !ok {
-		return fmt.Errorf("user not found")
+		return errUserNotFound
 	}
 
 	stored.Settings = settings

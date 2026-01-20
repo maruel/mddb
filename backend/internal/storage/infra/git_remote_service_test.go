@@ -13,7 +13,7 @@ func TestGitRemoteService(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	dbDir := filepath.Join(tmpDir, "db")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+	if err := os.MkdirAll(dbDir, 0o750); err != nil {
 		t.Fatal(err)
 	}
 
@@ -25,7 +25,7 @@ func TestGitRemoteService(t *testing.T) {
 	orgID := jsonldb.ID(100)
 	name := "origin"
 	url := "https://github.com/user/repo.git"
-	token := "ghp_test_token"
+	token := "ghp_test_token" //nolint:gosec // G101: test token, not a real credential
 
 	// Create remote
 	remote, err := s.CreateRemote(orgID, name, url, "github", "token", token)

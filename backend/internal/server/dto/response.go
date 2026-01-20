@@ -166,7 +166,7 @@ type ServeAssetResponse struct {
 
 // --- Search Responses ---
 
-// SearchResponse is the response to a search request
+// SearchResponse is the response to a search request.
 type SearchResponse struct {
 	Results []SearchResult `json:"results"`
 }

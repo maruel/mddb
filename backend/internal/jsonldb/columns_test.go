@@ -102,7 +102,7 @@ type schemaTestStruct struct {
 }
 
 func (s schemaTestStruct) Clone() schemaTestStruct { return s }
-func (s schemaTestStruct) GetID() ID               { return ID(s.ID) }
+func (s schemaTestStruct) GetID() ID               { return ID(s.ID) } //nolint:gosec // test code with small integers
 func (s schemaTestStruct) Validate() error         { return nil }
 
 // TestSchemaFromType tests schemaFromType indirectly through Table creation.

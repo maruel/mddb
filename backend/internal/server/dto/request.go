@@ -187,7 +187,7 @@ type ServeAssetRequest struct {
 
 // --- Search ---
 
-// SearchRequest is a request to search pages and databases
+// SearchRequest is a request to search pages and databases.
 type SearchRequest struct {
 	OrgID       string `path:"orgID"`
 	Query       string `json:"query"`
