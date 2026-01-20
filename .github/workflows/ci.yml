@@ -29,5 +29,5 @@ jobs:
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: backend/coverage.out
+          files: backend/coverage.out,frontend/coverage/lcov.info
       - run: make build

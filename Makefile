@@ -40,6 +40,7 @@ test:
 
 coverage:
 	cd backend && go test -coverprofile=coverage.out ./...
+	cd frontend && pnpm coverage
 
 lint: lint-go lint-frontend
 
