@@ -572,9 +572,10 @@ Response: { "records": [...], "total": 150 }
 
 ### Phase 18: Model Layer Separation ✓
 *Completed.*
-- Separated structs used for disk serialization (`entity` package) from those used for API responses (`dto` package).
+- Separated structs used for disk serialization (`storage/entity` package) from those used for API responses (`server/dto` package).
 - Created API response types: `UserResponse`, `MembershipResponse`, `InvitationResponse`, `OrganizationResponse`, `GitRemoteResponse`, `NodeResponse`, `DataRecordResponse`.
 - **dto package is fully self-contained**: Duplicated necessary types (Property, UserRole, NodeType, Settings, etc.) in dto to eliminate dependency on entity. This prevents accidental API contract changes when internal entity types evolve.
+- **Package organization**: Entity types live under `internal/storage/entity` (persistence layer), DTO types live under `internal/server/dto` (API layer).
 - Moved all entity→dto conversion functions to `handlers/convert.go` where both packages are already imported.
 - Storage services return entity types with wrapper structs (`MembershipWithOrgName`, `UserWithMemberships`); handlers perform dto conversion.
 - Updated all handlers to use local conversion functions instead of methods on domain models.

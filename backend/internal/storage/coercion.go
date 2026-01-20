@@ -4,7 +4,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/maruel/mddb/backend/internal/entity"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // Type coercion maps JSON wire types through Go types to SQLite storage classes.

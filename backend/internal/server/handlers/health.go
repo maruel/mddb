@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto"
 )
 
 // HealthHandler handles health check requests.

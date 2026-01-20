@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/entity"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func Test_coerceValue_Text(t *testing.T) {

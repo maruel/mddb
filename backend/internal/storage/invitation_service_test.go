@@ -3,7 +3,7 @@ package storage
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/entity"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestInvitationService(t *testing.T) {

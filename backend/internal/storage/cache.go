@@ -3,8 +3,8 @@ package storage
 import (
 	"sync"
 
-	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // Cache handles in-memory caching of metadata, hot pages, and records.

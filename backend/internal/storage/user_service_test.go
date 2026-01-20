@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/entity"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestUserService(t *testing.T) {

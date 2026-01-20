@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/dto"
-	"github.com/maruel/mddb/backend/internal/entity"
+	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/microsoft"

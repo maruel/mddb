@@ -6,10 +6,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/maruel/mddb/backend/internal/dto"
-	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // AssetHandler handles asset/file-related HTTP requests

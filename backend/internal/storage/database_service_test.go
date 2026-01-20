@@ -3,8 +3,8 @@ package storage
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestDatabaseService_Create(t *testing.T) {

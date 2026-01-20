@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // testID returns a LUCI-style ID for the given number.

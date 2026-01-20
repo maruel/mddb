@@ -12,9 +12,9 @@ import (
 	"net/http"
 
 	"github.com/maruel/mddb/backend/frontend"
-	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // NewRouter creates and configures the HTTP router.

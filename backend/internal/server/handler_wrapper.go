@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/maruel/mddb/backend/internal/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto"
 )
 
 // Wrap wraps a handler function to work as an http.Handler.

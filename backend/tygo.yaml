@@ -1,5 +1,5 @@
 packages:
-  - path: "github.com/maruel/mddb/backend/internal/dto"
+  - path: "github.com/maruel/mddb/backend/internal/server/dto"
     enum_style: "union"
     type_mappings:
       "time.Time": "string"

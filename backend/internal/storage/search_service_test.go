@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/entity"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestSearchService_SearchPages(t *testing.T) {

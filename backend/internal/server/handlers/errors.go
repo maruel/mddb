@@ -5,7 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/maruel/mddb/backend/internal/dto"
+	"github.com/maruel/mddb/backend/internal/server/dto"
 )
 
 // writeErrorResponse writes an APIError as a JSON response.

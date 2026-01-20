@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func testID(n uint64) jsonldb.ID {

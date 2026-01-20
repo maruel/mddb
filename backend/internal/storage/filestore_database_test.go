@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestDatabase_ReadWrite(t *testing.T) {

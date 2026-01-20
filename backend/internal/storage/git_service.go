@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/entity"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // GitService handles version control operations using git.

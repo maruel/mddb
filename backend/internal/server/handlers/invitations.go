@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/dto"
-	"github.com/maruel/mddb/backend/internal/entity"
+	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // InvitationHandler handles invitation requests.

@@ -3,10 +3,10 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/dto"
-	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // OrganizationHandler handles organization management requests.

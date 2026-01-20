@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // FileStore handles all file system operations using directory-based storage.

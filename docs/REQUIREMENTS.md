@@ -121,7 +121,7 @@ Most core functional requirements for a local-first markdown and database system
 - [ ] **CI/CD Workflows**: Automated GitHub Actions for CI (test/lint) and Release (cross-platform builds).
 - [x] **Local-First**: Filesystem-based storage with no external database dependencies.
 - [x] **Simplified Storage**: Unified JSONLDB format with versioning and column definitions in the first row, removing the need for separate `metadata.json`.
-- [x] **API Contract Centralization**: All Request, Response, and DTO structures are centralized in the `internal/dto` package as the single source of truth for the frontend. The dto package is fully self-contained with no imports from entity, preventing accidental API contract changes when internal entity types evolve.
+- [x] **API Contract Centralization**: All Request, Response, and DTO structures are centralized in the `internal/server/dto` package as the single source of truth for the frontend. The dto package is fully self-contained with no imports from entity, preventing accidental API contract changes when internal entity types evolve. Entity types for persistence are in `internal/storage/entity`.
 - [x] **Encapsulation**: Handlers and storage implementation details are isolated from the API contract.
 - [x] **Cross-Platform**: Compatible with Linux, macOS, and Windows.
 - [x] **Type Generation**: Automatic TypeScript type generation from Go models via `tygo`, ensuring API contract synchronization between backend and frontend.
