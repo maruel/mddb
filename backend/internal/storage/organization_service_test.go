@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/storage/entity"
@@ -25,7 +24,7 @@ func TestOrganizationService(t *testing.T) {
 	t.Run("CreateOrganization", func(t *testing.T) {
 		t.Run("valid name", func(t *testing.T) {
 			var createErr error
-			org, createErr = service.CreateOrganization(context.Background(), "Test Organization")
+			org, createErr = service.CreateOrganization(t.Context(), "Test Organization")
 			if createErr != nil {
 				t.Fatalf("CreateOrganization failed: %v", createErr)
 			}
@@ -48,7 +47,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("empty name", func(t *testing.T) {
-			_, createErr := service.CreateOrganization(context.Background(), "")
+			_, createErr := service.CreateOrganization(t.Context(), "")
 			if createErr == nil {
 				t.Error("Expected error when creating organization with empty name")
 			}
@@ -56,7 +55,7 @@ func TestOrganizationService(t *testing.T) {
 
 		t.Run("second organization", func(t *testing.T) {
 			var createErr error
-			org2, createErr = service.CreateOrganization(context.Background(), "Second Org")
+			org2, createErr = service.CreateOrganization(t.Context(), "Second Org")
 			if createErr != nil {
 				t.Fatalf("CreateOrganization (second) failed: %v", createErr)
 			}
@@ -188,7 +187,7 @@ func TestOrganizationService(t *testing.T) {
 			t.Fatal(svcErr)
 		}
 
-		persistOrg, createErr := svc1.CreateOrganization(context.Background(), "Persistent Org")
+		persistOrg, createErr := svc1.CreateOrganization(t.Context(), "Persistent Org")
 		if createErr != nil {
 			t.Fatal(createErr)
 		}

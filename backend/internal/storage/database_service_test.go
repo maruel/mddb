@@ -16,7 +16,7 @@ func TestDatabaseService_Create(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	columns := []entity.Property{
 		{Name: "title", Type: "text"},
@@ -49,7 +49,7 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	tests := []struct {
 		name    string
@@ -96,7 +96,7 @@ func TestDatabaseService_Get(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	// Create a database
 	columns := []entity.Property{
@@ -130,7 +130,7 @@ func TestDatabaseService_List(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	// Create multiple databases
 	titles := []string{"DB 1", "DB 2", "DB 3"}
@@ -178,7 +178,7 @@ func TestDatabaseService_Delete(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "col", Type: "text"}}
@@ -209,7 +209,7 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	// Create a database
 	columns := []entity.Property{
@@ -248,7 +248,7 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "name", Type: "text"}}
@@ -287,7 +287,7 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "name", Type: "text"}}
@@ -326,7 +326,7 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "name", Type: "text"}}
@@ -375,7 +375,7 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	// Create a database
 	columns := []entity.Property{{Name: "name", Type: "text"}}
@@ -413,7 +413,7 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 
 	cache := NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	ctx := newTestContext(testID(100).String())
+	ctx := newTestContext(t, testID(100).String())
 
 	// Create a database with various column types
 	columns := []entity.Property{

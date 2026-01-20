@@ -20,11 +20,11 @@ func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, *Orga
 	if err != nil {
 		t.Fatal(err)
 	}
-	org, err := orgService.CreateOrganization(context.Background(), "Test Org")
+	org, err := orgService.CreateOrganization(t.Context(), "Test Org")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.WithValue(context.Background(), entity.UserKey, &entity.User{ID: testID(1000)})
+	ctx := context.WithValue(t.Context(), entity.UserKey, &entity.User{ID: testID(1000)})
 	return context.WithValue(ctx, entity.OrgKey, org.ID), orgService
 }
 
@@ -196,7 +196,7 @@ func TestPageService_SearchPages(t *testing.T) {
 func TestPageService_GetPageHistory_NoGit(t *testing.T) {
 	fileStore, _ := NewFileStore(t.TempDir())
 	service := NewPageService(fileStore, nil, NewCache(), nil)
-	history, err := service.GetPageHistory(newTestContext(""), jsonldb.NewID().String())
+	history, err := service.GetPageHistory(newTestContext(t, ""), jsonldb.NewID().String())
 	if err != nil {
 		t.Fatalf("GetPageHistory failed: %v", err)
 	}
@@ -208,7 +208,7 @@ func TestPageService_GetPageHistory_NoGit(t *testing.T) {
 func TestPageService_GetPageVersion_NoGit(t *testing.T) {
 	fileStore, _ := NewFileStore(t.TempDir())
 	service := NewPageService(fileStore, nil, NewCache(), nil)
-	if _, err := service.GetPageVersion(newTestContext(""), jsonldb.NewID().String(), "abc123"); err == nil {
+	if _, err := service.GetPageVersion(newTestContext(t, ""), jsonldb.NewID().String(), "abc123"); err == nil {
 		t.Error("Expected error when getting page version without git service")
 	}
 }

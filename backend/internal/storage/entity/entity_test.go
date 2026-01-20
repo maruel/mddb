@@ -10,17 +10,17 @@ import (
 
 func TestGetOrgID(t *testing.T) {
 	t.Run("context with org ID", func(t *testing.T) {
-		if got := GetOrgID(context.WithValue(context.Background(), OrgKey, jsonldb.ID(123))); got != jsonldb.ID(123) {
+		if got := GetOrgID(context.WithValue(t.Context(), OrgKey, jsonldb.ID(123))); got != jsonldb.ID(123) {
 			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(123))
 		}
 	})
 	t.Run("context without org ID", func(t *testing.T) {
-		if got := GetOrgID(context.Background()); got != jsonldb.ID(0) {
+		if got := GetOrgID(t.Context()); got != jsonldb.ID(0) {
 			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(0))
 		}
 	})
 	t.Run("context with wrong type value", func(t *testing.T) {
-		if got := GetOrgID(context.WithValue(context.Background(), OrgKey, "not an ID")); got != jsonldb.ID(0) {
+		if got := GetOrgID(context.WithValue(t.Context(), OrgKey, "not an ID")); got != jsonldb.ID(0) {
 			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(0))
 		}
 	})

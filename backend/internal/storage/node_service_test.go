@@ -31,7 +31,7 @@ func TestNodeService_GetNode(t *testing.T) {
 	cache := NewCache()
 	service := NewNodeService(fileStore, nil, cache, nil)
 
-	ctx := newTestContext("")
+	ctx := newTestContext(t, "")
 
 	// Test with empty ID
 	_, err := service.GetNode(ctx, "")

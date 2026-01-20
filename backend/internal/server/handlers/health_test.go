@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -43,7 +42,7 @@ func TestHealthHandler_Health(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			handler := NewHealthHandler(tt.version)
-			resp, err := handler.Health(context.Background(), dto.HealthRequest{})
+			resp, err := handler.Health(t.Context(), dto.HealthRequest{})
 
 			if err != nil {
 				t.Fatalf("Health() error = %v", err)
