@@ -28,8 +28,8 @@ linters:
     - usestdlibvars
     - whitespace
   settings:
-    unused:
-      check-exported: true
+    exhaustive:
+      default-signifies-exhaustive: true
     gocritic:
       enabled-tags:
         - diagnostic

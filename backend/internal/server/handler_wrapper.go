@@ -349,7 +349,6 @@ func populateQueryParams(r *http.Request, input any) {
 		}
 
 		// Set the field value based on its type
-		//nolint:exhaustive // Only string and int are supported for query params currently
 		switch field.Type.Kind() {
 		case reflect.String:
 			elem.Field(i).SetString(paramValue)

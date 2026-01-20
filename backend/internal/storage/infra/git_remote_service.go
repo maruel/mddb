@@ -77,8 +77,8 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 	return &GitRemoteService{table: table}, nil
 }
 
-// ListRemotes returns all remotes for an organization.
-func (s *GitRemoteService) ListRemotes(orgID jsonldb.ID) ([]*GitRemote, error) {
+// List returns all remotes for an organization.
+func (s *GitRemoteService) List(orgID jsonldb.ID) ([]*GitRemote, error) {
 	if orgID.IsZero() {
 		return nil, errOrgIDEmptyRemote
 	}
@@ -91,13 +91,12 @@ func (s *GitRemoteService) ListRemotes(orgID jsonldb.ID) ([]*GitRemote, error) {
 	return result, nil
 }
 
-// CreateRemote creates a new git remote.
-func (s *GitRemoteService) CreateRemote(orgID jsonldb.ID, name, url, remoteType, authType, token string) (*GitRemote, error) {
+// Create creates a new git remote.
+func (s *GitRemoteService) Create(orgID jsonldb.ID, name, url, remoteType, authType, token string) (*GitRemote, error) {
 	if orgID.IsZero() {
 		return nil, errOrgIDEmptyRemote
 	}
-
-	remote := &GitRemote{
+	r := &GitRemote{
 		ID:             jsonldb.NewID(),
 		OrganizationID: orgID,
 		Name:           name,
@@ -107,15 +106,14 @@ func (s *GitRemoteService) CreateRemote(orgID jsonldb.ID, name, url, remoteType,
 		Token:          token,
 		Created:        time.Now(),
 	}
-
-	if err := s.table.Append(remote); err != nil {
+	if err := s.table.Append(r); err != nil {
 		return nil, err
 	}
-	return s.table.Last(), nil
+	return r, nil
 }
 
-// GetRemote retrieves a remote by ID.
-func (s *GitRemoteService) GetRemote(id jsonldb.ID) (*GitRemote, error) {
+// Get retrieves a remote by ID.
+func (s *GitRemoteService) Get(id jsonldb.ID) (*GitRemote, error) {
 	if id.IsZero() {
 		return nil, errRemoteIDEmpty
 	}
@@ -127,28 +125,22 @@ func (s *GitRemoteService) GetRemote(id jsonldb.ID) (*GitRemote, error) {
 	return nil, errRemoteNotFound
 }
 
-// DeleteRemote deletes a git remote.
-func (s *GitRemoteService) DeleteRemote(orgID, remoteID jsonldb.ID) error {
+// Delete deletes a git remote.
+func (s *GitRemoteService) Delete(orgID, remoteID jsonldb.ID) error {
 	if orgID.IsZero() {
 		return errOrgIDEmptyRemote
 	}
 	if remoteID.IsZero() {
 		return errRemoteIDEmpty
 	}
-
-	var remaining []*GitRemote
-	found := false
-	for r := range s.table.Iter(0) {
-		if r.ID == remoteID {
-			found = true
-			continue
-		}
-		remaining = append(remaining, r)
+	found, err := s.table.Delete(remoteID)
+	if err != nil {
+		return err
 	}
 	if !found {
 		return errRemoteNotFound
 	}
-	return s.table.Replace(remaining)
+	return nil
 }
 
 // UpdateLastSync updates the last sync time for a remote.

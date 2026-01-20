@@ -15,9 +15,6 @@ func TestNewNodeService(t *testing.T) {
 	cache := infra.NewCache()
 	service := NewNodeService(fileStore, nil, cache, nil)
 
-	if service == nil {
-		t.Fatal("NewNodeService returned nil")
-	}
 	if service.fileStore != fileStore {
 		t.Error("fileStore not properly assigned")
 	}

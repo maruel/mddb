@@ -32,7 +32,7 @@ func NewGitRemoteHandler(remoteService *infra.GitRemoteService, gitService *infr
 
 // ListRemotes lists all git remotes for an organization.
 func (h *GitRemoteHandler) ListRemotes(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListGitRemotesRequest) (*dto.ListGitRemotesResponse, error) {
-	remotes, err := h.remoteService.ListRemotes(orgID)
+	remotes, err := h.remoteService.List(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (h *GitRemoteHandler) ListRemotes(ctx context.Context, orgID jsonldb.ID, _ 
 
 // CreateRemote creates a new git remote.
 func (h *GitRemoteHandler) CreateRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req *dto.CreateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	remote, err := h.remoteService.CreateRemote(orgID, req.Name, req.URL, req.Type, req.AuthType, req.Token)
+	remote, err := h.remoteService.Create(orgID, req.Name, req.URL, req.Type, req.AuthType, req.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity
 		return nil, err
 	}
 
-	remote, err := h.remoteService.GetRemote(remoteID)
+	remote, err := h.remoteService.Get(remoteID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,12 +111,12 @@ func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _
 		return nil, err
 	}
 
-	remote, err := h.remoteService.GetRemote(remoteID)
+	remote, err := h.remoteService.Get(remoteID)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := h.remoteService.DeleteRemote(orgID, remoteID); err != nil {
+	if err := h.remoteService.Delete(orgID, remoteID); err != nil {
 		return nil, err
 	}
 

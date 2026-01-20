@@ -28,7 +28,7 @@ func TestGitRemoteService(t *testing.T) {
 	token := "ghp_test_token" //nolint:gosec // G101: test token, not a real credential
 
 	// Create remote
-	remote, err := s.CreateRemote(orgID, name, url, "github", "token", token)
+	remote, err := s.Create(orgID, name, url, "github", "token", token)
 	if err != nil {
 		t.Fatalf("Failed to create remote: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestGitRemoteService(t *testing.T) {
 	}
 
 	// List remotes
-	remotes, err := s.ListRemotes(orgID)
+	remotes, err := s.List(orgID)
 	if err != nil || len(remotes) != 1 {
 		t.Fatalf("Failed to list remotes: %v, len=%d", err, len(remotes))
 	}
@@ -54,11 +54,11 @@ func TestGitRemoteService(t *testing.T) {
 	}
 
 	// Delete
-	if err := s.DeleteRemote(orgID, remote.ID); err != nil {
+	if err := s.Delete(orgID, remote.ID); err != nil {
 		t.Fatalf("Failed to delete remote: %v", err)
 	}
 
-	remotes, _ = s.ListRemotes(orgID)
+	remotes, _ = s.List(orgID)
 	if len(remotes) != 0 {
 		t.Errorf("Remote still exists after deletion")
 	}

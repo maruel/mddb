@@ -8,9 +8,6 @@ import (
 
 func TestNewHealthHandler(t *testing.T) {
 	handler := NewHealthHandler("1.0.0")
-	if handler == nil {
-		t.Fatal("NewHealthHandler returned nil")
-	}
 	if handler.version != "1.0.0" {
 		t.Errorf("version = %q, want %q", handler.version, "1.0.0")
 	}
@@ -46,9 +43,6 @@ func TestHealthHandler_Health(t *testing.T) {
 
 			if err != nil {
 				t.Fatalf("Health() error = %v", err)
-			}
-			if resp == nil {
-				t.Fatal("Health() returned nil response")
 			}
 			if resp.Status != tt.expectedStatus {
 				t.Errorf("Status = %q, want %q", resp.Status, tt.expectedStatus)
