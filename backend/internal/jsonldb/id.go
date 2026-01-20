@@ -65,22 +65,35 @@ var (
 //
 // IDs are guaranteed to be unique and monotonically increasing within a process.
 // Multiple calls in the same 10µs interval use an incrementing slice counter.
+// If the slice overflows (>2047 IDs in one 10µs interval), it spins until the
+// next interval to maintain uniqueness.
 func NewID() ID {
 	idMu.Lock()
-	defer idMu.Unlock()
+	for {
+		t10us := max(0, time.Now().UnixMicro()/10-epoch)
 
-	t10us := max(0, time.Now().UnixMicro()/10-epoch)
+		if t10us != idLastT10us {
+			// New interval: reset slice to 0
+			idLastT10us = t10us
+			idSlice = 0
+			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion)
+			idMu.Unlock()
+			return id
+		}
 
-	if t10us == idLastT10us {
 		// Same 10µs interval: increment slice
 		idSlice++
-	} else {
-		// New interval: reset slice to 0
-		idLastT10us = t10us
-		idSlice = 0
-	}
+		if idSlice <= sliceMask {
+			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion)
+			idMu.Unlock()
+			return id
+		}
 
-	return newIDFromParts(uint64(t10us), uint64(idSlice), idVersion)
+		// Overflow: release lock, wait, and retry
+		idMu.Unlock()
+		time.Sleep(time.Microsecond)
+		idMu.Lock()
+	}
 }
 
 func newIDFromParts(t10us, slice, version uint64) ID {
