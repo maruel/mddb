@@ -16,8 +16,8 @@ import (
 func AuthMiddleware(userService *identity.UserService, jwtSecret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Skip auth for login and register
-			if r.URL.Path == "/api/auth/login" || r.URL.Path == "/api/auth/register" || !strings.HasPrefix(r.URL.Path, "/api/") {
+			// Skip auth for login, register, OAuth, and non-API paths
+			if r.URL.Path == "/api/auth/login" || r.URL.Path == "/api/auth/register" || strings.HasPrefix(r.URL.Path, "/api/auth/oauth/") || !strings.HasPrefix(r.URL.Path, "/api/") {
 				next.ServeHTTP(w, r)
 				return
 			}
