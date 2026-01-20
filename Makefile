@@ -41,8 +41,9 @@ types: $(FRONTEND_STAMP)
 dev: build
 	mddb -port $(PORT) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
 
-test:
+test: $(FRONTEND_STAMP)
 	cd backend && go test -cover ./...
+	cd frontend && pnpm test
 
 coverage: $(FRONTEND_STAMP)
 	cd backend && go test -coverprofile=coverage.out ./...
