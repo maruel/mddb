@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -25,25 +26,15 @@ func NewMembershipHandler(memService *identity.MembershipService, userService *i
 }
 
 // SwitchOrg switches the user's active organization and returns a new token.
-func (h *MembershipHandler) SwitchOrg(ctx context.Context, req dto.SwitchOrgRequest) (*dto.SwitchOrgResponse, error) {
-	currentUser, ok := ctx.Value(entity.UserKey).(*entity.User)
-	if !ok {
-		return nil, dto.Unauthorized()
-	}
+func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *entity.User, req dto.SwitchOrgRequest) (*dto.SwitchOrgResponse, error) {
 	orgID, err := decodeOrgID(req.OrgID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Verify membership
-	if _, err = h.memService.GetMembership(currentUser.ID, orgID); err != nil {
+	if _, err = h.memService.GetMembership(user.ID, orgID); err != nil {
 		return nil, dto.Forbidden("User is not a member of this organization")
-	}
-
-	// Re-fetch user for token generation
-	user, err := h.userService.GetUser(currentUser.ID)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to fetch user", err)
 	}
 
 	token, err := h.authHandler.GenerateToken(user)
@@ -52,7 +43,7 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req dto.SwitchOrgRequ
 	}
 
 	// Build user response with memberships
-	uwm, err := h.userService.GetUserWithMemberships(currentUser.ID)
+	uwm, err := h.userService.GetUserWithMemberships(user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -67,19 +58,11 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req dto.SwitchOrgRequ
 }
 
 // UpdateMembershipSettings updates user preferences within an organization.
-func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req dto.UpdateMembershipSettingsRequest) (*dto.MembershipResponse, error) {
-	currentUser, ok := ctx.Value(entity.UserKey).(*entity.User)
-	if !ok {
-		return nil, dto.Unauthorized()
-	}
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
-	if err := h.memService.UpdateSettings(currentUser.ID, orgID, membershipSettingsToEntity(req.Settings)); err != nil {
+func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, orgID jsonldb.ID, user *entity.User, req dto.UpdateMembershipSettingsRequest) (*dto.MembershipResponse, error) {
+	if err := h.memService.UpdateSettings(user.ID, orgID, membershipSettingsToEntity(req.Settings)); err != nil {
 		return nil, dto.InternalWithError("Failed to update membership settings", err)
 	}
-	m, err := h.memService.GetMembership(currentUser.ID, orgID)
+	m, err := h.memService.GetMembership(user.ID, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get membership", err)
 	}

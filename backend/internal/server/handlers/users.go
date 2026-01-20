@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -21,12 +22,7 @@ func NewUserHandler(userService *identity.UserService) *UserHandler {
 }
 
 // ListUsers returns all users in the organization.
-func (h *UserHandler) ListUsers(ctx context.Context, req dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
-
+func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
 	allUsers, err := h.userService.ListUsersWithMemberships()
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list users", err)
@@ -47,11 +43,7 @@ func (h *UserHandler) ListUsers(ctx context.Context, req dto.ListUsersRequest) (
 }
 
 // UpdateUserRole updates a user's role.
-func (h *UserHandler) UpdateUserRole(ctx context.Context, req dto.UpdateRoleRequest) (*dto.UserResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.UpdateRoleRequest) (*dto.UserResponse, error) {
 	if req.UserID == "" || req.Role == "" {
 		return nil, dto.MissingField("user_id or role")
 	}
@@ -70,15 +62,11 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, req dto.UpdateRoleRequ
 }
 
 // UpdateUserSettings updates user global settings.
-func (h *UserHandler) UpdateUserSettings(ctx context.Context, req dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
-	currentUser, ok := ctx.Value(entity.UserKey).(*entity.User)
-	if !ok {
-		return nil, dto.Unauthorized()
-	}
-	if err := h.userService.UpdateSettings(currentUser.ID, userSettingsToEntity(req.Settings)); err != nil {
+func (h *UserHandler) UpdateUserSettings(ctx context.Context, _ jsonldb.ID, user *entity.User, req dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
+	if err := h.userService.UpdateSettings(user.ID, userSettingsToEntity(req.Settings)); err != nil {
 		return nil, dto.InternalWithError("Failed to update settings", err)
 	}
-	uwm, err := h.userService.GetUserWithMemberships(currentUser.ID)
+	uwm, err := h.userService.GetUserWithMemberships(user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}

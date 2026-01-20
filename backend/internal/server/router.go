@@ -1,8 +1,8 @@
 // Package server implements HTTP routing, middleware, and request handling.
 //
-// It provides handler composition utilities (Wrap, RequireRole, AuthMiddleware)
-// for type-safe routes with JWT authentication, role-based access control, and
-// automatic JSON marshaling. It also serves the embedded SolidJS frontend.
+// It provides handler composition utilities (Wrap, WrapAuth) for type-safe routes
+// with JWT authentication, role-based access control, and automatic JSON marshaling.
+// It also serves the embedded SolidJS frontend.
 package server
 
 import (
@@ -25,6 +25,8 @@ import (
 func NewRouter(fileStore *infra.FileStore, gitService *infra.GitService, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, remoteService *infra.GitRemoteService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
 	cache := infra.NewCache()
 	mux := &http.ServeMux{}
+	jwtSecretBytes := []byte(jwtSecret)
+
 	ph := handlers.NewPageHandler(fileStore, gitService, cache, orgService)
 	dh := handlers.NewDatabaseHandler(fileStore, gitService, cache, orgService)
 	nh := handlers.NewNodeHandler(fileStore, gitService, cache, orgService)
@@ -35,34 +37,41 @@ func NewRouter(fileStore *infra.FileStore, gitService *infra.GitService, userSer
 	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
 	mh := handlers.NewMembershipHandler(memService, userService, authh)
 	orgh := handlers.NewOrganizationHandler(orgService)
-	grh := handlers.NewGitRemoteHandler(remoteService, gitService, orgService.RootDir()) // Added rootDir accessor
+	grh := handlers.NewGitRemoteHandler(remoteService, gitService, orgService.RootDir())
 
-	// Health check
+	// Helper to create WrapAuth with common deps
+	viewer := entity.UserRoleViewer
+	editor := entity.UserRoleEditor
+	admin := entity.UserRoleAdmin
+
+	// Health check (public)
 	hh := handlers.NewHealthHandler("1.0.0")
 	mux.Handle("/api/health", Wrap(hh.Health))
 
-	// Auth endpoints
+	// Auth endpoints (public)
 	mux.Handle("POST /api/auth/login", Wrap(authh.Login))
 	mux.Handle("POST /api/auth/register", Wrap(authh.Register))
-	mux.Handle("GET /api/auth/me", Wrap(authh.Me))
 	mux.Handle("POST /api/auth/invitations/accept", Wrap(ih.AcceptInvitation))
-	mux.Handle("POST /api/auth/switch-org", Wrap(mh.SwitchOrg))
 
-	// Settings endpoints
-	mux.Handle("PUT /api/auth/settings", Wrap(uh.UpdateUserSettings))
-	mux.Handle("PUT /api/{orgID}/settings/membership", RequireRole(memService, entity.UserRoleViewer)(Wrap(mh.UpdateMembershipSettings)))
-	mux.Handle("GET /api/{orgID}/settings/organization", RequireRole(memService, entity.UserRoleViewer)(Wrap(orgh.GetOrganization)))
-	mux.Handle("PUT /api/{orgID}/settings/organization", RequireRole(memService, entity.UserRoleAdmin)(Wrap(orgh.UpdateSettings)))
-	mux.Handle("GET /api/{orgID}/onboarding", RequireRole(memService, entity.UserRoleViewer)(Wrap(orgh.GetOnboarding)))
-	mux.Handle("PUT /api/{orgID}/onboarding", RequireRole(memService, entity.UserRoleAdmin)(Wrap(orgh.UpdateOnboarding)))
+	// Auth endpoints (authenticated, no org)
+	mux.Handle("GET /api/auth/me", WrapAuth(userService, memService, jwtSecretBytes, viewer, authh.Me))
+	mux.Handle("POST /api/auth/switch-org", WrapAuth(userService, memService, jwtSecretBytes, viewer, mh.SwitchOrg))
+	mux.Handle("PUT /api/auth/settings", WrapAuth(userService, memService, jwtSecretBytes, viewer, uh.UpdateUserSettings))
+
+	// Settings endpoints (authenticated with org)
+	mux.Handle("PUT /api/{orgID}/settings/membership", WrapAuth(userService, memService, jwtSecretBytes, viewer, mh.UpdateMembershipSettings))
+	mux.Handle("GET /api/{orgID}/settings/organization", WrapAuth(userService, memService, jwtSecretBytes, viewer, orgh.GetOrganization))
+	mux.Handle("PUT /api/{orgID}/settings/organization", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateSettings))
+	mux.Handle("GET /api/{orgID}/onboarding", WrapAuth(userService, memService, jwtSecretBytes, viewer, orgh.GetOnboarding))
+	mux.Handle("PUT /api/{orgID}/onboarding", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateOnboarding))
 
 	// Git Remote endpoints
-	mux.Handle("GET /api/{orgID}/settings/git/remotes", RequireRole(memService, entity.UserRoleAdmin)(Wrap(grh.ListRemotes)))
-	mux.Handle("POST /api/{orgID}/settings/git/remotes", RequireRole(memService, entity.UserRoleAdmin)(Wrap(grh.CreateRemote)))
-	mux.Handle("POST /api/{orgID}/settings/git/remotes/{remoteID}/push", RequireRole(memService, entity.UserRoleAdmin)(Wrap(grh.Push)))
-	mux.Handle("DELETE /api/{orgID}/settings/git/remotes/{remoteID}", RequireRole(memService, entity.UserRoleAdmin)(Wrap(grh.DeleteRemote)))
+	mux.Handle("GET /api/{orgID}/settings/git/remotes", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.ListRemotes))
+	mux.Handle("POST /api/{orgID}/settings/git/remotes", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.CreateRemote))
+	mux.Handle("POST /api/{orgID}/settings/git/remotes/{remoteID}/push", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.Push))
+	mux.Handle("DELETE /api/{orgID}/settings/git/remotes/{remoteID}", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.DeleteRemote))
 
-	// OAuth endpoints
+	// OAuth endpoints (public)
 	if (googleClientID != "" && googleClientSecret != "") || (msClientID != "" && msClientSecret != "") {
 		oh := handlers.NewOAuthHandler(userService, orgService, authh)
 		base := strings.TrimRight(baseURL, "/")
@@ -77,57 +86,56 @@ func NewRouter(fileStore *infra.FileStore, gitService *infra.GitService, userSer
 	}
 
 	// User management endpoints
-	mux.Handle("GET /api/{orgID}/users", RequireRole(memService, entity.UserRoleAdmin)(Wrap(uh.ListUsers)))
-	mux.Handle("PUT /api/{orgID}/users/role", RequireRole(memService, entity.UserRoleAdmin)(Wrap(uh.UpdateUserRole)))
+	mux.Handle("GET /api/{orgID}/users", WrapAuth(userService, memService, jwtSecretBytes, admin, uh.ListUsers))
+	mux.Handle("PUT /api/{orgID}/users/role", WrapAuth(userService, memService, jwtSecretBytes, admin, uh.UpdateUserRole))
 
 	// Invitation endpoints
-	mux.Handle("GET /api/{orgID}/invitations", RequireRole(memService, entity.UserRoleAdmin)(Wrap(ih.ListInvitations)))
-	mux.Handle("POST /api/{orgID}/invitations", RequireRole(memService, entity.UserRoleAdmin)(Wrap(ih.CreateInvitation)))
+	mux.Handle("GET /api/{orgID}/invitations", WrapAuth(userService, memService, jwtSecretBytes, admin, ih.ListInvitations))
+	mux.Handle("POST /api/{orgID}/invitations", WrapAuth(userService, memService, jwtSecretBytes, admin, ih.CreateInvitation))
 
 	// Unified Nodes endpoints
-	mux.Handle("GET /api/{orgID}/nodes", RequireRole(memService, entity.UserRoleViewer)(Wrap(nh.ListNodes)))
-	mux.Handle("GET /api/{orgID}/nodes/{id}", RequireRole(memService, entity.UserRoleViewer)(Wrap(nh.GetNode)))
-	mux.Handle("POST /api/{orgID}/nodes", RequireRole(memService, entity.UserRoleEditor)(Wrap(nh.CreateNode)))
+	mux.Handle("GET /api/{orgID}/nodes", WrapAuth(userService, memService, jwtSecretBytes, viewer, nh.ListNodes))
+	mux.Handle("GET /api/{orgID}/nodes/{id}", WrapAuth(userService, memService, jwtSecretBytes, viewer, nh.GetNode))
+	mux.Handle("POST /api/{orgID}/nodes", WrapAuth(userService, memService, jwtSecretBytes, editor, nh.CreateNode))
 
 	// Pages endpoints
-	mux.Handle("GET /api/{orgID}/pages", RequireRole(memService, entity.UserRoleViewer)(Wrap(ph.ListPages)))
-	mux.Handle("GET /api/{orgID}/pages/{id}", RequireRole(memService, entity.UserRoleViewer)(Wrap(ph.GetPage)))
-	mux.Handle("GET /api/{orgID}/pages/{id}/history", RequireRole(memService, entity.UserRoleViewer)(Wrap(ph.GetPageHistory)))
-	mux.Handle("GET /api/{orgID}/pages/{id}/history/{hash}", RequireRole(memService, entity.UserRoleViewer)(Wrap(ph.GetPageVersion)))
-	mux.Handle("POST /api/{orgID}/pages", RequireRole(memService, entity.UserRoleEditor)(Wrap(ph.CreatePage)))
-	mux.Handle("PUT /api/{orgID}/pages/{id}", RequireRole(memService, entity.UserRoleEditor)(Wrap(ph.UpdatePage)))
-	mux.Handle("DELETE /api/{orgID}/pages/{id}", RequireRole(memService, entity.UserRoleEditor)(Wrap(ph.DeletePage)))
+	mux.Handle("GET /api/{orgID}/pages", WrapAuth(userService, memService, jwtSecretBytes, viewer, ph.ListPages))
+	mux.Handle("GET /api/{orgID}/pages/{id}", WrapAuth(userService, memService, jwtSecretBytes, viewer, ph.GetPage))
+	mux.Handle("GET /api/{orgID}/pages/{id}/history", WrapAuth(userService, memService, jwtSecretBytes, viewer, ph.GetPageHistory))
+	mux.Handle("GET /api/{orgID}/pages/{id}/history/{hash}", WrapAuth(userService, memService, jwtSecretBytes, viewer, ph.GetPageVersion))
+	mux.Handle("POST /api/{orgID}/pages", WrapAuth(userService, memService, jwtSecretBytes, editor, ph.CreatePage))
+	mux.Handle("PUT /api/{orgID}/pages/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, ph.UpdatePage))
+	mux.Handle("DELETE /api/{orgID}/pages/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, ph.DeletePage))
 
 	// Database endpoints
-	mux.Handle("GET /api/{orgID}/databases", RequireRole(memService, entity.UserRoleViewer)(Wrap(dh.ListDatabases)))
-	mux.Handle("GET /api/{orgID}/databases/{id}", RequireRole(memService, entity.UserRoleViewer)(Wrap(dh.GetDatabase)))
-	mux.Handle("POST /api/{orgID}/databases", RequireRole(memService, entity.UserRoleEditor)(Wrap(dh.CreateDatabase)))
-	mux.Handle("PUT /api/{orgID}/databases/{id}", RequireRole(memService, entity.UserRoleEditor)(Wrap(dh.UpdateDatabase)))
-	mux.Handle("DELETE /api/{orgID}/databases/{id}", RequireRole(memService, entity.UserRoleEditor)(Wrap(dh.DeleteDatabase)))
+	mux.Handle("GET /api/{orgID}/databases", WrapAuth(userService, memService, jwtSecretBytes, viewer, dh.ListDatabases))
+	mux.Handle("GET /api/{orgID}/databases/{id}", WrapAuth(userService, memService, jwtSecretBytes, viewer, dh.GetDatabase))
+	mux.Handle("POST /api/{orgID}/databases", WrapAuth(userService, memService, jwtSecretBytes, editor, dh.CreateDatabase))
+	mux.Handle("PUT /api/{orgID}/databases/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, dh.UpdateDatabase))
+	mux.Handle("DELETE /api/{orgID}/databases/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, dh.DeleteDatabase))
 
 	// Records endpoints
-	mux.Handle("GET /api/{orgID}/databases/{id}/records", RequireRole(memService, entity.UserRoleViewer)(Wrap(dh.ListRecords)))
-	mux.Handle("GET /api/{orgID}/databases/{id}/records/{rid}", RequireRole(memService, entity.UserRoleViewer)(Wrap(dh.GetRecord)))
-	mux.Handle("POST /api/{orgID}/databases/{id}/records", RequireRole(memService, entity.UserRoleEditor)(Wrap(dh.CreateRecord)))
-	mux.Handle("PUT /api/{orgID}/databases/{id}/records/{rid}", RequireRole(memService, entity.UserRoleEditor)(Wrap(dh.UpdateRecord)))
-	mux.Handle("DELETE /api/{orgID}/databases/{id}/records/{rid}", RequireRole(memService, entity.UserRoleEditor)(Wrap(dh.DeleteRecord)))
+	mux.Handle("GET /api/{orgID}/databases/{id}/records", WrapAuth(userService, memService, jwtSecretBytes, viewer, dh.ListRecords))
+	mux.Handle("GET /api/{orgID}/databases/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, viewer, dh.GetRecord))
+	mux.Handle("POST /api/{orgID}/databases/{id}/records", WrapAuth(userService, memService, jwtSecretBytes, editor, dh.CreateRecord))
+	mux.Handle("PUT /api/{orgID}/databases/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, editor, dh.UpdateRecord))
+	mux.Handle("DELETE /api/{orgID}/databases/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, editor, dh.DeleteRecord))
 
 	// Assets endpoints (page-based)
-	mux.Handle("GET /api/{orgID}/pages/{id}/assets", RequireRole(memService, entity.UserRoleViewer)(Wrap(ah.ListPageAssets)))
-	mux.Handle("POST /api/{orgID}/pages/{id}/assets", RequireRole(memService, entity.UserRoleEditor)(http.HandlerFunc(ah.UploadPageAssetHandler)))
-	mux.Handle("DELETE /api/{orgID}/pages/{id}/assets/{name}", RequireRole(memService, entity.UserRoleEditor)(Wrap(ah.DeletePageAsset)))
+	mux.Handle("GET /api/{orgID}/pages/{id}/assets", WrapAuth(userService, memService, jwtSecretBytes, viewer, ah.ListPageAssets))
+	mux.Handle("POST /api/{orgID}/pages/{id}/assets", WrapAuthRaw(userService, memService, jwtSecretBytes, editor, ah.UploadPageAssetHandler))
+	mux.Handle("DELETE /api/{orgID}/pages/{id}/assets/{name}", WrapAuth(userService, memService, jwtSecretBytes, editor, ah.DeletePageAsset))
 
 	// Search endpoint
-	mux.Handle("POST /api/{orgID}/search", RequireRole(memService, entity.UserRoleViewer)(Wrap(sh.Search)))
+	mux.Handle("POST /api/{orgID}/search", WrapAuth(userService, memService, jwtSecretBytes, viewer, sh.Search))
 
-	// File serving (raw asset files)
+	// File serving (raw asset files) - public for now
 	mux.HandleFunc("GET /assets/{orgID}/{id}/{name}", ah.ServeAssetFile)
 
 	// Serve embedded SolidJS frontend with SPA fallback
 	mux.Handle("/", NewEmbeddedSPAHandler(frontend.Files))
 
-	// Apply Auth Middleware to all API requests
-	return AuthMiddleware(userService, []byte(jwtSecret))(mux)
+	return mux
 }
 
 // EmbeddedSPAHandler serves an embedded single-page application with fallback to index.html.

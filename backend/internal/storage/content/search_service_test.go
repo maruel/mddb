@@ -21,7 +21,7 @@ func TestSearchService_SearchPages(t *testing.T) {
 	// Create test pages
 	cache := infra.NewCache()
 	pageService := NewPageService(fileStore, nil, cache, nil)
-	ctx := newTestContext(t, orgID.String())
+	ctx := t.Context()
 	_, _ = pageService.CreatePage(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project")
 	_, _ = pageService.CreatePage(ctx, orgID, "Advanced Topics", "Learn about advanced mddb configuration and optimization")
 	_, _ = pageService.CreatePage(ctx, orgID, "API Reference", "Complete mddb API documentation for developers")
@@ -106,7 +106,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	}
 	searchService := NewSearchService(fileStore)
 	orgID := jsonldb.ID(100)
-	ctx := newTestContext(t, orgID.String())
+	ctx := t.Context()
 
 	// Create test database with records
 	cache := infra.NewCache()
@@ -190,7 +190,7 @@ func TestSearchService_Scoring(t *testing.T) {
 	}
 	searchService := NewSearchService(fileStore)
 	orgID := jsonldb.ID(100)
-	ctx := newTestContext(t, orgID.String())
+	ctx := t.Context()
 
 	// Create pages where title match should score higher
 	cache := infra.NewCache()
@@ -229,7 +229,7 @@ func TestSearchService_Limit(t *testing.T) {
 	}
 	searchService := NewSearchService(fileStore)
 	orgID := jsonldb.ID(100)
-	ctx := newTestContext(t, orgID.String())
+	ctx := t.Context()
 
 	// Create multiple pages
 	cache := infra.NewCache()
@@ -261,7 +261,7 @@ func TestSearchService_Integration(t *testing.T) {
 	}
 	searchService := NewSearchService(fileStore)
 	orgID := jsonldb.ID(100)
-	ctx := newTestContext(t, orgID.String())
+	ctx := t.Context()
 
 	// Create mixed content
 	cache := infra.NewCache()

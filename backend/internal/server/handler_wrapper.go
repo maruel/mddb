@@ -5,13 +5,19 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // Wrap wraps a handler function to work as an http.Handler.
@@ -36,7 +42,7 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 		}
 		if err != nil {
 			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
-			writeErrorResponse(w, http.StatusBadRequest, "Failed to read request body")
+			writeBadRequestError(w, "Failed to read request body")
 			return
 		}
 		var input In
@@ -45,7 +51,7 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 			d.DisallowUnknownFields()
 			if err := d.Decode(&input); err != nil {
 				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
-				writeErrorResponse(w, http.StatusBadRequest, "Invalid request body")
+				writeBadRequestError(w, "Invalid request body")
 				return
 			}
 		}
@@ -81,6 +87,195 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 			slog.ErrorContext(ctx, "Failed to encode response", "err", err)
 		}
 	})
+}
+
+// WrapAuth wraps an authenticated handler function to work as an http.Handler.
+// It combines JWT validation, organization membership checking, and request parsing.
+// The function must have signature: func(context.Context, jsonldb.ID, *entity.User, In) (*Out, error)
+// where orgID is the organization ID from the path (zero if not present),
+// user is the authenticated user, In can be unmarshalled from JSON, and Out is a struct.
+func WrapAuth[In any, Out any](
+	userService *identity.UserService,
+	memService *identity.MembershipService,
+	jwtSecret []byte,
+	requiredRole entity.UserRole,
+	fn func(context.Context, jsonldb.ID, *entity.User, In) (*Out, error),
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		// Validate JWT
+		user, err := validateJWT(r, userService, jwtSecret)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		// Check organization membership if orgID is in path
+		var orgID jsonldb.ID
+		orgIDStr := r.PathValue("orgID")
+		if orgIDStr != "" {
+			orgID, err = jsonldb.DecodeID(orgIDStr)
+			if err != nil {
+				http.Error(w, "Invalid organization ID format", http.StatusBadRequest)
+				return
+			}
+
+			membership, err := memService.GetMembership(user.ID, orgID)
+			if err != nil {
+				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
+				return
+			}
+
+			if !hasPermission(membership.Role, requiredRole) {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+		}
+
+		// Parse request body
+		body, err := io.ReadAll(r.Body)
+		if err2 := r.Body.Close(); err == nil {
+			err = err2
+		}
+		if err != nil {
+			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
+			writeBadRequestError(w, "Failed to read request body")
+			return
+		}
+		var input In
+		if len(body) > 0 {
+			d := json.NewDecoder(bytes.NewReader(body))
+			d.DisallowUnknownFields()
+			if err := d.Decode(&input); err != nil {
+				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
+				writeBadRequestError(w, "Invalid request body")
+				return
+			}
+		}
+
+		populatePathParams(r, &input)
+		populateQueryParams(r, &input)
+
+		output, err := fn(ctx, orgID, user, input)
+		if err != nil {
+			statusCode := http.StatusInternalServerError
+			errorCode := dto.ErrorCodeInternal
+			details := make(map[string]any)
+
+			var ewsErr dto.ErrorWithStatus
+			if errors.As(err, &ewsErr) {
+				statusCode = ewsErr.StatusCode()
+				errorCode = ewsErr.Code()
+				if d := ewsErr.Details(); d != nil {
+					details = d
+				}
+			}
+
+			slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode, "code", errorCode)
+			writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(output); err != nil {
+			slog.ErrorContext(ctx, "Failed to encode response", "err", err)
+		}
+	})
+}
+
+// WrapAuthRaw wraps a raw http.HandlerFunc with authentication and role checking.
+// Use this for handlers that need to handle requests directly (e.g., multipart forms).
+// The wrapped handler receives the request with validated auth - the handler should
+// extract orgID from the path via r.PathValue("orgID") if needed.
+func WrapAuthRaw(
+	userService *identity.UserService,
+	memService *identity.MembershipService,
+	jwtSecret []byte,
+	requiredRole entity.UserRole,
+	fn http.HandlerFunc,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Validate JWT
+		_, err := validateJWT(r, userService, jwtSecret)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		// Check organization membership if orgID is in path
+		orgIDStr := r.PathValue("orgID")
+		if orgIDStr != "" {
+			orgID, err := jsonldb.DecodeID(orgIDStr)
+			if err != nil {
+				http.Error(w, "Invalid organization ID format", http.StatusBadRequest)
+				return
+			}
+
+			user, _ := validateJWT(r, userService, jwtSecret)
+			membership, err := memService.GetMembership(user.ID, orgID)
+			if err != nil {
+				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
+				return
+			}
+
+			if !hasPermission(membership.Role, requiredRole) {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+		}
+
+		// Call the raw handler
+		fn(w, r)
+	})
+}
+
+// validateJWT extracts and validates the JWT token from the request.
+func validateJWT(r *http.Request, userService *identity.UserService, jwtSecret []byte) (*entity.User, error) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return nil, fmt.Errorf("unauthorized")
+	}
+
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return nil, fmt.Errorf("invalid authorization header")
+	}
+
+	tokenString := parts[1]
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return jwtSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, fmt.Errorf("invalid claims")
+	}
+
+	userIDStr, ok := claims["sub"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid user ID in token")
+	}
+
+	userID, err := jsonldb.DecodeID(userIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user ID format")
+	}
+
+	user, err := userService.GetUser(userID)
+	if err != nil {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	return user, nil
 }
 
 // populatePathParams extracts path parameters from the request and populates
@@ -158,9 +353,9 @@ func populateQueryParams(r *http.Request, input any) {
 	}
 }
 
-// writeErrorResponse writes an error response as JSON (internal use).
-func writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
-	writeErrorResponseWithCode(w, statusCode, dto.ErrorCodeInternal, message, nil)
+// writeBadRequestError writes a 400 Bad Request error response as JSON (internal use).
+func writeBadRequestError(w http.ResponseWriter, message string) {
+	writeErrorResponseWithCode(w, http.StatusBadRequest, dto.ErrorCodeInternal, message, nil)
 }
 
 // writeErrorResponseWithCode writes a detailed error response as JSON with code and details.

@@ -281,16 +281,6 @@ type Session struct {
 	ExpiresAt time.Time  `json:"expires_at" jsonschema:"description=Session expiration timestamp"`
 }
 
-// ContextKey is a custom type for context keys to avoid collisions.
-type ContextKey string
-
-const (
-	// UserKey is the context key for the authenticated user.
-	UserKey ContextKey = "user"
-	// OrgKey is the context key for the active organization ID.
-	OrgKey ContextKey = "org"
-)
-
 // Asset represents an uploaded file/image associated with a node.
 // Asset IDs are filenames, not generated IDs, hence the string type.
 type Asset struct {

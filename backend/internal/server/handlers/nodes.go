@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
@@ -25,11 +26,7 @@ func NewNodeHandler(fileStore *infra.FileStore, gitService *infra.GitService, ca
 }
 
 // ListNodes returns the hierarchical node tree.
-func (h *NodeHandler) ListNodes(ctx context.Context, req dto.ListNodesRequest) (*dto.ListNodesResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *NodeHandler) ListNodes(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListNodesRequest) (*dto.ListNodesResponse, error) {
 	nodes, err := h.nodeService.ListNodes(ctx, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to read node tree", err)
@@ -42,11 +39,7 @@ func (h *NodeHandler) ListNodes(ctx context.Context, req dto.ListNodesRequest) (
 }
 
 // GetNode retrieves a single node's metadata.
-func (h *NodeHandler) GetNode(ctx context.Context, req dto.GetNodeRequest) (*dto.NodeResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *NodeHandler) GetNode(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.GetNodeRequest) (*dto.NodeResponse, error) {
 	id, err := decodeID(req.ID, "node_id")
 	if err != nil {
 		return nil, err
@@ -59,13 +52,9 @@ func (h *NodeHandler) GetNode(ctx context.Context, req dto.GetNodeRequest) (*dto
 }
 
 // CreateNode creates a new node (page, database, or hybrid).
-func (h *NodeHandler) CreateNode(ctx context.Context, req dto.CreateNodeRequest) (*dto.NodeResponse, error) {
+func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.CreateNodeRequest) (*dto.NodeResponse, error) {
 	if req.Title == "" || req.Type == "" {
 		return nil, dto.MissingField("title or type")
-	}
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
 	}
 
 	var nodeType entity.NodeType

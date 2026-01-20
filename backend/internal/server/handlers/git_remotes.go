@@ -8,7 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
@@ -29,11 +31,7 @@ func NewGitRemoteHandler(remoteService *infra.GitRemoteService, gitService *infr
 }
 
 // ListRemotes lists all git remotes for an organization.
-func (h *GitRemoteHandler) ListRemotes(ctx context.Context, req dto.ListGitRemotesRequest) (*dto.ListGitRemotesResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *GitRemoteHandler) ListRemotes(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListGitRemotesRequest) (*dto.ListGitRemotesResponse, error) {
 	remotes, err := h.remoteService.ListRemotes(orgID)
 	if err != nil {
 		return nil, err
@@ -46,11 +44,7 @@ func (h *GitRemoteHandler) ListRemotes(ctx context.Context, req dto.ListGitRemot
 }
 
 // CreateRemote creates a new git remote.
-func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *dto.CreateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *GitRemoteHandler) CreateRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req *dto.CreateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
 	remote, err := h.remoteService.CreateRemote(orgID, req.Name, req.URL, req.Type, req.AuthType, req.Token)
 	if err != nil {
 		return nil, err
@@ -77,11 +71,7 @@ func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *dto.CreateGitR
 }
 
 // Push pushes changes to a git remote.
-func (h *GitRemoteHandler) Push(ctx context.Context, req dto.PushGitRemoteRequest) (*dto.OkResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.PushGitRemoteRequest) (*dto.OkResponse, error) {
 	remoteID, err := decodeID(req.RemoteID, "remote_id")
 	if err != nil {
 		return nil, err
@@ -116,11 +106,7 @@ func (h *GitRemoteHandler) Push(ctx context.Context, req dto.PushGitRemoteReques
 }
 
 // DeleteRemote deletes a git remote.
-func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, req dto.DeleteGitRemoteRequest) (*dto.OkResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.DeleteGitRemoteRequest) (*dto.OkResponse, error) {
 	remoteID, err := decodeID(req.RemoteID, "remote_id")
 	if err != nil {
 		return nil, err

@@ -127,14 +127,8 @@ func (h *AuthHandler) GenerateToken(user *entity.User) (string, error) {
 	return token.SignedString(h.jwtSecret)
 }
 
-// Me returns the current user info from the context.
-func (h *AuthHandler) Me(ctx context.Context, req dto.MeRequest) (*dto.UserResponse, error) {
-	// User info should be in context if authenticated via middleware
-	user, ok := ctx.Value(entity.UserKey).(*entity.User)
-	if !ok {
-		return nil, dto.NewAPIError(401, dto.ErrorCodeUnauthorized, "Unauthorized")
-	}
-
+// Me returns the current user info.
+func (h *AuthHandler) Me(ctx context.Context, _ jsonldb.ID, user *entity.User, req dto.MeRequest) (*dto.UserResponse, error) {
 	// Build user response with memberships
 	uwm, err := h.userService.GetUserWithMemberships(user.ID)
 	if err != nil {

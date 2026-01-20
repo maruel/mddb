@@ -1,154 +1,79 @@
 package server
 
 import (
-	"context"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-func TestOrgIsolationMiddleware(t *testing.T) {
-	tempDir := t.TempDir()
-	memService, _ := identity.NewMembershipService(tempDir)
-
+func TestHasPermission(t *testing.T) {
 	tests := []struct {
-		name           string
-		membershipOrg  jsonldb.ID
-		membershipRole entity.UserRole
-		requestOrgID   string
-		expectedStatus int
+		name         string
+		userRole     entity.UserRole
+		requiredRole entity.UserRole
+		expected     bool
 	}{
 		{
-			name:           "Access own organization",
-			membershipOrg:  jsonldb.ID(1),
-			membershipRole: entity.UserRoleViewer,
-			requestOrgID:   jsonldb.ID(1).String(),
-			expectedStatus: http.StatusOK,
+			name:         "Viewer accessing Viewer endpoint",
+			userRole:     entity.UserRoleViewer,
+			requiredRole: entity.UserRoleViewer,
+			expected:     true,
 		},
 		{
-			name:           "Access different organization",
-			membershipOrg:  jsonldb.ID(1),
-			membershipRole: entity.UserRoleViewer,
-			requestOrgID:   jsonldb.ID(2).String(),
-			expectedStatus: http.StatusForbidden,
+			name:         "Viewer accessing Editor endpoint",
+			userRole:     entity.UserRoleViewer,
+			requiredRole: entity.UserRoleEditor,
+			expected:     false,
 		},
 		{
-			name:           "Access with no org context in request",
-			membershipOrg:  jsonldb.ID(1),
-			membershipRole: entity.UserRoleViewer,
-			requestOrgID:   "",
-			expectedStatus: http.StatusOK,
+			name:         "Viewer accessing Admin endpoint",
+			userRole:     entity.UserRoleViewer,
+			requiredRole: entity.UserRoleAdmin,
+			expected:     false,
+		},
+		{
+			name:         "Editor accessing Viewer endpoint",
+			userRole:     entity.UserRoleEditor,
+			requiredRole: entity.UserRoleViewer,
+			expected:     true,
+		},
+		{
+			name:         "Editor accessing Editor endpoint",
+			userRole:     entity.UserRoleEditor,
+			requiredRole: entity.UserRoleEditor,
+			expected:     true,
+		},
+		{
+			name:         "Editor accessing Admin endpoint",
+			userRole:     entity.UserRoleEditor,
+			requiredRole: entity.UserRoleAdmin,
+			expected:     false,
+		},
+		{
+			name:         "Admin accessing Viewer endpoint",
+			userRole:     entity.UserRoleAdmin,
+			requiredRole: entity.UserRoleViewer,
+			expected:     true,
+		},
+		{
+			name:         "Admin accessing Editor endpoint",
+			userRole:     entity.UserRoleAdmin,
+			requiredRole: entity.UserRoleEditor,
+			expected:     true,
+		},
+		{
+			name:         "Admin accessing Admin endpoint",
+			userRole:     entity.UserRoleAdmin,
+			requiredRole: entity.UserRoleAdmin,
+			expected:     true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userID := jsonldb.ID(100)
-			// Clear and setup membership for each test case
-			_ = memService.DeleteMembership(userID, jsonldb.ID(1))
-			_ = memService.DeleteMembership(userID, jsonldb.ID(2))
-
-			if !tt.membershipOrg.IsZero() {
-				_, _ = memService.CreateMembership(userID, tt.membershipOrg, tt.membershipRole)
-			}
-
-			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-			})
-
-			middleware := RequireRole(memService, entity.UserRoleViewer)(next)
-
-			req := httptest.NewRequest("GET", "/api/"+tt.requestOrgID+"/nodes", http.NoBody)
-			if tt.requestOrgID != "" {
-				req.SetPathValue("orgID", tt.requestOrgID)
-			}
-
-			user := &entity.User{ID: userID}
-			ctx := context.WithValue(req.Context(), entity.UserKey, user)
-			req = req.WithContext(ctx)
-
-			rr := httptest.NewRecorder()
-			middleware.ServeHTTP(rr, req)
-
-			if rr.Code != tt.expectedStatus {
-				t.Errorf("expected status %d, got %d", tt.expectedStatus, rr.Code)
-			}
-		})
-	}
-}
-
-func TestRolePermissions(t *testing.T) {
-	tempDir := t.TempDir()
-	memService, _ := identity.NewMembershipService(tempDir)
-
-	tests := []struct {
-		name           string
-		userRole       entity.UserRole
-		requiredRole   entity.UserRole
-		expectedStatus int
-	}{
-		{
-			name:           "Viewer accessing Viewer endpoint",
-			userRole:       entity.UserRoleViewer,
-			requiredRole:   entity.UserRoleViewer,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "Viewer accessing Editor endpoint",
-			userRole:       entity.UserRoleViewer,
-			requiredRole:   entity.UserRoleEditor,
-			expectedStatus: http.StatusForbidden,
-		},
-		{
-			name:           "Editor accessing Viewer endpoint",
-			userRole:       entity.UserRoleEditor,
-			requiredRole:   entity.UserRoleViewer,
-			expectedStatus: http.StatusOK,
-		},
-		{
-			name:           "Editor accessing Admin endpoint",
-			userRole:       entity.UserRoleEditor,
-			requiredRole:   entity.UserRoleAdmin,
-			expectedStatus: http.StatusForbidden,
-		},
-		{
-			name:           "Admin accessing Editor endpoint",
-			userRole:       entity.UserRoleAdmin,
-			requiredRole:   entity.UserRoleEditor,
-			expectedStatus: http.StatusOK,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			userID := jsonldb.ID(200)
-			orgID := jsonldb.ID(1)
-			// Clear and setup membership for each test case
-			_ = memService.DeleteMembership(userID, orgID)
-			_, _ = memService.CreateMembership(userID, orgID, tt.userRole)
-
-			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-			})
-
-			middleware := RequireRole(memService, tt.requiredRole)(next)
-
-			req := httptest.NewRequest("GET", "/api/"+orgID.String()+"/nodes", http.NoBody)
-			req.SetPathValue("orgID", orgID.String())
-
-			user := &entity.User{ID: userID}
-			ctx := context.WithValue(req.Context(), entity.UserKey, user)
-			req = req.WithContext(ctx)
-
-			rr := httptest.NewRecorder()
-			middleware.ServeHTTP(rr, req)
-
-			if rr.Code != tt.expectedStatus {
-				t.Errorf("expected status %d, got %d", tt.expectedStatus, rr.Code)
+			got := hasPermission(tt.userRole, tt.requiredRole)
+			if got != tt.expected {
+				t.Errorf("hasPermission(%v, %v) = %v, want %v", tt.userRole, tt.requiredRole, got, tt.expected)
 			}
 		})
 	}

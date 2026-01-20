@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
@@ -22,11 +23,7 @@ func NewSearchHandler(fileStore *infra.FileStore) *SearchHandler {
 }
 
 // Search performs a full-text search across all nodes.
-func (h *SearchHandler) Search(ctx context.Context, req dto.SearchRequest) (*dto.SearchResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *SearchHandler) Search(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.SearchRequest) (*dto.SearchResponse, error) {
 	results, err := h.searchService.Search(ctx, orgID, entity.SearchOptions{
 		Query:       req.Query,
 		Limit:       req.Limit,

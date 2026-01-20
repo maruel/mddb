@@ -6,8 +6,10 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
@@ -27,11 +29,7 @@ func NewAssetHandler(fileStore *infra.FileStore, git *infra.GitService, orgs *id
 }
 
 // ListPageAssets returns a list of assets associated with a page.
-func (h *AssetHandler) ListPageAssets(ctx context.Context, req dto.ListPageAssetsRequest) (*dto.ListPageAssetsResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *AssetHandler) ListPageAssets(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListPageAssetsRequest) (*dto.ListPageAssetsResponse, error) {
 	pageID, err := decodeID(req.PageID, "page_id")
 	if err != nil {
 		return nil, err
@@ -44,6 +42,7 @@ func (h *AssetHandler) ListPageAssets(ctx context.Context, req dto.ListPageAsset
 }
 
 // UploadPageAssetHandler handles asset uploading (multipart/form-data).
+// This is a raw http.HandlerFunc because it handles multipart forms.
 func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Request) {
 	orgIDStr := r.PathValue("orgID")
 	pageIDStr := r.PathValue("id")
@@ -88,6 +87,7 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 }
 
 // ServeAssetFile serves the binary data of an asset.
+// This is a raw http.HandlerFunc for direct file serving.
 func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 	orgIDStr := r.PathValue("orgID")
 	pageIDStr := r.PathValue("id")
@@ -118,11 +118,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePageAsset deletes an asset.
-func (h *AssetHandler) DeletePageAsset(ctx context.Context, req dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
 	pageID, err := decodeID(req.PageID, "page_id")
 	if err != nil {
 		return nil, err

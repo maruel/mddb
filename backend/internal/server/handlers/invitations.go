@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -27,13 +29,9 @@ func NewInvitationHandler(invService *identity.InvitationService, userService *i
 }
 
 // CreateInvitation creates a new invitation and sends it (logic to be added).
-func (h *InvitationHandler) CreateInvitation(ctx context.Context, req dto.CreateInvitationRequest) (*dto.InvitationResponse, error) {
+func (h *InvitationHandler) CreateInvitation(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.CreateInvitationRequest) (*dto.InvitationResponse, error) {
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
-	}
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
 	}
 	invitation, err := h.invService.CreateInvitation(req.Email, orgID, userRoleToEntity(req.Role))
 	if err != nil {
@@ -43,11 +41,7 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, req dto.Create
 }
 
 // ListInvitations returns all pending invitations for an organization.
-func (h *InvitationHandler) ListInvitations(ctx context.Context, req dto.ListInvitationsRequest) (*dto.ListInvitationsResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
+func (h *InvitationHandler) ListInvitations(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListInvitationsRequest) (*dto.ListInvitationsResponse, error) {
 	invitations, err := h.invService.ListByOrganization(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list invitations", err)
@@ -60,6 +54,7 @@ func (h *InvitationHandler) ListInvitations(ctx context.Context, req dto.ListInv
 }
 
 // AcceptInvitation handles a user accepting an invitation.
+// This is a public endpoint (no auth required).
 func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req dto.AcceptInvitationRequest) (*dto.LoginResponse, error) {
 	if req.Token == "" {
 		return nil, dto.MissingField("token")

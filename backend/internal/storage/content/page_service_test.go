@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
@@ -26,8 +25,7 @@ func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, jsonl
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.WithValue(t.Context(), entity.UserKey, &entity.User{ID: jsonldb.ID(1000)})
-	return context.WithValue(ctx, entity.OrgKey, org.ID), org.ID, orgService
+	return t.Context(), org.ID, orgService
 }
 
 func TestNewPageService(t *testing.T) {
@@ -202,7 +200,7 @@ func TestPageService_GetPageHistory_NoGit(t *testing.T) {
 	fileStore, _ := infra.NewFileStore(t.TempDir())
 	service := NewPageService(fileStore, nil, infra.NewCache(), nil)
 	orgID := jsonldb.ID(999)
-	history, err := service.GetPageHistory(newTestContext(t, ""), orgID, jsonldb.NewID())
+	history, err := service.GetPageHistory(t.Context(), orgID, jsonldb.NewID())
 	if err != nil {
 		t.Fatalf("GetPageHistory failed: %v", err)
 	}
@@ -215,7 +213,7 @@ func TestPageService_GetPageVersion_NoGit(t *testing.T) {
 	fileStore, _ := infra.NewFileStore(t.TempDir())
 	service := NewPageService(fileStore, nil, infra.NewCache(), nil)
 	orgID := jsonldb.ID(999)
-	if _, err := service.GetPageVersion(newTestContext(t, ""), orgID, jsonldb.NewID(), "abc123"); err == nil {
+	if _, err := service.GetPageVersion(t.Context(), orgID, jsonldb.NewID(), "abc123"); err == nil {
 		t.Error("Expected error when getting page version without git service")
 	}
 }

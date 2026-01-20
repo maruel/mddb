@@ -33,7 +33,7 @@ func TestNodeService_GetNode(t *testing.T) {
 	cache := infra.NewCache()
 	service := NewNodeService(fileStore, nil, cache, nil)
 
-	ctx := newTestContext(t, "")
+	ctx := t.Context()
 	orgID := jsonldb.ID(999)
 
 	// Test with empty ID
