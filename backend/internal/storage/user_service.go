@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -54,14 +54,14 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 }
 
 type userStorage struct {
-	models.User
+	entity.User
 	PasswordHash string `json:"password_hash" jsonschema:"description=Bcrypt-hashed password"`
 }
 
 func (u *userStorage) Clone() *userStorage {
 	c := *u
 	if u.OAuthIdentities != nil {
-		c.OAuthIdentities = make([]models.OAuthIdentity, len(u.OAuthIdentities))
+		c.OAuthIdentities = make([]entity.OAuthIdentity, len(u.OAuthIdentities))
 		copy(c.OAuthIdentities, u.OAuthIdentities)
 	}
 	return &c
@@ -84,7 +84,7 @@ func (u *userStorage) Validate() error {
 }
 
 // CreateUser creates a new user.
-func (s *UserService) CreateUser(email, password, name string, role models.UserRole) (*models.User, error) {
+func (s *UserService) CreateUser(email, password, name string, role entity.UserRole) (*entity.User, error) {
 	if email == "" || password == "" {
 		return nil, fmt.Errorf("email and password are required")
 	}
@@ -105,7 +105,7 @@ func (s *UserService) CreateUser(email, password, name string, role models.UserR
 	}
 
 	now := time.Now()
-	user := &models.User{
+	user := &entity.User{
 		ID:       id,
 		Email:    email,
 		Name:     name,
@@ -138,7 +138,7 @@ func (s *UserService) CountUsers() (int, error) {
 }
 
 // UpdateUserRole updates the role of a user in a specific organization.
-func (s *UserService) UpdateUserRole(userID, orgID string, role models.UserRole) error {
+func (s *UserService) UpdateUserRole(userID, orgID string, role entity.UserRole) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -157,7 +157,7 @@ func (s *UserService) UpdateUserRole(userID, orgID string, role models.UserRole)
 }
 
 // GetUser retrieves a user by ID.
-func (s *UserService) GetUser(idStr string) (*models.User, error) {
+func (s *UserService) GetUser(idStr string) (*entity.User, error) {
 	id, err := jsonldb.DecodeID(idStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user id: %w", err)
@@ -175,8 +175,14 @@ func (s *UserService) GetUser(idStr string) (*models.User, error) {
 	return &user, nil
 }
 
-// GetMembershipsForUser returns membership responses with organization names populated.
-func (s *UserService) GetMembershipsForUser(userIDStr string) ([]models.MembershipResponse, error) {
+// MembershipWithOrgName wraps a membership with its organization name.
+type MembershipWithOrgName struct {
+	entity.Membership
+	OrganizationName string
+}
+
+// GetMembershipsForUser returns memberships with organization names populated.
+func (s *UserService) GetMembershipsForUser(userIDStr string) ([]MembershipWithOrgName, error) {
 	if s.memService == nil {
 		return nil, nil
 	}
@@ -186,38 +192,43 @@ func (s *UserService) GetMembershipsForUser(userIDStr string) ([]models.Membersh
 		return nil, err
 	}
 
-	responses := make([]models.MembershipResponse, 0, len(mems))
+	results := make([]MembershipWithOrgName, 0, len(mems))
 	for _, m := range mems {
-		resp := m.ToResponse()
+		result := MembershipWithOrgName{Membership: m}
 		if s.orgService != nil {
 			org, err := s.orgService.GetOrganization(m.OrganizationID)
 			if err == nil {
-				resp.OrganizationName = org.Name
+				result.OrganizationName = org.Name
 			}
 		}
-		responses = append(responses, *resp)
+		results = append(results, result)
 	}
-	return responses, nil
+	return results, nil
 }
 
-// GetUserResponse retrieves a user by ID and returns a fully populated UserResponse.
-func (s *UserService) GetUserResponse(idStr string) (*models.UserResponse, error) {
+// UserWithMemberships wraps a user with their memberships.
+type UserWithMemberships struct {
+	User        *entity.User
+	Memberships []MembershipWithOrgName
+}
+
+// GetUserWithMemberships retrieves a user by ID with their memberships.
+func (s *UserService) GetUserWithMemberships(idStr string) (*UserWithMemberships, error) {
 	user, err := s.GetUser(idStr)
 	if err != nil {
 		return nil, err
 	}
 
-	resp := user.ToResponse()
-
-	// Populate memberships
 	mems, _ := s.GetMembershipsForUser(idStr)
-	resp.Memberships = mems
 
-	return resp, nil
+	return &UserWithMemberships{
+		User:        user,
+		Memberships: mems,
+	}, nil
 }
 
 // GetUserByEmail retrieves a user by email.
-func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
+func (s *UserService) GetUserByEmail(email string) (*entity.User, error) {
 	s.mu.RLock()
 	stored, ok := s.byEmail[email]
 	s.mu.RUnlock()
@@ -231,7 +242,7 @@ func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
 }
 
 // Authenticate verifies user credentials.
-func (s *UserService) Authenticate(email, password string) (*models.User, error) {
+func (s *UserService) Authenticate(email, password string) (*entity.User, error) {
 	s.mu.RLock()
 	stored, ok := s.byEmail[email]
 	s.mu.RUnlock()
@@ -250,7 +261,7 @@ func (s *UserService) Authenticate(email, password string) (*models.User, error)
 }
 
 // GetUserByOAuth retrieves a user by their OAuth identity.
-func (s *UserService) GetUserByOAuth(provider, providerID string) (*models.User, error) {
+func (s *UserService) GetUserByOAuth(provider, providerID string) (*entity.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -267,7 +278,7 @@ func (s *UserService) GetUserByOAuth(provider, providerID string) (*models.User,
 }
 
 // LinkOAuthIdentity links an OAuth identity to a user.
-func (s *UserService) LinkOAuthIdentity(userIDStr string, identity models.OAuthIdentity) error {
+func (s *UserService) LinkOAuthIdentity(userIDStr string, identity entity.OAuthIdentity) error {
 	userID, err := jsonldb.DecodeID(userIDStr)
 	if err != nil {
 		return fmt.Errorf("invalid user id: %w", err)
@@ -300,7 +311,7 @@ func (s *UserService) LinkOAuthIdentity(userIDStr string, identity models.OAuthI
 }
 
 // UpdateSettings updates user global settings.
-func (s *UserService) UpdateSettings(idStr string, settings models.UserSettings) error {
+func (s *UserService) UpdateSettings(idStr string, settings entity.UserSettings) error {
 	id, err := jsonldb.DecodeID(idStr)
 	if err != nil {
 		return fmt.Errorf("invalid user id: %w", err)
@@ -329,11 +340,11 @@ func (s *UserService) getAllFromCache() []*userStorage {
 }
 
 // ListUsers returns all users (domain models without runtime fields).
-func (s *UserService) ListUsers() ([]*models.User, error) {
+func (s *UserService) ListUsers() ([]*entity.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	users := make([]*models.User, 0, len(s.byID))
+	users := make([]*entity.User, 0, len(s.byID))
 	for _, stored := range s.byID {
 		user := stored.User
 		users = append(users, &user)
@@ -341,19 +352,20 @@ func (s *UserService) ListUsers() ([]*models.User, error) {
 	return users, nil
 }
 
-// ListUserResponses returns all users as response types with memberships.
-func (s *UserService) ListUserResponses() ([]models.UserResponse, error) {
+// ListUsersWithMemberships returns all users with their memberships.
+func (s *UserService) ListUsersWithMemberships() ([]UserWithMemberships, error) {
 	users, err := s.ListUsers()
 	if err != nil {
 		return nil, err
 	}
 
-	responses := make([]models.UserResponse, 0, len(users))
+	results := make([]UserWithMemberships, 0, len(users))
 	for _, user := range users {
-		resp := user.ToResponse()
 		mems, _ := s.GetMembershipsForUser(user.ID.String())
-		resp.Memberships = mems
-		responses = append(responses, *resp)
+		results = append(results, UserWithMemberships{
+			User:        user,
+			Memberships: mems,
+		})
 	}
-	return responses, nil
+	return results, nil
 }

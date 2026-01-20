@@ -3,8 +3,8 @@ package storage
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // testID returns a LUCI-style ID for the given number.
@@ -20,9 +20,9 @@ func newTestContext(orgIDStr string) context.Context {
 		// For backward compat, if it's not a valid ID, use a deterministic one
 		orgID = testID(999)
 	}
-	user := &models.User{
+	user := &entity.User{
 		ID: testID(1000),
 	}
-	ctx := context.WithValue(context.Background(), models.UserKey, user)
-	return context.WithValue(ctx, models.OrgKey, orgID)
+	ctx := context.WithValue(context.Background(), entity.UserKey, user)
+	return context.WithValue(ctx, entity.OrgKey, orgID)
 }

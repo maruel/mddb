@@ -1,10 +1,181 @@
-package models
+package dto
 
-import (
-	"time"
+// --- Auth Responses ---
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
-)
+// LoginResponse is a response from logging in.
+type LoginResponse struct {
+	Token string        `json:"token"`
+	User  *UserResponse `json:"user"`
+}
+
+// --- Page Responses ---
+
+// ListPagesResponse is a response containing a list of pages.
+type ListPagesResponse struct {
+	Pages []any `json:"pages"`
+}
+
+// GetPageResponse is a response containing a page.
+type GetPageResponse struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+// CreatePageResponse is a response from creating a page.
+type CreatePageResponse struct {
+	ID string `json:"id"`
+}
+
+// UpdatePageResponse is a response from updating a page.
+type UpdatePageResponse struct {
+	ID string `json:"id"`
+}
+
+// DeletePageResponse is a response from deleting a page.
+type DeletePageResponse struct{}
+
+// GetPageHistoryResponse is a response containing page history.
+type GetPageHistoryResponse struct {
+	History []*Commit `json:"history"`
+}
+
+// GetPageVersionResponse is a response containing page content at a version.
+type GetPageVersionResponse struct {
+	Content string `json:"content"`
+}
+
+// --- Database Responses ---
+
+// ListDatabasesResponse is a response containing a list of databases.
+type ListDatabasesResponse struct {
+	Databases []any `json:"databases"`
+}
+
+// GetDatabaseResponse is a response containing a database.
+type GetDatabaseResponse struct {
+	ID         string     `json:"id"`
+	Title      string     `json:"title"`
+	Properties []Property `json:"properties"`
+	Created    string     `json:"created"`
+	Modified   string     `json:"modified"`
+}
+
+// CreateDatabaseResponse is a response from creating a database.
+type CreateDatabaseResponse struct {
+	ID string `json:"id"`
+}
+
+// UpdateDatabaseResponse is a response from updating a database.
+type UpdateDatabaseResponse struct {
+	ID string `json:"id"`
+}
+
+// DeleteDatabaseResponse is a response from deleting a database.
+type DeleteDatabaseResponse struct{}
+
+// ListRecordsResponse is a response containing a list of records.
+type ListRecordsResponse struct {
+	Records []DataRecordResponse `json:"records"`
+}
+
+// CreateRecordResponse is a response from creating a record.
+type CreateRecordResponse struct {
+	ID string `json:"id"`
+}
+
+// UpdateRecordResponse is a response from updating a record.
+type UpdateRecordResponse struct {
+	ID string `json:"id"`
+}
+
+// GetRecordResponse is a response containing a record.
+type GetRecordResponse struct {
+	ID       string         `json:"id"`
+	Data     map[string]any `json:"data"`
+	Created  string         `json:"created"`
+	Modified string         `json:"modified"`
+}
+
+// DeleteRecordResponse is a response from deleting a record.
+type DeleteRecordResponse struct{}
+
+// --- Node Responses ---
+
+// ListNodesResponse is a response containing a list of nodes.
+type ListNodesResponse struct {
+	Nodes []NodeResponse `json:"nodes"`
+}
+
+// --- Asset Responses ---
+
+// ListPageAssetsResponse is a response containing a list of assets.
+type ListPageAssetsResponse struct {
+	Assets []any `json:"assets"`
+}
+
+// UploadPageAssetResponse is a response from uploading an asset.
+type UploadPageAssetResponse struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`
+	MimeType string `json:"mime_type"`
+}
+
+// DeletePageAssetResponse is a response from deleting an asset.
+type DeletePageAssetResponse struct{}
+
+// ServeAssetResponse wraps the binary asset data.
+type ServeAssetResponse struct {
+	Data     string `json:"data"`
+	MimeType string `json:"mime_type"`
+}
+
+// --- Search Responses ---
+
+// SearchResponse is the response to a search request
+type SearchResponse struct {
+	Results []SearchResult `json:"results"`
+}
+
+// --- Invitation Responses ---
+
+// ListInvitationsResponse is a response containing a list of invitations.
+type ListInvitationsResponse struct {
+	Invitations []InvitationResponse `json:"invitations"`
+}
+
+// --- Membership Responses ---
+
+// SwitchOrgResponse is a response from switching organization.
+type SwitchOrgResponse struct {
+	Token string        `json:"token"`
+	User  *UserResponse `json:"user"`
+}
+
+// --- Git Remote Responses ---
+
+// ListGitRemotesResponse is a response containing a list of git remotes.
+type ListGitRemotesResponse struct {
+	Remotes []GitRemoteResponse `json:"remotes"`
+}
+
+// --- Health Responses ---
+
+// HealthResponse is a response from a health check.
+type HealthResponse struct {
+	Status  string `json:"status"`
+	Version string `json:"version"`
+}
+
+// --- User Responses ---
+
+// ListUsersResponse is a response containing a list of users.
+type ListUsersResponse struct {
+	Users []UserResponse `json:"users"`
+}
+
+// --- API Response Types ---
 
 // UserResponse is the API representation of a user.
 type UserResponse struct {
@@ -88,148 +259,14 @@ type DataRecordResponse struct {
 	Modified string         `json:"modified" jsonschema:"description=Last modification timestamp (RFC3339)"`
 }
 
-// formatTime formats a time.Time to RFC3339 string.
-func formatTime(t time.Time) string {
-	if t.IsZero() {
-		return ""
-	}
-	return t.Format(time.RFC3339)
-}
+// --- Type aliases for frontend compatibility ---
+// These provide shorter names that match the original entity types.
 
-// ToResponse converts a User to a UserResponse.
-func (u *User) ToResponse() *UserResponse {
-	return &UserResponse{
-		ID:              u.ID.String(),
-		Email:           u.Email,
-		Name:            u.Name,
-		OAuthIdentities: u.OAuthIdentities,
-		Settings:        u.Settings,
-		Created:         formatTime(u.Created),
-		Modified:        formatTime(u.Modified),
-	}
-}
+// Node is an alias for NodeResponse for frontend compatibility.
+type Node = NodeResponse
 
-// ToResponse converts a Membership to a MembershipResponse.
-func (m *Membership) ToResponse() *MembershipResponse {
-	return &MembershipResponse{
-		ID:             m.ID.String(),
-		UserID:         m.UserID.String(),
-		OrganizationID: m.OrganizationID.String(),
-		Role:           m.Role,
-		Settings:       m.Settings,
-		Created:        formatTime(m.Created),
-	}
-}
+// DataRecord is an alias for DataRecordResponse for frontend compatibility.
+type DataRecord = DataRecordResponse
 
-// ToResponseWithOrgName converts a Membership to a MembershipResponse with org name.
-func (m *Membership) ToResponseWithOrgName(orgName string) *MembershipResponse {
-	resp := m.ToResponse()
-	resp.OrganizationName = orgName
-	return resp
-}
-
-// ToResponse converts an Invitation to an InvitationResponse.
-func (i *Invitation) ToResponse() *InvitationResponse {
-	return &InvitationResponse{
-		ID:             i.ID.String(),
-		Email:          i.Email,
-		OrganizationID: i.OrganizationID.String(),
-		Role:           i.Role,
-		ExpiresAt:      formatTime(i.ExpiresAt),
-		Created:        formatTime(i.Created),
-	}
-}
-
-// ToResponse converts an Organization to an OrganizationResponse.
-func (o *Organization) ToResponse() *OrganizationResponse {
-	return &OrganizationResponse{
-		ID:         o.ID.String(),
-		Name:       o.Name,
-		Quotas:     o.Quotas,
-		Settings:   o.Settings,
-		Onboarding: o.Onboarding,
-		Created:    formatTime(o.Created),
-	}
-}
-
-// ToResponse converts a GitRemote to a GitRemoteResponse.
-func (g *GitRemote) ToResponse() *GitRemoteResponse {
-	return &GitRemoteResponse{
-		ID:             g.ID.String(),
-		OrganizationID: g.OrganizationID.String(),
-		Name:           g.Name,
-		URL:            g.URL,
-		Type:           g.Type,
-		AuthType:       g.AuthType,
-		Created:        formatTime(g.Created),
-		LastSync:       formatTime(g.LastSync),
-	}
-}
-
-// ToResponse converts a Node to a NodeResponse.
-func (n *Node) ToResponse() *NodeResponse {
-	resp := &NodeResponse{
-		ID:         n.ID.String(),
-		Title:      n.Title,
-		Content:    n.Content,
-		Properties: n.Properties,
-		Created:    formatTime(n.Created),
-		Modified:   formatTime(n.Modified),
-		Tags:       n.Tags,
-		FaviconURL: n.FaviconURL,
-		Type:       n.Type,
-	}
-	if !n.ParentID.IsZero() {
-		resp.ParentID = n.ParentID.String()
-	}
-	if len(n.Children) > 0 {
-		resp.Children = make([]NodeResponse, 0, len(n.Children))
-		for _, child := range n.Children {
-			if child != nil {
-				resp.Children = append(resp.Children, *child.ToResponse())
-			}
-		}
-	}
-	return resp
-}
-
-// ToResponse converts a DataRecord to a DataRecordResponse.
-func (r *DataRecord) ToResponse() *DataRecordResponse {
-	return &DataRecordResponse{
-		ID:       r.ID.String(),
-		Data:     r.Data,
-		Created:  formatTime(r.Created),
-		Modified: formatTime(r.Modified),
-	}
-}
-
-// UserResponseBuilder helps construct UserResponse with context fields.
-type UserResponseBuilder struct {
-	resp *UserResponse
-}
-
-// NewUserResponseBuilder creates a new builder from a User.
-func NewUserResponseBuilder(u *User) *UserResponseBuilder {
-	return &UserResponseBuilder{resp: u.ToResponse()}
-}
-
-// WithMemberships sets the memberships.
-func (b *UserResponseBuilder) WithMemberships(memberships []MembershipResponse) *UserResponseBuilder {
-	b.resp.Memberships = memberships
-	return b
-}
-
-// WithActiveContext sets the active organization context.
-func (b *UserResponseBuilder) WithActiveContext(orgID jsonldb.ID, role UserRole, onboarding *OnboardingState) *UserResponseBuilder {
-	if !orgID.IsZero() {
-		b.resp.OrganizationID = orgID.String()
-	}
-	b.resp.Role = role
-	b.resp.Onboarding = onboarding
-	return b
-}
-
-// Build returns the constructed UserResponse.
-func (b *UserResponseBuilder) Build() *UserResponse {
-	return b.resp
-}
+// Organization is an alias for OrganizationResponse for frontend compatibility.
+type Organization = OrganizationResponse

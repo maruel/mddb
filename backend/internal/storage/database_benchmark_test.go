@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 func BenchmarkDatabaseOperations(b *testing.B) {
@@ -23,13 +23,13 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 
 	orgID := testID(0) // zero org for tests
 	dbID := jsonldb.NewID()
-	db := &models.Database{
+	db := &entity.Database{
 		ID:       dbID,
 		Title:    "Benchmark Database",
 		Version:  "1.0",
 		Created:  time.Now(),
 		Modified: time.Now(),
-		Properties: []models.Property{
+		Properties: []entity.Property{
 			{Name: "Title", Type: "text"},
 			{Name: "Value", Type: "number"},
 		},
@@ -42,7 +42,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// Benchmark Record Creation (Append)
 	b.Run("CreateRecord", func(b *testing.B) {
 		for i := range b.N {
-			record := &models.DataRecord{
+			record := &entity.DataRecord{
 				ID:       jsonldb.NewID(),
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -63,12 +63,12 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a database with 1000 records
 		readDBID := jsonldb.NewID()
-		readDB := &models.Database{ID: readDBID, Title: "Read Bench", Version: "1.0", Created: time.Now(), Modified: time.Now()}
+		readDB := &entity.Database{ID: readDBID, Title: "Read Bench", Version: "1.0", Created: time.Now(), Modified: time.Now()}
 		if err := fs.WriteDatabase(orgID, readDB); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
-			record := &models.DataRecord{
+			record := &entity.DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  time.Now(),
@@ -94,13 +94,13 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := testID(100)
-		readDB := &models.Database{ID: readDBID, Title: "Read Bench Page", Version: "1.0", Created: time.Now(), Modified: time.Now()}
+		readDB := &entity.Database{ID: readDBID, Title: "Read Bench Page", Version: "1.0", Created: time.Now(), Modified: time.Now()}
 		if err := fs.WriteDatabase(orgID, readDB); err != nil {
 			b.Fatal(err)
 		}
 		// Write 10,000 records
 		for range 10000 {
-			record := &models.DataRecord{
+			record := &entity.DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  time.Now(),

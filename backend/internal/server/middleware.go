@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -65,17 +65,17 @@ func AuthMiddleware(userService *storage.UserService, jwtSecret []byte) func(htt
 			}
 
 			// Add user to context
-			ctx := context.WithValue(r.Context(), models.UserKey, user)
+			ctx := context.WithValue(r.Context(), entity.UserKey, user)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
 // RequireRole ensures the authenticated user has at least the required role in the target organization.
-func RequireRole(memService *storage.MembershipService, requiredRole models.UserRole) func(http.Handler) http.Handler {
+func RequireRole(memService *storage.MembershipService, requiredRole entity.UserRole) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			user, ok := r.Context().Value(models.UserKey).(*models.User)
+			user, ok := r.Context().Value(entity.UserKey).(*entity.User)
 			if !ok {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
@@ -102,17 +102,17 @@ func RequireRole(memService *storage.MembershipService, requiredRole models.User
 			}
 
 			// Add org to context for handlers
-			ctx := context.WithValue(r.Context(), models.OrgKey, orgID)
+			ctx := context.WithValue(r.Context(), entity.OrgKey, orgID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func hasPermission(userRole, requiredRole models.UserRole) bool {
-	weights := map[models.UserRole]int{
-		models.UserRoleViewer: 1,
-		models.UserRoleEditor: 2,
-		models.UserRoleAdmin:  3,
+func hasPermission(userRole, requiredRole entity.UserRole) bool {
+	weights := map[entity.UserRole]int{
+		entity.UserRoleViewer: 1,
+		entity.UserRoleEditor: 2,
+		entity.UserRoleAdmin:  3,
 	}
 
 	return weights[userRole] >= weights[requiredRole]

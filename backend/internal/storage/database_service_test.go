@@ -3,8 +3,8 @@ package storage
 import (
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 func TestDatabaseService_Create(t *testing.T) {
@@ -18,9 +18,9 @@ func TestDatabaseService_Create(t *testing.T) {
 	service := NewDatabaseService(fs, nil, cache, nil)
 	ctx := newTestContext(testID(100).String())
 
-	columns := []models.Property{
+	columns := []entity.Property{
 		{Name: "title", Type: "text"},
-		{Name: "status", Type: models.PropertyTypeText},
+		{Name: "status", Type: entity.PropertyTypeText},
 	}
 
 	db, err := service.CreateDatabase(ctx, "Test DB", columns)
@@ -54,25 +54,25 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 	tests := []struct {
 		name    string
 		title   string
-		columns []models.Property
+		columns []entity.Property
 		wantErr bool
 	}{
 		{
 			name:    "empty title",
 			title:   "",
-			columns: []models.Property{{Name: "col", Type: "text"}},
+			columns: []entity.Property{{Name: "col", Type: "text"}},
 			wantErr: true,
 		},
 		{
 			name:    "no columns",
 			title:   "Test",
-			columns: []models.Property{},
+			columns: []entity.Property{},
 			wantErr: true,
 		},
 		{
 			name:    "valid",
 			title:   "Test",
-			columns: []models.Property{{Name: "col", Type: "text"}},
+			columns: []entity.Property{{Name: "col", Type: "text"}},
 			wantErr: false,
 		},
 	}
@@ -99,7 +99,7 @@ func TestDatabaseService_Get(t *testing.T) {
 	ctx := newTestContext(testID(100).String())
 
 	// Create a database
-	columns := []models.Property{
+	columns := []entity.Property{
 		{Name: "name", Type: "text"},
 	}
 	created, err := service.CreateDatabase(ctx, "Test DB", columns)
@@ -137,7 +137,7 @@ func TestDatabaseService_List(t *testing.T) {
 	createdIDs := []jsonldb.ID{}
 
 	for _, title := range titles {
-		columns := []models.Property{{Name: "col", Type: "text"}}
+		columns := []entity.Property{{Name: "col", Type: "text"}}
 		db, err := service.CreateDatabase(ctx, title, columns)
 		if err != nil {
 			t.Fatalf("Failed to create database: %v", err)
@@ -181,7 +181,7 @@ func TestDatabaseService_Delete(t *testing.T) {
 	ctx := newTestContext(testID(100).String())
 
 	// Create a database
-	columns := []models.Property{{Name: "col", Type: "text"}}
+	columns := []entity.Property{{Name: "col", Type: "text"}}
 	created, err := service.CreateDatabase(ctx, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -212,9 +212,9 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 	ctx := newTestContext(testID(100).String())
 
 	// Create a database
-	columns := []models.Property{
+	columns := []entity.Property{
 		{Name: "title", Type: "text"},
-		{Name: "status", Type: models.PropertyTypeText},
+		{Name: "status", Type: entity.PropertyTypeText},
 	}
 	db, err := service.CreateDatabase(ctx, "Test DB", columns)
 	if err != nil {
@@ -251,7 +251,7 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 	ctx := newTestContext(testID(100).String())
 
 	// Create a database
-	columns := []models.Property{{Name: "name", Type: "text"}}
+	columns := []entity.Property{{Name: "name", Type: "text"}}
 	db, err := service.CreateDatabase(ctx, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -290,7 +290,7 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 	ctx := newTestContext(testID(100).String())
 
 	// Create a database
-	columns := []models.Property{{Name: "name", Type: "text"}}
+	columns := []entity.Property{{Name: "name", Type: "text"}}
 	db, err := service.CreateDatabase(ctx, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -329,7 +329,7 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 	ctx := newTestContext(testID(100).String())
 
 	// Create a database
-	columns := []models.Property{{Name: "name", Type: "text"}}
+	columns := []entity.Property{{Name: "name", Type: "text"}}
 	db, err := service.CreateDatabase(ctx, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -378,7 +378,7 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 	ctx := newTestContext(testID(100).String())
 
 	// Create a database
-	columns := []models.Property{{Name: "name", Type: "text"}}
+	columns := []entity.Property{{Name: "name", Type: "text"}}
 	db, err := service.CreateDatabase(ctx, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -416,12 +416,12 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 	ctx := newTestContext(testID(100).String())
 
 	// Create a database with various column types
-	columns := []models.Property{
+	columns := []entity.Property{
 		{Name: "name", Type: "text"},
 		{Name: "count", Type: "number"},
 		{Name: "price", Type: "number"},
 		{Name: "active", Type: "checkbox"},
-		{Name: "category", Type: models.PropertyTypeText},
+		{Name: "category", Type: entity.PropertyTypeText},
 	}
 	db, err := service.CreateDatabase(ctx, "Type Test DB", columns)
 	if err != nil {

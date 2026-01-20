@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -24,28 +24,28 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 	tests := []struct {
 		name           string
 		membershipOrg  string
-		membershipRole models.UserRole
+		membershipRole entity.UserRole
 		requestOrgID   string
 		expectedStatus int
 	}{
 		{
 			name:           "Access own organization",
 			membershipOrg:  testID(1).String(),
-			membershipRole: models.UserRoleViewer,
+			membershipRole: entity.UserRoleViewer,
 			requestOrgID:   testID(1).String(),
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Access different organization",
 			membershipOrg:  testID(1).String(),
-			membershipRole: models.UserRoleViewer,
+			membershipRole: entity.UserRoleViewer,
 			requestOrgID:   testID(2).String(),
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Access with no org context in request",
 			membershipOrg:  testID(1).String(),
-			membershipRole: models.UserRoleViewer,
+			membershipRole: entity.UserRoleViewer,
 			requestOrgID:   "",
 			expectedStatus: http.StatusOK,
 		},
@@ -66,15 +66,15 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			})
 
-			middleware := RequireRole(memService, models.UserRoleViewer)(next)
+			middleware := RequireRole(memService, entity.UserRoleViewer)(next)
 
 			req := httptest.NewRequest("GET", "/api/"+tt.requestOrgID+"/nodes", http.NoBody)
 			if tt.requestOrgID != "" {
 				req.SetPathValue("orgID", tt.requestOrgID)
 			}
 
-			user := &models.User{ID: userID}
-			ctx := context.WithValue(req.Context(), models.UserKey, user)
+			user := &entity.User{ID: userID}
+			ctx := context.WithValue(req.Context(), entity.UserKey, user)
 			req = req.WithContext(ctx)
 
 			rr := httptest.NewRecorder()
@@ -94,38 +94,38 @@ func TestRolePermissions(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		userRole       models.UserRole
-		requiredRole   models.UserRole
+		userRole       entity.UserRole
+		requiredRole   entity.UserRole
 		expectedStatus int
 	}{
 		{
 			name:           "Viewer accessing Viewer endpoint",
-			userRole:       models.UserRoleViewer,
-			requiredRole:   models.UserRoleViewer,
+			userRole:       entity.UserRoleViewer,
+			requiredRole:   entity.UserRoleViewer,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Viewer accessing Editor endpoint",
-			userRole:       models.UserRoleViewer,
-			requiredRole:   models.UserRoleEditor,
+			userRole:       entity.UserRoleViewer,
+			requiredRole:   entity.UserRoleEditor,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Editor accessing Viewer endpoint",
-			userRole:       models.UserRoleEditor,
-			requiredRole:   models.UserRoleViewer,
+			userRole:       entity.UserRoleEditor,
+			requiredRole:   entity.UserRoleViewer,
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Editor accessing Admin endpoint",
-			userRole:       models.UserRoleEditor,
-			requiredRole:   models.UserRoleAdmin,
+			userRole:       entity.UserRoleEditor,
+			requiredRole:   entity.UserRoleAdmin,
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Admin accessing Editor endpoint",
-			userRole:       models.UserRoleAdmin,
-			requiredRole:   models.UserRoleEditor,
+			userRole:       entity.UserRoleAdmin,
+			requiredRole:   entity.UserRoleEditor,
 			expectedStatus: http.StatusOK,
 		},
 	}
@@ -147,8 +147,8 @@ func TestRolePermissions(t *testing.T) {
 			req := httptest.NewRequest("GET", "/api/"+orgID.String()+"/nodes", http.NoBody)
 			req.SetPathValue("orgID", orgID.String())
 
-			user := &models.User{ID: userID}
-			ctx := context.WithValue(req.Context(), models.UserKey, user)
+			user := &entity.User{ID: userID}
+			ctx := context.WithValue(req.Context(), entity.UserKey, user)
 			req = req.WithContext(ctx)
 
 			rr := httptest.NewRecorder()

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // DatabaseService handles database business logic.
@@ -28,7 +28,7 @@ func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cac
 }
 
 // GetDatabase retrieves a database by ID.
-func (s *DatabaseService) GetDatabase(ctx context.Context, idStr string) (*models.Database, error) {
+func (s *DatabaseService) GetDatabase(ctx context.Context, idStr string) (*entity.Database, error) {
 	if idStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -36,12 +36,12 @@ func (s *DatabaseService) GetDatabase(ctx context.Context, idStr string) (*model
 	if err != nil {
 		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	return s.fileStore.ReadDatabase(orgID, id)
 }
 
 // CreateDatabase creates a new database with a generated numeric ID.
-func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, columns []models.Property) (*models.Database, error) {
+func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, columns []entity.Property) (*entity.Database, error) {
 	if title == "" {
 		return nil, fmt.Errorf("title cannot be empty")
 	}
@@ -49,7 +49,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 		return nil, fmt.Errorf("at least one column is required")
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 
 	// Check Quota
 	if s.orgService != nil {
@@ -64,7 +64,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 
 	id := jsonldb.NewID()
 	now := time.Now()
-	db := &models.Database{
+	db := &entity.Database{
 		ID:         id,
 		Title:      title,
 		Properties: columns,
@@ -90,7 +90,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, title string, colu
 }
 
 // UpdateDatabase updates an existing database's schema.
-func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title string, columns []models.Property) (*models.Database, error) {
+func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title string, columns []entity.Property) (*entity.Database, error) {
 	if idStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -106,7 +106,7 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, idStr, title strin
 		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	db, err := s.fileStore.ReadDatabase(orgID, id)
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, idStr string) erro
 	if err != nil {
 		return fmt.Errorf("invalid database id: %w", err)
 	}
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	if err := s.fileStore.DeleteDatabase(orgID, id); err != nil {
 		return err
 	}
@@ -160,14 +160,14 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, idStr string) erro
 }
 
 // ListDatabases returns all databases.
-func (s *DatabaseService) ListDatabases(ctx context.Context) ([]*models.Database, error) {
-	orgID := models.GetOrgID(ctx)
+func (s *DatabaseService) ListDatabases(ctx context.Context) ([]*entity.Database, error) {
+	orgID := entity.GetOrgID(ctx)
 	return s.fileStore.ListDatabases(orgID)
 }
 
 // CreateRecord creates a new record in a database.
 // Data values are coerced to SQLite-compatible types based on column schema.
-func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string, data map[string]any) (*models.DataRecord, error) {
+func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string, data map[string]any) (*entity.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -177,7 +177,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 
 	// Read database to get columns for type coercion
 	db, err := s.fileStore.ReadDatabase(orgID, databaseID)
@@ -192,7 +192,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 	id := jsonldb.NewID()
 
 	now := time.Now()
-	record := &models.DataRecord{
+	record := &entity.DataRecord{
 		ID:       id,
 		Data:     coercedData,
 		Created:  now,
@@ -216,7 +216,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, databaseIDStr string
 }
 
 // GetRecords retrieves all records from a database.
-func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) ([]*models.DataRecord, error) {
+func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) ([]*entity.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -230,7 +230,7 @@ func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) 
 		return records, nil
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	// Verify database exists
 	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
@@ -246,7 +246,7 @@ func (s *DatabaseService) GetRecords(ctx context.Context, databaseIDStr string) 
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
-func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr string, offset, limit int) ([]*models.DataRecord, error) {
+func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr string, offset, limit int) ([]*entity.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -256,7 +256,7 @@ func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr stri
 		return nil, fmt.Errorf("invalid database id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	// Verify database exists
 	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, fmt.Errorf("database not found")
@@ -266,7 +266,7 @@ func (s *DatabaseService) GetRecordsPage(ctx context.Context, databaseIDStr stri
 }
 
 // GetRecord retrieves a specific record by ID.
-func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordIDStr string) (*models.DataRecord, error) {
+func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordIDStr string) (*entity.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -283,7 +283,7 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordID
 		return nil, fmt.Errorf("invalid record id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	records, err := s.fileStore.ReadRecords(orgID, databaseID)
 	if err != nil {
 		return nil, err
@@ -300,7 +300,7 @@ func (s *DatabaseService) GetRecord(ctx context.Context, databaseIDStr, recordID
 
 // UpdateRecord updates an existing record in a database.
 // Data values are coerced to SQLite-compatible types based on column schema.
-func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recordIDStr string, data map[string]any) (*models.DataRecord, error) {
+func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recordIDStr string, data map[string]any) (*entity.DataRecord, error) {
 	if databaseIDStr == "" {
 		return nil, fmt.Errorf("database id cannot be empty")
 	}
@@ -317,7 +317,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 		return nil, fmt.Errorf("invalid record id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 
 	// Read database to get columns for type coercion
 	db, err := s.fileStore.ReadDatabase(orgID, databaseID)
@@ -334,7 +334,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, databaseIDStr, recor
 	// Coerce data types based on property schema
 	coercedData := coerceRecordData(data, db.Properties)
 
-	record := &models.DataRecord{
+	record := &entity.DataRecord{
 		ID:       recordID,
 		Data:     coercedData,
 		Created:  existing.Created,
@@ -375,7 +375,7 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, databaseIDStr, recor
 		return fmt.Errorf("invalid record id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 
 	if err := s.fileStore.DeleteRecord(orgID, databaseID, recordID); err != nil {
 		return err

@@ -8,7 +8,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -25,10 +25,10 @@ func NewPageHandler(fileStore *storage.FileStore, gitService *storage.GitService
 }
 
 // ListPages returns a list of all pages
-func (h *PageHandler) ListPages(ctx context.Context, req models.ListPagesRequest) (*models.ListPagesResponse, error) {
+func (h *PageHandler) ListPages(ctx context.Context, req dto.ListPagesRequest) (*dto.ListPagesResponse, error) {
 	pages, err := h.pageService.ListPages(ctx)
 	if err != nil {
-		return nil, models.InternalWithError("Failed to list pages", err)
+		return nil, dto.InternalWithError("Failed to list pages", err)
 	}
 
 	pageList := make([]any, len(pages))
@@ -41,17 +41,17 @@ func (h *PageHandler) ListPages(ctx context.Context, req models.ListPagesRequest
 		}
 	}
 
-	return &models.ListPagesResponse{Pages: pageList}, nil
+	return &dto.ListPagesResponse{Pages: pageList}, nil
 }
 
 // GetPage returns a specific page by ID
-func (h *PageHandler) GetPage(ctx context.Context, req models.GetPageRequest) (*models.GetPageResponse, error) {
+func (h *PageHandler) GetPage(ctx context.Context, req dto.GetPageRequest) (*dto.GetPageResponse, error) {
 	page, err := h.pageService.GetPage(ctx, req.ID)
 	if err != nil {
-		return nil, models.NotFound("page")
+		return nil, dto.NotFound("page")
 	}
 
-	return &models.GetPageResponse{
+	return &dto.GetPageResponse{
 		ID:      page.ID.String(),
 		Title:   page.Title,
 		Content: page.Content,
@@ -59,55 +59,55 @@ func (h *PageHandler) GetPage(ctx context.Context, req models.GetPageRequest) (*
 }
 
 // CreatePage creates a new page
-func (h *PageHandler) CreatePage(ctx context.Context, req models.CreatePageRequest) (*models.CreatePageResponse, error) {
+func (h *PageHandler) CreatePage(ctx context.Context, req dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
 	if req.Title == "" {
-		return nil, models.MissingField("title")
+		return nil, dto.MissingField("title")
 	}
 
 	page, err := h.pageService.CreatePage(ctx, req.Title, req.Content)
 	if err != nil {
-		return nil, models.InternalWithError("Failed to create page", err)
+		return nil, dto.InternalWithError("Failed to create page", err)
 	}
 
-	return &models.CreatePageResponse{ID: page.ID.String()}, nil
+	return &dto.CreatePageResponse{ID: page.ID.String()}, nil
 }
 
 // UpdatePage updates an existing page
-func (h *PageHandler) UpdatePage(ctx context.Context, req models.UpdatePageRequest) (*models.UpdatePageResponse, error) {
+func (h *PageHandler) UpdatePage(ctx context.Context, req dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
 	page, err := h.pageService.UpdatePage(ctx, req.ID, req.Title, req.Content)
 	if err != nil {
-		return nil, models.NotFound("page")
+		return nil, dto.NotFound("page")
 	}
 
-	return &models.UpdatePageResponse{ID: page.ID.String()}, nil
+	return &dto.UpdatePageResponse{ID: page.ID.String()}, nil
 }
 
 // DeletePage deletes a page
-func (h *PageHandler) DeletePage(ctx context.Context, req models.DeletePageRequest) (*models.DeletePageResponse, error) {
+func (h *PageHandler) DeletePage(ctx context.Context, req dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
 	err := h.pageService.DeletePage(ctx, req.ID)
 	if err != nil {
-		return nil, models.NotFound("page")
+		return nil, dto.NotFound("page")
 	}
 
-	return &models.DeletePageResponse{}, nil
+	return &dto.DeletePageResponse{}, nil
 }
 
 // GetPageHistory returns the history of a page
-func (h *PageHandler) GetPageHistory(ctx context.Context, req models.GetPageHistoryRequest) (*models.GetPageHistoryResponse, error) {
+func (h *PageHandler) GetPageHistory(ctx context.Context, req dto.GetPageHistoryRequest) (*dto.GetPageHistoryResponse, error) {
 	history, err := h.pageService.GetPageHistory(ctx, req.ID)
 	if err != nil {
-		return nil, models.InternalWithError("Failed to get page history", err)
+		return nil, dto.InternalWithError("Failed to get page history", err)
 	}
 
-	return &models.GetPageHistoryResponse{History: history}, nil
+	return &dto.GetPageHistoryResponse{History: commitsToDTO(history)}, nil
 }
 
 // GetPageVersion returns a specific version of a page
-func (h *PageHandler) GetPageVersion(ctx context.Context, req models.GetPageVersionRequest) (*models.GetPageVersionResponse, error) {
+func (h *PageHandler) GetPageVersion(ctx context.Context, req dto.GetPageVersionRequest) (*dto.GetPageVersionResponse, error) {
 	content, err := h.pageService.GetPageVersion(ctx, req.ID, req.Hash)
 	if err != nil {
-		return nil, models.InternalWithError("Failed to get page version", err)
+		return nil, dto.InternalWithError("Failed to get page version", err)
 	}
 
-	return &models.GetPageVersionResponse{Content: content}, nil
+	return &dto.GetPageVersionResponse{Content: content}, nil
 }

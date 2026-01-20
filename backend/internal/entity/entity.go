@@ -1,8 +1,26 @@
-// Package models defines the core domain types and API contracts.
+// Package entity defines persistent domain models for storage in jsonldb.
 //
-// It includes domain entities (Node, User, Organization, Membership),
-// API request/response types, and structured error handling with APIError.
-package models
+// This package contains the core domain types that are persisted to disk via
+// jsonldb. These types implement the jsonldb.Row interface (Clone, GetID,
+// Validate) and use jsonldb.ID for unique identifiers.
+//
+// The entity package is the foundation of the data model:
+//   - Node: Unified content entity (document, database, or hybrid)
+//   - User: System users with OAuth identities
+//   - Organization: Workspaces with quotas and settings
+//   - Membership: User-organization relationships with roles
+//   - Invitation: Pending invitations to join organizations
+//   - GitRemote: Git repository configurations
+//   - DataRecord: Individual records within database nodes
+//
+// Types in this package are storage-oriented and use jsonldb.ID (uint64) for
+// identifiers. For API representations with string IDs and RFC3339 timestamps,
+// see the dto package.
+//
+// Architecture note: The entity package has no dependencies on HTTP or API
+// concerns. It only depends on jsonldb for ID types and is designed to be
+// imported by both storage services and the dto package for conversions.
+package entity
 
 import (
 	"context"
@@ -334,8 +352,7 @@ type Asset struct {
 	Path     string    `json:"path"`
 }
 
-// Legacy types for compatibility during migration (optional to keep or remove)
-// For now, we refactor them to use the new Node concept or keep them if needed by existing code.
+// Legacy types for compatibility during migration
 
 // Page is kept for backward compatibility with existing storage methods
 type Page struct {

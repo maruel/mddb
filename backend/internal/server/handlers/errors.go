@@ -5,18 +5,18 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/dto"
 )
 
 // writeErrorResponse writes an APIError as a JSON response.
 // Use this in raw http.HandlerFunc handlers that don't use server.Wrap.
 func writeErrorResponse(w http.ResponseWriter, err error) {
 	statusCode := http.StatusInternalServerError
-	errorCode := models.ErrorCodeInternal
+	errorCode := dto.ErrorCodeInternal
 	message := "internal error"
 	var details map[string]any
 
-	var ewsErr models.ErrorWithStatus
+	var ewsErr dto.ErrorWithStatus
 	if errors.As(err, &ewsErr) {
 		statusCode = ewsErr.StatusCode()
 		errorCode = ewsErr.Code()
@@ -27,8 +27,8 @@ func writeErrorResponse(w http.ResponseWriter, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
-	response := models.ErrorResponse{
-		Error: models.ErrorDetails{
+	response := dto.ErrorResponse{
+		Error: dto.ErrorDetails{
 			Code:    errorCode,
 			Message: message,
 		},

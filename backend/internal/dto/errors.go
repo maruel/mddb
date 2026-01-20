@@ -1,8 +1,27 @@
-// Package models defines the core data structures used throughout the application.
-package models
+// Package dto defines API request/response types and error handling.
+//
+// This package contains all types used for HTTP API communication via goty:
+//   - Request types with path/query/json struct tags for parameter binding
+//   - Response types with string IDs and RFC3339 timestamps for JSON serialization
+//   - Structured error types with HTTP status codes and error codes
+//   - API-specific types (Property, UserRole, NodeType, Settings, etc.)
+//
+// The dto package is the API contract layer, fully self-contained with no
+// dependency on the entity package. This ensures that changes to internal
+// domain models (entity) do not accidentally affect the API contract.
+//
+// Conversion between dto and entity types is handled by the handlers package
+// (in convert.go), which imports both packages.
+//
+// Error handling follows a structured pattern:
+//   - ErrorCode provides machine-readable error classification
+//   - APIError wraps errors with HTTP status codes and details
+//   - Constructor functions (NotFound, BadRequest, etc.) create common errors
+package dto
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 )
 
@@ -92,9 +111,7 @@ func (e *APIError) WithDetails(details map[string]any) *APIError {
 	if e.details == nil {
 		e.details = make(map[string]any)
 	}
-	for k, v := range details {
-		e.details[k] = v
-	}
+	maps.Copy(e.details, details)
 	return e
 }
 

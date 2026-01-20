@@ -3,7 +3,7 @@ package storage
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/entity"
 )
 
 func TestInvitationService(t *testing.T) {
@@ -16,7 +16,7 @@ func TestInvitationService(t *testing.T) {
 
 	orgID := testID(100)
 	email := "invitee@example.com"
-	role := models.UserRoleEditor
+	role := entity.UserRoleEditor
 
 	// Test CreateInvitation
 	inv, err := service.CreateInvitation(email, orgID.String(), role)

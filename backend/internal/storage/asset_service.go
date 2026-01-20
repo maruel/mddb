@@ -6,8 +6,8 @@ import (
 	"mime"
 	"path/filepath"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // AssetService handles asset business logic.
@@ -27,7 +27,7 @@ func NewAssetService(fileStore *FileStore, gitService *GitService, orgService *O
 }
 
 // SaveAsset saves an asset file to a page's directory.
-func (s *AssetService) SaveAsset(ctx context.Context, pageIDStr, fileName string, data []byte) (*models.Asset, error) {
+func (s *AssetService) SaveAsset(ctx context.Context, pageIDStr, fileName string, data []byte) (*entity.Asset, error) {
 	if pageIDStr == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
@@ -43,7 +43,7 @@ func (s *AssetService) SaveAsset(ctx context.Context, pageIDStr, fileName string
 		return nil, fmt.Errorf("invalid page id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 
 	// Check Quota
 	if s.orgService != nil {
@@ -72,7 +72,7 @@ func (s *AssetService) SaveAsset(ctx context.Context, pageIDStr, fileName string
 		mimeType = "application/octet-stream"
 	}
 
-	asset := &models.Asset{
+	asset := &entity.Asset{
 		ID:       fileName,
 		Name:     fileName,
 		MimeType: mimeType,
@@ -103,7 +103,7 @@ func (s *AssetService) GetAsset(ctx context.Context, pageIDStr, assetName string
 		return nil, fmt.Errorf("invalid page id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	return s.fileStore.ReadAsset(orgID, pageID, assetName)
 }
 
@@ -121,7 +121,7 @@ func (s *AssetService) DeleteAsset(ctx context.Context, pageIDStr, assetName str
 		return fmt.Errorf("invalid page id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	if err := s.fileStore.DeleteAsset(orgID, pageID, assetName); err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (s *AssetService) DeleteAsset(ctx context.Context, pageIDStr, assetName str
 }
 
 // ListAssets lists all assets in a page's directory.
-func (s *AssetService) ListAssets(ctx context.Context, pageIDStr string) ([]*models.Asset, error) {
+func (s *AssetService) ListAssets(ctx context.Context, pageIDStr string) ([]*entity.Asset, error) {
 	if pageIDStr == "" {
 		return nil, fmt.Errorf("page id cannot be empty")
 	}
@@ -146,6 +146,6 @@ func (s *AssetService) ListAssets(ctx context.Context, pageIDStr string) ([]*mod
 		return nil, fmt.Errorf("invalid page id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	return s.fileStore.ListAssets(orgID, pageID)
 }

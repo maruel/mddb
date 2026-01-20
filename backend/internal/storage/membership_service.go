@@ -7,16 +7,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // MembershipService handles user-organization relationships.
 type MembershipService struct {
 	rootDir string
-	table   *jsonldb.Table[*models.Membership]
+	table   *jsonldb.Table[*entity.Membership]
 	mu      sync.RWMutex
-	byID    map[string]*models.Membership // key: userID_orgID (as strings)
+	byID    map[string]*entity.Membership // key: userID_orgID (as strings)
 }
 
 // NewMembershipService creates a new membership service.
@@ -27,7 +27,7 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 	}
 
 	tablePath := filepath.Join(dbDir, "memberships.jsonl")
-	table, err := jsonldb.NewTable[*models.Membership](tablePath)
+	table, err := jsonldb.NewTable[*entity.Membership](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 	s := &MembershipService{
 		rootDir: rootDir,
 		table:   table,
-		byID:    make(map[string]*models.Membership),
+		byID:    make(map[string]*entity.Membership),
 	}
 
 	for m := range table.Iter(0) {
@@ -46,7 +46,7 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 }
 
 // CreateMembership adds a user to an organization.
-func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role models.UserRole) (*models.Membership, error) {
+func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role entity.UserRole) (*entity.Membership, error) {
 	userID, err := jsonldb.DecodeID(userIDStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user id: %w", err)
@@ -64,7 +64,7 @@ func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role mo
 		return nil, fmt.Errorf("membership already exists")
 	}
 
-	membership := &models.Membership{
+	membership := &entity.Membership{
 		ID:             jsonldb.NewID(),
 		UserID:         userID,
 		OrganizationID: orgID,
@@ -84,7 +84,7 @@ func (s *MembershipService) CreateMembership(userIDStr, orgIDStr string, role mo
 }
 
 // GetMembership retrieves a specific user-org relationship.
-func (s *MembershipService) GetMembership(userIDStr, orgIDStr string) (*models.Membership, error) {
+func (s *MembershipService) GetMembership(userIDStr, orgIDStr string) (*entity.Membership, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -98,7 +98,7 @@ func (s *MembershipService) GetMembership(userIDStr, orgIDStr string) (*models.M
 }
 
 // ListByUser returns all organizations a user belongs to.
-func (s *MembershipService) ListByUser(userIDStr string) ([]models.Membership, error) {
+func (s *MembershipService) ListByUser(userIDStr string) ([]entity.Membership, error) {
 	userID, err := jsonldb.DecodeID(userIDStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user id: %w", err)
@@ -107,7 +107,7 @@ func (s *MembershipService) ListByUser(userIDStr string) ([]models.Membership, e
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var memberships []models.Membership
+	var memberships []entity.Membership
 	for _, m := range s.byID {
 		if m.UserID == userID {
 			memberships = append(memberships, *m)
@@ -117,7 +117,7 @@ func (s *MembershipService) ListByUser(userIDStr string) ([]models.Membership, e
 }
 
 // ListByOrganization returns all users in an organization.
-func (s *MembershipService) ListByOrganization(orgIDStr string) ([]models.Membership, error) {
+func (s *MembershipService) ListByOrganization(orgIDStr string) ([]entity.Membership, error) {
 	orgID, err := jsonldb.DecodeID(orgIDStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid organization id: %w", err)
@@ -126,7 +126,7 @@ func (s *MembershipService) ListByOrganization(orgIDStr string) ([]models.Member
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var memberships []models.Membership
+	var memberships []entity.Membership
 	for _, m := range s.byID {
 		if m.OrganizationID == orgID {
 			memberships = append(memberships, *m)
@@ -136,7 +136,7 @@ func (s *MembershipService) ListByOrganization(orgIDStr string) ([]models.Member
 }
 
 // UpdateRole updates a user's role in an organization.
-func (s *MembershipService) UpdateRole(userIDStr, orgIDStr string, role models.UserRole) error {
+func (s *MembershipService) UpdateRole(userIDStr, orgIDStr string, role entity.UserRole) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -151,7 +151,7 @@ func (s *MembershipService) UpdateRole(userIDStr, orgIDStr string, role models.U
 }
 
 // UpdateSettings updates user preferences within a specific organization.
-func (s *MembershipService) UpdateSettings(userIDStr, orgIDStr string, settings models.MembershipSettings) error {
+func (s *MembershipService) UpdateSettings(userIDStr, orgIDStr string, settings entity.MembershipSettings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -179,19 +179,10 @@ func (s *MembershipService) DeleteMembership(userIDStr, orgIDStr string) error {
 	return s.table.Replace(s.getAllFromCache())
 }
 
-func (s *MembershipService) getAllFromCache() []*models.Membership {
-	rows := make([]*models.Membership, 0, len(s.byID))
+func (s *MembershipService) getAllFromCache() []*entity.Membership {
+	rows := make([]*entity.Membership, 0, len(s.byID))
 	for _, v := range s.byID {
 		rows = append(rows, v)
 	}
 	return rows
-}
-
-// GetMembershipResponse retrieves a specific user-org relationship as a response type.
-func (s *MembershipService) GetMembershipResponse(userIDStr, orgIDStr string) (*models.MembershipResponse, error) {
-	m, err := s.GetMembership(userIDStr, orgIDStr)
-	if err != nil {
-		return nil, err
-	}
-	return m.ToResponse(), nil
 }

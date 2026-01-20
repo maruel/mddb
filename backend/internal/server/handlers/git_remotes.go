@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -29,23 +29,23 @@ func NewGitRemoteHandler(remoteService *storage.GitRemoteService, gitService *st
 }
 
 // ListRemotes lists all git remotes for an organization.
-func (h *GitRemoteHandler) ListRemotes(ctx context.Context, req models.ListGitRemotesRequest) (*models.ListGitRemotesResponse, error) {
+func (h *GitRemoteHandler) ListRemotes(ctx context.Context, req dto.ListGitRemotesRequest) (*dto.ListGitRemotesResponse, error) {
 	remotes, err := h.remoteService.ListRemotes(req.OrgID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Convert to response types
-	responses := make([]models.GitRemoteResponse, 0, len(remotes))
+	responses := make([]dto.GitRemoteResponse, 0, len(remotes))
 	for _, r := range remotes {
-		responses = append(responses, *r.ToResponse())
+		responses = append(responses, *gitRemoteToResponse(r))
 	}
 
-	return &models.ListGitRemotesResponse{Remotes: responses}, nil
+	return &dto.ListGitRemotesResponse{Remotes: responses}, nil
 }
 
 // CreateRemote creates a new git remote.
-func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *models.CreateGitRemoteRequest) (*models.GitRemoteResponse, error) {
+func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *dto.CreateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
 	remote, err := h.remoteService.CreateRemote(req.OrgID, req.Name, req.URL, req.Type, req.AuthType, req.Token)
 	if err != nil {
 		return nil, err
@@ -68,11 +68,11 @@ func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *models.CreateG
 		return nil, fmt.Errorf("failed to add git remote: %w", err)
 	}
 
-	return remote.ToResponse(), nil
+	return gitRemoteToResponse(remote), nil
 }
 
 // Push pushes changes to a git remote.
-func (h *GitRemoteHandler) Push(ctx context.Context, req models.PushGitRemoteRequest) (*any, error) {
+func (h *GitRemoteHandler) Push(ctx context.Context, req dto.PushGitRemoteRequest) (*any, error) {
 	remote, err := h.remoteService.GetRemote(req.RemoteID)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (h *GitRemoteHandler) Push(ctx context.Context, req models.PushGitRemoteReq
 }
 
 // DeleteRemote deletes a git remote.
-func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, req models.DeleteGitRemoteRequest) (*any, error) {
+func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, req dto.DeleteGitRemoteRequest) (*any, error) {
 	remote, err := h.remoteService.GetRemote(req.RemoteID)
 	if err != nil {
 		return nil, err

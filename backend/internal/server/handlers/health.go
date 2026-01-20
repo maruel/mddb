@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/dto"
 )
 
 // HealthHandler handles health check requests.
@@ -19,8 +19,8 @@ func NewHealthHandler(version string) *HealthHandler {
 }
 
 // Health handles health check requests.
-func (h *HealthHandler) Health(ctx context.Context, req models.HealthRequest) (*models.HealthResponse, error) {
-	return &models.HealthResponse{
+func (h *HealthHandler) Health(ctx context.Context, req dto.HealthRequest) (*dto.HealthResponse, error) {
+	return &dto.HealthResponse{
 		Status:  "ok",
 		Version: h.version,
 	}, nil

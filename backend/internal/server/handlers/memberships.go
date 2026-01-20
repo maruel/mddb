@@ -3,7 +3,8 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/dto"
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -24,54 +25,59 @@ func NewMembershipHandler(memService *storage.MembershipService, userService *st
 }
 
 // SwitchOrg switches the user's active organization and returns a new token.
-func (h *MembershipHandler) SwitchOrg(ctx context.Context, req models.SwitchOrgRequest) (*models.SwitchOrgResponse, error) {
-	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
+func (h *MembershipHandler) SwitchOrg(ctx context.Context, req dto.SwitchOrgRequest) (*dto.SwitchOrgResponse, error) {
+	currentUser, ok := ctx.Value(entity.UserKey).(*entity.User)
 	if !ok {
-		return nil, models.Unauthorized()
+		return nil, dto.Unauthorized()
 	}
 
 	// Verify membership
 	_, err := h.memService.GetMembership(currentUser.ID.String(), req.OrgID)
 	if err != nil {
-		return nil, models.Forbidden("User is not a member of this organization")
+		return nil, dto.Forbidden("User is not a member of this organization")
 	}
 
 	// Re-fetch user for token generation
 	user, err := h.userService.GetUser(currentUser.ID.String())
 	if err != nil {
-		return nil, models.InternalWithError("Failed to fetch user", err)
+		return nil, dto.InternalWithError("Failed to fetch user", err)
 	}
 
 	token, err := h.authHandler.GenerateToken(user)
 	if err != nil {
-		return nil, models.InternalWithError("Failed to generate token", err)
+		return nil, dto.InternalWithError("Failed to generate token", err)
 	}
 
 	// Build user response with memberships
-	userResp, err := h.userService.GetUserResponse(currentUser.ID.String())
+	uwm, err := h.userService.GetUserWithMemberships(currentUser.ID.String())
 	if err != nil {
-		return nil, models.InternalWithError("Failed to get user response", err)
+		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
+	userResp := userWithMembershipsToResponse(uwm)
 
 	h.authHandler.PopulateActiveContext(userResp, req.OrgID)
 
-	return &models.SwitchOrgResponse{
+	return &dto.SwitchOrgResponse{
 		Token: token,
 		User:  userResp,
 	}, nil
 }
 
 // UpdateMembershipSettings updates user preferences within an organization.
-func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req models.UpdateMembershipSettingsRequest) (*models.MembershipResponse, error) {
-	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
+func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req dto.UpdateMembershipSettingsRequest) (*dto.MembershipResponse, error) {
+	currentUser, ok := ctx.Value(entity.UserKey).(*entity.User)
 	if !ok {
-		return nil, models.Unauthorized()
+		return nil, dto.Unauthorized()
 	}
 
-	orgID := models.GetOrgID(ctx)
-	if err := h.memService.UpdateSettings(currentUser.ID.String(), orgID.String(), req.Settings); err != nil {
-		return nil, models.InternalWithError("Failed to update membership settings", err)
+	orgID := entity.GetOrgID(ctx)
+	if err := h.memService.UpdateSettings(currentUser.ID.String(), orgID.String(), membershipSettingsToEntity(req.Settings)); err != nil {
+		return nil, dto.InternalWithError("Failed to update membership settings", err)
 	}
 
-	return h.memService.GetMembershipResponse(currentUser.ID.String(), orgID.String())
+	m, err := h.memService.GetMembership(currentUser.ID.String(), orgID.String())
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get membership", err)
+	}
+	return membershipToResponse(m), nil
 }

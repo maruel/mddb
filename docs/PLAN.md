@@ -572,13 +572,14 @@ Response: { "records": [...], "total": 150 }
 
 ### Phase 18: Model Layer Separation ✓
 *Completed.*
-- Separated structs used for disk serialization from those used for API responses.
+- Separated structs used for disk serialization (`entity` package) from those used for API responses (`dto` package).
 - Created API response types: `UserResponse`, `MembershipResponse`, `InvitationResponse`, `OrganizationResponse`, `GitRemoteResponse`, `NodeResponse`, `DataRecordResponse`.
-- Added `ToResponse()` conversion methods on domain models.
-- Removed runtime-only fields from domain models (`User.Memberships`, `User.OrganizationID`, `User.Role`, `User.Onboarding`, `Membership.OrganizationName`).
-- Updated all handlers to return response types instead of domain models.
+- **dto package is fully self-contained**: Duplicated necessary types (Property, UserRole, NodeType, Settings, etc.) in dto to eliminate dependency on entity. This prevents accidental API contract changes when internal entity types evolve.
+- Moved all entity→dto conversion functions to `handlers/convert.go` where both packages are already imported.
+- Storage services return entity types with wrapper structs (`MembershipWithOrgName`, `UserWithMemberships`); handlers perform dto conversion.
+- Updated all handlers to use local conversion functions instead of methods on domain models.
 - Refactored `PopulateActiveContext()` to work with `UserResponse`.
-- Updated frontend TypeScript types to match new API contracts.
+- Updated frontend TypeScript types via tygo (generating only from dto package).
 
 ## Future Considerations
 - **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.

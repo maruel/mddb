@@ -6,8 +6,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // SearchService handles full-text search across nodes.
@@ -23,12 +23,12 @@ func NewSearchService(fileStore *FileStore) *SearchService {
 }
 
 // Search performs a full-text search across all nodes.
-func (s *SearchService) Search(ctx context.Context, opts models.SearchOptions) ([]models.SearchResult, error) {
+func (s *SearchService) Search(ctx context.Context, opts entity.SearchOptions) ([]entity.SearchResult, error) {
 	if opts.Query == "" {
 		return nil, nil
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 
 	if !opts.MatchTitle && !opts.MatchBody && !opts.MatchFields {
 		opts.MatchTitle = true
@@ -37,7 +37,7 @@ func (s *SearchService) Search(ctx context.Context, opts models.SearchOptions) (
 	}
 
 	query := strings.ToLower(opts.Query)
-	var results []models.SearchResult
+	var results []entity.SearchResult
 
 	// Search pages
 	if opts.MatchTitle || opts.MatchBody {
@@ -62,14 +62,14 @@ func (s *SearchService) Search(ctx context.Context, opts models.SearchOptions) (
 	return results, nil
 }
 
-func (s *SearchService) searchPages(orgID jsonldb.ID, query string, opts models.SearchOptions) []models.SearchResult {
+func (s *SearchService) searchPages(orgID jsonldb.ID, query string, opts entity.SearchOptions) []entity.SearchResult {
 	nodes, _ := s.fileStore.ReadNodeTree(orgID)
-	var results []models.SearchResult
+	var results []entity.SearchResult
 
-	var processNodes func([]*models.Node)
-	processNodes = func(list []*models.Node) {
+	var processNodes func([]*entity.Node)
+	processNodes = func(list []*entity.Node) {
 		for _, node := range list {
-			if node.Type != models.NodeTypeDatabase {
+			if node.Type != entity.NodeTypeDatabase {
 				score := 0.0
 				matches := make(map[string]string)
 				snippet := ""
@@ -86,7 +86,7 @@ func (s *SearchService) searchPages(orgID jsonldb.ID, query string, opts models.
 				}
 
 				if score > 0 {
-					results = append(results, models.SearchResult{
+					results = append(results, entity.SearchResult{
 						Type:     "page",
 						NodeID:   node.ID,
 						Title:    node.Title,
@@ -106,14 +106,14 @@ func (s *SearchService) searchPages(orgID jsonldb.ID, query string, opts models.
 	return results
 }
 
-func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts models.SearchOptions) []models.SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
+func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts entity.SearchOptions) []entity.SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
 	nodes, _ := s.fileStore.ReadNodeTree(orgID)
-	var results []models.SearchResult
+	var results []entity.SearchResult
 
-	var processNodes func([]*models.Node)
-	processNodes = func(list []*models.Node) {
+	var processNodes func([]*entity.Node)
+	processNodes = func(list []*entity.Node) {
 		for _, node := range list {
-			if node.Type != models.NodeTypeDocument {
+			if node.Type != entity.NodeTypeDocument {
 				records, _ := s.fileStore.ReadRecords(orgID, node.ID)
 				for _, record := range records {
 					score := 0.0
@@ -131,7 +131,7 @@ func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts mod
 
 					if score > 0 {
 						recordID := record.ID
-						results = append(results, models.SearchResult{
+						results = append(results, entity.SearchResult{
 							Type:     "record",
 							NodeID:   node.ID,
 							RecordID: recordID,
@@ -219,7 +219,7 @@ func truncate(s string, maxLen int) string {
 }
 
 // sortResultsByScore sorts results by score in descending order.
-func sortResultsByScore(results []models.SearchResult) {
+func sortResultsByScore(results []entity.SearchResult) {
 	sort.Slice(results, func(i, j int) bool {
 		return results[i].Score > results[j].Score
 	})

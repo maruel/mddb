@@ -8,18 +8,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // OrganizationService handles organization management.
 type OrganizationService struct {
 	rootDir    string
-	table      *jsonldb.Table[*models.Organization]
+	table      *jsonldb.Table[*entity.Organization]
 	fileStore  *FileStore
 	gitService *GitService
 	mu         sync.RWMutex
-	byID       map[jsonldb.ID]*models.Organization
+	byID       map[jsonldb.ID]*entity.Organization
 }
 
 // NewOrganizationService creates a new organization service.
@@ -30,7 +30,7 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 	}
 
 	tablePath := filepath.Join(dbDir, "organizations.jsonl")
-	table, err := jsonldb.NewTable[*models.Organization](tablePath)
+	table, err := jsonldb.NewTable[*entity.Organization](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 		table:      table,
 		fileStore:  fileStore,
 		gitService: gitService,
-		byID:       make(map[jsonldb.ID]*models.Organization),
+		byID:       make(map[jsonldb.ID]*entity.Organization),
 	}
 
 	for org := range table.Iter(0) {
@@ -51,7 +51,7 @@ func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *Gi
 }
 
 // CreateOrganization creates a new organization.
-func (s *OrganizationService) CreateOrganization(ctx context.Context, name string) (*models.Organization, error) {
+func (s *OrganizationService) CreateOrganization(ctx context.Context, name string) (*entity.Organization, error) {
 	if name == "" {
 		return nil, fmt.Errorf("organization name is required")
 	}
@@ -61,11 +61,11 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 
 	id := jsonldb.NewID()
 	now := time.Now()
-	org := &models.Organization{
+	org := &entity.Organization{
 		ID:      id,
 		Name:    name,
 		Created: now,
-		Onboarding: models.OnboardingState{
+		Onboarding: entity.OnboardingState{
 			Completed: false,
 			Step:      "name",
 			UpdatedAt: now,
@@ -104,7 +104,7 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 		// Commit the welcome page
 		if s.gitService != nil {
 			// Create a context with the new org ID
-			orgCtx := context.WithValue(ctx, models.OrgKey, id)
+			orgCtx := context.WithValue(ctx, entity.OrgKey, id)
 			_ = s.gitService.CommitChange(orgCtx, "create", "page", welcomeID.String(), "Initial welcome page")
 		}
 	}
@@ -113,7 +113,7 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 }
 
 // GetOrganization retrieves an organization by ID.
-func (s *OrganizationService) GetOrganization(id jsonldb.ID) (*models.Organization, error) {
+func (s *OrganizationService) GetOrganization(id jsonldb.ID) (*entity.Organization, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -126,7 +126,7 @@ func (s *OrganizationService) GetOrganization(id jsonldb.ID) (*models.Organizati
 }
 
 // GetOrganizationByID retrieves an organization by string ID.
-func (s *OrganizationService) GetOrganizationByID(idStr string) (*models.Organization, error) {
+func (s *OrganizationService) GetOrganizationByID(idStr string) (*entity.Organization, error) {
 	id, err := jsonldb.DecodeID(idStr)
 	if err != nil {
 		return nil, err
@@ -135,11 +135,11 @@ func (s *OrganizationService) GetOrganizationByID(idStr string) (*models.Organiz
 }
 
 // ListOrganizations returns all organizations.
-func (s *OrganizationService) ListOrganizations() ([]*models.Organization, error) {
+func (s *OrganizationService) ListOrganizations() ([]*entity.Organization, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	orgs := make([]*models.Organization, 0, len(s.byID))
+	orgs := make([]*entity.Organization, 0, len(s.byID))
 	for _, org := range s.byID {
 		orgs = append(orgs, org)
 	}
@@ -147,7 +147,7 @@ func (s *OrganizationService) ListOrganizations() ([]*models.Organization, error
 }
 
 // UpdateSettings updates organization-wide settings.
-func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings models.OrganizationSettings) error {
+func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings entity.OrganizationSettings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -161,7 +161,7 @@ func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings models.Orga
 }
 
 // UpdateOnboarding updates the onboarding state of an organization.
-func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state models.OnboardingState) error {
+func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state entity.OnboardingState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -175,8 +175,8 @@ func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state models.Onboa
 	return s.table.Replace(s.getAllFromCache())
 }
 
-func (s *OrganizationService) getAllFromCache() []*models.Organization {
-	rows := make([]*models.Organization, 0, len(s.byID))
+func (s *OrganizationService) getAllFromCache() []*entity.Organization {
+	rows := make([]*entity.Organization, 0, len(s.byID))
 	for _, v := range s.byID {
 		rows = append(rows, v)
 	}

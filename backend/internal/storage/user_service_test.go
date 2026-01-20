@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/entity"
 )
 
 func TestUserService(t *testing.T) {
@@ -27,7 +27,7 @@ func TestUserService(t *testing.T) {
 	}
 
 	// Test CreateUser
-	user, err := service.CreateUser("test@example.com", "password123", "Test User", models.UserRoleAdmin)
+	user, err := service.CreateUser("test@example.com", "password123", "Test User", entity.UserRoleAdmin)
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestUserService(t *testing.T) {
 
 	// Test UpdateUserRole
 	orgID := testID(100)
-	err = service.UpdateUserRole(user.ID.String(), orgID.String(), models.UserRoleEditor)
+	err = service.UpdateUserRole(user.ID.String(), orgID.String(), entity.UserRoleEditor)
 	if err != nil {
 		t.Fatalf("Failed to update user role: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestUserService(t *testing.T) {
 
 	found := false
 	for _, m := range memberships {
-		if m.OrganizationID == orgID.String() && m.Role == models.UserRoleEditor {
+		if m.OrganizationID.String() == orgID.String() && m.Role == entity.UserRoleEditor {
 			found = true
 			break
 		}

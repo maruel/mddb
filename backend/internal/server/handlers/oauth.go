@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/dto"
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -64,7 +65,7 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	provider := r.PathValue("provider")
 	config, ok := h.providers[provider]
 	if !ok {
-		writeErrorResponse(w, models.InvalidProvider())
+		writeErrorResponse(w, dto.InvalidProvider())
 		return
 	}
 
@@ -79,19 +80,19 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	provider := r.PathValue("provider")
 	config, ok := h.providers[provider]
 	if !ok {
-		writeErrorResponse(w, models.InvalidProvider())
+		writeErrorResponse(w, dto.InvalidProvider())
 		return
 	}
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		writeErrorResponse(w, models.MissingField("code"))
+		writeErrorResponse(w, dto.MissingField("code"))
 		return
 	}
 
 	token, err := config.Exchange(r.Context(), code)
 	if err != nil {
-		writeErrorResponse(w, models.OAuthError("token_exchange"))
+		writeErrorResponse(w, dto.OAuthError("token_exchange"))
 		return
 	}
 
@@ -106,18 +107,18 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	case "google":
 		resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 		if err != nil {
-			writeErrorResponse(w, models.OAuthError("user_info"))
+			writeErrorResponse(w, dto.OAuthError("user_info"))
 			return
 		}
 		defer func() { _ = resp.Body.Close() }()
 		if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-			writeErrorResponse(w, models.OAuthError("decode"))
+			writeErrorResponse(w, dto.OAuthError("decode"))
 			return
 		}
 	case "microsoft":
 		resp, err := client.Get("https://graph.microsoft.com/v1.0/me")
 		if err != nil {
-			writeErrorResponse(w, models.OAuthError("user_info"))
+			writeErrorResponse(w, dto.OAuthError("user_info"))
 			return
 		}
 		defer func() { _ = resp.Body.Close() }()
@@ -129,7 +130,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			Mail              string `json:"mail"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&msUser); err != nil {
-			writeErrorResponse(w, models.OAuthError("decode"))
+			writeErrorResponse(w, dto.OAuthError("decode"))
 			return
 		}
 		userInfo.ID = msUser.ID
@@ -149,13 +150,13 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			// Create new user if not found
 			orgName := userInfo.Name + "'s Organization"
 			org, _ := h.orgService.CreateOrganization(r.Context(), orgName)
-			role := models.UserRoleAdmin
+			role := entity.UserRoleAdmin
 
 			// Password is not used for OAuth users
 			password, _ := storage.GenerateToken(32)
 			user, err = h.userService.CreateUser(userInfo.Email, password, userInfo.Name, role)
 			if err != nil {
-				writeErrorResponse(w, models.Internal("user_creation"))
+				writeErrorResponse(w, dto.Internal("user_creation"))
 				return
 			}
 			if org != nil && !org.ID.IsZero() {
@@ -164,7 +165,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Link OAuth identity
-		_ = h.userService.LinkOAuthIdentity(user.ID.String(), models.OAuthIdentity{
+		_ = h.userService.LinkOAuthIdentity(user.ID.String(), entity.OAuthIdentity{
 			Provider:   provider,
 			ProviderID: userInfo.ID,
 			Email:      userInfo.Email,
@@ -178,7 +179,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT token
 	jwtToken, err := h.authHandler.GenerateToken(user)
 	if err != nil {
-		writeErrorResponse(w, models.Internal("token_generation"))
+		writeErrorResponse(w, dto.Internal("token_generation"))
 		return
 	}
 

@@ -7,17 +7,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // InvitationService handles organization invitations.
 type InvitationService struct {
 	rootDir string
-	table   *jsonldb.Table[*models.Invitation]
+	table   *jsonldb.Table[*entity.Invitation]
 	mu      sync.RWMutex
-	byID    map[jsonldb.ID]*models.Invitation
-	byToken map[string]*models.Invitation
+	byID    map[jsonldb.ID]*entity.Invitation
+	byToken map[string]*entity.Invitation
 }
 
 // NewInvitationService creates a new invitation service.
@@ -28,7 +28,7 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	}
 
 	tablePath := filepath.Join(dbDir, "invitations.jsonl")
-	table, err := jsonldb.NewTable[*models.Invitation](tablePath)
+	table, err := jsonldb.NewTable[*entity.Invitation](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -36,8 +36,8 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	s := &InvitationService{
 		rootDir: rootDir,
 		table:   table,
-		byID:    make(map[jsonldb.ID]*models.Invitation),
-		byToken: make(map[string]*models.Invitation),
+		byID:    make(map[jsonldb.ID]*entity.Invitation),
+		byToken: make(map[string]*entity.Invitation),
 	}
 
 	for inv := range table.Iter(0) {
@@ -49,7 +49,7 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 }
 
 // CreateInvitation creates a new invitation.
-func (s *InvitationService) CreateInvitation(email, orgIDStr string, role models.UserRole) (*models.Invitation, error) {
+func (s *InvitationService) CreateInvitation(email, orgIDStr string, role entity.UserRole) (*entity.Invitation, error) {
 	if email == "" || orgIDStr == "" {
 		return nil, fmt.Errorf("email and organization ID are required")
 	}
@@ -69,7 +69,7 @@ func (s *InvitationService) CreateInvitation(email, orgIDStr string, role models
 
 	id := jsonldb.NewID()
 
-	invitation := &models.Invitation{
+	invitation := &entity.Invitation{
 		ID:             id,
 		Email:          email,
 		OrganizationID: orgID,
@@ -92,7 +92,7 @@ func (s *InvitationService) CreateInvitation(email, orgIDStr string, role models
 }
 
 // GetInvitationByToken retrieves an invitation by its token.
-func (s *InvitationService) GetInvitationByToken(token string) (*models.Invitation, error) {
+func (s *InvitationService) GetInvitationByToken(token string) (*entity.Invitation, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -126,7 +126,7 @@ func (s *InvitationService) DeleteInvitation(idStr string) error {
 }
 
 // ListByOrganization returns all invitations for an organization.
-func (s *InvitationService) ListByOrganization(orgIDStr string) ([]*models.Invitation, error) {
+func (s *InvitationService) ListByOrganization(orgIDStr string) ([]*entity.Invitation, error) {
 	orgID, err := jsonldb.DecodeID(orgIDStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid organization id: %w", err)
@@ -135,7 +135,7 @@ func (s *InvitationService) ListByOrganization(orgIDStr string) ([]*models.Invit
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var invitations []*models.Invitation
+	var invitations []*entity.Invitation
 	for _, inv := range s.byID {
 		if inv.OrganizationID == orgID {
 			invitations = append(invitations, inv)
@@ -144,8 +144,8 @@ func (s *InvitationService) ListByOrganization(orgIDStr string) ([]*models.Invit
 	return invitations, nil
 }
 
-func (s *InvitationService) getAllFromCache() []*models.Invitation {
-	rows := make([]*models.Invitation, 0, len(s.byID))
+func (s *InvitationService) getAllFromCache() []*entity.Invitation {
+	rows := make([]*entity.Invitation, 0, len(s.byID))
 	for _, v := range s.byID {
 		rows = append(rows, v)
 	}

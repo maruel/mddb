@@ -1,4 +1,4 @@
-package models
+package entity
 
 // PropertyType represents the type of a database property.
 type PropertyType string

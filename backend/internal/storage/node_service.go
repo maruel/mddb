@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 // NodeService handles unified node business logic.
@@ -28,7 +28,7 @@ func NewNodeService(fileStore *FileStore, gitService *GitService, cache *Cache, 
 }
 
 // GetNode retrieves a unified node by ID.
-func (s *NodeService) GetNode(ctx context.Context, idStr string) (*models.Node, error) {
+func (s *NodeService) GetNode(ctx context.Context, idStr string) (*entity.Node, error) {
 	if idStr == "" {
 		return nil, fmt.Errorf("node id cannot be empty")
 	}
@@ -38,7 +38,7 @@ func (s *NodeService) GetNode(ctx context.Context, idStr string) (*models.Node, 
 		return nil, fmt.Errorf("invalid node id: %w", err)
 	}
 
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 
 	// For GetNode, we don't currently cache individual nodes but we could
 	// If we have a cached node tree, we could search in it
@@ -52,8 +52,8 @@ func (s *NodeService) GetNode(ctx context.Context, idStr string) (*models.Node, 
 }
 
 // ListNodes returns the full hierarchical tree of nodes.
-func (s *NodeService) ListNodes(ctx context.Context) ([]*models.Node, error) {
-	orgID := models.GetOrgID(ctx)
+func (s *NodeService) ListNodes(ctx context.Context) ([]*entity.Node, error) {
+	orgID := entity.GetOrgID(ctx)
 	if nodes := s.cache.GetNodeTree(); nodes != nil {
 		return nodes, nil
 	}
@@ -68,8 +68,8 @@ func (s *NodeService) ListNodes(ctx context.Context) ([]*models.Node, error) {
 }
 
 // CreateNode creates a new node (can be document, database, or hybrid)
-func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType models.NodeType, parentIDStr string) (*models.Node, error) {
-	orgID := models.GetOrgID(ctx)
+func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType entity.NodeType, parentIDStr string) (*entity.Node, error) {
+	orgID := entity.GetOrgID(ctx)
 
 	// Check Quota
 	if s.orgService != nil {
@@ -86,7 +86,7 @@ func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType mod
 	parentID, _ := jsonldb.DecodeID(parentIDStr) // Empty string decodes to zero ID
 	now := time.Now()
 
-	node := &models.Node{
+	node := &entity.Node{
 		ID:       id,
 		ParentID: parentID,
 		Title:    title,
@@ -100,15 +100,15 @@ func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType mod
 	// Currently FileStore uses flat directory for IDs.
 	// If ParentID is used, we might want to store it in metadata.
 
-	if nodeType == models.NodeTypeDocument || nodeType == models.NodeTypeHybrid {
+	if nodeType == entity.NodeTypeDocument || nodeType == entity.NodeTypeHybrid {
 		_, err := s.fileStore.WritePage(orgID, id, title, "")
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if nodeType == models.NodeTypeDatabase || nodeType == models.NodeTypeHybrid {
-		db := &models.Database{
+	if nodeType == entity.NodeTypeDatabase || nodeType == entity.NodeTypeHybrid {
+		db := &entity.Database{
 			ID:       id,
 			Title:    title,
 			Created:  now,
@@ -126,7 +126,7 @@ func (s *NodeService) CreateNode(ctx context.Context, title string, nodeType mod
 	return node, nil
 }
 
-func findNodeInTree(nodes []*models.Node, id jsonldb.ID) *models.Node {
+func findNodeInTree(nodes []*entity.Node, id jsonldb.ID) *entity.Node {
 	for _, node := range nodes {
 		if node.ID == id {
 			return node

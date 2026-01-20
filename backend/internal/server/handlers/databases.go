@@ -3,7 +3,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -20,10 +20,10 @@ func NewDatabaseHandler(fileStore *storage.FileStore, gitService *storage.GitSer
 }
 
 // ListDatabases returns a list of all databases
-func (h *DatabaseHandler) ListDatabases(ctx context.Context, req models.ListDatabasesRequest) (*models.ListDatabasesResponse, error) {
+func (h *DatabaseHandler) ListDatabases(ctx context.Context, req dto.ListDatabasesRequest) (*dto.ListDatabasesResponse, error) {
 	databases, err := h.databaseService.ListDatabases(ctx)
 	if err != nil {
-		return nil, models.InternalWithError("Failed to list databases", err)
+		return nil, dto.InternalWithError("Failed to list databases", err)
 	}
 
 	dbList := make([]any, len(databases))
@@ -36,103 +36,103 @@ func (h *DatabaseHandler) ListDatabases(ctx context.Context, req models.ListData
 		}
 	}
 
-	return &models.ListDatabasesResponse{Databases: dbList}, nil
+	return &dto.ListDatabasesResponse{Databases: dbList}, nil
 }
 
 // GetDatabase returns a specific database by ID
-func (h *DatabaseHandler) GetDatabase(ctx context.Context, req models.GetDatabaseRequest) (*models.GetDatabaseResponse, error) {
+func (h *DatabaseHandler) GetDatabase(ctx context.Context, req dto.GetDatabaseRequest) (*dto.GetDatabaseResponse, error) {
 	db, err := h.databaseService.GetDatabase(ctx, req.ID)
 	if err != nil {
-		return nil, models.NotFound("database")
+		return nil, dto.NotFound("database")
 	}
 
-	return &models.GetDatabaseResponse{
+	return &dto.GetDatabaseResponse{
 		ID:         db.ID.String(),
 		Title:      db.Title,
-		Properties: db.Properties,
+		Properties: propertiesToDTO(db.Properties),
 		Created:    db.Created.Format("2006-01-02T15:04:05Z07:00"),
 		Modified:   db.Modified.Format("2006-01-02T15:04:05Z07:00"),
 	}, nil
 }
 
 // CreateDatabase creates a new database.
-func (h *DatabaseHandler) CreateDatabase(ctx context.Context, req models.CreateDatabaseRequest) (*models.CreateDatabaseResponse, error) {
+func (h *DatabaseHandler) CreateDatabase(ctx context.Context, req dto.CreateDatabaseRequest) (*dto.CreateDatabaseResponse, error) {
 	if req.Title == "" {
-		return nil, models.MissingField("title")
+		return nil, dto.MissingField("title")
 	}
 
-	db, err := h.databaseService.CreateDatabase(ctx, req.Title, req.Properties)
+	db, err := h.databaseService.CreateDatabase(ctx, req.Title, propertiesToEntity(req.Properties))
 	if err != nil {
-		return nil, models.InternalWithError("Failed to create database", err)
+		return nil, dto.InternalWithError("Failed to create database", err)
 	}
 
-	return &models.CreateDatabaseResponse{ID: db.ID.String()}, nil
+	return &dto.CreateDatabaseResponse{ID: db.ID.String()}, nil
 }
 
 // UpdateDatabase updates a database schema.
-func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, req models.UpdateDatabaseRequest) (*models.UpdateDatabaseResponse, error) {
-	db, err := h.databaseService.UpdateDatabase(ctx, req.ID, req.Title, req.Properties)
+func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, req dto.UpdateDatabaseRequest) (*dto.UpdateDatabaseResponse, error) {
+	db, err := h.databaseService.UpdateDatabase(ctx, req.ID, req.Title, propertiesToEntity(req.Properties))
 	if err != nil {
-		return nil, models.NotFound("database")
+		return nil, dto.NotFound("database")
 	}
 
-	return &models.UpdateDatabaseResponse{ID: db.ID.String()}, nil
+	return &dto.UpdateDatabaseResponse{ID: db.ID.String()}, nil
 }
 
 // DeleteDatabase deletes a database.
-func (h *DatabaseHandler) DeleteDatabase(ctx context.Context, req models.DeleteDatabaseRequest) (*models.DeleteDatabaseResponse, error) {
+func (h *DatabaseHandler) DeleteDatabase(ctx context.Context, req dto.DeleteDatabaseRequest) (*dto.DeleteDatabaseResponse, error) {
 	err := h.databaseService.DeleteDatabase(ctx, req.ID)
 	if err != nil {
-		return nil, models.NotFound("database")
+		return nil, dto.NotFound("database")
 	}
 
-	return &models.DeleteDatabaseResponse{}, nil
+	return &dto.DeleteDatabaseResponse{}, nil
 }
 
 // ListRecords returns all records in a database.
-func (h *DatabaseHandler) ListRecords(ctx context.Context, req models.ListRecordsRequest) (*models.ListRecordsResponse, error) {
+func (h *DatabaseHandler) ListRecords(ctx context.Context, req dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
 	records, err := h.databaseService.GetRecordsPage(ctx, req.ID, req.Offset, req.Limit)
 	if err != nil {
-		return nil, models.InternalWithError("Failed to list records", err)
+		return nil, dto.InternalWithError("Failed to list records", err)
 	}
 
 	// Convert to response types
-	recordList := make([]models.DataRecordResponse, len(records))
+	recordList := make([]dto.DataRecordResponse, len(records))
 	for i, record := range records {
-		recordList[i] = *record.ToResponse()
+		recordList[i] = *dataRecordToResponse(record)
 	}
 
-	return &models.ListRecordsResponse{Records: recordList}, nil
+	return &dto.ListRecordsResponse{Records: recordList}, nil
 }
 
 // CreateRecord creates a new record in a database.
-func (h *DatabaseHandler) CreateRecord(ctx context.Context, req models.CreateRecordRequest) (*models.CreateRecordResponse, error) {
+func (h *DatabaseHandler) CreateRecord(ctx context.Context, req dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
 	record, err := h.databaseService.CreateRecord(ctx, req.ID, req.Data)
 	if err != nil {
-		return nil, models.InternalWithError("Failed to create record", err)
+		return nil, dto.InternalWithError("Failed to create record", err)
 	}
 
-	return &models.CreateRecordResponse{ID: record.ID.String()}, nil
+	return &dto.CreateRecordResponse{ID: record.ID.String()}, nil
 }
 
 // UpdateRecord updates an existing record in a database.
-func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req models.UpdateRecordRequest) (*models.UpdateRecordResponse, error) {
+func (h *DatabaseHandler) UpdateRecord(ctx context.Context, req dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
 	record, err := h.databaseService.UpdateRecord(ctx, req.ID, req.RID, req.Data)
 	if err != nil {
-		return nil, models.NotFound("record")
+		return nil, dto.NotFound("record")
 	}
 
-	return &models.UpdateRecordResponse{ID: record.ID.String()}, nil
+	return &dto.UpdateRecordResponse{ID: record.ID.String()}, nil
 }
 
 // GetRecord retrieves a single record from a database.
-func (h *DatabaseHandler) GetRecord(ctx context.Context, req models.GetRecordRequest) (*models.GetRecordResponse, error) {
+func (h *DatabaseHandler) GetRecord(ctx context.Context, req dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
 	record, err := h.databaseService.GetRecord(ctx, req.ID, req.RID)
 	if err != nil {
-		return nil, models.NotFound("record")
+		return nil, dto.NotFound("record")
 	}
 
-	return &models.GetRecordResponse{
+	return &dto.GetRecordResponse{
 		ID:       record.ID.String(),
 		Data:     record.Data,
 		Created:  record.Created.Format("2006-01-02T15:04:05Z07:00"),
@@ -141,11 +141,11 @@ func (h *DatabaseHandler) GetRecord(ctx context.Context, req models.GetRecordReq
 }
 
 // DeleteRecord deletes a record from a database.
-func (h *DatabaseHandler) DeleteRecord(ctx context.Context, req models.DeleteRecordRequest) (*models.DeleteRecordResponse, error) {
+func (h *DatabaseHandler) DeleteRecord(ctx context.Context, req dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
 	err := h.databaseService.DeleteRecord(ctx, req.ID, req.RID)
 	if err != nil {
-		return nil, models.NotFound("record")
+		return nil, dto.NotFound("record")
 	}
 
-	return &models.DeleteRecordResponse{}, nil
+	return &dto.DeleteRecordResponse{}, nil
 }

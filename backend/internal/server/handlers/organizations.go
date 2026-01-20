@@ -3,8 +3,9 @@ package handlers
 import (
 	"context"
 
+	"github.com/maruel/mddb/backend/internal/dto"
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -21,10 +22,10 @@ func NewOrganizationHandler(orgService *storage.OrganizationService) *Organizati
 }
 
 // GetOrganization retrieves current organization details.
-func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*models.OrganizationResponse, error) {
-	orgID := models.GetOrgID(ctx)
+func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*dto.OrganizationResponse, error) {
+	orgID := entity.GetOrgID(ctx)
 	if orgID.IsZero() {
-		return nil, models.Forbidden("Organization context missing")
+		return nil, dto.Forbidden("Organization context missing")
 	}
 
 	org, err := h.orgService.GetOrganization(orgID)
@@ -32,44 +33,46 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*mo
 		return nil, err
 	}
 
-	return org.ToResponse(), nil
+	return organizationToResponse(org), nil
 }
 
 // GetOnboarding retrieves organization onboarding status.
-func (h *OrganizationHandler) GetOnboarding(ctx context.Context, req models.GetOnboardingRequest) (*models.OnboardingState, error) {
+func (h *OrganizationHandler) GetOnboarding(ctx context.Context, req dto.GetOnboardingRequest) (*dto.OnboardingState, error) {
 	orgID, err := jsonldb.DecodeID(req.OrgID)
 	if err != nil {
-		return nil, models.BadRequest("invalid_org_id")
+		return nil, dto.BadRequest("invalid_org_id")
 	}
 	org, err := h.orgService.GetOrganization(orgID)
 	if err != nil {
 		return nil, err
 	}
-	return &org.Onboarding, nil
+	result := onboardingStateToDTO(org.Onboarding)
+	return &result, nil
 }
 
 // UpdateOnboarding updates organization onboarding status.
-func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, req models.UpdateOnboardingRequest) (*models.OnboardingState, error) {
+func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, req dto.UpdateOnboardingRequest) (*dto.OnboardingState, error) {
 	orgID, err := jsonldb.DecodeID(req.OrgID)
 	if err != nil {
-		return nil, models.BadRequest("invalid_org_id")
+		return nil, dto.BadRequest("invalid_org_id")
 	}
-	if err := h.orgService.UpdateOnboarding(orgID, req.State); err != nil {
-		return nil, models.InternalWithError("Failed to update onboarding state", err)
+	if err := h.orgService.UpdateOnboarding(orgID, onboardingStateToEntity(req.State)); err != nil {
+		return nil, dto.InternalWithError("Failed to update onboarding state", err)
 	}
 	org, _ := h.orgService.GetOrganization(orgID)
-	return &org.Onboarding, nil
+	result := onboardingStateToDTO(org.Onboarding)
+	return &result, nil
 }
 
 // UpdateSettings updates organization-wide settings.
-func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req models.UpdateOrgSettingsRequest) (*models.OrganizationResponse, error) {
-	orgID := models.GetOrgID(ctx)
+func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req dto.UpdateOrgSettingsRequest) (*dto.OrganizationResponse, error) {
+	orgID := entity.GetOrgID(ctx)
 	if orgID.IsZero() {
-		return nil, models.Forbidden("Organization context missing")
+		return nil, dto.Forbidden("Organization context missing")
 	}
 
-	if err := h.orgService.UpdateSettings(orgID, req.Settings); err != nil {
-		return nil, models.InternalWithError("Failed to update organization settings", err)
+	if err := h.orgService.UpdateSettings(orgID, organizationSettingsToEntity(req.Settings)); err != nil {
+		return nil, dto.InternalWithError("Failed to update organization settings", err)
 	}
 
 	org, err := h.orgService.GetOrganization(orgID)
@@ -77,5 +80,5 @@ func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req models.Upd
 		return nil, err
 	}
 
-	return org.ToResponse(), nil
+	return organizationToResponse(org), nil
 }

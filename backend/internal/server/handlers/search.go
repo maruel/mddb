@@ -3,7 +3,8 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/dto"
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -20,8 +21,8 @@ func NewSearchHandler(fileStore *storage.FileStore) *SearchHandler {
 }
 
 // Search performs a full-text search across all nodes.
-func (h *SearchHandler) Search(ctx context.Context, req models.SearchRequest) (*models.SearchResponse, error) {
-	results, err := h.searchService.Search(ctx, models.SearchOptions{
+func (h *SearchHandler) Search(ctx context.Context, req dto.SearchRequest) (*dto.SearchResponse, error) {
+	results, err := h.searchService.Search(ctx, entity.SearchOptions{
 		Query:       req.Query,
 		Limit:       req.Limit,
 		MatchTitle:  req.MatchTitle,
@@ -29,8 +30,8 @@ func (h *SearchHandler) Search(ctx context.Context, req models.SearchRequest) (*
 		MatchFields: req.MatchFields,
 	})
 	if err != nil {
-		return nil, models.InternalWithError("Failed to perform search", err)
+		return nil, dto.InternalWithError("Failed to perform search", err)
 	}
 
-	return &models.SearchResponse{Results: results}, nil
+	return &dto.SearchResponse{Results: searchResultsToDTO(results)}, nil
 }

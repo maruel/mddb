@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -27,7 +27,7 @@ func TestRegister(t *testing.T) {
 	ctx := context.Background()
 
 	// Register Joe
-	req1 := models.RegisterRequest{
+	req1 := dto.RegisterRequest{
 		Email:    "joe@example.com",
 		Password: "password",
 		Name:     "Joe",
@@ -49,7 +49,7 @@ func TestRegister(t *testing.T) {
 	if resp1OrgID == "" {
 		t.Error("Expected Joe's membership to have an organization ID")
 	}
-	if resp1.User.Memberships[0].Role != models.UserRoleAdmin {
+	if resp1.User.Memberships[0].Role != dto.UserRoleAdmin {
 		t.Errorf("Expected Joe to be admin in his org, got %s", resp1.User.Memberships[0].Role)
 	}
 
@@ -62,7 +62,7 @@ func TestRegister(t *testing.T) {
 	}
 
 	// Register Alice
-	req2 := models.RegisterRequest{
+	req2 := dto.RegisterRequest{
 		Email:    "alice@example.com",
 		Password: "password",
 		Name:     "Alice",
@@ -87,7 +87,7 @@ func TestRegister(t *testing.T) {
 	if resp2OrgID == resp1OrgID {
 		t.Error("Expected Alice to have a different organization ID than Joe")
 	}
-	if resp2.User.Memberships[0].Role != models.UserRoleAdmin {
+	if resp2.User.Memberships[0].Role != dto.UserRoleAdmin {
 		t.Errorf("Expected Alice to be admin in her org, got %s", resp2.User.Memberships[0].Role)
 	}
 

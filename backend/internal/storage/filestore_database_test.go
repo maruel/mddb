@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/models"
 )
 
 func TestDatabase_ReadWrite(t *testing.T) {
@@ -19,17 +19,17 @@ func TestDatabase_ReadWrite(t *testing.T) {
 	orgID := testID(100)
 	tests := []struct {
 		name     string
-		database *models.Database
+		database *entity.Database
 	}{
 		{
 			name: "simple database",
-			database: &models.Database{
+			database: &entity.Database{
 				ID:      testID(1),
 				Title:   "Test Database",
 				Version: "1.0",
-				Properties: []models.Property{
+				Properties: []entity.Property{
 					{Name: "title", Type: "text"},
-					{Name: "status", Type: models.PropertyTypeText},
+					{Name: "status", Type: entity.PropertyTypeText},
 				},
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -37,15 +37,15 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		},
 		{
 			name: "database with all column types",
-			database: &models.Database{
+			database: &entity.Database{
 				ID:      testID(2),
 				Title:   "Complex Database",
 				Version: "1.0",
-				Properties: []models.Property{
+				Properties: []entity.Property{
 					{Name: "text_field", Type: "text", Required: true},
 					{Name: "number_field", Type: "number"},
-					{Name: "select_field", Type: models.PropertyTypeText},
-					{Name: "multi_select", Type: models.PropertyTypeText},
+					{Name: "select_field", Type: entity.PropertyTypeText},
+					{Name: "multi_select", Type: entity.PropertyTypeText},
 					{Name: "checkbox_field", Type: "checkbox"},
 					{Name: "date_field", Type: "date"},
 				},
@@ -108,11 +108,11 @@ func TestDatabase_Exists(t *testing.T) {
 	}
 
 	orgID := testID(100)
-	db := &models.Database{
+	db := &entity.Database{
 		ID:      testID(1),
 		Title:   "Test",
 		Version: "1.0",
-		Properties: []models.Property{
+		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -147,11 +147,11 @@ func TestDatabase_List(t *testing.T) {
 	// Create multiple databases
 	dbIDs := []jsonldb.ID{testID(1), testID(2), testID(3)}
 	for _, id := range dbIDs {
-		db := &models.Database{
+		db := &entity.Database{
 			ID:      id,
 			Title:   "Database " + id.String(),
 			Version: "1.0",
-			Properties: []models.Property{
+			Properties: []entity.Property{
 				{Name: "name", Type: "text"},
 			},
 			Created:  time.Now(),
@@ -194,11 +194,11 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	orgID := testID(100)
-	db := &models.Database{
+	db := &entity.Database{
 		ID:      testID(1),
 		Title:   "Test",
 		Version: "1.0",
-		Properties: []models.Property{
+		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -239,11 +239,11 @@ func TestRecord_AppendRead(t *testing.T) {
 	dbID := testID(1)
 
 	// Create database first
-	db := &models.Database{
+	db := &entity.Database{
 		ID:      dbID,
 		Title:   "Test",
 		Version: "1.0",
-		Properties: []models.Property{
+		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -254,7 +254,7 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 
 	// Append records
-	records := []*models.DataRecord{
+	records := []*entity.DataRecord{
 		{
 			ID:       jsonldb.NewID(),
 			Data:     map[string]any{"name": "Record 1"},
@@ -321,11 +321,11 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 	dbID := testID(1)
 
 	// Create database
-	db := &models.Database{
+	db := &entity.Database{
 		ID:      dbID,
 		Title:   "Empty DB",
 		Version: "1.0",
-		Properties: []models.Property{
+		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -357,11 +357,11 @@ func TestDatabase_NestedPath(t *testing.T) {
 
 	// Create database with base64 encoded ID
 	dbID := testID(42)
-	db := &models.Database{
+	db := &entity.Database{
 		ID:      dbID,
 		Title:   "Database 42",
 		Version: "1.0",
-		Properties: []models.Property{
+		Properties: []entity.Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),

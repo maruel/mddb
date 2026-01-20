@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/entity"
 )
 
 func Test_coerceValue_Text(t *testing.T) {
@@ -169,19 +169,19 @@ func Test_coerceValue_EdgeCases(t *testing.T) {
 
 func Test_propertyAffinity(t *testing.T) {
 	tests := []struct {
-		propType models.PropertyType
+		propType entity.PropertyType
 		want     affinity
 	}{
-		{models.PropertyTypeText, affinityTEXT},
-		{models.PropertyTypeNumber, affinityNUMERIC},
-		{models.PropertyTypeCheckbox, affinityINTEGER},
-		{models.PropertyTypeDate, affinityTEXT},
-		{models.PropertyTypeSelect, affinityTEXT},
-		{models.PropertyTypeMultiSelect, affinityBLOB},
-		{models.PropertyTypeURL, affinityTEXT},
-		{models.PropertyTypeEmail, affinityTEXT},
-		{models.PropertyTypePhone, affinityTEXT},
-		{models.PropertyType("unknown"), affinityBLOB},
+		{entity.PropertyTypeText, affinityTEXT},
+		{entity.PropertyTypeNumber, affinityNUMERIC},
+		{entity.PropertyTypeCheckbox, affinityINTEGER},
+		{entity.PropertyTypeDate, affinityTEXT},
+		{entity.PropertyTypeSelect, affinityTEXT},
+		{entity.PropertyTypeMultiSelect, affinityBLOB},
+		{entity.PropertyTypeURL, affinityTEXT},
+		{entity.PropertyTypeEmail, affinityTEXT},
+		{entity.PropertyTypePhone, affinityTEXT},
+		{entity.PropertyType("unknown"), affinityBLOB},
 	}
 
 	for _, tt := range tests {
@@ -195,10 +195,10 @@ func Test_propertyAffinity(t *testing.T) {
 }
 
 func Test_coerceRecordData(t *testing.T) {
-	properties := []models.Property{
-		{Name: "name", Type: models.PropertyTypeText},
-		{Name: "age", Type: models.PropertyTypeNumber},
-		{Name: "active", Type: models.PropertyTypeCheckbox},
+	properties := []entity.Property{
+		{Name: "name", Type: entity.PropertyTypeText},
+		{Name: "age", Type: entity.PropertyTypeNumber},
+		{Name: "active", Type: entity.PropertyTypeCheckbox},
 	}
 
 	data := map[string]any{
@@ -225,7 +225,7 @@ func Test_coerceRecordData(t *testing.T) {
 }
 
 func Test_coerceRecordData_Nil(t *testing.T) {
-	properties := []models.Property{{Name: "col", Type: models.PropertyTypeText}}
+	properties := []entity.Property{{Name: "col", Type: entity.PropertyTypeText}}
 	result := coerceRecordData(nil, properties)
 	if result != nil {
 		t.Errorf("coerceRecordData(nil, properties) = %v, want nil", result)

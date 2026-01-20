@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/models"
+	"github.com/maruel/mddb/backend/internal/entity"
 )
 
 // GitService handles version control operations using git.
@@ -64,7 +64,7 @@ func (gs *GitService) InitRepository(dir string) error {
 // CommitChange stages and commits a change to the repository.
 // If orgID is present in context, it commits to the organization's repository.
 func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType, resourceID, description string) error {
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	targetDir := gs.repoDir
 	relPath := "." // Default to root
 
@@ -108,8 +108,8 @@ func (gs *GitService) CommitChange(ctx context.Context, operation, resourceType,
 }
 
 // GetHistory returns commit history for a specific resource.
-func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID string) ([]*models.Commit, error) {
-	orgID := models.GetOrgID(ctx)
+func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID string) ([]*entity.Commit, error) {
+	orgID := entity.GetOrgID(ctx)
 	targetDir := gs.repoDir
 	path := ""
 
@@ -127,10 +127,10 @@ func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID s
 	format := "%H|%an|%ai|%s"
 	output, err := gs.gitOutputInDir(targetDir, "log", "--pretty=format:"+format, "--", path)
 	if err != nil {
-		return []*models.Commit{}, nil
+		return []*entity.Commit{}, nil
 	}
 
-	var commits []*models.Commit
+	var commits []*entity.Commit
 	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
 		if line == "" {
 			continue
@@ -150,7 +150,7 @@ func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID s
 			timestamp = time.Now()
 		}
 
-		commits = append(commits, &models.Commit{
+		commits = append(commits, &entity.Commit{
 			Hash:      hash,
 			Message:   message,
 			Timestamp: timestamp,
@@ -161,8 +161,8 @@ func (gs *GitService) GetHistory(ctx context.Context, resourceType, resourceID s
 }
 
 // GetCommit retrieves a specific commit with full details.
-func (gs *GitService) GetCommit(ctx context.Context, hash string) (*models.CommitDetail, error) {
-	orgID := models.GetOrgID(ctx)
+func (gs *GitService) GetCommit(ctx context.Context, hash string) (*entity.CommitDetail, error) {
+	orgID := entity.GetOrgID(ctx)
 	targetDir := gs.repoDir
 	if !orgID.IsZero() {
 		targetDir = filepath.Join(gs.repoDir, orgID.String())
@@ -188,7 +188,7 @@ func (gs *GitService) GetCommit(ctx context.Context, hash string) (*models.Commi
 		body = strings.Join(lines[5:], "\n")
 	}
 
-	return &models.CommitDetail{
+	return &entity.CommitDetail{
 		Hash:      lines[0],
 		Timestamp: timestamp,
 		Author:    lines[2],
@@ -200,7 +200,7 @@ func (gs *GitService) GetCommit(ctx context.Context, hash string) (*models.Commi
 
 // GetFileAtCommit retrieves the content of a file at a specific commit.
 func (gs *GitService) GetFileAtCommit(ctx context.Context, hash, filePath string) ([]byte, error) {
-	orgID := models.GetOrgID(ctx)
+	orgID := entity.GetOrgID(ctx)
 	targetDir := gs.repoDir
 	if !orgID.IsZero() {
 		orgIDStr := orgID.String()
