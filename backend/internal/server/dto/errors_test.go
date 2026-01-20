@@ -68,7 +68,7 @@ func TestAPIError(t *testing.T) {
 	t.Run("Wrap", func(t *testing.T) {
 		origErr := errors.New("original error")
 		err := NewAPIError(http.StatusInternalServerError, ErrorCodeInternal, "wrapped error").Wrap(origErr)
-		if err.Unwrap() != origErr {
+		if !errors.Is(err, origErr) {
 			t.Error("Expected Unwrap() to return the original error")
 		}
 		if err.Error() != "wrapped error: original error" {
@@ -115,8 +115,8 @@ func TestErrorConstructors(t *testing.T) {
 		}
 	})
 	t.Run("Forbidden", func(t *testing.T) {
-		err, ok := Forbidden("access denied").(*APIError)
-		if !ok {
+		var err *APIError
+		if !errors.As(Forbidden("access denied"), &err) {
 			t.Fatal("Expected Forbidden to return *APIError")
 		}
 		if err.StatusCode() != http.StatusForbidden {
@@ -127,8 +127,8 @@ func TestErrorConstructors(t *testing.T) {
 		}
 	})
 	t.Run("Unauthorized", func(t *testing.T) {
-		err, ok := Unauthorized().(*APIError)
-		if !ok {
+		var err *APIError
+		if !errors.As(Unauthorized(), &err) {
 			t.Fatal("Expected Unauthorized to return *APIError")
 		}
 		if err.StatusCode() != http.StatusUnauthorized {
@@ -153,7 +153,7 @@ func TestErrorConstructors(t *testing.T) {
 		if err.StatusCode() != http.StatusInternalServerError {
 			t.Errorf("Expected status code %d, got %d", http.StatusInternalServerError, err.StatusCode())
 		}
-		if err.Unwrap() != origErr {
+		if !errors.Is(err, origErr) {
 			t.Error("Expected InternalWithError to wrap the original error")
 		}
 	})
