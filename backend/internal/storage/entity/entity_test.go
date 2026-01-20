@@ -10,24 +10,17 @@ import (
 
 func TestGetOrgID(t *testing.T) {
 	t.Run("context with org ID", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), OrgKey, jsonldb.ID(123))
-		got := GetOrgID(ctx)
-		if got != jsonldb.ID(123) {
+		if got := GetOrgID(context.WithValue(context.Background(), OrgKey, jsonldb.ID(123))); got != jsonldb.ID(123) {
 			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(123))
 		}
 	})
-
 	t.Run("context without org ID", func(t *testing.T) {
-		got := GetOrgID(context.Background())
-		if got != jsonldb.ID(0) {
+		if got := GetOrgID(context.Background()); got != jsonldb.ID(0) {
 			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(0))
 		}
 	})
-
 	t.Run("context with wrong type value", func(t *testing.T) {
-		ctx := context.WithValue(context.Background(), OrgKey, "not an ID")
-		got := GetOrgID(ctx)
-		if got != jsonldb.ID(0) {
+		if got := GetOrgID(context.WithValue(context.Background(), OrgKey, "not an ID")); got != jsonldb.ID(0) {
 			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(0))
 		}
 	})
@@ -42,55 +35,38 @@ func TestDataRecord(t *testing.T) {
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
-
 			clone := original.Clone()
-
 			if clone.ID != original.ID {
 				t.Errorf("Clone ID = %v, want %v", clone.ID, original.ID)
 			}
 			if clone.Data["name"] != original.Data["name"] {
 				t.Error("Clone Data not properly copied")
 			}
-
-			// Check that modifying clone doesn't affect original
 			clone.Data["name"] = "modified"
 			if original.Data["name"] == "modified" {
 				t.Error("Clone Data should not share reference with original")
 			}
 		})
-
 		t.Run("nil data", func(t *testing.T) {
-			original := &DataRecord{
-				ID:   jsonldb.ID(1),
-				Data: nil,
-			}
-
-			clone := original.Clone()
-
-			if clone.Data != nil {
+			original := &DataRecord{ID: jsonldb.ID(1), Data: nil}
+			if original.Clone().Data != nil {
 				t.Error("Clone of nil Data should be nil")
 			}
 		})
 	})
-
 	t.Run("GetID", func(t *testing.T) {
-		record := &DataRecord{ID: jsonldb.ID(42)}
-		if record.GetID() != jsonldb.ID(42) {
-			t.Errorf("GetID() = %v, want %v", record.GetID(), jsonldb.ID(42))
+		if got := (&DataRecord{ID: jsonldb.ID(42)}).GetID(); got != jsonldb.ID(42) {
+			t.Errorf("GetID() = %v, want %v", got, jsonldb.ID(42))
 		}
 	})
-
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			record := &DataRecord{ID: jsonldb.ID(1)}
-			if err := record.Validate(); err != nil {
+			if err := (&DataRecord{ID: jsonldb.ID(1)}).Validate(); err != nil {
 				t.Errorf("Validate() unexpected error: %v", err)
 			}
 		})
-
 		t.Run("zero ID", func(t *testing.T) {
-			record := &DataRecord{ID: jsonldb.ID(0)}
-			if err := record.Validate(); err == nil {
+			if err := (&DataRecord{ID: jsonldb.ID(0)}).Validate(); err == nil {
 				t.Error("Validate() expected error for zero ID")
 			}
 		})
@@ -107,9 +83,7 @@ func TestMembership(t *testing.T) {
 			Settings:       MembershipSettings{Notifications: true},
 			Created:        time.Now(),
 		}
-
 		clone := original.Clone()
-
 		if clone.ID != original.ID {
 			t.Errorf("Clone ID = %v, want %v", clone.ID, original.ID)
 		}
@@ -117,14 +91,11 @@ func TestMembership(t *testing.T) {
 			t.Errorf("Clone Role = %v, want %v", clone.Role, original.Role)
 		}
 	})
-
 	t.Run("GetID", func(t *testing.T) {
-		m := &Membership{ID: jsonldb.ID(99)}
-		if m.GetID() != jsonldb.ID(99) {
-			t.Errorf("GetID() = %v, want %v", m.GetID(), jsonldb.ID(99))
+		if got := (&Membership{ID: jsonldb.ID(99)}).GetID(); got != jsonldb.ID(99) {
+			t.Errorf("GetID() = %v, want %v", got, jsonldb.ID(99))
 		}
 	})
-
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			m := &Membership{
@@ -137,7 +108,6 @@ func TestMembership(t *testing.T) {
 				t.Errorf("Validate() unexpected error: %v", err)
 			}
 		})
-
 		t.Run("zero ID", func(t *testing.T) {
 			m := &Membership{
 				ID:             jsonldb.ID(0),
@@ -145,15 +115,12 @@ func TestMembership(t *testing.T) {
 				OrganizationID: jsonldb.ID(3),
 				Role:           UserRoleAdmin,
 			}
-			err := m.Validate()
-			if err == nil {
+			if err := m.Validate(); err == nil {
 				t.Error("Validate() expected error for zero ID")
-			}
-			if err.Error() != "id is required" {
+			} else if err.Error() != "id is required" {
 				t.Errorf("Validate() error = %q, want %q", err.Error(), "id is required")
 			}
 		})
-
 		t.Run("zero UserID", func(t *testing.T) {
 			m := &Membership{
 				ID:             jsonldb.ID(1),
@@ -161,15 +128,12 @@ func TestMembership(t *testing.T) {
 				OrganizationID: jsonldb.ID(3),
 				Role:           UserRoleAdmin,
 			}
-			err := m.Validate()
-			if err == nil {
+			if err := m.Validate(); err == nil {
 				t.Error("Validate() expected error for zero UserID")
-			}
-			if err.Error() != "user_id is required" {
+			} else if err.Error() != "user_id is required" {
 				t.Errorf("Validate() error = %q, want %q", err.Error(), "user_id is required")
 			}
 		})
-
 		t.Run("zero OrganizationID", func(t *testing.T) {
 			m := &Membership{
 				ID:             jsonldb.ID(1),
@@ -177,15 +141,12 @@ func TestMembership(t *testing.T) {
 				OrganizationID: jsonldb.ID(0),
 				Role:           UserRoleAdmin,
 			}
-			err := m.Validate()
-			if err == nil {
+			if err := m.Validate(); err == nil {
 				t.Error("Validate() expected error for zero OrganizationID")
-			}
-			if err.Error() != "organization_id is required" {
+			} else if err.Error() != "organization_id is required" {
 				t.Errorf("Validate() error = %q, want %q", err.Error(), "organization_id is required")
 			}
 		})
-
 		t.Run("empty Role", func(t *testing.T) {
 			m := &Membership{
 				ID:             jsonldb.ID(1),
@@ -193,11 +154,9 @@ func TestMembership(t *testing.T) {
 				OrganizationID: jsonldb.ID(3),
 				Role:           "",
 			}
-			err := m.Validate()
-			if err == nil {
+			if err := m.Validate(); err == nil {
 				t.Error("Validate() expected error for empty Role")
-			}
-			if err.Error() != "role is required" {
+			} else if err.Error() != "role is required" {
 				t.Errorf("Validate() error = %q, want %q", err.Error(), "role is required")
 			}
 		})
@@ -216,63 +175,47 @@ func TestOrganization(t *testing.T) {
 				},
 				Created: time.Now(),
 			}
-
 			clone := original.Clone()
-
 			if clone.ID != original.ID {
 				t.Errorf("Clone ID = %v, want %v", clone.ID, original.ID)
 			}
 			if clone.Name != original.Name {
 				t.Errorf("Clone Name = %v, want %v", clone.Name, original.Name)
 			}
-
-			// Check that AllowedDomains is deep copied
 			clone.Settings.AllowedDomains[0] = "modified.com"
 			if original.Settings.AllowedDomains[0] == "modified.com" {
 				t.Error("Clone should not share AllowedDomains reference with original")
 			}
 		})
-
 		t.Run("nil AllowedDomains", func(t *testing.T) {
 			original := &Organization{
 				ID:       jsonldb.ID(1),
 				Name:     "Test Org",
 				Settings: OrganizationSettings{AllowedDomains: nil},
 			}
-
-			clone := original.Clone()
-
-			if clone.Settings.AllowedDomains != nil {
+			if original.Clone().Settings.AllowedDomains != nil {
 				t.Error("Clone of nil AllowedDomains should be nil")
 			}
 		})
 	})
-
 	t.Run("GetID", func(t *testing.T) {
-		o := &Organization{ID: jsonldb.ID(77)}
-		if o.GetID() != jsonldb.ID(77) {
-			t.Errorf("GetID() = %v, want %v", o.GetID(), jsonldb.ID(77))
+		if got := (&Organization{ID: jsonldb.ID(77)}).GetID(); got != jsonldb.ID(77) {
+			t.Errorf("GetID() = %v, want %v", got, jsonldb.ID(77))
 		}
 	})
-
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			o := &Organization{ID: jsonldb.ID(1), Name: "Test Org"}
-			if err := o.Validate(); err != nil {
+			if err := (&Organization{ID: jsonldb.ID(1), Name: "Test Org"}).Validate(); err != nil {
 				t.Errorf("Validate() unexpected error: %v", err)
 			}
 		})
-
 		t.Run("zero ID", func(t *testing.T) {
-			o := &Organization{ID: jsonldb.ID(0), Name: "Test Org"}
-			if err := o.Validate(); err == nil {
+			if err := (&Organization{ID: jsonldb.ID(0), Name: "Test Org"}).Validate(); err == nil {
 				t.Error("Validate() expected error for zero ID")
 			}
 		})
-
 		t.Run("empty Name", func(t *testing.T) {
-			o := &Organization{ID: jsonldb.ID(1), Name: ""}
-			if err := o.Validate(); err == nil {
+			if err := (&Organization{ID: jsonldb.ID(1), Name: ""}).Validate(); err == nil {
 				t.Error("Validate() expected error for empty Name")
 			}
 		})
@@ -290,9 +233,7 @@ func TestGitRemote(t *testing.T) {
 			AuthType:       "token",
 			Created:        time.Now(),
 		}
-
 		clone := original.Clone()
-
 		if clone.ID != original.ID {
 			t.Errorf("Clone ID = %v, want %v", clone.ID, original.ID)
 		}
@@ -300,14 +241,11 @@ func TestGitRemote(t *testing.T) {
 			t.Errorf("Clone URL = %v, want %v", clone.URL, original.URL)
 		}
 	})
-
 	t.Run("GetID", func(t *testing.T) {
-		g := &GitRemote{ID: jsonldb.ID(55)}
-		if g.GetID() != jsonldb.ID(55) {
-			t.Errorf("GetID() = %v, want %v", g.GetID(), jsonldb.ID(55))
+		if got := (&GitRemote{ID: jsonldb.ID(55)}).GetID(); got != jsonldb.ID(55) {
+			t.Errorf("GetID() = %v, want %v", got, jsonldb.ID(55))
 		}
 	})
-
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			r := &GitRemote{
@@ -319,7 +257,6 @@ func TestGitRemote(t *testing.T) {
 				t.Errorf("Validate() unexpected error: %v", err)
 			}
 		})
-
 		t.Run("zero ID", func(t *testing.T) {
 			r := &GitRemote{
 				ID:             jsonldb.ID(0),
@@ -330,7 +267,6 @@ func TestGitRemote(t *testing.T) {
 				t.Error("Validate() expected error for zero ID")
 			}
 		})
-
 		t.Run("zero OrganizationID", func(t *testing.T) {
 			r := &GitRemote{
 				ID:             jsonldb.ID(1),
@@ -341,7 +277,6 @@ func TestGitRemote(t *testing.T) {
 				t.Error("Validate() expected error for zero OrganizationID")
 			}
 		})
-
 		t.Run("empty URL", func(t *testing.T) {
 			r := &GitRemote{
 				ID:             jsonldb.ID(1),
@@ -366,9 +301,7 @@ func TestInvitation(t *testing.T) {
 			ExpiresAt:      time.Now().Add(24 * time.Hour),
 			Created:        time.Now(),
 		}
-
 		clone := original.Clone()
-
 		if clone.ID != original.ID {
 			t.Errorf("Clone ID = %v, want %v", clone.ID, original.ID)
 		}
@@ -376,14 +309,11 @@ func TestInvitation(t *testing.T) {
 			t.Errorf("Clone Email = %v, want %v", clone.Email, original.Email)
 		}
 	})
-
 	t.Run("GetID", func(t *testing.T) {
-		i := &Invitation{ID: jsonldb.ID(33)}
-		if i.GetID() != jsonldb.ID(33) {
-			t.Errorf("GetID() = %v, want %v", i.GetID(), jsonldb.ID(33))
+		if got := (&Invitation{ID: jsonldb.ID(33)}).GetID(); got != jsonldb.ID(33) {
+			t.Errorf("GetID() = %v, want %v", got, jsonldb.ID(33))
 		}
 	})
-
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			inv := &Invitation{
@@ -396,7 +326,6 @@ func TestInvitation(t *testing.T) {
 				t.Errorf("Validate() unexpected error: %v", err)
 			}
 		})
-
 		t.Run("zero ID", func(t *testing.T) {
 			inv := &Invitation{
 				ID:             jsonldb.ID(0),
@@ -408,7 +337,6 @@ func TestInvitation(t *testing.T) {
 				t.Error("Validate() expected error for zero ID")
 			}
 		})
-
 		t.Run("empty Email", func(t *testing.T) {
 			inv := &Invitation{
 				ID:             jsonldb.ID(1),
@@ -420,7 +348,6 @@ func TestInvitation(t *testing.T) {
 				t.Error("Validate() expected error for empty Email")
 			}
 		})
-
 		t.Run("zero OrganizationID", func(t *testing.T) {
 			inv := &Invitation{
 				ID:             jsonldb.ID(1),
@@ -432,7 +359,6 @@ func TestInvitation(t *testing.T) {
 				t.Error("Validate() expected error for zero OrganizationID")
 			}
 		})
-
 		t.Run("empty Token", func(t *testing.T) {
 			inv := &Invitation{
 				ID:             jsonldb.ID(1),
@@ -449,9 +375,8 @@ func TestInvitation(t *testing.T) {
 
 func TestUser(t *testing.T) {
 	t.Run("GetID", func(t *testing.T) {
-		u := &User{ID: jsonldb.ID(88)}
-		if u.GetID() != jsonldb.ID(88) {
-			t.Errorf("GetID() = %v, want %v", u.GetID(), jsonldb.ID(88))
+		if got := (&User{ID: jsonldb.ID(88)}).GetID(); got != jsonldb.ID(88) {
+			t.Errorf("GetID() = %v, want %v", got, jsonldb.ID(88))
 		}
 	})
 }
