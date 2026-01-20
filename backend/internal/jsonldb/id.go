@@ -21,7 +21,7 @@ const (
 
 	// idVersion is the current ID schema version.
 	// Bump this when the ID format changes in a breaking way.
-	idVersion uint64 = 2
+	idVersion uint64 = 1
 
 	// idEncodedLen is the fixed length of encoded IDs.
 	// 64 bits / 6 bits per char = 10.67, rounded up to 11.

@@ -241,7 +241,7 @@ func (t *Table[T]) Iter(startID ID) iter.Seq[T] {
 //
 // Returns an error if the row fails validation, has a zero ID, or has a duplicate ID.
 // If the file doesn't exist, it is created with a schema header first.
-func (t *Table[T]) Append(row T) error {
+func (t *Table[T]) Append(row T) (err error) {
 	if err := row.Validate(); err != nil {
 		return fmt.Errorf("invalid row: %w", err)
 	}
@@ -274,7 +274,9 @@ func (t *Table[T]) Append(row T) error {
 		return fmt.Errorf("failed to open table file for append: %w", err)
 	}
 	defer func() {
-		_ = f.Close()
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close table file: %w", cerr)
+		}
 	}()
 	if _, err := f.Write(append(data, '\n')); err != nil {
 		return fmt.Errorf("failed to write row: %w", err)
@@ -307,13 +309,15 @@ func (t *Table[T]) Replace(rows []T) error {
 }
 
 // saveSchemaHeaderLocked writes just the schema header as the first line. Caller must hold t.mu.
-func (t *Table[T]) saveSchemaHeaderLocked() error {
+func (t *Table[T]) saveSchemaHeaderLocked() (err error) {
 	f, err := os.Create(t.path)
 	if err != nil {
 		return fmt.Errorf("failed to create table file: %w", err)
 	}
 	defer func() {
-		_ = f.Close()
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close table file: %w", cerr)
+		}
 	}()
 
 	writer := bufio.NewWriter(f)
@@ -334,13 +338,15 @@ func (t *Table[T]) saveSchemaHeaderLocked() error {
 }
 
 // save writes the schema header and all rows to the file. Caller must hold t.mu.
-func (t *Table[T]) save() error {
+func (t *Table[T]) save() (err error) {
 	f, err := os.Create(t.path)
 	if err != nil {
 		return fmt.Errorf("failed to create table file: %w", err)
 	}
 	defer func() {
-		_ = f.Close()
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("failed to close table file: %w", cerr)
+		}
 	}()
 
 	writer := bufio.NewWriter(f)
