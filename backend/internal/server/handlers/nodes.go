@@ -34,11 +34,17 @@ func (h *NodeHandler) ListNodes(ctx context.Context, req models.ListNodesRequest
 		return nil, models.InternalWithError("Failed to read node tree", err)
 	}
 
-	return &models.ListNodesResponse{Nodes: nodes}, nil
+	// Convert to response types
+	responses := make([]models.NodeResponse, 0, len(nodes))
+	for _, n := range nodes {
+		responses = append(responses, *n.ToResponse())
+	}
+
+	return &models.ListNodesResponse{Nodes: responses}, nil
 }
 
 // GetNode retrieves a single node's metadata.
-func (h *NodeHandler) GetNode(ctx context.Context, req models.GetNodeRequest) (*models.Node, error) {
+func (h *NodeHandler) GetNode(ctx context.Context, req models.GetNodeRequest) (*models.NodeResponse, error) {
 	orgID := models.GetOrgID(ctx)
 	id, err := jsonldb.DecodeID(req.ID)
 	if err != nil {
@@ -55,11 +61,11 @@ func (h *NodeHandler) GetNode(ctx context.Context, req models.GetNodeRequest) (*
 		return nil, models.NotFound("node")
 	}
 
-	return node, nil
+	return node.ToResponse(), nil
 }
 
 // CreateNode creates a new node (page, database, or hybrid).
-func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeRequest) (*models.Node, error) {
+func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeRequest) (*models.NodeResponse, error) {
 	if req.Title == "" || req.Type == "" {
 		return nil, models.MissingField("title or type")
 	}
@@ -117,7 +123,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, req models.CreateNodeReque
 	// Invalidate cache
 	h.cache.InvalidateNodeTree()
 
-	return node, nil
+	return node.ToResponse(), nil
 }
 
 func findNode(nodes []*models.Node, id jsonldb.ID) *models.Node {

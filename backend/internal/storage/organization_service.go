@@ -125,6 +125,15 @@ func (s *OrganizationService) GetOrganization(id jsonldb.ID) (*models.Organizati
 	return org, nil
 }
 
+// GetOrganizationByID retrieves an organization by string ID.
+func (s *OrganizationService) GetOrganizationByID(idStr string) (*models.Organization, error) {
+	id, err := jsonldb.DecodeID(idStr)
+	if err != nil {
+		return nil, err
+	}
+	return s.GetOrganization(id)
+}
+
 // ListOrganizations returns all organizations.
 func (s *OrganizationService) ListOrganizations() ([]*models.Organization, error) {
 	s.mu.RLock()

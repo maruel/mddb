@@ -27,7 +27,7 @@ func NewInvitationHandler(invService *storage.InvitationService, userService *st
 }
 
 // CreateInvitation creates a new invitation and sends it (logic to be added).
-func (h *InvitationHandler) CreateInvitation(ctx context.Context, req models.CreateInvitationRequest) (*models.Invitation, error) {
+func (h *InvitationHandler) CreateInvitation(ctx context.Context, req models.CreateInvitationRequest) (*models.InvitationResponse, error) {
 	if req.Email == "" || req.Role == "" {
 		return nil, models.MissingField("email or role")
 	}
@@ -38,7 +38,7 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, req models.Cre
 		return nil, models.InternalWithError("Failed to create invitation", err)
 	}
 
-	return invitation, nil
+	return invitation.ToResponse(), nil
 }
 
 // ListInvitations returns all pending invitations for an organization.
@@ -49,7 +49,13 @@ func (h *InvitationHandler) ListInvitations(ctx context.Context, req models.List
 		return nil, models.InternalWithError("Failed to list invitations", err)
 	}
 
-	return &models.ListInvitationsResponse{Invitations: invitations}, nil
+	// Convert to response types (excludes Token)
+	responses := make([]models.InvitationResponse, 0, len(invitations))
+	for _, inv := range invitations {
+		responses = append(responses, *inv.ToResponse())
+	}
+
+	return &models.ListInvitationsResponse{Invitations: responses}, nil
 }
 
 // AcceptInvitation handles a user accepting an invitation.
@@ -89,10 +95,14 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req models.Acc
 	// Delete invitation
 	_ = h.invService.DeleteInvitation(inv.ID.String())
 
-	// Return a new token for the user
-	// Note: We need the AuthHandler to generate the token, or move the logic.
-	// For now, returning a basic response.
+	// Build user response
+	userResp, err := h.userService.GetUserResponse(user.ID.String())
+	if err != nil {
+		return nil, models.InternalWithError("Failed to get user response", err)
+	}
+
+	// Return response (Note: Token generation requires AuthHandler)
 	return &models.LoginResponse{
-		User: user,
+		User: userResp,
 	}, nil
 }

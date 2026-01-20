@@ -27,17 +27,17 @@ func (h *UserHandler) ListUsers(ctx context.Context, req models.ListUsersRequest
 		return nil, models.Forbidden("Organization context missing")
 	}
 
-	allUsers, err := h.userService.ListUsers()
+	allUsers, err := h.userService.ListUserResponses()
 	if err != nil {
 		return nil, models.InternalWithError("Failed to list users", err)
 	}
 
 	// Filter by organization membership
-	var users []*models.User
-	for _, u := range allUsers {
-		for _, m := range u.Memberships {
-			if m.OrganizationID == orgID {
-				users = append(users, u)
+	var users []models.UserResponse
+	for i := range allUsers {
+		for _, m := range allUsers[i].Memberships {
+			if m.OrganizationID == orgID.String() {
+				users = append(users, allUsers[i])
 				break
 			}
 		}
@@ -47,7 +47,7 @@ func (h *UserHandler) ListUsers(ctx context.Context, req models.ListUsersRequest
 }
 
 // UpdateUserRole updates a user's role.
-func (h *UserHandler) UpdateUserRole(ctx context.Context, req models.UpdateRoleRequest) (*models.User, error) {
+func (h *UserHandler) UpdateUserRole(ctx context.Context, req models.UpdateRoleRequest) (*models.UserResponse, error) {
 	orgID := models.GetOrgID(ctx)
 	if orgID.IsZero() {
 		return nil, models.Forbidden("Organization context missing")
@@ -61,11 +61,11 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, req models.UpdateRoleR
 		return nil, models.InternalWithError("Failed to update user role", err)
 	}
 
-	return h.userService.GetUser(req.UserID)
+	return h.userService.GetUserResponse(req.UserID)
 }
 
 // UpdateUserSettings updates user global settings.
-func (h *UserHandler) UpdateUserSettings(ctx context.Context, req models.UpdateUserSettingsRequest) (*models.User, error) {
+func (h *UserHandler) UpdateUserSettings(ctx context.Context, req models.UpdateUserSettingsRequest) (*models.UserResponse, error) {
 	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {
 		return nil, models.Unauthorized()
@@ -75,5 +75,5 @@ func (h *UserHandler) UpdateUserSettings(ctx context.Context, req models.UpdateU
 		return nil, models.InternalWithError("Failed to update settings", err)
 	}
 
-	return h.userService.GetUser(currentUser.ID.String())
+	return h.userService.GetUserResponse(currentUser.ID.String())
 }

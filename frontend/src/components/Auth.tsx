@@ -1,10 +1,16 @@
 import { createSignal, Show } from 'solid-js';
 import styles from './Auth.module.css';
-import type { User, LoginResponse, LoginRequest, RegisterRequest, ErrorResponse } from '../types';
+import type {
+  UserResponse,
+  LoginResponse,
+  LoginRequest,
+  RegisterRequest,
+  ErrorResponse,
+} from '../types';
 import { useI18n } from '../i18n';
 
 interface AuthProps {
-  onLogin: (token: string, user: User) => void;
+  onLogin: (token: string, user: UserResponse) => void;
 }
 
 export default function Auth(props: AuthProps) {

@@ -17,7 +17,7 @@ import type {
   Node,
   DataRecord,
   Commit,
-  User,
+  UserResponse,
   ListNodesResponse,
   ListRecordsResponse,
   GetPageHistoryResponse,
@@ -36,7 +36,7 @@ const slugify = (text: string) => {
 
 export default function App() {
   const { t, locale, setLocale } = useI18n();
-  const [user, setUser] = createSignal<User | null>(null);
+  const [user, setUser] = createSignal<UserResponse | null>(null);
   const [token, setToken] = createSignal<string | null>(localStorage.getItem('mddb_token'));
   const [nodes, setNodes] = createSignal<Node[]>([]);
   const [records, setRecords] = createSignal<DataRecord[]>([]);
@@ -95,7 +95,7 @@ export default function App() {
     window.history.pushState(null, '', '/');
   };
 
-  const handleLogin = (newToken: string, userData: User) => {
+  const handleLogin = (newToken: string, userData: UserResponse) => {
     localStorage.setItem('mddb_token', newToken);
     setToken(newToken);
     setUser(userData);
@@ -564,7 +564,7 @@ export default function App() {
             <>
               <Show when={user()?.role === 'admin' && !user()?.onboarding?.completed}>
                 <Onboarding
-                  user={user() as User}
+                  user={user() as UserResponse}
                   token={token() as string}
                   onComplete={() => {
                     // Re-fetch user to get updated onboarding state
@@ -695,7 +695,7 @@ export default function App() {
                   <main class={styles.main}>
                     <Show when={showSettings() && user() && token()}>
                       <WorkspaceSettings
-                        user={user() as User}
+                        user={user() as UserResponse}
                         token={token() as string}
                         onClose={() => setShowSettings(false)}
                       />

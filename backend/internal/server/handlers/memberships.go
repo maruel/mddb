@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/models"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -37,7 +36,7 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req models.SwitchOrgR
 		return nil, models.Forbidden("User is not a member of this organization")
 	}
 
-	// Re-fetch user to ensure we have memberships for the token
+	// Re-fetch user for token generation
 	user, err := h.userService.GetUser(currentUser.ID.String())
 	if err != nil {
 		return nil, models.InternalWithError("Failed to fetch user", err)
@@ -48,17 +47,22 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req models.SwitchOrgR
 		return nil, models.InternalWithError("Failed to generate token", err)
 	}
 
-	orgID, _ := jsonldb.DecodeID(req.OrgID)
-	h.authHandler.PopulateActiveContext(user, orgID)
+	// Build user response with memberships
+	userResp, err := h.userService.GetUserResponse(currentUser.ID.String())
+	if err != nil {
+		return nil, models.InternalWithError("Failed to get user response", err)
+	}
+
+	h.authHandler.PopulateActiveContext(userResp, req.OrgID)
 
 	return &models.SwitchOrgResponse{
 		Token: token,
-		User:  user,
+		User:  userResp,
 	}, nil
 }
 
 // UpdateMembershipSettings updates user preferences within an organization.
-func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req models.UpdateMembershipSettingsRequest) (*models.Membership, error) {
+func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req models.UpdateMembershipSettingsRequest) (*models.MembershipResponse, error) {
 	currentUser, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {
 		return nil, models.Unauthorized()
@@ -69,5 +73,5 @@ func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req mo
 		return nil, models.InternalWithError("Failed to update membership settings", err)
 	}
 
-	return h.memService.GetMembership(currentUser.ID.String(), orgID.String())
+	return h.memService.GetMembershipResponse(currentUser.ID.String(), orgID.String())
 }

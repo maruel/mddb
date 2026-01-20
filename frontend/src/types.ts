@@ -14,7 +14,7 @@ export interface LoginRequest {
  */
 export interface LoginResponse {
   token: string;
-  user?: User;
+  user?: UserResponse;
 }
 /**
  * RegisterRequest is a request to register a new user.
@@ -204,7 +204,7 @@ export interface ListRecordsRequest {
  * ListRecordsResponse is a response containing a list of records.
  */
 export interface ListRecordsResponse {
-  records: DataRecord[];
+  records: DataRecordResponse[];
 }
 /**
  * CreateRecordRequest is a request to create a record.
@@ -274,7 +274,7 @@ export interface ListNodesRequest {
  * ListNodesResponse is a response containing a list of nodes.
  */
 export interface ListNodesResponse {
-  nodes: (Node | undefined)[];
+  nodes: NodeResponse[];
 }
 /**
  * GetNodeRequest is a request to get a node.
@@ -383,7 +383,7 @@ export interface ListInvitationsRequest {
  * ListInvitationsResponse is a response containing a list of invitations.
  */
 export interface ListInvitationsResponse {
-  invitations: (Invitation | undefined)[];
+  invitations: InvitationResponse[];
 }
 /**
  * AcceptInvitationRequest is a request to accept an invitation.
@@ -404,7 +404,7 @@ export interface SwitchOrgRequest {
  */
 export interface SwitchOrgResponse {
   token: string;
-  user?: User;
+  user?: UserResponse;
 }
 /**
  * UpdateMembershipSettingsRequest is a request to update user preferences within an organization.
@@ -443,7 +443,7 @@ export interface ListGitRemotesRequest {
  * ListGitRemotesResponse is a response containing a list of git remotes.
  */
 export interface ListGitRemotesResponse {
-  remotes: (GitRemote | undefined)[];
+  remotes: GitRemoteResponse[];
 }
 /**
  * CreateGitRemoteRequest is a request to create a git remote.
@@ -509,7 +509,7 @@ export interface UpdateRoleRequest {
  * ListUsersResponse is a response containing a list of users.
  */
 export interface ListUsersResponse {
-  users: (User | undefined)[];
+  users: UserResponse[];
 }
 /**
  * UpdateUserSettingsRequest is a request to update user global settings.
@@ -517,6 +517,101 @@ export interface ListUsersResponse {
 export interface UpdateUserSettingsRequest {
   settings: UserSettings;
 }
+
+//////////
+
+/**
+ * UserResponse is the API representation of a user.
+ */
+export interface UserResponse {
+  id: string;
+  email: string;
+  name: string;
+  oauth_identities?: OAuthIdentity[];
+  settings: UserSettings;
+  created: string;
+  modified: string;
+  memberships?: MembershipResponse[];
+  organization_id?: string;
+  role?: UserRole;
+  onboarding?: OnboardingState;
+}
+/**
+ * MembershipResponse is the API representation of a membership.
+ */
+export interface MembershipResponse {
+  id: string;
+  user_id: string;
+  organization_id: string;
+  organization_name?: string;
+  role: UserRole;
+  settings: MembershipSettings;
+  created: string;
+}
+/**
+ * InvitationResponse is the API representation of an invitation (excludes Token).
+ */
+export interface InvitationResponse {
+  id: string;
+  email: string;
+  organization_id: string;
+  role: UserRole;
+  expires_at: string;
+  created: string;
+}
+/**
+ * OrganizationResponse is the API representation of an organization.
+ */
+export interface OrganizationResponse {
+  id: string;
+  name: string;
+  quotas: Quota;
+  settings: OrganizationSettings;
+  onboarding: OnboardingState;
+  created: string;
+}
+/**
+ * GitRemoteResponse is the API representation of a git remote.
+ */
+export interface GitRemoteResponse {
+  id: string;
+  organization_id: string;
+  name: string;
+  url: string;
+  type: string;
+  auth_type: string;
+  created: string;
+  last_sync?: string;
+}
+/**
+ * NodeResponse is the API representation of a node.
+ */
+export interface NodeResponse {
+  id: string;
+  parent_id?: string;
+  title: string;
+  content?: string;
+  properties?: Property[];
+  created: string;
+  modified: string;
+  tags?: string[];
+  favicon_url?: string;
+  type: NodeType;
+  children?: NodeResponse[];
+}
+/**
+ * DataRecordResponse is the API representation of a data record.
+ */
+export interface DataRecordResponse {
+  id: string;
+  data: { [key: string]: any };
+  created: string;
+  modified: string;
+}
+/**
+ * UserResponseBuilder helps construct UserResponse with context fields.
+ */
+export interface UserResponseBuilder {}
 
 //////////
 /*
@@ -680,48 +775,40 @@ export interface DataRecord {
   modified: string;
 }
 /**
- * User represents a system user.
+ * User represents a system user (persistent fields only).
  */
 export interface User {
   id: string;
   email: string;
   name: string;
-  memberships?: Membership[];
   oauth_identities?: OAuthIdentity[];
   settings: UserSettings;
   created: string;
   modified: string;
-  /**
-   * Active context (populated in API responses)
-   */
-  organization_id?: string;
-  role?: UserRole;
-  onboarding?: OnboardingState;
 }
 /**
  * UserSettings represents global user preferences.
  */
 export interface UserSettings {
-  theme: string; // light, dark, system
-  language: string; // en, fr, etc.
+  theme: string;
+  language: string;
 }
 /**
  * OAuthIdentity represents a link between a local user and an OAuth2 provider.
  */
 export interface OAuthIdentity {
-  provider: string; // google, microsoft
+  provider: string;
   provider_id: string;
   email: string;
   last_login: string;
 }
 /**
- * Membership represents a user's relationship with an organization.
+ * Membership represents a user's relationship with an organization (persistent fields only).
  */
 export interface Membership {
   id: string;
   user_id: string;
   organization_id: string;
-  organization_name?: string;
   role: UserRole;
   settings: MembershipSettings;
   created: string;
@@ -764,7 +851,7 @@ export interface Organization {
  */
 export interface OnboardingState {
   completed: boolean;
-  step: string; // e.g., "name", "members", "git", "done"
+  step: string;
   updated_at: string;
 }
 /**
@@ -787,10 +874,10 @@ export interface GitSettings {
 export interface GitRemote {
   id: string;
   organization_id: string;
-  name: string; // e.g., "origin"
+  name: string;
   url: string;
-  type: string; // "github", "gitlab", "custom"
-  auth_type: string; // "token", "ssh"
+  type: string;
+  auth_type: string;
   created: string;
   last_sync?: string;
 }
@@ -799,7 +886,7 @@ export interface GitRemote {
  */
 export interface Quota {
   max_pages: number /* int */;
-  max_storage: number /* int64 */; // in bytes
+  max_storage: number /* int64 */;
   max_users: number /* int */;
 }
 /**

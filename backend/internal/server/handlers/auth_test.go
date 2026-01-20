@@ -46,14 +46,14 @@ func TestRegister(t *testing.T) {
 		t.Error("Expected Joe to have a membership")
 	}
 	resp1OrgID := resp1.User.Memberships[0].OrganizationID
-	if resp1OrgID.IsZero() {
+	if resp1OrgID == "" {
 		t.Error("Expected Joe's membership to have an organization ID")
 	}
 	if resp1.User.Memberships[0].Role != models.UserRoleAdmin {
 		t.Errorf("Expected Joe to be admin in his org, got %s", resp1.User.Memberships[0].Role)
 	}
 
-	org1, err := orgService.GetOrganization(resp1OrgID)
+	org1, err := orgService.GetOrganizationByID(resp1OrgID)
 	if err != nil {
 		t.Fatalf("Failed to get Joe's organization: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestRegister(t *testing.T) {
 		t.Error("Expected Alice to have a membership")
 	}
 	resp2OrgID := resp2.User.Memberships[0].OrganizationID
-	if resp2OrgID.IsZero() {
+	if resp2OrgID == "" {
 		t.Error("Expected Alice's membership to have an organization ID")
 	}
 	if resp2OrgID == resp1OrgID {
@@ -91,7 +91,7 @@ func TestRegister(t *testing.T) {
 		t.Errorf("Expected Alice to be admin in her org, got %s", resp2.User.Memberships[0].Role)
 	}
 
-	org2, err := orgService.GetOrganization(resp2OrgID)
+	org2, err := orgService.GetOrganizationByID(resp2OrgID)
 	if err != nil {
 		t.Fatalf("Failed to get Alice's organization: %v", err)
 	}

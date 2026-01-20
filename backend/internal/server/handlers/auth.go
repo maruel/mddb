@@ -42,13 +42,20 @@ func (h *AuthHandler) Login(ctx context.Context, req models.LoginRequest) (*mode
 		return nil, models.InternalWithError("Failed to generate token", err)
 	}
 
-	if len(user.Memberships) > 0 {
-		h.PopulateActiveContext(user, user.Memberships[0].OrganizationID)
+	// Build user response
+	userResp, err := h.userService.GetUserResponse(user.ID.String())
+	if err != nil {
+		return nil, models.InternalWithError("Failed to get user response", err)
+	}
+
+	// Set active context to first membership
+	if len(userResp.Memberships) > 0 {
+		h.PopulateActiveContext(userResp, userResp.Memberships[0].OrganizationID)
 	}
 
 	return &models.LoginResponse{
 		Token: token,
-		User:  user,
+		User:  userResp,
 	}, nil
 }
 
@@ -82,24 +89,25 @@ func (h *AuthHandler) Register(ctx context.Context, req models.RegisterRequest) 
 		return nil, models.InternalWithError("Failed to create initial membership", err)
 	}
 
-	// Re-fetch user to get populated memberships
-	user, err = h.userService.GetUser(user.ID.String())
-	if err != nil {
-		return nil, models.InternalWithError("Failed to re-fetch user", err)
-	}
-
 	token, err := h.GenerateToken(user)
 	if err != nil {
 		return nil, models.InternalWithError("Failed to generate token", err)
 	}
 
-	if len(user.Memberships) > 0 {
-		h.PopulateActiveContext(user, user.Memberships[0].OrganizationID)
+	// Build user response with memberships
+	userResp, err := h.userService.GetUserResponse(user.ID.String())
+	if err != nil {
+		return nil, models.InternalWithError("Failed to get user response", err)
+	}
+
+	// Set active context to first membership (the newly created org)
+	if len(userResp.Memberships) > 0 {
+		h.PopulateActiveContext(userResp, userResp.Memberships[0].OrganizationID)
 	}
 
 	return &models.LoginResponse{
 		Token: token,
-		User:  user,
+		User:  userResp,
 	}, nil
 }
 
@@ -117,34 +125,46 @@ func (h *AuthHandler) GenerateToken(user *models.User) (string, error) {
 }
 
 // Me returns the current user info from the context.
-func (h *AuthHandler) Me(ctx context.Context, req models.MeRequest) (*models.User, error) {
+func (h *AuthHandler) Me(ctx context.Context, req models.MeRequest) (*models.UserResponse, error) {
 	// User info should be in context if authenticated via middleware
 	user, ok := ctx.Value(models.UserKey).(*models.User)
 	if !ok {
 		return nil, models.NewAPIError(401, models.ErrorCodeUnauthorized, "Unauthorized")
 	}
 
-	// For /api/auth/me, we need to decide which org is "active"
-	// For now, use the first membership if not specified
-	if len(user.Memberships) > 0 {
-		h.PopulateActiveContext(user, user.Memberships[0].OrganizationID)
+	// Build user response with memberships
+	userResp, err := h.userService.GetUserResponse(user.ID.String())
+	if err != nil {
+		return nil, models.InternalWithError("Failed to get user response", err)
 	}
 
-	return user, nil
+	// For /api/auth/me, we need to decide which org is "active"
+	// For now, use the first membership if not specified
+	if len(userResp.Memberships) > 0 {
+		h.PopulateActiveContext(userResp, userResp.Memberships[0].OrganizationID)
+	}
+
+	return userResp, nil
 }
 
-// PopulateActiveContext populates organization-specific fields in the User struct.
-func (h *AuthHandler) PopulateActiveContext(user *models.User, orgID jsonldb.ID) {
-	user.OrganizationID = orgID
-	for _, m := range user.Memberships {
-		if m.OrganizationID == orgID {
-			user.Role = m.Role
+// PopulateActiveContext populates organization-specific fields in the UserResponse.
+func (h *AuthHandler) PopulateActiveContext(userResp *models.UserResponse, orgIDStr string) {
+	orgID, err := jsonldb.DecodeID(orgIDStr)
+	if err != nil {
+		return
+	}
+
+	userResp.OrganizationID = orgIDStr
+
+	for _, m := range userResp.Memberships {
+		if m.OrganizationID == orgIDStr {
+			userResp.Role = m.Role
 			break
 		}
 	}
 
 	// Fetch onboarding state
 	if org, err := h.orgService.GetOrganization(orgID); err == nil {
-		user.Onboarding = &org.Onboarding
+		userResp.Onboarding = &org.Onboarding
 	}
 }

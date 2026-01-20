@@ -83,21 +83,15 @@ func (r *DataRecord) Validate() error {
 	return nil
 }
 
-// User represents a system user.
+// User represents a system user (persistent fields only).
 type User struct {
 	ID              jsonldb.ID      `json:"id" jsonschema:"description=Unique user identifier"`
 	Email           string          `json:"email" jsonschema:"description=User email address"`
 	Name            string          `json:"name" jsonschema:"description=User display name"`
-	Memberships     []Membership    `json:"memberships,omitempty" jsonschema:"description=Organization memberships (populated at runtime)"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
 	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
 	Created         time.Time       `json:"created" jsonschema:"description=Account creation timestamp"`
 	Modified        time.Time       `json:"modified" jsonschema:"description=Last modification timestamp"`
-
-	// Active context (populated in API responses)
-	OrganizationID jsonldb.ID       `json:"organization_id,omitempty" jsonschema:"description=Current organization context (runtime)"`
-	Role           UserRole         `json:"role,omitempty" jsonschema:"description=Role in current organization (runtime)"`
-	Onboarding     *OnboardingState `json:"onboarding,omitempty" jsonschema:"description=Onboarding state for current org (runtime)"`
 }
 
 // GetID returns the User's ID.
@@ -119,15 +113,14 @@ type OAuthIdentity struct {
 	LastLogin  time.Time `json:"last_login" jsonschema:"description=Last login timestamp via this provider"`
 }
 
-// Membership represents a user's relationship with an organization.
+// Membership represents a user's relationship with an organization (persistent fields only).
 type Membership struct {
-	ID               jsonldb.ID         `json:"id" jsonschema:"description=Unique membership identifier"`
-	UserID           jsonldb.ID         `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
-	OrganizationID   jsonldb.ID         `json:"organization_id" jsonschema:"description=Organization ID the user is a member of"`
-	OrganizationName string             `json:"organization_name,omitempty" jsonschema:"description=Organization name (populated at runtime)"`
-	Role             UserRole           `json:"role" jsonschema:"description=User role within the organization (admin/editor/viewer)"`
-	Settings         MembershipSettings `json:"settings" jsonschema:"description=User preferences within this organization"`
-	Created          time.Time          `json:"created" jsonschema:"description=Membership creation timestamp"`
+	ID             jsonldb.ID         `json:"id" jsonschema:"description=Unique membership identifier"`
+	UserID         jsonldb.ID         `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
+	OrganizationID jsonldb.ID         `json:"organization_id" jsonschema:"description=Organization ID the user is a member of"`
+	Role           UserRole           `json:"role" jsonschema:"description=User role within the organization (admin/editor/viewer)"`
+	Settings       MembershipSettings `json:"settings" jsonschema:"description=User preferences within this organization"`
+	Created        time.Time          `json:"created" jsonschema:"description=Membership creation timestamp"`
 }
 
 // Clone returns a copy of the Membership.

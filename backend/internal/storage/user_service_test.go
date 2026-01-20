@@ -76,15 +76,15 @@ func TestUserService(t *testing.T) {
 		t.Fatalf("Failed to update user role: %v", err)
 	}
 
-	updatedUser, err := service.GetUser(user.ID.String())
+	// Check membership for role using GetMembershipsForUser
+	memberships, err := service.GetMembershipsForUser(user.ID.String())
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Check membership for role
 	found := false
-	for _, m := range updatedUser.Memberships {
-		if m.OrganizationID == orgID && m.Role == models.UserRoleEditor {
+	for _, m := range memberships {
+		if m.OrganizationID == orgID.String() && m.Role == models.UserRoleEditor {
 			found = true
 			break
 		}

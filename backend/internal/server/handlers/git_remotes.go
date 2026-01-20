@@ -34,11 +34,18 @@ func (h *GitRemoteHandler) ListRemotes(ctx context.Context, req models.ListGitRe
 	if err != nil {
 		return nil, err
 	}
-	return &models.ListGitRemotesResponse{Remotes: remotes}, nil
+
+	// Convert to response types
+	responses := make([]models.GitRemoteResponse, 0, len(remotes))
+	for _, r := range remotes {
+		responses = append(responses, *r.ToResponse())
+	}
+
+	return &models.ListGitRemotesResponse{Remotes: responses}, nil
 }
 
 // CreateRemote creates a new git remote.
-func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *models.CreateGitRemoteRequest) (*models.GitRemote, error) {
+func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *models.CreateGitRemoteRequest) (*models.GitRemoteResponse, error) {
 	remote, err := h.remoteService.CreateRemote(req.OrgID, req.Name, req.URL, req.Type, req.AuthType, req.Token)
 	if err != nil {
 		return nil, err
@@ -61,7 +68,7 @@ func (h *GitRemoteHandler) CreateRemote(ctx context.Context, req *models.CreateG
 		return nil, fmt.Errorf("failed to add git remote: %w", err)
 	}
 
-	return remote, nil
+	return remote.ToResponse(), nil
 }
 
 // Push pushes changes to a git remote.

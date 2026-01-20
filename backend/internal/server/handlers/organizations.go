@@ -21,13 +21,18 @@ func NewOrganizationHandler(orgService *storage.OrganizationService) *Organizati
 }
 
 // GetOrganization retrieves current organization details.
-func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*models.Organization, error) {
+func (h *OrganizationHandler) GetOrganization(ctx context.Context, req any) (*models.OrganizationResponse, error) {
 	orgID := models.GetOrgID(ctx)
 	if orgID.IsZero() {
 		return nil, models.Forbidden("Organization context missing")
 	}
 
-	return h.orgService.GetOrganization(orgID)
+	org, err := h.orgService.GetOrganization(orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	return org.ToResponse(), nil
 }
 
 // GetOnboarding retrieves organization onboarding status.
@@ -57,7 +62,7 @@ func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, req models.U
 }
 
 // UpdateSettings updates organization-wide settings.
-func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req models.UpdateOrgSettingsRequest) (*models.Organization, error) {
+func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req models.UpdateOrgSettingsRequest) (*models.OrganizationResponse, error) {
 	orgID := models.GetOrgID(ctx)
 	if orgID.IsZero() {
 		return nil, models.Forbidden("Organization context missing")
@@ -67,5 +72,10 @@ func (h *OrganizationHandler) UpdateSettings(ctx context.Context, req models.Upd
 		return nil, models.InternalWithError("Failed to update organization settings", err)
 	}
 
-	return h.orgService.GetOrganization(orgID)
+	org, err := h.orgService.GetOrganization(orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	return org.ToResponse(), nil
 }

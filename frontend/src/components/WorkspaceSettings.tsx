@@ -1,7 +1,7 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
 import type {
-  User,
-  Invitation,
+  UserResponse,
+  InvitationResponse,
   ListUsersResponse,
   ListInvitationsResponse,
   Organization,
@@ -9,14 +9,14 @@ import type {
   MembershipSettings,
   OrganizationSettings,
   UserRole,
-  GitRemote,
+  GitRemoteResponse,
   ListGitRemotesResponse,
 } from '../types';
 import styles from './WorkspaceSettings.module.css';
 import { useI18n } from '../i18n';
 
 interface WorkspaceSettingsProps {
-  user: User;
+  user: UserResponse;
   token: string;
   onClose: () => void;
 }
@@ -26,11 +26,11 @@ type Tab = 'members' | 'personal' | 'workspace' | 'sync';
 export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = createSignal<Tab>('members');
-  const [members, setMembers] = createSignal<User[]>([]);
-  const [invitations, setInvitations] = createSignal<Invitation[]>([]);
+  const [members, setMembers] = createSignal<UserResponse[]>([]);
+  const [invitations, setInvitations] = createSignal<InvitationResponse[]>([]);
 
   // Git Remotes states
-  const [remotes, setRemotes] = createSignal<GitRemote[]>([]);
+  const [remotes, setRemotes] = createSignal<GitRemoteResponse[]>([]);
   const [newRemoteName, setNewRemoteName] = createSignal('origin');
   const [newRemoteURL, setNewRemoteURL] = createSignal('');
   const [newRemoteToken, setNewRemoteToken] = createSignal('');
@@ -105,8 +105,8 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       if (activeTab() === 'members' && props.user.role === 'admin' && results[0] && results[1]) {
         const membersData = (await results[0].json()) as ListUsersResponse;
         const invsData = (await results[1].json()) as ListInvitationsResponse;
-        setMembers(membersData.users?.filter((u): u is User => !!u) || []);
-        setInvitations(invsData.invitations?.filter((i): i is Invitation => !!i) || []);
+        setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
+        setInvitations(invsData.invitations?.filter((i): i is InvitationResponse => !!i) || []);
       }
 
       const lastResult = results[results.length - 1];
@@ -119,7 +119,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
       if (activeTab() === 'sync' && props.user.role === 'admin' && lastResult) {
         const remoteData = (await lastResult.json()) as ListGitRemotesResponse;
-        setRemotes(remoteData.remotes?.filter((r): r is GitRemote => !!r) || []);
+        setRemotes(remoteData.remotes?.filter((r): r is GitRemoteResponse => !!r) || []);
       }
 
       // Load membership settings (notifications)

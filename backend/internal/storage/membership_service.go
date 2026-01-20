@@ -186,3 +186,12 @@ func (s *MembershipService) getAllFromCache() []*models.Membership {
 	}
 	return rows
 }
+
+// GetMembershipResponse retrieves a specific user-org relationship as a response type.
+func (s *MembershipService) GetMembershipResponse(userIDStr, orgIDStr string) (*models.MembershipResponse, error) {
+	m, err := s.GetMembership(userIDStr, orgIDStr)
+	if err != nil {
+		return nil, err
+	}
+	return m.ToResponse(), nil
+}

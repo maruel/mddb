@@ -60,10 +60,6 @@ type userStorage struct {
 
 func (u *userStorage) Clone() *userStorage {
 	c := *u
-	if u.Memberships != nil {
-		c.Memberships = make([]models.Membership, len(u.Memberships))
-		copy(c.Memberships, u.Memberships)
-	}
 	if u.OAuthIdentities != nil {
 		c.OAuthIdentities = make([]models.OAuthIdentity, len(u.OAuthIdentities))
 		copy(c.OAuthIdentities, u.OAuthIdentities)
@@ -176,25 +172,48 @@ func (s *UserService) GetUser(idStr string) (*models.User, error) {
 	}
 
 	user := stored.User
-	s.populateMemberships(&user)
 	return &user, nil
 }
 
-func (s *UserService) populateMemberships(user *models.User) {
-	if s.memService != nil {
-		mems, err := s.memService.ListByUser(user.ID.String())
-		if err == nil {
-			if s.orgService != nil {
-				for i := range mems {
-					org, err := s.orgService.GetOrganization(mems[i].OrganizationID)
-					if err == nil {
-						mems[i].OrganizationName = org.Name
-					}
-				}
-			}
-			user.Memberships = mems
-		}
+// GetMembershipsForUser returns membership responses with organization names populated.
+func (s *UserService) GetMembershipsForUser(userIDStr string) ([]models.MembershipResponse, error) {
+	if s.memService == nil {
+		return nil, nil
 	}
+
+	mems, err := s.memService.ListByUser(userIDStr)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]models.MembershipResponse, 0, len(mems))
+	for _, m := range mems {
+		resp := m.ToResponse()
+		if s.orgService != nil {
+			org, err := s.orgService.GetOrganization(m.OrganizationID)
+			if err == nil {
+				resp.OrganizationName = org.Name
+			}
+		}
+		responses = append(responses, *resp)
+	}
+	return responses, nil
+}
+
+// GetUserResponse retrieves a user by ID and returns a fully populated UserResponse.
+func (s *UserService) GetUserResponse(idStr string) (*models.UserResponse, error) {
+	user, err := s.GetUser(idStr)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := user.ToResponse()
+
+	// Populate memberships
+	mems, _ := s.GetMembershipsForUser(idStr)
+	resp.Memberships = mems
+
+	return resp, nil
 }
 
 // GetUserByEmail retrieves a user by email.
@@ -208,7 +227,6 @@ func (s *UserService) GetUserByEmail(email string) (*models.User, error) {
 	}
 
 	user := stored.User
-	s.populateMemberships(&user)
 	return &user, nil
 }
 
@@ -228,7 +246,6 @@ func (s *UserService) Authenticate(email, password string) (*models.User, error)
 	}
 
 	user := stored.User
-	s.populateMemberships(&user)
 	return &user, nil
 }
 
@@ -241,7 +258,6 @@ func (s *UserService) GetUserByOAuth(provider, providerID string) (*models.User,
 		for _, identity := range stored.OAuthIdentities {
 			if identity.Provider == provider && identity.ProviderID == providerID {
 				user := stored.User
-				s.populateMemberships(&user)
 				return &user, nil
 			}
 		}
@@ -312,7 +328,7 @@ func (s *UserService) getAllFromCache() []*userStorage {
 	return rows
 }
 
-// ListUsers returns all users.
+// ListUsers returns all users (domain models without runtime fields).
 func (s *UserService) ListUsers() ([]*models.User, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -320,8 +336,24 @@ func (s *UserService) ListUsers() ([]*models.User, error) {
 	users := make([]*models.User, 0, len(s.byID))
 	for _, stored := range s.byID {
 		user := stored.User
-		s.populateMemberships(&user)
 		users = append(users, &user)
 	}
 	return users, nil
+}
+
+// ListUserResponses returns all users as response types with memberships.
+func (s *UserService) ListUserResponses() ([]models.UserResponse, error) {
+	users, err := s.ListUsers()
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]models.UserResponse, 0, len(users))
+	for _, user := range users {
+		resp := user.ToResponse()
+		mems, _ := s.GetMembershipsForUser(user.ID.String())
+		resp.Memberships = mems
+		responses = append(responses, *resp)
+	}
+	return responses, nil
 }

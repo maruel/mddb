@@ -10,8 +10,8 @@ type LoginRequest struct {
 
 // LoginResponse is a response from logging in.
 type LoginResponse struct {
-	Token string `json:"token"`
-	User  *User  `json:"user"`
+	Token string        `json:"token"`
+	User  *UserResponse `json:"user"`
 }
 
 // RegisterRequest is a request to register a new user.
@@ -177,7 +177,7 @@ type ListRecordsRequest struct {
 
 // ListRecordsResponse is a response containing a list of records.
 type ListRecordsResponse struct {
-	Records []DataRecord `json:"records"`
+	Records []DataRecordResponse `json:"records"`
 }
 
 // CreateRecordRequest is a request to create a record.
@@ -239,7 +239,7 @@ type ListNodesRequest struct {
 
 // ListNodesResponse is a response containing a list of nodes.
 type ListNodesResponse struct {
-	Nodes []*Node `json:"nodes"`
+	Nodes []NodeResponse `json:"nodes"`
 }
 
 // GetNodeRequest is a request to get a node.
@@ -339,7 +339,7 @@ type ListInvitationsRequest struct {
 
 // ListInvitationsResponse is a response containing a list of invitations.
 type ListInvitationsResponse struct {
-	Invitations []*Invitation `json:"invitations"`
+	Invitations []InvitationResponse `json:"invitations"`
 }
 
 // AcceptInvitationRequest is a request to accept an invitation.
@@ -358,8 +358,8 @@ type SwitchOrgRequest struct {
 
 // SwitchOrgResponse is a response from switching organization.
 type SwitchOrgResponse struct {
-	Token string `json:"token"`
-	User  *User  `json:"user"`
+	Token string        `json:"token"`
+	User  *UserResponse `json:"user"`
 }
 
 // UpdateMembershipSettingsRequest is a request to update user preferences within an organization.
@@ -396,7 +396,7 @@ type ListGitRemotesRequest struct {
 
 // ListGitRemotesResponse is a response containing a list of git remotes.
 type ListGitRemotesResponse struct {
-	Remotes []*GitRemote `json:"remotes"`
+	Remotes []GitRemoteResponse `json:"remotes"`
 }
 
 // CreateGitRemoteRequest is a request to create a git remote.
@@ -457,7 +457,7 @@ type UpdateRoleRequest struct {
 
 // ListUsersResponse is a response containing a list of users.
 type ListUsersResponse struct {
-	Users []*User `json:"users"`
+	Users []UserResponse `json:"users"`
 }
 
 // UpdateUserSettingsRequest is a request to update user global settings.
