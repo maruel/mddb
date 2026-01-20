@@ -125,10 +125,13 @@ func (s *InvitationService) DeleteInvitation(id jsonldb.ID) error {
 		return errInvitationNotFound
 	}
 
+	if _, err := s.table.Delete(id); err != nil {
+		return err
+	}
+
 	delete(s.byToken, inv.Token)
 	delete(s.byID, id)
-
-	return s.table.Replace(s.getAllFromCache())
+	return nil
 }
 
 // ListByOrganization returns all invitations for an organization.
@@ -147,12 +150,4 @@ func (s *InvitationService) ListByOrganization(orgID jsonldb.ID) ([]*entity.Invi
 		}
 	}
 	return invitations, nil
-}
-
-func (s *InvitationService) getAllFromCache() []*entity.Invitation {
-	rows := make([]*entity.Invitation, 0, len(s.byID))
-	for _, v := range s.byID {
-		rows = append(rows, v)
-	}
-	return rows
 }

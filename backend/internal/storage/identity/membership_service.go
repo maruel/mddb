@@ -151,7 +151,10 @@ func (s *MembershipService) UpdateRole(userID, orgID jsonldb.ID, role entity.Use
 	}
 
 	m.Role = role
-	return s.table.Replace(s.getAllFromCache())
+	if _, err := s.table.Update(m); err != nil {
+		return err
+	}
+	return nil
 }
 
 // UpdateSettings updates user preferences within a specific organization.
@@ -166,7 +169,10 @@ func (s *MembershipService) UpdateSettings(userID, orgID jsonldb.ID, settings en
 	}
 
 	m.Settings = settings
-	return s.table.Replace(s.getAllFromCache())
+	if _, err := s.table.Update(m); err != nil {
+		return err
+	}
+	return nil
 }
 
 // DeleteMembership removes a user from an organization.
@@ -175,18 +181,15 @@ func (s *MembershipService) DeleteMembership(userID, orgID jsonldb.ID) error {
 	defer s.mu.Unlock()
 
 	key := userID.String() + "_" + orgID.String()
-	if _, ok := s.byID[key]; !ok {
+	m, ok := s.byID[key]
+	if !ok {
 		return errMembershipNotFound
 	}
 
-	delete(s.byID, key)
-	return s.table.Replace(s.getAllFromCache())
-}
-
-func (s *MembershipService) getAllFromCache() []*entity.Membership {
-	rows := make([]*entity.Membership, 0, len(s.byID))
-	for _, v := range s.byID {
-		rows = append(rows, v)
+	if _, err := s.table.Delete(m.ID); err != nil {
+		return err
 	}
-	return rows
+
+	delete(s.byID, key)
+	return nil
 }

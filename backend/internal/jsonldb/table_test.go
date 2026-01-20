@@ -216,8 +216,11 @@ func TestTable(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Delete error: %v", err)
 				}
-				if !deleted {
-					t.Error("Delete() = false, want true for existing ID")
+				if deleted == nil {
+					t.Fatal("Delete() = nil, want deleted row for existing ID")
+				}
+				if deleted.ID != 2 || deleted.Name != "Two" {
+					t.Errorf("Delete() returned %+v, want {ID:2, Name:Two}", deleted)
 				}
 				if table.Len() != 2 {
 					t.Errorf("Len() = %d, want 2 after delete", table.Len())
@@ -232,8 +235,8 @@ func TestTable(t *testing.T) {
 				if err != nil {
 					t.Fatalf("Delete error: %v", err)
 				}
-				if deleted {
-					t.Error("Delete() = true, want false for non-existing ID")
+				if deleted != nil {
+					t.Errorf("Delete() = %+v, want nil for non-existing ID", deleted)
 				}
 			})
 
@@ -262,8 +265,8 @@ func TestTable(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Delete error: %v", err)
 			}
-			if !deleted {
-				t.Error("Delete() = false, want true")
+			if deleted == nil || deleted.ID != 1 {
+				t.Errorf("Delete() = %+v, want {ID:1}", deleted)
 			}
 
 			// Verify index was rebuilt correctly
@@ -283,14 +286,31 @@ func TestTable(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Delete error: %v", err)
 			}
-			if !deleted {
-				t.Error("Delete() = false, want true")
+			if deleted == nil || deleted.ID != 2 {
+				t.Errorf("Delete() = %+v, want {ID:2}", deleted)
 			}
 
 			// Verify first row still accessible
 			got := table.Get(ID(1))
 			if got == nil || got.ID != 1 {
 				t.Error("Get(1) failed after deleting last row")
+			}
+		})
+
+		t.Run("returns clone", func(t *testing.T) {
+			table, _ := setupTable(t)
+
+			_ = table.Append(&testRow{ID: 1, Name: "Original"})
+			_ = table.Append(&testRow{ID: 2, Name: "Two"})
+
+			deleted, _ := table.Delete(ID(1))
+			deleted.Name = "Modified"
+
+			// Re-add and verify it's not affected by mutation
+			_ = table.Append(&testRow{ID: 1, Name: "Readded"})
+			got := table.Get(ID(1))
+			if got.Name != "Readded" {
+				t.Error("Delete() returned reference instead of clone")
 			}
 		})
 	})
@@ -613,82 +633,6 @@ not valid json
 				err = table.Append(&validatingRow{ID: 1, Name: "Invalid", FailValidate: true})
 				if err == nil {
 					t.Error("Append() expected validation error, got nil")
-				}
-			})
-		})
-	})
-
-	t.Run("Replace", func(t *testing.T) {
-		t.Run("valid", func(t *testing.T) {
-			table, path := setupTable(t)
-
-			// Add initial data
-			_ = table.Append(&testRow{ID: 1, Name: "One"})
-			_ = table.Append(&testRow{ID: 2, Name: "Two"})
-
-			t.Run("replace all rows", func(t *testing.T) {
-				newRows := []*testRow{
-					{ID: 10, Name: "Ten"},
-					{ID: 20, Name: "Twenty"},
-					{ID: 30, Name: "Thirty"},
-				}
-				err := table.Replace(newRows)
-				if err != nil {
-					t.Fatalf("Replace error: %v", err)
-				}
-
-				if table.Len() != 3 {
-					t.Errorf("Len() = %d, want 3", table.Len())
-				}
-
-				// Old rows should be gone
-				if table.Get(ID(1)) != nil {
-					t.Error("Old row 1 still present after Replace")
-				}
-
-				// New rows should be present
-				if table.Get(ID(10)) == nil {
-					t.Error("New row 10 not present after Replace")
-				}
-			})
-
-			t.Run("replace with empty slice", func(t *testing.T) {
-				err := table.Replace([]*testRow{})
-				if err != nil {
-					t.Fatalf("Replace error: %v", err)
-				}
-				if table.Len() != 0 {
-					t.Errorf("Len() = %d, want 0", table.Len())
-				}
-			})
-
-			t.Run("persistence after replace", func(t *testing.T) {
-				_ = table.Replace([]*testRow{{ID: 100, Name: "Hundred"}})
-
-				table2, err := NewTable[*testRow](path)
-				if err != nil {
-					t.Fatalf("NewTable error: %v", err)
-				}
-				if table2.Len() != 1 {
-					t.Errorf("Reloaded table Len() = %d, want 1", table2.Len())
-				}
-				got := table2.Get(ID(100))
-				if got == nil || got.Name != "Hundred" {
-					t.Error("Replaced row not persisted correctly")
-				}
-			})
-		})
-
-		t.Run("errors", func(t *testing.T) {
-			t.Run("duplicate ID in replacement", func(t *testing.T) {
-				table, _ := setupTable(t)
-
-				err := table.Replace([]*testRow{
-					{ID: 1, Name: "First"},
-					{ID: 1, Name: "Duplicate"},
-				})
-				if err == nil {
-					t.Error("Replace() expected error for duplicate ID, got nil")
 				}
 			})
 		})

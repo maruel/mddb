@@ -133,11 +133,11 @@ func (s *GitRemoteService) Delete(orgID, remoteID jsonldb.ID) error {
 	if remoteID.IsZero() {
 		return errRemoteIDEmpty
 	}
-	found, err := s.table.Delete(remoteID)
+	deleted, err := s.table.Delete(remoteID)
 	if err != nil {
 		return err
 	}
-	if !found {
+	if deleted == nil {
 		return errRemoteNotFound
 	}
 	return nil
@@ -149,15 +149,13 @@ func (s *GitRemoteService) UpdateLastSync(remoteID jsonldb.ID) error {
 		return errRemoteIDEmpty
 	}
 
-	var all []*GitRemote
-	for r := range s.table.Iter(0) {
-		all = append(all, r)
+	remote := s.table.Get(remoteID)
+	if remote == nil {
+		return errRemoteNotFound
 	}
-	for i := range all {
-		if all[i].ID == remoteID {
-			all[i].LastSync = time.Now()
-			return s.table.Replace(all)
-		}
+	remote.LastSync = time.Now()
+	if _, err := s.table.Update(remote); err != nil {
+		return err
 	}
-	return errRemoteNotFound
+	return nil
 }

@@ -36,7 +36,7 @@ type Row[T any] interface {
 //
 // All read and write operations are protected by a read-write mutex, making Table
 // safe for concurrent use by multiple goroutines. Write operations (Append, Update,
-// Delete, Replace) are atomic and immediately persisted to disk.
+// Delete) are atomic and immediately persisted to disk.
 //
 // The JSONL file format uses the first line as a schema header containing version
 // and column definitions. Subsequent lines are JSON-encoded rows.
@@ -82,16 +82,19 @@ func (t *Table[T]) Get(id ID) T {
 
 // Delete removes a row by ID and persists the change.
 //
-// Returns true if the row existed and was deleted, false if no row with that ID exists.
+// Returns the deleted row, or nil if no row with that ID exists.
 // The entire table is rewritten to disk on success.
-func (t *Table[T]) Delete(id ID) (bool, error) {
+func (t *Table[T]) Delete(id ID) (T, error) {
+	var zero T
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	idx, ok := t.byID[id]
 	if !ok {
-		return false, nil
+		return zero, nil
 	}
+
+	deleted := t.rows[idx]
 
 	// Remove from slice
 	t.rows = append(t.rows[:idx], t.rows[idx+1:]...)
@@ -103,9 +106,9 @@ func (t *Table[T]) Delete(id ID) (bool, error) {
 	}
 
 	if err := t.save(); err != nil {
-		return false, err
+		return zero, err
 	}
-	return true, nil
+	return deleted, nil
 }
 
 // Update replaces an existing row (matched by ID) and persists the change.
@@ -126,7 +129,7 @@ func (t *Table[T]) Update(row T) (T, error) {
 		return zero, nil
 	}
 
-	prev := t.rows[idx].Clone()
+	prev := t.rows[idx]
 	t.rows[idx] = row
 	if err := t.save(); err != nil {
 		return zero, err
@@ -287,28 +290,6 @@ func (t *Table[T]) Append(row T) (err error) {
 	t.byID[id] = len(t.rows)
 	t.rows = append(t.rows, row)
 	return nil
-}
-
-// Replace atomically replaces all rows with the provided slice and rewrites the file.
-//
-// Returns an error if any row has a duplicate ID.
-// Use this for bulk updates or when row order needs to change.
-func (t *Table[T]) Replace(rows []T) error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
-	// Rebuild the index, checking for duplicates
-	byID := make(map[ID]int, len(rows))
-	for i, row := range rows {
-		id := row.GetID()
-		if _, exists := byID[id]; exists {
-			return fmt.Errorf("duplicate ID %s", id)
-		}
-		byID[id] = i
-	}
-	t.byID = byID
-	t.rows = rows
-	return t.save()
 }
 
 // saveSchemaHeaderLocked writes just the schema header as the first line. Caller must hold t.mu.

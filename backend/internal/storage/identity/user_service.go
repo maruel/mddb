@@ -332,7 +332,10 @@ func (s *UserService) LinkOAuthIdentity(userID jsonldb.ID, identity entity.OAuth
 	}
 
 	stored.Modified = time.Now()
-	return s.table.Replace(s.getAllFromCache())
+	if _, err := s.table.Update(stored); err != nil {
+		return err
+	}
+	return nil
 }
 
 // UpdateSettings updates user global settings.
@@ -352,15 +355,10 @@ func (s *UserService) UpdateSettings(id jsonldb.ID, settings entity.UserSettings
 	stored.Settings = settings
 	stored.Modified = time.Now()
 
-	return s.table.Replace(s.getAllFromCache())
-}
-
-func (s *UserService) getAllFromCache() []*userStorage {
-	rows := make([]*userStorage, 0, len(s.byID))
-	for _, v := range s.byID {
-		rows = append(rows, v)
+	if _, err := s.table.Update(stored); err != nil {
+		return err
 	}
-	return rows
+	return nil
 }
 
 // ListUsers returns all users (domain models without runtime fields).

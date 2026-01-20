@@ -628,23 +628,14 @@ func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *entity.D
 		return fmt.Errorf("failed to load database: %w", err)
 	}
 
-	// Find and update the record
-	var updated []*entity.DataRecord
-	found := false
-	for r := range table.Iter(0) {
-		if r.ID == record.ID {
-			updated = append(updated, record)
-			found = true
-		} else {
-			updated = append(updated, r)
-		}
+	prev, err := table.Update(record)
+	if err != nil {
+		return fmt.Errorf("failed to update record: %w", err)
 	}
-
-	if !found {
+	if prev == nil {
 		return errRecordNotFound
 	}
-
-	return table.Replace(updated)
+	return nil
 }
 
 // DeleteRecord deletes a record from a database using jsonldb abstraction.
@@ -661,22 +652,14 @@ func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID jsonldb.ID) error 
 		return fmt.Errorf("failed to load database: %w", err)
 	}
 
-	// Find and remove the record
-	var updated []*entity.DataRecord
-	found := false
-	for r := range table.Iter(0) {
-		if r.ID == recordID {
-			found = true
-		} else {
-			updated = append(updated, r)
-		}
+	deleted, err := table.Delete(recordID)
+	if err != nil {
+		return fmt.Errorf("failed to delete record: %w", err)
 	}
-
-	if !found {
+	if deleted == nil {
 		return errRecordNotFound
 	}
-
-	return table.Replace(updated)
+	return nil
 }
 
 func (fs *FileStore) databaseRecordsFile(orgID, id jsonldb.ID) string {

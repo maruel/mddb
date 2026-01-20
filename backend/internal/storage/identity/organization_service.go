@@ -162,7 +162,10 @@ func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings entity.Orga
 	}
 
 	org.Settings = settings
-	return s.table.Replace(s.getAllFromCache())
+	if _, err := s.table.Update(org); err != nil {
+		return err
+	}
+	return nil
 }
 
 // UpdateOnboarding updates the onboarding state of an organization.
@@ -177,15 +180,10 @@ func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state entity.Onboa
 
 	org.Onboarding = state
 	org.Onboarding.UpdatedAt = time.Now()
-	return s.table.Replace(s.getAllFromCache())
-}
-
-func (s *OrganizationService) getAllFromCache() []*entity.Organization {
-	rows := make([]*entity.Organization, 0, len(s.byID))
-	for _, v := range s.byID {
-		rows = append(rows, v)
+	if _, err := s.table.Update(org); err != nil {
+		return err
 	}
-	return rows
+	return nil
 }
 
 // RootDir returns the root directory of the organization service.
