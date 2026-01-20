@@ -9,36 +9,28 @@ import (
 )
 
 func TestGetOrgID(t *testing.T) {
-	tests := []struct {
-		name     string
-		ctx      context.Context
-		expected jsonldb.ID
-	}{
-		{
-			name:     "context with org ID",
-			ctx:      context.WithValue(context.Background(), OrgKey, jsonldb.ID(123)),
-			expected: jsonldb.ID(123),
-		},
-		{
-			name:     "context without org ID",
-			ctx:      context.Background(),
-			expected: jsonldb.ID(0),
-		},
-		{
-			name:     "context with wrong type value",
-			ctx:      context.WithValue(context.Background(), OrgKey, "not an ID"),
-			expected: jsonldb.ID(0),
-		},
-	}
+	t.Run("context with org ID", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), OrgKey, jsonldb.ID(123))
+		got := GetOrgID(ctx)
+		if got != jsonldb.ID(123) {
+			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(123))
+		}
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := GetOrgID(tt.ctx)
-			if got != tt.expected {
-				t.Errorf("GetOrgID() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
+	t.Run("context without org ID", func(t *testing.T) {
+		got := GetOrgID(context.Background())
+		if got != jsonldb.ID(0) {
+			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(0))
+		}
+	})
+
+	t.Run("context with wrong type value", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), OrgKey, "not an ID")
+		got := GetOrgID(ctx)
+		if got != jsonldb.ID(0) {
+			t.Errorf("GetOrgID() = %v, want %v", got, jsonldb.ID(0))
+		}
+	})
 }
 
 func TestDataRecord(t *testing.T) {
@@ -89,31 +81,19 @@ func TestDataRecord(t *testing.T) {
 	})
 
 	t.Run("Validate", func(t *testing.T) {
-		tests := []struct {
-			name    string
-			record  *DataRecord
-			wantErr bool
-		}{
-			{
-				name:    "valid record",
-				record:  &DataRecord{ID: jsonldb.ID(1)},
-				wantErr: false,
-			},
-			{
-				name:    "zero ID",
-				record:  &DataRecord{ID: jsonldb.ID(0)},
-				wantErr: true,
-			},
-		}
+		t.Run("valid", func(t *testing.T) {
+			record := &DataRecord{ID: jsonldb.ID(1)}
+			if err := record.Validate(); err != nil {
+				t.Errorf("Validate() unexpected error: %v", err)
+			}
+		})
 
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				err := tt.record.Validate()
-				if (err != nil) != tt.wantErr {
-					t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
-				}
-			})
-		}
+		t.Run("zero ID", func(t *testing.T) {
+			record := &DataRecord{ID: jsonldb.ID(0)}
+			if err := record.Validate(); err == nil {
+				t.Error("Validate() expected error for zero ID")
+			}
+		})
 	})
 }
 
@@ -146,81 +126,81 @@ func TestMembership(t *testing.T) {
 	})
 
 	t.Run("Validate", func(t *testing.T) {
-		tests := []struct {
-			name       string
-			membership *Membership
-			wantErr    bool
-			errContain string
-		}{
-			{
-				name: "valid membership",
-				membership: &Membership{
-					ID:             jsonldb.ID(1),
-					UserID:         jsonldb.ID(2),
-					OrganizationID: jsonldb.ID(3),
-					Role:           UserRoleAdmin,
-				},
-				wantErr: false,
-			},
-			{
-				name: "zero ID",
-				membership: &Membership{
-					ID:             jsonldb.ID(0),
-					UserID:         jsonldb.ID(2),
-					OrganizationID: jsonldb.ID(3),
-					Role:           UserRoleAdmin,
-				},
-				wantErr:    true,
-				errContain: "id is required",
-			},
-			{
-				name: "zero UserID",
-				membership: &Membership{
-					ID:             jsonldb.ID(1),
-					UserID:         jsonldb.ID(0),
-					OrganizationID: jsonldb.ID(3),
-					Role:           UserRoleAdmin,
-				},
-				wantErr:    true,
-				errContain: "user_id is required",
-			},
-			{
-				name: "zero OrganizationID",
-				membership: &Membership{
-					ID:             jsonldb.ID(1),
-					UserID:         jsonldb.ID(2),
-					OrganizationID: jsonldb.ID(0),
-					Role:           UserRoleAdmin,
-				},
-				wantErr:    true,
-				errContain: "organization_id is required",
-			},
-			{
-				name: "empty Role",
-				membership: &Membership{
-					ID:             jsonldb.ID(1),
-					UserID:         jsonldb.ID(2),
-					OrganizationID: jsonldb.ID(3),
-					Role:           "",
-				},
-				wantErr:    true,
-				errContain: "role is required",
-			},
-		}
+		t.Run("valid", func(t *testing.T) {
+			m := &Membership{
+				ID:             jsonldb.ID(1),
+				UserID:         jsonldb.ID(2),
+				OrganizationID: jsonldb.ID(3),
+				Role:           UserRoleAdmin,
+			}
+			if err := m.Validate(); err != nil {
+				t.Errorf("Validate() unexpected error: %v", err)
+			}
+		})
 
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				err := tt.membership.Validate()
-				if (err != nil) != tt.wantErr {
-					t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
-				}
-				if tt.wantErr && err != nil && tt.errContain != "" {
-					if got := err.Error(); got != tt.errContain {
-						t.Errorf("Validate() error = %q, want containing %q", got, tt.errContain)
-					}
-				}
-			})
-		}
+		t.Run("zero ID", func(t *testing.T) {
+			m := &Membership{
+				ID:             jsonldb.ID(0),
+				UserID:         jsonldb.ID(2),
+				OrganizationID: jsonldb.ID(3),
+				Role:           UserRoleAdmin,
+			}
+			err := m.Validate()
+			if err == nil {
+				t.Error("Validate() expected error for zero ID")
+			}
+			if err.Error() != "id is required" {
+				t.Errorf("Validate() error = %q, want %q", err.Error(), "id is required")
+			}
+		})
+
+		t.Run("zero UserID", func(t *testing.T) {
+			m := &Membership{
+				ID:             jsonldb.ID(1),
+				UserID:         jsonldb.ID(0),
+				OrganizationID: jsonldb.ID(3),
+				Role:           UserRoleAdmin,
+			}
+			err := m.Validate()
+			if err == nil {
+				t.Error("Validate() expected error for zero UserID")
+			}
+			if err.Error() != "user_id is required" {
+				t.Errorf("Validate() error = %q, want %q", err.Error(), "user_id is required")
+			}
+		})
+
+		t.Run("zero OrganizationID", func(t *testing.T) {
+			m := &Membership{
+				ID:             jsonldb.ID(1),
+				UserID:         jsonldb.ID(2),
+				OrganizationID: jsonldb.ID(0),
+				Role:           UserRoleAdmin,
+			}
+			err := m.Validate()
+			if err == nil {
+				t.Error("Validate() expected error for zero OrganizationID")
+			}
+			if err.Error() != "organization_id is required" {
+				t.Errorf("Validate() error = %q, want %q", err.Error(), "organization_id is required")
+			}
+		})
+
+		t.Run("empty Role", func(t *testing.T) {
+			m := &Membership{
+				ID:             jsonldb.ID(1),
+				UserID:         jsonldb.ID(2),
+				OrganizationID: jsonldb.ID(3),
+				Role:           "",
+			}
+			err := m.Validate()
+			if err == nil {
+				t.Error("Validate() expected error for empty Role")
+			}
+			if err.Error() != "role is required" {
+				t.Errorf("Validate() error = %q, want %q", err.Error(), "role is required")
+			}
+		})
 	})
 }
 
@@ -276,36 +256,26 @@ func TestOrganization(t *testing.T) {
 	})
 
 	t.Run("Validate", func(t *testing.T) {
-		tests := []struct {
-			name    string
-			org     *Organization
-			wantErr bool
-		}{
-			{
-				name:    "valid organization",
-				org:     &Organization{ID: jsonldb.ID(1), Name: "Test Org"},
-				wantErr: false,
-			},
-			{
-				name:    "zero ID",
-				org:     &Organization{ID: jsonldb.ID(0), Name: "Test Org"},
-				wantErr: true,
-			},
-			{
-				name:    "empty Name",
-				org:     &Organization{ID: jsonldb.ID(1), Name: ""},
-				wantErr: true,
-			},
-		}
+		t.Run("valid", func(t *testing.T) {
+			o := &Organization{ID: jsonldb.ID(1), Name: "Test Org"}
+			if err := o.Validate(); err != nil {
+				t.Errorf("Validate() unexpected error: %v", err)
+			}
+		})
 
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				err := tt.org.Validate()
-				if (err != nil) != tt.wantErr {
-					t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
-				}
-			})
-		}
+		t.Run("zero ID", func(t *testing.T) {
+			o := &Organization{ID: jsonldb.ID(0), Name: "Test Org"}
+			if err := o.Validate(); err == nil {
+				t.Error("Validate() expected error for zero ID")
+			}
+		})
+
+		t.Run("empty Name", func(t *testing.T) {
+			o := &Organization{ID: jsonldb.ID(1), Name: ""}
+			if err := o.Validate(); err == nil {
+				t.Error("Validate() expected error for empty Name")
+			}
+		})
 	})
 }
 
@@ -339,57 +309,49 @@ func TestGitRemote(t *testing.T) {
 	})
 
 	t.Run("Validate", func(t *testing.T) {
-		tests := []struct {
-			name    string
-			remote  *GitRemote
-			wantErr bool
-		}{
-			{
-				name: "valid remote",
-				remote: &GitRemote{
-					ID:             jsonldb.ID(1),
-					OrganizationID: jsonldb.ID(2),
-					URL:            "https://github.com/test/repo",
-				},
-				wantErr: false,
-			},
-			{
-				name: "zero ID",
-				remote: &GitRemote{
-					ID:             jsonldb.ID(0),
-					OrganizationID: jsonldb.ID(2),
-					URL:            "https://github.com/test/repo",
-				},
-				wantErr: true,
-			},
-			{
-				name: "zero OrganizationID",
-				remote: &GitRemote{
-					ID:             jsonldb.ID(1),
-					OrganizationID: jsonldb.ID(0),
-					URL:            "https://github.com/test/repo",
-				},
-				wantErr: true,
-			},
-			{
-				name: "empty URL",
-				remote: &GitRemote{
-					ID:             jsonldb.ID(1),
-					OrganizationID: jsonldb.ID(2),
-					URL:            "",
-				},
-				wantErr: true,
-			},
-		}
+		t.Run("valid", func(t *testing.T) {
+			r := &GitRemote{
+				ID:             jsonldb.ID(1),
+				OrganizationID: jsonldb.ID(2),
+				URL:            "https://github.com/test/repo",
+			}
+			if err := r.Validate(); err != nil {
+				t.Errorf("Validate() unexpected error: %v", err)
+			}
+		})
 
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				err := tt.remote.Validate()
-				if (err != nil) != tt.wantErr {
-					t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
-				}
-			})
-		}
+		t.Run("zero ID", func(t *testing.T) {
+			r := &GitRemote{
+				ID:             jsonldb.ID(0),
+				OrganizationID: jsonldb.ID(2),
+				URL:            "https://github.com/test/repo",
+			}
+			if err := r.Validate(); err == nil {
+				t.Error("Validate() expected error for zero ID")
+			}
+		})
+
+		t.Run("zero OrganizationID", func(t *testing.T) {
+			r := &GitRemote{
+				ID:             jsonldb.ID(1),
+				OrganizationID: jsonldb.ID(0),
+				URL:            "https://github.com/test/repo",
+			}
+			if err := r.Validate(); err == nil {
+				t.Error("Validate() expected error for zero OrganizationID")
+			}
+		})
+
+		t.Run("empty URL", func(t *testing.T) {
+			r := &GitRemote{
+				ID:             jsonldb.ID(1),
+				OrganizationID: jsonldb.ID(2),
+				URL:            "",
+			}
+			if err := r.Validate(); err == nil {
+				t.Error("Validate() expected error for empty URL")
+			}
+		})
 	})
 }
 
@@ -423,71 +385,65 @@ func TestInvitation(t *testing.T) {
 	})
 
 	t.Run("Validate", func(t *testing.T) {
-		tests := []struct {
-			name    string
-			inv     *Invitation
-			wantErr bool
-		}{
-			{
-				name: "valid invitation",
-				inv: &Invitation{
-					ID:             jsonldb.ID(1),
-					Email:          "test@example.com",
-					OrganizationID: jsonldb.ID(2),
-					Token:          "abc123",
-				},
-				wantErr: false,
-			},
-			{
-				name: "zero ID",
-				inv: &Invitation{
-					ID:             jsonldb.ID(0),
-					Email:          "test@example.com",
-					OrganizationID: jsonldb.ID(2),
-					Token:          "abc123",
-				},
-				wantErr: true,
-			},
-			{
-				name: "empty Email",
-				inv: &Invitation{
-					ID:             jsonldb.ID(1),
-					Email:          "",
-					OrganizationID: jsonldb.ID(2),
-					Token:          "abc123",
-				},
-				wantErr: true,
-			},
-			{
-				name: "zero OrganizationID",
-				inv: &Invitation{
-					ID:             jsonldb.ID(1),
-					Email:          "test@example.com",
-					OrganizationID: jsonldb.ID(0),
-					Token:          "abc123",
-				},
-				wantErr: true,
-			},
-			{
-				name: "empty Token",
-				inv: &Invitation{
-					ID:             jsonldb.ID(1),
-					Email:          "test@example.com",
-					OrganizationID: jsonldb.ID(2),
-					Token:          "",
-				},
-				wantErr: true,
-			},
-		}
+		t.Run("valid", func(t *testing.T) {
+			inv := &Invitation{
+				ID:             jsonldb.ID(1),
+				Email:          "test@example.com",
+				OrganizationID: jsonldb.ID(2),
+				Token:          "abc123",
+			}
+			if err := inv.Validate(); err != nil {
+				t.Errorf("Validate() unexpected error: %v", err)
+			}
+		})
 
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				err := tt.inv.Validate()
-				if (err != nil) != tt.wantErr {
-					t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
-				}
-			})
-		}
+		t.Run("zero ID", func(t *testing.T) {
+			inv := &Invitation{
+				ID:             jsonldb.ID(0),
+				Email:          "test@example.com",
+				OrganizationID: jsonldb.ID(2),
+				Token:          "abc123",
+			}
+			if err := inv.Validate(); err == nil {
+				t.Error("Validate() expected error for zero ID")
+			}
+		})
+
+		t.Run("empty Email", func(t *testing.T) {
+			inv := &Invitation{
+				ID:             jsonldb.ID(1),
+				Email:          "",
+				OrganizationID: jsonldb.ID(2),
+				Token:          "abc123",
+			}
+			if err := inv.Validate(); err == nil {
+				t.Error("Validate() expected error for empty Email")
+			}
+		})
+
+		t.Run("zero OrganizationID", func(t *testing.T) {
+			inv := &Invitation{
+				ID:             jsonldb.ID(1),
+				Email:          "test@example.com",
+				OrganizationID: jsonldb.ID(0),
+				Token:          "abc123",
+			}
+			if err := inv.Validate(); err == nil {
+				t.Error("Validate() expected error for zero OrganizationID")
+			}
+		})
+
+		t.Run("empty Token", func(t *testing.T) {
+			inv := &Invitation{
+				ID:             jsonldb.ID(1),
+				Email:          "test@example.com",
+				OrganizationID: jsonldb.ID(2),
+				Token:          "",
+			}
+			if err := inv.Validate(); err == nil {
+				t.Error("Validate() expected error for empty Token")
+			}
+		})
 	})
 }
 
