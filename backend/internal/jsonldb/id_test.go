@@ -44,15 +44,15 @@ func TestID(t *testing.T) {
 			}
 		})
 
-		t.Run("counter increment within same millisecond", func(t *testing.T) {
-			// Generate multiple IDs quickly to trigger same-millisecond logic
+		t.Run("slice increment within same interval", func(t *testing.T) {
+			// Generate multiple IDs quickly to trigger same-interval logic
 			id1 := NewID()
 			id2 := NewID()
 			id3 := NewID()
 
 			// All should be unique and ordered
 			if id1 >= id2 || id2 >= id3 {
-				t.Error("IDs not properly ordered within same millisecond")
+				t.Error("IDs not properly ordered within same 10µs interval")
 			}
 		})
 	})
@@ -294,10 +294,11 @@ func TestID(t *testing.T) {
 			after := time.Now()
 
 			idTime := id.Time()
-			if idTime.Before(before.Truncate(time.Millisecond)) {
+			// Truncate to 10µs resolution
+			if idTime.Before(before.Truncate(10 * time.Microsecond)) {
 				t.Errorf("ID time %v is before creation time %v", idTime, before)
 			}
-			if idTime.After(after.Add(time.Millisecond)) {
+			if idTime.After(after.Add(10 * time.Microsecond)) {
 				t.Errorf("ID time %v is after creation time %v", idTime, after)
 			}
 		})
@@ -305,8 +306,8 @@ func TestID(t *testing.T) {
 		t.Run("zero ID time", func(t *testing.T) {
 			id := ID(0)
 			idTime := id.Time()
-			// Zero ID should return epoch time
-			expectedEpoch := time.UnixMilli(epoch)
+			// Zero ID should return epoch time (2026-01-01 00:00:00 UTC)
+			expectedEpoch := time.UnixMicro(epoch * 10)
 			if !idTime.Equal(expectedEpoch) {
 				t.Errorf("Zero ID time = %v, want epoch %v", idTime, expectedEpoch)
 			}
@@ -336,7 +337,7 @@ func TestID(t *testing.T) {
 		})
 	})
 
-	t.Run("RandomBits", func(t *testing.T) {
+	t.Run("Slice", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			tests := []struct {
 				name string
@@ -344,26 +345,27 @@ func TestID(t *testing.T) {
 				want uint16
 			}{
 				{"zero ID", 0, 0},
-				{"constructed ID random bits 0", newIDFromParts(0, 0, 0), 0},
-				{"constructed ID random bits 1234", newIDFromParts(0, 1234, 0), 1234},
-				{"constructed ID random bits max", newIDFromParts(0, 0xFFFF, 0), 0xFFFF},
+				{"constructed ID slice 0", newIDFromParts(0, 0, 0), 0},
+				{"constructed ID slice 1234", newIDFromParts(0, 1234, 0), 1234},
+				{"constructed ID slice max", newIDFromParts(0, sliceMask, 0), sliceMask},
 			}
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					if got := tt.id.RandomBits(); got != tt.want {
-						t.Errorf("RandomBits() = %d, want %d", got, tt.want)
+					if got := tt.id.Slice(); got != tt.want {
+						t.Errorf("Slice() = %d, want %d", got, tt.want)
 					}
 				})
 			}
 		})
 
-		t.Run("generated ID has non-zero random bits", func(t *testing.T) {
-			// Generate several IDs and check that random bits are populated
-			for i := 0; i < 10; i++ {
-				id := NewID()
-				// Random bits should be non-zero (extremely unlikely to be zero)
-				_ = id.RandomBits() // Just verify it doesn't panic
+		t.Run("slice increments within interval", func(t *testing.T) {
+			// Generate several IDs quickly and verify slice increments
+			id1 := NewID()
+			id2 := NewID()
+			// If in same interval, slice should increment
+			if id1.Time().Equal(id2.Time()) && id2.Slice() != id1.Slice()+1 {
+				t.Errorf("Slice not incrementing: id1.Slice()=%d, id2.Slice()=%d", id1.Slice(), id2.Slice())
 			}
 		})
 	})

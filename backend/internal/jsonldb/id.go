@@ -1,8 +1,6 @@
 package jsonldb
 
 import (
-	"crypto/rand"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -10,22 +8,27 @@ import (
 )
 
 // ID structure (64 bits):
-// - Bit 63: sign (always 0, keeps int64 positive)
-// - Bits 62-20: milliseconds since epoch (43 bits = ~278 years)
-// - Bits 19-4: random (16 bits = 65536 values per ms)
-// - Bits 3-0: version (4 bits)
-
+//   - Bit 63: sign (always 0, keeps int64 positive)
+//   - Bits 62-15: 10µs intervals since epoch (48 bits)
+//   - Bits 14-4: slice (11 bits = 2048 values per 10µs)
+//   - Bits 3-0: version (4 bits)
+//
+// Time span: ~89 years from epoch (until ~2115).
+// Max throughput: ~204.8M IDs/sec (2048 per 10µs × 100,000 intervals/sec).
 const (
-	// epoch is 2026-01-01 00:00:00 UTC in milliseconds.
-	epoch int64 = 1767225600000
+	// epoch is 2026-01-01 00:00:00 UTC in 10µs intervals.
+	epoch int64 = 176722560000000
 
 	// idVersion is the current ID schema version.
 	// Bump this when the ID format changes in a breaking way.
-	idVersion uint64 = 1
+	idVersion uint64 = 2
 
 	// idEncodedLen is the fixed length of encoded IDs.
 	// 64 bits / 6 bits per char = 10.67, rounded up to 11.
 	idEncodedLen = 11
+
+	// sliceMask is the bitmask for extracting the 11-bit slice value.
+	sliceMask = 0x7FF
 )
 
 // sortableAlphabet is a base64 alphabet in ASCII order for lexicographic sorting.
@@ -46,50 +49,45 @@ func init() {
 
 // ID is a time-sortable 64-bit identifier inspired by LUCI IDs.
 //
-// IDs encode a millisecond timestamp, random bits for collision avoidance,
-// and a version number. They are lexicographically sortable when encoded
-// as strings, making them suitable for use as database keys and filenames.
+// IDs encode a 10µs timestamp, a monotonically increasing slice for collision
+// avoidance, and a version number. They are lexicographically sortable when
+// encoded as strings, making them suitable for use as database keys and filenames.
 // The zero value (0) represents an invalid/unset ID.
 type ID uint64
 
 var (
-	idMu      sync.Mutex
-	idLastMs  int64
-	idCounter uint16
+	idMu        sync.Mutex
+	idLastT10us int64
+	idSlice     uint16
 )
 
 // NewID generates a new time-based ID.
 //
 // IDs are guaranteed to be unique and monotonically increasing within a process.
-// Multiple calls in the same millisecond use an incrementing counter.
+// Multiple calls in the same 10µs interval use an incrementing slice counter.
 func NewID() ID {
 	idMu.Lock()
 	defer idMu.Unlock()
 
-	ms := max(0, time.Now().UnixMilli()-epoch)
+	t10us := max(0, time.Now().UnixMicro()/10-epoch)
 
-	var randBits uint16
-	if ms == idLastMs {
-		// Same millisecond: increment counter
-		idCounter++
-		randBits = idCounter
+	if t10us == idLastT10us {
+		// Same 10µs interval: increment slice
+		idSlice++
 	} else {
-		// New millisecond: reset with random value
-		idLastMs = ms
-		var b [2]byte
-		_, _ = rand.Read(b[:])
-		idCounter = binary.BigEndian.Uint16(b[:])
-		randBits = idCounter
+		// New interval: reset slice to 0
+		idLastT10us = t10us
+		idSlice = 0
 	}
 
-	return newIDFromParts(uint64(ms), uint64(randBits), idVersion)
+	return newIDFromParts(uint64(t10us), uint64(idSlice), idVersion)
 }
 
-func newIDFromParts(ms, randBits, version uint64) ID {
-	// ms: 43 bits, shifted to bits 62-20
-	// randBits: 16 bits, shifted to bits 19-4
+func newIDFromParts(t10us, slice, version uint64) ID {
+	// t10us: 48 bits, shifted to bits 62-15
+	// slice: 11 bits, shifted to bits 14-4
 	// version: 4 bits, in bits 3-0
-	return ID((ms << 20) | (randBits << 4) | (version & 0xF))
+	return ID((t10us << 15) | ((slice & sliceMask) << 4) | (version & 0xF))
 }
 
 // String returns a big-endian base64 encoding using a sortable alphabet.
@@ -175,8 +173,8 @@ func DecodeID(s string) (ID, error) {
 
 // Time extracts the timestamp from an ID.
 func (id ID) Time() time.Time {
-	ms := int64(id>>20) + epoch
-	return time.UnixMilli(ms)
+	t10us := int64(id>>15) + epoch
+	return time.UnixMicro(t10us * 10)
 }
 
 // Version extracts the version bits from an ID.
@@ -184,9 +182,9 @@ func (id ID) Version() int {
 	return int(id & 0xF)
 }
 
-// RandomBits extracts the random/counter bits from an ID.
-func (id ID) RandomBits() uint16 {
-	return uint16((id >> 4) & 0xFFFF)
+// Slice extracts the slice counter from an ID.
+func (id ID) Slice() uint16 {
+	return uint16((id >> 4) & sliceMask)
 }
 
 // Compare returns -1 if id < other, 0 if equal, 1 if id > other.
