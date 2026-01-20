@@ -34,18 +34,18 @@ const (
 
 // SelectOption represents an option for select/multi_select properties.
 type SelectOption struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Color string `json:"color,omitempty"`
+	ID    string `json:"id" jsonschema:"description=Unique option identifier"`
+	Name  string `json:"name" jsonschema:"description=Display name of the option"`
+	Color string `json:"color,omitempty" jsonschema:"description=Color for visual distinction"`
 }
 
 // Property represents a database property (column) with its configuration.
 type Property struct {
-	Name     string       `json:"name"`
-	Type     PropertyType `json:"type"`
-	Required bool         `json:"required,omitempty"`
+	Name     string       `json:"name" jsonschema:"description=Property name (column header)"`
+	Type     PropertyType `json:"type" jsonschema:"description=Property type (text/number/select/etc)"`
+	Required bool         `json:"required,omitempty" jsonschema:"description=Whether this property is required"`
 
 	// Options contains the allowed values for select and multi_select properties.
 	// Each option has an ID (used in storage), name (display), and optional color.
-	Options []SelectOption `json:"options,omitempty"`
+	Options []SelectOption `json:"options,omitempty" jsonschema:"description=Allowed values for select properties"`
 }

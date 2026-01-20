@@ -43,17 +43,17 @@ func GetOrgID(ctx context.Context) jsonldb.ID {
 
 // Node represents the unified content entity (can be a Page, a Database, or both)
 type Node struct {
-	ID         jsonldb.ID `json:"id"`
-	ParentID   jsonldb.ID `json:"parent_id,omitempty"` // For hierarchical structure
-	Title      string     `json:"title"`
-	Content    string     `json:"content,omitempty"`    // Markdown content (Page part)
-	Properties []Property `json:"properties,omitempty"` // Schema (Database part)
-	Created    time.Time  `json:"created"`
-	Modified   time.Time  `json:"modified"`
-	Tags       []string   `json:"tags,omitempty"`
-	FaviconURL string     `json:"favicon_url,omitempty"`
-	Type       NodeType   `json:"type"`               // document, database, or both
-	Children   []*Node    `json:"children,omitempty"` // Nested nodes
+	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique node identifier"`
+	ParentID   jsonldb.ID `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
+	Title      string     `json:"title" jsonschema:"description=Node title"`
+	Content    string     `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
+	Properties []Property `json:"properties,omitempty" jsonschema:"description=Schema definition (Database part)"`
+	Created    time.Time  `json:"created" jsonschema:"description=Node creation timestamp"`
+	Modified   time.Time  `json:"modified" jsonschema:"description=Last modification timestamp"`
+	Tags       []string   `json:"tags,omitempty" jsonschema:"description=Node tags for categorization"`
+	FaviconURL string     `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
+	Type       NodeType   `json:"type" jsonschema:"description=Node type (document/database/hybrid)"`
+	Children   []*Node    `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
 }
 
 // NodeType defines what features are enabled for a node
@@ -326,9 +326,9 @@ func (i *Invitation) Validate() error {
 
 // Session represents an active user session.
 type Session struct {
-	ID        jsonldb.ID `json:"id"`
-	UserID    jsonldb.ID `json:"user_id"`
-	ExpiresAt time.Time  `json:"expires_at"`
+	ID        jsonldb.ID `json:"id" jsonschema:"description=Unique session identifier"`
+	UserID    jsonldb.ID `json:"user_id" jsonschema:"description=User this session belongs to"`
+	ExpiresAt time.Time  `json:"expires_at" jsonschema:"description=Session expiration timestamp"`
 }
 
 // ContextKey is a custom type for context keys to avoid collisions.
@@ -344,72 +344,72 @@ const (
 // Asset represents an uploaded file/image associated with a node.
 // Asset IDs are filenames, not generated IDs, hence the string type.
 type Asset struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	MimeType string    `json:"mime_type"`
-	Size     int64     `json:"size"`
-	Created  time.Time `json:"created"`
-	Path     string    `json:"path"`
+	ID       string    `json:"id" jsonschema:"description=Asset identifier (filename)"`
+	Name     string    `json:"name" jsonschema:"description=Original filename"`
+	MimeType string    `json:"mime_type" jsonschema:"description=MIME type of the asset"`
+	Size     int64     `json:"size" jsonschema:"description=File size in bytes"`
+	Created  time.Time `json:"created" jsonschema:"description=Upload timestamp"`
+	Path     string    `json:"path" jsonschema:"description=Storage path on disk"`
 }
 
 // Legacy types for compatibility during migration
 
 // Page is kept for backward compatibility with existing storage methods
 type Page struct {
-	ID         jsonldb.ID `json:"id"`
-	Title      string     `json:"title"`
-	Content    string     `json:"content"`
-	Created    time.Time  `json:"created"`
-	Modified   time.Time  `json:"modified"`
-	Tags       []string   `json:"tags,omitempty"`
-	Path       string     `json:"path"`
-	FaviconURL string     `json:"favicon_url,omitempty"`
+	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique page identifier"`
+	Title      string     `json:"title" jsonschema:"description=Page title"`
+	Content    string     `json:"content" jsonschema:"description=Markdown content"`
+	Created    time.Time  `json:"created" jsonschema:"description=Page creation timestamp"`
+	Modified   time.Time  `json:"modified" jsonschema:"description=Last modification timestamp"`
+	Tags       []string   `json:"tags,omitempty" jsonschema:"description=Page tags"`
+	Path       string     `json:"path" jsonschema:"description=Storage path"`
+	FaviconURL string     `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
 }
 
 // Database represents a structured database with schema and metadata.
 type Database struct {
-	ID         jsonldb.ID `json:"id"`
-	Title      string     `json:"title"`
-	Properties []Property `json:"properties"`
-	Created    time.Time  `json:"created"`
-	Modified   time.Time  `json:"modified"`
-	Version    string     `json:"version"` // JSONL format version (e.g., "1.0")
+	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique database identifier"`
+	Title      string     `json:"title" jsonschema:"description=Database title"`
+	Properties []Property `json:"properties" jsonschema:"description=Schema definition (columns)"`
+	Created    time.Time  `json:"created" jsonschema:"description=Database creation timestamp"`
+	Modified   time.Time  `json:"modified" jsonschema:"description=Last modification timestamp"`
+	Version    string     `json:"version" jsonschema:"description=JSONL format version"`
 }
 
 // Commit represents a commit in git history.
 type Commit struct {
-	Hash      string    `json:"hash"`
-	Message   string    `json:"message"`
-	Timestamp time.Time `json:"timestamp"`
+	Hash      string    `json:"hash" jsonschema:"description=Git commit hash"`
+	Message   string    `json:"message" jsonschema:"description=Commit message"`
+	Timestamp time.Time `json:"timestamp" jsonschema:"description=Commit timestamp"`
 }
 
 // CommitDetail contains full commit information.
 type CommitDetail struct {
-	Hash      string    `json:"hash"`
-	Timestamp time.Time `json:"timestamp"`
-	Author    string    `json:"author"`
-	Email     string    `json:"email"`
-	Subject   string    `json:"subject"`
-	Body      string    `json:"body"`
+	Hash      string    `json:"hash" jsonschema:"description=Git commit hash"`
+	Timestamp time.Time `json:"timestamp" jsonschema:"description=Commit timestamp"`
+	Author    string    `json:"author" jsonschema:"description=Commit author name"`
+	Email     string    `json:"email" jsonschema:"description=Commit author email"`
+	Subject   string    `json:"subject" jsonschema:"description=Commit subject line"`
+	Body      string    `json:"body" jsonschema:"description=Commit body message"`
 }
 
 // SearchResult represents a single search result
 type SearchResult struct {
-	Type     string            `json:"type"` // "page" or "record"
-	NodeID   jsonldb.ID        `json:"node_id"`
-	RecordID jsonldb.ID        `json:"record_id,omitempty"`
-	Title    string            `json:"title"`
-	Snippet  string            `json:"snippet"`
-	Score    float64           `json:"score"`
-	Matches  map[string]string `json:"matches"`
-	Modified time.Time         `json:"modified"`
+	Type     string            `json:"type" jsonschema:"description=Result type (page or record)"`
+	NodeID   jsonldb.ID        `json:"node_id" jsonschema:"description=Node containing the result"`
+	RecordID jsonldb.ID        `json:"record_id,omitempty" jsonschema:"description=Record ID if result is a database record"`
+	Title    string            `json:"title" jsonschema:"description=Title of the matched item"`
+	Snippet  string            `json:"snippet" jsonschema:"description=Text snippet with match context"`
+	Score    float64           `json:"score" jsonschema:"description=Relevance score"`
+	Matches  map[string]string `json:"matches" jsonschema:"description=Matched fields and their values"`
+	Modified time.Time         `json:"modified" jsonschema:"description=Last modification timestamp"`
 }
 
 // SearchOptions defines parameters for a search
 type SearchOptions struct {
-	Query       string `json:"query"`
-	Limit       int    `json:"limit,omitempty"`
-	MatchTitle  bool   `json:"match_title,omitempty"`
-	MatchBody   bool   `json:"match_body,omitempty"`
-	MatchFields bool   `json:"match_fields,omitempty"`
+	Query       string `json:"query" jsonschema:"description=Search query string"`
+	Limit       int    `json:"limit,omitempty" jsonschema:"description=Maximum number of results"`
+	MatchTitle  bool   `json:"match_title,omitempty" jsonschema:"description=Search in titles"`
+	MatchBody   bool   `json:"match_body,omitempty" jsonschema:"description=Search in body content"`
+	MatchFields bool   `json:"match_fields,omitempty" jsonschema:"description=Search in database fields"`
 }
