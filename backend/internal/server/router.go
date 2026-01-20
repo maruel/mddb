@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
@@ -19,7 +20,8 @@ import (
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
-func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, remoteService *storage.GitRemoteService, jwtSecret, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
+// baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
+func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, remoteService *storage.GitRemoteService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
 	cache := storage.NewCache()
 	mux := &http.ServeMux{}
 	ph := handlers.NewPageHandler(fileStore, gitService, cache, orgService)
@@ -62,11 +64,12 @@ func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, use
 	// OAuth endpoints
 	if (googleClientID != "" && googleClientSecret != "") || (msClientID != "" && msClientSecret != "") {
 		oh := handlers.NewOAuthHandler(userService, orgService, authh)
+		base := strings.TrimRight(baseURL, "/")
 		if googleClientID != "" && googleClientSecret != "" {
-			oh.AddProvider("google", googleClientID, googleClientSecret, "/api/auth/oauth/google/callback")
+			oh.AddProvider("google", googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")
 		}
 		if msClientID != "" && msClientSecret != "" {
-			oh.AddProvider("microsoft", msClientID, msClientSecret, "/api/auth/oauth/microsoft/callback")
+			oh.AddProvider("microsoft", msClientID, msClientSecret, base+"/api/auth/oauth/microsoft/callback")
 		}
 		mux.HandleFunc("GET /api/auth/oauth/{provider}", oh.LoginRedirect)
 		mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", oh.Callback)

@@ -15,6 +15,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -41,6 +42,7 @@ func mainImpl() error {
 	port := flag.String("port", "8080", "Port to listen on")
 	dataDir := flag.String("data-dir", "./data", "Data directory")
 	logLevel := flag.String("log-level", "info", "Log level (debug, info, warn, error)")
+	baseURL := flag.String("base-url", "http://localhost", "Base URL for OAuth callbacks (e.g., https://example.com)")
 	googleClientID := flag.String("google-client-id", "", "Google OAuth client ID")
 	googleClientSecret := flag.String("google-client-secret", "", "Google OAuth client secret")
 	msClientID := flag.String("ms-client-id", "", "Microsoft OAuth client ID")
@@ -91,6 +93,11 @@ func mainImpl() error {
 			*logLevel = v
 		}
 	}
+	if !set["base-url"] {
+		if v := env["BASE_URL"]; v != "" {
+			*baseURL = v
+		}
+	}
 	if !set["google-client-id"] {
 		if v := env["GOOGLE_CLIENT_ID"]; v != "" {
 			*googleClientID = v
@@ -110,6 +117,12 @@ func mainImpl() error {
 		if v := env["MS_CLIENT_SECRET"]; v != "" {
 			*msClientSecret = v
 		}
+	}
+
+	// Append port to base URL if localhost and no port specified
+	if u, err := url.Parse(*baseURL); err == nil && u.Port() == "" && u.Hostname() == "localhost" {
+		u.Host = net.JoinHostPort(u.Hostname(), *port)
+		*baseURL = u.String()
 	}
 
 	if len(flag.Args()) > 0 {
@@ -173,7 +186,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:        addr,
-		Handler:     server.NewRouter(fileStore, gitService, userService, orgService, invService, memService, remoteService, jwtSecret, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
+		Handler:     server.NewRouter(fileStore, gitService, userService, orgService, invService, memService, remoteService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
 		BaseContext: func(_ net.Listener) context.Context { return ctx },
 	}
 
@@ -304,12 +317,30 @@ func runOnboarding(dataDir string) error {
 	jwtSecret, _ := utils.GenerateToken(32)
 	env["JWT_SECRET"] = jwtSecret
 
+	// Base URL
+	fmt.Println("\n--- Base URL Setup ---")
+	fmt.Println("The base URL is used for OAuth callback URLs.")
+	fmt.Println("If no port is specified, it will use the server's port automatically.")
+	fmt.Print("Base URL (default: http://localhost): ")
+	val, _ := reader.ReadString('\n')
+	baseURL := strings.TrimSpace(val)
+	if baseURL == "" {
+		baseURL = "http://localhost"
+	}
+	env["BASE_URL"] = baseURL
+	// For display purposes in onboarding, show with default port if localhost
+	displayBaseURL := baseURL
+	if u, err := url.Parse(baseURL); err == nil && u.Port() == "" && u.Hostname() == "localhost" {
+		u.Host = net.JoinHostPort(u.Hostname(), "8080")
+		displayBaseURL = u.String()
+	}
+
 	// Google OAuth
 	fmt.Println("\n--- Google OAuth Setup ---")
-	fmt.Println("To use Google login, create a project at https://console.cloud.google.com/")
-	fmt.Println("Configure an OAuth 2.0 Client ID with redirect URI: http://localhost:8080/api/auth/oauth/google/callback")
+	fmt.Println("To use Google login, create a project at https://console.cloud.google.com/apis/credentials")
+	fmt.Printf("Configure an OAuth 2.0 Client ID with redirect URI: %s/api/auth/oauth/google/callback\n", displayBaseURL)
 	fmt.Print("Google Client ID (optional): ")
-	val, _ := reader.ReadString('\n')
+	val, _ = reader.ReadString('\n')
 	env["GOOGLE_CLIENT_ID"] = strings.TrimSpace(val)
 	if env["GOOGLE_CLIENT_ID"] != "" {
 		fmt.Print("Google Client Secret: ")
@@ -320,7 +351,7 @@ func runOnboarding(dataDir string) error {
 	// Microsoft OAuth
 	fmt.Println("\n--- Microsoft OAuth Setup ---")
 	fmt.Println("To use Microsoft login, register an app at https://portal.azure.com/")
-	fmt.Println("Configure a redirect URI: http://localhost:8080/api/auth/oauth/microsoft/callback")
+	fmt.Printf("Configure a redirect URI: %s/api/auth/oauth/microsoft/callback\n", displayBaseURL)
 	fmt.Print("Microsoft Client ID (optional): ")
 	val, _ = reader.ReadString('\n')
 	env["MS_CLIENT_ID"] = strings.TrimSpace(val)
