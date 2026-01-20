@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
-import { debounce } from "./debounce";
+import { describe, it, expect, vi } from 'vitest';
+import { debounce } from './debounce';
 
-describe("debounce", () => {
-  it("calls the function after the delay", async () => {
+describe('debounce', () => {
+  it('calls the function after the delay', async () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 100);
@@ -16,7 +16,7 @@ describe("debounce", () => {
     vi.useRealTimers();
   });
 
-  it("resets the delay on subsequent calls", async () => {
+  it('resets the delay on subsequent calls', async () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 100);

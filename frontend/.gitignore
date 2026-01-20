@@ -1,6 +1,7 @@
-/node_modules/
-/src/*.gen.ts
-/.env.local
 /.env.*.local
+/.env.local
 /.npmrc
+/coverage/
+/node_modules/
 /package-lock.json
+/src/*.gen.ts

@@ -19,8 +19,6 @@ jobs:
           node-version: "24"
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-        working-directory: frontend
       - uses: golangci/golangci-lint-action@v9
         with:
           working-directory: backend

@@ -4,6 +4,7 @@
 DATA_DIR=./data
 PORT?=8080
 LOG_LEVEL?=info
+FRONTEND_STAMP=frontend/node_modules/.stamp
 
 help:
 	@echo "mddb - Markdown Document & Database System"
@@ -22,12 +23,17 @@ help:
 	@echo "  PORT=8080           - Server port (default: 8080)"
 	@echo "  LOG_LEVEL=info      - Log level (debug|info|warn|error)"
 
+# Install frontend dependencies (only when lockfile changes)
+$(FRONTEND_STAMP): frontend/pnpm-lock.yaml
+	cd frontend && pnpm install --frozen-lockfile
+	@touch $@
+
 # Build frontend and Go server
 build: types
 	cd backend && go generate ./...
 	cd backend && go install ./cmd/...
 
-types:
+types: $(FRONTEND_STAMP)
 	cd backend && go tool tygo generate
 	@mv frontend/src/types.gen.ts frontend/src/types.ts
 	cd frontend && pnpm exec prettier --write src/types.ts
@@ -38,7 +44,7 @@ dev: build
 test:
 	cd backend && go test -cover ./...
 
-coverage:
+coverage: $(FRONTEND_STAMP)
 	cd backend && go test -coverprofile=coverage.out ./...
 	cd frontend && pnpm coverage
 
@@ -48,10 +54,10 @@ lint-go:
 	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)
 	cd backend && golangci-lint run ./...
 
-lint-frontend:
+lint-frontend: $(FRONTEND_STAMP)
 	cd frontend && pnpm lint
 
-lint-fix:
+lint-fix: $(FRONTEND_STAMP)
 	cd backend && golangci-lint run ./... --fix || true
 	cd frontend && pnpm lint:fix
 
@@ -63,5 +69,5 @@ git-hooks:
 	@git config merge.ours.driver true
 	@echo "✓ Git hooks installed"
 
-frontend-dev:
-	cd frontend && pnpm install && pnpm dev
+frontend-dev: $(FRONTEND_STAMP)
+	cd frontend && pnpm dev

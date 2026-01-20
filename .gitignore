@@ -1,4 +1,3 @@
 /data/
 .env
 coverage.out
-frontend/coverage/
