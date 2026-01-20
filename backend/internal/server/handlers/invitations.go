@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -32,36 +31,31 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, req dto.Create
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
-
-	orgID, err := jsonldb.DecodeID(req.OrgID)
+	orgID, err := decodeOrgID(req.OrgID)
 	if err != nil {
-		return nil, dto.BadRequest("invalid_org_id")
+		return nil, err
 	}
 	invitation, err := h.invService.CreateInvitation(req.Email, orgID, userRoleToEntity(req.Role))
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create invitation", err)
 	}
-
 	return invitationToResponse(invitation), nil
 }
 
 // ListInvitations returns all pending invitations for an organization.
 func (h *InvitationHandler) ListInvitations(ctx context.Context, req dto.ListInvitationsRequest) (*dto.ListInvitationsResponse, error) {
-	orgID, err := jsonldb.DecodeID(req.OrgID)
+	orgID, err := decodeOrgID(req.OrgID)
 	if err != nil {
-		return nil, dto.BadRequest("invalid_org_id")
+		return nil, err
 	}
 	invitations, err := h.invService.ListByOrganization(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list invitations", err)
 	}
-
-	// Convert to response types (excludes Token)
 	responses := make([]dto.InvitationResponse, 0, len(invitations))
 	for _, inv := range invitations {
 		responses = append(responses, *invitationToResponse(inv))
 	}
-
 	return &dto.ListInvitationsResponse{Invitations: responses}, nil
 }
 
@@ -94,8 +88,7 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req dto.Accept
 	}
 
 	// Create membership
-	_, err = h.memService.CreateMembership(user.ID, inv.OrganizationID, inv.Role)
-	if err != nil {
+	if _, err = h.memService.CreateMembership(user.ID, inv.OrganizationID, inv.Role); err != nil {
 		return nil, dto.InternalWithError("Failed to create membership", err)
 	}
 

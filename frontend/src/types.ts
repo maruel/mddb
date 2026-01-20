@@ -472,6 +472,12 @@ export interface UpdateUserSettingsRequest {
 // source: response.go
 
 /**
+ * OkResponse is a simple success response.
+ */
+export interface OkResponse {
+  ok: boolean;
+}
+/**
  * LoginResponse is a response from logging in.
  */
 export interface LoginResponse {
@@ -482,7 +488,16 @@ export interface LoginResponse {
  * ListPagesResponse is a response containing a list of pages.
  */
 export interface ListPagesResponse {
-  pages: any[];
+  pages: PageSummary[];
+}
+/**
+ * PageSummary is a brief representation of a page for list responses.
+ */
+export interface PageSummary {
+  id: string;
+  title: string;
+  created: string;
+  modified: string;
 }
 /**
  * GetPageResponse is a response containing a page.
@@ -507,7 +522,7 @@ export interface UpdatePageResponse {
 /**
  * DeletePageResponse is a response from deleting a page.
  */
-export interface DeletePageResponse {}
+export type DeletePageResponse = OkResponse;
 /**
  * GetPageHistoryResponse is a response containing page history.
  */
@@ -524,7 +539,16 @@ export interface GetPageVersionResponse {
  * ListDatabasesResponse is a response containing a list of databases.
  */
 export interface ListDatabasesResponse {
-  databases: any[];
+  databases: DatabaseSummary[];
+}
+/**
+ * DatabaseSummary is a brief representation of a database for list responses.
+ */
+export interface DatabaseSummary {
+  id: string;
+  title: string;
+  created: string;
+  modified: string;
 }
 /**
  * GetDatabaseResponse is a response containing a database.
@@ -551,7 +575,7 @@ export interface UpdateDatabaseResponse {
 /**
  * DeleteDatabaseResponse is a response from deleting a database.
  */
-export interface DeleteDatabaseResponse {}
+export type DeleteDatabaseResponse = OkResponse;
 /**
  * ListRecordsResponse is a response containing a list of records.
  */
@@ -582,7 +606,7 @@ export interface GetRecordResponse {
 /**
  * DeleteRecordResponse is a response from deleting a record.
  */
-export interface DeleteRecordResponse {}
+export type DeleteRecordResponse = OkResponse;
 /**
  * ListNodesResponse is a response containing a list of nodes.
  */
@@ -593,7 +617,18 @@ export interface ListNodesResponse {
  * ListPageAssetsResponse is a response containing a list of assets.
  */
 export interface ListPageAssetsResponse {
-  assets: any[];
+  assets: AssetSummary[];
+}
+/**
+ * AssetSummary is a brief representation of an asset for list responses.
+ */
+export interface AssetSummary {
+  id: string;
+  name: string;
+  size: number /* int64 */;
+  mime_type: string;
+  created: string;
+  url: string;
 }
 /**
  * UploadPageAssetResponse is a response from uploading an asset.
@@ -607,7 +642,7 @@ export interface UploadPageAssetResponse {
 /**
  * DeletePageAssetResponse is a response from deleting an asset.
  */
-export interface DeletePageAssetResponse {}
+export type DeletePageAssetResponse = OkResponse;
 /**
  * ServeAssetResponse wraps the binary asset data.
  */
@@ -741,18 +776,6 @@ export interface DataRecordResponse {
   created: string;
   modified: string;
 }
-/**
- * Node is an alias for NodeResponse for frontend compatibility.
- */
-export type Node = NodeResponse;
-/**
- * DataRecord is an alias for DataRecordResponse for frontend compatibility.
- */
-export type DataRecord = DataRecordResponse;
-/**
- * Organization is an alias for OrganizationResponse for frontend compatibility.
- */
-export type Organization = OrganizationResponse;
 
 //////////
 // source: types.go

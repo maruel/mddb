@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
@@ -23,9 +22,9 @@ func NewSearchHandler(fileStore *storage.FileStore) *SearchHandler {
 
 // Search performs a full-text search across all nodes.
 func (h *SearchHandler) Search(ctx context.Context, req dto.SearchRequest) (*dto.SearchResponse, error) {
-	orgID, err := jsonldb.DecodeID(req.OrgID)
+	orgID, err := decodeOrgID(req.OrgID)
 	if err != nil {
-		return nil, dto.BadRequest("invalid_org_id")
+		return nil, err
 	}
 	results, err := h.searchService.Search(ctx, orgID, entity.SearchOptions{
 		Query:       req.Query,
@@ -37,6 +36,5 @@ func (h *SearchHandler) Search(ctx context.Context, req dto.SearchRequest) (*dto
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to perform search", err)
 	}
-
 	return &dto.SearchResponse{Results: searchResultsToDTO(results)}, nil
 }

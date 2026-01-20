@@ -3,10 +3,29 @@ package handlers
 import (
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
+
+// --- ID decoding helpers ---
+
+func decodeOrgID(s string) (jsonldb.ID, error) {
+	id, err := jsonldb.DecodeID(s)
+	if err != nil {
+		return 0, dto.BadRequest("invalid_org_id")
+	}
+	return id, nil
+}
+
+func decodeID(s, field string) (jsonldb.ID, error) {
+	id, err := jsonldb.DecodeID(s)
+	if err != nil {
+		return 0, dto.BadRequest("invalid_" + field)
+	}
+	return id, nil
+}
 
 // --- Time formatting ---
 
@@ -345,4 +364,59 @@ func userWithMembershipsToResponse(uwm *storage.UserWithMemberships) *dto.UserRe
 	resp := userToResponse(uwm.User)
 	resp.Memberships = membershipsWithOrgNameToResponse(uwm.Memberships)
 	return resp
+}
+
+// --- List summary conversions ---
+
+func pageToSummary(n *entity.Node) dto.PageSummary {
+	return dto.PageSummary{
+		ID:       n.ID.String(),
+		Title:    n.Title,
+		Created:  formatTime(n.Created),
+		Modified: formatTime(n.Modified),
+	}
+}
+
+func pagesToSummaries(nodes []*entity.Node) []dto.PageSummary {
+	result := make([]dto.PageSummary, len(nodes))
+	for i, n := range nodes {
+		result[i] = pageToSummary(n)
+	}
+	return result
+}
+
+func databaseToSummary(n *entity.Node) dto.DatabaseSummary {
+	return dto.DatabaseSummary{
+		ID:       n.ID.String(),
+		Title:    n.Title,
+		Created:  formatTime(n.Created),
+		Modified: formatTime(n.Modified),
+	}
+}
+
+func databasesToSummaries(nodes []*entity.Node) []dto.DatabaseSummary {
+	result := make([]dto.DatabaseSummary, len(nodes))
+	for i, n := range nodes {
+		result[i] = databaseToSummary(n)
+	}
+	return result
+}
+
+func assetToSummary(a *entity.Asset, orgID, pageID string) dto.AssetSummary {
+	return dto.AssetSummary{
+		ID:       a.ID,
+		Name:     a.Name,
+		Size:     a.Size,
+		MimeType: a.MimeType,
+		Created:  formatTime(a.Created),
+		URL:      "/api/" + orgID + "/assets/" + pageID + "/" + a.Name,
+	}
+}
+
+func assetsToSummaries(assets []*entity.Asset, orgID, pageID string) []dto.AssetSummary {
+	result := make([]dto.AssetSummary, len(assets))
+	for i, a := range assets {
+		result[i] = assetToSummary(a, orgID, pageID)
+	}
+	return result
 }

@@ -1,5 +1,12 @@
 package dto
 
+// --- Common Responses ---
+
+// OkResponse is a simple success response.
+type OkResponse struct {
+	Ok bool `json:"ok"`
+}
+
 // --- Auth Responses ---
 
 // LoginResponse is a response from logging in.
@@ -12,7 +19,15 @@ type LoginResponse struct {
 
 // ListPagesResponse is a response containing a list of pages.
 type ListPagesResponse struct {
-	Pages []any `json:"pages"`
+	Pages []PageSummary `json:"pages"`
+}
+
+// PageSummary is a brief representation of a page for list responses.
+type PageSummary struct {
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Created  string `json:"created"`
+	Modified string `json:"modified"`
 }
 
 // GetPageResponse is a response containing a page.
@@ -33,7 +48,7 @@ type UpdatePageResponse struct {
 }
 
 // DeletePageResponse is a response from deleting a page.
-type DeletePageResponse struct{}
+type DeletePageResponse = OkResponse
 
 // GetPageHistoryResponse is a response containing page history.
 type GetPageHistoryResponse struct {
@@ -49,7 +64,15 @@ type GetPageVersionResponse struct {
 
 // ListDatabasesResponse is a response containing a list of databases.
 type ListDatabasesResponse struct {
-	Databases []any `json:"databases"`
+	Databases []DatabaseSummary `json:"databases"`
+}
+
+// DatabaseSummary is a brief representation of a database for list responses.
+type DatabaseSummary struct {
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Created  string `json:"created"`
+	Modified string `json:"modified"`
 }
 
 // GetDatabaseResponse is a response containing a database.
@@ -72,7 +95,7 @@ type UpdateDatabaseResponse struct {
 }
 
 // DeleteDatabaseResponse is a response from deleting a database.
-type DeleteDatabaseResponse struct{}
+type DeleteDatabaseResponse = OkResponse
 
 // ListRecordsResponse is a response containing a list of records.
 type ListRecordsResponse struct {
@@ -98,7 +121,7 @@ type GetRecordResponse struct {
 }
 
 // DeleteRecordResponse is a response from deleting a record.
-type DeleteRecordResponse struct{}
+type DeleteRecordResponse = OkResponse
 
 // --- Node Responses ---
 
@@ -111,7 +134,17 @@ type ListNodesResponse struct {
 
 // ListPageAssetsResponse is a response containing a list of assets.
 type ListPageAssetsResponse struct {
-	Assets []any `json:"assets"`
+	Assets []AssetSummary `json:"assets"`
+}
+
+// AssetSummary is a brief representation of an asset for list responses.
+type AssetSummary struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`
+	MimeType string `json:"mime_type"`
+	Created  string `json:"created"`
+	URL      string `json:"url"`
 }
 
 // UploadPageAssetResponse is a response from uploading an asset.
@@ -123,7 +156,7 @@ type UploadPageAssetResponse struct {
 }
 
 // DeletePageAssetResponse is a response from deleting an asset.
-type DeletePageAssetResponse struct{}
+type DeletePageAssetResponse = OkResponse
 
 // ServeAssetResponse wraps the binary asset data.
 type ServeAssetResponse struct {
@@ -258,15 +291,3 @@ type DataRecordResponse struct {
 	Created  string         `json:"created" jsonschema:"description=Record creation timestamp (RFC3339)"`
 	Modified string         `json:"modified" jsonschema:"description=Last modification timestamp (RFC3339)"`
 }
-
-// --- Type aliases for frontend compatibility ---
-// These provide shorter names that match the original entity types.
-
-// Node is an alias for NodeResponse for frontend compatibility.
-type Node = NodeResponse
-
-// DataRecord is an alias for DataRecordResponse for frontend compatibility.
-type DataRecord = DataRecordResponse
-
-// Organization is an alias for OrganizationResponse for frontend compatibility.
-type Organization = OrganizationResponse

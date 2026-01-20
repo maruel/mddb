@@ -340,7 +340,6 @@ type Asset struct {
 	Path     string    `json:"path" jsonschema:"description=Storage path on disk"`
 }
 
-
 // Commit represents a commit in git history.
 type Commit struct {
 	Hash      string    `json:"hash" jsonschema:"description=Git commit hash"`

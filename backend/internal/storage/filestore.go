@@ -38,7 +38,6 @@ type page struct {
 	faviconURL string
 }
 
-
 // NewFileStore initializes a FileStore with the given root directory.
 func NewFileStore(rootDir string) (*FileStore, error) {
 	if err := os.MkdirAll(rootDir, 0o755); err != nil {

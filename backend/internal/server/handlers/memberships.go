@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
@@ -31,15 +30,13 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, req dto.SwitchOrgRequ
 	if !ok {
 		return nil, dto.Unauthorized()
 	}
-
-	orgID, err := jsonldb.DecodeID(req.OrgID)
+	orgID, err := decodeOrgID(req.OrgID)
 	if err != nil {
-		return nil, dto.BadRequest("invalid_org_id")
+		return nil, err
 	}
 
 	// Verify membership
-	_, err = h.memService.GetMembership(currentUser.ID, orgID)
-	if err != nil {
+	if _, err = h.memService.GetMembership(currentUser.ID, orgID); err != nil {
 		return nil, dto.Forbidden("User is not a member of this organization")
 	}
 
@@ -75,15 +72,13 @@ func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, req dt
 	if !ok {
 		return nil, dto.Unauthorized()
 	}
-
-	orgID, err := jsonldb.DecodeID(req.OrgID)
+	orgID, err := decodeOrgID(req.OrgID)
 	if err != nil {
-		return nil, dto.BadRequest("invalid_org_id")
+		return nil, err
 	}
 	if err := h.memService.UpdateSettings(currentUser.ID, orgID, membershipSettingsToEntity(req.Settings)); err != nil {
 		return nil, dto.InternalWithError("Failed to update membership settings", err)
 	}
-
 	m, err := h.memService.GetMembership(currentUser.ID, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get membership", err)
