@@ -132,6 +132,9 @@ func jsonFieldName(field *reflect.StructField) string {
 	// Handle "name,omitempty" format
 	for i, c := range tag {
 		if c == ',' {
+			if i == 0 {
+				return field.Name // ",omitempty" - no name specified, use Go field name
+			}
 			return tag[:i]
 		}
 	}
@@ -174,5 +177,7 @@ func goTypeToColumnType(t reflect.Type) columnType {
 		// Unsupported types default to text
 		return columnTypeText
 	}
+	// Unreachable: switch exhaustively handles all reflect.Kind values.
+	// Kept as safety fallback.
 	return columnTypeText
 }

@@ -115,6 +115,8 @@ func (id ID) String() string {
 			return string(buf[i:])
 		}
 	}
+	// Unreachable: any non-zero ID has at least one non-'-' character.
+	// Kept as safety fallback.
 	return "-"
 }
 

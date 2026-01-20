@@ -236,7 +236,7 @@ func TestJsonFieldName(t *testing.T) {
 			{"NoTag", "NoTag"},
 			{"WithTag", "custom_name"},
 			{"WithOmit", "with_omit"},
-			{"OnlyOmit", ""},         // ",omitempty" returns empty name (comma at index 0)
+			{"OnlyOmit", "OnlyOmit"}, // ",omitempty" returns Go field name
 			{"DashTag", "DashTag"},   // "-" returns field name
 			{"EmptyTag", "EmptyTag"}, // empty tag returns field name
 			{"ComplexTag", "complex"},
