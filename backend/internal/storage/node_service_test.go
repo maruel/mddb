@@ -1,20 +1,13 @@
 package storage
 
 import (
-	"os"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestNewNodeService(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-node-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	fileStore, _ := NewFileStore(tempDir)
 	cache := NewCache()
@@ -32,13 +25,7 @@ func TestNewNodeService(t *testing.T) {
 }
 
 func TestNodeService_GetNode(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-node-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	fileStore, _ := NewFileStore(tempDir)
 	cache := NewCache()
@@ -47,7 +34,7 @@ func TestNodeService_GetNode(t *testing.T) {
 	ctx := newTestContext("")
 
 	// Test with empty ID
-	_, err = service.GetNode(ctx, "")
+	_, err := service.GetNode(ctx, "")
 	if err == nil {
 		t.Error("Expected error for empty node ID")
 	}
@@ -60,13 +47,7 @@ func TestNodeService_GetNode(t *testing.T) {
 }
 
 func TestNodeService_CreateNode(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-node-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	ctx, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
@@ -124,13 +105,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 }
 
 func TestNodeService_ListNodes(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-node-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	ctx, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
@@ -180,47 +155,65 @@ func TestFindNodeInTree(t *testing.T) {
 
 	tree := []*entity.Node{parent}
 
-	tests := []struct {
-		name      string
-		searchID  uint64
-		wantTitle string
-		wantNil   bool
-	}{
-		{"find root", 1, "Parent", false},
-		{"find child", 2, "Child 1", false},
-		{"find another child", 3, "Child 2", false},
-		{"find grandchild", 4, "Grandchild", false},
-		{"not found", 999, "", true},
-	}
+	t.Run("find root", func(t *testing.T) {
+		result := findNodeInTree(tree, testID(1))
+		if result == nil {
+			t.Fatal("Expected non-nil result")
+		}
+		if result.Title != "Parent" {
+			t.Errorf("Title = %q, want %q", result.Title, "Parent")
+		}
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := findNodeInTree(tree, testID(tt.searchID))
-			if tt.wantNil {
-				if result != nil {
-					t.Error("Expected nil result")
-				}
-			} else {
-				if result == nil {
-					t.Fatal("Expected non-nil result")
-				}
-				if result.Title != tt.wantTitle {
-					t.Errorf("Title = %q, want %q", result.Title, tt.wantTitle)
-				}
-			}
-		})
-	}
+	t.Run("find child", func(t *testing.T) {
+		result := findNodeInTree(tree, testID(2))
+		if result == nil {
+			t.Fatal("Expected non-nil result")
+		}
+		if result.Title != "Child 1" {
+			t.Errorf("Title = %q, want %q", result.Title, "Child 1")
+		}
+	})
 
-	// Test with empty tree
-	result := findNodeInTree([]*entity.Node{}, testID(1))
-	if result != nil {
-		t.Error("Expected nil result for empty tree")
-	}
+	t.Run("find another child", func(t *testing.T) {
+		result := findNodeInTree(tree, testID(3))
+		if result == nil {
+			t.Fatal("Expected non-nil result")
+		}
+		if result.Title != "Child 2" {
+			t.Errorf("Title = %q, want %q", result.Title, "Child 2")
+		}
+	})
 
-	// Test with nil children
-	nodeNoChildren := &entity.Node{ID: testID(10), Children: nil}
-	result = findNodeInTree([]*entity.Node{nodeNoChildren}, testID(999))
-	if result != nil {
-		t.Error("Expected nil when searching in tree with no matching nodes")
-	}
+	t.Run("find grandchild", func(t *testing.T) {
+		result := findNodeInTree(tree, testID(4))
+		if result == nil {
+			t.Fatal("Expected non-nil result")
+		}
+		if result.Title != "Grandchild" {
+			t.Errorf("Title = %q, want %q", result.Title, "Grandchild")
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		result := findNodeInTree(tree, testID(999))
+		if result != nil {
+			t.Error("Expected nil result")
+		}
+	})
+
+	t.Run("empty tree", func(t *testing.T) {
+		result := findNodeInTree([]*entity.Node{}, testID(1))
+		if result != nil {
+			t.Error("Expected nil result for empty tree")
+		}
+	})
+
+	t.Run("nil children", func(t *testing.T) {
+		nodeNoChildren := &entity.Node{ID: testID(10), Children: nil}
+		result := findNodeInTree([]*entity.Node{nodeNoChildren}, testID(999))
+		if result != nil {
+			t.Error("Expected nil when searching in tree with no matching nodes")
+		}
+	})
 }

@@ -2,11 +2,10 @@ package storage
 
 import (
 	"context"
-	"os"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // newTestContextWithOrg creates a test context with a real organization.
@@ -34,13 +33,7 @@ func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, *Orga
 }
 
 func TestNewPageService(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-page-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	fileStore, err := NewFileStore(tempDir)
 	if err != nil {
@@ -62,13 +55,7 @@ func TestNewPageService(t *testing.T) {
 }
 
 func TestPageService_CreatePage(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-page-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	ctx, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
@@ -99,13 +86,7 @@ func TestPageService_CreatePage(t *testing.T) {
 }
 
 func TestPageService_GetPage(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-page-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	ctx, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
@@ -141,13 +122,7 @@ func TestPageService_GetPage(t *testing.T) {
 }
 
 func TestPageService_UpdatePage(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-page-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	ctx, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
@@ -192,13 +167,7 @@ func TestPageService_UpdatePage(t *testing.T) {
 }
 
 func TestPageService_DeletePage(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-page-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	ctx, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
@@ -237,13 +206,7 @@ func TestPageService_DeletePage(t *testing.T) {
 }
 
 func TestPageService_ListPages(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-page-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	ctx, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
@@ -272,13 +235,7 @@ func TestPageService_ListPages(t *testing.T) {
 }
 
 func TestPageService_SearchPages(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-page-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	ctx, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
@@ -320,13 +277,7 @@ func TestPageService_SearchPages(t *testing.T) {
 }
 
 func TestPageService_GetPageHistory_NoGit(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-page-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	fileStore, _ := NewFileStore(tempDir)
 	cache := NewCache()
@@ -344,13 +295,7 @@ func TestPageService_GetPageHistory_NoGit(t *testing.T) {
 }
 
 func TestPageService_GetPageVersion_NoGit(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-page-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	fileStore, _ := NewFileStore(tempDir)
 	cache := NewCache()
@@ -358,7 +303,7 @@ func TestPageService_GetPageVersion_NoGit(t *testing.T) {
 
 	ctx := newTestContext("")
 
-	_, err = service.GetPageVersion(ctx, jsonldb.NewID().String(), "abc123")
+	_, err := service.GetPageVersion(ctx, jsonldb.NewID().String(), "abc123")
 	if err == nil {
 		t.Error("Expected error when getting page version without git service")
 	}

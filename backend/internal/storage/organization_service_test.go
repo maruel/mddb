@@ -2,20 +2,13 @@ package storage
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestOrganizationService(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-org-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	fileStore, err := NewFileStore(tempDir)
 	if err != nil {
@@ -186,13 +179,7 @@ func TestOrganizationService(t *testing.T) {
 	})
 
 	t.Run("Persistence", func(t *testing.T) {
-		persistDir, persistErr := os.MkdirTemp("", "mddb-org-persist-test-*")
-		if persistErr != nil {
-			t.Fatal(persistErr)
-		}
-		defer func() {
-			_ = os.RemoveAll(persistDir)
-		}()
+		persistDir := t.TempDir()
 
 		// Create service and add organization
 		fs1, _ := NewFileStore(persistDir)

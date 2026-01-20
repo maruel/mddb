@@ -1,20 +1,13 @@
 package storage
 
 import (
-	"os"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestMembershipService(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-membership-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	service, err := NewMembershipService(tempDir)
 	if err != nil {
@@ -169,13 +162,7 @@ func TestMembershipService(t *testing.T) {
 }
 
 func TestMembershipService_Persistence(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-membership-persist-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	userID := testID(100)
 	orgID := testID(200)
