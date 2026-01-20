@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
+import type { JSX } from 'solid-js';
 import DatabaseTable from './DatabaseTable';
 import { I18nProvider } from '../i18n';
 import type { DataRecord, Property } from '../types';
@@ -172,7 +173,8 @@ describe('DatabaseTable', () => {
     });
 
     const deleteButtons = screen.getAllByTitle(/delete/i);
-    fireEvent.click(deleteButtons[0]);
+    const firstButton = deleteButtons[0];
+    if (firstButton) fireEvent.click(firstButton);
 
     expect(mockDelete).toHaveBeenCalledWith('rec-1');
   });
@@ -228,9 +230,7 @@ describe('DatabaseTable', () => {
   });
 
   it('shows empty state when no records', async () => {
-    renderWithI18n(() => (
-      <DatabaseTable databaseId="db-1" columns={mockColumns} records={[]} />
-    ));
+    renderWithI18n(() => <DatabaseTable databaseId="db-1" columns={mockColumns} records={[]} />);
 
     await waitFor(() => {
       expect(screen.getByText(/no records/i)).toBeTruthy();
@@ -430,17 +430,18 @@ describe('DatabaseTable', () => {
     fireEvent.input(input, { target: { value: 'Alice Updated' } });
 
     // Click save
-    const saveButton = screen.getAllByText('✓').find(
-      (el) => el.tagName.toLowerCase() === 'button'
-    );
+    const saveButton = screen.getAllByText('✓').find((el) => el.tagName.toLowerCase() === 'button');
     if (saveButton) {
       fireEvent.click(saveButton);
     }
 
     await waitFor(() => {
-      expect(mockUpdateRecord).toHaveBeenCalledWith('rec-1', expect.objectContaining({
-        Name: 'Alice Updated',
-      }));
+      expect(mockUpdateRecord).toHaveBeenCalledWith(
+        'rec-1',
+        expect.objectContaining({
+          Name: 'Alice Updated',
+        })
+      );
     });
   });
 

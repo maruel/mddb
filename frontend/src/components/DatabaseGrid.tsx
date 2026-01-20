@@ -24,7 +24,7 @@ export default function DatabaseGrid(props: DatabaseGridProps) {
                 )}
               </strong>
               <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>
-                ×
+                ✕
               </button>
             </div>
             <div class={styles.cardBody}>

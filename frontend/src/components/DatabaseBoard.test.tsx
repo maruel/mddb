@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
+import type { JSX } from 'solid-js';
 import DatabaseBoard from './DatabaseBoard';
 import { I18nProvider } from '../i18n';
 import type { DataRecord, Property } from '../types';
@@ -231,7 +232,7 @@ describe('DatabaseBoard', () => {
     ));
 
     await waitFor(() => {
-      const deleteButtons = screen.getAllByText('×');
+      const deleteButtons = screen.getAllByText('✕');
       expect(deleteButtons.length).toBe(4);
     });
   });
@@ -249,8 +250,9 @@ describe('DatabaseBoard', () => {
       expect(screen.getByText('Task 1')).toBeTruthy();
     });
 
-    const deleteButtons = screen.getAllByText('×');
-    fireEvent.click(deleteButtons[0]);
+    const deleteButtons = screen.getAllByText('✕');
+    const firstButton = deleteButtons[0];
+    if (firstButton) fireEvent.click(firstButton);
 
     expect(mockDeleteRecord).toHaveBeenCalled();
   });

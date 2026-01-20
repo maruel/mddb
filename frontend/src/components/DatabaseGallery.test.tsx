@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
+import type { JSX } from 'solid-js';
 import DatabaseGallery from './DatabaseGallery';
 import { I18nProvider } from '../i18n';
 import type { DataRecord, Property } from '../types';
@@ -239,7 +240,8 @@ describe('DatabaseGallery', () => {
     });
 
     const deleteButtons = screen.getAllByText('✕');
-    fireEvent.click(deleteButtons[0]);
+    const firstButton = deleteButtons[0];
+    if (firstButton) fireEvent.click(firstButton);
 
     expect(mockDeleteRecord).toHaveBeenCalledWith('rec-1');
   });

@@ -117,9 +117,7 @@ describe('MarkdownPreview', () => {
   });
 
   it('renders bold and italic text', () => {
-    const { container } = render(() => (
-      <MarkdownPreview content="**bold** and *italic* text" />
-    ));
+    const { container } = render(() => <MarkdownPreview content="**bold** and *italic* text" />);
 
     const preview = container.querySelector('[role="region"]');
     expect(preview?.innerHTML).toContain('<strong>bold</strong>');

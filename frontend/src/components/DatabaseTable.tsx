@@ -93,7 +93,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
         return (
           <input
             type="checkbox"
-            checked={Boolean(initialValue)}
+            checked={initialValue === 'true'}
             onChange={(e) => handleCellChange(String(e.target.checked))}
             class={styles.input}
           />

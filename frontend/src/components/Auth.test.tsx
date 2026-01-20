@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
+import type { JSX } from 'solid-js';
 import Auth from './Auth';
 import { I18nProvider } from '../i18n';
 import type { UserResponse, LoginResponse, ErrorResponse } from '../types';
@@ -23,13 +24,13 @@ vi.mock('./Auth.module.css', () => ({
 
 // Mock fetch
 const mockFetch = vi.fn();
-global.fetch = mockFetch;
+globalThis.fetch = mockFetch;
 
 // Mock window.history and PopStateEvent
 const mockPushState = vi.fn();
 const mockDispatchEvent = vi.fn();
-global.window.history.pushState = mockPushState;
-global.window.dispatchEvent = mockDispatchEvent;
+window.history.pushState = mockPushState;
+window.dispatchEvent = mockDispatchEvent;
 
 function renderWithI18n(component: () => JSX.Element) {
   return render(() => <I18nProvider>{component()}</I18nProvider>);
@@ -297,9 +298,7 @@ describe('Auth', () => {
 
   it('disables submit button while loading', async () => {
     // Make fetch hang
-    mockFetch.mockImplementationOnce(
-      () => new Promise((resolve) => setTimeout(resolve, 10000))
-    );
+    mockFetch.mockImplementationOnce(() => new Promise((resolve) => setTimeout(resolve, 10000)));
 
     renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
 

@@ -183,9 +183,9 @@ export default function App() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    const t = token();
+    const tok = token();
     const u = user();
-    if (t && !u) {
+    if (tok && !u) {
       const fetchUser = async () => {
         try {
           const res = await authFetch('/api/auth/me');
@@ -460,6 +460,24 @@ export default function App() {
 
   const handleNodeClick = (node: Node) => {
     loadNode(node.id);
+  };
+
+  // Recursively find a node by ID in the tree
+  const findNodeById = (nodeId: string | null): Node | undefined => {
+    if (!nodeId) return undefined;
+
+    const search = (nodeList: Node[]): Node | undefined => {
+      for (const node of nodeList) {
+        if (node.id === nodeId) return node;
+        if (node.children) {
+          const found = search(node.children.filter((c): c is Node => !!c));
+          if (found) return found;
+        }
+      }
+      return undefined;
+    };
+
+    return search(nodes());
   };
 
   const getBreadcrumbs = (nodeId: string | null): Node[] => {
@@ -835,11 +853,7 @@ export default function App() {
 
                           <div class={styles.nodeContent}>
                             {/* Always show markdown content if it exists or if node is document/hybrid */}
-                            <Show
-                              when={
-                                nodes().find((n) => n.id === selectedNodeId())?.type !== 'database'
-                              }
-                            >
+                            <Show when={findNodeById(selectedNodeId())?.type !== 'database'}>
                               <div class={styles.editorContent}>
                                 <textarea
                                   value={content()}
@@ -862,11 +876,7 @@ export default function App() {
                             </Show>
 
                             {/* Show database table if node is database or hybrid */}
-                            <Show
-                              when={
-                                nodes().find((n) => n.id === selectedNodeId())?.type !== 'document'
-                              }
-                            >
+                            <Show when={findNodeById(selectedNodeId())?.type !== 'document'}>
                               <div class={styles.databaseView}>
                                 <div class={styles.databaseHeader}>
                                   <h3>{t('database.records')}</h3>
@@ -900,10 +910,7 @@ export default function App() {
                                 <Show when={viewMode() === 'table'}>
                                   <DatabaseTable
                                     databaseId={selectedNodeId() || ''}
-                                    columns={
-                                      nodes().find((n) => n.id === selectedNodeId())?.properties ||
-                                      []
-                                    }
+                                    columns={findNodeById(selectedNodeId())?.properties || []}
                                     records={records()}
                                     onAddRecord={handleAddRecord}
                                     onDeleteRecord={handleDeleteRecord}
@@ -914,30 +921,21 @@ export default function App() {
                                 <Show when={viewMode() === 'grid'}>
                                   <DatabaseGrid
                                     records={records()}
-                                    columns={
-                                      nodes().find((n) => n.id === selectedNodeId())?.properties ||
-                                      []
-                                    }
+                                    columns={findNodeById(selectedNodeId())?.properties || []}
                                     onDeleteRecord={handleDeleteRecord}
                                   />
                                 </Show>
                                 <Show when={viewMode() === 'gallery'}>
                                   <DatabaseGallery
                                     records={records()}
-                                    columns={
-                                      nodes().find((n) => n.id === selectedNodeId())?.properties ||
-                                      []
-                                    }
+                                    columns={findNodeById(selectedNodeId())?.properties || []}
                                     onDeleteRecord={handleDeleteRecord}
                                   />
                                 </Show>
                                 <Show when={viewMode() === 'board'}>
                                   <DatabaseBoard
                                     records={records()}
-                                    columns={
-                                      nodes().find((n) => n.id === selectedNodeId())?.properties ||
-                                      []
-                                    }
+                                    columns={findNodeById(selectedNodeId())?.properties || []}
                                     onDeleteRecord={handleDeleteRecord}
                                   />
                                 </Show>
