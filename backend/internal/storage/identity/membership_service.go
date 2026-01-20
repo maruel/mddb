@@ -82,9 +82,7 @@ func (s *MembershipService) CreateMembership(userID, orgID jsonldb.ID, role enti
 		return nil, err
 	}
 
-	// Update local cache
-	newM := s.table.Last()
-	s.byID[key] = newM
+	s.byID[key] = membership
 
 	return membership, nil
 }
