@@ -1,6 +1,8 @@
 module github.com/maruel/mddb/backend
 
-go 1.25.5
+go 1.25.5.0
+
+toolchain go1.24.7
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.0

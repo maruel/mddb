@@ -60,9 +60,9 @@ func TestID(t *testing.T) {
 	t.Run("String", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			tests := []struct {
-				name     string
-				id       ID
-				wantLen  int  // -1 means check <= idEncodedLen
+				name      string
+				id        ID
+				wantLen   int    // -1 means check <= idEncodedLen
 				wantExact string // empty means check is non-empty
 			}{
 				{"zero ID returns dash", 0, 1, "-"},
@@ -117,7 +117,7 @@ func TestID(t *testing.T) {
 				want string
 			}{
 				{"zero ID", 0, `"-"`},
-				{"small ID", 1, `"0"`}, // ID 1 encodes to "0" in sortable alphabet
+				{"small ID", 1, `"0"`},        // ID 1 encodes to "0" in sortable alphabet
 				{"generated ID", NewID(), ""}, // Will verify round-trip
 			}
 
@@ -185,7 +185,7 @@ func TestID(t *testing.T) {
 				name  string
 				input string
 			}{
-				{"JSON number instead of string", `123`}, // Valid JSON but wrong type
+				{"JSON number instead of string", `123`},     // Valid JSON but wrong type
 				{"JSON object instead of string", `{"a":1}`}, // Valid JSON but wrong type
 				{"invalid ID too long", `"abcdefghijklm"`},
 				{"invalid ID character", `"!!!"`},

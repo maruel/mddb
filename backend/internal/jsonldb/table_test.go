@@ -70,9 +70,10 @@ func (r *alwaysInvalidRow) Validate() error {
 }
 
 // setupTable creates a table in the test's temp directory.
-func setupTable(t *testing.T) (*Table[*testRow], string) {
-	path := filepath.Join(t.TempDir(), "test.jsonl")
-	table, err := NewTable[*testRow](path)
+func setupTable(t *testing.T) (table *Table[*testRow], path string) {
+	path = filepath.Join(t.TempDir(), "test.jsonl")
+	var err error
+	table, err = NewTable[*testRow](path)
 	if err != nil {
 		t.Fatalf("NewTable failed: %v", err)
 	}
@@ -92,10 +93,10 @@ func TestTable(t *testing.T) {
 			}{
 				{"empty table", func() {}, 0},
 				{"one row", func() {
-					table.Append(&testRow{ID: 1, Name: "One"})
+					_ = table.Append(&testRow{ID: 1, Name: "One"})
 				}, 1},
 				{"two rows", func() {
-					table.Append(&testRow{ID: 2, Name: "Two"})
+					_ = table.Append(&testRow{ID: 2, Name: "Two"})
 				}, 2},
 			}
 
@@ -123,7 +124,7 @@ func TestTable(t *testing.T) {
 			})
 
 			// Add rows and test Last returns correct row
-			table.Append(&testRow{ID: 1, Name: "First"})
+			_ = table.Append(&testRow{ID: 1, Name: "First"})
 			t.Run("single row", func(t *testing.T) {
 				last := table.Last()
 				if last == nil || last.ID != 1 || last.Name != "First" {
@@ -131,7 +132,7 @@ func TestTable(t *testing.T) {
 				}
 			})
 
-			table.Append(&testRow{ID: 2, Name: "Second"})
+			_ = table.Append(&testRow{ID: 2, Name: "Second"})
 			t.Run("multiple rows", func(t *testing.T) {
 				last := table.Last()
 				if last == nil || last.ID != 2 || last.Name != "Second" {
@@ -156,8 +157,8 @@ func TestTable(t *testing.T) {
 			table, _ := setupTable(t)
 
 			// Add test data
-			table.Append(&testRow{ID: 10, Name: "Ten"})
-			table.Append(&testRow{ID: 20, Name: "Twenty"})
+			_ = table.Append(&testRow{ID: 10, Name: "Ten"})
+			_ = table.Append(&testRow{ID: 20, Name: "Twenty"})
 
 			tests := []struct {
 				name   string
@@ -190,7 +191,7 @@ func TestTable(t *testing.T) {
 		t.Run("returns clone", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			table.Append(&testRow{ID: 1, Name: "Original"})
+			_ = table.Append(&testRow{ID: 1, Name: "Original"})
 			got := table.Get(ID(1))
 			got.Name = "Modified"
 
@@ -206,9 +207,9 @@ func TestTable(t *testing.T) {
 			table, path := setupTable(t)
 
 			// Add test data
-			table.Append(&testRow{ID: 1, Name: "One"})
-			table.Append(&testRow{ID: 2, Name: "Two"})
-			table.Append(&testRow{ID: 3, Name: "Three"})
+			_ = table.Append(&testRow{ID: 1, Name: "One"})
+			_ = table.Append(&testRow{ID: 2, Name: "Two"})
+			_ = table.Append(&testRow{ID: 3, Name: "Three"})
 
 			t.Run("delete existing row", func(t *testing.T) {
 				deleted, err := table.Delete(ID(2))
@@ -254,8 +255,8 @@ func TestTable(t *testing.T) {
 		t.Run("delete first row", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			table.Append(&testRow{ID: 1, Name: "One"})
-			table.Append(&testRow{ID: 2, Name: "Two"})
+			_ = table.Append(&testRow{ID: 1, Name: "One"})
+			_ = table.Append(&testRow{ID: 2, Name: "Two"})
 
 			deleted, err := table.Delete(ID(1))
 			if err != nil {
@@ -275,8 +276,8 @@ func TestTable(t *testing.T) {
 		t.Run("delete last row", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			table.Append(&testRow{ID: 1, Name: "One"})
-			table.Append(&testRow{ID: 2, Name: "Two"})
+			_ = table.Append(&testRow{ID: 1, Name: "One"})
+			_ = table.Append(&testRow{ID: 2, Name: "Two"})
 
 			deleted, err := table.Delete(ID(2))
 			if err != nil {
@@ -299,7 +300,7 @@ func TestTable(t *testing.T) {
 			table, path := setupTable(t)
 
 			// Add test data
-			table.Append(&testRow{ID: 1, Name: "Original"})
+			_ = table.Append(&testRow{ID: 1, Name: "Original"})
 
 			t.Run("update existing row", func(t *testing.T) {
 				prev, err := table.Update(&testRow{ID: 1, Name: "Updated"})
@@ -345,7 +346,7 @@ func TestTable(t *testing.T) {
 				t.Fatalf("NewTable failed: %v", err)
 			}
 
-			table.Append(&validatingRow{ID: 1, Name: "Valid"})
+			_ = table.Append(&validatingRow{ID: 1, Name: "Valid"})
 
 			t.Run("validation error", func(t *testing.T) {
 				_, err := table.Update(&validatingRow{ID: 1, Name: "Invalid", FailValidate: true})
@@ -372,8 +373,8 @@ func TestTable(t *testing.T) {
 			t.Run("loads existing table", func(t *testing.T) {
 				table, path := setupTable(t)
 
-				table.Append(&testRow{ID: 1, Name: "One"})
-				table.Append(&testRow{ID: 2, Name: "Two"})
+				_ = table.Append(&testRow{ID: 1, Name: "One"})
+				_ = table.Append(&testRow{ID: 2, Name: "Two"})
 
 				table2, err := NewTable[*testRow](path)
 				if err != nil {
@@ -389,7 +390,7 @@ func TestTable(t *testing.T) {
 			t.Run("unreadable file", func(t *testing.T) {
 				// Create a directory where we expect a file
 				path := filepath.Join(t.TempDir(), "not-a-file")
-				os.Mkdir(path, 0o755)
+				_ = os.Mkdir(path, 0o755)
 
 				_, err := NewTable[*testRow](path)
 				if err == nil {
@@ -399,7 +400,7 @@ func TestTable(t *testing.T) {
 
 			t.Run("invalid schema header", func(t *testing.T) {
 				path := filepath.Join(t.TempDir(), "bad-schema.jsonl")
-				os.WriteFile(path, []byte("not valid json\n"), 0o644)
+				_ = os.WriteFile(path, []byte("not valid json\n"), 0o644)
 
 				_, err := NewTable[*testRow](path)
 				if err == nil {
@@ -410,7 +411,7 @@ func TestTable(t *testing.T) {
 			t.Run("invalid row data", func(t *testing.T) {
 				path := filepath.Join(t.TempDir(), "bad-row.jsonl")
 				// Valid schema header, invalid row
-				os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
+				_ = os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 not valid json
 `), 0o644)
 
@@ -422,7 +423,7 @@ not valid json
 
 			t.Run("row with zero ID", func(t *testing.T) {
 				path := filepath.Join(t.TempDir(), "zero-id.jsonl")
-				os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
+				_ = os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 {"id":0,"name":"Zero"}
 `), 0o644)
 
@@ -434,7 +435,7 @@ not valid json
 
 			t.Run("duplicate ID", func(t *testing.T) {
 				path := filepath.Join(t.TempDir(), "dup-id.jsonl")
-				os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
+				_ = os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 {"id":1,"name":"First"}
 {"id":1,"name":"Duplicate"}
 `), 0o644)
@@ -447,7 +448,7 @@ not valid json
 
 			t.Run("invalid schema version", func(t *testing.T) {
 				path := filepath.Join(t.TempDir(), "bad-version.jsonl")
-				os.WriteFile(path, []byte(`{"version":"","columns":[]}
+				_ = os.WriteFile(path, []byte(`{"version":"","columns":[]}
 `), 0o644)
 
 				_, err := NewTable[*testRow](path)
@@ -459,7 +460,7 @@ not valid json
 			t.Run("row fails validation on load", func(t *testing.T) {
 				// Use alwaysInvalidRow which always fails validation
 				path := filepath.Join(t.TempDir(), "invalid-row.jsonl")
-				os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
+				_ = os.WriteFile(path, []byte(`{"version":"1.0","columns":[]}
 {"id":1,"name":"Test"}
 `), 0o644)
 
@@ -482,7 +483,7 @@ not valid json
 				{ID: 40, Name: "Forty"},
 			}
 			for _, r := range iterRows {
-				table.Append(r)
+				_ = table.Append(r)
 			}
 
 			tests := []struct {
@@ -515,7 +516,7 @@ not valid json
 			table, _ := setupTable(t)
 
 			for i := 1; i <= 10; i++ {
-				table.Append(&testRow{ID: i, Name: "Row"})
+				_ = table.Append(&testRow{ID: i, Name: "Row"})
 			}
 
 			count := 0
@@ -534,7 +535,7 @@ not valid json
 		t.Run("returns clones", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			table.Append(&testRow{ID: 1, Name: "Original"})
+			_ = table.Append(&testRow{ID: 1, Name: "Original"})
 
 			for row := range table.Iter(0) {
 				row.Name = "Modified"
@@ -595,7 +596,7 @@ not valid json
 			t.Run("duplicate ID", func(t *testing.T) {
 				table, _ := setupTable(t)
 
-				table.Append(&testRow{ID: 1, Name: "First"})
+				_ = table.Append(&testRow{ID: 1, Name: "First"})
 				err := table.Append(&testRow{ID: 1, Name: "Duplicate"})
 				if err == nil {
 					t.Error("Append() expected error for duplicate ID, got nil")
@@ -622,8 +623,8 @@ not valid json
 			table, path := setupTable(t)
 
 			// Add initial data
-			table.Append(&testRow{ID: 1, Name: "One"})
-			table.Append(&testRow{ID: 2, Name: "Two"})
+			_ = table.Append(&testRow{ID: 1, Name: "One"})
+			_ = table.Append(&testRow{ID: 2, Name: "Two"})
 
 			t.Run("replace all rows", func(t *testing.T) {
 				newRows := []*testRow{
@@ -662,7 +663,7 @@ not valid json
 			})
 
 			t.Run("persistence after replace", func(t *testing.T) {
-				table.Replace([]*testRow{{ID: 100, Name: "Hundred"}})
+				_ = table.Replace([]*testRow{{ID: 100, Name: "Hundred"}})
 
 				table2, err := NewTable[*testRow](path)
 				if err != nil {
