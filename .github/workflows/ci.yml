@@ -25,5 +25,9 @@ jobs:
         with:
           working-directory: backend
       - run: make lint-frontend
-      - run: make test
+      - run: make coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: backend/coverage.out
       - run: make build

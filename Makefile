@@ -1,4 +1,4 @@
-.PHONY: help build dev test lint lint-go lint-frontend lint-fix git-hooks frontend-dev types
+.PHONY: help build dev test coverage lint lint-go lint-frontend lint-fix git-hooks frontend-dev types
 
 # Variables
 DATA_DIR=./data
@@ -37,6 +37,9 @@ dev: build
 
 test:
 	cd backend && go test -cover ./...
+
+coverage:
+	cd backend && go test -coverprofile=coverage.out ./...
 
 lint: lint-go lint-frontend
 
