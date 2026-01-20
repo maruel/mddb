@@ -1,4 +1,4 @@
-package storage
+package identity
 
 import (
 	"context"
@@ -10,20 +10,21 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // OrganizationService handles organization management.
 type OrganizationService struct {
 	rootDir    string
 	table      *jsonldb.Table[*entity.Organization]
-	fileStore  *FileStore
-	gitService *GitService
+	fileStore  *infra.FileStore
+	gitService *infra.GitService
 	mu         sync.RWMutex
 	byID       map[jsonldb.ID]*entity.Organization
 }
 
 // NewOrganizationService creates a new organization service.
-func NewOrganizationService(rootDir string, fileStore *FileStore, gitService *GitService) (*OrganizationService, error) {
+func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitService *infra.GitService) (*OrganizationService, error) {
 	dbDir := filepath.Join(rootDir, "db")
 	if err := os.MkdirAll(dbDir, 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create db directory: %w", err)

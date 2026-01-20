@@ -5,8 +5,8 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // --- ID decoding helpers ---
@@ -340,7 +340,7 @@ func onboardingStateToEntity(o dto.OnboardingState) entity.OnboardingState {
 
 // --- Storage wrapper type conversions ---
 
-func membershipWithOrgNameToResponse(m *storage.MembershipWithOrgName) dto.MembershipResponse {
+func membershipWithOrgNameToResponse(m *identity.MembershipWithOrgName) dto.MembershipResponse {
 	return dto.MembershipResponse{
 		ID:               m.ID.String(),
 		UserID:           m.UserID.String(),
@@ -352,7 +352,7 @@ func membershipWithOrgNameToResponse(m *storage.MembershipWithOrgName) dto.Membe
 	}
 }
 
-func membershipsWithOrgNameToResponse(mems []storage.MembershipWithOrgName) []dto.MembershipResponse {
+func membershipsWithOrgNameToResponse(mems []identity.MembershipWithOrgName) []dto.MembershipResponse {
 	result := make([]dto.MembershipResponse, len(mems))
 	for i := range mems {
 		result[i] = membershipWithOrgNameToResponse(&mems[i])
@@ -360,7 +360,7 @@ func membershipsWithOrgNameToResponse(mems []storage.MembershipWithOrgName) []dt
 	return result
 }
 
-func userWithMembershipsToResponse(uwm *storage.UserWithMemberships) *dto.UserResponse {
+func userWithMembershipsToResponse(uwm *identity.UserWithMemberships) *dto.UserResponse {
 	resp := userToResponse(uwm.User)
 	resp.Memberships = membershipsWithOrgNameToResponse(uwm.Memberships)
 	return resp

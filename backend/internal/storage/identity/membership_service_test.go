@@ -1,4 +1,4 @@
-package storage
+package identity
 
 import (
 	"testing"
@@ -15,8 +15,8 @@ func TestMembershipService(t *testing.T) {
 		t.Fatalf("NewMembershipService failed: %v", err)
 	}
 
-	userID := testID(100)
-	orgID := testID(200)
+	userID := jsonldb.ID(100)
+	orgID := jsonldb.ID(200)
 
 	// Test CreateMembership
 	membership, err := service.CreateMembership(userID, orgID, entity.UserRoleAdmin)
@@ -65,17 +65,17 @@ func TestMembershipService(t *testing.T) {
 	}
 
 	// Test GetMembership with non-existent
-	_, err = service.GetMembership(testID(999), orgID)
+	_, err = service.GetMembership(jsonldb.ID(999), orgID)
 	if err == nil {
 		t.Error("Expected error for non-existent membership")
 	}
 
 	// Create second user in same org
-	userID2 := testID(101)
+	userID2 := jsonldb.ID(101)
 	_, _ = service.CreateMembership(userID2, orgID, entity.UserRoleViewer)
 
 	// Create same user in different org
-	orgID2 := testID(201)
+	orgID2 := jsonldb.ID(201)
 	_, _ = service.CreateMembership(userID, orgID2, entity.UserRoleEditor)
 
 	// Test ListByUser
@@ -120,7 +120,7 @@ func TestMembershipService(t *testing.T) {
 	}
 
 	// Test UpdateRole with non-existent
-	err = service.UpdateRole(testID(999), orgID, entity.UserRoleAdmin)
+	err = service.UpdateRole(jsonldb.ID(999), orgID, entity.UserRoleAdmin)
 	if err == nil {
 		t.Error("Expected error when updating role for non-existent membership")
 	}
@@ -138,7 +138,7 @@ func TestMembershipService(t *testing.T) {
 	}
 
 	// Test UpdateSettings with non-existent
-	err = service.UpdateSettings(testID(999), orgID, newSettings)
+	err = service.UpdateSettings(jsonldb.ID(999), orgID, newSettings)
 	if err == nil {
 		t.Error("Expected error when updating settings for non-existent membership")
 	}
@@ -156,7 +156,7 @@ func TestMembershipService(t *testing.T) {
 	}
 
 	// Test DeleteMembership with non-existent
-	err = service.DeleteMembership(testID(999), orgID)
+	err = service.DeleteMembership(jsonldb.ID(999), orgID)
 	if err == nil {
 		t.Error("Expected error deleting non-existent membership")
 	}
@@ -165,8 +165,8 @@ func TestMembershipService(t *testing.T) {
 func TestMembershipService_Persistence(t *testing.T) {
 	tempDir := t.TempDir()
 
-	userID := testID(100)
-	orgID := testID(200)
+	userID := jsonldb.ID(100)
+	orgID := jsonldb.ID(200)
 
 	// Create service and add membership
 	service1, err := NewMembershipService(tempDir)

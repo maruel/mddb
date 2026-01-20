@@ -1,22 +1,23 @@
-package storage
+package content
 
 import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestDatabaseService_Create(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	columns := []entity.Property{
@@ -43,14 +44,14 @@ func TestDatabaseService_Create(t *testing.T) {
 
 func TestDatabaseService_CreateValidation(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	tests := []struct {
@@ -91,14 +92,14 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 
 func TestDatabaseService_Get(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
@@ -126,14 +127,14 @@ func TestDatabaseService_Get(t *testing.T) {
 
 func TestDatabaseService_List(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create multiple databases
@@ -175,14 +176,14 @@ func TestDatabaseService_List(t *testing.T) {
 
 func TestDatabaseService_Delete(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
@@ -207,14 +208,14 @@ func TestDatabaseService_Delete(t *testing.T) {
 
 func TestDatabaseService_CreateRecord(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
@@ -247,14 +248,14 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 
 func TestDatabaseService_GetRecords(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
@@ -287,14 +288,14 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 
 func TestDatabaseService_GetRecord(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
@@ -327,14 +328,14 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 
 func TestDatabaseService_UpdateRecord(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
@@ -377,14 +378,14 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 
 func TestDatabaseService_DeleteRecord(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create a database
@@ -416,14 +417,14 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 
 func TestDatabaseService_TypeCoercion(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewDatabaseService(fs, nil, cache, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create a database with various column types

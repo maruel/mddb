@@ -4,15 +4,16 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestRegister(t *testing.T) {
 	tempDir := t.TempDir()
-	fileStore, _ := storage.NewFileStore(tempDir)
-	memService, _ := storage.NewMembershipService(tempDir)
-	orgService, _ := storage.NewOrganizationService(tempDir, fileStore, nil)
-	userService, _ := storage.NewUserService(tempDir, memService, orgService)
+	fileStore, _ := infra.NewFileStore(tempDir)
+	memService, _ := identity.NewMembershipService(tempDir)
+	orgService, _ := identity.NewOrganizationService(tempDir, fileStore, nil)
+	userService, _ := identity.NewUserService(tempDir, memService, orgService)
 	authHandler := NewAuthHandler(userService, orgService, "secret")
 	ctx := t.Context()
 

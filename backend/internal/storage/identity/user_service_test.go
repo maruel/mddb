@@ -1,20 +1,14 @@
-package storage
+package identity
 
 import (
-	"os"
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestUserService(t *testing.T) {
-	tempDir, err := os.MkdirTemp("", "mddb-user-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		_ = os.RemoveAll(tempDir)
-	}()
+	tempDir := t.TempDir()
 
 	memService, err := NewMembershipService(tempDir)
 	if err != nil {
@@ -70,7 +64,7 @@ func TestUserService(t *testing.T) {
 	}
 
 	// Test UpdateUserRole
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	err = service.UpdateUserRole(user.ID, orgID, entity.UserRoleEditor)
 	if err != nil {
 		t.Fatalf("Failed to update user role: %v", err)

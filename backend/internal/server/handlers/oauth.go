@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -17,14 +17,14 @@ import (
 
 // OAuthHandler handles OAuth2 authentication for multiple providers.
 type OAuthHandler struct {
-	userService *storage.UserService
-	orgService  *storage.OrganizationService
+	userService *identity.UserService
+	orgService  *identity.OrganizationService
 	authHandler *AuthHandler
 	providers   map[string]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
-func NewOAuthHandler(userService *storage.UserService, orgService *storage.OrganizationService, authHandler *AuthHandler) *OAuthHandler {
+func NewOAuthHandler(userService *identity.UserService, orgService *identity.OrganizationService, authHandler *AuthHandler) *OAuthHandler {
 	return &OAuthHandler{
 		userService: userService,
 		orgService:  orgService,

@@ -1,8 +1,9 @@
-package storage
+package identity
 
 import (
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
@@ -14,7 +15,7 @@ func TestInvitationService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	email := "invitee@example.com"
 	role := entity.UserRoleEditor
 

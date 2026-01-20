@@ -1,4 +1,4 @@
-package storage
+package content
 
 import (
 	"context"
@@ -7,18 +7,20 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // NodeService handles unified node business logic.
 type NodeService struct {
-	fileStore  *FileStore
-	gitService *GitService
-	cache      *Cache
-	orgService *OrganizationService
+	fileStore  *infra.FileStore
+	gitService *infra.GitService
+	cache      *infra.Cache
+	orgService *identity.OrganizationService
 }
 
 // NewNodeService creates a new node service.
-func NewNodeService(fileStore *FileStore, gitService *GitService, cache *Cache, orgService *OrganizationService) *NodeService {
+func NewNodeService(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *NodeService {
 	return &NodeService{
 		fileStore:  fileStore,
 		gitService: gitService,

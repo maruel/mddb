@@ -51,6 +51,13 @@ When you add or modify an API endpoint, add the Request/Response structs to `int
 - **Records**: `data.jsonl` (one JSON object per line)
 - **Column Types**: text, number, select, multi_select, checkbox, date
 
+## Build & Test
+
+Run these commands to verify changes:
+- `make lint` - Run linters
+- `make build` - Compile backend and frontend
+- `make test` - Run all tests
+
 ## Code Quality & Linting
 
 **All code must pass linting before commits.**

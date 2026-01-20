@@ -1,4 +1,4 @@
-package storage
+package content
 
 import (
 	"context"
@@ -7,18 +7,20 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // DatabaseService handles database business logic.
 type DatabaseService struct {
-	fileStore  *FileStore
-	gitService *GitService
-	cache      *Cache
-	orgService *OrganizationService
+	fileStore  *infra.FileStore
+	gitService *infra.GitService
+	cache      *infra.Cache
+	orgService *identity.OrganizationService
 }
 
 // NewDatabaseService creates a new database service.
-func NewDatabaseService(fileStore *FileStore, gitService *GitService, cache *Cache, orgService *OrganizationService) *DatabaseService {
+func NewDatabaseService(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *DatabaseService {
 	return &DatabaseService{
 		fileStore:  fileStore,
 		gitService: gitService,

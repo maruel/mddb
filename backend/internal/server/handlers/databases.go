@@ -4,18 +4,20 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // DatabaseHandler handles database-related HTTP requests
 type DatabaseHandler struct {
-	databaseService *storage.DatabaseService
+	databaseService *content.DatabaseService
 }
 
 // NewDatabaseHandler creates a new database handler
-func NewDatabaseHandler(fileStore *storage.FileStore, gitService *storage.GitService, cache *storage.Cache, orgService *storage.OrganizationService) *DatabaseHandler {
+func NewDatabaseHandler(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *DatabaseHandler {
 	return &DatabaseHandler{
-		databaseService: storage.NewDatabaseService(fileStore, gitService, cache, orgService),
+		databaseService: content.NewDatabaseService(fileStore, gitService, cache, orgService),
 	}
 }
 

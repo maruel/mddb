@@ -1,7 +1,6 @@
-package storage
+package infra
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -10,18 +9,14 @@ import (
 )
 
 func BenchmarkDatabaseOperations(b *testing.B) {
-	tmpDir, err := os.MkdirTemp("", "mddb-bench")
-	if err != nil {
-		b.Fatal(err)
-	}
-	defer func() { _ = os.RemoveAll(tmpDir) }()
+	tmpDir := b.TempDir()
 
 	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	orgID := testID(0) // zero org for tests
+	orgID := jsonldb.ID(0) // zero org for tests
 	dbID := jsonldb.NewID()
 	node := &entity.Node{
 		ID:       dbID,
@@ -93,7 +88,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
-		readDBID := testID(100)
+		readDBID := jsonldb.ID(100)
 		readNode := &entity.Node{ID: readDBID, Title: "Read Bench Page", Type: entity.NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
 		if err := fs.WriteDatabase(orgID, readNode); err != nil {
 			b.Fatal(err)

@@ -1,4 +1,4 @@
-package storage
+package infra
 
 import (
 	"os"
@@ -17,10 +17,10 @@ func TestFileStorePageOperations(t *testing.T) {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 
 	// Test WritePage (with numeric ID encoded as base64)
-	pageID := testID(1)
+	pageID := jsonldb.ID(1)
 	page, err := fs.WritePage(orgID, pageID, "Test Title", "# Test Content")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
@@ -82,7 +82,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test error handling for non-existent page
-	_, err = fs.ReadPage(orgID, testID(999)) // Use a non-existent page ID
+	_, err = fs.ReadPage(orgID, jsonldb.ID(999)) // Use a non-existent page ID
 	if err == nil {
 		t.Error("expected error reading non-existent page")
 	}
@@ -95,16 +95,16 @@ func TestFileStoreListPages(t *testing.T) {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 
 	// Create multiple pages with numeric IDs
 	pages := []struct {
 		id    jsonldb.ID
 		title string
 	}{
-		{testID(1), "First Page"},
-		{testID(2), "Second Page"},
-		{testID(3), "Third Page"},
+		{jsonldb.ID(1), "First Page"},
+		{jsonldb.ID(2), "Second Page"},
+		{jsonldb.ID(3), "Third Page"},
 	}
 
 	for _, p := range pages {
@@ -125,7 +125,7 @@ func TestFileStoreListPages(t *testing.T) {
 	}
 
 	// Verify directory structure
-	expectedDir := filepath.Join(tmpDir, orgID.String(), "pages", testID(1).String())
+	expectedDir := filepath.Join(tmpDir, orgID.String(), "pages", jsonldb.ID(1).String())
 	if _, err := os.Stat(expectedDir); err != nil {
 		t.Errorf("expected page directory %s to exist: %v", expectedDir, err)
 	}
@@ -143,10 +143,10 @@ func TestMarkdownFormatting(t *testing.T) {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 
 	// Write page with specific content
-	pageID := testID(1)
+	pageID := jsonldb.ID(1)
 	_, err = fs.WritePage(orgID, pageID, "Format Test", "# Content\n\nWith multiple lines")
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)

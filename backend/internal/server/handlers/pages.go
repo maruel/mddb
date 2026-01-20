@@ -9,18 +9,20 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // PageHandler handles page-related HTTP requests
 type PageHandler struct {
-	pageService *storage.PageService
+	pageService *content.PageService
 }
 
 // NewPageHandler creates a new page handler
-func NewPageHandler(fileStore *storage.FileStore, gitService *storage.GitService, cache *storage.Cache, orgService *storage.OrganizationService) *PageHandler {
+func NewPageHandler(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *PageHandler {
 	return &PageHandler{
-		pageService: storage.NewPageService(fileStore, gitService, cache, orgService),
+		pageService: content.NewPageService(fileStore, gitService, cache, orgService),
 	}
 }
 
@@ -134,9 +136,9 @@ func (h *PageHandler) GetPageVersion(ctx context.Context, req dto.GetPageVersion
 	if err != nil {
 		return nil, err
 	}
-	content, err := h.pageService.GetPageVersion(ctx, orgID, id, req.Hash)
+	pageContent, err := h.pageService.GetPageVersion(ctx, orgID, id, req.Hash)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page version", err)
 	}
-	return &dto.GetPageVersionResponse{Content: content}, nil
+	return &dto.GetPageVersionResponse{Content: pageContent}, nil
 }

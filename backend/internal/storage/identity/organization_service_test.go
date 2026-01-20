@@ -1,15 +1,17 @@
-package storage
+package identity
 
 import (
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestOrganizationService(t *testing.T) {
 	tempDir := t.TempDir()
 
-	fileStore, err := NewFileStore(tempDir)
+	fileStore, err := infra.NewFileStore(tempDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +76,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent ID", func(t *testing.T) {
-			_, getErr := service.GetOrganization(testID(99999))
+			_, getErr := service.GetOrganization(jsonldb.ID(99999))
 			if getErr == nil {
 				t.Error("Expected error for non-existent organization")
 			}
@@ -132,7 +134,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent organization", func(t *testing.T) {
-			updateErr := service.UpdateSettings(testID(99999), newSettings)
+			updateErr := service.UpdateSettings(jsonldb.ID(99999), newSettings)
 			if updateErr == nil {
 				t.Error("Expected error when updating settings for non-existent org")
 			}
@@ -164,7 +166,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent organization", func(t *testing.T) {
-			updateErr := service.UpdateOnboarding(testID(99999), newState)
+			updateErr := service.UpdateOnboarding(jsonldb.ID(99999), newState)
 			if updateErr == nil {
 				t.Error("Expected error when updating onboarding for non-existent org")
 			}
@@ -181,7 +183,7 @@ func TestOrganizationService(t *testing.T) {
 		persistDir := t.TempDir()
 
 		// Create service and add organization
-		fs1, _ := NewFileStore(persistDir)
+		fs1, _ := infra.NewFileStore(persistDir)
 		svc1, svcErr := NewOrganizationService(persistDir, fs1, nil)
 		if svcErr != nil {
 			t.Fatal(svcErr)
@@ -195,7 +197,7 @@ func TestOrganizationService(t *testing.T) {
 		orgID := persistOrg.ID
 
 		// Create new service instance (simulating restart)
-		fs2, _ := NewFileStore(persistDir)
+		fs2, _ := infra.NewFileStore(persistDir)
 		svc2, svc2Err := NewOrganizationService(persistDir, fs2, nil)
 		if svc2Err != nil {
 			t.Fatal(svc2Err)

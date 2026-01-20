@@ -1,4 +1,4 @@
-package storage
+package content
 
 import (
 	"context"
@@ -8,15 +8,16 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // SearchService handles full-text search across nodes.
 type SearchService struct {
-	fileStore *FileStore
+	fileStore *infra.FileStore
 }
 
 // NewSearchService creates a new search service.
-func NewSearchService(fileStore *FileStore) *SearchService {
+func NewSearchService(fileStore *infra.FileStore) *SearchService {
 	return &SearchService{
 		fileStore: fileStore,
 	}

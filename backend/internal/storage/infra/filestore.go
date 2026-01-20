@@ -1,9 +1,5 @@
-// Package storage implements the file-system persistence layer and business services.
-//
-// It provides services for nodes, pages, databases, users, organizations, and
-// assets. Data is stored as markdown files and JSONL databases with optional
-// git versioning. The package handles caching, quota management, and search.
-package storage
+// Package infra provides infrastructure components for file storage, git operations, and caching.
+package infra
 
 import (
 	"bytes"

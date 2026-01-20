@@ -1,23 +1,25 @@
-package storage
+package content
 
 import (
 	"fmt"
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestSearchService_SearchPages(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
+	fileStore, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 
 	// Create test pages
-	cache := NewCache()
+	cache := infra.NewCache()
 	pageService := NewPageService(fileStore, nil, cache, nil)
 	ctx := newTestContext(t, orgID.String())
 	_, _ = pageService.CreatePage(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project")
@@ -98,16 +100,16 @@ func TestSearchService_SearchPages(t *testing.T) {
 
 func TestSearchService_SearchRecords(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
+	fileStore, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create test database with records
-	cache := NewCache()
+	cache := infra.NewCache()
 	dbService := NewDatabaseService(fileStore, nil, cache, nil)
 	columns := []entity.Property{
 		{Name: "title", Type: "text", Required: true},
@@ -182,16 +184,16 @@ func TestSearchService_SearchRecords(t *testing.T) {
 
 func TestSearchService_Scoring(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
+	fileStore, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create pages where title match should score higher
-	cache := NewCache()
+	cache := infra.NewCache()
 	pageService := NewPageService(fileStore, nil, cache, nil)
 	_, _ = pageService.CreatePage(ctx, orgID, "Python Programming", "This is about Java not Python")
 	_, _ = pageService.CreatePage(ctx, orgID, "Java Basics", "Learn Python programming fundamentals")
@@ -221,16 +223,16 @@ func TestSearchService_Scoring(t *testing.T) {
 
 func TestSearchService_Limit(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
+	fileStore, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create multiple pages
-	cache := NewCache()
+	cache := infra.NewCache()
 	pageService := NewPageService(fileStore, nil, cache, nil)
 	for i := range 10 {
 		_, _ = pageService.CreatePage(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content")
@@ -253,16 +255,16 @@ func TestSearchService_Limit(t *testing.T) {
 
 func TestSearchService_Integration(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
+	fileStore, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 	searchService := NewSearchService(fileStore)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	ctx := newTestContext(t, orgID.String())
 
 	// Create mixed content
-	cache := NewCache()
+	cache := infra.NewCache()
 	pageService := NewPageService(fileStore, nil, cache, nil)
 	_, _ = pageService.CreatePage(ctx, orgID, "Blog Post", "Article about searchable content and web development")
 

@@ -1,4 +1,4 @@
-package storage
+package content
 
 import (
 	"context"
@@ -8,17 +8,19 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // AssetService handles asset business logic.
 type AssetService struct {
-	fileStore  *FileStore
-	gitService *GitService
-	orgService *OrganizationService
+	fileStore  *infra.FileStore
+	gitService *infra.GitService
+	orgService *identity.OrganizationService
 }
 
 // NewAssetService creates a new asset service.
-func NewAssetService(fileStore *FileStore, gitService *GitService, orgService *OrganizationService) *AssetService {
+func NewAssetService(fileStore *infra.FileStore, gitService *infra.GitService, orgService *identity.OrganizationService) *AssetService {
 	return &AssetService{
 		fileStore:  fileStore,
 		gitService: gitService,

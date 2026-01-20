@@ -4,20 +4,22 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
-	nodeService *storage.NodeService
-	gitService  *storage.GitService
+	nodeService *content.NodeService
+	gitService  *infra.GitService
 }
 
 // NewNodeHandler creates a new node handler.
-func NewNodeHandler(fileStore *storage.FileStore, gitService *storage.GitService, cache *storage.Cache, orgService *storage.OrganizationService) *NodeHandler {
+func NewNodeHandler(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *NodeHandler {
 	return &NodeHandler{
-		nodeService: storage.NewNodeService(fileStore, gitService, cache, orgService),
+		nodeService: content.NewNodeService(fileStore, gitService, cache, orgService),
 		gitService:  gitService,
 	}
 }

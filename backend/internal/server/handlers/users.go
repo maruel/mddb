@@ -4,17 +4,17 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // UserHandler handles user management requests.
 type UserHandler struct {
-	userService *storage.UserService
+	userService *identity.UserService
 }
 
 // NewUserHandler creates a new user handler.
-func NewUserHandler(userService *storage.UserService) *UserHandler {
+func NewUserHandler(userService *identity.UserService) *UserHandler {
 	return &UserHandler{
 		userService: userService,
 	}

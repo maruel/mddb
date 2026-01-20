@@ -1,4 +1,4 @@
-package storage
+package content
 
 import (
 	"context"
@@ -6,17 +6,19 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // newTestContextWithOrg creates a test context with a real organization.
 // It creates an organization and returns the context with that org ID and the org ID itself.
-func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, jsonldb.ID, *OrganizationService) {
+func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, jsonldb.ID, *identity.OrganizationService) {
 	t.Helper()
-	fileStore, err := NewFileStore(tempDir)
+	fileStore, err := infra.NewFileStore(tempDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	orgService, err := NewOrganizationService(tempDir, fileStore, nil)
+	orgService, err := identity.NewOrganizationService(tempDir, fileStore, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,16 +26,16 @@ func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, jsonl
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := context.WithValue(t.Context(), entity.UserKey, &entity.User{ID: testID(1000)})
+	ctx := context.WithValue(t.Context(), entity.UserKey, &entity.User{ID: jsonldb.ID(1000)})
 	return context.WithValue(ctx, entity.OrgKey, org.ID), org.ID, orgService
 }
 
 func TestNewPageService(t *testing.T) {
-	fileStore, err := NewFileStore(t.TempDir())
+	fileStore, err := infra.NewFileStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	cache := NewCache()
+	cache := infra.NewCache()
 	service := NewPageService(fileStore, nil, cache, nil)
 	if service == nil {
 		t.Fatal("NewPageService returned nil")
@@ -49,8 +51,8 @@ func TestNewPageService(t *testing.T) {
 func TestPageService_CreatePage(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, NewCache(), orgService)
+	fileStore, _ := infra.NewFileStore(tempDir)
+	service := NewPageService(fileStore, nil, infra.NewCache(), orgService)
 	page, err := service.CreatePage(ctx, orgID, "Test Page", "# Hello World")
 	if err != nil {
 		t.Fatalf("CreatePage failed: %v", err)
@@ -72,8 +74,8 @@ func TestPageService_CreatePage(t *testing.T) {
 func TestPageService_GetPage(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, NewCache(), orgService)
+	fileStore, _ := infra.NewFileStore(tempDir)
+	service := NewPageService(fileStore, nil, infra.NewCache(), orgService)
 	created, err := service.CreatePage(ctx, orgID, "Get Test Page", "Test content")
 	if err != nil {
 		t.Fatal(err)
@@ -97,8 +99,8 @@ func TestPageService_GetPage(t *testing.T) {
 func TestPageService_UpdatePage(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, NewCache(), orgService)
+	fileStore, _ := infra.NewFileStore(tempDir)
+	service := NewPageService(fileStore, nil, infra.NewCache(), orgService)
 	created, err := service.CreatePage(ctx, orgID, "Original Title", "Original content")
 	if err != nil {
 		t.Fatal(err)
@@ -128,8 +130,8 @@ func TestPageService_UpdatePage(t *testing.T) {
 func TestPageService_DeletePage(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, NewCache(), orgService)
+	fileStore, _ := infra.NewFileStore(tempDir)
+	service := NewPageService(fileStore, nil, infra.NewCache(), orgService)
 	created, err := service.CreatePage(ctx, orgID, "Delete Test Page", "Content to delete")
 	if err != nil {
 		t.Fatal(err)
@@ -152,8 +154,8 @@ func TestPageService_DeletePage(t *testing.T) {
 func TestPageService_ListPages(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, NewCache(), orgService)
+	fileStore, _ := infra.NewFileStore(tempDir)
+	service := NewPageService(fileStore, nil, infra.NewCache(), orgService)
 	pages, err := service.ListPages(ctx, orgID)
 	if err != nil {
 		t.Fatalf("ListPages failed: %v", err)
@@ -173,8 +175,8 @@ func TestPageService_ListPages(t *testing.T) {
 func TestPageService_SearchPages(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, NewCache(), orgService)
+	fileStore, _ := infra.NewFileStore(tempDir)
+	service := NewPageService(fileStore, nil, infra.NewCache(), orgService)
 	_, _ = service.CreatePage(ctx, orgID, "Apple Recipes", "How to cook with apples")
 	_, _ = service.CreatePage(ctx, orgID, "Orange Juice", "Making fresh juice")
 	_, _ = service.CreatePage(ctx, orgID, "Banana Bread", "Contains apple cider vinegar")
@@ -197,9 +199,9 @@ func TestPageService_SearchPages(t *testing.T) {
 }
 
 func TestPageService_GetPageHistory_NoGit(t *testing.T) {
-	fileStore, _ := NewFileStore(t.TempDir())
-	service := NewPageService(fileStore, nil, NewCache(), nil)
-	orgID := testID(999)
+	fileStore, _ := infra.NewFileStore(t.TempDir())
+	service := NewPageService(fileStore, nil, infra.NewCache(), nil)
+	orgID := jsonldb.ID(999)
 	history, err := service.GetPageHistory(newTestContext(t, ""), orgID, jsonldb.NewID())
 	if err != nil {
 		t.Fatalf("GetPageHistory failed: %v", err)
@@ -210,9 +212,9 @@ func TestPageService_GetPageHistory_NoGit(t *testing.T) {
 }
 
 func TestPageService_GetPageVersion_NoGit(t *testing.T) {
-	fileStore, _ := NewFileStore(t.TempDir())
-	service := NewPageService(fileStore, nil, NewCache(), nil)
-	orgID := testID(999)
+	fileStore, _ := infra.NewFileStore(t.TempDir())
+	service := NewPageService(fileStore, nil, infra.NewCache(), nil)
+	orgID := jsonldb.ID(999)
 	if _, err := service.GetPageVersion(newTestContext(t, ""), orgID, jsonldb.NewID(), "abc123"); err == nil {
 		t.Error("Expected error when getting page version without git service")
 	}

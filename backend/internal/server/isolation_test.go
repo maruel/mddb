@@ -4,22 +4,16 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-func testID(n uint64) jsonldb.ID {
-	return jsonldb.ID(n)
-}
-
 func TestOrgIsolationMiddleware(t *testing.T) {
-	tempDir, _ := os.MkdirTemp("", "mddb-isolation-test-*")
-	defer func() { _ = os.RemoveAll(tempDir) }()
-	memService, _ := storage.NewMembershipService(tempDir)
+	tempDir := t.TempDir()
+	memService, _ := identity.NewMembershipService(tempDir)
 
 	tests := []struct {
 		name           string
@@ -30,21 +24,21 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 	}{
 		{
 			name:           "Access own organization",
-			membershipOrg:  testID(1),
+			membershipOrg:  jsonldb.ID(1),
 			membershipRole: entity.UserRoleViewer,
-			requestOrgID:   testID(1).String(),
+			requestOrgID:   jsonldb.ID(1).String(),
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name:           "Access different organization",
-			membershipOrg:  testID(1),
+			membershipOrg:  jsonldb.ID(1),
 			membershipRole: entity.UserRoleViewer,
-			requestOrgID:   testID(2).String(),
+			requestOrgID:   jsonldb.ID(2).String(),
 			expectedStatus: http.StatusForbidden,
 		},
 		{
 			name:           "Access with no org context in request",
-			membershipOrg:  testID(1),
+			membershipOrg:  jsonldb.ID(1),
 			membershipRole: entity.UserRoleViewer,
 			requestOrgID:   "",
 			expectedStatus: http.StatusOK,
@@ -53,10 +47,10 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userID := testID(100)
+			userID := jsonldb.ID(100)
 			// Clear and setup membership for each test case
-			_ = memService.DeleteMembership(userID, testID(1))
-			_ = memService.DeleteMembership(userID, testID(2))
+			_ = memService.DeleteMembership(userID, jsonldb.ID(1))
+			_ = memService.DeleteMembership(userID, jsonldb.ID(2))
 
 			if !tt.membershipOrg.IsZero() {
 				_, _ = memService.CreateMembership(userID, tt.membershipOrg, tt.membershipRole)
@@ -88,9 +82,8 @@ func TestOrgIsolationMiddleware(t *testing.T) {
 }
 
 func TestRolePermissions(t *testing.T) {
-	tempDir, _ := os.MkdirTemp("", "mddb-role-test-*")
-	defer func() { _ = os.RemoveAll(tempDir) }()
-	memService, _ := storage.NewMembershipService(tempDir)
+	tempDir := t.TempDir()
+	memService, _ := identity.NewMembershipService(tempDir)
 
 	tests := []struct {
 		name           string
@@ -132,8 +125,8 @@ func TestRolePermissions(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			userID := testID(200)
-			orgID := testID(1)
+			userID := jsonldb.ID(200)
+			orgID := jsonldb.ID(1)
 			// Clear and setup membership for each test case
 			_ = memService.DeleteMembership(userID, orgID)
 			_, _ = memService.CreateMembership(userID, orgID, tt.userRole)

@@ -14,15 +14,16 @@ import (
 
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
-func NewRouter(fileStore *storage.FileStore, gitService *storage.GitService, userService *storage.UserService, orgService *storage.OrganizationService, invService *storage.InvitationService, memService *storage.MembershipService, remoteService *storage.GitRemoteService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
-	cache := storage.NewCache()
+func NewRouter(fileStore *infra.FileStore, gitService *infra.GitService, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, remoteService *infra.GitRemoteService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
+	cache := infra.NewCache()
 	mux := &http.ServeMux{}
 	ph := handlers.NewPageHandler(fileStore, gitService, cache, orgService)
 	dh := handlers.NewDatabaseHandler(fileStore, gitService, cache, orgService)

@@ -9,18 +9,18 @@ import (
 	"strings"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // GitRemoteHandler handles git remote operations.
 type GitRemoteHandler struct {
-	remoteService *storage.GitRemoteService
-	gitService    *storage.GitService
+	remoteService *infra.GitRemoteService
+	gitService    *infra.GitService
 	rootDir       string
 }
 
 // NewGitRemoteHandler creates a new git remote handler.
-func NewGitRemoteHandler(remoteService *storage.GitRemoteService, gitService *storage.GitService, rootDir string) *GitRemoteHandler {
+func NewGitRemoteHandler(remoteService *infra.GitRemoteService, gitService *infra.GitService, rootDir string) *GitRemoteHandler {
 	return &GitRemoteHandler{
 		remoteService: remoteService,
 		gitService:    gitService,

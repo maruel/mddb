@@ -5,19 +5,19 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // InvitationHandler handles invitation requests.
 type InvitationHandler struct {
-	invService  *storage.InvitationService
-	userService *storage.UserService
-	orgService  *storage.OrganizationService
-	memService  *storage.MembershipService
+	invService  *identity.InvitationService
+	userService *identity.UserService
+	orgService  *identity.OrganizationService
+	memService  *identity.MembershipService
 }
 
 // NewInvitationHandler creates a new invitation handler.
-func NewInvitationHandler(invService *storage.InvitationService, userService *storage.UserService, orgService *storage.OrganizationService, memService *storage.MembershipService) *InvitationHandler {
+func NewInvitationHandler(invService *identity.InvitationService, userService *identity.UserService, orgService *identity.OrganizationService, memService *identity.MembershipService) *InvitationHandler {
 	return &InvitationHandler{
 		invService:  invService,
 		userService: userService,

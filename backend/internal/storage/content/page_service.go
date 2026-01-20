@@ -1,4 +1,12 @@
-package storage
+// Package content provides services for git-backed content management.
+//
+// This package handles file-based storage with git versioning for:
+//   - Pages (markdown documents)
+//   - Databases (structured data with JSONL storage)
+//   - Records (database rows)
+//   - Assets (file attachments)
+//   - Search (full-text search across content)
+package content
 
 import (
 	"context"
@@ -7,18 +15,20 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // PageService handles page business logic.
 type PageService struct {
-	fileStore  *FileStore
-	gitService *GitService
-	cache      *Cache
-	orgService *OrganizationService
+	fileStore  *infra.FileStore
+	gitService *infra.GitService
+	cache      *infra.Cache
+	orgService *identity.OrganizationService
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *FileStore, gitService *GitService, cache *Cache, orgService *OrganizationService) *PageService {
+func NewPageService(fileStore *infra.FileStore, gitService *infra.GitService, cache *infra.Cache, orgService *identity.OrganizationService) *PageService {
 	return &PageService{
 		fileStore:  fileStore,
 		gitService: gitService,

@@ -7,19 +7,19 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // AuthHandler handles authentication requests.
 type AuthHandler struct {
-	userService *storage.UserService
-	orgService  *storage.OrganizationService
+	userService *identity.UserService
+	orgService  *identity.OrganizationService
 	jwtSecret   []byte
 }
 
 // NewAuthHandler creates a new auth handler.
-func NewAuthHandler(userService *storage.UserService, orgService *storage.OrganizationService, jwtSecret string) *AuthHandler {
+func NewAuthHandler(userService *identity.UserService, orgService *identity.OrganizationService, jwtSecret string) *AuthHandler {
 	return &AuthHandler{
 		userService: userService,
 		orgService:  orgService,

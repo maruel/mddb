@@ -4,19 +4,19 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // MembershipHandler handles membership-related requests.
 type MembershipHandler struct {
-	memService  *storage.MembershipService
-	userService *storage.UserService
+	memService  *identity.MembershipService
+	userService *identity.UserService
 	authHandler *AuthHandler
 }
 
 // NewMembershipHandler creates a new membership handler.
-func NewMembershipHandler(memService *storage.MembershipService, userService *storage.UserService, authHandler *AuthHandler) *MembershipHandler {
+func NewMembershipHandler(memService *identity.MembershipService, userService *identity.UserService, authHandler *AuthHandler) *MembershipHandler {
 	return &MembershipHandler{
 		memService:  memService,
 		userService: userService,

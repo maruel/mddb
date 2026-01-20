@@ -1,4 +1,4 @@
-package storage
+package infra
 
 import (
 	"os"
@@ -16,7 +16,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	tests := []struct {
 		name string
 		node *entity.Node
@@ -24,7 +24,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		{
 			name: "simple database",
 			node: &entity.Node{
-				ID:    testID(1),
+				ID:    jsonldb.ID(1),
 				Title: "Test Database",
 				Type:  entity.NodeTypeDatabase,
 				Properties: []entity.Property{
@@ -38,7 +38,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		{
 			name: "database with all column types",
 			node: &entity.Node{
-				ID:    testID(2),
+				ID:    jsonldb.ID(2),
 				Title: "Complex Database",
 				Type:  entity.NodeTypeDatabase,
 				Properties: []entity.Property{
@@ -107,9 +107,9 @@ func TestDatabase_Exists(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	node := &entity.Node{
-		ID:    testID(1),
+		ID:    jsonldb.ID(1),
 		Title: "Test",
 		Type:  entity.NodeTypeDatabase,
 		Properties: []entity.Property{
@@ -142,10 +142,10 @@ func TestDatabase_List(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 
 	// Create multiple databases
-	dbIDs := []jsonldb.ID{testID(1), testID(2), testID(3)}
+	dbIDs := []jsonldb.ID{jsonldb.ID(1), jsonldb.ID(2), jsonldb.ID(3)}
 	for _, id := range dbIDs {
 		node := &entity.Node{
 			ID:    id,
@@ -193,9 +193,9 @@ func TestDatabase_Delete(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	node := &entity.Node{
-		ID:    testID(1),
+		ID:    jsonldb.ID(1),
 		Title: "Test",
 		Type:  entity.NodeTypeDatabase,
 		Properties: []entity.Property{
@@ -235,8 +235,8 @@ func TestRecord_AppendRead(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
-	dbID := testID(1)
+	orgID := jsonldb.ID(100)
+	dbID := jsonldb.ID(1)
 
 	// Create database first
 	node := &entity.Node{
@@ -317,8 +317,8 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
-	dbID := testID(1)
+	orgID := jsonldb.ID(100)
+	dbID := jsonldb.ID(1)
 
 	// Create database
 	node := &entity.Node{
@@ -353,10 +353,10 @@ func TestDatabase_NestedPath(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 
 	// Create database with base64 encoded ID
-	dbID := testID(42)
+	dbID := jsonldb.ID(42)
 	node := &entity.Node{
 		ID:    dbID,
 		Title: "Database 42",

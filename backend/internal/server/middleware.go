@@ -8,12 +8,12 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // AuthMiddleware validates JWT tokens and adds user info to the context.
-func AuthMiddleware(userService *storage.UserService, jwtSecret []byte) func(http.Handler) http.Handler {
+func AuthMiddleware(userService *identity.UserService, jwtSecret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Skip auth for login and register
@@ -79,7 +79,7 @@ func AuthMiddleware(userService *storage.UserService, jwtSecret []byte) func(htt
 }
 
 // RequireRole ensures the authenticated user has at least the required role in the target organization.
-func RequireRole(memService *storage.MembershipService, requiredRole entity.UserRole) func(http.Handler) http.Handler {
+func RequireRole(memService *identity.MembershipService, requiredRole entity.UserRole) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			user, ok := r.Context().Value(entity.UserKey).(*entity.User)

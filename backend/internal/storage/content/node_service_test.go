@@ -1,17 +1,18 @@
-package storage
+package content
 
 import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestNewNodeService(t *testing.T) {
 	tempDir := t.TempDir()
 
-	fileStore, _ := NewFileStore(tempDir)
-	cache := NewCache()
+	fileStore, _ := infra.NewFileStore(tempDir)
+	cache := infra.NewCache()
 	service := NewNodeService(fileStore, nil, cache, nil)
 
 	if service == nil {
@@ -28,12 +29,12 @@ func TestNewNodeService(t *testing.T) {
 func TestNodeService_GetNode(t *testing.T) {
 	tempDir := t.TempDir()
 
-	fileStore, _ := NewFileStore(tempDir)
-	cache := NewCache()
+	fileStore, _ := infra.NewFileStore(tempDir)
+	cache := infra.NewCache()
 	service := NewNodeService(fileStore, nil, cache, nil)
 
 	ctx := newTestContext(t, "")
-	orgID := testID(999)
+	orgID := jsonldb.ID(999)
 
 	// Test with empty ID
 	var emptyID jsonldb.ID
@@ -53,8 +54,8 @@ func TestNodeService_CreateNode(t *testing.T) {
 	tempDir := t.TempDir()
 
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := NewFileStore(tempDir)
-	cache := NewCache()
+	fileStore, _ := infra.NewFileStore(tempDir)
+	cache := infra.NewCache()
 	service := NewNodeService(fileStore, nil, cache, orgService)
 
 	// Test creating a document node
@@ -112,8 +113,8 @@ func TestNodeService_ListNodes(t *testing.T) {
 	tempDir := t.TempDir()
 
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := NewFileStore(tempDir)
-	cache := NewCache()
+	fileStore, _ := infra.NewFileStore(tempDir)
+	cache := infra.NewCache()
 	service := NewNodeService(fileStore, nil, cache, orgService)
 
 	// List initial nodes (may include welcome page from org creation)
@@ -147,13 +148,13 @@ func TestNodeService_ListNodes(t *testing.T) {
 }
 
 func TestFindNodeInTree(t *testing.T) {
-	child1 := &entity.Node{ID: testID(2), Title: "Child 1"}
-	child2 := &entity.Node{ID: testID(3), Title: "Child 2"}
-	grandchild := &entity.Node{ID: testID(4), Title: "Grandchild"}
+	child1 := &entity.Node{ID: jsonldb.ID(2), Title: "Child 1"}
+	child2 := &entity.Node{ID: jsonldb.ID(3), Title: "Child 2"}
+	grandchild := &entity.Node{ID: jsonldb.ID(4), Title: "Grandchild"}
 	child2.Children = []*entity.Node{grandchild}
 
 	parent := &entity.Node{
-		ID:       testID(1),
+		ID:       jsonldb.ID(1),
 		Title:    "Parent",
 		Children: []*entity.Node{child1, child2},
 	}
@@ -161,7 +162,7 @@ func TestFindNodeInTree(t *testing.T) {
 	tree := []*entity.Node{parent}
 
 	t.Run("find root", func(t *testing.T) {
-		result := findNodeInTree(tree, testID(1))
+		result := findNodeInTree(tree, jsonldb.ID(1))
 		if result == nil {
 			t.Fatal("Expected non-nil result")
 		}
@@ -171,7 +172,7 @@ func TestFindNodeInTree(t *testing.T) {
 	})
 
 	t.Run("find child", func(t *testing.T) {
-		result := findNodeInTree(tree, testID(2))
+		result := findNodeInTree(tree, jsonldb.ID(2))
 		if result == nil {
 			t.Fatal("Expected non-nil result")
 		}
@@ -181,7 +182,7 @@ func TestFindNodeInTree(t *testing.T) {
 	})
 
 	t.Run("find another child", func(t *testing.T) {
-		result := findNodeInTree(tree, testID(3))
+		result := findNodeInTree(tree, jsonldb.ID(3))
 		if result == nil {
 			t.Fatal("Expected non-nil result")
 		}
@@ -191,7 +192,7 @@ func TestFindNodeInTree(t *testing.T) {
 	})
 
 	t.Run("find grandchild", func(t *testing.T) {
-		result := findNodeInTree(tree, testID(4))
+		result := findNodeInTree(tree, jsonldb.ID(4))
 		if result == nil {
 			t.Fatal("Expected non-nil result")
 		}
@@ -201,22 +202,22 @@ func TestFindNodeInTree(t *testing.T) {
 	})
 
 	t.Run("not found", func(t *testing.T) {
-		result := findNodeInTree(tree, testID(999))
+		result := findNodeInTree(tree, jsonldb.ID(999))
 		if result != nil {
 			t.Error("Expected nil result")
 		}
 	})
 
 	t.Run("empty tree", func(t *testing.T) {
-		result := findNodeInTree([]*entity.Node{}, testID(1))
+		result := findNodeInTree([]*entity.Node{}, jsonldb.ID(1))
 		if result != nil {
 			t.Error("Expected nil result for empty tree")
 		}
 	})
 
 	t.Run("nil children", func(t *testing.T) {
-		nodeNoChildren := &entity.Node{ID: testID(10), Children: nil}
-		result := findNodeInTree([]*entity.Node{nodeNoChildren}, testID(999))
+		nodeNoChildren := &entity.Node{ID: jsonldb.ID(10), Children: nil}
+		result := findNodeInTree([]*entity.Node{nodeNoChildren}, jsonldb.ID(999))
 		if result != nil {
 			t.Error("Expected nil when searching in tree with no matching nodes")
 		}

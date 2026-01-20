@@ -1,17 +1,15 @@
-package storage
+package infra
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
 func TestGitRemoteService(t *testing.T) {
-	tmpDir, err := os.MkdirTemp("", "mddb-remote-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = os.RemoveAll(tmpDir) }()
+	tmpDir := t.TempDir()
 
 	dbDir := filepath.Join(tmpDir, "db")
 	if err := os.MkdirAll(dbDir, 0o755); err != nil {
@@ -23,7 +21,7 @@ func TestGitRemoteService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	name := "origin"
 	url := "https://github.com/user/repo.git"
 	token := "ghp_test_token"

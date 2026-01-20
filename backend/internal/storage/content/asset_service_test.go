@@ -1,24 +1,23 @@
-package storage
+package content
 
 import (
 	"bytes"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestAssetService_SaveAsset(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
 
 	// Create a page first
-	orgID := testID(100)
-	pageID := testID(1)
+	orgID := jsonldb.ID(100)
+	pageID := jsonldb.ID(1)
 	_, err = fs.WritePage(orgID, pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
@@ -49,28 +48,27 @@ func TestAssetService_SaveAsset(t *testing.T) {
 		t.Errorf("expected size %d, got %d", len(testData), asset.Size)
 	}
 
-	// Verify file exists on disk
-	assetPath := filepath.Join(fs.pageDir(orgID, pageID), "test.png")
-	info, err := os.Stat(assetPath)
+	// Verify file exists and can be retrieved
+	retrievedData, err := as.GetAsset(newTestContext(t, orgID.String()), orgID, pageID, "test.png")
 	if err != nil {
 		t.Fatalf("asset file not found: %v", err)
 	}
 
-	if info.Size() != int64(len(testData)) {
-		t.Errorf("expected file size %d, got %d", len(testData), info.Size())
+	if !bytes.Equal(retrievedData, testData) {
+		t.Errorf("retrieved data does not match saved data")
 	}
 }
 
 func TestAssetService_GetAsset(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
 
 	// Create a page and save asset
-	orgID := testID(100)
-	pageID := testID(1)
+	orgID := jsonldb.ID(100)
+	pageID := jsonldb.ID(1)
 	_, err = fs.WritePage(orgID, pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
@@ -96,14 +94,14 @@ func TestAssetService_GetAsset(t *testing.T) {
 
 func TestAssetService_DeleteAsset(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
 
 	// Create a page and save asset
-	orgID := testID(100)
-	pageID := testID(1)
+	orgID := jsonldb.ID(100)
+	pageID := jsonldb.ID(1)
 	_, err = fs.WritePage(orgID, pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
@@ -115,34 +113,34 @@ func TestAssetService_DeleteAsset(t *testing.T) {
 		t.Fatalf("failed to save asset: %v", err)
 	}
 
-	// Verify file exists
-	assetPath := filepath.Join(fs.pageDir(orgID, pageID), "test.png")
-	if _, err := os.Stat(assetPath); err != nil {
+	// Verify file exists via public API
+	ctx := newTestContext(t, orgID.String())
+	if _, err := as.GetAsset(ctx, orgID, pageID, "test.png"); err != nil {
 		t.Fatalf("asset file not found before delete: %v", err)
 	}
 
 	// Delete asset
-	err = as.DeleteAsset(newTestContext(t, orgID.String()), orgID, pageID, "test.png")
+	err = as.DeleteAsset(ctx, orgID, pageID, "test.png")
 	if err != nil {
 		t.Fatalf("failed to delete asset: %v", err)
 	}
 
 	// Verify file is gone
-	if _, err := os.Stat(assetPath); err == nil {
+	if _, err := as.GetAsset(ctx, orgID, pageID, "test.png"); err == nil {
 		t.Fatal("asset file still exists after delete")
 	}
 }
 
 func TestAssetService_ListAssets(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
 
 	// Create a page
-	orgID := testID(100)
-	pageID := testID(1)
+	orgID := jsonldb.ID(100)
+	pageID := jsonldb.ID(1)
 	_, err = fs.WritePage(orgID, pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
@@ -184,12 +182,12 @@ func TestAssetService_ListAssets(t *testing.T) {
 
 func TestAssetService_Validation(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
+	fs, err := infra.NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
 	as := NewAssetService(fs, nil, nil)
-	orgID := testID(100)
+	orgID := jsonldb.ID(100)
 	var zeroID jsonldb.ID
 	t.Run("empty page id on save", func(t *testing.T) {
 		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, zeroID, "test.png", []byte("data")); err == nil {
@@ -197,12 +195,12 @@ func TestAssetService_Validation(t *testing.T) {
 		}
 	})
 	t.Run("empty file name on save", func(t *testing.T) {
-		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, testID(1), "", []byte("data")); err == nil {
+		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, jsonldb.ID(1), "", []byte("data")); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty data on save", func(t *testing.T) {
-		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, testID(1), "test.png", []byte("")); err == nil {
+		if _, err := as.SaveAsset(newTestContext(t, orgID.String()), orgID, jsonldb.ID(1), "test.png", []byte("")); err == nil {
 			t.Error("expected error")
 		}
 	})
@@ -212,7 +210,7 @@ func TestAssetService_Validation(t *testing.T) {
 		}
 	})
 	t.Run("empty asset name on get", func(t *testing.T) {
-		if _, err := as.GetAsset(newTestContext(t, orgID.String()), orgID, testID(1), ""); err == nil {
+		if _, err := as.GetAsset(newTestContext(t, orgID.String()), orgID, jsonldb.ID(1), ""); err == nil {
 			t.Error("expected error")
 		}
 	})

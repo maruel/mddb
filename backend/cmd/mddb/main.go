@@ -26,7 +26,8 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
@@ -144,37 +145,37 @@ func mainImpl() error {
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: ll})))
 
-	fileStore, err := storage.NewFileStore(*dataDir)
+	fileStore, err := infra.NewFileStore(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
 
-	gitService, err := storage.NewGitService(*dataDir)
+	gitService, err := infra.NewGitService(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize git service: %w", err)
 	}
 
-	memService, err := storage.NewMembershipService(*dataDir)
+	memService, err := identity.NewMembershipService(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize membership service: %w", err)
 	}
 
-	orgService, err := storage.NewOrganizationService(*dataDir, fileStore, gitService)
+	orgService, err := identity.NewOrganizationService(*dataDir, fileStore, gitService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize organization service: %w", err)
 	}
 
-	userService, err := storage.NewUserService(*dataDir, memService, orgService)
+	userService, err := identity.NewUserService(*dataDir, memService, orgService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize user service: %w", err)
 	}
 
-	invService, err := storage.NewInvitationService(*dataDir)
+	invService, err := identity.NewInvitationService(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize invitation service: %w", err)
 	}
 
-	remoteService, err := storage.NewGitRemoteService(*dataDir)
+	remoteService, err := infra.NewGitRemoteService(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize git remote service: %w", err)
 	}

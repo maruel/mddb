@@ -1,4 +1,11 @@
-package storage
+// Package identity provides services for user authentication and organization management.
+//
+// This package handles internal database tables (JSONL-backed) for:
+//   - User accounts and authentication
+//   - Organizations (multi-tenant workspaces)
+//   - Memberships (user-organization relationships)
+//   - Invitations (pending organization invites)
+package identity
 
 import (
 	"fmt"

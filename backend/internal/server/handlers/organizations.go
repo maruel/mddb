@@ -4,16 +4,16 @@ import (
 	"context"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // OrganizationHandler handles organization management requests.
 type OrganizationHandler struct {
-	orgService *storage.OrganizationService
+	orgService *identity.OrganizationService
 }
 
 // NewOrganizationHandler creates a new organization handler.
-func NewOrganizationHandler(orgService *storage.OrganizationService) *OrganizationHandler {
+func NewOrganizationHandler(orgService *identity.OrganizationService) *OrganizationHandler {
 	return &OrganizationHandler{
 		orgService: orgService,
 	}
