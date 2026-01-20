@@ -84,13 +84,12 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity
 
 	orgDir := filepath.Join(h.rootDir, orgID.String())
 
-	token, _ := h.remoteService.GetToken(remoteID)
 	url := remote.URL
-	if remote.AuthType == "token" && token != "" {
+	if remote.AuthType == "token" && remote.Token != "" {
 		if strings.Contains(url, "github.com") {
-			url = strings.Replace(url, "https://github.com", fmt.Sprintf("https://x-access-token:%s@github.com", token), 1)
+			url = strings.Replace(url, "https://github.com", fmt.Sprintf("https://x-access-token:%s@github.com", remote.Token), 1)
 		} else if strings.Contains(url, "gitlab.com") {
-			url = strings.Replace(url, "https://gitlab.com", fmt.Sprintf("https://oauth2:%s@gitlab.com", token), 1)
+			url = strings.Replace(url, "https://gitlab.com", fmt.Sprintf("https://oauth2:%s@gitlab.com", remote.Token), 1)
 		}
 	}
 

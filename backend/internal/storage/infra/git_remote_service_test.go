@@ -43,10 +43,9 @@ func TestGitRemoteService(t *testing.T) {
 		t.Fatalf("Failed to list remotes: %v, len=%d", err, len(remotes))
 	}
 
-	// Get token
-	savedToken, err := s.GetToken(remote.ID)
-	if err != nil || savedToken != token {
-		t.Errorf("Failed to get token: %v, got=%s", err, savedToken)
+	// Verify token stored on remote
+	if remote.Token != token {
+		t.Errorf("Token mismatch: got=%s, want=%s", remote.Token, token)
 	}
 
 	// Update sync
