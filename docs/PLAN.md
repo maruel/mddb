@@ -87,6 +87,16 @@ See `README.md` and `API.md` for details.
     - [x] **CLI Versioning**: Implement `mddb -version` to display build metadata (Git commit, dirty state) using Go's build info.
     - [x] **Local Config**: Store CLI configuration in an unversioned `.env` file in `data/` (added to `.gitignore`).
     - [x] **Settings Integration**: Ensure all onboarding options are accessible and editable in Workspace Settings.
+- [ ] **User Signup Analytics**:
+    - [ ] **IP Address Tracking**: Save user's IP address on account creation for analytics and fraud detection.
+        - Add `SignupIP` and `SignupCountry` fields to `User` struct.
+        - Extract client IP from `X-Forwarded-For` header (for proxied requests) or `RemoteAddr`.
+        - Update `auth.go:Register()` and `oauth.go:Callback()` handlers.
+    - [ ] **GeoIP Lookup**: Resolve IP address to country code using MaxMind GeoLite2-Country database.
+        - Use `github.com/oschwald/maxminddb-golang/v2` for database lookups.
+        - Create `internal/geoip/` package with `LookupCountry(ip string) (string, error)`.
+        - Add `-geoip-db` CLI flag and `GEOIP_DB_PATH` in `.env` file.
+        - Graceful degradation if database not available or path not configured.
 
 ### Phase 10: Connectivity & Relations
 - [ ] **Backlinks Indexing**: Efficient background indexing of internal markdown links to provide backlink lists.
