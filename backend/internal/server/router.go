@@ -16,29 +16,27 @@ import (
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
-func NewRouter(fileStore *content.FileStore, gitService *git.Client, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
+func NewRouter(fileStore *content.FileStore, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
 	mux := &http.ServeMux{}
 	jwtSecretBytes := []byte(jwtSecret)
 
-	pageService := content.NewPageService(fileStore, gitService, orgService)
-	ph := handlers.NewPageHandler(pageService)
-	dh := handlers.NewDatabaseHandler(fileStore, gitService, orgService)
-	nh := handlers.NewNodeHandler(fileStore, gitService, orgService)
-	ah := handlers.NewAssetHandler(fileStore, gitService, orgService)
+	ph := handlers.NewPageHandler(fileStore)
+	dh := handlers.NewDatabaseHandler(fileStore)
+	nh := handlers.NewNodeHandler(fileStore)
+	ah := handlers.NewAssetHandler(fileStore)
 	sh := handlers.NewSearchHandler(fileStore)
-	authh := handlers.NewAuthHandler(userService, memService, orgService, pageService, jwtSecret)
+	authh := handlers.NewAuthHandler(userService, memService, orgService, fileStore, jwtSecret)
 	uh := handlers.NewUserHandler(userService, memService, orgService)
 	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
 	mh := handlers.NewMembershipHandler(memService, userService, orgService, authh)
 	orgh := handlers.NewOrganizationHandler(orgService)
-	grh := handlers.NewGitRemoteHandler(orgService, gitService)
+	grh := handlers.NewGitRemoteHandler(orgService, fileStore.Git)
 
 	// Helper to create WrapAuth with common deps
 	viewer := identity.UserRoleViewer
@@ -74,7 +72,7 @@ func NewRouter(fileStore *content.FileStore, gitService *git.Client, userService
 
 	// OAuth endpoints (public)
 	if (googleClientID != "" && googleClientSecret != "") || (msClientID != "" && msClientSecret != "") {
-		oh := handlers.NewOAuthHandler(userService, memService, orgService, pageService, authh)
+		oh := handlers.NewOAuthHandler(userService, memService, orgService, fileStore, authh)
 		base := strings.TrimRight(baseURL, "/")
 		if googleClientID != "" && googleClientSecret != "" {
 			oh.AddProvider("google", googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")

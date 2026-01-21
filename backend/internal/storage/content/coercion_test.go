@@ -192,7 +192,7 @@ func Test_propertyAffinity(t *testing.T) {
 	}
 }
 
-func Test_coerceRecordData(t *testing.T) {
+func Test_CoerceRecordData(t *testing.T) {
 	properties := []Property{
 		{Name: "name", Type: PropertyTypeText},
 		{Name: "age", Type: PropertyTypeNumber},
@@ -206,7 +206,7 @@ func Test_coerceRecordData(t *testing.T) {
 		"unknown": "value",     // unknown property, pass through
 	}
 
-	result := coerceRecordData(data, properties)
+	result := CoerceRecordData(data, properties)
 
 	if result["name"] != "123" {
 		t.Errorf("name: got %v (%T), want '123' (string)", result["name"], result["name"])
@@ -222,19 +222,19 @@ func Test_coerceRecordData(t *testing.T) {
 	}
 }
 
-func Test_coerceRecordData_Nil(t *testing.T) {
+func Test_CoerceRecordData_Nil(t *testing.T) {
 	properties := []Property{{Name: "col", Type: PropertyTypeText}}
-	result := coerceRecordData(nil, properties)
+	result := CoerceRecordData(nil, properties)
 	if result != nil {
-		t.Errorf("coerceRecordData(nil, properties) = %v, want nil", result)
+		t.Errorf("CoerceRecordData(nil, properties) = %v, want nil", result)
 	}
 }
 
-func Test_coerceRecordData_EmptyProperties(t *testing.T) {
+func Test_CoerceRecordData_EmptyProperties(t *testing.T) {
 	data := map[string]any{"key": "value"}
-	result := coerceRecordData(data, nil)
+	result := CoerceRecordData(data, nil)
 	if result["key"] != "value" {
-		t.Errorf("coerceRecordData with empty properties should passthrough, got %v", result)
+		t.Errorf("CoerceRecordData with empty properties should passthrough, got %v", result)
 	}
 }
 

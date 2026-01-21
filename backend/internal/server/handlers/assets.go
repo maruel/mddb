@@ -12,22 +12,17 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // AssetHandler handles asset/file-related HTTP requests.
 type AssetHandler struct {
-	fileStore    *content.FileStore
-	assetService *content.AssetService
+	fs *content.FileStore
 }
 
 // NewAssetHandler creates a new asset handler.
-func NewAssetHandler(fileStore *content.FileStore, gitClient *git.Client, orgs *identity.OrganizationService) *AssetHandler {
-	return &AssetHandler{
-		fileStore:    fileStore,
-		assetService: content.NewAssetService(fileStore, gitClient, orgs),
-	}
+func NewAssetHandler(fs *content.FileStore) *AssetHandler {
+	return &AssetHandler{fs: fs}
 }
 
 // ListPageAssets returns a list of assets associated with a page.
@@ -36,7 +31,7 @@ func (h *AssetHandler) ListPageAssets(ctx context.Context, orgID jsonldb.ID, _ *
 	if err != nil {
 		return nil, err
 	}
-	it, err := h.fileStore.IterAssets(orgID, pageID)
+	it, err := h.fs.IterAssets(orgID, pageID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list assets", err)
 	}
@@ -83,7 +78,15 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	asset, err := h.assetService.Save(r.Context(), orgID, pageID, header.Filename, data)
+	// Get user from context (set by auth middleware)
+	user, ok := r.Context().Value(userContextKey).(*identity.User)
+	if !ok || user == nil {
+		writeErrorResponse(w, dto.Internal("user_context"))
+		return
+	}
+
+	author := content.Author{Name: user.Name, Email: user.Email}
+	asset, err := h.fs.SaveAsset(r.Context(), orgID, pageID, header.Filename, data, author)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("asset_save"))
 		return
@@ -113,7 +116,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := h.fileStore.ReadAsset(orgID, pageID, assetName)
+	data, err := h.fs.ReadAsset(orgID, pageID, assetName)
 	if err != nil {
 		writeErrorResponse(w, dto.NotFound("asset"))
 		return
@@ -129,13 +132,20 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePageAsset deletes an asset.
-func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
+func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
 	pageID, err := decodeID(req.PageID, "page_id")
 	if err != nil {
 		return nil, err
 	}
-	if err := h.assetService.Delete(ctx, orgID, pageID, req.AssetName); err != nil {
+	author := content.Author{Name: user.Name, Email: user.Email}
+	if err := h.fs.DeleteAsset(ctx, orgID, pageID, req.AssetName, author); err != nil {
 		return nil, dto.NotFound("asset")
 	}
 	return &dto.DeletePageAssetResponse{Ok: true}, nil
 }
+
+// userContextKey is the context key for the authenticated user.
+// This should match what the auth middleware uses.
+type contextKey string
+
+const userContextKey contextKey = "user"

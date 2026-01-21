@@ -1,22 +1,43 @@
 package content
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 func BenchmarkDatabaseOperations(b *testing.B) {
 	tmpDir := b.TempDir()
+	ctx := context.Background()
+	author := Author{Name: "Benchmark", Email: "bench@test.com"}
 
-	fs, err := NewFileStore(tmpDir)
+	gitClient, err := git.New(ctx, tmpDir, "test", "test@test.com")
 	if err != nil {
 		b.Fatal(err)
 	}
 
+	fs, err := NewFileStore(tmpDir, gitClient)
+	if err != nil {
+		b.Fatal(err)
+	}
+	fs.SetQuotaChecker(&noopQuotaChecker{})
+
 	orgID := jsonldb.ID(1) // non-zero org for tests
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		b.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		b.Fatalf("failed to init org git repo: %v", err)
+	}
+
 	dbID := jsonldb.NewID()
 	node := &Node{
 		ID:       dbID,
@@ -30,7 +51,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		},
 	}
 
-	if err := fs.WriteDatabase(orgID, node); err != nil {
+	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
 		b.Fatal(err)
 	}
 
@@ -46,7 +67,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 					"c2": i,
 				},
 			}
-			if err := fs.AppendRecord(orgID, dbID, record); err != nil {
+			if err := fs.AppendRecord(ctx, orgID, dbID, record, author); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -59,7 +80,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		// Prepare a database with 1000 records
 		readDBID := jsonldb.NewID()
 		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteDatabase(orgID, readNode); err != nil {
+		if err := fs.WriteDatabase(ctx, orgID, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
@@ -69,7 +90,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
-			if err := fs.AppendRecord(orgID, readDBID, record); err != nil {
+			if err := fs.AppendRecord(ctx, orgID, readDBID, record, author); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -91,7 +112,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := jsonldb.ID(100)
 		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteDatabase(orgID, readNode); err != nil {
+		if err := fs.WriteDatabase(ctx, orgID, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		// Write 10,000 records
@@ -102,7 +123,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
-			if err := fs.AppendRecord(orgID, readDBID, record); err != nil {
+			if err := fs.AppendRecord(ctx, orgID, readDBID, record, author); err != nil {
 				b.Fatal(err)
 			}
 		}

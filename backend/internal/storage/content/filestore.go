@@ -1,27 +1,45 @@
-// Package content provides the core file storage implementation for the mddb system.
+// Package content provides versioned file storage for the mddb system.
 package content
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"iter"
 	"log/slog"
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
-// FileStore handles all file system operations using directory-based storage.
+// Author identifies who made a change for git commits.
+type Author struct {
+	Name  string
+	Email string
+}
+
+// QuotaChecker validates quota constraints before writes.
+type QuotaChecker interface {
+	CheckPageQuota(ctx context.Context, orgID jsonldb.ID) error
+	CheckStorageQuota(ctx context.Context, orgID jsonldb.ID, additionalBytes int64) error
+}
+
+// FileStore is a versioned file storage system. All mutations are committed to git.
 // Storage model: Each page (document or database) is an ID-based directory.
 //   - Pages: ID directory containing index.md with YAML front matter.
-//   - Databases: ID directory containing data.jsonl (with schema header in first row).
+//   - Databases: ID directory containing metadata.json + data.jsonl.
 //   - Assets: files within each page's directory namespace.
 type FileStore struct {
 	rootDir string
+	Git     *git.Client
+	quota   QuotaChecker
 }
 
 // page is an internal type for reading/writing page markdown files.
@@ -35,16 +53,38 @@ type page struct {
 	faviconURL string
 }
 
-// NewFileStore initializes a FileStore with the given root directory.
-func NewFileStore(rootDir string) (*FileStore, error) {
+// NewFileStore creates a versioned file store.
+// gitClient is required - all operations are versioned.
+// Quota checker must be set via SetQuotaChecker before any write operations.
+func NewFileStore(rootDir string, gitClient *git.Client) (*FileStore, error) {
+	if gitClient == nil {
+		return nil, errors.New("git client is required")
+	}
 	if err := os.MkdirAll(rootDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create root directory: %w", err)
 	}
 
 	return &FileStore{
 		rootDir: rootDir,
+		Git:     gitClient,
 	}, nil
 }
+
+// SetQuotaChecker sets the quota checker for this file store.
+// Must be called before any write operations.
+func (fs *FileStore) SetQuotaChecker(quota QuotaChecker) {
+	fs.quota = quota
+}
+
+var errQuotaNotSet = errors.New("quota checker not set on FileStore")
+
+func (fs *FileStore) checkQuotaSet() error {
+	if fs.quota == nil {
+		return errQuotaNotSet
+	}
+	return nil
+}
+
 
 func (fs *FileStore) orgPagesDir(orgID jsonldb.ID) string {
 	if orgID == 0 {
@@ -94,11 +134,18 @@ func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*Node, error) {
 	}, nil
 }
 
-// WritePage writes a page to disk and returns it as a Node.
-func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*Node, error) {
+// WritePage creates a new page on disk, commits to git, and returns it as a Node.
+func (fs *FileStore) WritePage(ctx context.Context, orgID, id jsonldb.ID, title, content string, author Author) (*Node, error) {
+	if err := fs.checkQuotaSet(); err != nil {
+		return nil, err
+	}
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
+	if err := fs.quota.CheckPageQuota(ctx, orgID); err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 	p := &page{
 		id:       id,
@@ -119,6 +166,12 @@ func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*No
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 
+	msg := "create: page " + id.String() + " - " + title
+	files := []string{"pages/" + id.String() + "/index.md"}
+	if err := fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files); err != nil {
+		return nil, err
+	}
+
 	return &Node{
 		ID:       p.id,
 		Title:    p.title,
@@ -130,8 +183,8 @@ func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*No
 	}, nil
 }
 
-// UpdatePage updates an existing page and returns it as a Node.
-func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*Node, error) {
+// UpdatePage updates an existing page, commits to git, and returns it as a Node.
+func (fs *FileStore) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title, content string, author Author) (*Node, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -154,6 +207,12 @@ func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*N
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 
+	msg := "update: page " + id.String()
+	files := []string{"pages/" + id.String() + "/index.md"}
+	if err := fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files); err != nil {
+		return nil, err
+	}
+
 	return &Node{
 		ID:         p.id,
 		Title:      p.title,
@@ -166,8 +225,8 @@ func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*N
 	}, nil
 }
 
-// DeletePage deletes a page directory.
-func (fs *FileStore) DeletePage(orgID, id jsonldb.ID) error {
+// DeletePage deletes a page directory and commits to git.
+func (fs *FileStore) DeletePage(ctx context.Context, orgID, id jsonldb.ID, author Author) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
@@ -178,7 +237,10 @@ func (fs *FileStore) DeletePage(orgID, id jsonldb.ID) error {
 		}
 		return fmt.Errorf("failed to delete page: %w", err)
 	}
-	return nil
+
+	msg := "delete: page " + id.String()
+	files := []string{"pages/" + id.String()}
+	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
 // IterPages returns an iterator over all pages for an organization as Nodes.
@@ -428,11 +490,17 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*Node, error) {
 	}, nil
 }
 
-// WriteDatabase writes database metadata (including properties) to metadata.json.
+// WriteDatabase writes database metadata to metadata.json and commits to git.
 // The JSONL records file is created lazily when the first record is added.
-func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, node *Node) error {
+// isNew should be true for create operations (triggers quota check), false for updates.
+func (fs *FileStore) WriteDatabase(ctx context.Context, orgID jsonldb.ID, node *Node, isNew bool, author Author) error {
 	if orgID == 0 {
 		return errOrgIDRequired
+	}
+	if isNew {
+		if err := fs.quota.CheckPageQuota(ctx, orgID); err != nil {
+			return err
+		}
 	}
 
 	if err := os.MkdirAll(fs.pageDir(orgID, node.ID), 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
@@ -456,11 +524,18 @@ func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, node *Node) error {
 		return fmt.Errorf("failed to write metadata: %w", err)
 	}
 
-	return nil
+	var msg string
+	if isNew {
+		msg = "create: database " + node.ID.String() + " - " + node.Title
+	} else {
+		msg = "update: database " + node.ID.String()
+	}
+	files := []string{"pages/" + node.ID.String() + "/metadata.json"}
+	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
-// DeleteDatabase deletes a database and all its records.
-func (fs *FileStore) DeleteDatabase(orgID, id jsonldb.ID) error {
+// DeleteDatabase deletes a database and all its records, commits to git.
+func (fs *FileStore) DeleteDatabase(ctx context.Context, orgID, id jsonldb.ID, author Author) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
@@ -468,7 +543,10 @@ func (fs *FileStore) DeleteDatabase(orgID, id jsonldb.ID) error {
 	if err := os.RemoveAll(pageDir); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to delete database: %w", err)
 	}
-	return nil
+
+	msg := "delete: database " + id.String()
+	files := []string{"pages/" + id.String()}
+	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
 // IterDatabases returns an iterator over all databases for the given organization as Nodes.
@@ -504,17 +582,17 @@ func (fs *FileStore) IterDatabases(orgID jsonldb.ID) (iter.Seq[*Node], error) {
 	}, nil
 }
 
-// AppendRecord appends a record to a database using jsonldb abstraction.
-func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *DataRecord) error {
+// AppendRecord appends a record to a database and commits to git.
+func (fs *FileStore) AppendRecord(ctx context.Context, orgID, databaseID jsonldb.ID, record *DataRecord, author Author) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
-	pageDir := fs.pageDir(orgID, id)
+	pageDir := fs.pageDir(orgID, databaseID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	filePath := fs.databaseRecordsFile(orgID, id)
+	filePath := fs.databaseRecordsFile(orgID, databaseID)
 
 	// Load or create table using jsonldb
 	table, err := jsonldb.NewTable[*DataRecord](filePath)
@@ -527,7 +605,9 @@ func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *DataRecord) erro
 		return fmt.Errorf("failed to append record: %w", err)
 	}
 
-	return nil
+	msg := "create: record " + record.ID.String() + " in database " + databaseID.String()
+	files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
+	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
 // IterRecords returns an iterator over all records for a database.
@@ -584,8 +664,8 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 	return records, nil
 }
 
-// UpdateRecord updates an existing record in a database using jsonldb abstraction.
-func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *DataRecord) error {
+// UpdateRecord updates an existing record in a database and commits to git.
+func (fs *FileStore) UpdateRecord(ctx context.Context, orgID, databaseID jsonldb.ID, record *DataRecord, author Author) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
@@ -605,11 +685,14 @@ func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *DataReco
 	if prev == nil {
 		return errRecordNotFound
 	}
-	return nil
+
+	msg := "update: record " + record.ID.String() + " in database " + databaseID.String()
+	files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
+	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
-// DeleteRecord deletes a record from a database using jsonldb abstraction.
-func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID jsonldb.ID) error {
+// DeleteRecord deletes a record from a database and commits to git.
+func (fs *FileStore) DeleteRecord(ctx context.Context, orgID, databaseID, recordID jsonldb.ID, author Author) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
@@ -629,7 +712,10 @@ func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID jsonldb.ID) error 
 	if deleted == nil {
 		return errRecordNotFound
 	}
-	return nil
+
+	msg := "delete: record " + recordID.String() + " from database " + databaseID.String()
+	files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
+	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
 func (fs *FileStore) databaseRecordsFile(orgID, id jsonldb.ID) string {
@@ -642,22 +728,44 @@ func (fs *FileStore) databaseMetadataFile(orgID, id jsonldb.ID) string {
 
 // Asset operations
 
-// SaveAsset saves an asset associated with a page.
-func (fs *FileStore) SaveAsset(orgID, pageID jsonldb.ID, assetName string, data []byte) (string, error) {
+// SaveAsset saves an asset associated with a page and commits to git.
+func (fs *FileStore) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, assetName string, data []byte, author Author) (*Asset, error) {
 	if orgID == 0 {
-		return "", errOrgIDRequired
+		return nil, errOrgIDRequired
 	}
+	if err := fs.quota.CheckStorageQuota(ctx, orgID, int64(len(data))); err != nil {
+		return nil, err
+	}
+
 	pageDir := fs.pageDir(orgID, pageID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
-		return "", fmt.Errorf("failed to create page directory: %w", err)
+		return nil, fmt.Errorf("failed to create page directory: %w", err)
 	}
 
 	assetPath := filepath.Join(pageDir, assetName)
 	if err := os.WriteFile(assetPath, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
-		return "", fmt.Errorf("failed to write asset: %w", err)
+		return nil, fmt.Errorf("failed to write asset: %w", err)
 	}
 
-	return assetName, nil
+	msg := "create: asset " + assetName + " in page " + pageID.String()
+	files := []string{"pages/" + pageID.String() + "/" + assetName}
+	if err := fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files); err != nil {
+		return nil, err
+	}
+
+	// Detect MIME type from filename
+	mimeType := mime.TypeByExtension(filepath.Ext(assetName))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	return &Asset{
+		ID:       assetName,
+		Name:     assetName,
+		MimeType: mimeType,
+		Size:     int64(len(data)),
+		Path:     assetName,
+	}, nil
 }
 
 // ReadAsset reads an asset associated with a page.
@@ -676,8 +784,8 @@ func (fs *FileStore) ReadAsset(orgID, pageID jsonldb.ID, assetName string) ([]by
 	return data, nil
 }
 
-// DeleteAsset deletes an asset associated with a page.
-func (fs *FileStore) DeleteAsset(orgID, pageID jsonldb.ID, assetName string) error {
+// DeleteAsset deletes an asset associated with a page and commits to git.
+func (fs *FileStore) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID, assetName string, author Author) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
@@ -688,7 +796,10 @@ func (fs *FileStore) DeleteAsset(orgID, pageID jsonldb.ID, assetName string) err
 		}
 		return fmt.Errorf("failed to delete asset: %w", err)
 	}
-	return nil
+
+	msg := "delete: asset " + assetName + " from page " + pageID.String()
+	files := []string{"pages/" + pageID.String() + "/" + assetName}
+	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
 // IterAssets returns an iterator over all assets associated with a page.
@@ -792,4 +903,89 @@ func formatMarkdownFile(p *page) []byte {
 	buf.WriteString("\n\n")
 	buf.WriteString(p.content)
 	return buf.Bytes()
+}
+
+// History operations
+
+// GetHistory returns the commit history for a page, limited to n commits.
+// n is capped at 1000. If n <= 0, defaults to 1000.
+func (fs *FileStore) GetHistory(ctx context.Context, orgID, id jsonldb.ID, n int) ([]*git.Commit, error) {
+	return fs.Git.GetHistory(ctx, orgID.String(), "pages/"+id.String(), n)
+}
+
+// GetFileAtCommit returns the content of a file at a specific commit.
+func (fs *FileStore) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash, path string) ([]byte, error) {
+	return fs.Git.GetFileAtCommit(ctx, orgID.String(), hash, path)
+}
+
+// CreateNode creates a new node (can be document, database, or hybrid) and commits to git.
+func (fs *FileStore) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType NodeType, author Author) (*Node, error) {
+	if err := fs.quota.CheckPageQuota(ctx, orgID); err != nil {
+		return nil, err
+	}
+
+	id := jsonldb.NewID()
+	now := time.Now()
+
+	node := &Node{
+		ID:       id,
+		Title:    title,
+		Type:     nodeType,
+		Created:  now,
+		Modified: now,
+	}
+
+	var files []string
+
+	if nodeType == NodeTypeDocument || nodeType == NodeTypeHybrid {
+		p := &page{
+			id:       id,
+			title:    title,
+			content:  "",
+			created:  now,
+			modified: now,
+		}
+
+		pageDir := fs.pageDir(orgID, id)
+		if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
+			return nil, fmt.Errorf("failed to create directory: %w", err)
+		}
+
+		filePath := fs.pageIndexFile(orgID, id)
+		data := formatMarkdownFile(p)
+		if err := os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
+			return nil, fmt.Errorf("failed to write page: %w", err)
+		}
+		files = append(files, "pages/"+id.String()+"/index.md")
+	}
+
+	if nodeType == NodeTypeDatabase || nodeType == NodeTypeHybrid {
+		if err := os.MkdirAll(fs.pageDir(orgID, id), 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
+			return nil, fmt.Errorf("failed to create directory: %w", err)
+		}
+
+		metadataFile := fs.databaseMetadataFile(orgID, id)
+		metadata := map[string]any{
+			"title":      title,
+			"version":    "1.0",
+			"created":    now,
+			"modified":   now,
+			"properties": []Property{},
+		}
+		data, err := json.Marshal(metadata)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+		}
+		if err := os.WriteFile(metadataFile, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
+			return nil, fmt.Errorf("failed to write metadata: %w", err)
+		}
+		files = append(files, "pages/"+id.String()+"/metadata.json")
+	}
+
+	msg := "create: " + string(nodeType) + " " + id.String() + " - " + title
+	if err := fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files); err != nil {
+		return nil, err
+	}
+
+	return node, nil
 }

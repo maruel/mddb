@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -21,18 +22,18 @@ type OAuthHandler struct {
 	userService *identity.UserService
 	memService  *identity.MembershipService
 	orgService  *identity.OrganizationService
-	pageService *content.PageService
+	fs          *content.FileStore
 	authHandler *AuthHandler
 	providers   map[string]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
-func NewOAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, pageService *content.PageService, authHandler *AuthHandler) *OAuthHandler {
+func NewOAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, fs *content.FileStore, authHandler *AuthHandler) *OAuthHandler {
 	return &OAuthHandler{
 		userService: userService,
 		memService:  memService,
 		orgService:  orgService,
-		pageService: pageService,
+		fs:          fs,
 		authHandler: authHandler,
 		providers:   make(map[string]*oauth2.Config),
 	}
@@ -178,7 +179,9 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			// Create welcome page
 			welcomeTitle := "Welcome to " + orgName
 			welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
-			if _, err := h.pageService.Create(r.Context(), org.ID, welcomeTitle, welcomeContent, userInfo.Name, userInfo.Email); err != nil {
+			pageID := jsonldb.NewID()
+			author := content.Author{Name: userInfo.Name, Email: userInfo.Email}
+			if _, err := h.fs.WritePage(r.Context(), org.ID, pageID, welcomeTitle, welcomeContent, author); err != nil {
 				slog.ErrorContext(r.Context(), "Failed to create welcome page", "error", err, "org_id", org.ID)
 				writeErrorResponse(w, dto.InternalWithError("Failed to initialize organization", err))
 				return

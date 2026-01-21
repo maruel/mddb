@@ -1,7 +1,9 @@
 package content
 
 import (
+	"context"
 	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 	"time"
@@ -10,13 +12,20 @@ import (
 )
 
 func TestDatabase_ReadWrite(t *testing.T) {
-	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
 
 	orgID := jsonldb.ID(100)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
+
 	tests := []struct {
 		name string
 		node *Node
@@ -58,7 +67,7 @@ func TestDatabase_ReadWrite(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Write database
-			err := fs.WriteDatabase(orgID, tt.node)
+			err := fs.WriteDatabase(ctx, orgID, tt.node, true, author)
 			if err != nil {
 				t.Fatalf("Failed to write database: %v", err)
 			}
@@ -101,13 +110,20 @@ func TestDatabase_ReadWrite(t *testing.T) {
 }
 
 func TestDatabase_Exists(t *testing.T) {
-	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
 
 	orgID := jsonldb.ID(100)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
+
 	node := &Node{
 		ID:    jsonldb.ID(1),
 		Title: "Test",
@@ -125,7 +141,7 @@ func TestDatabase_Exists(t *testing.T) {
 	}
 
 	// Write database
-	if err := fs.WriteDatabase(orgID, node); err != nil {
+	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 
@@ -136,13 +152,19 @@ func TestDatabase_Exists(t *testing.T) {
 }
 
 func TestDatabase_List(t *testing.T) {
-	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
 
 	orgID := jsonldb.ID(100)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
 
 	// Create multiple databases
 	dbIDs := []jsonldb.ID{jsonldb.ID(1), jsonldb.ID(2), jsonldb.ID(3)}
@@ -157,7 +179,7 @@ func TestDatabase_List(t *testing.T) {
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.WriteDatabase(orgID, node); err != nil {
+		if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
 			t.Fatalf("Failed to write database %v: %v", id, err)
 		}
 	}
@@ -188,13 +210,20 @@ func TestDatabase_List(t *testing.T) {
 }
 
 func TestDatabase_Delete(t *testing.T) {
-	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
 
 	orgID := jsonldb.ID(100)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
+
 	node := &Node{
 		ID:    jsonldb.ID(1),
 		Title: "Test",
@@ -207,7 +236,7 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	// Write database
-	if err := fs.WriteDatabase(orgID, node); err != nil {
+	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 
@@ -218,7 +247,7 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	// Delete database
-	err = fs.DeleteDatabase(orgID, node.ID)
+	err := fs.DeleteDatabase(ctx, orgID, node.ID, author)
 	if err != nil {
 		t.Fatalf("Failed to delete database: %v", err)
 	}
@@ -230,14 +259,20 @@ func TestDatabase_Delete(t *testing.T) {
 }
 
 func TestRecord_AppendRead(t *testing.T) {
-	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
 
 	orgID := jsonldb.ID(100)
 	dbID := jsonldb.ID(1)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
 
 	// Create database first
 	node := &Node{
@@ -250,7 +285,7 @@ func TestRecord_AppendRead(t *testing.T) {
 		Created:  time.Now(),
 		Modified: time.Now(),
 	}
-	if err := fs.WriteDatabase(orgID, node); err != nil {
+	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
@@ -277,7 +312,7 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 
 	for _, rec := range records {
-		err := fs.AppendRecord(orgID, dbID, rec)
+		err := fs.AppendRecord(ctx, orgID, dbID, rec, author)
 		if err != nil {
 			t.Fatalf("Failed to append record: %v", err)
 		}
@@ -313,14 +348,20 @@ func TestRecord_AppendRead(t *testing.T) {
 }
 
 func TestRecord_EmptyDatabase(t *testing.T) {
-	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
 
 	orgID := jsonldb.ID(100)
 	dbID := jsonldb.ID(1)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
 
 	// Create database
 	node := &Node{
@@ -333,7 +374,7 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 		Created:  time.Now(),
 		Modified: time.Now(),
 	}
-	if err := fs.WriteDatabase(orgID, node); err != nil {
+	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
 		t.Fatalf("Failed to create database: %v", err)
 	}
 
@@ -350,13 +391,19 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 }
 
 func TestDatabase_NestedPath(t *testing.T) {
-	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
 
 	orgID := jsonldb.ID(100)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
 
 	// Create database with base64 encoded ID
 	dbID := jsonldb.ID(42)
@@ -371,7 +418,7 @@ func TestDatabase_NestedPath(t *testing.T) {
 		Modified: time.Now(),
 	}
 
-	if err := fs.WriteDatabase(orgID, node); err != nil {
+	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
 		t.Fatalf("Failed to write database: %v", err)
 	}
 

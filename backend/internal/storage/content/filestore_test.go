@@ -1,28 +1,66 @@
 package content
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
-func TestFileStorePageOperations(t *testing.T) {
-	// Create temporary directory for testing
+// testFileStore creates a FileStore for testing with a real git repo and no-op quota.
+func testFileStore(t *testing.T) *FileStore {
+	t.Helper()
 	tmpDir := t.TempDir()
 
-	fs, err := NewFileStore(tmpDir)
+	gitClient, err := git.New(context.Background(), tmpDir, "test", "test@test.com")
+	if err != nil {
+		t.Fatalf("failed to create git client: %v", err)
+	}
+
+	fs, err := NewFileStore(tmpDir, gitClient)
 	if err != nil {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
 
+	// Use no-op quota checker for tests
+	fs.SetQuotaChecker(&noopQuotaChecker{})
+
+	return fs
+}
+
+// noopQuotaChecker always allows operations (for testing).
+type noopQuotaChecker struct{}
+
+func (n *noopQuotaChecker) CheckPageQuota(ctx context.Context, orgID jsonldb.ID) error {
+	return nil
+}
+
+func (n *noopQuotaChecker) CheckStorageQuota(ctx context.Context, orgID jsonldb.ID, additionalBytes int64) error {
+	return nil
+}
+
+func TestFileStorePageOperations(t *testing.T) {
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
+
 	orgID := jsonldb.ID(100)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
 
 	// Test WritePage (with numeric ID encoded as base64)
 	pageID := jsonldb.ID(1)
-	page, err := fs.WritePage(orgID, pageID, "Test Title", "# Test Content")
+	page, err := fs.WritePage(ctx, orgID, pageID, "Test Title", "# Test Content", author)
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
 	}
@@ -53,7 +91,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test UpdatePage
-	updated, err := fs.UpdatePage(orgID, pageID, "Updated Title", "# Updated Content")
+	updated, err := fs.UpdatePage(ctx, orgID, pageID, "Updated Title", "# Updated Content", author)
 	if err != nil {
 		t.Fatalf("failed to update page: %v", err)
 	}
@@ -73,7 +111,7 @@ func TestFileStorePageOperations(t *testing.T) {
 	}
 
 	// Test DeletePage
-	err = fs.DeletePage(orgID, pageID)
+	err = fs.DeletePage(ctx, orgID, pageID, author)
 	if err != nil {
 		t.Fatalf("failed to delete page: %v", err)
 	}
@@ -90,13 +128,19 @@ func TestFileStorePageOperations(t *testing.T) {
 }
 
 func TestFileStoreListPages(t *testing.T) {
-	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("failed to create FileStore: %v", err)
-	}
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
 
 	orgID := jsonldb.ID(100)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
 
 	// Create multiple pages with numeric IDs
 	pages := []struct {
@@ -109,7 +153,7 @@ func TestFileStoreListPages(t *testing.T) {
 	}
 
 	for _, p := range pages {
-		_, err := fs.WritePage(orgID, p.id, p.title, "Content")
+		_, err := fs.WritePage(ctx, orgID, p.id, p.title, "Content", author)
 		if err != nil {
 			t.Fatalf("failed to write page %v: %v", p.id, err)
 		}
@@ -127,7 +171,7 @@ func TestFileStoreListPages(t *testing.T) {
 	}
 
 	// Verify directory structure
-	expectedDir := filepath.Join(tmpDir, orgID.String(), "pages", jsonldb.ID(1).String())
+	expectedDir := filepath.Join(fs.rootDir, orgID.String(), "pages", jsonldb.ID(1).String())
 	if _, err := os.Stat(expectedDir); err != nil {
 		t.Errorf("expected page directory %s to exist: %v", expectedDir, err)
 	}
@@ -139,23 +183,29 @@ func TestFileStoreListPages(t *testing.T) {
 }
 
 func TestMarkdownFormatting(t *testing.T) {
-	tmpDir := t.TempDir()
-	fs, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("failed to create FileStore: %v", err)
-	}
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
 
 	orgID := jsonldb.ID(100)
 
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
+
 	// Write page with specific content
 	pageID := jsonldb.ID(1)
-	_, err = fs.WritePage(orgID, pageID, "Format Test", "# Content\n\nWith multiple lines")
+	_, err := fs.WritePage(ctx, orgID, pageID, "Format Test", "# Content\n\nWith multiple lines", author)
 	if err != nil {
 		t.Fatalf("failed to write page: %v", err)
 	}
 
 	// Read the file directly to verify format
-	filePath := filepath.Join(tmpDir, orgID.String(), "pages", pageID.String(), "index.md")
+	filePath := filepath.Join(fs.rootDir, orgID.String(), "pages", pageID.String(), "index.md")
 	data, err := os.ReadFile(filePath) //nolint:gosec // G304: test code with controlled path
 	if err != nil {
 		t.Fatalf("failed to read file: %v", err)

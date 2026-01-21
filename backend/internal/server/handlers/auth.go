@@ -17,17 +17,17 @@ type AuthHandler struct {
 	userService *identity.UserService
 	memService  *identity.MembershipService
 	orgService  *identity.OrganizationService
-	pageService *content.PageService
+	fs          *content.FileStore
 	jwtSecret   []byte
 }
 
 // NewAuthHandler creates a new auth handler.
-func NewAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, pageService *content.PageService, jwtSecret string) *AuthHandler {
+func NewAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, fs *content.FileStore, jwtSecret string) *AuthHandler {
 	return &AuthHandler{
 		userService: userService,
 		memService:  memService,
 		orgService:  orgService,
-		pageService: pageService,
+		fs:          fs,
 		jwtSecret:   []byte(jwtSecret),
 	}
 }
@@ -88,7 +88,9 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	// Create welcome page
 	welcomeTitle := "Welcome to " + orgName
 	welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
-	if _, err := h.pageService.Create(ctx, org.ID, welcomeTitle, welcomeContent, req.Name, req.Email); err != nil {
+	pageID := jsonldb.NewID()
+	author := content.Author{Name: req.Name, Email: req.Email}
+	if _, err := h.fs.WritePage(ctx, org.ID, pageID, welcomeTitle, welcomeContent, author); err != nil {
 		slog.ErrorContext(ctx, "Failed to create welcome page", "error", err, "org_id", org.ID)
 		return nil, dto.InternalWithError("Failed to initialize organization", err)
 	}

@@ -6,60 +6,35 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
-// mockQuotaGetterSearch implements the QuotaGetter interface for testing.
-type mockQuotaGetterSearch struct {
-	quotas map[jsonldb.ID]entity.Quota
-}
-
-func (m *mockQuotaGetterSearch) GetQuota(ctx context.Context, orgID jsonldb.ID) (entity.Quota, error) {
-	if quota, exists := m.quotas[orgID]; exists {
-		return quota, nil
-	}
-	// Return default quota if not found
-	return entity.Quota{MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10}, nil
-}
-
 func TestSearchService_SearchPages(t *testing.T) {
-	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
-	gitService, err := git.New(t.Context(), tmpDir, "", "")
-	if err != nil {
-		t.Fatalf("Failed to create git service: %v", err)
-	}
-	searchService := NewSearchService(fileStore)
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
+	searchService := NewSearchService(fs)
 	orgID := jsonldb.ID(100)
-	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
-		t.Fatalf("Failed to create org dir: %v", err)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
 	}
-	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
-		t.Fatalf("Failed to init git for org: %v", err)
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
 	}
 
 	// Create test pages
-	mockQuotaGetter := &mockQuotaGetterSearch{
-		quotas: map[jsonldb.ID]entity.Quota{
-			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
-		},
+	if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Getting Started", "This is a guide to get started with mddb project", author); err != nil {
+		t.Fatalf("WritePage Getting Started failed: %v", err)
 	}
-	pageService := NewPageService(fileStore, gitService, mockQuotaGetter)
-	ctx := t.Context()
-	if _, err := pageService.Create(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project", "", ""); err != nil {
-		t.Fatalf("Create Getting Started failed: %v", err)
+	if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Advanced Topics", "Learn about advanced mddb configuration and optimization", author); err != nil {
+		t.Fatalf("WritePage Advanced Topics failed: %v", err)
 	}
-	if _, err := pageService.Create(ctx, orgID, "Advanced Topics", "Learn about advanced mddb configuration and optimization", "", ""); err != nil {
-		t.Fatalf("Create Advanced Topics failed: %v", err)
-	}
-	if _, err := pageService.Create(ctx, orgID, "API Reference", "Complete mddb API documentation for developers", "", ""); err != nil {
-		t.Fatalf("Create API Reference failed: %v", err)
+	if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "API Reference", "Complete mddb API documentation for developers", author); err != nil {
+		t.Fatalf("WritePage API Reference failed: %v", err)
 	}
 
 	tests := []struct {
@@ -135,52 +110,54 @@ func TestSearchService_SearchPages(t *testing.T) {
 }
 
 func TestSearchService_SearchRecords(t *testing.T) {
-	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
-	gitService, err := git.New(t.Context(), tmpDir, "", "")
-	if err != nil {
-		t.Fatalf("Failed to create git service: %v", err)
-	}
-	searchService := NewSearchService(fileStore)
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
+	searchService := NewSearchService(fs)
 	orgID := jsonldb.ID(100)
-	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
-		t.Fatalf("Failed to create org dir: %v", err)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
 	}
-	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
-		t.Fatalf("Failed to init git for org: %v", err)
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
 	}
-	ctx := t.Context()
 
 	// Create test database with records
-	mockQuotaGetterDB := &mockQuotaGetterSearch{
-		quotas: map[jsonldb.ID]entity.Quota{
-			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+	dbID := jsonldb.NewID()
+	node := &Node{
+		ID:    dbID,
+		Title: "Tasks",
+		Type:  NodeTypeDatabase,
+		Properties: []Property{
+			{Name: "title", Type: "text", Required: true},
+			{Name: "status", Type: PropertyTypeText},
+			{Name: "description", Type: "text"},
 		},
+		Created:  time.Now(),
+		Modified: time.Now(),
 	}
-	dbService := NewDatabaseService(fileStore, gitService, mockQuotaGetterDB)
-	columns := []Property{
-		{Name: "title", Type: "text", Required: true},
-		{Name: "status", Type: PropertyTypeText},
-		{Name: "description", Type: "text"},
-	}
-
-	db, err := dbService.Create(ctx, orgID, "Tasks", columns)
-	if err != nil {
-		t.Fatalf("Create database failed: %v", err)
+	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("WriteDatabase failed: %v", err)
 	}
 
 	// Create records
-	if _, err := dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"}); err != nil {
-		t.Fatalf("Create record failed: %v", err)
+	records := []map[string]any{
+		{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"},
+		{"title": "Finish report", "status": "done", "description": "Quarterly performance"},
+		{"title": "Review code", "status": "todo", "description": "Pull request on main repo"},
 	}
-	if _, err := dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"}); err != nil {
-		t.Fatalf("Create record failed: %v", err)
-	}
-	if _, err := dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"}); err != nil {
-		t.Fatalf("Create record failed: %v", err)
+	for _, data := range records {
+		rec := &DataRecord{
+			ID:       jsonldb.NewID(),
+			Data:     data,
+			Created:  time.Now(),
+			Modified: time.Now(),
+		}
+		if err := fs.AppendRecord(ctx, orgID, dbID, rec, author); err != nil {
+			t.Fatalf("AppendRecord failed: %v", err)
+		}
 	}
 
 	tests := []struct {
@@ -242,37 +219,26 @@ func TestSearchService_SearchRecords(t *testing.T) {
 }
 
 func TestSearchService_Scoring(t *testing.T) {
-	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
-	gitService, err := git.New(t.Context(), tmpDir, "", "")
-	if err != nil {
-		t.Fatalf("Failed to create git service: %v", err)
-	}
-	searchService := NewSearchService(fileStore)
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
+	searchService := NewSearchService(fs)
 	orgID := jsonldb.ID(100)
-	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
-		t.Fatalf("Failed to create org dir: %v", err)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
 	}
-	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
-		t.Fatalf("Failed to init git for org: %v", err)
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
 	}
-	ctx := t.Context()
 
 	// Create pages where title match should score higher
-	mockQuotaGetterScoring := &mockQuotaGetterSearch{
-		quotas: map[jsonldb.ID]entity.Quota{
-			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
-		},
+	if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Python Programming", "This is about Java not Python", author); err != nil {
+		t.Fatalf("WritePage Python Programming failed: %v", err)
 	}
-	pageService := NewPageService(fileStore, gitService, mockQuotaGetterScoring)
-	if _, err := pageService.Create(ctx, orgID, "Python Programming", "This is about Java not Python", "", ""); err != nil {
-		t.Fatalf("Create Python Programming failed: %v", err)
-	}
-	if _, err := pageService.Create(ctx, orgID, "Java Basics", "Learn Python programming fundamentals", "", ""); err != nil {
-		t.Fatalf("Create Java Basics failed: %v", err)
+	if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Java Basics", "Learn Python programming fundamentals", author); err != nil {
+		t.Fatalf("WritePage Java Basics failed: %v", err)
 	}
 
 	results, err := searchService.Search(ctx, orgID, SearchOptions{
@@ -299,35 +265,24 @@ func TestSearchService_Scoring(t *testing.T) {
 }
 
 func TestSearchService_Limit(t *testing.T) {
-	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
-	gitService, err := git.New(t.Context(), tmpDir, "", "")
-	if err != nil {
-		t.Fatalf("Failed to create git service: %v", err)
-	}
-	searchService := NewSearchService(fileStore)
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
+	searchService := NewSearchService(fs)
 	orgID := jsonldb.ID(100)
-	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
-		t.Fatalf("Failed to create org dir: %v", err)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
 	}
-	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
-		t.Fatalf("Failed to init git for org: %v", err)
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
 	}
-	ctx := t.Context()
 
 	// Create multiple pages
-	mockQuotaGetterLimit := &mockQuotaGetterSearch{
-		quotas: map[jsonldb.ID]entity.Quota{
-			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
-		},
-	}
-	pageService := NewPageService(fileStore, gitService, mockQuotaGetterLimit)
 	for i := range 10 {
-		if _, err := pageService.Create(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content", "", ""); err != nil {
-			t.Fatalf("Create Test Page %d failed: %v", i, err)
+		if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), fmt.Sprintf("Test Page %d", i), "This is test content", author); err != nil {
+			t.Fatalf("WritePage Test Page %d failed: %v", i, err)
 		}
 	}
 
@@ -347,47 +302,49 @@ func TestSearchService_Limit(t *testing.T) {
 }
 
 func TestSearchService_Integration(t *testing.T) {
-	tmpDir := t.TempDir()
-	fileStore, err := NewFileStore(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to create FileStore: %v", err)
-	}
-	gitService, err := git.New(t.Context(), tmpDir, "", "")
-	if err != nil {
-		t.Fatalf("Failed to create git service: %v", err)
-	}
-	searchService := NewSearchService(fileStore)
+	fs := testFileStore(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
+	searchService := NewSearchService(fs)
 	orgID := jsonldb.ID(100)
-	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
-		t.Fatalf("Failed to create org dir: %v", err)
-	}
-	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
-		t.Fatalf("Failed to init git for org: %v", err)
-	}
-	ctx := t.Context()
 
-	// Create mixed content
-	mockQuotaGetterIntegration := &mockQuotaGetterSearch{
-		quotas: map[jsonldb.ID]entity.Quota{
-			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
+
+	// Create mixed content - page
+	if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Blog Post", "Article about searchable content and web development", author); err != nil {
+		t.Fatalf("WritePage Blog Post failed: %v", err)
+	}
+
+	// Create database with record
+	dbID := jsonldb.NewID()
+	node := &Node{
+		ID:    dbID,
+		Title: "Articles",
+		Type:  NodeTypeDatabase,
+		Properties: []Property{
+			{Name: "title", Type: "text", Required: true},
+			{Name: "content", Type: "text"},
 		},
+		Created:  time.Now(),
+		Modified: time.Now(),
 	}
-	pageService := NewPageService(fileStore, gitService, mockQuotaGetterIntegration)
-	if _, err := pageService.Create(ctx, orgID, "Blog Post", "Article about searchable content and web development", "", ""); err != nil {
-		t.Fatalf("Create Blog Post failed: %v", err)
+	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("WriteDatabase failed: %v", err)
 	}
-
-	dbService := NewDatabaseService(fileStore, gitService, mockQuotaGetterIntegration)
-	columns := []Property{
-		{Name: "title", Type: "text", Required: true},
-		{Name: "content", Type: "text"},
+	rec := &DataRecord{
+		ID:       jsonldb.NewID(),
+		Data:     map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"},
+		Created:  time.Now(),
+		Modified: time.Now(),
 	}
-	db, err := dbService.Create(ctx, orgID, "Articles", columns)
-	if err != nil {
-		t.Fatalf("Create database failed: %v", err)
-	}
-	if _, err := dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"}); err != nil {
-		t.Fatalf("Create record failed: %v", err)
+	if err := fs.AppendRecord(ctx, orgID, dbID, rec, author); err != nil {
+		t.Fatalf("AppendRecord failed: %v", err)
 	}
 
 	// Search should find both page and record
@@ -427,3 +384,4 @@ func TestSearchService_Integration(t *testing.T) {
 		t.Error("Expected at least one record result")
 	}
 }
+

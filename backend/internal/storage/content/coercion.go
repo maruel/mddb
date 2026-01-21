@@ -214,9 +214,9 @@ func coerceToNumeric(value any) any {
 	}
 }
 
-// coerceRecordData applies type coercion to all values in a data map based on property definitions.
+// CoerceRecordData applies type coercion to all values in a data map based on property definitions.
 // Properties not in the schema are passed through unchanged (BLOB affinity).
-func coerceRecordData(data map[string]any, properties []Property) map[string]any {
+func CoerceRecordData(data map[string]any, properties []Property) map[string]any {
 	if data == nil {
 		return nil
 	}

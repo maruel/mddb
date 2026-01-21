@@ -2,32 +2,26 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
-	nodeService *content.NodeService
-	gitService  *git.Client
+	fs *content.FileStore
 }
 
 // NewNodeHandler creates a new node handler.
-func NewNodeHandler(fileStore *content.FileStore, gitService *git.Client, orgService *identity.OrganizationService) *NodeHandler {
-	return &NodeHandler{
-		nodeService: content.NewNodeService(fileStore, gitService, orgService),
-		gitService:  gitService,
-	}
+func NewNodeHandler(fs *content.FileStore) *NodeHandler {
+	return &NodeHandler{fs: fs}
 }
 
 // ListNodes returns the hierarchical node tree.
 func (h *NodeHandler) ListNodes(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListNodesRequest) (*dto.ListNodesResponse, error) {
-	nodes, err := h.nodeService.List(ctx, orgID)
+	nodes, err := h.fs.ReadNodeTree(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to read node tree", err)
 	}
@@ -44,7 +38,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, orgID jsonldb.ID, _ *identity
 	if err != nil {
 		return nil, err
 	}
-	node, err := h.nodeService.Get(ctx, orgID, id)
+	node, err := h.fs.ReadNode(orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("node")
 	}
@@ -69,24 +63,10 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *id
 		return nil, dto.BadRequest("Invalid node type")
 	}
 
-	node, err := h.nodeService.Create(ctx, orgID, req.Title, nodeType, 0)
+	author := content.Author{Name: user.Name, Email: user.Email}
+	node, err := h.fs.CreateNode(ctx, orgID, req.Title, nodeType, author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create node", err)
-	}
-
-	msg := fmt.Sprintf("create: %s %s - %s", req.Type, node.ID.String(), req.Title)
-	var files []string
-	idStr := node.ID.String()
-	switch nodeType {
-	case content.NodeTypeDocument:
-		files = []string{"pages/" + idStr + "/index.md"}
-	case content.NodeTypeDatabase:
-		files = []string{"pages/" + idStr + "/metadata.json"}
-	case content.NodeTypeHybrid:
-		files = []string{"pages/" + idStr + "/index.md", "pages/" + idStr + "/metadata.json"}
-	}
-	if err := h.gitService.Commit(ctx, orgID.String(), user.Name, user.Email, msg, files); err != nil {
-		return nil, dto.InternalWithError("Failed to commit change", err)
 	}
 
 	return nodeToResponse(node), nil

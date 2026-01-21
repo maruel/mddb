@@ -151,14 +151,14 @@ func mainImpl() error {
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: ll})))
 
-	fileStore, err := content.NewFileStore(*dataDir)
-	if err != nil {
-		return fmt.Errorf("failed to initialize file store: %w", err)
-	}
-
 	gitService, err := git.New(context.Background(), *dataDir, "", "")
 	if err != nil {
 		return fmt.Errorf("failed to initialize git service: %w", err)
+	}
+
+	fileStore, err := content.NewFileStore(*dataDir, gitService)
+	if err != nil {
+		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
 
 	// Create db directory for identity tables
@@ -177,6 +177,10 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize organization service: %w", err)
 	}
 
+	// Set up quota checking now that we have both FileStore and OrgService
+	quotaChecker := content.NewOrgQuotaChecker(orgService, fileStore)
+	fileStore.SetQuotaChecker(quotaChecker)
+
 	userService, err := identity.NewUserService(filepath.Join(dbDir, "users.jsonl"))
 	if err != nil {
 		return fmt.Errorf("failed to initialize user service: %w", err)
@@ -194,7 +198,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(fileStore, gitService, userService, orgService, invService, memService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
+		Handler:           server.NewRouter(fileStore, userService, orgService, invService, memService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}

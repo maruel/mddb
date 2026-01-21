@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"path/filepath"
 	"testing"
 
@@ -12,18 +13,39 @@ import (
 )
 
 func TestRegister(t *testing.T) {
-	ctx := t.Context()
+	ctx := context.Background()
 	tempDir := t.TempDir()
-	fileStore, _ := content.NewFileStore(tempDir)
-	gitService, err := git.New(ctx, tempDir, "", "")
+
+	gitService, err := git.New(ctx, tempDir, "test", "test@test.com")
 	if err != nil {
 		t.Fatalf("git.New failed: %v", err)
 	}
-	memService, _ := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
-	orgService, _ := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, gitService)
-	userService, _ := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
-	pageService := content.NewPageService(fileStore, gitService, orgService)
-	authHandler := NewAuthHandler(userService, memService, orgService, pageService, "secret")
+
+	fileStore, err := content.NewFileStore(tempDir, gitService)
+	if err != nil {
+		t.Fatalf("NewFileStore failed: %v", err)
+	}
+
+	memService, err := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
+	if err != nil {
+		t.Fatalf("NewMembershipService failed: %v", err)
+	}
+
+	orgService, err := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, gitService)
+	if err != nil {
+		t.Fatalf("NewOrganizationService failed: %v", err)
+	}
+
+	userService, err := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
+	if err != nil {
+		t.Fatalf("NewUserService failed: %v", err)
+	}
+
+	// Set quota checker after orgService is created
+	quotaChecker := content.NewOrgQuotaChecker(orgService, fileStore)
+	fileStore.SetQuotaChecker(quotaChecker)
+
+	authHandler := NewAuthHandler(userService, memService, orgService, fileStore, "secret")
 
 	// Register Joe
 	req1 := dto.RegisterRequest{

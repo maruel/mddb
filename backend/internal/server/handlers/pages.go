@@ -7,6 +7,8 @@ package handlers
 
 import (
 	"context"
+	"fmt"
+	"slices"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -16,23 +18,21 @@ import (
 
 // PageHandler handles page-related HTTP requests.
 type PageHandler struct {
-	pageService *content.PageService
+	fs *content.FileStore
 }
 
 // NewPageHandler creates a new page handler.
-func NewPageHandler(pageService *content.PageService) *PageHandler {
-	return &PageHandler{
-		pageService: pageService,
-	}
+func NewPageHandler(fs *content.FileStore) *PageHandler {
+	return &PageHandler{fs: fs}
 }
 
 // ListPages returns a list of all pages.
 func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListPagesRequest) (*dto.ListPagesResponse, error) {
-	pages, err := h.pageService.List(ctx, orgID)
+	it, err := h.fs.IterPages(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list pages", err)
 	}
-	return &dto.ListPagesResponse{Pages: pagesToSummaries(pages)}, nil
+	return &dto.ListPagesResponse{Pages: pagesToSummaries(slices.Collect(it))}, nil
 }
 
 // GetPage returns a specific page by ID.
@@ -41,7 +41,7 @@ func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *identity
 	if err != nil {
 		return nil, err
 	}
-	page, err := h.pageService.Get(ctx, orgID, id)
+	page, err := h.fs.ReadPage(orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -57,7 +57,9 @@ func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *id
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
 	}
-	page, err := h.pageService.Create(ctx, orgID, req.Title, req.Content, user.Name, user.Email)
+	id := jsonldb.NewID()
+	author := content.Author{Name: user.Name, Email: user.Email}
+	page, err := h.fs.WritePage(ctx, orgID, id, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
@@ -70,7 +72,8 @@ func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *id
 	if err != nil {
 		return nil, err
 	}
-	page, err := h.pageService.Update(ctx, orgID, id, req.Title, req.Content, user.Name, user.Email)
+	author := content.Author{Name: user.Name, Email: user.Email}
+	page, err := h.fs.UpdatePage(ctx, orgID, id, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -83,7 +86,8 @@ func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *id
 	if err != nil {
 		return nil, err
 	}
-	if err := h.pageService.Delete(ctx, orgID, id, user.Name, user.Email); err != nil {
+	author := content.Author{Name: user.Name, Email: user.Email}
+	if err := h.fs.DeletePage(ctx, orgID, id, author); err != nil {
 		return nil, dto.NotFound("page")
 	}
 	return &dto.DeletePageResponse{Ok: true}, nil
@@ -95,7 +99,7 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *i
 	if err != nil {
 		return nil, err
 	}
-	history, err := h.pageService.GetHistory(ctx, orgID, id, req.Limit)
+	history, err := h.fs.GetHistory(ctx, orgID, id, req.Limit)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page history", err)
 	}
@@ -108,9 +112,10 @@ func (h *PageHandler) GetPageVersion(ctx context.Context, orgID jsonldb.ID, _ *i
 	if err != nil {
 		return nil, err
 	}
-	pageContent, err := h.pageService.GetVersion(ctx, orgID, id, req.Hash)
+	path := fmt.Sprintf("%s/pages/%s/index.md", orgID.String(), id.String())
+	contentBytes, err := h.fs.GetFileAtCommit(ctx, orgID, req.Hash, path)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page version", err)
 	}
-	return &dto.GetPageVersionResponse{Content: pageContent}, nil
+	return &dto.GetPageVersionResponse{Content: string(contentBytes)}, nil
 }
