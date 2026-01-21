@@ -137,18 +137,6 @@ func (s *OrganizationService) GetOrganizationByID(idStr string) (*entity.Organiz
 	return s.GetOrganization(id)
 }
 
-// ListOrganizations returns all organizations.
-func (s *OrganizationService) ListOrganizations() ([]*entity.Organization, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	orgs := make([]*entity.Organization, 0, len(s.byID))
-	for _, org := range s.byID {
-		orgs = append(orgs, org)
-	}
-	return orgs, nil
-}
-
 // UpdateSettings updates organization-wide settings.
 func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings entity.OrganizationSettings) error {
 	s.mu.Lock()

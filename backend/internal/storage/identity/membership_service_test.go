@@ -93,21 +93,6 @@ func TestMembershipService(t *testing.T) {
 		t.Error("Expected error for invalid user ID in ListByUser")
 	}
 
-	// Test ListByOrganization
-	orgMemberships, err := service.ListByOrganization(orgID)
-	if err != nil {
-		t.Fatalf("ListByOrganization failed: %v", err)
-	}
-	if len(orgMemberships) != 2 {
-		t.Errorf("Expected 2 memberships for org, got %d", len(orgMemberships))
-	}
-
-	// Test ListByOrganization with invalid ID (contains invalid character @)
-	_, err = service.ListByOrganization(jsonldb.ID(0))
-	if err == nil {
-		t.Error("Expected error for invalid org ID in ListByOrganization")
-	}
-
 	// Test UpdateRole
 	err = service.UpdateRole(userID, orgID, entity.UserRoleEditor)
 	if err != nil {
@@ -141,24 +126,6 @@ func TestMembershipService(t *testing.T) {
 	err = service.UpdateSettings(jsonldb.ID(999), orgID, newSettings)
 	if err == nil {
 		t.Error("Expected error when updating settings for non-existent membership")
-	}
-
-	// Test DeleteMembership
-	err = service.DeleteMembership(userID2, orgID)
-	if err != nil {
-		t.Fatalf("DeleteMembership failed: %v", err)
-	}
-
-	// Verify deletion
-	_, err = service.GetMembership(userID2, orgID)
-	if err == nil {
-		t.Error("Expected error getting deleted membership")
-	}
-
-	// Test DeleteMembership with non-existent
-	err = service.DeleteMembership(jsonldb.ID(999), orgID)
-	if err == nil {
-		t.Error("Expected error deleting non-existent membership")
 	}
 }
 
