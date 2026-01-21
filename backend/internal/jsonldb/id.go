@@ -91,7 +91,7 @@ func NewIDSlice(instanceID, totalInstances int) ID {
 		if t10us != idLastT10us {
 			// New interval: reset slice to instanceID
 			idLastT10us = t10us
-			idSlice = uint16(instanceID % totalInstances) //nolint:gosec // safe modulo
+			idSlice = uint16(instanceID % totalInstances)                   //nolint:gosec // safe modulo
 			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion) //nolint:gosec // t10us guaranteed non-negative
 			idMu.Unlock()
 			return id
