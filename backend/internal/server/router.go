@@ -64,10 +64,12 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	mux.Handle("GET /api/auth/me", WrapAuth(userService, memService, jwtSecretBytes, viewer, authh.Me))
 	mux.Handle("POST /api/auth/switch-org", WrapAuth(userService, memService, jwtSecretBytes, viewer, mh.SwitchOrg))
 	mux.Handle("PUT /api/auth/settings", WrapAuth(userService, memService, jwtSecretBytes, viewer, uh.UpdateUserSettings))
+	mux.Handle("POST /api/organizations", WrapAuth(userService, memService, jwtSecretBytes, viewer, authh.CreateOrganization))
 
 	// Settings endpoints (authenticated with org)
 	mux.Handle("PUT /api/{orgID}/settings/membership", WrapAuth(userService, memService, jwtSecretBytes, viewer, mh.UpdateMembershipSettings))
 	mux.Handle("GET /api/{orgID}/settings/organization", WrapAuth(userService, memService, jwtSecretBytes, viewer, orgh.GetOrganization))
+	mux.Handle("PATCH /api/{orgID}/settings/organization", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateOrganization))
 	mux.Handle("PUT /api/{orgID}/settings/organization", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateSettings))
 	mux.Handle("GET /api/{orgID}/onboarding", WrapAuth(userService, memService, jwtSecretBytes, viewer, orgh.GetOnboarding))
 	mux.Handle("PUT /api/{orgID}/onboarding", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateOnboarding))

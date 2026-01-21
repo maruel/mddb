@@ -65,3 +65,18 @@ func (h *OrganizationHandler) UpdateSettings(ctx context.Context, orgID jsonldb.
 	}
 	return organizationToResponse(org), nil
 }
+
+// UpdateOrganization updates the organization's name.
+func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.UpdateOrganizationRequest) (*dto.OrganizationResponse, error) {
+	if req.Name == "" {
+		return nil, dto.BadRequest("Organization name is required")
+	}
+	org, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
+		org.Name = req.Name
+		return nil
+	})
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to update organization", err)
+	}
+	return organizationToResponse(org), nil
+}

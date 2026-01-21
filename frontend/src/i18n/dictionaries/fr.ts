@@ -14,6 +14,7 @@ export const dict: Dictionary = {
     invite: 'Inviter',
     push: 'Pousser',
     remove: 'Retirer',
+    creating: 'Création...',
   },
 
   app: {
@@ -70,7 +71,7 @@ export const dict: Dictionary = {
     letsGetStarted: 'Préparons votre espace de travail.',
     confirmWorkspaceName: "Confirmer le nom de l'espace",
     workspaceName: "Nom de l'espace de travail",
-    workspaceNameHint: "Dérivé de votre nom d'inscription.",
+    workspaceNameHint: 'Vous pouvez modifier ce nom.',
     nextInviteTeam: "Suivant : Inviter l'équipe",
     teamCollaboration: "Collaboration d'équipe",
     teamCollaborationHint:
@@ -84,6 +85,19 @@ export const dict: Dictionary = {
     patPlaceholder: 'ghp_...',
     skipForNow: 'Passer pour le moment',
     setupAndFinish: 'Configurer et terminer',
+  },
+
+  createOrg: {
+    title: 'Créer une organisation',
+    description: 'Créez un nouvel espace de travail pour organiser votre contenu.',
+    firstOrgTitle: 'Créez votre espace de travail',
+    firstOrgDescription: 'Bienvenue ! Configurons votre premier espace de travail.',
+    nameLabel: "Nom de l'organisation",
+    namePlaceholder: 'Mon nouvel espace',
+    create: 'Créer',
+    welcomeTitle: 'Bienvenue',
+    welcomeContent:
+      '# Bienvenue sur mddb\n\nCeci est votre nouvel espace de travail. Vous pouvez créer des pages, des tables et télécharger des fichiers ici.',
   },
 
   settings: {

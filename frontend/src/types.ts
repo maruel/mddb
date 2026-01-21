@@ -391,6 +391,21 @@ export interface UpdateOrgSettingsRequest {
   settings: OrganizationSettings;
 }
 /**
+ * UpdateOrganizationRequest is a request to update organization details.
+ */
+export interface UpdateOrganizationRequest {
+  OrgID: string;
+  name: string;
+}
+/**
+ * CreateOrganizationRequest is a request to create a new organization.
+ */
+export interface CreateOrganizationRequest {
+  name: string;
+  welcome_page_title?: string;
+  welcome_page_content?: string;
+}
+/**
  * GetOnboardingRequest is a request to get onboarding status.
  */
 export interface GetOnboardingRequest {

@@ -81,6 +81,26 @@ body {
   border-radius: 4px;
 }
 
+.createOrgButton {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.2rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.createOrgButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 .container {
   display: flex;
   flex: 1;

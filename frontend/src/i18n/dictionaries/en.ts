@@ -14,6 +14,7 @@ export const dict: Dictionary = {
     invite: 'Invite',
     push: 'Push',
     remove: 'Remove',
+    creating: 'Creating...',
   },
 
   app: {
@@ -69,7 +70,7 @@ export const dict: Dictionary = {
     letsGetStarted: "Let's get your workspace ready.",
     confirmWorkspaceName: 'Confirm Workspace Name',
     workspaceName: 'Workspace Name',
-    workspaceNameHint: 'This is derived from your registration name.',
+    workspaceNameHint: 'You can change this name to something more descriptive.',
     nextInviteTeam: 'Next: Invite Team',
     teamCollaboration: 'Team Collaboration',
     teamCollaborationHint: 'You can invite your team members now or later in settings.',
@@ -82,6 +83,19 @@ export const dict: Dictionary = {
     patPlaceholder: 'ghp_...',
     skipForNow: 'Skip for now',
     setupAndFinish: 'Setup & Finish',
+  },
+
+  createOrg: {
+    title: 'Create Organization',
+    description: 'Create a new workspace to organize your content.',
+    firstOrgTitle: 'Create Your Workspace',
+    firstOrgDescription: "Welcome! Let's set up your first workspace to get started.",
+    nameLabel: 'Organization Name',
+    namePlaceholder: 'My New Workspace',
+    create: 'Create',
+    welcomeTitle: 'Welcome',
+    welcomeContent:
+      '# Welcome to mddb\n\nThis is your new workspace. You can create pages, tables, and upload assets here.',
   },
 
   settings: {

@@ -11,6 +11,7 @@ import Auth from './components/Auth';
 import Privacy from './components/Privacy';
 import Terms from './components/Terms';
 import PWAInstallBanner from './components/PWAInstallBanner';
+import CreateOrgModal from './components/CreateOrgModal';
 import { debounce } from './utils/debounce';
 import { useI18n, type Locale } from './i18n';
 import type {
@@ -51,6 +52,7 @@ export default function App() {
   const [error, setError] = createSignal<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+  const [showCreateOrg, setShowCreateOrg] = createSignal(false);
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
@@ -122,6 +124,34 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function createOrganization(data: {
+    name: string;
+    welcomePageTitle: string;
+    welcomePageContent: string;
+  }) {
+    const res = await fetch('/api/organizations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token()}`,
+      },
+      body: JSON.stringify({
+        name: data.name,
+        welcome_page_title: data.welcomePageTitle,
+        welcome_page_content: data.welcomePageContent,
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error?.message || 'Failed to create organization');
+    }
+
+    const org = await res.json();
+    // Refresh user data and switch to the new org
+    await switchOrg(org.id);
   }
 
   // Debounced auto-save function
@@ -578,6 +608,14 @@ export default function App() {
         <Show when={!isTermsPage()} fallback={<Terms />}>
           <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
             <>
+              {/* First org creation for new users with no memberships */}
+              <Show when={(user()?.memberships?.length ?? 0) === 0}>
+                <CreateOrgModal
+                  isFirstOrg={true}
+                  onClose={() => {}}
+                  onCreate={createOrganization}
+                />
+              </Show>
               <Show when={user()?.role === 'admin' && !user()?.onboarding?.completed}>
                 <Onboarding
                   user={user() as UserResponse}
@@ -622,6 +660,13 @@ export default function App() {
                         {user()?.memberships?.[0]?.organization_name || t('app.myOrg')}
                       </span>
                     </Show>
+                    <button
+                      class={styles.createOrgButton}
+                      onClick={() => setShowCreateOrg(true)}
+                      title={t('createOrg.title') || 'Create Organization'}
+                    >
+                      +
+                    </button>
                     <span>
                       {user()?.name} ({user()?.role})
                     </span>
@@ -951,6 +996,9 @@ export default function App() {
         </Show>
       </Show>
       <PWAInstallBanner />
+      <Show when={showCreateOrg()}>
+        <CreateOrgModal onClose={() => setShowCreateOrg(false)} onCreate={createOrganization} />
+      </Show>
     </>
   );
 }
