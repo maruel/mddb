@@ -97,6 +97,26 @@ See `README.md` and `API.md` for details.
         - Create `internal/geoip/` package with `LookupCountry(ip string) (string, error)`.
         - Add `-geoip-db` CLI flag and `GEOIP_DB_PATH` in `.env` file.
         - Graceful degradation if database not available or path not configured.
+- [ ] **Passwordless Authentication (Passkeys)**:
+    - [ ] **Email Magic Links**: *(Deferred - requires outbound email infrastructure)*
+        - Generate short-lived JWT tokens (15-minute expiry) for email login links.
+        - Add `POST /api/auth/magic-link` endpoint to request login link.
+        - Add `GET /api/auth/magic-link/verify` endpoint to validate and exchange for session JWT.
+        - Support multiple email addresses per user (already have `OAuthIdentities` pattern).
+    - [ ] **WebAuthn/Passkey Support**: Implement FIDO2 passkeys for biometric/hardware key authentication.
+        - Add `github.com/go-webauthn/webauthn` dependency for server-side WebAuthn.
+        - Add `Credentials []WebAuthnCredential` field to User struct for storing public keys.
+        - Create `internal/storage/identity/webauthn.go` for credential and session management.
+        - Implement registration flow: `POST /api/auth/webauthn/register/{begin,complete}`.
+        - Implement authentication flow: `POST /api/auth/webauthn/authenticate/{begin,complete}`.
+        - Implement credential management: list, rename, delete passkeys.
+        - Track signature counters for replay attack prevention.
+        - Frontend: integrate with `navigator.credentials` API (SimpleWebAuthn client library).
+    - [ ] **Security Hardening**:
+        - Rate limiting on all auth endpoints (login attempts, magic link requests).
+        - Challenge expiration (5-minute TTL for WebAuthn sessions).
+        - Audit logging for authentication events.
+        - Gradual rollout: allow passkeys alongside existing password/OAuth auth.
 
 ### Phase 10: Connectivity & Relations
 - [ ] **Backlinks Indexing**: Efficient background indexing of internal markdown links to provide backlink lists.
