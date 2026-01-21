@@ -71,7 +71,8 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *e
 
 // UpdateUserSettings updates user global settings.
 func (h *UserHandler) UpdateUserSettings(ctx context.Context, _ jsonldb.ID, user *entity.User, req dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
-	if err := h.userService.UpdateSettings(user.ID, userSettingsToEntity(req.Settings)); err != nil {
+	user.Settings = userSettingsToEntity(req.Settings)
+	if err := h.userService.Update(user); err != nil {
 		return nil, dto.InternalWithError("Failed to update settings", err)
 	}
 	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)

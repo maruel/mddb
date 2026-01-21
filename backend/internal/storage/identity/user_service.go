@@ -166,49 +166,19 @@ func (s *UserService) GetByOAuth(provider, providerID string) (*entity.User, err
 	return nil, errUserNotFound
 }
 
-// LinkOAuth links an OAuth identity to a user.
-func (s *UserService) LinkOAuth(userID jsonldb.ID, identity entity.OAuthIdentity) error {
-	if userID.IsZero() {
+// Update persists changes to a user.
+func (s *UserService) Update(user *entity.User) error {
+	if user == nil || user.ID.IsZero() {
 		return errUserIDEmpty
 	}
 
-	stored := s.table.Get(userID)
+	stored := s.table.Get(user.ID)
 	if stored == nil {
 		return errUserNotFound
 	}
 
-	// Check if already linked
-	found := false
-	for i, id := range stored.OAuthIdentities {
-		if id.Provider == identity.Provider && id.ProviderID == identity.ProviderID {
-			stored.OAuthIdentities[i].LastLogin = time.Now()
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		stored.OAuthIdentities = append(stored.OAuthIdentities, identity)
-	}
-
-	stored.Modified = time.Now()
-	_, err := s.table.Update(stored)
-	return err
-}
-
-// UpdateSettings updates user global settings.
-func (s *UserService) UpdateSettings(id jsonldb.ID, settings entity.UserSettings) error {
-	if id.IsZero() {
-		return errUserIDEmpty
-	}
-
-	stored := s.table.Get(id)
-	if stored == nil {
-		return errUserNotFound
-	}
-
-	stored.Settings = settings
-	stored.Modified = time.Now()
+	// Preserve password hash while updating user fields
+	stored.User = *user
 	_, err := s.table.Update(stored)
 	return err
 }

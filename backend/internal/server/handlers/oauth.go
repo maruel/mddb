@@ -167,16 +167,14 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Link OAuth identity
-		_ = h.userService.LinkOAuth(user.ID, entity.OAuthIdentity{
+		user.OAuthIdentities = append(user.OAuthIdentities, entity.OAuthIdentity{
 			Provider:   provider,
 			ProviderID: userInfo.ID,
 			Email:      userInfo.Email,
 			LastLogin:  time.Now(),
 		})
+		_ = h.userService.Update(user)
 	}
-
-	// Get fully populated user
-	user, _ = h.userService.Get(user.ID)
 
 	// Generate JWT token
 	jwtToken, err := h.authHandler.GenerateToken(user)
