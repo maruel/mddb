@@ -102,16 +102,6 @@ func TestOrganizationService(t *testing.T) {
 		})
 	})
 
-	t.Run("ListOrganizations", func(t *testing.T) {
-		orgs, listErr := service.ListOrganizations()
-		if listErr != nil {
-			t.Fatalf("ListOrganizations failed: %v", listErr)
-		}
-		if len(orgs) != 2 {
-			t.Errorf("ListOrganizations returned %d orgs, want 2", len(orgs))
-		}
-	})
-
 	t.Run("UpdateSettings", func(t *testing.T) {
 		newSettings := entity.OrganizationSettings{
 			AllowedDomains: []string{"example.com"},

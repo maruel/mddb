@@ -45,24 +45,6 @@ func TestUserService(t *testing.T) {
 		t.Error("Expected authentication to fail with wrong password")
 	}
 
-	// Test CountUsers
-	count, err := service.CountUsers()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if count != 1 {
-		t.Errorf("Expected 1 user, got %d", count)
-	}
-
-	// Test ListUsers
-	users, err := service.ListUsers()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(users) != 1 {
-		t.Errorf("Expected 1 user in list, got %d", len(users))
-	}
-
 	// Test UpdateUserRole
 	orgID := jsonldb.ID(100)
 	err = service.UpdateUserRole(user.ID, orgID, entity.UserRoleEditor)

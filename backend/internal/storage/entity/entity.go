@@ -284,13 +284,6 @@ func (i *Invitation) Validate() error {
 	return nil
 }
 
-// Session represents an active user session.
-type Session struct {
-	ID        jsonldb.ID `json:"id" jsonschema:"description=Unique session identifier"`
-	UserID    jsonldb.ID `json:"user_id" jsonschema:"description=User this session belongs to"`
-	ExpiresAt time.Time  `json:"expires_at" jsonschema:"description=Session expiration timestamp"`
-}
-
 // Asset represents an uploaded file/image associated with a node.
 // Asset IDs are filenames, not generated IDs, hence the string type.
 type Asset struct {

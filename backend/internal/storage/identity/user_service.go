@@ -21,20 +21,15 @@ import (
 )
 
 var (
-	errUserIDRequired    = errors.New("id is required")
-	errUserEmailRequired = errors.New("email is required")
-	errEmailPwdRequired  = errors.New("email and password are required")
-	errUserExists        = errors.New("user already exists")
-	errUserIDEmpty       = errors.New("user id cannot be empty")
-	errUserOrgIDEmpty    = errors.New("organization id cannot be empty")
-	errMemSvcNotInit     = errors.New("membership service not initialized")
-	errUserNotFound      = errors.New("user not found")
-	errInvalidCreds      = errors.New("invalid credentials")
+	errUserIDRequired   = errors.New("id is required")
+	errEmailPwdRequired = errors.New("email and password are required")
+	errUserExists       = errors.New("user already exists")
+	errMemSvcNotInit    = errors.New("membership service not initialized")
+	errInvalidCreds     = errors.New("invalid credentials")
 )
 
 // UserService handles user management and authentication.
 type UserService struct {
-	rootDir    string
 	table      *jsonldb.Table[*userStorage]
 	memService *MembershipService
 	orgService *OrganizationService
@@ -57,7 +52,6 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 	}
 
 	s := &UserService{
-		rootDir:    rootDir,
 		table:      table,
 		memService: memService,
 		orgService: orgService,
@@ -98,7 +92,7 @@ func (u *userStorage) Validate() error {
 		return errUserIDRequired
 	}
 	if u.Email == "" {
-		return errUserEmailRequired
+		return errEmailEmpty
 	}
 	return nil
 }
@@ -148,20 +142,13 @@ func (s *UserService) CreateUser(email, password, name string, role entity.UserR
 	return user, nil
 }
 
-// CountUsers returns the total number of users.
-func (s *UserService) CountUsers() (int, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.byID), nil
-}
-
 // UpdateUserRole updates the role of a user in a specific organization.
 func (s *UserService) UpdateUserRole(userID, orgID jsonldb.ID, role entity.UserRole) error {
 	if userID.IsZero() {
 		return errUserIDEmpty
 	}
 	if orgID.IsZero() {
-		return errUserOrgIDEmpty
+		return errOrgIDEmpty
 	}
 
 	s.mu.Lock()
@@ -243,6 +230,7 @@ func (s *UserService) GetUserWithMemberships(id jsonldb.ID) (*UserWithMembership
 		return nil, err
 	}
 
+	// Memberships are supplementary; continue with empty list on error.
 	mems, _ := s.GetMembershipsForUser(id)
 
 	return &UserWithMemberships{
@@ -381,6 +369,7 @@ func (s *UserService) ListUsersWithMemberships() ([]UserWithMemberships, error) 
 
 	results := make([]UserWithMemberships, 0, len(users))
 	for _, user := range users {
+		// Memberships are supplementary; continue with empty list on error.
 		mems, _ := s.GetMembershipsForUser(user.ID)
 		results = append(results, UserWithMemberships{
 			User:        user,

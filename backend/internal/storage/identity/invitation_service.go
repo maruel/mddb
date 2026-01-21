@@ -14,15 +14,12 @@ import (
 )
 
 var (
-	errEmailRequired      = errors.New("email is required")
-	errOrgIDEmpty         = errors.New("organization id cannot be empty")
 	errInvitationNotFound = errors.New("invitation not found")
 	errInvitationIDEmpty  = errors.New("invitation id cannot be empty")
 )
 
 // InvitationService handles organization invitations.
 type InvitationService struct {
-	rootDir string
 	table   *jsonldb.Table[*entity.Invitation]
 	mu      sync.RWMutex
 	byID    map[jsonldb.ID]*entity.Invitation
@@ -43,7 +40,6 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	}
 
 	s := &InvitationService{
-		rootDir: rootDir,
 		table:   table,
 		byID:    make(map[jsonldb.ID]*entity.Invitation),
 		byToken: make(map[string]*entity.Invitation),
@@ -60,7 +56,7 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 // CreateInvitation creates a new invitation.
 func (s *InvitationService) CreateInvitation(email string, orgID jsonldb.ID, role entity.UserRole) (*entity.Invitation, error) {
 	if email == "" {
-		return nil, errEmailRequired
+		return nil, errEmailEmpty
 	}
 	if orgID.IsZero() {
 		return nil, errOrgIDEmpty
