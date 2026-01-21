@@ -384,4 +384,3 @@ func TestSearchService_Integration(t *testing.T) {
 		t.Error("Expected at least one record result")
 	}
 }
-

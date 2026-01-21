@@ -85,7 +85,6 @@ func (fs *FileStore) checkQuotaSet() error {
 	return nil
 }
 
-
 func (fs *FileStore) orgPagesDir(orgID jsonldb.ID) string {
 	if orgID == 0 {
 		return ""
