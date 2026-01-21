@@ -196,6 +196,7 @@ export interface DeletePageRequest {
 export interface GetPageHistoryRequest {
   OrgID: string;
   ID: string;
+  Limit: number /* int */; // Max commits to return (1-1000, default 1000).
 }
 /**
  * GetPageVersionRequest is a request to get a specific page version.
@@ -676,6 +677,7 @@ export interface UserResponse {
   id: string;
   email: string;
   name: string;
+  is_global_admin?: boolean;
   oauth_identities?: OAuthIdentity[];
   settings: UserSettings;
   created: string;
@@ -756,6 +758,25 @@ export interface DataRecordResponse {
   created: string;
   modified: string;
 }
+/**
+ * AdminStatsResponse contains server-wide statistics.
+ */
+export interface AdminStatsResponse {
+  user_count: number /* int */;
+  org_count: number /* int */;
+}
+/**
+ * AdminUsersResponse contains all users in the system.
+ */
+export interface AdminUsersResponse {
+  users: UserResponse[];
+}
+/**
+ * AdminOrgsResponse contains all organizations in the system.
+ */
+export interface AdminOrgsResponse {
+  organizations: OrganizationResponse[];
+}
 
 //////////
 // source: types.go
@@ -834,7 +855,7 @@ export interface Property {
  * UserRole defines the permissions for a user.
  */
 /**
- * UserRoleAdmin has full access to all resources and settings.
+ * UserRoleAdmin has full access to all resources and settings within an organization.
  */
 export const UserRoleAdmin = 'admin';
 /**

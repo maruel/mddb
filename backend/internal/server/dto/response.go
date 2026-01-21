@@ -210,6 +210,7 @@ type UserResponse struct {
 	ID              string               `json:"id" jsonschema:"description=Unique user identifier"`
 	Email           string               `json:"email" jsonschema:"description=User email address"`
 	Name            string               `json:"name" jsonschema:"description=User display name"`
+	IsGlobalAdmin   bool                 `json:"is_global_admin,omitempty" jsonschema:"description=Whether user has server-wide administrative access"`
 	OAuthIdentities []OAuthIdentity      `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
 	Settings        UserSettings         `json:"settings" jsonschema:"description=Global user preferences"`
 	Created         string               `json:"created" jsonschema:"description=Account creation timestamp (RFC3339)"`
@@ -284,4 +285,22 @@ type DataRecordResponse struct {
 	Data     map[string]any `json:"data" jsonschema:"description=Record field values keyed by property name"`
 	Created  string         `json:"created" jsonschema:"description=Record creation timestamp (RFC3339)"`
 	Modified string         `json:"modified" jsonschema:"description=Last modification timestamp (RFC3339)"`
+}
+
+// --- Global Admin Responses ---
+
+// AdminStatsResponse contains server-wide statistics.
+type AdminStatsResponse struct {
+	UserCount int `json:"user_count" jsonschema:"description=Total number of users"`
+	OrgCount  int `json:"org_count" jsonschema:"description=Total number of organizations"`
+}
+
+// AdminUsersResponse contains all users in the system.
+type AdminUsersResponse struct {
+	Users []UserResponse `json:"users" jsonschema:"description=All users in the system"`
+}
+
+// AdminOrgsResponse contains all organizations in the system.
+type AdminOrgsResponse struct {
+	Organizations []OrganizationResponse `json:"organizations" jsonschema:"description=All organizations in the system"`
 }

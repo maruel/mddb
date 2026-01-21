@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 	"time"
@@ -161,6 +162,11 @@ func (s *OrganizationService) Modify(id jsonldb.ID, fn func(org *Organization) e
 		return nil, errOrgNotFound
 	}
 	return s.table.Modify(id, fn)
+}
+
+// Iter iterates over organizations with ID greater than startID. Pass 0 to iterate from the beginning.
+func (s *OrganizationService) Iter(startID jsonldb.ID) iter.Seq[*Organization] {
+	return s.table.Iter(startID)
 }
 
 //

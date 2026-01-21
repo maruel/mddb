@@ -235,6 +235,79 @@ func WrapAuthRaw(
 	})
 }
 
+// WrapGlobalAdmin wraps a handler that requires global admin privileges.
+// These endpoints are for server-wide administration (stats, all users, all orgs).
+// No organization context is required - just valid JWT and IsGlobalAdmin flag.
+func WrapGlobalAdmin[In any, Out any](
+	userService *identity.UserService,
+	jwtSecret []byte,
+	fn func(context.Context, *identity.User, In) (*Out, error),
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		user, err := validateJWT(r, userService, jwtSecret)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		if !user.IsGlobalAdmin {
+			http.Error(w, "Forbidden: global admin required", http.StatusForbidden)
+			return
+		}
+
+		body, err := io.ReadAll(r.Body)
+		if err2 := r.Body.Close(); err == nil {
+			err = err2
+		}
+		if err != nil {
+			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
+			writeBadRequestError(w, "Failed to read request body")
+			return
+		}
+		var input In
+		if len(body) > 0 {
+			d := json.NewDecoder(bytes.NewReader(body))
+			d.DisallowUnknownFields()
+			if err := d.Decode(&input); err != nil {
+				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
+				writeBadRequestError(w, "Invalid request body")
+				return
+			}
+		}
+
+		populatePathParams(r, &input)
+		populateQueryParams(r, &input)
+
+		output, err := fn(ctx, user, input)
+		if err != nil {
+			statusCode := http.StatusInternalServerError
+			errorCode := dto.ErrorCodeInternal
+			details := make(map[string]any)
+
+			var ewsErr dto.ErrorWithStatus
+			if errors.As(err, &ewsErr) {
+				statusCode = ewsErr.StatusCode()
+				errorCode = ewsErr.Code()
+				if d := ewsErr.Details(); d != nil {
+					details = d
+				}
+			}
+
+			slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode, "code", errorCode)
+			writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(output); err != nil {
+			slog.ErrorContext(ctx, "Failed to encode response", "err", err)
+		}
+	})
+}
+
 var (
 	errUnauthorized       = errors.New("unauthorized")
 	errInvalidAuthHdr     = errors.New("invalid authorization header")

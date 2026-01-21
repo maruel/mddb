@@ -50,6 +50,7 @@ func userToResponse(u *identity.User) *dto.UserResponse {
 		ID:              u.ID.String(),
 		Email:           u.Email,
 		Name:            u.Name,
+		IsGlobalAdmin:   u.IsGlobalAdmin,
 		OAuthIdentities: identities,
 		Settings:        userSettingsToDTO(u.Settings),
 		Created:         formatTime(u.Created),

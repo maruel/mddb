@@ -87,6 +87,14 @@ See `README.md` and `API.md` for details.
     - [x] **CLI Versioning**: Implement `mddb -version` to display build metadata (Git commit, dirty state) using Go's build info.
     - [x] **Local Config**: Store CLI configuration in an unversioned `.env` file in `data/` (added to `.gitignore`).
     - [x] **Settings Integration**: Ensure all onboarding options are accessible and editable in Workspace Settings.
+- [x] **Global Admin Role**:
+    - [x] **User.IsGlobalAdmin field**: Server-wide admin flag on User (not org-scoped).
+    - [x] **First user is global admin**: First registered user automatically becomes global admin.
+    - [x] **WrapGlobalAdmin middleware**: Handler wrapper for global admin-only endpoints.
+    - [x] **Admin API endpoints**: `GET /api/admin/stats`, `/api/admin/users`, `/api/admin/organizations`.
+    - [ ] **Env var override**: `MDDB_GLOBAL_ADMIN_EMAIL` to promote specific user on startup.
+    - [ ] **CLI promotion**: `mddb admin promote user@example.com` command.
+    - [ ] **Admin UI**: Server dashboard for global admins (user management, org oversight, server stats).
 - [ ] **User Signup Analytics**:
     - [ ] **IP Address Tracking**: Save user's IP address on account creation for analytics and fraud detection.
         - Add `SignupIP` and `SignupCountry` fields to `User` struct.

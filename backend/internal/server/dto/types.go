@@ -54,7 +54,7 @@ type Property struct {
 type UserRole string
 
 const (
-	// UserRoleAdmin has full access to all resources and settings.
+	// UserRoleAdmin has full access to all resources and settings within an organization.
 	UserRoleAdmin UserRole = "admin"
 	// UserRoleEditor can create and modify content but cannot manage users.
 	UserRoleEditor UserRole = "editor"

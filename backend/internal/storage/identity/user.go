@@ -22,6 +22,7 @@ type User struct {
 	ID              jsonldb.ID      `json:"id" jsonschema:"description=Unique user identifier"`
 	Email           string          `json:"email" jsonschema:"description=User email address"`
 	Name            string          `json:"name" jsonschema:"description=User display name"`
+	IsGlobalAdmin   bool            `json:"is_global_admin,omitempty" jsonschema:"description=Whether user has server-wide administrative access"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
 	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
 	Created         time.Time       `json:"created" jsonschema:"description=Account creation timestamp"`
@@ -66,6 +67,7 @@ func NewUserService(tablePath string) (*UserService, error) {
 }
 
 // Create creates a new user.
+// The first user created becomes a global admin.
 func (s *UserService) Create(email, password, name string) (*User, error) {
 	if email == "" || password == "" {
 		return nil, errEmailPwdRequired
@@ -78,15 +80,18 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
+	// First user becomes global admin
+	isFirstUser := s.table.Len() == 0
 	id := jsonldb.NewID()
 	now := time.Now()
 	stored := &userStorage{
 		User: User{
-			ID:       id,
-			Email:    email,
-			Name:     name,
-			Created:  now,
-			Modified: now,
+			ID:            id,
+			Email:         email,
+			Name:          name,
+			IsGlobalAdmin: isFirstUser,
+			Created:       now,
+			Modified:      now,
 		},
 		PasswordHash: string(hash),
 	}

@@ -47,6 +47,12 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	hh := handlers.NewHealthHandler("1.0.0")
 	mux.Handle("/api/health", Wrap(hh.Health))
 
+	// Global admin endpoints (requires IsGlobalAdmin)
+	adminh := handlers.NewAdminHandler(userService, orgService, memService)
+	mux.Handle("GET /api/admin/stats", WrapGlobalAdmin(userService, jwtSecretBytes, adminh.Stats))
+	mux.Handle("GET /api/admin/users", WrapGlobalAdmin(userService, jwtSecretBytes, adminh.ListAllUsers))
+	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(userService, jwtSecretBytes, adminh.ListAllOrgs))
+
 	// Auth endpoints (public)
 	mux.Handle("POST /api/auth/login", Wrap(authh.Login))
 	mux.Handle("POST /api/auth/register", Wrap(authh.Register))
