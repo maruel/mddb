@@ -70,23 +70,37 @@ var (
 // If the slice overflows (>2047 IDs in one 10µs interval), it spins until the
 // next interval to maintain uniqueness.
 func NewID() ID {
+	return NewIDSlice(0, 1)
+}
+
+// NewIDSlice generates a new time-based ID with support for multiple instances.
+//
+// instanceID is the ID of the current process/instance (0 to totalInstances-1).
+// totalInstances is the total number of parallel instances running.
+//
+// This allows multiple processes to generate unique IDs without coordination
+// by partitioning the slice space.
+func NewIDSlice(instanceID, totalInstances int) ID {
+	if totalInstances <= 0 {
+		totalInstances = 1
+	}
 	idMu.Lock()
 	for {
 		t10us := max(0, time.Now().UnixMicro()/10-epoch)
 
 		if t10us != idLastT10us {
-			// New interval: reset slice to 0
+			// New interval: reset slice to instanceID
 			idLastT10us = t10us
-			idSlice = 0
-			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion) //nolint:gosec // t10us is guaranteed non-negative by max(0, ...)
+			idSlice = uint16(instanceID % totalInstances) //nolint:gosec // safe modulo
+			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion) //nolint:gosec // t10us guaranteed non-negative
 			idMu.Unlock()
 			return id
 		}
 
-		// Same 10µs interval: increment slice
-		idSlice++
+		// Same 10µs interval: increment slice by stride
+		idSlice += uint16(totalInstances) //nolint:gosec // intentional wrap/overflow check happens next
 		if idSlice <= sliceMask {
-			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion) //nolint:gosec // t10us is guaranteed non-negative by max(0, ...)
+			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion) //nolint:gosec // t10us guaranteed non-negative
 			idMu.Unlock()
 			return id
 		}
