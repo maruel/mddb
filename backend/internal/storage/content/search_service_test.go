@@ -124,12 +124,12 @@ func TestSearchService_SearchRecords(t *testing.T) {
 		t.Fatalf("failed to init org git repo: %v", err)
 	}
 
-	// Create test database with records
+	// Create test table with records
 	dbID := jsonldb.NewID()
 	node := &Node{
 		ID:    dbID,
 		Title: "Tasks",
-		Type:  NodeTypeDatabase,
+		Type:  NodeTypeTable,
 		Properties: []Property{
 			{Name: "title", Type: "text", Required: true},
 			{Name: "status", Type: PropertyTypeText},
@@ -138,8 +138,8 @@ func TestSearchService_SearchRecords(t *testing.T) {
 		Created:  time.Now(),
 		Modified: time.Now(),
 	}
-	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
-		t.Fatalf("WriteDatabase failed: %v", err)
+	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("WriteTable failed: %v", err)
 	}
 
 	// Create records
@@ -321,12 +321,12 @@ func TestSearchService_Integration(t *testing.T) {
 		t.Fatalf("WritePage Blog Post failed: %v", err)
 	}
 
-	// Create database with record
+	// Create table with record
 	dbID := jsonldb.NewID()
 	node := &Node{
 		ID:    dbID,
 		Title: "Articles",
-		Type:  NodeTypeDatabase,
+		Type:  NodeTypeTable,
 		Properties: []Property{
 			{Name: "title", Type: "text", Required: true},
 			{Name: "content", Type: "text"},
@@ -334,8 +334,8 @@ func TestSearchService_Integration(t *testing.T) {
 		Created:  time.Now(),
 		Modified: time.Now(),
 	}
-	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
-		t.Fatalf("WriteDatabase failed: %v", err)
+	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("WriteTable failed: %v", err)
 	}
 	rec := &DataRecord{
 		ID:       jsonldb.NewID(),

@@ -75,7 +75,7 @@ make build            # Build Go binary
 - `welcome.*` - Welcome/empty states
 - `onboarding.*` - Onboarding wizard
 - `settings.*` - Settings panels
-- `database.*` - Database views
+- `table.*` - Table views
 - `errors.*` - Error messages (keyed by ErrorCode for API errors)
 - `success.*` - Success messages
 

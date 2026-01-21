@@ -68,9 +68,9 @@ type NodeType string
 const (
 	// NodeTypeDocument represents a markdown document.
 	NodeTypeDocument NodeType = "document"
-	// NodeTypeDatabase represents a structured database.
-	NodeTypeDatabase NodeType = "database"
-	// NodeTypeHybrid represents an entity that is both a document and a database.
+	// NodeTypeTable represents a structured table.
+	NodeTypeTable NodeType = "table"
+	// NodeTypeHybrid represents an entity that is both a document and a table.
 	NodeTypeHybrid NodeType = "hybrid"
 )
 

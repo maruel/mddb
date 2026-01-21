@@ -5,16 +5,16 @@ import {
   PropertyTypeSelect,
   PropertyTypeMultiSelect,
 } from '../types';
-import styles from './DatabaseBoard.module.css';
+import styles from './TableBoard.module.css';
 import { useI18n } from '../i18n';
 
-interface DatabaseBoardProps {
+interface TableBoardProps {
   records: DataRecordResponse[];
   columns: Property[];
   onDeleteRecord: (id: string) => void;
 }
 
-export default function DatabaseBoard(props: DatabaseBoardProps) {
+export default function TableBoard(props: TableBoardProps) {
   const { t } = useI18n();
   // Find the first select column to group by
   const groupColumn = () =>
@@ -34,7 +34,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
     }
 
     // Add "No Group" for records without a value
-    grouped['__none__'] = { name: t('database.noGroup') || 'No Group', records: [] };
+    grouped['__none__'] = { name: t('table.noGroup') || 'No Group', records: [] };
 
     props.records.forEach((record) => {
       const val = record.data[col.name];
@@ -59,7 +59,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
     <div class={styles.board}>
       <Show
         when={groupColumn()}
-        fallback={<div class={styles.noGroup}>{t('database.addSelectColumn')}</div>}
+        fallback={<div class={styles.noGroup}>{t('table.addSelectColumn')}</div>}
       >
         <div class={styles.columns}>
           <For each={groups()}>
@@ -77,7 +77,7 @@ export default function DatabaseBoard(props: DatabaseBoardProps) {
                           <strong>
                             {String(
                               (props.columns[0] ? record.data[props.columns[0].name] : null) ||
-                                t('database.untitled')
+                                t('table.untitled')
                             )}
                           </strong>
                           <button

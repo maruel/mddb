@@ -12,7 +12,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
-func BenchmarkDatabaseOperations(b *testing.B) {
+func BenchmarkTableOperations(b *testing.B) {
 	tmpDir := b.TempDir()
 	ctx := context.Background()
 	author := Author{Name: "Benchmark", Email: "bench@test.com"}
@@ -40,8 +40,8 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	dbID := jsonldb.NewID()
 	node := &Node{
 		ID:       dbID,
-		Title:    "Benchmark Database",
-		Type:     NodeTypeDatabase,
+		Title:    "Benchmark Table",
+		Type:     NodeTypeTable,
 		Created:  time.Now(),
 		Modified: time.Now(),
 		Properties: []Property{
@@ -50,7 +50,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		},
 	}
 
-	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
+	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
 		b.Fatal(err)
 	}
 
@@ -76,10 +76,10 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// We need a fresh file store or just read from the existing one populated by previous step
 	// To make this isolated, we can pre-populate a DB with N records
 	b.Run("ReadRecords", func(b *testing.B) {
-		// Prepare a database with 1000 records
+		// Prepare a table with 1000 records
 		readDBID := jsonldb.NewID()
-		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteDatabase(ctx, orgID, readNode, true, author); err != nil {
+		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: time.Now(), Modified: time.Now()}
+		if err := fs.WriteTable(ctx, orgID, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
@@ -110,8 +110,8 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := jsonldb.ID(100)
-		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteDatabase(ctx, orgID, readNode, true, author); err != nil {
+		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: time.Now(), Modified: time.Now()}
+		if err := fs.WriteTable(ctx, orgID, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		// Write 10,000 records

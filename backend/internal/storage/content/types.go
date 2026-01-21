@@ -12,12 +12,12 @@ type Node struct {
 	ParentID   jsonldb.ID `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
 	Title      string     `json:"title" jsonschema:"description=Node title"`
 	Content    string     `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
-	Properties []Property `json:"properties,omitempty" jsonschema:"description=Schema definition (Database part)"`
+	Properties []Property `json:"properties,omitempty" jsonschema:"description=Schema definition (Table part)"`
 	Created    time.Time  `json:"created" jsonschema:"description=Node creation timestamp"`
 	Modified   time.Time  `json:"modified" jsonschema:"description=Last modification timestamp"`
 	Tags       []string   `json:"tags,omitempty" jsonschema:"description=Node tags for categorization"`
 	FaviconURL string     `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
-	Type       NodeType   `json:"type" jsonschema:"description=Node type (document/database/hybrid)"`
+	Type       NodeType   `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
 	Children   []*Node    `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
 }
 
@@ -27,9 +27,9 @@ type NodeType string
 const (
 	// NodeTypeDocument represents a markdown document.
 	NodeTypeDocument NodeType = "document"
-	// NodeTypeDatabase represents a structured database.
-	NodeTypeDatabase NodeType = "database"
-	// NodeTypeHybrid represents an entity that is both a document and a database.
+	// NodeTypeTable represents a structured table.
+	NodeTypeTable NodeType = "table"
+	// NodeTypeHybrid represents an entity that is both a document and a table.
 	NodeTypeHybrid NodeType = "hybrid"
 )
 
@@ -81,7 +81,7 @@ type Asset struct {
 type SearchResult struct {
 	Type     string            `json:"type" jsonschema:"description=Result type (page or record)"`
 	NodeID   jsonldb.ID        `json:"node_id" jsonschema:"description=Node containing the result"`
-	RecordID jsonldb.ID        `json:"record_id,omitempty" jsonschema:"description=Record ID if result is a database record"`
+	RecordID jsonldb.ID        `json:"record_id,omitempty" jsonschema:"description=Record ID if result is a table record"`
 	Title    string            `json:"title" jsonschema:"description=Title of the matched item"`
 	Snippet  string            `json:"snippet" jsonschema:"description=Text snippet with match context"`
 	Score    float64           `json:"score" jsonschema:"description=Relevance score"`
@@ -137,7 +137,7 @@ type SelectOption struct {
 	Color string `json:"color,omitempty" jsonschema:"description=Color for visual distinction"`
 }
 
-// Property represents a database property (column) with its configuration.
+// Property represents a table property (column) with its configuration.
 type Property struct {
 	Name     string       `json:"name" jsonschema:"description=Property name (column header)"`
 	Type     PropertyType `json:"type" jsonschema:"description=Property type (text/number/select/etc)"`

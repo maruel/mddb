@@ -1,15 +1,15 @@
 import { For, Show } from 'solid-js';
 import type { DataRecordResponse, Property } from '../types';
-import styles from './DatabaseGallery.module.css';
+import styles from './TableGallery.module.css';
 import { useI18n } from '../i18n';
 
-interface DatabaseGalleryProps {
+interface TableGalleryProps {
   records: DataRecordResponse[];
   columns: Property[];
   onDeleteRecord: (id: string) => void;
 }
 
-export default function DatabaseGallery(props: DatabaseGalleryProps) {
+export default function TableGallery(props: TableGalleryProps) {
   const { t } = useI18n();
   // Try to find an image column
   const imageColumn = () =>
@@ -32,7 +32,7 @@ export default function DatabaseGallery(props: DatabaseGalleryProps) {
                   <div class={styles.imageContainer}>
                     <Show
                       when={record.data[col().name]}
-                      fallback={<div class={styles.imagePlaceholder}>{t('database.noImage')}</div>}
+                      fallback={<div class={styles.imagePlaceholder}>{t('table.noImage')}</div>}
                     >
                       <img
                         src={String(record.data[col().name])}
@@ -50,7 +50,7 @@ export default function DatabaseGallery(props: DatabaseGalleryProps) {
                   <strong>
                     {String(
                       (props.columns[0] ? record.data[props.columns[0].name] : null) ||
-                        t('database.untitled')
+                        t('table.untitled')
                     )}
                   </strong>
                   <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>

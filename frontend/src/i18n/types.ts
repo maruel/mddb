@@ -24,7 +24,7 @@ export interface Dictionary {
     logout: string;
     workspace: string;
     newPage: string;
-    newDatabase: string;
+    newTable: string;
     settings: string;
     privacyPolicy: string;
     terms: string;
@@ -62,7 +62,7 @@ export interface Dictionary {
     title: string;
     subtitle: string;
     createPage: string;
-    createDatabase: string;
+    createTable: string;
   };
 
   onboarding: {
@@ -145,7 +145,7 @@ export interface Dictionary {
     roleViewer: string;
   };
 
-  database: {
+  table: {
     records: string;
     table: string;
     grid: string;
@@ -167,7 +167,7 @@ export interface Dictionary {
     INVALID_FORMAT: string;
     NOT_FOUND: string;
     PAGE_NOT_FOUND: string;
-    DATABASE_NOT_FOUND: string;
+    TABLE_NOT_FOUND: string;
     FILE_NOT_FOUND: string;
     STORAGE_ERROR: string;
     INTERNAL_ERROR: string;

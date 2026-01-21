@@ -1,15 +1,15 @@
 import { For } from 'solid-js';
 import type { DataRecordResponse, Property } from '../types';
-import styles from './DatabaseGrid.module.css';
+import styles from './TableGrid.module.css';
 import { useI18n } from '../i18n';
 
-interface DatabaseGridProps {
+interface TableGridProps {
   records: DataRecordResponse[];
   columns: Property[];
   onDeleteRecord: (id: string) => void;
 }
 
-export default function DatabaseGrid(props: DatabaseGridProps) {
+export default function TableGrid(props: TableGridProps) {
   const { t } = useI18n();
   return (
     <div class={styles.grid}>
@@ -20,7 +20,7 @@ export default function DatabaseGrid(props: DatabaseGridProps) {
               <strong>
                 {String(
                   (props.columns[0] ? record.data[props.columns[0].name] : null) ||
-                    t('database.untitled')
+                    t('table.untitled')
                 )}
               </strong>
               <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>

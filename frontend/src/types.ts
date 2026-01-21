@@ -875,14 +875,14 @@ export type UserRole = typeof UserRoleAdmin | typeof UserRoleEditor | typeof Use
  */
 export const NodeTypeDocument = 'document';
 /**
- * NodeTypeDatabase represents a structured database.
+ * NodeTypeTable represents a structured table.
  */
-export const NodeTypeDatabase = 'database';
+export const NodeTypeTable = 'table';
 /**
- * NodeTypeHybrid represents an entity that is both a document and a database.
+ * NodeTypeHybrid represents an entity that is both a document and a table.
  */
 export const NodeTypeHybrid = 'hybrid';
-export type NodeType = typeof NodeTypeDocument | typeof NodeTypeDatabase | typeof NodeTypeHybrid;
+export type NodeType = typeof NodeTypeDocument | typeof NodeTypeTable | typeof NodeTypeHybrid;
 /**
  * UserSettings represents global user preferences.
  */

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
 import type { JSX } from 'solid-js';
-import DatabaseBoard from './DatabaseBoard';
+import TableBoard from './TableBoard';
 import { I18nProvider } from '../i18n';
 import type { DataRecordResponse, Property } from '../types';
 
 // Mock CSS module
-vi.mock('./DatabaseBoard.module.css', () => ({
+vi.mock('./TableBoard.module.css', () => ({
   default: {
     board: 'board',
     noGroup: 'noGroup',
@@ -34,7 +34,7 @@ function renderWithI18n(component: () => JSX.Element) {
   return render(() => <I18nProvider>{component()}</I18nProvider>);
 }
 
-describe('DatabaseBoard', () => {
+describe('TableBoard', () => {
   const mockColumnsWithSelect: Property[] = [
     { name: 'Title', type: 'text' },
     {
@@ -102,7 +102,7 @@ describe('DatabaseBoard', () => {
 
   it('renders board with columns based on select options', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={mockRecords}
         onDeleteRecord={mockDeleteRecord}
@@ -118,7 +118,7 @@ describe('DatabaseBoard', () => {
 
   it('shows "No Group" column for records without status value', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={mockRecords}
         onDeleteRecord={mockDeleteRecord}
@@ -132,7 +132,7 @@ describe('DatabaseBoard', () => {
 
   it('groups records correctly by status', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={mockRecords}
         onDeleteRecord={mockDeleteRecord}
@@ -153,7 +153,7 @@ describe('DatabaseBoard', () => {
 
   it('shows record count in column headers', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={mockRecords}
         onDeleteRecord={mockDeleteRecord}
@@ -170,7 +170,7 @@ describe('DatabaseBoard', () => {
 
   it('uses first column value as card title', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={mockRecords}
         onDeleteRecord={mockDeleteRecord}
@@ -194,7 +194,7 @@ describe('DatabaseBoard', () => {
     ];
 
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={recordsWithoutTitle}
         onDeleteRecord={mockDeleteRecord}
@@ -208,7 +208,7 @@ describe('DatabaseBoard', () => {
 
   it('displays additional fields in card body (excluding group column)', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={mockRecords}
         onDeleteRecord={mockDeleteRecord}
@@ -224,7 +224,7 @@ describe('DatabaseBoard', () => {
 
   it('renders delete button for each card', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={mockRecords}
         onDeleteRecord={mockDeleteRecord}
@@ -239,7 +239,7 @@ describe('DatabaseBoard', () => {
 
   it('calls onDeleteRecord when delete button is clicked', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={mockRecords}
         onDeleteRecord={mockDeleteRecord}
@@ -259,7 +259,7 @@ describe('DatabaseBoard', () => {
 
   it('shows message when no select column exists', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsNoSelect}
         records={mockRecords}
         onDeleteRecord={mockDeleteRecord}
@@ -288,7 +288,7 @@ describe('DatabaseBoard', () => {
     ];
 
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithMultiSelect}
         records={recordsWithTags}
         onDeleteRecord={mockDeleteRecord}
@@ -313,7 +313,7 @@ describe('DatabaseBoard', () => {
     ];
 
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={recordsOnlyTodo}
         onDeleteRecord={mockDeleteRecord}
@@ -339,7 +339,7 @@ describe('DatabaseBoard', () => {
     ];
 
     renderWithI18n(() => (
-      <DatabaseBoard
+      <TableBoard
         columns={mockColumnsWithSelect}
         records={recordsWithCustomStatus}
         onDeleteRecord={mockDeleteRecord}
@@ -354,11 +354,7 @@ describe('DatabaseBoard', () => {
 
   it('renders empty board when no records', async () => {
     renderWithI18n(() => (
-      <DatabaseBoard
-        columns={mockColumnsWithSelect}
-        records={[]}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={[]} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {

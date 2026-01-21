@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
 import type { JSX } from 'solid-js';
-import DatabaseGallery from './DatabaseGallery';
+import TableGallery from './TableGallery';
 import { I18nProvider } from '../i18n';
 import type { DataRecordResponse, Property } from '../types';
 
 // Mock CSS module
-vi.mock('./DatabaseGallery.module.css', () => ({
+vi.mock('./TableGallery.module.css', () => ({
   default: {
     gallery: 'gallery',
     card: 'card',
@@ -31,7 +31,7 @@ function renderWithI18n(component: () => JSX.Element) {
   return render(() => <I18nProvider>{component()}</I18nProvider>);
 }
 
-describe('DatabaseGallery', () => {
+describe('TableGallery', () => {
   const mockColumnsWithImage: Property[] = [
     { name: 'Title', type: 'text' },
     { name: 'Image', type: 'url' },
@@ -84,7 +84,7 @@ describe('DatabaseGallery', () => {
 
   it('renders gallery with cards', async () => {
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithImage}
         records={mockRecordsWithImage}
         onDeleteRecord={mockDeleteRecord}
@@ -99,7 +99,7 @@ describe('DatabaseGallery', () => {
 
   it('detects image column by name containing "image"', async () => {
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithImage}
         records={mockRecordsWithImage}
         onDeleteRecord={mockDeleteRecord}
@@ -128,7 +128,7 @@ describe('DatabaseGallery', () => {
     ];
 
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithCover}
         records={recordsWithCover}
         onDeleteRecord={mockDeleteRecord}
@@ -144,7 +144,7 @@ describe('DatabaseGallery', () => {
 
   it('shows placeholder when no image value', async () => {
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithImage}
         records={mockRecordsWithImage}
         onDeleteRecord={mockDeleteRecord}
@@ -159,7 +159,7 @@ describe('DatabaseGallery', () => {
 
   it('uses first column value as card title', async () => {
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithImage}
         records={mockRecordsWithImage}
         onDeleteRecord={mockDeleteRecord}
@@ -183,7 +183,7 @@ describe('DatabaseGallery', () => {
     ];
 
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithImage}
         records={recordsWithoutTitle}
         onDeleteRecord={mockDeleteRecord}
@@ -197,7 +197,7 @@ describe('DatabaseGallery', () => {
 
   it('displays up to 2 additional fields in card body', async () => {
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithImage}
         records={mockRecordsWithImage}
         onDeleteRecord={mockDeleteRecord}
@@ -213,7 +213,7 @@ describe('DatabaseGallery', () => {
 
   it('renders delete button for each card', async () => {
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithImage}
         records={mockRecordsWithImage}
         onDeleteRecord={mockDeleteRecord}
@@ -228,7 +228,7 @@ describe('DatabaseGallery', () => {
 
   it('calls onDeleteRecord when delete button is clicked', async () => {
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithImage}
         records={mockRecordsWithImage}
         onDeleteRecord={mockDeleteRecord}
@@ -248,7 +248,7 @@ describe('DatabaseGallery', () => {
 
   it('sets correct alt text on images', async () => {
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsWithImage}
         records={mockRecordsWithImage}
         onDeleteRecord={mockDeleteRecord}
@@ -263,11 +263,7 @@ describe('DatabaseGallery', () => {
 
   it('renders empty gallery when no records', async () => {
     const { container } = renderWithI18n(() => (
-      <DatabaseGallery
-        columns={mockColumnsWithImage}
-        records={[]}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={[]} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -288,7 +284,7 @@ describe('DatabaseGallery', () => {
     ];
 
     renderWithI18n(() => (
-      <DatabaseGallery
+      <TableGallery
         columns={mockColumnsNoImage}
         records={recordsNoImage}
         onDeleteRecord={mockDeleteRecord}

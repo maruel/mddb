@@ -43,10 +43,10 @@ func (s *SearchService) Search(ctx context.Context, orgID jsonldb.ID, opts Searc
 		results = append(results, pageResults...)
 	}
 
-	// Search databases
+	// Search tables
 	if opts.MatchFields {
-		dbResults := s.searchDatabases(orgID, query, opts)
-		results = append(results, dbResults...)
+		tableResults := s.searchTables(orgID, query, opts)
+		results = append(results, tableResults...)
 	}
 
 	// Sort by score
@@ -71,7 +71,7 @@ func (s *SearchService) searchPages(orgID jsonldb.ID, query string, opts SearchO
 	var processNodes func([]*Node)
 	processNodes = func(list []*Node) {
 		for _, node := range list {
-			if node.Type != NodeTypeDatabase {
+			if node.Type != NodeTypeTable {
 				score := 0.0
 				matches := make(map[string]string)
 				snippet := ""
@@ -108,10 +108,10 @@ func (s *SearchService) searchPages(orgID jsonldb.ID, query string, opts SearchO
 	return results
 }
 
-func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts SearchOptions) []SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
+func (s *SearchService) searchTables(orgID jsonldb.ID, query string, opts SearchOptions) []SearchResult { //nolint:unparam // opts might be used for future table-specific filtering
 	nodes, err := s.fileStore.ReadNodeTree(orgID)
 	if err != nil {
-		slog.Warn("Failed to read node tree for database search", "orgID", orgID, "error", err)
+		slog.Warn("Failed to read node tree for table search", "orgID", orgID, "error", err)
 		return nil
 	}
 	var results []SearchResult
@@ -122,7 +122,7 @@ func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts Sea
 			if node.Type != NodeTypeDocument {
 				it, err := s.fileStore.IterRecords(orgID, node.ID)
 				if err != nil {
-					slog.Warn("Failed to iterate records for database search", "orgID", orgID, "nodeID", node.ID, "error", err)
+					slog.Warn("Failed to iterate records for table search", "orgID", orgID, "nodeID", node.ID, "error", err)
 					continue
 				}
 				for record := range it {

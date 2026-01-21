@@ -7,11 +7,11 @@ import {
   PropertyTypeNumber,
   PropertyTypeDate,
 } from '../types';
-import styles from './DatabaseTable.module.css';
+import styles from './TableTable.module.css';
 import { useI18n } from '../i18n';
 
-interface DatabaseTableProps {
-  databaseId: string;
+interface TableTableProps {
+  tableId: string;
   columns: Property[];
   records: DataRecordResponse[];
   onAddRecord?: (data: Record<string, unknown>) => void;
@@ -21,7 +21,7 @@ interface DatabaseTableProps {
   hasMore?: boolean;
 }
 
-export default function DatabaseTable(props: DatabaseTableProps) {
+export default function TableTable(props: TableTableProps) {
   const { t } = useI18n();
   const [editingCell, setEditingCell] = createSignal<{
     recordId: string;
@@ -180,7 +180,7 @@ export default function DatabaseTable(props: DatabaseTableProps) {
                       <button
                         class={styles.deleteBtn}
                         onClick={() => props.onDeleteRecord?.(record.id)}
-                        title={t('database.deleteRecord') || 'Delete record'}
+                        title={t('table.deleteRecord') || 'Delete record'}
                       >
                         ✕
                       </button>
@@ -252,12 +252,12 @@ export default function DatabaseTable(props: DatabaseTableProps) {
       </div>
 
       <Show when={props.records.length === 0}>
-        <div class={styles.empty}>{t('database.noRecords')}</div>
+        <div class={styles.empty}>{t('table.noRecords')}</div>
       </Show>
 
       <Show when={props.hasMore}>
         <div class={styles.loadMore}>
-          <button onClick={() => props.onLoadMore?.()}>{t('database.loadMore')}</button>
+          <button onClick={() => props.onLoadMore?.()}>{t('table.loadMore')}</button>
         </div>
       </Show>
     </div>

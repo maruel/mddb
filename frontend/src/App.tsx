@@ -1,10 +1,10 @@
 import { createSignal, createEffect, For, Show, onMount, onCleanup } from 'solid-js';
 import SidebarNode from './components/SidebarNode';
 import MarkdownPreview from './components/MarkdownPreview';
-import DatabaseTable from './components/DatabaseTable';
-import DatabaseGrid from './components/DatabaseGrid';
-import DatabaseGallery from './components/DatabaseGallery';
-import DatabaseBoard from './components/DatabaseBoard';
+import TableTable from './components/TableTable';
+import TableGrid from './components/TableGrid';
+import TableGallery from './components/TableGallery';
+import TableBoard from './components/TableBoard';
 import WorkspaceSettings from './components/WorkspaceSettings';
 import Onboarding from './components/Onboarding';
 import Auth from './components/Auth';
@@ -314,11 +314,9 @@ export default function App() {
         }
       }
 
-      // If it's a database or hybrid, load records
-      if (nodeData.type === 'database' || nodeData.type === 'hybrid') {
-        const recordsRes = await authFetch(
-          `/api/databases/${id}/records?offset=0&limit=${PAGE_SIZE}`
-        );
+      // If it's a table or hybrid, load records
+      if (nodeData.type === 'table' || nodeData.type === 'hybrid') {
+        const recordsRes = await authFetch(`/api/tables/${id}/records?offset=0&limit=${PAGE_SIZE}`);
         const recordsData = (await recordsRes.json()) as ListRecordsResponse;
         const loadedRecords = (recordsData.records || []) as DataRecordResponse[];
         setRecords(loadedRecords);
@@ -373,7 +371,7 @@ export default function App() {
     }
   }
 
-  async function createNode(type: 'document' | 'database' = 'document') {
+  async function createNode(type: 'document' | 'table' = 'document') {
     if (!title().trim()) {
       setError(t('errors.titleRequired') || 'Title is required');
       return;
@@ -514,7 +512,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const res = await authFetch(`/api/databases/${nodeId}/records`, {
+      const res = await authFetch(`/api/tables/${nodeId}/records`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data }),
@@ -543,7 +541,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      await authFetch(`/api/databases/${nodeId}/records/${recordId}`, { method: 'DELETE' });
+      await authFetch(`/api/tables/${nodeId}/records/${recordId}`, { method: 'DELETE' });
       loadNode(nodeId);
       setError(null);
     } catch (err) {
@@ -561,7 +559,7 @@ export default function App() {
       setLoading(true);
       const offset = records().length;
       const res = await authFetch(
-        `/api/databases/${nodeId}/records?offset=${offset}&limit=${PAGE_SIZE}`
+        `/api/tables/${nodeId}/records?offset=${offset}&limit=${PAGE_SIZE}`
       );
       const data = await res.json();
       const newRecords = data.records || [];
@@ -659,9 +657,9 @@ export default function App() {
                         <button
                           onClick={() => {
                             setShowSettings(false);
-                            createNode('database');
+                            createNode('table');
                           }}
-                          title={t('app.newDatabase') || 'New Database'}
+                          title={t('app.newTable') || 'New Table'}
                         >
                           +D
                         </button>
@@ -766,10 +764,10 @@ export default function App() {
                                   {t('welcome.createPage')}
                                 </button>
                                 <button
-                                  onClick={() => createNode('database')}
+                                  onClick={() => createNode('table')}
                                   class={styles.createButton}
                                 >
-                                  {t('welcome.createDatabase')}
+                                  {t('welcome.createTable')}
                                 </button>
                               </div>
                             </div>
@@ -853,7 +851,7 @@ export default function App() {
 
                           <div class={styles.nodeContent}>
                             {/* Always show markdown content if it exists or if node is document/hybrid */}
-                            <Show when={findNodeById(selectedNodeId())?.type !== 'database'}>
+                            <Show when={findNodeById(selectedNodeId())?.type !== 'table'}>
                               <div class={styles.editorContent}>
                                 <textarea
                                   value={content()}
@@ -875,41 +873,41 @@ export default function App() {
                               </div>
                             </Show>
 
-                            {/* Show database table if node is database or hybrid */}
+                            {/* Show table if node is table or hybrid */}
                             <Show when={findNodeById(selectedNodeId())?.type !== 'document'}>
-                              <div class={styles.databaseView}>
-                                <div class={styles.databaseHeader}>
-                                  <h3>{t('database.records')}</h3>
+                              <div class={styles.tableView}>
+                                <div class={styles.tableHeader}>
+                                  <h3>{t('table.records')}</h3>
                                   <div class={styles.viewToggle}>
                                     <button
                                       classList={{ [`${styles.active}`]: viewMode() === 'table' }}
                                       onClick={() => setViewMode('table')}
                                     >
-                                      {t('database.table')}
+                                      {t('table.table')}
                                     </button>
                                     <button
                                       classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
                                       onClick={() => setViewMode('grid')}
                                     >
-                                      {t('database.grid')}
+                                      {t('table.grid')}
                                     </button>
                                     <button
                                       classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
                                       onClick={() => setViewMode('gallery')}
                                     >
-                                      {t('database.gallery')}
+                                      {t('table.gallery')}
                                     </button>
                                     <button
                                       classList={{ [`${styles.active}`]: viewMode() === 'board' }}
                                       onClick={() => setViewMode('board')}
                                     >
-                                      {t('database.board')}
+                                      {t('table.board')}
                                     </button>
                                   </div>
                                 </div>
                                 <Show when={viewMode() === 'table'}>
-                                  <DatabaseTable
-                                    databaseId={selectedNodeId() || ''}
+                                  <TableTable
+                                    tableId={selectedNodeId() || ''}
                                     columns={findNodeById(selectedNodeId())?.properties || []}
                                     records={records()}
                                     onAddRecord={handleAddRecord}
@@ -919,21 +917,21 @@ export default function App() {
                                   />
                                 </Show>
                                 <Show when={viewMode() === 'grid'}>
-                                  <DatabaseGrid
+                                  <TableGrid
                                     records={records()}
                                     columns={findNodeById(selectedNodeId())?.properties || []}
                                     onDeleteRecord={handleDeleteRecord}
                                   />
                                 </Show>
                                 <Show when={viewMode() === 'gallery'}>
-                                  <DatabaseGallery
+                                  <TableGallery
                                     records={records()}
                                     columns={findNodeById(selectedNodeId())?.properties || []}
                                     onDeleteRecord={handleDeleteRecord}
                                   />
                                 </Show>
                                 <Show when={viewMode() === 'board'}>
-                                  <DatabaseBoard
+                                  <TableBoard
                                     records={records()}
                                     columns={findNodeById(selectedNodeId())?.properties || []}
                                     onDeleteRecord={handleDeleteRecord}

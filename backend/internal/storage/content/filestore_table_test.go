@@ -11,7 +11,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
-func TestDatabase_ReadWrite(t *testing.T) {
+func TestTable_ReadWrite(t *testing.T) {
 	fs := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
@@ -31,11 +31,11 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		node *Node
 	}{
 		{
-			name: "simple database",
+			name: "simple table",
 			node: &Node{
 				ID:    jsonldb.ID(1),
-				Title: "Test Database",
-				Type:  NodeTypeDatabase,
+				Title: "Test Table",
+				Type:  NodeTypeTable,
 				Properties: []Property{
 					{Name: "title", Type: "text"},
 					{Name: "status", Type: PropertyTypeText},
@@ -45,11 +45,11 @@ func TestDatabase_ReadWrite(t *testing.T) {
 			},
 		},
 		{
-			name: "database with all column types",
+			name: "table with all column types",
 			node: &Node{
 				ID:    jsonldb.ID(2),
-				Title: "Complex Database",
-				Type:  NodeTypeDatabase,
+				Title: "Complex Table",
+				Type:  NodeTypeTable,
 				Properties: []Property{
 					{Name: "text_field", Type: "text", Required: true},
 					{Name: "number_field", Type: "number"},
@@ -66,16 +66,16 @@ func TestDatabase_ReadWrite(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Write database
-			err := fs.WriteDatabase(ctx, orgID, tt.node, true, author)
+			// Write table
+			err := fs.WriteTable(ctx, orgID, tt.node, true, author)
 			if err != nil {
-				t.Fatalf("Failed to write database: %v", err)
+				t.Fatalf("Failed to write table: %v", err)
 			}
 
-			// Read database
-			got, err := fs.ReadDatabase(orgID, tt.node.ID)
+			// Read table
+			got, err := fs.ReadTable(orgID, tt.node.ID)
 			if err != nil {
-				t.Fatalf("Failed to read database: %v", err)
+				t.Fatalf("Failed to read table: %v", err)
 			}
 
 			// Verify basic fields
@@ -103,13 +103,13 @@ func TestDatabase_ReadWrite(t *testing.T) {
 			// Verify metadata file exists
 			filePath := fs.databaseMetadataFile(orgID, tt.node.ID)
 			if _, err := os.Stat(filePath); err != nil {
-				t.Errorf("Database metadata file not found: %s", filePath)
+				t.Errorf("Table metadata file not found: %s", filePath)
 			}
 		})
 	}
 }
 
-func TestDatabase_Exists(t *testing.T) {
+func TestTable_Exists(t *testing.T) {
 	fs := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
@@ -127,7 +127,7 @@ func TestDatabase_Exists(t *testing.T) {
 	node := &Node{
 		ID:    jsonldb.ID(1),
 		Title: "Test",
-		Type:  NodeTypeDatabase,
+		Type:  NodeTypeTable,
 		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
@@ -136,22 +136,22 @@ func TestDatabase_Exists(t *testing.T) {
 	}
 
 	// Should not exist initially
-	if fs.DatabaseExists(orgID, node.ID) {
-		t.Error("Database should not exist initially")
+	if fs.TableExists(orgID, node.ID) {
+		t.Error("Table should not exist initially")
 	}
 
-	// Write database
-	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
-		t.Fatalf("Failed to write database: %v", err)
+	// Write table
+	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("Failed to write table: %v", err)
 	}
 
 	// Should exist after write
-	if !fs.DatabaseExists(orgID, node.ID) {
-		t.Error("Database should exist after write")
+	if !fs.TableExists(orgID, node.ID) {
+		t.Error("Table should exist after write")
 	}
 }
 
-func TestDatabase_List(t *testing.T) {
+func TestTable_List(t *testing.T) {
 	fs := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
@@ -166,50 +166,50 @@ func TestDatabase_List(t *testing.T) {
 		t.Fatalf("failed to init org git repo: %v", err)
 	}
 
-	// Create multiple databases
-	dbIDs := []jsonldb.ID{jsonldb.ID(1), jsonldb.ID(2), jsonldb.ID(3)}
-	for _, id := range dbIDs {
+	// Create multiple tables
+	tableIDs := []jsonldb.ID{jsonldb.ID(1), jsonldb.ID(2), jsonldb.ID(3)}
+	for _, id := range tableIDs {
 		node := &Node{
 			ID:    id,
-			Title: "Database " + id.String(),
-			Type:  NodeTypeDatabase,
+			Title: "Table " + id.String(),
+			Type:  NodeTypeTable,
 			Properties: []Property{
 				{Name: "name", Type: "text"},
 			},
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
-			t.Fatalf("Failed to write database %v: %v", id, err)
+		if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+			t.Fatalf("Failed to write table %v: %v", id, err)
 		}
 	}
 
-	// List databases
-	it, err := fs.IterDatabases(orgID)
+	// List tables
+	it, err := fs.IterTables(orgID)
 	if err != nil {
-		t.Fatalf("Failed to list databases: %v", err)
+		t.Fatalf("Failed to list tables: %v", err)
 	}
-	databases := slices.Collect(it)
+	tables := slices.Collect(it)
 
-	if len(databases) != len(dbIDs) {
-		t.Errorf("Database count mismatch: got %d, want %d", len(databases), len(dbIDs))
+	if len(tables) != len(tableIDs) {
+		t.Errorf("Table count mismatch: got %d, want %d", len(tables), len(tableIDs))
 	}
 
-	for _, db := range databases {
+	for _, table := range tables {
 		found := false
-		for _, id := range dbIDs {
-			if db.ID == id {
+		for _, id := range tableIDs {
+			if table.ID == id {
 				found = true
 				break
 			}
 		}
 		if !found {
-			t.Errorf("Unexpected database: %v", db.ID)
+			t.Errorf("Unexpected table: %v", table.ID)
 		}
 	}
 }
 
-func TestDatabase_Delete(t *testing.T) {
+func TestTable_Delete(t *testing.T) {
 	fs := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
@@ -227,7 +227,7 @@ func TestDatabase_Delete(t *testing.T) {
 	node := &Node{
 		ID:    jsonldb.ID(1),
 		Title: "Test",
-		Type:  NodeTypeDatabase,
+		Type:  NodeTypeTable,
 		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
@@ -235,26 +235,26 @@ func TestDatabase_Delete(t *testing.T) {
 		Modified: time.Now(),
 	}
 
-	// Write database
-	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
-		t.Fatalf("Failed to write database: %v", err)
+	// Write table
+	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("Failed to write table: %v", err)
 	}
 
 	// Verify metadata file exists
 	metadataPath := fs.databaseMetadataFile(orgID, node.ID)
 	if _, err := os.Stat(metadataPath); err != nil {
-		t.Fatalf("Database metadata file not found: %v", err)
+		t.Fatalf("Table metadata file not found: %v", err)
 	}
 
-	// Delete database
-	err := fs.DeleteDatabase(ctx, orgID, node.ID, author)
+	// Delete table
+	err := fs.DeleteTable(ctx, orgID, node.ID, author)
 	if err != nil {
-		t.Fatalf("Failed to delete database: %v", err)
+		t.Fatalf("Failed to delete table: %v", err)
 	}
 
 	// Verify file is deleted
 	if _, err := os.Stat(metadataPath); err == nil {
-		t.Error("Database metadata file should be deleted")
+		t.Error("Table metadata file should be deleted")
 	}
 }
 
@@ -274,19 +274,19 @@ func TestRecord_AppendRead(t *testing.T) {
 		t.Fatalf("failed to init org git repo: %v", err)
 	}
 
-	// Create database first
+	// Create table first
 	node := &Node{
 		ID:    dbID,
 		Title: "Test",
-		Type:  NodeTypeDatabase,
+		Type:  NodeTypeTable,
 		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
 	}
-	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
-		t.Fatalf("Failed to create database: %v", err)
+	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("Failed to create table: %v", err)
 	}
 
 	// Append records
@@ -347,7 +347,7 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 }
 
-func TestRecord_EmptyDatabase(t *testing.T) {
+func TestRecord_EmptyTable(t *testing.T) {
 	fs := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
@@ -363,22 +363,22 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 		t.Fatalf("failed to init org git repo: %v", err)
 	}
 
-	// Create database
+	// Create table
 	node := &Node{
 		ID:    dbID,
-		Title: "Empty DB",
-		Type:  NodeTypeDatabase,
+		Title: "Empty Table",
+		Type:  NodeTypeTable,
 		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
 		Modified: time.Now(),
 	}
-	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
-		t.Fatalf("Failed to create database: %v", err)
+	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("Failed to create table: %v", err)
 	}
 
-	// Read records from empty database
+	// Read records from empty table
 	recIt, err := fs.IterRecords(orgID, dbID)
 	if err != nil {
 		t.Fatalf("Failed to read records: %v", err)
@@ -390,7 +390,7 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 	}
 }
 
-func TestDatabase_NestedPath(t *testing.T) {
+func TestTable_NestedPath(t *testing.T) {
 	fs := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
@@ -405,12 +405,12 @@ func TestDatabase_NestedPath(t *testing.T) {
 		t.Fatalf("failed to init org git repo: %v", err)
 	}
 
-	// Create database with base64 encoded ID
+	// Create table with base64 encoded ID
 	dbID := jsonldb.ID(42)
 	node := &Node{
 		ID:    dbID,
-		Title: "Database 42",
-		Type:  NodeTypeDatabase,
+		Title: "Table 42",
+		Type:  NodeTypeTable,
 		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
@@ -418,14 +418,14 @@ func TestDatabase_NestedPath(t *testing.T) {
 		Modified: time.Now(),
 	}
 
-	if err := fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
-		t.Fatalf("Failed to write database: %v", err)
+	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("Failed to write table: %v", err)
 	}
 
 	// Read back
-	got, err := fs.ReadDatabase(orgID, dbID)
+	got, err := fs.ReadTable(orgID, dbID)
 	if err != nil {
-		t.Fatalf("Failed to read database: %v", err)
+		t.Fatalf("Failed to read table: %v", err)
 	}
 
 	if got.ID != dbID {
@@ -435,6 +435,6 @@ func TestDatabase_NestedPath(t *testing.T) {
 	// Verify metadata file exists at correct path
 	expectedPath := fs.databaseMetadataFile(orgID, dbID)
 	if _, err := os.Stat(expectedPath); err != nil {
-		t.Errorf("Database metadata file not found at expected path: %s", expectedPath)
+		t.Errorf("Table metadata file not found at expected path: %s", expectedPath)
 	}
 }

@@ -392,7 +392,7 @@ body {
   background: #e0e0e0;
 }
 
-.databaseView {
+.tableView {
   border-top: 4px solid #f0f0f0;
   padding: 1.5rem;
   display: flex;
@@ -400,7 +400,7 @@ body {
   flex: 1;
 }
 
-.databaseHeader {
+.tableHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;

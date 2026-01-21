@@ -26,9 +26,9 @@ type Author struct {
 }
 
 // FileStore is a versioned file storage system. All mutations are committed to git.
-// Storage model: Each page (document or database) is an ID-based directory.
+// Storage model: Each page (document or table) is an ID-based directory.
 //   - Pages: ID directory containing index.md with YAML front matter.
-//   - Databases: ID directory containing metadata.json + data.jsonl.
+//   - Tables: ID directory containing metadata.json + data.jsonl.
 //   - Assets: files within each page's directory namespace.
 type FileStore struct {
 	rootDir     string
@@ -349,17 +349,17 @@ func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*Node, error) {
 
 	metadataFile := fs.databaseMetadataFile(orgID, id)
 	if _, err := os.Stat(metadataFile); err == nil {
-		db, err := fs.ReadDatabase(orgID, id)
+		table, err := fs.ReadTable(orgID, id)
 		if err == nil {
 			if node.Type == NodeTypeDocument {
 				node.Type = NodeTypeHybrid
 			} else {
-				node.Type = NodeTypeDatabase
-				node.Title = db.Title
-				node.Created = db.Created
-				node.Modified = db.Modified
+				node.Type = NodeTypeTable
+				node.Title = table.Title
+				node.Created = table.Created
+				node.Modified = table.Modified
 			}
-			node.Properties = db.Properties
+			node.Properties = table.Properties
 		}
 	}
 
@@ -433,17 +433,17 @@ func (fs *FileStore) ReadNodeFromPath(orgID jsonldb.ID, path string, id, parentI
 
 	schemaFile := filepath.Join(path, "metadata.json")
 	if _, err := os.Stat(schemaFile); err == nil {
-		db, err := fs.ReadDatabase(orgID, id)
+		table, err := fs.ReadTable(orgID, id)
 		if err == nil {
 			if node.Type == NodeTypeDocument {
 				node.Type = NodeTypeHybrid
 			} else {
-				node.Type = NodeTypeDatabase
-				node.Title = db.Title
-				node.Created = db.Created
-				node.Modified = db.Modified
+				node.Type = NodeTypeTable
+				node.Title = table.Title
+				node.Created = table.Created
+				node.Modified = table.Modified
 			}
-			node.Properties = db.Properties
+			node.Properties = table.Properties
 		}
 	}
 
@@ -485,15 +485,15 @@ func (fs *FileStore) pageIndexFile(orgID, id jsonldb.ID) string {
 
 // Database operations
 
-// DatabaseExists checks if a database exists for the given organization and ID.
-func (fs *FileStore) DatabaseExists(orgID, id jsonldb.ID) bool {
+// TableExists checks if a table exists for the given organization and ID.
+func (fs *FileStore) TableExists(orgID, id jsonldb.ID) bool {
 	path := fs.databaseMetadataFile(orgID, id)
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// ReadDatabase reads a database definition from metadata.json and returns it as a Node.
-func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*Node, error) {
+// ReadTable reads a table definition from metadata.json and returns it as a Node.
+func (fs *FileStore) ReadTable(orgID, id jsonldb.ID) (*Node, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -502,9 +502,9 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*Node, error) {
 	data, err := os.ReadFile(metadataFile) //nolint:gosec // G304: metadataFile is constructed from validated orgID and id
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, errDatabaseNotFound
+			return nil, errTableNotFound
 		}
-		return nil, fmt.Errorf("failed to read database metadata: %w", err)
+		return nil, fmt.Errorf("failed to read table metadata: %w", err)
 	}
 
 	var metadata struct {
@@ -515,7 +515,7 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*Node, error) {
 		Properties []Property `json:"properties"`
 	}
 	if err := json.Unmarshal(data, &metadata); err != nil {
-		return nil, fmt.Errorf("failed to parse database metadata: %w", err)
+		return nil, fmt.Errorf("failed to parse table metadata: %w", err)
 	}
 
 	return &Node{
@@ -524,14 +524,14 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*Node, error) {
 		Properties: metadata.Properties,
 		Created:    metadata.Created,
 		Modified:   metadata.Modified,
-		Type:       NodeTypeDatabase,
+		Type:       NodeTypeTable,
 	}, nil
 }
 
-// WriteDatabase writes database metadata to metadata.json and commits to git.
+// WriteTable writes table metadata to metadata.json and commits to git.
 // The JSONL records file is created lazily when the first record is added.
 // isNew should be true for create operations (triggers quota check), false for updates.
-func (fs *FileStore) WriteDatabase(ctx context.Context, orgID jsonldb.ID, node *Node, isNew bool, author Author) error {
+func (fs *FileStore) WriteTable(ctx context.Context, orgID jsonldb.ID, node *Node, isNew bool, author Author) error {
 	if orgID.IsZero() {
 		return errOrgIDRequired
 	}
@@ -541,7 +541,7 @@ func (fs *FileStore) WriteDatabase(ctx context.Context, orgID jsonldb.ID, node *
 		}
 	}
 
-	// Write metadata.json with all database metadata including properties
+	// Write metadata.json with all table metadata including properties
 	metadataFile := fs.databaseMetadataFile(orgID, node.ID)
 	metadata := map[string]any{
 		"title":      node.Title,
@@ -571,31 +571,31 @@ func (fs *FileStore) WriteDatabase(ctx context.Context, orgID jsonldb.ID, node *
 
 	var msg string
 	if isNew {
-		msg = "create: database " + node.ID.String() + " - " + node.Title
+		msg = "create: table " + node.ID.String() + " - " + node.Title
 	} else {
-		msg = "update: database " + node.ID.String()
+		msg = "update: table " + node.ID.String()
 	}
 	files := []string{"pages/" + node.ID.String() + "/metadata.json"}
 	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
-// DeleteDatabase deletes a database and all its records, commits to git.
-func (fs *FileStore) DeleteDatabase(ctx context.Context, orgID, id jsonldb.ID, author Author) error {
+// DeleteTable deletes a table and all its records, commits to git.
+func (fs *FileStore) DeleteTable(ctx context.Context, orgID, id jsonldb.ID, author Author) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.RemoveAll(pageDir); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to delete database: %w", err)
+		return fmt.Errorf("failed to delete table: %w", err)
 	}
 
-	msg := "delete: database " + id.String()
+	msg := "delete: table " + id.String()
 	files := []string{"pages/" + id.String()}
 	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
-// IterDatabases returns an iterator over all databases for the given organization as Nodes.
-func (fs *FileStore) IterDatabases(orgID jsonldb.ID) (iter.Seq[*Node], error) {
+// IterTables returns an iterator over all tables for the given organization as Nodes.
+func (fs *FileStore) IterTables(orgID jsonldb.ID) (iter.Seq[*Node], error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -617,7 +617,7 @@ func (fs *FileStore) IterDatabases(orgID jsonldb.ID) (iter.Seq[*Node], error) {
 			}
 			metadataFile := fs.databaseMetadataFile(orgID, id)
 			if _, err := os.Stat(metadataFile); err == nil {
-				if node, err := fs.ReadDatabase(orgID, id); err == nil {
+				if node, err := fs.ReadTable(orgID, id); err == nil {
 					if !yield(node) {
 						return
 					}
@@ -627,8 +627,8 @@ func (fs *FileStore) IterDatabases(orgID jsonldb.ID) (iter.Seq[*Node], error) {
 	}, nil
 }
 
-// AppendRecord appends a record to a database and commits to git.
-func (fs *FileStore) AppendRecord(ctx context.Context, orgID, databaseID jsonldb.ID, record *DataRecord, author Author) error {
+// AppendRecord appends a record to a table and commits to git.
+func (fs *FileStore) AppendRecord(ctx context.Context, orgID, tableID jsonldb.ID, record *DataRecord, author Author) error {
 	if orgID.IsZero() {
 		return errOrgIDRequired
 	}
@@ -639,17 +639,17 @@ func (fs *FileStore) AppendRecord(ctx context.Context, orgID, databaseID jsonldb
 		return err
 	}
 
-	pageDir := fs.pageDir(orgID, databaseID)
+	pageDir := fs.pageDir(orgID, tableID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	filePath := fs.databaseRecordsFile(orgID, databaseID)
+	filePath := fs.databaseRecordsFile(orgID, tableID)
 
 	// Load or create table using jsonldb
 	table, err := jsonldb.NewTable[*DataRecord](filePath)
 	if err != nil {
-		return fmt.Errorf("failed to load database: %w", err)
+		return fmt.Errorf("failed to load table: %w", err)
 	}
 
 	// Append record
@@ -657,12 +657,12 @@ func (fs *FileStore) AppendRecord(ctx context.Context, orgID, databaseID jsonldb
 		return fmt.Errorf("failed to append record: %w", err)
 	}
 
-	msg := "create: record " + record.ID.String() + " in database " + databaseID.String()
-	files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
+	msg := "create: record " + record.ID.String() + " in table " + tableID.String()
+	files := []string{"pages/" + tableID.String() + "/data.jsonl"}
 	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
-// IterRecords returns an iterator over all records for a database.
+// IterRecords returns an iterator over all records for a table.
 func (fs *FileStore) IterRecords(orgID, id jsonldb.ID) (iter.Seq[*DataRecord], error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
@@ -680,7 +680,7 @@ func (fs *FileStore) IterRecords(orgID, id jsonldb.ID) (iter.Seq[*DataRecord], e
 	return table.Iter(0), nil
 }
 
-// ReadRecordsPage reads a page of records for a database using jsonldb abstraction.
+// ReadRecordsPage reads a page of records for a table using jsonldb abstraction.
 func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([]*DataRecord, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
@@ -716,8 +716,8 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 	return records, nil
 }
 
-// UpdateRecord updates an existing record in a database and commits to git.
-func (fs *FileStore) UpdateRecord(ctx context.Context, orgID, databaseID jsonldb.ID, record *DataRecord, author Author) error {
+// UpdateRecord updates an existing record in a table and commits to git.
+func (fs *FileStore) UpdateRecord(ctx context.Context, orgID, tableID jsonldb.ID, record *DataRecord, author Author) error {
 	if orgID.IsZero() {
 		return errOrgIDRequired
 	}
@@ -728,12 +728,12 @@ func (fs *FileStore) UpdateRecord(ctx context.Context, orgID, databaseID jsonldb
 		return err
 	}
 
-	filePath := fs.databaseRecordsFile(orgID, databaseID)
+	filePath := fs.databaseRecordsFile(orgID, tableID)
 
 	// Load using jsonldb abstraction
 	table, err := jsonldb.NewTable[*DataRecord](filePath)
 	if err != nil {
-		return fmt.Errorf("failed to load database: %w", err)
+		return fmt.Errorf("failed to load table: %w", err)
 	}
 
 	prev, err := table.Update(record)
@@ -744,23 +744,23 @@ func (fs *FileStore) UpdateRecord(ctx context.Context, orgID, databaseID jsonldb
 		return errRecordNotFound
 	}
 
-	msg := "update: record " + record.ID.String() + " in database " + databaseID.String()
-	files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
+	msg := "update: record " + record.ID.String() + " in table " + tableID.String()
+	files := []string{"pages/" + tableID.String() + "/data.jsonl"}
 	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
-// DeleteRecord deletes a record from a database and commits to git.
-func (fs *FileStore) DeleteRecord(ctx context.Context, orgID, databaseID, recordID jsonldb.ID, author Author) error {
+// DeleteRecord deletes a record from a table and commits to git.
+func (fs *FileStore) DeleteRecord(ctx context.Context, orgID, tableID, recordID jsonldb.ID, author Author) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
 
-	filePath := fs.databaseRecordsFile(orgID, databaseID)
+	filePath := fs.databaseRecordsFile(orgID, tableID)
 
 	// Load using jsonldb abstraction
 	table, err := jsonldb.NewTable[*DataRecord](filePath)
 	if err != nil {
-		return fmt.Errorf("failed to load database: %w", err)
+		return fmt.Errorf("failed to load table: %w", err)
 	}
 
 	deleted, err := table.Delete(recordID)
@@ -771,8 +771,8 @@ func (fs *FileStore) DeleteRecord(ctx context.Context, orgID, databaseID, record
 		return errRecordNotFound
 	}
 
-	msg := "delete: record " + recordID.String() + " from database " + databaseID.String()
-	files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
+	msg := "delete: record " + recordID.String() + " from table " + tableID.String()
+	files := []string{"pages/" + tableID.String() + "/data.jsonl"}
 	return fs.Git.Commit(ctx, orgID.String(), author.Name, author.Email, msg, files)
 }
 
@@ -1017,7 +1017,7 @@ func (fs *FileStore) CreateNode(ctx context.Context, orgID jsonldb.ID, title str
 		files = append(files, "pages/"+id.String()+"/index.md")
 	}
 
-	if nodeType == NodeTypeDatabase || nodeType == NodeTypeHybrid {
+	if nodeType == NodeTypeTable || nodeType == NodeTypeHybrid {
 		if err := os.MkdirAll(fs.pageDir(orgID, id), 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}

@@ -18,11 +18,11 @@ export const dict: Dictionary = {
 
   app: {
     title: 'mddb',
-    tagline: 'Un sistema de documentos y bases de datos basado en Markdown',
+    tagline: 'Un sistema de documentos y tablas basado en Markdown',
     logout: 'Cerrar sesión',
     workspace: 'Espacio de trabajo',
     newPage: 'Nueva página',
-    newDatabase: 'Nueva base de datos',
+    newTable: 'Nueva tabla',
     settings: 'Configuración del espacio',
     privacyPolicy: 'Política de privacidad',
     terms: 'Términos',
@@ -61,7 +61,7 @@ export const dict: Dictionary = {
     title: 'Bienvenido a mddb',
     subtitle: 'Selecciona un elemento de la barra lateral o crea uno nuevo para comenzar.',
     createPage: 'Crear página',
-    createDatabase: 'Crear base de datos',
+    createTable: 'Crear tabla',
   },
 
   onboarding: {
@@ -145,8 +145,8 @@ export const dict: Dictionary = {
     roleViewer: 'Lector',
   },
 
-  database: {
-    records: 'Registros',
+  table: {
+    records: 'Registros de tabla',
     table: 'Tabla',
     grid: 'Cuadrícula',
     gallery: 'Galería',
@@ -167,7 +167,7 @@ export const dict: Dictionary = {
     INVALID_FORMAT: 'El formato de datos no es válido',
     NOT_FOUND: 'El recurso solicitado no fue encontrado',
     PAGE_NOT_FOUND: 'Página no encontrada',
-    DATABASE_NOT_FOUND: 'Base de datos no encontrada',
+    TABLE_NOT_FOUND: 'Tabla no encontrada',
     FILE_NOT_FOUND: 'Archivo no encontrado',
     STORAGE_ERROR: 'Ocurrió un error de almacenamiento',
     INTERNAL_ERROR: 'Ocurrió un error interno del servidor',

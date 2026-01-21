@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
 import type { JSX } from 'solid-js';
-import DatabaseTable from './DatabaseTable';
+import TableTable from './TableTable';
 import { I18nProvider } from '../i18n';
 import type { DataRecordResponse, Property } from '../types';
 
 // Mock CSS module
-vi.mock('./DatabaseTable.module.css', () => ({
+vi.mock('./TableTable.module.css', () => ({
   default: {
     container: 'container',
     tableWrapper: 'tableWrapper',
@@ -40,7 +40,7 @@ function renderWithI18n(component: () => JSX.Element) {
   return render(() => <I18nProvider>{component()}</I18nProvider>);
 }
 
-describe('DatabaseTable', () => {
+describe('TableTable', () => {
   const mockColumns: Property[] = [
     { name: 'Name', type: 'text', required: true },
     { name: 'Age', type: 'number' },
@@ -76,9 +76,7 @@ describe('DatabaseTable', () => {
   });
 
   it('renders table with headers', async () => {
-    renderWithI18n(() => (
-      <DatabaseTable databaseId="db-1" columns={mockColumns} records={mockRecords} />
-    ));
+    renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     await waitFor(() => {
       expect(screen.getByText('Name')).toBeTruthy();
@@ -90,9 +88,7 @@ describe('DatabaseTable', () => {
   });
 
   it('shows required indicator for required columns', async () => {
-    renderWithI18n(() => (
-      <DatabaseTable databaseId="db-1" columns={mockColumns} records={mockRecords} />
-    ));
+    renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     await waitFor(() => {
       const requiredIndicator = screen.getByText('*');
@@ -101,9 +97,7 @@ describe('DatabaseTable', () => {
   });
 
   it('renders record data correctly', async () => {
-    renderWithI18n(() => (
-      <DatabaseTable databaseId="db-1" columns={mockColumns} records={mockRecords} />
-    ));
+    renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     await waitFor(() => {
       expect(screen.getByText('Alice')).toBeTruthy();
@@ -114,9 +108,7 @@ describe('DatabaseTable', () => {
   });
 
   it('renders checkbox values as checkmarks', async () => {
-    renderWithI18n(() => (
-      <DatabaseTable databaseId="db-1" columns={mockColumns} records={mockRecords} />
-    ));
+    renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     await waitFor(() => {
       // Alice's Active is true, should show checkmark
@@ -125,9 +117,7 @@ describe('DatabaseTable', () => {
   });
 
   it('formats date values', async () => {
-    renderWithI18n(() => (
-      <DatabaseTable databaseId="db-1" columns={mockColumns} records={mockRecords} />
-    ));
+    renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     // Date should be formatted according to locale
     // The exact format depends on the browser's locale settings
@@ -141,8 +131,8 @@ describe('DatabaseTable', () => {
     const mockDelete = vi.fn();
 
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onDeleteRecord={mockDelete}
@@ -159,8 +149,8 @@ describe('DatabaseTable', () => {
     const mockDelete = vi.fn();
 
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onDeleteRecord={mockDelete}
@@ -181,8 +171,8 @@ describe('DatabaseTable', () => {
 
   it('enters edit mode when clicking a cell', async () => {
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onUpdateRecord={vi.fn()}
@@ -205,8 +195,8 @@ describe('DatabaseTable', () => {
 
   it('shows save and cancel buttons when editing', async () => {
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onUpdateRecord={vi.fn()}
@@ -230,7 +220,7 @@ describe('DatabaseTable', () => {
   });
 
   it('shows empty state when no records', async () => {
-    renderWithI18n(() => <DatabaseTable databaseId="db-1" columns={mockColumns} records={[]} />);
+    renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={[]} />);
 
     await waitFor(() => {
       expect(screen.getByText(/no records/i)).toBeTruthy();
@@ -241,8 +231,8 @@ describe('DatabaseTable', () => {
     const mockLoadMore = vi.fn();
 
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         hasMore={true}
@@ -262,12 +252,7 @@ describe('DatabaseTable', () => {
 
   it('hides load more button when hasMore is false', async () => {
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        hasMore={false}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} hasMore={false} />
     ));
 
     await waitFor(() => {
@@ -279,8 +264,8 @@ describe('DatabaseTable', () => {
     const mockAddRecord = vi.fn();
 
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onAddRecord={mockAddRecord}
@@ -295,8 +280,8 @@ describe('DatabaseTable', () => {
 
   it('renders select dropdown for select type columns', async () => {
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onUpdateRecord={vi.fn()}
@@ -320,8 +305,8 @@ describe('DatabaseTable', () => {
 
   it('renders number input for number type columns', async () => {
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onUpdateRecord={vi.fn()}
@@ -344,8 +329,8 @@ describe('DatabaseTable', () => {
 
   it('renders date input for date type columns', async () => {
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onUpdateRecord={vi.fn()}
@@ -377,8 +362,8 @@ describe('DatabaseTable', () => {
 
   it('renders checkbox input for checkbox type columns', async () => {
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onUpdateRecord={vi.fn()}
@@ -404,8 +389,8 @@ describe('DatabaseTable', () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onUpdateRecord={mockUpdateRecord}
@@ -449,8 +434,8 @@ describe('DatabaseTable', () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
-      <DatabaseTable
-        databaseId="db-1"
+      <TableTable
+        tableId="db-1"
         columns={mockColumns}
         records={mockRecords}
         onUpdateRecord={mockUpdateRecord}

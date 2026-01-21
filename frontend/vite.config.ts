@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icon.svg'],
       manifest: {
-        name: 'mddb - Markdown Document & Database',
+        name: 'mddb - Markdown Document & Table',
         short_name: 'mddb',
-        description: 'A markdown-based document and database application',
+        description: 'A markdown-based document and table application',
         theme_color: '#1a1a1a',
         background_color: '#ffffff',
         display: 'standalone',

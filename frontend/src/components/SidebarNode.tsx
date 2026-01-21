@@ -35,7 +35,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
         >
           ▶
         </span>
-        <span class={styles.nodeIcon}>{props.node.type === 'database' ? '📊' : '📄'}</span>
+        <span class={styles.nodeIcon}>{props.node.type === 'table' ? '📊' : '📄'}</span>
         <span class={styles.pageTitleText}>{props.node.title}</span>
       </div>
 

@@ -4,8 +4,8 @@ This document tracks potential bugs and issues found during code review while in
 
 ## Issues
 
-### 1. DatabaseBoard Group Filtering Logic
-**File:** `src/components/DatabaseBoard.tsx:52-55`
+### 1. TableBoard Group Filtering Logic
+**File:** `src/components/TableBoard.tsx:52-55`
 
 **Description:** The filtering logic for groups compares option names with group names, but groups are keyed by `opt.id`. If an option's `id` differs from its `name`, this could cause unexpected behavior where groups with records are hidden.
 
@@ -31,9 +31,9 @@ This document tracks potential bugs and issues found during code review while in
 
 ---
 
-### 4. Missing onUpdateRecord in Database View Components
-**File:** `src/components/DatabaseGrid.tsx`, `DatabaseGallery.tsx`, `DatabaseBoard.tsx`
+### 4. Missing onUpdateRecord in Table View Components
+**File:** `src/components/TableGrid.tsx`, `TableGallery.tsx`, `TableBoard.tsx`
 
-**Description:** Unlike `DatabaseTable`, the Grid, Gallery, and Board views don't have `onUpdateRecord` support. Users cannot edit records inline in these views.
+**Description:** Unlike `TableTable`, the Grid, Gallery, and Board views don't have `onUpdateRecord` support. Users cannot edit records inline in these views.
 
 **Note:** This may be intentional UX decision, but it's worth noting for feature parity.

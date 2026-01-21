@@ -11,32 +11,32 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-// DatabaseHandler handles database-related HTTP requests.
-type DatabaseHandler struct {
+// TableHandler handles table-related HTTP requests.
+type TableHandler struct {
 	fs *content.FileStore
 }
 
-// NewDatabaseHandler creates a new database handler.
-func NewDatabaseHandler(fs *content.FileStore) *DatabaseHandler {
-	return &DatabaseHandler{fs: fs}
+// NewTableHandler creates a new table handler.
+func NewTableHandler(fs *content.FileStore) *TableHandler {
+	return &TableHandler{fs: fs}
 }
 
 // ListDatabases returns a list of all databases.
-func (h *DatabaseHandler) ListDatabases(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListDatabasesRequest) (*dto.ListDatabasesResponse, error) {
-	it, err := h.fs.IterDatabases(orgID)
+func (h *TableHandler) ListDatabases(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListDatabasesRequest) (*dto.ListDatabasesResponse, error) {
+	it, err := h.fs.IterTables(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list databases", err)
 	}
-	return &dto.ListDatabasesResponse{Databases: databasesToSummaries(slices.Collect(it))}, nil
+	return &dto.ListDatabasesResponse{Databases: tablesToSummaries(slices.Collect(it))}, nil
 }
 
 // GetDatabase returns a specific database by ID.
-func (h *DatabaseHandler) GetDatabase(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetDatabaseRequest) (*dto.GetDatabaseResponse, error) {
+func (h *TableHandler) GetDatabase(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetDatabaseRequest) (*dto.GetDatabaseResponse, error) {
 	id, err := decodeID(req.ID, "database_id")
 	if err != nil {
 		return nil, err
 	}
-	db, err := h.fs.ReadDatabase(orgID, id)
+	db, err := h.fs.ReadTable(orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
@@ -50,7 +50,7 @@ func (h *DatabaseHandler) GetDatabase(ctx context.Context, orgID jsonldb.ID, _ *
 }
 
 // CreateDatabase creates a new database.
-func (h *DatabaseHandler) CreateDatabase(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateDatabaseRequest) (*dto.CreateDatabaseResponse, error) {
+func (h *TableHandler) CreateDatabase(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateDatabaseRequest) (*dto.CreateDatabaseResponse, error) {
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
 	}
@@ -63,24 +63,24 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 		Properties: propertiesToEntity(req.Properties),
 		Created:    now,
 		Modified:   now,
-		Type:       content.NodeTypeDatabase,
+		Type:       content.NodeTypeTable,
 	}
 
 	author := content.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.WriteDatabase(ctx, orgID, node, true, author); err != nil {
+	if err := h.fs.WriteTable(ctx, orgID, node, true, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create database", err)
 	}
 	return &dto.CreateDatabaseResponse{ID: id.String()}, nil
 }
 
 // UpdateDatabase updates a database schema.
-func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdateDatabaseRequest) (*dto.UpdateDatabaseResponse, error) {
+func (h *TableHandler) UpdateDatabase(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdateDatabaseRequest) (*dto.UpdateDatabaseResponse, error) {
 	id, err := decodeID(req.ID, "database_id")
 	if err != nil {
 		return nil, err
 	}
 
-	node, err := h.fs.ReadDatabase(orgID, id)
+	node, err := h.fs.ReadTable(orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
@@ -90,27 +90,27 @@ func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, orgID jsonldb.ID, 
 	node.Modified = time.Now()
 
 	author := content.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.WriteDatabase(ctx, orgID, node, false, author); err != nil {
+	if err := h.fs.WriteTable(ctx, orgID, node, false, author); err != nil {
 		return nil, dto.NotFound("database")
 	}
 	return &dto.UpdateDatabaseResponse{ID: id.String()}, nil
 }
 
 // DeleteDatabase deletes a database.
-func (h *DatabaseHandler) DeleteDatabase(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeleteDatabaseRequest) (*dto.DeleteDatabaseResponse, error) {
+func (h *TableHandler) DeleteDatabase(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeleteDatabaseRequest) (*dto.DeleteDatabaseResponse, error) {
 	id, err := decodeID(req.ID, "database_id")
 	if err != nil {
 		return nil, err
 	}
 	author := content.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.DeleteDatabase(ctx, orgID, id, author); err != nil {
+	if err := h.fs.DeleteTable(ctx, orgID, id, author); err != nil {
 		return nil, dto.NotFound("database")
 	}
 	return &dto.DeleteDatabaseResponse{Ok: true}, nil
 }
 
 // ListRecords returns all records in a database.
-func (h *DatabaseHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
+func (h *TableHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
 	dbID, err := decodeID(req.ID, "database_id")
 	if err != nil {
 		return nil, err
@@ -127,14 +127,14 @@ func (h *DatabaseHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *
 }
 
 // CreateRecord creates a new record in a database.
-func (h *DatabaseHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
+func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
 	dbID, err := decodeID(req.ID, "database_id")
 	if err != nil {
 		return nil, err
 	}
 
-	// Read database to get columns for type coercion
-	node, err := h.fs.ReadDatabase(orgID, dbID)
+	// Read table to get columns for type coercion
+	node, err := h.fs.ReadTable(orgID, dbID)
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
@@ -159,7 +159,7 @@ func (h *DatabaseHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, us
 }
 
 // UpdateRecord updates an existing record in a database.
-func (h *DatabaseHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
+func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
 	dbID, err := decodeID(req.ID, "database_id")
 	if err != nil {
 		return nil, err
@@ -169,8 +169,8 @@ func (h *DatabaseHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, us
 		return nil, err
 	}
 
-	// Read database to get columns for type coercion
-	node, err := h.fs.ReadDatabase(orgID, dbID)
+	// Read table to get columns for type coercion
+	node, err := h.fs.ReadTable(orgID, dbID)
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
@@ -209,7 +209,7 @@ func (h *DatabaseHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, us
 }
 
 // GetRecord retrieves a single record from a database.
-func (h *DatabaseHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
+func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
 	dbID, err := decodeID(req.ID, "database_id")
 	if err != nil {
 		return nil, err
@@ -237,7 +237,7 @@ func (h *DatabaseHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *id
 }
 
 // DeleteRecord deletes a record from a database.
-func (h *DatabaseHandler) DeleteRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
+func (h *TableHandler) DeleteRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
 	dbID, err := decodeID(req.ID, "database_id")
 	if err != nil {
 		return nil, err

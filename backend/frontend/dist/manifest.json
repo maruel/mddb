@@ -1,7 +1,7 @@
 {
-  "name": "mddb - Markdown Document & Database",
+  "name": "mddb - Markdown Document & Table",
   "short_name": "mddb",
-  "description": "A markdown-based document and database application",
+  "description": "A markdown-based document and table application",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a1a1a",

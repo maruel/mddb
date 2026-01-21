@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
 import type { JSX } from 'solid-js';
-import DatabaseGrid from './DatabaseGrid';
+import TableGrid from './TableGrid';
 import { I18nProvider } from '../i18n';
 import type { DataRecordResponse, Property } from '../types';
 
 // Mock CSS module
-vi.mock('./DatabaseGrid.module.css', () => ({
+vi.mock('./TableGrid.module.css', () => ({
   default: {
     grid: 'grid',
     card: 'card',
@@ -27,7 +27,7 @@ function renderWithI18n(component: () => JSX.Element) {
   return render(() => <I18nProvider>{component()}</I18nProvider>);
 }
 
-describe('DatabaseGrid', () => {
+describe('TableGrid', () => {
   const mockColumns: Property[] = [
     { name: 'Title', type: 'text' },
     { name: 'Description', type: 'text' },
@@ -58,7 +58,7 @@ describe('DatabaseGrid', () => {
 
   it('renders grid with cards', async () => {
     renderWithI18n(() => (
-      <DatabaseGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
+      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -69,7 +69,7 @@ describe('DatabaseGrid', () => {
 
   it('uses first column value as card title', async () => {
     renderWithI18n(() => (
-      <DatabaseGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
+      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -90,7 +90,7 @@ describe('DatabaseGrid', () => {
     ];
 
     renderWithI18n(() => (
-      <DatabaseGrid
+      <TableGrid
         columns={mockColumns}
         records={recordsWithoutTitle}
         onDeleteRecord={mockDeleteRecord}
@@ -104,7 +104,7 @@ describe('DatabaseGrid', () => {
 
   it('displays up to 3 additional fields in card body', async () => {
     renderWithI18n(() => (
-      <DatabaseGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
+      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -118,7 +118,7 @@ describe('DatabaseGrid', () => {
 
   it('shows field values correctly', async () => {
     renderWithI18n(() => (
-      <DatabaseGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
+      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -139,7 +139,7 @@ describe('DatabaseGrid', () => {
     ];
 
     renderWithI18n(() => (
-      <DatabaseGrid
+      <TableGrid
         columns={mockColumns}
         records={recordsWithMissingFields}
         onDeleteRecord={mockDeleteRecord}
@@ -154,7 +154,7 @@ describe('DatabaseGrid', () => {
 
   it('renders delete button for each card', async () => {
     renderWithI18n(() => (
-      <DatabaseGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
+      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -165,7 +165,7 @@ describe('DatabaseGrid', () => {
 
   it('calls onDeleteRecord when delete button is clicked', async () => {
     renderWithI18n(() => (
-      <DatabaseGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
+      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -181,7 +181,7 @@ describe('DatabaseGrid', () => {
 
   it('renders empty grid when no records', async () => {
     const { container } = renderWithI18n(() => (
-      <DatabaseGrid columns={mockColumns} records={[]} onDeleteRecord={mockDeleteRecord} />
+      <TableGrid columns={mockColumns} records={[]} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -193,7 +193,7 @@ describe('DatabaseGrid', () => {
 
   it('handles records with empty columns array', async () => {
     renderWithI18n(() => (
-      <DatabaseGrid columns={[]} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
+      <TableGrid columns={[]} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     // Should render without crashing and show "Untitled" since no first column

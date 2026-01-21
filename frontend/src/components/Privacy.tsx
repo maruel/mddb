@@ -44,7 +44,7 @@ export default function Privacy() {
         <section class={styles.section}>
           <h2>4. Your Data, Your Control</h2>
           <p>
-            mddb is designed to be local-first and markdown-based. Your documents and databases are
+            mddb is designed to be local-first and markdown-based. Your documents and tables are
             stored in the location you specify. If you use a hosted version, the provider has access
             to your data.
           </p>

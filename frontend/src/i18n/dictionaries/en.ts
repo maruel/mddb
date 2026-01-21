@@ -18,11 +18,11 @@ export const dict: Dictionary = {
 
   app: {
     title: 'mddb',
-    tagline: 'A seamless markdown-based document and database system',
+    tagline: 'A seamless markdown-based document and table system',
     logout: 'Logout',
     workspace: 'Workspace',
     newPage: 'New Page',
-    newDatabase: 'New Database',
+    newTable: 'New Table',
     settings: 'Workspace Settings',
     privacyPolicy: 'Privacy Policy',
     terms: 'Terms',
@@ -61,7 +61,7 @@ export const dict: Dictionary = {
     title: 'Welcome to mddb',
     subtitle: 'Select a node from the sidebar or create a new one to get started.',
     createPage: 'Create Page',
-    createDatabase: 'Create Database',
+    createTable: 'Create Table',
   },
 
   onboarding: {
@@ -144,8 +144,8 @@ export const dict: Dictionary = {
     roleViewer: 'Viewer',
   },
 
-  database: {
-    records: 'Database Records',
+  table: {
+    records: 'Table Records',
     table: 'Table',
     grid: 'Grid',
     gallery: 'Gallery',
@@ -166,7 +166,7 @@ export const dict: Dictionary = {
     INVALID_FORMAT: 'The data format is invalid',
     NOT_FOUND: 'The requested resource was not found',
     PAGE_NOT_FOUND: 'Page not found',
-    DATABASE_NOT_FOUND: 'Database not found',
+    TABLE_NOT_FOUND: 'Table not found',
     FILE_NOT_FOUND: 'File not found',
     STORAGE_ERROR: 'A storage error occurred',
     INTERNAL_ERROR: 'An internal server error occurred',

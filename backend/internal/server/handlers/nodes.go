@@ -55,8 +55,8 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *id
 	switch req.Type {
 	case dto.NodeTypeDocument:
 		nodeType = content.NodeTypeDocument
-	case dto.NodeTypeDatabase:
-		nodeType = content.NodeTypeDatabase
+	case dto.NodeTypeTable:
+		nodeType = content.NodeTypeTable // Map table to table in storage layer
 	case dto.NodeTypeHybrid:
 		nodeType = content.NodeTypeHybrid
 	default:
