@@ -16,15 +16,15 @@ var errNodeIDEmpty = errors.New("node id cannot be empty")
 
 // NodeService handles unified node business logic.
 type NodeService struct {
-	fileStore  *infra.FileStore
+	FileStore  *FileStore
 	gitService *infra.Git
 	orgService *identity.OrganizationService
 }
 
 // NewNodeService creates a new node service.
-func NewNodeService(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *NodeService {
+func NewNodeService(fileStore *FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *NodeService {
 	return &NodeService{
-		fileStore:  fileStore,
+		FileStore:  fileStore,
 		gitService: gitService,
 		orgService: orgService,
 	}
@@ -36,12 +36,12 @@ func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*entit
 		return nil, errNodeIDEmpty
 	}
 
-	return s.fileStore.ReadNode(orgID, id)
+	return s.FileStore.ReadNode(orgID, id)
 }
 
 // ListNodes returns the full hierarchical tree of nodes.
 func (s *NodeService) ListNodes(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
-	return s.fileStore.ReadNodeTree(orgID)
+	return s.FileStore.ReadNodeTree(orgID)
 }
 
 // CreateNode creates a new node (can be document, database, or hybrid).
@@ -50,7 +50,7 @@ func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title st
 	if s.orgService != nil {
 		org, err := s.orgService.Get(orgID)
 		if err == nil && org.Quotas.MaxPages > 0 {
-			count, _, err := s.fileStore.GetOrganizationUsage(orgID)
+			count, _, err := s.FileStore.GetOrganizationUsage(orgID)
 			if err == nil && count >= org.Quotas.MaxPages {
 				return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, org.Quotas.MaxPages)
 			}
@@ -70,7 +70,7 @@ func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title st
 	}
 
 	if nodeType == entity.NodeTypeDocument || nodeType == entity.NodeTypeHybrid {
-		_, err := s.fileStore.WritePage(orgID, id, title, "")
+		_, err := s.FileStore.WritePage(orgID, id, title, "")
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +84,7 @@ func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title st
 			Modified: now,
 			Type:     entity.NodeTypeDatabase,
 		}
-		err := s.fileStore.WriteDatabase(orgID, dbNode)
+		err := s.FileStore.WriteDatabase(orgID, dbNode)
 		if err != nil {
 			return nil, err
 		}

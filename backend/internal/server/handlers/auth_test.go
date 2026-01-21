@@ -6,17 +6,20 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestRegister(t *testing.T) {
 	tempDir := t.TempDir()
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := content.NewFileStore(tempDir)
+	gitService, _ := infra.NewGit("")
 	memService, _ := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
-	orgService, _ := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, fileStore, nil)
+	orgService, _ := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, gitService)
 	userService, _ := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
-	authHandler := NewAuthHandler(userService, memService, orgService, "secret")
+	pageService := content.NewPageService(fileStore, gitService, orgService)
+	authHandler := NewAuthHandler(userService, memService, orgService, pageService, "secret")
 	ctx := t.Context()
 
 	// Register Joe

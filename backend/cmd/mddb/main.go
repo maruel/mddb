@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 	"github.com/maruel/mddb/backend/internal/utils"
@@ -150,7 +151,7 @@ func mainImpl() error {
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: ll})))
 
-	fileStore, err := infra.NewFileStore(*dataDir)
+	fileStore, err := content.NewFileStore(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
@@ -171,7 +172,7 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize membership service: %w", err)
 	}
 
-	orgService, err := identity.NewOrganizationService(filepath.Join(dbDir, "organizations.jsonl"), *dataDir, fileStore, gitService)
+	orgService, err := identity.NewOrganizationService(filepath.Join(dbDir, "organizations.jsonl"), *dataDir, gitService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize organization service: %w", err)
 	}

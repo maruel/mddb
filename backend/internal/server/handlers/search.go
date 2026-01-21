@@ -8,7 +8,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // SearchHandler handles search-related HTTP requests.
@@ -17,7 +16,7 @@ type SearchHandler struct {
 }
 
 // NewSearchHandler creates a new search handler.
-func NewSearchHandler(fileStore *infra.FileStore) *SearchHandler {
+func NewSearchHandler(fileStore *content.FileStore) *SearchHandler {
 	return &SearchHandler{
 		searchService: content.NewSearchService(fileStore),
 	}

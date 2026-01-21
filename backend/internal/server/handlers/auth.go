@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -15,15 +17,17 @@ type AuthHandler struct {
 	userService *identity.UserService
 	memService  *identity.MembershipService
 	orgService  *identity.OrganizationService
+	pageService *content.PageService
 	jwtSecret   []byte
 }
 
 // NewAuthHandler creates a new auth handler.
-func NewAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, jwtSecret string) *AuthHandler {
+func NewAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, pageService *content.PageService, jwtSecret string) *AuthHandler {
 	return &AuthHandler{
 		userService: userService,
 		memService:  memService,
 		orgService:  orgService,
+		pageService: pageService,
 		jwtSecret:   []byte(jwtSecret),
 	}
 }
@@ -79,6 +83,14 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	org, err := h.orgService.Create(ctx, orgName)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create organization", err)
+	}
+
+	// Create welcome page
+	welcomeTitle := "Welcome to " + orgName
+	welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
+	if _, err := h.pageService.CreatePage(ctx, org.ID, welcomeTitle, welcomeContent); err != nil {
+		slog.ErrorContext(ctx, "Failed to create welcome page", "error", err, "org_id", org.ID)
+		return nil, dto.InternalWithError("Failed to initialize organization", err)
 	}
 
 	user, err := h.userService.Create(req.Email, req.Password, req.Name)

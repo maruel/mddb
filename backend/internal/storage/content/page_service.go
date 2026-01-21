@@ -17,7 +17,6 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
@@ -28,17 +27,17 @@ var (
 
 // PageService handles page business logic.
 type PageService struct {
-	fileStore  *infra.FileStore
-	gitService *infra.Git
-	orgService *identity.OrganizationService
+	FileStore   *FileStore
+	gitService  *infra.Git
+	quotaGetter QuotaGetter
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *PageService {
+func NewPageService(fileStore *FileStore, gitService *infra.Git, quotaGetter QuotaGetter) *PageService {
 	return &PageService{
-		fileStore:  fileStore,
-		gitService: gitService,
-		orgService: orgService,
+		FileStore:   fileStore,
+		gitService:  gitService,
+		quotaGetter: quotaGetter,
 	}
 }
 
@@ -48,7 +47,7 @@ func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*entit
 		return nil, errPageIDEmpty
 	}
 
-	return s.fileStore.ReadPage(orgID, id)
+	return s.FileStore.ReadPage(orgID, id)
 }
 
 // CreatePage creates a new page with a generated numeric ID and returns it as a Node.
@@ -58,19 +57,23 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 	}
 
 	// Check Quota
-	if s.orgService != nil {
-		org, err := s.orgService.Get(orgID)
-		if err == nil && org.Quotas.MaxPages > 0 {
-			count, _, err := s.fileStore.GetOrganizationUsage(orgID)
-			if err == nil && count >= org.Quotas.MaxPages {
-				return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, org.Quotas.MaxPages)
-			}
+	quota, err := s.quotaGetter.GetQuota(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if quota.MaxPages > 0 {
+		count, _, err := s.FileStore.GetOrganizationUsage(orgID)
+		if err != nil {
+			return nil, err
+		}
+		if count >= quota.MaxPages {
+			return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, quota.MaxPages)
 		}
 	}
 
 	id := jsonldb.NewID()
 
-	node, err := s.fileStore.WritePage(orgID, id, title, content)
+	node, err := s.FileStore.WritePage(orgID, id, title, content)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +97,7 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 		return nil, errPageTitleEmpty
 	}
 
-	node, err := s.fileStore.UpdatePage(orgID, id, title, content)
+	node, err := s.FileStore.UpdatePage(orgID, id, title, content)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +116,7 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 	if id.IsZero() {
 		return errPageIDEmpty
 	}
-	if err := s.fileStore.DeletePage(orgID, id); err != nil {
+	if err := s.FileStore.DeletePage(orgID, id); err != nil {
 		return err
 	}
 
@@ -128,7 +131,7 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 
 // ListPages returns all pages as Nodes.
 func (s *PageService) ListPages(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
-	it, err := s.fileStore.IterPages(orgID)
+	it, err := s.FileStore.IterPages(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +144,7 @@ func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query s
 		return []*entity.Node{}, nil
 	}
 
-	it, err := s.fileStore.IterPages(orgID)
+	it, err := s.FileStore.IterPages(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -160,9 +163,9 @@ func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query s
 }
 
 // GetPageHistory returns the commit history for a page.
-func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) ([]*entity.Commit, error) {
+func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) ([]*infra.Commit, error) {
 	if s.gitService == nil {
-		return []*entity.Commit{}, nil
+		return []*infra.Commit{}, nil
 	}
 	return s.gitService.GetHistory(ctx, orgID, "page", id.String())
 }

@@ -17,12 +17,12 @@ import (
 
 // AssetHandler handles asset/file-related HTTP requests.
 type AssetHandler struct {
-	fileStore    *infra.FileStore
+	fileStore    *content.FileStore
 	assetService *content.AssetService
 }
 
 // NewAssetHandler creates a new asset handler.
-func NewAssetHandler(fileStore *infra.FileStore, git *infra.Git, orgs *identity.OrganizationService) *AssetHandler {
+func NewAssetHandler(fileStore *content.FileStore, git *infra.Git, orgs *identity.OrganizationService) *AssetHandler {
 	return &AssetHandler{
 		fileStore:    fileStore,
 		assetService: content.NewAssetService(fileStore, git, orgs),

@@ -1,4 +1,4 @@
-package infra
+package content
 
 import (
 	"slices"
@@ -17,7 +17,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	orgID := jsonldb.ID(0) // zero org for tests
+	orgID := jsonldb.ID(1) // non-zero org for tests
 	dbID := jsonldb.NewID()
 	node := &entity.Node{
 		ID:       dbID,

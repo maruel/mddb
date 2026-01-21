@@ -97,23 +97,6 @@ type Asset struct {
 	Path     string    `json:"path" jsonschema:"description=Storage path on disk"`
 }
 
-// Commit represents a commit in git history.
-type Commit struct {
-	Hash      string    `json:"hash" jsonschema:"description=Git commit hash"`
-	Message   string    `json:"message" jsonschema:"description=Commit message"`
-	Timestamp time.Time `json:"timestamp" jsonschema:"description=Commit timestamp"`
-}
-
-// CommitDetail contains full commit information.
-type CommitDetail struct {
-	Hash      string    `json:"hash" jsonschema:"description=Git commit hash"`
-	Timestamp time.Time `json:"timestamp" jsonschema:"description=Commit timestamp"`
-	Author    string    `json:"author" jsonschema:"description=Commit author name"`
-	Email     string    `json:"email" jsonschema:"description=Commit author email"`
-	Subject   string    `json:"subject" jsonschema:"description=Commit subject line"`
-	Body      string    `json:"body" jsonschema:"description=Commit body message"`
-}
-
 // SearchResult represents a single search result.
 type SearchResult struct {
 	Type     string            `json:"type" jsonschema:"description=Result type (page or record)"`

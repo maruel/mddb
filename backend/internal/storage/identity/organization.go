@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
@@ -16,7 +17,7 @@ import (
 type Organization struct {
 	ID         jsonldb.ID           `json:"id" jsonschema:"description=Unique organization identifier"`
 	Name       string               `json:"name" jsonschema:"description=Display name of the organization"`
-	Quotas     Quota                `json:"quotas" jsonschema:"description=Resource limits for the organization"`
+	Quotas     entity.Quota         `json:"quotas" jsonschema:"description=Resource limits for the organization"`
 	Settings   OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
 	Onboarding OnboardingState      `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
 	GitRemote  GitRemote            `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
@@ -78,13 +79,6 @@ func (g *GitRemote) IsZero() bool {
 	return g.URL == ""
 }
 
-// Quota defines limits for an organization.
-type Quota struct {
-	MaxPages   int   `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
-	MaxStorage int64 `json:"max_storage" jsonschema:"description=Maximum storage in bytes"`
-	MaxUsers   int   `json:"max_users" jsonschema:"description=Maximum number of users allowed"`
-}
-
 // OrganizationService handles organization management.
 //
 // An Organization owns a file storage that is managed by git. Users can be member of this organization via a
@@ -92,14 +86,13 @@ type Quota struct {
 type OrganizationService struct {
 	rootDir    string
 	table      *jsonldb.Table[*Organization]
-	fileStore  *infra.FileStore
 	gitService *infra.Git
 }
 
 // NewOrganizationService creates a new organization service.
 // tablePath is the path to the organizations.jsonl file.
 // rootDir is the root directory for organization content (each org gets a subdirectory).
-func NewOrganizationService(tablePath, rootDir string, fileStore *infra.FileStore, gitService *infra.Git) (*OrganizationService, error) {
+func NewOrganizationService(tablePath, rootDir string, gitService *infra.Git) (*OrganizationService, error) {
 	table, err := jsonldb.NewTable[*Organization](tablePath)
 	if err != nil {
 		return nil, err
@@ -107,7 +100,6 @@ func NewOrganizationService(tablePath, rootDir string, fileStore *infra.FileStor
 	return &OrganizationService{
 		rootDir:    rootDir,
 		table:      table,
-		fileStore:  fileStore,
 		gitService: gitService,
 	}, nil
 }
@@ -144,17 +136,6 @@ func (s *OrganizationService) Create(ctx context.Context, name string) (*Organiz
 			fmt.Printf("failed to initialize git repo for org %s: %v\n", id, err)
 		}
 	}
-	// Create welcome page
-	if s.fileStore != nil {
-		welcomeTitle := "Welcome to " + name
-		welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
-		welcomeID := jsonldb.NewID()
-		_, _ = s.fileStore.WritePage(id, welcomeID, welcomeTitle, welcomeContent)
-		// Commit the welcome page
-		if s.gitService != nil {
-			_ = s.gitService.CommitChange(ctx, id, "create", "page", welcomeID.String(), "Initial welcome page")
-		}
-	}
 	return org, nil
 }
 
@@ -165,6 +146,15 @@ func (s *OrganizationService) Get(id jsonldb.ID) (*Organization, error) {
 		return nil, errOrgNotFound
 	}
 	return org, nil
+}
+
+// GetQuota returns the quota for an organization.
+func (s *OrganizationService) GetQuota(_ context.Context, id jsonldb.ID) (entity.Quota, error) {
+	org, err := s.Get(id)
+	if err != nil {
+		return entity.Quota{}, err
+	}
+	return org.Quotas, nil
 }
 
 // Modify atomically modifies an organization.
