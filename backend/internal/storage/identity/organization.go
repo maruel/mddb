@@ -7,18 +7,17 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // Organization represents a workspace or group of users.
 type Organization struct {
-	ID         jsonldb.ID               `json:"id" jsonschema:"description=Unique organization identifier"`
-	Name       string                   `json:"name" jsonschema:"description=Display name of the organization"`
-	Quotas     entity.OrganizationQuota `json:"quotas" jsonschema:"description=Resource limits for the organization"`
-	Settings   OrganizationSettings     `json:"settings" jsonschema:"description=Organization-wide configuration"`
-	Onboarding OnboardingState          `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
-	GitRemote  GitRemote                `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
-	Created    time.Time                `json:"created" jsonschema:"description=Organization creation timestamp"`
+	ID         jsonldb.ID           `json:"id" jsonschema:"description=Unique organization identifier"`
+	Name       string               `json:"name" jsonschema:"description=Display name of the organization"`
+	Quotas     OrganizationQuota    `json:"quotas" jsonschema:"description=Resource limits for the organization"`
+	Settings   OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
+	Onboarding OnboardingState      `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
+	GitRemote  GitRemote            `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
+	Created    time.Time            `json:"created" jsonschema:"description=Organization creation timestamp"`
 }
 
 // Clone returns a deep copy of the Organization.
@@ -43,6 +42,9 @@ func (o *Organization) Validate() error {
 	}
 	if o.Name == "" {
 		return errNameRequired
+	}
+	if o.Quotas.MaxPages <= 0 || o.Quotas.MaxStorage <= 0 || o.Quotas.MaxUsers <= 0 {
+		return errInvalidOrgQuota
 	}
 	return nil
 }
@@ -74,6 +76,13 @@ type GitRemote struct {
 // IsZero returns true if the GitRemote has no URL configured.
 func (g *GitRemote) IsZero() bool {
 	return g.URL == ""
+}
+
+// OrganizationQuota defines limits for an organization.
+type OrganizationQuota struct {
+	MaxPages   int   `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
+	MaxStorage int64 `json:"max_storage" jsonschema:"description=Maximum storage in bytes"`
+	MaxUsers   int   `json:"max_users" jsonschema:"description=Maximum number of users allowed"`
 }
 
 // OrganizationService handles organization management.
@@ -108,6 +117,11 @@ func (s *OrganizationService) Create(_ context.Context, name string) (*Organizat
 		ID:      id,
 		Name:    name,
 		Created: now,
+		Quotas: OrganizationQuota{
+			MaxPages:   1000,
+			MaxStorage: 1024 * 1024 * 1024, // 1 GiB
+			MaxUsers:   3,
+		},
 		Onboarding: OnboardingState{
 			Completed: false,
 			Step:      "name",
@@ -130,10 +144,10 @@ func (s *OrganizationService) Get(id jsonldb.ID) (*Organization, error) {
 }
 
 // GetQuota returns the quota for an organization.
-func (s *OrganizationService) GetQuota(_ context.Context, id jsonldb.ID) (entity.OrganizationQuota, error) {
+func (s *OrganizationService) GetQuota(_ context.Context, id jsonldb.ID) (OrganizationQuota, error) {
 	org, err := s.Get(id)
 	if err != nil {
-		return entity.OrganizationQuota{}, err
+		return OrganizationQuota{}, err
 	}
 	return org.Quotas, nil
 }
@@ -156,4 +170,5 @@ func (s *OrganizationService) Iter(startID jsonldb.ID) iter.Seq[*Organization] {
 var (
 	errOrgNameRequired = errors.New("organization name is required")
 	errOrgNotFound     = errors.New("organization not found")
+	errInvalidOrgQuota = errors.New("invalid organization quota")
 )

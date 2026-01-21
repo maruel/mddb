@@ -14,6 +14,11 @@ func TestOrganization(t *testing.T) {
 			valid := &Organization{
 				ID:   jsonldb.ID(1),
 				Name: "Test Org",
+				Quotas: OrganizationQuota{
+					MaxPages:   100,
+					MaxStorage: 1024,
+					MaxUsers:   10,
+				},
 			}
 			if err := valid.Validate(); err != nil {
 				t.Errorf("Expected valid organization, got error: %v", err)
@@ -24,6 +29,11 @@ func TestOrganization(t *testing.T) {
 			zeroID := &Organization{
 				ID:   jsonldb.ID(0),
 				Name: "Test Org",
+				Quotas: OrganizationQuota{
+					MaxPages:   100,
+					MaxStorage: 1024,
+					MaxUsers:   10,
+				},
 			}
 			if err := zeroID.Validate(); err == nil {
 				t.Error("Expected error for zero ID")
@@ -34,9 +44,28 @@ func TestOrganization(t *testing.T) {
 			emptyName := &Organization{
 				ID:   jsonldb.ID(1),
 				Name: "",
+				Quotas: OrganizationQuota{
+					MaxPages:   100,
+					MaxStorage: 1024,
+					MaxUsers:   10,
+				},
 			}
 			if err := emptyName.Validate(); err == nil {
 				t.Error("Expected error for empty name")
+			}
+		})
+		t.Run("invalid quota", func(t *testing.T) {
+			invalidQuota := &Organization{
+				ID:   jsonldb.ID(1),
+				Name: "Test Org",
+				Quotas: OrganizationQuota{
+					MaxPages:   0,
+					MaxStorage: 1024,
+					MaxUsers:   10,
+				},
+			}
+			if err := invalidQuota.Validate(); err == nil {
+				t.Error("Expected error for invalid quota")
 			}
 		})
 	})

@@ -7,7 +7,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -218,7 +217,7 @@ func membershipSettingsToDTO(s identity.MembershipSettings) dto.MembershipSettin
 	}
 }
 
-func organizationQuotaToDTO(q entity.OrganizationQuota) dto.OrganizationQuota {
+func organizationQuotaToDTO(q identity.OrganizationQuota) dto.OrganizationQuota {
 	return dto.OrganizationQuota{
 		MaxPages:   q.MaxPages,
 		MaxStorage: q.MaxStorage,

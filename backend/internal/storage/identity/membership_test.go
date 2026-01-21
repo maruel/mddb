@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestMembership(t *testing.T) {
@@ -102,13 +101,36 @@ func TestMembership(t *testing.T) {
 }
 
 func TestMembershipService(t *testing.T) {
-	service, err := NewMembershipService(filepath.Join(t.TempDir(), "memberships.jsonl"))
+	tempDir := t.TempDir()
+	userService, err := NewUserService(filepath.Join(tempDir, "users.jsonl"))
+	if err != nil {
+		t.Fatalf("NewUserService failed: %v", err)
+	}
+
+	orgService, err := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
+	if err != nil {
+		t.Fatalf("NewOrganizationService failed: %v", err)
+	}
+
+	service, err := NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"), userService, orgService)
 	if err != nil {
 		t.Fatalf("NewMembershipService failed: %v", err)
 	}
 
-	userID := jsonldb.ID(100)
-	orgID := jsonldb.ID(200)
+	// Create a user for testing
+	user, err := userService.Create("test@example.com", "password", "Test User")
+	if err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
+	userID := user.ID
+
+	// Create an organization for testing
+	org, err := orgService.Create(t.Context(), "Test Org")
+	if err != nil {
+		t.Fatalf("Failed to create org: %v", err)
+	}
+	orgID := org.ID
+
 	var membership *Membership
 
 	t.Run("Create", func(t *testing.T) {
@@ -156,17 +178,37 @@ func TestMembershipService(t *testing.T) {
 	})
 
 	t.Run("UserOrgQuota", func(t *testing.T) {
-		quotaService, err := NewMembershipService(filepath.Join(t.TempDir(), "quota_memberships.jsonl"))
+		tempDir := t.TempDir()
+		quotaUserService, err := NewUserService(filepath.Join(tempDir, "users.jsonl"))
+		if err != nil {
+			t.Fatalf("NewUserService failed: %v", err)
+		}
+
+		quotaOrgService, err := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
+		if err != nil {
+			t.Fatalf("NewOrganizationService failed: %v", err)
+		}
+
+		quotaService, err := NewMembershipService(filepath.Join(tempDir, "quota_memberships.jsonl"), quotaUserService, quotaOrgService)
 		if err != nil {
 			t.Fatalf("NewMembershipService failed: %v", err)
 		}
 
-		quotaUserID := jsonldb.ID(500)
-		maxOrgs := entity.DefaultUserQuota().MaxOrgs
+		quotaUser, err := quotaUserService.Create("quota@example.com", "password", "Quota User")
+		if err != nil {
+			t.Fatalf("Failed to create quota user: %v", err)
+		}
+		quotaUserID := quotaUser.ID
+		maxOrgs := quotaUser.Quotas.MaxOrgs
 
 		// Create memberships up to the limit
 		for i := range maxOrgs {
-			quotaOrgID := jsonldb.ID(600 + i) //nolint:gosec // G115: test code with small known values
+			// Create dummy orgs for testing
+			quotaOrg, err := quotaOrgService.Create(t.Context(), "Quota Org")
+			if err != nil {
+				t.Fatalf("Failed to create quota org: %v", err)
+			}
+			quotaOrgID := quotaOrg.ID
 			_, createErr := quotaService.Create(quotaUserID, quotaOrgID, UserRoleViewer)
 			if createErr != nil {
 				t.Fatalf("Create membership %d failed: %v", i+1, createErr)
@@ -180,16 +222,81 @@ func TestMembershipService(t *testing.T) {
 		}
 
 		// Try to create one more - should fail
-		_, createErr := quotaService.Create(quotaUserID, jsonldb.ID(700), UserRoleViewer)
+		failOrg, err := quotaOrgService.Create(t.Context(), "Fail Org")
+		if err != nil {
+			t.Fatalf("Failed to create fail org: %v", err)
+		}
+		_, createErr := quotaService.Create(quotaUserID, failOrg.ID, UserRoleViewer)
 		if createErr == nil {
 			t.Error("Expected error when exceeding user org quota")
 		}
 
 		// Different user should still be able to create memberships
-		otherUserID := jsonldb.ID(501)
-		_, createErr = quotaService.Create(otherUserID, jsonldb.ID(600), UserRoleViewer)
+		otherUser, err := quotaUserService.Create("other@example.com", "password", "Other User")
+		if err != nil {
+			t.Fatalf("Failed to create other user: %v", err)
+		}
+		otherUserID := otherUser.ID
+		// Create a new org for other user to avoid org user limit (which is 3 by default)
+		otherOrg, err := quotaOrgService.Create(t.Context(), "Other Org")
+		if err != nil {
+			t.Fatalf("Failed to create other org: %v", err)
+		}
+		_, createErr = quotaService.Create(otherUserID, otherOrg.ID, UserRoleViewer)
 		if createErr != nil {
 			t.Errorf("Different user should be able to create membership: %v", createErr)
+		}
+	})
+
+	t.Run("OrgUserQuota", func(t *testing.T) {
+		tempDir := t.TempDir()
+		userService, err := NewUserService(filepath.Join(tempDir, "users.jsonl"))
+		if err != nil {
+			t.Fatalf("NewUserService failed: %v", err)
+		}
+		orgService, err := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
+		if err != nil {
+			t.Fatalf("NewOrganizationService failed: %v", err)
+		}
+		service, err := NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"), userService, orgService)
+		if err != nil {
+			t.Fatalf("NewMembershipService failed: %v", err)
+		}
+
+		// Create org with small quota
+		org, err := orgService.Create(t.Context(), "Small Org")
+		if err != nil {
+			t.Fatalf("Failed to create org: %v", err)
+		}
+		// Manually update quota to 1 for testing
+		_, err = orgService.Modify(org.ID, func(o *Organization) error {
+			o.Quotas.MaxUsers = 1
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Failed to modify org quota: %v", err)
+		}
+
+		// Create first user
+		user1, err := userService.Create("user1@example.com", "password", "User 1")
+		if err != nil {
+			t.Fatalf("Failed to create user 1: %v", err)
+		}
+		// Add first user to org
+		_, err = service.Create(user1.ID, org.ID, UserRoleAdmin)
+		if err != nil {
+			t.Fatalf("Failed to add user 1: %v", err)
+		}
+
+		// Create second user
+		user2, err := userService.Create("user2@example.com", "password", "User 2")
+		if err != nil {
+			t.Fatalf("Failed to create user 2: %v", err)
+		}
+		// Try to add second user to org - should fail
+		_, err = service.Create(user2.ID, org.ID, UserRoleViewer)
+		if err == nil {
+			t.Error("Expected error when exceeding org user quota")
 		}
 	})
 
@@ -214,13 +321,21 @@ func TestMembershipService(t *testing.T) {
 
 	t.Run("Iter", func(t *testing.T) {
 		// Create second user in same org
-		userID2 := jsonldb.ID(101)
+		user2, err := userService.Create("test2@example.com", "password", "Test User 2")
+		if err != nil {
+			t.Fatalf("Failed to create user 2: %v", err)
+		}
+		userID2 := user2.ID
 		if _, err := service.Create(userID2, orgID, UserRoleViewer); err != nil {
 			t.Fatalf("Create membership for userID2 failed: %v", err)
 		}
 
 		// Create same user in different org
-		orgID2 := jsonldb.ID(201)
+		org2, err := orgService.Create(t.Context(), "Test Org 2")
+		if err != nil {
+			t.Fatalf("Failed to create org 2: %v", err)
+		}
+		orgID2 := org2.ID
 		if _, err := service.Create(userID, orgID2, UserRoleEditor); err != nil {
 			t.Fatalf("Create membership for orgID2 failed: %v", err)
 		}
@@ -300,11 +415,32 @@ func TestMembershipService(t *testing.T) {
 	})
 
 	t.Run("Persistence", func(t *testing.T) {
-		tablePath := filepath.Join(t.TempDir(), "memberships.jsonl")
-		persistUserID := jsonldb.ID(100)
-		persistOrgID := jsonldb.ID(200)
+		persistDir := t.TempDir()
+		tablePath := filepath.Join(persistDir, "memberships.jsonl")
+		userPath := filepath.Join(persistDir, "users.jsonl")
 
-		service1, svcErr := NewMembershipService(tablePath)
+		userService1, err := NewUserService(userPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		orgService1, err := NewOrganizationService(filepath.Join(persistDir, "organizations.jsonl"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		user, err := userService1.Create("persist@example.com", "password", "Persist User")
+		if err != nil {
+			t.Fatal(err)
+		}
+		persistUserID := user.ID
+
+		org, err := orgService1.Create(t.Context(), "Persist Org")
+		if err != nil {
+			t.Fatal(err)
+		}
+		persistOrgID := org.ID
+
+		service1, svcErr := NewMembershipService(tablePath, userService1, orgService1)
 		if svcErr != nil {
 			t.Fatal(svcErr)
 		}
@@ -315,7 +451,15 @@ func TestMembershipService(t *testing.T) {
 		}
 
 		// Create new service instance (simulating restart)
-		service2, svcErr := NewMembershipService(tablePath)
+		userService2, err := NewUserService(userPath)
+		if err != nil {
+			t.Fatal(err)
+		}
+		orgService2, err := NewOrganizationService(filepath.Join(persistDir, "organizations.jsonl"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		service2, svcErr := NewMembershipService(tablePath, userService2, orgService2)
 		if svcErr != nil {
 			t.Fatal(svcErr)
 		}
@@ -333,6 +477,8 @@ func TestMembershipService(t *testing.T) {
 		t.Run("malformed JSON", func(t *testing.T) {
 			tempDir := t.TempDir()
 			jsonlPath := filepath.Join(tempDir, "invalid_memberships.jsonl")
+			userService, _ := NewUserService(filepath.Join(tempDir, "users.jsonl"))
+			orgService, _ := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
 
 			// Write invalid JSON to the file (malformed JSON)
 			err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
@@ -343,7 +489,7 @@ func TestMembershipService(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err = NewMembershipService(jsonlPath)
+			_, err = NewMembershipService(jsonlPath, userService, orgService)
 			if err == nil {
 				t.Error("Expected error when loading invalid JSONL file")
 			}
@@ -352,6 +498,8 @@ func TestMembershipService(t *testing.T) {
 		t.Run("malformed row with empty role", func(t *testing.T) {
 			tempDir := t.TempDir()
 			jsonlPath := filepath.Join(tempDir, "malformed_memberships.jsonl")
+			userService, _ := NewUserService(filepath.Join(tempDir, "users.jsonl"))
+			orgService, _ := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
 
 			// Write JSON with malformed row (missing required fields)
 			err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
@@ -361,7 +509,7 @@ func TestMembershipService(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err = NewMembershipService(jsonlPath)
+			_, err = NewMembershipService(jsonlPath, userService, orgService)
 			if err == nil {
 				t.Error("Expected error when loading JSONL with invalid row (empty role)")
 			}
@@ -370,6 +518,8 @@ func TestMembershipService(t *testing.T) {
 		t.Run("row with zero ID", func(t *testing.T) {
 			tempDir := t.TempDir()
 			jsonlPath := filepath.Join(tempDir, "zero_id_memberships.jsonl")
+			userService, _ := NewUserService(filepath.Join(tempDir, "users.jsonl"))
+			orgService, _ := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
 
 			// Write JSON with zero ID
 			err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
@@ -379,7 +529,7 @@ func TestMembershipService(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err = NewMembershipService(jsonlPath)
+			_, err = NewMembershipService(jsonlPath, userService, orgService)
 			if err == nil {
 				t.Error("Expected error when loading JSONL with zero ID")
 			}

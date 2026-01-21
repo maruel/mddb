@@ -157,14 +157,19 @@ func mainImpl() error {
 		return fmt.Errorf("failed to create db directory: %w", err)
 	}
 
-	memService, err := identity.NewMembershipService(filepath.Join(dbDir, "memberships.jsonl"))
+	userService, err := identity.NewUserService(filepath.Join(dbDir, "users.jsonl"))
 	if err != nil {
-		return fmt.Errorf("failed to initialize membership service: %w", err)
+		return fmt.Errorf("failed to initialize user service: %w", err)
 	}
 
 	orgService, err := identity.NewOrganizationService(filepath.Join(dbDir, "organizations.jsonl"))
 	if err != nil {
 		return fmt.Errorf("failed to initialize organization service: %w", err)
+	}
+
+	memService, err := identity.NewMembershipService(filepath.Join(dbDir, "memberships.jsonl"), userService, orgService)
+	if err != nil {
+		return fmt.Errorf("failed to initialize membership service: %w", err)
 	}
 
 	gitService, err := git.New(context.Background(), *dataDir, "", "")
@@ -175,11 +180,6 @@ func mainImpl() error {
 	fileStore, err := content.NewFileStore(*dataDir, gitService, orgService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
-	}
-
-	userService, err := identity.NewUserService(filepath.Join(dbDir, "users.jsonl"))
-	if err != nil {
-		return fmt.Errorf("failed to initialize user service: %w", err)
 	}
 
 	invService, err := identity.NewInvitationService(filepath.Join(dbDir, "invitations.jsonl"))

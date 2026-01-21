@@ -16,14 +16,19 @@ func TestRegister(t *testing.T) {
 	ctx := context.Background()
 	tempDir := t.TempDir()
 
-	memService, err := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
+	userService, err := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
 	if err != nil {
-		t.Fatalf("NewMembershipService failed: %v", err)
+		t.Fatalf("NewUserService failed: %v", err)
 	}
 
 	orgService, err := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
 	if err != nil {
 		t.Fatalf("NewOrganizationService failed: %v", err)
+	}
+
+	memService, err := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"), userService, orgService)
+	if err != nil {
+		t.Fatalf("NewMembershipService failed: %v", err)
 	}
 
 	gitService, err := git.New(ctx, tempDir, "test", "test@test.com")
@@ -34,11 +39,6 @@ func TestRegister(t *testing.T) {
 	fileStore, err := content.NewFileStore(tempDir, gitService, orgService)
 	if err != nil {
 		t.Fatalf("NewFileStore failed: %v", err)
-	}
-
-	userService, err := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
-	if err != nil {
-		t.Fatalf("NewUserService failed: %v", err)
 	}
 
 	authHandler := NewAuthHandler(userService, memService, orgService, fileStore, "secret")

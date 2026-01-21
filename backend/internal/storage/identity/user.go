@@ -24,6 +24,7 @@ type User struct {
 	Name            string          `json:"name" jsonschema:"description=User display name"`
 	IsGlobalAdmin   bool            `json:"is_global_admin,omitempty" jsonschema:"description=Whether user has server-wide administrative access"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
+	Quotas          UserQuota       `json:"quotas" jsonschema:"description=Resource limits for the user"`
 	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
 	Created         time.Time       `json:"created" jsonschema:"description=Account creation timestamp"`
 	Modified        time.Time       `json:"modified" jsonschema:"description=Last modification timestamp"`
@@ -38,6 +39,11 @@ func (u *User) GetID() jsonldb.ID {
 type UserSettings struct {
 	Theme    string `json:"theme" jsonschema:"description=UI theme preference (light/dark/system)"`
 	Language string `json:"language" jsonschema:"description=Preferred language code (en/fr/etc)"`
+}
+
+// UserQuota defines limits for a user.
+type UserQuota struct {
+	MaxOrgs int `json:"max_orgs" jsonschema:"description=Maximum number of organizations the user can be a member of"`
 }
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
@@ -90,8 +96,11 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 			Email:         email,
 			Name:          name,
 			IsGlobalAdmin: isFirstUser,
-			Created:       now,
-			Modified:      now,
+			Quotas: UserQuota{
+				MaxOrgs: 3,
+			},
+			Created:  now,
+			Modified: now,
 		},
 		PasswordHash: string(hash),
 	}
@@ -182,6 +191,7 @@ var (
 	errEmailPwdRequired = errors.New("email and password are required")
 	errUserExists       = errors.New("user already exists")
 	errInvalidCreds     = errors.New("invalid credentials")
+	errInvalidUserQuota = errors.New("invalid user quota")
 )
 
 // oauthKey is a composite key for OAuth identity lookups.
@@ -259,6 +269,9 @@ func (u *userStorage) Validate() error {
 	}
 	if u.Email == "" {
 		return errEmailEmpty
+	}
+	if u.Quotas.MaxOrgs <= 0 {
+		return errInvalidUserQuota
 	}
 	return nil
 }

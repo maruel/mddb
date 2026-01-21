@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/git"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // testFileStore creates a FileStore for testing with a real git repo and no-op quota.
@@ -33,8 +33,8 @@ func testFileStore(t *testing.T) *FileStore {
 // noopQuotaGetter returns unlimited quotas (for testing).
 type noopQuotaGetter struct{}
 
-func (n *noopQuotaGetter) GetQuota(_ context.Context, _ jsonldb.ID) (entity.OrganizationQuota, error) {
-	return entity.OrganizationQuota{}, nil // Zero values = no limits
+func (n *noopQuotaGetter) GetQuota(_ context.Context, _ jsonldb.ID) (identity.OrganizationQuota, error) {
+	return identity.OrganizationQuota{}, nil // Zero values = no limits
 }
 
 func TestFileStorePageOperations(t *testing.T) {

@@ -12,7 +12,7 @@ func TestUserStorage(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			valid := &userStorage{
-				User:         User{ID: jsonldb.ID(1), Email: "test@example.com"},
+				User:         User{ID: jsonldb.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrgs: 3}},
 				PasswordHash: "hash",
 			}
 			if err := valid.Validate(); err != nil {
@@ -22,7 +22,7 @@ func TestUserStorage(t *testing.T) {
 
 		t.Run("zero ID", func(t *testing.T) {
 			zeroID := &userStorage{
-				User:         User{ID: jsonldb.ID(0), Email: "test@example.com"},
+				User:         User{ID: jsonldb.ID(0), Email: "test@example.com", Quotas: UserQuota{MaxOrgs: 3}},
 				PasswordHash: "hash",
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -32,11 +32,20 @@ func TestUserStorage(t *testing.T) {
 
 		t.Run("empty email", func(t *testing.T) {
 			emptyEmail := &userStorage{
-				User:         User{ID: jsonldb.ID(1), Email: ""},
+				User:         User{ID: jsonldb.ID(1), Email: "", Quotas: UserQuota{MaxOrgs: 3}},
 				PasswordHash: "hash",
 			}
 			if err := emptyEmail.Validate(); err == nil {
 				t.Error("Expected error for empty email")
+			}
+		})
+		t.Run("invalid quota", func(t *testing.T) {
+			invalidQuota := &userStorage{
+				User:         User{ID: jsonldb.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrgs: 0}},
+				PasswordHash: "hash",
+			}
+			if err := invalidQuota.Validate(); err == nil {
+				t.Error("Expected error for invalid quota")
 			}
 		})
 	})
@@ -64,7 +73,7 @@ func TestUserStorage(t *testing.T) {
 
 		t.Run("nil OAuthIdentities", func(t *testing.T) {
 			noOAuth := &userStorage{
-				User:         User{ID: jsonldb.ID(1), Email: "test@example.com"},
+				User:         User{ID: jsonldb.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrgs: 3}},
 				PasswordHash: "hash",
 			}
 			cloneNoOAuth := noOAuth.Clone()

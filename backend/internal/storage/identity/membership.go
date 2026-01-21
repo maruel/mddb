@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // UserRole defines the permissions for a user.
@@ -66,22 +65,33 @@ type MembershipSettings struct {
 
 // MembershipService handles user-organization relationships.
 type MembershipService struct {
-	table     *jsonldb.Table[*Membership]
-	byUserID  *jsonldb.Index[jsonldb.ID, *Membership]
-	byUserOrg *jsonldb.UniqueIndex[userOrgKey, *Membership]
+	table       *jsonldb.Table[*Membership]
+	byUserID    *jsonldb.Index[jsonldb.ID, *Membership]
+	byOrgID     *jsonldb.Index[jsonldb.ID, *Membership]
+	byUserOrg   *jsonldb.UniqueIndex[userOrgKey, *Membership]
+	userService *UserService
+	orgService  *OrganizationService
 }
 
 // NewMembershipService creates a new membership service.
-func NewMembershipService(tablePath string) (*MembershipService, error) {
+func NewMembershipService(tablePath string, userService *UserService, orgService *OrganizationService) (*MembershipService, error) {
 	table, err := jsonldb.NewTable[*Membership](tablePath)
 	if err != nil {
 		return nil, err
 	}
 	byUserID := jsonldb.NewIndex(table, func(m *Membership) jsonldb.ID { return m.UserID })
+	byOrgID := jsonldb.NewIndex(table, func(m *Membership) jsonldb.ID { return m.OrganizationID })
 	byUserOrg := jsonldb.NewUniqueIndex(table, func(m *Membership) userOrgKey {
 		return userOrgKey{UserID: m.UserID, OrgID: m.OrganizationID}
 	})
-	return &MembershipService{table: table, byUserID: byUserID, byUserOrg: byUserOrg}, nil
+	return &MembershipService{
+		table:       table,
+		byUserID:    byUserID,
+		byOrgID:     byOrgID,
+		byUserOrg:   byUserOrg,
+		userService: userService,
+		orgService:  orgService,
+	}, nil
 }
 
 // findByUserAndOrg finds a membership by user and organization IDs. O(1) via index.
@@ -101,9 +111,23 @@ func (s *MembershipService) Create(userID, orgID jsonldb.ID, role UserRole) (*Me
 		return nil, errMembershipExists
 	}
 	// Check user org quota
-	if s.CountUserMemberships(userID) >= entity.DefaultUserQuota().MaxOrgs {
-		return nil, errUserOrgQuotaExceeded
+	user, err := s.userService.Get(userID)
+	if err != nil {
+		return nil, err
 	}
+	if s.CountUserMemberships(userID) >= user.Quotas.MaxOrgs {
+		return nil, errQuotaExceeded
+	}
+
+	// Check org user quota
+	org, err := s.orgService.Get(orgID)
+	if err != nil {
+		return nil, err
+	}
+	if s.CountOrgMemberships(orgID) >= org.Quotas.MaxUsers {
+		return nil, errQuotaExceeded
+	}
+
 	membership := &Membership{
 		ID:             jsonldb.NewID(),
 		UserID:         userID,
@@ -143,6 +167,15 @@ func (s *MembershipService) CountUserMemberships(userID jsonldb.ID) int {
 	return count
 }
 
+// CountOrgMemberships returns the number of users in an organization.
+func (s *MembershipService) CountOrgMemberships(orgID jsonldb.ID) int {
+	count := 0
+	for range s.byOrgID.Iter(orgID) {
+		count++
+	}
+	return count
+}
+
 // Modify atomically modifies a membership.
 func (s *MembershipService) Modify(id jsonldb.ID, fn func(m *Membership) error) (*Membership, error) {
 	if id.IsZero() {
@@ -154,9 +187,9 @@ func (s *MembershipService) Modify(id jsonldb.ID, fn func(m *Membership) error) 
 //
 
 var (
-	errMembershipExists     = errors.New("membership already exists")
-	errMembershipNotFound   = errors.New("membership not found")
-	errUserOrgQuotaExceeded = errors.New("user organization quota exceeded")
+	errMembershipExists   = errors.New("membership already exists")
+	errMembershipNotFound = errors.New("membership not found")
+	errQuotaExceeded      = errors.New("quota exceeded")
 )
 
 // userOrgKey is a composite key for user+organization lookups.
