@@ -83,25 +83,6 @@ func TestOrganizationService(t *testing.T) {
 		})
 	})
 
-	t.Run("GetOrganizationByID", func(t *testing.T) {
-		t.Run("valid string ID", func(t *testing.T) {
-			retrieved, getErr := service.GetOrganizationByID(org.ID.String())
-			if getErr != nil {
-				t.Fatalf("GetOrganizationByID failed: %v", getErr)
-			}
-			if retrieved.ID != org.ID {
-				t.Errorf("Retrieved ID = %v, want %v", retrieved.ID, org.ID)
-			}
-		})
-
-		t.Run("invalid string ID", func(t *testing.T) {
-			_, getErr := service.GetOrganizationByID("invalid-id")
-			if getErr == nil {
-				t.Error("Expected error for invalid ID string")
-			}
-		})
-	})
-
 	t.Run("UpdateSettings", func(t *testing.T) {
 		newSettings := entity.OrganizationSettings{
 			AllowedDomains: []string{"example.com"},

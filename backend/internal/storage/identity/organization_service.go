@@ -109,15 +109,6 @@ func (s *OrganizationService) GetOrganization(id jsonldb.ID) (*entity.Organizati
 	return org, nil
 }
 
-// GetOrganizationByID retrieves an organization by string ID.
-func (s *OrganizationService) GetOrganizationByID(idStr string) (*entity.Organization, error) {
-	id, err := jsonldb.DecodeID(idStr)
-	if err != nil {
-		return nil, err
-	}
-	return s.GetOrganization(id)
-}
-
 // UpdateSettings updates organization-wide settings.
 func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings entity.OrganizationSettings) error {
 	org := s.table.Get(id)

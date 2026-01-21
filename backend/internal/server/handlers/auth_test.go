@@ -3,6 +3,7 @@ package handlers
 import (
 	"testing"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
@@ -44,7 +45,11 @@ func TestRegister(t *testing.T) {
 		t.Errorf("Expected Joe to be admin in his org, got %s", resp1.User.Memberships[0].Role)
 	}
 
-	org1, err := orgService.GetOrganizationByID(resp1OrgID)
+	org1ID, err := jsonldb.DecodeID(resp1OrgID)
+	if err != nil {
+		t.Fatalf("Failed to decode Joe's organization ID: %v", err)
+	}
+	org1, err := orgService.GetOrganization(org1ID)
 	if err != nil {
 		t.Fatalf("Failed to get Joe's organization: %v", err)
 	}
@@ -82,7 +87,11 @@ func TestRegister(t *testing.T) {
 		t.Errorf("Expected Alice to be admin in her org, got %s", resp2.User.Memberships[0].Role)
 	}
 
-	org2, err := orgService.GetOrganizationByID(resp2OrgID)
+	org2ID, err := jsonldb.DecodeID(resp2OrgID)
+	if err != nil {
+		t.Fatalf("Failed to decode Alice's organization ID: %v", err)
+	}
+	org2, err := orgService.GetOrganization(org2ID)
 	if err != nil {
 		t.Fatalf("Failed to get Alice's organization: %v", err)
 	}
