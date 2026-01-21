@@ -2,6 +2,7 @@ package infra
 
 import (
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -163,10 +164,11 @@ func TestDatabase_List(t *testing.T) {
 	}
 
 	// List databases
-	databases, err := fs.ListDatabases(orgID)
+	it, err := fs.IterDatabases(orgID)
 	if err != nil {
 		t.Fatalf("Failed to list databases: %v", err)
 	}
+	databases := slices.Collect(it)
 
 	if len(databases) != len(dbIDs) {
 		t.Errorf("Database count mismatch: got %d, want %d", len(databases), len(dbIDs))
@@ -283,10 +285,11 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 
 	// Read records
-	got, err := fs.ReadRecords(orgID, dbID)
+	recIt, err := fs.IterRecords(orgID, dbID)
 	if err != nil {
 		t.Fatalf("Failed to read records: %v", err)
 	}
+	got := slices.Collect(recIt)
 
 	if len(got) != len(records) {
 		t.Errorf("Record count mismatch: got %d, want %d", len(got), len(records))
@@ -336,10 +339,11 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 	}
 
 	// Read records from empty database
-	records, err := fs.ReadRecords(orgID, dbID)
+	recIt, err := fs.IterRecords(orgID, dbID)
 	if err != nil {
 		t.Fatalf("Failed to read records: %v", err)
 	}
+	records := slices.Collect(recIt)
 
 	if len(records) != 0 {
 		t.Errorf("Expected 0 records, got %d", len(records))

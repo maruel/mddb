@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -127,7 +128,11 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 
 // ListPages returns all pages as Nodes.
 func (s *PageService) ListPages(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
-	return s.fileStore.ListPages(orgID)
+	it, err := s.fileStore.IterPages(orgID)
+	if err != nil {
+		return nil, err
+	}
+	return slices.Collect(it), nil
 }
 
 // SearchPages performs a simple text search across pages.
@@ -136,7 +141,7 @@ func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query s
 		return []*entity.Node{}, nil
 	}
 
-	nodes, err := s.fileStore.ListPages(orgID)
+	it, err := s.fileStore.IterPages(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +149,7 @@ func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query s
 	queryLower := strings.ToLower(query)
 	var results []*entity.Node
 
-	for _, node := range nodes {
+	for node := range it {
 		if strings.Contains(strings.ToLower(node.Title), queryLower) ||
 			strings.Contains(strings.ToLower(node.Content), queryLower) {
 			results = append(results, node)

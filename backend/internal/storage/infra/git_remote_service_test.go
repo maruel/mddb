@@ -3,6 +3,7 @@ package infra
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -38,9 +39,13 @@ func TestGitRemoteService(t *testing.T) {
 	}
 
 	// List remotes
-	remotes, err := s.List(orgID)
-	if err != nil || len(remotes) != 1 {
-		t.Fatalf("Failed to list remotes: %v, len=%d", err, len(remotes))
+	it, err := s.Iter(orgID)
+	if err != nil {
+		t.Fatalf("Failed to list remotes: %v", err)
+	}
+	remotes := slices.Collect(it)
+	if len(remotes) != 1 {
+		t.Fatalf("Expected 1 remote, got %d", len(remotes))
 	}
 
 	// Verify token stored on remote
@@ -58,7 +63,8 @@ func TestGitRemoteService(t *testing.T) {
 		t.Fatalf("Failed to delete remote: %v", err)
 	}
 
-	remotes, _ = s.List(orgID)
+	it2, _ := s.Iter(orgID)
+	remotes = slices.Collect(it2)
 	if len(remotes) != 0 {
 		t.Errorf("Remote still exists after deletion")
 	}

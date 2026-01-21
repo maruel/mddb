@@ -3,6 +3,7 @@ package infra
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -115,10 +116,11 @@ func TestFileStoreListPages(t *testing.T) {
 	}
 
 	// List pages
-	listed, err := fs.ListPages(orgID)
+	it, err := fs.IterPages(orgID)
 	if err != nil {
 		t.Fatalf("failed to list pages: %v", err)
 	}
+	listed := slices.Collect(it)
 
 	if len(listed) != len(pages) {
 		t.Errorf("expected %d pages, got %d", len(pages), len(listed))

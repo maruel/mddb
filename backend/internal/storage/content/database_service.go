@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -143,7 +144,11 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.
 
 // ListDatabases returns all databases as Nodes.
 func (s *DatabaseService) ListDatabases(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
-	return s.fileStore.ListDatabases(orgID)
+	it, err := s.fileStore.IterDatabases(orgID)
+	if err != nil {
+		return nil, err
+	}
+	return slices.Collect(it), nil
 }
 
 // CreateRecord creates a new record in a database.
@@ -197,7 +202,11 @@ func (s *DatabaseService) GetRecords(ctx context.Context, orgID, databaseID json
 		return nil, errDatabaseNotFound
 	}
 
-	return s.fileStore.ReadRecords(orgID, databaseID)
+	it, err := s.fileStore.IterRecords(orgID, databaseID)
+	if err != nil {
+		return nil, err
+	}
+	return slices.Collect(it), nil
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
@@ -222,12 +231,12 @@ func (s *DatabaseService) GetRecord(ctx context.Context, orgID, databaseID, reco
 		return nil, errRecordIDEmpty
 	}
 
-	records, err := s.fileStore.ReadRecords(orgID, databaseID)
+	it, err := s.fileStore.IterRecords(orgID, databaseID)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, record := range records {
+	for record := range it {
 		if record.ID == recordID {
 			return record, nil
 		}

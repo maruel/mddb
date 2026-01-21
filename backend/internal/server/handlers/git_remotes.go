@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -32,10 +33,11 @@ func NewGitRemoteHandler(remoteService *infra.GitRemoteService, gitService *infr
 
 // ListRemotes lists all git remotes for an organization.
 func (h *GitRemoteHandler) ListRemotes(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListGitRemotesRequest) (*dto.ListGitRemotesResponse, error) {
-	remotes, err := h.remoteService.List(orgID)
+	it, err := h.remoteService.Iter(orgID)
 	if err != nil {
 		return nil, err
 	}
+	remotes := slices.Collect(it)
 	responses := make([]dto.GitRemoteResponse, 0, len(remotes))
 	for _, r := range remotes {
 		responses = append(responses, *gitRemoteToResponse(r))

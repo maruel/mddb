@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -35,10 +36,11 @@ func (h *AssetHandler) ListPageAssets(ctx context.Context, orgID jsonldb.ID, _ *
 	if err != nil {
 		return nil, err
 	}
-	assets, err := h.fileStore.ListAssets(orgID, pageID)
+	it, err := h.fileStore.IterAssets(orgID, pageID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list assets", err)
 	}
+	assets := slices.Collect(it)
 	return &dto.ListPageAssetsResponse{Assets: assetsToSummaries(assets, orgID.String(), req.PageID)}, nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"mime"
 	"path/filepath"
+	"slices"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
@@ -133,5 +134,9 @@ func (s *AssetService) ListAssets(ctx context.Context, orgID, pageID jsonldb.ID)
 		return nil, errPageIDEmpty
 	}
 
-	return s.fileStore.ListAssets(orgID, pageID)
+	it, err := s.fileStore.IterAssets(orgID, pageID)
+	if err != nil {
+		return nil, err
+	}
+	return slices.Collect(it), nil
 }

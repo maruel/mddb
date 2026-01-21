@@ -3,6 +3,7 @@ package infra
 import (
 	"errors"
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 	"time"
@@ -77,18 +78,20 @@ func NewGitRemoteService(rootDir string) (*GitRemoteService, error) {
 	return &GitRemoteService{table: table}, nil
 }
 
-// List returns all remotes for an organization.
-func (s *GitRemoteService) List(orgID jsonldb.ID) ([]*GitRemote, error) {
+// Iter returns an iterator over all remotes for an organization.
+func (s *GitRemoteService) Iter(orgID jsonldb.ID) (iter.Seq[*GitRemote], error) {
 	if orgID.IsZero() {
 		return nil, errOrgIDEmptyRemote
 	}
-	var result []*GitRemote
-	for r := range s.table.Iter(0) {
-		if r.OrganizationID == orgID {
-			result = append(result, r)
+	return func(yield func(*GitRemote) bool) {
+		for r := range s.table.Iter(0) {
+			if r.OrganizationID == orgID {
+				if !yield(r) {
+					return
+				}
+			}
 		}
-	}
-	return result, nil
+	}, nil
 }
 
 // Create creates a new git remote.

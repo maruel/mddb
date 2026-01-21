@@ -113,8 +113,8 @@ func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts ent
 	processNodes = func(list []*entity.Node) {
 		for _, node := range list {
 			if node.Type != entity.NodeTypeDocument {
-				records, _ := s.fileStore.ReadRecords(orgID, node.ID)
-				for _, record := range records {
+				it, _ := s.fileStore.IterRecords(orgID, node.ID)
+				for record := range it {
 					score := 0.0
 					matches := make(map[string]string)
 					matchedField := ""

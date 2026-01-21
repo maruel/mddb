@@ -1,6 +1,7 @@
 package infra
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -76,10 +77,11 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 
 		b.ResetTimer()
 		for range b.N {
-			records, err := fs.ReadRecords(orgID, readDBID)
+			it, err := fs.IterRecords(orgID, readDBID)
 			if err != nil {
 				b.Fatal(err)
 			}
+			records := slices.Collect(it)
 			if len(records) != 1000 {
 				b.Errorf("expected 1000 records, got %d", len(records))
 			}
