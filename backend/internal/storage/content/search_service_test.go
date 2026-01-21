@@ -39,9 +39,15 @@ func TestSearchService_SearchPages(t *testing.T) {
 	}
 	pageService := NewPageService(fileStore, nil, mockQuotaGetter)
 	ctx := t.Context()
-	_, _ = pageService.Create(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project", "", "")
-	_, _ = pageService.Create(ctx, orgID, "Advanced Topics", "Learn about advanced mddb configuration and optimization", "", "")
-	_, _ = pageService.Create(ctx, orgID, "API Reference", "Complete mddb API documentation for developers", "", "")
+	if _, err := pageService.Create(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project", "", ""); err != nil {
+		t.Fatalf("Create Getting Started failed: %v", err)
+	}
+	if _, err := pageService.Create(ctx, orgID, "Advanced Topics", "Learn about advanced mddb configuration and optimization", "", ""); err != nil {
+		t.Fatalf("Create Advanced Topics failed: %v", err)
+	}
+	if _, err := pageService.Create(ctx, orgID, "API Reference", "Complete mddb API documentation for developers", "", ""); err != nil {
+		t.Fatalf("Create API Reference failed: %v", err)
+	}
 
 	tests := []struct {
 		name          string
@@ -138,12 +144,21 @@ func TestSearchService_SearchRecords(t *testing.T) {
 		{Name: "description", Type: "text"},
 	}
 
-	db, _ := dbService.Create(ctx, orgID, "Tasks", columns)
+	db, err := dbService.Create(ctx, orgID, "Tasks", columns)
+	if err != nil {
+		t.Fatalf("Create database failed: %v", err)
+	}
 
 	// Create records
-	_, _ = dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"})
-	_, _ = dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"})
-	_, _ = dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"})
+	if _, err := dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Buy groceries", "status": "todo", "description": "Fresh vegetables"}); err != nil {
+		t.Fatalf("Create record failed: %v", err)
+	}
+	if _, err := dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Finish report", "status": "done", "description": "Quarterly performance"}); err != nil {
+		t.Fatalf("Create record failed: %v", err)
+	}
+	if _, err := dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Review code", "status": "todo", "description": "Pull request on main repo"}); err != nil {
+		t.Fatalf("Create record failed: %v", err)
+	}
 
 	tests := []struct {
 		name          string
@@ -220,8 +235,12 @@ func TestSearchService_Scoring(t *testing.T) {
 		},
 	}
 	pageService := NewPageService(fileStore, nil, mockQuotaGetterScoring)
-	_, _ = pageService.Create(ctx, orgID, "Python Programming", "This is about Java not Python", "", "")
-	_, _ = pageService.Create(ctx, orgID, "Java Basics", "Learn Python programming fundamentals", "", "")
+	if _, err := pageService.Create(ctx, orgID, "Python Programming", "This is about Java not Python", "", ""); err != nil {
+		t.Fatalf("Create Python Programming failed: %v", err)
+	}
+	if _, err := pageService.Create(ctx, orgID, "Java Basics", "Learn Python programming fundamentals", "", ""); err != nil {
+		t.Fatalf("Create Java Basics failed: %v", err)
+	}
 
 	results, err := searchService.Search(ctx, orgID, SearchOptions{
 		Query:      "python",
@@ -264,7 +283,9 @@ func TestSearchService_Limit(t *testing.T) {
 	}
 	pageService := NewPageService(fileStore, nil, mockQuotaGetterLimit)
 	for i := range 10 {
-		_, _ = pageService.Create(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content", "", "")
+		if _, err := pageService.Create(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content", "", ""); err != nil {
+			t.Fatalf("Create Test Page %d failed: %v", i, err)
+		}
 	}
 
 	results, err := searchService.Search(ctx, orgID, SearchOptions{
@@ -299,15 +320,22 @@ func TestSearchService_Integration(t *testing.T) {
 		},
 	}
 	pageService := NewPageService(fileStore, nil, mockQuotaGetterIntegration)
-	_, _ = pageService.Create(ctx, orgID, "Blog Post", "Article about searchable content and web development", "", "")
+	if _, err := pageService.Create(ctx, orgID, "Blog Post", "Article about searchable content and web development", "", ""); err != nil {
+		t.Fatalf("Create Blog Post failed: %v", err)
+	}
 
 	dbService := NewDatabaseService(fileStore, nil, mockQuotaGetterIntegration)
 	columns := []Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "content", Type: "text"},
 	}
-	db, _ := dbService.Create(ctx, orgID, "Articles", columns)
-	_, _ = dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
+	db, err := dbService.Create(ctx, orgID, "Articles", columns)
+	if err != nil {
+		t.Fatalf("Create database failed: %v", err)
+	}
+	if _, err := dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"}); err != nil {
+		t.Fatalf("Create record failed: %v", err)
+	}
 
 	// Search should find both page and record
 	results, err := searchService.Search(ctx, orgID, SearchOptions{

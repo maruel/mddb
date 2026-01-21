@@ -178,12 +178,15 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if org != nil && !org.ID.IsZero() {
-				_, _ = h.memService.Create(user.ID, org.ID, identity.UserRoleAdmin)
+				if _, err := h.memService.Create(user.ID, org.ID, identity.UserRoleAdmin); err != nil {
+					writeErrorResponse(w, dto.Internal("membership_creation"))
+					return
+				}
 			}
 		}
 
 		// Link OAuth identity
-		_, _ = h.userService.Modify(user.ID, func(u *identity.User) error {
+		if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
 			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
 				Provider:   provider,
 				ProviderID: userInfo.ID,
@@ -191,7 +194,10 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				LastLogin:  time.Now(),
 			})
 			return nil
-		})
+		}); err != nil {
+			writeErrorResponse(w, dto.Internal("oauth_link"))
+			return
+		}
 	}
 
 	// Generate JWT token

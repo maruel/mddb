@@ -175,11 +175,15 @@ func TestMembershipService(t *testing.T) {
 	t.Run("Iter", func(t *testing.T) {
 		// Create second user in same org
 		userID2 := jsonldb.ID(101)
-		_, _ = service.Create(userID2, orgID, UserRoleViewer)
+		if _, err := service.Create(userID2, orgID, UserRoleViewer); err != nil {
+			t.Fatalf("Create membership for userID2 failed: %v", err)
+		}
 
 		// Create same user in different org
 		orgID2 := jsonldb.ID(201)
-		_, _ = service.Create(userID, orgID2, UserRoleEditor)
+		if _, err := service.Create(userID, orgID2, UserRoleEditor); err != nil {
+			t.Fatalf("Create membership for orgID2 failed: %v", err)
+		}
 
 		t.Run("by user", func(t *testing.T) {
 			iter, iterErr := service.Iter(userID)

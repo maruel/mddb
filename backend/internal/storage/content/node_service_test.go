@@ -114,8 +114,12 @@ func TestNodeService_ListNodes(t *testing.T) {
 
 	// Create some nodes
 	var emptyParentID jsonldb.ID
-	_, _ = service.Create(ctx, orgID, "Node 1", NodeTypeDocument, emptyParentID)
-	_, _ = service.Create(ctx, orgID, "Node 2", NodeTypeDocument, emptyParentID)
+	if _, err := service.Create(ctx, orgID, "Node 1", NodeTypeDocument, emptyParentID); err != nil {
+		t.Fatalf("Create Node 1 failed: %v", err)
+	}
+	if _, err := service.Create(ctx, orgID, "Node 2", NodeTypeDocument, emptyParentID); err != nil {
+		t.Fatalf("Create Node 2 failed: %v", err)
+	}
 
 	nodes, err := service.List(ctx, orgID)
 	if err != nil {

@@ -195,9 +195,15 @@ func TestPageService_ListPages(t *testing.T) {
 		t.Fatalf("ListPages failed: %v", err)
 	}
 	initialCount := len(pages)
-	_, _ = service.Create(ctx, orgID, "Page 1", "Content 1", "", "")
-	_, _ = service.Create(ctx, orgID, "Page 2", "Content 2", "", "")
-	_, _ = service.Create(ctx, orgID, "Page 3", "Content 3", "", "")
+	if _, err := service.Create(ctx, orgID, "Page 1", "Content 1", "", ""); err != nil {
+		t.Fatalf("Create Page 1 failed: %v", err)
+	}
+	if _, err := service.Create(ctx, orgID, "Page 2", "Content 2", "", ""); err != nil {
+		t.Fatalf("Create Page 2 failed: %v", err)
+	}
+	if _, err := service.Create(ctx, orgID, "Page 3", "Content 3", "", ""); err != nil {
+		t.Fatalf("Create Page 3 failed: %v", err)
+	}
 	if pages, err = service.List(ctx, orgID); err != nil {
 		t.Fatalf("ListPages failed: %v", err)
 	}
@@ -216,23 +222,35 @@ func TestPageService_SearchPages(t *testing.T) {
 		},
 	}
 	service := NewPageService(fileStore, nil, mockQuotaGetter)
-	_, _ = service.Create(ctx, orgID, "Apple Recipes", "How to cook with apples", "", "")
-	_, _ = service.Create(ctx, orgID, "Orange Juice", "Making fresh juice", "", "")
-	_, _ = service.Create(ctx, orgID, "Banana Bread", "Contains apple cider vinegar", "", "")
+	if _, err := service.Create(ctx, orgID, "Apple Recipes", "How to cook with apples", "", ""); err != nil {
+		t.Fatalf("Create Apple Recipes failed: %v", err)
+	}
+	if _, err := service.Create(ctx, orgID, "Orange Juice", "Making fresh juice", "", ""); err != nil {
+		t.Fatalf("Create Orange Juice failed: %v", err)
+	}
+	if _, err := service.Create(ctx, orgID, "Banana Bread", "Contains apple cider vinegar", "", ""); err != nil {
+		t.Fatalf("Create Banana Bread failed: %v", err)
+	}
 	results, err := service.Search(ctx, orgID, "Apple")
 	if err != nil {
-		t.Fatalf("SearchPages failed: %v", err)
+		t.Fatalf("Search failed: %v", err)
 	}
 	if len(results) != 2 {
 		t.Errorf("Expected 2 search results for 'Apple', got %d", len(results))
 	}
-	if results, _ = service.Search(ctx, orgID, "juice"); len(results) != 1 {
+	if results, err = service.Search(ctx, orgID, "juice"); err != nil {
+		t.Fatalf("Search failed: %v", err)
+	} else if len(results) != 1 {
 		t.Errorf("Expected 1 search result for 'juice', got %d", len(results))
 	}
-	if results, _ = service.Search(ctx, orgID, "xyz123uniquestring"); len(results) != 0 {
+	if results, err = service.Search(ctx, orgID, "xyz123uniquestring"); err != nil {
+		t.Fatalf("Search failed: %v", err)
+	} else if len(results) != 0 {
 		t.Errorf("Expected 0 search results for 'xyz123uniquestring', got %d", len(results))
 	}
-	if results, _ = service.Search(ctx, orgID, ""); len(results) != 0 {
+	if results, err = service.Search(ctx, orgID, ""); err != nil {
+		t.Fatalf("Search failed: %v", err)
+	} else if len(results) != 0 {
 		t.Errorf("Expected 0 results for empty query, got %d", len(results))
 	}
 }
