@@ -28,7 +28,7 @@ func NewPageHandler(pageService *content.PageService) *PageHandler {
 
 // ListPages returns a list of all pages.
 func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListPagesRequest) (*dto.ListPagesResponse, error) {
-	pages, err := h.pageService.ListPages(ctx, orgID)
+	pages, err := h.pageService.List(ctx, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list pages", err)
 	}
@@ -41,7 +41,7 @@ func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *identity
 	if err != nil {
 		return nil, err
 	}
-	page, err := h.pageService.GetPage(ctx, orgID, id)
+	page, err := h.pageService.Get(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -57,7 +57,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *id
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
 	}
-	page, err := h.pageService.CreatePage(ctx, orgID, req.Title, req.Content, user.Name, user.Email)
+	page, err := h.pageService.Create(ctx, orgID, req.Title, req.Content, user.Name, user.Email)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
@@ -70,7 +70,7 @@ func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *id
 	if err != nil {
 		return nil, err
 	}
-	page, err := h.pageService.UpdatePage(ctx, orgID, id, req.Title, req.Content, user.Name, user.Email)
+	page, err := h.pageService.Update(ctx, orgID, id, req.Title, req.Content, user.Name, user.Email)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -83,7 +83,7 @@ func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *id
 	if err != nil {
 		return nil, err
 	}
-	if err := h.pageService.DeletePage(ctx, orgID, id, user.Name, user.Email); err != nil {
+	if err := h.pageService.Delete(ctx, orgID, id, user.Name, user.Email); err != nil {
 		return nil, dto.NotFound("page")
 	}
 	return &dto.DeletePageResponse{Ok: true}, nil
@@ -95,7 +95,7 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *i
 	if err != nil {
 		return nil, err
 	}
-	history, err := h.pageService.GetPageHistory(ctx, orgID, id, req.Limit)
+	history, err := h.pageService.GetHistory(ctx, orgID, id, req.Limit)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page history", err)
 	}
@@ -108,7 +108,7 @@ func (h *PageHandler) GetPageVersion(ctx context.Context, orgID jsonldb.ID, _ *i
 	if err != nil {
 		return nil, err
 	}
-	pageContent, err := h.pageService.GetPageVersion(ctx, orgID, id, req.Hash)
+	pageContent, err := h.pageService.GetVersion(ctx, orgID, id, req.Hash)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page version", err)
 	}

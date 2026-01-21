@@ -28,13 +28,13 @@ func TestNodeService_GetNode(t *testing.T) {
 
 	// Test with empty ID
 	var emptyID jsonldb.ID
-	_, err := service.GetNode(ctx, orgID, emptyID)
+	_, err := service.Get(ctx, orgID, emptyID)
 	if err == nil {
 		t.Error("Expected error for empty node ID")
 	}
 
 	// Test with invalid ID (contains invalid character @)
-	_, err = service.GetNode(ctx, orgID, jsonldb.ID(0))
+	_, err = service.Get(ctx, orgID, jsonldb.ID(0))
 	if err == nil {
 		t.Error("Expected error for invalid node ID")
 	}
@@ -49,7 +49,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 
 	// Test creating a document node
 	var emptyParentID jsonldb.ID
-	node, err := service.CreateNode(ctx, orgID, "Test Document", NodeTypeDocument, emptyParentID)
+	node, err := service.Create(ctx, orgID, "Test Document", NodeTypeDocument, emptyParentID)
 	if err != nil {
 		t.Fatalf("CreateNode (document) failed: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 	}
 
 	// Test creating a database node
-	dbNode, err := service.CreateNode(ctx, orgID, "Test Database", NodeTypeDatabase, emptyParentID)
+	dbNode, err := service.Create(ctx, orgID, "Test Database", NodeTypeDatabase, emptyParentID)
 	if err != nil {
 		t.Fatalf("CreateNode (database) failed: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 	}
 
 	// Test creating a hybrid node
-	hybridNode, err := service.CreateNode(ctx, orgID, "Test Hybrid", NodeTypeHybrid, emptyParentID)
+	hybridNode, err := service.Create(ctx, orgID, "Test Hybrid", NodeTypeHybrid, emptyParentID)
 	if err != nil {
 		t.Fatalf("CreateNode (hybrid) failed: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 	}
 
 	// Test creating a child node with parentID
-	childNode, err := service.CreateNode(ctx, orgID, "Child Node", NodeTypeDocument, node.ID)
+	childNode, err := service.Create(ctx, orgID, "Child Node", NodeTypeDocument, node.ID)
 	if err != nil {
 		t.Fatalf("CreateNode (child) failed: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestNodeService_ListNodes(t *testing.T) {
 	service := NewNodeService(fileStore, nil, orgService)
 
 	// List initial nodes (may include welcome page from org creation)
-	initialNodes, err := service.ListNodes(ctx, orgID)
+	initialNodes, err := service.List(ctx, orgID)
 	if err != nil {
 		t.Fatalf("ListNodes failed: %v", err)
 	}
@@ -114,10 +114,10 @@ func TestNodeService_ListNodes(t *testing.T) {
 
 	// Create some nodes
 	var emptyParentID jsonldb.ID
-	_, _ = service.CreateNode(ctx, orgID, "Node 1", NodeTypeDocument, emptyParentID)
-	_, _ = service.CreateNode(ctx, orgID, "Node 2", NodeTypeDocument, emptyParentID)
+	_, _ = service.Create(ctx, orgID, "Node 1", NodeTypeDocument, emptyParentID)
+	_, _ = service.Create(ctx, orgID, "Node 2", NodeTypeDocument, emptyParentID)
 
-	nodes, err := service.ListNodes(ctx, orgID)
+	nodes, err := service.List(ctx, orgID)
 	if err != nil {
 		t.Fatalf("ListNodes failed: %v", err)
 	}

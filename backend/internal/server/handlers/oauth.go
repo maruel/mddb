@@ -164,7 +164,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			// Create welcome page
 			welcomeTitle := "Welcome to " + orgName
 			welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
-			if _, err := h.pageService.CreatePage(r.Context(), org.ID, welcomeTitle, welcomeContent, userInfo.Name, userInfo.Email); err != nil {
+			if _, err := h.pageService.Create(r.Context(), org.ID, welcomeTitle, welcomeContent, userInfo.Name, userInfo.Email); err != nil {
 				slog.ErrorContext(r.Context(), "Failed to create welcome page", "error", err, "org_id", org.ID)
 				writeErrorResponse(w, dto.InternalWithError("Failed to initialize organization", err))
 				return

@@ -78,7 +78,7 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	asset, err := h.assetService.SaveAsset(r.Context(), orgID, pageID, header.Filename, data)
+	asset, err := h.assetService.Save(r.Context(), orgID, pageID, header.Filename, data)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("asset_save"))
 		return
@@ -125,7 +125,7 @@ func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, _ 
 	if err != nil {
 		return nil, err
 	}
-	if err := h.assetService.DeleteAsset(ctx, orgID, pageID, req.AssetName); err != nil {
+	if err := h.assetService.Delete(ctx, orgID, pageID, req.AssetName); err != nil {
 		return nil, dto.NotFound("asset")
 	}
 	return &dto.DeletePageAssetResponse{Ok: true}, nil

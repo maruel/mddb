@@ -34,16 +34,16 @@ func NewDatabaseService(fileStore *FileStore, gitService *git.Client, quotaGette
 	}
 }
 
-// GetDatabase retrieves a database by ID and returns it as a Node.
-func (s *DatabaseService) GetDatabase(ctx context.Context, orgID, id jsonldb.ID) (*Node, error) {
+// Get retrieves a database by ID and returns it as a Node.
+func (s *DatabaseService) Get(ctx context.Context, orgID, id jsonldb.ID) (*Node, error) {
 	if id.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
 	return s.FileStore.ReadDatabase(orgID, id)
 }
 
-// CreateDatabase creates a new database with a generated numeric ID and returns it as a Node.
-func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, title string, columns []Property) (*Node, error) {
+// Create creates a new database with a generated numeric ID and returns it as a Node.
+func (s *DatabaseService) Create(ctx context.Context, orgID jsonldb.ID, title string, columns []Property) (*Node, error) {
 	if title == "" {
 		return nil, errTitleEmpty
 	}
@@ -92,8 +92,8 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 	return node, nil
 }
 
-// UpdateDatabase updates an existing database's schema and returns it as a Node.
-func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.ID, title string, columns []Property) (*Node, error) {
+// Update updates an existing database's schema and returns it as a Node.
+func (s *DatabaseService) Update(ctx context.Context, orgID, id jsonldb.ID, title string, columns []Property) (*Node, error) {
 	if id.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
@@ -128,8 +128,8 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.
 	return node, nil
 }
 
-// DeleteDatabase deletes a database and all its records.
-func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.ID) error {
+// Delete deletes a database and all its records.
+func (s *DatabaseService) Delete(ctx context.Context, orgID, id jsonldb.ID) error {
 	if id.IsZero() {
 		return errDatabaseIDEmpty
 	}
@@ -148,8 +148,8 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.
 	return nil
 }
 
-// ListDatabases returns all databases as Nodes.
-func (s *DatabaseService) ListDatabases(ctx context.Context, orgID jsonldb.ID) ([]*Node, error) {
+// List returns all databases as Nodes.
+func (s *DatabaseService) List(ctx context.Context, orgID jsonldb.ID) ([]*Node, error) {
 	it, err := s.FileStore.IterDatabases(orgID)
 	if err != nil {
 		return nil, err

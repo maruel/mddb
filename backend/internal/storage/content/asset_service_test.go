@@ -7,7 +7,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
-func TestAssetService_SaveAsset(t *testing.T) {
+func TestAssetService_Save(t *testing.T) {
 	tmpDir := t.TempDir()
 	fs, err := NewFileStore(tmpDir)
 	if err != nil {
@@ -26,7 +26,7 @@ func TestAssetService_SaveAsset(t *testing.T) {
 
 	// Save an asset
 	testData := []byte("test image data")
-	asset, err := as.SaveAsset(t.Context(), orgID, pageID, "test.png", testData)
+	asset, err := as.Save(t.Context(), orgID, pageID, "test.png", testData)
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
 	}
@@ -48,7 +48,7 @@ func TestAssetService_SaveAsset(t *testing.T) {
 	}
 
 	// Verify file exists and can be retrieved
-	retrievedData, err := as.GetAsset(t.Context(), orgID, pageID, "test.png")
+	retrievedData, err := as.Get(t.Context(), orgID, pageID, "test.png")
 	if err != nil {
 		t.Fatalf("asset file not found: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestAssetService_SaveAsset(t *testing.T) {
 	}
 }
 
-func TestAssetService_GetAsset(t *testing.T) {
+func TestAssetService_Get(t *testing.T) {
 	tmpDir := t.TempDir()
 	fs, err := NewFileStore(tmpDir)
 	if err != nil {
@@ -75,13 +75,13 @@ func TestAssetService_GetAsset(t *testing.T) {
 
 	as := NewAssetService(fs, nil, nil)
 	testData := []byte("test image data")
-	_, err = as.SaveAsset(t.Context(), orgID, pageID, "test.png", testData)
+	_, err = as.Save(t.Context(), orgID, pageID, "test.png", testData)
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
 	}
 
 	// Retrieve asset
-	data, err := as.GetAsset(t.Context(), orgID, pageID, "test.png")
+	data, err := as.Get(t.Context(), orgID, pageID, "test.png")
 	if err != nil {
 		t.Fatalf("failed to get asset: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestAssetService_GetAsset(t *testing.T) {
 	}
 }
 
-func TestAssetService_DeleteAsset(t *testing.T) {
+func TestAssetService_Delete(t *testing.T) {
 	tmpDir := t.TempDir()
 	fs, err := NewFileStore(tmpDir)
 	if err != nil {
@@ -107,30 +107,30 @@ func TestAssetService_DeleteAsset(t *testing.T) {
 	}
 
 	as := NewAssetService(fs, nil, nil)
-	_, err = as.SaveAsset(t.Context(), orgID, pageID, "test.png", []byte("test data"))
+	_, err = as.Save(t.Context(), orgID, pageID, "test.png", []byte("test data"))
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
 	}
 
 	// Verify file exists via public API
 	ctx := t.Context()
-	if _, err := as.GetAsset(ctx, orgID, pageID, "test.png"); err != nil {
+	if _, err := as.Get(ctx, orgID, pageID, "test.png"); err != nil {
 		t.Fatalf("asset file not found before delete: %v", err)
 	}
 
 	// Delete asset
-	err = as.DeleteAsset(ctx, orgID, pageID, "test.png")
+	err = as.Delete(ctx, orgID, pageID, "test.png")
 	if err != nil {
 		t.Fatalf("failed to delete asset: %v", err)
 	}
 
 	// Verify file is gone
-	if _, err := as.GetAsset(ctx, orgID, pageID, "test.png"); err == nil {
+	if _, err := as.Get(ctx, orgID, pageID, "test.png"); err == nil {
 		t.Fatal("asset file still exists after delete")
 	}
 }
 
-func TestAssetService_ListAssets(t *testing.T) {
+func TestAssetService_List(t *testing.T) {
 	tmpDir := t.TempDir()
 	fs, err := NewFileStore(tmpDir)
 	if err != nil {
@@ -150,14 +150,14 @@ func TestAssetService_ListAssets(t *testing.T) {
 	// Save multiple assets
 	assets := []string{"image1.png", "image2.jpg", "document.pdf"}
 	for _, name := range assets {
-		_, err := as.SaveAsset(t.Context(), orgID, pageID, name, []byte("test data"))
+		_, err := as.Save(t.Context(), orgID, pageID, name, []byte("test data"))
 		if err != nil {
 			t.Fatalf("failed to save asset %s: %v", name, err)
 		}
 	}
 
 	// List assets
-	listed, err := as.ListAssets(t.Context(), orgID, pageID)
+	listed, err := as.List(t.Context(), orgID, pageID)
 	if err != nil {
 		t.Fatalf("failed to list assets: %v", err)
 	}
@@ -189,32 +189,32 @@ func TestAssetService_Validation(t *testing.T) {
 	orgID := jsonldb.ID(100)
 	var zeroID jsonldb.ID
 	t.Run("empty page id on save", func(t *testing.T) {
-		if _, err := as.SaveAsset(t.Context(), orgID, zeroID, "test.png", []byte("data")); err == nil {
+		if _, err := as.Save(t.Context(), orgID, zeroID, "test.png", []byte("data")); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty file name on save", func(t *testing.T) {
-		if _, err := as.SaveAsset(t.Context(), orgID, jsonldb.ID(1), "", []byte("data")); err == nil {
+		if _, err := as.Save(t.Context(), orgID, jsonldb.ID(1), "", []byte("data")); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty data on save", func(t *testing.T) {
-		if _, err := as.SaveAsset(t.Context(), orgID, jsonldb.ID(1), "test.png", []byte("")); err == nil {
+		if _, err := as.Save(t.Context(), orgID, jsonldb.ID(1), "test.png", []byte("")); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty page id on get", func(t *testing.T) {
-		if _, err := as.GetAsset(t.Context(), orgID, zeroID, "test.png"); err == nil {
+		if _, err := as.Get(t.Context(), orgID, zeroID, "test.png"); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty asset name on get", func(t *testing.T) {
-		if _, err := as.GetAsset(t.Context(), orgID, jsonldb.ID(1), ""); err == nil {
+		if _, err := as.Get(t.Context(), orgID, jsonldb.ID(1), ""); err == nil {
 			t.Error("expected error")
 		}
 	})
 	t.Run("empty page id on list", func(t *testing.T) {
-		if _, err := as.ListAssets(t.Context(), orgID, zeroID); err == nil {
+		if _, err := as.List(t.Context(), orgID, zeroID); err == nil {
 			t.Error("expected error")
 		}
 	})

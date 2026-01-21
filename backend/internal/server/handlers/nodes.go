@@ -27,7 +27,7 @@ func NewNodeHandler(fileStore *content.FileStore, gitService *git.Client, orgSer
 
 // ListNodes returns the hierarchical node tree.
 func (h *NodeHandler) ListNodes(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListNodesRequest) (*dto.ListNodesResponse, error) {
-	nodes, err := h.nodeService.ListNodes(ctx, orgID)
+	nodes, err := h.nodeService.List(ctx, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to read node tree", err)
 	}
@@ -44,7 +44,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, orgID jsonldb.ID, _ *identity
 	if err != nil {
 		return nil, err
 	}
-	node, err := h.nodeService.GetNode(ctx, orgID, id)
+	node, err := h.nodeService.Get(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("node")
 	}
@@ -69,7 +69,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *id
 		return nil, dto.BadRequest("Invalid node type")
 	}
 
-	node, err := h.nodeService.CreateNode(ctx, orgID, req.Title, nodeType, 0)
+	node, err := h.nodeService.Create(ctx, orgID, req.Title, nodeType, 0)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create node", err)
 	}

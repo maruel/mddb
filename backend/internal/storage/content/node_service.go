@@ -29,8 +29,8 @@ func NewNodeService(fileStore *FileStore, gitService *git.Client, orgService *id
 	}
 }
 
-// GetNode retrieves a unified node by ID.
-func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*Node, error) {
+// Get retrieves a unified node by ID.
+func (s *NodeService) Get(ctx context.Context, orgID, id jsonldb.ID) (*Node, error) {
 	if id.IsZero() {
 		return nil, errNodeIDEmpty
 	}
@@ -38,13 +38,13 @@ func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*Node,
 	return s.FileStore.ReadNode(orgID, id)
 }
 
-// ListNodes returns the full hierarchical tree of nodes.
-func (s *NodeService) ListNodes(ctx context.Context, orgID jsonldb.ID) ([]*Node, error) {
+// List returns the full hierarchical tree of nodes.
+func (s *NodeService) List(ctx context.Context, orgID jsonldb.ID) ([]*Node, error) {
 	return s.FileStore.ReadNodeTree(orgID)
 }
 
-// CreateNode creates a new node (can be document, database, or hybrid).
-func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType NodeType, parentID jsonldb.ID) (*Node, error) {
+// Create creates a new node (can be document, database, or hybrid).
+func (s *NodeService) Create(ctx context.Context, orgID jsonldb.ID, title string, nodeType NodeType, parentID jsonldb.ID) (*Node, error) {
 	// Check Quota
 	if s.orgService != nil {
 		org, err := s.orgService.Get(orgID)

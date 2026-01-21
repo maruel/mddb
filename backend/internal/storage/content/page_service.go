@@ -40,8 +40,8 @@ func NewPageService(fileStore *FileStore, gitService *git.Client, quotaGetter Qu
 	}
 }
 
-// GetPage retrieves a page by ID and returns it as a Node.
-func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*Node, error) {
+// Get retrieves a page by ID and returns it as a Node.
+func (s *PageService) Get(ctx context.Context, orgID, id jsonldb.ID) (*Node, error) {
 	if id.IsZero() {
 		return nil, errPageIDEmpty
 	}
@@ -49,9 +49,9 @@ func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*Node,
 	return s.FileStore.ReadPage(orgID, id)
 }
 
-// CreatePage creates a new page with a generated numeric ID and returns it as a Node.
+// Create creates a new page with a generated numeric ID and returns it as a Node.
 // authorName and authorEmail are used for the git commit; if empty, defaults are used.
-func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, content, authorName, authorEmail string) (*Node, error) {
+func (s *PageService) Create(ctx context.Context, orgID jsonldb.ID, title, content, authorName, authorEmail string) (*Node, error) {
 	if title == "" {
 		return nil, errPageTitleEmpty
 	}
@@ -90,9 +90,9 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 	return node, nil
 }
 
-// UpdatePage updates an existing page and returns it as a Node.
+// Update updates an existing page and returns it as a Node.
 // authorName and authorEmail are used for the git commit; if empty, defaults are used.
-func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title, content, authorName, authorEmail string) (*Node, error) {
+func (s *PageService) Update(ctx context.Context, orgID, id jsonldb.ID, title, content, authorName, authorEmail string) (*Node, error) {
 	if id.IsZero() {
 		return nil, errPageIDEmpty
 	}
@@ -116,9 +116,9 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 	return node, nil
 }
 
-// DeletePage deletes a page.
+// Delete deletes a page.
 // authorName and authorEmail are used for the git commit; if empty, defaults are used.
-func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID, authorName, authorEmail string) error {
+func (s *PageService) Delete(ctx context.Context, orgID, id jsonldb.ID, authorName, authorEmail string) error {
 	if id.IsZero() {
 		return errPageIDEmpty
 	}
@@ -137,8 +137,8 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID, auth
 	return nil
 }
 
-// ListPages returns all pages as Nodes.
-func (s *PageService) ListPages(ctx context.Context, orgID jsonldb.ID) ([]*Node, error) {
+// List returns all pages as Nodes.
+func (s *PageService) List(ctx context.Context, orgID jsonldb.ID) ([]*Node, error) {
 	it, err := s.FileStore.IterPages(orgID)
 	if err != nil {
 		return nil, err
@@ -146,8 +146,8 @@ func (s *PageService) ListPages(ctx context.Context, orgID jsonldb.ID) ([]*Node,
 	return slices.Collect(it), nil
 }
 
-// SearchPages performs a simple text search across pages.
-func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query string) ([]*Node, error) {
+// Search performs a simple text search across pages.
+func (s *PageService) Search(ctx context.Context, orgID jsonldb.ID, query string) ([]*Node, error) {
 	if query == "" {
 		return []*Node{}, nil
 	}
@@ -170,17 +170,17 @@ func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query s
 	return results, nil
 }
 
-// GetPageHistory returns the commit history for a page, limited to n commits.
+// GetHistory returns the commit history for a page, limited to n commits.
 // n is capped at 1000. If n <= 0, defaults to 1000.
-func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID, n int) ([]*git.Commit, error) {
+func (s *PageService) GetHistory(ctx context.Context, orgID, id jsonldb.ID, n int) ([]*git.Commit, error) {
 	if s.gitService == nil {
 		return []*git.Commit{}, nil
 	}
 	return s.gitService.GetHistory(ctx, orgID.String(), "pages/"+id.String(), n)
 }
 
-// GetPageVersion returns the content of a page at a specific commit.
-func (s *PageService) GetPageVersion(ctx context.Context, orgID, id jsonldb.ID, commitHash string) (string, error) {
+// GetVersion returns the content of a page at a specific commit.
+func (s *PageService) GetVersion(ctx context.Context, orgID, id jsonldb.ID, commitHash string) (string, error) {
 	if s.gitService == nil {
 		return "", errGitServiceNotAvail
 	}

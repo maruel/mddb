@@ -67,7 +67,7 @@ func TestPageService_CreatePage(t *testing.T) {
 		},
 	}
 	service := NewPageService(fileStore, nil, mockQuotaGetter)
-	page, err := service.CreatePage(ctx, orgID, "Test Page", "# Hello World", "", "")
+	page, err := service.Create(ctx, orgID, "Test Page", "# Hello World", "", "")
 	if err != nil {
 		t.Fatalf("CreatePage failed: %v", err)
 	}
@@ -80,7 +80,7 @@ func TestPageService_CreatePage(t *testing.T) {
 	if page.ID.IsZero() {
 		t.Error("Expected non-zero page ID")
 	}
-	if _, err = service.CreatePage(ctx, orgID, "", "content", "", ""); err == nil {
+	if _, err = service.Create(ctx, orgID, "", "content", "", ""); err == nil {
 		t.Error("Expected error when creating page with empty title")
 	}
 }
@@ -95,11 +95,11 @@ func TestPageService_GetPage(t *testing.T) {
 		},
 	}
 	service := NewPageService(fileStore, nil, mockQuotaGetter)
-	created, err := service.CreatePage(ctx, orgID, "Get Test Page", "Test content", "", "")
+	created, err := service.Create(ctx, orgID, "Get Test Page", "Test content", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	retrieved, err := service.GetPage(ctx, orgID, created.ID)
+	retrieved, err := service.Get(ctx, orgID, created.ID)
 	if err != nil {
 		t.Fatalf("GetPage failed: %v", err)
 	}
@@ -107,10 +107,10 @@ func TestPageService_GetPage(t *testing.T) {
 		t.Errorf("Title = %q, want %q", retrieved.Title, "Get Test Page")
 	}
 	var emptyID jsonldb.ID
-	if _, err = service.GetPage(ctx, orgID, emptyID); err == nil {
+	if _, err = service.Get(ctx, orgID, emptyID); err == nil {
 		t.Error("Expected error when getting page with empty ID")
 	}
-	if _, err = service.GetPage(ctx, orgID, jsonldb.ID(0)); err == nil {
+	if _, err = service.Get(ctx, orgID, jsonldb.ID(0)); err == nil {
 		t.Error("Expected error when getting page with invalid ID")
 	}
 }
@@ -125,11 +125,11 @@ func TestPageService_UpdatePage(t *testing.T) {
 		},
 	}
 	service := NewPageService(fileStore, nil, mockQuotaGetter)
-	created, err := service.CreatePage(ctx, orgID, "Original Title", "Original content", "", "")
+	created, err := service.Create(ctx, orgID, "Original Title", "Original content", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	updated, err := service.UpdatePage(ctx, orgID, created.ID, "New Title", "New content", "", "")
+	updated, err := service.Update(ctx, orgID, created.ID, "New Title", "New content", "", "")
 	if err != nil {
 		t.Fatalf("UpdatePage failed: %v", err)
 	}
@@ -140,13 +140,13 @@ func TestPageService_UpdatePage(t *testing.T) {
 		t.Errorf("Content = %q, want %q", updated.Content, "New content")
 	}
 	var emptyID2 jsonldb.ID
-	if _, err = service.UpdatePage(ctx, orgID, emptyID2, "Title", "Content", "", ""); err == nil {
+	if _, err = service.Update(ctx, orgID, emptyID2, "Title", "Content", "", ""); err == nil {
 		t.Error("Expected error when updating page with empty ID")
 	}
-	if _, err = service.UpdatePage(ctx, orgID, created.ID, "", "Content", "", ""); err == nil {
+	if _, err = service.Update(ctx, orgID, created.ID, "", "Content", "", ""); err == nil {
 		t.Error("Expected error when updating page with empty title")
 	}
-	if _, err = service.UpdatePage(ctx, orgID, jsonldb.ID(0), "Title", "Content", "", ""); err == nil {
+	if _, err = service.Update(ctx, orgID, jsonldb.ID(0), "Title", "Content", "", ""); err == nil {
 		t.Error("Expected error when updating page with invalid ID")
 	}
 }
@@ -161,21 +161,21 @@ func TestPageService_DeletePage(t *testing.T) {
 		},
 	}
 	service := NewPageService(fileStore, nil, mockQuotaGetter)
-	created, err := service.CreatePage(ctx, orgID, "Delete Test Page", "Content to delete", "", "")
+	created, err := service.Create(ctx, orgID, "Delete Test Page", "Content to delete", "", "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = service.DeletePage(ctx, orgID, created.ID, "", ""); err != nil {
+	if err = service.Delete(ctx, orgID, created.ID, "", ""); err != nil {
 		t.Fatalf("DeletePage failed: %v", err)
 	}
-	if _, err = service.GetPage(ctx, orgID, created.ID); err == nil {
+	if _, err = service.Get(ctx, orgID, created.ID); err == nil {
 		t.Error("Expected error when getting deleted page")
 	}
 	var emptyID3 jsonldb.ID
-	if err = service.DeletePage(ctx, orgID, emptyID3, "", ""); err == nil {
+	if err = service.Delete(ctx, orgID, emptyID3, "", ""); err == nil {
 		t.Error("Expected error when deleting page with empty ID")
 	}
-	if err = service.DeletePage(ctx, orgID, jsonldb.ID(0), "", ""); err == nil {
+	if err = service.Delete(ctx, orgID, jsonldb.ID(0), "", ""); err == nil {
 		t.Error("Expected error when deleting page with invalid ID")
 	}
 }
@@ -190,15 +190,15 @@ func TestPageService_ListPages(t *testing.T) {
 		},
 	}
 	service := NewPageService(fileStore, nil, mockQuotaGetter)
-	pages, err := service.ListPages(ctx, orgID)
+	pages, err := service.List(ctx, orgID)
 	if err != nil {
 		t.Fatalf("ListPages failed: %v", err)
 	}
 	initialCount := len(pages)
-	_, _ = service.CreatePage(ctx, orgID, "Page 1", "Content 1", "", "")
-	_, _ = service.CreatePage(ctx, orgID, "Page 2", "Content 2", "", "")
-	_, _ = service.CreatePage(ctx, orgID, "Page 3", "Content 3", "", "")
-	if pages, err = service.ListPages(ctx, orgID); err != nil {
+	_, _ = service.Create(ctx, orgID, "Page 1", "Content 1", "", "")
+	_, _ = service.Create(ctx, orgID, "Page 2", "Content 2", "", "")
+	_, _ = service.Create(ctx, orgID, "Page 3", "Content 3", "", "")
+	if pages, err = service.List(ctx, orgID); err != nil {
 		t.Fatalf("ListPages failed: %v", err)
 	}
 	if len(pages) != initialCount+3 {
@@ -216,23 +216,23 @@ func TestPageService_SearchPages(t *testing.T) {
 		},
 	}
 	service := NewPageService(fileStore, nil, mockQuotaGetter)
-	_, _ = service.CreatePage(ctx, orgID, "Apple Recipes", "How to cook with apples", "", "")
-	_, _ = service.CreatePage(ctx, orgID, "Orange Juice", "Making fresh juice", "", "")
-	_, _ = service.CreatePage(ctx, orgID, "Banana Bread", "Contains apple cider vinegar", "", "")
-	results, err := service.SearchPages(ctx, orgID, "Apple")
+	_, _ = service.Create(ctx, orgID, "Apple Recipes", "How to cook with apples", "", "")
+	_, _ = service.Create(ctx, orgID, "Orange Juice", "Making fresh juice", "", "")
+	_, _ = service.Create(ctx, orgID, "Banana Bread", "Contains apple cider vinegar", "", "")
+	results, err := service.Search(ctx, orgID, "Apple")
 	if err != nil {
 		t.Fatalf("SearchPages failed: %v", err)
 	}
 	if len(results) != 2 {
 		t.Errorf("Expected 2 search results for 'Apple', got %d", len(results))
 	}
-	if results, _ = service.SearchPages(ctx, orgID, "juice"); len(results) != 1 {
+	if results, _ = service.Search(ctx, orgID, "juice"); len(results) != 1 {
 		t.Errorf("Expected 1 search result for 'juice', got %d", len(results))
 	}
-	if results, _ = service.SearchPages(ctx, orgID, "xyz123uniquestring"); len(results) != 0 {
+	if results, _ = service.Search(ctx, orgID, "xyz123uniquestring"); len(results) != 0 {
 		t.Errorf("Expected 0 search results for 'xyz123uniquestring', got %d", len(results))
 	}
-	if results, _ = service.SearchPages(ctx, orgID, ""); len(results) != 0 {
+	if results, _ = service.Search(ctx, orgID, ""); len(results) != 0 {
 		t.Errorf("Expected 0 results for empty query, got %d", len(results))
 	}
 }
@@ -246,7 +246,7 @@ func TestPageService_GetPageHistory_NoGit(t *testing.T) {
 	}
 	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(999)
-	history, err := service.GetPageHistory(t.Context(), orgID, jsonldb.NewID(), 0)
+	history, err := service.GetHistory(t.Context(), orgID, jsonldb.NewID(), 0)
 	if err != nil {
 		t.Fatalf("GetPageHistory failed: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestPageService_GetPageVersion_NoGit(t *testing.T) {
 	}
 	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(999)
-	if _, err := service.GetPageVersion(t.Context(), orgID, jsonldb.NewID(), "abc123"); err == nil {
+	if _, err := service.GetVersion(t.Context(), orgID, jsonldb.NewID(), "abc123"); err == nil {
 		t.Error("Expected error when getting page version without git service")
 	}
 }

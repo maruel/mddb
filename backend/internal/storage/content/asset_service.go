@@ -36,8 +36,8 @@ func NewAssetService(fileStore *FileStore, gitService *git.Client, orgService *i
 	}
 }
 
-// SaveAsset saves an asset file to a page's directory.
-func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, fileName string, data []byte) (*Asset, error) {
+// Save saves an asset file to a page's directory.
+func (s *AssetService) Save(ctx context.Context, orgID, pageID jsonldb.ID, fileName string, data []byte) (*Asset, error) {
 	if pageID.IsZero() {
 		return nil, errPageIDEmpty
 	}
@@ -94,8 +94,8 @@ func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 	return asset, nil
 }
 
-// GetAsset retrieves asset file data.
-func (s *AssetService) GetAsset(ctx context.Context, orgID, pageID jsonldb.ID, assetName string) ([]byte, error) {
+// Get retrieves asset file data.
+func (s *AssetService) Get(ctx context.Context, orgID, pageID jsonldb.ID, assetName string) ([]byte, error) {
 	if pageID.IsZero() {
 		return nil, errPageIDEmpty
 	}
@@ -106,8 +106,8 @@ func (s *AssetService) GetAsset(ctx context.Context, orgID, pageID jsonldb.ID, a
 	return s.FileStore.ReadAsset(orgID, pageID, assetName)
 }
 
-// DeleteAsset deletes an asset file from a page's directory.
-func (s *AssetService) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID, assetName string) error {
+// Delete deletes an asset file from a page's directory.
+func (s *AssetService) Delete(ctx context.Context, orgID, pageID jsonldb.ID, assetName string) error {
 	if pageID.IsZero() {
 		return errPageIDEmpty
 	}
@@ -130,8 +130,8 @@ func (s *AssetService) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID
 	return nil
 }
 
-// ListAssets lists all assets in a page's directory.
-func (s *AssetService) ListAssets(ctx context.Context, orgID, pageID jsonldb.ID) ([]*Asset, error) {
+// List lists all assets in a page's directory.
+func (s *AssetService) List(ctx context.Context, orgID, pageID jsonldb.ID) ([]*Asset, error) {
 	if pageID.IsZero() {
 		return nil, errPageIDEmpty
 	}

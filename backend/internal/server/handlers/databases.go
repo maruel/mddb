@@ -24,7 +24,7 @@ func NewDatabaseHandler(fileStore *content.FileStore, gitService *git.Client, or
 
 // ListDatabases returns a list of all databases.
 func (h *DatabaseHandler) ListDatabases(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListDatabasesRequest) (*dto.ListDatabasesResponse, error) {
-	databases, err := h.databaseService.ListDatabases(ctx, orgID)
+	databases, err := h.databaseService.List(ctx, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list databases", err)
 	}
@@ -37,7 +37,7 @@ func (h *DatabaseHandler) GetDatabase(ctx context.Context, orgID jsonldb.ID, _ *
 	if err != nil {
 		return nil, err
 	}
-	db, err := h.databaseService.GetDatabase(ctx, orgID, id)
+	db, err := h.databaseService.Get(ctx, orgID, id)
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
@@ -55,7 +55,7 @@ func (h *DatabaseHandler) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
 	}
-	db, err := h.databaseService.CreateDatabase(ctx, orgID, req.Title, propertiesToEntity(req.Properties))
+	db, err := h.databaseService.Create(ctx, orgID, req.Title, propertiesToEntity(req.Properties))
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create database", err)
 	}
@@ -68,7 +68,7 @@ func (h *DatabaseHandler) UpdateDatabase(ctx context.Context, orgID jsonldb.ID, 
 	if err != nil {
 		return nil, err
 	}
-	db, err := h.databaseService.UpdateDatabase(ctx, orgID, id, req.Title, propertiesToEntity(req.Properties))
+	db, err := h.databaseService.Update(ctx, orgID, id, req.Title, propertiesToEntity(req.Properties))
 	if err != nil {
 		return nil, dto.NotFound("database")
 	}
@@ -81,7 +81,7 @@ func (h *DatabaseHandler) DeleteDatabase(ctx context.Context, orgID jsonldb.ID, 
 	if err != nil {
 		return nil, err
 	}
-	if err := h.databaseService.DeleteDatabase(ctx, orgID, id); err != nil {
+	if err := h.databaseService.Delete(ctx, orgID, id); err != nil {
 		return nil, dto.NotFound("database")
 	}
 	return &dto.DeleteDatabaseResponse{Ok: true}, nil

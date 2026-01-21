@@ -88,7 +88,7 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	// Create welcome page
 	welcomeTitle := "Welcome to " + orgName
 	welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
-	if _, err := h.pageService.CreatePage(ctx, org.ID, welcomeTitle, welcomeContent, req.Name, req.Email); err != nil {
+	if _, err := h.pageService.Create(ctx, org.ID, welcomeTitle, welcomeContent, req.Name, req.Email); err != nil {
 		slog.ErrorContext(ctx, "Failed to create welcome page", "error", err, "org_id", org.ID)
 		return nil, dto.InternalWithError("Failed to initialize organization", err)
 	}
