@@ -132,7 +132,7 @@ func (s *OrganizationService) Create(ctx context.Context, name string) (*Organiz
 	}
 	// Initialize git repository for the organization
 	if s.gitService != nil {
-		if err := s.gitService.InitRepository(orgDir); err != nil {
+		if err := s.gitService.InitRepository(id.String()); err != nil {
 			fmt.Printf("failed to initialize git repo for org %s: %v\n", id, err)
 		}
 	}

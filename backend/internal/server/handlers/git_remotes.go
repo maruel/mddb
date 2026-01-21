@@ -3,8 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -67,7 +65,7 @@ func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *i
 	}
 
 	// Actually add it to the local git repo
-	orgDir := h.gitService.OrgDir(orgID)
+	subdir := orgID.String()
 	url := req.URL
 
 	// If token-based auth, inject token into URL if it's GitHub/GitLab
@@ -79,7 +77,7 @@ func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *i
 		}
 	}
 
-	if err := h.gitService.AddRemote(orgDir, gitRemoteName, url); err != nil {
+	if err := h.gitService.AddRemote(subdir, gitRemoteName, url); err != nil {
 		return nil, fmt.Errorf("failed to add git remote: %w", err)
 	}
 
@@ -96,7 +94,7 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *identi
 		return nil, dto.NotFound("remote")
 	}
 
-	orgDir := h.gitService.OrgDir(orgID)
+	subdir := orgID.String()
 
 	url := org.GitRemote.URL
 	if org.GitRemote.AuthType == "token" && org.GitRemote.Token != "" {
@@ -107,9 +105,9 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *identi
 		}
 	}
 
-	_ = h.gitService.AddRemote(orgDir, gitRemoteName, url)
+	_ = h.gitService.AddRemote(subdir, gitRemoteName, url)
 
-	if err := h.gitService.Push(orgDir, gitRemoteName, ""); err != nil {
+	if err := h.gitService.Push(subdir, gitRemoteName, ""); err != nil {
 		return nil, fmt.Errorf("failed to push to git remote: %w", err)
 	}
 
@@ -136,20 +134,9 @@ func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _
 	}
 
 	// Also remove from local git repo
-	orgDir := h.gitService.OrgDir(orgID)
-	_ = h.execGitInDir(orgDir, "remote", "remove", gitRemoteName)
+	_ = h.gitService.RemoveRemote(orgID.String(), gitRemoteName)
 
 	return &dto.OkResponse{Ok: true}, nil
-}
-
-func (h *GitRemoteHandler) execGitInDir(dir string, args ...string) error {
-	cmd := exec.Command("git", args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(),
-		"GIT_CONFIG_GLOBAL=/dev/null",
-		"GIT_CONFIG_SYSTEM=/dev/null",
-	)
-	return cmd.Run()
 }
 
 // gitRemoteToResponse converts an identity.GitRemote to a dto.GitRemoteResponse.

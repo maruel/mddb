@@ -82,7 +82,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "create", "database", id.String(), title); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID.String(), "create", "database", id.String(), title); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -116,7 +116,7 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "update", "database", id.String(), "Updated schema"); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID.String(), "update", "database", id.String(), "Updated schema"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -134,7 +134,7 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "delete", "database", id.String(), "Deleted database"); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID.String(), "delete", "database", id.String(), "Deleted database"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -183,7 +183,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID js
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "create", "record", id.String(), "in database "+databaseID.String()); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID.String(), "create", "record", id.String(), "in database "+databaseID.String()); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -282,7 +282,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, r
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "update", "record", recordID.String(), "in database "+databaseID.String()); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID.String(), "update", "record", recordID.String(), "in database "+databaseID.String()); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -304,7 +304,7 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, orgID, databaseID, r
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "delete", "record", recordID.String(), "from database "+databaseID.String()); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID.String(), "delete", "record", recordID.String(), "from database "+databaseID.String()); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}

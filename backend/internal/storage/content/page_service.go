@@ -78,7 +78,7 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "create", "page", id.String(), title); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID.String(), "create", "page", id.String(), title); err != nil {
 			// Log error but don't fail the operation
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
@@ -102,7 +102,7 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "update", "page", id.String(), "Updated content"); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID.String(), "update", "page", id.String(), "Updated content"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -120,7 +120,7 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID, "delete", "page", id.String(), "Deleted page"); err != nil {
+		if err := s.gitService.CommitChange(ctx, orgID.String(), "delete", "page", id.String(), "Deleted page"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -166,7 +166,7 @@ func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) 
 	if s.gitService == nil {
 		return []*git.Commit{}, nil
 	}
-	return s.gitService.GetHistory(ctx, orgID, "page", id.String())
+	return s.gitService.GetHistory(ctx, orgID.String(), "page", id.String())
 }
 
 // GetPageVersion returns the content of a page at a specific commit.
@@ -181,7 +181,7 @@ func (s *PageService) GetPageVersion(ctx context.Context, orgID, id jsonldb.ID, 
 		path = fmt.Sprintf("pages/%s/index.md", id.String())
 	}
 
-	contentBytes, err := s.gitService.GetFileAtCommit(ctx, orgID, commitHash, path)
+	contentBytes, err := s.gitService.GetFileAtCommit(ctx, orgID.String(), commitHash, path)
 	if err != nil {
 		return "", err
 	}

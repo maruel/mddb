@@ -9,8 +9,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
 var errInvalidCommitFmt = errors.New("invalid commit format")
@@ -43,15 +41,20 @@ func New(rootDir string) (*Client, error) {
 	gs := &Client{repoDir: rootDir}
 
 	// Check if root .git exists, initialize if not
-	if err := gs.InitRepository(rootDir); err != nil {
+	if err := gs.InitRepository(""); err != nil {
 		return nil, err
 	}
 
 	return gs, nil
 }
 
-// InitRepository initializes a git repository in the target directory if it doesn't exist.
-func (gs *Client) InitRepository(dir string) error {
+// InitRepository initializes a git repository in the target subdirectory if it doesn't exist.
+// If subdir is empty, initializes the root repository.
+func (gs *Client) InitRepository(subdir string) error {
+	dir := gs.repoDir
+	if subdir != "" {
+		dir = filepath.Join(gs.repoDir, subdir)
+	}
 	gitDir := filepath.Join(dir, ".git")
 	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
 		// Initialize repo
@@ -82,14 +85,14 @@ func (gs *Client) InitRepository(dir string) error {
 }
 
 // CommitChange stages and commits a change to the repository.
-// If orgID is non-zero, it commits to the organization's repository.
-func (gs *Client) CommitChange(ctx context.Context, orgID jsonldb.ID, operation, resourceType, resourceID, description string) error {
+// If subdir is non-empty, it commits to that subdirectory's repository.
+func (gs *Client) CommitChange(ctx context.Context, subdir, operation, resourceType, resourceID, description string) error {
 	targetDir := gs.repoDir
 	relPath := "." // Default to root
 
-	if !orgID.IsZero() {
-		targetDir = filepath.Join(gs.repoDir, orgID.String())
-		relPath = "pages" // Inside org dir, it's pages/
+	if subdir != "" {
+		targetDir = filepath.Join(gs.repoDir, subdir)
+		relPath = "pages" // Inside subdir, it's pages/
 	}
 
 	// Stage changes in the target directory
@@ -115,11 +118,11 @@ func (gs *Client) CommitChange(ctx context.Context, orgID jsonldb.ID, operation,
 		return fmt.Errorf("failed to commit in %s: %w", targetDir, err)
 	}
 
-	// If we committed to an organization repo, we should also update the root repo
-	// if it's tracking the org as a submodule or directory
-	if !orgID.IsZero() && targetDir != gs.repoDir {
-		if err := gs.execGitInDir(gs.repoDir, "add", orgID.String()); err == nil {
-			_ = gs.execGitInDir(gs.repoDir, "commit", "-m", fmt.Sprintf("sync: org %s update", orgID.String()))
+	// If we committed to a subdirectory repo, we should also update the root repo
+	// if it's tracking the subdir as a submodule or directory
+	if subdir != "" && targetDir != gs.repoDir {
+		if err := gs.execGitInDir(gs.repoDir, "add", subdir); err == nil {
+			_ = gs.execGitInDir(gs.repoDir, "commit", "-m", fmt.Sprintf("sync: %s update", subdir))
 		}
 	}
 
@@ -127,12 +130,12 @@ func (gs *Client) CommitChange(ctx context.Context, orgID jsonldb.ID, operation,
 }
 
 // GetHistory returns commit history for a specific resource.
-func (gs *Client) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, resourceID string) ([]*Commit, error) {
+func (gs *Client) GetHistory(ctx context.Context, subdir, resourceType, resourceID string) ([]*Commit, error) {
 	targetDir := gs.repoDir
 	path := ""
 
-	if !orgID.IsZero() {
-		targetDir = filepath.Join(gs.repoDir, orgID.String())
+	if subdir != "" {
+		targetDir = filepath.Join(gs.repoDir, subdir)
 		path = filepath.Join("pages", resourceID)
 	} else {
 		// Legacy path or system-wide resource
@@ -179,10 +182,10 @@ func (gs *Client) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType
 }
 
 // GetCommit retrieves a specific commit with full details.
-func (gs *Client) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*CommitDetail, error) {
+func (gs *Client) GetCommit(ctx context.Context, subdir, hash string) (*CommitDetail, error) {
 	targetDir := gs.repoDir
-	if !orgID.IsZero() {
-		targetDir = filepath.Join(gs.repoDir, orgID.String())
+	if subdir != "" {
+		targetDir = filepath.Join(gs.repoDir, subdir)
 	}
 
 	output, err := gs.gitOutputInDir(targetDir, "show", "-s", "--format=%H%n%ai%n%an%n%ae%n%s%n%b", hash)
@@ -216,15 +219,14 @@ func (gs *Client) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) 
 }
 
 // GetFileAtCommit retrieves the content of a file at a specific commit.
-func (gs *Client) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash, filePath string) ([]byte, error) {
+func (gs *Client) GetFileAtCommit(ctx context.Context, subdir, hash, filePath string) ([]byte, error) {
 	targetDir := gs.repoDir
-	if !orgID.IsZero() {
-		orgIDStr := orgID.String()
-		targetDir = filepath.Join(gs.repoDir, orgIDStr)
+	if subdir != "" {
+		targetDir = filepath.Join(gs.repoDir, subdir)
 		// filePath is already relative to targetDir in most cases
-		// if it was passed as {orgID}/pages/... we need to strip it
-		if strings.HasPrefix(filePath, orgIDStr+"/") {
-			filePath = strings.TrimPrefix(filePath, orgIDStr+"/")
+		// if it was passed as {subdir}/pages/... we need to strip it
+		if strings.HasPrefix(filePath, subdir+"/") {
+			filePath = strings.TrimPrefix(filePath, subdir+"/")
 		}
 	}
 
@@ -270,13 +272,12 @@ func (gs *Client) gitOutputBytesInDir(dir string, args ...string) ([]byte, error
 	return cmd.Output()
 }
 
-// OrgDir returns the directory path for an organization's repository.
-func (gs *Client) OrgDir(orgID jsonldb.ID) string {
-	return filepath.Join(gs.repoDir, orgID.String())
-}
-
-// AddRemote adds a remote to the repository in the target directory.
-func (gs *Client) AddRemote(dir, name, url string) error {
+// AddRemote adds a remote to the repository for the given subdirectory.
+func (gs *Client) AddRemote(subdir, name, url string) error {
+	dir := gs.repoDir
+	if subdir != "" {
+		dir = filepath.Join(gs.repoDir, subdir)
+	}
 	// Check if remote already exists
 	remotes, err := gs.gitOutputInDir(dir, "remote")
 	if err == nil {
@@ -291,8 +292,12 @@ func (gs *Client) AddRemote(dir, name, url string) error {
 	return gs.execGitInDir(dir, "remote", "add", name, url)
 }
 
-// Push pushes changes to a remote repository.
-func (gs *Client) Push(dir, remoteName, branch string) error {
+// Push pushes changes to a remote repository for the given subdirectory.
+func (gs *Client) Push(subdir, remoteName, branch string) error {
+	dir := gs.repoDir
+	if subdir != "" {
+		dir = filepath.Join(gs.repoDir, subdir)
+	}
 	if branch == "" {
 		branch = "master" // Default to master
 		// Check if current branch is main
@@ -303,4 +308,13 @@ func (gs *Client) Push(dir, remoteName, branch string) error {
 	}
 
 	return gs.execGitInDir(dir, "push", remoteName, branch)
+}
+
+// RemoveRemote removes a remote from the repository for the given subdirectory.
+func (gs *Client) RemoveRemote(subdir, name string) error {
+	dir := gs.repoDir
+	if subdir != "" {
+		dir = filepath.Join(gs.repoDir, subdir)
+	}
+	return gs.execGitInDir(dir, "remote", "remove", name)
 }

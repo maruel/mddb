@@ -74,7 +74,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, _ *ident
 	}
 
 	if h.gitService != nil {
-		_ = h.gitService.CommitChange(ctx, orgID, "create", string(req.Type), node.ID.String(), req.Title)
+		_ = h.gitService.CommitChange(ctx, orgID.String(), "create", string(req.Type), node.ID.String(), req.Title)
 	}
 
 	return nodeToResponse(node), nil
