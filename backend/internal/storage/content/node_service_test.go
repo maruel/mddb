@@ -5,16 +5,15 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestNewNodeService(t *testing.T) {
 	tempDir := t.TempDir()
 
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	service := NewNodeService(fileStore, nil, nil)
 
-	if service.fileStore != fileStore {
+	if service.FileStore != fileStore {
 		t.Error("fileStore not properly assigned")
 	}
 }
@@ -22,7 +21,7 @@ func TestNewNodeService(t *testing.T) {
 func TestNodeService_GetNode(t *testing.T) {
 	tempDir := t.TempDir()
 
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	service := NewNodeService(fileStore, nil, nil)
 
 	ctx := t.Context()
@@ -46,7 +45,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 	tempDir := t.TempDir()
 
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	service := NewNodeService(fileStore, nil, orgService)
 
 	// Test creating a document node
@@ -104,7 +103,7 @@ func TestNodeService_ListNodes(t *testing.T) {
 	tempDir := t.TempDir()
 
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	service := NewNodeService(fileStore, nil, orgService)
 
 	// List initial nodes (may include welcome page from org creation)

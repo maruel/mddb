@@ -18,21 +18,20 @@ var (
 	errPageIDEmpty    = errors.New("page id cannot be empty")
 	errFileNameEmpty  = errors.New("file name cannot be empty")
 	errFileDataEmpty  = errors.New("file data cannot be empty")
-	errPageNotFound   = errors.New("page not found")
 	errAssetNameEmpty = errors.New("asset name cannot be empty")
 )
 
 // AssetService handles asset business logic.
 type AssetService struct {
-	fileStore  *infra.FileStore
+	FileStore  *FileStore
 	gitService *infra.Git
 	orgService *identity.OrganizationService
 }
 
 // NewAssetService creates a new asset service.
-func NewAssetService(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *AssetService {
+func NewAssetService(fileStore *FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *AssetService {
 	return &AssetService{
-		fileStore:  fileStore,
+		FileStore:  fileStore,
 		gitService: gitService,
 		orgService: orgService,
 	}
@@ -54,7 +53,7 @@ func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 	if s.orgService != nil {
 		org, err := s.orgService.Get(orgID)
 		if err == nil && org.Quotas.MaxStorage > 0 {
-			_, usage, err := s.fileStore.GetOrganizationUsage(orgID)
+			_, usage, err := s.FileStore.GetOrganizationUsage(orgID)
 			if err == nil && usage+int64(len(data)) > org.Quotas.MaxStorage {
 				return nil, fmt.Errorf("storage quota exceeded (%d/%d bytes)", usage+int64(len(data)), org.Quotas.MaxStorage)
 			}
@@ -62,11 +61,11 @@ func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 	}
 
 	// Verify page exists
-	if !s.fileStore.PageExists(orgID, pageID) {
+	if !s.FileStore.PageExists(orgID, pageID) {
 		return nil, errPageNotFound
 	}
 
-	path, err := s.fileStore.SaveAsset(orgID, pageID, fileName, data)
+	path, err := s.FileStore.SaveAsset(orgID, pageID, fileName, data)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +102,7 @@ func (s *AssetService) GetAsset(ctx context.Context, orgID, pageID jsonldb.ID, a
 		return nil, errAssetNameEmpty
 	}
 
-	return s.fileStore.ReadAsset(orgID, pageID, assetName)
+	return s.FileStore.ReadAsset(orgID, pageID, assetName)
 }
 
 // DeleteAsset deletes an asset file from a page's directory.
@@ -115,7 +114,7 @@ func (s *AssetService) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID
 		return errAssetNameEmpty
 	}
 
-	if err := s.fileStore.DeleteAsset(orgID, pageID, assetName); err != nil {
+	if err := s.FileStore.DeleteAsset(orgID, pageID, assetName); err != nil {
 		return err
 	}
 
@@ -134,7 +133,7 @@ func (s *AssetService) ListAssets(ctx context.Context, orgID, pageID jsonldb.ID)
 		return nil, errPageIDEmpty
 	}
 
-	it, err := s.fileStore.IterAssets(orgID, pageID)
+	it, err := s.FileStore.IterAssets(orgID, pageID)
 	if err != nil {
 		return nil, err
 	}

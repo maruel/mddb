@@ -1,17 +1,30 @@
 package content
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
+
+// mockQuotaGetterSearch implements the QuotaGetter interface for testing.
+type mockQuotaGetterSearch struct {
+	quotas map[jsonldb.ID]entity.Quota
+}
+
+func (m *mockQuotaGetterSearch) GetQuota(ctx context.Context, orgID jsonldb.ID) (entity.Quota, error) {
+	if quota, exists := m.quotas[orgID]; exists {
+		return quota, nil
+	}
+	// Return default quota if not found
+	return entity.Quota{MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10}, nil
+}
 
 func TestSearchService_SearchPages(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := infra.NewFileStore(tmpDir)
+	fileStore, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -19,7 +32,7 @@ func TestSearchService_SearchPages(t *testing.T) {
 	orgID := jsonldb.ID(100)
 
 	// Create test pages
-	mockQuotaGetter := &mockQuotaGetter{
+	mockQuotaGetter := &mockQuotaGetterSearch{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
@@ -104,7 +117,7 @@ func TestSearchService_SearchPages(t *testing.T) {
 
 func TestSearchService_SearchRecords(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := infra.NewFileStore(tmpDir)
+	fileStore, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -113,7 +126,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	ctx := t.Context()
 
 	// Create test database with records
-	mockQuotaGetterDB := &mockQuotaGetter{
+	mockQuotaGetterDB := &mockQuotaGetterSearch{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
@@ -192,7 +205,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 
 func TestSearchService_Scoring(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := infra.NewFileStore(tmpDir)
+	fileStore, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -201,7 +214,7 @@ func TestSearchService_Scoring(t *testing.T) {
 	ctx := t.Context()
 
 	// Create pages where title match should score higher
-	mockQuotaGetterScoring := &mockQuotaGetter{
+	mockQuotaGetterScoring := &mockQuotaGetterSearch{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
@@ -235,7 +248,7 @@ func TestSearchService_Scoring(t *testing.T) {
 
 func TestSearchService_Limit(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := infra.NewFileStore(tmpDir)
+	fileStore, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -244,7 +257,7 @@ func TestSearchService_Limit(t *testing.T) {
 	ctx := t.Context()
 
 	// Create multiple pages
-	mockQuotaGetterLimit := &mockQuotaGetter{
+	mockQuotaGetterLimit := &mockQuotaGetterSearch{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
@@ -271,7 +284,7 @@ func TestSearchService_Limit(t *testing.T) {
 
 func TestSearchService_Integration(t *testing.T) {
 	tmpDir := t.TempDir()
-	fileStore, err := infra.NewFileStore(tmpDir)
+	fileStore, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -280,7 +293,7 @@ func TestSearchService_Integration(t *testing.T) {
 	ctx := t.Context()
 
 	// Create mixed content
-	mockQuotaGetterIntegration := &mockQuotaGetter{
+	mockQuotaGetterIntegration := &mockQuotaGetterSearch{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},

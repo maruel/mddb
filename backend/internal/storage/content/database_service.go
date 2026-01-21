@@ -16,22 +16,20 @@ var (
 	errDatabaseIDEmpty  = errors.New("database id cannot be empty")
 	errTitleEmpty       = errors.New("title cannot be empty")
 	errColumnRequired   = errors.New("at least one column is required")
-	errDatabaseNotFound = errors.New("database not found")
 	errRecordIDEmpty    = errors.New("record id cannot be empty")
-	errRecordNotFound   = errors.New("record not found")
 )
 
 // DatabaseService handles database business logic.
 type DatabaseService struct {
-	fileStore   *infra.FileStore
+	FileStore   *FileStore
 	gitService  *infra.Git
 	quotaGetter QuotaGetter
 }
 
 // NewDatabaseService creates a new database service.
-func NewDatabaseService(fileStore *infra.FileStore, gitService *infra.Git, quotaGetter QuotaGetter) *DatabaseService {
+func NewDatabaseService(fileStore *FileStore, gitService *infra.Git, quotaGetter QuotaGetter) *DatabaseService {
 	return &DatabaseService{
-		fileStore:   fileStore,
+		FileStore:   fileStore,
 		gitService:  gitService,
 		quotaGetter: quotaGetter,
 	}
@@ -42,7 +40,7 @@ func (s *DatabaseService) GetDatabase(ctx context.Context, orgID, id jsonldb.ID)
 	if id.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
-	return s.fileStore.ReadDatabase(orgID, id)
+	return s.FileStore.ReadDatabase(orgID, id)
 }
 
 // CreateDatabase creates a new database with a generated numeric ID and returns it as a Node.
@@ -60,7 +58,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 		return nil, err
 	}
 	if quota.MaxPages > 0 {
-		count, _, err := s.fileStore.GetOrganizationUsage(orgID)
+		count, _, err := s.FileStore.GetOrganizationUsage(orgID)
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +78,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 		Type:       entity.NodeTypeDatabase,
 	}
 
-	if err := s.fileStore.WriteDatabase(orgID, node); err != nil {
+	if err := s.FileStore.WriteDatabase(orgID, node); err != nil {
 		return nil, err
 	}
 
@@ -105,7 +103,7 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.
 		return nil, errColumnRequired
 	}
 
-	node, err := s.fileStore.ReadDatabase(orgID, id)
+	node, err := s.FileStore.ReadDatabase(orgID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +112,7 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.
 	node.Properties = columns
 	node.Modified = time.Now()
 
-	if err := s.fileStore.WriteDatabase(orgID, node); err != nil {
+	if err := s.FileStore.WriteDatabase(orgID, node); err != nil {
 		return nil, err
 	}
 
@@ -132,7 +130,7 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.
 	if id.IsZero() {
 		return errDatabaseIDEmpty
 	}
-	if err := s.fileStore.DeleteDatabase(orgID, id); err != nil {
+	if err := s.FileStore.DeleteDatabase(orgID, id); err != nil {
 		return err
 	}
 
@@ -147,7 +145,7 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.
 
 // ListDatabases returns all databases as Nodes.
 func (s *DatabaseService) ListDatabases(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
-	it, err := s.fileStore.IterDatabases(orgID)
+	it, err := s.FileStore.IterDatabases(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +160,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID js
 	}
 
 	// Read database to get columns for type coercion
-	node, err := s.fileStore.ReadDatabase(orgID, databaseID)
+	node, err := s.FileStore.ReadDatabase(orgID, databaseID)
 	if err != nil {
 		return nil, errDatabaseNotFound
 	}
@@ -181,7 +179,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID js
 		Modified: now,
 	}
 
-	if err := s.fileStore.AppendRecord(orgID, databaseID, record); err != nil {
+	if err := s.FileStore.AppendRecord(orgID, databaseID, record); err != nil {
 		return nil, err
 	}
 
@@ -201,11 +199,11 @@ func (s *DatabaseService) GetRecords(ctx context.Context, orgID, databaseID json
 	}
 
 	// Verify database exists
-	if !s.fileStore.DatabaseExists(orgID, databaseID) {
+	if !s.FileStore.DatabaseExists(orgID, databaseID) {
 		return nil, errDatabaseNotFound
 	}
 
-	it, err := s.fileStore.IterRecords(orgID, databaseID)
+	it, err := s.FileStore.IterRecords(orgID, databaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,11 +216,11 @@ func (s *DatabaseService) GetRecordsPage(ctx context.Context, orgID, databaseID 
 		return nil, errDatabaseIDEmpty
 	}
 	// Verify database exists
-	if !s.fileStore.DatabaseExists(orgID, databaseID) {
+	if !s.FileStore.DatabaseExists(orgID, databaseID) {
 		return nil, errDatabaseNotFound
 	}
 
-	return s.fileStore.ReadRecordsPage(orgID, databaseID, offset, limit)
+	return s.FileStore.ReadRecordsPage(orgID, databaseID, offset, limit)
 }
 
 // GetRecord retrieves a specific record by ID.
@@ -234,7 +232,7 @@ func (s *DatabaseService) GetRecord(ctx context.Context, orgID, databaseID, reco
 		return nil, errRecordIDEmpty
 	}
 
-	it, err := s.fileStore.IterRecords(orgID, databaseID)
+	it, err := s.FileStore.IterRecords(orgID, databaseID)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +257,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, r
 	}
 
 	// Read database to get columns for type coercion
-	node, err := s.fileStore.ReadDatabase(orgID, databaseID)
+	node, err := s.FileStore.ReadDatabase(orgID, databaseID)
 	if err != nil {
 		return nil, errDatabaseNotFound
 	}
@@ -280,7 +278,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, r
 		Modified: time.Now(),
 	}
 
-	if err := s.fileStore.UpdateRecord(orgID, databaseID, record); err != nil {
+	if err := s.FileStore.UpdateRecord(orgID, databaseID, record); err != nil {
 		return nil, err
 	}
 
@@ -302,7 +300,7 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, orgID, databaseID, r
 		return errRecordIDEmpty
 	}
 
-	if err := s.fileStore.DeleteRecord(orgID, databaseID, recordID); err != nil {
+	if err := s.FileStore.DeleteRecord(orgID, databaseID, recordID); err != nil {
 		return err
 	}
 

@@ -8,7 +8,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // mockQuotaGetterPageService implements the QuotaGetter interface for testing.
@@ -40,7 +39,7 @@ func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, jsonl
 }
 
 func TestNewPageService(t *testing.T) {
-	fileStore, err := infra.NewFileStore(t.TempDir())
+	fileStore, err := NewFileStore(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +52,7 @@ func TestNewPageService(t *testing.T) {
 	if service == nil {
 		t.Fatal("NewPageService returned nil")
 	}
-	if service.fileStore != fileStore {
+	if service.FileStore != fileStore {
 		t.Error("fileStore not properly assigned")
 	}
 }
@@ -61,7 +60,7 @@ func TestNewPageService(t *testing.T) {
 func TestPageService_CreatePage(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	mockQuotaGetter := &mockQuotaGetterPageService{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
@@ -89,7 +88,7 @@ func TestPageService_CreatePage(t *testing.T) {
 func TestPageService_GetPage(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	mockQuotaGetter := &mockQuotaGetterPageService{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
@@ -119,7 +118,7 @@ func TestPageService_GetPage(t *testing.T) {
 func TestPageService_UpdatePage(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	mockQuotaGetter := &mockQuotaGetterPageService{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
@@ -155,7 +154,7 @@ func TestPageService_UpdatePage(t *testing.T) {
 func TestPageService_DeletePage(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	mockQuotaGetter := &mockQuotaGetterPageService{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
@@ -184,7 +183,7 @@ func TestPageService_DeletePage(t *testing.T) {
 func TestPageService_ListPages(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	mockQuotaGetter := &mockQuotaGetterPageService{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
@@ -210,7 +209,7 @@ func TestPageService_ListPages(t *testing.T) {
 func TestPageService_SearchPages(t *testing.T) {
 	tempDir := t.TempDir()
 	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := NewFileStore(tempDir)
 	mockQuotaGetter := &mockQuotaGetterPageService{
 		quotas: map[jsonldb.ID]entity.Quota{
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
@@ -239,7 +238,7 @@ func TestPageService_SearchPages(t *testing.T) {
 }
 
 func TestPageService_GetPageHistory_NoGit(t *testing.T) {
-	fileStore, _ := infra.NewFileStore(t.TempDir())
+	fileStore, _ := NewFileStore(t.TempDir())
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(999): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
@@ -257,7 +256,7 @@ func TestPageService_GetPageHistory_NoGit(t *testing.T) {
 }
 
 func TestPageService_GetPageVersion_NoGit(t *testing.T) {
-	fileStore, _ := infra.NewFileStore(t.TempDir())
+	fileStore, _ := NewFileStore(t.TempDir())
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(999): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},

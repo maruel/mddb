@@ -5,12 +5,11 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestAssetService_SaveAsset(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
@@ -61,7 +60,7 @@ func TestAssetService_SaveAsset(t *testing.T) {
 
 func TestAssetService_GetAsset(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
@@ -94,7 +93,7 @@ func TestAssetService_GetAsset(t *testing.T) {
 
 func TestAssetService_DeleteAsset(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
@@ -133,7 +132,7 @@ func TestAssetService_DeleteAsset(t *testing.T) {
 
 func TestAssetService_ListAssets(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
@@ -182,7 +181,7 @@ func TestAssetService_ListAssets(t *testing.T) {
 
 func TestAssetService_Validation(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}

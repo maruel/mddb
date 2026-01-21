@@ -1,10 +1,9 @@
-// Package infra provides infrastructure components for file storage, git operations, and caching.
-package infra
+// Package content provides the core file storage implementation for the mddb system.
+package content
 
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"iter"
 	"os"
@@ -16,14 +15,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
-var (
-	errOrgIDRequired    = errors.New("organization ID is required")
-	errPageNotFound     = errors.New("page not found")
-	errNodeNotFound     = errors.New("node not found")
-	errDatabaseNotFound = errors.New("database not found")
-	errRecordNotFound   = errors.New("record not found")
-	errAssetNotFound    = errors.New("asset not found")
-)
 
 // FileStore handles all file system operations using directory-based storage.
 // Storage model: Each page (document or database) is an ID-based directory.
@@ -801,3 +792,4 @@ func formatMarkdownFile(p *page) []byte {
 	buf.WriteString(p.content)
 	return buf.Bytes()
 }
+

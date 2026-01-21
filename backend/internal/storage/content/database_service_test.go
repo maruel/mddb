@@ -6,7 +6,6 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // mockQuotaGetter implements the QuotaGetter interface for testing.
@@ -24,7 +23,7 @@ func (m *mockQuotaGetter) GetQuota(ctx context.Context, orgID jsonldb.ID) (entit
 
 func TestDatabaseService_Create(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -61,7 +60,7 @@ func TestDatabaseService_Create(t *testing.T) {
 
 func TestDatabaseService_CreateValidation(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -113,7 +112,7 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 
 func TestDatabaseService_Get(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -152,7 +151,7 @@ func TestDatabaseService_Get(t *testing.T) {
 
 func TestDatabaseService_List(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -205,7 +204,7 @@ func TestDatabaseService_List(t *testing.T) {
 
 func TestDatabaseService_Delete(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -241,7 +240,7 @@ func TestDatabaseService_Delete(t *testing.T) {
 
 func TestDatabaseService_CreateRecord(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -285,7 +284,7 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 
 func TestDatabaseService_GetRecords(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -329,7 +328,7 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 
 func TestDatabaseService_GetRecord(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -373,7 +372,7 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 
 func TestDatabaseService_UpdateRecord(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -427,7 +426,7 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 
 func TestDatabaseService_DeleteRecord(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
@@ -470,7 +469,7 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 
 func TestDatabaseService_TypeCoercion(t *testing.T) {
 	tmpDir := t.TempDir()
-	fs, err := infra.NewFileStore(tmpDir)
+	fs, err := NewFileStore(tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}

@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 	"github.com/maruel/mddb/backend/internal/utils"
@@ -150,7 +151,7 @@ func mainImpl() error {
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: ll})))
 
-	fileStore, err := infra.NewFileStore(*dataDir)
+	fileStore, err := content.NewFileStore(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}

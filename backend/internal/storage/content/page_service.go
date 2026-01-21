@@ -27,15 +27,15 @@ var (
 
 // PageService handles page business logic.
 type PageService struct {
-	fileStore   *infra.FileStore
+	FileStore   *FileStore
 	gitService  *infra.Git
 	quotaGetter QuotaGetter
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *infra.FileStore, gitService *infra.Git, quotaGetter QuotaGetter) *PageService {
+func NewPageService(fileStore *FileStore, gitService *infra.Git, quotaGetter QuotaGetter) *PageService {
 	return &PageService{
-		fileStore:   fileStore,
+		FileStore:   fileStore,
 		gitService:  gitService,
 		quotaGetter: quotaGetter,
 	}
@@ -47,7 +47,7 @@ func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*entit
 		return nil, errPageIDEmpty
 	}
 
-	return s.fileStore.ReadPage(orgID, id)
+	return s.FileStore.ReadPage(orgID, id)
 }
 
 // CreatePage creates a new page with a generated numeric ID and returns it as a Node.
@@ -62,7 +62,7 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 		return nil, err
 	}
 	if quota.MaxPages > 0 {
-		count, _, err := s.fileStore.GetOrganizationUsage(orgID)
+		count, _, err := s.FileStore.GetOrganizationUsage(orgID)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +73,7 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 
 	id := jsonldb.NewID()
 
-	node, err := s.fileStore.WritePage(orgID, id, title, content)
+	node, err := s.FileStore.WritePage(orgID, id, title, content)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 		return nil, errPageTitleEmpty
 	}
 
-	node, err := s.fileStore.UpdatePage(orgID, id, title, content)
+	node, err := s.FileStore.UpdatePage(orgID, id, title, content)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 	if id.IsZero() {
 		return errPageIDEmpty
 	}
-	if err := s.fileStore.DeletePage(orgID, id); err != nil {
+	if err := s.FileStore.DeletePage(orgID, id); err != nil {
 		return err
 	}
 
@@ -131,7 +131,7 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 
 // ListPages returns all pages as Nodes.
 func (s *PageService) ListPages(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
-	it, err := s.fileStore.IterPages(orgID)
+	it, err := s.FileStore.IterPages(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query s
 		return []*entity.Node{}, nil
 	}
 
-	it, err := s.fileStore.IterPages(orgID)
+	it, err := s.FileStore.IterPages(orgID)
 	if err != nil {
 		return nil, err
 	}
