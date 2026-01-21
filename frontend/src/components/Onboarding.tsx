@@ -70,6 +70,29 @@ export default function Onboarding(props: OnboardingProps) {
     }
   };
 
+  const handleNameStep = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Update organization name
+      const res = await authFetch('/api/settings/organization', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: orgName() }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update organization name');
+
+      // Proceed to next step
+      await updateStep('members');
+    } catch (err) {
+      setError('Error: ' + err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSkipGit = () => {
     updateStep('done', true);
   };
@@ -118,16 +141,15 @@ export default function Onboarding(props: OnboardingProps) {
               <h3>{t('onboarding.confirmWorkspaceName')}</h3>
               <div class={styles.formGroup}>
                 <label>{t('onboarding.workspaceName')}</label>
-                <input
-                  type="text"
-                  value={orgName()}
-                  onInput={(e) => setOrgName(e.target.value)}
-                  disabled
-                />
+                <input type="text" value={orgName()} onInput={(e) => setOrgName(e.target.value)} />
                 <p class={styles.hint}>{t('onboarding.workspaceNameHint')}</p>
               </div>
-              <button class={styles.primaryButton} onClick={() => updateStep('members')}>
-                {t('onboarding.nextInviteTeam')}
+              <button
+                class={styles.primaryButton}
+                onClick={handleNameStep}
+                disabled={!orgName() || loading()}
+              >
+                {loading() ? t('common.saving') : t('onboarding.nextInviteTeam')}
               </button>
             </div>
           </Show>

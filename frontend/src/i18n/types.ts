@@ -16,6 +16,7 @@ export interface Dictionary {
     invite: string;
     push: string;
     remove: string;
+    creating: string;
   };
 
   app: {
@@ -83,6 +84,18 @@ export interface Dictionary {
     patPlaceholder: string;
     skipForNow: string;
     setupAndFinish: string;
+  };
+
+  createOrg: {
+    title: string;
+    description: string;
+    firstOrgTitle: string;
+    firstOrgDescription: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    create: string;
+    welcomeTitle: string;
+    welcomeContent: string;
   };
 
   settings: {

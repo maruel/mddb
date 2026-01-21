@@ -240,6 +240,19 @@ type UpdateOrgSettingsRequest struct {
 	Settings OrganizationSettings `json:"settings"`
 }
 
+// UpdateOrganizationRequest is a request to update organization details.
+type UpdateOrganizationRequest struct {
+	OrgID string `path:"orgID"`
+	Name  string `json:"name"`
+}
+
+// CreateOrganizationRequest is a request to create a new organization.
+type CreateOrganizationRequest struct {
+	Name               string `json:"name"`
+	WelcomePageTitle   string `json:"welcome_page_title,omitempty"`
+	WelcomePageContent string `json:"welcome_page_content,omitempty"`
+}
+
 // GetOnboardingRequest is a request to get onboarding status.
 type GetOnboardingRequest struct {
 	OrgID string `path:"orgID"`

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -168,32 +167,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		// Try to find user by email
 		user, err = h.userService.GetByEmail(userInfo.Email)
 		if err != nil {
-			// Create new user if not found
-			orgName := userInfo.Name + "'s Organization"
-			org, err := h.orgService.Create(r.Context(), orgName)
-			if err != nil {
-				writeErrorResponse(w, dto.Internal("org_creation"))
-				return
-			}
-
-			// Initialize organization storage
-			if err := h.fs.InitOrg(r.Context(), org.ID); err != nil {
-				slog.ErrorContext(r.Context(), "Failed to initialize org storage", "error", err, "org_id", org.ID)
-				writeErrorResponse(w, dto.Internal("org_init"))
-				return
-			}
-
-			// Create welcome page
-			welcomeTitle := "Welcome to " + orgName
-			welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, tables, and upload assets here."
-			pageID := jsonldb.NewID()
-			author := content.Author{Name: userInfo.Name, Email: userInfo.Email}
-			if _, err := h.fs.WritePage(r.Context(), org.ID, pageID, welcomeTitle, welcomeContent, author); err != nil {
-				slog.ErrorContext(r.Context(), "Failed to create welcome page", "error", err, "org_id", org.ID)
-				writeErrorResponse(w, dto.InternalWithError("Failed to initialize organization", err))
-				return
-			}
-
+			// Create new user without organization (frontend will prompt for org creation)
 			// Password is not used for OAuth users
 			password, err := utils.GenerateToken(32)
 			if err != nil {
@@ -205,12 +179,6 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				writeErrorResponse(w, dto.Internal("user_creation"))
 				return
-			}
-			if org != nil && !org.ID.IsZero() {
-				if _, err := h.memService.Create(user.ID, org.ID, identity.UserRoleAdmin); err != nil {
-					writeErrorResponse(w, dto.Internal("membership_creation"))
-					return
-				}
 			}
 		}
 

@@ -67,6 +67,7 @@ func (h *AuthHandler) Login(ctx context.Context, req dto.LoginRequest) (*dto.Log
 }
 
 // Register handles user registration.
+// Note: Organization creation is handled by the frontend after registration.
 func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*dto.LoginResponse, error) {
 	if req.Email == "" || req.Password == "" || req.Name == "" {
 		return nil, dto.MissingField("email, password, or name")
@@ -78,36 +79,9 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, dto.NewAPIError(409, dto.ErrorCodeConflict, "User already exists")
 	}
 
-	// Create an organization only for this user
-	orgName := req.Name + "'s Organization"
-	org, err := h.orgService.Create(ctx, orgName)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to create organization", err)
-	}
-
-	// Initialize organization storage
-	if err := h.fs.InitOrg(ctx, org.ID); err != nil {
-		return nil, dto.InternalWithError("Failed to initialize organization storage", err)
-	}
-
-	// Create welcome page
-	welcomeTitle := "Welcome to " + orgName
-	welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, tables, and upload assets here."
-	pageID := jsonldb.NewID()
-	author := content.Author{Name: req.Name, Email: req.Email}
-	if _, err := h.fs.WritePage(ctx, org.ID, pageID, welcomeTitle, welcomeContent, author); err != nil {
-		slog.ErrorContext(ctx, "Failed to create welcome page", "error", err, "org_id", org.ID)
-		return nil, dto.InternalWithError("Failed to initialize organization", err)
-	}
-
 	user, err := h.userService.Create(req.Email, req.Password, req.Name)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create user", err)
-	}
-
-	// Create initial membership (admin of their own org)
-	if _, err := h.memService.Create(user.ID, org.ID, identity.UserRoleAdmin); err != nil {
-		return nil, dto.InternalWithError("Failed to create initial membership", err)
 	}
 
 	token, err := h.GenerateToken(user)
@@ -115,17 +89,12 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, dto.InternalWithError("Failed to generate token", err)
 	}
 
-	// Build user response with memberships
+	// Build user response (will have empty memberships for new users)
 	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
-
-	// Set active context to first membership (the newly created org)
-	if len(userResp.Memberships) > 0 {
-		h.PopulateActiveContext(userResp, userResp.Memberships[0].OrganizationID)
-	}
 
 	return &dto.LoginResponse{
 		Token: token,
@@ -162,6 +131,41 @@ func (h *AuthHandler) Me(ctx context.Context, _ jsonldb.ID, user *identity.User,
 	}
 
 	return userResp, nil
+}
+
+// CreateOrganization creates a new organization for the authenticated user.
+func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user *identity.User, req dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
+	if req.Name == "" {
+		return nil, dto.MissingField("name")
+	}
+
+	// Create the organization
+	org, err := h.orgService.Create(ctx, req.Name)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to create organization", err)
+	}
+
+	// Initialize organization storage
+	if err := h.fs.InitOrg(ctx, org.ID); err != nil {
+		return nil, dto.InternalWithError("Failed to initialize organization storage", err)
+	}
+
+	// Create welcome page if content provided
+	if req.WelcomePageTitle != "" && req.WelcomePageContent != "" {
+		pageID := jsonldb.NewID()
+		author := content.Author{Name: user.Name, Email: user.Email}
+		if _, err := h.fs.WritePage(ctx, org.ID, pageID, req.WelcomePageTitle, req.WelcomePageContent, author); err != nil {
+			slog.ErrorContext(ctx, "Failed to create welcome page", "error", err, "org_id", org.ID)
+			return nil, dto.InternalWithError("Failed to initialize organization", err)
+		}
+	}
+
+	// Create membership (user becomes admin of new org)
+	if _, err := h.memService.Create(user.ID, org.ID, identity.UserRoleAdmin); err != nil {
+		return nil, dto.InternalWithError("Failed to create membership", err)
+	}
+
+	return organizationToResponse(org), nil
 }
 
 // PopulateActiveContext populates organization-specific fields in the UserResponse.

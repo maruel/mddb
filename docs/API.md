@@ -49,6 +49,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | POST | `/api/{orgID}/settings/git/remote/push` | admin |
 | PUT | `/api/{orgID}/settings/membership` | viewer |
 | GET | `/api/{orgID}/settings/organization` | viewer |
+| PATCH | `/api/{orgID}/settings/organization` | admin |
 | PUT | `/api/{orgID}/settings/organization` | admin |
 
 ## Users
@@ -114,4 +115,10 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | POST | `/api/{orgID}/pages/{id}/assets` | editor |
 | DELETE | `/api/{orgID}/pages/{id}/assets/{name}` | editor |
 | GET | `/assets/{orgID}/{id}/{name}` | public |
+
+## Other
+
+| Method | Path | Auth |
+|--------|------|------|
+| POST | `/api/organizations` | viewer |
 
