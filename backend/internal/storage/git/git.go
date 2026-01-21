@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,8 +9,6 @@ import (
 	"strings"
 	"time"
 )
-
-var errInvalidCommitFmt = errors.New("invalid commit format")
 
 // Client handles version control operations using git.
 // All changes to pages and databases are automatically committed.
@@ -21,19 +18,14 @@ type Client struct {
 
 // Commit represents a commit in git history.
 type Commit struct {
-	Hash      string    `json:"hash" jsonschema:"description=Git commit hash"`
-	Message   string    `json:"message" jsonschema:"description=Commit message"`
-	Timestamp time.Time `json:"timestamp" jsonschema:"description=Commit timestamp"`
-}
-
-// CommitDetail contains full commit information.
-type CommitDetail struct {
-	Hash      string    `json:"hash" jsonschema:"description=Git commit hash"`
-	Timestamp time.Time `json:"timestamp" jsonschema:"description=Commit timestamp"`
-	Author    string    `json:"author" jsonschema:"description=Commit author name"`
-	Email     string    `json:"email" jsonschema:"description=Commit author email"`
-	Subject   string    `json:"subject" jsonschema:"description=Commit subject line"`
-	Body      string    `json:"body" jsonschema:"description=Commit body message"`
+	Hash           string    `json:"hash"`
+	Message        string    `json:"message"` // Subject line.
+	Author         string    `json:"author"`
+	AuthorEmail    string    `json:"author_email"`
+	AuthorDate     time.Time `json:"author_date"`
+	Committer      string    `json:"committer"`
+	CommitterEmail string    `json:"committer_email"`
+	CommitDate     time.Time `json:"commit_date"`
 }
 
 // New initializes git service for the given root directory.
@@ -145,7 +137,7 @@ func (gs *Client) GetHistory(ctx context.Context, subdir, resourceType, resource
 		}
 	}
 
-	format := "%H|%an|%ai|%s"
+	format := "%H%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s"
 	output, err := gs.gitOutputInDir(targetDir, "log", "--pretty=format:"+format, "--", path)
 	if err != nil {
 		return nil, nil //nolint:nilerr // git log returns error for paths with no history, which is not an error condition
@@ -157,65 +149,27 @@ func (gs *Client) GetHistory(ctx context.Context, subdir, resourceType, resource
 			continue
 		}
 
-		parts := strings.Split(line, "|")
-		if len(parts) < 4 {
+		parts := strings.Split(line, "\x00")
+		if len(parts) < 8 {
 			continue
 		}
 
-		hash := parts[0]
-		timestampStr := parts[2]
-		message := parts[3]
-
-		timestamp, err := time.Parse("2006-01-02 15:04:05 -0700", timestampStr)
-		if err != nil {
-			timestamp = time.Now()
-		}
+		authorDate, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[3])
+		commitDate, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[6])
 
 		commits = append(commits, &Commit{
-			Hash:      hash,
-			Message:   message,
-			Timestamp: timestamp,
+			Hash:           parts[0],
+			Author:         parts[1],
+			AuthorEmail:    parts[2],
+			AuthorDate:     authorDate,
+			Committer:      parts[4],
+			CommitterEmail: parts[5],
+			CommitDate:     commitDate,
+			Message:        parts[7],
 		})
 	}
 
 	return commits, nil
-}
-
-// GetCommit retrieves a specific commit with full details.
-func (gs *Client) GetCommit(ctx context.Context, subdir, hash string) (*CommitDetail, error) {
-	targetDir := gs.repoDir
-	if subdir != "" {
-		targetDir = filepath.Join(gs.repoDir, subdir)
-	}
-
-	output, err := gs.gitOutputInDir(targetDir, "show", "-s", "--format=%H%n%ai%n%an%n%ae%n%s%n%b", hash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get commit: %w", err)
-	}
-
-	lines := strings.Split(strings.TrimSpace(output), "\n")
-	if len(lines) < 5 {
-		return nil, errInvalidCommitFmt
-	}
-
-	timestamp, err := time.Parse("2006-01-02 15:04:05 -0700", lines[1])
-	if err != nil {
-		timestamp = time.Now()
-	}
-
-	body := ""
-	if len(lines) > 5 {
-		body = strings.Join(lines[5:], "\n")
-	}
-
-	return &CommitDetail{
-		Hash:      lines[0],
-		Timestamp: timestamp,
-		Author:    lines[2],
-		Email:     lines[3],
-		Subject:   lines[4],
-		Body:      body,
-	}, nil
 }
 
 // GetFileAtCommit retrieves the content of a file at a specific commit.

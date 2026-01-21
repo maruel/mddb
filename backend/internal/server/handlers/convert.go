@@ -131,7 +131,7 @@ func commitToDTO(c *git.Commit) *dto.Commit {
 	return &dto.Commit{
 		Hash:      c.Hash,
 		Message:   c.Message,
-		Timestamp: formatTime(c.Timestamp),
+		Timestamp: formatTime(c.CommitDate),
 	}
 }
 
