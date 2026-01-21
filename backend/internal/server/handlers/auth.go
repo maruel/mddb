@@ -145,6 +145,14 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 		return nil, dto.InternalWithError("Failed to create organization", err)
 	}
 
+	// Skip the "name" onboarding step since name was already provided
+	if _, err := h.orgService.Modify(org.ID, func(o *identity.Organization) error {
+		o.Onboarding.Step = "members"
+		return nil
+	}); err != nil {
+		slog.ErrorContext(ctx, "Failed to update onboarding step", "error", err, "org_id", org.ID)
+	}
+
 	// Initialize organization storage
 	if err := h.fs.InitOrg(ctx, org.ID); err != nil {
 		return nil, dto.InternalWithError("Failed to initialize organization storage", err)
