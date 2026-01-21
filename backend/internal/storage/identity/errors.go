@@ -1,10 +1,6 @@
 package identity
 
-import (
-	"errors"
-
-	"github.com/maruel/mddb/backend/internal/jsonldb"
-)
+import "errors"
 
 // Shared error constants for identity services.
 var (
@@ -13,8 +9,3 @@ var (
 	errEmailEmpty   = errors.New("email is required")
 	errUserNotFound = errors.New("user not found")
 )
-
-// membershipKey returns the composite key for a user-organization membership.
-func membershipKey(userID, orgID jsonldb.ID) string {
-	return userID.String() + "_" + orgID.String()
-}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -20,8 +19,6 @@ var (
 // MembershipService handles user-organization relationships.
 type MembershipService struct {
 	table *jsonldb.Table[*entity.Membership]
-	mu    sync.RWMutex
-	byID  map[string]*entity.Membership // key: userID_orgID (as strings)
 }
 
 // NewMembershipService creates a new membership service.
@@ -37,16 +34,17 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 		return nil, err
 	}
 
-	s := &MembershipService{
-		table: table,
-		byID:  make(map[string]*entity.Membership),
-	}
+	return &MembershipService{table: table}, nil
+}
 
-	for m := range table.Iter(0) {
-		s.byID[membershipKey(m.UserID, m.OrganizationID)] = m
+// findByUserAndOrg finds a membership by user and organization IDs.
+func (s *MembershipService) findByUserAndOrg(userID, orgID jsonldb.ID) *entity.Membership {
+	for m := range s.table.Iter(0) {
+		if m.UserID == userID && m.OrganizationID == orgID {
+			return m
+		}
 	}
-
-	return s, nil
+	return nil
 }
 
 // CreateMembership adds a user to an organization.
@@ -58,11 +56,7 @@ func (s *MembershipService) CreateMembership(userID, orgID jsonldb.ID, role enti
 		return nil, errOrgIDEmpty
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	key := membershipKey(userID, orgID)
-	if _, ok := s.byID[key]; ok {
+	if s.findByUserAndOrg(userID, orgID) != nil {
 		return nil, errMembershipExists
 	}
 
@@ -78,21 +72,15 @@ func (s *MembershipService) CreateMembership(userID, orgID jsonldb.ID, role enti
 		return nil, err
 	}
 
-	s.byID[key] = membership
-
 	return membership, nil
 }
 
 // GetMembership retrieves a specific user-org relationship.
 func (s *MembershipService) GetMembership(userID, orgID jsonldb.ID) (*entity.Membership, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	m, ok := s.byID[membershipKey(userID, orgID)]
-	if !ok {
+	m := s.findByUserAndOrg(userID, orgID)
+	if m == nil {
 		return nil, errMembershipNotFound
 	}
-
 	return m, nil
 }
 
@@ -102,11 +90,8 @@ func (s *MembershipService) ListByUser(userID jsonldb.ID) ([]entity.Membership, 
 		return nil, errUserIDEmpty
 	}
 
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	var memberships []entity.Membership
-	for _, m := range s.byID {
+	for m := range s.table.Iter(0) {
 		if m.UserID == userID {
 			memberships = append(memberships, *m)
 		}
@@ -116,11 +101,8 @@ func (s *MembershipService) ListByUser(userID jsonldb.ID) ([]entity.Membership, 
 
 // UpdateRole updates a user's role in an organization.
 func (s *MembershipService) UpdateRole(userID, orgID jsonldb.ID, role entity.UserRole) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	m, ok := s.byID[membershipKey(userID, orgID)]
-	if !ok {
+	m := s.findByUserAndOrg(userID, orgID)
+	if m == nil {
 		return errMembershipNotFound
 	}
 
@@ -133,11 +115,8 @@ func (s *MembershipService) UpdateRole(userID, orgID jsonldb.ID, role entity.Use
 
 // UpdateSettings updates user preferences within a specific organization.
 func (s *MembershipService) UpdateSettings(userID, orgID jsonldb.ID, settings entity.MembershipSettings) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	m, ok := s.byID[membershipKey(userID, orgID)]
-	if !ok {
+	m := s.findByUserAndOrg(userID, orgID)
+	if m == nil {
 		return errMembershipNotFound
 	}
 
