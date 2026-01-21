@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -306,7 +307,11 @@ func organizationSettingsToEntity(s dto.OrganizationSettings) identity.Organizat
 func onboardingStateToEntity(o dto.OnboardingState) identity.OnboardingState {
 	var updatedAt time.Time
 	if o.UpdatedAt != "" {
-		updatedAt, _ = time.Parse(time.RFC3339, o.UpdatedAt)
+		var err error
+		updatedAt, err = time.Parse(time.RFC3339, o.UpdatedAt)
+		if err != nil {
+			slog.Warn("Failed to parse onboarding UpdatedAt timestamp", "value", o.UpdatedAt, "error", err)
+		}
 	}
 	return identity.OnboardingState{
 		Completed: o.Completed,

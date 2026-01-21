@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"iter"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,7 +51,9 @@ func (fs *FileStore) orgPagesDir(orgID jsonldb.ID) string {
 		return ""
 	}
 	dir := filepath.Join(fs.rootDir, orgID.String(), "pages")
-	_ = os.MkdirAll(dir, 0o755) //nolint:gosec // G301: 0o755 is intentional for user data directories
+	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
+		slog.Error("Failed to create organization pages directory", "dir", dir, "error", err)
+	}
 	return dir
 }
 

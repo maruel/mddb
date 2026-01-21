@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -35,5 +36,7 @@ func writeErrorResponse(w http.ResponseWriter, err error) {
 		Details: details,
 	}
 
-	_ = json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("Failed to encode error response", "error", err)
+	}
 }

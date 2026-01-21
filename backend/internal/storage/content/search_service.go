@@ -3,6 +3,7 @@ package content
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -60,7 +61,11 @@ func (s *SearchService) Search(ctx context.Context, orgID jsonldb.ID, opts Searc
 }
 
 func (s *SearchService) searchPages(orgID jsonldb.ID, query string, opts SearchOptions) []SearchResult {
-	nodes, _ := s.fileStore.ReadNodeTree(orgID)
+	nodes, err := s.fileStore.ReadNodeTree(orgID)
+	if err != nil {
+		slog.Warn("Failed to read node tree for page search", "orgID", orgID, "error", err)
+		return nil
+	}
 	var results []SearchResult
 
 	var processNodes func([]*Node)
@@ -104,14 +109,22 @@ func (s *SearchService) searchPages(orgID jsonldb.ID, query string, opts SearchO
 }
 
 func (s *SearchService) searchDatabases(orgID jsonldb.ID, query string, opts SearchOptions) []SearchResult { //nolint:unparam // opts might be used for future database-specific filtering
-	nodes, _ := s.fileStore.ReadNodeTree(orgID)
+	nodes, err := s.fileStore.ReadNodeTree(orgID)
+	if err != nil {
+		slog.Warn("Failed to read node tree for database search", "orgID", orgID, "error", err)
+		return nil
+	}
 	var results []SearchResult
 
 	var processNodes func([]*Node)
 	processNodes = func(list []*Node) {
 		for _, node := range list {
 			if node.Type != NodeTypeDocument {
-				it, _ := s.fileStore.IterRecords(orgID, node.ID)
+				it, err := s.fileStore.IterRecords(orgID, node.ID)
+				if err != nil {
+					slog.Warn("Failed to iterate records for database search", "orgID", orgID, "nodeID", node.ID, "error", err)
+					continue
+				}
 				for record := range it {
 					score := 0.0
 					matches := make(map[string]string)

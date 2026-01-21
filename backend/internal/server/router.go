@@ -9,6 +9,7 @@ import (
 	"embed"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -154,9 +155,16 @@ func (h *EmbeddedSPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := "dist" + r.URL.Path
 	f, err := h.fs.Open(path)
 	if err == nil {
-		_ = f.Close()
+		if err := f.Close(); err != nil {
+			slog.Error("Failed to close embedded file", "path", path, "error", err)
+		}
 		// File exists, serve it from embedded FS
-		fsys, _ := fs.Sub(h.fs, "dist")
+		fsys, err := fs.Sub(h.fs, "dist")
+		if err != nil {
+			slog.Error("Failed to create sub-filesystem", "error", err)
+			http.NotFound(w, r)
+			return
+		}
 		fileServer := http.FileServer(http.FS(fsys))
 		// Set cache headers for static assets with extensions
 		if containsDot(r.URL.Path) {
@@ -172,12 +180,18 @@ func (h *EmbeddedSPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	defer func() { _ = indexFile.Close() }()
+	defer func() {
+		if err := indexFile.Close(); err != nil {
+			slog.Error("Failed to close index.html", "error", err)
+		}
+	}()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	// Serve index.html
-	_, _ = io.Copy(w, indexFile)
+	if _, err := io.Copy(w, indexFile); err != nil {
+		slog.Error("Failed to serve index.html", "error", err)
+	}
 }
 
 // containsDot checks if a path contains a dot (file extension).

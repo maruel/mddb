@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -86,8 +87,10 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req dto.Accept
 		return nil, dto.InternalWithError("Failed to create membership", err)
 	}
 
-	// Delete invitation
-	_ = h.invService.Delete(inv.ID)
+	// Delete invitation (best effort - membership already created)
+	if err := h.invService.Delete(inv.ID); err != nil {
+		slog.Warn("Failed to delete invitation after acceptance", "invitationID", inv.ID, "error", err)
+	}
 
 	// Build user response
 	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)

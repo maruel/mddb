@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -163,8 +164,14 @@ func (c *Client) GetHistory(ctx context.Context, subdir, path string, n int) ([]
 			continue
 		}
 
-		authorDate, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[3])
-		commitDate, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[6])
+		authorDate, err := time.Parse("2006-01-02 15:04:05 -0700", parts[3])
+		if err != nil {
+			slog.Warn("Failed to parse author date in git log", "value", parts[3], "error", err)
+		}
+		commitDate, err := time.Parse("2006-01-02 15:04:05 -0700", parts[6])
+		if err != nil {
+			slog.Warn("Failed to parse commit date in git log", "value", parts[6], "error", err)
+		}
 
 		commits = append(commits, &Commit{
 			Hash:           parts[0],

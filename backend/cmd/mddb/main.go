@@ -323,7 +323,10 @@ func runOnboarding(dataDir string) error {
 	env := make(map[string]string)
 
 	// JWT Secret
-	jwtSecret, _ := utils.GenerateToken(32)
+	jwtSecret, err := utils.GenerateToken(32)
+	if err != nil {
+		return fmt.Errorf("failed to generate JWT secret: %w", err)
+	}
 	env["JWT_SECRET"] = jwtSecret
 
 	// Base URL
@@ -331,7 +334,10 @@ func runOnboarding(dataDir string) error {
 	fmt.Println("The base URL is used for OAuth callback URLs.")
 	fmt.Println("If no port is specified, it will use the server's port automatically.")
 	fmt.Print("Base URL (default: http://localhost): ")
-	val, _ := reader.ReadString('\n')
+	val, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read base URL: %w", err)
+	}
 	baseURL := strings.TrimSpace(val)
 	if baseURL == "" {
 		baseURL = "http://localhost"
@@ -349,11 +355,17 @@ func runOnboarding(dataDir string) error {
 	fmt.Println("To use Google login, create a project at https://console.cloud.google.com/apis/credentials")
 	fmt.Printf("Configure an OAuth 2.0 Client ID with redirect URI: %s/api/auth/oauth/google/callback\n", displayBaseURL)
 	fmt.Print("Google Client ID (optional): ")
-	val, _ = reader.ReadString('\n')
+	val, err = reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read Google Client ID: %w", err)
+	}
 	env["GOOGLE_CLIENT_ID"] = strings.TrimSpace(val)
 	if env["GOOGLE_CLIENT_ID"] != "" {
 		fmt.Print("Google Client Secret: ")
-		val, _ = reader.ReadString('\n')
+		val, err = reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read Google Client Secret: %w", err)
+		}
 		env["GOOGLE_CLIENT_SECRET"] = strings.TrimSpace(val)
 	}
 
@@ -362,11 +374,17 @@ func runOnboarding(dataDir string) error {
 	fmt.Println("To use Microsoft login, register an app at https://portal.azure.com/")
 	fmt.Printf("Configure a redirect URI: %s/api/auth/oauth/microsoft/callback\n", displayBaseURL)
 	fmt.Print("Microsoft Client ID (optional): ")
-	val, _ = reader.ReadString('\n')
+	val, err = reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read Microsoft Client ID: %w", err)
+	}
 	env["MS_CLIENT_ID"] = strings.TrimSpace(val)
 	if env["MS_CLIENT_ID"] != "" {
 		fmt.Print("Microsoft Client Secret: ")
-		val, _ = reader.ReadString('\n')
+		val, err = reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read Microsoft Client Secret: %w", err)
+		}
 		env["MS_CLIENT_SECRET"] = strings.TrimSpace(val)
 	}
 

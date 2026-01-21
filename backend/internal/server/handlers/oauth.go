@@ -76,7 +76,12 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// In a real app, use a secure state from session/cookie
-	state, _ := utils.GenerateToken(16)
+	state, err := utils.GenerateToken(16)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "Failed to generate OAuth state token", "error", err)
+		writeErrorResponse(w, dto.Internal("state_generation"))
+		return
+	}
 	url := config.AuthCodeURL(state)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
@@ -116,7 +121,11 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			writeErrorResponse(w, dto.OAuthError("user_info"))
 			return
 		}
-		defer func() { _ = resp.Body.Close() }()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				slog.ErrorContext(r.Context(), "Failed to close Google API response body", "error", err)
+			}
+		}()
 		if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
 			writeErrorResponse(w, dto.OAuthError("decode"))
 			return
@@ -127,7 +136,11 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			writeErrorResponse(w, dto.OAuthError("user_info"))
 			return
 		}
-		defer func() { _ = resp.Body.Close() }()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				slog.ErrorContext(r.Context(), "Failed to close Microsoft API response body", "error", err)
+			}
+		}()
 
 		var msUser struct {
 			ID                string `json:"id"`
@@ -171,7 +184,12 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Password is not used for OAuth users
-			password, _ := utils.GenerateToken(32)
+			password, err := utils.GenerateToken(32)
+			if err != nil {
+				slog.ErrorContext(r.Context(), "Failed to generate password for OAuth user", "error", err)
+				writeErrorResponse(w, dto.Internal("password_generation"))
+				return
+			}
 			user, err = h.userService.Create(userInfo.Email, password, userInfo.Name)
 			if err != nil {
 				writeErrorResponse(w, dto.Internal("user_creation"))

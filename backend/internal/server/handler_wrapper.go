@@ -212,7 +212,12 @@ func WrapAuthRaw(
 				return
 			}
 
-			user, _ := validateJWT(r, userService, jwtSecret)
+			// Re-validate JWT to get user (we already validated above, so this should not fail)
+			user, err := validateJWT(r, userService, jwtSecret)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
 			membership, err := memService.Get(user.ID, orgID)
 			if err != nil {
 				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
@@ -379,5 +384,7 @@ func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code dto.
 		Details: details,
 	}
 
-	_ = json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("Failed to encode error response", "error", err)
+	}
 }
