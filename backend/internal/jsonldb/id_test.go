@@ -58,18 +58,31 @@ func TestID(t *testing.T) {
 	})
 
 	t.Run("InitIDSlice", func(t *testing.T) {
-		// Cleanup after this test block to restore default state
-		t.Cleanup(func() {
-			_ = InitIDSlice(0, 1)
-		})
+		resetState := func() {
+			idMu.Lock()
+			idLastT10us = 0
+			idSlice = 0
+			idInstanceID = 0
+			idTotalInstances = 1
+			idMu.Unlock()
+		}
+
+		// Ensure clean state before starting
+		resetState()
+
+		// Cleanup after this test block
+		t.Cleanup(resetState)
 
 		t.Run("valid inputs", func(t *testing.T) {
+			resetState()
 			if err := InitIDSlice(0, 1); err != nil {
 				t.Errorf("InitIDSlice(0, 1) failed: %v", err)
 			}
+			resetState()
 			if err := InitIDSlice(0, 3); err != nil {
 				t.Errorf("InitIDSlice(0, 3) failed: %v", err)
 			}
+			resetState()
 			if err := InitIDSlice(2, 3); err != nil {
 				t.Errorf("InitIDSlice(2, 3) failed: %v", err)
 			}
@@ -90,6 +103,7 @@ func TestID(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
+					resetState()
 					if err := InitIDSlice(tt.inst, tt.total); err == nil {
 						t.Errorf("InitIDSlice(%d, %d) expected error, got nil", tt.inst, tt.total)
 					}
@@ -98,6 +112,7 @@ func TestID(t *testing.T) {
 		})
 
 		t.Run("NewID behavior after init", func(t *testing.T) {
+			resetState()
 			// Initialize for instance 1 of 3
 			if err := InitIDSlice(1, 3); err != nil {
 				t.Fatalf("InitIDSlice failed: %v", err)
@@ -120,6 +135,14 @@ func TestID(t *testing.T) {
 				if id2.Slice() != id1.Slice()+3 {
 					t.Errorf("Slice did not increment by stride 3: %d -> %d", id1.Slice(), id2.Slice())
 				}
+			}
+		})
+
+		t.Run("fails if IDs already generated", func(t *testing.T) {
+			resetState()
+			_ = NewID() // Dirty the state
+			if err := InitIDSlice(0, 3); err == nil {
+				t.Error("InitIDSlice should fail after NewID() called")
 			}
 		})
 	})

@@ -87,11 +87,12 @@ func InitIDSlice(instanceID, totalInstances int) error {
 	idMu.Lock()
 	defer idMu.Unlock()
 
+	if idLastT10us != 0 || idSlice != 0 {
+		return errors.New("cannot initialize ID slice: IDs have already been generated")
+	}
+
 	idInstanceID = instanceID
 	idTotalInstances = totalInstances
-	// Reset state to ensure next ID respects the new configuration
-	idLastT10us = 0
-	idSlice = 0
 	return nil
 }
 
