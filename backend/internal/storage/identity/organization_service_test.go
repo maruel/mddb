@@ -90,9 +90,14 @@ func TestOrganizationService(t *testing.T) {
 		}
 
 		t.Run("existing organization", func(t *testing.T) {
-			updateErr := service.UpdateSettings(org.ID, newSettings)
+			orgToUpdate, getErr := service.Get(org.ID)
+			if getErr != nil {
+				t.Fatalf("Get failed: %v", getErr)
+			}
+			orgToUpdate.Settings = newSettings
+			updateErr := service.Update(orgToUpdate)
 			if updateErr != nil {
-				t.Fatalf("UpdateSettings failed: %v", updateErr)
+				t.Fatalf("Update failed: %v", updateErr)
 			}
 
 			updatedOrg, _ := service.Get(org.ID)
@@ -105,9 +110,10 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent organization", func(t *testing.T) {
-			updateErr := service.UpdateSettings(jsonldb.ID(99999), newSettings)
+			fakeOrg := &entity.Organization{ID: jsonldb.ID(99999), Settings: newSettings}
+			updateErr := service.Update(fakeOrg)
 			if updateErr == nil {
-				t.Error("Expected error when updating settings for non-existent org")
+				t.Error("Expected error when updating non-existent org")
 			}
 		})
 	})
@@ -119,9 +125,14 @@ func TestOrganizationService(t *testing.T) {
 		}
 
 		t.Run("existing organization", func(t *testing.T) {
-			updateErr := service.UpdateOnboarding(org2.ID, newState)
+			orgToUpdate, getErr := service.Get(org2.ID)
+			if getErr != nil {
+				t.Fatalf("Get failed: %v", getErr)
+			}
+			orgToUpdate.Onboarding = newState
+			updateErr := service.Update(orgToUpdate)
 			if updateErr != nil {
-				t.Fatalf("UpdateOnboarding failed: %v", updateErr)
+				t.Fatalf("Update failed: %v", updateErr)
 			}
 
 			updatedOrg2, _ := service.Get(org2.ID)
@@ -131,15 +142,13 @@ func TestOrganizationService(t *testing.T) {
 			if updatedOrg2.Onboarding.Step != "done" {
 				t.Errorf("Onboarding.Step = %q, want %q", updatedOrg2.Onboarding.Step, "done")
 			}
-			if updatedOrg2.Onboarding.UpdatedAt.IsZero() {
-				t.Error("Expected Onboarding.UpdatedAt to be set")
-			}
 		})
 
 		t.Run("non-existent organization", func(t *testing.T) {
-			updateErr := service.UpdateOnboarding(jsonldb.ID(99999), newState)
+			fakeOrg := &entity.Organization{ID: jsonldb.ID(99999), Onboarding: newState}
+			updateErr := service.Update(fakeOrg)
 			if updateErr == nil {
-				t.Error("Expected error when updating onboarding for non-existent org")
+				t.Error("Expected error when updating non-existent org")
 			}
 		})
 	})

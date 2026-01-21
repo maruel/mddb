@@ -112,29 +112,6 @@ func (s *OrganizationService) Get(id jsonldb.ID) (*entity.Organization, error) {
 	return org, nil
 }
 
-// UpdateSettings updates organization-wide settings.
-func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings entity.OrganizationSettings) error {
-	org := s.table.Get(id)
-	if org == nil {
-		return errOrgNotFound
-	}
-	org.Settings = settings
-	_, err := s.table.Update(org)
-	return err
-}
-
-// UpdateOnboarding updates the onboarding state of an organization.
-func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state entity.OnboardingState) error {
-	org := s.table.Get(id)
-	if org == nil {
-		return errOrgNotFound
-	}
-	org.Onboarding = state
-	org.Onboarding.UpdatedAt = time.Now()
-	_, err := s.table.Update(org)
-	return err
-}
-
 // Update persists changes to an organization.
 func (s *OrganizationService) Update(org *entity.Organization) error {
 	if org == nil || org.ID.IsZero() {

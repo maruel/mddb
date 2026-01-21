@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -42,22 +43,28 @@ func (h *OrganizationHandler) GetOnboarding(ctx context.Context, orgID jsonldb.I
 
 // UpdateOnboarding updates organization onboarding status.
 func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.UpdateOnboardingRequest) (*dto.OnboardingState, error) {
-	if err := h.orgService.UpdateOnboarding(orgID, onboardingStateToEntity(req.State)); err != nil {
+	org, err := h.orgService.Get(orgID)
+	if err != nil {
+		return nil, err
+	}
+	org.Onboarding = onboardingStateToEntity(req.State)
+	org.Onboarding.UpdatedAt = time.Now()
+	if err := h.orgService.Update(org); err != nil {
 		return nil, dto.InternalWithError("Failed to update onboarding state", err)
 	}
-	org, _ := h.orgService.Get(orgID)
 	result := onboardingStateToDTO(org.Onboarding)
 	return &result, nil
 }
 
 // UpdateSettings updates organization-wide settings.
 func (h *OrganizationHandler) UpdateSettings(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.UpdateOrgSettingsRequest) (*dto.OrganizationResponse, error) {
-	if err := h.orgService.UpdateSettings(orgID, organizationSettingsToEntity(req.Settings)); err != nil {
-		return nil, dto.InternalWithError("Failed to update organization settings", err)
-	}
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
+	}
+	org.Settings = organizationSettingsToEntity(req.Settings)
+	if err := h.orgService.Update(org); err != nil {
+		return nil, dto.InternalWithError("Failed to update organization settings", err)
 	}
 	return organizationToResponse(org), nil
 }
