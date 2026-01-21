@@ -3,6 +3,7 @@ module github.com/maruel/mddb/backend
 go 1.25.5
 
 require (
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/invopop/jsonschema v0.13.0
 	golang.org/x/crypto v0.47.0
