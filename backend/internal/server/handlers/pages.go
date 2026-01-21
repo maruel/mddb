@@ -53,11 +53,11 @@ func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *identity
 }
 
 // CreatePage creates a new page.
-func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
+func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
 	}
-	page, err := h.pageService.CreatePage(ctx, orgID, req.Title, req.Content)
+	page, err := h.pageService.CreatePage(ctx, orgID, req.Title, req.Content, user.Name, user.Email)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
@@ -65,12 +65,12 @@ func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, _ *ident
 }
 
 // UpdatePage updates an existing page.
-func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
+func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
 		return nil, err
 	}
-	page, err := h.pageService.UpdatePage(ctx, orgID, id, req.Title, req.Content)
+	page, err := h.pageService.UpdatePage(ctx, orgID, id, req.Title, req.Content, user.Name, user.Email)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -78,12 +78,12 @@ func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, _ *ident
 }
 
 // DeletePage deletes a page.
-func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
+func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
 		return nil, err
 	}
-	if err := h.pageService.DeletePage(ctx, orgID, id); err != nil {
+	if err := h.pageService.DeletePage(ctx, orgID, id, user.Name, user.Email); err != nil {
 		return nil, dto.NotFound("page")
 	}
 	return &dto.DeletePageResponse{Ok: true}, nil
@@ -95,7 +95,7 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *i
 	if err != nil {
 		return nil, err
 	}
-	history, err := h.pageService.GetPageHistory(ctx, orgID, id)
+	history, err := h.pageService.GetPageHistory(ctx, orgID, id, req.Limit)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page history", err)
 	}

@@ -84,7 +84,9 @@ func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID.String(), "create", "asset", fileName, "in page "+pageID.String()); err != nil {
+		msg := fmt.Sprintf("create: asset %s in page %s", fileName, pageID.String())
+		files := []string{"pages/" + pageID.String() + "/" + fileName}
+		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -118,7 +120,9 @@ func (s *AssetService) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID.String(), "delete", "asset", assetName, "in page "+pageID.String()); err != nil {
+		msg := fmt.Sprintf("delete: asset %s from page %s", assetName, pageID.String())
+		files := []string{"pages/" + pageID.String() + "/" + assetName}
+		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}

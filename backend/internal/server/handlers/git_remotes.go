@@ -77,8 +77,8 @@ func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *i
 		}
 	}
 
-	if err := h.gitService.AddRemote(subdir, gitRemoteName, url); err != nil {
-		return nil, fmt.Errorf("failed to add git remote: %w", err)
+	if err := h.gitService.SetRemote(ctx, subdir, gitRemoteName, url); err != nil {
+		return nil, fmt.Errorf("failed to set git remote: %w", err)
 	}
 
 	return gitRemoteToResponse(orgID, &org.GitRemote), nil
@@ -105,17 +105,21 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *identi
 		}
 	}
 
-	_ = h.gitService.AddRemote(subdir, gitRemoteName, url)
+	if err := h.gitService.SetRemote(ctx, subdir, gitRemoteName, url); err != nil {
+		return nil, fmt.Errorf("failed to set git remote: %w", err)
+	}
 
-	if err := h.gitService.Push(subdir, gitRemoteName, ""); err != nil {
+	if err := h.gitService.Push(ctx, subdir, gitRemoteName, ""); err != nil {
 		return nil, fmt.Errorf("failed to push to git remote: %w", err)
 	}
 
 	// Update last sync time
-	_, _ = h.orgService.Modify(orgID, func(org *identity.Organization) error {
+	if _, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
 		org.GitRemote.LastSync = time.Now()
 		return nil
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("failed to update last sync time: %w", err)
+	}
 
 	return &dto.OkResponse{Ok: true}, nil
 }
@@ -134,7 +138,9 @@ func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _
 	}
 
 	// Also remove from local git repo
-	_ = h.gitService.RemoveRemote(orgID.String(), gitRemoteName)
+	if err := h.gitService.SetRemote(ctx, orgID.String(), gitRemoteName, ""); err != nil {
+		return nil, fmt.Errorf("failed to remove git remote: %w", err)
+	}
 
 	return &dto.OkResponse{Ok: true}, nil
 }

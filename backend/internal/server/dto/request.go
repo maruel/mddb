@@ -56,6 +56,7 @@ type DeletePageRequest struct {
 type GetPageHistoryRequest struct {
 	OrgID string `path:"orgID"`
 	ID    string `path:"id"`
+	Limit int    `query:"limit"` // Max commits to return (1-1000, default 1000).
 }
 
 // GetPageVersionRequest is a request to get a specific page version.

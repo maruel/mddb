@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -51,7 +52,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, orgID jsonldb.ID, _ *identity
 }
 
 // CreateNode creates a new node (page, database, or hybrid).
-func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.CreateNodeRequest) (*dto.NodeResponse, error) {
+func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateNodeRequest) (*dto.NodeResponse, error) {
 	if req.Title == "" || req.Type == "" {
 		return nil, dto.MissingField("title or type")
 	}
@@ -74,7 +75,20 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, _ *ident
 	}
 
 	if h.gitService != nil {
-		_ = h.gitService.CommitChange(ctx, orgID.String(), "create", string(req.Type), node.ID.String(), req.Title)
+		msg := fmt.Sprintf("create: %s %s - %s", req.Type, node.ID.String(), req.Title)
+		var files []string
+		idStr := node.ID.String()
+		switch nodeType {
+		case content.NodeTypeDocument:
+			files = []string{"pages/" + idStr + "/index.md"}
+		case content.NodeTypeDatabase:
+			files = []string{"pages/" + idStr + "/metadata.json"}
+		case content.NodeTypeHybrid:
+			files = []string{"pages/" + idStr + "/index.md", "pages/" + idStr + "/metadata.json"}
+		}
+		if err := h.gitService.Commit(ctx, orgID.String(), user.Name, user.Email, msg, files); err != nil {
+			return nil, dto.InternalWithError("Failed to commit change", err)
+		}
 	}
 
 	return nodeToResponse(node), nil

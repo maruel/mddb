@@ -39,9 +39,9 @@ func TestSearchService_SearchPages(t *testing.T) {
 	}
 	pageService := NewPageService(fileStore, nil, mockQuotaGetter)
 	ctx := t.Context()
-	_, _ = pageService.CreatePage(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project")
-	_, _ = pageService.CreatePage(ctx, orgID, "Advanced Topics", "Learn about advanced mddb configuration and optimization")
-	_, _ = pageService.CreatePage(ctx, orgID, "API Reference", "Complete mddb API documentation for developers")
+	_, _ = pageService.CreatePage(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project", "", "")
+	_, _ = pageService.CreatePage(ctx, orgID, "Advanced Topics", "Learn about advanced mddb configuration and optimization", "", "")
+	_, _ = pageService.CreatePage(ctx, orgID, "API Reference", "Complete mddb API documentation for developers", "", "")
 
 	tests := []struct {
 		name          string
@@ -220,8 +220,8 @@ func TestSearchService_Scoring(t *testing.T) {
 		},
 	}
 	pageService := NewPageService(fileStore, nil, mockQuotaGetterScoring)
-	_, _ = pageService.CreatePage(ctx, orgID, "Python Programming", "This is about Java not Python")
-	_, _ = pageService.CreatePage(ctx, orgID, "Java Basics", "Learn Python programming fundamentals")
+	_, _ = pageService.CreatePage(ctx, orgID, "Python Programming", "This is about Java not Python", "", "")
+	_, _ = pageService.CreatePage(ctx, orgID, "Java Basics", "Learn Python programming fundamentals", "", "")
 
 	results, err := searchService.Search(ctx, orgID, SearchOptions{
 		Query:      "python",
@@ -264,7 +264,7 @@ func TestSearchService_Limit(t *testing.T) {
 	}
 	pageService := NewPageService(fileStore, nil, mockQuotaGetterLimit)
 	for i := range 10 {
-		_, _ = pageService.CreatePage(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content")
+		_, _ = pageService.CreatePage(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content", "", "")
 	}
 
 	results, err := searchService.Search(ctx, orgID, SearchOptions{
@@ -299,7 +299,7 @@ func TestSearchService_Integration(t *testing.T) {
 		},
 	}
 	pageService := NewPageService(fileStore, nil, mockQuotaGetterIntegration)
-	_, _ = pageService.CreatePage(ctx, orgID, "Blog Post", "Article about searchable content and web development")
+	_, _ = pageService.CreatePage(ctx, orgID, "Blog Post", "Article about searchable content and web development", "", "")
 
 	dbService := NewDatabaseService(fileStore, nil, mockQuotaGetterIntegration)
 	columns := []Property{

@@ -12,15 +12,15 @@ import (
 )
 
 func TestRegister(t *testing.T) {
+	ctx := t.Context()
 	tempDir := t.TempDir()
 	fileStore, _ := content.NewFileStore(tempDir)
-	gitService, _ := git.New("")
+	gitService, _ := git.New(ctx, "", "", "")
 	memService, _ := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
 	orgService, _ := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, gitService)
 	userService, _ := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
 	pageService := content.NewPageService(fileStore, gitService, orgService)
 	authHandler := NewAuthHandler(userService, memService, orgService, pageService, "secret")
-	ctx := t.Context()
 
 	// Register Joe
 	req1 := dto.RegisterRequest{

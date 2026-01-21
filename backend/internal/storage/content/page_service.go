@@ -50,7 +50,8 @@ func (s *PageService) GetPage(ctx context.Context, orgID, id jsonldb.ID) (*Node,
 }
 
 // CreatePage creates a new page with a generated numeric ID and returns it as a Node.
-func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, content string) (*Node, error) {
+// authorName and authorEmail are used for the git commit; if empty, defaults are used.
+func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, content, authorName, authorEmail string) (*Node, error) {
 	if title == "" {
 		return nil, errPageTitleEmpty
 	}
@@ -78,7 +79,9 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID.String(), "create", "page", id.String(), title); err != nil {
+		msg := fmt.Sprintf("create: page %s - %s", id.String(), title)
+		files := []string{"pages/" + id.String() + "/index.md"}
+		if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
 			// Log error but don't fail the operation
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
@@ -88,7 +91,8 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 }
 
 // UpdatePage updates an existing page and returns it as a Node.
-func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title, content string) (*Node, error) {
+// authorName and authorEmail are used for the git commit; if empty, defaults are used.
+func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title, content, authorName, authorEmail string) (*Node, error) {
 	if id.IsZero() {
 		return nil, errPageIDEmpty
 	}
@@ -102,7 +106,9 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID.String(), "update", "page", id.String(), "Updated content"); err != nil {
+		msg := fmt.Sprintf("update: page %s", id.String())
+		files := []string{"pages/" + id.String() + "/index.md"}
+		if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -111,7 +117,8 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 }
 
 // DeletePage deletes a page.
-func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) error {
+// authorName and authorEmail are used for the git commit; if empty, defaults are used.
+func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID, authorName, authorEmail string) error {
 	if id.IsZero() {
 		return errPageIDEmpty
 	}
@@ -120,7 +127,9 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 	}
 
 	if s.gitService != nil {
-		if err := s.gitService.CommitChange(ctx, orgID.String(), "delete", "page", id.String(), "Deleted page"); err != nil {
+		msg := fmt.Sprintf("delete: page %s", id.String())
+		files := []string{"pages/" + id.String()}
+		if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
 		}
 	}
@@ -161,12 +170,13 @@ func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query s
 	return results, nil
 }
 
-// GetPageHistory returns the commit history for a page.
-func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) ([]*git.Commit, error) {
+// GetPageHistory returns the commit history for a page, limited to n commits.
+// n is capped at 1000. If n <= 0, defaults to 1000.
+func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID, n int) ([]*git.Commit, error) {
 	if s.gitService == nil {
 		return []*git.Commit{}, nil
 	}
-	return s.gitService.GetHistory(ctx, orgID.String(), "page", id.String())
+	return s.gitService.GetHistory(ctx, orgID.String(), "pages/"+id.String(), n)
 }
 
 // GetPageVersion returns the content of a page at a specific commit.
