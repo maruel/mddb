@@ -190,6 +190,7 @@ type Organization struct {
 	Quotas     Quota                `json:"quotas" jsonschema:"description=Resource limits for the organization"`
 	Settings   OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
 	Onboarding OnboardingState      `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
+	GitRemote  GitRemote            `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
 	Created    time.Time            `json:"created" jsonschema:"description=Organization creation timestamp"`
 }
 
@@ -236,6 +237,21 @@ type OrganizationSettings struct {
 // GitSettings contains configuration for Git remotes and synchronization.
 type GitSettings struct {
 	AutoPush bool `json:"auto_push" jsonschema:"description=Automatically push changes to remote"`
+}
+
+// GitRemote represents the single remote repository configuration for an organization.
+type GitRemote struct {
+	URL      string    `json:"url,omitempty" jsonschema:"description=Git repository URL"`
+	Type     string    `json:"type,omitempty" jsonschema:"description=Remote type (github/gitlab/custom)"`
+	AuthType string    `json:"auth_type,omitempty" jsonschema:"description=Authentication method (token/ssh)"`
+	Token    string    `json:"token,omitempty" jsonschema:"description=Authentication token"`
+	Created  time.Time `json:"created,omitzero" jsonschema:"description=Remote creation timestamp"`
+	LastSync time.Time `json:"last_sync,omitzero" jsonschema:"description=Last synchronization timestamp"`
+}
+
+// IsZero returns true if the GitRemote has no URL configured.
+func (g *GitRemote) IsZero() bool {
+	return g.URL == ""
 }
 
 // Quota defines limits for an organization.

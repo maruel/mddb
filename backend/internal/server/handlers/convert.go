@@ -7,7 +7,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // --- ID decoding helpers ---
@@ -85,19 +84,6 @@ func organizationToResponse(o *entity.Organization) *dto.OrganizationResponse {
 		Settings:   organizationSettingsToDTO(o.Settings),
 		Onboarding: onboardingStateToDTO(o.Onboarding),
 		Created:    formatTime(o.Created),
-	}
-}
-
-func gitRemoteToResponse(g *infra.GitRemote) *dto.GitRemoteResponse {
-	return &dto.GitRemoteResponse{
-		ID:             g.ID.String(),
-		OrganizationID: g.OrganizationID.String(),
-		Name:           g.Name,
-		URL:            g.URL,
-		Type:           g.Type,
-		AuthType:       g.AuthType,
-		Created:        formatTime(g.Created),
-		LastSync:       formatTime(g.LastSync),
 	}
 }
 

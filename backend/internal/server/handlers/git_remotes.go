@@ -6,48 +6,45 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
+const gitRemoteName = "origin"
+
 // GitRemoteHandler handles git remote operations.
 type GitRemoteHandler struct {
-	remoteService *infra.GitRemoteService
-	gitService    *infra.Git
-	rootDir       string
+	orgService *identity.OrganizationService
+	gitService *infra.Git
+	rootDir    string
 }
 
 // NewGitRemoteHandler creates a new git remote handler.
-func NewGitRemoteHandler(remoteService *infra.GitRemoteService, gitService *infra.Git, rootDir string) *GitRemoteHandler {
+func NewGitRemoteHandler(orgService *identity.OrganizationService, gitService *infra.Git, rootDir string) *GitRemoteHandler {
 	return &GitRemoteHandler{
-		remoteService: remoteService,
-		gitService:    gitService,
-		rootDir:       rootDir,
+		orgService: orgService,
+		gitService: gitService,
+		rootDir:    rootDir,
 	}
 }
 
-// ListRemotes lists all git remotes for an organization.
-func (h *GitRemoteHandler) ListRemotes(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListGitRemotesRequest) (*dto.ListGitRemotesResponse, error) {
-	it, err := h.remoteService.Iter(orgID)
-	if err != nil {
-		return nil, err
+// GetRemote returns the git remote for an organization, or null if none exists.
+func (h *GitRemoteHandler) GetRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+	remote := h.orgService.GetGitRemote(orgID)
+	if remote == nil {
+		return nil, nil //nolint:nilnil // nil response with nil error indicates "no remote configured" which is a valid state
 	}
-	remotes := slices.Collect(it)
-	responses := make([]dto.GitRemoteResponse, 0, len(remotes))
-	for _, r := range remotes {
-		responses = append(responses, *gitRemoteToResponse(r))
-	}
-	return &dto.ListGitRemotesResponse{Remotes: responses}, nil
+	return gitRemoteToResponse(orgID, remote), nil
 }
 
-// CreateRemote creates a new git remote.
-func (h *GitRemoteHandler) CreateRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req *dto.CreateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	remote, err := h.remoteService.Create(orgID, req.Name, req.URL, req.Type, req.AuthType, req.Token)
+// SetRemote creates or updates the git remote for an organization.
+func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req *dto.SetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+	remote, err := h.orgService.SetGitRemote(orgID, req.URL, req.Type, req.AuthType, req.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -65,23 +62,18 @@ func (h *GitRemoteHandler) CreateRemote(ctx context.Context, orgID jsonldb.ID, _
 		}
 	}
 
-	if err := h.gitService.AddRemote(orgDir, req.Name, url); err != nil {
+	if err := h.gitService.AddRemote(orgDir, gitRemoteName, url); err != nil {
 		return nil, fmt.Errorf("failed to add git remote: %w", err)
 	}
 
-	return gitRemoteToResponse(remote), nil
+	return gitRemoteToResponse(orgID, remote), nil
 }
 
-// Push pushes changes to a git remote.
+// Push pushes changes to the git remote.
 func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.PushGitRemoteRequest) (*dto.OkResponse, error) {
-	remoteID, err := decodeID(req.RemoteID, "remote_id")
-	if err != nil {
-		return nil, err
-	}
-
-	remote, err := h.remoteService.Get(remoteID)
-	if err != nil {
-		return nil, err
+	remote := h.orgService.GetGitRemote(orgID)
+	if remote == nil {
+		return nil, dto.NotFound("remote")
 	}
 
 	orgDir := filepath.Join(h.rootDir, orgID.String())
@@ -95,36 +87,30 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity
 		}
 	}
 
-	_ = h.gitService.AddRemote(orgDir, remote.Name, url)
+	_ = h.gitService.AddRemote(orgDir, gitRemoteName, url)
 
-	if err := h.gitService.Push(orgDir, remote.Name, ""); err != nil {
+	if err := h.gitService.Push(orgDir, gitRemoteName, ""); err != nil {
 		return nil, fmt.Errorf("failed to push to git remote: %w", err)
 	}
 
-	_ = h.remoteService.UpdateLastSync(remoteID)
+	_ = h.orgService.UpdateGitRemoteLastSync(orgID)
 
 	return &dto.OkResponse{Ok: true}, nil
 }
 
-// DeleteRemote deletes a git remote.
+// DeleteRemote deletes the git remote for an organization.
 func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.DeleteGitRemoteRequest) (*dto.OkResponse, error) {
-	remoteID, err := decodeID(req.RemoteID, "remote_id")
-	if err != nil {
-		return nil, err
+	if h.orgService.GetGitRemote(orgID) == nil {
+		return nil, dto.NotFound("remote")
 	}
 
-	remote, err := h.remoteService.Get(remoteID)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := h.remoteService.Delete(orgID, remoteID); err != nil {
+	if err := h.orgService.DeleteGitRemote(orgID); err != nil {
 		return nil, err
 	}
 
 	// Also remove from local git repo
 	orgDir := filepath.Join(h.rootDir, orgID.String())
-	_ = h.execGitInDir(orgDir, "remote", "remove", remote.Name)
+	_ = h.execGitInDir(orgDir, "remote", "remove", gitRemoteName)
 
 	return &dto.OkResponse{Ok: true}, nil
 }
@@ -137,4 +123,19 @@ func (h *GitRemoteHandler) execGitInDir(dir string, args ...string) error {
 		"GIT_CONFIG_SYSTEM=/dev/null",
 	)
 	return cmd.Run()
+}
+
+// gitRemoteToResponse converts an entity.GitRemote to a dto.GitRemoteResponse.
+func gitRemoteToResponse(orgID jsonldb.ID, r *entity.GitRemote) *dto.GitRemoteResponse {
+	resp := &dto.GitRemoteResponse{
+		OrganizationID: orgID.String(),
+		URL:            r.URL,
+		Type:           r.Type,
+		AuthType:       r.AuthType,
+		Created:        r.Created.Format("2006-01-02T15:04:05Z07:00"),
+	}
+	if !r.LastSync.IsZero() {
+		resp.LastSync = r.LastSync.Format("2006-01-02T15:04:05Z07:00")
+	}
+	return resp
 }

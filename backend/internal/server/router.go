@@ -22,7 +22,7 @@ import (
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
-func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, remoteService *infra.GitRemoteService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
+func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
 	mux := &http.ServeMux{}
 	jwtSecretBytes := []byte(jwtSecret)
 
@@ -36,7 +36,7 @@ func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *i
 	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
 	mh := handlers.NewMembershipHandler(memService, userService, authh)
 	orgh := handlers.NewOrganizationHandler(orgService)
-	grh := handlers.NewGitRemoteHandler(remoteService, gitService, orgService.RootDir())
+	grh := handlers.NewGitRemoteHandler(orgService, gitService, orgService.RootDir())
 
 	// Helper to create WrapAuth with common deps
 	viewer := entity.UserRoleViewer
@@ -64,11 +64,11 @@ func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *i
 	mux.Handle("GET /api/{orgID}/onboarding", WrapAuth(userService, memService, jwtSecretBytes, viewer, orgh.GetOnboarding))
 	mux.Handle("PUT /api/{orgID}/onboarding", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateOnboarding))
 
-	// Git Remote endpoints
-	mux.Handle("GET /api/{orgID}/settings/git/remotes", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.ListRemotes))
-	mux.Handle("POST /api/{orgID}/settings/git/remotes", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.CreateRemote))
-	mux.Handle("POST /api/{orgID}/settings/git/remotes/{remoteID}/push", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.Push))
-	mux.Handle("DELETE /api/{orgID}/settings/git/remotes/{remoteID}", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.DeleteRemote))
+	// Git Remote endpoints (one remote per org)
+	mux.Handle("GET /api/{orgID}/settings/git/remote", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.GetRemote))
+	mux.Handle("PUT /api/{orgID}/settings/git/remote", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.SetRemote))
+	mux.Handle("POST /api/{orgID}/settings/git/remote/push", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.Push))
+	mux.Handle("DELETE /api/{orgID}/settings/git/remote", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.DeleteRemote))
 
 	// OAuth endpoints (public)
 	if (googleClientID != "" && googleClientSecret != "") || (msClientID != "" && msClientSecret != "") {

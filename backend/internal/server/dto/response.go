@@ -188,11 +188,6 @@ type SwitchOrgResponse struct {
 
 // --- Git Remote Responses ---
 
-// ListGitRemotesResponse is a response containing a list of git remotes.
-type ListGitRemotesResponse struct {
-	Remotes []GitRemoteResponse `json:"remotes"`
-}
-
 // --- Health Responses ---
 
 // HealthResponse is a response from a health check.
@@ -258,10 +253,9 @@ type OrganizationResponse struct {
 }
 
 // GitRemoteResponse is the API representation of a git remote.
+// Each organization has at most one remote, identified by OrganizationID.
 type GitRemoteResponse struct {
-	ID             string `json:"id" jsonschema:"description=Unique git remote identifier"`
 	OrganizationID string `json:"organization_id" jsonschema:"description=Organization this remote belongs to"`
-	Name           string `json:"name" jsonschema:"description=Remote name (e.g. origin)"`
 	URL            string `json:"url" jsonschema:"description=Git repository URL"`
 	Type           string `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
 	AuthType       string `json:"auth_type" jsonschema:"description=Authentication method (token/ssh)"`

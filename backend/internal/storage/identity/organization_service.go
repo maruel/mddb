@@ -136,3 +136,73 @@ func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state entity.Onboa
 func (s *OrganizationService) RootDir() string {
 	return s.rootDir
 }
+
+// GetGitRemote returns the git remote for an organization, or nil if none is configured.
+func (s *OrganizationService) GetGitRemote(id jsonldb.ID) *entity.GitRemote {
+	org := s.table.Get(id)
+	if org == nil || org.GitRemote.IsZero() {
+		return nil
+	}
+	remote := org.GitRemote
+	return &remote
+}
+
+// SetGitRemote creates or updates the git remote for an organization.
+func (s *OrganizationService) SetGitRemote(id jsonldb.ID, url, remoteType, authType, token string) (*entity.GitRemote, error) {
+	org := s.table.Get(id)
+	if org == nil {
+		return nil, errOrgNotFound
+	}
+
+	// Preserve existing timestamps on update
+	created := org.GitRemote.Created
+	lastSync := org.GitRemote.LastSync
+	if org.GitRemote.IsZero() {
+		created = time.Now()
+	}
+
+	org.GitRemote = entity.GitRemote{
+		URL:      url,
+		Type:     remoteType,
+		AuthType: authType,
+		Token:    token,
+		Created:  created,
+		LastSync: lastSync,
+	}
+
+	if _, err := s.table.Update(org); err != nil {
+		return nil, err
+	}
+	remote := org.GitRemote
+	return &remote, nil
+}
+
+// DeleteGitRemote removes the git remote configuration from an organization.
+func (s *OrganizationService) DeleteGitRemote(id jsonldb.ID) error {
+	org := s.table.Get(id)
+	if org == nil {
+		return errOrgNotFound
+	}
+	if org.GitRemote.IsZero() {
+		return errOrgNotFound // No remote to delete
+	}
+
+	org.GitRemote = entity.GitRemote{}
+	_, err := s.table.Update(org)
+	return err
+}
+
+// UpdateGitRemoteLastSync updates the last sync time for an organization's git remote.
+func (s *OrganizationService) UpdateGitRemoteLastSync(id jsonldb.ID) error {
+	org := s.table.Get(id)
+	if org == nil {
+		return errOrgNotFound
+	}
+	if org.GitRemote.IsZero() {
+		return errOrgNotFound // No remote to update
+	}
+
+	org.GitRemote.LastSync = time.Now()
+	_, err := s.table.Update(org)
+	return err
+}

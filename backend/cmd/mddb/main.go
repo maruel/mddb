@@ -180,11 +180,6 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize invitation service: %w", err)
 	}
 
-	remoteService, err := infra.NewGitRemoteService(*dataDir)
-	if err != nil {
-		return fmt.Errorf("failed to initialize git remote service: %w", err)
-	}
-
 	// Create context that cancels on SIGTERM and SIGINT
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
@@ -192,7 +187,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(fileStore, gitService, userService, orgService, invService, memService, remoteService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
+		Handler:           server.NewRouter(fileStore, gitService, userService, orgService, invService, memService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}
