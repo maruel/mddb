@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -249,5 +250,63 @@ func TestInvitationService(t *testing.T) {
 				t.Error("Wrong invitation returned")
 			}
 		})
+	})
+}
+
+func TestInvalidJSONLInvitationFiles(t *testing.T) {
+	// Test with invalid JSONL content for invitations
+	t.Run("InvalidJSONLInvitation", func(t *testing.T) {
+		tempDir := t.TempDir()
+		jsonlPath := filepath.Join(tempDir, "invalid_invitations.jsonl")
+
+		// Write invalid JSON to the file (malformed JSON)
+		err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
+{"id":1,"email":"test@example.com","org_id":100,"token":"token123"}
+{"id":2,"email":"test2@example.com","org_id":101,"token":"token456"
+`), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = NewInvitationService(jsonlPath)
+		if err == nil {
+			t.Error("Expected error when loading invalid JSONL file")
+		}
+	})
+
+	t.Run("InvalidJSONLInvitationWithMalformedRow", func(t *testing.T) {
+		tempDir := t.TempDir()
+		jsonlPath := filepath.Join(tempDir, "malformed_invitations.jsonl")
+
+		// Write JSON with malformed row (missing required fields)
+		err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
+{"id":1,"email":"","org_id":100,"token":"token123"}
+`), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = NewInvitationService(jsonlPath)
+		if err == nil {
+			t.Error("Expected error when loading JSONL with invalid row (empty email)")
+		}
+	})
+
+	t.Run("InvalidJSONLInvitationWithZeroID", func(t *testing.T) {
+		tempDir := t.TempDir()
+		jsonlPath := filepath.Join(tempDir, "zero_id_invitations.jsonl")
+
+		// Write JSON with zero ID
+		err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
+{"id":0,"email":"test@example.com","org_id":100,"token":"token123"}
+`), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = NewInvitationService(jsonlPath)
+		if err == nil {
+			t.Error("Expected error when loading JSONL with zero ID")
+		}
 	})
 }

@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -384,6 +385,64 @@ func TestUserService(t *testing.T) {
 		}
 		if found2.ID != persistUser.ID {
 			t.Errorf("Expected user ID %v, got %v", persistUser.ID, found2.ID)
+		}
+	})
+}
+
+func TestInvalidJSONLUserFiles(t *testing.T) {
+	// Test with invalid JSONL content for users
+	t.Run("InvalidJSONLUser", func(t *testing.T) {
+		tempDir := t.TempDir()
+		jsonlPath := filepath.Join(tempDir, "invalid_users.jsonl")
+
+		// Write invalid JSON to the file (malformed JSON)
+		err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
+{"user":{"id":1,"email":"test@example.com"},"password_hash":"hash"}
+{"user":{"id":2,"email":"test2@example.com"},"password_hash":"hash2"
+`), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = NewUserService(jsonlPath)
+		if err == nil {
+			t.Error("Expected error when loading invalid JSONL file")
+		}
+	})
+
+	t.Run("InvalidJSONLUserWithMalformedRow", func(t *testing.T) {
+		tempDir := t.TempDir()
+		jsonlPath := filepath.Join(tempDir, "malformed_users.jsonl")
+
+		// Write JSON with malformed row (missing required fields)
+		err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
+{"user":{"id":1,"email":""},"password_hash":"hash"}
+`), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = NewUserService(jsonlPath)
+		if err == nil {
+			t.Error("Expected error when loading JSONL with invalid row (empty email)")
+		}
+	})
+
+	t.Run("InvalidJSONLUserWithZeroID", func(t *testing.T) {
+		tempDir := t.TempDir()
+		jsonlPath := filepath.Join(tempDir, "zero_id_users.jsonl")
+
+		// Write JSON with zero ID
+		err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
+{"user":{"id":0,"email":"test@example.com"},"password_hash":"hash"}
+`), 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = NewUserService(jsonlPath)
+		if err == nil {
+			t.Error("Expected error when loading JSONL with zero ID")
 		}
 	})
 }
