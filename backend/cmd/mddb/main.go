@@ -151,16 +151,6 @@ func mainImpl() error {
 	}
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: ll})))
 
-	gitService, err := git.New(context.Background(), *dataDir, "", "")
-	if err != nil {
-		return fmt.Errorf("failed to initialize git service: %w", err)
-	}
-
-	fileStore, err := content.NewFileStore(*dataDir, gitService)
-	if err != nil {
-		return fmt.Errorf("failed to initialize file store: %w", err)
-	}
-
 	// Create db directory for identity tables
 	dbDir := filepath.Join(*dataDir, "db")
 	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
@@ -177,9 +167,15 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize organization service: %w", err)
 	}
 
-	// Set up quota checking now that we have both FileStore and OrgService
-	quotaChecker := content.NewOrgQuotaChecker(orgService, fileStore)
-	fileStore.SetQuotaChecker(quotaChecker)
+	gitService, err := git.New(context.Background(), *dataDir, "", "")
+	if err != nil {
+		return fmt.Errorf("failed to initialize git service: %w", err)
+	}
+
+	fileStore, err := content.NewFileStore(*dataDir, gitService, orgService)
+	if err != nil {
+		return fmt.Errorf("failed to initialize file store: %w", err)
+	}
 
 	userService, err := identity.NewUserService(filepath.Join(dbDir, "users.jsonl"))
 	if err != nil {

@@ -16,16 +16,6 @@ func TestRegister(t *testing.T) {
 	ctx := context.Background()
 	tempDir := t.TempDir()
 
-	gitService, err := git.New(ctx, tempDir, "test", "test@test.com")
-	if err != nil {
-		t.Fatalf("git.New failed: %v", err)
-	}
-
-	fileStore, err := content.NewFileStore(tempDir, gitService)
-	if err != nil {
-		t.Fatalf("NewFileStore failed: %v", err)
-	}
-
 	memService, err := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
 	if err != nil {
 		t.Fatalf("NewMembershipService failed: %v", err)
@@ -36,14 +26,20 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("NewOrganizationService failed: %v", err)
 	}
 
+	gitService, err := git.New(ctx, tempDir, "test", "test@test.com")
+	if err != nil {
+		t.Fatalf("git.New failed: %v", err)
+	}
+
+	fileStore, err := content.NewFileStore(tempDir, gitService, orgService)
+	if err != nil {
+		t.Fatalf("NewFileStore failed: %v", err)
+	}
+
 	userService, err := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
 	if err != nil {
 		t.Fatalf("NewUserService failed: %v", err)
 	}
-
-	// Set quota checker after orgService is created
-	quotaChecker := content.NewOrgQuotaChecker(orgService, fileStore)
-	fileStore.SetQuotaChecker(quotaChecker)
 
 	authHandler := NewAuthHandler(userService, memService, orgService, fileStore, "secret")
 

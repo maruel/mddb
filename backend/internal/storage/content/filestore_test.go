@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
@@ -21,26 +22,19 @@ func testFileStore(t *testing.T) *FileStore {
 		t.Fatalf("failed to create git client: %v", err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitClient)
+	fs, err := NewFileStore(tmpDir, gitClient, &noopQuotaGetter{})
 	if err != nil {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
 
-	// Use no-op quota checker for tests
-	fs.SetQuotaChecker(&noopQuotaChecker{})
-
 	return fs
 }
 
-// noopQuotaChecker always allows operations (for testing).
-type noopQuotaChecker struct{}
+// noopQuotaGetter returns unlimited quotas (for testing).
+type noopQuotaGetter struct{}
 
-func (n *noopQuotaChecker) CheckPageQuota(ctx context.Context, orgID jsonldb.ID) error {
-	return nil
-}
-
-func (n *noopQuotaChecker) CheckStorageQuota(ctx context.Context, orgID jsonldb.ID, additionalBytes int64) error {
-	return nil
+func (n *noopQuotaGetter) GetQuota(_ context.Context, _ jsonldb.ID) (entity.Quota, error) {
+	return entity.Quota{}, nil // Zero values = no limits
 }
 
 func TestFileStorePageOperations(t *testing.T) {

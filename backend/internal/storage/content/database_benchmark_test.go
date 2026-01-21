@@ -22,11 +22,10 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitClient)
+	fs, err := NewFileStore(tmpDir, gitClient, &noopQuotaGetter{})
 	if err != nil {
 		b.Fatal(err)
 	}
-	fs.SetQuotaChecker(&noopQuotaChecker{})
 
 	orgID := jsonldb.ID(1) // non-zero org for tests
 
