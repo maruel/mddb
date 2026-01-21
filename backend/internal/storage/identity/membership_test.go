@@ -289,62 +289,61 @@ func TestMembershipService(t *testing.T) {
 			t.Errorf("Persisted Role = %v, want %v", retrieved.Role, UserRoleAdmin)
 		}
 	})
-}
 
-func TestInvalidJSONLMembershipFiles(t *testing.T) {
-	// Test with invalid JSONL content for memberships
-	t.Run("InvalidJSONLMembership", func(t *testing.T) {
-		tempDir := t.TempDir()
-		jsonlPath := filepath.Join(tempDir, "invalid_memberships.jsonl")
+	t.Run("InvalidJSONL", func(t *testing.T) {
+		t.Run("malformed JSON", func(t *testing.T) {
+			tempDir := t.TempDir()
+			jsonlPath := filepath.Join(tempDir, "invalid_memberships.jsonl")
 
-		// Write invalid JSON to the file (malformed JSON)
-		err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
+			// Write invalid JSON to the file (malformed JSON)
+			err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
 {"id":1,"user_id":100,"org_id":200,"role":"admin"}
 {"id":2,"user_id":101,"org_id":201,"role":"viewer"
-`), 0o644)
-		if err != nil {
-			t.Fatal(err)
-		}
+`), 0o600)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		_, err = NewMembershipService(jsonlPath)
-		if err == nil {
-			t.Error("Expected error when loading invalid JSONL file")
-		}
-	})
+			_, err = NewMembershipService(jsonlPath)
+			if err == nil {
+				t.Error("Expected error when loading invalid JSONL file")
+			}
+		})
 
-	t.Run("InvalidJSONLMembershipWithMalformedRow", func(t *testing.T) {
-		tempDir := t.TempDir()
-		jsonlPath := filepath.Join(tempDir, "malformed_memberships.jsonl")
+		t.Run("malformed row with empty role", func(t *testing.T) {
+			tempDir := t.TempDir()
+			jsonlPath := filepath.Join(tempDir, "malformed_memberships.jsonl")
 
-		// Write JSON with malformed row (missing required fields)
-		err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
+			// Write JSON with malformed row (missing required fields)
+			err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
 {"id":1,"user_id":100,"org_id":200,"role":""}
-`), 0o644)
-		if err != nil {
-			t.Fatal(err)
-		}
+`), 0o600)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		_, err = NewMembershipService(jsonlPath)
-		if err == nil {
-			t.Error("Expected error when loading JSONL with invalid row (empty role)")
-		}
-	})
+			_, err = NewMembershipService(jsonlPath)
+			if err == nil {
+				t.Error("Expected error when loading JSONL with invalid row (empty role)")
+			}
+		})
 
-	t.Run("InvalidJSONLMembershipWithZeroID", func(t *testing.T) {
-		tempDir := t.TempDir()
-		jsonlPath := filepath.Join(tempDir, "zero_id_memberships.jsonl")
+		t.Run("row with zero ID", func(t *testing.T) {
+			tempDir := t.TempDir()
+			jsonlPath := filepath.Join(tempDir, "zero_id_memberships.jsonl")
 
-		// Write JSON with zero ID
-		err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
+			// Write JSON with zero ID
+			err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
 {"id":0,"user_id":100,"org_id":200,"role":"admin"}
-`), 0o644)
-		if err != nil {
-			t.Fatal(err)
-		}
+`), 0o600)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		_, err = NewMembershipService(jsonlPath)
-		if err == nil {
-			t.Error("Expected error when loading JSONL with zero ID")
-		}
+			_, err = NewMembershipService(jsonlPath)
+			if err == nil {
+				t.Error("Expected error when loading JSONL with zero ID")
+			}
+		})
 	})
 }
