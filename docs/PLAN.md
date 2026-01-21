@@ -66,12 +66,20 @@ See `README.md` and `API.md` for details.
 - Added invitation system and OAuth2 (Google/Microsoft) integration.
 - Developed tiered settings for users, memberships, and organizations.
 
-### Phase 8: Experience & Scaling ✓
-*Completed.*
-- Scoped search results to active organizations.
-- Added organization switcher UI and unified API type generation (tygo).
-- Implemented quota enforcement for users, pages, and storage.
-- Added administrative management UIs.
+### Phase 8: Experience & Scaling
+*In Progress.*
+- [x] Scoped search results to active organizations.
+- [x] Added organization switcher UI and unified API type generation (tygo).
+- [x] Implemented quota enforcement for users, pages, and storage.
+- [ ] **Advanced Quota Enforcement**:
+    - [x] **Performance**: `MaxRecordsPerTable` (O(n) protection).
+    - [x] **Performance**: `MaxAssetSize` (single file limit).
+    - [ ] **Business Tiering**: `MaxHistoryRetention` (days/commits).
+    - [ ] **Business Tiering**: `MaxGuests` (read-only users).
+    - [ ] **Business Tiering**: `MaxApiKeys`.
+    - [ ] **Operational**: `RequestRateLimit` (RPM protection).
+    - [ ] **Operational**: `BandwidthLimit` (egress tracking).
+- [x] Added administrative management UIs.
 
 ### Phase 9: Advanced Sync & Onboarding
 *In Progress.*
@@ -629,11 +637,6 @@ Response: { "records": [...], "total": 150 }
 - Updated frontend TypeScript types via tygo (generating only from dto package).
 
 ## Future Considerations
-- **Advanced Quota Enforcement**:
-    - **Performance**: `MaxRecordsPerDatabase` (O(n) protection), `MaxAssetSize` (single file limit), `MaxRepoSize` (Git history growth).
-    - **Business Tiering**: `MaxHistoryRetention` (days/commits), `MaxGuests` (read-only users), `MaxApiKeys`.
-    - **Operational**: `RequestRateLimit` (RPM protection), `BandwidthLimit` (egress tracking).
-    - **AI**: `MaxAITokens` / `MaxAIRequests` (Phase 11).
 - **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
 - **Publishing & Extensibility**: Public pages, custom domains, webhooks, and per-organization API keys.
 - **Google Drive Integration**: Bi-directional sync/import/export for Google Docs (Markdown) and Google Sheets (JSONL).

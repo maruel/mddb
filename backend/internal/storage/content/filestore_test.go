@@ -30,6 +30,29 @@ func testFileStore(t *testing.T) *FileStore {
 	return fs
 }
 
+// testFileStoreWithQuota creates a FileStore with a real OrganizationService for quota testing.
+func testFileStoreWithQuota(t *testing.T) *FileStore {
+	t.Helper()
+	tmpDir := t.TempDir()
+
+	gitClient, err := git.New(context.Background(), tmpDir, "test", "test@test.com")
+	if err != nil {
+		t.Fatalf("failed to create git client: %v", err)
+	}
+
+	orgService, err := identity.NewOrganizationService(filepath.Join(tmpDir, "organizations.jsonl"))
+	if err != nil {
+		t.Fatalf("failed to create OrganizationService: %v", err)
+	}
+
+	fs, err := NewFileStore(tmpDir, gitClient, orgService)
+	if err != nil {
+		t.Fatalf("failed to create FileStore: %v", err)
+	}
+
+	return fs
+}
+
 // noopQuotaGetter returns unlimited quotas (for testing).
 type noopQuotaGetter struct{}
 
@@ -119,6 +142,84 @@ func TestFileStorePageOperations(t *testing.T) {
 	if err == nil {
 		t.Error("expected error reading non-existent page")
 	}
+}
+
+func TestAsset_Quota(t *testing.T) {
+	fs := testFileStoreWithQuota(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
+
+	orgService := fs.quotaGetter.(*identity.OrganizationService)
+	org, err := orgService.Create(ctx, "Test Org")
+	if err != nil {
+		t.Fatalf("Failed to create org: %v", err)
+	}
+	orgID := org.ID
+
+	pageID := jsonldb.ID(1)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
+
+	t.Run("MaxAssetSize", func(t *testing.T) {
+		// Set small asset size quota
+		_, err = orgService.Modify(orgID, func(o *identity.Organization) error {
+			o.Quotas.MaxAssetSize = 10
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Failed to modify org quota: %v", err)
+		}
+
+		// Try to save asset larger than quota
+		_, err = fs.SaveAsset(ctx, orgID, pageID, "test.txt", []byte("this is more than 10 bytes"), author)
+		if err == nil {
+			t.Error("Expected error when exceeding asset size quota")
+		}
+
+		// Save asset within quota
+		_, err = fs.SaveAsset(ctx, orgID, pageID, "small.txt", []byte("small"), author)
+		if err != nil {
+			t.Errorf("Unexpected error saving small asset: %v", err)
+		}
+	})
+
+	t.Run("MaxStorage", func(t *testing.T) {
+		// Set small total storage quota
+		_, err = orgService.Modify(orgID, func(o *identity.Organization) error {
+			o.Quotas.MaxStorage = 100
+			o.Quotas.MaxAssetSize = 100 // Ensure single asset fits
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Failed to modify org quota: %v", err)
+		}
+
+		// Save first asset
+		_, err = fs.SaveAsset(ctx, orgID, pageID, "1.txt", []byte("0123456789"), author) // 10 bytes
+		if err != nil {
+			t.Fatalf("Failed to save first asset: %v", err)
+		}
+
+		// Save second asset
+		_, err = fs.SaveAsset(ctx, orgID, pageID, "2.txt", []byte("0123456789012345678901234567890123456789"), author) // 40 bytes
+		if err != nil {
+			t.Fatalf("Failed to save second asset: %v", err)
+		}
+
+		// Total usage is now ~50 bytes + overhead.
+		// Try to save something that definitely exceeds 100.
+		largeData := make([]byte, 100)
+		_, err = fs.SaveAsset(ctx, orgID, pageID, "large.txt", largeData, author)
+		if err == nil {
+			t.Error("Expected error when exceeding total storage quota")
+		}
+	})
 }
 
 func TestFileStoreListPages(t *testing.T) {

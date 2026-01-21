@@ -123,6 +123,36 @@ func (fs *FileStore) checkStorageQuota(ctx context.Context, orgID jsonldb.ID, ad
 	return nil
 }
 
+// checkRecordQuota returns an error if adding a new record would exceed the table's record quota.
+func (fs *FileStore) checkRecordQuota(ctx context.Context, orgID jsonldb.ID, currentCount int) error {
+	quota, err := fs.quotaGetter.GetQuota(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	if quota.MaxRecordsPerTable <= 0 {
+		return nil // No limit
+	}
+	if currentCount >= quota.MaxRecordsPerTable {
+		return errQuotaExceeded
+	}
+	return nil
+}
+
+// checkAssetSizeQuota returns an error if the given size exceeds the organization's single asset size quota.
+func (fs *FileStore) checkAssetSizeQuota(ctx context.Context, orgID jsonldb.ID, size int64) error {
+	quota, err := fs.quotaGetter.GetQuota(ctx, orgID)
+	if err != nil {
+		return err
+	}
+	if quota.MaxAssetSize <= 0 {
+		return nil // No limit
+	}
+	if size > quota.MaxAssetSize {
+		return errQuotaExceeded
+	}
+	return nil
+}
+
 func (fs *FileStore) orgPagesDir(orgID jsonldb.ID) string {
 	if orgID == 0 {
 		return ""
@@ -652,6 +682,10 @@ func (fs *FileStore) AppendRecord(ctx context.Context, orgID, tableID jsonldb.ID
 		return fmt.Errorf("failed to load table: %w", err)
 	}
 
+	if err := fs.checkRecordQuota(ctx, orgID, table.Len()); err != nil {
+		return err
+	}
+
 	// Append record
 	if err := table.Append(record); err != nil {
 		return fmt.Errorf("failed to append record: %w", err)
@@ -788,8 +822,11 @@ func (fs *FileStore) databaseMetadataFile(orgID, id jsonldb.ID) string {
 
 // SaveAsset saves an asset associated with a page and commits to git.
 func (fs *FileStore) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, assetName string, data []byte, author Author) (*Asset, error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
+	}
+	if err := fs.checkAssetSizeQuota(ctx, orgID, int64(len(data))); err != nil {
+		return nil, err
 	}
 	if err := fs.checkStorageQuota(ctx, orgID, int64(len(data))); err != nil {
 		return nil, err

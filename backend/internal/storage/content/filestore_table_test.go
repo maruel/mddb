@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestTable_ReadWrite(t *testing.T) {
@@ -344,6 +345,75 @@ func TestRecord_AppendRead(t *testing.T) {
 	recordsPath := fs.databaseRecordsFile(orgID, dbID)
 	if _, err := os.Stat(recordsPath); err != nil {
 		t.Errorf("Records file not found: %s", recordsPath)
+	}
+}
+
+func TestRecord_Quota(t *testing.T) {
+	fs := testFileStoreWithQuota(t)
+	ctx := context.Background()
+	author := Author{Name: "Test", Email: "test@test.com"}
+
+	orgService := fs.quotaGetter.(*identity.OrganizationService)
+	org, err := orgService.Create(ctx, "Test Org")
+	if err != nil {
+		t.Fatalf("Failed to create org: %v", err)
+	}
+	orgID := org.ID
+
+	dbID := jsonldb.ID(1)
+
+	// Create org directory and initialize git repo
+	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("failed to init org git repo: %v", err)
+	}
+
+	// Create table
+	node := &Node{
+		ID:    dbID,
+		Title: "Test",
+		Type:  NodeTypeTable,
+		Properties: []Property{
+			{Name: "name", Type: "text"},
+		},
+		Created:  time.Now(),
+		Modified: time.Now(),
+	}
+	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		t.Fatalf("Failed to create table: %v", err)
+	}
+
+	// Append one record
+	rec := &DataRecord{
+		ID:       jsonldb.NewID(),
+		Data:     map[string]any{"name": "Record 1"},
+		Created:  time.Now(),
+		Modified: time.Now(),
+	}
+	if err := fs.AppendRecord(ctx, orgID, dbID, rec, author); err != nil {
+		t.Fatalf("Failed to append record: %v", err)
+	}
+
+	// Now try to exceed quota by setting a very small quota.
+	_, err = orgService.Modify(orgID, func(org *identity.Organization) error {
+		org.Quotas.MaxRecordsPerTable = 1
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Failed to modify org quota: %v", err)
+	}
+
+	// Try to append second record - should fail
+	rec2 := &DataRecord{
+		ID:       jsonldb.NewID(),
+		Data:     map[string]any{"name": "Record 2"},
+		Created:  time.Now(),
+		Modified: time.Now(),
+	}
+	if err := fs.AppendRecord(ctx, orgID, dbID, rec2, author); err == nil {
+		t.Error("Expected error when exceeding record quota")
 	}
 }
 

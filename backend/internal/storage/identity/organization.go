@@ -43,7 +43,7 @@ func (o *Organization) Validate() error {
 	if o.Name == "" {
 		return errNameRequired
 	}
-	if o.Quotas.MaxPages <= 0 || o.Quotas.MaxStorage <= 0 || o.Quotas.MaxUsers <= 0 {
+	if o.Quotas.MaxPages <= 0 || o.Quotas.MaxStorage <= 0 || o.Quotas.MaxUsers <= 0 || o.Quotas.MaxRecordsPerTable <= 0 || o.Quotas.MaxAssetSize <= 0 {
 		return errInvalidOrgQuota
 	}
 	return nil
@@ -80,9 +80,11 @@ func (g *GitRemote) IsZero() bool {
 
 // OrganizationQuota defines limits for an organization.
 type OrganizationQuota struct {
-	MaxPages   int   `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
-	MaxStorage int64 `json:"max_storage" jsonschema:"description=Maximum storage in bytes"`
-	MaxUsers   int   `json:"max_users" jsonschema:"description=Maximum number of users allowed"`
+	MaxPages           int   `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
+	MaxStorage         int64 `json:"max_storage" jsonschema:"description=Maximum storage in bytes"`
+	MaxUsers           int   `json:"max_users" jsonschema:"description=Maximum number of users allowed"`
+	MaxRecordsPerTable int   `json:"max_records_per_table" jsonschema:"description=Maximum number of records allowed per table"`
+	MaxAssetSize       int64 `json:"max_asset_size" jsonschema:"description=Maximum size of a single asset in bytes"`
 }
 
 // OrganizationService handles organization management.
@@ -118,9 +120,11 @@ func (s *OrganizationService) Create(_ context.Context, name string) (*Organizat
 		Name:    name,
 		Created: now,
 		Quotas: OrganizationQuota{
-			MaxPages:   1000,
-			MaxStorage: 1024 * 1024 * 1024, // 1 GiB
-			MaxUsers:   3,
+			MaxPages:           1000,
+			MaxStorage:         1024 * 1024 * 1024, // 1 GiB
+			MaxUsers:           3,
+			MaxRecordsPerTable: 10000,
+			MaxAssetSize:       50 * 1024 * 1024, // 50 MiB
 		},
 		Onboarding: OnboardingState{
 			Completed: false,

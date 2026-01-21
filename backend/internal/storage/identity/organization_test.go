@@ -15,9 +15,11 @@ func TestOrganization(t *testing.T) {
 				ID:   jsonldb.ID(1),
 				Name: "Test Org",
 				Quotas: OrganizationQuota{
-					MaxPages:   100,
-					MaxStorage: 1024,
-					MaxUsers:   10,
+					MaxPages:           100,
+					MaxStorage:         1024,
+					MaxUsers:           10,
+					MaxRecordsPerTable: 1000,
+					MaxAssetSize:       1024,
 				},
 			}
 			if err := valid.Validate(); err != nil {
@@ -30,9 +32,11 @@ func TestOrganization(t *testing.T) {
 				ID:   jsonldb.ID(0),
 				Name: "Test Org",
 				Quotas: OrganizationQuota{
-					MaxPages:   100,
-					MaxStorage: 1024,
-					MaxUsers:   10,
+					MaxPages:           100,
+					MaxStorage:         1024,
+					MaxUsers:           10,
+					MaxRecordsPerTable: 1000,
+					MaxAssetSize:       1024,
 				},
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -45,9 +49,11 @@ func TestOrganization(t *testing.T) {
 				ID:   jsonldb.ID(1),
 				Name: "",
 				Quotas: OrganizationQuota{
-					MaxPages:   100,
-					MaxStorage: 1024,
-					MaxUsers:   10,
+					MaxPages:           100,
+					MaxStorage:         1024,
+					MaxUsers:           10,
+					MaxRecordsPerTable: 1000,
+					MaxAssetSize:       1024,
 				},
 			}
 			if err := emptyName.Validate(); err == nil {
@@ -59,9 +65,11 @@ func TestOrganization(t *testing.T) {
 				ID:   jsonldb.ID(1),
 				Name: "Test Org",
 				Quotas: OrganizationQuota{
-					MaxPages:   0,
-					MaxStorage: 1024,
-					MaxUsers:   10,
+					MaxPages:           0,
+					MaxStorage:         1024,
+					MaxUsers:           10,
+					MaxRecordsPerTable: 1000,
+					MaxAssetSize:       1024,
 				},
 			}
 			if err := invalidQuota.Validate(); err == nil {
