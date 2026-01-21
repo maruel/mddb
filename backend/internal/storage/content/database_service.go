@@ -118,7 +118,7 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.
 	}
 
 	if s.gitService != nil {
-		msg := fmt.Sprintf("update: database %s", id.String())
+		msg := "update: database " + id.String()
 		files := []string{"pages/" + id.String() + "/metadata.json"}
 		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -138,7 +138,7 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.
 	}
 
 	if s.gitService != nil {
-		msg := fmt.Sprintf("delete: database %s", id.String())
+		msg := "delete: database " + id.String()
 		files := []string{"pages/" + id.String()}
 		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)

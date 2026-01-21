@@ -106,7 +106,7 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 	}
 
 	if s.gitService != nil {
-		msg := fmt.Sprintf("update: page %s", id.String())
+		msg := "update: page " + id.String()
 		files := []string{"pages/" + id.String() + "/index.md"}
 		if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -127,7 +127,7 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID, auth
 	}
 
 	if s.gitService != nil {
-		msg := fmt.Sprintf("delete: page %s", id.String())
+		msg := "delete: page " + id.String()
 		files := []string{"pages/" + id.String()}
 		if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
