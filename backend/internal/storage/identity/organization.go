@@ -3,15 +3,11 @@ package identity
 import (
 	"context"
 	"errors"
-	"fmt"
 	"iter"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 // Organization represents a workspace or group of users.
@@ -85,28 +81,24 @@ func (g *GitRemote) IsZero() bool {
 // An Organization owns a file storage that is managed by git. Users can be member of this organization via a
 // Membership.
 type OrganizationService struct {
-	rootDir    string
-	table      *jsonldb.Table[*Organization]
-	gitService *git.Client
+	table *jsonldb.Table[*Organization]
 }
 
 // NewOrganizationService creates a new organization service.
 // tablePath is the path to the organizations.jsonl file.
-// rootDir is the root directory for organization content (each org gets a subdirectory).
-func NewOrganizationService(tablePath, rootDir string, gitService *git.Client) (*OrganizationService, error) {
+func NewOrganizationService(tablePath string) (*OrganizationService, error) {
 	table, err := jsonldb.NewTable[*Organization](tablePath)
 	if err != nil {
 		return nil, err
 	}
 	return &OrganizationService{
-		rootDir:    rootDir,
-		table:      table,
-		gitService: gitService,
+		table: table,
 	}, nil
 }
 
-// Create creates a new organization.
-func (s *OrganizationService) Create(ctx context.Context, name string) (*Organization, error) {
+// Create creates a new organization record.
+// Note: After calling Create, callers should also call FileStore.InitOrg to initialize storage.
+func (s *OrganizationService) Create(_ context.Context, name string) (*Organization, error) {
 	if name == "" {
 		return nil, errOrgNameRequired
 	}
@@ -124,16 +116,6 @@ func (s *OrganizationService) Create(ctx context.Context, name string) (*Organiz
 	}
 	if err := s.table.Append(org); err != nil {
 		return nil, err
-	}
-	// Create organization content directory
-	orgDir := filepath.Join(s.rootDir, id.String())
-	orgPagesDir := filepath.Join(orgDir, "pages")
-	if err := os.MkdirAll(orgPagesDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
-		return nil, fmt.Errorf("failed to create organization content directory: %w", err)
-	}
-	// Initialize git repository for the organization
-	if err := s.gitService.Init(ctx, id.String()); err != nil {
-		return nil, fmt.Errorf("failed to initialize git repo for org %s: %w", id, err)
 	}
 	return org, nil
 }

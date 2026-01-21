@@ -85,6 +85,11 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 		return nil, dto.InternalWithError("Failed to create organization", err)
 	}
 
+	// Initialize organization storage
+	if err := h.fs.InitOrg(ctx, org.ID); err != nil {
+		return nil, dto.InternalWithError("Failed to initialize organization storage", err)
+	}
+
 	// Create welcome page
 	welcomeTitle := "Welcome to " + orgName
 	welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."

@@ -31,7 +31,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("NewMembershipService failed: %v", err)
 	}
 
-	orgService, err := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, gitService)
+	orgService, err := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
 	if err != nil {
 		t.Fatalf("NewOrganizationService failed: %v", err)
 	}

@@ -76,6 +76,23 @@ func (fs *FileStore) SetQuotaChecker(quota QuotaChecker) {
 	fs.quota = quota
 }
 
+// InitOrg initializes storage for a new organization.
+// Creates the org directory structure and initializes git.
+func (fs *FileStore) InitOrg(ctx context.Context, orgID jsonldb.ID) error {
+	if orgID.IsZero() {
+		return errOrgIDRequired
+	}
+	orgDir := filepath.Join(fs.rootDir, orgID.String())
+	pagesDir := filepath.Join(orgDir, "pages")
+	if err := os.MkdirAll(pagesDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
+		return fmt.Errorf("failed to create organization directory: %w", err)
+	}
+	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+		return fmt.Errorf("failed to initialize git repo for org %s: %w", orgID, err)
+	}
+	return nil
+}
+
 var errQuotaNotSet = errors.New("quota checker not set on FileStore")
 
 func (fs *FileStore) checkQuotaSet() error {

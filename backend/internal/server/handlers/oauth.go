@@ -176,6 +176,13 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			// Initialize organization storage
+			if err := h.fs.InitOrg(r.Context(), org.ID); err != nil {
+				slog.ErrorContext(r.Context(), "Failed to initialize org storage", "error", err, "org_id", org.ID)
+				writeErrorResponse(w, dto.Internal("org_init"))
+				return
+			}
+
 			// Create welcome page
 			welcomeTitle := "Welcome to " + orgName
 			welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
