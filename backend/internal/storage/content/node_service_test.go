@@ -12,14 +12,10 @@ func TestNewNodeService(t *testing.T) {
 	tempDir := t.TempDir()
 
 	fileStore, _ := infra.NewFileStore(tempDir)
-	cache := infra.NewCache()
-	service := NewNodeService(fileStore, nil, cache, nil)
+	service := NewNodeService(fileStore, nil, nil)
 
 	if service.fileStore != fileStore {
 		t.Error("fileStore not properly assigned")
-	}
-	if service.cache != cache {
-		t.Error("cache not properly assigned")
 	}
 }
 
@@ -27,8 +23,7 @@ func TestNodeService_GetNode(t *testing.T) {
 	tempDir := t.TempDir()
 
 	fileStore, _ := infra.NewFileStore(tempDir)
-	cache := infra.NewCache()
-	service := NewNodeService(fileStore, nil, cache, nil)
+	service := NewNodeService(fileStore, nil, nil)
 
 	ctx := t.Context()
 	orgID := jsonldb.ID(999)
@@ -52,8 +47,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := infra.NewFileStore(tempDir)
-	cache := infra.NewCache()
-	service := NewNodeService(fileStore, nil, cache, orgService)
+	service := NewNodeService(fileStore, nil, orgService)
 
 	// Test creating a document node
 	var emptyParentID jsonldb.ID
@@ -111,8 +105,7 @@ func TestNodeService_ListNodes(t *testing.T) {
 
 	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := infra.NewFileStore(tempDir)
-	cache := infra.NewCache()
-	service := NewNodeService(fileStore, nil, cache, orgService)
+	service := NewNodeService(fileStore, nil, orgService)
 
 	// List initial nodes (may include welcome page from org creation)
 	initialNodes, err := service.ListNodes(ctx, orgID)
@@ -126,9 +119,6 @@ func TestNodeService_ListNodes(t *testing.T) {
 	_, _ = service.CreateNode(ctx, orgID, "Node 1", entity.NodeTypeDocument, emptyParentID)
 	_, _ = service.CreateNode(ctx, orgID, "Node 2", entity.NodeTypeDocument, emptyParentID)
 
-	// Need to clear cache to see new nodes from file system
-	cache.InvalidateNodeTree()
-
 	nodes, err := service.ListNodes(ctx, orgID)
 	if err != nil {
 		t.Fatalf("ListNodes failed: %v", err)
@@ -136,87 +126,4 @@ func TestNodeService_ListNodes(t *testing.T) {
 	if len(nodes) != initialCount+2 {
 		t.Errorf("Expected %d nodes, got %d", initialCount+2, len(nodes))
 	}
-
-	// Verify caching - second call should return cached results
-	nodes2, _ := service.ListNodes(ctx, orgID)
-	if len(nodes2) != initialCount+2 {
-		t.Errorf("Expected %d nodes from cache, got %d", initialCount+2, len(nodes2))
-	}
-}
-
-func TestFindNodeInTree(t *testing.T) {
-	child1 := &entity.Node{ID: jsonldb.ID(2), Title: "Child 1"}
-	child2 := &entity.Node{ID: jsonldb.ID(3), Title: "Child 2"}
-	grandchild := &entity.Node{ID: jsonldb.ID(4), Title: "Grandchild"}
-	child2.Children = []*entity.Node{grandchild}
-
-	parent := &entity.Node{
-		ID:       jsonldb.ID(1),
-		Title:    "Parent",
-		Children: []*entity.Node{child1, child2},
-	}
-
-	tree := []*entity.Node{parent}
-
-	t.Run("find root", func(t *testing.T) {
-		result := findNodeInTree(tree, jsonldb.ID(1))
-		if result == nil {
-			t.Fatal("Expected non-nil result")
-		}
-		if result.Title != "Parent" {
-			t.Errorf("Title = %q, want %q", result.Title, "Parent")
-		}
-	})
-
-	t.Run("find child", func(t *testing.T) {
-		result := findNodeInTree(tree, jsonldb.ID(2))
-		if result == nil {
-			t.Fatal("Expected non-nil result")
-		}
-		if result.Title != "Child 1" {
-			t.Errorf("Title = %q, want %q", result.Title, "Child 1")
-		}
-	})
-
-	t.Run("find another child", func(t *testing.T) {
-		result := findNodeInTree(tree, jsonldb.ID(3))
-		if result == nil {
-			t.Fatal("Expected non-nil result")
-		}
-		if result.Title != "Child 2" {
-			t.Errorf("Title = %q, want %q", result.Title, "Child 2")
-		}
-	})
-
-	t.Run("find grandchild", func(t *testing.T) {
-		result := findNodeInTree(tree, jsonldb.ID(4))
-		if result == nil {
-			t.Fatal("Expected non-nil result")
-		}
-		if result.Title != "Grandchild" {
-			t.Errorf("Title = %q, want %q", result.Title, "Grandchild")
-		}
-	})
-
-	t.Run("not found", func(t *testing.T) {
-		result := findNodeInTree(tree, jsonldb.ID(999))
-		if result != nil {
-			t.Error("Expected nil result")
-		}
-	})
-
-	t.Run("empty tree", func(t *testing.T) {
-		result := findNodeInTree([]*entity.Node{}, jsonldb.ID(1))
-		if result != nil {
-			t.Error("Expected nil result for empty tree")
-		}
-	})
-
-	t.Run("nil children", func(t *testing.T) {
-		nodeNoChildren := &entity.Node{ID: jsonldb.ID(10), Children: nil}
-		result := findNodeInTree([]*entity.Node{nodeNoChildren}, jsonldb.ID(999))
-		if result != nil {
-			t.Error("Expected nil when searching in tree with no matching nodes")
-		}
-	})
 }

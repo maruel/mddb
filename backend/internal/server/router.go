@@ -23,13 +23,12 @@ import (
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
 func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, remoteService *infra.GitRemoteService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
-	cache := infra.NewCache()
 	mux := &http.ServeMux{}
 	jwtSecretBytes := []byte(jwtSecret)
 
-	ph := handlers.NewPageHandler(fileStore, gitService, cache, orgService)
-	dh := handlers.NewDatabaseHandler(fileStore, gitService, cache, orgService)
-	nh := handlers.NewNodeHandler(fileStore, gitService, cache, orgService)
+	ph := handlers.NewPageHandler(fileStore, gitService, orgService)
+	dh := handlers.NewDatabaseHandler(fileStore, gitService, orgService)
+	nh := handlers.NewNodeHandler(fileStore, gitService, orgService)
 	ah := handlers.NewAssetHandler(fileStore, gitService, orgService)
 	sh := handlers.NewSearchHandler(fileStore)
 	authh := handlers.NewAuthHandler(userService, orgService, jwtSecret)

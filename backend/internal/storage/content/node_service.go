@@ -18,16 +18,14 @@ var errNodeIDEmpty = errors.New("node id cannot be empty")
 type NodeService struct {
 	fileStore  *infra.FileStore
 	gitService *infra.Git
-	cache      *infra.Cache
 	orgService *identity.OrganizationService
 }
 
 // NewNodeService creates a new node service.
-func NewNodeService(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *NodeService {
+func NewNodeService(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *NodeService {
 	return &NodeService{
 		fileStore:  fileStore,
 		gitService: gitService,
-		cache:      cache,
 		orgService: orgService,
 	}
 }
@@ -38,29 +36,12 @@ func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*entit
 		return nil, errNodeIDEmpty
 	}
 
-	// Check cached node tree first
-	if tree := s.cache.GetNodeTree(); tree != nil {
-		if node := findNodeInTree(tree, id); node != nil {
-			return node, nil
-		}
-	}
-
 	return s.fileStore.ReadNode(orgID, id)
 }
 
 // ListNodes returns the full hierarchical tree of nodes.
 func (s *NodeService) ListNodes(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
-	if nodes := s.cache.GetNodeTree(); nodes != nil {
-		return nodes, nil
-	}
-
-	nodes, err := s.fileStore.ReadNodeTree(orgID)
-	if err != nil {
-		return nil, err
-	}
-
-	s.cache.SetNodeTree(nodes)
-	return nodes, nil
+	return s.fileStore.ReadNodeTree(orgID)
 }
 
 // CreateNode creates a new node (can be document, database, or hybrid).
@@ -109,20 +90,5 @@ func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title st
 		}
 	}
 
-	// Invalidate cache
-	s.cache.InvalidateNodeTree()
-
 	return node, nil
-}
-
-func findNodeInTree(nodes []*entity.Node, id jsonldb.ID) *entity.Node {
-	for _, node := range nodes {
-		if node.ID == id {
-			return node
-		}
-		if child := findNodeInTree(node.Children, id); child != nil {
-			return child
-		}
-	}
-	return nil
 }

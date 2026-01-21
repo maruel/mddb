@@ -43,8 +43,15 @@ See `README.md` and `API.md` for details.
 - Enhanced error handling with structured responses.
 - Implemented full-text search across pages and databases.
 - Integrated automatic Git versioning for the data directory.
-- Developed page history UI and performance optimizations (pagination, caching).
+- Developed page history UI and performance optimizations (pagination).
 - Unified UI with a hierarchical sidebar and integrated database views.
+
+**Deferred: Caching Layer**
+- In-memory caching was removed to establish a stable storage foundation first.
+- Future caching will be added once the storage APIs are finalized:
+  - Node tree caching (expensive tree builds for sidebar)
+  - Hot records caching (frequently accessed database records)
+  - Thread-safe cache with proper invalidation on mutations
 
 ### Phase 6: Multi-tenant Foundation ✓
 *Completed.*

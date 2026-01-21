@@ -22,9 +22,9 @@ type PageHandler struct {
 }
 
 // NewPageHandler creates a new page handler.
-func NewPageHandler(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *PageHandler {
+func NewPageHandler(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *PageHandler {
 	return &PageHandler{
-		pageService: content.NewPageService(fileStore, gitService, cache, orgService),
+		pageService: content.NewPageService(fileStore, gitService, orgService),
 	}
 }
 

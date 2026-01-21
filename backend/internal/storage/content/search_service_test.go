@@ -19,8 +19,7 @@ func TestSearchService_SearchPages(t *testing.T) {
 	orgID := jsonldb.ID(100)
 
 	// Create test pages
-	cache := infra.NewCache()
-	pageService := NewPageService(fileStore, nil, cache, nil)
+	pageService := NewPageService(fileStore, nil, nil)
 	ctx := t.Context()
 	_, _ = pageService.CreatePage(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project")
 	_, _ = pageService.CreatePage(ctx, orgID, "Advanced Topics", "Learn about advanced mddb configuration and optimization")
@@ -109,8 +108,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	ctx := t.Context()
 
 	// Create test database with records
-	cache := infra.NewCache()
-	dbService := NewDatabaseService(fileStore, nil, cache, nil)
+	dbService := NewDatabaseService(fileStore, nil, nil)
 	columns := []entity.Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "status", Type: entity.PropertyTypeText},
@@ -193,8 +191,7 @@ func TestSearchService_Scoring(t *testing.T) {
 	ctx := t.Context()
 
 	// Create pages where title match should score higher
-	cache := infra.NewCache()
-	pageService := NewPageService(fileStore, nil, cache, nil)
+	pageService := NewPageService(fileStore, nil, nil)
 	_, _ = pageService.CreatePage(ctx, orgID, "Python Programming", "This is about Java not Python")
 	_, _ = pageService.CreatePage(ctx, orgID, "Java Basics", "Learn Python programming fundamentals")
 
@@ -232,8 +229,7 @@ func TestSearchService_Limit(t *testing.T) {
 	ctx := t.Context()
 
 	// Create multiple pages
-	cache := infra.NewCache()
-	pageService := NewPageService(fileStore, nil, cache, nil)
+	pageService := NewPageService(fileStore, nil, nil)
 	for i := range 10 {
 		_, _ = pageService.CreatePage(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content")
 	}
@@ -264,11 +260,10 @@ func TestSearchService_Integration(t *testing.T) {
 	ctx := t.Context()
 
 	// Create mixed content
-	cache := infra.NewCache()
-	pageService := NewPageService(fileStore, nil, cache, nil)
+	pageService := NewPageService(fileStore, nil, nil)
 	_, _ = pageService.CreatePage(ctx, orgID, "Blog Post", "Article about searchable content and web development")
 
-	dbService := NewDatabaseService(fileStore, nil, cache, nil)
+	dbService := NewDatabaseService(fileStore, nil, nil)
 	columns := []entity.Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "content", Type: "text"},
