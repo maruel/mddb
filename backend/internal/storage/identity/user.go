@@ -53,6 +53,7 @@ type OAuthIdentity struct {
 type UserService struct {
 	table   *jsonldb.Table[*userStorage]
 	byEmail *jsonldb.UniqueIndex[string, *userStorage]
+	byOAuth *oauthIndex
 }
 
 // NewUserService creates a new user service.
@@ -67,37 +68,8 @@ func NewUserService(rootDir string) (*UserService, error) {
 		return nil, err
 	}
 	byEmail := jsonldb.NewUniqueIndex(table, func(u *userStorage) string { return u.Email })
-	return &UserService{table: table, byEmail: byEmail}, nil
-}
-
-type userStorage struct {
-	User
-	PasswordHash string `json:"password_hash" jsonschema:"description=Bcrypt-hashed password"`
-}
-
-func (u *userStorage) Clone() *userStorage {
-	c := *u
-	if u.OAuthIdentities != nil {
-		c.OAuthIdentities = make([]OAuthIdentity, len(u.OAuthIdentities))
-		copy(c.OAuthIdentities, u.OAuthIdentities)
-	}
-	return &c
-}
-
-// GetID returns the userStorage's ID.
-func (u *userStorage) GetID() jsonldb.ID {
-	return u.ID
-}
-
-// Validate checks that the userStorage is valid.
-func (u *userStorage) Validate() error {
-	if u.ID.IsZero() {
-		return errUserIDRequired
-	}
-	if u.Email == "" {
-		return errEmailEmpty
-	}
-	return nil
+	byOAuth := newOAuthIndex(table)
+	return &UserService{table: table, byEmail: byEmail, byOAuth: byOAuth}, nil
 }
 
 // Create creates a new user.
@@ -105,8 +77,8 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 	if email == "" || password == "" {
 		return nil, errEmailPwdRequired
 	}
-	// Check if user already exists
-	if _, err := s.GetByEmail(email); err == nil {
+	// Check if user already exists (direct index check, no copy)
+	if s.byEmail.Get(email) != nil {
 		return nil, errUserExists
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -168,17 +140,14 @@ func (s *UserService) Authenticate(email, password string) (*User, error) {
 	return &user, nil
 }
 
-// GetByOAuth retrieves a user by their OAuth identity.
+// GetByOAuth retrieves a user by their OAuth identity. O(1) via index.
 func (s *UserService) GetByOAuth(provider, providerID string) (*User, error) {
-	for stored := range s.table.Iter(0) {
-		for _, ident := range stored.OAuthIdentities {
-			if ident.Provider == provider && ident.ProviderID == providerID {
-				user := stored.User
-				return &user, nil
-			}
-		}
+	stored := s.byOAuth.Get(provider, providerID)
+	if stored == nil {
+		return nil, errUserNotFound
 	}
-	return nil, errUserNotFound
+	user := stored.User
+	return &user, nil
 }
 
 // Modify atomically modifies a user.
@@ -196,10 +165,10 @@ func (s *UserService) Modify(id jsonldb.ID, fn func(user *User) error) (*User, e
 	return &user, nil
 }
 
-// Iter iterates over all users.
-func (s *UserService) Iter() iter.Seq[*User] {
+// Iter iterates over users with ID greater than startID. Pass 0 to iterate from the beginning.
+func (s *UserService) Iter(startID jsonldb.ID) iter.Seq[*User] {
 	return func(yield func(*User) bool) {
-		for stored := range s.table.Iter(0) {
+		for stored := range s.table.Iter(startID) {
 			user := stored.User
 			if !yield(&user) {
 				return
@@ -216,3 +185,82 @@ var (
 	errUserExists       = errors.New("user already exists")
 	errInvalidCreds     = errors.New("invalid credentials")
 )
+
+// oauthKey is a composite key for OAuth identity lookups.
+type oauthKey struct {
+	Provider   string
+	ProviderID string
+}
+
+// oauthIndex indexes users by their OAuth identities (multi-valued).
+type oauthIndex struct {
+	table *jsonldb.Table[*userStorage]
+	byKey map[oauthKey]jsonldb.ID
+}
+
+func newOAuthIndex(table *jsonldb.Table[*userStorage]) *oauthIndex {
+	idx := &oauthIndex{table: table, byKey: make(map[oauthKey]jsonldb.ID)}
+	table.AddObserver(idx)
+	return idx
+}
+
+func (idx *oauthIndex) Get(provider, providerID string) *userStorage {
+	id, ok := idx.byKey[oauthKey{Provider: provider, ProviderID: providerID}]
+	if !ok {
+		return nil
+	}
+	return idx.table.Get(id)
+}
+
+func (idx *oauthIndex) OnAppend(row *userStorage) {
+	for _, ident := range row.OAuthIdentities {
+		idx.byKey[oauthKey{Provider: ident.Provider, ProviderID: ident.ProviderID}] = row.ID
+	}
+}
+
+func (idx *oauthIndex) OnUpdate(prev, curr *userStorage) {
+	// Remove old keys
+	for _, ident := range prev.OAuthIdentities {
+		delete(idx.byKey, oauthKey{Provider: ident.Provider, ProviderID: ident.ProviderID})
+	}
+	// Add new keys
+	for _, ident := range curr.OAuthIdentities {
+		idx.byKey[oauthKey{Provider: ident.Provider, ProviderID: ident.ProviderID}] = curr.ID
+	}
+}
+
+func (idx *oauthIndex) OnDelete(row *userStorage) {
+	for _, ident := range row.OAuthIdentities {
+		delete(idx.byKey, oauthKey{Provider: ident.Provider, ProviderID: ident.ProviderID})
+	}
+}
+
+type userStorage struct {
+	User
+	PasswordHash string `json:"password_hash" jsonschema:"description=Bcrypt-hashed password"`
+}
+
+func (u *userStorage) Clone() *userStorage {
+	c := *u
+	if u.OAuthIdentities != nil {
+		c.OAuthIdentities = make([]OAuthIdentity, len(u.OAuthIdentities))
+		copy(c.OAuthIdentities, u.OAuthIdentities)
+	}
+	return &c
+}
+
+// GetID returns the userStorage's ID.
+func (u *userStorage) GetID() jsonldb.ID {
+	return u.ID
+}
+
+// Validate checks that the userStorage is valid.
+func (u *userStorage) Validate() error {
+	if u.ID.IsZero() {
+		return errUserIDRequired
+	}
+	if u.Email == "" {
+		return errEmailEmpty
+	}
+	return nil
+}

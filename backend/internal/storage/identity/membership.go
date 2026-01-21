@@ -66,12 +66,6 @@ type MembershipSettings struct {
 	Notifications bool `json:"notifications" jsonschema:"description=Whether email notifications are enabled"`
 }
 
-// userOrgKey is a composite key for user+organization lookups.
-type userOrgKey struct {
-	UserID jsonldb.ID
-	OrgID  jsonldb.ID
-}
-
 // MembershipService handles user-organization relationships.
 type MembershipService struct {
 	table     *jsonldb.Table[*Membership]
@@ -157,3 +151,9 @@ var (
 	errMembershipExists   = errors.New("membership already exists")
 	errMembershipNotFound = errors.New("membership not found")
 )
+
+// userOrgKey is a composite key for user+organization lookups.
+type userOrgKey struct {
+	UserID jsonldb.ID
+	OrgID  jsonldb.ID
+}

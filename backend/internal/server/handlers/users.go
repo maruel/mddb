@@ -28,7 +28,7 @@ func NewUserHandler(userService *identity.UserService, memService *identity.Memb
 func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
 	// Filter by organization membership and convert to response
 	var users []dto.UserResponse
-	for user := range h.userService.Iter() {
+	for user := range h.userService.Iter(0) {
 		uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 		if err != nil {
 			continue
