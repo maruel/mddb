@@ -6,7 +6,6 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -29,7 +28,7 @@ func NewInvitationHandler(invService *identity.InvitationService, userService *i
 }
 
 // CreateInvitation creates a new invitation and sends it (logic to be added).
-func (h *InvitationHandler) CreateInvitation(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.CreateInvitationRequest) (*dto.InvitationResponse, error) {
+func (h *InvitationHandler) CreateInvitation(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.CreateInvitationRequest) (*dto.InvitationResponse, error) {
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
@@ -41,7 +40,7 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, orgID jsonldb.
 }
 
 // ListInvitations returns all pending invitations for an organization.
-func (h *InvitationHandler) ListInvitations(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListInvitationsRequest) (*dto.ListInvitationsResponse, error) {
+func (h *InvitationHandler) ListInvitations(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListInvitationsRequest) (*dto.ListInvitationsResponse, error) {
 	invitations, err := h.invService.Iter(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list invitations", err)

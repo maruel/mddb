@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
@@ -24,7 +23,7 @@ var (
 // Membership.
 type OrganizationService struct {
 	rootDir    string
-	table      *jsonldb.Table[*entity.Organization]
+	table      *jsonldb.Table[*Organization]
 	fileStore  *infra.FileStore
 	gitService *infra.Git
 }
@@ -37,7 +36,7 @@ func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitServi
 	}
 
 	tablePath := filepath.Join(dbDir, "organizations.jsonl")
-	table, err := jsonldb.NewTable[*entity.Organization](tablePath)
+	table, err := jsonldb.NewTable[*Organization](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -51,18 +50,18 @@ func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitServi
 }
 
 // Create creates a new organization.
-func (s *OrganizationService) Create(ctx context.Context, name string) (*entity.Organization, error) {
+func (s *OrganizationService) Create(ctx context.Context, name string) (*Organization, error) {
 	if name == "" {
 		return nil, errOrgNameRequired
 	}
 
 	id := jsonldb.NewID()
 	now := time.Now()
-	org := &entity.Organization{
+	org := &Organization{
 		ID:      id,
 		Name:    name,
 		Created: now,
-		Onboarding: entity.OnboardingState{
+		Onboarding: OnboardingState{
 			Completed: false,
 			Step:      "name",
 			UpdatedAt: now,
@@ -104,7 +103,7 @@ func (s *OrganizationService) Create(ctx context.Context, name string) (*entity.
 }
 
 // Get retrieves an organization by ID.
-func (s *OrganizationService) Get(id jsonldb.ID) (*entity.Organization, error) {
+func (s *OrganizationService) Get(id jsonldb.ID) (*Organization, error) {
 	org := s.table.Get(id)
 	if org == nil {
 		return nil, errOrgNotFound
@@ -113,7 +112,7 @@ func (s *OrganizationService) Get(id jsonldb.ID) (*entity.Organization, error) {
 }
 
 // Modify atomically modifies an organization.
-func (s *OrganizationService) Modify(id jsonldb.ID, fn func(org *entity.Organization) error) (*entity.Organization, error) {
+func (s *OrganizationService) Modify(id jsonldb.ID, fn func(org *Organization) error) (*Organization, error) {
 	if id.IsZero() {
 		return nil, errOrgNotFound
 	}

@@ -11,7 +11,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
@@ -31,7 +30,7 @@ func NewAssetHandler(fileStore *infra.FileStore, git *infra.Git, orgs *identity.
 }
 
 // ListPageAssets returns a list of assets associated with a page.
-func (h *AssetHandler) ListPageAssets(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListPageAssetsRequest) (*dto.ListPageAssetsResponse, error) {
+func (h *AssetHandler) ListPageAssets(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListPageAssetsRequest) (*dto.ListPageAssetsResponse, error) {
 	pageID, err := decodeID(req.PageID, "page_id")
 	if err != nil {
 		return nil, err
@@ -121,7 +120,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePageAsset deletes an asset.
-func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
+func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
 	pageID, err := decodeID(req.PageID, "page_id")
 	if err != nil {
 		return nil, err

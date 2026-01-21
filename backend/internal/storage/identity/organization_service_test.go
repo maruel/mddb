@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
@@ -21,7 +20,7 @@ func TestOrganizationService(t *testing.T) {
 		t.Fatalf("NewOrganizationService failed: %v", err)
 	}
 
-	var org, org2 *entity.Organization
+	var org, org2 *Organization
 
 	t.Run("CreateOrganization", func(t *testing.T) {
 		t.Run("valid name", func(t *testing.T) {
@@ -84,13 +83,13 @@ func TestOrganizationService(t *testing.T) {
 	})
 
 	t.Run("ModifySettings", func(t *testing.T) {
-		newSettings := entity.OrganizationSettings{
+		newSettings := OrganizationSettings{
 			AllowedDomains: []string{"example.com"},
 			PublicAccess:   true,
 		}
 
 		t.Run("existing organization", func(t *testing.T) {
-			_, modifyErr := service.Modify(org.ID, func(o *entity.Organization) error {
+			_, modifyErr := service.Modify(org.ID, func(o *Organization) error {
 				o.Settings = newSettings
 				return nil
 			})
@@ -108,7 +107,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent organization", func(t *testing.T) {
-			_, modifyErr := service.Modify(jsonldb.ID(99999), func(o *entity.Organization) error {
+			_, modifyErr := service.Modify(jsonldb.ID(99999), func(o *Organization) error {
 				o.Settings = newSettings
 				return nil
 			})
@@ -119,13 +118,13 @@ func TestOrganizationService(t *testing.T) {
 	})
 
 	t.Run("ModifyOnboarding", func(t *testing.T) {
-		newState := entity.OnboardingState{
+		newState := OnboardingState{
 			Completed: true,
 			Step:      "done",
 		}
 
 		t.Run("existing organization", func(t *testing.T) {
-			_, modifyErr := service.Modify(org2.ID, func(o *entity.Organization) error {
+			_, modifyErr := service.Modify(org2.ID, func(o *Organization) error {
 				o.Onboarding = newState
 				return nil
 			})
@@ -143,7 +142,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent organization", func(t *testing.T) {
-			_, modifyErr := service.Modify(jsonldb.ID(99999), func(o *entity.Organization) error {
+			_, modifyErr := service.Modify(jsonldb.ID(99999), func(o *Organization) error {
 				o.Onboarding = newState
 				return nil
 			})

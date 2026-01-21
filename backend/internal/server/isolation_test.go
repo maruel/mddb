@@ -3,68 +3,68 @@ package server
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func TestHasPermission(t *testing.T) {
 	tests := []struct {
 		name         string
-		userRole     entity.UserRole
-		requiredRole entity.UserRole
+		userRole     identity.UserRole
+		requiredRole identity.UserRole
 		expected     bool
 	}{
 		{
 			name:         "Viewer accessing Viewer endpoint",
-			userRole:     entity.UserRoleViewer,
-			requiredRole: entity.UserRoleViewer,
+			userRole:     identity.UserRoleViewer,
+			requiredRole: identity.UserRoleViewer,
 			expected:     true,
 		},
 		{
 			name:         "Viewer accessing Editor endpoint",
-			userRole:     entity.UserRoleViewer,
-			requiredRole: entity.UserRoleEditor,
+			userRole:     identity.UserRoleViewer,
+			requiredRole: identity.UserRoleEditor,
 			expected:     false,
 		},
 		{
 			name:         "Viewer accessing Admin endpoint",
-			userRole:     entity.UserRoleViewer,
-			requiredRole: entity.UserRoleAdmin,
+			userRole:     identity.UserRoleViewer,
+			requiredRole: identity.UserRoleAdmin,
 			expected:     false,
 		},
 		{
 			name:         "Editor accessing Viewer endpoint",
-			userRole:     entity.UserRoleEditor,
-			requiredRole: entity.UserRoleViewer,
+			userRole:     identity.UserRoleEditor,
+			requiredRole: identity.UserRoleViewer,
 			expected:     true,
 		},
 		{
 			name:         "Editor accessing Editor endpoint",
-			userRole:     entity.UserRoleEditor,
-			requiredRole: entity.UserRoleEditor,
+			userRole:     identity.UserRoleEditor,
+			requiredRole: identity.UserRoleEditor,
 			expected:     true,
 		},
 		{
 			name:         "Editor accessing Admin endpoint",
-			userRole:     entity.UserRoleEditor,
-			requiredRole: entity.UserRoleAdmin,
+			userRole:     identity.UserRoleEditor,
+			requiredRole: identity.UserRoleAdmin,
 			expected:     false,
 		},
 		{
 			name:         "Admin accessing Viewer endpoint",
-			userRole:     entity.UserRoleAdmin,
-			requiredRole: entity.UserRoleViewer,
+			userRole:     identity.UserRoleAdmin,
+			requiredRole: identity.UserRoleViewer,
 			expected:     true,
 		},
 		{
 			name:         "Admin accessing Editor endpoint",
-			userRole:     entity.UserRoleAdmin,
-			requiredRole: entity.UserRoleEditor,
+			userRole:     identity.UserRoleAdmin,
+			requiredRole: identity.UserRoleEditor,
 			expected:     true,
 		},
 		{
 			name:         "Admin accessing Admin endpoint",
-			userRole:     entity.UserRoleAdmin,
-			requiredRole: entity.UserRoleAdmin,
+			userRole:     identity.UserRoleAdmin,
+			requiredRole: identity.UserRoleAdmin,
 			expected:     true,
 		},
 	}

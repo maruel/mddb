@@ -38,7 +38,7 @@ func formatTime(t time.Time) string {
 
 // --- Entity to DTO conversions ---
 
-func userToResponse(u *entity.User) *dto.UserResponse {
+func userToResponse(u *identity.User) *dto.UserResponse {
 	identities := make([]dto.OAuthIdentity, len(u.OAuthIdentities))
 	for i, id := range u.OAuthIdentities {
 		identities[i] = oauthIdentityToDTO(id)
@@ -54,7 +54,7 @@ func userToResponse(u *entity.User) *dto.UserResponse {
 	}
 }
 
-func membershipToResponse(m *entity.Membership) *dto.MembershipResponse {
+func membershipToResponse(m *identity.Membership) *dto.MembershipResponse {
 	return &dto.MembershipResponse{
 		ID:             m.ID.String(),
 		UserID:         m.UserID.String(),
@@ -65,7 +65,7 @@ func membershipToResponse(m *entity.Membership) *dto.MembershipResponse {
 	}
 }
 
-func invitationToResponse(i *entity.Invitation) *dto.InvitationResponse {
+func invitationToResponse(i *identity.Invitation) *dto.InvitationResponse {
 	return &dto.InvitationResponse{
 		ID:             i.ID.String(),
 		Email:          i.Email,
@@ -76,7 +76,7 @@ func invitationToResponse(i *entity.Invitation) *dto.InvitationResponse {
 	}
 }
 
-func organizationToResponse(o *entity.Organization) *dto.OrganizationResponse {
+func organizationToResponse(o *identity.Organization) *dto.OrganizationResponse {
 	return &dto.OrganizationResponse{
 		ID:         o.ID.String(),
 		Name:       o.Name,
@@ -192,14 +192,14 @@ func propertiesToDTO(props []entity.Property) []dto.Property {
 	return result
 }
 
-func userSettingsToDTO(s entity.UserSettings) dto.UserSettings {
+func userSettingsToDTO(s identity.UserSettings) dto.UserSettings {
 	return dto.UserSettings{
 		Theme:    s.Theme,
 		Language: s.Language,
 	}
 }
 
-func oauthIdentityToDTO(o entity.OAuthIdentity) dto.OAuthIdentity {
+func oauthIdentityToDTO(o identity.OAuthIdentity) dto.OAuthIdentity {
 	return dto.OAuthIdentity{
 		Provider:   o.Provider,
 		ProviderID: o.ProviderID,
@@ -208,13 +208,13 @@ func oauthIdentityToDTO(o entity.OAuthIdentity) dto.OAuthIdentity {
 	}
 }
 
-func membershipSettingsToDTO(s entity.MembershipSettings) dto.MembershipSettings {
+func membershipSettingsToDTO(s identity.MembershipSettings) dto.MembershipSettings {
 	return dto.MembershipSettings{
 		Notifications: s.Notifications,
 	}
 }
 
-func quotaToDTO(q entity.Quota) dto.Quota {
+func quotaToDTO(q identity.Quota) dto.Quota {
 	return dto.Quota{
 		MaxPages:   q.MaxPages,
 		MaxStorage: q.MaxStorage,
@@ -222,13 +222,13 @@ func quotaToDTO(q entity.Quota) dto.Quota {
 	}
 }
 
-func gitSettingsToDTO(g entity.GitSettings) dto.GitSettings {
+func gitSettingsToDTO(g identity.GitSettings) dto.GitSettings {
 	return dto.GitSettings{
 		AutoPush: g.AutoPush,
 	}
 }
 
-func organizationSettingsToDTO(s entity.OrganizationSettings) dto.OrganizationSettings {
+func organizationSettingsToDTO(s identity.OrganizationSettings) dto.OrganizationSettings {
 	return dto.OrganizationSettings{
 		AllowedDomains: s.AllowedDomains,
 		PublicAccess:   s.PublicAccess,
@@ -236,7 +236,7 @@ func organizationSettingsToDTO(s entity.OrganizationSettings) dto.OrganizationSe
 	}
 }
 
-func onboardingStateToDTO(o entity.OnboardingState) dto.OnboardingState {
+func onboardingStateToDTO(o identity.OnboardingState) dto.OnboardingState {
 	return dto.OnboardingState{
 		Completed: o.Completed,
 		Step:      o.Step,
@@ -244,7 +244,7 @@ func onboardingStateToDTO(o entity.OnboardingState) dto.OnboardingState {
 	}
 }
 
-func onboardingStatePtrToDTO(o *entity.OnboardingState) *dto.OnboardingState {
+func onboardingStatePtrToDTO(o *identity.OnboardingState) *dto.OnboardingState {
 	if o == nil {
 		return nil
 	}
@@ -282,43 +282,43 @@ func propertiesToEntity(props []dto.Property) []entity.Property {
 	return result
 }
 
-func userRoleToEntity(r dto.UserRole) entity.UserRole {
-	return entity.UserRole(r)
+func userRoleToEntity(r dto.UserRole) identity.UserRole {
+	return identity.UserRole(r)
 }
 
-func membershipSettingsToEntity(s dto.MembershipSettings) entity.MembershipSettings {
-	return entity.MembershipSettings{
+func membershipSettingsToEntity(s dto.MembershipSettings) identity.MembershipSettings {
+	return identity.MembershipSettings{
 		Notifications: s.Notifications,
 	}
 }
 
-func userSettingsToEntity(s dto.UserSettings) entity.UserSettings {
-	return entity.UserSettings{
+func userSettingsToEntity(s dto.UserSettings) identity.UserSettings {
+	return identity.UserSettings{
 		Theme:    s.Theme,
 		Language: s.Language,
 	}
 }
 
-func gitSettingsToEntity(g dto.GitSettings) entity.GitSettings {
-	return entity.GitSettings{
+func gitSettingsToEntity(g dto.GitSettings) identity.GitSettings {
+	return identity.GitSettings{
 		AutoPush: g.AutoPush,
 	}
 }
 
-func organizationSettingsToEntity(s dto.OrganizationSettings) entity.OrganizationSettings {
-	return entity.OrganizationSettings{
+func organizationSettingsToEntity(s dto.OrganizationSettings) identity.OrganizationSettings {
+	return identity.OrganizationSettings{
 		AllowedDomains: s.AllowedDomains,
 		PublicAccess:   s.PublicAccess,
 		Git:            gitSettingsToEntity(s.Git),
 	}
 }
 
-func onboardingStateToEntity(o dto.OnboardingState) entity.OnboardingState {
+func onboardingStateToEntity(o dto.OnboardingState) identity.OnboardingState {
 	var updatedAt time.Time
 	if o.UpdatedAt != "" {
 		updatedAt, _ = time.Parse(time.RFC3339, o.UpdatedAt)
 	}
-	return entity.OnboardingState{
+	return identity.OnboardingState{
 		Completed: o.Completed,
 		Step:      o.Step,
 		UpdatedAt: updatedAt,
@@ -329,13 +329,13 @@ func onboardingStateToEntity(o dto.OnboardingState) entity.OnboardingState {
 
 // membershipWithOrgName wraps a membership with its organization name.
 type membershipWithOrgName struct {
-	entity.Membership
+	identity.Membership
 	OrganizationName string
 }
 
 // userWithMemberships wraps a user with their memberships.
 type userWithMemberships struct {
-	User        *entity.User
+	User        *identity.User
 	Memberships []membershipWithOrgName
 }
 

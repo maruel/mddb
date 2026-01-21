@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -51,14 +50,14 @@ func NewUserService(rootDir string) (*UserService, error) {
 }
 
 type userStorage struct {
-	entity.User
+	User
 	PasswordHash string `json:"password_hash" jsonschema:"description=Bcrypt-hashed password"`
 }
 
 func (u *userStorage) Clone() *userStorage {
 	c := *u
 	if u.OAuthIdentities != nil {
-		c.OAuthIdentities = make([]entity.OAuthIdentity, len(u.OAuthIdentities))
+		c.OAuthIdentities = make([]OAuthIdentity, len(u.OAuthIdentities))
 		copy(c.OAuthIdentities, u.OAuthIdentities)
 	}
 	return &c
@@ -81,7 +80,7 @@ func (u *userStorage) Validate() error {
 }
 
 // Create creates a new user.
-func (s *UserService) Create(email, password, name string) (*entity.User, error) {
+func (s *UserService) Create(email, password, name string) (*User, error) {
 	if email == "" || password == "" {
 		return nil, errEmailPwdRequired
 	}
@@ -99,7 +98,7 @@ func (s *UserService) Create(email, password, name string) (*entity.User, error)
 	id := jsonldb.NewID()
 	now := time.Now()
 	stored := &userStorage{
-		User: entity.User{
+		User: User{
 			ID:       id,
 			Email:    email,
 			Name:     name,
@@ -118,7 +117,7 @@ func (s *UserService) Create(email, password, name string) (*entity.User, error)
 }
 
 // Get retrieves a user by ID.
-func (s *UserService) Get(id jsonldb.ID) (*entity.User, error) {
+func (s *UserService) Get(id jsonldb.ID) (*User, error) {
 	if id.IsZero() {
 		return nil, errUserIDEmpty
 	}
@@ -131,7 +130,7 @@ func (s *UserService) Get(id jsonldb.ID) (*entity.User, error) {
 }
 
 // GetByEmail retrieves a user by email. O(1) via index.
-func (s *UserService) GetByEmail(email string) (*entity.User, error) {
+func (s *UserService) GetByEmail(email string) (*User, error) {
 	stored := s.byEmail.Get(email)
 	if stored == nil {
 		return nil, errUserNotFound
@@ -141,7 +140,7 @@ func (s *UserService) GetByEmail(email string) (*entity.User, error) {
 }
 
 // Authenticate verifies user credentials. O(1) lookup via index.
-func (s *UserService) Authenticate(email, password string) (*entity.User, error) {
+func (s *UserService) Authenticate(email, password string) (*User, error) {
 	stored := s.byEmail.Get(email)
 	if stored == nil {
 		return nil, errInvalidCreds
@@ -154,10 +153,10 @@ func (s *UserService) Authenticate(email, password string) (*entity.User, error)
 }
 
 // GetByOAuth retrieves a user by their OAuth identity.
-func (s *UserService) GetByOAuth(provider, providerID string) (*entity.User, error) {
+func (s *UserService) GetByOAuth(provider, providerID string) (*User, error) {
 	for stored := range s.table.Iter(0) {
-		for _, identity := range stored.OAuthIdentities {
-			if identity.Provider == provider && identity.ProviderID == providerID {
+		for _, ident := range stored.OAuthIdentities {
+			if ident.Provider == provider && ident.ProviderID == providerID {
 				user := stored.User
 				return &user, nil
 			}
@@ -167,7 +166,7 @@ func (s *UserService) GetByOAuth(provider, providerID string) (*entity.User, err
 }
 
 // Modify atomically modifies a user.
-func (s *UserService) Modify(id jsonldb.ID, fn func(user *entity.User) error) (*entity.User, error) {
+func (s *UserService) Modify(id jsonldb.ID, fn func(user *User) error) (*User, error) {
 	if id.IsZero() {
 		return nil, errUserIDEmpty
 	}
@@ -182,8 +181,8 @@ func (s *UserService) Modify(id jsonldb.ID, fn func(user *entity.User) error) (*
 }
 
 // Iter iterates over all users.
-func (s *UserService) Iter() iter.Seq[*entity.User] {
-	return func(yield func(*entity.User) bool) {
+func (s *UserService) Iter() iter.Seq[*User] {
+	return func(yield func(*User) bool) {
 		for stored := range s.table.Iter(0) {
 			user := stored.User
 			if !yield(&user) {

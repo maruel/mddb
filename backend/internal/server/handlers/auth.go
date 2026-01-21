@@ -7,7 +7,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -88,7 +87,7 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	}
 
 	// Create initial membership (admin of their own org)
-	if _, err := h.memService.Create(user.ID, org.ID, entity.UserRoleAdmin); err != nil {
+	if _, err := h.memService.Create(user.ID, org.ID, identity.UserRoleAdmin); err != nil {
 		return nil, dto.InternalWithError("Failed to create initial membership", err)
 	}
 
@@ -116,7 +115,7 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 }
 
 // GenerateToken generates a JWT token for the given user.
-func (h *AuthHandler) GenerateToken(user *entity.User) (string, error) {
+func (h *AuthHandler) GenerateToken(user *identity.User) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":   user.ID,
 		"email": user.Email,
@@ -129,7 +128,7 @@ func (h *AuthHandler) GenerateToken(user *entity.User) (string, error) {
 }
 
 // Me returns the current user info.
-func (h *AuthHandler) Me(ctx context.Context, _ jsonldb.ID, user *entity.User, req dto.MeRequest) (*dto.UserResponse, error) {
+func (h *AuthHandler) Me(ctx context.Context, _ jsonldb.ID, user *identity.User, req dto.MeRequest) (*dto.UserResponse, error) {
 	// Build user response with memberships
 	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {

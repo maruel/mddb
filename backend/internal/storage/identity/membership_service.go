@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 var (
@@ -19,7 +18,7 @@ var (
 
 // MembershipService handles user-organization relationships.
 type MembershipService struct {
-	table *jsonldb.Table[*entity.Membership]
+	table *jsonldb.Table[*Membership]
 }
 
 // NewMembershipService creates a new membership service.
@@ -30,7 +29,7 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 	}
 
 	tablePath := filepath.Join(dbDir, "memberships.jsonl")
-	table, err := jsonldb.NewTable[*entity.Membership](tablePath)
+	table, err := jsonldb.NewTable[*Membership](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +38,7 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 }
 
 // findByUserAndOrg finds a membership by user and organization IDs.
-func (s *MembershipService) findByUserAndOrg(userID, orgID jsonldb.ID) *entity.Membership {
+func (s *MembershipService) findByUserAndOrg(userID, orgID jsonldb.ID) *Membership {
 	for m := range s.table.Iter(0) {
 		if m.UserID == userID && m.OrganizationID == orgID {
 			return m
@@ -49,7 +48,7 @@ func (s *MembershipService) findByUserAndOrg(userID, orgID jsonldb.ID) *entity.M
 }
 
 // Create adds a user to an organization.
-func (s *MembershipService) Create(userID, orgID jsonldb.ID, role entity.UserRole) (*entity.Membership, error) {
+func (s *MembershipService) Create(userID, orgID jsonldb.ID, role UserRole) (*Membership, error) {
 	if userID.IsZero() {
 		return nil, errUserIDEmpty
 	}
@@ -61,7 +60,7 @@ func (s *MembershipService) Create(userID, orgID jsonldb.ID, role entity.UserRol
 		return nil, errMembershipExists
 	}
 
-	membership := &entity.Membership{
+	membership := &Membership{
 		ID:             jsonldb.NewID(),
 		UserID:         userID,
 		OrganizationID: orgID,
@@ -77,7 +76,7 @@ func (s *MembershipService) Create(userID, orgID jsonldb.ID, role entity.UserRol
 }
 
 // Get retrieves a specific user-org relationship.
-func (s *MembershipService) Get(userID, orgID jsonldb.ID) (*entity.Membership, error) {
+func (s *MembershipService) Get(userID, orgID jsonldb.ID) (*Membership, error) {
 	m := s.findByUserAndOrg(userID, orgID)
 	if m == nil {
 		return nil, errMembershipNotFound
@@ -86,11 +85,11 @@ func (s *MembershipService) Get(userID, orgID jsonldb.ID) (*entity.Membership, e
 }
 
 // Iter iterates over all memberships for a user.
-func (s *MembershipService) Iter(userID jsonldb.ID) (iter.Seq[*entity.Membership], error) {
+func (s *MembershipService) Iter(userID jsonldb.ID) (iter.Seq[*Membership], error) {
 	if userID.IsZero() {
 		return nil, errUserIDEmpty
 	}
-	return func(yield func(*entity.Membership) bool) {
+	return func(yield func(*Membership) bool) {
 		for m := range s.table.Iter(0) {
 			if m.UserID == userID && !yield(m) {
 				return
@@ -100,7 +99,7 @@ func (s *MembershipService) Iter(userID jsonldb.ID) (iter.Seq[*entity.Membership
 }
 
 // Modify atomically modifies a membership.
-func (s *MembershipService) Modify(id jsonldb.ID, fn func(m *entity.Membership) error) (*entity.Membership, error) {
+func (s *MembershipService) Modify(id jsonldb.ID, fn func(m *Membership) error) (*Membership, error) {
 	if id.IsZero() {
 		return nil, errMembershipNotFound
 	}

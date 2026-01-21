@@ -16,7 +16,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -91,15 +90,15 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 
 // WrapAuth wraps an authenticated handler function to work as an http.Handler.
 // It combines JWT validation, organization membership checking, and request parsing.
-// The function must have signature: func(context.Context, jsonldb.ID, *entity.User, In) (*Out, error)
+// The function must have signature: func(context.Context, jsonldb.ID, *identity.User, In) (*Out, error)
 // where orgID is the organization ID from the path (zero if not present),
 // user is the authenticated user, In can be unmarshalled from JSON, and Out is a struct.
 func WrapAuth[In any, Out any](
 	userService *identity.UserService,
 	memService *identity.MembershipService,
 	jwtSecret []byte,
-	requiredRole entity.UserRole,
-	fn func(context.Context, jsonldb.ID, *entity.User, In) (*Out, error),
+	requiredRole identity.UserRole,
+	fn func(context.Context, jsonldb.ID, *identity.User, In) (*Out, error),
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -193,7 +192,7 @@ func WrapAuthRaw(
 	userService *identity.UserService,
 	memService *identity.MembershipService,
 	jwtSecret []byte,
-	requiredRole entity.UserRole,
+	requiredRole identity.UserRole,
 	fn http.HandlerFunc,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -242,7 +241,7 @@ var (
 )
 
 // validateJWT extracts and validates the JWT token from the request.
-func validateJWT(r *http.Request, userService *identity.UserService, jwtSecret []byte) (*entity.User, error) {
+func validateJWT(r *http.Request, userService *identity.UserService, jwtSecret []byte) (*identity.User, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, errUnauthorized

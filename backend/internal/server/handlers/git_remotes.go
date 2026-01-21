@@ -10,7 +10,6 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
@@ -32,7 +31,7 @@ func NewGitRemoteHandler(orgService *identity.OrganizationService, gitService *i
 }
 
 // GetRemote returns the git remote for an organization, or null if none exists.
-func (h *GitRemoteHandler) GetRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+func (h *GitRemoteHandler) GetRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -44,8 +43,8 @@ func (h *GitRemoteHandler) GetRemote(ctx context.Context, orgID jsonldb.ID, _ *e
 }
 
 // SetRemote creates or updates the git remote for an organization.
-func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req *dto.SetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	org, err := h.orgService.Modify(orgID, func(org *entity.Organization) error {
+func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.SetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+	org, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
 		// Preserve existing timestamps on update
 		created := org.GitRemote.Created
 		lastSync := org.GitRemote.LastSync
@@ -53,7 +52,7 @@ func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *e
 			created = time.Now()
 		}
 
-		org.GitRemote = entity.GitRemote{
+		org.GitRemote = identity.GitRemote{
 			URL:      req.URL,
 			Type:     req.Type,
 			AuthType: req.AuthType,
@@ -88,7 +87,7 @@ func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *e
 }
 
 // Push pushes changes to the git remote.
-func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.PushGitRemoteRequest) (*dto.OkResponse, error) {
+func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.PushGitRemoteRequest) (*dto.OkResponse, error) {
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -115,7 +114,7 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity
 	}
 
 	// Update last sync time
-	_, _ = h.orgService.Modify(orgID, func(org *entity.Organization) error {
+	_, _ = h.orgService.Modify(orgID, func(org *identity.Organization) error {
 		org.GitRemote.LastSync = time.Now()
 		return nil
 	})
@@ -124,12 +123,12 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity
 }
 
 // DeleteRemote deletes the git remote for an organization.
-func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.DeleteGitRemoteRequest) (*dto.OkResponse, error) {
-	_, err := h.orgService.Modify(orgID, func(org *entity.Organization) error {
+func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.DeleteGitRemoteRequest) (*dto.OkResponse, error) {
+	_, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
 		if org.GitRemote.IsZero() {
 			return dto.NotFound("remote")
 		}
-		org.GitRemote = entity.GitRemote{}
+		org.GitRemote = identity.GitRemote{}
 		return nil
 	})
 	if err != nil {
@@ -153,8 +152,8 @@ func (h *GitRemoteHandler) execGitInDir(dir string, args ...string) error {
 	return cmd.Run()
 }
 
-// gitRemoteToResponse converts an entity.GitRemote to a dto.GitRemoteResponse.
-func gitRemoteToResponse(orgID jsonldb.ID, r *entity.GitRemote) *dto.GitRemoteResponse {
+// gitRemoteToResponse converts an identity.GitRemote to a dto.GitRemoteResponse.
+func gitRemoteToResponse(orgID jsonldb.ID, r *identity.GitRemote) *dto.GitRemoteResponse {
 	resp := &dto.GitRemoteResponse{
 		OrganizationID: orgID.String(),
 		URL:            r.URL,

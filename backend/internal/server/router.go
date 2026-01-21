@@ -14,7 +14,6 @@ import (
 
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
@@ -39,9 +38,9 @@ func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *i
 	grh := handlers.NewGitRemoteHandler(orgService, gitService)
 
 	// Helper to create WrapAuth with common deps
-	viewer := entity.UserRoleViewer
-	editor := entity.UserRoleEditor
-	admin := entity.UserRoleAdmin
+	viewer := identity.UserRoleViewer
+	editor := identity.UserRoleEditor
+	admin := identity.UserRoleAdmin
 
 	// Health check (public)
 	hh := handlers.NewHealthHandler("1.0.0")

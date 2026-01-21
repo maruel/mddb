@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestInvitationService(t *testing.T) {
@@ -17,7 +16,7 @@ func TestInvitationService(t *testing.T) {
 
 	orgID := jsonldb.ID(100)
 	email := "invitee@example.com"
-	role := entity.UserRoleEditor
+	role := UserRoleEditor
 
 	// Test CreateInvitation
 	inv, err := service.Create(email, orgID, role)

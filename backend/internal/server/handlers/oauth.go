@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 	"golang.org/x/oauth2"
@@ -162,13 +161,13 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			if org != nil && !org.ID.IsZero() {
-				_, _ = h.memService.Create(user.ID, org.ID, entity.UserRoleAdmin)
+				_, _ = h.memService.Create(user.ID, org.ID, identity.UserRoleAdmin)
 			}
 		}
 
 		// Link OAuth identity
-		_, _ = h.userService.Modify(user.ID, func(u *entity.User) error {
-			u.OAuthIdentities = append(u.OAuthIdentities, entity.OAuthIdentity{
+		_, _ = h.userService.Modify(user.ID, func(u *identity.User) error {
+			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
 				Provider:   provider,
 				ProviderID: userInfo.ID,
 				Email:      userInfo.Email,

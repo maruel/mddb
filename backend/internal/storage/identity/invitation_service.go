@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
@@ -20,7 +19,7 @@ var (
 
 // InvitationService handles organization invitations.
 type InvitationService struct {
-	table *jsonldb.Table[*entity.Invitation]
+	table *jsonldb.Table[*Invitation]
 }
 
 // NewInvitationService creates a new invitation service.
@@ -31,7 +30,7 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	}
 
 	tablePath := filepath.Join(dbDir, "invitations.jsonl")
-	table, err := jsonldb.NewTable[*entity.Invitation](tablePath)
+	table, err := jsonldb.NewTable[*Invitation](tablePath)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +39,7 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 }
 
 // Create creates a new invitation.
-func (s *InvitationService) Create(email string, orgID jsonldb.ID, role entity.UserRole) (*entity.Invitation, error) {
+func (s *InvitationService) Create(email string, orgID jsonldb.ID, role UserRole) (*Invitation, error) {
 	if email == "" {
 		return nil, errEmailEmpty
 	}
@@ -53,7 +52,7 @@ func (s *InvitationService) Create(email string, orgID jsonldb.ID, role entity.U
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	invitation := &entity.Invitation{
+	invitation := &Invitation{
 		ID:             jsonldb.NewID(),
 		Email:          email,
 		OrganizationID: orgID,
@@ -71,7 +70,7 @@ func (s *InvitationService) Create(email string, orgID jsonldb.ID, role entity.U
 }
 
 // GetByToken retrieves an invitation by its token.
-func (s *InvitationService) GetByToken(token string) (*entity.Invitation, error) {
+func (s *InvitationService) GetByToken(token string) (*Invitation, error) {
 	for inv := range s.table.Iter(0) {
 		if inv.Token == token {
 			return inv, nil
@@ -97,11 +96,11 @@ func (s *InvitationService) Delete(id jsonldb.ID) error {
 }
 
 // Iter iterates over all invitations for an organization.
-func (s *InvitationService) Iter(orgID jsonldb.ID) (iter.Seq[*entity.Invitation], error) {
+func (s *InvitationService) Iter(orgID jsonldb.ID) (iter.Seq[*Invitation], error) {
 	if orgID.IsZero() {
 		return nil, errOrgIDEmpty
 	}
-	return func(yield func(*entity.Invitation) bool) {
+	return func(yield func(*Invitation) bool) {
 		for inv := range s.table.Iter(0) {
 			if inv.OrganizationID == orgID && !yield(inv) {
 				return
