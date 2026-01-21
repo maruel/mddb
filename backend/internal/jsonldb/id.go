@@ -31,8 +31,10 @@ const (
 	sliceMask = 0x7FF
 )
 
-// sortableAlphabet is a base64 alphabet in ASCII order for lexicographic sorting.
+// sortableAlphabet is a 64-character alphabet in ASCII order for lexicographic sorting.
 // Characters: - (0x2D), 0-9 (0x30-39), A-Z (0x41-5A), _ (0x5F), a-z (0x61-7A).
+// This is NOT standard base64; it uses ASCII-ordered characters so that
+// lexicographic string comparison matches numeric comparison.
 const sortableAlphabet = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
 
 // decodeMap maps ASCII characters back to their 6-bit values.
@@ -103,11 +105,12 @@ func newIDFromParts(t10us, slice, version uint64) ID {
 	return ID((t10us << 15) | ((slice & sliceMask) << 4) | (version & 0xF))
 }
 
-// String returns a big-endian base64 encoding using a sortable alphabet.
+// String encodes the ID as a compact, sortable string.
 //
-// Big-endian ensures lexicographic string order matches numeric order,
-// making IDs sortable as strings in databases and file systems.
-// Leading zeros are stripped for compactness. Zero IDs return "-".
+// Uses a custom 64-character alphabet ordered by ASCII value (not base64),
+// encoding 6 bits per character in big-endian order. This ensures lexicographic
+// string comparison matches numeric comparison, making IDs sortable as strings.
+// Leading zero-characters are stripped for compactness. Zero IDs return "-".
 func (id ID) String() string {
 	if id == 0 {
 		return "-"
