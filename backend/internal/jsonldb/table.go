@@ -161,9 +161,18 @@ func (t *Table[T]) Update(row T) (T, error) {
 // Modify atomically reads, modifies, and writes a row.
 //
 // The callback fn receives a clone of the current row and should modify it.
-// The lock is held for the duration of fn, so it should be quick.
 // Returns the modified row on success, or an error if the row doesn't exist
 // or validation fails.
+//
+// Modify uses pessimistic locking: the write lock is held for the entire
+// operation (read, callback, validate, write). This guarantees the operation
+// succeeds on the first attempt without retry loops, unlike optimistic CAS
+// which may require retries under contention. The tradeoff is that fn should
+// complete quickly to avoid blocking other operations.
+//
+// If fn returns an error, the row is not modified. If validation fails after
+// fn returns, the row is not modified. If the disk write fails, the in-memory
+// state is rolled back.
 func (t *Table[T]) Modify(id ID, fn func(row T) error) (T, error) {
 	var zero T
 	t.mu.Lock()
