@@ -25,6 +25,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -190,6 +191,11 @@ func mainImpl() error {
 	// Create context that cancels on SIGTERM and SIGINT
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
+
+	// Watch own executable for modifications (for development restarts)
+	if err := watchExecutable(ctx, stop); err != nil {
+		return fmt.Errorf("failed to watch executable: %w", err)
+	}
 
 	addr := ":" + *port
 	httpServer := &http.Server{
@@ -401,5 +407,52 @@ func runOnboarding(dataDir string) error {
 	fmt.Println("You can edit this file later to change your settings.")
 	fmt.Println("")
 
+	return nil
+}
+
+// watchExecutable watches the current executable for modifications and calls
+// stop to trigger graceful shutdown when detected. This enables seamless
+// restarts during development.
+func watchExecutable(ctx context.Context, stop context.CancelFunc) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	exe, err = filepath.EvalSymlinks(exe)
+	if err != nil {
+		return err
+	}
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	// Watch the directory since the file gets replaced on rebuild
+	if err := watcher.Add(filepath.Dir(exe)); err != nil {
+		watcher.Close()
+		return err
+	}
+
+	base := filepath.Base(exe)
+	go func() {
+		defer watcher.Close()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return
+				}
+				if filepath.Base(event.Name) == base && (event.Op&(fsnotify.Write|fsnotify.Create) != 0) {
+					slog.InfoContext(ctx, "Executable modified, initiating shutdown")
+					stop()
+					return
+				}
+			case <-watcher.Errors:
+			}
+		}
+	}()
 	return nil
 }
