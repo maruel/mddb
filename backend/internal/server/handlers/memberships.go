@@ -35,7 +35,7 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *e
 	}
 
 	// Verify membership
-	if _, err = h.memService.GetMembership(user.ID, orgID); err != nil {
+	if _, err = h.memService.Get(user.ID, orgID); err != nil {
 		return nil, dto.Forbidden("User is not a member of this organization")
 	}
 
@@ -64,7 +64,7 @@ func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, orgID 
 	if err := h.memService.UpdateSettings(user.ID, orgID, membershipSettingsToEntity(req.Settings)); err != nil {
 		return nil, dto.InternalWithError("Failed to update membership settings", err)
 	}
-	m, err := h.memService.GetMembership(user.ID, orgID)
+	m, err := h.memService.Get(user.ID, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get membership", err)
 	}

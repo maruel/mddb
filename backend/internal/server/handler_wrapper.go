@@ -121,7 +121,7 @@ func WrapAuth[In any, Out any](
 				return
 			}
 
-			membership, err := memService.GetMembership(user.ID, orgID)
+			membership, err := memService.Get(user.ID, orgID)
 			if err != nil {
 				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
 				return
@@ -214,7 +214,7 @@ func WrapAuthRaw(
 			}
 
 			user, _ := validateJWT(r, userService, jwtSecret)
-			membership, err := memService.GetMembership(user.ID, orgID)
+			membership, err := memService.Get(user.ID, orgID)
 			if err != nil {
 				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
 				return
@@ -280,7 +280,7 @@ func validateJWT(r *http.Request, userService *identity.UserService, jwtSecret [
 		return nil, errInvalidUserIDFmt
 	}
 
-	user, err := userService.GetUser(userID)
+	user, err := userService.Get(userID)
 	if err != nil {
 		return nil, errUserNotFound
 	}

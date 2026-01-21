@@ -50,8 +50,8 @@ func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitServi
 	}, nil
 }
 
-// CreateOrganization creates a new organization.
-func (s *OrganizationService) CreateOrganization(ctx context.Context, name string) (*entity.Organization, error) {
+// Create creates a new organization.
+func (s *OrganizationService) Create(ctx context.Context, name string) (*entity.Organization, error) {
 	if name == "" {
 		return nil, errOrgNameRequired
 	}
@@ -103,8 +103,8 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	return org, nil
 }
 
-// GetOrganization retrieves an organization by ID.
-func (s *OrganizationService) GetOrganization(id jsonldb.ID) (*entity.Organization, error) {
+// Get retrieves an organization by ID.
+func (s *OrganizationService) Get(id jsonldb.ID) (*entity.Organization, error) {
 	org := s.table.Get(id)
 	if org == nil {
 		return nil, errOrgNotFound

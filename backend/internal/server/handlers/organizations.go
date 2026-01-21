@@ -23,7 +23,7 @@ func NewOrganizationHandler(orgService *identity.OrganizationService) *Organizat
 
 // GetOrganization retrieves current organization details.
 func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.GetOnboardingRequest) (*dto.OrganizationResponse, error) {
-	org, err := h.orgService.GetOrganization(orgID)
+	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID jsonldb
 
 // GetOnboarding retrieves organization onboarding status.
 func (h *OrganizationHandler) GetOnboarding(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.GetOnboardingRequest) (*dto.OnboardingState, error) {
-	org, err := h.orgService.GetOrganization(orgID)
+	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, orgID jsonld
 	if err := h.orgService.UpdateOnboarding(orgID, onboardingStateToEntity(req.State)); err != nil {
 		return nil, dto.InternalWithError("Failed to update onboarding state", err)
 	}
-	org, _ := h.orgService.GetOrganization(orgID)
+	org, _ := h.orgService.Get(orgID)
 	result := onboardingStateToDTO(org.Onboarding)
 	return &result, nil
 }
@@ -55,7 +55,7 @@ func (h *OrganizationHandler) UpdateSettings(ctx context.Context, orgID jsonldb.
 	if err := h.orgService.UpdateSettings(orgID, organizationSettingsToEntity(req.Settings)); err != nil {
 		return nil, dto.InternalWithError("Failed to update organization settings", err)
 	}
-	org, err := h.orgService.GetOrganization(orgID)
+	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
 	}

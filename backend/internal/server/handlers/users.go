@@ -57,7 +57,7 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *e
 
 	// Update or create membership
 	if err := h.memService.UpdateRole(userID, orgID, userRoleToEntity(req.Role)); err != nil {
-		if _, err = h.memService.CreateMembership(userID, orgID, userRoleToEntity(req.Role)); err != nil {
+		if _, err = h.memService.Create(userID, orgID, userRoleToEntity(req.Role)); err != nil {
 			return nil, dto.InternalWithError("Failed to update user role", err)
 		}
 	}

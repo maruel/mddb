@@ -48,7 +48,7 @@ func (s *NodeService) ListNodes(ctx context.Context, orgID jsonldb.ID) ([]*entit
 func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType entity.NodeType, parentID jsonldb.ID) (*entity.Node, error) {
 	// Check Quota
 	if s.orgService != nil {
-		org, err := s.orgService.GetOrganization(orgID)
+		org, err := s.orgService.Get(orgID)
 		if err == nil && org.Quotas.MaxPages > 0 {
 			count, _, err := s.fileStore.GetOrganizationUsage(orgID)
 			if err == nil && count >= org.Quotas.MaxPages {

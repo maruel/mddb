@@ -341,7 +341,7 @@ type userWithMemberships struct {
 
 // getUserWithMemberships fetches a user and their memberships with org names.
 func getUserWithMemberships(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, userID jsonldb.ID) (*userWithMemberships, error) {
-	user, err := userService.GetUser(userID)
+	user, err := userService.Get(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +350,7 @@ func getUserWithMemberships(userService *identity.UserService, memService *ident
 	if memIter, err := memService.Iter(userID); err == nil {
 		for m := range memIter {
 			mwon := membershipWithOrgName{Membership: *m}
-			if org, err := orgService.GetOrganization(m.OrganizationID); err == nil {
+			if org, err := orgService.Get(m.OrganizationID); err == nil {
 				mwon.OrganizationName = org.Name
 			}
 			mems = append(mems, mwon)

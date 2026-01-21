@@ -26,7 +26,7 @@ func TestOrganizationService(t *testing.T) {
 	t.Run("CreateOrganization", func(t *testing.T) {
 		t.Run("valid name", func(t *testing.T) {
 			var createErr error
-			org, createErr = service.CreateOrganization(t.Context(), "Test Organization")
+			org, createErr = service.Create(t.Context(), "Test Organization")
 			if createErr != nil {
 				t.Fatalf("CreateOrganization failed: %v", createErr)
 			}
@@ -49,7 +49,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("empty name", func(t *testing.T) {
-			_, createErr := service.CreateOrganization(t.Context(), "")
+			_, createErr := service.Create(t.Context(), "")
 			if createErr == nil {
 				t.Error("Expected error when creating organization with empty name")
 			}
@@ -57,7 +57,7 @@ func TestOrganizationService(t *testing.T) {
 
 		t.Run("second organization", func(t *testing.T) {
 			var createErr error
-			org2, createErr = service.CreateOrganization(t.Context(), "Second Org")
+			org2, createErr = service.Create(t.Context(), "Second Org")
 			if createErr != nil {
 				t.Fatalf("CreateOrganization (second) failed: %v", createErr)
 			}
@@ -66,7 +66,7 @@ func TestOrganizationService(t *testing.T) {
 
 	t.Run("GetOrganization", func(t *testing.T) {
 		t.Run("existing ID", func(t *testing.T) {
-			retrieved, getErr := service.GetOrganization(org.ID)
+			retrieved, getErr := service.Get(org.ID)
 			if getErr != nil {
 				t.Fatalf("GetOrganization failed: %v", getErr)
 			}
@@ -76,7 +76,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent ID", func(t *testing.T) {
-			_, getErr := service.GetOrganization(jsonldb.ID(99999))
+			_, getErr := service.Get(jsonldb.ID(99999))
 			if getErr == nil {
 				t.Error("Expected error for non-existent organization")
 			}
@@ -95,7 +95,7 @@ func TestOrganizationService(t *testing.T) {
 				t.Fatalf("UpdateSettings failed: %v", updateErr)
 			}
 
-			updatedOrg, _ := service.GetOrganization(org.ID)
+			updatedOrg, _ := service.Get(org.ID)
 			if !updatedOrg.Settings.PublicAccess {
 				t.Error("Expected Settings.PublicAccess = true after update")
 			}
@@ -124,7 +124,7 @@ func TestOrganizationService(t *testing.T) {
 				t.Fatalf("UpdateOnboarding failed: %v", updateErr)
 			}
 
-			updatedOrg2, _ := service.GetOrganization(org2.ID)
+			updatedOrg2, _ := service.Get(org2.ID)
 			if !updatedOrg2.Onboarding.Completed {
 				t.Error("Expected Onboarding.Completed = true after update")
 			}
@@ -160,7 +160,7 @@ func TestOrganizationService(t *testing.T) {
 			t.Fatal(svcErr)
 		}
 
-		persistOrg, createErr := svc1.CreateOrganization(t.Context(), "Persistent Org")
+		persistOrg, createErr := svc1.Create(t.Context(), "Persistent Org")
 		if createErr != nil {
 			t.Fatal(createErr)
 		}
@@ -175,7 +175,7 @@ func TestOrganizationService(t *testing.T) {
 		}
 
 		// Verify organization persisted
-		retrieved, getErr := svc2.GetOrganization(orgID)
+		retrieved, getErr := svc2.Get(orgID)
 		if getErr != nil {
 			t.Fatalf("Failed to retrieve persisted organization: %v", getErr)
 		}

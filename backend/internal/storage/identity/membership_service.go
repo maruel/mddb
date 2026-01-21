@@ -48,8 +48,8 @@ func (s *MembershipService) findByUserAndOrg(userID, orgID jsonldb.ID) *entity.M
 	return nil
 }
 
-// CreateMembership adds a user to an organization.
-func (s *MembershipService) CreateMembership(userID, orgID jsonldb.ID, role entity.UserRole) (*entity.Membership, error) {
+// Create adds a user to an organization.
+func (s *MembershipService) Create(userID, orgID jsonldb.ID, role entity.UserRole) (*entity.Membership, error) {
 	if userID.IsZero() {
 		return nil, errUserIDEmpty
 	}
@@ -76,8 +76,8 @@ func (s *MembershipService) CreateMembership(userID, orgID jsonldb.ID, role enti
 	return membership, nil
 }
 
-// GetMembership retrieves a specific user-org relationship.
-func (s *MembershipService) GetMembership(userID, orgID jsonldb.ID) (*entity.Membership, error) {
+// Get retrieves a specific user-org relationship.
+func (s *MembershipService) Get(userID, orgID jsonldb.ID) (*entity.Membership, error) {
 	m := s.findByUserAndOrg(userID, orgID)
 	if m == nil {
 		return nil, errMembershipNotFound

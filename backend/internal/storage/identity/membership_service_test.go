@@ -18,10 +18,10 @@ func TestMembershipService(t *testing.T) {
 	userID := jsonldb.ID(100)
 	orgID := jsonldb.ID(200)
 
-	// Test CreateMembership
-	membership, err := service.CreateMembership(userID, orgID, entity.UserRoleAdmin)
+	// Test Create
+	membership, err := service.Create(userID, orgID, entity.UserRoleAdmin)
 	if err != nil {
-		t.Fatalf("CreateMembership failed: %v", err)
+		t.Fatalf("Create failed: %v", err)
 	}
 
 	if membership.UserID != userID {
@@ -38,45 +38,45 @@ func TestMembershipService(t *testing.T) {
 	}
 
 	// Test creating duplicate membership
-	_, err = service.CreateMembership(userID, orgID, entity.UserRoleEditor)
+	_, err = service.Create(userID, orgID, entity.UserRoleEditor)
 	if err == nil {
 		t.Error("Expected error when creating duplicate membership")
 	}
 
-	// Test CreateMembership with invalid user ID (contains invalid character @)
-	_, err = service.CreateMembership(jsonldb.ID(0), orgID, entity.UserRoleAdmin)
+	// Test Create with invalid user ID (contains invalid character @)
+	_, err = service.Create(jsonldb.ID(0), orgID, entity.UserRoleAdmin)
 	if err == nil {
 		t.Error("Expected error for invalid user ID")
 	}
 
-	// Test CreateMembership with invalid org ID (contains invalid character @)
-	_, err = service.CreateMembership(userID, jsonldb.ID(0), entity.UserRoleAdmin)
+	// Test Create with invalid org ID (contains invalid character @)
+	_, err = service.Create(userID, jsonldb.ID(0), entity.UserRoleAdmin)
 	if err == nil {
 		t.Error("Expected error for invalid org ID")
 	}
 
-	// Test GetMembership
-	retrieved, err := service.GetMembership(userID, orgID)
+	// Test Get
+	retrieved, err := service.Get(userID, orgID)
 	if err != nil {
-		t.Fatalf("GetMembership failed: %v", err)
+		t.Fatalf("Get failed: %v", err)
 	}
 	if retrieved.Role != entity.UserRoleAdmin {
 		t.Errorf("Role = %v, want %v", retrieved.Role, entity.UserRoleAdmin)
 	}
 
-	// Test GetMembership with non-existent
-	_, err = service.GetMembership(jsonldb.ID(999), orgID)
+	// Test Get with non-existent
+	_, err = service.Get(jsonldb.ID(999), orgID)
 	if err == nil {
 		t.Error("Expected error for non-existent membership")
 	}
 
 	// Create second user in same org
 	userID2 := jsonldb.ID(101)
-	_, _ = service.CreateMembership(userID2, orgID, entity.UserRoleViewer)
+	_, _ = service.Create(userID2, orgID, entity.UserRoleViewer)
 
 	// Create same user in different org
 	orgID2 := jsonldb.ID(201)
-	_, _ = service.CreateMembership(userID, orgID2, entity.UserRoleEditor)
+	_, _ = service.Create(userID, orgID2, entity.UserRoleEditor)
 
 	// Test Iter
 	iter, err := service.Iter(userID)
@@ -103,7 +103,7 @@ func TestMembershipService(t *testing.T) {
 		t.Fatalf("UpdateRole failed: %v", err)
 	}
 
-	updated, _ := service.GetMembership(userID, orgID)
+	updated, _ := service.Get(userID, orgID)
 	if updated.Role != entity.UserRoleEditor {
 		t.Errorf("Role after update = %v, want %v", updated.Role, entity.UserRoleEditor)
 	}
@@ -121,7 +121,7 @@ func TestMembershipService(t *testing.T) {
 		t.Fatalf("UpdateSettings failed: %v", err)
 	}
 
-	updatedSettings, _ := service.GetMembership(userID, orgID)
+	updatedSettings, _ := service.Get(userID, orgID)
 	if !updatedSettings.Settings.Notifications {
 		t.Error("Settings.Notifications = false, want true")
 	}
@@ -145,7 +145,7 @@ func TestMembershipService_Persistence(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = service1.CreateMembership(userID, orgID, entity.UserRoleAdmin)
+	_, err = service1.Create(userID, orgID, entity.UserRoleAdmin)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,7 +157,7 @@ func TestMembershipService_Persistence(t *testing.T) {
 	}
 
 	// Verify membership persisted
-	retrieved, err := service2.GetMembership(userID, orgID)
+	retrieved, err := service2.Get(userID, orgID)
 	if err != nil {
 		t.Fatalf("Failed to retrieve persisted membership: %v", err)
 	}

@@ -145,29 +145,29 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try to find user by OAuth ID
-	user, err := h.userService.GetUserByOAuth(provider, userInfo.ID)
+	user, err := h.userService.GetByOAuth(provider, userInfo.ID)
 	if err != nil {
 		// Try to find user by email
-		user, err = h.userService.GetUserByEmail(userInfo.Email)
+		user, err = h.userService.GetByEmail(userInfo.Email)
 		if err != nil {
 			// Create new user if not found
 			orgName := userInfo.Name + "'s Organization"
-			org, _ := h.orgService.CreateOrganization(r.Context(), orgName)
+			org, _ := h.orgService.Create(r.Context(), orgName)
 
 			// Password is not used for OAuth users
 			password, _ := utils.GenerateToken(32)
-			user, err = h.userService.CreateUser(userInfo.Email, password, userInfo.Name)
+			user, err = h.userService.Create(userInfo.Email, password, userInfo.Name)
 			if err != nil {
 				writeErrorResponse(w, dto.Internal("user_creation"))
 				return
 			}
 			if org != nil && !org.ID.IsZero() {
-				_, _ = h.memService.CreateMembership(user.ID, org.ID, entity.UserRoleAdmin)
+				_, _ = h.memService.Create(user.ID, org.ID, entity.UserRoleAdmin)
 			}
 		}
 
 		// Link OAuth identity
-		_ = h.userService.LinkOAuthIdentity(user.ID, entity.OAuthIdentity{
+		_ = h.userService.LinkOAuth(user.ID, entity.OAuthIdentity{
 			Provider:   provider,
 			ProviderID: userInfo.ID,
 			Email:      userInfo.Email,
@@ -176,7 +176,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get fully populated user
-	user, _ = h.userService.GetUser(user.ID)
+	user, _ = h.userService.Get(user.ID)
 
 	// Generate JWT token
 	jwtToken, err := h.authHandler.GenerateToken(user)

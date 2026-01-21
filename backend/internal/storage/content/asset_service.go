@@ -52,7 +52,7 @@ func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 
 	// Check Quota
 	if s.orgService != nil {
-		org, err := s.orgService.GetOrganization(orgID)
+		org, err := s.orgService.Get(orgID)
 		if err == nil && org.Quotas.MaxStorage > 0 {
 			_, usage, err := s.fileStore.GetOrganizationUsage(orgID)
 			if err == nil && usage+int64(len(data)) > org.Quotas.MaxStorage {

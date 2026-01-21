@@ -12,8 +12,8 @@ func TestUserService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Test CreateUser
-	user, err := service.CreateUser("test@example.com", "password123", "Test User")
+	// Test Create
+	user, err := service.Create("test@example.com", "password123", "Test User")
 	if err != nil {
 		t.Fatalf("Failed to create user: %v", err)
 	}
@@ -22,8 +22,8 @@ func TestUserService(t *testing.T) {
 		t.Errorf("Expected email test@example.com, got %s", user.Email)
 	}
 
-	// Test GetUser
-	retrieved, err := service.GetUser(user.ID)
+	// Test Get
+	retrieved, err := service.Get(user.ID)
 	if err != nil {
 		t.Fatalf("Failed to get user: %v", err)
 	}
@@ -31,8 +31,8 @@ func TestUserService(t *testing.T) {
 		t.Errorf("Expected user ID %s, got %s", user.ID, retrieved.ID)
 	}
 
-	// Test GetUserByEmail
-	byEmail, err := service.GetUserByEmail("test@example.com")
+	// Test GetByEmail
+	byEmail, err := service.GetByEmail("test@example.com")
 	if err != nil {
 		t.Fatalf("Failed to get user by email: %v", err)
 	}
@@ -56,7 +56,7 @@ func TestUserService(t *testing.T) {
 	}
 
 	// Test duplicate user creation
-	_, err = service.CreateUser("test@example.com", "password456", "Another User")
+	_, err = service.Create("test@example.com", "password456", "Another User")
 	if err == nil {
 		t.Error("Expected error when creating duplicate user")
 	}

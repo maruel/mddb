@@ -78,14 +78,14 @@ func (u *userStorage) Validate() error {
 	return nil
 }
 
-// CreateUser creates a new user.
-func (s *UserService) CreateUser(email, password, name string) (*entity.User, error) {
+// Create creates a new user.
+func (s *UserService) Create(email, password, name string) (*entity.User, error) {
 	if email == "" || password == "" {
 		return nil, errEmailPwdRequired
 	}
 
 	// Check if user already exists
-	if _, err := s.GetUserByEmail(email); err == nil {
+	if _, err := s.GetByEmail(email); err == nil {
 		return nil, errUserExists
 	}
 
@@ -115,8 +115,8 @@ func (s *UserService) CreateUser(email, password, name string) (*entity.User, er
 	return &user, nil
 }
 
-// GetUser retrieves a user by ID.
-func (s *UserService) GetUser(id jsonldb.ID) (*entity.User, error) {
+// Get retrieves a user by ID.
+func (s *UserService) Get(id jsonldb.ID) (*entity.User, error) {
 	if id.IsZero() {
 		return nil, errUserIDEmpty
 	}
@@ -128,8 +128,8 @@ func (s *UserService) GetUser(id jsonldb.ID) (*entity.User, error) {
 	return &user, nil
 }
 
-// GetUserByEmail retrieves a user by email.
-func (s *UserService) GetUserByEmail(email string) (*entity.User, error) {
+// GetByEmail retrieves a user by email.
+func (s *UserService) GetByEmail(email string) (*entity.User, error) {
 	for stored := range s.table.Iter(0) {
 		if stored.Email == email {
 			user := stored.User
@@ -153,8 +153,8 @@ func (s *UserService) Authenticate(email, password string) (*entity.User, error)
 	return nil, errInvalidCreds
 }
 
-// GetUserByOAuth retrieves a user by their OAuth identity.
-func (s *UserService) GetUserByOAuth(provider, providerID string) (*entity.User, error) {
+// GetByOAuth retrieves a user by their OAuth identity.
+func (s *UserService) GetByOAuth(provider, providerID string) (*entity.User, error) {
 	for stored := range s.table.Iter(0) {
 		for _, identity := range stored.OAuthIdentities {
 			if identity.Provider == provider && identity.ProviderID == providerID {
@@ -166,8 +166,8 @@ func (s *UserService) GetUserByOAuth(provider, providerID string) (*entity.User,
 	return nil, errUserNotFound
 }
 
-// LinkOAuthIdentity links an OAuth identity to a user.
-func (s *UserService) LinkOAuthIdentity(userID jsonldb.ID, identity entity.OAuthIdentity) error {
+// LinkOAuth links an OAuth identity to a user.
+func (s *UserService) LinkOAuth(userID jsonldb.ID, identity entity.OAuthIdentity) error {
 	if userID.IsZero() {
 		return errUserIDEmpty
 	}

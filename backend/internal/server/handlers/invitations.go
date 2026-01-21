@@ -33,7 +33,7 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, orgID jsonldb.
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
-	invitation, err := h.invService.CreateInvitation(req.Email, orgID, userRoleToEntity(req.Role))
+	invitation, err := h.invService.Create(req.Email, orgID, userRoleToEntity(req.Role))
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create invitation", err)
 	}
@@ -60,7 +60,7 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req dto.Accept
 		return nil, dto.MissingField("token")
 	}
 
-	inv, err := h.invService.GetInvitationByToken(req.Token)
+	inv, err := h.invService.GetByToken(req.Token)
 	if err != nil {
 		return nil, dto.NewAPIError(404, dto.ErrorCodeNotFound, "Invitation not found or expired")
 	}
@@ -70,25 +70,25 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req dto.Accept
 	}
 
 	// Create user or link to existing
-	user, err := h.userService.GetUserByEmail(inv.Email)
+	user, err := h.userService.GetByEmail(inv.Email)
 	if err != nil {
 		// Create new user if they don't exist
 		if req.Password == "" || req.Name == "" {
 			return nil, dto.MissingField("password and name required for new account")
 		}
-		user, err = h.userService.CreateUser(inv.Email, req.Password, req.Name)
+		user, err = h.userService.Create(inv.Email, req.Password, req.Name)
 		if err != nil {
 			return nil, dto.InternalWithError("Failed to create user", err)
 		}
 	}
 
 	// Create membership
-	if _, err = h.memService.CreateMembership(user.ID, inv.OrganizationID, inv.Role); err != nil {
+	if _, err = h.memService.Create(user.ID, inv.OrganizationID, inv.Role); err != nil {
 		return nil, dto.InternalWithError("Failed to create membership", err)
 	}
 
 	// Delete invitation
-	_ = h.invService.DeleteInvitation(inv.ID)
+	_ = h.invService.Delete(inv.ID)
 
 	// Build user response
 	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)

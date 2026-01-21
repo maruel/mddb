@@ -20,7 +20,7 @@ func TestInvitationService(t *testing.T) {
 	role := entity.UserRoleEditor
 
 	// Test CreateInvitation
-	inv, err := service.CreateInvitation(email, orgID, role)
+	inv, err := service.Create(email, orgID, role)
 	if err != nil {
 		t.Fatalf("Failed to create invitation: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestInvitationService(t *testing.T) {
 	}
 
 	// Test GetInvitationByToken
-	found, err := service.GetInvitationByToken(inv.Token)
+	found, err := service.GetByToken(inv.Token)
 	if err != nil {
 		t.Fatalf("Failed to find invitation by token: %v", err)
 	}
@@ -61,12 +61,12 @@ func TestInvitationService(t *testing.T) {
 	}
 
 	// Test DeleteInvitation
-	err = service.DeleteInvitation(inv.ID)
+	err = service.Delete(inv.ID)
 	if err != nil {
 		t.Fatalf("Failed to delete invitation: %v", err)
 	}
 
-	_, err = service.GetInvitationByToken(inv.Token)
+	_, err = service.GetByToken(inv.Token)
 	if err == nil {
 		t.Error("Expected invitation to be deleted")
 	}

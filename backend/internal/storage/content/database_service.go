@@ -57,7 +57,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 
 	// Check Quota
 	if s.orgService != nil {
-		org, err := s.orgService.GetOrganization(orgID)
+		org, err := s.orgService.Get(orgID)
 		if err == nil && org.Quotas.MaxPages > 0 {
 			count, _, err := s.fileStore.GetOrganizationUsage(orgID)
 			if err == nil && count >= org.Quotas.MaxPages {

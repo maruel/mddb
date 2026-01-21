@@ -21,7 +21,7 @@ func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, jsonl
 	if err != nil {
 		t.Fatal(err)
 	}
-	org, err := orgService.CreateOrganization(t.Context(), "Test Org")
+	org, err := orgService.Create(t.Context(), "Test Org")
 	if err != nil {
 		t.Fatal(err)
 	}

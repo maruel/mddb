@@ -49,7 +49,7 @@ func TestRegister(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to decode Joe's organization ID: %v", err)
 	}
-	org1, err := orgService.GetOrganization(org1ID)
+	org1, err := orgService.Get(org1ID)
 	if err != nil {
 		t.Fatalf("Failed to get Joe's organization: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestRegister(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to decode Alice's organization ID: %v", err)
 	}
-	org2, err := orgService.GetOrganization(org2ID)
+	org2, err := orgService.Get(org2ID)
 	if err != nil {
 		t.Fatalf("Failed to get Alice's organization: %v", err)
 	}

@@ -70,25 +70,25 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	}
 
 	// Check if user already exists
-	_, err := h.userService.GetUserByEmail(req.Email)
+	_, err := h.userService.GetByEmail(req.Email)
 	if err == nil {
 		return nil, dto.NewAPIError(409, dto.ErrorCodeConflict, "User already exists")
 	}
 
 	// Create an organization only for this user
 	orgName := req.Name + "'s Organization"
-	org, err := h.orgService.CreateOrganization(ctx, orgName)
+	org, err := h.orgService.Create(ctx, orgName)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create organization", err)
 	}
 
-	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name)
+	user, err := h.userService.Create(req.Email, req.Password, req.Name)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create user", err)
 	}
 
 	// Create initial membership (admin of their own org)
-	if _, err := h.memService.CreateMembership(user.ID, org.ID, entity.UserRoleAdmin); err != nil {
+	if _, err := h.memService.Create(user.ID, org.ID, entity.UserRoleAdmin); err != nil {
 		return nil, dto.InternalWithError("Failed to create initial membership", err)
 	}
 
@@ -163,7 +163,7 @@ func (h *AuthHandler) PopulateActiveContext(userResp *dto.UserResponse, orgIDStr
 	}
 
 	// Fetch onboarding state
-	if org, err := h.orgService.GetOrganization(orgID); err == nil {
+	if org, err := h.orgService.Get(orgID); err == nil {
 		userResp.Onboarding = onboardingStatePtrToDTO(&org.Onboarding)
 	}
 }

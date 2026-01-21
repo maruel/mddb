@@ -39,8 +39,8 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	return &InvitationService{table: table}, nil
 }
 
-// CreateInvitation creates a new invitation.
-func (s *InvitationService) CreateInvitation(email string, orgID jsonldb.ID, role entity.UserRole) (*entity.Invitation, error) {
+// Create creates a new invitation.
+func (s *InvitationService) Create(email string, orgID jsonldb.ID, role entity.UserRole) (*entity.Invitation, error) {
 	if email == "" {
 		return nil, errEmailEmpty
 	}
@@ -70,8 +70,8 @@ func (s *InvitationService) CreateInvitation(email string, orgID jsonldb.ID, rol
 	return invitation, nil
 }
 
-// GetInvitationByToken retrieves an invitation by its token.
-func (s *InvitationService) GetInvitationByToken(token string) (*entity.Invitation, error) {
+// GetByToken retrieves an invitation by its token.
+func (s *InvitationService) GetByToken(token string) (*entity.Invitation, error) {
 	for inv := range s.table.Iter(0) {
 		if inv.Token == token {
 			return inv, nil
@@ -80,8 +80,8 @@ func (s *InvitationService) GetInvitationByToken(token string) (*entity.Invitati
 	return nil, errInvitationNotFound
 }
 
-// DeleteInvitation deletes an invitation.
-func (s *InvitationService) DeleteInvitation(id jsonldb.ID) error {
+// Delete deletes an invitation.
+func (s *InvitationService) Delete(id jsonldb.ID) error {
 	if id.IsZero() {
 		return errInvitationIDEmpty
 	}
