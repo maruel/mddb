@@ -11,8 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"iter"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -57,12 +55,7 @@ type UserService struct {
 }
 
 // NewUserService creates a new user service.
-func NewUserService(rootDir string) (*UserService, error) {
-	dbDir := filepath.Join(rootDir, "db")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
-		return nil, fmt.Errorf("failed to create db directory: %w", err)
-	}
-	tablePath := filepath.Join(dbDir, "users.jsonl")
+func NewUserService(tablePath string) (*UserService, error) {
 	table, err := jsonldb.NewTable[*userStorage](tablePath)
 	if err != nil {
 		return nil, err

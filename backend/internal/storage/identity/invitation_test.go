@@ -1,13 +1,14 @@
 package identity
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
 func TestInvitationService(t *testing.T) {
-	service, err := NewInvitationService(t.TempDir())
+	service, err := NewInvitationService(filepath.Join(t.TempDir(), "invitations.jsonl"))
 	if err != nil {
 		t.Fatal(err)
 	}

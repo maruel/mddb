@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -15,7 +16,7 @@ func TestOrganizationService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	service, err := NewOrganizationService(tempDir, fileStore, nil)
+	service, err := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, fileStore, nil)
 	if err != nil {
 		t.Fatalf("NewOrganizationService failed: %v", err)
 	}
@@ -154,10 +155,11 @@ func TestOrganizationService(t *testing.T) {
 
 	t.Run("Persistence", func(t *testing.T) {
 		persistDir := t.TempDir()
+		tablePath := filepath.Join(persistDir, "organizations.jsonl")
 
 		// Create service and add organization
 		fs1, _ := infra.NewFileStore(persistDir)
-		svc1, svcErr := NewOrganizationService(persistDir, fs1, nil)
+		svc1, svcErr := NewOrganizationService(tablePath, persistDir, fs1, nil)
 		if svcErr != nil {
 			t.Fatal(svcErr)
 		}
@@ -171,7 +173,7 @@ func TestOrganizationService(t *testing.T) {
 
 		// Create new service instance (simulating restart)
 		fs2, _ := infra.NewFileStore(persistDir)
-		svc2, svc2Err := NewOrganizationService(persistDir, fs2, nil)
+		svc2, svc2Err := NewOrganizationService(tablePath, persistDir, fs2, nil)
 		if svc2Err != nil {
 			t.Fatal(svc2Err)
 		}

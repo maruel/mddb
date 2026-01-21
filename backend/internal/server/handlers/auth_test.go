@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -12,9 +13,9 @@ import (
 func TestRegister(t *testing.T) {
 	tempDir := t.TempDir()
 	fileStore, _ := infra.NewFileStore(tempDir)
-	memService, _ := identity.NewMembershipService(tempDir)
-	orgService, _ := identity.NewOrganizationService(tempDir, fileStore, nil)
-	userService, _ := identity.NewUserService(tempDir)
+	memService, _ := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
+	orgService, _ := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, fileStore, nil)
+	userService, _ := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
 	authHandler := NewAuthHandler(userService, memService, orgService, "secret")
 	ctx := t.Context()
 

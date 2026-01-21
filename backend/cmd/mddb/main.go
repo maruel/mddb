@@ -160,22 +160,28 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize git service: %w", err)
 	}
 
-	memService, err := identity.NewMembershipService(*dataDir)
+	// Create db directory for identity tables
+	dbDir := filepath.Join(*dataDir, "db")
+	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
+		return fmt.Errorf("failed to create db directory: %w", err)
+	}
+
+	memService, err := identity.NewMembershipService(filepath.Join(dbDir, "memberships.jsonl"))
 	if err != nil {
 		return fmt.Errorf("failed to initialize membership service: %w", err)
 	}
 
-	orgService, err := identity.NewOrganizationService(*dataDir, fileStore, gitService)
+	orgService, err := identity.NewOrganizationService(filepath.Join(dbDir, "organizations.jsonl"), *dataDir, fileStore, gitService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize organization service: %w", err)
 	}
 
-	userService, err := identity.NewUserService(*dataDir)
+	userService, err := identity.NewUserService(filepath.Join(dbDir, "users.jsonl"))
 	if err != nil {
 		return fmt.Errorf("failed to initialize user service: %w", err)
 	}
 
-	invService, err := identity.NewInvitationService(*dataDir)
+	invService, err := identity.NewInvitationService(filepath.Join(dbDir, "invitations.jsonl"))
 	if err != nil {
 		return fmt.Errorf("failed to initialize invitation service: %w", err)
 	}

@@ -102,12 +102,9 @@ type OrganizationService struct {
 }
 
 // NewOrganizationService creates a new organization service.
-func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitService *infra.Git) (*OrganizationService, error) {
-	dbDir := filepath.Join(rootDir, "db")
-	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
-		return nil, fmt.Errorf("failed to create db directory: %w", err)
-	}
-	tablePath := filepath.Join(dbDir, "organizations.jsonl")
+// tablePath is the path to the organizations.jsonl file.
+// rootDir is the root directory for organization content (each org gets a subdirectory).
+func NewOrganizationService(tablePath, rootDir string, fileStore *infra.FileStore, gitService *infra.Git) (*OrganizationService, error) {
 	table, err := jsonldb.NewTable[*Organization](tablePath)
 	if err != nil {
 		return nil, err

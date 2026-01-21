@@ -2,6 +2,7 @@ package content
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -17,7 +18,7 @@ func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, jsonl
 	if err != nil {
 		t.Fatal(err)
 	}
-	orgService, err := identity.NewOrganizationService(tempDir, fileStore, nil)
+	orgService, err := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, fileStore, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

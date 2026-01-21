@@ -1,13 +1,14 @@
 package identity
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
 func TestMembershipService(t *testing.T) {
-	service, err := NewMembershipService(t.TempDir())
+	service, err := NewMembershipService(filepath.Join(t.TempDir(), "memberships.jsonl"))
 	if err != nil {
 		t.Fatalf("NewMembershipService failed: %v", err)
 	}
@@ -134,13 +135,13 @@ func TestMembershipService(t *testing.T) {
 }
 
 func TestMembershipService_Persistence(t *testing.T) {
-	tempDir := t.TempDir()
+	tablePath := filepath.Join(t.TempDir(), "memberships.jsonl")
 
 	userID := jsonldb.ID(100)
 	orgID := jsonldb.ID(200)
 
 	// Create service and add membership
-	service1, err := NewMembershipService(tempDir)
+	service1, err := NewMembershipService(tablePath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +152,7 @@ func TestMembershipService_Persistence(t *testing.T) {
 	}
 
 	// Create new service instance (simulating restart)
-	service2, err := NewMembershipService(tempDir)
+	service2, err := NewMembershipService(tablePath)
 	if err != nil {
 		t.Fatal(err)
 	}

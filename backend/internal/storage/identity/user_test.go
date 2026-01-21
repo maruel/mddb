@@ -1,11 +1,12 @@
 package identity
 
 import (
+	"path/filepath"
 	"testing"
 )
 
 func TestUserService(t *testing.T) {
-	service, err := NewUserService(t.TempDir())
+	service, err := NewUserService(filepath.Join(t.TempDir(), "users.jsonl"))
 	if err != nil {
 		t.Fatal(err)
 	}
