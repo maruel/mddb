@@ -1,6 +1,6 @@
 package dto
 
-// PropertyType represents the type of a database property.
+// PropertyType represents the type of a table property.
 type PropertyType string
 
 const (
@@ -39,7 +39,7 @@ type SelectOption struct {
 	Color string `json:"color,omitempty"`
 }
 
-// Property represents a database property (column) with its configuration.
+// Property represents a table column with its configuration.
 type Property struct {
 	Name     string       `json:"name"`
 	Type     PropertyType `json:"type"`

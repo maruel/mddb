@@ -11,10 +11,10 @@ import (
 
 var errSchemaVersionRequired = errors.New("schema version is required")
 
-// currentVersion is the current version of the JSONL database format.
+// currentVersion is the current version of the JSONL table format.
 const currentVersion = "1.0"
 
-// columnType represents the type of a database column.
+// columnType represents the type of a table column.
 type columnType string
 
 const (
@@ -26,7 +26,7 @@ const (
 	columnTypeJSONB  columnType = "jsonb"
 )
 
-// column represents a database column in storage.
+// column represents a table column in storage.
 type column struct {
 	Name        string     `json:"name"`
 	Type        columnType `json:"type"`

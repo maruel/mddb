@@ -244,7 +244,7 @@ export interface DeleteTableRequest {
   ID: string;
 }
 /**
- * ListRecordsRequest is a request to list records in a database.
+ * ListRecordsRequest is a request to list records in a table.
  */
 export interface ListRecordsRequest {
   OrgID: string;
@@ -338,7 +338,7 @@ export interface ServeAssetRequest {
   AssetName: string;
 }
 /**
- * SearchRequest is a request to search pages and databases.
+ * SearchRequest is a request to search pages and tables.
  */
 export interface SearchRequest {
   OrgID: string;
@@ -782,7 +782,7 @@ export interface AdminOrgsResponse {
 // source: types.go
 
 /**
- * PropertyType represents the type of a database property.
+ * PropertyType represents the type of a table property.
  */
 /**
  * PropertyTypeText stores plain text values.
@@ -839,7 +839,7 @@ export interface SelectOption {
   color?: string;
 }
 /**
- * Property represents a database property (column) with its configuration.
+ * Property represents a table column with its configuration.
  */
 export interface Property {
   name: string;

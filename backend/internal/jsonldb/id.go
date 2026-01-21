@@ -52,7 +52,7 @@ func init() {
 //
 // IDs encode a 10µs timestamp and a monotonically increasing slice for collision
 // avoidance. They are lexicographically sortable when encoded as strings, making
-// them suitable for use as database keys and filenames.
+// them suitable for use as table keys and filenames.
 // The zero value (0) represents an invalid/unset ID.
 type ID uint64
 

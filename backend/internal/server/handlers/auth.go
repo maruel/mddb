@@ -92,7 +92,7 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 
 	// Create welcome page
 	welcomeTitle := "Welcome to " + orgName
-	welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
+	welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, tables, and upload assets here."
 	pageID := jsonldb.NewID()
 	author := content.Author{Name: req.Name, Email: req.Email}
 	if _, err := h.fs.WritePage(ctx, org.ID, pageID, welcomeTitle, welcomeContent, author); err != nil {

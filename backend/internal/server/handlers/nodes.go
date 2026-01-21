@@ -45,7 +45,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, orgID jsonldb.ID, _ *identity
 	return nodeToResponse(node), nil
 }
 
-// CreateNode creates a new node (page, database, or hybrid).
+// CreateNode creates a new node (page, table, or hybrid).
 func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateNodeRequest) (*dto.NodeResponse, error) {
 	if req.Title == "" || req.Type == "" {
 		return nil, dto.MissingField("title or type")

@@ -270,12 +270,12 @@ type NodeResponse struct {
 	ParentID   string         `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
 	Title      string         `json:"title" jsonschema:"description=Node title"`
 	Content    string         `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
-	Properties []Property     `json:"properties,omitempty" jsonschema:"description=Schema (Database part)"`
+	Properties []Property     `json:"properties,omitempty" jsonschema:"description=Schema (Table part)"`
 	Created    string         `json:"created" jsonschema:"description=Node creation timestamp (RFC3339)"`
 	Modified   string         `json:"modified" jsonschema:"description=Last modification timestamp (RFC3339)"`
 	Tags       []string       `json:"tags,omitempty" jsonschema:"description=Node tags"`
 	FaviconURL string         `json:"favicon_url,omitempty" jsonschema:"description=Favicon URL"`
-	Type       NodeType       `json:"type" jsonschema:"description=Node type (document/database/hybrid)"`
+	Type       NodeType       `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
 	Children   []NodeResponse `json:"children,omitempty" jsonschema:"description=Nested nodes"`
 }
 

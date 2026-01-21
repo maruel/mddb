@@ -102,7 +102,7 @@ func TestTable_ReadWrite(t *testing.T) {
 			}
 
 			// Verify metadata file exists
-			filePath := fs.databaseMetadataFile(orgID, tt.node.ID)
+			filePath := fs.tableMetadataFile(orgID, tt.node.ID)
 			if _, err := os.Stat(filePath); err != nil {
 				t.Errorf("Table metadata file not found: %s", filePath)
 			}
@@ -242,7 +242,7 @@ func TestTable_Delete(t *testing.T) {
 	}
 
 	// Verify metadata file exists
-	metadataPath := fs.databaseMetadataFile(orgID, node.ID)
+	metadataPath := fs.tableMetadataFile(orgID, node.ID)
 	if _, err := os.Stat(metadataPath); err != nil {
 		t.Fatalf("Table metadata file not found: %v", err)
 	}
@@ -342,7 +342,7 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 
 	// Verify JSONL file exists
-	recordsPath := fs.databaseRecordsFile(orgID, dbID)
+	recordsPath := fs.tableRecordsFile(orgID, dbID)
 	if _, err := os.Stat(recordsPath); err != nil {
 		t.Errorf("Records file not found: %s", recordsPath)
 	}
@@ -503,7 +503,7 @@ func TestTable_NestedPath(t *testing.T) {
 	}
 
 	// Verify metadata file exists at correct path
-	expectedPath := fs.databaseMetadataFile(orgID, dbID)
+	expectedPath := fs.tableMetadataFile(orgID, dbID)
 	if _, err := os.Stat(expectedPath); err != nil {
 		t.Errorf("Table metadata file not found at expected path: %s", expectedPath)
 	}

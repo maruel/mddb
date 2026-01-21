@@ -185,7 +185,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 			// Create welcome page
 			welcomeTitle := "Welcome to " + orgName
-			welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, databases, and upload assets here."
+			welcomeContent := "# Welcome to mddb\n\nThis is your new workspace. You can create pages, tables, and upload assets here."
 			pageID := jsonldb.NewID()
 			author := content.Author{Name: userInfo.Name, Email: userInfo.Email}
 			if _, err := h.fs.WritePage(r.Context(), org.ID, pageID, welcomeTitle, welcomeContent, author); err != nil {

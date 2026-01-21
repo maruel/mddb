@@ -6,7 +6,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
-// Node represents the unified content entity (can be a Page, a Database, or both).
+// Node represents the unified content entity (can be a Page, a Table, or both).
 type Node struct {
 	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique node identifier"`
 	ParentID   jsonldb.ID `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
@@ -33,7 +33,7 @@ const (
 	NodeTypeHybrid NodeType = "hybrid"
 )
 
-// DataRecord represents a record in a database.
+// DataRecord represents a record in a table.
 type DataRecord struct {
 	ID       jsonldb.ID     `json:"id" jsonschema:"description=Unique record identifier"`
 	Data     map[string]any `json:"data" jsonschema:"description=Record field values keyed by property name"`
@@ -95,10 +95,10 @@ type SearchOptions struct {
 	Limit       int    `json:"limit,omitempty" jsonschema:"description=Maximum number of results"`
 	MatchTitle  bool   `json:"match_title,omitempty" jsonschema:"description=Search in titles"`
 	MatchBody   bool   `json:"match_body,omitempty" jsonschema:"description=Search in body content"`
-	MatchFields bool   `json:"match_fields,omitempty" jsonschema:"description=Search in database fields"`
+	MatchFields bool   `json:"match_fields,omitempty" jsonschema:"description=Search in table fields"`
 }
 
-// PropertyType represents the type of a database property.
+// PropertyType represents the type of a table property.
 type PropertyType string
 
 const (
@@ -137,7 +137,7 @@ type SelectOption struct {
 	Color string `json:"color,omitempty" jsonschema:"description=Color for visual distinction"`
 }
 
-// Property represents a table property (column) with its configuration.
+// Property represents a table column with its configuration.
 type Property struct {
 	Name     string       `json:"name" jsonschema:"description=Property name (column header)"`
 	Type     PropertyType `json:"type" jsonschema:"description=Property type (text/number/select/etc)"`
