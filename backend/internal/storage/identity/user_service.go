@@ -142,10 +142,8 @@ func (s *UserService) CreateUser(email, password, name string, role entity.UserR
 		return nil, err
 	}
 
-	// Update local cache
-	newStored := s.table.Last()
-	s.byID[id] = newStored
-	s.byEmail[email] = newStored
+	s.byID[id] = stored
+	s.byEmail[email] = stored
 
 	return user, nil
 }

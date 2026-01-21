@@ -111,47 +111,6 @@ func TestTable(t *testing.T) {
 		})
 	})
 
-	t.Run("Last", func(t *testing.T) {
-		t.Run("valid", func(t *testing.T) {
-			table, _ := setupTable(t)
-
-			// Test empty table returns zero value
-			t.Run("empty table", func(t *testing.T) {
-				last := table.Last()
-				if last != nil {
-					t.Errorf("Last() on empty table = %v, want nil", last)
-				}
-			})
-
-			// Add rows and test Last returns correct row
-			_ = table.Append(&testRow{ID: 1, Name: "First"})
-			t.Run("single row", func(t *testing.T) {
-				last := table.Last()
-				if last == nil || last.ID != 1 || last.Name != "First" {
-					t.Errorf("Last() = %+v, want {ID:1, Name:First}", last)
-				}
-			})
-
-			_ = table.Append(&testRow{ID: 2, Name: "Second"})
-			t.Run("multiple rows", func(t *testing.T) {
-				last := table.Last()
-				if last == nil || last.ID != 2 || last.Name != "Second" {
-					t.Errorf("Last() = %+v, want {ID:2, Name:Second}", last)
-				}
-			})
-
-			// Verify Last returns a clone (mutation doesn't affect table)
-			t.Run("returns clone", func(t *testing.T) {
-				last := table.Last()
-				last.Name = "Modified"
-				lastAgain := table.Last()
-				if lastAgain.Name == "Modified" {
-					t.Error("Last() returned reference instead of clone")
-				}
-			})
-		})
-	})
-
 	t.Run("Get", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			table, _ := setupTable(t)

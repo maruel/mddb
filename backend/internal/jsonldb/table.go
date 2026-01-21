@@ -58,17 +58,6 @@ func (t *Table[T]) Len() int {
 	return len(t.rows)
 }
 
-// Last returns a clone of the most recently appended row, or nil if empty.
-func (t *Table[T]) Last() T {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-	if len(t.rows) == 0 {
-		var zero T
-		return zero
-	}
-	return t.rows[len(t.rows)-1].Clone()
-}
-
 // Get returns a clone of the row with the given ID, or nil if not found.
 func (t *Table[T]) Get(id ID) T {
 	t.mu.RLock()

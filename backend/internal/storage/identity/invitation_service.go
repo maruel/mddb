@@ -90,10 +90,8 @@ func (s *InvitationService) CreateInvitation(email string, orgID jsonldb.ID, rol
 		return nil, err
 	}
 
-	// Update local cache
-	newInv := s.table.Last()
-	s.byID[id] = newInv
-	s.byToken[token] = newInv
+	s.byID[id] = invitation
+	s.byToken[token] = invitation
 
 	return invitation, nil
 }
