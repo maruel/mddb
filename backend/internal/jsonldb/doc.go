@@ -22,4 +22,5 @@
 // # File Format
 //
 // JSONL files with line 1 as schema header, subsequent lines as JSON rows.
+// Rows are sorted by ID on load if out of order (handles clock drift, manual edits).
 package jsonldb

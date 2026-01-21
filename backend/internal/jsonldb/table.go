@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"iter"
 	"os"
+	"slices"
 	"sort"
 	"sync"
 )
@@ -245,6 +246,8 @@ func (t *Table[T]) load() error {
 	t.rows = make([]T, 0, n)
 	t.byID = make(map[ID]int, n)
 	lineNum := 0
+	var prevID ID
+	needsSort := false
 	for line := range bytes.SplitSeq(data, []byte{'\n'}) {
 		if len(line) == 0 {
 			continue
@@ -277,8 +280,24 @@ func (t *Table[T]) load() error {
 		if _, exists := t.byID[id]; exists {
 			return fmt.Errorf("duplicate ID %s in %s line %d", id, t.path, lineNum)
 		}
+		// Check if rows are in sorted order (needed for Iter with startID)
+		if id < prevID {
+			needsSort = true
+		}
+		prevID = id
 		t.byID[id] = len(t.rows)
 		t.rows = append(t.rows, row)
+	}
+
+	// Sort by ID if rows were out of order (e.g., clock drift, manual editing)
+	if needsSort {
+		slices.SortFunc(t.rows, func(a, b T) int {
+			return a.GetID().Compare(b.GetID())
+		})
+		// Rebuild index after sorting
+		for i, row := range t.rows {
+			t.byID[row.GetID()] = i
+		}
 	}
 	return nil
 }
@@ -310,10 +329,11 @@ func (t *Table[T]) Iter(startID ID) iter.Seq[T] {
 	}
 }
 
-// Append adds a new row to the table and persists it by appending to the file.
+// Append adds a new row to the table and persists it.
 //
 // Returns an error if the row fails validation, has a zero ID, or has a duplicate ID.
-// If the file doesn't exist, it is created with a schema header first.
+// If the new row's ID is less than the last row's ID (e.g., clock drift), the row is
+// inserted at the correct position and the entire file is rewritten to maintain sorted order.
 func (t *Table[T]) Append(row T) (err error) {
 	if err := row.Validate(); err != nil {
 		return fmt.Errorf("invalid row: %w", err)
@@ -330,32 +350,52 @@ func (t *Table[T]) Append(row T) (err error) {
 		return fmt.Errorf("duplicate ID %s", id)
 	}
 
-	// If file doesn't exist, write schema header first
-	if _, err := os.Stat(t.path); os.IsNotExist(err) {
-		if err := t.saveSchemaHeaderLocked(); err != nil {
-			return fmt.Errorf("failed to write schema header: %w", err)
+	// Check if new row breaks sorted order (e.g., clock drift)
+	if len(t.rows) > 0 && id < t.rows[len(t.rows)-1].GetID() {
+		// Find insertion point via binary search
+		idx := sort.Search(len(t.rows), func(i int) bool {
+			return t.rows[i].GetID() >= id
+		})
+		// Insert at correct position
+		t.rows = slices.Insert(t.rows, idx, row)
+		// Update indices for shifted rows
+		for i := idx; i < len(t.rows); i++ {
+			t.byID[t.rows[i].GetID()] = i
 		}
+		// Rewrite entire file in sorted order
+		if err := t.save(); err != nil {
+			return fmt.Errorf("failed to save table: %w", err)
+		}
+	} else {
+		// Normal case: append to end of file
+		if _, err := os.Stat(t.path); os.IsNotExist(err) {
+			if err := t.saveSchemaHeaderLocked(); err != nil {
+				return fmt.Errorf("failed to write schema header: %w", err)
+			}
+		}
+
+		data, err := json.Marshal(row)
+		if err != nil {
+			return fmt.Errorf("failed to marshal row: %w", err)
+		}
+
+		f, err := os.OpenFile(t.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: 0o644 is intentional for user data files
+		if err != nil {
+			return fmt.Errorf("failed to open table file for append: %w", err)
+		}
+		defer func() {
+			if cerr := f.Close(); cerr != nil && err == nil {
+				err = fmt.Errorf("failed to close table file: %w", cerr)
+			}
+		}()
+		if _, err := f.Write(append(data, '\n')); err != nil {
+			return fmt.Errorf("failed to write row: %w", err)
+		}
+
+		t.byID[id] = len(t.rows)
+		t.rows = append(t.rows, row)
 	}
 
-	data, err := json.Marshal(row)
-	if err != nil {
-		return fmt.Errorf("failed to marshal row: %w", err)
-	}
-
-	f, err := os.OpenFile(t.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: 0o644 is intentional for user data files
-	if err != nil {
-		return fmt.Errorf("failed to open table file for append: %w", err)
-	}
-	defer func() {
-		if cerr := f.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("failed to close table file: %w", cerr)
-		}
-	}()
-	if _, err := f.Write(append(data, '\n')); err != nil {
-		return fmt.Errorf("failed to write row: %w", err)
-	}
-	t.byID[id] = len(t.rows)
-	t.rows = append(t.rows, row)
 	for _, obs := range t.observers {
 		obs.OnAppend(row)
 	}

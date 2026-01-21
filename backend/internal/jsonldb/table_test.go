@@ -896,3 +896,137 @@ func TestRow(t *testing.T) {
 		})
 	})
 }
+
+func TestTable_SortOnAppend(t *testing.T) {
+	t.Run("sorts when appending out-of-order ID", func(t *testing.T) {
+		table, _ := setupTable(t)
+
+		// Append rows in order
+		_ = table.Append(&testRow{ID: 10, Name: "ten"})
+		_ = table.Append(&testRow{ID: 20, Name: "twenty"})
+		_ = table.Append(&testRow{ID: 30, Name: "thirty"})
+
+		// Append row with lower ID (simulating clock drift)
+		err := table.Append(&testRow{ID: 15, Name: "fifteen"})
+		if err != nil {
+			t.Fatalf("Append error: %v", err)
+		}
+
+		// Verify rows are sorted
+		ids := make([]int, 0, 4)
+		for row := range table.Iter(0) {
+			ids = append(ids, row.ID)
+		}
+
+		want := []int{10, 15, 20, 30}
+		if !slices.Equal(ids, want) {
+			t.Errorf("rows not sorted after append: got %v, want %v", ids, want)
+		}
+
+		// Verify Iter with startID works
+		idsFrom15 := make([]int, 0, 2)
+		for row := range table.Iter(ID(15)) {
+			idsFrom15 = append(idsFrom15, row.ID)
+		}
+		wantFrom15 := []int{20, 30}
+		if !slices.Equal(idsFrom15, wantFrom15) {
+			t.Errorf("Iter(15) not working: got %v, want %v", idsFrom15, wantFrom15)
+		}
+	})
+
+	t.Run("no sort when appending in order", func(t *testing.T) {
+		table, _ := setupTable(t)
+
+		_ = table.Append(&testRow{ID: 1, Name: "one"})
+		_ = table.Append(&testRow{ID: 2, Name: "two"})
+		_ = table.Append(&testRow{ID: 3, Name: "three"})
+
+		ids := make([]int, 0, 3)
+		for row := range table.Iter(0) {
+			ids = append(ids, row.ID)
+		}
+
+		want := []int{1, 2, 3}
+		if !slices.Equal(ids, want) {
+			t.Errorf("unexpected order: got %v, want %v", ids, want)
+		}
+	})
+}
+
+func TestTable_SortOnLoad(t *testing.T) {
+	t.Run("sorts out-of-order rows", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "unsorted.jsonl")
+
+		// Write a JSONL file with out-of-order IDs (simulating clock drift)
+		content := `{"version":"1","columns":[]}
+{"id":4,"name":"fourth"}
+{"id":2,"name":"second"}
+{"id":5,"name":"fifth"}
+{"id":1,"name":"first"}
+{"id":3,"name":"third"}
+`
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		// Load table - should sort automatically
+		table, err := NewTable[*testRow](path)
+		if err != nil {
+			t.Fatalf("NewTable error: %v", err)
+		}
+
+		// Verify rows are now sorted by ID
+		ids := make([]int, 0, 5)
+		for row := range table.Iter(0) {
+			ids = append(ids, row.ID)
+		}
+
+		want := []int{1, 2, 3, 4, 5}
+		if !slices.Equal(ids, want) {
+			t.Errorf("rows not sorted: got %v, want %v", ids, want)
+		}
+
+		// Verify Iter with startID works correctly after sorting
+		idsFrom2 := make([]int, 0, 3)
+		for row := range table.Iter(ID(2)) {
+			idsFrom2 = append(idsFrom2, row.ID)
+		}
+
+		wantFrom2 := []int{3, 4, 5}
+		if !slices.Equal(idsFrom2, wantFrom2) {
+			t.Errorf("Iter(2) not working: got %v, want %v", idsFrom2, wantFrom2)
+		}
+	})
+
+	t.Run("already sorted rows not re-sorted", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "sorted.jsonl")
+
+		// Write a JSONL file with sorted IDs
+		content := `{"version":"1","columns":[]}
+{"id":1,"name":"first"}
+{"id":2,"name":"second"}
+{"id":3,"name":"third"}
+`
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		table, err := NewTable[*testRow](path)
+		if err != nil {
+			t.Fatalf("NewTable error: %v", err)
+		}
+
+		// Verify order preserved
+		ids := make([]int, 0, 3)
+		for row := range table.Iter(0) {
+			ids = append(ids, row.ID)
+		}
+
+		want := []int{1, 2, 3}
+		if !slices.Equal(ids, want) {
+			t.Errorf("rows order changed: got %v, want %v", ids, want)
+		}
+	})
+}
