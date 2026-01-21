@@ -629,6 +629,11 @@ Response: { "records": [...], "total": 150 }
 - Updated frontend TypeScript types via tygo (generating only from dto package).
 
 ## Future Considerations
+- **Advanced Quota Enforcement**:
+    - **Performance**: `MaxRecordsPerDatabase` (O(n) protection), `MaxAssetSize` (single file limit), `MaxRepoSize` (Git history growth).
+    - **Business Tiering**: `MaxHistoryRetention` (days/commits), `MaxGuests` (read-only users), `MaxApiKeys`.
+    - **Operational**: `RequestRateLimit` (RPM protection), `BandwidthLimit` (egress tracking).
+    - **AI**: `MaxAITokens` / `MaxAIRequests` (Phase 11).
 - **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
 - **Publishing & Extensibility**: Public pages, custom domains, webhooks, and per-organization API keys.
 - **Google Drive Integration**: Bi-directional sync/import/export for Google Docs (Markdown) and Google Sheets (JSONL).
