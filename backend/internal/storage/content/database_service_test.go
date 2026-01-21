@@ -15,8 +15,7 @@ func TestDatabaseService_Create(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -48,8 +47,7 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -96,8 +94,7 @@ func TestDatabaseService_Get(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -131,8 +128,7 @@ func TestDatabaseService_List(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -180,8 +176,7 @@ func TestDatabaseService_Delete(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -212,8 +207,7 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -252,8 +246,7 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -292,8 +285,7 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -332,8 +324,7 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -382,8 +373,7 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -421,8 +411,7 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	cache := infra.NewCache()
-	service := NewDatabaseService(fs, nil, cache, nil)
+	service := NewDatabaseService(fs, nil, nil)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 

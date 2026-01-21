@@ -29,16 +29,14 @@ var (
 type PageService struct {
 	fileStore  *infra.FileStore
 	gitService *infra.Git
-	cache      *infra.Cache
 	orgService *identity.OrganizationService
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *PageService {
+func NewPageService(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *PageService {
 	return &PageService{
 		fileStore:  fileStore,
 		gitService: gitService,
-		cache:      cache,
 		orgService: orgService,
 	}
 }
@@ -76,9 +74,6 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 		return nil, err
 	}
 
-	// Invalidate node tree cache
-	s.cache.InvalidateNodeTree()
-
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "create", "page", id.String(), title); err != nil {
 			// Log error but don't fail the operation
@@ -103,9 +98,6 @@ func (s *PageService) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, titl
 		return nil, err
 	}
 
-	// Invalidate cache (title might have changed)
-	s.cache.InvalidateNodeTree()
-
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "update", "page", id.String(), "Updated content"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -123,9 +115,6 @@ func (s *PageService) DeletePage(ctx context.Context, orgID, id jsonldb.ID) erro
 	if err := s.fileStore.DeletePage(orgID, id); err != nil {
 		return err
 	}
-
-	// Invalidate cache
-	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "delete", "page", id.String(), "Deleted page"); err != nil {

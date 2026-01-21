@@ -25,16 +25,14 @@ var (
 type DatabaseService struct {
 	fileStore  *infra.FileStore
 	gitService *infra.Git
-	cache      *infra.Cache
 	orgService *identity.OrganizationService
 }
 
 // NewDatabaseService creates a new database service.
-func NewDatabaseService(fileStore *infra.FileStore, gitService *infra.Git, cache *infra.Cache, orgService *identity.OrganizationService) *DatabaseService {
+func NewDatabaseService(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *DatabaseService {
 	return &DatabaseService{
 		fileStore:  fileStore,
 		gitService: gitService,
-		cache:      cache,
 		orgService: orgService,
 	}
 }
@@ -82,9 +80,6 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 		return nil, err
 	}
 
-	// Invalidate cache
-	s.cache.InvalidateNodeTree()
-
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "create", "database", id.String(), title); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -119,9 +114,6 @@ func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.
 		return nil, err
 	}
 
-	// Invalidate cache
-	s.cache.InvalidateNodeTree()
-
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "update", "database", id.String(), "Updated schema"); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -139,10 +131,6 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.
 	if err := s.fileStore.DeleteDatabase(orgID, id); err != nil {
 		return err
 	}
-
-	// Invalidate cache
-	s.cache.InvalidateRecords(id)
-	s.cache.InvalidateNodeTree()
 
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "delete", "database", id.String(), "Deleted database"); err != nil {
@@ -189,9 +177,6 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID js
 		return nil, err
 	}
 
-	// Invalidate records cache
-	s.cache.InvalidateRecords(databaseID)
-
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "create", "record", id.String(), "in database "+databaseID.String()); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -207,21 +192,12 @@ func (s *DatabaseService) GetRecords(ctx context.Context, orgID, databaseID json
 		return nil, errDatabaseIDEmpty
 	}
 
-	if records, ok := s.cache.GetRecords(databaseID); ok {
-		return records, nil
-	}
 	// Verify database exists
 	if !s.fileStore.DatabaseExists(orgID, databaseID) {
 		return nil, errDatabaseNotFound
 	}
 
-	records, err := s.fileStore.ReadRecords(orgID, databaseID)
-	if err != nil {
-		return nil, err
-	}
-
-	s.cache.SetRecords(databaseID, records)
-	return records, nil
+	return s.fileStore.ReadRecords(orgID, databaseID)
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
@@ -296,9 +272,6 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, r
 		return nil, err
 	}
 
-	// Invalidate records cache
-	s.cache.InvalidateRecords(databaseID)
-
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "update", "record", recordID.String(), "in database "+databaseID.String()); err != nil {
 			fmt.Printf("failed to commit change: %v\n", err)
@@ -320,9 +293,6 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, orgID, databaseID, r
 	if err := s.fileStore.DeleteRecord(orgID, databaseID, recordID); err != nil {
 		return err
 	}
-
-	// Invalidate records cache
-	s.cache.InvalidateRecords(databaseID)
 
 	if s.gitService != nil {
 		if err := s.gitService.CommitChange(ctx, orgID, "delete", "record", recordID.String(), "from database "+databaseID.String()); err != nil {
