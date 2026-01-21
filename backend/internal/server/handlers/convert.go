@@ -84,7 +84,7 @@ func organizationToResponse(o *identity.Organization) *dto.OrganizationResponse 
 	return &dto.OrganizationResponse{
 		ID:         o.ID.String(),
 		Name:       o.Name,
-		Quotas:     quotaToDTO(o.Quotas),
+		Quotas:     organizationQuotaToDTO(o.Quotas),
 		Settings:   organizationSettingsToDTO(o.Settings),
 		Onboarding: onboardingStateToDTO(o.Onboarding),
 		Created:    formatTime(o.Created),
@@ -218,8 +218,8 @@ func membershipSettingsToDTO(s identity.MembershipSettings) dto.MembershipSettin
 	}
 }
 
-func quotaToDTO(q entity.Quota) dto.Quota {
-	return dto.Quota{
+func organizationQuotaToDTO(q entity.OrganizationQuota) dto.OrganizationQuota {
+	return dto.OrganizationQuota{
 		MaxPages:   q.MaxPages,
 		MaxStorage: q.MaxStorage,
 		MaxUsers:   q.MaxUsers,

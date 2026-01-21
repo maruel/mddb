@@ -9,5 +9,5 @@ import (
 
 // QuotaGetter retrieves quota limits for an organization.
 type QuotaGetter interface {
-	GetQuota(ctx context.Context, orgID jsonldb.ID) (entity.Quota, error)
+	GetQuota(ctx context.Context, orgID jsonldb.ID) (entity.OrganizationQuota, error)
 }

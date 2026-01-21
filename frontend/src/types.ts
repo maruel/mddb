@@ -716,7 +716,7 @@ export interface InvitationResponse {
 export interface OrganizationResponse {
   id: string;
   name: string;
-  quotas: Quota;
+  quotas: OrganizationQuota;
   settings: OrganizationSettings;
   onboarding: OnboardingState;
   created: string;
@@ -906,12 +906,18 @@ export interface MembershipSettings {
   notifications: boolean;
 }
 /**
- * Quota defines limits for an organization.
+ * OrganizationQuota defines limits for an organization.
  */
-export interface Quota {
+export interface OrganizationQuota {
   max_pages: number /* int */;
   max_storage: number /* int64 */;
   max_users: number /* int */;
+}
+/**
+ * UserQuota defines limits for a user.
+ */
+export interface UserQuota {
+  max_orgs: number /* int */;
 }
 /**
  * OrganizationSettings represents organization-wide settings.

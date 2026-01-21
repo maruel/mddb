@@ -54,7 +54,7 @@ func (h *AdminHandler) ListAllOrgs(ctx context.Context, _ *identity.User, _ stru
 		orgs = append(orgs, dto.OrganizationResponse{
 			ID:         org.ID.String(),
 			Name:       org.Name,
-			Quotas:     quotaToDTO(org.Quotas),
+			Quotas:     organizationQuotaToDTO(org.Quotas),
 			Settings:   organizationSettingsToDTO(org.Settings),
 			Onboarding: onboardingStateToDTO(org.Onboarding),
 			Created:    formatTime(org.Created),

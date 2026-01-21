@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestMembership(t *testing.T) {
@@ -152,6 +153,44 @@ func TestMembershipService(t *testing.T) {
 				t.Error("Expected error for invalid org ID")
 			}
 		})
+	})
+
+	t.Run("UserOrgQuota", func(t *testing.T) {
+		quotaService, err := NewMembershipService(filepath.Join(t.TempDir(), "quota_memberships.jsonl"))
+		if err != nil {
+			t.Fatalf("NewMembershipService failed: %v", err)
+		}
+
+		quotaUserID := jsonldb.ID(500)
+		maxOrgs := entity.DefaultUserQuota().MaxOrgs
+
+		// Create memberships up to the limit
+		for i := range maxOrgs {
+			quotaOrgID := jsonldb.ID(600 + i) //nolint:gosec // G115: test code with small known values
+			_, createErr := quotaService.Create(quotaUserID, quotaOrgID, UserRoleViewer)
+			if createErr != nil {
+				t.Fatalf("Create membership %d failed: %v", i+1, createErr)
+			}
+		}
+
+		// Verify count
+		count := quotaService.CountUserMemberships(quotaUserID)
+		if count != maxOrgs {
+			t.Errorf("CountUserMemberships = %d, want %d", count, maxOrgs)
+		}
+
+		// Try to create one more - should fail
+		_, createErr := quotaService.Create(quotaUserID, jsonldb.ID(700), UserRoleViewer)
+		if createErr == nil {
+			t.Error("Expected error when exceeding user org quota")
+		}
+
+		// Different user should still be able to create memberships
+		otherUserID := jsonldb.ID(501)
+		_, createErr = quotaService.Create(otherUserID, jsonldb.ID(600), UserRoleViewer)
+		if createErr != nil {
+			t.Errorf("Different user should be able to create membership: %v", createErr)
+		}
 	})
 
 	t.Run("Get", func(t *testing.T) {

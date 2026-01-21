@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 // UserRole defines the permissions for a user.
@@ -99,6 +100,10 @@ func (s *MembershipService) Create(userID, orgID jsonldb.ID, role UserRole) (*Me
 	if s.findByUserAndOrg(userID, orgID) != nil {
 		return nil, errMembershipExists
 	}
+	// Check user org quota
+	if s.CountUserMemberships(userID) >= entity.DefaultUserQuota().MaxOrgs {
+		return nil, errUserOrgQuotaExceeded
+	}
 	membership := &Membership{
 		ID:             jsonldb.NewID(),
 		UserID:         userID,
@@ -129,6 +134,15 @@ func (s *MembershipService) Iter(userID jsonldb.ID) (iter.Seq[*Membership], erro
 	return s.byUserID.Iter(userID), nil
 }
 
+// CountUserMemberships returns the number of organizations a user belongs to.
+func (s *MembershipService) CountUserMemberships(userID jsonldb.ID) int {
+	count := 0
+	for range s.byUserID.Iter(userID) {
+		count++
+	}
+	return count
+}
+
 // Modify atomically modifies a membership.
 func (s *MembershipService) Modify(id jsonldb.ID, fn func(m *Membership) error) (*Membership, error) {
 	if id.IsZero() {
@@ -140,8 +154,9 @@ func (s *MembershipService) Modify(id jsonldb.ID, fn func(m *Membership) error) 
 //
 
 var (
-	errMembershipExists   = errors.New("membership already exists")
-	errMembershipNotFound = errors.New("membership not found")
+	errMembershipExists     = errors.New("membership already exists")
+	errMembershipNotFound   = errors.New("membership not found")
+	errUserOrgQuotaExceeded = errors.New("user organization quota exceeded")
 )
 
 // userOrgKey is a composite key for user+organization lookups.

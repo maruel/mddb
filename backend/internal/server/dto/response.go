@@ -247,7 +247,7 @@ type InvitationResponse struct {
 type OrganizationResponse struct {
 	ID         string               `json:"id" jsonschema:"description=Unique organization identifier"`
 	Name       string               `json:"name" jsonschema:"description=Display name of the organization"`
-	Quotas     Quota                `json:"quotas" jsonschema:"description=Resource limits for the organization"`
+	Quotas     OrganizationQuota    `json:"quotas" jsonschema:"description=Resource limits for the organization"`
 	Settings   OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
 	Onboarding OnboardingState      `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
 	Created    string               `json:"created" jsonschema:"description=Organization creation timestamp (RFC3339)"`

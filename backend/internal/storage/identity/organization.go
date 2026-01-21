@@ -12,13 +12,13 @@ import (
 
 // Organization represents a workspace or group of users.
 type Organization struct {
-	ID         jsonldb.ID           `json:"id" jsonschema:"description=Unique organization identifier"`
-	Name       string               `json:"name" jsonschema:"description=Display name of the organization"`
-	Quotas     entity.Quota         `json:"quotas" jsonschema:"description=Resource limits for the organization"`
-	Settings   OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
-	Onboarding OnboardingState      `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
-	GitRemote  GitRemote            `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
-	Created    time.Time            `json:"created" jsonschema:"description=Organization creation timestamp"`
+	ID         jsonldb.ID               `json:"id" jsonschema:"description=Unique organization identifier"`
+	Name       string                   `json:"name" jsonschema:"description=Display name of the organization"`
+	Quotas     entity.OrganizationQuota `json:"quotas" jsonschema:"description=Resource limits for the organization"`
+	Settings   OrganizationSettings     `json:"settings" jsonschema:"description=Organization-wide configuration"`
+	Onboarding OnboardingState          `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
+	GitRemote  GitRemote                `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
+	Created    time.Time                `json:"created" jsonschema:"description=Organization creation timestamp"`
 }
 
 // Clone returns a deep copy of the Organization.
@@ -130,10 +130,10 @@ func (s *OrganizationService) Get(id jsonldb.ID) (*Organization, error) {
 }
 
 // GetQuota returns the quota for an organization.
-func (s *OrganizationService) GetQuota(_ context.Context, id jsonldb.ID) (entity.Quota, error) {
+func (s *OrganizationService) GetQuota(_ context.Context, id jsonldb.ID) (entity.OrganizationQuota, error) {
 	org, err := s.Get(id)
 	if err != nil {
-		return entity.Quota{}, err
+		return entity.OrganizationQuota{}, err
 	}
 	return org.Quotas, nil
 }

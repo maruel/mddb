@@ -33,8 +33,8 @@ func testFileStore(t *testing.T) *FileStore {
 // noopQuotaGetter returns unlimited quotas (for testing).
 type noopQuotaGetter struct{}
 
-func (n *noopQuotaGetter) GetQuota(_ context.Context, _ jsonldb.ID) (entity.Quota, error) {
-	return entity.Quota{}, nil // Zero values = no limits
+func (n *noopQuotaGetter) GetQuota(_ context.Context, _ jsonldb.ID) (entity.OrganizationQuota, error) {
+	return entity.OrganizationQuota{}, nil // Zero values = no limits
 }
 
 func TestFileStorePageOperations(t *testing.T) {
