@@ -10,4 +10,5 @@ var (
 	errDatabaseNotFound = errors.New("database not found")
 	errRecordNotFound   = errors.New("record not found")
 	errAssetNotFound    = errors.New("asset not found")
+	errQuotaExceeded    = errors.New("quota exceeded")
 )

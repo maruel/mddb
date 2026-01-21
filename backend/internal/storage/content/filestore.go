@@ -99,7 +99,7 @@ func (fs *FileStore) checkPageQuota(ctx context.Context, orgID jsonldb.ID) error
 		return err
 	}
 	if count >= quota.MaxPages {
-		return fmt.Errorf("page quota exceeded (%d/%d)", count, quota.MaxPages)
+		return errQuotaExceeded
 	}
 	return nil
 }
@@ -118,7 +118,7 @@ func (fs *FileStore) checkStorageQuota(ctx context.Context, orgID jsonldb.ID, ad
 		return err
 	}
 	if usage+additionalBytes > quota.MaxStorage {
-		return fmt.Errorf("storage quota exceeded (%d/%d bytes)", usage+additionalBytes, quota.MaxStorage)
+		return errQuotaExceeded
 	}
 	return nil
 }
@@ -173,7 +173,7 @@ func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*Node, error) {
 
 // WritePage creates a new page on disk, commits to git, and returns it as a Node.
 func (fs *FileStore) WritePage(ctx context.Context, orgID, id jsonldb.ID, title, content string, author Author) (*Node, error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	if err := fs.checkPageQuota(ctx, orgID); err != nil {
@@ -189,13 +189,17 @@ func (fs *FileStore) WritePage(ctx context.Context, orgID, id jsonldb.ID, title,
 		modified: now,
 	}
 
+	data := formatMarkdownFile(p)
+	if err := fs.checkStorageQuota(ctx, orgID, int64(len(data))); err != nil {
+		return nil, err
+	}
+
 	pageDir := fs.pageDir(orgID, id)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	filePath := fs.pageIndexFile(orgID, id)
-	data := formatMarkdownFile(p)
 	if err := os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
@@ -528,17 +532,13 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*Node, error) {
 // The JSONL records file is created lazily when the first record is added.
 // isNew should be true for create operations (triggers quota check), false for updates.
 func (fs *FileStore) WriteDatabase(ctx context.Context, orgID jsonldb.ID, node *Node, isNew bool, author Author) error {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return errOrgIDRequired
 	}
 	if isNew {
 		if err := fs.checkPageQuota(ctx, orgID); err != nil {
 			return err
 		}
-	}
-
-	if err := os.MkdirAll(fs.pageDir(orgID, node.ID), 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
-		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
 	// Write metadata.json with all database metadata including properties
@@ -554,6 +554,17 @@ func (fs *FileStore) WriteDatabase(ctx context.Context, orgID jsonldb.ID, node *
 	if err != nil {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
+
+	if isNew {
+		if err := fs.checkStorageQuota(ctx, orgID, int64(len(data))); err != nil {
+			return err
+		}
+	}
+
+	if err := os.MkdirAll(fs.pageDir(orgID, node.ID), 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
 	if err := os.WriteFile(metadataFile, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
 		return fmt.Errorf("failed to write metadata: %w", err)
 	}
@@ -618,9 +629,16 @@ func (fs *FileStore) IterDatabases(orgID jsonldb.ID) (iter.Seq[*Node], error) {
 
 // AppendRecord appends a record to a database and commits to git.
 func (fs *FileStore) AppendRecord(ctx context.Context, orgID, databaseID jsonldb.ID, record *DataRecord, author Author) error {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return errOrgIDRequired
 	}
+
+	// Estimate storage impact
+	recordData, _ := json.Marshal(record)
+	if err := fs.checkStorageQuota(ctx, orgID, int64(len(recordData)+1)); err != nil {
+		return err
+	}
+
 	pageDir := fs.pageDir(orgID, databaseID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return fmt.Errorf("failed to create directory: %w", err)
@@ -700,8 +718,14 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 
 // UpdateRecord updates an existing record in a database and commits to git.
 func (fs *FileStore) UpdateRecord(ctx context.Context, orgID, databaseID jsonldb.ID, record *DataRecord, author Author) error {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return errOrgIDRequired
+	}
+
+	// Estimate storage impact (simplified, assuming replacement might increase size)
+	recordData, _ := json.Marshal(record)
+	if err := fs.checkStorageQuota(ctx, orgID, int64(len(recordData))); err != nil {
+		return err
 	}
 
 	filePath := fs.databaseRecordsFile(orgID, databaseID)

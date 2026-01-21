@@ -70,7 +70,8 @@ See `README.md` and `API.md` for details.
 *Completed.*
 - Scoped search results to active organizations.
 - Added organization switcher UI and unified API type generation (tygo).
-- Implemented quota enforcement and administrative management UIs.
+- Implemented quota enforcement for users, pages, and storage.
+- Added administrative management UIs.
 
 ### Phase 9: Advanced Sync & Onboarding
 *In Progress.*
