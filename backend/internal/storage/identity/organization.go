@@ -58,14 +58,9 @@ type OnboardingState struct {
 
 // OrganizationSettings represents organization-wide settings.
 type OrganizationSettings struct {
-	AllowedDomains []string    `json:"allowed_domains,omitempty" jsonschema:"description=Email domains allowed for membership"`
-	PublicAccess   bool        `json:"public_access" jsonschema:"description=Whether content is publicly accessible"`
-	Git            GitSettings `json:"git" jsonschema:"description=Git synchronization configuration"`
-}
-
-// GitSettings contains configuration for Git remotes and synchronization.
-type GitSettings struct {
-	AutoPush bool `json:"auto_push" jsonschema:"description=Automatically push changes to remote"`
+	AllowedDomains []string `json:"allowed_domains,omitempty" jsonschema:"description=Email domains allowed for membership"`
+	PublicAccess   bool     `json:"public_access" jsonschema:"description=Whether content is publicly accessible"`
+	GitAutoPush    bool     `json:"git_auto_push" jsonschema:"description=Automatically push changes to remote"`
 }
 
 // GitRemote represents the single remote repository configuration for an organization.

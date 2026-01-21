@@ -913,18 +913,12 @@ export interface Quota {
   max_users: number /* int */;
 }
 /**
- * GitSettings contains configuration for Git remotes and synchronization.
- */
-export interface GitSettings {
-  auto_push: boolean;
-}
-/**
  * OrganizationSettings represents organization-wide settings.
  */
 export interface OrganizationSettings {
   allowed_domains?: string[];
   public_access: boolean;
-  git: GitSettings;
+  git_auto_push: boolean;
 }
 /**
  * OnboardingState tracks the progress of an organization's initial setup.

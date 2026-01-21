@@ -100,16 +100,11 @@ type Quota struct {
 	MaxUsers   int   `json:"max_users" jsonschema:"description=Maximum number of users allowed"`
 }
 
-// GitSettings contains configuration for Git remotes and synchronization.
-type GitSettings struct {
-	AutoPush bool `json:"auto_push" jsonschema:"description=Automatically push changes to remote"`
-}
-
 // OrganizationSettings represents organization-wide settings.
 type OrganizationSettings struct {
-	AllowedDomains []string    `json:"allowed_domains,omitempty" jsonschema:"description=Email domains allowed for membership"`
-	PublicAccess   bool        `json:"public_access" jsonschema:"description=Whether content is publicly accessible"`
-	Git            GitSettings `json:"git" jsonschema:"description=Git synchronization configuration"`
+	AllowedDomains []string `json:"allowed_domains,omitempty" jsonschema:"description=Email domains allowed for membership"`
+	PublicAccess   bool     `json:"public_access" jsonschema:"description=Whether content is publicly accessible"`
+	GitAutoPush    bool     `json:"git_auto_push" jsonschema:"description=Automatically push changes to remote"`
 }
 
 // OnboardingState tracks the progress of an organization's initial setup.

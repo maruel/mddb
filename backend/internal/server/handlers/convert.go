@@ -222,17 +222,11 @@ func quotaToDTO(q identity.Quota) dto.Quota {
 	}
 }
 
-func gitSettingsToDTO(g identity.GitSettings) dto.GitSettings {
-	return dto.GitSettings{
-		AutoPush: g.AutoPush,
-	}
-}
-
 func organizationSettingsToDTO(s identity.OrganizationSettings) dto.OrganizationSettings {
 	return dto.OrganizationSettings{
 		AllowedDomains: s.AllowedDomains,
 		PublicAccess:   s.PublicAccess,
-		Git:            gitSettingsToDTO(s.Git),
+		GitAutoPush:    s.GitAutoPush,
 	}
 }
 
@@ -299,17 +293,11 @@ func userSettingsToEntity(s dto.UserSettings) identity.UserSettings {
 	}
 }
 
-func gitSettingsToEntity(g dto.GitSettings) identity.GitSettings {
-	return identity.GitSettings{
-		AutoPush: g.AutoPush,
-	}
-}
-
 func organizationSettingsToEntity(s dto.OrganizationSettings) identity.OrganizationSettings {
 	return identity.OrganizationSettings{
 		AllowedDomains: s.AllowedDomains,
 		PublicAccess:   s.PublicAccess,
-		Git:            gitSettingsToEntity(s.Git),
+		GitAutoPush:    s.GitAutoPush,
 	}
 }
 
