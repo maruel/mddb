@@ -81,12 +81,10 @@ func (s *DatabaseService) Create(ctx context.Context, orgID jsonldb.ID, title st
 		return nil, err
 	}
 
-	if s.gitService != nil {
-		msg := fmt.Sprintf("create: database %s - %s", id.String(), title)
-		files := []string{"pages/" + id.String() + "/metadata.json"}
-		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
+	msg := fmt.Sprintf("create: database %s - %s", id.String(), title)
+	files := []string{"pages/" + id.String() + "/metadata.json"}
+	if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
+		return nil, err
 	}
 
 	return node, nil
@@ -117,12 +115,10 @@ func (s *DatabaseService) Update(ctx context.Context, orgID, id jsonldb.ID, titl
 		return nil, err
 	}
 
-	if s.gitService != nil {
-		msg := "update: database " + id.String()
-		files := []string{"pages/" + id.String() + "/metadata.json"}
-		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
+	msg := "update: database " + id.String()
+	files := []string{"pages/" + id.String() + "/metadata.json"}
+	if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
+		return nil, err
 	}
 
 	return node, nil
@@ -137,15 +133,9 @@ func (s *DatabaseService) Delete(ctx context.Context, orgID, id jsonldb.ID) erro
 		return err
 	}
 
-	if s.gitService != nil {
-		msg := "delete: database " + id.String()
-		files := []string{"pages/" + id.String()}
-		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
-	}
-
-	return nil
+	msg := "delete: database " + id.String()
+	files := []string{"pages/" + id.String()}
+	return s.gitService.Commit(ctx, orgID.String(), "", "", msg, files)
 }
 
 // List returns all databases as Nodes.
@@ -188,12 +178,10 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID js
 		return nil, err
 	}
 
-	if s.gitService != nil {
-		msg := fmt.Sprintf("create: record %s in database %s", id.String(), databaseID.String())
-		files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
-		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
+	msg := fmt.Sprintf("create: record %s in database %s", id.String(), databaseID.String())
+	files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
+	if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
+		return nil, err
 	}
 
 	return record, nil
@@ -289,12 +277,10 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, r
 		return nil, err
 	}
 
-	if s.gitService != nil {
-		msg := fmt.Sprintf("update: record %s in database %s", recordID.String(), databaseID.String())
-		files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
-		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
+	msg := fmt.Sprintf("update: record %s in database %s", recordID.String(), databaseID.String())
+	files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
+	if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
+		return nil, err
 	}
 
 	return record, nil
@@ -313,13 +299,7 @@ func (s *DatabaseService) DeleteRecord(ctx context.Context, orgID, databaseID, r
 		return err
 	}
 
-	if s.gitService != nil {
-		msg := fmt.Sprintf("delete: record %s from database %s", recordID.String(), databaseID.String())
-		files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
-		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
-	}
-
-	return nil
+	msg := fmt.Sprintf("delete: record %s from database %s", recordID.String(), databaseID.String())
+	files := []string{"pages/" + databaseID.String() + "/data.jsonl"}
+	return s.gitService.Commit(ctx, orgID.String(), "", "", msg, files)
 }

@@ -107,7 +107,8 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	client := config.Client(r.Context(), token)
+	ctx := r.Context()
+	client := config.Client(ctx, token)
 	var userInfo struct {
 		ID    string `json:"id"`
 		Email string `json:"email"`
@@ -123,7 +124,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 		defer func() {
 			if err := resp.Body.Close(); err != nil {
-				slog.ErrorContext(r.Context(), "Failed to close Google API response body", "error", err)
+				slog.ErrorContext(ctx, "Failed to close Google API response body", "error", err)
 			}
 		}()
 		if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
@@ -138,7 +139,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 		defer func() {
 			if err := resp.Body.Close(); err != nil {
-				slog.ErrorContext(r.Context(), "Failed to close Microsoft API response body", "error", err)
+				slog.ErrorContext(ctx, "Failed to close Microsoft API response body", "error", err)
 			}
 		}()
 

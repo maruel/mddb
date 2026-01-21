@@ -15,7 +15,10 @@ func TestRegister(t *testing.T) {
 	ctx := t.Context()
 	tempDir := t.TempDir()
 	fileStore, _ := content.NewFileStore(tempDir)
-	gitService, _ := git.New(ctx, "", "", "")
+	gitService, err := git.New(ctx, tempDir, "", "")
+	if err != nil {
+		t.Fatalf("git.New failed: %v", err)
+	}
 	memService, _ := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
 	orgService, _ := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, gitService)
 	userService, _ := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))

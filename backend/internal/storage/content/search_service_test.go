@@ -3,10 +3,13 @@ package content
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 // mockQuotaGetterSearch implements the QuotaGetter interface for testing.
@@ -28,8 +31,18 @@ func TestSearchService_SearchPages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 	searchService := NewSearchService(fileStore)
 	orgID := jsonldb.ID(100)
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create test pages
 	mockQuotaGetter := &mockQuotaGetterSearch{
@@ -37,7 +50,7 @@ func TestSearchService_SearchPages(t *testing.T) {
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	pageService := NewPageService(fileStore, nil, mockQuotaGetter)
+	pageService := NewPageService(fileStore, gitService, mockQuotaGetter)
 	ctx := t.Context()
 	if _, err := pageService.Create(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project", "", ""); err != nil {
 		t.Fatalf("Create Getting Started failed: %v", err)
@@ -127,8 +140,18 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 	searchService := NewSearchService(fileStore)
 	orgID := jsonldb.ID(100)
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 	ctx := t.Context()
 
 	// Create test database with records
@@ -137,7 +160,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	dbService := NewDatabaseService(fileStore, nil, mockQuotaGetterDB)
+	dbService := NewDatabaseService(fileStore, gitService, mockQuotaGetterDB)
 	columns := []Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "status", Type: PropertyTypeText},
@@ -224,8 +247,18 @@ func TestSearchService_Scoring(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 	searchService := NewSearchService(fileStore)
 	orgID := jsonldb.ID(100)
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 	ctx := t.Context()
 
 	// Create pages where title match should score higher
@@ -234,7 +267,7 @@ func TestSearchService_Scoring(t *testing.T) {
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	pageService := NewPageService(fileStore, nil, mockQuotaGetterScoring)
+	pageService := NewPageService(fileStore, gitService, mockQuotaGetterScoring)
 	if _, err := pageService.Create(ctx, orgID, "Python Programming", "This is about Java not Python", "", ""); err != nil {
 		t.Fatalf("Create Python Programming failed: %v", err)
 	}
@@ -271,8 +304,18 @@ func TestSearchService_Limit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 	searchService := NewSearchService(fileStore)
 	orgID := jsonldb.ID(100)
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 	ctx := t.Context()
 
 	// Create multiple pages
@@ -281,7 +324,7 @@ func TestSearchService_Limit(t *testing.T) {
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	pageService := NewPageService(fileStore, nil, mockQuotaGetterLimit)
+	pageService := NewPageService(fileStore, gitService, mockQuotaGetterLimit)
 	for i := range 10 {
 		if _, err := pageService.Create(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content", "", ""); err != nil {
 			t.Fatalf("Create Test Page %d failed: %v", i, err)
@@ -309,8 +352,18 @@ func TestSearchService_Integration(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 	searchService := NewSearchService(fileStore)
 	orgID := jsonldb.ID(100)
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 	ctx := t.Context()
 
 	// Create mixed content
@@ -319,12 +372,12 @@ func TestSearchService_Integration(t *testing.T) {
 			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	pageService := NewPageService(fileStore, nil, mockQuotaGetterIntegration)
+	pageService := NewPageService(fileStore, gitService, mockQuotaGetterIntegration)
 	if _, err := pageService.Create(ctx, orgID, "Blog Post", "Article about searchable content and web development", "", ""); err != nil {
 		t.Fatalf("Create Blog Post failed: %v", err)
 	}
 
-	dbService := NewDatabaseService(fileStore, nil, mockQuotaGetterIntegration)
+	dbService := NewDatabaseService(fileStore, gitService, mockQuotaGetterIntegration)
 	columns := []Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "content", Type: "text"},

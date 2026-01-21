@@ -2,10 +2,13 @@ package content
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 // mockQuotaGetter implements the QuotaGetter interface for testing.
@@ -27,15 +30,28 @@ func TestDatabaseService_Create(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	columns := []Property{
 		{Name: "title", Type: "text"},
@@ -64,15 +80,25 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	tests := []struct {
 		name    string
@@ -116,15 +142,25 @@ func TestDatabaseService_Get(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create a database
 	columns := []Property{
@@ -155,15 +191,25 @@ func TestDatabaseService_List(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create multiple databases
 	titles := []string{"DB 1", "DB 2", "DB 3"}
@@ -208,15 +254,25 @@ func TestDatabaseService_Delete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create a database
 	columns := []Property{{Name: "col", Type: "text"}}
@@ -244,15 +300,25 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create a database
 	columns := []Property{
@@ -288,15 +354,25 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create a database
 	columns := []Property{{Name: "name", Type: "text"}}
@@ -332,15 +408,25 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create a database
 	columns := []Property{{Name: "name", Type: "text"}}
@@ -376,15 +462,25 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create a database
 	columns := []Property{{Name: "name", Type: "text"}}
@@ -430,15 +526,25 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create a database
 	columns := []Property{{Name: "name", Type: "text"}}
@@ -473,15 +579,25 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("Failed to create git service: %v", err)
+	}
 
 	mockQuotaGetter := &mockQuotaGetter{
 		quotas: map[jsonldb.ID]entity.Quota{
 			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
 		},
 	}
-	service := NewDatabaseService(fs, nil, mockQuotaGetter)
+	service := NewDatabaseService(fs, gitService, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("Failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(ctx, orgID.String()); err != nil {
+		t.Fatalf("Failed to init git for org: %v", err)
+	}
 
 	// Create a database with various column types
 	columns := []Property{

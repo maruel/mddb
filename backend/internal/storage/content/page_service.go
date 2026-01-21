@@ -19,10 +19,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
-var (
-	errPageTitleEmpty     = errors.New("title cannot be empty")
-	errGitServiceNotAvail = errors.New("git service not available")
-)
+var errPageTitleEmpty = errors.New("title cannot be empty")
 
 // PageService handles page business logic.
 type PageService struct {
@@ -78,13 +75,10 @@ func (s *PageService) Create(ctx context.Context, orgID jsonldb.ID, title, conte
 		return nil, err
 	}
 
-	if s.gitService != nil {
-		msg := fmt.Sprintf("create: page %s - %s", id.String(), title)
-		files := []string{"pages/" + id.String() + "/index.md"}
-		if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
-			// Log error but don't fail the operation
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
+	msg := fmt.Sprintf("create: page %s - %s", id.String(), title)
+	files := []string{"pages/" + id.String() + "/index.md"}
+	if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
+		return nil, err
 	}
 
 	return node, nil
@@ -105,12 +99,10 @@ func (s *PageService) Update(ctx context.Context, orgID, id jsonldb.ID, title, c
 		return nil, err
 	}
 
-	if s.gitService != nil {
-		msg := "update: page " + id.String()
-		files := []string{"pages/" + id.String() + "/index.md"}
-		if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
+	msg := "update: page " + id.String()
+	files := []string{"pages/" + id.String() + "/index.md"}
+	if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
+		return nil, err
 	}
 
 	return node, nil
@@ -126,15 +118,9 @@ func (s *PageService) Delete(ctx context.Context, orgID, id jsonldb.ID, authorNa
 		return err
 	}
 
-	if s.gitService != nil {
-		msg := "delete: page " + id.String()
-		files := []string{"pages/" + id.String()}
-		if err := s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
-	}
-
-	return nil
+	msg := "delete: page " + id.String()
+	files := []string{"pages/" + id.String()}
+	return s.gitService.Commit(ctx, orgID.String(), authorName, authorEmail, msg, files)
 }
 
 // List returns all pages as Nodes.
@@ -173,18 +159,11 @@ func (s *PageService) Search(ctx context.Context, orgID jsonldb.ID, query string
 // GetHistory returns the commit history for a page, limited to n commits.
 // n is capped at 1000. If n <= 0, defaults to 1000.
 func (s *PageService) GetHistory(ctx context.Context, orgID, id jsonldb.ID, n int) ([]*git.Commit, error) {
-	if s.gitService == nil {
-		return []*git.Commit{}, nil
-	}
 	return s.gitService.GetHistory(ctx, orgID.String(), "pages/"+id.String(), n)
 }
 
 // GetVersion returns the content of a page at a specific commit.
 func (s *PageService) GetVersion(ctx context.Context, orgID, id jsonldb.ID, commitHash string) (string, error) {
-	if s.gitService == nil {
-		return "", errGitServiceNotAvail
-	}
-
 	// New storage path: {orgID}/pages/{id}/index.md
 	path := fmt.Sprintf("%s/pages/%s/index.md", orgID.String(), id.String())
 	if orgID.IsZero() {

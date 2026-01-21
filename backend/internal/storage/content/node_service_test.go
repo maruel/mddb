@@ -4,13 +4,15 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 func TestNewNodeService(t *testing.T) {
 	tempDir := t.TempDir()
 
 	fileStore, _ := NewFileStore(tempDir)
-	service := NewNodeService(fileStore, nil, nil)
+	gitService, _ := git.New(t.Context(), tempDir, "", "")
+	service := NewNodeService(fileStore, gitService, nil)
 
 	if service.FileStore != fileStore {
 		t.Error("fileStore not properly assigned")
@@ -21,7 +23,8 @@ func TestNodeService_GetNode(t *testing.T) {
 	tempDir := t.TempDir()
 
 	fileStore, _ := NewFileStore(tempDir)
-	service := NewNodeService(fileStore, nil, nil)
+	gitService, _ := git.New(t.Context(), tempDir, "", "")
+	service := NewNodeService(fileStore, gitService, nil)
 
 	ctx := t.Context()
 	orgID := jsonldb.ID(999)
@@ -43,9 +46,9 @@ func TestNodeService_GetNode(t *testing.T) {
 func TestNodeService_CreateNode(t *testing.T) {
 	tempDir := t.TempDir()
 
-	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, orgService, gitService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
-	service := NewNodeService(fileStore, nil, orgService)
+	service := NewNodeService(fileStore, gitService, orgService)
 
 	// Test creating a document node
 	var emptyParentID jsonldb.ID
@@ -101,9 +104,9 @@ func TestNodeService_CreateNode(t *testing.T) {
 func TestNodeService_ListNodes(t *testing.T) {
 	tempDir := t.TempDir()
 
-	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, orgService, gitService := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := NewFileStore(tempDir)
-	service := NewNodeService(fileStore, nil, orgService)
+	service := NewNodeService(fileStore, gitService, orgService)
 
 	// List initial nodes (may include welcome page from org creation)
 	initialNodes, err := service.List(ctx, orgID)

@@ -83,12 +83,10 @@ func (s *AssetService) Save(ctx context.Context, orgID, pageID jsonldb.ID, fileN
 		Path:     path,
 	}
 
-	if s.gitService != nil {
-		msg := fmt.Sprintf("create: asset %s in page %s", fileName, pageID.String())
-		files := []string{"pages/" + pageID.String() + "/" + fileName}
-		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
+	msg := fmt.Sprintf("create: asset %s in page %s", fileName, pageID.String())
+	files := []string{"pages/" + pageID.String() + "/" + fileName}
+	if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
+		return nil, err
 	}
 
 	return asset, nil
@@ -119,15 +117,9 @@ func (s *AssetService) Delete(ctx context.Context, orgID, pageID jsonldb.ID, ass
 		return err
 	}
 
-	if s.gitService != nil {
-		msg := fmt.Sprintf("delete: asset %s from page %s", assetName, pageID.String())
-		files := []string{"pages/" + pageID.String() + "/" + assetName}
-		if err := s.gitService.Commit(ctx, orgID.String(), "", "", msg, files); err != nil {
-			fmt.Printf("failed to commit change: %v\n", err)
-		}
-	}
-
-	return nil
+	msg := fmt.Sprintf("delete: asset %s from page %s", assetName, pageID.String())
+	files := []string{"pages/" + pageID.String() + "/" + assetName}
+	return s.gitService.Commit(ctx, orgID.String(), "", "", msg, files)
 }
 
 // List lists all assets in a page's directory.

@@ -74,21 +74,19 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *id
 		return nil, dto.InternalWithError("Failed to create node", err)
 	}
 
-	if h.gitService != nil {
-		msg := fmt.Sprintf("create: %s %s - %s", req.Type, node.ID.String(), req.Title)
-		var files []string
-		idStr := node.ID.String()
-		switch nodeType {
-		case content.NodeTypeDocument:
-			files = []string{"pages/" + idStr + "/index.md"}
-		case content.NodeTypeDatabase:
-			files = []string{"pages/" + idStr + "/metadata.json"}
-		case content.NodeTypeHybrid:
-			files = []string{"pages/" + idStr + "/index.md", "pages/" + idStr + "/metadata.json"}
-		}
-		if err := h.gitService.Commit(ctx, orgID.String(), user.Name, user.Email, msg, files); err != nil {
-			return nil, dto.InternalWithError("Failed to commit change", err)
-		}
+	msg := fmt.Sprintf("create: %s %s - %s", req.Type, node.ID.String(), req.Title)
+	var files []string
+	idStr := node.ID.String()
+	switch nodeType {
+	case content.NodeTypeDocument:
+		files = []string{"pages/" + idStr + "/index.md"}
+	case content.NodeTypeDatabase:
+		files = []string{"pages/" + idStr + "/metadata.json"}
+	case content.NodeTypeHybrid:
+		files = []string{"pages/" + idStr + "/index.md", "pages/" + idStr + "/metadata.json"}
+	}
+	if err := h.gitService.Commit(ctx, orgID.String(), user.Name, user.Email, msg, files); err != nil {
+		return nil, dto.InternalWithError("Failed to commit change", err)
 	}
 
 	return nodeToResponse(node), nil

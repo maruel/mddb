@@ -2,9 +2,12 @@ package content
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 func TestAssetService_Save(t *testing.T) {
@@ -13,16 +16,26 @@ func TestAssetService_Save(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("failed to create git service: %v", err)
+	}
+	orgID := jsonldb.ID(100)
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
+		t.Fatalf("failed to init git for org: %v", err)
+	}
 
 	// Create a page first
-	orgID := jsonldb.ID(100)
 	pageID := jsonldb.ID(1)
 	_, err = fs.WritePage(orgID, pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
 	}
 
-	as := NewAssetService(fs, nil, nil)
+	as := NewAssetService(fs, gitService, nil)
 
 	// Save an asset
 	testData := []byte("test image data")
@@ -64,6 +77,10 @@ func TestAssetService_Get(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("failed to create git service: %v", err)
+	}
 
 	// Create a page and save asset
 	orgID := jsonldb.ID(100)
@@ -73,7 +90,7 @@ func TestAssetService_Get(t *testing.T) {
 		t.Fatalf("failed to create page: %v", err)
 	}
 
-	as := NewAssetService(fs, nil, nil)
+	as := NewAssetService(fs, gitService, nil)
 	testData := []byte("test image data")
 	_, err = as.Save(t.Context(), orgID, pageID, "test.png", testData)
 	if err != nil {
@@ -97,16 +114,26 @@ func TestAssetService_Delete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("failed to create git service: %v", err)
+	}
+	orgID := jsonldb.ID(100)
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
+		t.Fatalf("failed to init git for org: %v", err)
+	}
 
 	// Create a page and save asset
-	orgID := jsonldb.ID(100)
 	pageID := jsonldb.ID(1)
 	_, err = fs.WritePage(orgID, pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
 	}
 
-	as := NewAssetService(fs, nil, nil)
+	as := NewAssetService(fs, gitService, nil)
 	_, err = as.Save(t.Context(), orgID, pageID, "test.png", []byte("test data"))
 	if err != nil {
 		t.Fatalf("failed to save asset: %v", err)
@@ -136,16 +163,26 @@ func TestAssetService_List(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("failed to create git service: %v", err)
+	}
+	orgID := jsonldb.ID(100)
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
+		t.Fatalf("failed to init git for org: %v", err)
+	}
 
 	// Create a page
-	orgID := jsonldb.ID(100)
 	pageID := jsonldb.ID(1)
 	_, err = fs.WritePage(orgID, pageID, "Test Page", "Test content")
 	if err != nil {
 		t.Fatalf("failed to create page: %v", err)
 	}
 
-	as := NewAssetService(fs, nil, nil)
+	as := NewAssetService(fs, gitService, nil)
 
 	// Save multiple assets
 	assets := []string{"image1.png", "image2.jpg", "document.pdf"}
@@ -185,8 +222,18 @@ func TestAssetService_Validation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create file store: %v", err)
 	}
-	as := NewAssetService(fs, nil, nil)
+	gitService, err := git.New(t.Context(), tmpDir, "", "")
+	if err != nil {
+		t.Fatalf("failed to create git service: %v", err)
+	}
 	orgID := jsonldb.ID(100)
+	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
+		t.Fatalf("failed to create org dir: %v", err)
+	}
+	if err := gitService.Init(t.Context(), orgID.String()); err != nil {
+		t.Fatalf("failed to init git for org: %v", err)
+	}
+	as := NewAssetService(fs, gitService, nil)
 	var zeroID jsonldb.ID
 	t.Run("empty page id on save", func(t *testing.T) {
 		if _, err := as.Save(t.Context(), orgID, zeroID, "test.png", []byte("data")); err == nil {
