@@ -67,7 +67,7 @@ func schemaFromType[T any]() ([]column, error) {
 
 	// Validate type
 	switch t.Kind() {
-	case reflect.Ptr:
+	case reflect.Pointer:
 		if t.Elem().Kind() != reflect.Struct {
 			return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
 		}
@@ -89,7 +89,7 @@ func schemaFromType[T any]() ([]column, error) {
 
 	// Get the struct type for Go type mapping
 	structType := t
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		structType = t.Elem()
 	}
 
@@ -141,12 +141,12 @@ func jsonFieldName(field *reflect.StructField) string {
 // goTypeToColumnType maps Go types to JSONL column types.
 func goTypeToColumnType(t reflect.Type) columnType {
 	// Dereference pointers
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 
 	// Check for time.Time first (before switch)
-	if t == reflect.TypeOf(time.Time{}) {
+	if t == reflect.TypeFor[time.Time]() {
 		return columnTypeDate
 	}
 
