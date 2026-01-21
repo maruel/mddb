@@ -9,7 +9,6 @@ import (
 	"slices"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
@@ -38,7 +37,7 @@ func NewAssetService(fileStore *FileStore, gitService *infra.Git, orgService *id
 }
 
 // SaveAsset saves an asset file to a page's directory.
-func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, fileName string, data []byte) (*entity.Asset, error) {
+func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, fileName string, data []byte) (*Asset, error) {
 	if pageID.IsZero() {
 		return nil, errPageIDEmpty
 	}
@@ -76,7 +75,7 @@ func (s *AssetService) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 		mimeType = "application/octet-stream"
 	}
 
-	asset := &entity.Asset{
+	asset := &Asset{
 		ID:       fileName,
 		Name:     fileName,
 		MimeType: mimeType,
@@ -128,7 +127,7 @@ func (s *AssetService) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID
 }
 
 // ListAssets lists all assets in a page's directory.
-func (s *AssetService) ListAssets(ctx context.Context, orgID, pageID jsonldb.ID) ([]*entity.Asset, error) {
+func (s *AssetService) ListAssets(ctx context.Context, orgID, pageID jsonldb.ID) ([]*Asset, error) {
 	if pageID.IsZero() {
 		return nil, errPageIDEmpty
 	}

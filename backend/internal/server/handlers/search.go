@@ -6,7 +6,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -24,7 +23,7 @@ func NewSearchHandler(fileStore *content.FileStore) *SearchHandler {
 
 // Search performs a full-text search across all nodes.
 func (h *SearchHandler) Search(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.SearchRequest) (*dto.SearchResponse, error) {
-	results, err := h.searchService.Search(ctx, orgID, entity.SearchOptions{
+	results, err := h.searchService.Search(ctx, orgID, content.SearchOptions{
 		Query:       req.Query,
 		Limit:       req.Limit,
 		MatchTitle:  req.MatchTitle,

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
@@ -36,7 +35,7 @@ func NewDatabaseService(fileStore *FileStore, gitService *infra.Git, quotaGetter
 }
 
 // GetDatabase retrieves a database by ID and returns it as a Node.
-func (s *DatabaseService) GetDatabase(ctx context.Context, orgID, id jsonldb.ID) (*entity.Node, error) {
+func (s *DatabaseService) GetDatabase(ctx context.Context, orgID, id jsonldb.ID) (*Node, error) {
 	if id.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
@@ -44,7 +43,7 @@ func (s *DatabaseService) GetDatabase(ctx context.Context, orgID, id jsonldb.ID)
 }
 
 // CreateDatabase creates a new database with a generated numeric ID and returns it as a Node.
-func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, title string, columns []entity.Property) (*entity.Node, error) {
+func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, title string, columns []Property) (*Node, error) {
 	if title == "" {
 		return nil, errTitleEmpty
 	}
@@ -69,13 +68,13 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 
 	id := jsonldb.NewID()
 	now := time.Now()
-	node := &entity.Node{
+	node := &Node{
 		ID:         id,
 		Title:      title,
 		Properties: columns,
 		Created:    now,
 		Modified:   now,
-		Type:       entity.NodeTypeDatabase,
+		Type:       NodeTypeDatabase,
 	}
 
 	if err := s.FileStore.WriteDatabase(orgID, node); err != nil {
@@ -92,7 +91,7 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 }
 
 // UpdateDatabase updates an existing database's schema and returns it as a Node.
-func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.ID, title string, columns []entity.Property) (*entity.Node, error) {
+func (s *DatabaseService) UpdateDatabase(ctx context.Context, orgID, id jsonldb.ID, title string, columns []Property) (*Node, error) {
 	if id.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
@@ -144,7 +143,7 @@ func (s *DatabaseService) DeleteDatabase(ctx context.Context, orgID, id jsonldb.
 }
 
 // ListDatabases returns all databases as Nodes.
-func (s *DatabaseService) ListDatabases(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
+func (s *DatabaseService) ListDatabases(ctx context.Context, orgID jsonldb.ID) ([]*Node, error) {
 	it, err := s.FileStore.IterDatabases(orgID)
 	if err != nil {
 		return nil, err
@@ -154,7 +153,7 @@ func (s *DatabaseService) ListDatabases(ctx context.Context, orgID jsonldb.ID) (
 
 // CreateRecord creates a new record in a database.
 // Data values are coerced to SQLite-compatible types based on column schema.
-func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID jsonldb.ID, data map[string]any) (*entity.DataRecord, error) {
+func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID jsonldb.ID, data map[string]any) (*DataRecord, error) {
 	if databaseID.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
@@ -172,7 +171,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID js
 	id := jsonldb.NewID()
 
 	now := time.Now()
-	record := &entity.DataRecord{
+	record := &DataRecord{
 		ID:       id,
 		Data:     coercedData,
 		Created:  now,
@@ -193,7 +192,7 @@ func (s *DatabaseService) CreateRecord(ctx context.Context, orgID, databaseID js
 }
 
 // GetRecords retrieves all records from a database.
-func (s *DatabaseService) GetRecords(ctx context.Context, orgID, databaseID jsonldb.ID) ([]*entity.DataRecord, error) {
+func (s *DatabaseService) GetRecords(ctx context.Context, orgID, databaseID jsonldb.ID) ([]*DataRecord, error) {
 	if databaseID.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
@@ -211,7 +210,7 @@ func (s *DatabaseService) GetRecords(ctx context.Context, orgID, databaseID json
 }
 
 // GetRecordsPage retrieves a subset of records from a database.
-func (s *DatabaseService) GetRecordsPage(ctx context.Context, orgID, databaseID jsonldb.ID, offset, limit int) ([]*entity.DataRecord, error) {
+func (s *DatabaseService) GetRecordsPage(ctx context.Context, orgID, databaseID jsonldb.ID, offset, limit int) ([]*DataRecord, error) {
 	if databaseID.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
@@ -224,7 +223,7 @@ func (s *DatabaseService) GetRecordsPage(ctx context.Context, orgID, databaseID 
 }
 
 // GetRecord retrieves a specific record by ID.
-func (s *DatabaseService) GetRecord(ctx context.Context, orgID, databaseID, recordID jsonldb.ID) (*entity.DataRecord, error) {
+func (s *DatabaseService) GetRecord(ctx context.Context, orgID, databaseID, recordID jsonldb.ID) (*DataRecord, error) {
 	if databaseID.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
@@ -248,7 +247,7 @@ func (s *DatabaseService) GetRecord(ctx context.Context, orgID, databaseID, reco
 
 // UpdateRecord updates an existing record in a database.
 // Data values are coerced to SQLite-compatible types based on column schema.
-func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, recordID jsonldb.ID, data map[string]any) (*entity.DataRecord, error) {
+func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, recordID jsonldb.ID, data map[string]any) (*DataRecord, error) {
 	if databaseID.IsZero() {
 		return nil, errDatabaseIDEmpty
 	}
@@ -271,7 +270,7 @@ func (s *DatabaseService) UpdateRecord(ctx context.Context, orgID, databaseID, r
 	// Coerce data types based on property schema
 	coercedData := coerceRecordData(data, node.Properties)
 
-	record := &entity.DataRecord{
+	record := &DataRecord{
 		ID:       recordID,
 		Data:     coercedData,
 		Created:  existing.Created,

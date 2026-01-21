@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestNewNodeService(t *testing.T) {
@@ -50,7 +49,7 @@ func TestNodeService_CreateNode(t *testing.T) {
 
 	// Test creating a document node
 	var emptyParentID jsonldb.ID
-	node, err := service.CreateNode(ctx, orgID, "Test Document", entity.NodeTypeDocument, emptyParentID)
+	node, err := service.CreateNode(ctx, orgID, "Test Document", NodeTypeDocument, emptyParentID)
 	if err != nil {
 		t.Fatalf("CreateNode (document) failed: %v", err)
 	}
@@ -58,8 +57,8 @@ func TestNodeService_CreateNode(t *testing.T) {
 	if node.Title != "Test Document" {
 		t.Errorf("Title = %q, want %q", node.Title, "Test Document")
 	}
-	if node.Type != entity.NodeTypeDocument {
-		t.Errorf("Type = %v, want %v", node.Type, entity.NodeTypeDocument)
+	if node.Type != NodeTypeDocument {
+		t.Errorf("Type = %v, want %v", node.Type, NodeTypeDocument)
 	}
 	if node.ID.IsZero() {
 		t.Error("Expected non-zero node ID")
@@ -69,27 +68,27 @@ func TestNodeService_CreateNode(t *testing.T) {
 	}
 
 	// Test creating a database node
-	dbNode, err := service.CreateNode(ctx, orgID, "Test Database", entity.NodeTypeDatabase, emptyParentID)
+	dbNode, err := service.CreateNode(ctx, orgID, "Test Database", NodeTypeDatabase, emptyParentID)
 	if err != nil {
 		t.Fatalf("CreateNode (database) failed: %v", err)
 	}
 
-	if dbNode.Type != entity.NodeTypeDatabase {
-		t.Errorf("Type = %v, want %v", dbNode.Type, entity.NodeTypeDatabase)
+	if dbNode.Type != NodeTypeDatabase {
+		t.Errorf("Type = %v, want %v", dbNode.Type, NodeTypeDatabase)
 	}
 
 	// Test creating a hybrid node
-	hybridNode, err := service.CreateNode(ctx, orgID, "Test Hybrid", entity.NodeTypeHybrid, emptyParentID)
+	hybridNode, err := service.CreateNode(ctx, orgID, "Test Hybrid", NodeTypeHybrid, emptyParentID)
 	if err != nil {
 		t.Fatalf("CreateNode (hybrid) failed: %v", err)
 	}
 
-	if hybridNode.Type != entity.NodeTypeHybrid {
-		t.Errorf("Type = %v, want %v", hybridNode.Type, entity.NodeTypeHybrid)
+	if hybridNode.Type != NodeTypeHybrid {
+		t.Errorf("Type = %v, want %v", hybridNode.Type, NodeTypeHybrid)
 	}
 
 	// Test creating a child node with parentID
-	childNode, err := service.CreateNode(ctx, orgID, "Child Node", entity.NodeTypeDocument, node.ID)
+	childNode, err := service.CreateNode(ctx, orgID, "Child Node", NodeTypeDocument, node.ID)
 	if err != nil {
 		t.Fatalf("CreateNode (child) failed: %v", err)
 	}
@@ -115,8 +114,8 @@ func TestNodeService_ListNodes(t *testing.T) {
 
 	// Create some nodes
 	var emptyParentID jsonldb.ID
-	_, _ = service.CreateNode(ctx, orgID, "Node 1", entity.NodeTypeDocument, emptyParentID)
-	_, _ = service.CreateNode(ctx, orgID, "Node 2", entity.NodeTypeDocument, emptyParentID)
+	_, _ = service.CreateNode(ctx, orgID, "Node 1", NodeTypeDocument, emptyParentID)
+	_, _ = service.CreateNode(ctx, orgID, "Node 2", NodeTypeDocument, emptyParentID)
 
 	nodes, err := service.ListNodes(ctx, orgID)
 	if err != nil {

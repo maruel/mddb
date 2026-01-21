@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 
@@ -67,7 +66,7 @@ func (fs *FileStore) PageExists(orgID, id jsonldb.ID) bool {
 }
 
 // ReadPage reads a page from disk and returns it as a Node.
-func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*entity.Node, error) {
+func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*Node, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -81,7 +80,7 @@ func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*entity.Node, error) {
 	}
 
 	p := parseMarkdownFile(id, data)
-	return &entity.Node{
+	return &Node{
 		ID:         p.id,
 		Title:      p.title,
 		Content:    p.content,
@@ -89,12 +88,12 @@ func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*entity.Node, error) {
 		Modified:   p.modified,
 		Tags:       p.tags,
 		FaviconURL: p.faviconURL,
-		Type:       entity.NodeTypeDocument,
+		Type:       NodeTypeDocument,
 	}, nil
 }
 
 // WritePage writes a page to disk and returns it as a Node.
-func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*entity.Node, error) {
+func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*Node, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -118,19 +117,19 @@ func (fs *FileStore) WritePage(orgID, id jsonldb.ID, title, content string) (*en
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 
-	return &entity.Node{
+	return &Node{
 		ID:       p.id,
 		Title:    p.title,
 		Content:  p.content,
 		Created:  p.created,
 		Modified: p.modified,
 		Tags:     p.tags,
-		Type:     entity.NodeTypeDocument,
+		Type:     NodeTypeDocument,
 	}, nil
 }
 
 // UpdatePage updates an existing page and returns it as a Node.
-func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*entity.Node, error) {
+func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*Node, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -153,7 +152,7 @@ func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*e
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
 
-	return &entity.Node{
+	return &Node{
 		ID:         p.id,
 		Title:      p.title,
 		Content:    p.content,
@@ -161,7 +160,7 @@ func (fs *FileStore) UpdatePage(orgID, id jsonldb.ID, title, content string) (*e
 		Modified:   p.modified,
 		Tags:       p.tags,
 		FaviconURL: p.faviconURL,
-		Type:       entity.NodeTypeDocument,
+		Type:       NodeTypeDocument,
 	}, nil
 }
 
@@ -181,7 +180,7 @@ func (fs *FileStore) DeletePage(orgID, id jsonldb.ID) error {
 }
 
 // IterPages returns an iterator over all pages for an organization as Nodes.
-func (fs *FileStore) IterPages(orgID jsonldb.ID) (iter.Seq[*entity.Node], error) {
+func (fs *FileStore) IterPages(orgID jsonldb.ID) (iter.Seq[*Node], error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -192,7 +191,7 @@ func (fs *FileStore) IterPages(orgID jsonldb.ID) (iter.Seq[*entity.Node], error)
 		return nil, fmt.Errorf("failed to read pages directory: %w", err)
 	}
 
-	return func(yield func(*entity.Node) bool) {
+	return func(yield func(*Node) bool) {
 		for _, entry := range entries {
 			if !entry.IsDir() {
 				continue
@@ -214,7 +213,7 @@ func (fs *FileStore) IterPages(orgID jsonldb.ID) (iter.Seq[*entity.Node], error)
 }
 
 // ReadNode reads a unified node from disk.
-func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*entity.Node, error) {
+func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*Node, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -227,7 +226,7 @@ func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*entity.Node, error) {
 		return nil, fmt.Errorf("failed to access node: %w", err)
 	}
 
-	node := &entity.Node{
+	node := &Node{
 		ID:       id,
 		Created:  info.ModTime(),
 		Modified: info.ModTime(),
@@ -242,7 +241,7 @@ func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*entity.Node, error) {
 			node.Created = page.Created
 			node.Modified = page.Modified
 			node.Tags = page.Tags
-			node.Type = entity.NodeTypeDocument
+			node.Type = NodeTypeDocument
 		}
 	}
 
@@ -250,10 +249,10 @@ func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*entity.Node, error) {
 	if _, err := os.Stat(metadataFile); err == nil {
 		db, err := fs.ReadDatabase(orgID, id)
 		if err == nil {
-			if node.Type == entity.NodeTypeDocument {
-				node.Type = entity.NodeTypeHybrid
+			if node.Type == NodeTypeDocument {
+				node.Type = NodeTypeHybrid
 			} else {
-				node.Type = entity.NodeTypeDatabase
+				node.Type = NodeTypeDatabase
 				node.Title = db.Title
 				node.Created = db.Created
 				node.Modified = db.Modified
@@ -266,20 +265,20 @@ func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*entity.Node, error) {
 }
 
 // ReadNodeTree returns the full hierarchical tree of nodes.
-func (fs *FileStore) ReadNodeTree(orgID jsonldb.ID) ([]*entity.Node, error) {
+func (fs *FileStore) ReadNodeTree(orgID jsonldb.ID) ([]*Node, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
 	return fs.readNodesRecursive(orgID, fs.orgPagesDir(orgID), 0)
 }
 
-func (fs *FileStore) readNodesRecursive(orgID jsonldb.ID, dir string, parentID jsonldb.ID) ([]*entity.Node, error) {
+func (fs *FileStore) readNodesRecursive(orgID jsonldb.ID, dir string, parentID jsonldb.ID) ([]*Node, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
 
-	var nodes []*entity.Node
+	var nodes []*Node
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -304,13 +303,13 @@ func (fs *FileStore) readNodesRecursive(orgID jsonldb.ID, dir string, parentID j
 }
 
 // ReadNodeFromPath reads a node from a specific path.
-func (fs *FileStore) ReadNodeFromPath(orgID jsonldb.ID, path string, id, parentID jsonldb.ID) (*entity.Node, error) {
+func (fs *FileStore) ReadNodeFromPath(orgID jsonldb.ID, path string, id, parentID jsonldb.ID) (*Node, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	node := &entity.Node{
+	node := &Node{
 		ID:       id,
 		ParentID: parentID,
 		Created:  info.ModTime(),
@@ -326,7 +325,7 @@ func (fs *FileStore) ReadNodeFromPath(orgID jsonldb.ID, path string, id, parentI
 			node.Created = page.Created
 			node.Modified = page.Modified
 			node.Tags = page.Tags
-			node.Type = entity.NodeTypeDocument
+			node.Type = NodeTypeDocument
 		}
 	}
 
@@ -334,10 +333,10 @@ func (fs *FileStore) ReadNodeFromPath(orgID jsonldb.ID, path string, id, parentI
 	if _, err := os.Stat(schemaFile); err == nil {
 		db, err := fs.ReadDatabase(orgID, id)
 		if err == nil {
-			if node.Type == entity.NodeTypeDocument {
-				node.Type = entity.NodeTypeHybrid
+			if node.Type == NodeTypeDocument {
+				node.Type = NodeTypeHybrid
 			} else {
-				node.Type = entity.NodeTypeDatabase
+				node.Type = NodeTypeDatabase
 				node.Title = db.Title
 				node.Created = db.Created
 				node.Modified = db.Modified
@@ -392,7 +391,7 @@ func (fs *FileStore) DatabaseExists(orgID, id jsonldb.ID) bool {
 }
 
 // ReadDatabase reads a database definition from metadata.json and returns it as a Node.
-func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*entity.Node, error) {
+func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*Node, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -411,25 +410,25 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*entity.Node, error) {
 		Version    string            `json:"version"`
 		Created    time.Time         `json:"created"`
 		Modified   time.Time         `json:"modified"`
-		Properties []entity.Property `json:"properties"`
+		Properties []Property `json:"properties"`
 	}
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		return nil, fmt.Errorf("failed to parse database metadata: %w", err)
 	}
 
-	return &entity.Node{
+	return &Node{
 		ID:         id,
 		Title:      metadata.Title,
 		Properties: metadata.Properties,
 		Created:    metadata.Created,
 		Modified:   metadata.Modified,
-		Type:       entity.NodeTypeDatabase,
+		Type:       NodeTypeDatabase,
 	}, nil
 }
 
 // WriteDatabase writes database metadata (including properties) to metadata.json.
 // The JSONL records file is created lazily when the first record is added.
-func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, node *entity.Node) error {
+func (fs *FileStore) WriteDatabase(orgID jsonldb.ID, node *Node) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
@@ -471,7 +470,7 @@ func (fs *FileStore) DeleteDatabase(orgID, id jsonldb.ID) error {
 }
 
 // IterDatabases returns an iterator over all databases for the given organization as Nodes.
-func (fs *FileStore) IterDatabases(orgID jsonldb.ID) (iter.Seq[*entity.Node], error) {
+func (fs *FileStore) IterDatabases(orgID jsonldb.ID) (iter.Seq[*Node], error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -482,7 +481,7 @@ func (fs *FileStore) IterDatabases(orgID jsonldb.ID) (iter.Seq[*entity.Node], er
 		return nil, fmt.Errorf("failed to read pages directory: %w", err)
 	}
 
-	return func(yield func(*entity.Node) bool) {
+	return func(yield func(*Node) bool) {
 		for _, entry := range entries {
 			if !entry.IsDir() {
 				continue
@@ -504,7 +503,7 @@ func (fs *FileStore) IterDatabases(orgID jsonldb.ID) (iter.Seq[*entity.Node], er
 }
 
 // AppendRecord appends a record to a database using jsonldb abstraction.
-func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *entity.DataRecord) error {
+func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *DataRecord) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
@@ -516,7 +515,7 @@ func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *entity.DataRecor
 	filePath := fs.databaseRecordsFile(orgID, id)
 
 	// Load or create table using jsonldb
-	table, err := jsonldb.NewTable[*entity.DataRecord](filePath)
+	table, err := jsonldb.NewTable[*DataRecord](filePath)
 	if err != nil {
 		return fmt.Errorf("failed to load database: %w", err)
 	}
@@ -530,17 +529,17 @@ func (fs *FileStore) AppendRecord(orgID, id jsonldb.ID, record *entity.DataRecor
 }
 
 // IterRecords returns an iterator over all records for a database.
-func (fs *FileStore) IterRecords(orgID, id jsonldb.ID) (iter.Seq[*entity.DataRecord], error) {
+func (fs *FileStore) IterRecords(orgID, id jsonldb.ID) (iter.Seq[*DataRecord], error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
 	filePath := fs.databaseRecordsFile(orgID, id)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return func(yield func(*entity.DataRecord) bool) {}, nil
+		return func(yield func(*DataRecord) bool) {}, nil
 	}
 
-	table, err := jsonldb.NewTable[*entity.DataRecord](filePath)
+	table, err := jsonldb.NewTable[*DataRecord](filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
@@ -548,28 +547,28 @@ func (fs *FileStore) IterRecords(orgID, id jsonldb.ID) (iter.Seq[*entity.DataRec
 }
 
 // ReadRecordsPage reads a page of records for a database using jsonldb abstraction.
-func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([]*entity.DataRecord, error) {
+func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([]*DataRecord, error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
 	filePath := fs.databaseRecordsFile(orgID, id)
 
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return []*entity.DataRecord{}, nil
+		return []*DataRecord{}, nil
 	}
 
-	table, err := jsonldb.NewTable[*entity.DataRecord](filePath)
+	table, err := jsonldb.NewTable[*DataRecord](filePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read records: %w", err)
 	}
 
 	offset = max(0, offset)
 	if offset >= table.Len() {
-		return []*entity.DataRecord{}, nil
+		return []*DataRecord{}, nil
 	}
 	end := min(offset+limit, table.Len())
 
-	var records []*entity.DataRecord
+	var records []*DataRecord
 	idx := 0
 	for r := range table.Iter(0) {
 		if idx >= offset {
@@ -584,7 +583,7 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 }
 
 // UpdateRecord updates an existing record in a database using jsonldb abstraction.
-func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *entity.DataRecord) error {
+func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *DataRecord) error {
 	if orgID == 0 {
 		return errOrgIDRequired
 	}
@@ -592,7 +591,7 @@ func (fs *FileStore) UpdateRecord(orgID, databaseID jsonldb.ID, record *entity.D
 	filePath := fs.databaseRecordsFile(orgID, databaseID)
 
 	// Load using jsonldb abstraction
-	table, err := jsonldb.NewTable[*entity.DataRecord](filePath)
+	table, err := jsonldb.NewTable[*DataRecord](filePath)
 	if err != nil {
 		return fmt.Errorf("failed to load database: %w", err)
 	}
@@ -616,7 +615,7 @@ func (fs *FileStore) DeleteRecord(orgID, databaseID, recordID jsonldb.ID) error 
 	filePath := fs.databaseRecordsFile(orgID, databaseID)
 
 	// Load using jsonldb abstraction
-	table, err := jsonldb.NewTable[*entity.DataRecord](filePath)
+	table, err := jsonldb.NewTable[*DataRecord](filePath)
 	if err != nil {
 		return fmt.Errorf("failed to load database: %w", err)
 	}
@@ -691,7 +690,7 @@ func (fs *FileStore) DeleteAsset(orgID, pageID jsonldb.ID, assetName string) err
 }
 
 // IterAssets returns an iterator over all assets associated with a page.
-func (fs *FileStore) IterAssets(orgID, pageID jsonldb.ID) (iter.Seq[*entity.Asset], error) {
+func (fs *FileStore) IterAssets(orgID, pageID jsonldb.ID) (iter.Seq[*Asset], error) {
 	if orgID == 0 {
 		return nil, errOrgIDRequired
 	}
@@ -699,12 +698,12 @@ func (fs *FileStore) IterAssets(orgID, pageID jsonldb.ID) (iter.Seq[*entity.Asse
 	entries, err := os.ReadDir(pageDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return func(yield func(*entity.Asset) bool) {}, nil
+			return func(yield func(*Asset) bool) {}, nil
 		}
 		return nil, fmt.Errorf("failed to read assets: %w", err)
 	}
 
-	return func(yield func(*entity.Asset) bool) {
+	return func(yield func(*Asset) bool) {
 		for _, entry := range entries {
 			if entry.IsDir() {
 				continue
@@ -717,7 +716,7 @@ func (fs *FileStore) IterAssets(orgID, pageID jsonldb.ID) (iter.Seq[*entity.Asse
 			if err != nil {
 				continue
 			}
-			if !yield(&entity.Asset{
+			if !yield(&Asset{
 				ID:      name,
 				Name:    name,
 				Size:    info.Size(),

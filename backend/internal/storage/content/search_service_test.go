@@ -86,7 +86,7 @@ func TestSearchService_SearchPages(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
+			results, err := searchService.Search(ctx, orgID, SearchOptions{
 				Query:      tt.query,
 				MatchTitle: true,
 				MatchBody:  true,
@@ -132,9 +132,9 @@ func TestSearchService_SearchRecords(t *testing.T) {
 		},
 	}
 	dbService := NewDatabaseService(fileStore, nil, mockQuotaGetterDB)
-	columns := []entity.Property{
+	columns := []Property{
 		{Name: "title", Type: "text", Required: true},
-		{Name: "status", Type: entity.PropertyTypeText},
+		{Name: "status", Type: PropertyTypeText},
 		{Name: "description", Type: "text"},
 	}
 
@@ -179,7 +179,7 @@ func TestSearchService_SearchRecords(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
+			results, err := searchService.Search(ctx, orgID, SearchOptions{
 				Query:       tt.query,
 				MatchFields: true,
 			})
@@ -223,7 +223,7 @@ func TestSearchService_Scoring(t *testing.T) {
 	_, _ = pageService.CreatePage(ctx, orgID, "Python Programming", "This is about Java not Python")
 	_, _ = pageService.CreatePage(ctx, orgID, "Java Basics", "Learn Python programming fundamentals")
 
-	results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
+	results, err := searchService.Search(ctx, orgID, SearchOptions{
 		Query:      "python",
 		MatchTitle: true,
 		MatchBody:  true,
@@ -267,7 +267,7 @@ func TestSearchService_Limit(t *testing.T) {
 		_, _ = pageService.CreatePage(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content")
 	}
 
-	results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
+	results, err := searchService.Search(ctx, orgID, SearchOptions{
 		Query:      "test",
 		Limit:      2,
 		MatchTitle: true,
@@ -302,7 +302,7 @@ func TestSearchService_Integration(t *testing.T) {
 	_, _ = pageService.CreatePage(ctx, orgID, "Blog Post", "Article about searchable content and web development")
 
 	dbService := NewDatabaseService(fileStore, nil, mockQuotaGetterIntegration)
-	columns := []entity.Property{
+	columns := []Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "content", Type: "text"},
 	}
@@ -310,7 +310,7 @@ func TestSearchService_Integration(t *testing.T) {
 	_, _ = dbService.CreateRecord(ctx, orgID, db.ID, map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"})
 
 	// Search should find both page and record
-	results, err := searchService.Search(ctx, orgID, entity.SearchOptions{
+	results, err := searchService.Search(ctx, orgID, SearchOptions{
 		Query:       "searchable",
 		MatchTitle:  true,
 		MatchBody:   true,

@@ -1,4 +1,4 @@
-package entity
+package content
 
 import (
 	"testing"

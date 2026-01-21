@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func TestDatabase_ReadWrite(t *testing.T) {
@@ -20,17 +19,17 @@ func TestDatabase_ReadWrite(t *testing.T) {
 	orgID := jsonldb.ID(100)
 	tests := []struct {
 		name string
-		node *entity.Node
+		node *Node
 	}{
 		{
 			name: "simple database",
-			node: &entity.Node{
+			node: &Node{
 				ID:    jsonldb.ID(1),
 				Title: "Test Database",
-				Type:  entity.NodeTypeDatabase,
-				Properties: []entity.Property{
+				Type:  NodeTypeDatabase,
+				Properties: []Property{
 					{Name: "title", Type: "text"},
-					{Name: "status", Type: entity.PropertyTypeText},
+					{Name: "status", Type: PropertyTypeText},
 				},
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -38,15 +37,15 @@ func TestDatabase_ReadWrite(t *testing.T) {
 		},
 		{
 			name: "database with all column types",
-			node: &entity.Node{
+			node: &Node{
 				ID:    jsonldb.ID(2),
 				Title: "Complex Database",
-				Type:  entity.NodeTypeDatabase,
-				Properties: []entity.Property{
+				Type:  NodeTypeDatabase,
+				Properties: []Property{
 					{Name: "text_field", Type: "text", Required: true},
 					{Name: "number_field", Type: "number"},
-					{Name: "select_field", Type: entity.PropertyTypeText},
-					{Name: "multi_select", Type: entity.PropertyTypeText},
+					{Name: "select_field", Type: PropertyTypeText},
+					{Name: "multi_select", Type: PropertyTypeText},
 					{Name: "checkbox_field", Type: "checkbox"},
 					{Name: "date_field", Type: "date"},
 				},
@@ -109,11 +108,11 @@ func TestDatabase_Exists(t *testing.T) {
 	}
 
 	orgID := jsonldb.ID(100)
-	node := &entity.Node{
+	node := &Node{
 		ID:    jsonldb.ID(1),
 		Title: "Test",
-		Type:  entity.NodeTypeDatabase,
-		Properties: []entity.Property{
+		Type:  NodeTypeDatabase,
+		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -148,11 +147,11 @@ func TestDatabase_List(t *testing.T) {
 	// Create multiple databases
 	dbIDs := []jsonldb.ID{jsonldb.ID(1), jsonldb.ID(2), jsonldb.ID(3)}
 	for _, id := range dbIDs {
-		node := &entity.Node{
+		node := &Node{
 			ID:    id,
 			Title: "Database " + id.String(),
-			Type:  entity.NodeTypeDatabase,
-			Properties: []entity.Property{
+			Type:  NodeTypeDatabase,
+			Properties: []Property{
 				{Name: "name", Type: "text"},
 			},
 			Created:  time.Now(),
@@ -196,11 +195,11 @@ func TestDatabase_Delete(t *testing.T) {
 	}
 
 	orgID := jsonldb.ID(100)
-	node := &entity.Node{
+	node := &Node{
 		ID:    jsonldb.ID(1),
 		Title: "Test",
-		Type:  entity.NodeTypeDatabase,
-		Properties: []entity.Property{
+		Type:  NodeTypeDatabase,
+		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -241,11 +240,11 @@ func TestRecord_AppendRead(t *testing.T) {
 	dbID := jsonldb.ID(1)
 
 	// Create database first
-	node := &entity.Node{
+	node := &Node{
 		ID:    dbID,
 		Title: "Test",
-		Type:  entity.NodeTypeDatabase,
-		Properties: []entity.Property{
+		Type:  NodeTypeDatabase,
+		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -256,7 +255,7 @@ func TestRecord_AppendRead(t *testing.T) {
 	}
 
 	// Append records
-	records := []*entity.DataRecord{
+	records := []*DataRecord{
 		{
 			ID:       jsonldb.NewID(),
 			Data:     map[string]any{"name": "Record 1"},
@@ -324,11 +323,11 @@ func TestRecord_EmptyDatabase(t *testing.T) {
 	dbID := jsonldb.ID(1)
 
 	// Create database
-	node := &entity.Node{
+	node := &Node{
 		ID:    dbID,
 		Title: "Empty DB",
-		Type:  entity.NodeTypeDatabase,
-		Properties: []entity.Property{
+		Type:  NodeTypeDatabase,
+		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),
@@ -361,11 +360,11 @@ func TestDatabase_NestedPath(t *testing.T) {
 
 	// Create database with base64 encoded ID
 	dbID := jsonldb.ID(42)
-	node := &entity.Node{
+	node := &Node{
 		ID:    dbID,
 		Title: "Database 42",
-		Type:  entity.NodeTypeDatabase,
-		Properties: []entity.Property{
+		Type:  NodeTypeDatabase,
+		Properties: []Property{
 			{Name: "name", Type: "text"},
 		},
 		Created:  time.Now(),

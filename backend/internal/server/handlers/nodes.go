@@ -6,7 +6,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
@@ -57,14 +56,14 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, _ *ident
 		return nil, dto.MissingField("title or type")
 	}
 
-	var nodeType entity.NodeType
+	var nodeType content.NodeType
 	switch req.Type {
 	case dto.NodeTypeDocument:
-		nodeType = entity.NodeTypeDocument
+		nodeType = content.NodeTypeDocument
 	case dto.NodeTypeDatabase:
-		nodeType = entity.NodeTypeDatabase
+		nodeType = content.NodeTypeDatabase
 	case dto.NodeTypeHybrid:
-		nodeType = entity.NodeTypeHybrid
+		nodeType = content.NodeTypeHybrid
 	default:
 		return nil, dto.BadRequest("Invalid node type")
 	}

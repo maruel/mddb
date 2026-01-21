@@ -5,6 +5,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
@@ -88,7 +89,7 @@ func organizationToResponse(o *identity.Organization) *dto.OrganizationResponse 
 	}
 }
 
-func nodeToResponse(n *entity.Node) *dto.NodeResponse {
+func nodeToResponse(n *content.Node) *dto.NodeResponse {
 	resp := &dto.NodeResponse{
 		ID:         n.ID.String(),
 		Title:      n.Title,
@@ -114,7 +115,7 @@ func nodeToResponse(n *entity.Node) *dto.NodeResponse {
 	return resp
 }
 
-func dataRecordToResponse(r *entity.DataRecord) *dto.DataRecordResponse {
+func dataRecordToResponse(r *content.DataRecord) *dto.DataRecordResponse {
 	return &dto.DataRecordResponse{
 		ID:       r.ID.String(),
 		Data:     r.Data,
@@ -142,7 +143,7 @@ func commitsToDTO(commits []*infra.Commit) []*dto.Commit {
 	return result
 }
 
-func searchResultToDTO(r *entity.SearchResult) dto.SearchResult {
+func searchResultToDTO(r *content.SearchResult) dto.SearchResult {
 	return dto.SearchResult{
 		Type:     r.Type,
 		NodeID:   r.NodeID.String(),
@@ -155,7 +156,7 @@ func searchResultToDTO(r *entity.SearchResult) dto.SearchResult {
 	}
 }
 
-func searchResultsToDTO(results []entity.SearchResult) []dto.SearchResult {
+func searchResultsToDTO(results []content.SearchResult) []dto.SearchResult {
 	dtoResults := make([]dto.SearchResult, len(results))
 	for i := range results {
 		dtoResults[i] = searchResultToDTO(&results[i])
@@ -165,7 +166,7 @@ func searchResultsToDTO(results []entity.SearchResult) []dto.SearchResult {
 
 // --- Nested type conversions (entity -> dto) ---
 
-func propertyToDTO(p entity.Property) dto.Property {
+func propertyToDTO(p content.Property) dto.Property {
 	options := make([]dto.SelectOption, len(p.Options))
 	for i, o := range p.Options {
 		options[i] = dto.SelectOption{
@@ -182,7 +183,7 @@ func propertyToDTO(p entity.Property) dto.Property {
 	}
 }
 
-func propertiesToDTO(props []entity.Property) []dto.Property {
+func propertiesToDTO(props []content.Property) []dto.Property {
 	if props == nil {
 		return nil
 	}
@@ -249,28 +250,28 @@ func onboardingStatePtrToDTO(o *identity.OnboardingState) *dto.OnboardingState {
 
 // --- DTO to Entity conversions (for requests) ---
 
-func propertyToEntity(p dto.Property) entity.Property {
-	options := make([]entity.SelectOption, len(p.Options))
+func propertyToEntity(p dto.Property) content.Property {
+	options := make([]content.SelectOption, len(p.Options))
 	for i, o := range p.Options {
-		options[i] = entity.SelectOption{
+		options[i] = content.SelectOption{
 			ID:    o.ID,
 			Name:  o.Name,
 			Color: o.Color,
 		}
 	}
-	return entity.Property{
+	return content.Property{
 		Name:     p.Name,
-		Type:     entity.PropertyType(p.Type),
+		Type:     content.PropertyType(p.Type),
 		Required: p.Required,
 		Options:  options,
 	}
 }
 
-func propertiesToEntity(props []dto.Property) []entity.Property {
+func propertiesToEntity(props []dto.Property) []content.Property {
 	if props == nil {
 		return nil
 	}
-	result := make([]entity.Property, len(props))
+	result := make([]content.Property, len(props))
 	for i, p := range props {
 		result[i] = propertyToEntity(p)
 	}
@@ -377,7 +378,7 @@ func userWithMembershipsToResponse(uwm *userWithMemberships) *dto.UserResponse {
 
 // --- List summary conversions ---
 
-func pageToSummary(n *entity.Node) dto.PageSummary {
+func pageToSummary(n *content.Node) dto.PageSummary {
 	return dto.PageSummary{
 		ID:       n.ID.String(),
 		Title:    n.Title,
@@ -386,7 +387,7 @@ func pageToSummary(n *entity.Node) dto.PageSummary {
 	}
 }
 
-func pagesToSummaries(nodes []*entity.Node) []dto.PageSummary {
+func pagesToSummaries(nodes []*content.Node) []dto.PageSummary {
 	result := make([]dto.PageSummary, len(nodes))
 	for i, n := range nodes {
 		result[i] = pageToSummary(n)
@@ -394,7 +395,7 @@ func pagesToSummaries(nodes []*entity.Node) []dto.PageSummary {
 	return result
 }
 
-func databaseToSummary(n *entity.Node) dto.DatabaseSummary {
+func databaseToSummary(n *content.Node) dto.DatabaseSummary {
 	return dto.DatabaseSummary{
 		ID:       n.ID.String(),
 		Title:    n.Title,
@@ -403,7 +404,7 @@ func databaseToSummary(n *entity.Node) dto.DatabaseSummary {
 	}
 }
 
-func databasesToSummaries(nodes []*entity.Node) []dto.DatabaseSummary {
+func databasesToSummaries(nodes []*content.Node) []dto.DatabaseSummary {
 	result := make([]dto.DatabaseSummary, len(nodes))
 	for i, n := range nodes {
 		result[i] = databaseToSummary(n)
@@ -411,7 +412,7 @@ func databasesToSummaries(nodes []*entity.Node) []dto.DatabaseSummary {
 	return result
 }
 
-func assetToSummary(a *entity.Asset, orgID, pageID string) dto.AssetSummary {
+func assetToSummary(a *content.Asset, orgID, pageID string) dto.AssetSummary {
 	return dto.AssetSummary{
 		ID:       a.ID,
 		Name:     a.Name,
@@ -422,7 +423,7 @@ func assetToSummary(a *entity.Asset, orgID, pageID string) dto.AssetSummary {
 	}
 }
 
-func assetsToSummaries(assets []*entity.Asset, orgID, pageID string) []dto.AssetSummary {
+func assetsToSummaries(assets []*content.Asset, orgID, pageID string) []dto.AssetSummary {
 	result := make([]dto.AssetSummary, len(assets))
 	for i, a := range assets {
 		result[i] = assetToSummary(a, orgID, pageID)

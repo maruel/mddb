@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
@@ -31,7 +30,7 @@ func NewNodeService(fileStore *FileStore, gitService *infra.Git, orgService *ide
 }
 
 // GetNode retrieves a unified node by ID.
-func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*entity.Node, error) {
+func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*Node, error) {
 	if id.IsZero() {
 		return nil, errNodeIDEmpty
 	}
@@ -40,12 +39,12 @@ func (s *NodeService) GetNode(ctx context.Context, orgID, id jsonldb.ID) (*entit
 }
 
 // ListNodes returns the full hierarchical tree of nodes.
-func (s *NodeService) ListNodes(ctx context.Context, orgID jsonldb.ID) ([]*entity.Node, error) {
+func (s *NodeService) ListNodes(ctx context.Context, orgID jsonldb.ID) ([]*Node, error) {
 	return s.FileStore.ReadNodeTree(orgID)
 }
 
 // CreateNode creates a new node (can be document, database, or hybrid).
-func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType entity.NodeType, parentID jsonldb.ID) (*entity.Node, error) {
+func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType NodeType, parentID jsonldb.ID) (*Node, error) {
 	// Check Quota
 	if s.orgService != nil {
 		org, err := s.orgService.Get(orgID)
@@ -60,7 +59,7 @@ func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title st
 	id := jsonldb.NewID()
 	now := time.Now()
 
-	node := &entity.Node{
+	node := &Node{
 		ID:       id,
 		ParentID: parentID,
 		Title:    title,
@@ -69,20 +68,20 @@ func (s *NodeService) CreateNode(ctx context.Context, orgID jsonldb.ID, title st
 		Modified: now,
 	}
 
-	if nodeType == entity.NodeTypeDocument || nodeType == entity.NodeTypeHybrid {
+	if nodeType == NodeTypeDocument || nodeType == NodeTypeHybrid {
 		_, err := s.FileStore.WritePage(orgID, id, title, "")
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if nodeType == entity.NodeTypeDatabase || nodeType == entity.NodeTypeHybrid {
-		dbNode := &entity.Node{
+	if nodeType == NodeTypeDatabase || nodeType == NodeTypeHybrid {
+		dbNode := &Node{
 			ID:       id,
 			Title:    title,
 			Created:  now,
 			Modified: now,
-			Type:     entity.NodeTypeDatabase,
+			Type:     NodeTypeDatabase,
 		}
 		err := s.FileStore.WriteDatabase(orgID, dbNode)
 		if err != nil {

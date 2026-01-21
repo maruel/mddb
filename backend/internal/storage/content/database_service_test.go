@@ -37,9 +37,9 @@ func TestDatabaseService_Create(t *testing.T) {
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
-	columns := []entity.Property{
+	columns := []Property{
 		{Name: "title", Type: "text"},
-		{Name: "status", Type: entity.PropertyTypeText},
+		{Name: "status", Type: PropertyTypeText},
 	}
 
 	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
@@ -77,25 +77,25 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 	tests := []struct {
 		name    string
 		title   string
-		columns []entity.Property
+		columns []Property
 		wantErr bool
 	}{
 		{
 			name:    "empty title",
 			title:   "",
-			columns: []entity.Property{{Name: "col", Type: "text"}},
+			columns: []Property{{Name: "col", Type: "text"}},
 			wantErr: true,
 		},
 		{
 			name:    "no columns",
 			title:   "Test",
-			columns: []entity.Property{},
+			columns: []Property{},
 			wantErr: true,
 		},
 		{
 			name:    "valid",
 			title:   "Test",
-			columns: []entity.Property{{Name: "col", Type: "text"}},
+			columns: []Property{{Name: "col", Type: "text"}},
 			wantErr: false,
 		},
 	}
@@ -127,7 +127,7 @@ func TestDatabaseService_Get(t *testing.T) {
 	ctx := t.Context()
 
 	// Create a database
-	columns := []entity.Property{
+	columns := []Property{
 		{Name: "name", Type: "text"},
 	}
 	created, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
@@ -170,7 +170,7 @@ func TestDatabaseService_List(t *testing.T) {
 	createdIDs := make([]jsonldb.ID, 0, len(titles))
 
 	for _, title := range titles {
-		columns := []entity.Property{{Name: "col", Type: "text"}}
+		columns := []Property{{Name: "col", Type: "text"}}
 		db, err := service.CreateDatabase(ctx, orgID, title, columns)
 		if err != nil {
 			t.Fatalf("Failed to create database: %v", err)
@@ -219,7 +219,7 @@ func TestDatabaseService_Delete(t *testing.T) {
 	ctx := t.Context()
 
 	// Create a database
-	columns := []entity.Property{{Name: "col", Type: "text"}}
+	columns := []Property{{Name: "col", Type: "text"}}
 	created, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -255,9 +255,9 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 	ctx := t.Context()
 
 	// Create a database
-	columns := []entity.Property{
+	columns := []Property{
 		{Name: "title", Type: "text"},
-		{Name: "status", Type: entity.PropertyTypeText},
+		{Name: "status", Type: PropertyTypeText},
 	}
 	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
@@ -299,7 +299,7 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 	ctx := t.Context()
 
 	// Create a database
-	columns := []entity.Property{{Name: "name", Type: "text"}}
+	columns := []Property{{Name: "name", Type: "text"}}
 	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -343,7 +343,7 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 	ctx := t.Context()
 
 	// Create a database
-	columns := []entity.Property{{Name: "name", Type: "text"}}
+	columns := []Property{{Name: "name", Type: "text"}}
 	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -387,7 +387,7 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 	ctx := t.Context()
 
 	// Create a database
-	columns := []entity.Property{{Name: "name", Type: "text"}}
+	columns := []Property{{Name: "name", Type: "text"}}
 	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -441,7 +441,7 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 	ctx := t.Context()
 
 	// Create a database
-	columns := []entity.Property{{Name: "name", Type: "text"}}
+	columns := []Property{{Name: "name", Type: "text"}}
 	db, err := service.CreateDatabase(ctx, orgID, "Test DB", columns)
 	if err != nil {
 		t.Fatalf("Failed to create database: %v", err)
@@ -484,12 +484,12 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 	ctx := t.Context()
 
 	// Create a database with various column types
-	columns := []entity.Property{
+	columns := []Property{
 		{Name: "name", Type: "text"},
 		{Name: "count", Type: "number"},
 		{Name: "price", Type: "number"},
 		{Name: "active", Type: "checkbox"},
-		{Name: "category", Type: entity.PropertyTypeText},
+		{Name: "category", Type: PropertyTypeText},
 	}
 	db, err := service.CreateDatabase(ctx, orgID, "Type Test DB", columns)
 	if err != nil {

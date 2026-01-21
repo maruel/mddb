@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 func BenchmarkDatabaseOperations(b *testing.B) {
@@ -19,13 +18,13 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 
 	orgID := jsonldb.ID(1) // non-zero org for tests
 	dbID := jsonldb.NewID()
-	node := &entity.Node{
+	node := &Node{
 		ID:       dbID,
 		Title:    "Benchmark Database",
-		Type:     entity.NodeTypeDatabase,
+		Type:     NodeTypeDatabase,
 		Created:  time.Now(),
 		Modified: time.Now(),
-		Properties: []entity.Property{
+		Properties: []Property{
 			{Name: "Title", Type: "text"},
 			{Name: "Value", Type: "number"},
 		},
@@ -38,7 +37,7 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// Benchmark Record Creation (Append)
 	b.Run("CreateRecord", func(b *testing.B) {
 		for i := range b.N {
-			record := &entity.DataRecord{
+			record := &DataRecord{
 				ID:       jsonldb.NewID(),
 				Created:  time.Now(),
 				Modified: time.Now(),
@@ -59,12 +58,12 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a database with 1000 records
 		readDBID := jsonldb.NewID()
-		readNode := &entity.Node{ID: readDBID, Title: "Read Bench", Type: entity.NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
+		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
 		if err := fs.WriteDatabase(orgID, readNode); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
-			record := &entity.DataRecord{
+			record := &DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  time.Now(),
@@ -91,13 +90,13 @@ func BenchmarkDatabaseOperations(b *testing.B) {
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := jsonldb.ID(100)
-		readNode := &entity.Node{ID: readDBID, Title: "Read Bench Page", Type: entity.NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
+		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeDatabase, Created: time.Now(), Modified: time.Now()}
 		if err := fs.WriteDatabase(orgID, readNode); err != nil {
 			b.Fatal(err)
 		}
 		// Write 10,000 records
 		for range 10000 {
-			record := &entity.DataRecord{
+			record := &DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  time.Now(),
