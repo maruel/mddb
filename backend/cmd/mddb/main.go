@@ -430,13 +430,13 @@ func watchExecutable(ctx context.Context, stop context.CancelFunc) error {
 
 	// Watch the directory since the file gets replaced on rebuild
 	if err := watcher.Add(filepath.Dir(exe)); err != nil {
-		watcher.Close()
+		_ = watcher.Close()
 		return err
 	}
 
 	base := filepath.Base(exe)
 	go func() {
-		defer watcher.Close()
+		defer func() { _ = watcher.Close() }()
 		for {
 			select {
 			case <-ctx.Done():
