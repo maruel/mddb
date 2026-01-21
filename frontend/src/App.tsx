@@ -436,7 +436,7 @@ export default function App() {
     const nodeId = selectedNodeId();
     if (!nodeId) return;
 
-    if (!confirm(t('database.confirmDeleteRecord') || 'Delete this record?')) return;
+    if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
       setLoading(true);
@@ -537,7 +537,7 @@ export default function App() {
     const nodeId = selectedNodeId();
     if (!nodeId) return;
 
-    if (!confirm(t('database.confirmDeleteRecord') || 'Delete this record?')) return;
+    if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
       setLoading(true);

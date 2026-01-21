@@ -273,7 +273,7 @@ describe('TableGallery', () => {
     });
   });
 
-  it('handles database without image column', async () => {
+  it('handles table without image column', async () => {
     const recordsNoImage: DataRecordResponse[] = [
       {
         id: 'rec-1',

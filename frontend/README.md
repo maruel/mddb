@@ -1,6 +1,6 @@
 # mddb Frontend
 
-SolidJS-based frontend for mddb - a markdown document and database system.
+SolidJS-based frontend for mddb - a markdown document and table system.
 
 ## Development
 
