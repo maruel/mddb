@@ -53,7 +53,9 @@ func (i *Invitation) Validate() error {
 
 // InvitationService handles organization invitations.
 type InvitationService struct {
-	table *jsonldb.Table[*Invitation]
+	table   *jsonldb.Table[*Invitation]
+	byToken *jsonldb.UniqueIndex[string, *Invitation]
+	byOrgID *jsonldb.Index[jsonldb.ID, *Invitation]
 }
 
 // NewInvitationService creates a new invitation service.
@@ -67,7 +69,9 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &InvitationService{table: table}, nil
+	byToken := jsonldb.NewUniqueIndex(table, func(i *Invitation) string { return i.Token })
+	byOrgID := jsonldb.NewIndex(table, func(i *Invitation) jsonldb.ID { return i.OrganizationID })
+	return &InvitationService{table: table, byToken: byToken, byOrgID: byOrgID}, nil
 }
 
 // Create creates a new invitation.
@@ -97,14 +101,13 @@ func (s *InvitationService) Create(email string, orgID jsonldb.ID, role UserRole
 	return invitation, nil
 }
 
-// GetByToken retrieves an invitation by its token.
+// GetByToken retrieves an invitation by its token. O(1) via index.
 func (s *InvitationService) GetByToken(token string) (*Invitation, error) {
-	for inv := range s.table.Iter(0) {
-		if inv.Token == token {
-			return inv, nil
-		}
+	inv := s.byToken.Get(token)
+	if inv == nil {
+		return nil, errInvitationNotFound
 	}
-	return nil, errInvitationNotFound
+	return inv, nil
 }
 
 // Delete deletes an invitation.
@@ -121,18 +124,12 @@ func (s *InvitationService) Delete(id jsonldb.ID) error {
 	return nil
 }
 
-// Iter iterates over all invitations for an organization.
+// Iter iterates over all invitations for an organization. O(1) via index.
 func (s *InvitationService) Iter(orgID jsonldb.ID) (iter.Seq[*Invitation], error) {
 	if orgID.IsZero() {
 		return nil, errOrgIDEmpty
 	}
-	return func(yield func(*Invitation) bool) {
-		for inv := range s.table.Iter(0) {
-			if inv.OrganizationID == orgID && !yield(inv) {
-				return
-			}
-		}
-	}, nil
+	return s.byOrgID.Iter(orgID), nil
 }
 
 //

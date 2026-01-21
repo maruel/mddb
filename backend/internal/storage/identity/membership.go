@@ -66,9 +66,17 @@ type MembershipSettings struct {
 	Notifications bool `json:"notifications" jsonschema:"description=Whether email notifications are enabled"`
 }
 
+// userOrgKey is a composite key for user+organization lookups.
+type userOrgKey struct {
+	UserID jsonldb.ID
+	OrgID  jsonldb.ID
+}
+
 // MembershipService handles user-organization relationships.
 type MembershipService struct {
-	table *jsonldb.Table[*Membership]
+	table     *jsonldb.Table[*Membership]
+	byUserID  *jsonldb.Index[jsonldb.ID, *Membership]
+	byUserOrg *jsonldb.UniqueIndex[userOrgKey, *Membership]
 }
 
 // NewMembershipService creates a new membership service.
@@ -82,17 +90,16 @@ func NewMembershipService(rootDir string) (*MembershipService, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &MembershipService{table: table}, nil
+	byUserID := jsonldb.NewIndex(table, func(m *Membership) jsonldb.ID { return m.UserID })
+	byUserOrg := jsonldb.NewUniqueIndex(table, func(m *Membership) userOrgKey {
+		return userOrgKey{UserID: m.UserID, OrgID: m.OrganizationID}
+	})
+	return &MembershipService{table: table, byUserID: byUserID, byUserOrg: byUserOrg}, nil
 }
 
-// findByUserAndOrg finds a membership by user and organization IDs.
+// findByUserAndOrg finds a membership by user and organization IDs. O(1) via index.
 func (s *MembershipService) findByUserAndOrg(userID, orgID jsonldb.ID) *Membership {
-	for m := range s.table.Iter(0) {
-		if m.UserID == userID && m.OrganizationID == orgID {
-			return m
-		}
-	}
-	return nil
+	return s.byUserOrg.Get(userOrgKey{UserID: userID, OrgID: orgID})
 }
 
 // Create adds a user to an organization.
@@ -128,18 +135,12 @@ func (s *MembershipService) Get(userID, orgID jsonldb.ID) (*Membership, error) {
 	return m, nil
 }
 
-// Iter iterates over all memberships for a user.
+// Iter iterates over all memberships for a user. O(1) via index.
 func (s *MembershipService) Iter(userID jsonldb.ID) (iter.Seq[*Membership], error) {
 	if userID.IsZero() {
 		return nil, errUserIDEmpty
 	}
-	return func(yield func(*Membership) bool) {
-		for m := range s.table.Iter(0) {
-			if m.UserID == userID && !yield(m) {
-				return
-			}
-		}
-	}, nil
+	return s.byUserID.Iter(userID), nil
 }
 
 // Modify atomically modifies a membership.
