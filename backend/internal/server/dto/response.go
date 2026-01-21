@@ -60,23 +60,23 @@ type GetPageVersionResponse struct {
 	Content string `json:"content"`
 }
 
-// --- Database Responses ---
+// --- Table Responses ---
 
-// ListDatabasesResponse is a response containing a list of databases.
-type ListDatabasesResponse struct {
-	Databases []DatabaseSummary `json:"databases"`
+// ListTablesResponse is a response containing a list of tables.
+type ListTablesResponse struct {
+	Tables []TableSummary `json:"tables"`
 }
 
-// DatabaseSummary is a brief representation of a database for list responses.
-type DatabaseSummary struct {
+// TableSummary is a brief representation of a table for list responses.
+type TableSummary struct {
 	ID       string `json:"id"`
 	Title    string `json:"title"`
 	Created  string `json:"created"`
 	Modified string `json:"modified"`
 }
 
-// GetDatabaseResponse is a response containing a database.
-type GetDatabaseResponse struct {
+// GetTableResponse is a response containing a table.
+type GetTableResponse struct {
 	ID         string     `json:"id"`
 	Title      string     `json:"title"`
 	Properties []Property `json:"properties"`
@@ -84,18 +84,18 @@ type GetDatabaseResponse struct {
 	Modified   string     `json:"modified"`
 }
 
-// CreateDatabaseResponse is a response from creating a database.
-type CreateDatabaseResponse struct {
+// CreateTableResponse is a response from creating a table.
+type CreateTableResponse struct {
 	ID string `json:"id"`
 }
 
-// UpdateDatabaseResponse is a response from updating a database.
-type UpdateDatabaseResponse struct {
+// UpdateTableResponse is a response from updating a table.
+type UpdateTableResponse struct {
 	ID string `json:"id"`
 }
 
-// DeleteDatabaseResponse is a response from deleting a database.
-type DeleteDatabaseResponse = OkResponse
+// DeleteTableResponse is a response from deleting a table.
+type DeleteTableResponse = OkResponse
 
 // ListRecordsResponse is a response containing a list of records.
 type ListRecordsResponse struct {

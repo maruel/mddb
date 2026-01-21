@@ -112,19 +112,19 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	mux.Handle("PUT /api/{orgID}/pages/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, ph.UpdatePage))
 	mux.Handle("DELETE /api/{orgID}/pages/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, ph.DeletePage))
 
-	// Database endpoints
-	mux.Handle("GET /api/{orgID}/databases", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.ListDatabases))
-	mux.Handle("GET /api/{orgID}/databases/{id}", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.GetDatabase))
-	mux.Handle("POST /api/{orgID}/databases", WrapAuth(userService, memService, jwtSecretBytes, editor, th.CreateDatabase))
-	mux.Handle("PUT /api/{orgID}/databases/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.UpdateDatabase))
-	mux.Handle("DELETE /api/{orgID}/databases/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.DeleteDatabase))
+	// Table endpoints
+	mux.Handle("GET /api/{orgID}/tables", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.ListTables))
+	mux.Handle("GET /api/{orgID}/tables/{id}", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.GetTable))
+	mux.Handle("POST /api/{orgID}/tables", WrapAuth(userService, memService, jwtSecretBytes, editor, th.CreateTable))
+	mux.Handle("PUT /api/{orgID}/tables/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.UpdateTable))
+	mux.Handle("DELETE /api/{orgID}/tables/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.DeleteTable))
 
 	// Records endpoints
-	mux.Handle("GET /api/{orgID}/databases/{id}/records", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.ListRecords))
-	mux.Handle("GET /api/{orgID}/databases/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.GetRecord))
-	mux.Handle("POST /api/{orgID}/databases/{id}/records", WrapAuth(userService, memService, jwtSecretBytes, editor, th.CreateRecord))
-	mux.Handle("PUT /api/{orgID}/databases/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.UpdateRecord))
-	mux.Handle("DELETE /api/{orgID}/databases/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.DeleteRecord))
+	mux.Handle("GET /api/{orgID}/tables/{id}/records", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.ListRecords))
+	mux.Handle("GET /api/{orgID}/tables/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.GetRecord))
+	mux.Handle("POST /api/{orgID}/tables/{id}/records", WrapAuth(userService, memService, jwtSecretBytes, editor, th.CreateRecord))
+	mux.Handle("PUT /api/{orgID}/tables/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.UpdateRecord))
+	mux.Handle("DELETE /api/{orgID}/tables/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.DeleteRecord))
 
 	// Assets endpoints (page-based)
 	mux.Handle("GET /api/{orgID}/pages/{id}/assets", WrapAuth(userService, memService, jwtSecretBytes, viewer, ah.ListPageAssets))

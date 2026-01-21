@@ -40,8 +40,8 @@ const (
 	ErrorCodeNotFound ErrorCode = "NOT_FOUND"
 	// ErrorCodePageNotFound is returned when a page is not found.
 	ErrorCodePageNotFound ErrorCode = "PAGE_NOT_FOUND"
-	// ErrorCodeDatabaseNotFound is returned when a database is not found.
-	ErrorCodeDatabaseNotFound ErrorCode = "DATABASE_NOT_FOUND"
+	// ErrorCodeTableNotFound is returned when a table is not found.
+	ErrorCodeTableNotFound ErrorCode = "TABLE_NOT_FOUND"
 
 	// ErrorCodeFileNotFound is returned when a file is not found.
 	ErrorCodeFileNotFound ErrorCode = "FILE_NOT_FOUND"

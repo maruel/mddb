@@ -21,36 +21,36 @@ func NewTableHandler(fs *content.FileStore) *TableHandler {
 	return &TableHandler{fs: fs}
 }
 
-// ListDatabases returns a list of all databases.
-func (h *TableHandler) ListDatabases(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListDatabasesRequest) (*dto.ListDatabasesResponse, error) {
+// ListTables returns a list of all tables.
+func (h *TableHandler) ListTables(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListTablesRequest) (*dto.ListTablesResponse, error) {
 	it, err := h.fs.IterTables(orgID)
 	if err != nil {
-		return nil, dto.InternalWithError("Failed to list databases", err)
+		return nil, dto.InternalWithError("Failed to list tables", err)
 	}
-	return &dto.ListDatabasesResponse{Databases: tablesToSummaries(slices.Collect(it))}, nil
+	return &dto.ListTablesResponse{Tables: tablesToSummaries(slices.Collect(it))}, nil
 }
 
-// GetDatabase returns a specific database by ID.
-func (h *TableHandler) GetDatabase(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetDatabaseRequest) (*dto.GetDatabaseResponse, error) {
-	id, err := decodeID(req.ID, "database_id")
+// GetTable returns a specific table by ID.
+func (h *TableHandler) GetTable(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetTableRequest) (*dto.GetTableResponse, error) {
+	id, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
 	}
-	db, err := h.fs.ReadTable(orgID, id)
+	table, err := h.fs.ReadTable(orgID, id)
 	if err != nil {
-		return nil, dto.NotFound("database")
+		return nil, dto.NotFound("table")
 	}
-	return &dto.GetDatabaseResponse{
-		ID:         db.ID.String(),
-		Title:      db.Title,
-		Properties: propertiesToDTO(db.Properties),
-		Created:    formatTime(db.Created),
-		Modified:   formatTime(db.Modified),
+	return &dto.GetTableResponse{
+		ID:         table.ID.String(),
+		Title:      table.Title,
+		Properties: propertiesToDTO(table.Properties),
+		Created:    formatTime(table.Created),
+		Modified:   formatTime(table.Modified),
 	}, nil
 }
 
-// CreateDatabase creates a new database.
-func (h *TableHandler) CreateDatabase(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateDatabaseRequest) (*dto.CreateDatabaseResponse, error) {
+// CreateTable creates a new table.
+func (h *TableHandler) CreateTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateTableRequest) (*dto.CreateTableResponse, error) {
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
 	}
@@ -68,21 +68,21 @@ func (h *TableHandler) CreateDatabase(ctx context.Context, orgID jsonldb.ID, use
 
 	author := content.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.WriteTable(ctx, orgID, node, true, author); err != nil {
-		return nil, dto.InternalWithError("Failed to create database", err)
+		return nil, dto.InternalWithError("Failed to create table", err)
 	}
-	return &dto.CreateDatabaseResponse{ID: id.String()}, nil
+	return &dto.CreateTableResponse{ID: id.String()}, nil
 }
 
-// UpdateDatabase updates a database schema.
-func (h *TableHandler) UpdateDatabase(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdateDatabaseRequest) (*dto.UpdateDatabaseResponse, error) {
-	id, err := decodeID(req.ID, "database_id")
+// UpdateTable updates a table schema.
+func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
+	id, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
 	}
 
 	node, err := h.fs.ReadTable(orgID, id)
 	if err != nil {
-		return nil, dto.NotFound("database")
+		return nil, dto.NotFound("table")
 	}
 
 	node.Title = req.Title
@@ -91,22 +91,22 @@ func (h *TableHandler) UpdateDatabase(ctx context.Context, orgID jsonldb.ID, use
 
 	author := content.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.WriteTable(ctx, orgID, node, false, author); err != nil {
-		return nil, dto.NotFound("database")
+		return nil, dto.NotFound("table")
 	}
-	return &dto.UpdateDatabaseResponse{ID: id.String()}, nil
+	return &dto.UpdateTableResponse{ID: id.String()}, nil
 }
 
-// DeleteDatabase deletes a database.
-func (h *TableHandler) DeleteDatabase(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeleteDatabaseRequest) (*dto.DeleteDatabaseResponse, error) {
-	id, err := decodeID(req.ID, "database_id")
+// DeleteTable deletes a table.
+func (h *TableHandler) DeleteTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeleteTableRequest) (*dto.DeleteTableResponse, error) {
+	id, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
 	}
 	author := content.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.DeleteTable(ctx, orgID, id, author); err != nil {
-		return nil, dto.NotFound("database")
+		return nil, dto.NotFound("table")
 	}
-	return &dto.DeleteDatabaseResponse{Ok: true}, nil
+	return &dto.DeleteTableResponse{Ok: true}, nil
 }
 
 // ListRecords returns all records in a database.

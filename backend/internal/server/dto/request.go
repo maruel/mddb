@@ -66,36 +66,36 @@ type GetPageVersionRequest struct {
 	Hash  string `path:"hash"`
 }
 
-// --- Databases ---
+// --- Tables ---
 
-// ListDatabasesRequest is a request to list databases.
-type ListDatabasesRequest struct {
+// ListTablesRequest is a request to list tables.
+type ListTablesRequest struct {
 	OrgID string `path:"orgID"`
 }
 
-// GetDatabaseRequest is a request to get a database.
-type GetDatabaseRequest struct {
+// GetTableRequest is a request to get a table.
+type GetTableRequest struct {
 	OrgID string `path:"orgID"`
 	ID    string `path:"id"`
 }
 
-// CreateDatabaseRequest is a request to create a database.
-type CreateDatabaseRequest struct {
+// CreateTableRequest is a request to create a table.
+type CreateTableRequest struct {
 	OrgID      string     `path:"orgID"`
 	Title      string     `json:"title"`
 	Properties []Property `json:"properties"`
 }
 
-// UpdateDatabaseRequest is a request to update a database.
-type UpdateDatabaseRequest struct {
+// UpdateTableRequest is a request to update a table.
+type UpdateTableRequest struct {
 	OrgID      string     `path:"orgID"`
 	ID         string     `path:"id"`
 	Title      string     `json:"title"`
 	Properties []Property `json:"properties"`
 }
 
-// DeleteDatabaseRequest is a request to delete a database.
-type DeleteDatabaseRequest struct {
+// DeleteTableRequest is a request to delete a table.
+type DeleteTableRequest struct {
 	OrgID string `path:"orgID"`
 	ID    string `path:"id"`
 }

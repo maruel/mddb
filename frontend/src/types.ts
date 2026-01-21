@@ -48,9 +48,9 @@ export const ErrorCodeNotFound = 'NOT_FOUND';
  */
 export const ErrorCodePageNotFound = 'PAGE_NOT_FOUND';
 /**
- * ErrorCodeDatabaseNotFound is returned when a database is not found.
+ * ErrorCodeTableNotFound is returned when a table is not found.
  */
-export const ErrorCodeDatabaseNotFound = 'DATABASE_NOT_FOUND';
+export const ErrorCodeTableNotFound = 'TABLE_NOT_FOUND';
 /**
  * ErrorCodeFileNotFound is returned when a file is not found.
  */
@@ -97,7 +97,7 @@ export type ErrorCode =
   | typeof ErrorCodeInvalidFormat
   | typeof ErrorCodeNotFound
   | typeof ErrorCodePageNotFound
-  | typeof ErrorCodeDatabaseNotFound
+  | typeof ErrorCodeTableNotFound
   | typeof ErrorCodeFileNotFound
   | typeof ErrorCodeStorageError
   | typeof ErrorCodeInternal
@@ -207,39 +207,39 @@ export interface GetPageVersionRequest {
   Hash: string;
 }
 /**
- * ListDatabasesRequest is a request to list databases.
+ * ListTablesRequest is a request to list tables.
  */
-export interface ListDatabasesRequest {
+export interface ListTablesRequest {
   OrgID: string;
 }
 /**
- * GetDatabaseRequest is a request to get a database.
+ * GetTableRequest is a request to get a table.
  */
-export interface GetDatabaseRequest {
+export interface GetTableRequest {
   OrgID: string;
   ID: string;
 }
 /**
- * CreateDatabaseRequest is a request to create a database.
+ * CreateTableRequest is a request to create a table.
  */
-export interface CreateDatabaseRequest {
+export interface CreateTableRequest {
   OrgID: string;
   title: string;
   properties: Property[];
 }
 /**
- * UpdateDatabaseRequest is a request to update a database.
+ * UpdateTableRequest is a request to update a table.
  */
-export interface UpdateDatabaseRequest {
+export interface UpdateTableRequest {
   OrgID: string;
   ID: string;
   title: string;
   properties: Property[];
 }
 /**
- * DeleteDatabaseRequest is a request to delete a database.
+ * DeleteTableRequest is a request to delete a table.
  */
-export interface DeleteDatabaseRequest {
+export interface DeleteTableRequest {
   OrgID: string;
   ID: string;
 }
@@ -524,24 +524,24 @@ export interface GetPageVersionResponse {
   content: string;
 }
 /**
- * ListDatabasesResponse is a response containing a list of databases.
+ * ListTablesResponse is a response containing a list of tables.
  */
-export interface ListDatabasesResponse {
-  databases: DatabaseSummary[];
+export interface ListTablesResponse {
+  tables: TableSummary[];
 }
 /**
- * DatabaseSummary is a brief representation of a database for list responses.
+ * TableSummary is a brief representation of a table for list responses.
  */
-export interface DatabaseSummary {
+export interface TableSummary {
   id: string;
   title: string;
   created: string;
   modified: string;
 }
 /**
- * GetDatabaseResponse is a response containing a database.
+ * GetTableResponse is a response containing a table.
  */
-export interface GetDatabaseResponse {
+export interface GetTableResponse {
   id: string;
   title: string;
   properties: Property[];
@@ -549,21 +549,21 @@ export interface GetDatabaseResponse {
   modified: string;
 }
 /**
- * CreateDatabaseResponse is a response from creating a database.
+ * CreateTableResponse is a response from creating a table.
  */
-export interface CreateDatabaseResponse {
+export interface CreateTableResponse {
   id: string;
 }
 /**
- * UpdateDatabaseResponse is a response from updating a database.
+ * UpdateTableResponse is a response from updating a table.
  */
-export interface UpdateDatabaseResponse {
+export interface UpdateTableResponse {
   id: string;
 }
 /**
- * DeleteDatabaseResponse is a response from deleting a database.
+ * DeleteTableResponse is a response from deleting a table.
  */
-export type DeleteDatabaseResponse = OkResponse;
+export type DeleteTableResponse = OkResponse;
 /**
  * ListRecordsResponse is a response containing a list of records.
  */

@@ -400,8 +400,8 @@ func pagesToSummaries(nodes []*content.Node) []dto.PageSummary {
 	return result
 }
 
-func tableToSummary(n *content.Node) dto.DatabaseSummary {
-	return dto.DatabaseSummary{
+func tableToSummary(n *content.Node) dto.TableSummary {
+	return dto.TableSummary{
 		ID:       n.ID.String(),
 		Title:    n.Title,
 		Created:  formatTime(n.Created),
@@ -409,8 +409,8 @@ func tableToSummary(n *content.Node) dto.DatabaseSummary {
 	}
 }
 
-func tablesToSummaries(nodes []*content.Node) []dto.DatabaseSummary {
-	result := make([]dto.DatabaseSummary, len(nodes))
+func tablesToSummaries(nodes []*content.Node) []dto.TableSummary {
+	result := make([]dto.TableSummary, len(nodes))
 	for i, n := range nodes {
 		result[i] = tableToSummary(n)
 	}
