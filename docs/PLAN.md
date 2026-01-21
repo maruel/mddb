@@ -31,40 +31,13 @@ See `README.md` and `API.md` for details.
 
 ## Implementation Phases
 
-### Phases 1-4: Core Foundation ✓
-*Completed.*
-- Established directory-based storage, page CRUD, and dual-format databases (Markdown/JSONL).
-- Implemented rich text editor with live preview and auto-save.
-- Added asset management with directory-level namespaces.
-- Set up deterministic builds with frontend assets embedded in a single Go binary.
+### Completed Phases
 
-### Phase 5: Polish & Features ✓
-*Completed.*
-- Enhanced error handling with structured responses.
-- Implemented full-text search across pages and databases.
-- Integrated automatic Git versioning for the data directory.
-- Developed page history UI and performance optimizations (pagination).
-- Unified UI with a hierarchical sidebar and integrated database views.
-
-**Deferred: Caching Layer**
-- In-memory caching was removed to establish a stable storage foundation first.
-- Future caching will be added once the storage APIs are finalized:
-  - Node tree caching (expensive tree builds for sidebar)
-  - Hot records caching (frequently accessed database records)
-  - Thread-safe cache with proper invalidation on mutations
-
-### Phase 6: Multi-tenant Foundation ✓
-*Completed.*
-- Implemented JWT-based authentication and workspace isolation.
-- Established per-organization Git submodules for data sovereignty.
-- Developed RBAC middleware and multi-tenant path resolution.
-- Integrated organization lifecycle management and cross-tenant isolation verification.
-
-### Phase 7: Relational Metadata & Identity ✓
-*Completed.*
-- Implemented many-to-many User/Org membership model.
-- Added invitation system and OAuth2 (Google/Microsoft) integration.
-- Developed tiered settings for users, memberships, and organizations.
+- **Phases 1-4: Core Foundation** (Directory storage, page CRUD, rich text editor, assets)
+- **Phase 5: Polish & Features** (Full-text search, Git versioning, history UI)
+- **Phase 6: Multi-tenant Foundation** (Auth, workspace isolation, RBAC)
+- **Phase 7: Relational Metadata & Identity** (Memberships, invitations, OAuth2)
+- **Phase 18: Model Layer Separation** (Entity/DTO separation, API types refinement)
 
 ### Phase 8: Experience & Scaling
 *In Progress.*
@@ -623,18 +596,6 @@ Response: { "records": [...], "total": 150 }
 - [ ] **Formulas**: Simple calculated properties based on other columns in the same record.
 - [ ] **Bulk Actions**: Multi-select records for deletion or property updates.
 - [ ] **Undo/Redo**: Global undo/redo support for document edits and database record changes.
-
-### Phase 18: Model Layer Separation ✓
-*Completed.*
-- Separated structs used for disk serialization (`storage/entity` package) from those used for API responses (`server/dto` package).
-- Created API response types: `UserResponse`, `MembershipResponse`, `InvitationResponse`, `OrganizationResponse`, `GitRemoteResponse`, `NodeResponse`, `DataRecordResponse`.
-- **dto package is fully self-contained**: Duplicated necessary types (Property, UserRole, NodeType, Settings, etc.) in dto to eliminate dependency on entity. This prevents accidental API contract changes when internal entity types evolve.
-- **Package organization**: Entity types live under `internal/storage/entity` (persistence layer), DTO types live under `internal/server/dto` (API layer).
-- Moved all entity→dto conversion functions to `handlers/convert.go` where both packages are already imported.
-- Storage services return entity types with wrapper structs (`MembershipWithOrgName`, `UserWithMemberships`); handlers perform dto conversion.
-- Updated all handlers to use local conversion functions instead of methods on domain models.
-- Refactored `PopulateActiveContext()` to work with `UserResponse`.
-- Updated frontend TypeScript types via tygo (generating only from dto package).
 
 ## Future Considerations
 - **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
