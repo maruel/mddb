@@ -10,24 +10,10 @@ import (
 // TestID tests all ID type methods using table-driven tests.
 func TestID(t *testing.T) {
 	t.Run("NewID", func(t *testing.T) {
-		t.Run("valid", func(t *testing.T) {
-			tests := []struct {
-				name string
-			}{
-				{"generates non-zero ID"},
-				{"generates correct version"},
-			}
-
-			for _, tt := range tests {
-				t.Run(tt.name, func(t *testing.T) {
-					id := NewID()
-					if id == 0 {
-						t.Error("NewID returned zero")
-					}
-					if id.Version() != int(idVersion) {
-						t.Errorf("Version = %d, want %d", id.Version(), idVersion)
-					}
-				})
+		t.Run("generates non-zero ID", func(t *testing.T) {
+			id := NewID()
+			if id == 0 {
+				t.Error("NewID returned zero")
 			}
 		})
 
@@ -314,7 +300,7 @@ func TestID(t *testing.T) {
 		})
 	})
 
-	t.Run("Version", func(t *testing.T) {
+	t.Run("Slice", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			tests := []struct {
 				name string
@@ -322,32 +308,9 @@ func TestID(t *testing.T) {
 				want int
 			}{
 				{"zero ID", 0, 0},
-				{"generated ID", NewID(), int(idVersion)},
-				{"constructed ID version 1", newIDFromParts(0, 0, 1), 1},
-				{"constructed ID version 15", newIDFromParts(0, 0, 15), 15},
-			}
-
-			for _, tt := range tests {
-				t.Run(tt.name, func(t *testing.T) {
-					if got := tt.id.Version(); got != tt.want {
-						t.Errorf("Version() = %d, want %d", got, tt.want)
-					}
-				})
-			}
-		})
-	})
-
-	t.Run("Slice", func(t *testing.T) {
-		t.Run("valid", func(t *testing.T) {
-			tests := []struct {
-				name string
-				id   ID
-				want uint16
-			}{
-				{"zero ID", 0, 0},
-				{"constructed ID slice 0", newIDFromParts(0, 0, 0), 0},
-				{"constructed ID slice 1234", newIDFromParts(0, 1234, 0), 1234},
-				{"constructed ID slice max", newIDFromParts(0, sliceMask, 0), sliceMask},
+				{"constructed ID slice 0", newIDFromParts(0, 0), 0},
+				{"constructed ID slice 1234", newIDFromParts(0, 1234), 1234},
+				{"constructed ID slice max", newIDFromParts(0, sliceMask), sliceMask},
 			}
 
 			for _, tt := range tests {
@@ -414,8 +377,90 @@ func TestID(t *testing.T) {
 	})
 }
 
+func TestInitIDSlice(t *testing.T) {
+	// Reset to default after test
+	t.Cleanup(func() {
+		idMu.Lock()
+		idInstance = 0
+		idTotalInstances = 1
+		idMu.Unlock()
+	})
+
+	t.Run("valid configurations", func(t *testing.T) {
+		tests := []struct {
+			name           string
+			instance       int
+			totalInstances int
+		}{
+			{"single instance", 0, 1},
+			{"two instances first", 0, 2},
+			{"two instances second", 1, 2},
+			{"three instances", 2, 3},
+			{"max instances", sliceMask, sliceMask + 1},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if err := InitIDSlice(tt.instance, tt.totalInstances); err != nil {
+					t.Errorf("InitIDSlice(%d, %d) error: %v", tt.instance, tt.totalInstances, err)
+				}
+			})
+		}
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		tests := []struct {
+			name           string
+			instance       int
+			totalInstances int
+		}{
+			{"negative instance", -1, 3},
+			{"instance >= total", 3, 3},
+			{"zero total", 0, 0},
+			{"negative total", 0, -1},
+			{"total exceeds max", 0, sliceMask + 2},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if err := InitIDSlice(tt.instance, tt.totalInstances); err == nil {
+					t.Errorf("InitIDSlice(%d, %d) expected error, got nil", tt.instance, tt.totalInstances)
+				}
+			})
+		}
+	})
+
+	t.Run("partitions slice space", func(t *testing.T) {
+		// Reset state
+		idMu.Lock()
+		idLastT10us = 0
+		idMu.Unlock()
+
+		// Configure 4 instances
+		if err := InitIDSlice(2, 4); err != nil {
+			t.Fatalf("InitIDSlice error: %v", err)
+		}
+
+		// Generate IDs and verify slice values
+		id1 := NewID()
+		id2 := NewID()
+		id3 := NewID()
+
+		// Instance 2 should generate slices: 2, 6, 10, ...
+		if id1.Slice()%4 != 2 {
+			t.Errorf("id1.Slice() = %d, want %%4 == 2", id1.Slice())
+		}
+		if id2.Slice()%4 != 2 {
+			t.Errorf("id2.Slice() = %d, want %%4 == 2", id2.Slice())
+		}
+		if id3.Slice()%4 != 2 {
+			t.Errorf("id3.Slice() = %d, want %%4 == 2", id3.Slice())
+		}
+	})
+}
+
 func BenchmarkNewID(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		NewID()
 	}
 }
@@ -423,7 +468,7 @@ func BenchmarkNewID(b *testing.B) {
 func BenchmarkIDEncode(b *testing.B) {
 	id := NewID()
 	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		_ = id.String()
 	}
 }
@@ -432,7 +477,7 @@ func BenchmarkDecodeID(b *testing.B) {
 	id := NewID()
 	encoded := id.String()
 	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		_, _ = DecodeID(encoded)
 	}
 }
