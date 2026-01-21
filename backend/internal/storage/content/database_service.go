@@ -9,7 +9,6 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
@@ -24,17 +23,17 @@ var (
 
 // DatabaseService handles database business logic.
 type DatabaseService struct {
-	fileStore  *infra.FileStore
-	gitService *infra.Git
-	orgService *identity.OrganizationService
+	fileStore   *infra.FileStore
+	gitService  *infra.Git
+	quotaGetter QuotaGetter
 }
 
 // NewDatabaseService creates a new database service.
-func NewDatabaseService(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *DatabaseService {
+func NewDatabaseService(fileStore *infra.FileStore, gitService *infra.Git, quotaGetter QuotaGetter) *DatabaseService {
 	return &DatabaseService{
-		fileStore:  fileStore,
-		gitService: gitService,
-		orgService: orgService,
+		fileStore:   fileStore,
+		gitService:  gitService,
+		quotaGetter: quotaGetter,
 	}
 }
 
@@ -56,13 +55,17 @@ func (s *DatabaseService) CreateDatabase(ctx context.Context, orgID jsonldb.ID, 
 	}
 
 	// Check Quota
-	if s.orgService != nil {
-		org, err := s.orgService.Get(orgID)
-		if err == nil && org.Quotas.MaxPages > 0 {
-			count, _, err := s.fileStore.GetOrganizationUsage(orgID)
-			if err == nil && count >= org.Quotas.MaxPages {
-				return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, org.Quotas.MaxPages)
-			}
+	quota, err := s.quotaGetter.GetQuota(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if quota.MaxPages > 0 {
+		count, _, err := s.fileStore.GetOrganizationUsage(orgID)
+		if err != nil {
+			return nil, err
+		}
+		if count >= quota.MaxPages {
+			return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, quota.MaxPages)
 		}
 	}
 

@@ -171,7 +171,7 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize membership service: %w", err)
 	}
 
-	orgService, err := identity.NewOrganizationService(filepath.Join(dbDir, "organizations.jsonl"), *dataDir, fileStore, gitService)
+	orgService, err := identity.NewOrganizationService(filepath.Join(dbDir, "organizations.jsonl"), *dataDir, gitService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize organization service: %w", err)
 	}

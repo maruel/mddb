@@ -14,6 +14,7 @@ import (
 
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
@@ -25,12 +26,13 @@ func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *i
 	mux := &http.ServeMux{}
 	jwtSecretBytes := []byte(jwtSecret)
 
-	ph := handlers.NewPageHandler(fileStore, gitService, orgService)
+	pageService := content.NewPageService(fileStore, gitService, orgService)
+	ph := handlers.NewPageHandler(pageService)
 	dh := handlers.NewDatabaseHandler(fileStore, gitService, orgService)
 	nh := handlers.NewNodeHandler(fileStore, gitService, orgService)
 	ah := handlers.NewAssetHandler(fileStore, gitService, orgService)
 	sh := handlers.NewSearchHandler(fileStore)
-	authh := handlers.NewAuthHandler(userService, memService, orgService, jwtSecret)
+	authh := handlers.NewAuthHandler(userService, memService, orgService, pageService, jwtSecret)
 	uh := handlers.NewUserHandler(userService, memService, orgService)
 	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
 	mh := handlers.NewMembershipHandler(memService, userService, orgService, authh)
@@ -71,7 +73,7 @@ func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *i
 
 	// OAuth endpoints (public)
 	if (googleClientID != "" && googleClientSecret != "") || (msClientID != "" && msClientSecret != "") {
-		oh := handlers.NewOAuthHandler(userService, memService, orgService, authh)
+		oh := handlers.NewOAuthHandler(userService, memService, orgService, pageService, authh)
 		base := strings.TrimRight(baseURL, "/")
 		if googleClientID != "" && googleClientSecret != "" {
 			oh.AddProvider("google", googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")

@@ -1,12 +1,26 @@
 package content
 
 import (
+	"context"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
+
+// mockQuotaGetter implements the QuotaGetter interface for testing.
+type mockQuotaGetter struct {
+	quotas map[jsonldb.ID]entity.Quota
+}
+
+func (m *mockQuotaGetter) GetQuota(ctx context.Context, orgID jsonldb.ID) (entity.Quota, error) {
+	if quota, exists := m.quotas[orgID]; exists {
+		return quota, nil
+	}
+	// Return default quota if not found
+	return entity.Quota{MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10}, nil
+}
 
 func TestDatabaseService_Create(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -15,7 +29,12 @@ func TestDatabaseService_Create(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -47,7 +66,12 @@ func TestDatabaseService_CreateValidation(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -94,7 +118,12 @@ func TestDatabaseService_Get(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -128,7 +157,12 @@ func TestDatabaseService_List(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -176,7 +210,12 @@ func TestDatabaseService_Delete(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -207,7 +246,12 @@ func TestDatabaseService_CreateRecord(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -246,7 +290,12 @@ func TestDatabaseService_GetRecords(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -285,7 +334,12 @@ func TestDatabaseService_GetRecord(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -324,7 +378,12 @@ func TestDatabaseService_UpdateRecord(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -373,7 +432,12 @@ func TestDatabaseService_DeleteRecord(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 
@@ -411,7 +475,12 @@ func TestDatabaseService_TypeCoercion(t *testing.T) {
 		t.Fatalf("Failed to create FileStore: %v", err)
 	}
 
-	service := NewDatabaseService(fs, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewDatabaseService(fs, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(100)
 	ctx := t.Context()
 

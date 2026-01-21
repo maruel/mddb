@@ -6,19 +6,29 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
+
+// mockQuotaGetterPageService implements the QuotaGetter interface for testing.
+type mockQuotaGetterPageService struct {
+	quotas map[jsonldb.ID]entity.Quota
+}
+
+func (m *mockQuotaGetterPageService) GetQuota(ctx context.Context, orgID jsonldb.ID) (entity.Quota, error) {
+	if quota, exists := m.quotas[orgID]; exists {
+		return quota, nil
+	}
+	// Return default quota if not found
+	return entity.Quota{MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10}, nil
+}
 
 // newTestContextWithOrg creates a test context with a real organization.
 // It creates an organization and returns the context with that org ID and the org ID itself.
 func newTestContextWithOrg(t *testing.T, tempDir string) (context.Context, jsonldb.ID, *identity.OrganizationService) {
 	t.Helper()
-	fileStore, err := infra.NewFileStore(tempDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	orgService, err := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, fileStore, nil)
+	orgService, err := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +44,12 @@ func TestNewPageService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	service := NewPageService(fileStore, nil, nil)
+	mockQuotaGetter := &mockQuotaGetterPageService{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(100): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	if service == nil {
 		t.Fatal("NewPageService returned nil")
 	}
@@ -45,9 +60,14 @@ func TestNewPageService(t *testing.T) {
 
 func TestPageService_CreatePage(t *testing.T) {
 	tempDir := t.TempDir()
-	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := infra.NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, orgService)
+	mockQuotaGetter := &mockQuotaGetterPageService{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	page, err := service.CreatePage(ctx, orgID, "Test Page", "# Hello World")
 	if err != nil {
 		t.Fatalf("CreatePage failed: %v", err)
@@ -68,9 +88,14 @@ func TestPageService_CreatePage(t *testing.T) {
 
 func TestPageService_GetPage(t *testing.T) {
 	tempDir := t.TempDir()
-	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := infra.NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, orgService)
+	mockQuotaGetter := &mockQuotaGetterPageService{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	created, err := service.CreatePage(ctx, orgID, "Get Test Page", "Test content")
 	if err != nil {
 		t.Fatal(err)
@@ -93,9 +118,14 @@ func TestPageService_GetPage(t *testing.T) {
 
 func TestPageService_UpdatePage(t *testing.T) {
 	tempDir := t.TempDir()
-	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := infra.NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, orgService)
+	mockQuotaGetter := &mockQuotaGetterPageService{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	created, err := service.CreatePage(ctx, orgID, "Original Title", "Original content")
 	if err != nil {
 		t.Fatal(err)
@@ -124,9 +154,14 @@ func TestPageService_UpdatePage(t *testing.T) {
 
 func TestPageService_DeletePage(t *testing.T) {
 	tempDir := t.TempDir()
-	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := infra.NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, orgService)
+	mockQuotaGetter := &mockQuotaGetterPageService{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	created, err := service.CreatePage(ctx, orgID, "Delete Test Page", "Content to delete")
 	if err != nil {
 		t.Fatal(err)
@@ -148,9 +183,14 @@ func TestPageService_DeletePage(t *testing.T) {
 
 func TestPageService_ListPages(t *testing.T) {
 	tempDir := t.TempDir()
-	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := infra.NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, orgService)
+	mockQuotaGetter := &mockQuotaGetterPageService{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	pages, err := service.ListPages(ctx, orgID)
 	if err != nil {
 		t.Fatalf("ListPages failed: %v", err)
@@ -169,9 +209,14 @@ func TestPageService_ListPages(t *testing.T) {
 
 func TestPageService_SearchPages(t *testing.T) {
 	tempDir := t.TempDir()
-	ctx, orgID, orgService := newTestContextWithOrg(t, tempDir)
+	ctx, orgID, _ := newTestContextWithOrg(t, tempDir)
 	fileStore, _ := infra.NewFileStore(tempDir)
-	service := NewPageService(fileStore, nil, orgService)
+	mockQuotaGetter := &mockQuotaGetterPageService{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	_, _ = service.CreatePage(ctx, orgID, "Apple Recipes", "How to cook with apples")
 	_, _ = service.CreatePage(ctx, orgID, "Orange Juice", "Making fresh juice")
 	_, _ = service.CreatePage(ctx, orgID, "Banana Bread", "Contains apple cider vinegar")
@@ -195,7 +240,12 @@ func TestPageService_SearchPages(t *testing.T) {
 
 func TestPageService_GetPageHistory_NoGit(t *testing.T) {
 	fileStore, _ := infra.NewFileStore(t.TempDir())
-	service := NewPageService(fileStore, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(999): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(999)
 	history, err := service.GetPageHistory(t.Context(), orgID, jsonldb.NewID())
 	if err != nil {
@@ -208,7 +258,12 @@ func TestPageService_GetPageHistory_NoGit(t *testing.T) {
 
 func TestPageService_GetPageVersion_NoGit(t *testing.T) {
 	fileStore, _ := infra.NewFileStore(t.TempDir())
-	service := NewPageService(fileStore, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			jsonldb.ID(999): {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	service := NewPageService(fileStore, nil, mockQuotaGetter)
 	orgID := jsonldb.ID(999)
 	if _, err := service.GetPageVersion(t.Context(), orgID, jsonldb.NewID(), "abc123"); err == nil {
 		t.Error("Expected error when getting page version without git service")

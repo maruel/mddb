@@ -17,7 +17,6 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
@@ -28,17 +27,17 @@ var (
 
 // PageService handles page business logic.
 type PageService struct {
-	fileStore  *infra.FileStore
-	gitService *infra.Git
-	orgService *identity.OrganizationService
+	fileStore   *infra.FileStore
+	gitService  *infra.Git
+	quotaGetter QuotaGetter
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *PageService {
+func NewPageService(fileStore *infra.FileStore, gitService *infra.Git, quotaGetter QuotaGetter) *PageService {
 	return &PageService{
-		fileStore:  fileStore,
-		gitService: gitService,
-		orgService: orgService,
+		fileStore:   fileStore,
+		gitService:  gitService,
+		quotaGetter: quotaGetter,
 	}
 }
 
@@ -58,13 +57,17 @@ func (s *PageService) CreatePage(ctx context.Context, orgID jsonldb.ID, title, c
 	}
 
 	// Check Quota
-	if s.orgService != nil {
-		org, err := s.orgService.Get(orgID)
-		if err == nil && org.Quotas.MaxPages > 0 {
-			count, _, err := s.fileStore.GetOrganizationUsage(orgID)
-			if err == nil && count >= org.Quotas.MaxPages {
-				return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, org.Quotas.MaxPages)
-			}
+	quota, err := s.quotaGetter.GetQuota(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	if quota.MaxPages > 0 {
+		count, _, err := s.fileStore.GetOrganizationUsage(orgID)
+		if err != nil {
+			return nil, err
+		}
+		if count >= quota.MaxPages {
+			return nil, fmt.Errorf("page quota exceeded (%d/%d)", count, quota.MaxPages)
 		}
 	}
 

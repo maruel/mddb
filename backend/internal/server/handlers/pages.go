@@ -12,7 +12,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // PageHandler handles page-related HTTP requests.
@@ -21,9 +20,9 @@ type PageHandler struct {
 }
 
 // NewPageHandler creates a new page handler.
-func NewPageHandler(fileStore *infra.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *PageHandler {
+func NewPageHandler(pageService *content.PageService) *PageHandler {
 	return &PageHandler{
-		pageService: content.NewPageService(fileStore, gitService, orgService),
+		pageService: pageService,
 	}
 }
 

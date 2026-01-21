@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestOrganization(t *testing.T) {
@@ -108,12 +107,7 @@ func TestGitRemote(t *testing.T) {
 func TestOrganizationService(t *testing.T) {
 	tempDir := t.TempDir()
 
-	fileStore, err := infra.NewFileStore(tempDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	service, err := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, fileStore, nil)
+	service, err := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, nil)
 	if err != nil {
 		t.Fatalf("NewOrganizationService failed: %v", err)
 	}
@@ -248,8 +242,7 @@ func TestOrganizationService(t *testing.T) {
 		persistDir := t.TempDir()
 		tablePath := filepath.Join(persistDir, "organizations.jsonl")
 
-		fs1, _ := infra.NewFileStore(persistDir)
-		svc1, svcErr := NewOrganizationService(tablePath, persistDir, fs1, nil)
+		svc1, svcErr := NewOrganizationService(tablePath, persistDir, nil)
 		if svcErr != nil {
 			t.Fatal(svcErr)
 		}
@@ -262,8 +255,7 @@ func TestOrganizationService(t *testing.T) {
 		orgID := persistOrg.ID
 
 		// Create new service instance (simulating restart)
-		fs2, _ := infra.NewFileStore(persistDir)
-		svc2, svc2Err := NewOrganizationService(tablePath, persistDir, fs2, nil)
+		svc2, svc2Err := NewOrganizationService(tablePath, persistDir, nil)
 		if svc2Err != nil {
 			t.Fatal(svc2Err)
 		}

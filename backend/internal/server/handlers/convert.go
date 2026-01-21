@@ -214,7 +214,7 @@ func membershipSettingsToDTO(s identity.MembershipSettings) dto.MembershipSettin
 	}
 }
 
-func quotaToDTO(q identity.Quota) dto.Quota {
+func quotaToDTO(q entity.Quota) dto.Quota {
 	return dto.Quota{
 		MaxPages:   q.MaxPages,
 		MaxStorage: q.MaxStorage,

@@ -19,7 +19,12 @@ func TestSearchService_SearchPages(t *testing.T) {
 	orgID := jsonldb.ID(100)
 
 	// Create test pages
-	pageService := NewPageService(fileStore, nil, nil)
+	mockQuotaGetter := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	pageService := NewPageService(fileStore, nil, mockQuotaGetter)
 	ctx := t.Context()
 	_, _ = pageService.CreatePage(ctx, orgID, "Getting Started", "This is a guide to get started with mddb project")
 	_, _ = pageService.CreatePage(ctx, orgID, "Advanced Topics", "Learn about advanced mddb configuration and optimization")
@@ -108,7 +113,12 @@ func TestSearchService_SearchRecords(t *testing.T) {
 	ctx := t.Context()
 
 	// Create test database with records
-	dbService := NewDatabaseService(fileStore, nil, nil)
+	mockQuotaGetterDB := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	dbService := NewDatabaseService(fileStore, nil, mockQuotaGetterDB)
 	columns := []entity.Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "status", Type: entity.PropertyTypeText},
@@ -191,7 +201,12 @@ func TestSearchService_Scoring(t *testing.T) {
 	ctx := t.Context()
 
 	// Create pages where title match should score higher
-	pageService := NewPageService(fileStore, nil, nil)
+	mockQuotaGetterScoring := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	pageService := NewPageService(fileStore, nil, mockQuotaGetterScoring)
 	_, _ = pageService.CreatePage(ctx, orgID, "Python Programming", "This is about Java not Python")
 	_, _ = pageService.CreatePage(ctx, orgID, "Java Basics", "Learn Python programming fundamentals")
 
@@ -229,7 +244,12 @@ func TestSearchService_Limit(t *testing.T) {
 	ctx := t.Context()
 
 	// Create multiple pages
-	pageService := NewPageService(fileStore, nil, nil)
+	mockQuotaGetterLimit := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	pageService := NewPageService(fileStore, nil, mockQuotaGetterLimit)
 	for i := range 10 {
 		_, _ = pageService.CreatePage(ctx, orgID, fmt.Sprintf("Test Page %d", i), "This is test content")
 	}
@@ -260,10 +280,15 @@ func TestSearchService_Integration(t *testing.T) {
 	ctx := t.Context()
 
 	// Create mixed content
-	pageService := NewPageService(fileStore, nil, nil)
+	mockQuotaGetterIntegration := &mockQuotaGetter{
+		quotas: map[jsonldb.ID]entity.Quota{
+			orgID: {MaxPages: 100, MaxStorage: 1000000, MaxUsers: 10},
+		},
+	}
+	pageService := NewPageService(fileStore, nil, mockQuotaGetterIntegration)
 	_, _ = pageService.CreatePage(ctx, orgID, "Blog Post", "Article about searchable content and web development")
 
-	dbService := NewDatabaseService(fileStore, nil, nil)
+	dbService := NewDatabaseService(fileStore, nil, mockQuotaGetterIntegration)
 	columns := []entity.Property{
 		{Name: "title", Type: "text", Required: true},
 		{Name: "content", Type: "text"},
