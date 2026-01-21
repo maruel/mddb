@@ -52,14 +52,14 @@ func TestUserService(t *testing.T) {
 		t.Fatalf("Failed to update user role: %v", err)
 	}
 
-	// Check membership for role using GetMembershipsForUser
-	memberships, err := service.GetMembershipsForUser(user.ID)
+	// Check membership for role using IterMemberships
+	iter, err := service.IterMemberships(user.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	found := false
-	for _, m := range memberships {
+	for m := range iter {
 		if m.OrganizationID.String() == orgID.String() && m.Role == entity.UserRoleEditor {
 			found = true
 			break

@@ -3,6 +3,7 @@ package identity
 import (
 	"errors"
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 	"time"
@@ -84,19 +85,18 @@ func (s *MembershipService) GetMembership(userID, orgID jsonldb.ID) (*entity.Mem
 	return m, nil
 }
 
-// ListByUser returns all organizations a user belongs to.
-func (s *MembershipService) ListByUser(userID jsonldb.ID) ([]entity.Membership, error) {
+// Iter iterates over all memberships for a user.
+func (s *MembershipService) Iter(userID jsonldb.ID) (iter.Seq[*entity.Membership], error) {
 	if userID.IsZero() {
 		return nil, errUserIDEmpty
 	}
-
-	var memberships []entity.Membership
-	for m := range s.table.Iter(0) {
-		if m.UserID == userID {
-			memberships = append(memberships, *m)
+	return func(yield func(*entity.Membership) bool) {
+		for m := range s.table.Iter(0) {
+			if m.UserID == userID && !yield(m) {
+				return
+			}
 		}
-	}
-	return memberships, nil
+	}, nil
 }
 
 // UpdateRole updates a user's role in an organization.

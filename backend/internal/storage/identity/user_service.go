@@ -10,6 +10,7 @@ package identity
 import (
 	"errors"
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 	"time"
@@ -161,29 +162,31 @@ type MembershipWithOrgName struct {
 	OrganizationName string
 }
 
-// GetMembershipsForUser returns memberships with organization names populated.
-func (s *UserService) GetMembershipsForUser(userID jsonldb.ID) ([]MembershipWithOrgName, error) {
+// IterMemberships iterates over memberships with organization names populated.
+func (s *UserService) IterMemberships(userID jsonldb.ID) (iter.Seq[MembershipWithOrgName], error) {
 	if s.memService == nil {
-		return nil, nil
+		return func(yield func(MembershipWithOrgName) bool) {}, nil
 	}
 
-	mems, err := s.memService.ListByUser(userID)
+	mems, err := s.memService.Iter(userID)
 	if err != nil {
 		return nil, err
 	}
 
-	results := make([]MembershipWithOrgName, 0, len(mems))
-	for _, m := range mems {
-		result := MembershipWithOrgName{Membership: m}
-		if s.orgService != nil {
-			org, err := s.orgService.GetOrganization(m.OrganizationID)
-			if err == nil {
-				result.OrganizationName = org.Name
+	return func(yield func(MembershipWithOrgName) bool) {
+		for m := range mems {
+			result := MembershipWithOrgName{Membership: *m}
+			if s.orgService != nil {
+				org, err := s.orgService.GetOrganization(m.OrganizationID)
+				if err == nil {
+					result.OrganizationName = org.Name
+				}
+			}
+			if !yield(result) {
+				return
 			}
 		}
-		results = append(results, result)
-	}
-	return results, nil
+	}, nil
 }
 
 // UserWithMemberships wraps a user with their memberships.
@@ -200,7 +203,12 @@ func (s *UserService) GetUserWithMemberships(id jsonldb.ID) (*UserWithMembership
 	}
 
 	// Memberships are supplementary; continue with empty list on error.
-	mems, _ := s.GetMembershipsForUser(id)
+	var mems []MembershipWithOrgName
+	if memIter, err := s.IterMemberships(id); err == nil {
+		for m := range memIter {
+			mems = append(mems, m)
+		}
+	}
 
 	return &UserWithMemberships{
 		User:        user,
@@ -293,27 +301,32 @@ func (s *UserService) UpdateSettings(id jsonldb.ID, settings entity.UserSettings
 	return err
 }
 
-// ListUsers returns all users (domain models without runtime fields).
-func (s *UserService) ListUsers() []*entity.User {
-	users := make([]*entity.User, 0, s.table.Len())
-	for stored := range s.table.Iter(0) {
-		user := stored.User
-		users = append(users, &user)
+// Iter iterates over all users (domain models without runtime fields).
+func (s *UserService) Iter() iter.Seq[*entity.User] {
+	return func(yield func(*entity.User) bool) {
+		for stored := range s.table.Iter(0) {
+			user := stored.User
+			if !yield(&user) {
+				return
+			}
+		}
 	}
-	return users
 }
 
-// ListUsersWithMemberships returns all users with their memberships.
-func (s *UserService) ListUsersWithMemberships() []UserWithMemberships {
-	users := s.ListUsers()
-	results := make([]UserWithMemberships, 0, len(users))
-	for _, user := range users {
-		// Memberships are supplementary; continue with empty list on error.
-		mems, _ := s.GetMembershipsForUser(user.ID)
-		results = append(results, UserWithMemberships{
-			User:        user,
-			Memberships: mems,
-		})
+// IterWithMemberships iterates over all users with their memberships.
+func (s *UserService) IterWithMemberships() iter.Seq[UserWithMemberships] {
+	return func(yield func(UserWithMemberships) bool) {
+		for user := range s.Iter() {
+			// Memberships are supplementary; continue with empty list on error.
+			var mems []MembershipWithOrgName
+			if memIter, err := s.IterMemberships(user.ID); err == nil {
+				for m := range memIter {
+					mems = append(mems, m)
+				}
+			}
+			if !yield(UserWithMemberships{User: user, Memberships: mems}) {
+				return
+			}
+		}
 	}
-	return results
 }

@@ -3,6 +3,7 @@ package identity
 import (
 	"errors"
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 	"time"
@@ -95,17 +96,16 @@ func (s *InvitationService) DeleteInvitation(id jsonldb.ID) error {
 	return nil
 }
 
-// ListByOrganization returns all invitations for an organization.
-func (s *InvitationService) ListByOrganization(orgID jsonldb.ID) ([]*entity.Invitation, error) {
+// Iter iterates over all invitations for an organization.
+func (s *InvitationService) Iter(orgID jsonldb.ID) (iter.Seq[*entity.Invitation], error) {
 	if orgID.IsZero() {
 		return nil, errOrgIDEmpty
 	}
-
-	var invitations []*entity.Invitation
-	for inv := range s.table.Iter(0) {
-		if inv.OrganizationID == orgID {
-			invitations = append(invitations, inv)
+	return func(yield func(*entity.Invitation) bool) {
+		for inv := range s.table.Iter(0) {
+			if inv.OrganizationID == orgID && !yield(inv) {
+				return
+			}
 		}
-	}
-	return invitations, nil
+	}, nil
 }

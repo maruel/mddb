@@ -42,12 +42,12 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, orgID jsonldb.
 
 // ListInvitations returns all pending invitations for an organization.
 func (h *InvitationHandler) ListInvitations(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListInvitationsRequest) (*dto.ListInvitationsResponse, error) {
-	invitations, err := h.invService.ListByOrganization(orgID)
+	invitations, err := h.invService.Iter(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list invitations", err)
 	}
-	responses := make([]dto.InvitationResponse, 0, len(invitations))
-	for _, inv := range invitations {
+	var responses []dto.InvitationResponse
+	for inv := range invitations {
 		responses = append(responses, *invitationToResponse(inv))
 	}
 	return &dto.ListInvitationsResponse{Invitations: responses}, nil

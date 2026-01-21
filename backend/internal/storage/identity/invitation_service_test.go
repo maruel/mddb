@@ -47,13 +47,17 @@ func TestInvitationService(t *testing.T) {
 		t.Errorf("Expected ID %v, got %v", inv.ID, found.ID)
 	}
 
-	// Test ListByOrganization
-	list, err := service.ListByOrganization(orgID)
+	// Test Iter
+	iter, err := service.Iter(orgID)
 	if err != nil {
-		t.Fatalf("Failed to list invitations: %v", err)
+		t.Fatalf("Failed to iterate invitations: %v", err)
 	}
-	if len(list) != 1 {
-		t.Errorf("Expected 1 invitation, got %d", len(list))
+	count := 0
+	for range iter {
+		count++
+	}
+	if count != 1 {
+		t.Errorf("Expected 1 invitation, got %d", count)
 	}
 
 	// Test DeleteInvitation

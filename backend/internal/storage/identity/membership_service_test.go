@@ -78,19 +78,23 @@ func TestMembershipService(t *testing.T) {
 	orgID2 := jsonldb.ID(201)
 	_, _ = service.CreateMembership(userID, orgID2, entity.UserRoleEditor)
 
-	// Test ListByUser
-	userMemberships, err := service.ListByUser(userID)
+	// Test Iter
+	iter, err := service.Iter(userID)
 	if err != nil {
-		t.Fatalf("ListByUser failed: %v", err)
+		t.Fatalf("Iter failed: %v", err)
 	}
-	if len(userMemberships) != 2 {
-		t.Errorf("Expected 2 memberships for user, got %d", len(userMemberships))
+	count := 0
+	for range iter {
+		count++
+	}
+	if count != 2 {
+		t.Errorf("Expected 2 memberships for user, got %d", count)
 	}
 
-	// Test ListByUser with invalid ID (contains invalid character @)
-	_, err = service.ListByUser(jsonldb.ID(0))
+	// Test Iter with invalid ID
+	_, err = service.Iter(jsonldb.ID(0))
 	if err == nil {
-		t.Error("Expected error for invalid user ID in ListByUser")
+		t.Error("Expected error for invalid user ID in Iter")
 	}
 
 	// Test UpdateRole

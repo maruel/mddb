@@ -23,14 +23,12 @@ func NewUserHandler(userService *identity.UserService) *UserHandler {
 
 // ListUsers returns all users in the organization.
 func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
-	allUsers := h.userService.ListUsersWithMemberships()
-
 	// Filter by organization membership and convert to response
 	var users []dto.UserResponse
-	for i := range allUsers {
-		for _, m := range allUsers[i].Memberships {
+	for uwm := range h.userService.IterWithMemberships() {
+		for _, m := range uwm.Memberships {
 			if m.OrganizationID == orgID {
-				users = append(users, *userWithMembershipsToResponse(&allUsers[i]))
+				users = append(users, *userWithMembershipsToResponse(&uwm))
 				break
 			}
 		}
