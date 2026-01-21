@@ -61,12 +61,13 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *e
 
 // UpdateMembershipSettings updates user preferences within an organization.
 func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, orgID jsonldb.ID, user *entity.User, req dto.UpdateMembershipSettingsRequest) (*dto.MembershipResponse, error) {
-	if err := h.memService.UpdateSettings(user.ID, orgID, membershipSettingsToEntity(req.Settings)); err != nil {
-		return nil, dto.InternalWithError("Failed to update membership settings", err)
-	}
 	m, err := h.memService.Get(user.ID, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get membership", err)
+	}
+	m.Settings = membershipSettingsToEntity(req.Settings)
+	if err := h.memService.Update(m); err != nil {
+		return nil, dto.InternalWithError("Failed to update membership settings", err)
 	}
 	return membershipToResponse(m), nil
 }

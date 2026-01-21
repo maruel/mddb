@@ -99,30 +99,11 @@ func (s *MembershipService) Iter(userID jsonldb.ID) (iter.Seq[*entity.Membership
 	}, nil
 }
 
-// UpdateRole updates a user's role in an organization.
-func (s *MembershipService) UpdateRole(userID, orgID jsonldb.ID, role entity.UserRole) error {
-	m := s.findByUserAndOrg(userID, orgID)
-	if m == nil {
+// Update persists changes to a membership.
+func (s *MembershipService) Update(m *entity.Membership) error {
+	if m == nil || m.ID.IsZero() {
 		return errMembershipNotFound
 	}
-
-	m.Role = role
-	if _, err := s.table.Update(m); err != nil {
-		return err
-	}
-	return nil
-}
-
-// UpdateSettings updates user preferences within a specific organization.
-func (s *MembershipService) UpdateSettings(userID, orgID jsonldb.ID, settings entity.MembershipSettings) error {
-	m := s.findByUserAndOrg(userID, orgID)
-	if m == nil {
-		return errMembershipNotFound
-	}
-
-	m.Settings = settings
-	if _, err := s.table.Update(m); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.table.Update(m)
+	return err
 }
