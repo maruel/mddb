@@ -3,7 +3,6 @@ package content
 import (
 	"math"
 	"testing"
-
 )
 
 func Test_coerceValue_Text(t *testing.T) {

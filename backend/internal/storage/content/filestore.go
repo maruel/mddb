@@ -14,7 +14,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
-
 // FileStore handles all file system operations using directory-based storage.
 // Storage model: Each page (document or database) is an ID-based directory.
 //   - Pages: ID directory containing index.md with YAML front matter.
@@ -406,10 +405,10 @@ func (fs *FileStore) ReadDatabase(orgID, id jsonldb.ID) (*Node, error) {
 	}
 
 	var metadata struct {
-		Title      string            `json:"title"`
-		Version    string            `json:"version"`
-		Created    time.Time         `json:"created"`
-		Modified   time.Time         `json:"modified"`
+		Title      string     `json:"title"`
+		Version    string     `json:"version"`
+		Created    time.Time  `json:"created"`
+		Modified   time.Time  `json:"modified"`
 		Properties []Property `json:"properties"`
 	}
 	if err := json.Unmarshal(data, &metadata); err != nil {
@@ -791,4 +790,3 @@ func formatMarkdownFile(p *page) []byte {
 	buf.WriteString(p.content)
 	return buf.Bytes()
 }
-

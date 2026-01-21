@@ -9,8 +9,8 @@ import (
 	"slices"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 var (
@@ -23,12 +23,12 @@ var (
 // AssetService handles asset business logic.
 type AssetService struct {
 	FileStore  *FileStore
-	gitService *infra.Git
+	gitService *git.Client
 	orgService *identity.OrganizationService
 }
 
 // NewAssetService creates a new asset service.
-func NewAssetService(fileStore *FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *AssetService {
+func NewAssetService(fileStore *FileStore, gitService *git.Client, orgService *identity.OrganizationService) *AssetService {
 	return &AssetService{
 		FileStore:  fileStore,
 		gitService: gitService,

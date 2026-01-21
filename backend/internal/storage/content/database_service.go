@@ -8,25 +8,25 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 var (
-	errDatabaseIDEmpty  = errors.New("database id cannot be empty")
-	errTitleEmpty       = errors.New("title cannot be empty")
-	errColumnRequired   = errors.New("at least one column is required")
-	errRecordIDEmpty    = errors.New("record id cannot be empty")
+	errDatabaseIDEmpty = errors.New("database id cannot be empty")
+	errTitleEmpty      = errors.New("title cannot be empty")
+	errColumnRequired  = errors.New("at least one column is required")
+	errRecordIDEmpty   = errors.New("record id cannot be empty")
 )
 
 // DatabaseService handles database business logic.
 type DatabaseService struct {
 	FileStore   *FileStore
-	gitService  *infra.Git
+	gitService  *git.Client
 	quotaGetter QuotaGetter
 }
 
 // NewDatabaseService creates a new database service.
-func NewDatabaseService(fileStore *FileStore, gitService *infra.Git, quotaGetter QuotaGetter) *DatabaseService {
+func NewDatabaseService(fileStore *FileStore, gitService *git.Client, quotaGetter QuotaGetter) *DatabaseService {
 	return &DatabaseService{
 		FileStore:   fileStore,
 		gitService:  gitService,

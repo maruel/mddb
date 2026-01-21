@@ -1,4 +1,4 @@
-package infra
+package git
 
 import (
 	"context"
@@ -15,9 +15,9 @@ import (
 
 var errInvalidCommitFmt = errors.New("invalid commit format")
 
-// Git handles version control operations using git.
+// Client handles version control operations using git.
 // All changes to pages and databases are automatically committed.
-type Git struct {
+type Client struct {
 	repoDir string // Root directory (contains .git/)
 }
 
@@ -38,9 +38,9 @@ type CommitDetail struct {
 	Body      string    `json:"body" jsonschema:"description=Commit body message"`
 }
 
-// NewGit initializes git service for the given root directory.
-func NewGit(rootDir string) (*Git, error) {
-	gs := &Git{repoDir: rootDir}
+// New initializes git service for the given root directory.
+func New(rootDir string) (*Client, error) {
+	gs := &Client{repoDir: rootDir}
 
 	// Check if root .git exists, initialize if not
 	if err := gs.InitRepository(rootDir); err != nil {
@@ -51,7 +51,7 @@ func NewGit(rootDir string) (*Git, error) {
 }
 
 // InitRepository initializes a git repository in the target directory if it doesn't exist.
-func (gs *Git) InitRepository(dir string) error {
+func (gs *Client) InitRepository(dir string) error {
 	gitDir := filepath.Join(dir, ".git")
 	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
 		// Initialize repo
@@ -83,7 +83,7 @@ func (gs *Git) InitRepository(dir string) error {
 
 // CommitChange stages and commits a change to the repository.
 // If orgID is non-zero, it commits to the organization's repository.
-func (gs *Git) CommitChange(ctx context.Context, orgID jsonldb.ID, operation, resourceType, resourceID, description string) error {
+func (gs *Client) CommitChange(ctx context.Context, orgID jsonldb.ID, operation, resourceType, resourceID, description string) error {
 	targetDir := gs.repoDir
 	relPath := "." // Default to root
 
@@ -127,7 +127,7 @@ func (gs *Git) CommitChange(ctx context.Context, orgID jsonldb.ID, operation, re
 }
 
 // GetHistory returns commit history for a specific resource.
-func (gs *Git) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, resourceID string) ([]*Commit, error) {
+func (gs *Client) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, resourceID string) ([]*Commit, error) {
 	targetDir := gs.repoDir
 	path := ""
 
@@ -179,7 +179,7 @@ func (gs *Git) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, r
 }
 
 // GetCommit retrieves a specific commit with full details.
-func (gs *Git) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*CommitDetail, error) {
+func (gs *Client) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*CommitDetail, error) {
 	targetDir := gs.repoDir
 	if !orgID.IsZero() {
 		targetDir = filepath.Join(gs.repoDir, orgID.String())
@@ -216,7 +216,7 @@ func (gs *Git) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*C
 }
 
 // GetFileAtCommit retrieves the content of a file at a specific commit.
-func (gs *Git) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash, filePath string) ([]byte, error) {
+func (gs *Client) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash, filePath string) ([]byte, error) {
 	targetDir := gs.repoDir
 	if !orgID.IsZero() {
 		orgIDStr := orgID.String()
@@ -237,7 +237,7 @@ func (gs *Git) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash, file
 }
 
 // execGitInDir executes a git command in a specific directory.
-func (gs *Git) execGitInDir(dir string, args ...string) error {
+func (gs *Client) execGitInDir(dir string, args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
@@ -248,7 +248,7 @@ func (gs *Git) execGitInDir(dir string, args ...string) error {
 }
 
 // gitOutputInDir executes a git command and returns output.
-func (gs *Git) gitOutputInDir(dir string, args ...string) (string, error) {
+func (gs *Client) gitOutputInDir(dir string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
@@ -260,7 +260,7 @@ func (gs *Git) gitOutputInDir(dir string, args ...string) (string, error) {
 }
 
 // gitOutputBytesInDir executes a git command and returns output as bytes.
-func (gs *Git) gitOutputBytesInDir(dir string, args ...string) ([]byte, error) {
+func (gs *Client) gitOutputBytesInDir(dir string, args ...string) ([]byte, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
@@ -271,12 +271,12 @@ func (gs *Git) gitOutputBytesInDir(dir string, args ...string) ([]byte, error) {
 }
 
 // OrgDir returns the directory path for an organization's repository.
-func (gs *Git) OrgDir(orgID jsonldb.ID) string {
+func (gs *Client) OrgDir(orgID jsonldb.ID) string {
 	return filepath.Join(gs.repoDir, orgID.String())
 }
 
 // AddRemote adds a remote to the repository in the target directory.
-func (gs *Git) AddRemote(dir, name, url string) error {
+func (gs *Client) AddRemote(dir, name, url string) error {
 	// Check if remote already exists
 	remotes, err := gs.gitOutputInDir(dir, "remote")
 	if err == nil {
@@ -292,7 +292,7 @@ func (gs *Git) AddRemote(dir, name, url string) error {
 }
 
 // Push pushes changes to a remote repository.
-func (gs *Git) Push(dir, remoteName, branch string) error {
+func (gs *Client) Push(dir, remoteName, branch string) error {
 	if branch == "" {
 		branch = "master" // Default to master
 		// Check if current branch is main

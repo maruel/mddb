@@ -10,8 +10,8 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 const gitRemoteName = "origin"
@@ -19,11 +19,11 @@ const gitRemoteName = "origin"
 // GitRemoteHandler handles git remote operations.
 type GitRemoteHandler struct {
 	orgService *identity.OrganizationService
-	gitService *infra.Git
+	gitService *git.Client
 }
 
 // NewGitRemoteHandler creates a new git remote handler.
-func NewGitRemoteHandler(orgService *identity.OrganizationService, gitService *infra.Git) *GitRemoteHandler {
+func NewGitRemoteHandler(orgService *identity.OrganizationService, gitService *git.Client) *GitRemoteHandler {
 	return &GitRemoteHandler{
 		orgService: orgService,
 		gitService: gitService,

@@ -10,7 +10,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 // Organization represents a workspace or group of users.
@@ -86,13 +86,13 @@ func (g *GitRemote) IsZero() bool {
 type OrganizationService struct {
 	rootDir    string
 	table      *jsonldb.Table[*Organization]
-	gitService *infra.Git
+	gitService *git.Client
 }
 
 // NewOrganizationService creates a new organization service.
 // tablePath is the path to the organizations.jsonl file.
 // rootDir is the root directory for organization content (each org gets a subdirectory).
-func NewOrganizationService(tablePath, rootDir string, gitService *infra.Git) (*OrganizationService, error) {
+func NewOrganizationService(tablePath, rootDir string, gitService *git.Client) (*OrganizationService, error) {
 	table, err := jsonldb.NewTable[*Organization](tablePath)
 	if err != nil {
 		return nil, err

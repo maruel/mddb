@@ -3,7 +3,6 @@ package content
 import (
 	"math"
 	"strconv"
-
 )
 
 // Type coercion maps JSON wire types through Go types to SQLite storage classes.

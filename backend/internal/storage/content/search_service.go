@@ -221,4 +221,3 @@ func sortResultsByScore(results []SearchResult) {
 		return results[i].Score > results[j].Score
 	})
 }
-

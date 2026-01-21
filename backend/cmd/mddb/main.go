@@ -27,8 +27,8 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
@@ -156,7 +156,7 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
 
-	gitService, err := infra.NewGit(*dataDir)
+	gitService, err := git.New(*dataDir)
 	if err != nil {
 		return fmt.Errorf("failed to initialize git service: %w", err)
 	}
@@ -260,7 +260,7 @@ func printVersion() {
 func loadDotEnv(dataDir string) (map[string]string, error) {
 	env := make(map[string]string)
 	path := filepath.Join(dataDir, ".env")
-	content, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from dataDir flag, not user input
+	envContent, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from dataDir flag, not user input
 	if err != nil {
 		if os.IsNotExist(err) {
 			return env, nil
@@ -268,7 +268,7 @@ func loadDotEnv(dataDir string) (map[string]string, error) {
 		return nil, err
 	}
 
-	lines := strings.Split(string(content), "\n")
+	lines := strings.Split(string(envContent), "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {

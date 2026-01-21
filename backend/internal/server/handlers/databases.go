@@ -6,8 +6,8 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // DatabaseHandler handles database-related HTTP requests.
@@ -16,7 +16,7 @@ type DatabaseHandler struct {
 }
 
 // NewDatabaseHandler creates a new database handler.
-func NewDatabaseHandler(fileStore *content.FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *DatabaseHandler {
+func NewDatabaseHandler(fileStore *content.FileStore, gitService *git.Client, orgService *identity.OrganizationService) *DatabaseHandler {
 	return &DatabaseHandler{
 		databaseService: content.NewDatabaseService(fileStore, gitService, orgService),
 	}

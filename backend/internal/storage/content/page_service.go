@@ -16,7 +16,7 @@ import (
 	"strings"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 var (
@@ -27,12 +27,12 @@ var (
 // PageService handles page business logic.
 type PageService struct {
 	FileStore   *FileStore
-	gitService  *infra.Git
+	gitService  *git.Client
 	quotaGetter QuotaGetter
 }
 
 // NewPageService creates a new page service.
-func NewPageService(fileStore *FileStore, gitService *infra.Git, quotaGetter QuotaGetter) *PageService {
+func NewPageService(fileStore *FileStore, gitService *git.Client, quotaGetter QuotaGetter) *PageService {
 	return &PageService{
 		FileStore:   fileStore,
 		gitService:  gitService,
@@ -162,9 +162,9 @@ func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query s
 }
 
 // GetPageHistory returns the commit history for a page.
-func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) ([]*infra.Commit, error) {
+func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) ([]*git.Commit, error) {
 	if s.gitService == nil {
-		return []*infra.Commit{}, nil
+		return []*git.Commit{}, nil
 	}
 	return s.gitService.GetHistory(ctx, orgID, "page", id.String())
 }

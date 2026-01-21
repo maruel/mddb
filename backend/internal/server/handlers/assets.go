@@ -11,8 +11,8 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // AssetHandler handles asset/file-related HTTP requests.
@@ -22,10 +22,10 @@ type AssetHandler struct {
 }
 
 // NewAssetHandler creates a new asset handler.
-func NewAssetHandler(fileStore *content.FileStore, git *infra.Git, orgs *identity.OrganizationService) *AssetHandler {
+func NewAssetHandler(fileStore *content.FileStore, gitClient *git.Client, orgs *identity.OrganizationService) *AssetHandler {
 	return &AssetHandler{
 		fileStore:    fileStore,
-		assetService: content.NewAssetService(fileStore, git, orgs),
+		assetService: content.NewAssetService(fileStore, gitClient, orgs),
 	}
 }
 

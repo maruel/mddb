@@ -7,14 +7,14 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 func TestRegister(t *testing.T) {
 	tempDir := t.TempDir()
 	fileStore, _ := content.NewFileStore(tempDir)
-	gitService, _ := infra.NewGit("")
+	gitService, _ := git.New("")
 	memService, _ := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
 	orgService, _ := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, gitService)
 	userService, _ := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))

@@ -15,14 +15,14 @@ import (
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
-func NewRouter(fileStore *content.FileStore, gitService *infra.Git, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
+func NewRouter(fileStore *content.FileStore, gitService *git.Client, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
 	mux := &http.ServeMux{}
 	jwtSecretBytes := []byte(jwtSecret)
 

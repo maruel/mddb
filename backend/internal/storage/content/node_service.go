@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 var errNodeIDEmpty = errors.New("node id cannot be empty")
@@ -16,12 +16,12 @@ var errNodeIDEmpty = errors.New("node id cannot be empty")
 // NodeService handles unified node business logic.
 type NodeService struct {
 	FileStore  *FileStore
-	gitService *infra.Git
+	gitService *git.Client
 	orgService *identity.OrganizationService
 }
 
 // NewNodeService creates a new node service.
-func NewNodeService(fileStore *FileStore, gitService *infra.Git, orgService *identity.OrganizationService) *NodeService {
+func NewNodeService(fileStore *FileStore, gitService *git.Client, orgService *identity.OrganizationService) *NodeService {
 	return &NodeService{
 		FileStore:  fileStore,
 		gitService: gitService,
