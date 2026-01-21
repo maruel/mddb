@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/storage/entity"
 )
 
 var errInvalidCommitFmt = errors.New("invalid commit format")
@@ -20,6 +19,23 @@ var errInvalidCommitFmt = errors.New("invalid commit format")
 // All changes to pages and databases are automatically committed.
 type Git struct {
 	repoDir string // Root directory (contains .git/)
+}
+
+// Commit represents a commit in git history.
+type Commit struct {
+	Hash      string    `json:"hash" jsonschema:"description=Git commit hash"`
+	Message   string    `json:"message" jsonschema:"description=Commit message"`
+	Timestamp time.Time `json:"timestamp" jsonschema:"description=Commit timestamp"`
+}
+
+// CommitDetail contains full commit information.
+type CommitDetail struct {
+	Hash      string    `json:"hash" jsonschema:"description=Git commit hash"`
+	Timestamp time.Time `json:"timestamp" jsonschema:"description=Commit timestamp"`
+	Author    string    `json:"author" jsonschema:"description=Commit author name"`
+	Email     string    `json:"email" jsonschema:"description=Commit author email"`
+	Subject   string    `json:"subject" jsonschema:"description=Commit subject line"`
+	Body      string    `json:"body" jsonschema:"description=Commit body message"`
 }
 
 // NewGit initializes git service for the given root directory.
@@ -111,7 +127,7 @@ func (gs *Git) CommitChange(ctx context.Context, orgID jsonldb.ID, operation, re
 }
 
 // GetHistory returns commit history for a specific resource.
-func (gs *Git) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, resourceID string) ([]*entity.Commit, error) {
+func (gs *Git) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, resourceID string) ([]*Commit, error) {
 	targetDir := gs.repoDir
 	path := ""
 
@@ -132,7 +148,7 @@ func (gs *Git) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, r
 		return nil, nil //nolint:nilerr // git log returns error for paths with no history, which is not an error condition
 	}
 
-	var commits []*entity.Commit
+	var commits []*Commit
 	for _, line := range strings.Split(strings.TrimSpace(output), "\n") {
 		if line == "" {
 			continue
@@ -152,7 +168,7 @@ func (gs *Git) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, r
 			timestamp = time.Now()
 		}
 
-		commits = append(commits, &entity.Commit{
+		commits = append(commits, &Commit{
 			Hash:      hash,
 			Message:   message,
 			Timestamp: timestamp,
@@ -163,7 +179,7 @@ func (gs *Git) GetHistory(ctx context.Context, orgID jsonldb.ID, resourceType, r
 }
 
 // GetCommit retrieves a specific commit with full details.
-func (gs *Git) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*entity.CommitDetail, error) {
+func (gs *Git) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*CommitDetail, error) {
 	targetDir := gs.repoDir
 	if !orgID.IsZero() {
 		targetDir = filepath.Join(gs.repoDir, orgID.String())
@@ -189,7 +205,7 @@ func (gs *Git) GetCommit(ctx context.Context, orgID jsonldb.ID, hash string) (*e
 		body = strings.Join(lines[5:], "\n")
 	}
 
-	return &entity.CommitDetail{
+	return &CommitDetail{
 		Hash:      lines[0],
 		Timestamp: timestamp,
 		Author:    lines[2],

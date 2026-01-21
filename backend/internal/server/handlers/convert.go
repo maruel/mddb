@@ -7,6 +7,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/entity"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
 // --- ID decoding helpers ---
@@ -122,7 +123,7 @@ func dataRecordToResponse(r *entity.DataRecord) *dto.DataRecordResponse {
 	}
 }
 
-func commitToDTO(c *entity.Commit) *dto.Commit {
+func commitToDTO(c *infra.Commit) *dto.Commit {
 	if c == nil {
 		return nil
 	}
@@ -133,7 +134,7 @@ func commitToDTO(c *entity.Commit) *dto.Commit {
 	}
 }
 
-func commitsToDTO(commits []*entity.Commit) []*dto.Commit {
+func commitsToDTO(commits []*infra.Commit) []*dto.Commit {
 	result := make([]*dto.Commit, len(commits))
 	for i, c := range commits {
 		result[i] = commitToDTO(c)

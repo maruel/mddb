@@ -13,7 +13,7 @@ import (
 
 func TestRegister(t *testing.T) {
 	tempDir := t.TempDir()
-	fileStore, _ := infra.NewFileStore(tempDir)
+	fileStore, _ := content.NewFileStore(tempDir)
 	gitService, _ := infra.NewGit("")
 	memService, _ := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"))
 	orgService, _ := identity.NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"), tempDir, gitService)

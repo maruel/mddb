@@ -163,9 +163,9 @@ func (s *PageService) SearchPages(ctx context.Context, orgID jsonldb.ID, query s
 }
 
 // GetPageHistory returns the commit history for a page.
-func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) ([]*entity.Commit, error) {
+func (s *PageService) GetPageHistory(ctx context.Context, orgID, id jsonldb.ID) ([]*infra.Commit, error) {
 	if s.gitService == nil {
-		return []*entity.Commit{}, nil
+		return []*infra.Commit{}, nil
 	}
 	return s.gitService.GetHistory(ctx, orgID, "page", id.String())
 }
