@@ -5,6 +5,8 @@
 // It also serves the embedded SolidJS frontend.
 package server
 
+//go:generate go run ../apiroutes
+
 import (
 	"embed"
 	"io"
