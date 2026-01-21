@@ -28,67 +28,67 @@ Error handling follows a structured pattern:
  * ErrorCode defines specific error types for the API.
  */
 /**
- * ErrorCodeValidationFailed is returned when input data fails validation
+ * ErrorCodeValidationFailed is returned when input data fails validation.
  */
 export const ErrorCodeValidationFailed = 'VALIDATION_FAILED';
 /**
- * ErrorCodeMissingField is returned when a required field is missing
+ * ErrorCodeMissingField is returned when a required field is missing.
  */
 export const ErrorCodeMissingField = 'MISSING_FIELD';
 /**
- * ErrorCodeInvalidFormat is returned when a field has an invalid format
+ * ErrorCodeInvalidFormat is returned when a field has an invalid format.
  */
 export const ErrorCodeInvalidFormat = 'INVALID_FORMAT';
 /**
- * ErrorCodeNotFound is returned when a resource is not found
+ * ErrorCodeNotFound is returned when a resource is not found.
  */
 export const ErrorCodeNotFound = 'NOT_FOUND';
 /**
- * ErrorCodePageNotFound is returned when a page is not found
+ * ErrorCodePageNotFound is returned when a page is not found.
  */
 export const ErrorCodePageNotFound = 'PAGE_NOT_FOUND';
 /**
- * ErrorCodeDatabaseNotFound is returned when a database is not found
+ * ErrorCodeDatabaseNotFound is returned when a database is not found.
  */
 export const ErrorCodeDatabaseNotFound = 'DATABASE_NOT_FOUND';
 /**
- * ErrorCodeFileNotFound is returned when a file is not found
+ * ErrorCodeFileNotFound is returned when a file is not found.
  */
 export const ErrorCodeFileNotFound = 'FILE_NOT_FOUND';
 /**
- * ErrorCodeStorageError is returned when a storage operation fails
+ * ErrorCodeStorageError is returned when a storage operation fails.
  */
 export const ErrorCodeStorageError = 'STORAGE_ERROR';
 /**
- * ErrorCodeInternal is returned when an unexpected server error occurs
+ * ErrorCodeInternal is returned when an unexpected server error occurs.
  */
 export const ErrorCodeInternal = 'INTERNAL_ERROR';
 /**
- * ErrorCodeNotImplemented is returned when a feature is not implemented
+ * ErrorCodeNotImplemented is returned when a feature is not implemented.
  */
 export const ErrorCodeNotImplemented = 'NOT_IMPLEMENTED';
 /**
- * ErrorCodeConflict is returned when there is a resource conflict
+ * ErrorCodeConflict is returned when there is a resource conflict.
  */
 export const ErrorCodeConflict = 'CONFLICT';
 /**
- * ErrorCodeUnauthorized is returned when authentication is missing or invalid
+ * ErrorCodeUnauthorized is returned when authentication is missing or invalid.
  */
 export const ErrorCodeUnauthorized = 'UNAUTHORIZED';
 /**
- * ErrorCodeForbidden is returned when a user has insufficient permissions
+ * ErrorCodeForbidden is returned when a user has insufficient permissions.
  */
 export const ErrorCodeForbidden = 'FORBIDDEN';
 /**
- * ErrorCodeInvalidProvider is returned when an OAuth provider is unknown
+ * ErrorCodeInvalidProvider is returned when an OAuth provider is unknown.
  */
 export const ErrorCodeInvalidProvider = 'INVALID_PROVIDER';
 /**
- * ErrorCodeOAuthError is returned when an OAuth operation fails
+ * ErrorCodeOAuthError is returned when an OAuth operation fails.
  */
 export const ErrorCodeOAuthError = 'OAUTH_ERROR';
 /**
- * ErrorCodeExpired is returned when a resource has expired
+ * ErrorCodeExpired is returned when a resource has expired.
  */
 export const ErrorCodeExpired = 'EXPIRED';
 export type ErrorCode =
@@ -127,7 +127,7 @@ export interface ErrorResponse {
  */
 export type ErrorWithStatus = any;
 /**
- * APIError is a concrete error type with status code, code, and optional details.
+ * APIError is a concrete error type with status code and optional details.
  */
 export interface APIError {}
 
@@ -337,7 +337,7 @@ export interface ServeAssetRequest {
   AssetName: string;
 }
 /**
- * SearchRequest is a request to search pages and databases
+ * SearchRequest is a request to search pages and databases.
  */
 export interface SearchRequest {
   OrgID: string;
@@ -403,45 +403,32 @@ export interface UpdateOnboardingRequest {
   state: OnboardingState;
 }
 /**
- * ListGitRemotesRequest is a request to list git remotes.
+ * GetGitRemoteRequest is a request to get the git remote for an organization.
  */
-export interface ListGitRemotesRequest {
+export interface GetGitRemoteRequest {
   OrgID: string;
 }
 /**
- * CreateGitRemoteRequest is a request to create a git remote.
+ * SetGitRemoteRequest is a request to set (create or update) the git remote for an organization.
  */
-export interface CreateGitRemoteRequest {
+export interface SetGitRemoteRequest {
   OrgID: string;
-  name: string;
   url: string;
   type: string; // github, gitlab, custom
   auth_type: string; // token, ssh
   token?: string;
 }
 /**
- * UpdateGitRemoteRequest is a request to update a git remote.
- */
-export interface UpdateGitRemoteRequest {
-  OrgID: string;
-  RemoteID: string;
-  name: string;
-  url: string;
-  token?: string;
-}
-/**
- * DeleteGitRemoteRequest is a request to delete a git remote.
+ * DeleteGitRemoteRequest is a request to delete the git remote for an organization.
  */
 export interface DeleteGitRemoteRequest {
   OrgID: string;
-  RemoteID: string;
 }
 /**
- * PushGitRemoteRequest is a request to push to a git remote.
+ * PushGitRemoteRequest is a request to push to the git remote.
  */
 export interface PushGitRemoteRequest {
   OrgID: string;
-  RemoteID: string;
 }
 /**
  * HealthRequest is a request to check system health.
@@ -651,7 +638,7 @@ export interface ServeAssetResponse {
   mime_type: string;
 }
 /**
- * SearchResponse is the response to a search request
+ * SearchResponse is the response to a search request.
  */
 export interface SearchResponse {
   results: SearchResult[];
@@ -668,12 +655,6 @@ export interface ListInvitationsResponse {
 export interface SwitchOrgResponse {
   token: string;
   user?: UserResponse;
-}
-/**
- * ListGitRemotesResponse is a response containing a list of git remotes.
- */
-export interface ListGitRemotesResponse {
-  remotes: GitRemoteResponse[];
 }
 /**
  * HealthResponse is a response from a health check.
@@ -740,11 +721,10 @@ export interface OrganizationResponse {
 }
 /**
  * GitRemoteResponse is the API representation of a git remote.
+ * Each organization has at most one remote, identified by OrganizationID.
  */
 export interface GitRemoteResponse {
-  id: string;
   organization_id: string;
-  name: string;
   url: string;
   type: string;
   auth_type: string;

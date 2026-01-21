@@ -25,7 +25,7 @@ help:
 
 # Install frontend dependencies (only when lockfile changes)
 $(FRONTEND_STAMP): frontend/pnpm-lock.yaml
-	cd frontend && pnpm install --frozen-lockfile
+	cd frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm install --frozen-lockfile
 	@touch $@
 
 # Build frontend and Go server
@@ -36,18 +36,18 @@ build: types
 types: $(FRONTEND_STAMP)
 	cd backend && go tool tygo generate
 	@mv frontend/src/types.gen.ts frontend/src/types.ts
-	cd frontend && pnpm exec prettier --write src/types.ts
+	cd frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --write src/types.ts
 
 dev: build
 	mddb -port $(PORT) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
 
 test: $(FRONTEND_STAMP)
 	cd backend && go test -cover ./...
-	cd frontend && pnpm test
+	cd frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test
 
 coverage: $(FRONTEND_STAMP)
 	cd backend && go test -coverprofile=coverage.out ./...
-	cd frontend && pnpm coverage
+	cd frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm coverage
 
 lint: lint-go lint-frontend
 
@@ -56,11 +56,11 @@ lint-go:
 	cd backend && golangci-lint run ./...
 
 lint-frontend: $(FRONTEND_STAMP)
-	cd frontend && pnpm lint
+	cd frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint
 
 lint-fix: $(FRONTEND_STAMP)
 	cd backend && golangci-lint run ./... --fix || true
-	cd frontend && pnpm lint:fix
+	cd frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint:fix
 
 git-hooks:
 	@echo "Installing git pre-commit hooks..."
@@ -71,4 +71,4 @@ git-hooks:
 	@echo "✓ Git hooks installed"
 
 frontend-dev: $(FRONTEND_STAMP)
-	cd frontend && pnpm dev
+	cd frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm dev

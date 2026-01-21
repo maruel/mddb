@@ -10,7 +10,6 @@ import type {
   OrganizationSettings,
   UserRole,
   GitRemoteResponse,
-  ListGitRemotesResponse,
 } from '../types';
 import styles from './WorkspaceSettings.module.css';
 import { useI18n } from '../i18n';
@@ -118,8 +117,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       }
 
       if (activeTab() === 'sync' && props.user.role === 'admin' && lastResult) {
-        const remoteData = (await lastResult.json()) as ListGitRemotesResponse;
-        setRemotes(remoteData.remotes?.filter((r): r is GitRemoteResponse => !!r) || []);
+        const remoteData = (await lastResult.json()) as { remotes?: GitRemoteResponse[] };
+        setRemotes(
+          remoteData.remotes?.filter((r: GitRemoteResponse): r is GitRemoteResponse => !!r) || []
+        );
       }
 
       // Load membership settings (notifications)
@@ -552,7 +553,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                 <For each={remotes()}>
                   {(remote) => (
                     <tr>
-                      <td>{remote.name}</td>
+                      <td>{remote.type || t('settings.defaultRemote') || 'Default'}</td>
                       <td>{remote.url}</td>
                       <td>
                         {remote.last_sync
@@ -561,14 +562,14 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                       </td>
                       <td class={styles.actions}>
                         <button
-                          onClick={() => handlePush(remote.id)}
+                          onClick={() => handlePush(remote.organization_id)}
                           disabled={loading()}
                           class={styles.smallButton}
                         >
                           {t('common.push')}
                         </button>
                         <button
-                          onClick={() => handleDeleteRemote(remote.id)}
+                          onClick={() => handleDeleteRemote(remote.organization_id)}
                           disabled={loading()}
                           class={styles.deleteButtonSmall}
                         >
