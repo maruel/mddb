@@ -1,6 +1,6 @@
-# mddb - Markdown Document & Database System
+# mddb - Markdown Document & Table System
 
-A Notion-like document and database system for managing your information. Store everything locally as files, no external services required.
+A Notion-like document and table system for managing your information. Store everything locally as files, no external services required.
 
 [![codecov](https://codecov.io/gh/maruel/mddb/graph/badge.svg?token=Q4SYDP0B00)](https://codecov.io/gh/maruel/mddb)
 
@@ -8,12 +8,14 @@ A Notion-like document and database system for managing your information. Store 
 
 mddb lets you:
 - 📝 **Create and edit documents** - Write in markdown with live preview
-- 📊 **Build databases** - Store structured data with typed columns
+- 📊 **Build tables** - Store structured data with typed columns
 - 🗂️ **Organize information** - Create folders and nested structures
 - ⚡ **Auto-save** - Changes save automatically as you work
 - 📁 **Keep it local** - All data stored as files on your computer
 
 Perfect for personal wikis, knowledge bases, project management, and data collection.
+
+> **Note**: mddb uses "Table" for what Notion calls a "Database" (a collection of records with columns). Both systems offer the same functionality—mddb just uses clearer terminology to distinguish data structures from the underlying storage system.
 
 ## Getting Started
 
@@ -32,7 +34,7 @@ That's it! All your data is stored in a `data/` folder.
 
 1. **Create a page** - Click "New Page" in the sidebar
 2. **Write markdown** - Edit in the left pane, see preview on the right
-3. **Create a database** - Switch to Databases tab and create a new one
+3. **Create a table** - Switch to Tables tab and create a new one
 4. **Add records** - Click the + button in tables to add rows
 
 ## Features
@@ -43,7 +45,7 @@ That's it! All your data is stored in a `data/` folder.
 - Organize pages in folders
 - Simple and distraction-free editor
 
-### Databases
+### Tables
 - Define custom columns with different types:
   - Text, numbers, dates
   - Single and multi-select dropdowns
@@ -53,7 +55,7 @@ That's it! All your data is stored in a `data/` folder.
 - All data stays local
 
 ### Search
-- Full-text search across documents and databases
+- Full-text search across documents and tables
 - Fast, relevant results
 - Search by title, content, or record fields
 
@@ -85,10 +87,10 @@ data/
     ├── 1/                      # First page (document)
     │   ├── index.md
     │   └── favicon.ico
-    ├── 2/                      # Second page (database)
+    ├── 2/                      # Second page (table)
     │   ├── index.md
-    │   ├── metadata.json       # Database schema
-    │   ├── data.jsonl          # Database records
+    │   ├── metadata.json       # Table schema
+    │   ├── data.jsonl          # Table records
     │   └── favicon.png
     ├── 3/                      # Third page
     │   ├── index.md

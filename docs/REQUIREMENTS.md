@@ -3,7 +3,7 @@
 ## Status
 
 **Project State: Production Prototype (Maturing)**
-Most core functional requirements for a local-first markdown and database system are met. The architecture follows clean 3-layer separation (API/handlers → business logic/services → persistence/filestore+jsonldb) with no layering violations.
+Most core functional requirements for a local-first markdown and table system are met. The architecture follows clean 3-layer separation (API/handlers → business logic/services → persistence/filestore+jsonldb) with no layering violations.
 
 ## Functional Requirements
 
@@ -16,9 +16,12 @@ Most core functional requirements for a local-first markdown and database system
 - [ ] **Backlinks**: Automatically track and display which pages link to the current page.
 - [ ] **Graph View**: Visual representation of the organization's knowledge graph.
 
-### 2. Database/Tables
-- [x] **Schema**: Define database schemas (columns with types: text, number, select, multi_select, checkbox, date).
-- [x] **Records**: Store and manage database records in JSONL format.
+### 2. Tables
+
+> **Note on Terminology**: mddb uses "Table" for what Notion calls a "Database" (a collection of structured records with columns). This distinction clarifies that mddb Tables are data structures, not the underlying storage system.
+
+- [x] **Schema**: Define table schemas (columns with types: text, number, select, multi_select, checkbox, date).
+- [x] **Records**: Store and manage table records in JSONL format.
 - [x] **Pagination**: Support for `offset` and `limit` to handle large datasets.
 - [/] **Type Coercion**: SQLite-compatible type affinity system for consistent storage.
     - **Storage Classes**: Map all values to SQLite's 5 storage classes: NULL, INTEGER, REAL, TEXT, BLOB.
@@ -39,7 +42,7 @@ Most core functional requirements for a local-first markdown and database system
     - **Future**: Enables seamless migration to SQLite backend.
 - [/] **Advanced Query**: Complex filtering (nested AND/OR logic) and multi-column persistent sorting. Pagination with `offset`/`limit` implemented; complex filtering pending.
 - [ ] **Property Editing**: Dynamic UI for schema modifications (adding/deleting columns, renaming, type conversion).
-- [ ] **Relations**: Support for "Relation" column type to link records between different databases (Foreign Keys).
+- [ ] **Relations**: Support for "Relation" column type to link records between different tables (Foreign Keys).
 - [ ] **Rollups**: Aggregate data from linked records (e.g., sum of related "Cost" fields, count of linked tasks).
 - [ ] **Formulas**: Calculated columns using simple expressions (e.g., `Price * Quantity`).
 
@@ -51,14 +54,14 @@ Most core functional requirements for a local-first markdown and database system
 
 ### 4. User Experience (Notion-like)
 
-- [ ] **Unified Sidebar**: Single hierarchical tree view for all content (pages and databases).
-- [/] **Seamless Databases**: Databases are integrated into pages; every database is a page, and every page can contain database views (supported via `NodeTypeHybrid`).
-- [x] **Database Views**: Flexible views (Table, Board, Gallery, Grid) that can be embedded or viewed as full pages.
+- [ ] **Unified Sidebar**: Single hierarchical tree view for all content (pages and tables).
+- [/] **Seamless Tables**: Tables are integrated into pages; every table is a page, and every page can contain table views (supported via `NodeTypeHybrid`).
+- [ ] **Table Views**: Flexible views (Table, Board, Gallery, Grid) that can be embedded or viewed as full pages.
 - [ ] **View Customization**: Toggleable columns, adjustable column widths, and drag-and-drop reordering.
 - [ ] **Interaction Polish**: Keyboard shortcuts for navigation, spreadsheet-like cell selection, and context menus for rows/columns.
 - [ ] **Undo/Redo**: Support for undoing and redoing actions (document edits, record changes).
 - [x] **Auto-save**: Automatic background saving of documents (2s debounce).
-- [x] **Search**: Full-text search across all documents and databases with relevance scoring.
+- [x] **Search**: Full-text search across all documents and tables with relevance scoring.
 - [x] **History**: View and restore previous versions of pages (leveraging Git).
 - [ ] **Real-time**: WebSocket-based real-time sync (future consideration).
 - [ ] **Theme Support**: Customizable UI themes.
@@ -67,7 +70,7 @@ Most core functional requirements for a local-first markdown and database system
 
 ### 5. API & Integration
 
-- [x] **REST API**: Comprehensive API for all operations (Pages, DBs, Records, Assets).
+- [x] **REST API**: Comprehensive API for all operations (Pages, Tables, Records, Assets).
 - [x] **Error Handling**: Structured error codes and detailed responses (Centralized `ErrorCode` union with HTTP status mapping).
 - [x] **JSON Schema**: Schema generation for API types via `invopop/jsonschema` library.
 
@@ -94,30 +97,55 @@ Most core functional requirements for a local-first markdown and database system
     - **Deferrable**: Users can skip onboarding and configure settings later via the workspace settings.
 
 ### 7. Globalization & Platform
-- [ ] **i18n & l10n**: Frontend supports multiple languages and regional formatting; backend remains language and locale agnostic (returns error codes, not localized messages).
+- [/] **i18n & l10n**: Frontend supports multiple languages and regional formatting; backend remains language and locale agnostic (returns error codes, not localized messages).
+    - [x] **i18n Infrastructure**: Internationalization framework with `@solid-primitives/i18n`.
+    - [x] **Locale Support**: English, French, German, Spanish translations.
+    - [ ] **Regional Formatting**: Date/time/number formatting per locale.
 - [/] **PWA**: Progressive Web App support for installability and mobile-like experience. Install banner implemented; full offline support pending.
 - [ ] **Offline Support**: Ability to work offline with robust data reconciliation upon reconnection.
 
-### 8. Agent Readiness
+### 8. Server Administration
+- [x] **Global Admin Role**: Server-wide admin flag on users (not org-scoped).
+    - [x] First registered user automatically becomes global admin.
+    - [x] Admin API endpoints: `GET /api/admin/stats`, `GET /api/admin/users`, `GET /api/admin/organizations`.
+    - [ ] **Env var override**: `MDDB_GLOBAL_ADMIN_EMAIL` to promote specific user on startup.
+    - [ ] **CLI promotion**: `mddb admin promote user@example.com` command.
+    - [ ] **Admin Dashboard UI**: Frontend dashboard for global admins (user/org management, server stats).
+- [ ] **User Analytics**: Track user signup metadata for analytics and fraud detection.
+    - [ ] **IP Address Tracking**: Save user's IP address and country on account creation.
+    - [ ] **GeoIP Lookup**: Resolve IP to country using MaxMind GeoLite2-Country database.
+
+### 9. Agent Readiness
 - [ ] **Agent Context**: Inclusion of `AGENTS.md` in data repositories to provide context for AI agents.
 
-### 9. AI & Intelligence
-- [ ] **Semantic Search (RAG)**: Vector-based search allowing for natural language queries across the entire organization.
-- [ ] **AI Writing Assistant**: In-editor tool for summarization, expansion, and content generation.
+### 10. Authentication & Security
+- [x] **OAuth2**: Google and Microsoft account login.
+- [ ] **Passwordless Authentication**: Support for email magic links and WebAuthn/Passkey authentication.
+    - [ ] **Email Magic Links**: Short-lived (15-min) login links via email.
+    - [ ] **WebAuthn/Passkeys**: FIDO2 support for biometric and hardware key authentication.
+    - [ ] **Security Hardening**: Rate limiting on auth endpoints, challenge expiration, audit logging.
+
+### 11. AI & Intelligence
+- [ ] **Advanced Search**:
+    - [ ] **BM25 Full-Text Search**: High-quality keyword search implementation.
+    - [ ] **Vector Semantic Search**: Embedding-based natural language search across documents and records.
+    - [ ] **LLM Reranking**: Use LLM to rerank search results for relevance.
 - [ ] **MCP Server**: Implement the Model Context Protocol (MCP) to allow LLMs and AI agents to safely browse, read, and edit the organization's data.
+- [ ] **AI Writing Assistant**: In-editor tool for summarization, expansion, and content generation.
+- [ ] **Data Repository Context**: Automatically add `AGENTS.md` to organization repositories for agent guidance.
 
 ## Non-Functional Requirements
 
 ### Performance & Scalability
 - [x] **Streaming**: Efficient line-by-line reading of records via `bufio.Scanner`.
-- [x] **Scalability**: Designed to handle thousands of pages and large databases via pagination.
-- [ ] **JSONLDB Sharding**: Support for sharding large databases in the JSONLDB storage engine.
+- [x] **Scalability**: Designed to handle thousands of pages and large tables via pagination.
+- [ ] **JSONLDB Sharding**: Support for sharding large tables in the JSONLDB storage engine.
 - [x] **Lightweight**: Fast startup and low memory footprint.
-- [x] **Caching**: Internal high-efficiency caching for frequently accessed pages, metadata, and database records to minimize disk I/O.
+- [x] **Caching**: Internal high-efficiency caching for frequently accessed pages, metadata, and table records to minimize disk I/O.
 
 ### Deployment & Architecture
 - [x] **Self-Contained**: Single executable binary with embedded frontend (`go:embed`).
-- [ ] **CLI Versioning**: Support `-version` flag to output build metadata (Git commit, build time) leveraging Go's `debug.ReadBuildInfo`.
+- [x] **CLI Versioning**: Support `-version` flag to output build metadata (Git commit, build time) leveraging Go's `debug.ReadBuildInfo`.
 - [ ] **CI/CD Workflows**: Automated GitHub Actions for CI (test/lint) and Release (cross-platform builds).
 - [x] **Local-First**: Filesystem-based storage with no external database dependencies.
 - [x] **Simplified Storage**: Unified JSONLDB format with versioning and column definitions in the first row, removing the need for separate `metadata.json`.

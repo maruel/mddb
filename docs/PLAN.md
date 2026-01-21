@@ -13,7 +13,7 @@
 
 ## Overview
 
-mddb is a Notion-like document and database system where all data is persisted as markdown files and JSON in a directory-based structure. The frontend (SolidJS) provides a rich user experience while the backend (Go) handles file operations, API endpoints, and business logic.
+mddb is a Notion-like document and table system where all data is persisted as markdown files and JSON in a directory-based structure. The frontend (SolidJS) provides a rich user experience while the backend (Go) handles file operations, API endpoints, and business logic.
 
 ## Requirements
 
@@ -23,7 +23,7 @@ See [REQUIREMENTS.md](REQUIREMENTS.md) for complete functional and non-functiona
 
 ### API Architecture
 
-Standard RESTful API for Pages, Databases, Records, and Assets. 
+Standard RESTful API for Pages, Tables, Records, and Assets. 
 **Multi-tenant routing**: Data-acting endpoints follow the pattern `/api/{orgID}/resource/...`. 
 The backend validates that the `orgID` in the path matches the user's authenticated session.
 
@@ -110,9 +110,9 @@ See `README.md` and `API.md` for details.
 
 ### Phase 10: Connectivity & Relations
 - [ ] **Backlinks Indexing**: Efficient background indexing of internal markdown links to provide backlink lists.
-- [ ] **Relational Data Model**: Update metadata schema to support record-level relations (foreign keys) between databases.
+- [ ] **Relational Data Model**: Update metadata schema to support record-level relations (foreign keys) between tables.
 - [ ] **Relational UI**: UI components for selecting related records (popover/search) and displaying Rollups (aggregated data from linked records).
-- [ ] **Graph View**: Interactive visualization of page and database connections.
+- [ ] **Graph View**: Interactive visualization of page and table connections.
 - [ ] **Notion Research**: Document product design insights from Notion documentation in `docs/notion/`.
 
 ### Phase 11: AI Intelligence
@@ -121,7 +121,7 @@ See `README.md` and `API.md` for details.
     - [ ] **Vector Semantic Search**: Embedding generation for documents and records to support semantic search.
     - [ ] **LLM Reranking**: Use LLM to rerank search results for relevance.
     - **Inspiration**: https://github.com/tobi/qmd for search implementation patterns.
-- [ ] **MCP Server**: Full implementation of the Model Context Protocol to expose documents/databases to AI agents.
+- [ ] **MCP Server**: Full implementation of the Model Context Protocol to expose documents/tables to AI agents.
 - [ ] **In-Editor AI Actions**: Context-aware AI commands for content generation and summarization.
 - [ ] **Data Repository Context**: Automatically add `AGENTS.md` to organization repositories for agent guidance.
 
@@ -132,7 +132,7 @@ See `README.md` and `API.md` for details.
     - [x] Implemented `I18nProvider` context with `useI18n` hook and `translateError` helper.
     - [x] Migrated all user-facing components to use `t()` translator:
         - `App.tsx`, `Auth.tsx`, `WorkspaceSettings.tsx`, `Onboarding.tsx`
-        - `DatabaseTable.tsx`, `DatabaseGrid.tsx`, `DatabaseGallery.tsx`, `DatabaseBoard.tsx`
+        - `TableView.tsx`, `GridView.tsx`, `GalleryView.tsx`, `BoardView.tsx`
     - [x] Locale persistence via `localStorage` and sync with user settings.
     - [x] English dictionary (`dictionaries/en.ts`) - ready for additional locales (fr, de, es).
 - [x] **l10n**: Added French (`fr.ts`), German (`de.ts`), Spanish (`es.ts`) translations.
@@ -152,7 +152,7 @@ See `README.md` and `API.md` for details.
 ### Phase 13: Advanced Data Architecture
 - [x] **JSONLDB Evolution (Part 1)**:
     - [x] Add versioning and column definitions to the first row of JSONL files.
-    - [x] Deprecate and remove `metadata.json` for databases.
+    - [x] Deprecate and remove `metadata.json` for tables.
 - [x] **JSONLDB Unification (Part 2)**:
     - [x] Merge `Database` and `Table` into a single `Table[T]` struct.
     - [x] Add `Row[T]` interface: `Clone() T` + `GetID() ID` + `Validate() error`. Table[T] requires Row[T] constraint.
@@ -214,7 +214,7 @@ See `README.md` and `API.md` for details.
     └── multi_select → jsonldb.jsonb + options[]
 
     Reference (ID storage + target config):
-    ├── relation → jsonldb.jsonb (array of IDs) + target_database_id
+    ├── relation → jsonldb.jsonb (array of IDs) + target_table_id
     └── person   → jsonldb.jsonb (array of user IDs)
 
     Computed (no storage, calculated on read):
@@ -259,7 +259,7 @@ See `README.md` and `API.md` for details.
     │       },
     │       "Related": {
     │         "type": "relation",
-    │         "target_database_id": "xyz"
+    │         "target_table_id": "xyz"
     │       }
     │     }
     │   }
@@ -285,13 +285,13 @@ See `README.md` and `API.md` for details.
 - [ ] **CI Workflow**: GitHub Actions workflow for linting (backend/frontend) and testing on every push.
 - [ ] **Release Workflow**: GitHub Actions workflow to build and release binaries (Linux, macOS, Windows) on new tags.
 
-### Phase 16: Database Views System
+### Phase 16: Table Views System
 
-A comprehensive view system allowing multiple configurable views per database, with persistent filters, sorts, and layout customization.
+A comprehensive view system allowing multiple configurable views per table, with persistent filters, sorts, and layout customization.
 
 #### Design Overview
 
-**Core Concept**: A View is a saved configuration for displaying database records. Each database can have multiple views, each with its own type, filters, sorts, and column settings.
+**Core Concept**: A View is a saved configuration for displaying table records. Each table can have multiple views, each with its own type, filters, sorts, and column settings.
 
 **Current State Analysis**:
 - Frontend has 4 view types implemented: `table`, `grid`, `gallery`, `board`
@@ -303,13 +303,13 @@ A comprehensive view system allowing multiple configurable views per database, w
 #### View Data Model
 
 ```go
-// View represents a saved view configuration for a database.
+// View represents a saved view configuration for a table.
 type View struct {
     ID          jsonldb.ID       `json:"id"`
-    DatabaseID  jsonldb.ID       `json:"database_id"`   // Parent database
+    TableID     jsonldb.ID       `json:"table_id"`      // Parent table
     Name        string           `json:"name"`          // User-defined name (e.g., "Active Tasks")
     Type        ViewType         `json:"type"`          // table, board, gallery, grid, calendar, timeline
-    IsDefault   bool             `json:"is_default"`    // First view shown when opening database
+    IsDefault   bool             `json:"is_default"`    // First view shown when opening table
 
     // Display Configuration
     Filters     FilterGroup      `json:"filters,omitempty"`      // Root filter group (AND/OR)
@@ -455,7 +455,7 @@ type ViewSettings struct {
 
 #### Storage Strategy
 
-**Location**: Views are stored in `metadata.json` alongside database properties.
+**Location**: Views are stored in `metadata.json` alongside table properties.
 
 ```
 pages/{nodeID}/
@@ -491,47 +491,47 @@ pages/{nodeID}/
 ```
 
 **Rationale**:
-- Views are tightly coupled to database schema (reference property names)
+- Views are tightly coupled to table schema (reference property names)
 - Simplifies atomic updates (single file read/write)
-- Views travel with database when exported/moved
+- Views travel with table when exported/moved
 - No separate file management complexity
 
 #### API Endpoints
 
 ```
-# List views for a database
-GET /api/{orgID}/databases/{dbID}/views
+# List views for a table
+GET /api/{orgID}/tables/{tableID}/views
 Response: { "views": [View, ...] }
 
 # Get single view
-GET /api/{orgID}/databases/{dbID}/views/{viewID}
+GET /api/{orgID}/tables/{tableID}/views/{viewID}
 Response: View
 
 # Create view
-POST /api/{orgID}/databases/{dbID}/views
+POST /api/{orgID}/tables/{tableID}/views
 Body: { "name": "...", "type": "table", ... }
 Response: View
 
 # Update view
-PUT /api/{orgID}/databases/{dbID}/views/{viewID}
+PUT /api/{orgID}/tables/{tableID}/views/{viewID}
 Body: { "name": "...", "filters": {...}, ... }
 Response: View
 
 # Delete view
-DELETE /api/{orgID}/databases/{dbID}/views/{viewID}
+DELETE /api/{orgID}/tables/{tableID}/views/{viewID}
 Response: 204 No Content
 
 # Set default view
-POST /api/{orgID}/databases/{dbID}/views/{viewID}/set-default
+POST /api/{orgID}/tables/{tableID}/views/{viewID}/set-default
 Response: View
 
 # Reorder views
-POST /api/{orgID}/databases/{dbID}/views/reorder
+POST /api/{orgID}/tables/{tableID}/views/reorder
 Body: { "view_ids": ["id1", "id2", "id3"] }
 Response: { "views": [View, ...] }
 
 # Get filtered/sorted records (view applied server-side)
-GET /api/{orgID}/databases/{dbID}/records?view={viewID}&offset=0&limit=50
+GET /api/{orgID}/tables/{tableID}/records?view={viewID}&offset=0&limit=50
 Response: { "records": [...], "total": 150 }
 ```
 
@@ -539,9 +539,9 @@ Response: { "records": [...], "total": 150 }
 
 - [ ] **Backend: View Model & Storage**
     - [ ] Define `View`, `Filter`, `FilterGroup`, `SortConfig`, `ColumnConfig`, `ViewSettings` in `models/view.go`
-    - [ ] Update `DatabaseMetadata` struct to include `Views []View`
-    - [ ] Add view CRUD methods to `DatabaseService`
-    - [ ] Implement default view creation when database is created (table view showing all columns)
+    - [ ] Update `TableMetadata` struct to include `Views []View`
+    - [ ] Add view CRUD methods to `TableService`
+    - [ ] Implement default view creation when table is created (table view showing all columns)
 
 - [ ] **Backend: Filter & Sort Engine**
     - [ ] Implement `FilterEngine` in `storage/filter.go` for in-memory filtering
@@ -556,7 +556,7 @@ Response: { "records": [...], "total": 150 }
     - [ ] Return `total` count in filtered results for pagination UI
 
 - [ ] **Frontend: View Management UI**
-    - [ ] Add view tabs/dropdown in database header
+    - [ ] Add view tabs/dropdown in table header
     - [ ] Implement "Add View" modal with type selection
     - [ ] Add view rename/delete context menu
     - [ ] Persist selected view in URL or localStorage
@@ -590,17 +590,17 @@ Response: { "records": [...], "total": 150 }
 
 5. **View Migration**: When properties are renamed/deleted, views referencing them should gracefully degrade (ignore invalid filters/sorts/columns).
 
-### Phase 17: Advanced Database UX & Power Features
+### Phase 17: Advanced Table UX & Power Features
 - [ ] **Property Management**: In-app UI for adding, renaming, and changing column types with data migration safety.
 - [ ] **Inline Editing & Navigation**: Spreadsheet-like keyboard navigation (Tab/Arrows) and rapid inline cell editing.
 - [ ] **Formulas**: Simple calculated properties based on other columns in the same record.
 - [ ] **Bulk Actions**: Multi-select records for deletion or property updates.
-- [ ] **Undo/Redo**: Global undo/redo support for document edits and database record changes.
+- [ ] **Undo/Redo**: Global undo/redo support for document edits and table record changes.
 
 ## Future Considerations
 - **Notion Integration (via MCP)**: Fetch and sync data from Notion using the Model Context Protocol.
 - **Publishing & Extensibility**: Public pages, custom domains, webhooks, and per-organization API keys.
 - **Google Drive Integration**: Bi-directional sync/import/export for Google Docs (Markdown) and Google Sheets (JSONL).
-- **SQLite Migration**: Migrate `data/db/*.json` to SQLite for better relational integrity and query performance. Type coercion (Phase 13 Part 3) ensures seamless migration by aligning JSONLDB storage with SQLite's type affinity system.
+- **SQLite Migration**: Migrate `data/db/*.jsonl` to SQLite for better relational integrity and query performance. Type coercion (Phase 13 Part 3) ensures seamless migration by aligning JSONLDB storage with SQLite's type affinity system.
 - **Real-time Collaboration**: WebSocket-based sync.
 - **Mobile App**: Native mobile clients using the REST API.

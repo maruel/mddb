@@ -1,14 +1,16 @@
 # mddb API Reference
 
-mddb provides a RESTful JSON API for interacting with nodes (pages and databases), records, and assets, scoped by organization.
+> ⚠️ **Note**: This API reference is a skeleton. For the complete list of endpoints, see `backend/internal/server/router.go` in the source code. This document covers the main data endpoints; additional endpoints for auth, organizations, users, and admin operations exist but are not fully documented here.
+
+mddb provides a RESTful JSON API for interacting with nodes (pages and tables), records, and assets, scoped by organization.
 
 ## Organizations
 
 Most endpoints require an `{orgID}` in the path to ensure data isolation.
 
-## Nodes (Unified Pages & Databases)
+## Nodes (Unified Pages & Tables)
 
-Nodes represent both document pages and databases in a unified hierarchy.
+Nodes represent both document pages and tables in a unified hierarchy.
 
 ### List Nodes
 **GET /api/{orgID}/nodes**
@@ -16,12 +18,12 @@ Returns the hierarchical tree of all nodes for the organization.
 
 ### Create Node
 **POST /api/{orgID}/nodes**
-Creates a new node (page or database).
-Body: `{"title": "...", "content": "...", "parentId": "optional-id", "type": "page|database"}`
+Creates a new node (page or table).
+Body: `{"title": "...", "content": "...", "parentId": "optional-id", "type": "page|table"}`
 
 ### Get Node
 **GET /api/{orgID}/nodes/{id}**
-Returns node content, metadata, and schema (if it's a database).
+Returns node content, metadata, and schema (if it's a table).
 
 ### Update Node
 **PUT /api/{orgID}/nodes/{id}**
@@ -39,29 +41,29 @@ Returns git commit history for the node.
 **GET /api/{orgID}/nodes/{id}/history/{hash}**
 Returns node content at a specific commit.
 
-## Databases & Records
+## Tables & Records
 
-Nodes of type `database` contain structured records.
+Nodes of type `table` contain structured records.
 
-### Get Database Schema
-**GET /api/{orgID}/databases/{id}**
-Returns database column definitions and metadata.
+### Get Table Schema
+**GET /api/{orgID}/tables/{id}**
+Returns table column definitions and metadata.
 
 ### List Records
-**GET /api/{orgID}/databases/{id}/records**
+**GET /api/{orgID}/tables/{id}/records**
 Returns records with optional pagination.
 Query params: `offset` (int), `limit` (int).
 
 ### Create Record
-**POST /api/{orgID}/databases/{id}/records**
-Adds a new record to the database.
+**POST /api/{orgID}/tables/{id}/records**
+Adds a new record to the table.
 
 ### Update Record
-**PUT /api/{orgID}/databases/{id}/records/{recordID}**
+**PUT /api/{orgID}/tables/{id}/records/{recordID}**
 Updates an existing record. (Currently returning NotImplemented)
 
 ### Delete Record
-**DELETE /api/{orgID}/databases/{id}/records/{recordID}**
+**DELETE /api/{orgID}/tables/{id}/records/{recordID}**
 Deletes a record. (Currently returning NotImplemented)
 
 ## Assets
@@ -86,7 +88,7 @@ Serves raw binary asset file.
 
 ### Global Search
 **POST /api/{orgID}/search**
-Search across all pages and databases within the organization. Body: `{"query": "..."}`
+Search across all pages and tables within the organization. Body: `{"query": "..."}`
 
 ## Authentication
 

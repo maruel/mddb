@@ -52,7 +52,7 @@ The `frontend/dist/` directory is tracked in Git to ensure that the Go binary ca
 ## Performance Optimizations
 
 ### Streaming Reads
-Database records are stored in JSONL format, allowing for line-by-line streaming using `bufio.Scanner`. This keeps memory usage low even for large databases.
+Table records are stored in JSONL format, allowing for line-by-line streaming using `bufio.Scanner`. This keeps memory usage low even for large tables.
 
 ### API Pagination
 Record retrieval supports `offset` and `limit` parameters to handle large datasets efficiently.
@@ -75,15 +75,15 @@ To achieve a Notion-like experience, mddb is moving towards a unified "Node" con
 ### Data Model Unification
 A Node is a directory that can contain:
 - `index.md`: Descriptive content (Page).
-- `metadata.json`: Structured schema (Database).
-- `data.jsonl`: Database records.
+- `metadata.json`: Structured schema (Table).
+- `data.jsonl`: Table records.
 - Assets and sub-directories (Sub-pages).
 
 ### Hierarchical Tree
-The API will provide a tree structure of all nodes, allowing the frontend to render a single, unified sidebar. This replaces the distinct "Pages" and "Databases" silos.
+The API will provide a tree structure of all nodes, allowing the frontend to render a single, unified sidebar. This replaces the distinct "Pages" and "Tables" silos.
 
 ### Component-based Views
-The UI will be refactored into modular "Views". A single Page can display its markdown content followed by one or more views (Table, etc.) of its own database records or even linked records from other nodes.
+The UI will be refactored into modular "Views". A single Page can display its markdown content followed by one or more views (Table, etc.) of its own table records or even linked records from other nodes.
 
 ## Multi-user Architecture (Planned)
 
@@ -113,7 +113,7 @@ Usage metrics (total bytes, page counts) will be cached in organization metadata
 
 ### In-Memory Cache
 A thread-safe, in-memory cache will be implemented to store:
-1. **Metadata**: Database schemas and organization configurations.
+1. **Metadata**: Table schemas and organization configurations.
 2. **Hot Pages**: Frequently accessed markdown content.
 3. **Record Indexes**: In-memory maps of record IDs to file positions or small record sets.
 
