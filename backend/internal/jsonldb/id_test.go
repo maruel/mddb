@@ -57,67 +57,69 @@ func TestID(t *testing.T) {
 		})
 	})
 
-	t.Run("NewIDSlice", func(t *testing.T) {
-		t.Run("instance 0 of 3", func(t *testing.T) {
-			// Reset state to ensure we start fresh for this test
-			idMu.Lock()
-			idLastT10us = 0
-			idMu.Unlock()
-
-			id1 := NewIDSlice(0, 3)
-			if id1.Slice()%3 != 0 {
-				t.Errorf("ID1 slice %d not matching instance 0 (mod 3)", id1.Slice())
-			}
-
-			// Force same interval logic if possible, or just check modulo
-			// It's hard to guarantee same interval, but if we call fast enough:
-			id2 := NewIDSlice(0, 3)
-			if id2.Slice()%3 != 0 {
-				t.Errorf("ID2 slice %d not matching instance 0 (mod 3)", id2.Slice())
-			}
-
-			// Verify increment if in same interval
-			if id1.Time().Equal(id2.Time()) {
-				if id2.Slice() != id1.Slice()+3 {
-					t.Errorf("Slice did not increment by stride 3: %d -> %d", id1.Slice(), id2.Slice())
-				}
-			}
+	t.Run("InitIDSlice", func(t *testing.T) {
+		// Cleanup after this test block to restore default state
+		t.Cleanup(func() {
+			_ = InitIDSlice(0, 1)
 		})
 
-		t.Run("instance 1 of 3", func(t *testing.T) {
-			// Reset state
-			idMu.Lock()
-			idLastT10us = 0
-			idMu.Unlock()
-
-			id1 := NewIDSlice(1, 3)
-			if id1.Slice()%3 != 1 {
-				t.Errorf("ID1 slice %d not matching instance 1 (mod 3)", id1.Slice())
+		t.Run("valid inputs", func(t *testing.T) {
+			if err := InitIDSlice(0, 1); err != nil {
+				t.Errorf("InitIDSlice(0, 1) failed: %v", err)
 			}
-
-			id2 := NewIDSlice(1, 3)
-			if id2.Slice()%3 != 1 {
-				t.Errorf("ID2 slice %d not matching instance 1 (mod 3)", id2.Slice())
+			if err := InitIDSlice(0, 3); err != nil {
+				t.Errorf("InitIDSlice(0, 3) failed: %v", err)
 			}
-		})
-
-		t.Run("instance 2 of 3", func(t *testing.T) {
-			// Reset state
-			idMu.Lock()
-			idLastT10us = 0
-			idMu.Unlock()
-
-			id1 := NewIDSlice(2, 3)
-			if id1.Slice()%3 != 2 {
-				t.Errorf("ID1 slice %d not matching instance 2 (mod 3)", id1.Slice())
+			if err := InitIDSlice(2, 3); err != nil {
+				t.Errorf("InitIDSlice(2, 3) failed: %v", err)
 			}
 		})
 
 		t.Run("invalid inputs", func(t *testing.T) {
-			id := NewIDSlice(0, 0) // Should default to 1
-			// It behaves like NewID()
-			if id == 0 {
-				t.Error("NewIDSlice(0, 0) returned zero ID")
+			tests := []struct {
+				name        string
+				inst, total int
+			}{
+				{"zero total", 0, 0},
+				{"negative total", 0, -1},
+				{"negative instance", -1, 1},
+				{"instance equal total", 1, 1},
+				{"instance greater total", 2, 1},
+				{"total too large", 0, 2049},
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					if err := InitIDSlice(tt.inst, tt.total); err == nil {
+						t.Errorf("InitIDSlice(%d, %d) expected error, got nil", tt.inst, tt.total)
+					}
+				})
+			}
+		})
+
+		t.Run("NewID behavior after init", func(t *testing.T) {
+			// Initialize for instance 1 of 3
+			if err := InitIDSlice(1, 3); err != nil {
+				t.Fatalf("InitIDSlice failed: %v", err)
+			}
+
+			// First ID should be at slice 1 (mod 3)
+			id1 := NewID()
+			if id1.Slice()%3 != 1 {
+				t.Errorf("ID1 slice %d not matching instance 1 (mod 3)", id1.Slice())
+			}
+
+			// Generate another ID, quickly to try for same interval
+			id2 := NewID()
+			if id2.Slice()%3 != 1 {
+				t.Errorf("ID2 slice %d not matching instance 1 (mod 3)", id2.Slice())
+			}
+
+			// If in same interval, verify stride
+			if id1.Time().Equal(id2.Time()) {
+				if id2.Slice() != id1.Slice()+3 {
+					t.Errorf("Slice did not increment by stride 3: %d -> %d", id1.Slice(), id2.Slice())
+				}
 			}
 		})
 	})

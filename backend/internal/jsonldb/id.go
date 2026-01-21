@@ -2,6 +2,7 @@ package jsonldb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -58,10 +59,41 @@ func init() {
 type ID uint64
 
 var (
-	idMu        sync.Mutex
-	idLastT10us int64
-	idSlice     uint16
+	idMu             sync.Mutex
+	idLastT10us      int64
+	idSlice          uint16
+	idInstanceID     int = 0
+	idTotalInstances int = 1
 )
+
+// InitIDSlice initializes the ID generator for distributed usage.
+//
+// It configures the generator to share the slice space among multiple instances.
+// instanceID must be between 0 and totalInstances-1.
+// totalInstances must be between 1 and 2048 (the maximum slice capacity).
+//
+// This function should be called once at process startup.
+func InitIDSlice(instanceID, totalInstances int) error {
+	if totalInstances < 1 {
+		return errors.New("totalInstances must be at least 1")
+	}
+	if totalInstances > (sliceMask + 1) {
+		return fmt.Errorf("totalInstances %d exceeds maximum slice capacity %d", totalInstances, sliceMask+1)
+	}
+	if instanceID < 0 || instanceID >= totalInstances {
+		return fmt.Errorf("instanceID %d must be in range [0, %d)", instanceID, totalInstances)
+	}
+
+	idMu.Lock()
+	defer idMu.Unlock()
+
+	idInstanceID = instanceID
+	idTotalInstances = totalInstances
+	// Reset state to ensure next ID respects the new configuration
+	idLastT10us = 0
+	idSlice = 0
+	return nil
+}
 
 // NewID generates a new time-based ID.
 //
@@ -70,20 +102,6 @@ var (
 // If the slice overflows (>2047 IDs in one 10µs interval), it spins until the
 // next interval to maintain uniqueness.
 func NewID() ID {
-	return NewIDSlice(0, 1)
-}
-
-// NewIDSlice generates a new time-based ID with support for multiple instances.
-//
-// instanceID is the ID of the current process/instance (0 to totalInstances-1).
-// totalInstances is the total number of parallel instances running.
-//
-// This allows multiple processes to generate unique IDs without coordination
-// by partitioning the slice space.
-func NewIDSlice(instanceID, totalInstances int) ID {
-	if totalInstances <= 0 {
-		totalInstances = 1
-	}
 	idMu.Lock()
 	for {
 		t10us := max(0, time.Now().UnixMicro()/10-epoch)
@@ -91,14 +109,14 @@ func NewIDSlice(instanceID, totalInstances int) ID {
 		if t10us != idLastT10us {
 			// New interval: reset slice to instanceID
 			idLastT10us = t10us
-			idSlice = uint16(instanceID % totalInstances)                   //nolint:gosec // safe modulo
+			idSlice = uint16(idInstanceID)                                  //nolint:gosec // idInstanceID validated in InitIDSlice
 			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion) //nolint:gosec // t10us guaranteed non-negative
 			idMu.Unlock()
 			return id
 		}
 
 		// Same 10µs interval: increment slice by stride
-		idSlice += uint16(totalInstances) //nolint:gosec // intentional wrap/overflow check happens next
+		idSlice += uint16(idTotalInstances) //nolint:gosec // intentional wrap/overflow check happens next
 		if idSlice <= sliceMask {
 			id := newIDFromParts(uint64(t10us), uint64(idSlice), idVersion) //nolint:gosec // t10us guaranteed non-negative
 			idMu.Unlock()
