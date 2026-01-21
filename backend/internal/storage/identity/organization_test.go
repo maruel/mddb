@@ -8,6 +8,103 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/infra"
 )
 
+func TestOrganization(t *testing.T) {
+	t.Run("Validate", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			valid := &Organization{
+				ID:   jsonldb.ID(1),
+				Name: "Test Org",
+			}
+			if err := valid.Validate(); err != nil {
+				t.Errorf("Expected valid organization, got error: %v", err)
+			}
+		})
+
+		t.Run("zero ID", func(t *testing.T) {
+			zeroID := &Organization{
+				ID:   jsonldb.ID(0),
+				Name: "Test Org",
+			}
+			if err := zeroID.Validate(); err == nil {
+				t.Error("Expected error for zero ID")
+			}
+		})
+
+		t.Run("empty name", func(t *testing.T) {
+			emptyName := &Organization{
+				ID:   jsonldb.ID(1),
+				Name: "",
+			}
+			if err := emptyName.Validate(); err == nil {
+				t.Error("Expected error for empty name")
+			}
+		})
+	})
+
+	t.Run("Clone", func(t *testing.T) {
+		t.Run("with AllowedDomains", func(t *testing.T) {
+			original := &Organization{
+				ID:   jsonldb.ID(1),
+				Name: "Test Org",
+				Settings: OrganizationSettings{
+					AllowedDomains: []string{"example.com", "test.com"},
+					PublicAccess:   true,
+				},
+			}
+
+			clone := original.Clone()
+
+			if clone.ID != original.ID {
+				t.Error("Clone ID should match")
+			}
+			if clone.Name != original.Name {
+				t.Error("Clone Name should match")
+			}
+
+			clone.Settings.AllowedDomains[0] = "modified.com"
+			if original.Settings.AllowedDomains[0] == "modified.com" {
+				t.Error("Clone AllowedDomains should be independent of original")
+			}
+		})
+
+		t.Run("nil AllowedDomains", func(t *testing.T) {
+			noAllowed := &Organization{
+				ID:   jsonldb.ID(1),
+				Name: "No Domains",
+			}
+			cloneNoAllowed := noAllowed.Clone()
+			if cloneNoAllowed.Settings.AllowedDomains != nil {
+				t.Error("Clone of nil AllowedDomains should be nil")
+			}
+		})
+	})
+
+	t.Run("GetID", func(t *testing.T) {
+		org := &Organization{ID: jsonldb.ID(42)}
+		if org.GetID() != jsonldb.ID(42) {
+			t.Errorf("GetID() = %v, want %v", org.GetID(), jsonldb.ID(42))
+		}
+	})
+}
+
+func TestGitRemote(t *testing.T) {
+	t.Run("IsZero", func(t *testing.T) {
+		t.Run("empty URL", func(t *testing.T) {
+			empty := &GitRemote{}
+			if !empty.IsZero() {
+				t.Error("Expected IsZero() = true for empty GitRemote")
+			}
+		})
+
+		t.Run("configured URL", func(t *testing.T) {
+			configured := &GitRemote{URL: "https://github.com/example/repo.git"}
+			if configured.IsZero() {
+				t.Error("Expected IsZero() = false for configured GitRemote")
+			}
+		})
+	})
+}
+
 func TestOrganizationService(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -23,12 +120,12 @@ func TestOrganizationService(t *testing.T) {
 
 	var org, org2 *Organization
 
-	t.Run("CreateOrganization", func(t *testing.T) {
-		t.Run("valid name", func(t *testing.T) {
+	t.Run("Create", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
 			var createErr error
 			org, createErr = service.Create(t.Context(), "Test Organization")
 			if createErr != nil {
-				t.Fatalf("CreateOrganization failed: %v", createErr)
+				t.Fatalf("Create failed: %v", createErr)
 			}
 
 			if org.Name != "Test Organization" {
@@ -59,23 +156,23 @@ func TestOrganizationService(t *testing.T) {
 			var createErr error
 			org2, createErr = service.Create(t.Context(), "Second Org")
 			if createErr != nil {
-				t.Fatalf("CreateOrganization (second) failed: %v", createErr)
+				t.Fatalf("Create (second) failed: %v", createErr)
 			}
 		})
 	})
 
-	t.Run("GetOrganization", func(t *testing.T) {
-		t.Run("existing ID", func(t *testing.T) {
+	t.Run("Get", func(t *testing.T) {
+		t.Run("existing", func(t *testing.T) {
 			retrieved, getErr := service.Get(org.ID)
 			if getErr != nil {
-				t.Fatalf("GetOrganization failed: %v", getErr)
+				t.Fatalf("Get failed: %v", getErr)
 			}
 			if retrieved.Name != "Test Organization" {
 				t.Errorf("Retrieved Name = %q, want %q", retrieved.Name, "Test Organization")
 			}
 		})
 
-		t.Run("non-existent ID", func(t *testing.T) {
+		t.Run("non-existent", func(t *testing.T) {
 			_, getErr := service.Get(jsonldb.ID(99999))
 			if getErr == nil {
 				t.Error("Expected error for non-existent organization")
@@ -83,19 +180,18 @@ func TestOrganizationService(t *testing.T) {
 		})
 	})
 
-	t.Run("ModifySettings", func(t *testing.T) {
-		newSettings := OrganizationSettings{
-			AllowedDomains: []string{"example.com"},
-			PublicAccess:   true,
-		}
-
-		t.Run("existing organization", func(t *testing.T) {
-			_, modifyErr := service.Modify(org.ID, func(o *Organization) error {
+	t.Run("Modify", func(t *testing.T) {
+		t.Run("settings", func(t *testing.T) {
+			newSettings := OrganizationSettings{
+				AllowedDomains: []string{"example.com"},
+				PublicAccess:   true,
+			}
+			_, modErr := service.Modify(org.ID, func(o *Organization) error {
 				o.Settings = newSettings
 				return nil
 			})
-			if modifyErr != nil {
-				t.Fatalf("Modify failed: %v", modifyErr)
+			if modErr != nil {
+				t.Fatalf("Modify failed: %v", modErr)
 			}
 
 			updatedOrg, _ := service.Get(org.ID)
@@ -107,30 +203,17 @@ func TestOrganizationService(t *testing.T) {
 			}
 		})
 
-		t.Run("non-existent organization", func(t *testing.T) {
-			_, modifyErr := service.Modify(jsonldb.ID(99999), func(o *Organization) error {
-				o.Settings = newSettings
-				return nil
-			})
-			if modifyErr == nil {
-				t.Error("Expected error when modifying non-existent org")
+		t.Run("onboarding", func(t *testing.T) {
+			newState := OnboardingState{
+				Completed: true,
+				Step:      "done",
 			}
-		})
-	})
-
-	t.Run("ModifyOnboarding", func(t *testing.T) {
-		newState := OnboardingState{
-			Completed: true,
-			Step:      "done",
-		}
-
-		t.Run("existing organization", func(t *testing.T) {
-			_, modifyErr := service.Modify(org2.ID, func(o *Organization) error {
+			_, modErr := service.Modify(org2.ID, func(o *Organization) error {
 				o.Onboarding = newState
 				return nil
 			})
-			if modifyErr != nil {
-				t.Fatalf("Modify failed: %v", modifyErr)
+			if modErr != nil {
+				t.Fatalf("Modify failed: %v", modErr)
 			}
 
 			updatedOrg2, _ := service.Get(org2.ID)
@@ -142,13 +225,21 @@ func TestOrganizationService(t *testing.T) {
 			}
 		})
 
-		t.Run("non-existent organization", func(t *testing.T) {
-			_, modifyErr := service.Modify(jsonldb.ID(99999), func(o *Organization) error {
-				o.Onboarding = newState
+		t.Run("non-existent", func(t *testing.T) {
+			_, modErr := service.Modify(jsonldb.ID(99999), func(o *Organization) error {
 				return nil
 			})
-			if modifyErr == nil {
+			if modErr == nil {
 				t.Error("Expected error when modifying non-existent org")
+			}
+		})
+
+		t.Run("zero ID", func(t *testing.T) {
+			_, modErr := service.Modify(jsonldb.ID(0), func(o *Organization) error {
+				return nil
+			})
+			if modErr == nil {
+				t.Error("Expected error when modifying with zero ID")
 			}
 		})
 	})
@@ -157,7 +248,6 @@ func TestOrganizationService(t *testing.T) {
 		persistDir := t.TempDir()
 		tablePath := filepath.Join(persistDir, "organizations.jsonl")
 
-		// Create service and add organization
 		fs1, _ := infra.NewFileStore(persistDir)
 		svc1, svcErr := NewOrganizationService(tablePath, persistDir, fs1, nil)
 		if svcErr != nil {
@@ -178,7 +268,6 @@ func TestOrganizationService(t *testing.T) {
 			t.Fatal(svc2Err)
 		}
 
-		// Verify organization persisted
 		retrieved, getErr := svc2.Get(orgID)
 		if getErr != nil {
 			t.Fatalf("Failed to retrieve persisted organization: %v", getErr)
