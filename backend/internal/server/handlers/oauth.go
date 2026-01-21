@@ -18,15 +18,17 @@ import (
 // OAuthHandler handles OAuth2 authentication for multiple providers.
 type OAuthHandler struct {
 	userService *identity.UserService
+	memService  *identity.MembershipService
 	orgService  *identity.OrganizationService
 	authHandler *AuthHandler
 	providers   map[string]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
-func NewOAuthHandler(userService *identity.UserService, orgService *identity.OrganizationService, authHandler *AuthHandler) *OAuthHandler {
+func NewOAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, authHandler *AuthHandler) *OAuthHandler {
 	return &OAuthHandler{
 		userService: userService,
+		memService:  memService,
 		orgService:  orgService,
 		authHandler: authHandler,
 		providers:   make(map[string]*oauth2.Config),
@@ -151,17 +153,16 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			// Create new user if not found
 			orgName := userInfo.Name + "'s Organization"
 			org, _ := h.orgService.CreateOrganization(r.Context(), orgName)
-			role := entity.UserRoleAdmin
 
 			// Password is not used for OAuth users
 			password, _ := utils.GenerateToken(32)
-			user, err = h.userService.CreateUser(userInfo.Email, password, userInfo.Name, role)
+			user, err = h.userService.CreateUser(userInfo.Email, password, userInfo.Name)
 			if err != nil {
 				writeErrorResponse(w, dto.Internal("user_creation"))
 				return
 			}
 			if org != nil && !org.ID.IsZero() {
-				_ = h.userService.UpdateUserRole(user.ID, org.ID, role)
+				_, _ = h.memService.CreateMembership(user.ID, org.ID, entity.UserRoleAdmin)
 			}
 		}
 

@@ -14,14 +14,16 @@ import (
 // AuthHandler handles authentication requests.
 type AuthHandler struct {
 	userService *identity.UserService
+	memService  *identity.MembershipService
 	orgService  *identity.OrganizationService
 	jwtSecret   []byte
 }
 
 // NewAuthHandler creates a new auth handler.
-func NewAuthHandler(userService *identity.UserService, orgService *identity.OrganizationService, jwtSecret string) *AuthHandler {
+func NewAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, jwtSecret string) *AuthHandler {
 	return &AuthHandler{
 		userService: userService,
+		memService:  memService,
 		orgService:  orgService,
 		jwtSecret:   []byte(jwtSecret),
 	}
@@ -44,7 +46,7 @@ func (h *AuthHandler) Login(ctx context.Context, req dto.LoginRequest) (*dto.Log
 	}
 
 	// Build user response
-	uwm, err := h.userService.GetUserWithMemberships(user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -79,15 +81,14 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create organization", err)
 	}
-	orgID := org.ID
 
-	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name, entity.UserRoleAdmin)
+	user, err := h.userService.CreateUser(req.Email, req.Password, req.Name)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create user", err)
 	}
 
 	// Create initial membership (admin of their own org)
-	if err := h.userService.UpdateUserRole(user.ID, orgID, entity.UserRoleAdmin); err != nil {
+	if _, err := h.memService.CreateMembership(user.ID, org.ID, entity.UserRoleAdmin); err != nil {
 		return nil, dto.InternalWithError("Failed to create initial membership", err)
 	}
 
@@ -97,7 +98,7 @@ func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*d
 	}
 
 	// Build user response with memberships
-	uwm, err := h.userService.GetUserWithMemberships(user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -130,7 +131,7 @@ func (h *AuthHandler) GenerateToken(user *entity.User) (string, error) {
 // Me returns the current user info.
 func (h *AuthHandler) Me(ctx context.Context, _ jsonldb.ID, user *entity.User, req dto.MeRequest) (*dto.UserResponse, error) {
 	// Build user response with memberships
-	uwm, err := h.userService.GetUserWithMemberships(user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}

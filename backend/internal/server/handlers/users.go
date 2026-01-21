@@ -12,12 +12,16 @@ import (
 // UserHandler handles user management requests.
 type UserHandler struct {
 	userService *identity.UserService
+	memService  *identity.MembershipService
+	orgService  *identity.OrganizationService
 }
 
 // NewUserHandler creates a new user handler.
-func NewUserHandler(userService *identity.UserService) *UserHandler {
+func NewUserHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService) *UserHandler {
 	return &UserHandler{
 		userService: userService,
+		memService:  memService,
+		orgService:  orgService,
 	}
 }
 
@@ -25,10 +29,14 @@ func NewUserHandler(userService *identity.UserService) *UserHandler {
 func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
 	// Filter by organization membership and convert to response
 	var users []dto.UserResponse
-	for uwm := range h.userService.IterWithMemberships() {
+	for user := range h.userService.Iter() {
+		uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
+		if err != nil {
+			continue
+		}
 		for _, m := range uwm.Memberships {
 			if m.OrganizationID == orgID {
-				users = append(users, *userWithMembershipsToResponse(&uwm))
+				users = append(users, *userWithMembershipsToResponse(uwm))
 				break
 			}
 		}
@@ -46,10 +54,15 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *e
 	if err != nil {
 		return nil, err
 	}
-	if err := h.userService.UpdateUserRole(userID, orgID, userRoleToEntity(req.Role)); err != nil {
-		return nil, dto.InternalWithError("Failed to update user role", err)
+
+	// Update or create membership
+	if err := h.memService.UpdateRole(userID, orgID, userRoleToEntity(req.Role)); err != nil {
+		if _, err = h.memService.CreateMembership(userID, orgID, userRoleToEntity(req.Role)); err != nil {
+			return nil, dto.InternalWithError("Failed to update user role", err)
+		}
 	}
-	uwm, err := h.userService.GetUserWithMemberships(userID)
+
+	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, userID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}
@@ -61,7 +74,7 @@ func (h *UserHandler) UpdateUserSettings(ctx context.Context, _ jsonldb.ID, user
 	if err := h.userService.UpdateSettings(user.ID, userSettingsToEntity(req.Settings)); err != nil {
 		return nil, dto.InternalWithError("Failed to update settings", err)
 	}
-	uwm, err := h.userService.GetUserWithMemberships(user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}

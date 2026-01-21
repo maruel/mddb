@@ -14,8 +14,8 @@ func TestRegister(t *testing.T) {
 	fileStore, _ := infra.NewFileStore(tempDir)
 	memService, _ := identity.NewMembershipService(tempDir)
 	orgService, _ := identity.NewOrganizationService(tempDir, fileStore, nil)
-	userService, _ := identity.NewUserService(tempDir, memService, orgService)
-	authHandler := NewAuthHandler(userService, orgService, "secret")
+	userService, _ := identity.NewUserService(tempDir)
+	authHandler := NewAuthHandler(userService, memService, orgService, "secret")
 	ctx := t.Context()
 
 	// Register Joe

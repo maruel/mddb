@@ -19,6 +19,9 @@ var (
 )
 
 // OrganizationService handles organization management.
+//
+// An Organization owns a file storage that is managed by git. Users can be member of this organization via a
+// Membership.
 type OrganizationService struct {
 	rootDir    string
 	table      *jsonldb.Table[*entity.Organization]

@@ -325,9 +325,42 @@ func onboardingStateToEntity(o dto.OnboardingState) entity.OnboardingState {
 	}
 }
 
-// --- Storage wrapper type conversions ---
+// --- User with memberships aggregation ---
 
-func membershipWithOrgNameToResponse(m *identity.MembershipWithOrgName) dto.MembershipResponse {
+// membershipWithOrgName wraps a membership with its organization name.
+type membershipWithOrgName struct {
+	entity.Membership
+	OrganizationName string
+}
+
+// userWithMemberships wraps a user with their memberships.
+type userWithMemberships struct {
+	User        *entity.User
+	Memberships []membershipWithOrgName
+}
+
+// getUserWithMemberships fetches a user and their memberships with org names.
+func getUserWithMemberships(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, userID jsonldb.ID) (*userWithMemberships, error) {
+	user, err := userService.GetUser(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	var mems []membershipWithOrgName
+	if memIter, err := memService.Iter(userID); err == nil {
+		for m := range memIter {
+			mwon := membershipWithOrgName{Membership: *m}
+			if org, err := orgService.GetOrganization(m.OrganizationID); err == nil {
+				mwon.OrganizationName = org.Name
+			}
+			mems = append(mems, mwon)
+		}
+	}
+
+	return &userWithMemberships{User: user, Memberships: mems}, nil
+}
+
+func membershipWithOrgNameToResponse(m *membershipWithOrgName) dto.MembershipResponse {
 	return dto.MembershipResponse{
 		ID:               m.ID.String(),
 		UserID:           m.UserID.String(),
@@ -339,7 +372,7 @@ func membershipWithOrgNameToResponse(m *identity.MembershipWithOrgName) dto.Memb
 	}
 }
 
-func membershipsWithOrgNameToResponse(mems []identity.MembershipWithOrgName) []dto.MembershipResponse {
+func membershipsWithOrgNameToResponse(mems []membershipWithOrgName) []dto.MembershipResponse {
 	result := make([]dto.MembershipResponse, len(mems))
 	for i := range mems {
 		result[i] = membershipWithOrgNameToResponse(&mems[i])
@@ -347,7 +380,7 @@ func membershipsWithOrgNameToResponse(mems []identity.MembershipWithOrgName) []d
 	return result
 }
 
-func userWithMembershipsToResponse(uwm *identity.UserWithMemberships) *dto.UserResponse {
+func userWithMembershipsToResponse(uwm *userWithMemberships) *dto.UserResponse {
 	resp := userToResponse(uwm.User)
 	resp.Memberships = membershipsWithOrgNameToResponse(uwm.Memberships)
 	return resp

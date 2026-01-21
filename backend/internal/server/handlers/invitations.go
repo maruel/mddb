@@ -76,7 +76,7 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req dto.Accept
 		if req.Password == "" || req.Name == "" {
 			return nil, dto.MissingField("password and name required for new account")
 		}
-		user, err = h.userService.CreateUser(inv.Email, req.Password, req.Name, inv.Role)
+		user, err = h.userService.CreateUser(inv.Email, req.Password, req.Name)
 		if err != nil {
 			return nil, dto.InternalWithError("Failed to create user", err)
 		}
@@ -91,7 +91,7 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req dto.Accept
 	_ = h.invService.DeleteInvitation(inv.ID)
 
 	// Build user response
-	uwm, err := h.userService.GetUserWithMemberships(user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}

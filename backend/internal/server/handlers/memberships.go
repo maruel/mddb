@@ -13,14 +13,16 @@ import (
 type MembershipHandler struct {
 	memService  *identity.MembershipService
 	userService *identity.UserService
+	orgService  *identity.OrganizationService
 	authHandler *AuthHandler
 }
 
 // NewMembershipHandler creates a new membership handler.
-func NewMembershipHandler(memService *identity.MembershipService, userService *identity.UserService, authHandler *AuthHandler) *MembershipHandler {
+func NewMembershipHandler(memService *identity.MembershipService, userService *identity.UserService, orgService *identity.OrganizationService, authHandler *AuthHandler) *MembershipHandler {
 	return &MembershipHandler{
 		memService:  memService,
 		userService: userService,
+		orgService:  orgService,
 		authHandler: authHandler,
 	}
 }
@@ -43,7 +45,7 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *e
 	}
 
 	// Build user response with memberships
-	uwm, err := h.userService.GetUserWithMemberships(user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}

@@ -31,10 +31,10 @@ func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *i
 	nh := handlers.NewNodeHandler(fileStore, gitService, orgService)
 	ah := handlers.NewAssetHandler(fileStore, gitService, orgService)
 	sh := handlers.NewSearchHandler(fileStore)
-	authh := handlers.NewAuthHandler(userService, orgService, jwtSecret)
-	uh := handlers.NewUserHandler(userService)
+	authh := handlers.NewAuthHandler(userService, memService, orgService, jwtSecret)
+	uh := handlers.NewUserHandler(userService, memService, orgService)
 	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
-	mh := handlers.NewMembershipHandler(memService, userService, authh)
+	mh := handlers.NewMembershipHandler(memService, userService, orgService, authh)
 	orgh := handlers.NewOrganizationHandler(orgService)
 	grh := handlers.NewGitRemoteHandler(orgService, gitService, orgService.RootDir())
 
@@ -72,7 +72,7 @@ func NewRouter(fileStore *infra.FileStore, gitService *infra.Git, userService *i
 
 	// OAuth endpoints (public)
 	if (googleClientID != "" && googleClientSecret != "") || (msClientID != "" && msClientSecret != "") {
-		oh := handlers.NewOAuthHandler(userService, orgService, authh)
+		oh := handlers.NewOAuthHandler(userService, memService, orgService, authh)
 		base := strings.TrimRight(baseURL, "/")
 		if googleClientID != "" && googleClientSecret != "" {
 			oh.AddProvider("google", googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")

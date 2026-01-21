@@ -24,19 +24,16 @@ var (
 	errUserIDRequired   = errors.New("id is required")
 	errEmailPwdRequired = errors.New("email and password are required")
 	errUserExists       = errors.New("user already exists")
-	errMemSvcNotInit    = errors.New("membership service not initialized")
 	errInvalidCreds     = errors.New("invalid credentials")
 )
 
 // UserService handles user management and authentication.
 type UserService struct {
-	table      *jsonldb.Table[*userStorage]
-	memService *MembershipService
-	orgService *OrganizationService
+	table *jsonldb.Table[*userStorage]
 }
 
 // NewUserService creates a new user service.
-func NewUserService(rootDir string, memService *MembershipService, orgService *OrganizationService) (*UserService, error) {
+func NewUserService(rootDir string) (*UserService, error) {
 	dbDir := filepath.Join(rootDir, "db")
 	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
@@ -48,11 +45,7 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 		return nil, err
 	}
 
-	return &UserService{
-		table:      table,
-		memService: memService,
-		orgService: orgService,
-	}, nil
+	return &UserService{table: table}, nil
 }
 
 type userStorage struct {
@@ -86,7 +79,7 @@ func (u *userStorage) Validate() error {
 }
 
 // CreateUser creates a new user.
-func (s *UserService) CreateUser(email, password, name string, role entity.UserRole) (*entity.User, error) {
+func (s *UserService) CreateUser(email, password, name string) (*entity.User, error) {
 	if email == "" || password == "" {
 		return nil, errEmailPwdRequired
 	}
@@ -122,27 +115,6 @@ func (s *UserService) CreateUser(email, password, name string, role entity.UserR
 	return &user, nil
 }
 
-// UpdateUserRole updates the role of a user in a specific organization.
-func (s *UserService) UpdateUserRole(userID, orgID jsonldb.ID, role entity.UserRole) error {
-	if userID.IsZero() {
-		return errUserIDEmpty
-	}
-	if orgID.IsZero() {
-		return errOrgIDEmpty
-	}
-	if s.memService == nil {
-		return errMemSvcNotInit
-	}
-
-	// Update membership
-	if err := s.memService.UpdateRole(userID, orgID, role); err != nil {
-		// If membership doesn't exist, create it
-		_, err = s.memService.CreateMembership(userID, orgID, role)
-		return err
-	}
-	return nil
-}
-
 // GetUser retrieves a user by ID.
 func (s *UserService) GetUser(id jsonldb.ID) (*entity.User, error) {
 	if id.IsZero() {
@@ -154,66 +126,6 @@ func (s *UserService) GetUser(id jsonldb.ID) (*entity.User, error) {
 	}
 	user := stored.User
 	return &user, nil
-}
-
-// MembershipWithOrgName wraps a membership with its organization name.
-type MembershipWithOrgName struct {
-	entity.Membership
-	OrganizationName string
-}
-
-// IterMemberships iterates over memberships with organization names populated.
-func (s *UserService) IterMemberships(userID jsonldb.ID) (iter.Seq[MembershipWithOrgName], error) {
-	if s.memService == nil {
-		return func(yield func(MembershipWithOrgName) bool) {}, nil
-	}
-
-	mems, err := s.memService.Iter(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	return func(yield func(MembershipWithOrgName) bool) {
-		for m := range mems {
-			result := MembershipWithOrgName{Membership: *m}
-			if s.orgService != nil {
-				org, err := s.orgService.GetOrganization(m.OrganizationID)
-				if err == nil {
-					result.OrganizationName = org.Name
-				}
-			}
-			if !yield(result) {
-				return
-			}
-		}
-	}, nil
-}
-
-// UserWithMemberships wraps a user with their memberships.
-type UserWithMemberships struct {
-	User        *entity.User
-	Memberships []MembershipWithOrgName
-}
-
-// GetUserWithMemberships retrieves a user by ID with their memberships.
-func (s *UserService) GetUserWithMemberships(id jsonldb.ID) (*UserWithMemberships, error) {
-	user, err := s.GetUser(id)
-	if err != nil {
-		return nil, err
-	}
-
-	// Memberships are supplementary; continue with empty list on error.
-	var mems []MembershipWithOrgName
-	if memIter, err := s.IterMemberships(id); err == nil {
-		for m := range memIter {
-			mems = append(mems, m)
-		}
-	}
-
-	return &UserWithMemberships{
-		User:        user,
-		Memberships: mems,
-	}, nil
 }
 
 // GetUserByEmail retrieves a user by email.
@@ -301,30 +213,12 @@ func (s *UserService) UpdateSettings(id jsonldb.ID, settings entity.UserSettings
 	return err
 }
 
-// Iter iterates over all users (domain models without runtime fields).
+// Iter iterates over all users.
 func (s *UserService) Iter() iter.Seq[*entity.User] {
 	return func(yield func(*entity.User) bool) {
 		for stored := range s.table.Iter(0) {
 			user := stored.User
 			if !yield(&user) {
-				return
-			}
-		}
-	}
-}
-
-// IterWithMemberships iterates over all users with their memberships.
-func (s *UserService) IterWithMemberships() iter.Seq[UserWithMemberships] {
-	return func(yield func(UserWithMemberships) bool) {
-		for user := range s.Iter() {
-			// Memberships are supplementary; continue with empty list on error.
-			var mems []MembershipWithOrgName
-			if memIter, err := s.IterMemberships(user.ID); err == nil {
-				for m := range memIter {
-					mems = append(mems, m)
-				}
-			}
-			if !yield(UserWithMemberships{User: user, Memberships: mems}) {
 				return
 			}
 		}
