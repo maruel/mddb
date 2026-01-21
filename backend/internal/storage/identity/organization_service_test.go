@@ -144,12 +144,6 @@ func TestOrganizationService(t *testing.T) {
 		})
 	})
 
-	t.Run("RootDir", func(t *testing.T) {
-		if service.RootDir() != tempDir {
-			t.Errorf("RootDir() = %q, want %q", service.RootDir(), tempDir)
-		}
-	})
-
 	t.Run("Persistence", func(t *testing.T) {
 		persistDir := t.TempDir()
 

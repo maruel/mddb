@@ -135,11 +135,6 @@ func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state entity.Onboa
 	return err
 }
 
-// RootDir returns the root directory of the organization service.
-func (s *OrganizationService) RootDir() string {
-	return s.rootDir
-}
-
 // GetGitRemote returns the git remote for an organization, or nil if none is configured.
 func (s *OrganizationService) GetGitRemote(id jsonldb.ID) *entity.GitRemote {
 	org := s.table.Get(id)

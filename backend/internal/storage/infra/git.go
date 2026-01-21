@@ -254,6 +254,11 @@ func (gs *Git) gitOutputBytesInDir(dir string, args ...string) ([]byte, error) {
 	return cmd.Output()
 }
 
+// OrgDir returns the directory path for an organization's repository.
+func (gs *Git) OrgDir(orgID jsonldb.ID) string {
+	return filepath.Join(gs.repoDir, orgID.String())
+}
+
 // AddRemote adds a remote to the repository in the target directory.
 func (gs *Git) AddRemote(dir, name, url string) error {
 	// Check if remote already exists

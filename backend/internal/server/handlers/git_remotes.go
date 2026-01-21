@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -21,15 +20,13 @@ const gitRemoteName = "origin"
 type GitRemoteHandler struct {
 	orgService *identity.OrganizationService
 	gitService *infra.Git
-	rootDir    string
 }
 
 // NewGitRemoteHandler creates a new git remote handler.
-func NewGitRemoteHandler(orgService *identity.OrganizationService, gitService *infra.Git, rootDir string) *GitRemoteHandler {
+func NewGitRemoteHandler(orgService *identity.OrganizationService, gitService *infra.Git) *GitRemoteHandler {
 	return &GitRemoteHandler{
 		orgService: orgService,
 		gitService: gitService,
-		rootDir:    rootDir,
 	}
 }
 
@@ -50,7 +47,7 @@ func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *e
 	}
 
 	// Actually add it to the local git repo
-	orgDir := filepath.Join(h.rootDir, orgID.String())
+	orgDir := h.gitService.OrgDir(orgID)
 	url := req.URL
 
 	// If token-based auth, inject token into URL if it's GitHub/GitLab
@@ -76,7 +73,7 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity
 		return nil, dto.NotFound("remote")
 	}
 
-	orgDir := filepath.Join(h.rootDir, orgID.String())
+	orgDir := h.gitService.OrgDir(orgID)
 
 	url := remote.URL
 	if remote.AuthType == "token" && remote.Token != "" {
@@ -109,7 +106,7 @@ func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _
 	}
 
 	// Also remove from local git repo
-	orgDir := filepath.Join(h.rootDir, orgID.String())
+	orgDir := h.gitService.OrgDir(orgID)
 	_ = h.execGitInDir(orgDir, "remote", "remove", gitRemoteName)
 
 	return &dto.OkResponse{Ok: true}, nil
