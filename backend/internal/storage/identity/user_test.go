@@ -5,9 +5,7 @@ import (
 )
 
 func TestUserService(t *testing.T) {
-	tempDir := t.TempDir()
-
-	service, err := NewUserService(tempDir)
+	service, err := NewUserService(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

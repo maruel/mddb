@@ -12,10 +12,44 @@ import (
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
-var (
-	errInvitationNotFound = errors.New("invitation not found")
-	errInvitationIDEmpty  = errors.New("invitation id cannot be empty")
-)
+// Invitation represents a request for a user to join an organization.
+type Invitation struct {
+	ID             jsonldb.ID `json:"id" jsonschema:"description=Unique invitation identifier"`
+	Email          string     `json:"email" jsonschema:"description=Email address of the invitee"`
+	OrganizationID jsonldb.ID `json:"organization_id" jsonschema:"description=Organization the user is invited to"`
+	Role           UserRole   `json:"role" jsonschema:"description=Role assigned upon acceptance"`
+	Token          string     `json:"token" jsonschema:"description=Secret token for invitation verification"`
+	ExpiresAt      time.Time  `json:"expires_at" jsonschema:"description=Invitation expiration timestamp"`
+	Created        time.Time  `json:"created" jsonschema:"description=Invitation creation timestamp"`
+}
+
+// Clone returns a copy of the Invitation.
+func (i *Invitation) Clone() *Invitation {
+	c := *i
+	return &c
+}
+
+// GetID returns the Invitation's ID.
+func (i *Invitation) GetID() jsonldb.ID {
+	return i.ID
+}
+
+// Validate checks that the Invitation is valid.
+func (i *Invitation) Validate() error {
+	if i.ID.IsZero() {
+		return errIDRequired
+	}
+	if i.Email == "" {
+		return errEmailEmpty
+	}
+	if i.OrganizationID.IsZero() {
+		return errOrgIDEmpty
+	}
+	if i.Token == "" {
+		return errTokenRequired
+	}
+	return nil
+}
 
 // InvitationService handles organization invitations.
 type InvitationService struct {
@@ -28,13 +62,11 @@ func NewInvitationService(rootDir string) (*InvitationService, error) {
 	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
 	}
-
 	tablePath := filepath.Join(dbDir, "invitations.jsonl")
 	table, err := jsonldb.NewTable[*Invitation](tablePath)
 	if err != nil {
 		return nil, err
 	}
-
 	return &InvitationService{table: table}, nil
 }
 
@@ -46,12 +78,10 @@ func (s *InvitationService) Create(email string, orgID jsonldb.ID, role UserRole
 	if orgID.IsZero() {
 		return nil, errOrgIDEmpty
 	}
-
 	token, err := utils.GenerateToken(32)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
-
 	invitation := &Invitation{
 		ID:             jsonldb.NewID(),
 		Email:          email,
@@ -61,11 +91,9 @@ func (s *InvitationService) Create(email string, orgID jsonldb.ID, role UserRole
 		ExpiresAt:      time.Now().Add(7 * 24 * time.Hour), // 7 days
 		Created:        time.Now(),
 	}
-
 	if err := s.table.Append(invitation); err != nil {
 		return nil, err
 	}
-
 	return invitation, nil
 }
 
@@ -84,11 +112,9 @@ func (s *InvitationService) Delete(id jsonldb.ID) error {
 	if id.IsZero() {
 		return errInvitationIDEmpty
 	}
-
 	if s.table.Get(id) == nil {
 		return errInvitationNotFound
 	}
-
 	if _, err := s.table.Delete(id); err != nil {
 		return err
 	}
@@ -108,3 +134,10 @@ func (s *InvitationService) Iter(orgID jsonldb.ID) (iter.Seq[*Invitation], error
 		}
 	}, nil
 }
+
+//
+
+var (
+	errInvitationNotFound = errors.New("invitation not found")
+	errInvitationIDEmpty  = errors.New("invitation id cannot be empty")
+)

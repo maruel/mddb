@@ -7,9 +7,7 @@ import (
 )
 
 func TestMembershipService(t *testing.T) {
-	tempDir := t.TempDir()
-
-	service, err := NewMembershipService(tempDir)
+	service, err := NewMembershipService(t.TempDir())
 	if err != nil {
 		t.Fatalf("NewMembershipService failed: %v", err)
 	}

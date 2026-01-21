@@ -19,12 +19,35 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	errUserIDRequired   = errors.New("id is required")
-	errEmailPwdRequired = errors.New("email and password are required")
-	errUserExists       = errors.New("user already exists")
-	errInvalidCreds     = errors.New("invalid credentials")
-)
+// User represents a system user (persistent fields only).
+type User struct {
+	ID              jsonldb.ID      `json:"id" jsonschema:"description=Unique user identifier"`
+	Email           string          `json:"email" jsonschema:"description=User email address"`
+	Name            string          `json:"name" jsonschema:"description=User display name"`
+	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
+	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
+	Created         time.Time       `json:"created" jsonschema:"description=Account creation timestamp"`
+	Modified        time.Time       `json:"modified" jsonschema:"description=Last modification timestamp"`
+}
+
+// GetID returns the User's ID.
+func (u *User) GetID() jsonldb.ID {
+	return u.ID
+}
+
+// UserSettings represents global user preferences.
+type UserSettings struct {
+	Theme    string `json:"theme" jsonschema:"description=UI theme preference (light/dark/system)"`
+	Language string `json:"language" jsonschema:"description=Preferred language code (en/fr/etc)"`
+}
+
+// OAuthIdentity represents a link between a local user and an OAuth2 provider.
+type OAuthIdentity struct {
+	Provider   string    `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft)"`
+	ProviderID string    `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
+	Email      string    `json:"email" jsonschema:"description=Email address from OAuth provider"`
+	LastLogin  time.Time `json:"last_login" jsonschema:"description=Last login timestamp via this provider"`
+}
 
 // UserService handles user management and authentication.
 type UserService struct {
@@ -38,13 +61,11 @@ func NewUserService(rootDir string) (*UserService, error) {
 	if err := os.MkdirAll(dbDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return nil, fmt.Errorf("failed to create db directory: %w", err)
 	}
-
 	tablePath := filepath.Join(dbDir, "users.jsonl")
 	table, err := jsonldb.NewTable[*userStorage](tablePath)
 	if err != nil {
 		return nil, err
 	}
-
 	byEmail := jsonldb.NewUniqueIndex(table, func(u *userStorage) string { return u.Email })
 	return &UserService{table: table, byEmail: byEmail}, nil
 }
@@ -84,17 +105,14 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 	if email == "" || password == "" {
 		return nil, errEmailPwdRequired
 	}
-
 	// Check if user already exists
 	if _, err := s.GetByEmail(email); err == nil {
 		return nil, errUserExists
 	}
-
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
-
 	id := jsonldb.NewID()
 	now := time.Now()
 	stored := &userStorage{
@@ -107,11 +125,9 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 		},
 		PasswordHash: string(hash),
 	}
-
 	if err := s.table.Append(stored); err != nil {
 		return nil, err
 	}
-
 	user := stored.User
 	return &user, nil
 }
@@ -191,3 +207,12 @@ func (s *UserService) Iter() iter.Seq[*User] {
 		}
 	}
 }
+
+//
+
+var (
+	errUserIDRequired   = errors.New("id is required")
+	errEmailPwdRequired = errors.New("email and password are required")
+	errUserExists       = errors.New("user already exists")
+	errInvalidCreds     = errors.New("invalid credentials")
+)

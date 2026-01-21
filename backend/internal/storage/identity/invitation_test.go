@@ -7,9 +7,7 @@ import (
 )
 
 func TestInvitationService(t *testing.T) {
-	tempDir := t.TempDir()
-
-	service, err := NewInvitationService(tempDir)
+	service, err := NewInvitationService(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
