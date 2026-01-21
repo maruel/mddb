@@ -10,6 +10,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/git"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func BenchmarkTableOperations(b *testing.B) {
@@ -22,12 +23,33 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitClient, &noopQuotaGetter{})
+	orgService, err := identity.NewOrganizationService(filepath.Join(tmpDir, "organizations.jsonl"))
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	orgID := jsonldb.ID(1) // non-zero org for tests
+	// Create a test organization with very high quotas (practically unlimited)
+	org, err := orgService.Create(ctx, "Benchmark Org")
+	if err != nil {
+		b.Fatal(err)
+	}
+	_, err = orgService.Modify(org.ID, func(o *identity.Organization) error {
+		o.Quotas.MaxPages = 1_000_000
+		o.Quotas.MaxStorage = 1_000_000_000_000 // 1TB
+		o.Quotas.MaxRecordsPerTable = 1_000_000
+		o.Quotas.MaxAssetSize = 1_000_000_000 // 1GB
+		return nil
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	fs, err := NewFileStore(tmpDir, gitClient, orgService)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	orgID := org.ID
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {

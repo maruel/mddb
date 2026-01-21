@@ -13,11 +13,9 @@ import (
 )
 
 func TestTable_ReadWrite(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
-
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -111,11 +109,9 @@ func TestTable_ReadWrite(t *testing.T) {
 }
 
 func TestTable_Exists(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
-
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -153,11 +149,9 @@ func TestTable_Exists(t *testing.T) {
 }
 
 func TestTable_List(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
-
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -211,11 +205,9 @@ func TestTable_List(t *testing.T) {
 }
 
 func TestTable_Delete(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
-
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -260,11 +252,10 @@ func TestTable_Delete(t *testing.T) {
 }
 
 func TestRecord_AppendRead(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
 
-	orgID := jsonldb.ID(100)
 	dbID := jsonldb.ID(1)
 
 	// Create org directory and initialize git repo
@@ -353,8 +344,7 @@ func TestRecord_Quota(t *testing.T) {
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
 
-	orgService := fs.quotaGetter.(*identity.OrganizationService)
-	org, err := orgService.Create(ctx, "Test Org")
+	org, err := fs.orgSvc.Create(ctx, "Test Org")
 	if err != nil {
 		t.Fatalf("Failed to create org: %v", err)
 	}
@@ -397,7 +387,7 @@ func TestRecord_Quota(t *testing.T) {
 	}
 
 	// Now try to exceed quota by setting a very small quota.
-	_, err = orgService.Modify(orgID, func(org *identity.Organization) error {
+	_, err = fs.orgSvc.Modify(orgID, func(org *identity.Organization) error {
 		org.Quotas.MaxRecordsPerTable = 1
 		return nil
 	})
@@ -418,11 +408,10 @@ func TestRecord_Quota(t *testing.T) {
 }
 
 func TestRecord_EmptyTable(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
 
-	orgID := jsonldb.ID(100)
 	dbID := jsonldb.ID(1)
 
 	// Create org directory and initialize git repo
@@ -461,11 +450,9 @@ func TestRecord_EmptyTable(t *testing.T) {
 }
 
 func TestTable_NestedPath(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
-
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {

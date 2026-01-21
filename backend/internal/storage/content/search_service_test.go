@@ -12,11 +12,10 @@ import (
 )
 
 func TestSearchService_SearchPages(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
 	searchService := NewSearchService(fs)
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -110,11 +109,10 @@ func TestSearchService_SearchPages(t *testing.T) {
 }
 
 func TestSearchService_SearchRecords(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
 	searchService := NewSearchService(fs)
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -219,11 +217,10 @@ func TestSearchService_SearchRecords(t *testing.T) {
 }
 
 func TestSearchService_Scoring(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
 	searchService := NewSearchService(fs)
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -265,11 +262,10 @@ func TestSearchService_Scoring(t *testing.T) {
 }
 
 func TestSearchService_Limit(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
 	searchService := NewSearchService(fs)
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -302,11 +298,10 @@ func TestSearchService_Limit(t *testing.T) {
 }
 
 func TestSearchService_Integration(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
 	searchService := NewSearchService(fs)
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {

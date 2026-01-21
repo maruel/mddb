@@ -12,8 +12,9 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-// testFileStore creates a FileStore for testing with a real git repo and no-op quota.
-func testFileStore(t *testing.T) *FileStore {
+// testFileStore creates a FileStore for testing with unlimited quota.
+// It also creates an org in the service for quota testing.
+func testFileStore(t *testing.T) (*FileStore, jsonldb.ID) {
 	t.Helper()
 	tmpDir := t.TempDir()
 
@@ -22,12 +23,33 @@ func testFileStore(t *testing.T) *FileStore {
 		t.Fatalf("failed to create git client: %v", err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitClient, &noopQuotaGetter{})
+	orgService, err := identity.NewOrganizationService(filepath.Join(tmpDir, "organizations.jsonl"))
+	if err != nil {
+		t.Fatalf("failed to create OrganizationService: %v", err)
+	}
+
+	// Create a test organization with very high quotas (practically unlimited)
+	org, err := orgService.Create(context.Background(), "Test Org")
+	if err != nil {
+		t.Fatalf("failed to create test org: %v", err)
+	}
+	_, err = orgService.Modify(org.ID, func(o *identity.Organization) error {
+		o.Quotas.MaxPages = 1_000_000
+		o.Quotas.MaxStorage = 1_000_000_000_000 // 1TB
+		o.Quotas.MaxRecordsPerTable = 1_000_000
+		o.Quotas.MaxAssetSize = 1_000_000_000 // 1GB
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to set unlimited quotas: %v", err)
+	}
+
+	fs, err := NewFileStore(tmpDir, gitClient, orgService)
 	if err != nil {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
 
-	return fs
+	return fs, org.ID
 }
 
 // testFileStoreWithQuota creates a FileStore with a real OrganizationService for quota testing.
@@ -53,19 +75,10 @@ func testFileStoreWithQuota(t *testing.T) *FileStore {
 	return fs
 }
 
-// noopQuotaGetter returns unlimited quotas (for testing).
-type noopQuotaGetter struct{}
-
-func (n *noopQuotaGetter) GetQuota(_ context.Context, _ jsonldb.ID) (identity.OrganizationQuota, error) {
-	return identity.OrganizationQuota{}, nil // Zero values = no limits
-}
-
 func TestFileStorePageOperations(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
-
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -149,8 +162,7 @@ func TestAsset_Quota(t *testing.T) {
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
 
-	orgService := fs.quotaGetter.(*identity.OrganizationService)
-	org, err := orgService.Create(ctx, "Test Org")
+	org, err := fs.orgSvc.Create(ctx, "Test Org")
 	if err != nil {
 		t.Fatalf("Failed to create org: %v", err)
 	}
@@ -168,7 +180,7 @@ func TestAsset_Quota(t *testing.T) {
 
 	t.Run("MaxAssetSize", func(t *testing.T) {
 		// Set small asset size quota
-		_, err = orgService.Modify(orgID, func(o *identity.Organization) error {
+		_, err = fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
 			o.Quotas.MaxAssetSize = 10
 			return nil
 		})
@@ -191,7 +203,7 @@ func TestAsset_Quota(t *testing.T) {
 
 	t.Run("MaxStorage", func(t *testing.T) {
 		// Set small total storage quota
-		_, err = orgService.Modify(orgID, func(o *identity.Organization) error {
+		_, err = fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
 			o.Quotas.MaxStorage = 100
 			o.Quotas.MaxAssetSize = 100 // Ensure single asset fits
 			return nil
@@ -223,11 +235,9 @@ func TestAsset_Quota(t *testing.T) {
 }
 
 func TestFileStoreListPages(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
-
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -278,11 +288,9 @@ func TestFileStoreListPages(t *testing.T) {
 }
 
 func TestMarkdownFormatting(t *testing.T) {
-	fs := testFileStore(t)
+	fs, orgID := testFileStore(t)
 	ctx := context.Background()
 	author := Author{Name: "Test", Email: "test@test.com"}
-
-	orgID := jsonldb.ID(100)
 
 	// Create org directory and initialize git repo
 	if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {

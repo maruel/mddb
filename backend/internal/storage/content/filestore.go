@@ -17,6 +17,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/git"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // Author identifies who made a change for git commits.
@@ -31,9 +32,9 @@ type Author struct {
 //   - Tables: ID directory containing metadata.json + data.jsonl.
 //   - Assets: files within each page's directory namespace.
 type FileStore struct {
-	rootDir     string
-	Git         *git.Client
-	quotaGetter QuotaGetter
+	rootDir string
+	Git     *git.Client
+	orgSvc  *identity.OrganizationService
 }
 
 // page is an internal type for reading/writing page markdown files.
@@ -49,22 +50,22 @@ type page struct {
 
 // NewFileStore creates a versioned file store.
 // gitClient is required - all operations are versioned.
-// quotaGetter provides quota limits for organizations.
-func NewFileStore(rootDir string, gitClient *git.Client, quotaGetter QuotaGetter) (*FileStore, error) {
+// orgSvc provides quota limits for organizations.
+func NewFileStore(rootDir string, gitClient *git.Client, orgSvc *identity.OrganizationService) (*FileStore, error) {
 	if gitClient == nil {
 		return nil, errors.New("git client is required")
 	}
-	if quotaGetter == nil {
-		return nil, errors.New("quota getter is required")
+	if orgSvc == nil {
+		return nil, errors.New("organization service is required")
 	}
 	if err := os.MkdirAll(rootDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create root directory: %w", err)
 	}
 
 	return &FileStore{
-		rootDir:     rootDir,
-		Git:         gitClient,
-		quotaGetter: quotaGetter,
+		rootDir: rootDir,
+		Git:     gitClient,
+		orgSvc:  orgSvc,
 	}, nil
 }
 
@@ -86,68 +87,56 @@ func (fs *FileStore) InitOrg(ctx context.Context, orgID jsonldb.ID) error {
 }
 
 // checkPageQuota returns an error if creating a new page would exceed quota.
-func (fs *FileStore) checkPageQuota(ctx context.Context, orgID jsonldb.ID) error {
-	quota, err := fs.quotaGetter.GetQuota(ctx, orgID)
+func (fs *FileStore) checkPageQuota(orgID jsonldb.ID) error {
+	org, err := fs.orgSvc.Get(orgID)
 	if err != nil {
 		return err
-	}
-	if quota.MaxPages <= 0 {
-		return nil // No limit
 	}
 	count, _, err := fs.GetOrganizationUsage(orgID)
 	if err != nil {
 		return err
 	}
-	if count >= quota.MaxPages {
+	if count >= org.Quotas.MaxPages {
 		return errQuotaExceeded
 	}
 	return nil
 }
 
 // checkStorageQuota returns an error if adding the given bytes would exceed storage quota.
-func (fs *FileStore) checkStorageQuota(ctx context.Context, orgID jsonldb.ID, additionalBytes int64) error {
-	quota, err := fs.quotaGetter.GetQuota(ctx, orgID)
+func (fs *FileStore) checkStorageQuota(orgID jsonldb.ID, additionalBytes int64) error {
+	org, err := fs.orgSvc.Get(orgID)
 	if err != nil {
 		return err
-	}
-	if quota.MaxStorage <= 0 {
-		return nil // No limit
 	}
 	_, usage, err := fs.GetOrganizationUsage(orgID)
 	if err != nil {
 		return err
 	}
-	if usage+additionalBytes > quota.MaxStorage {
+	if usage+additionalBytes > org.Quotas.MaxStorage {
 		return errQuotaExceeded
 	}
 	return nil
 }
 
 // checkRecordQuota returns an error if adding a new record would exceed the table's record quota.
-func (fs *FileStore) checkRecordQuota(ctx context.Context, orgID jsonldb.ID, currentCount int) error {
-	quota, err := fs.quotaGetter.GetQuota(ctx, orgID)
+func (fs *FileStore) checkRecordQuota(orgID jsonldb.ID, currentCount int) error {
+	org, err := fs.orgSvc.Get(orgID)
 	if err != nil {
 		return err
 	}
-	if quota.MaxRecordsPerTable <= 0 {
-		return nil // No limit
-	}
-	if currentCount >= quota.MaxRecordsPerTable {
+	if currentCount >= org.Quotas.MaxRecordsPerTable {
 		return errQuotaExceeded
 	}
 	return nil
 }
 
 // checkAssetSizeQuota returns an error if the given size exceeds the organization's single asset size quota.
-func (fs *FileStore) checkAssetSizeQuota(ctx context.Context, orgID jsonldb.ID, size int64) error {
-	quota, err := fs.quotaGetter.GetQuota(ctx, orgID)
+func (fs *FileStore) checkAssetSizeQuota(orgID jsonldb.ID, size int64) error {
+	org, err := fs.orgSvc.Get(orgID)
 	if err != nil {
 		return err
 	}
-	if quota.MaxAssetSize <= 0 {
-		return nil // No limit
-	}
-	if size > quota.MaxAssetSize {
+	if size > org.Quotas.MaxAssetSize {
 		return errQuotaExceeded
 	}
 	return nil
@@ -206,7 +195,7 @@ func (fs *FileStore) WritePage(ctx context.Context, orgID, id jsonldb.ID, title,
 	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
-	if err := fs.checkPageQuota(ctx, orgID); err != nil {
+	if err := fs.checkPageQuota(orgID); err != nil {
 		return nil, err
 	}
 
@@ -220,7 +209,7 @@ func (fs *FileStore) WritePage(ctx context.Context, orgID, id jsonldb.ID, title,
 	}
 
 	data := formatMarkdownFile(p)
-	if err := fs.checkStorageQuota(ctx, orgID, int64(len(data))); err != nil {
+	if err := fs.checkStorageQuota(orgID, int64(len(data))); err != nil {
 		return nil, err
 	}
 
@@ -566,7 +555,7 @@ func (fs *FileStore) WriteTable(ctx context.Context, orgID jsonldb.ID, node *Nod
 		return errOrgIDRequired
 	}
 	if isNew {
-		if err := fs.checkPageQuota(ctx, orgID); err != nil {
+		if err := fs.checkPageQuota(orgID); err != nil {
 			return err
 		}
 	}
@@ -586,7 +575,7 @@ func (fs *FileStore) WriteTable(ctx context.Context, orgID jsonldb.ID, node *Nod
 	}
 
 	if isNew {
-		if err := fs.checkStorageQuota(ctx, orgID, int64(len(data))); err != nil {
+		if err := fs.checkStorageQuota(orgID, int64(len(data))); err != nil {
 			return err
 		}
 	}
@@ -665,7 +654,7 @@ func (fs *FileStore) AppendRecord(ctx context.Context, orgID, tableID jsonldb.ID
 
 	// Estimate storage impact
 	recordData, _ := json.Marshal(record)
-	if err := fs.checkStorageQuota(ctx, orgID, int64(len(recordData)+1)); err != nil {
+	if err := fs.checkStorageQuota(orgID, int64(len(recordData)+1)); err != nil {
 		return err
 	}
 
@@ -682,7 +671,7 @@ func (fs *FileStore) AppendRecord(ctx context.Context, orgID, tableID jsonldb.ID
 		return fmt.Errorf("failed to load table: %w", err)
 	}
 
-	if err := fs.checkRecordQuota(ctx, orgID, table.Len()); err != nil {
+	if err := fs.checkRecordQuota(orgID, table.Len()); err != nil {
 		return err
 	}
 
@@ -758,7 +747,7 @@ func (fs *FileStore) UpdateRecord(ctx context.Context, orgID, tableID jsonldb.ID
 
 	// Estimate storage impact (simplified, assuming replacement might increase size)
 	recordData, _ := json.Marshal(record)
-	if err := fs.checkStorageQuota(ctx, orgID, int64(len(recordData))); err != nil {
+	if err := fs.checkStorageQuota(orgID, int64(len(recordData))); err != nil {
 		return err
 	}
 
@@ -825,10 +814,10 @@ func (fs *FileStore) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, as
 	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
-	if err := fs.checkAssetSizeQuota(ctx, orgID, int64(len(data))); err != nil {
+	if err := fs.checkAssetSizeQuota(orgID, int64(len(data))); err != nil {
 		return nil, err
 	}
-	if err := fs.checkStorageQuota(ctx, orgID, int64(len(data))); err != nil {
+	if err := fs.checkStorageQuota(orgID, int64(len(data))); err != nil {
 		return nil, err
 	}
 
@@ -1015,7 +1004,7 @@ func (fs *FileStore) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash
 
 // CreateNode creates a new node (can be document, table, or hybrid) and commits to git.
 func (fs *FileStore) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType NodeType, author Author) (*Node, error) {
-	if err := fs.checkPageQuota(ctx, orgID); err != nil {
+	if err := fs.checkPageQuota(orgID); err != nil {
 		return nil, err
 	}
 

@@ -147,15 +147,6 @@ func (s *OrganizationService) Get(id jsonldb.ID) (*Organization, error) {
 	return org, nil
 }
 
-// GetQuota returns the quota for an organization.
-func (s *OrganizationService) GetQuota(_ context.Context, id jsonldb.ID) (OrganizationQuota, error) {
-	org, err := s.Get(id)
-	if err != nil {
-		return OrganizationQuota{}, err
-	}
-	return org.Quotas, nil
-}
-
 // Modify atomically modifies an organization.
 func (s *OrganizationService) Modify(id jsonldb.ID, fn func(org *Organization) error) (*Organization, error) {
 	if id.IsZero() {
