@@ -32,6 +32,17 @@ type Row[T any] interface {
 	Validate() error
 }
 
+// TableObserver receives notifications about table mutations.
+//
+// Observers are called synchronously while the table lock is held.
+// Implementations must not call back into the table or acquire locks
+// that could cause deadlock.
+type TableObserver[T Row[T]] interface {
+	OnAppend(row T)
+	OnUpdate(prev, curr T)
+	OnDelete(row T)
+}
+
 // Table is a concurrent-safe, generic JSONL-backed data store with in-memory caching.
 //
 // All read and write operations are protected by a read-write mutex, making Table
@@ -44,11 +55,26 @@ type Row[T any] interface {
 // Rows are stored in insertion order and indexed by ID for O(1) lookups.
 // All returned rows are clones to prevent accidental mutation of cached data.
 type Table[T Row[T]] struct {
-	path   string
-	mu     sync.RWMutex
-	schema schemaHeader
-	rows   []T
-	byID   map[ID]int // maps ID to index in rows
+	path      string
+	mu        sync.RWMutex
+	schema    schemaHeader
+	rows      []T
+	byID      map[ID]int // maps ID to index in rows
+	observers []TableObserver[T]
+}
+
+// AddObserver registers an observer to receive mutation notifications.
+//
+// The observer is immediately called with OnAppend for each existing row,
+// allowing indexes to be built from current table state.
+// Observers are called while the table lock is held; see [TableObserver].
+func (t *Table[T]) AddObserver(obs TableObserver[T]) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	for _, row := range t.rows {
+		obs.OnAppend(row)
+	}
+	t.observers = append(t.observers, obs)
 }
 
 // Len returns the number of rows in the table.
@@ -97,6 +123,9 @@ func (t *Table[T]) Delete(id ID) (T, error) {
 	if err := t.save(); err != nil {
 		return zero, err
 	}
+	for _, obs := range t.observers {
+		obs.OnDelete(deleted)
+	}
 	return deleted, nil
 }
 
@@ -122,6 +151,9 @@ func (t *Table[T]) Update(row T) (T, error) {
 	t.rows[idx] = row
 	if err := t.save(); err != nil {
 		return zero, err
+	}
+	for _, obs := range t.observers {
+		obs.OnUpdate(prev, row)
 	}
 	return prev, nil
 }
@@ -278,6 +310,9 @@ func (t *Table[T]) Append(row T) (err error) {
 	}
 	t.byID[id] = len(t.rows)
 	t.rows = append(t.rows, row)
+	for _, obs := range t.observers {
+		obs.OnAppend(row)
+	}
 	return nil
 }
 

@@ -29,7 +29,8 @@ var (
 
 // UserService handles user management and authentication.
 type UserService struct {
-	table *jsonldb.Table[*userStorage]
+	table   *jsonldb.Table[*userStorage]
+	byEmail *jsonldb.UniqueIndex[string, *userStorage]
 }
 
 // NewUserService creates a new user service.
@@ -45,7 +46,8 @@ func NewUserService(rootDir string) (*UserService, error) {
 		return nil, err
 	}
 
-	return &UserService{table: table}, nil
+	byEmail := jsonldb.NewUniqueIndex(table, func(u *userStorage) string { return u.Email })
+	return &UserService{table: table, byEmail: byEmail}, nil
 }
 
 type userStorage struct {
@@ -128,29 +130,27 @@ func (s *UserService) Get(id jsonldb.ID) (*entity.User, error) {
 	return &user, nil
 }
 
-// GetByEmail retrieves a user by email.
+// GetByEmail retrieves a user by email. O(1) via index.
 func (s *UserService) GetByEmail(email string) (*entity.User, error) {
-	for stored := range s.table.Iter(0) {
-		if stored.Email == email {
-			user := stored.User
-			return &user, nil
-		}
+	stored := s.byEmail.Get(email)
+	if stored == nil {
+		return nil, errUserNotFound
 	}
-	return nil, errUserNotFound
+	user := stored.User
+	return &user, nil
 }
 
-// Authenticate verifies user credentials.
+// Authenticate verifies user credentials. O(1) lookup via index.
 func (s *UserService) Authenticate(email, password string) (*entity.User, error) {
-	for stored := range s.table.Iter(0) {
-		if stored.Email == email {
-			if err := bcrypt.CompareHashAndPassword([]byte(stored.PasswordHash), []byte(password)); err != nil {
-				return nil, errInvalidCreds
-			}
-			user := stored.User
-			return &user, nil
-		}
+	stored := s.byEmail.Get(email)
+	if stored == nil {
+		return nil, errInvalidCreds
 	}
-	return nil, errInvalidCreds
+	if err := bcrypt.CompareHashAndPassword([]byte(stored.PasswordHash), []byte(password)); err != nil {
+		return nil, errInvalidCreds
+	}
+	user := stored.User
+	return &user, nil
 }
 
 // GetByOAuth retrieves a user by their OAuth identity.

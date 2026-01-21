@@ -80,6 +80,140 @@ func setupTable(t *testing.T) (table *Table[*testRow], path string) {
 	return table, path
 }
 
+// mockObserver records observer calls for testing.
+type mockObserver struct {
+	appends []int
+	updates [][2]int // [prev, curr]
+	deletes []int
+}
+
+func (m *mockObserver) OnAppend(row *testRow) {
+	m.appends = append(m.appends, row.ID)
+}
+
+func (m *mockObserver) OnUpdate(prev, curr *testRow) {
+	m.updates = append(m.updates, [2]int{prev.ID, curr.ID})
+}
+
+func (m *mockObserver) OnDelete(row *testRow) {
+	m.deletes = append(m.deletes, row.ID)
+}
+
+func TestTable_Observers(t *testing.T) {
+	table, _ := setupTable(t)
+
+	obs := &mockObserver{}
+	table.AddObserver(obs)
+
+	// Test OnAppend
+	if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(obs.appends, []int{1}) {
+		t.Errorf("OnAppend calls = %v, want [1]", obs.appends)
+	}
+
+	// Test OnUpdate
+	if _, err := table.Update(&testRow{ID: 1, Name: "updated"}); err != nil {
+		t.Fatal(err)
+	}
+	if len(obs.updates) != 1 || obs.updates[0] != [2]int{1, 1} {
+		t.Errorf("OnUpdate calls = %v, want [[1,1]]", obs.updates)
+	}
+
+	// Test OnDelete
+	if _, err := table.Delete(ID(1)); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(obs.deletes, []int{1}) {
+		t.Errorf("OnDelete calls = %v, want [1]", obs.deletes)
+	}
+}
+
+func TestTable_MultipleObservers(t *testing.T) {
+	table, _ := setupTable(t)
+
+	obs1 := &mockObserver{}
+	obs2 := &mockObserver{}
+	table.AddObserver(obs1)
+	table.AddObserver(obs2)
+
+	if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if !slices.Equal(obs1.appends, []int{1}) {
+		t.Errorf("obs1 OnAppend = %v, want [1]", obs1.appends)
+	}
+	if !slices.Equal(obs2.appends, []int{1}) {
+		t.Errorf("obs2 OnAppend = %v, want [1]", obs2.appends)
+	}
+}
+
+func TestTable_AddObserverWithExistingData(t *testing.T) {
+	table, _ := setupTable(t)
+
+	// Add data before observer
+	if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := table.Append(&testRow{ID: 2, Name: "two"}); err != nil {
+		t.Fatal(err)
+	}
+
+	obs := &mockObserver{}
+	table.AddObserver(obs)
+
+	// Observer should receive OnAppend for existing rows
+	slices.Sort(obs.appends)
+	if !slices.Equal(obs.appends, []int{1, 2}) {
+		t.Errorf("OnAppend for existing = %v, want [1, 2]", obs.appends)
+	}
+}
+
+func TestTable_AppendToReadOnlyDir(t *testing.T) {
+	// Create a read-only directory
+	dir := t.TempDir()
+	path := filepath.Join(dir, "subdir", "test.jsonl")
+
+	// Don't create subdir - Append should fail when trying to create file
+	table := &Table[*testRow]{
+		path:   path,
+		rows:   nil,
+		byID:   make(map[ID]int),
+		schema: schemaHeader{Version: "1.0"},
+	}
+
+	err := table.Append(&testRow{ID: 1, Name: "test"})
+	if err == nil {
+		t.Error("Append to non-existent directory should fail")
+	}
+}
+
+func TestTable_UpdateNonExistentReturnsNil(t *testing.T) {
+	table, _ := setupTable(t)
+
+	prev, err := table.Update(&testRow{ID: 999, Name: "ghost"})
+	if err != nil {
+		t.Fatalf("Update error: %v", err)
+	}
+	if prev != nil {
+		t.Errorf("Update non-existent returned %v, want nil", prev)
+	}
+}
+
+func TestTable_DeleteNonExistentReturnsNil(t *testing.T) {
+	table, _ := setupTable(t)
+
+	deleted, err := table.Delete(ID(999))
+	if err != nil {
+		t.Fatalf("Delete error: %v", err)
+	}
+	if deleted != nil {
+		t.Errorf("Delete non-existent returned %v, want nil", deleted)
+	}
+}
+
 // TestTable tests all Table methods using table-driven tests.
 func TestTable(t *testing.T) {
 	t.Run("Len", func(t *testing.T) {
