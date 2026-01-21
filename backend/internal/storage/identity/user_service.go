@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -33,9 +32,6 @@ type UserService struct {
 	table      *jsonldb.Table[*userStorage]
 	memService *MembershipService
 	orgService *OrganizationService
-	mu         sync.RWMutex
-	byID       map[jsonldb.ID]*userStorage
-	byEmail    map[string]*userStorage
 }
 
 // NewUserService creates a new user service.
@@ -51,20 +47,11 @@ func NewUserService(rootDir string, memService *MembershipService, orgService *O
 		return nil, err
 	}
 
-	s := &UserService{
+	return &UserService{
 		table:      table,
 		memService: memService,
 		orgService: orgService,
-		byID:       make(map[jsonldb.ID]*userStorage),
-		byEmail:    make(map[string]*userStorage),
-	}
-
-	for u := range table.Iter(0) {
-		s.byID[u.ID] = u
-		s.byEmail[u.Email] = u
-	}
-
-	return s, nil
+	}, nil
 }
 
 type userStorage struct {
@@ -103,32 +90,26 @@ func (s *UserService) CreateUser(email, password, name string, role entity.UserR
 		return nil, errEmailPwdRequired
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	// Check if user already exists
-	if _, ok := s.byEmail[email]; ok {
+	if _, err := s.GetUserByEmail(email); err == nil {
 		return nil, errUserExists
 	}
-
-	id := jsonldb.NewID()
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("failed to hash password: %w", err)
 	}
 
+	id := jsonldb.NewID()
 	now := time.Now()
-	user := &entity.User{
-		ID:       id,
-		Email:    email,
-		Name:     name,
-		Created:  now,
-		Modified: now,
-	}
-
 	stored := &userStorage{
-		User:         *user,
+		User: entity.User{
+			ID:       id,
+			Email:    email,
+			Name:     name,
+			Created:  now,
+			Modified: now,
+		},
 		PasswordHash: string(hash),
 	}
 
@@ -136,10 +117,8 @@ func (s *UserService) CreateUser(email, password, name string, role entity.UserR
 		return nil, err
 	}
 
-	s.byID[id] = stored
-	s.byEmail[email] = stored
-
-	return user, nil
+	user := stored.User
+	return &user, nil
 }
 
 // UpdateUserRole updates the role of a user in a specific organization.
@@ -150,10 +129,6 @@ func (s *UserService) UpdateUserRole(userID, orgID jsonldb.ID, role entity.UserR
 	if orgID.IsZero() {
 		return errOrgIDEmpty
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	if s.memService == nil {
 		return errMemSvcNotInit
 	}
@@ -164,7 +139,6 @@ func (s *UserService) UpdateUserRole(userID, orgID jsonldb.ID, role entity.UserR
 		_, err = s.memService.CreateMembership(userID, orgID, role)
 		return err
 	}
-
 	return nil
 }
 
@@ -173,15 +147,10 @@ func (s *UserService) GetUser(id jsonldb.ID) (*entity.User, error) {
 	if id.IsZero() {
 		return nil, errUserIDEmpty
 	}
-
-	s.mu.RLock()
-	stored, ok := s.byID[id]
-	s.mu.RUnlock()
-
-	if !ok {
+	stored := s.table.Get(id)
+	if stored == nil {
 		return nil, errUserNotFound
 	}
-
 	user := stored.User
 	return &user, nil
 }
@@ -241,43 +210,32 @@ func (s *UserService) GetUserWithMemberships(id jsonldb.ID) (*UserWithMembership
 
 // GetUserByEmail retrieves a user by email.
 func (s *UserService) GetUserByEmail(email string) (*entity.User, error) {
-	s.mu.RLock()
-	stored, ok := s.byEmail[email]
-	s.mu.RUnlock()
-
-	if !ok {
-		return nil, errUserNotFound
+	for stored := range s.table.Iter(0) {
+		if stored.Email == email {
+			user := stored.User
+			return &user, nil
+		}
 	}
-
-	user := stored.User
-	return &user, nil
+	return nil, errUserNotFound
 }
 
 // Authenticate verifies user credentials.
 func (s *UserService) Authenticate(email, password string) (*entity.User, error) {
-	s.mu.RLock()
-	stored, ok := s.byEmail[email]
-	s.mu.RUnlock()
-
-	if !ok {
-		return nil, errInvalidCreds
+	for stored := range s.table.Iter(0) {
+		if stored.Email == email {
+			if err := bcrypt.CompareHashAndPassword([]byte(stored.PasswordHash), []byte(password)); err != nil {
+				return nil, errInvalidCreds
+			}
+			user := stored.User
+			return &user, nil
+		}
 	}
-
-	err := bcrypt.CompareHashAndPassword([]byte(stored.PasswordHash), []byte(password))
-	if err != nil {
-		return nil, errInvalidCreds
-	}
-
-	user := stored.User
-	return &user, nil
+	return nil, errInvalidCreds
 }
 
 // GetUserByOAuth retrieves a user by their OAuth identity.
 func (s *UserService) GetUserByOAuth(provider, providerID string) (*entity.User, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	for _, stored := range s.byID {
+	for stored := range s.table.Iter(0) {
 		for _, identity := range stored.OAuthIdentities {
 			if identity.Provider == provider && identity.ProviderID == providerID {
 				user := stored.User
@@ -285,7 +243,6 @@ func (s *UserService) GetUserByOAuth(provider, providerID string) (*entity.User,
 			}
 		}
 	}
-
 	return nil, errUserNotFound
 }
 
@@ -295,11 +252,8 @@ func (s *UserService) LinkOAuthIdentity(userID jsonldb.ID, identity entity.OAuth
 		return errUserIDEmpty
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	stored, ok := s.byID[userID]
-	if !ok {
+	stored := s.table.Get(userID)
+	if stored == nil {
 		return errUserNotFound
 	}
 
@@ -318,10 +272,8 @@ func (s *UserService) LinkOAuthIdentity(userID jsonldb.ID, identity entity.OAuth
 	}
 
 	stored.Modified = time.Now()
-	if _, err := s.table.Update(stored); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.table.Update(stored)
+	return err
 }
 
 // UpdateSettings updates user global settings.
@@ -330,43 +282,30 @@ func (s *UserService) UpdateSettings(id jsonldb.ID, settings entity.UserSettings
 		return errUserIDEmpty
 	}
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	stored, ok := s.byID[id]
-	if !ok {
+	stored := s.table.Get(id)
+	if stored == nil {
 		return errUserNotFound
 	}
 
 	stored.Settings = settings
 	stored.Modified = time.Now()
-
-	if _, err := s.table.Update(stored); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.table.Update(stored)
+	return err
 }
 
 // ListUsers returns all users (domain models without runtime fields).
-func (s *UserService) ListUsers() ([]*entity.User, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	users := make([]*entity.User, 0, len(s.byID))
-	for _, stored := range s.byID {
+func (s *UserService) ListUsers() []*entity.User {
+	users := make([]*entity.User, 0, s.table.Len())
+	for stored := range s.table.Iter(0) {
 		user := stored.User
 		users = append(users, &user)
 	}
-	return users, nil
+	return users
 }
 
 // ListUsersWithMemberships returns all users with their memberships.
-func (s *UserService) ListUsersWithMemberships() ([]UserWithMemberships, error) {
-	users, err := s.ListUsers()
-	if err != nil {
-		return nil, err
-	}
-
+func (s *UserService) ListUsersWithMemberships() []UserWithMemberships {
+	users := s.ListUsers()
 	results := make([]UserWithMemberships, 0, len(users))
 	for _, user := range users {
 		// Memberships are supplementary; continue with empty list on error.
@@ -376,5 +315,5 @@ func (s *UserService) ListUsersWithMemberships() ([]UserWithMemberships, error) 
 			Memberships: mems,
 		})
 	}
-	return results, nil
+	return results
 }

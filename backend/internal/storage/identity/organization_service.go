@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -25,8 +24,6 @@ type OrganizationService struct {
 	table      *jsonldb.Table[*entity.Organization]
 	fileStore  *infra.FileStore
 	gitService *infra.Git
-	mu         sync.RWMutex
-	byID       map[jsonldb.ID]*entity.Organization
 }
 
 // NewOrganizationService creates a new organization service.
@@ -42,19 +39,12 @@ func NewOrganizationService(rootDir string, fileStore *infra.FileStore, gitServi
 		return nil, err
 	}
 
-	s := &OrganizationService{
+	return &OrganizationService{
 		rootDir:    rootDir,
 		table:      table,
 		fileStore:  fileStore,
 		gitService: gitService,
-		byID:       make(map[jsonldb.ID]*entity.Organization),
-	}
-
-	for org := range table.Iter(0) {
-		s.byID[org.ID] = org
-	}
-
-	return s, nil
+	}, nil
 }
 
 // CreateOrganization creates a new organization.
@@ -62,9 +52,6 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	if name == "" {
 		return nil, errOrgNameRequired
 	}
-
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	id := jsonldb.NewID()
 	now := time.Now()
@@ -82,8 +69,6 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 	if err := s.table.Append(org); err != nil {
 		return nil, err
 	}
-
-	s.byID[id] = org
 
 	// Create organization content directory
 	orgDir := filepath.Join(s.rootDir, id.String())
@@ -117,14 +102,10 @@ func (s *OrganizationService) CreateOrganization(ctx context.Context, name strin
 
 // GetOrganization retrieves an organization by ID.
 func (s *OrganizationService) GetOrganization(id jsonldb.ID) (*entity.Organization, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	org, ok := s.byID[id]
-	if !ok {
+	org := s.table.Get(id)
+	if org == nil {
 		return nil, errOrgNotFound
 	}
-
 	return org, nil
 }
 
@@ -139,37 +120,25 @@ func (s *OrganizationService) GetOrganizationByID(idStr string) (*entity.Organiz
 
 // UpdateSettings updates organization-wide settings.
 func (s *OrganizationService) UpdateSettings(id jsonldb.ID, settings entity.OrganizationSettings) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	org, ok := s.byID[id]
-	if !ok {
+	org := s.table.Get(id)
+	if org == nil {
 		return errOrgNotFound
 	}
-
 	org.Settings = settings
-	if _, err := s.table.Update(org); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.table.Update(org)
+	return err
 }
 
 // UpdateOnboarding updates the onboarding state of an organization.
 func (s *OrganizationService) UpdateOnboarding(id jsonldb.ID, state entity.OnboardingState) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	org, ok := s.byID[id]
-	if !ok {
+	org := s.table.Get(id)
+	if org == nil {
 		return errOrgNotFound
 	}
-
 	org.Onboarding = state
 	org.Onboarding.UpdatedAt = time.Now()
-	if _, err := s.table.Update(org); err != nil {
-		return err
-	}
-	return nil
+	_, err := s.table.Update(org)
+	return err
 }
 
 // RootDir returns the root directory of the organization service.
