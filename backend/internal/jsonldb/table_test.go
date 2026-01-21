@@ -214,6 +214,109 @@ func TestTable_DeleteNonExistentReturnsNil(t *testing.T) {
 	}
 }
 
+func TestTable_Modify(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		table, _ := setupTable(t)
+		_ = table.Append(&testRow{ID: 1, Name: "original"})
+
+		result, err := table.Modify(ID(1), func(row *testRow) error {
+			row.Name = "modified"
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("Modify error: %v", err)
+		}
+		if result.Name != "modified" {
+			t.Errorf("Modify returned Name = %q, want %q", result.Name, "modified")
+		}
+
+		// Verify persisted
+		got := table.Get(ID(1))
+		if got.Name != "modified" {
+			t.Errorf("Get after Modify = %q, want %q", got.Name, "modified")
+		}
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		table, _ := setupTable(t)
+
+		_, err := table.Modify(ID(999), func(row *testRow) error {
+			return nil
+		})
+		if err == nil {
+			t.Error("Modify non-existent should return error")
+		}
+	})
+
+	t.Run("callback error", func(t *testing.T) {
+		table, _ := setupTable(t)
+		_ = table.Append(&testRow{ID: 1, Name: "original"})
+
+		_, err := table.Modify(ID(1), func(row *testRow) error {
+			return errors.New("callback failed")
+		})
+		if err == nil {
+			t.Error("Modify with failing callback should return error")
+		}
+
+		// Verify unchanged
+		got := table.Get(ID(1))
+		if got.Name != "original" {
+			t.Errorf("Row changed despite callback error: %q", got.Name)
+		}
+	})
+
+	t.Run("validation error", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "test.jsonl")
+		table, _ := NewTable[*validatingRow](path)
+		_ = table.Append(&validatingRow{ID: 1, Name: "valid"})
+
+		_, err := table.Modify(ID(1), func(row *validatingRow) error {
+			row.FailValidate = true
+			return nil
+		})
+		if err == nil {
+			t.Error("Modify with invalid result should return error")
+		}
+	})
+
+	t.Run("notifies observers", func(t *testing.T) {
+		table, _ := setupTable(t)
+		_ = table.Append(&testRow{ID: 1, Name: "original"})
+
+		obs := &mockObserver{}
+		table.AddObserver(obs)
+
+		_, _ = table.Modify(ID(1), func(row *testRow) error {
+			row.Name = "modified"
+			return nil
+		})
+
+		if len(obs.updates) != 1 {
+			t.Errorf("Observer updates = %d, want 1", len(obs.updates))
+		}
+	})
+
+	t.Run("returns clone", func(t *testing.T) {
+		table, _ := setupTable(t)
+		_ = table.Append(&testRow{ID: 1, Name: "original"})
+
+		result, _ := table.Modify(ID(1), func(row *testRow) error {
+			row.Name = "modified"
+			return nil
+		})
+
+		// Mutate returned value
+		result.Name = "mutated"
+
+		// Verify table unaffected
+		got := table.Get(ID(1))
+		if got.Name != "modified" {
+			t.Errorf("Table affected by mutating returned clone: %q", got.Name)
+		}
+	})
+}
+
 // TestTable tests all Table methods using table-driven tests.
 func TestTable(t *testing.T) {
 	t.Run("Len", func(t *testing.T) {

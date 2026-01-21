@@ -112,11 +112,10 @@ func (s *OrganizationService) Get(id jsonldb.ID) (*entity.Organization, error) {
 	return org, nil
 }
 
-// Update persists changes to an organization.
-func (s *OrganizationService) Update(org *entity.Organization) error {
-	if org == nil || org.ID.IsZero() {
-		return errOrgNotFound
+// Modify atomically modifies an organization.
+func (s *OrganizationService) Modify(id jsonldb.ID, fn func(org *entity.Organization) error) (*entity.Organization, error) {
+	if id.IsZero() {
+		return nil, errOrgNotFound
 	}
-	_, err := s.table.Update(org)
-	return err
+	return s.table.Modify(id, fn)
 }

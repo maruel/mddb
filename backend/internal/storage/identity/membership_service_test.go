@@ -97,12 +97,14 @@ func TestMembershipService(t *testing.T) {
 		t.Error("Expected error for invalid user ID in Iter")
 	}
 
-	// Test Update (role change)
+	// Test Modify (role change)
 	toUpdate, _ := service.Get(userID, orgID)
-	toUpdate.Role = entity.UserRoleEditor
-	err = service.Update(toUpdate)
+	_, err = service.Modify(toUpdate.ID, func(m *entity.Membership) error {
+		m.Role = entity.UserRoleEditor
+		return nil
+	})
 	if err != nil {
-		t.Fatalf("Update failed: %v", err)
+		t.Fatalf("Modify failed: %v", err)
 	}
 
 	updated, _ := service.Get(userID, orgID)
@@ -110,19 +112,22 @@ func TestMembershipService(t *testing.T) {
 		t.Errorf("Role after update = %v, want %v", updated.Role, entity.UserRoleEditor)
 	}
 
-	// Test Update with non-existent
-	fakeMembership := &entity.Membership{ID: jsonldb.ID(999)}
-	err = service.Update(fakeMembership)
+	// Test Modify with non-existent
+	_, err = service.Modify(jsonldb.ID(999), func(m *entity.Membership) error {
+		return nil
+	})
 	if err == nil {
-		t.Error("Expected error when updating non-existent membership")
+		t.Error("Expected error when modifying non-existent membership")
 	}
 
-	// Test Update (settings change)
+	// Test Modify (settings change)
 	toUpdate, _ = service.Get(userID, orgID)
-	toUpdate.Settings = entity.MembershipSettings{Notifications: true}
-	err = service.Update(toUpdate)
+	_, err = service.Modify(toUpdate.ID, func(m *entity.Membership) error {
+		m.Settings = entity.MembershipSettings{Notifications: true}
+		return nil
+	})
 	if err != nil {
-		t.Fatalf("Update failed: %v", err)
+		t.Fatalf("Modify failed: %v", err)
 	}
 
 	updatedSettings, _ := service.Get(userID, orgID)

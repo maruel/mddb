@@ -65,8 +65,11 @@ func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, orgID 
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get membership", err)
 	}
-	m.Settings = membershipSettingsToEntity(req.Settings)
-	if err := h.memService.Update(m); err != nil {
+	m, err = h.memService.Modify(m.ID, func(m *entity.Membership) error {
+		m.Settings = membershipSettingsToEntity(req.Settings)
+		return nil
+	})
+	if err != nil {
 		return nil, dto.InternalWithError("Failed to update membership settings", err)
 	}
 	return membershipToResponse(m), nil

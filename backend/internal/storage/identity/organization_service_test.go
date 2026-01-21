@@ -83,21 +83,19 @@ func TestOrganizationService(t *testing.T) {
 		})
 	})
 
-	t.Run("UpdateSettings", func(t *testing.T) {
+	t.Run("ModifySettings", func(t *testing.T) {
 		newSettings := entity.OrganizationSettings{
 			AllowedDomains: []string{"example.com"},
 			PublicAccess:   true,
 		}
 
 		t.Run("existing organization", func(t *testing.T) {
-			orgToUpdate, getErr := service.Get(org.ID)
-			if getErr != nil {
-				t.Fatalf("Get failed: %v", getErr)
-			}
-			orgToUpdate.Settings = newSettings
-			updateErr := service.Update(orgToUpdate)
-			if updateErr != nil {
-				t.Fatalf("Update failed: %v", updateErr)
+			_, modifyErr := service.Modify(org.ID, func(o *entity.Organization) error {
+				o.Settings = newSettings
+				return nil
+			})
+			if modifyErr != nil {
+				t.Fatalf("Modify failed: %v", modifyErr)
 			}
 
 			updatedOrg, _ := service.Get(org.ID)
@@ -110,29 +108,29 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent organization", func(t *testing.T) {
-			fakeOrg := &entity.Organization{ID: jsonldb.ID(99999), Settings: newSettings}
-			updateErr := service.Update(fakeOrg)
-			if updateErr == nil {
-				t.Error("Expected error when updating non-existent org")
+			_, modifyErr := service.Modify(jsonldb.ID(99999), func(o *entity.Organization) error {
+				o.Settings = newSettings
+				return nil
+			})
+			if modifyErr == nil {
+				t.Error("Expected error when modifying non-existent org")
 			}
 		})
 	})
 
-	t.Run("UpdateOnboarding", func(t *testing.T) {
+	t.Run("ModifyOnboarding", func(t *testing.T) {
 		newState := entity.OnboardingState{
 			Completed: true,
 			Step:      "done",
 		}
 
 		t.Run("existing organization", func(t *testing.T) {
-			orgToUpdate, getErr := service.Get(org2.ID)
-			if getErr != nil {
-				t.Fatalf("Get failed: %v", getErr)
-			}
-			orgToUpdate.Onboarding = newState
-			updateErr := service.Update(orgToUpdate)
-			if updateErr != nil {
-				t.Fatalf("Update failed: %v", updateErr)
+			_, modifyErr := service.Modify(org2.ID, func(o *entity.Organization) error {
+				o.Onboarding = newState
+				return nil
+			})
+			if modifyErr != nil {
+				t.Fatalf("Modify failed: %v", modifyErr)
 			}
 
 			updatedOrg2, _ := service.Get(org2.ID)
@@ -145,10 +143,12 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent organization", func(t *testing.T) {
-			fakeOrg := &entity.Organization{ID: jsonldb.ID(99999), Onboarding: newState}
-			updateErr := service.Update(fakeOrg)
-			if updateErr == nil {
-				t.Error("Expected error when updating non-existent org")
+			_, modifyErr := service.Modify(jsonldb.ID(99999), func(o *entity.Organization) error {
+				o.Onboarding = newState
+				return nil
+			})
+			if modifyErr == nil {
+				t.Error("Expected error when modifying non-existent org")
 			}
 		})
 	})

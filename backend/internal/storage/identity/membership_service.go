@@ -99,11 +99,10 @@ func (s *MembershipService) Iter(userID jsonldb.ID) (iter.Seq[*entity.Membership
 	}, nil
 }
 
-// Update persists changes to a membership.
-func (s *MembershipService) Update(m *entity.Membership) error {
-	if m == nil || m.ID.IsZero() {
-		return errMembershipNotFound
+// Modify atomically modifies a membership.
+func (s *MembershipService) Modify(id jsonldb.ID, fn func(m *entity.Membership) error) (*entity.Membership, error) {
+	if id.IsZero() {
+		return nil, errMembershipNotFound
 	}
-	_, err := s.table.Update(m)
-	return err
+	return s.table.Modify(id, fn)
 }

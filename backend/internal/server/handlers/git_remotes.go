@@ -45,28 +45,25 @@ func (h *GitRemoteHandler) GetRemote(ctx context.Context, orgID jsonldb.ID, _ *e
 
 // SetRemote creates or updates the git remote for an organization.
 func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req *dto.SetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	org, err := h.orgService.Get(orgID)
+	org, err := h.orgService.Modify(orgID, func(org *entity.Organization) error {
+		// Preserve existing timestamps on update
+		created := org.GitRemote.Created
+		lastSync := org.GitRemote.LastSync
+		if org.GitRemote.IsZero() {
+			created = time.Now()
+		}
+
+		org.GitRemote = entity.GitRemote{
+			URL:      req.URL,
+			Type:     req.Type,
+			AuthType: req.AuthType,
+			Token:    req.Token,
+			Created:  created,
+			LastSync: lastSync,
+		}
+		return nil
+	})
 	if err != nil {
-		return nil, err
-	}
-
-	// Preserve existing timestamps on update
-	created := org.GitRemote.Created
-	lastSync := org.GitRemote.LastSync
-	if org.GitRemote.IsZero() {
-		created = time.Now()
-	}
-
-	org.GitRemote = entity.GitRemote{
-		URL:      req.URL,
-		Type:     req.Type,
-		AuthType: req.AuthType,
-		Token:    req.Token,
-		Created:  created,
-		LastSync: lastSync,
-	}
-
-	if err := h.orgService.Update(org); err != nil {
 		return nil, err
 	}
 
@@ -118,24 +115,24 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *entity
 	}
 
 	// Update last sync time
-	org.GitRemote.LastSync = time.Now()
-	_ = h.orgService.Update(org)
+	_, _ = h.orgService.Modify(orgID, func(org *entity.Organization) error {
+		org.GitRemote.LastSync = time.Now()
+		return nil
+	})
 
 	return &dto.OkResponse{Ok: true}, nil
 }
 
 // DeleteRemote deletes the git remote for an organization.
 func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.DeleteGitRemoteRequest) (*dto.OkResponse, error) {
-	org, err := h.orgService.Get(orgID)
+	_, err := h.orgService.Modify(orgID, func(org *entity.Organization) error {
+		if org.GitRemote.IsZero() {
+			return dto.NotFound("remote")
+		}
+		org.GitRemote = entity.GitRemote{}
+		return nil
+	})
 	if err != nil {
-		return nil, err
-	}
-	if org.GitRemote.IsZero() {
-		return nil, dto.NotFound("remote")
-	}
-
-	org.GitRemote = entity.GitRemote{}
-	if err := h.orgService.Update(org); err != nil {
 		return nil, err
 	}
 

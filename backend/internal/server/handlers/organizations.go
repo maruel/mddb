@@ -43,13 +43,12 @@ func (h *OrganizationHandler) GetOnboarding(ctx context.Context, orgID jsonldb.I
 
 // UpdateOnboarding updates organization onboarding status.
 func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.UpdateOnboardingRequest) (*dto.OnboardingState, error) {
-	org, err := h.orgService.Get(orgID)
+	org, err := h.orgService.Modify(orgID, func(org *entity.Organization) error {
+		org.Onboarding = onboardingStateToEntity(req.State)
+		org.Onboarding.UpdatedAt = time.Now()
+		return nil
+	})
 	if err != nil {
-		return nil, err
-	}
-	org.Onboarding = onboardingStateToEntity(req.State)
-	org.Onboarding.UpdatedAt = time.Now()
-	if err := h.orgService.Update(org); err != nil {
 		return nil, dto.InternalWithError("Failed to update onboarding state", err)
 	}
 	result := onboardingStateToDTO(org.Onboarding)
@@ -58,12 +57,11 @@ func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, orgID jsonld
 
 // UpdateSettings updates organization-wide settings.
 func (h *OrganizationHandler) UpdateSettings(ctx context.Context, orgID jsonldb.ID, _ *entity.User, req dto.UpdateOrgSettingsRequest) (*dto.OrganizationResponse, error) {
-	org, err := h.orgService.Get(orgID)
+	org, err := h.orgService.Modify(orgID, func(org *entity.Organization) error {
+		org.Settings = organizationSettingsToEntity(req.Settings)
+		return nil
+	})
 	if err != nil {
-		return nil, err
-	}
-	org.Settings = organizationSettingsToEntity(req.Settings)
-	if err := h.orgService.Update(org); err != nil {
 		return nil, dto.InternalWithError("Failed to update organization settings", err)
 	}
 	return organizationToResponse(org), nil

@@ -62,8 +62,11 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *e
 			return nil, dto.InternalWithError("Failed to create membership", err)
 		}
 	} else {
-		m.Role = userRoleToEntity(req.Role)
-		if err = h.memService.Update(m); err != nil {
+		newRole := userRoleToEntity(req.Role)
+		if _, err = h.memService.Modify(m.ID, func(m *entity.Membership) error {
+			m.Role = newRole
+			return nil
+		}); err != nil {
 			return nil, dto.InternalWithError("Failed to update user role", err)
 		}
 	}
@@ -77,8 +80,11 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *e
 
 // UpdateUserSettings updates user global settings.
 func (h *UserHandler) UpdateUserSettings(ctx context.Context, _ jsonldb.ID, user *entity.User, req dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
-	user.Settings = userSettingsToEntity(req.Settings)
-	if err := h.userService.Update(user); err != nil {
+	_, err := h.userService.Modify(user.ID, func(u *entity.User) error {
+		u.Settings = userSettingsToEntity(req.Settings)
+		return nil
+	})
+	if err != nil {
 		return nil, dto.InternalWithError("Failed to update settings", err)
 	}
 	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)

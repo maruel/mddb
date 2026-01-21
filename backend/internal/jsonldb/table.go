@@ -158,6 +158,43 @@ func (t *Table[T]) Update(row T) (T, error) {
 	return prev, nil
 }
 
+// Modify atomically reads, modifies, and writes a row.
+//
+// The callback fn receives a clone of the current row and should modify it.
+// The lock is held for the duration of fn, so it should be quick.
+// Returns the modified row on success, or an error if the row doesn't exist
+// or validation fails.
+func (t *Table[T]) Modify(id ID, fn func(row T) error) (T, error) {
+	var zero T
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	idx, ok := t.byID[id]
+	if !ok {
+		return zero, fmt.Errorf("row %s not found", id)
+	}
+
+	prev := t.rows[idx]
+	row := prev.Clone()
+
+	if err := fn(row); err != nil {
+		return zero, err
+	}
+	if err := row.Validate(); err != nil {
+		return zero, fmt.Errorf("invalid row after modify: %w", err)
+	}
+
+	t.rows[idx] = row
+	if err := t.save(); err != nil {
+		t.rows[idx] = prev // Rollback on save failure
+		return zero, err
+	}
+	for _, obs := range t.observers {
+		obs.OnUpdate(prev, row)
+	}
+	return row.Clone(), nil
+}
+
 // NewTable creates a Table and loads existing data from the JSONL file at path.
 //
 // If the file doesn't exist, an empty table is created and the schema is

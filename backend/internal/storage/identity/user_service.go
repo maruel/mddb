@@ -166,21 +166,19 @@ func (s *UserService) GetByOAuth(provider, providerID string) (*entity.User, err
 	return nil, errUserNotFound
 }
 
-// Update persists changes to a user.
-func (s *UserService) Update(user *entity.User) error {
-	if user == nil || user.ID.IsZero() {
-		return errUserIDEmpty
+// Modify atomically modifies a user.
+func (s *UserService) Modify(id jsonldb.ID, fn func(user *entity.User) error) (*entity.User, error) {
+	if id.IsZero() {
+		return nil, errUserIDEmpty
 	}
-
-	stored := s.table.Get(user.ID)
-	if stored == nil {
-		return errUserNotFound
+	stored, err := s.table.Modify(id, func(row *userStorage) error {
+		return fn(&row.User)
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	// Preserve password hash while updating user fields
-	stored.User = *user
-	_, err := s.table.Update(stored)
-	return err
+	user := stored.User
+	return &user, nil
 }
 
 // Iter iterates over all users.
