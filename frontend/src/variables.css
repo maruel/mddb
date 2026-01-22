@@ -1,0 +1,28 @@
+:root {
+  /* Colors */
+  --c-primary: #2563eb;
+  --c-primary-hover: #1d4ed8;
+  --c-text: #1f2937;
+  --c-text-light: #6b7280;
+  --c-bg: #fff;
+  --c-bg-alt: #f9fafb;
+  --c-border: #e5e7eb;
+  --c-success: #16a34a;
+  --c-danger: #dc2626;
+
+  /* Spacing */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 1rem;
+  --s-4: 1.5rem;
+  --s-5: 2rem;
+
+  /* Typography */
+  --font: system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, monospace;
+
+  /* Misc */
+  --radius: 6px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --transition: 0.15s ease;
+}

@@ -1,36 +1,35 @@
 .board {
-  padding: 1rem 0;
+  padding: var(--s-3) 0;
   overflow-x: auto;
   min-height: 400px;
 }
 
 .noGroup {
-  padding: 2rem;
+  padding: var(--s-5);
   text-align: center;
-  color: #666;
-  background: #f9f9f9;
-  border-radius: 8px;
-  border: 2px dashed #eee;
+  color: var(--c-text-light);
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
+  border: 2px dashed var(--c-border);
 }
 
 .columns {
   display: flex;
-  gap: 1.5rem;
+  gap: var(--s-3);
   align-items: flex-start;
-  padding-bottom: 1rem;
 }
 
 .column {
   flex: 0 0 280px;
-  background: #f4f5f7;
-  border-radius: 8px;
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
   max-height: calc(100vh - 300px);
   display: flex;
   flex-direction: column;
 }
 
 .columnHeader {
-  padding: 1rem;
+  padding: var(--s-3);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -38,15 +37,13 @@
 
 .columnName {
   font-weight: 600;
-  color: #444;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .columnCount {
-  background: #dfe1e6;
-  color: #444;
+  background: var(--c-border);
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 10px;
@@ -54,51 +51,43 @@
 }
 
 .cards {
-  padding: 0 0.75rem 0.75rem;
+  padding: 0 var(--s-3) var(--s-3);
   overflow-y: auto;
   flex-grow: 1;
 }
 
 .card {
-  background: white;
-  border-radius: 6px;
-  padding: 0.75rem;
-  margin-bottom: 0.75rem;
-  box-shadow: 0 1px 2px rgba(9, 30, 66, 0.25);
+  background: var(--c-bg);
+  border-radius: var(--radius);
+  padding: var(--s-3);
+  margin-bottom: var(--s-2);
+  box-shadow: var(--shadow);
   cursor: grab;
-  transition: box-shadow 0.2s;
-}
-
-.card:hover {
-  box-shadow: 0 2px 4px rgba(9, 30, 66, 0.3);
 }
 
 .cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--s-2);
 }
 
 .cardHeader strong {
   font-size: 0.9rem;
-  color: #172b4d;
-  display: block;
   word-break: break-word;
 }
 
 .deleteBtn {
-  background: transparent;
+  background: none;
   border: none;
-  color: #ccc;
+  color: var(--c-border);
   cursor: pointer;
   padding: 0 5px;
-  font-size: 1.1rem;
-  line-height: 1;
+  font-size: 1rem;
 }
 
 .deleteBtn:hover {
-  color: #f44336;
+  color: var(--c-danger);
 }
 
 .cardBody {
@@ -106,13 +95,13 @@
 }
 
 .field {
-  margin-top: 0.25rem;
+  margin-top: var(--s-1);
   display: flex;
-  color: #5e6c84;
+  color: var(--c-text-light);
 }
 
 .fieldName {
-  margin-right: 0.5rem;
+  margin-right: var(--s-2);
   font-weight: 500;
 }
 

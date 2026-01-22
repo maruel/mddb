@@ -1,36 +1,32 @@
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.5rem;
-  padding: 1rem 0;
+  gap: var(--s-4);
+  padding: var(--s-3) 0;
 }
 
 .card {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition:
-    transform 0.2s,
-    box-shadow 0.2s;
-  display: flex;
-  flex-direction: column;
+    transform var(--transition),
+    box-shadow var(--transition);
 }
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow);
 }
 
 .imageContainer {
   height: 140px;
-  background: #f5f5f5;
+  background: var(--c-bg-alt);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--c-border);
 }
 
 .image {
@@ -40,35 +36,32 @@
 }
 
 .imagePlaceholder {
-  color: #999;
-  font-size: 0.9rem;
+  color: var(--c-text-light);
+  font-size: 0.85rem;
 }
 
 .cardContent {
-  padding: 1rem;
+  padding: var(--s-3);
 }
 
 .cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--s-2);
 }
 
 .deleteBtn {
-  background: transparent;
+  background: none;
   border: none;
-  color: #ccc;
+  color: var(--c-border);
   cursor: pointer;
   padding: 2px 5px;
-  font-size: 1.1rem;
-  line-height: 1;
-  border-radius: 4px;
+  font-size: 1rem;
 }
 
 .deleteBtn:hover {
-  color: #f44336;
-  background: #ffebee;
+  color: var(--c-danger);
 }
 
 .cardBody {
@@ -76,19 +69,13 @@
 }
 
 .field {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--s-1);
   display: flex;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .fieldName {
-  color: #666;
-  margin-right: 0.5rem;
+  color: var(--c-text-light);
+  margin-right: var(--s-2);
   flex-shrink: 0;
-}
-
-.fieldValue {
-  color: #333;
 }

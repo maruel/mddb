@@ -3,24 +3,20 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--c-primary);
   color: white;
-  padding: 1rem 1.5rem;
+  padding: var(--s-3) var(--s-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
+  gap: var(--s-3);
   z-index: 1000;
-  animation: slideUp 0.3s ease-out;
+  animation: slideUp 0.2s ease-out;
 }
 
 @keyframes slideUp {
   from {
     transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
   }
 }
 
@@ -30,50 +26,44 @@
 
 .title {
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--s-1);
 }
 
 .message {
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   opacity: 0.9;
 }
 
 .actions {
   display: flex;
-  gap: 0.75rem;
-  flex-shrink: 0;
+  gap: var(--s-2);
 }
 
 .installButton {
   background: white;
-  color: #667eea;
+  color: var(--c-primary);
   border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
-  font-weight: 600;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius);
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s;
 }
 
 .installButton:hover {
-  background: #f0f0f0;
+  background: var(--c-bg-alt);
 }
 
 .dismissButton {
   background: transparent;
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.5);
-  padding: 0.6rem 1.2rem;
-  border-radius: 4px;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition:
-    background-color 0.2s,
-    border-color 0.2s;
 }
 
 .dismissButton:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.8);
 }
 
 @media (max-width: 480px) {
