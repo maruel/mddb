@@ -9,9 +9,11 @@ package server
 
 import (
 	"embed"
+	"errors"
 	"io"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 
@@ -144,7 +146,18 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	// Serve embedded SolidJS frontend with SPA fallback
 	mux.Handle("/", NewEmbeddedSPAHandler(frontend.Files))
 
-	return mux
+	f := func(w http.ResponseWriter, r *http.Request) {
+		clientIP, err := getRealIP(r)
+		ctx := r.Context()
+		if err != nil {
+			slog.ErrorContext(ctx, "Failed to determine client IP", "err", err)
+			http.Error(w, "Can't determine IP address", http.StatusPreconditionFailed)
+			return
+		}
+		slog.InfoContext(ctx, "http", "path", r.URL.Path, "ip", clientIP)
+		mux.ServeHTTP(w, r)
+	}
+	return http.HandlerFunc(f)
 }
 
 // EmbeddedSPAHandler serves an embedded single-page application with fallback to index.html.
@@ -213,4 +226,40 @@ func containsDot(path string) bool {
 		}
 	}
 	return false
+}
+
+// getRealIP extracts the client's real IP address from an HTTP request,
+// taking into account X-Forwarded-For or other proxy headers.
+func getRealIP(r *http.Request) (net.IP, error) {
+	// Check X-Forwarded-For header (most common proxy header)
+	if xForwardedFor := r.Header.Get("X-Forwarded-For"); xForwardedFor != "" {
+		// X-Forwarded-For can contain multiple IPs, the client's IP is the first one
+		ip := net.ParseIP(strings.TrimSpace(strings.Split(xForwardedFor, ",")[0]))
+		if ip != nil {
+			return ip, nil
+		}
+	}
+
+	// Check X-Real-IP header (used by some proxies)
+	if xRealIP := r.Header.Get("X-Real-IP"); xRealIP != "" {
+		if ip := net.ParseIP(xRealIP); ip != nil {
+			return ip, nil
+		}
+	}
+
+	// If no proxy headers found, get the remote address
+	if remoteAddr := r.RemoteAddr; remoteAddr != "" {
+		// RemoteAddr might be in the format IP:port
+		if host, _, err := net.SplitHostPort(remoteAddr); err == nil {
+			if ip := net.ParseIP(host); ip != nil {
+				return ip, nil
+			}
+		} else {
+			// If SplitHostPort fails, try parsing the whole RemoteAddr as an IP
+			if ip := net.ParseIP(remoteAddr); ip != nil {
+				return ip, nil
+			}
+		}
+	}
+	return nil, errors.New("could not determine client IP address")
 }
