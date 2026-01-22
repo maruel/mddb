@@ -51,7 +51,7 @@ func TestID(t *testing.T) {
 				wantLen   int    // -1 means check <= idEncodedLen
 				wantExact string // empty means check is non-empty
 			}{
-				{"zero ID returns dash", 0, 1, "-"},
+				{"zero ID returns zero char", 0, 1, "0"},
 				{"small ID has compact encoding", 1, -1, ""},
 				{"max ID has full length", ID(^uint64(0) >> 1), idEncodedLen, ""}, // Max positive value
 			}
@@ -102,8 +102,8 @@ func TestID(t *testing.T) {
 				id   ID
 				want string
 			}{
-				{"zero ID", 0, `"-"`},
-				{"small ID", 1, `"0"`},        // ID 1 encodes to "0" in sortable alphabet
+				{"zero ID", 0, `"0"`},
+				{"small ID", 1, `"1"`},        // ID 1 encodes to "1" in sortable alphabet
 				{"generated ID", NewID(), ""}, // Will verify round-trip
 			}
 
@@ -148,9 +148,9 @@ func TestID(t *testing.T) {
 				input string
 				want  ID
 			}{
-				{"zero ID dash", `"-"`, 0},
+				{"zero ID zero char", `"0"`, 0},
 				{"zero ID empty", `""`, 0},
-				{"small ID", `"0"`, 1}, // "0" decodes to ID 1 in sortable alphabet
+				{"small ID", `"1"`, 1}, // "1" decodes to ID 1 in sortable alphabet
 			}
 
 			for _, tt := range tests {
@@ -219,8 +219,8 @@ func TestID(t *testing.T) {
 				want  ID
 			}{
 				{"empty string", "", 0},
-				{"dash", "-", 0},
-				{"small ID encoded", "0", 1}, // "0" decodes to ID 1 in sortable alphabet
+				{"zero char", "0", 0},
+				{"small ID encoded", "1", 1}, // "1" decodes to ID 1 in sortable alphabet
 			}
 
 			for _, tt := range tests {
@@ -258,6 +258,7 @@ func TestID(t *testing.T) {
 			}{
 				{"too long", "abcdefghijklm"},
 				{"invalid char low", "!!!"},
+				{"invalid char dash", "-"},
 				{"invalid char high", string([]byte{200})},
 				{"mixed valid invalid", "abc!def"},
 			}
