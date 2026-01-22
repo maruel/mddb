@@ -1,4 +1,4 @@
-.PHONY: help build dev test coverage lint lint-go lint-frontend lint-fix git-hooks frontend-dev types
+.PHONY: help build dev test coverage lint lint-go lint-frontend lint-fix git-hooks frontend-dev types upgrade
 
 # Variables
 DATA_DIR=./data
@@ -18,6 +18,7 @@ help:
 	@echo "  make lint-fix       - Fix all linting issues automatically"
 	@echo "  make git-hooks      - Install git pre-commit hooks"
 	@echo "  make frontend-dev   - Run frontend dev server (http://localhost:5173)"
+	@echo "  make upgrade        - Upgrade Go and pnpm dependencies"
 	@echo ""
 	@echo "Environment variables:"
 	@echo "  PORT=8080           - Server port (default: 8080)"
@@ -71,3 +72,7 @@ git-hooks:
 
 frontend-dev: $(FRONTEND_STAMP)
 	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm dev
+
+upgrade:
+	@cd ./backend && go get -u ./... && go mod tidy
+	@cd ./frontend && pnpm update --latest
