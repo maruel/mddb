@@ -95,7 +95,7 @@ export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 export class APIError extends Error {
   constructor(
     public status: number,
-    public response: ErrorResponse
+    public response: ErrorResponse,
   ) {
     super(response.error.message);
     this.name = 'APIError';
@@ -113,31 +113,7 @@ async function parseResponse<T>(res: Response): Promise<T> {
 /** Creates a typed API client */
 export function createAPIClient(fetch: FetchFn) {
   return {
-    async adminOrganizations(_req: AdminOrgsRequest): Promise<AdminOrgsResponse> {
-      const url = `/api/admin/organizations`;
-      const res = await fetch(url);
-      return parseResponse<AdminOrgsResponse>(res);
-    },
-
-    async adminStats(_req: AdminStatsRequest): Promise<AdminStatsResponse> {
-      const url = `/api/admin/stats`;
-      const res = await fetch(url);
-      return parseResponse<AdminStatsResponse>(res);
-    },
-
-    async adminUsers(_req: AdminUsersRequest): Promise<AdminUsersResponse> {
-      const url = `/api/admin/users`;
-      const res = await fetch(url);
-      return parseResponse<AdminUsersResponse>(res);
-    },
-
-    async authMe(_req: MeRequest): Promise<UserResponse> {
-      const url = `/api/auth/me`;
-      const res = await fetch(url);
-      return parseResponse<UserResponse>(res);
-    },
-
-    async createAuthInvitationsAccept(req: AcceptInvitationRequest): Promise<LoginResponse> {
+    async acceptInvitation(req: AcceptInvitationRequest): Promise<LoginResponse> {
       const url = `/api/auth/invitations/accept`;
       const body = {
         token: req.token,
@@ -152,49 +128,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<LoginResponse>(res);
     },
 
-    async createAuthLogin(req: LoginRequest): Promise<LoginResponse> {
-      const url = `/api/auth/login`;
-      const body = {
-        email: req.email,
-        password: req.password,
-      };
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<LoginResponse>(res);
-    },
-
-    async createAuthRegister(req: RegisterRequest): Promise<LoginResponse> {
-      const url = `/api/auth/register`;
-      const body = {
-        email: req.email,
-        password: req.password,
-        name: req.name,
-      };
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<LoginResponse>(res);
-    },
-
-    async createAuthSwitchOrg(req: SwitchOrgRequest): Promise<SwitchOrgResponse> {
-      const url = `/api/auth/switch-org`;
-      const body = {
-        org_id: req.org_id,
-      };
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<SwitchOrgResponse>(res);
-    },
-
-    async createInvitations(req: CreateInvitationRequest): Promise<InvitationResponse> {
+    async createInvitation(req: CreateInvitationRequest): Promise<InvitationResponse> {
       const url = `/api/${req.OrgID}/invitations`;
       const body = {
         email: req.email,
@@ -208,7 +142,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<InvitationResponse>(res);
     },
 
-    async createNodes(req: CreateNodeRequest): Promise<NodeResponse> {
+    async createNode(req: CreateNodeRequest): Promise<NodeResponse> {
       const url = `/api/${req.OrgID}/nodes`;
       const body = {
         parent_id: req.parent_id,
@@ -223,116 +157,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<NodeResponse>(res);
     },
 
-    async createPages(req: CreatePageRequest): Promise<CreatePageResponse> {
-      const url = `/api/${req.OrgID}/pages`;
-      const body = {
-        title: req.title,
-        content: req.content,
-      };
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<CreatePageResponse>(res);
-    },
-
-    async createSettingsGitRemotePush(req: PushGitRemoteRequest): Promise<OkResponse> {
-      const url = `/api/${req.OrgID}/settings/git/remote/push`;
-      const res = await fetch(url, { method: 'POST' });
-      return parseResponse<OkResponse>(res);
-    },
-
-    async createTables(req: CreateTableRequest): Promise<CreateTableResponse> {
-      const url = `/api/${req.OrgID}/tables`;
-      const body = {
-        title: req.title,
-        properties: req.properties,
-      };
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<CreateTableResponse>(res);
-    },
-
-    async createTablesByIdRecords(req: CreateRecordRequest): Promise<CreateRecordResponse> {
-      const url = `/api/${req.OrgID}/tables/${req.ID}/records`;
-      const body = {
-        data: req.data,
-      };
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<CreateRecordResponse>(res);
-    },
-
-    async deletePagesById(req: DeletePageRequest): Promise<DeletePageResponse> {
-      const url = `/api/${req.OrgID}/pages/${req.ID}`;
-      const res = await fetch(url, { method: 'DELETE' });
-      return parseResponse<DeletePageResponse>(res);
-    },
-
-    async deletePagesByIdAssetsByName(
-      req: DeletePageAssetRequest
-    ): Promise<DeletePageAssetResponse> {
-      const url = `/api/${req.OrgID}/pages/${req.PageID}/assets/${req.AssetName}`;
-      const res = await fetch(url, { method: 'DELETE' });
-      return parseResponse<DeletePageAssetResponse>(res);
-    },
-
-    async deleteSettingsGitRemote(req: DeleteGitRemoteRequest): Promise<OkResponse> {
-      const url = `/api/${req.OrgID}/settings/git/remote`;
-      const res = await fetch(url, { method: 'DELETE' });
-      return parseResponse<OkResponse>(res);
-    },
-
-    async deleteTablesById(req: DeleteTableRequest): Promise<DeleteTableResponse> {
-      const url = `/api/${req.OrgID}/tables/${req.ID}`;
-      const res = await fetch(url, { method: 'DELETE' });
-      return parseResponse<DeleteTableResponse>(res);
-    },
-
-    async deleteTablesByIdRecordsByRid(req: DeleteRecordRequest): Promise<DeleteRecordResponse> {
-      const url = `/api/${req.OrgID}/tables/${req.ID}/records/${req.RID}`;
-      const res = await fetch(url, { method: 'DELETE' });
-      return parseResponse<DeleteRecordResponse>(res);
-    },
-
-    async health(_req: HealthRequest): Promise<HealthResponse> {
-      const url = `/api/health`;
-      const res = await fetch(url);
-      return parseResponse<HealthResponse>(res);
-    },
-
-    async invitations(req: ListInvitationsRequest): Promise<ListInvitationsResponse> {
-      const url = `/api/${req.OrgID}/invitations`;
-      const res = await fetch(url);
-      return parseResponse<ListInvitationsResponse>(res);
-    },
-
-    async nodes(req: ListNodesRequest): Promise<ListNodesResponse> {
-      const url = `/api/${req.OrgID}/nodes`;
-      const res = await fetch(url);
-      return parseResponse<ListNodesResponse>(res);
-    },
-
-    async nodesById(req: GetNodeRequest): Promise<NodeResponse> {
-      const url = `/api/${req.OrgID}/nodes/${req.ID}`;
-      const res = await fetch(url);
-      return parseResponse<NodeResponse>(res);
-    },
-
-    async onboarding(req: GetOnboardingRequest): Promise<OnboardingState> {
-      const url = `/api/${req.OrgID}/onboarding`;
-      const res = await fetch(url);
-      return parseResponse<OnboardingState>(res);
-    },
-
-    async organizations(req: CreateOrganizationRequest): Promise<OrganizationResponse> {
+    async createOrganization(req: CreateOrganizationRequest): Promise<OrganizationResponse> {
       const url = `/api/organizations`;
       const body = {
         name: req.name,
@@ -347,50 +172,235 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<OrganizationResponse>(res);
     },
 
-    async pages(req: ListPagesRequest): Promise<ListPagesResponse> {
+    async createPage(req: CreatePageRequest): Promise<CreatePageResponse> {
       const url = `/api/${req.OrgID}/pages`;
-      const res = await fetch(url);
-      return parseResponse<ListPagesResponse>(res);
+      const body = {
+        title: req.title,
+        content: req.content,
+      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<CreatePageResponse>(res);
     },
 
-    async pagesById(req: GetPageRequest): Promise<GetPageResponse> {
+    async createRecord(req: CreateRecordRequest): Promise<CreateRecordResponse> {
+      const url = `/api/${req.OrgID}/tables/${req.ID}/records`;
+      const body = {
+        data: req.data,
+      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<CreateRecordResponse>(res);
+    },
+
+    async createTable(req: CreateTableRequest): Promise<CreateTableResponse> {
+      const url = `/api/${req.OrgID}/tables`;
+      const body = {
+        title: req.title,
+        properties: req.properties,
+      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<CreateTableResponse>(res);
+    },
+
+    async deletePage(req: DeletePageRequest): Promise<DeletePageResponse> {
+      const url = `/api/${req.OrgID}/pages/${req.ID}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      return parseResponse<DeletePageResponse>(res);
+    },
+
+    async deletePageAsset(req: DeletePageAssetRequest): Promise<DeletePageAssetResponse> {
+      const url = `/api/${req.OrgID}/pages/${req.PageID}/assets/${req.AssetName}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      return parseResponse<DeletePageAssetResponse>(res);
+    },
+
+    async deleteRecord(req: DeleteRecordRequest): Promise<DeleteRecordResponse> {
+      const url = `/api/${req.OrgID}/tables/${req.ID}/records/${req.RID}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      return parseResponse<DeleteRecordResponse>(res);
+    },
+
+    async deleteRemote(req: DeleteGitRemoteRequest): Promise<OkResponse> {
+      const url = `/api/${req.OrgID}/settings/git/remote`;
+      const res = await fetch(url, { method: 'DELETE' });
+      return parseResponse<OkResponse>(res);
+    },
+
+    async deleteTable(req: DeleteTableRequest): Promise<DeleteTableResponse> {
+      const url = `/api/${req.OrgID}/tables/${req.ID}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      return parseResponse<DeleteTableResponse>(res);
+    },
+
+    async getNode(req: GetNodeRequest): Promise<NodeResponse> {
+      const url = `/api/${req.OrgID}/nodes/${req.ID}`;
+      const res = await fetch(url);
+      return parseResponse<NodeResponse>(res);
+    },
+
+    async getOnboarding(req: GetOnboardingRequest): Promise<OnboardingState> {
+      const url = `/api/${req.OrgID}/onboarding`;
+      const res = await fetch(url);
+      return parseResponse<OnboardingState>(res);
+    },
+
+    async getOrganization(req: GetOnboardingRequest): Promise<OrganizationResponse> {
+      const url = `/api/${req.OrgID}/settings/organization`;
+      const res = await fetch(url);
+      return parseResponse<OrganizationResponse>(res);
+    },
+
+    async getPage(req: GetPageRequest): Promise<GetPageResponse> {
       const url = `/api/${req.OrgID}/pages/${req.ID}`;
       const res = await fetch(url);
       return parseResponse<GetPageResponse>(res);
     },
 
-    async pagesByIdAssets(req: ListPageAssetsRequest): Promise<ListPageAssetsResponse> {
-      const url = `/api/${req.OrgID}/pages/${req.PageID}/assets`;
-      const res = await fetch(url);
-      return parseResponse<ListPageAssetsResponse>(res);
-    },
-
-    async pagesByIdHistory(req: GetPageHistoryRequest): Promise<GetPageHistoryResponse> {
+    async getPageHistory(req: GetPageHistoryRequest): Promise<GetPageHistoryResponse> {
       const params = new URLSearchParams();
       if (req.Limit) params.set('limit', String(req.Limit));
-      const url =
-        `/api/${req.OrgID}/pages/${req.ID}/history` + (params.toString() ? `?${params}` : '');
+      const url = `/api/${req.OrgID}/pages/${req.ID}/history` + (params.toString() ? `?${params}` : '');
       const res = await fetch(url);
       return parseResponse<GetPageHistoryResponse>(res);
     },
 
-    async pagesByIdHistoryByHash(req: GetPageVersionRequest): Promise<GetPageVersionResponse> {
+    async getPageVersion(req: GetPageVersionRequest): Promise<GetPageVersionResponse> {
       const url = `/api/${req.OrgID}/pages/${req.ID}/history/${req.Hash}`;
       const res = await fetch(url);
       return parseResponse<GetPageVersionResponse>(res);
     },
 
-    async patchSettingsOrganization(req: UpdateOrganizationRequest): Promise<OrganizationResponse> {
-      const url = `/api/${req.OrgID}/settings/organization`;
+    async getRecord(req: GetRecordRequest): Promise<GetRecordResponse> {
+      const url = `/api/${req.OrgID}/tables/${req.ID}/records/${req.RID}`;
+      const res = await fetch(url);
+      return parseResponse<GetRecordResponse>(res);
+    },
+
+    async getRemote(req: GetGitRemoteRequest): Promise<GitRemoteResponse> {
+      const url = `/api/${req.OrgID}/settings/git/remote`;
+      const res = await fetch(url);
+      return parseResponse<GitRemoteResponse>(res);
+    },
+
+    async getTable(req: GetTableRequest): Promise<GetTableResponse> {
+      const url = `/api/${req.OrgID}/tables/${req.ID}`;
+      const res = await fetch(url);
+      return parseResponse<GetTableResponse>(res);
+    },
+
+    async health(_req: HealthRequest): Promise<HealthResponse> {
+      const url = `/api/health`;
+      const res = await fetch(url);
+      return parseResponse<HealthResponse>(res);
+    },
+
+    async listAllOrgs(_req: AdminOrgsRequest): Promise<AdminOrgsResponse> {
+      const url = `/api/admin/organizations`;
+      const res = await fetch(url);
+      return parseResponse<AdminOrgsResponse>(res);
+    },
+
+    async listAllUsers(_req: AdminUsersRequest): Promise<AdminUsersResponse> {
+      const url = `/api/admin/users`;
+      const res = await fetch(url);
+      return parseResponse<AdminUsersResponse>(res);
+    },
+
+    async listInvitations(req: ListInvitationsRequest): Promise<ListInvitationsResponse> {
+      const url = `/api/${req.OrgID}/invitations`;
+      const res = await fetch(url);
+      return parseResponse<ListInvitationsResponse>(res);
+    },
+
+    async listNodes(req: ListNodesRequest): Promise<ListNodesResponse> {
+      const url = `/api/${req.OrgID}/nodes`;
+      const res = await fetch(url);
+      return parseResponse<ListNodesResponse>(res);
+    },
+
+    async listPageAssets(req: ListPageAssetsRequest): Promise<ListPageAssetsResponse> {
+      const url = `/api/${req.OrgID}/pages/${req.PageID}/assets`;
+      const res = await fetch(url);
+      return parseResponse<ListPageAssetsResponse>(res);
+    },
+
+    async listPages(req: ListPagesRequest): Promise<ListPagesResponse> {
+      const url = `/api/${req.OrgID}/pages`;
+      const res = await fetch(url);
+      return parseResponse<ListPagesResponse>(res);
+    },
+
+    async listRecords(req: ListRecordsRequest): Promise<ListRecordsResponse> {
+      const params = new URLSearchParams();
+      if (req.Offset) params.set('offset', String(req.Offset));
+      if (req.Limit) params.set('limit', String(req.Limit));
+      const url = `/api/${req.OrgID}/tables/${req.ID}/records` + (params.toString() ? `?${params}` : '');
+      const res = await fetch(url);
+      return parseResponse<ListRecordsResponse>(res);
+    },
+
+    async listTables(req: ListTablesRequest): Promise<ListTablesResponse> {
+      const url = `/api/${req.OrgID}/tables`;
+      const res = await fetch(url);
+      return parseResponse<ListTablesResponse>(res);
+    },
+
+    async listUsers(req: ListUsersRequest): Promise<ListUsersResponse> {
+      const url = `/api/${req.OrgID}/users`;
+      const res = await fetch(url);
+      return parseResponse<ListUsersResponse>(res);
+    },
+
+    async login(req: LoginRequest): Promise<LoginResponse> {
+      const url = `/api/auth/login`;
       const body = {
-        name: req.name,
+        email: req.email,
+        password: req.password,
       };
       const res = await fetch(url, {
-        method: 'PATCH',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<OrganizationResponse>(res);
+      return parseResponse<LoginResponse>(res);
+    },
+
+    async me(_req: MeRequest): Promise<UserResponse> {
+      const url = `/api/auth/me`;
+      const res = await fetch(url);
+      return parseResponse<UserResponse>(res);
+    },
+
+    async push(req: PushGitRemoteRequest): Promise<OkResponse> {
+      const url = `/api/${req.OrgID}/settings/git/remote/push`;
+      const res = await fetch(url, { method: 'POST' });
+      return parseResponse<OkResponse>(res);
+    },
+
+    async register(req: RegisterRequest): Promise<LoginResponse> {
+      const url = `/api/auth/register`;
+      const body = {
+        email: req.email,
+        password: req.password,
+        name: req.name,
+      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<LoginResponse>(res);
     },
 
     async search(req: SearchRequest): Promise<SearchResponse> {
@@ -410,87 +420,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<SearchResponse>(res);
     },
 
-    async settingsGitRemote(req: GetGitRemoteRequest): Promise<GitRemoteResponse> {
-      const url = `/api/${req.OrgID}/settings/git/remote`;
-      const res = await fetch(url);
-      return parseResponse<GitRemoteResponse>(res);
-    },
-
-    async settingsOrganization(req: GetOnboardingRequest): Promise<OrganizationResponse> {
-      const url = `/api/${req.OrgID}/settings/organization`;
-      const res = await fetch(url);
-      return parseResponse<OrganizationResponse>(res);
-    },
-
-    async tables(req: ListTablesRequest): Promise<ListTablesResponse> {
-      const url = `/api/${req.OrgID}/tables`;
-      const res = await fetch(url);
-      return parseResponse<ListTablesResponse>(res);
-    },
-
-    async tablesById(req: GetTableRequest): Promise<GetTableResponse> {
-      const url = `/api/${req.OrgID}/tables/${req.ID}`;
-      const res = await fetch(url);
-      return parseResponse<GetTableResponse>(res);
-    },
-
-    async tablesByIdRecords(req: ListRecordsRequest): Promise<ListRecordsResponse> {
-      const params = new URLSearchParams();
-      if (req.Offset) params.set('offset', String(req.Offset));
-      if (req.Limit) params.set('limit', String(req.Limit));
-      const url =
-        `/api/${req.OrgID}/tables/${req.ID}/records` + (params.toString() ? `?${params}` : '');
-      const res = await fetch(url);
-      return parseResponse<ListRecordsResponse>(res);
-    },
-
-    async tablesByIdRecordsByRid(req: GetRecordRequest): Promise<GetRecordResponse> {
-      const url = `/api/${req.OrgID}/tables/${req.ID}/records/${req.RID}`;
-      const res = await fetch(url);
-      return parseResponse<GetRecordResponse>(res);
-    },
-
-    async updateAuthSettings(req: UpdateUserSettingsRequest): Promise<UserResponse> {
-      const url = `/api/auth/settings`;
-      const body = {
-        settings: req.settings,
-      };
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<UserResponse>(res);
-    },
-
-    async updateOnboarding(req: UpdateOnboardingRequest): Promise<OnboardingState> {
-      const url = `/api/${req.OrgID}/onboarding`;
-      const body = {
-        state: req.state,
-      };
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<OnboardingState>(res);
-    },
-
-    async updatePagesById(req: UpdatePageRequest): Promise<UpdatePageResponse> {
-      const url = `/api/${req.OrgID}/pages/${req.ID}`;
-      const body = {
-        title: req.title,
-        content: req.content,
-      };
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<UpdatePageResponse>(res);
-    },
-
-    async updateSettingsGitRemote(req: SetGitRemoteRequest): Promise<GitRemoteResponse> {
+    async setRemote(req: SetGitRemoteRequest): Promise<GitRemoteResponse> {
       const url = `/api/${req.OrgID}/settings/git/remote`;
       const body = {
         url: req.url,
@@ -506,9 +436,26 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<GitRemoteResponse>(res);
     },
 
-    async updateSettingsMembership(
-      req: UpdateMembershipSettingsRequest
-    ): Promise<MembershipResponse> {
+    async stats(_req: AdminStatsRequest): Promise<AdminStatsResponse> {
+      const url = `/api/admin/stats`;
+      const res = await fetch(url);
+      return parseResponse<AdminStatsResponse>(res);
+    },
+
+    async switchOrg(req: SwitchOrgRequest): Promise<SwitchOrgResponse> {
+      const url = `/api/auth/switch-org`;
+      const body = {
+        org_id: req.org_id,
+      };
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<SwitchOrgResponse>(res);
+    },
+
+    async updateMembershipSettings(req: UpdateMembershipSettingsRequest): Promise<MembershipResponse> {
       const url = `/api/${req.OrgID}/settings/membership`;
       const body = {
         settings: req.settings,
@@ -521,7 +468,60 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<MembershipResponse>(res);
     },
 
-    async updateSettingsOrganization(req: UpdateOrgSettingsRequest): Promise<OkResponse> {
+    async updateOnboarding(req: UpdateOnboardingRequest): Promise<OnboardingState> {
+      const url = `/api/${req.OrgID}/onboarding`;
+      const body = {
+        state: req.state,
+      };
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<OnboardingState>(res);
+    },
+
+    async updateOrganization(req: UpdateOrganizationRequest): Promise<OrganizationResponse> {
+      const url = `/api/${req.OrgID}/settings/organization`;
+      const body = {
+        name: req.name,
+      };
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<OrganizationResponse>(res);
+    },
+
+    async updatePage(req: UpdatePageRequest): Promise<UpdatePageResponse> {
+      const url = `/api/${req.OrgID}/pages/${req.ID}`;
+      const body = {
+        title: req.title,
+        content: req.content,
+      };
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<UpdatePageResponse>(res);
+    },
+
+    async updateRecord(req: UpdateRecordRequest): Promise<UpdateRecordResponse> {
+      const url = `/api/${req.OrgID}/tables/${req.ID}/records/${req.RID}`;
+      const body = {
+        data: req.data,
+      };
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<UpdateRecordResponse>(res);
+    },
+
+    async updateSettings(req: UpdateOrgSettingsRequest): Promise<OrganizationResponse> {
       const url = `/api/${req.OrgID}/settings/organization`;
       const body = {
         settings: req.settings,
@@ -531,10 +531,10 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<OkResponse>(res);
+      return parseResponse<OrganizationResponse>(res);
     },
 
-    async updateTablesById(req: UpdateTableRequest): Promise<UpdateTableResponse> {
+    async updateTable(req: UpdateTableRequest): Promise<UpdateTableResponse> {
       const url = `/api/${req.OrgID}/tables/${req.ID}`;
       const body = {
         title: req.title,
@@ -548,20 +548,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<UpdateTableResponse>(res);
     },
 
-    async updateTablesByIdRecordsByRid(req: UpdateRecordRequest): Promise<UpdateRecordResponse> {
-      const url = `/api/${req.OrgID}/tables/${req.ID}/records/${req.RID}`;
-      const body = {
-        data: req.data,
-      };
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      return parseResponse<UpdateRecordResponse>(res);
-    },
-
-    async updateUsersRole(req: UpdateRoleRequest): Promise<OkResponse> {
+    async updateUserRole(req: UpdateRoleRequest): Promise<UserResponse> {
       const url = `/api/${req.OrgID}/users/role`;
       const body = {
         user_id: req.user_id,
@@ -572,14 +559,22 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<OkResponse>(res);
+      return parseResponse<UserResponse>(res);
     },
 
-    async users(req: ListUsersRequest): Promise<ListUsersResponse> {
-      const url = `/api/${req.OrgID}/users`;
-      const res = await fetch(url);
-      return parseResponse<ListUsersResponse>(res);
+    async updateUserSettings(req: UpdateUserSettingsRequest): Promise<UserResponse> {
+      const url = `/api/auth/settings`;
+      const body = {
+        settings: req.settings,
+      };
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      return parseResponse<UserResponse>(res);
     },
+
   };
 }
 
