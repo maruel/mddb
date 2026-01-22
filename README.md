@@ -4,6 +4,19 @@ A Notion-like document and table system for managing your information. Store eve
 
 [![codecov](https://codecov.io/gh/maruel/mddb/graph/badge.svg?token=Q4SYDP0B00)](https://codecov.io/gh/maruel/mddb)
 
+Why?
+
+![1.3s](https://github.com/user-attachments/assets/263f10ac-8f5f-484f-a1f8-415d49896de8)
+
+https://x.com/ivanhzhao/status/2003510041010405790
+
+\-\- Ivan Zhao, Notion CEO
+
+![3s](https://github.com/user-attachments/assets/3e3bbf18-9ffa-4669-9f43-b7e9828e41ef)
+
+https://x.com/anothercohen/status/2014136100894199968
+
+
 ## What is mddb?
 
 mddb lets you:
