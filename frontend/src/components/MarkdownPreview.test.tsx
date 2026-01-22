@@ -36,9 +36,7 @@ describe('MarkdownPreview', () => {
   });
 
   it('renders links correctly', () => {
-    const { container } = render(() => (
-      <MarkdownPreview content="[Link Text](https://example.com)" />
-    ));
+    const { container } = render(() => <MarkdownPreview content="[Link Text](https://example.com)" />);
 
     const preview = container.querySelector('[role="region"]');
     expect(preview?.innerHTML).toContain('<a');
@@ -72,18 +70,14 @@ describe('MarkdownPreview', () => {
   });
 
   it('renders images without orgId unchanged', () => {
-    const { container } = render(() => (
-      <MarkdownPreview content="![Alt](https://example.com/image.png)" />
-    ));
+    const { container } = render(() => <MarkdownPreview content="![Alt](https://example.com/image.png)" />);
 
     const preview = container.querySelector('[role="region"]');
     expect(preview?.innerHTML).toContain('src="https://example.com/image.png"');
   });
 
   it('rewrites relative asset paths when orgId is provided', () => {
-    const { container } = render(() => (
-      <MarkdownPreview content="![Alt](assets/123/image.png)" orgId="org-456" />
-    ));
+    const { container } = render(() => <MarkdownPreview content="![Alt](assets/123/image.png)" orgId="org-456" />);
 
     const preview = container.querySelector('[role="region"]');
     // Should rewrite assets/123/image.png to /assets/org-456/123/image.png

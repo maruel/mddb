@@ -57,9 +57,7 @@ describe('TableGrid', () => {
   });
 
   it('renders grid with cards', async () => {
-    renderWithI18n(() => (
-      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
-    ));
+    renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       expect(screen.getByText('Product A')).toBeTruthy();
@@ -68,9 +66,7 @@ describe('TableGrid', () => {
   });
 
   it('uses first column value as card title', async () => {
-    renderWithI18n(() => (
-      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
-    ));
+    renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       // First column is Title, so "Product A" and "Product B" should be headers
@@ -90,11 +86,7 @@ describe('TableGrid', () => {
     ];
 
     renderWithI18n(() => (
-      <TableGrid
-        columns={mockColumns}
-        records={recordsWithoutTitle}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGrid columns={mockColumns} records={recordsWithoutTitle} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -103,9 +95,7 @@ describe('TableGrid', () => {
   });
 
   it('displays up to 3 additional fields in card body', async () => {
-    renderWithI18n(() => (
-      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
-    ));
+    renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       // Should show Description, Price, Status (columns 2-4, indices 1-3)
@@ -117,9 +107,7 @@ describe('TableGrid', () => {
   });
 
   it('shows field values correctly', async () => {
-    renderWithI18n(() => (
-      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
-    ));
+    renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       expect(screen.getByText('A great product')).toBeTruthy();
@@ -139,11 +127,7 @@ describe('TableGrid', () => {
     ];
 
     renderWithI18n(() => (
-      <TableGrid
-        columns={mockColumns}
-        records={recordsWithMissingFields}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGrid columns={mockColumns} records={recordsWithMissingFields} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -153,9 +137,7 @@ describe('TableGrid', () => {
   });
 
   it('renders delete button for each card', async () => {
-    renderWithI18n(() => (
-      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
-    ));
+    renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       const deleteButtons = screen.getAllByText('✕');
@@ -164,9 +146,7 @@ describe('TableGrid', () => {
   });
 
   it('calls onDeleteRecord when delete button is clicked', async () => {
-    renderWithI18n(() => (
-      <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
-    ));
+    renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       expect(screen.getByText('Product A')).toBeTruthy();
@@ -192,9 +172,7 @@ describe('TableGrid', () => {
   });
 
   it('handles records with empty columns array', async () => {
-    renderWithI18n(() => (
-      <TableGrid columns={[]} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
-    ));
+    renderWithI18n(() => <TableGrid columns={[]} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     // Should render without crashing and show "Untitled" since no first column
     await waitFor(() => {

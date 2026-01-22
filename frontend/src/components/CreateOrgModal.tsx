@@ -52,9 +52,7 @@ export default function CreateOrgModal(props: CreateOrgModalProps) {
       <div class={styles.modal}>
         <header class={styles.header}>
           <h2>{props.isFirstOrg ? t('createOrg.firstOrgTitle') : t('createOrg.title')}</h2>
-          <p>
-            {props.isFirstOrg ? t('createOrg.firstOrgDescription') : t('createOrg.description')}
-          </p>
+          <p>{props.isFirstOrg ? t('createOrg.firstOrgDescription') : t('createOrg.description')}</p>
         </header>
 
         {error() && <div class={styles.error}>{error()}</div>}

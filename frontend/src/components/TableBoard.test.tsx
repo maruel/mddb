@@ -102,11 +102,7 @@ describe('TableBoard', () => {
 
   it('renders board with columns based on select options', async () => {
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={mockRecords}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -118,11 +114,7 @@ describe('TableBoard', () => {
 
   it('shows "No Group" column for records without status value', async () => {
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={mockRecords}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -132,11 +124,7 @@ describe('TableBoard', () => {
 
   it('groups records correctly by status', async () => {
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={mockRecords}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -153,11 +141,7 @@ describe('TableBoard', () => {
 
   it('shows record count in column headers', async () => {
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={mockRecords}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -170,11 +154,7 @@ describe('TableBoard', () => {
 
   it('uses first column value as card title', async () => {
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={mockRecords}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -194,11 +174,7 @@ describe('TableBoard', () => {
     ];
 
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={recordsWithoutTitle}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={recordsWithoutTitle} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -208,11 +184,7 @@ describe('TableBoard', () => {
 
   it('displays additional fields in card body (excluding group column)', async () => {
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={mockRecords}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -224,11 +196,7 @@ describe('TableBoard', () => {
 
   it('renders delete button for each card', async () => {
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={mockRecords}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -239,11 +207,7 @@ describe('TableBoard', () => {
 
   it('calls onDeleteRecord when delete button is clicked', async () => {
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={mockRecords}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -259,11 +223,7 @@ describe('TableBoard', () => {
 
   it('shows message when no select column exists', async () => {
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsNoSelect}
-        records={mockRecords}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsNoSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -288,11 +248,7 @@ describe('TableBoard', () => {
     ];
 
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithMultiSelect}
-        records={recordsWithTags}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithMultiSelect} records={recordsWithTags} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -313,11 +269,7 @@ describe('TableBoard', () => {
     ];
 
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={recordsOnlyTodo}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={recordsOnlyTodo} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -339,11 +291,7 @@ describe('TableBoard', () => {
     ];
 
     renderWithI18n(() => (
-      <TableBoard
-        columns={mockColumnsWithSelect}
-        records={recordsWithCustomStatus}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableBoard columns={mockColumnsWithSelect} records={recordsWithCustomStatus} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -353,9 +301,7 @@ describe('TableBoard', () => {
   });
 
   it('renders empty board when no records', async () => {
-    renderWithI18n(() => (
-      <TableBoard columns={mockColumnsWithSelect} records={[]} onDeleteRecord={mockDeleteRecord} />
-    ));
+    renderWithI18n(() => <TableBoard columns={mockColumnsWithSelect} records={[]} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       // Should still show column headers from options

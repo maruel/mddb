@@ -131,12 +131,7 @@ describe('TableTable', () => {
     const mockDelete = vi.fn();
 
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onDeleteRecord={mockDelete}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onDeleteRecord={mockDelete} />
     ));
 
     await waitFor(() => {
@@ -149,12 +144,7 @@ describe('TableTable', () => {
     const mockDelete = vi.fn();
 
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onDeleteRecord={mockDelete}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onDeleteRecord={mockDelete} />
     ));
 
     await waitFor(() => {
@@ -171,12 +161,7 @@ describe('TableTable', () => {
 
   it('enters edit mode when clicking a cell', async () => {
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onUpdateRecord={vi.fn()}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     await waitFor(() => {
@@ -195,12 +180,7 @@ describe('TableTable', () => {
 
   it('shows save and cancel buttons when editing', async () => {
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onUpdateRecord={vi.fn()}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     await waitFor(() => {
@@ -231,13 +211,7 @@ describe('TableTable', () => {
     const mockLoadMore = vi.fn();
 
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        hasMore={true}
-        onLoadMore={mockLoadMore}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} hasMore={true} onLoadMore={mockLoadMore} />
     ));
 
     await waitFor(() => {
@@ -251,9 +225,7 @@ describe('TableTable', () => {
   });
 
   it('hides load more button when hasMore is false', async () => {
-    renderWithI18n(() => (
-      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} hasMore={false} />
-    ));
+    renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} hasMore={false} />);
 
     await waitFor(() => {
       expect(screen.queryByText(/load more/i)).toBeFalsy();
@@ -264,12 +236,7 @@ describe('TableTable', () => {
     const mockAddRecord = vi.fn();
 
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onAddRecord={mockAddRecord}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onAddRecord={mockAddRecord} />
     ));
 
     await waitFor(() => {
@@ -280,12 +247,7 @@ describe('TableTable', () => {
 
   it('renders select dropdown for select type columns', async () => {
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onUpdateRecord={vi.fn()}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     await waitFor(() => {
@@ -305,12 +267,7 @@ describe('TableTable', () => {
 
   it('renders number input for number type columns', async () => {
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onUpdateRecord={vi.fn()}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     await waitFor(() => {
@@ -329,12 +286,7 @@ describe('TableTable', () => {
 
   it('renders date input for date type columns', async () => {
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onUpdateRecord={vi.fn()}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     // Find a date cell and click it
@@ -362,12 +314,7 @@ describe('TableTable', () => {
 
   it('renders checkbox input for checkbox type columns', async () => {
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onUpdateRecord={vi.fn()}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     await waitFor(() => {
@@ -389,12 +336,7 @@ describe('TableTable', () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onUpdateRecord={mockUpdateRecord}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={mockUpdateRecord} />
     ));
 
     await waitFor(() => {
@@ -434,12 +376,7 @@ describe('TableTable', () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
-      <TableTable
-        tableId="db-1"
-        columns={mockColumns}
-        records={mockRecords}
-        onUpdateRecord={mockUpdateRecord}
-      />
+      <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={mockUpdateRecord} />
     ));
 
     await waitFor(() => {

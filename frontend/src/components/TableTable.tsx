@@ -102,15 +102,9 @@ export default function TableTable(props: TableTableProps) {
         // Use dropdown if options are defined, otherwise text input
         if (column.options && column.options.length > 0) {
           return (
-            <select
-              value={initialValue}
-              onChange={(e) => handleCellChange(e.target.value)}
-              class={styles.input}
-            >
+            <select value={initialValue} onChange={(e) => handleCellChange(e.target.value)} class={styles.input}>
               <option value="">--</option>
-              <For each={column.options}>
-                {(option) => <option value={option.id}>{option.name}</option>}
-              </For>
+              <For each={column.options}>{(option) => <option value={option.id}>{option.name}</option>}</For>
             </select>
           );
         }
@@ -189,8 +183,7 @@ export default function TableTable(props: TableTableProps) {
                   <For each={props.columns}>
                     {(column) => {
                       const isEditing = () =>
-                        editingCell()?.recordId === record.id &&
-                        editingCell()?.columnId === column.name;
+                        editingCell()?.recordId === record.id && editingCell()?.columnId === column.name;
 
                       return (
                         <td
@@ -200,25 +193,15 @@ export default function TableTable(props: TableTableProps) {
                         >
                           <Show
                             when={isEditing()}
-                            fallback={
-                              <div class={styles.cellContent}>
-                                {renderCellContent(record, column)}
-                              </div>
-                            }
+                            fallback={<div class={styles.cellContent}>{renderCellContent(record, column)}</div>}
                           >
                             <div class={styles.editContainer}>
                               {renderCellInput(column, editValue())}
                               <div class={styles.editActions}>
-                                <button
-                                  class={styles.saveBtn}
-                                  onClick={() => handleCellSave(record.id, column.name)}
-                                >
+                                <button class={styles.saveBtn} onClick={() => handleCellSave(record.id, column.name)}>
                                   ✓
                                 </button>
-                                <button
-                                  class={styles.cancelBtn}
-                                  onClick={() => setEditingCell(null)}
-                                >
+                                <button class={styles.cancelBtn} onClick={() => setEditingCell(null)}>
                                   ✕
                                 </button>
                               </div>
@@ -240,9 +223,7 @@ export default function TableTable(props: TableTableProps) {
                 </td>
                 <For each={props.columns}>
                   {(column) => (
-                    <td class={styles.cell}>
-                      {renderCellInput(column, String(newRowData()[column.name] ?? ''))}
-                    </td>
+                    <td class={styles.cell}>{renderCellInput(column, String(newRowData()[column.name] ?? ''))}</td>
                   )}
                 </For>
               </tr>

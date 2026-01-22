@@ -84,11 +84,7 @@ describe('TableGallery', () => {
 
   it('renders gallery with cards', async () => {
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithImage}
-        records={mockRecordsWithImage}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -99,11 +95,7 @@ describe('TableGallery', () => {
 
   it('detects image column by name containing "image"', async () => {
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithImage}
-        records={mockRecordsWithImage}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -128,11 +120,7 @@ describe('TableGallery', () => {
     ];
 
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithCover}
-        records={recordsWithCover}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithCover} records={recordsWithCover} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -144,11 +132,7 @@ describe('TableGallery', () => {
 
   it('shows placeholder when no image value', async () => {
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithImage}
-        records={mockRecordsWithImage}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -159,11 +143,7 @@ describe('TableGallery', () => {
 
   it('uses first column value as card title', async () => {
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithImage}
-        records={mockRecordsWithImage}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -183,11 +163,7 @@ describe('TableGallery', () => {
     ];
 
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithImage}
-        records={recordsWithoutTitle}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={recordsWithoutTitle} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -197,11 +173,7 @@ describe('TableGallery', () => {
 
   it('displays up to 2 additional fields in card body', async () => {
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithImage}
-        records={mockRecordsWithImage}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -213,11 +185,7 @@ describe('TableGallery', () => {
 
   it('renders delete button for each card', async () => {
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithImage}
-        records={mockRecordsWithImage}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -228,11 +196,7 @@ describe('TableGallery', () => {
 
   it('calls onDeleteRecord when delete button is clicked', async () => {
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithImage}
-        records={mockRecordsWithImage}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -248,11 +212,7 @@ describe('TableGallery', () => {
 
   it('sets correct alt text on images', async () => {
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsWithImage}
-        records={mockRecordsWithImage}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
@@ -284,11 +244,7 @@ describe('TableGallery', () => {
     ];
 
     renderWithI18n(() => (
-      <TableGallery
-        columns={mockColumnsNoImage}
-        records={recordsNoImage}
-        onDeleteRecord={mockDeleteRecord}
-      />
+      <TableGallery columns={mockColumnsNoImage} records={recordsNoImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {

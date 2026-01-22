@@ -15,9 +15,7 @@ export default function Onboarding(props: OnboardingProps) {
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
-  const [orgName, setOrgName] = createSignal(
-    untrack(() => props.user.memberships?.[0]?.organization_name || '')
-  );
+  const [orgName, setOrgName] = createSignal(untrack(() => props.user.memberships?.[0]?.organization_name || ''));
 
   // Git states
   const [remoteURL, setRemoteURL] = createSignal('');
@@ -144,11 +142,7 @@ export default function Onboarding(props: OnboardingProps) {
                 <input type="text" value={orgName()} onInput={(e) => setOrgName(e.target.value)} />
                 <p class={styles.hint}>{t('onboarding.workspaceNameHint')}</p>
               </div>
-              <button
-                class={styles.primaryButton}
-                onClick={handleNameStep}
-                disabled={!orgName() || loading()}
-              >
+              <button class={styles.primaryButton} onClick={handleNameStep} disabled={!orgName() || loading()}>
                 {loading() ? t('common.saving') : t('onboarding.nextGitSync')}
               </button>
             </div>
@@ -164,9 +158,7 @@ export default function Onboarding(props: OnboardingProps) {
                   <label>{t('onboarding.repoUrl')}</label>
                   <input
                     type="url"
-                    placeholder={
-                      t('onboarding.repoUrlPlaceholder') || 'https://github.com/user/repo.git'
-                    }
+                    placeholder={t('onboarding.repoUrlPlaceholder') || 'https://github.com/user/repo.git'}
                     value={remoteURL()}
                     onInput={(e) => setRemoteURL(e.target.value)}
                   />
@@ -184,11 +176,7 @@ export default function Onboarding(props: OnboardingProps) {
                   <button type="button" class={styles.secondaryButton} onClick={handleSkipGit}>
                     {t('onboarding.skipForNow')}
                   </button>
-                  <button
-                    type="submit"
-                    class={styles.primaryButton}
-                    disabled={!remoteURL() || loading()}
-                  >
+                  <button type="submit" class={styles.primaryButton} disabled={!remoteURL() || loading()}>
                     {loading() ? t('common.saving') : t('onboarding.setupAndFinish')}
                   </button>
                 </div>

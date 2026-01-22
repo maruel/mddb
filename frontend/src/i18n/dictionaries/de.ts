@@ -73,8 +73,7 @@ export const dict: Dictionary = {
     workspaceNameHint: 'Sie können diesen Namen ändern.',
     nextGitSync: 'Weiter: Git-Synchronisation',
     advancedSyncTitle: 'Erweiterte Synchronisation (Optional)',
-    advancedSyncHint:
-      'Sichern Sie Ihre Daten durch Synchronisation mit einem privaten Git-Repository.',
+    advancedSyncHint: 'Sichern Sie Ihre Daten durch Synchronisation mit einem privaten Git-Repository.',
     repoUrl: 'GitHub/GitLab-Repository-URL',
     repoUrlPlaceholder: 'https://github.com/user/repo.git',
     patLabel: 'Persönliches Zugriffstoken',

@@ -36,9 +36,7 @@ export default function TableGallery(props: TableGalleryProps) {
                     >
                       <img
                         src={String(record.data[col().name])}
-                        alt={String(
-                          (props.columns[0] ? record.data[props.columns[0].name] : null) || 'Record'
-                        )}
+                        alt={String((props.columns[0] ? record.data[props.columns[0].name] : null) || 'Record')}
                         class={styles.image}
                       />
                     </Show>
@@ -48,10 +46,7 @@ export default function TableGallery(props: TableGalleryProps) {
               <div class={styles.cardContent}>
                 <div class={styles.cardHeader}>
                   <strong>
-                    {String(
-                      (props.columns[0] ? record.data[props.columns[0].name] : null) ||
-                        t('table.untitled')
-                    )}
+                    {String((props.columns[0] ? record.data[props.columns[0].name] : null) || t('table.untitled'))}
                   </strong>
                   <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>
                     ✕
@@ -62,9 +57,7 @@ export default function TableGallery(props: TableGalleryProps) {
                     {(col) => (
                       <div class={styles.field}>
                         <span class={styles.fieldName}>{col.name}:</span>
-                        <span class={styles.fieldValue}>
-                          {String(record.data[col.name] || '-')}
-                        </span>
+                        <span class={styles.fieldValue}>{String(record.data[col.name] || '-')}</span>
                       </div>
                     )}
                   </For>

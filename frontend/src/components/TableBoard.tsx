@@ -1,10 +1,5 @@
 import { For, Show, createMemo } from 'solid-js';
-import {
-  type DataRecordResponse,
-  type Property,
-  PropertyTypeSelect,
-  PropertyTypeMultiSelect,
-} from '../types';
+import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '../types';
 import styles from './TableBoard.module.css';
 import { useI18n } from '../i18n';
 
@@ -50,17 +45,12 @@ export default function TableBoard(props: TableBoardProps) {
 
     // Filter to show groups with records, plus empty groups from options
     const optionNames = (col.options || []).map((opt) => opt.name);
-    return Object.values(grouped).filter(
-      (g) => g.records.length > 0 || optionNames.includes(g.name)
-    );
+    return Object.values(grouped).filter((g) => g.records.length > 0 || optionNames.includes(g.name));
   });
 
   return (
     <div class={styles.board}>
-      <Show
-        when={groupColumn()}
-        fallback={<div class={styles.noGroup}>{t('table.addSelectColumn')}</div>}
-      >
+      <Show when={groupColumn()} fallback={<div class={styles.noGroup}>{t('table.addSelectColumn')}</div>}>
         <div class={styles.columns}>
           <For each={groups()}>
             {(group) => (
@@ -76,29 +66,19 @@ export default function TableBoard(props: TableBoardProps) {
                         <div class={styles.cardHeader}>
                           <strong>
                             {String(
-                              (props.columns[0] ? record.data[props.columns[0].name] : null) ||
-                                t('table.untitled')
+                              (props.columns[0] ? record.data[props.columns[0].name] : null) || t('table.untitled')
                             )}
                           </strong>
-                          <button
-                            class={styles.deleteBtn}
-                            onClick={() => props.onDeleteRecord(record.id)}
-                          >
+                          <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>
                             ✕
                           </button>
                         </div>
                         <div class={styles.cardBody}>
-                          <For
-                            each={props.columns
-                              .slice(1, 4)
-                              .filter((c) => c.name !== groupColumn()?.name)}
-                          >
+                          <For each={props.columns.slice(1, 4).filter((c) => c.name !== groupColumn()?.name)}>
                             {(col) => (
                               <div class={styles.field}>
                                 <span class={styles.fieldName}>{col.name}:</span>
-                                <span class={styles.fieldValue}>
-                                  {String(record.data[col.name] || '-')}
-                                </span>
+                                <span class={styles.fieldValue}>{String(record.data[col.name] || '-')}</span>
                               </div>
                             )}
                           </For>
