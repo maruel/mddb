@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -11,6 +12,8 @@ import (
 	"sort"
 	"strings"
 )
+
+var quiet = flag.Bool("q", false, "quiet mode")
 
 // findRepoRoot finds the backend directory by looking for go.mod.
 func findRepoRoot() string {
@@ -36,6 +39,7 @@ type route struct {
 }
 
 func main() {
+	flag.Parse()
 	// Find repo root by looking for go.mod
 	root := findRepoRoot()
 	routerPath := root + "/internal/server/router.go"
@@ -107,7 +111,9 @@ func main() {
 		fmt.Fprintf(os.Stderr, "close file: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Fprintf(os.Stderr, "Generated docs/API.md with %d routes\n", len(routes))
+	if !*quiet {
+		fmt.Fprintf(os.Stderr, "Generated docs/API.md with %d routes\n", len(routes))
+	}
 }
 
 func parsePattern(p string) (method, path string) {
