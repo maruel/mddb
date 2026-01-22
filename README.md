@@ -4,7 +4,15 @@ A Notion-like document and table system for managing your information. Store eve
 
 [![codecov](https://codecov.io/gh/maruel/mddb/graph/badge.svg?token=Q4SYDP0B00)](https://codecov.io/gh/maruel/mddb)
 
-Why?
+## Why?
+
+an anecdote:
+
+<img src="https://github.com/user-attachments/assets/3e3bbf18-9ffa-4669-9f43-b7e9828e41ef" style="width: 400px;" />
+
+https://x.com/anothercohen/status/2014136100894199968
+
+and then:
 
 <img src="https://github.com/user-attachments/assets/263f10ac-8f5f-484f-a1f8-415d49896de8" style="width: 400px;" />
 
@@ -12,23 +20,24 @@ https://x.com/ivanhzhao/status/2003510041010405790
 
 \-\- Ivan Zhao, Notion CEO
 
-<img src="https://github.com/user-attachments/assets/3e3bbf18-9ffa-4669-9f43-b7e9828e41ef" style="width: 400px;" />
-
-https://x.com/anothercohen/status/2014136100894199968
-
 
 ## What is mddb?
 
 mddb lets you:
-- 📝 **Create and edit documents** - Write in markdown with live preview
-- 📊 **Build tables** - Store structured data with typed columns
-- 🗂️ **Organize information** - Create folders and nested structures
-- ⚡ **Auto-save** - Changes save automatically as you work
-- 📁 **Keep it local** - All data stored as files on your computer
+- 📝 **Create and edit documents**: Write in markdown with live preview (Google Docs)
+- 📊 **Build tables**: Store structured data with typed columns and cross table references (Google Sheets)
+- 🗂️ **Organize information**: Create folders and nested structures (Google Drive)
+- ⚡ **Auto-save**: Changes save automatically as you work
+- 📁 **Keep it local**: All data stored as files on your computer
+- 🔄 **Git-native**: Every change is a git commit—sync to any remote, track history, branch and merge
+- 🔍 **Search**: Search across documents, tables, and folders
+- 🚀 **Designed for LLM agents**: storage is easy for an agent to navigate
 
-Perfect for personal wikis, knowledge bases, project management, and data collection.
-
-> **Note**: mddb uses "Table" for what Notion calls a "Database" (a collection of records with columns). Both systems offer the same functionality—mddb just uses clearer terminology to distinguish data structures from the underlying storage system.
+> **Note**: mddb uses different terminology than Notion for clarity:
+> - **Table** instead of "Database" (a collection of records with columns)
+> - **Organization** instead of "Workspace" (a synced collection of pages)
+>
+> Same functionality, clearer names.
 
 ## Getting Started
 
@@ -43,82 +52,31 @@ Perfect for personal wikis, knowledge bases, project management, and data collec
 
 That's it! All your data is stored in a `data/` folder.
 
-### First Steps
-
-1. **Create a page** - Click "New Page" in the sidebar
-2. **Write markdown** - Edit in the left pane, see preview on the right
-3. **Create a table** - Switch to Tables tab and create a new one
-4. **Add records** - Click the + button in tables to add rows
-
-## Features
-
-### Documents
-- Full markdown support with live preview
-- Auto-save every 2 seconds while you type
-- Organize pages in folders
-- Simple and distraction-free editor
-
-### Tables
-- Define custom columns with different types:
-  - Text, numbers, dates
-  - Single and multi-select dropdowns
-  - Checkboxes
-- Edit records inline in table view
-- Add/delete rows easily
-- All data stays local
-
-### Search
-- Full-text search across documents and tables
-- Fast, relevant results
-- Search by title, content, or record fields
-
-### Storage
-- Everything stored as files on your computer
-- **Automatic Git Versioning**: Every change is committed to a local git repo in `data/`
-- Easy to backup - just copy the `data/` folder
-- No account or internet connection required
-
 ## Configuration
 
-When running mddb, you can customize:
-
-```
-./mddb -port 8080 -data-dir ./data -log-level info
-```
-
-- `-port` - Server port (default: 8080)
-- `-data-dir` - Where to store data (default: ./data)
-- `-log-level` - Logging verbosity: debug, info, warn, error
+Run `./mddb -help` and go from there.
 
 ## File Structure
 
-All your data is stored in simple, human-readable directories:
+All data is stored as plain files in a git repository:
 
 ```
 data/
-└── pages/
-    ├── 1/                      # First page (document)
-    │   ├── index.md
-    │   └── favicon.ico
-    ├── 2/                      # Second page (table)
-    │   ├── index.md
-    │   ├── metadata.json       # Table schema
-    │   ├── data.jsonl          # Table records
-    │   └── favicon.png
-    ├── 3/                      # Third page
-    │   ├── index.md
-    │   ├── photo.png           # Page assets
-    │   └── diagram.svg
-    └── 4/subfolder/5/          # Nested pages
-        ├── index.md
-        └── favicon.ico
+└── <org-id>/
+    └── pages/
+        ├── <page-id>/              # Document
+        │   ├── index.md            # Content with YAML front matter
+        │   └── photo.png           # Assets stored alongside
+        └── <page-id>/              # Table
+            ├── metadata.json       # Schema definition
+            └── data.jsonl          # Records (one JSON per line)
 ```
 
-You can:
-- Edit `index.md` files in any text editor
-- Add images/assets directly in each page's directory
-- Back them up with standard tools
-- Share them via Git or cloud storage
+Every mutation is a git commit. You can:
+- Edit files directly with any text editor
+- Sync to GitHub, GitLab, or any git remote
+- Use git history, branches, and merge workflows
+- Back up with standard tools
 
 ## FAQ
 
@@ -126,13 +84,10 @@ You can:
 A: Yes! Everything runs locally. No data is sent anywhere.
 
 **Q: Can I sync across devices?**
-A: Put the `data/` folder in Dropbox, Google Drive, or Git to sync.
-
-**Q: Can multiple people use it?**
-A: Not simultaneously - designed for single-user or small team with manual sync.
+A: Configure a git remote in organization settings—changes push automatically.
 
 **Q: Can I import/export my data?**
-A: Yes! Since everything is markdown and JSON, you can import/export easily.
+A: The data is itself in text form.
 
 ## Advanced Users
 
@@ -147,16 +102,6 @@ Clone the repository and run:
 make build-all
 ```
 
-This builds the SolidJS frontend and embeds it in the Go binary using `go:embed`. The result is a single, self-contained executable with no external dependencies.
-
-For detailed information on the technical architecture, embedded build process, and storage model, see [TECHNICAL.md](docs/TECHNICAL.md).
-
-See [AGENTS.md](AGENTS.md) for full development setup and [API.md](docs/API.md) for API reference.
-
 ## License
 
 See [LICENSE](LICENSE) file
-
----
-
-**mddb** - Keep your information local, organized, and yours.
