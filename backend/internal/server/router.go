@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
@@ -154,10 +155,37 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 			http.Error(w, "Can't determine IP address", http.StatusPreconditionFailed)
 			return
 		}
-		slog.InfoContext(ctx, "http", "path", r.URL.Path, "ip", clientIP)
-		mux.ServeHTTP(w, r)
+		start := time.Now()
+		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+		mux.ServeHTTP(rw, r)
+		slog.InfoContext(ctx, "http",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rw.status,
+			"duration_ms", time.Since(start).Milliseconds(),
+			"size", rw.size,
+			"ip", clientIP,
+		)
 	}
 	return http.HandlerFunc(f)
+}
+
+// responseWriter wraps http.ResponseWriter to capture status code and response size.
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+	size   int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.status = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func (rw *responseWriter) Write(b []byte) (int, error) {
+	n, err := rw.ResponseWriter.Write(b)
+	rw.size += n
+	return n, err
 }
 
 // EmbeddedSPAHandler serves an embedded single-page application with fallback to index.html.
