@@ -26,11 +26,14 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/lmittmann/tint"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
+	"github.com/mattn/go-colorable"
+	"github.com/mattn/go-isatty"
 )
 
 var (
@@ -56,11 +59,51 @@ func mainImpl() error {
 	msClientID := flag.String("ms-client-id", "", "Microsoft OAuth client ID")
 	msClientSecret := flag.String("ms-client-secret", "", "Microsoft OAuth client secret")
 	flag.Parse()
+	if len(flag.Args()) > 0 {
+		return fmt.Errorf("unknown arguments: %v", flag.Args())
+	}
 
 	if *version {
 		printVersion()
 		return nil
 	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	defer stop()
+	ll := &slog.LevelVar{}
+	ll.Set(slog.LevelInfo)
+	logger := slog.New(tint.NewHandler(colorable.NewColorable(os.Stderr), &tint.Options{
+		Level:      ll,
+		TimeFormat: "15:04:05.000", // Like time.TimeOnly plus milliseconds.
+		NoColor:    !isatty.IsTerminal(os.Stderr.Fd()),
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			val := a.Value.Any()
+			skip := false
+			switch t := val.(type) {
+			case string:
+				skip = t == ""
+			case bool:
+				skip = !t
+			case uint64:
+				skip = t == 0
+			case int64:
+				skip = t == 0
+			case float64:
+				skip = t == 0
+			case time.Time:
+				skip = t.IsZero()
+			case time.Duration:
+				skip = t == 0
+			case nil:
+				skip = true
+			}
+			if skip {
+				return slog.Attr{}
+			}
+			return a
+		},
+	}))
+	slog.SetDefault(logger)
 
 	// Check if onboarding is needed (no .env file)
 	envPath := filepath.Join(*dataDir, ".env")
@@ -133,24 +176,17 @@ func mainImpl() error {
 		*baseURL = u.String()
 	}
 
-	if len(flag.Args()) > 0 {
-		return fmt.Errorf("unknown arguments: %v", flag.Args())
-	}
-
-	var ll slog.Level
 	switch *logLevel {
 	case "debug":
-		ll = slog.LevelDebug
+		ll.Set(slog.LevelDebug)
 	case "info":
-		ll = slog.LevelInfo
 	case "warn":
-		ll = slog.LevelWarn
+		ll.Set(slog.LevelWarn)
 	case "error":
-		ll = slog.LevelError
+		ll.Set(slog.LevelError)
 	default:
 		return fmt.Errorf("unknown log level: %q", *logLevel)
 	}
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: ll})))
 
 	// Create db directory for identity tables
 	dbDir := filepath.Join(*dataDir, "db")
@@ -187,10 +223,6 @@ func mainImpl() error {
 	if err != nil {
 		return fmt.Errorf("failed to initialize invitation service: %w", err)
 	}
-
-	// Create context that cancels on SIGTERM and SIGINT
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
 
 	// Watch own executable for modifications (for development restarts)
 	if err := watchExecutable(ctx, stop); err != nil {
@@ -422,35 +454,34 @@ func watchExecutable(ctx context.Context, stop context.CancelFunc) error {
 	if err != nil {
 		return err
 	}
-
-	watcher, err := fsnotify.NewWatcher()
+	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
 	}
-
-	// Watch the directory since the file gets replaced on rebuild
-	if err := watcher.Add(filepath.Dir(exe)); err != nil {
-		_ = watcher.Close()
+	if err := w.Add(exe); err != nil {
+		_ = w.Close()
 		return err
 	}
-
-	base := filepath.Base(exe)
 	go func() {
-		defer func() { _ = watcher.Close() }()
+		defer func() { _ = w.Close() }()
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case event, ok := <-watcher.Events:
+			case event, ok := <-w.Events:
 				if !ok {
 					return
 				}
-				if filepath.Base(event.Name) == base && (event.Op&(fsnotify.Write|fsnotify.Create) != 0) {
+				if event.Has(fsnotify.Write) || event.Has(fsnotify.Chmod) {
 					slog.InfoContext(ctx, "Executable modified, initiating shutdown")
 					stop()
 					return
 				}
-			case <-watcher.Errors:
+			case err, ok := <-w.Errors:
+				if !ok {
+					return
+				}
+				slog.WarnContext(ctx, "Error watching executable", "err", err)
 			}
 		}
 	}()

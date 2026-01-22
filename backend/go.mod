@@ -6,6 +6,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/invopop/jsonschema v0.13.0
+	github.com/lmittmann/tint v1.1.2
 	golang.org/x/crypto v0.47.0
 )
 
@@ -16,6 +17,8 @@ require (
 	github.com/gzuidhof/tygo v0.2.20 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/spf13/cobra v1.3.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
