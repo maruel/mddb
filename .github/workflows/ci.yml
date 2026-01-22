@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
-          go-version-file: backend/go.mod
+          go-version-file: go.mod
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -20,12 +20,10 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
       - uses: golangci/golangci-lint-action@v9
-        with:
-          working-directory: backend
       - run: make lint-frontend
       - run: make coverage
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: backend/coverage.out,frontend/coverage/lcov.info
+          files: coverage.out,frontend/coverage/lcov.info
       - run: make build
