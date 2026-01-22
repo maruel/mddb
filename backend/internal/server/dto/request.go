@@ -460,7 +460,7 @@ func (r *UploadPageAssetRequest) Validate() error {
 type DeletePageAssetRequest struct {
 	OrgID     string `path:"orgID"`
 	PageID    string `path:"id"`
-	AssetName string `path:"assetName"`
+	AssetName string `path:"name"`
 }
 
 // Validate validates the delete page asset request fields.
