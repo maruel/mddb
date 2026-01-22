@@ -31,10 +31,10 @@ const (
 )
 
 // sortableAlphabet is a 64-character alphabet in ASCII order for lexicographic sorting.
-// Characters: - (0x2D), 0-9 (0x30-39), A-Z (0x41-5A), _ (0x5F), a-z (0x61-7A).
+// Characters: 0-9 (0x30-39), A-Z (0x41-5A), _ (0x5F), a-z (0x61-7A), ~ (0x7E).
 // This is NOT standard base64; it uses ASCII-ordered characters so that
 // lexicographic string comparison matches numeric comparison.
-const sortableAlphabet = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz"
+const sortableAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
 
 // decodeMap maps ASCII characters back to their 6-bit values.
 var decodeMap [128]byte
@@ -148,10 +148,10 @@ func newIDFromParts(t10us, slice uint64) ID {
 // Uses a custom 64-character alphabet ordered by ASCII value (not base64),
 // encoding 6 bits per character in big-endian order. This ensures lexicographic
 // string comparison matches numeric comparison, making IDs sortable as strings.
-// Leading zero-characters are stripped for compactness. Zero IDs return "-".
+// Leading zero-characters are stripped for compactness. Zero IDs return "0".
 func (id ID) String() string {
 	if id == 0 {
-		return "-"
+		return "0"
 	}
 	// Encode 64 bits into up to 11 characters (6 bits each)
 	var buf [idEncodedLen]byte
@@ -161,15 +161,15 @@ func (id ID) String() string {
 		buf[i] = sortableAlphabet[v&0x3F]
 		v >>= 6
 	}
-	// Strip leading '-' (zeros)
+	// Strip leading '0' (zeros)
 	for i := range idEncodedLen {
-		if buf[i] != '-' { //nolint:gosec // i is bounded by idEncodedLen (11), buf has length idEncodedLen
+		if buf[i] != '0' { //nolint:gosec // i is bounded by idEncodedLen (11), buf has length idEncodedLen
 			return string(buf[i:])
 		}
 	}
-	// Unreachable: any non-zero ID has at least one non-'-' character.
+	// Unreachable: any non-zero ID has at least one non-'0' character.
 	// Kept as safety fallback.
-	return "-"
+	return "0"
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -198,17 +198,17 @@ func (id ID) IsZero() bool {
 
 // DecodeID parses an encoded string back to an ID.
 //
-// Empty string or "-" decode to zero ID. Returns an error for invalid input.
+// Empty string or "0" decode to zero ID. Returns an error for invalid input.
 func DecodeID(s string) (ID, error) {
-	if s == "-" || s == "" {
+	if s == "0" || s == "" {
 		return 0, nil
 	}
 	if len(s) > idEncodedLen {
 		return 0, fmt.Errorf("invalid ID length: got %d, max %d", len(s), idEncodedLen)
 	}
-	// Left-pad with '-' (zero char) to full length
+	// Left-pad with '0' (zero char) to full length
 	for len(s) < idEncodedLen {
-		s = "-" + s
+		s = "0" + s
 	}
 	var v uint64
 	for i := range idEncodedLen {
