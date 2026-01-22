@@ -9,9 +9,9 @@
     "test": "vitest run",
     "coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "tsc --noEmit && eslint src && prettier --check src",
-    "lint:fix": "eslint src --fix && prettier --write src",
-    "format": "prettier --write src"
+    "lint": "tsc --noEmit && eslint frontend/src && prettier --check frontend/src",
+    "lint:fix": "eslint frontend/src --fix && prettier --write frontend/src",
+    "format": "prettier --write frontend/src"
   },
   "dependencies": {
     "@solid-primitives/i18n": "^2.2.1",

@@ -1,3 +1,9 @@
 /data/
 .env
+.env.*.local
+.env.local
+.npmrc
 coverage.out
+/coverage/
+/node_modules/
+/package-lock.json

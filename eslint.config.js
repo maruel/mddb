@@ -47,6 +47,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['src/*.gen.ts', 'dist/**'],
+    ignores: ['frontend/src/*.gen.ts', 'frontend/dist/**'],
   }
 );

@@ -18,12 +18,12 @@ jobs:
         with:
           node-version: "24"
           cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - uses: golangci/golangci-lint-action@v9
       - run: make lint-frontend
       - run: make coverage
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out,frontend/coverage/lcov.info
+          files: coverage.out,coverage/lcov.info
       - run: make build

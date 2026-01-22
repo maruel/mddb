@@ -93,7 +93,7 @@ make build            # Build Go binary
 
 ### Frontend (ESLint + Prettier)
 
-Configured in `eslint.config.js` and `.prettierrc`. Enforces strict equality, no-unused-vars, and consistent formatting (single quotes, 2 spaces).
+Configured in root `eslint.config.js` and `.prettierrc`. Enforces strict equality, no-unused-vars, and consistent formatting (single quotes, 2 spaces).
 
 ## Useful Resources
 

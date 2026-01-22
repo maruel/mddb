@@ -1,4 +1,4 @@
-//go:generate sh -c "cd ../../frontend && pnpm install --frozen-lockfile --silent && pnpm --silent build --logLevel silent"
+//go:generate sh -c "cd ../.. && pnpm install --frozen-lockfile --silent && pnpm --silent build --logLevel silent"
 
 // Package frontend embeds the compiled SolidJS web UI assets.
 //

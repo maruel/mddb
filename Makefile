@@ -4,7 +4,7 @@
 DATA_DIR=./data
 PORT?=8080
 LOG_LEVEL?=info
-FRONTEND_STAMP=frontend/node_modules/.stamp
+FRONTEND_STAMP=node_modules/.stamp
 ENV_FILE=$(DATA_DIR)/.env
 
 help:
@@ -28,8 +28,8 @@ help:
 	@echo "Note: 'make dev' auto-creates data/.env from .env.example if missing"
 
 # Install frontend dependencies (only when lockfile changes)
-$(FRONTEND_STAMP): frontend/pnpm-lock.yaml
-	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm install --frozen-lockfile --silent
+$(FRONTEND_STAMP): pnpm-lock.yaml
+	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm install --frozen-lockfile --silent
 	@touch $@
 
 # Build frontend and Go server
@@ -39,7 +39,7 @@ build: types
 
 types: $(FRONTEND_STAMP)
 	@cd ./backend && go tool tygo generate
-	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --log-level silent --write src/types.gen.ts
+	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --log-level silent --write frontend/src/types.gen.ts
 
 # Create data/.env from example if missing (skips interactive onboarding)
 # Order-only prerequisite (|) ensures we don't overwrite existing .env
@@ -53,11 +53,11 @@ dev: build $(ENV_FILE)
 
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...
-	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test
+	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test
 
 coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
-	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm coverage
+	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm coverage
 
 lint: lint-go lint-frontend
 
@@ -66,11 +66,11 @@ lint-go:
 	@golangci-lint run ./...
 
 lint-frontend: $(FRONTEND_STAMP)
-	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint
+	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint
 
 lint-fix: $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run ./... --fix || true
-	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint:fix
+	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint:fix
 
 git-hooks:
 	@echo "Installing git pre-commit hooks..."
@@ -81,8 +81,8 @@ git-hooks:
 	@echo "✓ Git hooks installed"
 
 frontend-dev: $(FRONTEND_STAMP)
-	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm dev
+	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm dev
 
 upgrade:
 	@go get -u ./... && go mod tidy
-	@cd ./frontend && pnpm update --latest
+	@pnpm update --latest

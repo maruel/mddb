@@ -1,6 +1,0 @@
-/.env.*.local
-/.env.local
-/.npmrc
-/coverage/
-/node_modules/
-/package-lock.json

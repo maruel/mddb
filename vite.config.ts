@@ -3,6 +3,8 @@ import solid from 'vite-plugin-solid';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  root: 'frontend',
+  cacheDir: '../node_modules/.vite',
   plugins: [
     solid(),
     VitePWA({
@@ -71,7 +73,7 @@ export default defineConfig({
     }),
   ],
   build: {
-    outDir: '../backend/frontend/dist',
+    outDir: '../backend/frontend/dist',  // relative to frontend/
     emptyOutDir: true,
     minify: 'terser',
     sourcemap: false,
