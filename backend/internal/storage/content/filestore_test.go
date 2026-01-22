@@ -321,7 +321,7 @@ func TestFileStore(t *testing.T) {
 				t.Fatalf("failed to get asset iterator: %v", err)
 			}
 
-			var found []string
+			found := make([]string, 0, len(assets))
 			for asset := range iter {
 				found = append(found, asset.Name)
 			}
