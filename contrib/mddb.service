@@ -11,7 +11,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=%h/go/bin/mddb -port 8080 -data-dir %h/mddb/data -log-level info
+ExecStart=%h/go/bin/mddb -port 8080 -data-dir %h/mddb/data -log-level info -base-url mddb.example.com
 WorkingDirectory=%h/mddb
 Restart=always
 RestartSec=5s
@@ -23,19 +23,19 @@ ProtectSystem=strict
 ProtectHome=read-only
 ReadWritePaths=%h/mddb/data
 PrivateTmp=true
-PrivateDevices=true
+# PrivateDevices=true
 ProtectControlGroups=true
 ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectKernelLogs=true
-ProtectClock=true
+# ProtectKernelModules=true
+# ProtectKernelLogs=true
+# ProtectClock=true
 ProtectHostname=true
 ProtectProc=invisible
 ProcSubset=pid
 
 # Capability restrictions
 NoNewPrivileges=true
-CapabilityBoundingSet=
+# CapabilityBoundingSet=
 AmbientCapabilities=
 
 # Network restrictions (allow only IPv4/IPv6/Unix sockets)
@@ -56,9 +56,9 @@ RestrictSUIDSGID=true
 RestrictNamespaces=true
 
 # Resource limits
-LimitNOFILE=65536
-LimitNPROC=512
-TasksMax=512
+# LimitNOFILE=65536
+# LimitNPROC=512
+# TasksMax=512
 
 # Misc
 UMask=0077
