@@ -1,132 +1,132 @@
 .preview {
   flex: 1;
-  padding: 1.5rem;
+  padding: var(--spacing-lg);
   overflow-y: auto;
-  font-size: 1rem;
-  line-height: 1.6;
-  color: #333;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
 }
 
 .preview :is(h1, h2, h3, h4, h5, h6) {
-  margin: 1.5rem 0 0.75rem;
-  font-weight: 600;
+  margin: var(--spacing-lg) 0 0.75rem;
+  font-weight: var(--font-weight-semibold);
 }
 
 .preview h1 {
-  font-size: 2rem;
-  border-bottom: 2px solid #e0e0e0;
-  padding-bottom: 0.5rem;
+  font-size: var(--font-size-4xl);
+  border-bottom: 2px solid var(--color-border-medium);
+  padding-bottom: var(--spacing-sm);
 }
 
 .preview h2 {
-  font-size: 1.5rem;
+  font-size: var(--font-size-2xl);
 }
 
 .preview h3 {
-  font-size: 1.25rem;
+  font-size: var(--font-size-xl);
 }
 
 .preview h4 {
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
 }
 
 .preview h5 {
-  font-size: 1rem;
+  font-size: var(--font-size-base);
 }
 
 .preview h6 {
   font-size: 0.95rem;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .preview p {
-  margin: 1rem 0;
+  margin: var(--spacing-md) 0;
 }
 
 .preview :is(ul, ol) {
-  margin: 1rem 0;
-  padding-left: 2rem;
+  margin: var(--spacing-md) 0;
+  padding-left: var(--spacing-xl);
 }
 
 .preview li {
-  margin: 0.5rem 0;
+  margin: var(--spacing-sm) 0;
 }
 
 .preview blockquote {
-  margin: 1rem 0;
-  padding-left: 1rem;
-  border-left: 4px solid #667eea;
-  color: #666;
+  margin: var(--spacing-md) 0;
+  padding-left: var(--spacing-md);
+  border-left: 4px solid var(--color-primary);
+  color: var(--color-text-secondary);
   font-style: italic;
 }
 
 .preview code {
-  background: #f5f5f5;
+  background: var(--color-bg-tertiary);
   padding: 0.2rem 0.4rem;
-  border-radius: 3px;
-  font-family: 'Monaco', 'Courier New', monospace;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-mono);
   font-size: 0.9em;
-  color: #d63384;
+  color: var(--color-text-code);
 }
 
 .preview pre {
-  background: #f5f5f5;
-  padding: 1rem;
-  border-radius: 4px;
+  background: var(--color-bg-tertiary);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
   overflow-x: auto;
-  margin: 1rem 0;
+  margin: var(--spacing-md) 0;
 }
 
 .preview pre code {
   background: none;
   padding: 0;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .preview a {
-  color: #667eea;
+  color: var(--color-primary);
   text-decoration: none;
   border-bottom: 1px solid transparent;
-  transition: border-color 0.2s;
+  transition: border-color var(--transition-base);
 }
 
 .preview a:hover {
-  border-bottom-color: #667eea;
+  border-bottom-color: var(--color-primary);
 }
 
 .preview img {
   max-width: 100%;
   height: auto;
-  border-radius: 4px;
-  margin: 1rem 0;
+  border-radius: var(--radius-md);
+  margin: var(--spacing-md) 0;
 }
 
 .preview table {
   border-collapse: collapse;
   width: 100%;
-  margin: 1rem 0;
+  margin: var(--spacing-md) 0;
 }
 
 .preview :is(th, td) {
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border-medium);
   padding: 0.75rem;
   text-align: left;
 }
 
 .preview th {
-  background: #f5f5f5;
-  font-weight: 600;
+  background: var(--color-bg-tertiary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .preview hr {
   border: none;
   height: 1px;
-  background: #e0e0e0;
-  margin: 2rem 0;
+  background: var(--color-border-medium);
+  margin: var(--spacing-xl) 0;
 }
 
 .preview strong {
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .preview em {

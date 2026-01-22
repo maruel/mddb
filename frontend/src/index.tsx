@@ -1,5 +1,6 @@
 import { render } from 'solid-js/web';
 import { I18nProvider, type Locale } from './i18n';
+import './variables.css';
 import App from './App';
 
 // Get initial locale from localStorage or default to 'en'

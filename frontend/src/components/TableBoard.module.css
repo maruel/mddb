@@ -1,56 +1,56 @@
 .board {
-  padding: 1rem 0;
+  padding: var(--spacing-md) 0;
   overflow-x: auto;
-  min-height: 400px;
+  min-height: var(--min-height-content);
 }
 
 .noGroup {
-  padding: 2rem;
+  padding: var(--spacing-xl);
   text-align: center;
-  color: #666;
-  background: #f9f9f9;
-  border-radius: 8px;
-  border: 2px dashed #eee;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-xl);
+  border: 2px dashed var(--color-border-light);
 }
 
 .columns {
   display: flex;
-  gap: 1.5rem;
+  gap: var(--spacing-lg);
   align-items: flex-start;
-  padding-bottom: 1rem;
+  padding-bottom: var(--spacing-md);
 }
 
 .column {
-  flex: 0 0 280px;
-  background: #f4f5f7;
-  border-radius: 8px;
+  flex: 0 0 var(--kanban-column-width);
+  background: var(--color-bg-kanban);
+  border-radius: var(--radius-xl);
   max-height: calc(100vh - 300px);
   display: flex;
   flex-direction: column;
 }
 
 .columnHeader {
-  padding: 1rem;
+  padding: var(--spacing-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .columnName {
-  font-weight: 600;
-  color: #444;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-heading);
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .columnCount {
-  background: #dfe1e6;
-  color: #444;
-  font-size: 0.75rem;
+  background: var(--color-bg-kanban-count);
+  color: var(--color-text-heading);
+  font-size: var(--font-size-xs);
   padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 600;
+  border-radius: var(--radius-pill);
+  font-weight: var(--font-weight-semibold);
 }
 
 .cards {
@@ -60,29 +60,29 @@
 }
 
 .card {
-  background: white;
-  border-radius: 6px;
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-lg);
   padding: 0.75rem;
   margin-bottom: 0.75rem;
-  box-shadow: 0 1px 2px rgba(9, 30, 66, 0.25);
+  box-shadow: var(--shadow-card);
   cursor: grab;
-  transition: box-shadow 0.2s;
+  transition: box-shadow var(--transition-base);
 }
 
 .card:hover {
-  box-shadow: 0 2px 4px rgba(9, 30, 66, 0.3);
+  box-shadow: var(--shadow-card-hover);
 }
 
 .cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-sm);
 }
 
 .cardHeader strong {
   font-size: 0.9rem;
-  color: #172b4d;
+  color: var(--color-text-dark);
   display: block;
   word-break: break-word;
 }
@@ -90,15 +90,15 @@
 .deleteBtn {
   background: transparent;
   border: none;
-  color: #ccc;
+  color: var(--color-border-input);
   cursor: pointer;
   padding: 0 5px;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   line-height: 1;
 }
 
 .deleteBtn:hover {
-  color: #f44336;
+  color: var(--color-danger);
 }
 
 .cardBody {
@@ -106,14 +106,14 @@
 }
 
 .field {
-  margin-top: 0.25rem;
+  margin-top: var(--spacing-xs);
   display: flex;
-  color: #5e6c84;
+  color: var(--color-text-subtle);
 }
 
 .fieldName {
-  margin-right: 0.5rem;
-  font-weight: 500;
+  margin-right: var(--spacing-sm);
+  font-weight: var(--font-weight-medium);
 }
 
 .fieldValue {

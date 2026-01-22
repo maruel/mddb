@@ -1,36 +1,36 @@
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.5rem;
-  padding: 1rem 0;
+  gap: var(--spacing-lg);
+  padding: var(--spacing-md) 0;
 }
 
 .card {
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-medium);
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
   transition:
-    transform 0.2s,
-    box-shadow 0.2s;
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
   display: flex;
   flex-direction: column;
 }
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
 }
 
 .imageContainer {
-  height: 140px;
-  background: #f5f5f5;
+  height: var(--gallery-image-height);
+  background: var(--color-bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .image {
@@ -40,12 +40,12 @@
 }
 
 .imagePlaceholder {
-  color: #999;
+  color: var(--color-text-tertiary);
   font-size: 0.9rem;
 }
 
 .cardContent {
-  padding: 1rem;
+  padding: var(--spacing-md);
 }
 
 .cardHeader {
@@ -58,17 +58,17 @@
 .deleteBtn {
   background: transparent;
   border: none;
-  color: #ccc;
+  color: var(--color-border-input);
   cursor: pointer;
   padding: 2px 5px;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   line-height: 1;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
 }
 
 .deleteBtn:hover {
-  color: #f44336;
-  background: #ffebee;
+  color: var(--color-danger);
+  background: var(--color-bg-delete-hover);
 }
 
 .cardBody {
@@ -76,7 +76,7 @@
 }
 
 .field {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--spacing-xs);
   display: flex;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -84,11 +84,11 @@
 }
 
 .fieldName {
-  color: #666;
-  margin-right: 0.5rem;
+  color: var(--color-text-secondary);
+  margin-right: var(--spacing-sm);
   flex-shrink: 0;
 }
 
 .fieldValue {
-  color: #333;
+  color: var(--color-text-primary);
 }

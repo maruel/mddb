@@ -1,6 +1,6 @@
 .settings {
-  padding: 2rem;
-  max-width: 900px;
+  padding: var(--spacing-xl);
+  max-width: var(--max-width-settings);
   margin: 0 auto;
 }
 
@@ -8,31 +8,31 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 1rem;
+  margin-bottom: var(--spacing-xl);
+  border-bottom: 2px solid var(--color-bg-hover);
+  padding-bottom: var(--spacing-md);
 }
 
 .closeButton {
   background: none;
   border: none;
-  font-size: 2rem;
+  font-size: var(--font-size-4xl);
   cursor: pointer;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .closeButton:hover {
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .section {
-  margin-bottom: 3rem;
+  margin-bottom: var(--spacing-3xl);
 }
 
 .section h3 {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: #333;
+  font-size: var(--font-size-xl);
+  margin-bottom: var(--spacing-md);
+  color: var(--color-text-primary);
 }
 
 .table {
@@ -42,91 +42,91 @@
 
 .table th,
 .table td {
-  padding: 1rem;
+  padding: var(--spacing-md);
   text-align: left;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--color-bg-hover);
 }
 
 .table th {
-  font-weight: 600;
-  color: #666;
-  background: #fafafa;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-page);
 }
 
 .roleSelect {
   padding: 0.4rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .error {
-  padding: 1rem;
-  background: #fee;
-  color: #c33;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
+  padding: var(--spacing-md);
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
 }
 
 .success {
-  padding: 1rem;
-  background: #eff;
-  color: #088;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-  border: 1px solid #0bb;
+  padding: var(--spacing-md);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-lg);
+  border: 1px solid var(--color-success-border);
 }
 
 .tabs {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #ddd;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-xl);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .tabs button {
   background: none;
   border: none;
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem var(--spacing-lg);
   cursor: pointer;
-  font-weight: 500;
-  color: #666;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
   border-bottom: 2px solid transparent;
-  transition: all 0.2s;
+  transition: all var(--transition-base);
 }
 
 .tabs button:hover {
-  color: #333;
+  color: var(--color-text-primary);
 }
 
 .tabs button.activeTab {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
 }
 
 .settingsForm {
-  background: #fff;
-  padding: 1.5rem;
-  border: 1px solid #eee;
-  border-radius: 8px;
+  background: var(--color-bg-primary);
+  padding: var(--spacing-lg);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
 }
 
 .formItem {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--spacing-lg);
 }
 
 .formItem label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #444;
+  margin-bottom: var(--spacing-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-heading);
 }
 
 .formItem input[type='text'],
 .formItem select {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
 }
 
@@ -144,114 +144,114 @@
 }
 
 .saveButton {
-  padding: 0.75rem 2rem;
-  background: #667eea;
+  padding: 0.75rem var(--spacing-xl);
+  background: var(--color-primary);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
 }
 
 .saveButton:hover {
-  background: #5568d3;
+  background: var(--color-primary-hover);
 }
 
 .saveButton:disabled {
-  background: #ccc;
+  background: var(--color-border-input);
   cursor: not-allowed;
 }
 
 .hint {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--color-text-muted);
   margin-top: 0.4rem;
 }
 
 .inviteSection {
-  margin-top: 2rem;
+  margin-top: var(--spacing-xl);
 }
 
 .inviteForm {
-  margin-top: 2rem;
-  padding: 1.5rem;
-  background: #f9f9f9;
-  border-radius: 8px;
+  margin-top: var(--spacing-xl);
+  padding: var(--spacing-lg);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-xl);
 }
 
 .inviteForm h4 {
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-md);
 }
 
 .formGroup {
   display: flex;
-  gap: 1rem;
+  gap: var(--spacing-md);
 }
 
 .formGroup input {
   flex: 1;
   padding: 0.6rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .formGroup select {
   padding: 0.6rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
 }
 
 .formGroup button {
-  padding: 0.6rem 1.5rem;
-  background: #667eea;
+  padding: 0.6rem var(--spacing-lg);
+  background: var(--color-primary);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .formGroup button:hover {
-  background: #5568d3;
+  background: var(--color-primary-hover);
 }
 
 .addRemoteSection {
-  margin-top: 3rem;
-  padding: 1.5rem;
+  margin-top: var(--spacing-3xl);
+  padding: var(--spacing-lg);
   background: #fcfcfc;
-  border-radius: 8px;
-  border: 1px dashed #ccc;
+  border-radius: var(--radius-xl);
+  border: 1px dashed var(--color-border-input);
 }
 
 .addRemoteSection h4 {
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-md);
 }
 
 .actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--spacing-sm);
 }
 
 .smallButton {
   padding: 0.4rem 0.8rem;
   font-size: 0.85rem;
-  background: #667eea;
+  background: var(--color-primary);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .smallButton:hover {
-  background: #5568d3;
+  background: var(--color-primary-hover);
 }
 
 .deleteButtonSmall {
   padding: 0.4rem 0.8rem;
   font-size: 0.85rem;
-  background: #fee;
-  color: #c33;
-  border: 1px solid #fcc;
-  border-radius: 4px;
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
@@ -262,8 +262,8 @@
 .formItem input[type='password'] {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   box-sizing: border-box;
 }
 
