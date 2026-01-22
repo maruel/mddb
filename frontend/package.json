@@ -23,7 +23,7 @@
     "@eslint/js": "^9.39.2",
     "@solidjs/testing-library": "^0.8.10",
     "@types/markdown-it": "^14.1.2",
-    "@vitest/coverage-v8": "^4.0.17",
+    "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.39.2",
     "eslint-plugin-solid": "^0.14.5",
     "globals": "^17.0.0",
@@ -35,7 +35,7 @@
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.2.0",
     "vite-plugin-solid": "^2.11.10",
-    "vitest": "^4.0.17"
+    "vitest": "^4.0.18"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
