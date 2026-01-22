@@ -72,10 +72,6 @@ export const dict: Dictionary = {
     confirmWorkspaceName: "Confirmer le nom de l'espace",
     workspaceName: "Nom de l'espace de travail",
     workspaceNameHint: 'Vous pouvez modifier ce nom.',
-    nextInviteTeam: "Suivant : Inviter l'équipe",
-    teamCollaboration: "Collaboration d'équipe",
-    teamCollaborationHint:
-      'Vous pouvez inviter vos membres maintenant ou plus tard dans les paramètres.',
     nextGitSync: 'Suivant : Synchronisation Git',
     advancedSyncTitle: 'Synchronisation avancée (Optionnel)',
     advancedSyncHint: 'Protégez vos données en les synchronisant avec un dépôt Git privé.',

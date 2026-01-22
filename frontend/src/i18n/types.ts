@@ -72,9 +72,6 @@ export interface Dictionary {
     confirmWorkspaceName: string;
     workspaceName: string;
     workspaceNameHint: string;
-    nextInviteTeam: string;
-    teamCollaboration: string;
-    teamCollaborationHint: string;
     nextGitSync: string;
     advancedSyncTitle: string;
     advancedSyncHint: string;
