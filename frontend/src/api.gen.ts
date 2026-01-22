@@ -41,7 +41,6 @@ import type {
   MembershipResponse,
   NodeResponse,
   OkResponse,
-  OnboardingState,
   OrganizationResponse,
   RegisterRequest,
   SearchRequest,
@@ -50,7 +49,6 @@ import type {
   SwitchOrgResponse,
   UpdateGitRemoteRequest,
   UpdateMembershipSettingsRequest,
-  UpdateOnboardingRequest,
   UpdateOrgPreferencesRequest,
   UpdateOrganizationRequest,
   UpdatePageRequest,
@@ -147,10 +145,6 @@ export function createAPIClient(fetchFn: FetchFn) {
           create: (options: CreateNodeRequest) => post<NodeResponse>(fetchFn, `/api/${orgID}/nodes`, options),
           get: (id: string) => get<NodeResponse>(fetchFn, `/api/${orgID}/nodes/${id}`),
           list: () => get<ListNodesResponse>(fetchFn, `/api/${orgID}/nodes`),
-        },
-        onboarding: {
-          get: () => get<OnboardingState>(fetchFn, `/api/${orgID}/onboarding`),
-          update: (options: UpdateOnboardingRequest) => post<OnboardingState>(fetchFn, `/api/${orgID}/onboarding`, options),
         },
         pages: {
           assets: {

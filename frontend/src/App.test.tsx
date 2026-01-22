@@ -934,46 +934,14 @@ describe('App', () => {
   });
 
   describe('Onboarding', () => {
-    it('shows onboarding for admin users who have not completed it', async () => {
-      localStorageMock.setItem('mddb_token', 'test-token');
-
-      const adminUser: UserResponse = {
-        ...mockUser,
-        role: UserRoleAdmin,
-        onboarding: { completed: false, step: 'welcome', updated_at: '2024-01-01T00:00:00Z' },
-      };
-
-      mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/auth/me') {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(adminUser),
-          });
-        }
-        if (url.includes('/nodes')) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ nodes: mockNodes }),
-          });
-        }
-        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-      });
-
-      renderWithI18n(() => <App />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('onboarding')).toBeTruthy();
-      });
-    });
-
-    it('does not show onboarding for non-admin users', async () => {
+    it('does not show onboarding on initial load', async () => {
       localStorageMock.setItem('mddb_token', 'test-token');
 
       mockFetch.mockImplementation((url: string) => {
         if (url === '/api/auth/me') {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve(mockUser), // role: 'member'
+            json: () => Promise.resolve(mockUser),
           });
         }
         if (url.includes('/nodes')) {
@@ -991,6 +959,7 @@ describe('App', () => {
         expect(screen.getByText('Test User (viewer)')).toBeTruthy();
       });
 
+      // Onboarding is only shown after org creation, not on initial load
       expect(screen.queryByTestId('onboarding')).toBeFalsy();
     });
   });

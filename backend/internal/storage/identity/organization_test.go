@@ -150,7 +150,7 @@ func TestOrganizationService(t *testing.T) {
 		t.Fatalf("NewOrganizationService failed: %v", err)
 	}
 
-	var org, org2 *Organization
+	var org *Organization
 
 	t.Run("Create", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
@@ -169,26 +169,12 @@ func TestOrganizationService(t *testing.T) {
 			if org.Created.IsZero() {
 				t.Error("Expected non-zero Created time")
 			}
-			if org.Onboarding.Completed {
-				t.Error("Expected Onboarding.Completed = false for new org")
-			}
-			if org.Onboarding.Step != "name" {
-				t.Errorf("Onboarding.Step = %q, want %q", org.Onboarding.Step, "name")
-			}
 		})
 
 		t.Run("empty name", func(t *testing.T) {
 			_, createErr := service.Create(t.Context(), "")
 			if createErr == nil {
 				t.Error("Expected error when creating organization with empty name")
-			}
-		})
-
-		t.Run("second organization", func(t *testing.T) {
-			var createErr error
-			org2, createErr = service.Create(t.Context(), "Second Org")
-			if createErr != nil {
-				t.Fatalf("Create (second) failed: %v", createErr)
 			}
 		})
 	})
@@ -232,28 +218,6 @@ func TestOrganizationService(t *testing.T) {
 			}
 			if len(updatedOrg.Settings.AllowedDomains) != 1 {
 				t.Errorf("AllowedDomains length = %d, want 1", len(updatedOrg.Settings.AllowedDomains))
-			}
-		})
-
-		t.Run("onboarding", func(t *testing.T) {
-			newState := OnboardingState{
-				Completed: true,
-				Step:      "done",
-			}
-			_, modErr := service.Modify(org2.ID, func(o *Organization) error {
-				o.Onboarding = newState
-				return nil
-			})
-			if modErr != nil {
-				t.Fatalf("Modify failed: %v", modErr)
-			}
-
-			updatedOrg2, _ := service.Get(org2.ID)
-			if !updatedOrg2.Onboarding.Completed {
-				t.Error("Expected Onboarding.Completed = true after update")
-			}
-			if updatedOrg2.Onboarding.Step != "done" {
-				t.Errorf("Onboarding.Step = %q, want %q", updatedOrg2.Onboarding.Step, "done")
 			}
 		})
 

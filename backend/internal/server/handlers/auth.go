@@ -145,14 +145,6 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 		return nil, dto.InternalWithError("Failed to create organization", err)
 	}
 
-	// Skip the "name" onboarding step since name was already provided
-	if _, err := h.orgService.Modify(org.ID, func(o *identity.Organization) error {
-		o.Onboarding.Step = "members"
-		return nil
-	}); err != nil {
-		slog.ErrorContext(ctx, "Failed to update onboarding step", "error", err, "org_id", org.ID)
-	}
-
 	// Initialize organization storage
 	if err := h.fs.InitOrg(ctx, org.ID); err != nil {
 		return nil, dto.InternalWithError("Failed to initialize organization storage", err)
@@ -178,11 +170,6 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 
 // PopulateActiveContext populates organization-specific fields in the UserResponse.
 func (h *AuthHandler) PopulateActiveContext(userResp *dto.UserResponse, orgIDStr string) {
-	orgID, err := jsonldb.DecodeID(orgIDStr)
-	if err != nil {
-		return
-	}
-
 	userResp.OrganizationID = orgIDStr
 
 	for _, m := range userResp.Memberships {
@@ -190,10 +177,5 @@ func (h *AuthHandler) PopulateActiveContext(userResp *dto.UserResponse, orgIDStr
 			userResp.Role = m.Role
 			break
 		}
-	}
-
-	// Fetch onboarding state
-	if org, err := h.orgService.Get(orgID); err == nil {
-		userResp.Onboarding = onboardingStatePtrToDTO(&org.Onboarding)
 	}
 }

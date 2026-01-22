@@ -218,7 +218,6 @@ type UserResponse struct {
 	Memberships     []MembershipResponse `json:"memberships,omitempty" jsonschema:"description=Organization memberships"`
 	OrganizationID  string               `json:"organization_id,omitempty" jsonschema:"description=Current organization context"`
 	Role            UserRole             `json:"role,omitempty" jsonschema:"description=Role in current organization"`
-	Onboarding      *OnboardingState     `json:"onboarding,omitempty" jsonschema:"description=Onboarding state for current org"`
 }
 
 // MembershipResponse is the API representation of a membership.
@@ -245,12 +244,11 @@ type InvitationResponse struct {
 
 // OrganizationResponse is the API representation of an organization.
 type OrganizationResponse struct {
-	ID         string               `json:"id" jsonschema:"description=Unique organization identifier"`
-	Name       string               `json:"name" jsonschema:"description=Display name of the organization"`
-	Quotas     OrganizationQuota    `json:"quotas" jsonschema:"description=Resource limits for the organization"`
-	Settings   OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
-	Onboarding OnboardingState      `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
-	Created    string               `json:"created" jsonschema:"description=Organization creation timestamp (RFC3339)"`
+	ID       string               `json:"id" jsonschema:"description=Unique organization identifier"`
+	Name     string               `json:"name" jsonschema:"description=Display name of the organization"`
+	Quotas   OrganizationQuota    `json:"quotas" jsonschema:"description=Resource limits for the organization"`
+	Settings OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
+	Created  string               `json:"created" jsonschema:"description=Organization creation timestamp (RFC3339)"`
 }
 
 // GitRemoteResponse is the API representation of a git remote.

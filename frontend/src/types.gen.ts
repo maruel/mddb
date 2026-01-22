@@ -332,7 +332,7 @@ export interface GetOrganizationRequest {
  * UpdateOrganizationRequest is a request to update organization details.
  */
 export interface UpdateOrganizationRequest {
-  name: string;
+  name?: string;
 }
 /**
  * CreateOrganizationRequest is a request to create a new organization.
@@ -341,17 +341,6 @@ export interface CreateOrganizationRequest {
   name: string;
   welcome_page_title?: string;
   welcome_page_content?: string;
-}
-/**
- * GetOnboardingRequest is a request to get onboarding status.
- */
-export interface GetOnboardingRequest {
-}
-/**
- * UpdateOnboardingRequest is a request to update onboarding status.
- */
-export interface UpdateOnboardingRequest {
-  state: OnboardingState;
 }
 /**
  * GetGitRemoteRequest is a request to get the git remote for an organization.
@@ -645,7 +634,6 @@ export interface UserResponse {
   memberships?: MembershipResponse[];
   organization_id?: string;
   role?: UserRole;
-  onboarding?: OnboardingState;
 }
 /**
  * MembershipResponse is the API representation of a membership.
@@ -678,7 +666,6 @@ export interface OrganizationResponse {
   name: string;
   quotas: OrganizationQuota;
   settings: OrganizationSettings;
-  onboarding: OnboardingState;
   created: string;
 }
 /**
@@ -877,14 +864,6 @@ export interface OrganizationSettings {
   allowed_domains?: string[];
   public_access: boolean;
   git_auto_push: boolean;
-}
-/**
- * OnboardingState tracks the progress of an organization's initial setup.
- */
-export interface OnboardingState {
-  completed: boolean;
-  step: string;
-  updated_at: string;
 }
 /**
  * Commit represents a commit in git history.

@@ -11,13 +11,12 @@ import (
 
 // Organization represents a workspace or group of users.
 type Organization struct {
-	ID         jsonldb.ID           `json:"id" jsonschema:"description=Unique organization identifier"`
-	Name       string               `json:"name" jsonschema:"description=Display name of the organization"`
-	Quotas     OrganizationQuota    `json:"quotas" jsonschema:"description=Resource limits for the organization"`
-	Settings   OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
-	Onboarding OnboardingState      `json:"onboarding" jsonschema:"description=Initial setup progress tracking"`
-	GitRemote  GitRemote            `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
-	Created    time.Time            `json:"created" jsonschema:"description=Organization creation timestamp"`
+	ID        jsonldb.ID           `json:"id" jsonschema:"description=Unique organization identifier"`
+	Name      string               `json:"name" jsonschema:"description=Display name of the organization"`
+	Quotas    OrganizationQuota    `json:"quotas" jsonschema:"description=Resource limits for the organization"`
+	Settings  OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
+	GitRemote GitRemote            `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
+	Created   time.Time            `json:"created" jsonschema:"description=Organization creation timestamp"`
 }
 
 // Clone returns a deep copy of the Organization.
@@ -47,13 +46,6 @@ func (o *Organization) Validate() error {
 		return errInvalidOrgQuota
 	}
 	return nil
-}
-
-// OnboardingState tracks the progress of an organization's initial setup.
-type OnboardingState struct {
-	Completed bool      `json:"completed" jsonschema:"description=Whether onboarding is complete"`
-	Step      string    `json:"step" jsonschema:"description=Current onboarding step (name/members/git/done)"`
-	UpdatedAt time.Time `json:"updated_at" jsonschema:"description=Last progress update timestamp"`
 }
 
 // OrganizationSettings represents organization-wide settings.
@@ -125,11 +117,6 @@ func (s *OrganizationService) Create(_ context.Context, name string) (*Organizat
 			MaxUsers:           3,
 			MaxRecordsPerTable: 10000,
 			MaxAssetSize:       50 * 1024 * 1024, // 50 MiB
-		},
-		Onboarding: OnboardingState{
-			Completed: false,
-			Step:      "name",
-			UpdatedAt: now,
 		},
 	}
 	if err := s.table.Append(org); err != nil {

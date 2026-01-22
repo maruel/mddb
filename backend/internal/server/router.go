@@ -75,8 +75,6 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	mux.Handle("GET /api/{orgID}/settings/organization", WrapAuth(userService, memService, jwtSecretBytes, viewer, orgh.GetOrganization))
 	mux.Handle("POST /api/{orgID}/settings/organization", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateOrganization))
 	mux.Handle("POST /api/{orgID}/settings/preferences", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateOrgPreferences))
-	mux.Handle("GET /api/{orgID}/onboarding", WrapAuth(userService, memService, jwtSecretBytes, viewer, orgh.GetOnboarding))
-	mux.Handle("POST /api/{orgID}/onboarding", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateOnboarding))
 
 	// Git Remote endpoints (one remote per org)
 	mux.Handle("GET /api/{orgID}/settings/git", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.GetGitRemote))

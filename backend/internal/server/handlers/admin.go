@@ -51,14 +51,7 @@ func (h *AdminHandler) ListAllUsers(ctx context.Context, _ *identity.User, _ *dt
 func (h *AdminHandler) ListAllOrgs(ctx context.Context, _ *identity.User, _ *dto.AdminOrgsRequest) (*dto.AdminOrgsResponse, error) {
 	orgs := make([]dto.OrganizationResponse, 0) //nolint:prealloc // size unknown from iterator
 	for org := range h.orgService.Iter(0) {
-		orgs = append(orgs, dto.OrganizationResponse{
-			ID:         org.ID.String(),
-			Name:       org.Name,
-			Quotas:     organizationQuotaToDTO(org.Quotas),
-			Settings:   organizationSettingsToDTO(org.Settings),
-			Onboarding: onboardingStateToDTO(org.Onboarding),
-			Created:    formatTime(org.Created),
-		})
+		orgs = append(orgs, *organizationToResponse(org))
 	}
 	return &dto.AdminOrgsResponse{Organizations: orgs}, nil
 }

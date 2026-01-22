@@ -639,7 +639,7 @@ func (r *GetOrganizationRequest) Validate() error {
 // UpdateOrganizationRequest is a request to update organization details.
 type UpdateOrganizationRequest struct {
 	OrgID string `path:"orgID" tstype:"-"`
-	Name  string `json:"name"`
+	Name  string `json:"name,omitempty"`
 }
 
 // Validate validates the update organization request fields.
@@ -664,33 +664,6 @@ type CreateOrganizationRequest struct {
 func (r *CreateOrganizationRequest) Validate() error {
 	if r.Name == "" {
 		return MissingField("name")
-	}
-	return nil
-}
-
-// GetOnboardingRequest is a request to get onboarding status.
-type GetOnboardingRequest struct {
-	OrgID string `path:"orgID" tstype:"-"`
-}
-
-// Validate validates the get onboarding request fields.
-func (r *GetOnboardingRequest) Validate() error {
-	if r.OrgID == "" {
-		return MissingField("orgID")
-	}
-	return nil
-}
-
-// UpdateOnboardingRequest is a request to update onboarding status.
-type UpdateOnboardingRequest struct {
-	OrgID string          `path:"orgID" tstype:"-"`
-	State OnboardingState `json:"state"`
-}
-
-// Validate validates the update onboarding request fields.
-func (r *UpdateOnboardingRequest) Validate() error {
-	if r.OrgID == "" {
-		return MissingField("orgID")
 	}
 	return nil
 }

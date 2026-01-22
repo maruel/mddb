@@ -41,8 +41,6 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/{orgID}/onboarding` | viewer |
-| POST | `/api/{orgID}/onboarding` | admin |
 | GET | `/api/{orgID}/settings/git` | admin |
 | POST | `/api/{orgID}/settings/git` | admin |
 | POST | `/api/{orgID}/settings/git/delete` | admin |

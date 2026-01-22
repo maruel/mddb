@@ -112,13 +112,6 @@ type OrganizationSettings struct {
 	GitAutoPush    bool     `json:"git_auto_push" jsonschema:"description=Automatically push changes to remote"`
 }
 
-// OnboardingState tracks the progress of an organization's initial setup.
-type OnboardingState struct {
-	Completed bool   `json:"completed" jsonschema:"description=Whether onboarding is complete"`
-	Step      string `json:"step" jsonschema:"description=Current onboarding step (name/members/git/done)"`
-	UpdatedAt string `json:"updated_at" jsonschema:"description=Last progress update timestamp (RFC3339)"`
-}
-
 // Commit represents a commit in git history.
 type Commit struct {
 	Hash      string `json:"hash"`

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log/slog"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -81,12 +80,11 @@ func invitationToResponse(i *identity.Invitation) *dto.InvitationResponse {
 
 func organizationToResponse(o *identity.Organization) *dto.OrganizationResponse {
 	return &dto.OrganizationResponse{
-		ID:         o.ID.String(),
-		Name:       o.Name,
-		Quotas:     organizationQuotaToDTO(o.Quotas),
-		Settings:   organizationSettingsToDTO(o.Settings),
-		Onboarding: onboardingStateToDTO(o.Onboarding),
-		Created:    formatTime(o.Created),
+		ID:       o.ID.String(),
+		Name:     o.Name,
+		Quotas:   organizationQuotaToDTO(o.Quotas),
+		Settings: organizationSettingsToDTO(o.Settings),
+		Created:  formatTime(o.Created),
 	}
 }
 
@@ -233,22 +231,6 @@ func organizationSettingsToDTO(s identity.OrganizationSettings) dto.Organization
 	}
 }
 
-func onboardingStateToDTO(o identity.OnboardingState) dto.OnboardingState {
-	return dto.OnboardingState{
-		Completed: o.Completed,
-		Step:      o.Step,
-		UpdatedAt: formatTime(o.UpdatedAt),
-	}
-}
-
-func onboardingStatePtrToDTO(o *identity.OnboardingState) *dto.OnboardingState {
-	if o == nil {
-		return nil
-	}
-	result := onboardingStateToDTO(*o)
-	return &result
-}
-
 // --- DTO to Entity conversions (for requests) ---
 
 func propertyToEntity(p dto.Property) content.Property {
@@ -301,22 +283,6 @@ func organizationSettingsToEntity(s dto.OrganizationSettings) identity.Organizat
 		AllowedDomains: s.AllowedDomains,
 		PublicAccess:   s.PublicAccess,
 		GitAutoPush:    s.GitAutoPush,
-	}
-}
-
-func onboardingStateToEntity(o dto.OnboardingState) identity.OnboardingState {
-	var updatedAt time.Time
-	if o.UpdatedAt != "" {
-		var err error
-		updatedAt, err = time.Parse(time.RFC3339, o.UpdatedAt)
-		if err != nil {
-			slog.Warn("Failed to parse onboarding UpdatedAt timestamp", "value", o.UpdatedAt, "error", err)
-		}
-	}
-	return identity.OnboardingState{
-		Completed: o.Completed,
-		Step:      o.Step,
-		UpdatedAt: updatedAt,
 	}
 }
 

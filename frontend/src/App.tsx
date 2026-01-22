@@ -46,6 +46,7 @@ export default function App() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
   const [showCreateOrg, setShowCreateOrg] = createSignal(false);
+  const [showGitSetup, setShowGitSetup] = createSignal(false);
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
@@ -110,6 +111,8 @@ export default function App() {
     });
     // Refresh user data and switch to the new org
     await switchOrg(org.id);
+    // Show git setup prompt after org creation
+    setShowGitSetup(true);
   }
 
   // Debounced auto-save function
@@ -553,22 +556,11 @@ export default function App() {
               <Show when={(user()?.memberships?.length ?? 0) === 0}>
                 <CreateOrgModal isFirstOrg={true} onClose={() => {}} onCreate={createOrganization} />
               </Show>
-              <Show when={user()?.role === 'admin' && !user()?.onboarding?.completed}>
+              <Show when={showGitSetup()}>
                 <Onboarding
                   user={user() as UserResponse}
                   token={token() as string}
-                  onComplete={() => {
-                    // Re-fetch user to get updated onboarding state
-                    const fetchUser = async () => {
-                      try {
-                        const data = await api().auth.me.get();
-                        setUser(data);
-                      } catch (err) {
-                        console.error('Failed to load user', err);
-                      }
-                    };
-                    fetchUser();
-                  }}
+                  onComplete={() => setShowGitSetup(false)}
                 />
               </Show>
               <div class={styles.app}>
