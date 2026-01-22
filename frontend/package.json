@@ -40,6 +40,10 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "sharp"
-    ]
+    ],
+    "overrides": {
+      "seroval": "^1.4.2",
+      "seroval-plugins": "^1.4.2"
+    }
   }
 }
