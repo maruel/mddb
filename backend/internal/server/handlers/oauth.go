@@ -201,9 +201,12 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT token
 	jwtToken, err := h.authHandler.GenerateToken(user)
 	if err != nil {
+		slog.ErrorContext(r.Context(), "OAuth: failed to generate token", "error", err, "userID", user.ID)
 		writeErrorResponse(w, dto.Internal("token_generation"))
 		return
 	}
+
+	slog.InfoContext(r.Context(), "OAuth: login successful, redirecting with token", "userID", user.ID, "email", user.Email)
 
 	// Redirect back to frontend with token (URL-encode for safety)
 	frontendURL := "/" // Default redirect
