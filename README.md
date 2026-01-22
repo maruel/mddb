@@ -6,13 +6,13 @@ A Notion-like document and table system for managing your information. Store eve
 
 Why?
 
-<img src="https://github.com/user-attachments/assets/263f10ac-8f5f-484f-a1f8-415d49896de8" style="max-width: 40px;" />
+<img src="https://github.com/user-attachments/assets/263f10ac-8f5f-484f-a1f8-415d49896de8" style="width: 400px;" />
 
 https://x.com/ivanhzhao/status/2003510041010405790
 
 \-\- Ivan Zhao, Notion CEO
 
-<img src="https://github.com/user-attachments/assets/3e3bbf18-9ffa-4669-9f43-b7e9828e41ef" style="max-width: 400px;" />
+<img src="https://github.com/user-attachments/assets/3e3bbf18-9ffa-4669-9f43-b7e9828e41ef" style="width: 400px;" />
 
 https://x.com/anothercohen/status/2014136100894199968
 
