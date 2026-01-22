@@ -470,6 +470,18 @@ export interface UpdateRoleRequest {
 export interface UpdateUserSettingsRequest {
   settings: UserSettings;
 }
+/**
+ * AdminStatsRequest is a request to get admin stats.
+ */
+export interface AdminStatsRequest {}
+/**
+ * AdminUsersRequest is a request to list all users (admin only).
+ */
+export interface AdminUsersRequest {}
+/**
+ * AdminOrgsRequest is a request to list all organizations (admin only).
+ */
+export interface AdminOrgsRequest {}
 
 //////////
 // source: response.go
@@ -971,3 +983,13 @@ export interface SearchResult {
   matches: { [key: string]: string };
   modified: string;
 }
+
+//////////
+// source: validate.go
+
+/**
+ * Validatable is implemented by request types that can validate their fields.
+ * The Wrap functions in handler_wrapper.go use this interface as a type
+ * constraint to ensure all request types provide validation.
+ */
+export type Validatable = any;
