@@ -1,4 +1,5 @@
-import { createSignal, Show, untrack } from 'solid-js';
+import { createSignal, createMemo, Show, untrack } from 'solid-js';
+import { createApi } from '../useApi';
 import type { UserResponse } from '../types.gen';
 import styles from './Onboarding.module.css';
 import { useI18n } from '../i18n';
@@ -21,40 +22,28 @@ export default function Onboarding(props: OnboardingProps) {
   const [remoteURL, setRemoteURL] = createSignal('');
   const [remoteToken, setRemoteToken] = createSignal('');
 
-  const authFetch = async (url: string, options: RequestInit = {}) => {
-    let finalUrl = url;
-    if (url.startsWith('/api/') && !url.startsWith('/api/auth/')) {
-      finalUrl = `/api/${props.user.organization_id}${url.substring(4)}`;
-    }
-
-    const res = await fetch(finalUrl, {
-      ...options,
-      headers: {
-        ...options.headers,
-        Authorization: `Bearer ${props.token}`,
-      },
-    });
-    return res;
-  };
+  // Create API client
+  const api = createMemo(() => createApi(() => props.token));
+  const orgApi = createMemo(() => {
+    const orgID = props.user.organization_id;
+    return orgID ? api().org(orgID) : null;
+  });
 
   const updateStep = async (nextStep: string, completed = false) => {
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
       setError(null);
 
-      const res = await authFetch('/api/onboarding', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          state: {
-            completed,
-            step: nextStep,
-            updated_at: new Date().toISOString(),
-          },
-        }),
+      await org.onboarding.update({
+        state: {
+          completed,
+          step: nextStep,
+          updated_at: new Date().toISOString(),
+        },
       });
-
-      if (!res.ok) throw new Error('Failed to update onboarding state');
 
       if (completed) {
         props.onComplete();
@@ -69,18 +58,15 @@ export default function Onboarding(props: OnboardingProps) {
   };
 
   const handleNameStep = async () => {
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
       setError(null);
 
       // Update organization name
-      const res = await authFetch('/api/settings/organization', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: orgName() }),
-      });
-
-      if (!res.ok) throw new Error('Failed to update organization name');
+      await org.settings.organization.update({ name: orgName() });
 
       // Proceed to next step
       await updateStep('git');
@@ -97,21 +83,17 @@ export default function Onboarding(props: OnboardingProps) {
 
   const handleSetupGit = async (e: Event) => {
     e.preventDefault();
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
-      const res = await authFetch('/api/settings/git/remotes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: 'origin',
-          url: remoteURL(),
-          token: remoteToken(),
-          type: 'custom',
-          auth_type: remoteToken() ? 'token' : 'none',
-        }),
+      await org.settings.git.update({
+        url: remoteURL(),
+        token: remoteToken(),
+        type: 'custom',
+        auth_type: remoteToken() ? 'token' : 'none',
       });
-
-      if (!res.ok) throw new Error('Failed to setup git remote');
 
       updateStep('done', true);
     } catch (err) {

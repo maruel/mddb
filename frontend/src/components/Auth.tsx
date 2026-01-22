@@ -1,11 +1,15 @@
 import { createSignal, Show } from 'solid-js';
+import { createAPIClient, APIError } from '../api.gen';
+import type { UserResponse } from '../types.gen';
 import styles from './Auth.module.css';
-import type { UserResponse, LoginResponse, LoginRequest, RegisterRequest, ErrorResponse } from '../types.gen';
 import { useI18n } from '../i18n';
 
 interface AuthProps {
   onLogin: (token: string, user: UserResponse) => void;
 }
+
+// Create an unauthenticated API client for login/register
+const api = createAPIClient((url, init) => fetch(url, init));
 
 export default function Auth(props: AuthProps) {
   const { t } = useI18n();
@@ -21,33 +25,22 @@ export default function Auth(props: AuthProps) {
     setError(null);
     setLoading(true);
 
-    const endpoint = isRegister() ? '/api/auth/register' : '/api/auth/login';
-    const body: LoginRequest | RegisterRequest = isRegister()
-      ? { email: email(), password: password(), name: name() }
-      : { email: email(), password: password() };
-
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const data = (await res.json()) as LoginResponse;
-
-      if (!res.ok) {
-        const errorData = data as unknown as ErrorResponse;
-        setError(errorData.error?.message || 'Authentication failed');
-        return;
-      }
+      const data = isRegister()
+        ? await api.auth.register({ email: email(), password: password(), name: name() })
+        : await api.auth.login({ email: email(), password: password() });
 
       if (data.token && data.user) {
         props.onLogin(data.token, data.user);
       } else {
         setError('Invalid response from server');
       }
-    } catch {
-      setError('An error occurred. Please try again.');
+    } catch (err) {
+      if (err instanceof APIError) {
+        setError(err.response.error?.message || 'Authentication failed');
+      } else {
+        setError('An error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

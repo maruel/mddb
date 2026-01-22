@@ -28,8 +28,8 @@ func NewGitRemoteHandler(orgService *identity.OrganizationService, gitService *g
 	}
 }
 
-// GetRemote returns the git remote for an organization, or null if none exists.
-func (h *GitRemoteHandler) GetRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+// GetGitRemote returns the git remote for an organization, or null if none exists.
+func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -40,8 +40,8 @@ func (h *GitRemoteHandler) GetRemote(ctx context.Context, orgID jsonldb.ID, _ *i
 	return gitRemoteToResponse(orgID, &org.GitRemote), nil
 }
 
-// SetRemote creates or updates the git remote for an organization.
-func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.SetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+// UpdateGitRemote creates or updates the git remote for an organization.
+func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
 	org, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
 		// Preserve existing timestamps on update
 		created := org.GitRemote.Created
@@ -84,8 +84,8 @@ func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *i
 	return gitRemoteToResponse(orgID, &org.GitRemote), nil
 }
 
-// Push pushes changes to the git remote.
-func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.PushGitRemoteRequest) (*dto.OkResponse, error) {
+// PushGit pushes changes to the git remote.
+func (h *GitRemoteHandler) PushGit(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.PushGitRequest) (*dto.OkResponse, error) {
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -124,8 +124,8 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *identi
 	return &dto.OkResponse{Ok: true}, nil
 }
 
-// DeleteRemote deletes the git remote for an organization.
-func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.DeleteGitRemoteRequest) (*dto.OkResponse, error) {
+// DeleteGitRemote deletes the git remote for an organization.
+func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.DeleteGitRequest) (*dto.OkResponse, error) {
 	_, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
 		if org.GitRemote.IsZero() {
 			return dto.NotFound("remote")

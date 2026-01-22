@@ -50,8 +50,8 @@ type UpdatePageResponse struct {
 // DeletePageResponse is a response from deleting a page.
 type DeletePageResponse = OkResponse
 
-// GetPageHistoryResponse is a response containing page history.
-type GetPageHistoryResponse struct {
+// ListPageVersionsResponse is a response containing page version history.
+type ListPageVersionsResponse struct {
 	History []*Commit `json:"history"`
 }
 

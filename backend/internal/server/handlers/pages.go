@@ -93,8 +93,8 @@ func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *id
 	return &dto.DeletePageResponse{Ok: true}, nil
 }
 
-// GetPageHistory returns the history of a page.
-func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetPageHistoryRequest) (*dto.GetPageHistoryResponse, error) {
+// ListPageVersions returns the version history of a page.
+func (h *PageHandler) ListPageVersions(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListPageVersionsRequest) (*dto.ListPageVersionsResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *i
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page history", err)
 	}
-	return &dto.GetPageHistoryResponse{History: commitsToDTO(history)}, nil
+	return &dto.ListPageVersionsResponse{History: commitsToDTO(history)}, nil
 }
 
 // GetPageVersion returns a specific version of a page.

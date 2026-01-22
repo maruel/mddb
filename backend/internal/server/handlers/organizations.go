@@ -22,7 +22,7 @@ func NewOrganizationHandler(orgService *identity.OrganizationService) *Organizat
 }
 
 // GetOrganization retrieves current organization details.
-func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetOnboardingRequest) (*dto.OrganizationResponse, error) {
+func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetOrganizationRequest) (*dto.OrganizationResponse, error) {
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -54,8 +54,8 @@ func (h *OrganizationHandler) UpdateOnboarding(ctx context.Context, orgID jsonld
 	return &result, nil
 }
 
-// UpdateSettings updates organization-wide settings.
-func (h *OrganizationHandler) UpdateSettings(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateOrgSettingsRequest) (*dto.OrganizationResponse, error) {
+// UpdateOrgPreferences updates organization-wide preferences/settings.
+func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateOrgPreferencesRequest) (*dto.OrganizationResponse, error) {
 	org, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
 		org.Settings = organizationSettingsToEntity(req.Settings)
 		return nil

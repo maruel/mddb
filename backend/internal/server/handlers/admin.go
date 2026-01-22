@@ -23,8 +23,8 @@ func NewAdminHandler(userService *identity.UserService, orgService *identity.Org
 	}
 }
 
-// Stats returns server-wide statistics.
-func (h *AdminHandler) Stats(ctx context.Context, _ *identity.User, _ *dto.AdminStatsRequest) (*dto.AdminStatsResponse, error) {
+// GetAdminStats returns server-wide statistics.
+func (h *AdminHandler) GetAdminStats(ctx context.Context, _ *identity.User, _ *dto.AdminStatsRequest) (*dto.AdminStatsResponse, error) {
 	var userCount, orgCount int
 	for range h.userService.Iter(0) {
 		userCount++

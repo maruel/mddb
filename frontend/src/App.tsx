@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For, Show, onMount, onCleanup } from 'solid-js';
+import { createSignal, createEffect, createMemo, For, Show, onMount, onCleanup } from 'solid-js';
 import SidebarNode from './components/SidebarNode';
 import MarkdownPreview from './components/MarkdownPreview';
 import TableTable from './components/TableTable';
@@ -14,15 +14,8 @@ import PWAInstallBanner from './components/PWAInstallBanner';
 import CreateOrgModal from './components/CreateOrgModal';
 import { debounce } from './utils/debounce';
 import { useI18n, type Locale } from './i18n';
-import type {
-  NodeResponse,
-  DataRecordResponse,
-  Commit,
-  UserResponse,
-  ListNodesResponse,
-  ListRecordsResponse,
-  GetPageHistoryResponse,
-} from './types.gen';
+import { createApi, APIError } from './useApi';
+import type { NodeResponse, DataRecordResponse, Commit, UserResponse } from './types.gen';
 import styles from './App.module.css';
 
 const slugify = (text: string) => {
@@ -62,36 +55,21 @@ export default function App() {
   const [hasMore, setHasMore] = createSignal(false);
   const PAGE_SIZE = 50;
 
-  // Helper for authenticated fetch
-  const authFetch = async (url: string, options: RequestInit = {}) => {
-    let finalUrl = url;
-    // Automatically prepend organization ID for data-acting API calls
-    if (url.startsWith('/api/') && !url.startsWith('/api/auth/') && !url.startsWith('/api/health')) {
-      const orgID = user()?.organization_id;
-      if (orgID) {
-        // Convert /api/nodes to /api/{orgID}/nodes
-        finalUrl = `/api/${orgID}${url.substring(4)}`;
-      }
-    }
-
-    const headers = {
-      ...options.headers,
-      Authorization: `Bearer ${token()}`,
-    };
-    const res = await fetch(finalUrl, { ...options, headers });
-    if (res.status === 401) {
-      logout();
-      throw new Error(t('errors.sessionExpired') || 'Session expired');
-    }
-    return res;
-  };
-
   const logout = () => {
     localStorage.removeItem('mddb_token');
     setToken(null);
     setUser(null);
     window.history.pushState(null, '', '/');
   };
+
+  // Create API client with auth
+  const api = createMemo(() => createApi(() => token(), logout));
+
+  // Get org-scoped API client
+  const orgApi = createMemo(() => {
+    const orgID = user()?.organization_id;
+    return orgID ? api().org(orgID) : null;
+  });
 
   const handleLogin = (newToken: string, userData: UserResponse) => {
     localStorage.setItem('mddb_token', newToken);
@@ -102,12 +80,10 @@ export default function App() {
   async function switchOrg(orgId: string, redirect = true) {
     try {
       setLoading(true);
-      const res = await authFetch('/api/auth/switch-org', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ org_id: orgId }),
-      });
-      const data = await res.json();
+      const data = await api().auth.switchOrg({ org_id: orgId });
+      if (!data.user) {
+        throw new Error('No user data returned');
+      }
       handleLogin(data.token, data.user);
       setSelectedNodeId(null);
       if (redirect) {
@@ -115,33 +91,23 @@ export default function App() {
       }
       await loadNodes();
     } catch (err) {
-      setError(`${t('errors.failedToSwitch')}: ${err}`);
-      throw err; // Propagate error for callers
+      if (err instanceof APIError) {
+        setError(`${t('errors.failedToSwitch')}: ${err.message}`);
+      } else {
+        setError(`${t('errors.failedToSwitch')}: ${err}`);
+      }
+      throw err;
     } finally {
       setLoading(false);
     }
   }
 
   async function createOrganization(data: { name: string; welcomePageTitle: string; welcomePageContent: string }) {
-    const res = await fetch('/api/organizations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token()}`,
-      },
-      body: JSON.stringify({
-        name: data.name,
-        welcome_page_title: data.welcomePageTitle,
-        welcome_page_content: data.welcomePageContent,
-      }),
+    const org = await api().organizations.create({
+      name: data.name,
+      welcome_page_title: data.welcomePageTitle,
+      welcome_page_content: data.welcomePageContent,
     });
-
-    if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error?.message || 'Failed to create organization');
-    }
-
-    const org = await res.json();
     // Refresh user data and switch to the new org
     await switchOrg(org.id);
   }
@@ -149,15 +115,12 @@ export default function App() {
   // Debounced auto-save function
   const debouncedAutoSave = debounce(async () => {
     const nodeId = selectedNodeId();
-    if (!nodeId || !hasUnsavedChanges()) return;
+    const org = orgApi();
+    if (!nodeId || !hasUnsavedChanges() || !org) return;
 
     try {
       setAutoSaveStatus('saving');
-      await authFetch(`/api/pages/${nodeId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title(), content: content() }),
-      });
+      await org.pages.update(nodeId, { title: title(), content: content() });
       setHasUnsavedChanges(false);
       setAutoSaveStatus('saved');
 
@@ -210,11 +173,8 @@ export default function App() {
     if (tok && !u) {
       const fetchUser = async () => {
         try {
-          const res = await authFetch('/api/auth/me');
-          if (res.ok) {
-            const data = await res.json();
-            setUser(data);
-          }
+          const data = await api().auth.me.get();
+          setUser(data);
         } catch (err) {
           console.error('Failed to load user', err);
         }
@@ -291,10 +251,12 @@ export default function App() {
   });
 
   async function loadNodes() {
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
-      const res = await authFetch('/api/nodes');
-      const data = (await res.json()) as ListNodesResponse;
+      const data = await org.nodes.list();
       setNodes((data.nodes?.filter(Boolean) as NodeResponse[]) || []);
       setError(null);
     } catch (err) {
@@ -305,12 +267,13 @@ export default function App() {
   }
 
   async function loadNode(id: string, pushState = true) {
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
       setShowHistory(false);
-      const res = await authFetch(`/api/nodes/${id}`);
-      if (!res.ok) throw new Error('Node not found');
-      const nodeData = await res.json();
+      const nodeData = await org.nodes.get(id);
 
       setSelectedNodeId(nodeData.id);
       setTitle(nodeData.title);
@@ -338,8 +301,7 @@ export default function App() {
 
       // If it's a table or hybrid, load records
       if (nodeData.type === 'table' || nodeData.type === 'hybrid') {
-        const recordsRes = await authFetch(`/api/tables/${id}/records?offset=0&limit=${PAGE_SIZE}`);
-        const recordsData = (await recordsRes.json()) as ListRecordsResponse;
+        const recordsData = await org.tables.records.list(id, { Offset: 0, Limit: PAGE_SIZE });
         const loadedRecords = (recordsData.records || []) as DataRecordResponse[];
         setRecords(loadedRecords);
         setHasMore(loadedRecords.length === PAGE_SIZE);
@@ -360,10 +322,12 @@ export default function App() {
       return;
     }
 
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
-      const res = await authFetch(`/api/pages/${nodeId}/history`);
-      const data = (await res.json()) as GetPageHistoryResponse;
+      const data = await org.pages.history.list(nodeId, { Limit: 100 });
       setHistory((data.history?.filter(Boolean) as Commit[]) || []);
       setShowHistory(true);
     } catch (err) {
@@ -376,11 +340,13 @@ export default function App() {
   async function loadVersion(nodeId: string, hash: string) {
     if (!confirm(t('editor.restoreConfirm') || 'This will replace current editor content. Continue?')) return;
 
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
-      const res = await authFetch(`/api/pages/${nodeId}/history/${hash}`);
-      const data = await res.json();
-      setContent(data.content);
+      const data = await org.pages.history.get(nodeId, hash);
+      setContent(data.content || '');
       setHasUnsavedChanges(true); // Mark as modified
       setShowHistory(false);
     } catch (err) {
@@ -396,14 +362,12 @@ export default function App() {
       return;
     }
 
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
-      const res = await authFetch('/api/nodes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title(), type }),
-      });
-      const newNode = await res.json();
+      const newNode = await org.nodes.create({ title: title(), type });
       await loadNodes();
       loadNode(newNode.id);
       setTitle('');
@@ -420,15 +384,12 @@ export default function App() {
 
   async function saveNode() {
     const nodeId = selectedNodeId();
-    if (!nodeId) return;
+    const org = orgApi();
+    if (!nodeId || !org) return;
 
     try {
       setLoading(true);
-      await authFetch(`/api/pages/${nodeId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: title(), content: content() }),
-      });
+      await org.pages.update(nodeId, { title: title(), content: content() });
       await loadNodes();
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
@@ -453,13 +414,14 @@ export default function App() {
 
   async function deleteCurrentNode() {
     const nodeId = selectedNodeId();
-    if (!nodeId) return;
+    const org = orgApi();
+    if (!nodeId || !org) return;
 
     if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
       setLoading(true);
-      await authFetch(`/api/pages/${nodeId}`, { method: 'DELETE' });
+      await org.pages.delete(nodeId);
       await loadNodes();
       setSelectedNodeId(null);
       setTitle('');
@@ -527,21 +489,12 @@ export default function App() {
 
   async function handleAddRecord(data: Record<string, unknown>) {
     const nodeId = selectedNodeId();
-    if (!nodeId) return;
+    const org = orgApi();
+    if (!nodeId || !org) return;
 
     try {
       setLoading(true);
-      const res = await authFetch(`/api/tables/${nodeId}/records`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data }),
-      });
-
-      if (!res.ok) {
-        setError(t('errors.failedToCreate') || 'Failed to create record');
-        return;
-      }
-
+      await org.tables.records.create(nodeId, { data });
       // Reload records
       loadNode(nodeId);
       setError(null);
@@ -554,13 +507,14 @@ export default function App() {
 
   async function handleDeleteRecord(recordId: string) {
     const nodeId = selectedNodeId();
-    if (!nodeId) return;
+    const org = orgApi();
+    if (!nodeId || !org) return;
 
     if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
       setLoading(true);
-      await authFetch(`/api/tables/${nodeId}/records/${recordId}`, { method: 'DELETE' });
+      await org.tables.records.delete(nodeId, recordId);
       loadNode(nodeId);
       setError(null);
     } catch (err) {
@@ -572,14 +526,14 @@ export default function App() {
 
   async function loadMoreRecords() {
     const nodeId = selectedNodeId();
-    if (!nodeId || loading()) return;
+    const org = orgApi();
+    if (!nodeId || loading() || !org) return;
 
     try {
       setLoading(true);
       const offset = records().length;
-      const res = await authFetch(`/api/tables/${nodeId}/records?offset=${offset}&limit=${PAGE_SIZE}`);
-      const data = await res.json();
-      const newRecords = data.records || [];
+      const data = await org.tables.records.list(nodeId, { Offset: offset, Limit: PAGE_SIZE });
+      const newRecords = (data.records || []) as DataRecordResponse[];
       setRecords([...records(), ...newRecords]);
       setHasMore(newRecords.length === PAGE_SIZE);
     } catch (err) {
@@ -606,10 +560,11 @@ export default function App() {
                   onComplete={() => {
                     // Re-fetch user to get updated onboarding state
                     const fetchUser = async () => {
-                      const res = await authFetch('/api/auth/me');
-                      if (res.ok) {
-                        const data = await res.json();
+                      try {
+                        const data = await api().auth.me.get();
                         setUser(data);
+                      } catch (err) {
+                        console.error('Failed to load user', err);
                       }
                     };
                     fetchUser();

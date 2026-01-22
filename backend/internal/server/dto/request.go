@@ -40,11 +40,11 @@ func (r *RegisterRequest) Validate() error {
 	return nil
 }
 
-// MeRequest is a request to get current user info.
-type MeRequest struct{}
+// GetMeRequest is a request to get current user info.
+type GetMeRequest struct{}
 
-// Validate is a no-op for MeRequest.
-func (r *MeRequest) Validate() error {
+// Validate is a no-op for GetMeRequest.
+func (r *GetMeRequest) Validate() error {
 	return nil
 }
 
@@ -52,7 +52,7 @@ func (r *MeRequest) Validate() error {
 
 // ListPagesRequest is a request to list all pages.
 type ListPagesRequest struct {
-	OrgID string `path:"orgID"`
+	OrgID string `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the list pages request fields.
@@ -65,8 +65,8 @@ func (r *ListPagesRequest) Validate() error {
 
 // GetPageRequest is a request to get a page.
 type GetPageRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
+	OrgID string `path:"orgID" tstype:"-"`
+	ID    string `path:"id" tstype:"-"`
 }
 
 // Validate validates the get page request fields.
@@ -82,7 +82,7 @@ func (r *GetPageRequest) Validate() error {
 
 // CreatePageRequest is a request to create a page.
 type CreatePageRequest struct {
-	OrgID   string `path:"orgID"`
+	OrgID   string `path:"orgID" tstype:"-"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
@@ -100,8 +100,8 @@ func (r *CreatePageRequest) Validate() error {
 
 // UpdatePageRequest is a request to update a page.
 type UpdatePageRequest struct {
-	OrgID   string `path:"orgID"`
-	ID      string `path:"id"`
+	OrgID   string `path:"orgID" tstype:"-"`
+	ID      string `path:"id" tstype:"-"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
@@ -122,8 +122,8 @@ func (r *UpdatePageRequest) Validate() error {
 
 // DeletePageRequest is a request to delete a page.
 type DeletePageRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
+	OrgID string `path:"orgID" tstype:"-"`
+	ID    string `path:"id" tstype:"-"`
 }
 
 // Validate validates the delete page request fields.
@@ -137,15 +137,15 @@ func (r *DeletePageRequest) Validate() error {
 	return nil
 }
 
-// GetPageHistoryRequest is a request to get page history.
-type GetPageHistoryRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
+// ListPageVersionsRequest is a request to list page version history.
+type ListPageVersionsRequest struct {
+	OrgID string `path:"orgID" tstype:"-"`
+	ID    string `path:"id" tstype:"-"`
 	Limit int    `query:"limit"` // Max commits to return (1-1000, default 1000).
 }
 
-// Validate validates the get page history request fields.
-func (r *GetPageHistoryRequest) Validate() error {
+// Validate validates the list page versions request fields.
+func (r *ListPageVersionsRequest) Validate() error {
 	if r.OrgID == "" {
 		return MissingField("orgID")
 	}
@@ -157,9 +157,9 @@ func (r *GetPageHistoryRequest) Validate() error {
 
 // GetPageVersionRequest is a request to get a specific page version.
 type GetPageVersionRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
-	Hash  string `path:"hash"`
+	OrgID string `path:"orgID" tstype:"-"`
+	ID    string `path:"id" tstype:"-"`
+	Hash  string `path:"hash" tstype:"-"`
 }
 
 // Validate validates the get page version request fields.
@@ -180,7 +180,7 @@ func (r *GetPageVersionRequest) Validate() error {
 
 // ListTablesRequest is a request to list tables.
 type ListTablesRequest struct {
-	OrgID string `path:"orgID"`
+	OrgID string `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the list tables request fields.
@@ -193,8 +193,8 @@ func (r *ListTablesRequest) Validate() error {
 
 // GetTableRequest is a request to get a table.
 type GetTableRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
+	OrgID string `path:"orgID" tstype:"-"`
+	ID    string `path:"id" tstype:"-"`
 }
 
 // Validate validates the get table request fields.
@@ -210,7 +210,7 @@ func (r *GetTableRequest) Validate() error {
 
 // CreateTableRequest is a request to create a table.
 type CreateTableRequest struct {
-	OrgID      string     `path:"orgID"`
+	OrgID      string     `path:"orgID" tstype:"-"`
 	Title      string     `json:"title"`
 	Properties []Property `json:"properties"`
 }
@@ -228,8 +228,8 @@ func (r *CreateTableRequest) Validate() error {
 
 // UpdateTableRequest is a request to update a table.
 type UpdateTableRequest struct {
-	OrgID      string     `path:"orgID"`
-	ID         string     `path:"id"`
+	OrgID      string     `path:"orgID" tstype:"-"`
+	ID         string     `path:"id" tstype:"-"`
 	Title      string     `json:"title"`
 	Properties []Property `json:"properties"`
 }
@@ -250,8 +250,8 @@ func (r *UpdateTableRequest) Validate() error {
 
 // DeleteTableRequest is a request to delete a table.
 type DeleteTableRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
+	OrgID string `path:"orgID" tstype:"-"`
+	ID    string `path:"id" tstype:"-"`
 }
 
 // Validate validates the delete table request fields.
@@ -267,8 +267,8 @@ func (r *DeleteTableRequest) Validate() error {
 
 // ListRecordsRequest is a request to list records in a table.
 type ListRecordsRequest struct {
-	OrgID  string `path:"orgID"`
-	ID     string `path:"id"`
+	OrgID  string `path:"orgID" tstype:"-"`
+	ID     string `path:"id" tstype:"-"`
 	Offset int    `query:"offset"`
 	Limit  int    `query:"limit"`
 }
@@ -286,8 +286,8 @@ func (r *ListRecordsRequest) Validate() error {
 
 // CreateRecordRequest is a request to create a record.
 type CreateRecordRequest struct {
-	OrgID string         `path:"orgID"`
-	ID    string         `path:"id"`
+	OrgID string         `path:"orgID" tstype:"-"`
+	ID    string         `path:"id" tstype:"-"`
 	Data  map[string]any `json:"data"`
 }
 
@@ -304,9 +304,9 @@ func (r *CreateRecordRequest) Validate() error {
 
 // UpdateRecordRequest is a request to update a record.
 type UpdateRecordRequest struct {
-	OrgID string         `path:"orgID"`
-	ID    string         `path:"id"`
-	RID   string         `path:"rid"`
+	OrgID string         `path:"orgID" tstype:"-"`
+	ID    string         `path:"id" tstype:"-"`
+	RID   string         `path:"rid" tstype:"-"`
 	Data  map[string]any `json:"data"`
 }
 
@@ -326,9 +326,9 @@ func (r *UpdateRecordRequest) Validate() error {
 
 // GetRecordRequest is a request to get a record.
 type GetRecordRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
-	RID   string `path:"rid"`
+	OrgID string `path:"orgID" tstype:"-"`
+	ID    string `path:"id" tstype:"-"`
+	RID   string `path:"rid" tstype:"-"`
 }
 
 // Validate validates the get record request fields.
@@ -347,9 +347,9 @@ func (r *GetRecordRequest) Validate() error {
 
 // DeleteRecordRequest is a request to delete a record.
 type DeleteRecordRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
-	RID   string `path:"rid"`
+	OrgID string `path:"orgID" tstype:"-"`
+	ID    string `path:"id" tstype:"-"`
+	RID   string `path:"rid" tstype:"-"`
 }
 
 // Validate validates the delete record request fields.
@@ -370,7 +370,7 @@ func (r *DeleteRecordRequest) Validate() error {
 
 // ListNodesRequest is a request to list nodes.
 type ListNodesRequest struct {
-	OrgID string `path:"orgID"`
+	OrgID string `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the list nodes request fields.
@@ -383,8 +383,8 @@ func (r *ListNodesRequest) Validate() error {
 
 // GetNodeRequest is a request to get a node.
 type GetNodeRequest struct {
-	OrgID string `path:"orgID"`
-	ID    string `path:"id"`
+	OrgID string `path:"orgID" tstype:"-"`
+	ID    string `path:"id" tstype:"-"`
 }
 
 // Validate validates the get node request fields.
@@ -400,7 +400,7 @@ func (r *GetNodeRequest) Validate() error {
 
 // CreateNodeRequest is a request to create a node.
 type CreateNodeRequest struct {
-	OrgID    string   `path:"orgID"`
+	OrgID    string   `path:"orgID" tstype:"-"`
 	ParentID string   `json:"parent_id,omitempty"`
 	Title    string   `json:"title"`
 	Type     NodeType `json:"type"`
@@ -424,8 +424,8 @@ func (r *CreateNodeRequest) Validate() error {
 
 // ListPageAssetsRequest is a request to list assets in a page.
 type ListPageAssetsRequest struct {
-	OrgID  string `path:"orgID"`
-	PageID string `path:"id"`
+	OrgID  string `path:"orgID" tstype:"-"`
+	PageID string `path:"id" tstype:"-"`
 }
 
 // Validate validates the list page assets request fields.
@@ -441,8 +441,8 @@ func (r *ListPageAssetsRequest) Validate() error {
 
 // UploadPageAssetRequest is a request to upload an asset to a page.
 type UploadPageAssetRequest struct {
-	OrgID  string `path:"orgID"`
-	PageID string `path:"id"`
+	OrgID  string `path:"orgID" tstype:"-"`
+	PageID string `path:"id" tstype:"-"`
 }
 
 // Validate validates the upload page asset request fields.
@@ -458,9 +458,9 @@ func (r *UploadPageAssetRequest) Validate() error {
 
 // DeletePageAssetRequest is a request to delete an asset from a page.
 type DeletePageAssetRequest struct {
-	OrgID     string `path:"orgID"`
-	PageID    string `path:"id"`
-	AssetName string `path:"name"`
+	OrgID     string `path:"orgID" tstype:"-"`
+	PageID    string `path:"id" tstype:"-"`
+	AssetName string `path:"name" tstype:"-"`
 }
 
 // Validate validates the delete page asset request fields.
@@ -479,9 +479,9 @@ func (r *DeletePageAssetRequest) Validate() error {
 
 // ServeAssetRequest is a request to serve an asset file directly.
 type ServeAssetRequest struct {
-	OrgID     string `path:"path"`
-	PageID    string `path:"id"`
-	AssetName string `path:"assetName"`
+	OrgID     string `path:"orgID" tstype:"-"`
+	PageID    string `path:"id" tstype:"-"`
+	AssetName string `path:"name" tstype:"-"`
 }
 
 // Validate validates the serve asset request fields.
@@ -502,7 +502,7 @@ func (r *ServeAssetRequest) Validate() error {
 
 // SearchRequest is a request to search pages and tables.
 type SearchRequest struct {
-	OrgID       string `path:"orgID"`
+	OrgID       string `path:"orgID" tstype:"-"`
 	Query       string `json:"query"`
 	Limit       int    `json:"limit,omitempty"`
 	MatchTitle  bool   `json:"match_title,omitempty"`
@@ -525,7 +525,7 @@ func (r *SearchRequest) Validate() error {
 
 // CreateInvitationRequest is a request to create an invitation.
 type CreateInvitationRequest struct {
-	OrgID string   `path:"orgID"`
+	OrgID string   `path:"orgID" tstype:"-"`
 	Email string   `json:"email"`
 	Role  UserRole `json:"role"`
 }
@@ -546,7 +546,7 @@ func (r *CreateInvitationRequest) Validate() error {
 
 // ListInvitationsRequest is a request to list invitations for an organization.
 type ListInvitationsRequest struct {
-	OrgID string `path:"orgID"`
+	OrgID string `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the list invitations request fields.
@@ -595,7 +595,7 @@ func (r *SwitchOrgRequest) Validate() error {
 
 // UpdateMembershipSettingsRequest is a request to update user preferences within an organization.
 type UpdateMembershipSettingsRequest struct {
-	OrgID    string             `path:"orgID"`
+	OrgID    string             `path:"orgID" tstype:"-"`
 	Settings MembershipSettings `json:"settings"`
 }
 
@@ -609,14 +609,27 @@ func (r *UpdateMembershipSettingsRequest) Validate() error {
 
 // --- Organizations ---
 
-// UpdateOrgSettingsRequest is a request to update organization-wide settings.
-type UpdateOrgSettingsRequest struct {
-	OrgID    string               `path:"orgID"`
+// UpdateOrgPreferencesRequest is a request to update organization-wide preferences.
+type UpdateOrgPreferencesRequest struct {
+	OrgID    string               `path:"orgID" tstype:"-"`
 	Settings OrganizationSettings `json:"settings"`
 }
 
-// Validate validates the update org settings request fields.
-func (r *UpdateOrgSettingsRequest) Validate() error {
+// Validate validates the update org preferences request fields.
+func (r *UpdateOrgPreferencesRequest) Validate() error {
+	if r.OrgID == "" {
+		return MissingField("orgID")
+	}
+	return nil
+}
+
+// GetOrganizationRequest is a request to get organization details.
+type GetOrganizationRequest struct {
+	OrgID string `path:"orgID" tstype:"-"`
+}
+
+// Validate validates the get organization request fields.
+func (r *GetOrganizationRequest) Validate() error {
 	if r.OrgID == "" {
 		return MissingField("orgID")
 	}
@@ -625,7 +638,7 @@ func (r *UpdateOrgSettingsRequest) Validate() error {
 
 // UpdateOrganizationRequest is a request to update organization details.
 type UpdateOrganizationRequest struct {
-	OrgID string `path:"orgID"`
+	OrgID string `path:"orgID" tstype:"-"`
 	Name  string `json:"name"`
 }
 
@@ -657,7 +670,7 @@ func (r *CreateOrganizationRequest) Validate() error {
 
 // GetOnboardingRequest is a request to get onboarding status.
 type GetOnboardingRequest struct {
-	OrgID string `path:"orgID"`
+	OrgID string `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the get onboarding request fields.
@@ -670,7 +683,7 @@ func (r *GetOnboardingRequest) Validate() error {
 
 // UpdateOnboardingRequest is a request to update onboarding status.
 type UpdateOnboardingRequest struct {
-	OrgID string          `path:"orgID"`
+	OrgID string          `path:"orgID" tstype:"-"`
 	State OnboardingState `json:"state"`
 }
 
@@ -686,7 +699,7 @@ func (r *UpdateOnboardingRequest) Validate() error {
 
 // GetGitRemoteRequest is a request to get the git remote for an organization.
 type GetGitRemoteRequest struct {
-	OrgID string `path:"orgID"`
+	OrgID string `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the get git remote request fields.
@@ -697,9 +710,9 @@ func (r *GetGitRemoteRequest) Validate() error {
 	return nil
 }
 
-// SetGitRemoteRequest is a request to set (create or update) the git remote for an organization.
-type SetGitRemoteRequest struct {
-	OrgID    string `path:"orgID"`
+// UpdateGitRemoteRequest is a request to set (create or update) the git remote for an organization.
+type UpdateGitRemoteRequest struct {
+	OrgID    string `path:"orgID" tstype:"-"`
 	URL      string `json:"url"`
 	Type     string `json:"type"`      // github, gitlab, custom
 	AuthType string `json:"auth_type"` // token, ssh
@@ -707,7 +720,7 @@ type SetGitRemoteRequest struct {
 }
 
 // Validate validates the set git remote request fields.
-func (r *SetGitRemoteRequest) Validate() error {
+func (r *UpdateGitRemoteRequest) Validate() error {
 	if r.OrgID == "" {
 		return MissingField("orgID")
 	}
@@ -723,26 +736,26 @@ func (r *SetGitRemoteRequest) Validate() error {
 	return nil
 }
 
-// DeleteGitRemoteRequest is a request to delete the git remote for an organization.
-type DeleteGitRemoteRequest struct {
-	OrgID string `path:"orgID"`
+// DeleteGitRequest is a request to delete the git remote for an organization.
+type DeleteGitRequest struct {
+	OrgID string `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the delete git remote request fields.
-func (r *DeleteGitRemoteRequest) Validate() error {
+func (r *DeleteGitRequest) Validate() error {
 	if r.OrgID == "" {
 		return MissingField("orgID")
 	}
 	return nil
 }
 
-// PushGitRemoteRequest is a request to push to the git remote.
-type PushGitRemoteRequest struct {
-	OrgID string `path:"orgID"`
+// PushGitRequest is a request to push to the git remote.
+type PushGitRequest struct {
+	OrgID string `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the push git remote request fields.
-func (r *PushGitRemoteRequest) Validate() error {
+func (r *PushGitRequest) Validate() error {
 	if r.OrgID == "" {
 		return MissingField("orgID")
 	}
@@ -763,7 +776,7 @@ func (r *HealthRequest) Validate() error {
 
 // ListUsersRequest is a request to list users.
 type ListUsersRequest struct {
-	OrgID string `path:"orgID"`
+	OrgID string `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the list users request fields.
@@ -774,15 +787,15 @@ func (r *ListUsersRequest) Validate() error {
 	return nil
 }
 
-// UpdateRoleRequest is a request to update a user's role.
-type UpdateRoleRequest struct {
-	OrgID  string   `path:"orgID"`
+// UpdateUserRoleRequest is a request to update a user's role.
+type UpdateUserRoleRequest struct {
+	OrgID  string   `path:"orgID" tstype:"-"`
 	UserID string   `json:"user_id"`
 	Role   UserRole `json:"role"`
 }
 
 // Validate validates the update role request fields.
-func (r *UpdateRoleRequest) Validate() error {
+func (r *UpdateUserRoleRequest) Validate() error {
 	if r.OrgID == "" {
 		return MissingField("orgID")
 	}

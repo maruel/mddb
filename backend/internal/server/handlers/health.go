@@ -18,8 +18,8 @@ func NewHealthHandler(version string) *HealthHandler {
 	}
 }
 
-// Health handles health check requests.
-func (h *HealthHandler) Health(ctx context.Context, req *dto.HealthRequest) (*dto.HealthResponse, error) {
+// GetHealth handles health check requests.
+func (h *HealthHandler) GetHealth(ctx context.Context, req *dto.HealthRequest) (*dto.HealthResponse, error) {
 	return &dto.HealthResponse{
 		Status:  "ok",
 		Version: h.version,

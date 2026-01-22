@@ -150,27 +150,21 @@ export interface RegisterRequest {
   name: string;
 }
 /**
- * MeRequest is a request to get current user info.
+ * GetMeRequest is a request to get current user info.
  */
-export interface MeRequest {}
+export interface GetMeRequest {}
 /**
  * ListPagesRequest is a request to list all pages.
  */
-export interface ListPagesRequest {
-  OrgID: string;
-}
+export interface ListPagesRequest {}
 /**
  * GetPageRequest is a request to get a page.
  */
-export interface GetPageRequest {
-  OrgID: string;
-  ID: string;
-}
+export interface GetPageRequest {}
 /**
  * CreatePageRequest is a request to create a page.
  */
 export interface CreatePageRequest {
-  OrgID: string;
   title: string;
   content: string;
 }
@@ -178,52 +172,35 @@ export interface CreatePageRequest {
  * UpdatePageRequest is a request to update a page.
  */
 export interface UpdatePageRequest {
-  OrgID: string;
-  ID: string;
   title: string;
   content: string;
 }
 /**
  * DeletePageRequest is a request to delete a page.
  */
-export interface DeletePageRequest {
-  OrgID: string;
-  ID: string;
-}
+export interface DeletePageRequest {}
 /**
- * GetPageHistoryRequest is a request to get page history.
+ * ListPageVersionsRequest is a request to list page version history.
  */
-export interface GetPageHistoryRequest {
-  OrgID: string;
-  ID: string;
+export interface ListPageVersionsRequest {
   Limit: number /* int */; // Max commits to return (1-1000, default 1000).
 }
 /**
  * GetPageVersionRequest is a request to get a specific page version.
  */
-export interface GetPageVersionRequest {
-  OrgID: string;
-  ID: string;
-  Hash: string;
-}
+export interface GetPageVersionRequest {}
 /**
  * ListTablesRequest is a request to list tables.
  */
-export interface ListTablesRequest {
-  OrgID: string;
-}
+export interface ListTablesRequest {}
 /**
  * GetTableRequest is a request to get a table.
  */
-export interface GetTableRequest {
-  OrgID: string;
-  ID: string;
-}
+export interface GetTableRequest {}
 /**
  * CreateTableRequest is a request to create a table.
  */
 export interface CreateTableRequest {
-  OrgID: string;
   title: string;
   properties: Property[];
 }
@@ -231,24 +208,17 @@ export interface CreateTableRequest {
  * UpdateTableRequest is a request to update a table.
  */
 export interface UpdateTableRequest {
-  OrgID: string;
-  ID: string;
   title: string;
   properties: Property[];
 }
 /**
  * DeleteTableRequest is a request to delete a table.
  */
-export interface DeleteTableRequest {
-  OrgID: string;
-  ID: string;
-}
+export interface DeleteTableRequest {}
 /**
  * ListRecordsRequest is a request to list records in a table.
  */
 export interface ListRecordsRequest {
-  OrgID: string;
-  ID: string;
   Offset: number /* int */;
   Limit: number /* int */;
 }
@@ -256,53 +226,34 @@ export interface ListRecordsRequest {
  * CreateRecordRequest is a request to create a record.
  */
 export interface CreateRecordRequest {
-  OrgID: string;
-  ID: string;
   data: { [key: string]: any };
 }
 /**
  * UpdateRecordRequest is a request to update a record.
  */
 export interface UpdateRecordRequest {
-  OrgID: string;
-  ID: string;
-  RID: string;
   data: { [key: string]: any };
 }
 /**
  * GetRecordRequest is a request to get a record.
  */
-export interface GetRecordRequest {
-  OrgID: string;
-  ID: string;
-  RID: string;
-}
+export interface GetRecordRequest {}
 /**
  * DeleteRecordRequest is a request to delete a record.
  */
-export interface DeleteRecordRequest {
-  OrgID: string;
-  ID: string;
-  RID: string;
-}
+export interface DeleteRecordRequest {}
 /**
  * ListNodesRequest is a request to list nodes.
  */
-export interface ListNodesRequest {
-  OrgID: string;
-}
+export interface ListNodesRequest {}
 /**
  * GetNodeRequest is a request to get a node.
  */
-export interface GetNodeRequest {
-  OrgID: string;
-  ID: string;
-}
+export interface GetNodeRequest {}
 /**
  * CreateNodeRequest is a request to create a node.
  */
 export interface CreateNodeRequest {
-  OrgID: string;
   parent_id?: string;
   title: string;
   type: NodeType;
@@ -310,38 +261,23 @@ export interface CreateNodeRequest {
 /**
  * ListPageAssetsRequest is a request to list assets in a page.
  */
-export interface ListPageAssetsRequest {
-  OrgID: string;
-  PageID: string;
-}
+export interface ListPageAssetsRequest {}
 /**
  * UploadPageAssetRequest is a request to upload an asset to a page.
  */
-export interface UploadPageAssetRequest {
-  OrgID: string;
-  PageID: string;
-}
+export interface UploadPageAssetRequest {}
 /**
  * DeletePageAssetRequest is a request to delete an asset from a page.
  */
-export interface DeletePageAssetRequest {
-  OrgID: string;
-  PageID: string;
-  AssetName: string;
-}
+export interface DeletePageAssetRequest {}
 /**
  * ServeAssetRequest is a request to serve an asset file directly.
  */
-export interface ServeAssetRequest {
-  OrgID: string;
-  PageID: string;
-  AssetName: string;
-}
+export interface ServeAssetRequest {}
 /**
  * SearchRequest is a request to search pages and tables.
  */
 export interface SearchRequest {
-  OrgID: string;
   query: string;
   limit?: number /* int */;
   match_title?: boolean;
@@ -352,16 +288,13 @@ export interface SearchRequest {
  * CreateInvitationRequest is a request to create an invitation.
  */
 export interface CreateInvitationRequest {
-  OrgID: string;
   email: string;
   role: UserRole;
 }
 /**
  * ListInvitationsRequest is a request to list invitations for an organization.
  */
-export interface ListInvitationsRequest {
-  OrgID: string;
-}
+export interface ListInvitationsRequest {}
 /**
  * AcceptInvitationRequest is a request to accept an invitation.
  */
@@ -380,21 +313,22 @@ export interface SwitchOrgRequest {
  * UpdateMembershipSettingsRequest is a request to update user preferences within an organization.
  */
 export interface UpdateMembershipSettingsRequest {
-  OrgID: string;
   settings: MembershipSettings;
 }
 /**
- * UpdateOrgSettingsRequest is a request to update organization-wide settings.
+ * UpdateOrgPreferencesRequest is a request to update organization-wide preferences.
  */
-export interface UpdateOrgSettingsRequest {
-  OrgID: string;
+export interface UpdateOrgPreferencesRequest {
   settings: OrganizationSettings;
 }
+/**
+ * GetOrganizationRequest is a request to get organization details.
+ */
+export interface GetOrganizationRequest {}
 /**
  * UpdateOrganizationRequest is a request to update organization details.
  */
 export interface UpdateOrganizationRequest {
-  OrgID: string;
   name: string;
 }
 /**
@@ -408,44 +342,34 @@ export interface CreateOrganizationRequest {
 /**
  * GetOnboardingRequest is a request to get onboarding status.
  */
-export interface GetOnboardingRequest {
-  OrgID: string;
-}
+export interface GetOnboardingRequest {}
 /**
  * UpdateOnboardingRequest is a request to update onboarding status.
  */
 export interface UpdateOnboardingRequest {
-  OrgID: string;
   state: OnboardingState;
 }
 /**
  * GetGitRemoteRequest is a request to get the git remote for an organization.
  */
-export interface GetGitRemoteRequest {
-  OrgID: string;
-}
+export interface GetGitRemoteRequest {}
 /**
- * SetGitRemoteRequest is a request to set (create or update) the git remote for an organization.
+ * UpdateGitRemoteRequest is a request to set (create or update) the git remote for an organization.
  */
-export interface SetGitRemoteRequest {
-  OrgID: string;
+export interface UpdateGitRemoteRequest {
   url: string;
   type: string; // github, gitlab, custom
   auth_type: string; // token, ssh
   token?: string;
 }
 /**
- * DeleteGitRemoteRequest is a request to delete the git remote for an organization.
+ * DeleteGitRequest is a request to delete the git remote for an organization.
  */
-export interface DeleteGitRemoteRequest {
-  OrgID: string;
-}
+export interface DeleteGitRequest {}
 /**
- * PushGitRemoteRequest is a request to push to the git remote.
+ * PushGitRequest is a request to push to the git remote.
  */
-export interface PushGitRemoteRequest {
-  OrgID: string;
-}
+export interface PushGitRequest {}
 /**
  * HealthRequest is a request to check system health.
  */
@@ -453,14 +377,11 @@ export interface HealthRequest {}
 /**
  * ListUsersRequest is a request to list users.
  */
-export interface ListUsersRequest {
-  OrgID: string;
-}
+export interface ListUsersRequest {}
 /**
- * UpdateRoleRequest is a request to update a user's role.
+ * UpdateUserRoleRequest is a request to update a user's role.
  */
-export interface UpdateRoleRequest {
-  OrgID: string;
+export interface UpdateUserRoleRequest {
   user_id: string;
   role: UserRole;
 }
@@ -539,9 +460,9 @@ export interface UpdatePageResponse {
  */
 export type DeletePageResponse = OkResponse;
 /**
- * GetPageHistoryResponse is a response containing page history.
+ * ListPageVersionsResponse is a response containing page version history.
  */
-export interface GetPageHistoryResponse {
+export interface ListPageVersionsResponse {
   history: (Commit | undefined)[];
 }
 /**

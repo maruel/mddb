@@ -45,7 +45,7 @@ func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *identi
 }
 
 // UpdateUserRole updates a user's role.
-func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateRoleRequest) (*dto.UserResponse, error) {
+func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateUserRoleRequest) (*dto.UserResponse, error) {
 	if req.UserID == "" || req.Role == "" {
 		return nil, dto.MissingField("user_id or role")
 	}

@@ -1,10 +1,8 @@
-import { createSignal, createEffect, For, Show } from 'solid-js';
+import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
+import { createApi } from '../useApi';
 import type {
   UserResponse,
   InvitationResponse,
-  ListUsersResponse,
-  ListInvitationsResponse,
-  OrganizationResponse,
   UserSettings,
   MembershipSettings,
   OrganizationSettings,
@@ -28,9 +26,8 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const [members, setMembers] = createSignal<UserResponse[]>([]);
   const [invitations, setInvitations] = createSignal<InvitationResponse[]>([]);
 
-  // Git Remotes states
-  const [remotes, setRemotes] = createSignal<GitRemoteResponse[]>([]);
-  const [newRemoteName, setNewRemoteName] = createSignal('origin');
+  // Git Remote state (single remote per org)
+  const [gitRemote, setGitRemote] = createSignal<GitRemoteResponse | null>(null);
   const [newRemoteURL, setNewRemoteURL] = createSignal('');
   const [newRemoteToken, setNewRemoteToken] = createSignal('');
 
@@ -41,7 +38,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   // Personal Settings states
   const [theme, setTheme] = createSignal('light');
   const [language, setLanguage] = createSignal('en');
-  const [notifications, setNotifications] = createSignal(true); // Default
+  const [notifications, setNotifications] = createSignal(true);
 
   createEffect(() => {
     setTheme(props.user.settings?.theme || 'light');
@@ -57,68 +54,42 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const [error, setError] = createSignal<string | null>(null);
   const [success, setSuccess] = createSignal<string | null>(null);
 
-  const authFetch = async (url: string, options: RequestInit = {}) => {
-    let finalUrl = url;
-    if (url.startsWith('/api/') && !url.startsWith('/api/auth/')) {
-      finalUrl = `/api/${props.user.organization_id}${url.substring(4)}`;
-    }
-
-    const res = await fetch(finalUrl, {
-      ...options,
-      headers: {
-        ...options.headers,
-        Authorization: `Bearer ${props.token}`,
-      },
-    });
-    if (!res.ok) {
-      const data = await res.json();
-      throw new Error(data.error?.message || data.error || 'Request failed');
-    }
-    return res;
-  };
+  // Create API client
+  const api = createMemo(() => createApi(() => props.token));
+  const orgApi = createMemo(() => {
+    const orgID = props.user.organization_id;
+    return orgID ? api().org(orgID) : null;
+  });
 
   const loadData = async () => {
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
       setError(null);
 
-      const promises: Promise<Response>[] = [];
-
       if (activeTab() === 'members' && props.user.role === 'admin') {
-        promises.push(authFetch('/api/users'));
-        promises.push(authFetch('/api/invitations'));
-      }
-
-      if (activeTab() === 'workspace') {
-        promises.push(authFetch('/api/settings/organization'));
-      }
-
-      if (activeTab() === 'sync' && props.user.role === 'admin') {
-        promises.push(authFetch('/api/settings/git/remotes'));
-      }
-
-      if (promises.length === 0) return;
-
-      const results = await Promise.all(promises);
-
-      if (activeTab() === 'members' && props.user.role === 'admin' && results[0] && results[1]) {
-        const membersData = (await results[0].json()) as ListUsersResponse;
-        const invsData = (await results[1].json()) as ListInvitationsResponse;
+        const [membersData, invsData] = await Promise.all([org.users.list(), org.invitations.list()]);
         setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
         setInvitations(invsData.invitations?.filter((i): i is InvitationResponse => !!i) || []);
       }
 
-      const lastResult = results[results.length - 1];
-      if (activeTab() === 'workspace' && lastResult) {
-        const orgData = (await lastResult.json()) as OrganizationResponse;
+      if (activeTab() === 'workspace') {
+        const orgData = await org.settings.organization.get();
         setOrgName(orgData.name);
         setPublicAccess(orgData.settings?.public_access || false);
         setAllowedDomains(orgData.settings?.allowed_domains?.join(', ') || '');
       }
 
-      if (activeTab() === 'sync' && props.user.role === 'admin' && lastResult) {
-        const remoteData = (await lastResult.json()) as { remotes?: GitRemoteResponse[] };
-        setRemotes(remoteData.remotes?.filter((r: GitRemoteResponse): r is GitRemoteResponse => !!r) || []);
+      if (activeTab() === 'sync' && props.user.role === 'admin') {
+        try {
+          const remoteData = await org.settings.git.get();
+          setGitRemote(remoteData);
+        } catch {
+          // No remote configured is a valid state
+          setGitRemote(null);
+        }
       }
 
       // Load membership settings (notifications)
@@ -139,15 +110,12 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
   const handleInvite = async (e: Event) => {
     e.preventDefault();
-    if (!inviteEmail()) return;
+    const org = orgApi();
+    if (!inviteEmail() || !org) return;
 
     try {
       setLoading(true);
-      await authFetch('/api/invitations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail(), role: inviteRole() }),
-      });
+      await org.invitations.create({ email: inviteEmail(), role: inviteRole() });
       setInviteEmail('');
       setSuccess(t('success.invitationSent') || 'Invitation sent successfully');
       loadData();
@@ -158,14 +126,13 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     }
   };
 
-  const handleUpdateRole = async (userId: string, role: string) => {
+  const handleUpdateRole = async (userId: string, role: UserRole) => {
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
-      await authFetch('/api/users/role', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId, role }),
-      });
+      await org.users.role.update({ user_id: userId, role });
       setSuccess(t('success.roleUpdated') || 'Role updated');
       loadData();
     } catch (err) {
@@ -177,6 +144,9 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
   const savePersonalSettings = async (e: Event) => {
     e.preventDefault();
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
       setError(null);
@@ -192,16 +162,8 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       };
 
       await Promise.all([
-        authFetch('/api/auth/settings', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ settings: userSettings }),
-        }),
-        authFetch('/api/settings/membership', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ settings: memSettings }),
-        }),
+        api().auth.settings.update({ settings: userSettings }),
+        org.settings.membership.update({ settings: memSettings }),
       ]);
 
       setSuccess(t('success.personalSettingsSaved') || 'Personal settings saved successfully');
@@ -214,26 +176,25 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
   const saveWorkspaceSettings = async (e: Event) => {
     e.preventDefault();
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
 
-      const orgSettings: Partial<OrganizationSettings> = {
+      const orgSettings: OrganizationSettings = {
         public_access: publicAccess(),
         allowed_domains: allowedDomains()
           ? allowedDomains()
               .split(',')
               .map((d) => d.trim())
           : [],
+        git_auto_push: false, // Preserve default
       };
 
-      await authFetch('/api/settings/organization', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: orgSettings }),
-      });
-
+      await org.settings.preferences.update({ settings: orgSettings });
       setSuccess(t('success.workspaceSettingsSaved') || 'Workspace settings saved successfully');
     } catch (err) {
       setError(`${t('errors.failedToSave')}: ${err}`);
@@ -242,26 +203,24 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     }
   };
 
-  const handleAddRemote = async (e: Event) => {
+  const handleAddOrUpdateRemote = async (e: Event) => {
     e.preventDefault();
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
       setError(null);
-      await authFetch('/api/settings/git/remotes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: newRemoteName(),
-          url: newRemoteURL(),
-          token: newRemoteToken(),
-          type: 'custom',
-          auth_type: newRemoteToken() ? 'token' : 'none',
-        }),
+      const remoteData = await org.settings.git.update({
+        url: newRemoteURL(),
+        token: newRemoteToken(),
+        type: 'custom',
+        auth_type: newRemoteToken() ? 'token' : 'none',
       });
-      setSuccess(t('success.remoteAdded') || 'Remote added');
+      setGitRemote(remoteData);
+      setSuccess(t('success.remoteAdded') || 'Git remote configured');
       setNewRemoteURL('');
       setNewRemoteToken('');
-      loadData();
     } catch (err) {
       setError(`${t('errors.failedToAddRemote')}: ${err}`);
     } finally {
@@ -269,14 +228,15 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     }
   };
 
-  const handlePush = async (remoteId: string) => {
+  const handlePush = async () => {
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
-      await authFetch(`/api/settings/git/remotes/${remoteId}/push`, {
-        method: 'POST',
-      });
+      await org.settings.git.pushGit();
       setSuccess(t('success.pushSuccessful') || 'Push successful');
       loadData();
     } catch (err) {
@@ -286,16 +246,18 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     }
   };
 
-  const handleDeleteRemote = async (remoteId: string) => {
+  const handleDeleteRemote = async () => {
     if (!confirm(t('settings.confirmRemoveRemote') || 'Are you sure you want to remove this remote?')) return;
+
+    const org = orgApi();
+    if (!org) return;
+
     try {
       setLoading(true);
       setError(null);
-      await authFetch(`/api/settings/git/remotes/${remoteId}`, {
-        method: 'DELETE',
-      });
+      await org.settings.git.delete();
+      setGitRemote(null);
       setSuccess(t('success.remoteRemoved') || 'Remote removed');
-      loadData();
     } catch (err) {
       setError(`${t('errors.failedToRemoveRemote')}: ${err}`);
     } finally {
@@ -358,7 +320,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                         <Show when={member.id !== props.user.id} fallback={member.role}>
                           <select
                             value={member.role}
-                            onChange={(e) => handleUpdateRole(member.id, e.target.value)}
+                            onChange={(e) => handleUpdateRole(member.id, e.target.value as UserRole)}
                             class={styles.roleSelect}
                           >
                             <option value="admin">{t('settings.roleAdmin')}</option>
@@ -509,84 +471,67 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
           <h3>{t('settings.gitSynchronization')}</h3>
           <p class={styles.hint}>{t('settings.gitSyncHint')}</p>
 
-          <Show when={remotes().length > 0}>
-            <table class={styles.table}>
-              <thead>
-                <tr>
-                  <th>{t('settings.nameColumn')}</th>
-                  <th>{t('settings.urlColumn')}</th>
-                  <th>{t('settings.lastSyncColumn')}</th>
-                  <th>{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <For each={remotes()}>
-                  {(remote) => (
+          <Show when={gitRemote()}>
+            {(remote) => {
+              const lastSync = remote().last_sync;
+              return (
+                <table class={styles.table}>
+                  <thead>
                     <tr>
-                      <td>{remote.type || t('settings.defaultRemote') || 'Default'}</td>
-                      <td>{remote.url}</td>
-                      <td>{remote.last_sync ? new Date(remote.last_sync).toLocaleString() : t('settings.never')}</td>
+                      <th>{t('settings.urlColumn')}</th>
+                      <th>{t('settings.lastSyncColumn')}</th>
+                      <th>{t('common.actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{remote().url}</td>
+                      <td>{lastSync ? new Date(lastSync).toLocaleString() : t('settings.never')}</td>
                       <td class={styles.actions}>
-                        <button
-                          onClick={() => handlePush(remote.organization_id)}
-                          disabled={loading()}
-                          class={styles.smallButton}
-                        >
+                        <button onClick={handlePush} disabled={loading()} class={styles.smallButton}>
                           {t('common.push')}
                         </button>
-                        <button
-                          onClick={() => handleDeleteRemote(remote.organization_id)}
-                          disabled={loading()}
-                          class={styles.deleteButtonSmall}
-                        >
+                        <button onClick={handleDeleteRemote} disabled={loading()} class={styles.deleteButtonSmall}>
                           {t('common.remove')}
                         </button>
                       </td>
                     </tr>
-                  )}
-                </For>
-              </tbody>
-            </table>
+                  </tbody>
+                </table>
+              );
+            }}
           </Show>
 
-          <div class={styles.addRemoteSection}>
-            <h4>{t('settings.addNewRemote')}</h4>
-            <form onSubmit={handleAddRemote} class={styles.settingsForm}>
-              <div class={styles.formItem}>
-                <label>{t('settings.remoteName')}</label>
-                <input
-                  type="text"
-                  value={newRemoteName()}
-                  onInput={(e) => setNewRemoteName(e.target.value)}
-                  placeholder={t('settings.remoteNamePlaceholder') || 'origin'}
-                  required
-                />
-              </div>
-              <div class={styles.formItem}>
-                <label>{t('settings.repositoryUrl')}</label>
-                <input
-                  type="url"
-                  value={newRemoteURL()}
-                  onInput={(e) => setNewRemoteURL(e.target.value)}
-                  placeholder={t('settings.repositoryUrlPlaceholder') || 'https://github.com/user/repo.git'}
-                  required
-                />
-              </div>
-              <div class={styles.formItem}>
-                <label>{t('settings.personalAccessToken')}</label>
-                <input
-                  type="password"
-                  value={newRemoteToken()}
-                  onInput={(e) => setNewRemoteToken(e.target.value)}
-                  placeholder={t('settings.tokenPlaceholder') || 'ghp_...'}
-                />
-                <p class={styles.hint}>{t('settings.tokenHint')}</p>
-              </div>
-              <button type="submit" class={styles.saveButton} disabled={loading()}>
-                {t('settings.addRemote')}
-              </button>
-            </form>
-          </div>
+          <Show when={!gitRemote()}>
+            <div class={styles.addRemoteSection}>
+              <h4>{t('settings.addNewRemote')}</h4>
+              <form onSubmit={handleAddOrUpdateRemote} class={styles.settingsForm}>
+                <div class={styles.formItem}>
+                  <label>{t('settings.repositoryUrl')}</label>
+                  <input
+                    type="url"
+                    value={newRemoteURL()}
+                    onInput={(e) => setNewRemoteURL(e.target.value)}
+                    placeholder={t('settings.repositoryUrlPlaceholder') || 'https://github.com/user/repo.git'}
+                    required
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.personalAccessToken')}</label>
+                  <input
+                    type="password"
+                    value={newRemoteToken()}
+                    onInput={(e) => setNewRemoteToken(e.target.value)}
+                    placeholder={t('settings.tokenPlaceholder') || 'ghp_...'}
+                  />
+                  <p class={styles.hint}>{t('settings.tokenHint')}</p>
+                </div>
+                <button type="submit" class={styles.saveButton} disabled={loading()}>
+                  {t('settings.addRemote')}
+                </button>
+              </form>
+            </div>
+          </Show>
         </section>
       </Show>
     </div>

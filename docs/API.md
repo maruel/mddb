@@ -34,7 +34,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | GET | `/api/auth/oauth/{provider}` | public |
 | GET | `/api/auth/oauth/{provider}/callback` | public |
 | POST | `/api/auth/register` | public |
-| PUT | `/api/auth/settings` | viewer |
+| POST | `/api/auth/settings` | viewer |
 | POST | `/api/auth/switch-org` | viewer |
 
 ## Settings
@@ -42,22 +42,22 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | Method | Path | Auth |
 |--------|------|------|
 | GET | `/api/{orgID}/onboarding` | viewer |
-| PUT | `/api/{orgID}/onboarding` | admin |
-| DELETE | `/api/{orgID}/settings/git/remote` | admin |
-| GET | `/api/{orgID}/settings/git/remote` | admin |
-| PUT | `/api/{orgID}/settings/git/remote` | admin |
-| POST | `/api/{orgID}/settings/git/remote/push` | admin |
-| PUT | `/api/{orgID}/settings/membership` | viewer |
+| POST | `/api/{orgID}/onboarding` | admin |
+| GET | `/api/{orgID}/settings/git` | admin |
+| POST | `/api/{orgID}/settings/git` | admin |
+| POST | `/api/{orgID}/settings/git/delete` | admin |
+| POST | `/api/{orgID}/settings/git/push` | admin |
+| POST | `/api/{orgID}/settings/membership` | viewer |
 | GET | `/api/{orgID}/settings/organization` | viewer |
-| PATCH | `/api/{orgID}/settings/organization` | admin |
-| PUT | `/api/{orgID}/settings/organization` | admin |
+| POST | `/api/{orgID}/settings/organization` | admin |
+| POST | `/api/{orgID}/settings/preferences` | admin |
 
 ## Users
 
 | Method | Path | Auth |
 |--------|------|------|
 | GET | `/api/{orgID}/users` | admin |
-| PUT | `/api/{orgID}/users/role` | admin |
+| POST | `/api/{orgID}/users/role` | admin |
 
 ## Invitations
 
@@ -80,9 +80,9 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 |--------|------|------|
 | GET | `/api/{orgID}/pages` | viewer |
 | POST | `/api/{orgID}/pages` | editor |
-| DELETE | `/api/{orgID}/pages/{id}` | editor |
 | GET | `/api/{orgID}/pages/{id}` | viewer |
-| PUT | `/api/{orgID}/pages/{id}` | editor |
+| POST | `/api/{orgID}/pages/{id}` | editor |
+| POST | `/api/{orgID}/pages/{id}/delete` | editor |
 | GET | `/api/{orgID}/pages/{id}/history` | viewer |
 | GET | `/api/{orgID}/pages/{id}/history/{hash}` | viewer |
 
@@ -92,14 +92,14 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 |--------|------|------|
 | GET | `/api/{orgID}/tables` | viewer |
 | POST | `/api/{orgID}/tables` | editor |
-| DELETE | `/api/{orgID}/tables/{id}` | editor |
 | GET | `/api/{orgID}/tables/{id}` | viewer |
-| PUT | `/api/{orgID}/tables/{id}` | editor |
+| POST | `/api/{orgID}/tables/{id}` | editor |
+| POST | `/api/{orgID}/tables/{id}/delete` | editor |
 | GET | `/api/{orgID}/tables/{id}/records` | viewer |
 | POST | `/api/{orgID}/tables/{id}/records` | editor |
-| DELETE | `/api/{orgID}/tables/{id}/records/{rid}` | editor |
 | GET | `/api/{orgID}/tables/{id}/records/{rid}` | viewer |
-| PUT | `/api/{orgID}/tables/{id}/records/{rid}` | editor |
+| POST | `/api/{orgID}/tables/{id}/records/{rid}` | editor |
+| POST | `/api/{orgID}/tables/{id}/records/{rid}/delete` | editor |
 
 ## Search
 
@@ -113,7 +113,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 |--------|------|------|
 | GET | `/api/{orgID}/pages/{id}/assets` | viewer |
 | POST | `/api/{orgID}/pages/{id}/assets` | editor |
-| DELETE | `/api/{orgID}/pages/{id}/assets/{name}` | editor |
+| POST | `/api/{orgID}/pages/{id}/assets/{name}/delete` | editor |
 | GET | `/assets/{orgID}/{id}/{name}` | public |
 
 ## Other

@@ -115,8 +115,8 @@ func (h *AuthHandler) GenerateToken(user *identity.User) (string, error) {
 	return token.SignedString(h.jwtSecret)
 }
 
-// Me returns the current user info.
-func (h *AuthHandler) Me(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.MeRequest) (*dto.UserResponse, error) {
+// GetMe returns the current user info.
+func (h *AuthHandler) GetMe(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.GetMeRequest) (*dto.UserResponse, error) {
 	// Build user response with memberships
 	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {
