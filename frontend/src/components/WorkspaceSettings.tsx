@@ -10,7 +10,7 @@ import type {
   OrganizationSettings,
   UserRole,
   GitRemoteResponse,
-} from '../types';
+} from '../types.gen';
 import styles from './WorkspaceSettings.module.css';
 import { useI18n } from '../i18n';
 

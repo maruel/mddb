@@ -86,7 +86,7 @@ import type {
   UpdateTableResponse,
   UpdateUserSettingsRequest,
   UserResponse,
-} from './types';
+} from './types.gen';
 
 /** Fetch function type - implement to add auth headers */
 export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;

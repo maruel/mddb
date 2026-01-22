@@ -47,6 +47,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['src/types.ts', 'dist/**'],
+    ignores: ['src/*.gen.ts', 'dist/**'],
   }
 );

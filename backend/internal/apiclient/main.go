@@ -19,7 +19,7 @@ func main() {
 	routerPath := filepath.Join(root, "internal", "server", "router.go")
 	dtoPath := filepath.Join(root, "internal", "server", "dto", "request.go")
 	handlersDir := filepath.Join(root, "internal", "server", "handlers")
-	outPath := filepath.Clean(filepath.Join(root, "..", "frontend", "src", "api.ts"))
+	outPath := filepath.Clean(filepath.Join(root, "..", "frontend", "src", "api.gen.ts"))
 
 	// Parse DTO request types for field info
 	dtoTypes, err := parseDTOTypes(dtoPath)
@@ -511,7 +511,7 @@ func generateTypeScript(outPath string, endpoints []Endpoint) error {
 	for _, t := range types {
 		fmt.Fprintf(&b, "  %s,\n", t)
 	}
-	b.WriteString("} from './types';\n\n")
+	b.WriteString("} from './types.gen';\n\n")
 
 	b.WriteString("/** Fetch function type - implement to add auth headers */\n")
 	b.WriteString("export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;\n\n")

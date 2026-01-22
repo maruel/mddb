@@ -1,5 +1,5 @@
 import { createSignal, For, Show } from 'solid-js';
-import type { NodeResponse } from '../types';
+import type { NodeResponse } from '../types.gen';
 import styles from '../App.module.css';
 
 interface SidebarNodeResponseProps {
