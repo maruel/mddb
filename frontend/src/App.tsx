@@ -200,8 +200,8 @@ export default function App() {
     setIsPrivacyPage(false);
     setIsTermsPage(false);
 
-    // Check for /orgID/nodeID
-    const matchWithOrg = path.match(/^\/([^/]+)\/([a-zA-Z0-9_-]+)(?:-.*)?$/);
+    // Check for /orgID/nodeID (slug separator is +)
+    const matchWithOrg = path.match(/^\/([^/]+)\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
     if (matchWithOrg && matchWithOrg[1] && matchWithOrg[2]) {
       const orgId = matchWithOrg[1];
       const nodeId = matchWithOrg[2];
