@@ -29,7 +29,7 @@ func NewInvitationHandler(invService *identity.InvitationService, userService *i
 }
 
 // CreateInvitation creates a new invitation and sends it (logic to be added).
-func (h *InvitationHandler) CreateInvitation(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.CreateInvitationRequest) (*dto.InvitationResponse, error) {
+func (h *InvitationHandler) CreateInvitation(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.CreateInvitationRequest) (*dto.InvitationResponse, error) {
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
@@ -41,7 +41,7 @@ func (h *InvitationHandler) CreateInvitation(ctx context.Context, orgID jsonldb.
 }
 
 // ListInvitations returns all pending invitations for an organization.
-func (h *InvitationHandler) ListInvitations(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListInvitationsRequest) (*dto.ListInvitationsResponse, error) {
+func (h *InvitationHandler) ListInvitations(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListInvitationsRequest) (*dto.ListInvitationsResponse, error) {
 	invitations, err := h.invService.Iter(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list invitations", err)
@@ -55,7 +55,7 @@ func (h *InvitationHandler) ListInvitations(ctx context.Context, orgID jsonldb.I
 
 // AcceptInvitation handles a user accepting an invitation.
 // This is a public endpoint (no auth required).
-func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req dto.AcceptInvitationRequest) (*dto.LoginResponse, error) {
+func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req *dto.AcceptInvitationRequest) (*dto.LoginResponse, error) {
 	if req.Token == "" {
 		return nil, dto.MissingField("token")
 	}

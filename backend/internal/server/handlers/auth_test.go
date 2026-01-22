@@ -43,7 +43,7 @@ func TestRegister(t *testing.T) {
 	authHandler := NewAuthHandler(userService, memService, orgService, fileStore, "secret")
 
 	// Register Joe - should not create organization (frontend handles that)
-	req1 := dto.RegisterRequest{
+	req1 := &dto.RegisterRequest{
 		Email:    "joe@example.com",
 		Password: "password",
 		Name:     "Joe",
@@ -63,7 +63,7 @@ func TestRegister(t *testing.T) {
 	}
 
 	// Register Alice
-	req2 := dto.RegisterRequest{
+	req2 := &dto.RegisterRequest{
 		Email:    "alice@example.com",
 		Password: "password",
 		Name:     "Alice",

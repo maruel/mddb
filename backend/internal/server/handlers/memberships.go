@@ -27,7 +27,7 @@ func NewMembershipHandler(memService *identity.MembershipService, userService *i
 }
 
 // SwitchOrg switches the user's active organization and returns a new token.
-func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *identity.User, req dto.SwitchOrgRequest) (*dto.SwitchOrgResponse, error) {
+func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.SwitchOrgRequest) (*dto.SwitchOrgResponse, error) {
 	orgID, err := decodeOrgID(req.OrgID)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *i
 }
 
 // UpdateMembershipSettings updates user preferences within an organization.
-func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdateMembershipSettingsRequest) (*dto.MembershipResponse, error) {
+func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdateMembershipSettingsRequest) (*dto.MembershipResponse, error) {
 	m, err := h.memService.Get(user.ID, orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get membership", err)
