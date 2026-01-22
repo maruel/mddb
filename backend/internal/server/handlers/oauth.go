@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -82,8 +83,8 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, dto.Internal("state_generation"))
 		return
 	}
-	url := config.AuthCodeURL(state)
-	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	authURL := config.AuthCodeURL(state)
+	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
 }
 
 // Callback handles the OAuth provider callback.
@@ -204,7 +205,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect back to frontend with token
+	// Redirect back to frontend with token (URL-encode for safety)
 	frontendURL := "/" // Default redirect
-	http.Redirect(w, r, fmt.Sprintf("%s?token=%s", frontendURL, jwtToken), http.StatusTemporaryRedirect)
+	http.Redirect(w, r, fmt.Sprintf("%s?token=%s", frontendURL, url.QueryEscape(jwtToken)), http.StatusFound)
 }

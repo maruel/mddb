@@ -159,9 +159,8 @@ export default function App() {
     }
   });
 
-  // Load user on mount
-  createEffect(() => {
-    // Check URL for OAuth token
+  // Handle OAuth token from URL on mount (runs once)
+  onMount(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get('token');
     if (urlToken) {
@@ -170,19 +169,30 @@ export default function App() {
       // Clean up URL query params but keep pathname
       window.history.replaceState({}, document.title, window.location.pathname);
     }
+  });
 
+  // Fetch user when we have a token but no user data
+  let fetchingUser = false;
+  createEffect(() => {
     const tok = token();
     const u = user();
-    if (tok && !u) {
-      const fetchUser = async () => {
+    if (tok && !u && !fetchingUser) {
+      fetchingUser = true;
+      (async () => {
         try {
           const data = await api().auth.me.get();
           setUser(data);
         } catch (err) {
           console.error('Failed to load user', err);
+          // Clear invalid token on auth failure
+          if (err instanceof APIError && err.status === 401) {
+            localStorage.removeItem('mddb_token');
+            setToken(null);
+          }
+        } finally {
+          fetchingUser = false;
         }
-      };
-      fetchUser();
+      })();
     }
   });
 

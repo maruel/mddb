@@ -36,7 +36,6 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
-
 func main() {
 	if err := mainImpl(); err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintf(os.Stderr, "mddb: %v\n", err)
