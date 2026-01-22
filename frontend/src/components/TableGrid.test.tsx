@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-li
 import type { JSX } from 'solid-js';
 import TableGrid from './TableGrid';
 import { I18nProvider } from '../i18n';
-import type { DataRecordResponse, Property } from '../types';
+import type { DataRecordResponse, Property } from '../types.gen';
 
 // Mock CSS module
 vi.mock('./TableGrid.module.css', () => ({

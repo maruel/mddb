@@ -22,7 +22,7 @@ import type {
   ListNodesResponse,
   ListRecordsResponse,
   GetPageHistoryResponse,
-} from './types';
+} from './types.gen';
 import styles from './App.module.css';
 
 const slugify = (text: string) => {

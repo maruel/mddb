@@ -1,5 +1,5 @@
 import { createSignal, Show, untrack } from 'solid-js';
-import type { UserResponse } from '../types';
+import type { UserResponse } from '../types.gen';
 import styles from './Onboarding.module.css';
 import { useI18n } from '../i18n';
 

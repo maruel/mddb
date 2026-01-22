@@ -1,5 +1,5 @@
 import { For } from 'solid-js';
-import type { DataRecordResponse, Property } from '../types';
+import type { DataRecordResponse, Property } from '../types.gen';
 import styles from './TableGrid.module.css';
 import { useI18n } from '../i18n';
 

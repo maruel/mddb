@@ -6,7 +6,7 @@ import {
   PropertyTypeSelect,
   PropertyTypeNumber,
   PropertyTypeDate,
-} from '../types';
+} from '../types.gen';
 import styles from './TableTable.module.css';
 import { useI18n } from '../i18n';
 

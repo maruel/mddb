@@ -1,5 +1,5 @@
 import { For, Show, createMemo } from 'solid-js';
-import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '../types';
+import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '../types.gen';
 import styles from './TableBoard.module.css';
 import { useI18n } from '../i18n';
 
