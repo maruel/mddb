@@ -6,6 +6,7 @@
 package server
 
 //go:generate go run ../apiroutes
+//go:generate go run ../apiclient
 
 import (
 	"embed"
