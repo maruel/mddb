@@ -1,0 +1,55 @@
+# mddb Caddyfile - Reverse proxy configuration for Caddy v2
+#
+# Usage:
+#   1. Replace "mddb.example.com" with your domain
+#   2. Copy to /etc/caddy/Caddyfile or include via `import`
+#   3. Reload: systemctl reload caddy
+#
+# Caddy automatically obtains and renews TLS certificates via Let's Encrypt.
+# Docs: https://caddyserver.com/docs/caddyfile/directives/reverse_proxy
+
+mddb.example.com {
+	# Compression (zstd preferred, then gzip)
+	encode zstd gzip
+
+	# Security headers
+	header {
+		# HSTS (1 year, include subdomains, allow preload)
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		# Prevent MIME type sniffing
+		X-Content-Type-Options "nosniff"
+		# Clickjacking protection
+		X-Frame-Options "SAMEORIGIN"
+		# XSS filter (legacy browsers)
+		X-XSS-Protection "1; mode=block"
+		# Referrer policy
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Remove server identification
+		-Server
+	}
+
+	# Reverse proxy to mddb backend
+	reverse_proxy localhost:8080 {
+		# Timeouts
+		transport http {
+			dial_timeout 5s
+			response_header_timeout 30s
+		}
+
+		# Health checking
+		health_uri /api/health
+		health_interval 30s
+		health_timeout 5s
+
+		# Trust X-Forwarded-* headers from backend
+		header_up X-Real-IP {remote_host}
+	}
+
+	# Logging (adjust path as needed)
+	log {
+		output file /var/log/caddy/mddb.log {
+			roll_size 100MiB
+			roll_keep 5
+		}
+	}
+}

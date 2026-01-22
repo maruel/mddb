@@ -1,0 +1,69 @@
+# mddb systemd user service
+# Install: mkdir -p ~/.config/systemd/user && cp contrib/mddb.service ~/.config/systemd/user/
+# Enable:  systemctl --user daemon-reload && systemctl --user enable --now mddb
+# Logs:    journalctl --user -u mddb -f
+
+[Unit]
+Description=mddb - Notion-like document and table system
+Documentation=https://github.com/maruel/mddb
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/go/bin/mddb -port 8080 -data-dir %h/mddb/data -log-level info
+WorkingDirectory=%h/mddb
+Restart=always
+RestartSec=5s
+
+# --- Security Hardening ---
+
+# Filesystem isolation
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/mddb/data
+PrivateTmp=true
+PrivateDevices=true
+ProtectControlGroups=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectClock=true
+ProtectHostname=true
+ProtectProc=invisible
+ProcSubset=pid
+
+# Capability restrictions
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Network restrictions (allow only IPv4/IPv6/Unix sockets)
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SocketBindDeny=any
+SocketBindAllow=tcp:8080
+
+# System call filtering
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources @obsolete
+
+# Memory/execution restrictions
+MemoryDenyWriteExecute=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=512
+TasksMax=512
+
+# Misc
+UMask=0077
+KeyringMode=private
+RemoveIPC=true
+
+[Install]
+WantedBy=default.target

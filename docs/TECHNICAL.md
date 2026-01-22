@@ -79,7 +79,7 @@ mddb uses a unified Node-based data model inspired by Notion. All content entiti
 | **Node** | Unified container; can be document, table, or hybrid | Directory at `data/{orgID}/pages/{nodeID}/` |
 | **Page** | Node with markdown content | `index.md` with YAML front matter |
 | **Table** | Node with schema (Properties) | `metadata.json` for schema |
-| **Record** | Row in a Table | Line in `data.jsonl` |
+| **Record** | Row in a Table (`DataRecord` type) | Line in `data.jsonl` |
 | **Asset** | Binary file attached to a Node | File in node directory |
 
 ### Node Types
@@ -117,6 +117,25 @@ Table columns support these types:
 | `email` | Validated email address |
 | `phone` | Phone number |
 
+### Property Structure
+
+Each `Property` (table column) has:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `Name` | string | Column header / field key |
+| `Type` | PropertyType | One of the types above |
+| `Required` | bool | Whether records must have this field |
+| `Options` | []SelectOption | For `select`/`multi_select` only |
+
+`SelectOption` defines allowed values for enumerated types:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `ID` | string | Stored value (stable identifier) |
+| `Name` | string | Display name |
+| `Color` | string | Optional color for UI
+
 ### Entity Relationships
 
 ```
@@ -125,19 +144,33 @@ Organization
     ├── Content (markdown, if document/hybrid)
     ├── Properties[] (schema, if table/hybrid)
     ├── Children[] (nested Nodes)
-    └── Assets[] (attached files)
+    └── Assets[] (attached files, filename-based IDs)
 
 Table Node
-└── DataRecords[] (stored separately in data.jsonl)
-    └── Data: map[string]any (field values keyed by property name)
+└── DataRecord[] (stored separately in data.jsonl, NOT embedded in Node)
+    ├── ID: jsonldb.ID (numeric)
+    ├── Data: map[string]any (field values keyed by Property.Name)
+    ├── Created: time.Time
+    └── Modified: time.Time
 ```
+
+### ID Types
+
+| Entity | ID Type | Example |
+|--------|---------|---------|
+| Node | `jsonldb.ID` (int64) | `1`, `42` |
+| Record | `jsonldb.ID` (int64) | `1`, `42` |
+| Asset | `string` (filename) | `"image.png"`, `"doc.pdf"` |
+
+Assets use the original filename as their identifier rather than a generated numeric ID.
 
 ### Key Design Decisions
 
 1. **Polymorphic Nodes**: Pages and Tables share the same API; `Type` field discriminates behavior
 2. **Separate Record Storage**: Records stored in JSONL for streaming reads, not embedded in Node
-3. **Filename-based Asset IDs**: Assets use original filename as ID (not generated)
+3. **Filename-based Asset IDs**: Assets use original filename as ID (not generated numeric ID)
 4. **Hierarchical Structure**: Nodes support parent-child relationships via `ParentID`
+5. **Type Coercion**: Record field values are coerced to match Property schema types on write
 
 ## Multi-user Architecture
 

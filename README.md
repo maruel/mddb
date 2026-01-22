@@ -52,6 +52,31 @@ That's it! All your data is stored in a `data/` folder.
 
 Run `./mddb -help` and go from there.
 
+### Reverse Proxy with Caddy
+
+A sample Caddyfile is provided in `contrib/mddb.caddyfile` for running mddb behind [Caddy](https://caddyserver.com/). Caddy automatically handles TLS certificates via Let's Encrypt.
+
+### Running as a systemd Service
+
+A hardened systemd user service file is provided in `contrib/`:
+
+```bash
+# Install
+mkdir -p ~/.config/systemd/user
+cp contrib/mddb.service ~/.config/systemd/user/
+
+# Configure data directory (edit paths if needed)
+mkdir -p ~/mddb/data
+
+# Enable and start
+systemctl --user daemon-reload
+systemctl --user enable --now mddb
+
+# View logs
+journalctl --user -u mddb -f
+```
+
+
 ## File Structure
 
 All data is stored as plain files in a git repository:
