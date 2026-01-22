@@ -85,7 +85,7 @@ export default function Onboarding(props: OnboardingProps) {
       if (!res.ok) throw new Error('Failed to update organization name');
 
       // Proceed to next step
-      await updateStep('members');
+      await updateStep('git');
     } catch (err) {
       setError('Error: ' + err);
     } finally {
@@ -149,18 +149,7 @@ export default function Onboarding(props: OnboardingProps) {
                 onClick={handleNameStep}
                 disabled={!orgName() || loading()}
               >
-                {loading() ? t('common.saving') : t('onboarding.nextInviteTeam')}
-              </button>
-            </div>
-          </Show>
-
-          <Show when={step() === 'members'}>
-            <div class={styles.step}>
-              <h3>{t('onboarding.teamCollaboration')}</h3>
-              <p>{t('onboarding.teamCollaborationHint')}</p>
-              <div class={styles.illustration}>👥</div>
-              <button class={styles.primaryButton} onClick={() => updateStep('git')}>
-                {t('onboarding.nextGitSync')}
+                {loading() ? t('common.saving') : t('onboarding.nextGitSync')}
               </button>
             </div>
           </Show>
@@ -211,7 +200,6 @@ export default function Onboarding(props: OnboardingProps) {
         <div class={styles.footer}>
           <div class={styles.progress}>
             <div class={`${styles.dot} ${step() === 'name' ? styles.active : ''}`} />
-            <div class={`${styles.dot} ${step() === 'members' ? styles.active : ''}`} />
             <div class={`${styles.dot} ${step() === 'git' ? styles.active : ''}`} />
           </div>
         </div>
