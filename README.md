@@ -8,15 +8,11 @@ A Notion-like document and table system for managing your information. Store eve
 
 an anecdote:
 
-<img src="https://github.com/user-attachments/assets/3e3bbf18-9ffa-4669-9f43-b7e9828e41ef" style="width: 400px;" />
-
-https://x.com/anothercohen/status/2014136100894199968
+<a href="https://x.com/anothercohen/status/2014136100894199968"><img src="https://github.com/user-attachments/assets/3e3bbf18-9ffa-4669-9f43-b7e9828e41ef" style="width: 400px;" /></a>
 
 and then:
 
-<img src="https://github.com/user-attachments/assets/263f10ac-8f5f-484f-a1f8-415d49896de8" style="width: 400px;" />
-
-https://x.com/ivanhzhao/status/2003510041010405790
+<a href="https://x.com/ivanhzhao/status/2003510041010405790"><img src="https://github.com/user-attachments/assets/263f10ac-8f5f-484f-a1f8-415d49896de8" style="width: 400px;" /></a>
 
 \-\- Ivan Zhao, Notion CEO
 
