@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -14,7 +15,10 @@ import (
 	"strings"
 )
 
+var quiet = flag.Bool("q", false, "quiet mode")
+
 func main() {
+	flag.Parse()
 	root := findRepoRoot()
 	routerPath := filepath.Join(root, "internal", "server", "router.go")
 	dtoPath := filepath.Join(root, "internal", "server", "dto", "request.go")
@@ -55,7 +59,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Fprintf(os.Stderr, "Generated %s with %d endpoints\n", outPath, len(endpoints))
+	if !*quiet {
+		fmt.Fprintf(os.Stderr, "Generated %s with %d endpoints\n", outPath, len(endpoints))
+	}
 }
 
 // findRepoRoot finds the backend directory by looking for go.mod.

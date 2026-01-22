@@ -25,7 +25,7 @@ help:
 
 # Install frontend dependencies (only when lockfile changes)
 $(FRONTEND_STAMP): frontend/pnpm-lock.yaml
-	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm install --frozen-lockfile
+	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm install --frozen-lockfile --silent
 	@touch $@
 
 # Build frontend and Go server
@@ -35,7 +35,7 @@ build: types
 
 types: $(FRONTEND_STAMP)
 	@cd ./backend && go tool tygo generate
-	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --write src/types.gen.ts
+	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --log-level silent --write src/types.gen.ts
 
 dev: build
 	@mddb -port $(PORT) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
@@ -51,7 +51,7 @@ coverage: $(FRONTEND_STAMP)
 lint: lint-go lint-frontend
 
 lint-go:
-	@which golangci-lint > /dev/null || (echo "Installing golangci-lint..." && go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest)
+	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 	@cd ./backend && golangci-lint run ./...
 
 lint-frontend: $(FRONTEND_STAMP)
