@@ -104,7 +104,7 @@ func mainImpl() error {
 	// Run onboarding if no .env file exists and stdin is a TTY
 	envPath := filepath.Join(*dataDir, ".env")
 	if _, err := os.Stat(envPath); os.IsNotExist(err) {
-		if info, err := os.Stdin.Stat(); err == nil && (info.Mode()&os.ModeCharDevice) != 0 {
+		if isatty.IsTerminal(os.Stdin.Fd()) {
 			if err := runOnboarding(*dataDir); err != nil {
 				return fmt.Errorf("onboarding failed: %w", err)
 			}
