@@ -347,6 +347,88 @@ func TestUserService(t *testing.T) {
 				t.Errorf("Expected user ID %s, got %s", oauthUser.ID, found.ID)
 			}
 		})
+
+		t.Run("MultipleIdentities", func(t *testing.T) {
+			service, err := NewUserService(filepath.Join(t.TempDir(), "users.jsonl"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			user, err := service.Create("multi@example.com", "password", "Multi OAuth User")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = service.Modify(user.ID, func(u *User) error {
+				u.OAuthIdentities = []OAuthIdentity{
+					{Provider: "google", ProviderID: "google-123", Email: "user@gmail.com"},
+					{Provider: "github", ProviderID: "github-456", Email: "user@github.com"},
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			googleUser, err := service.GetByOAuth("google", "google-123")
+			if err != nil {
+				t.Errorf("Failed to find user by Google identity: %v", err)
+			} else if googleUser.ID != user.ID {
+				t.Error("GetByOAuth(google) returned wrong user")
+			}
+
+			githubUser, err := service.GetByOAuth("github", "github-456")
+			if err != nil {
+				t.Errorf("Failed to find user by GitHub identity: %v", err)
+			} else if githubUser.ID != user.ID {
+				t.Error("GetByOAuth(github) returned wrong user")
+			}
+
+			_, err = service.GetByOAuth("twitter", "twitter-789")
+			if err == nil {
+				t.Error("Expected error for non-existent OAuth identity")
+			}
+		})
+
+		t.Run("IdentityRemoval", func(t *testing.T) {
+			service, err := NewUserService(filepath.Join(t.TempDir(), "users.jsonl"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			user, err := service.Create("remove@example.com", "password", "Remove OAuth User")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = service.Modify(user.ID, func(u *User) error {
+				u.OAuthIdentities = []OAuthIdentity{
+					{Provider: "google", ProviderID: "google-123"},
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = service.GetByOAuth("google", "google-123")
+			if err != nil {
+				t.Fatalf("Failed to find user by OAuth before removal: %v", err)
+			}
+
+			_, err = service.Modify(user.ID, func(u *User) error {
+				u.OAuthIdentities = nil
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = service.GetByOAuth("google", "google-123")
+			if err == nil {
+				t.Error("Expected error after OAuth identity was removed - index not updated!")
+			}
+		})
 	})
 
 	t.Run("Persistence", func(t *testing.T) {
@@ -395,6 +477,83 @@ func TestUserService(t *testing.T) {
 		if found2.ID != persistUser.ID {
 			t.Errorf("Expected user ID %v, got %v", persistUser.ID, found2.ID)
 		}
+	})
+
+	t.Run("GlobalAdmin", func(t *testing.T) {
+		t.Run("FirstUserBecomesAdmin", func(t *testing.T) {
+			service, err := NewUserService(filepath.Join(t.TempDir(), "users.jsonl"))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			firstUser, err := service.Create("first@example.com", "password123", "First User")
+			if err != nil {
+				t.Fatalf("Failed to create first user: %v", err)
+			}
+
+			if !firstUser.IsGlobalAdmin {
+				t.Error("First user should be a global admin")
+			}
+
+			secondUser, err := service.Create("second@example.com", "password123", "Second User")
+			if err != nil {
+				t.Fatalf("Failed to create second user: %v", err)
+			}
+
+			if secondUser.IsGlobalAdmin {
+				t.Error("Second user should NOT be a global admin")
+			}
+
+			thirdUser, err := service.Create("third@example.com", "password123", "Third User")
+			if err != nil {
+				t.Fatalf("Failed to create third user: %v", err)
+			}
+
+			if thirdUser.IsGlobalAdmin {
+				t.Error("Third user should NOT be a global admin")
+			}
+		})
+
+		t.Run("PersistsAfterReload", func(t *testing.T) {
+			userPath := filepath.Join(t.TempDir(), "users.jsonl")
+
+			service1, err := NewUserService(userPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			firstUser, err := service1.Create("first@example.com", "password123", "First User")
+			if err != nil {
+				t.Fatalf("Failed to create first user: %v", err)
+			}
+
+			if !firstUser.IsGlobalAdmin {
+				t.Fatal("First user should be global admin")
+			}
+
+			service2, err := NewUserService(userPath)
+			if err != nil {
+				t.Fatalf("Failed to reload service: %v", err)
+			}
+
+			reloadedUser, err := service2.Get(firstUser.ID)
+			if err != nil {
+				t.Fatalf("Failed to get user after reload: %v", err)
+			}
+
+			if !reloadedUser.IsGlobalAdmin {
+				t.Error("First user should still be global admin after reload")
+			}
+
+			secondUser, err := service2.Create("second@example.com", "password123", "Second User")
+			if err != nil {
+				t.Fatalf("Failed to create second user: %v", err)
+			}
+
+			if secondUser.IsGlobalAdmin {
+				t.Error("User created after reload should NOT be global admin")
+			}
+		})
 	})
 
 	t.Run("InvalidJSONL", func(t *testing.T) {

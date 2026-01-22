@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
@@ -379,5 +381,37 @@ func TestSearchService(t *testing.T) {
 		if !hasRecord {
 			t.Error("Expected at least one record result")
 		}
+	})
+
+	t.Run("CreateSnippet", func(t *testing.T) {
+		fs, _ := testFileStore(t)
+		searchSvc := NewSearchService(fs)
+
+		t.Run("ValidUTF8WithMultiByteChars", func(t *testing.T) {
+			content := strings.Repeat("日本語", 20) + "query" + strings.Repeat("中文字", 20)
+			snippet := searchSvc.createSnippet(content, "query")
+
+			if !utf8.ValidString(snippet) {
+				t.Errorf("snippet contains invalid UTF-8: %q", snippet)
+			}
+		})
+
+		t.Run("QueryAtBeginning", func(t *testing.T) {
+			content := "query" + strings.Repeat("日本語テスト", 30)
+			snippet := searchSvc.createSnippet(content, "query")
+
+			if !utf8.ValidString(snippet) {
+				t.Errorf("snippet contains invalid UTF-8: %q", snippet)
+			}
+		})
+
+		t.Run("QueryAtEnd", func(t *testing.T) {
+			content := strings.Repeat("日本語テスト", 30) + "query"
+			snippet := searchSvc.createSnippet(content, "query")
+
+			if !utf8.ValidString(snippet) {
+				t.Errorf("snippet contains invalid UTF-8: %q", snippet)
+			}
+		})
 	})
 }

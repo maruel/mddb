@@ -260,6 +260,15 @@ func (fs *FileStore) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title
 	p.modified = time.Now()
 
 	updatedData := formatMarkdownFile(p)
+
+	// Check storage quota for the additional bytes (new size - old size)
+	additionalBytes := int64(len(updatedData)) - int64(len(data))
+	if additionalBytes > 0 {
+		if err := fs.checkStorageQuota(orgID, additionalBytes); err != nil {
+			return nil, err
+		}
+	}
+
 	if err := os.WriteFile(filePath, updatedData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
 		return nil, fmt.Errorf("failed to write page: %w", err)
 	}
@@ -470,21 +479,25 @@ func (fs *FileStore) ReadNodeFromPath(orgID jsonldb.ID, path string, id, parentI
 }
 
 // GetOrganizationUsage calculates the total number of pages and storage usage (in bytes) for an organization.
+// Pages are counted as directories containing index.md (documents) or metadata.json (tables).
+// Hybrid nodes (both files) are counted once.
 func (fs *FileStore) GetOrganizationUsage(orgID jsonldb.ID) (pageCount int, storageUsage int64, err error) {
 	if orgID == 0 {
 		return 0, 0, errOrgIDRequired
 	}
 	dir := fs.orgPagesDir(orgID)
+	counted := make(map[string]bool)
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if !info.IsDir() {
 			storageUsage += info.Size()
-			if info.Name() == "index.md" || info.Name() == "data.jsonl" {
-				// We count unique directories that have index.md or data.jsonl
-				// But Walk is recursive. Let's simplify and just count index.md as "pages"
-				if info.Name() == "index.md" {
+			// Count directories containing index.md or metadata.json as pages/tables
+			if info.Name() == "index.md" || info.Name() == "metadata.json" {
+				parentDir := filepath.Dir(path)
+				if !counted[parentDir] {
+					counted[parentDir] = true
 					pageCount++
 				}
 			}
@@ -577,6 +590,17 @@ func (fs *FileStore) WriteTable(ctx context.Context, orgID jsonldb.ID, node *Nod
 	if isNew {
 		if err := fs.checkStorageQuota(orgID, int64(len(data))); err != nil {
 			return err
+		}
+	} else {
+		// For updates, check quota for additional bytes only
+		oldData, err := os.ReadFile(metadataFile) //nolint:gosec // G304: metadataFile is constructed from validated orgID and id
+		if err == nil {
+			additionalBytes := int64(len(data)) - int64(len(oldData))
+			if additionalBytes > 0 {
+				if err := fs.checkStorageQuota(orgID, additionalBytes); err != nil {
+					return err
+				}
+			}
 		}
 	}
 
@@ -745,18 +769,28 @@ func (fs *FileStore) UpdateRecord(ctx context.Context, orgID, tableID jsonldb.ID
 		return errOrgIDRequired
 	}
 
-	// Estimate storage impact (simplified, assuming replacement might increase size)
-	recordData, _ := json.Marshal(record)
-	if err := fs.checkStorageQuota(orgID, int64(len(recordData))); err != nil {
-		return err
-	}
-
 	filePath := fs.tableRecordsFile(orgID, tableID)
 
 	// Load using jsonldb abstraction
 	table, err := jsonldb.NewTable[*DataRecord](filePath)
 	if err != nil {
 		return fmt.Errorf("failed to load table: %w", err)
+	}
+
+	// Get the old record to calculate size delta
+	oldRecord := table.Get(record.ID)
+	if oldRecord == nil {
+		return errRecordNotFound
+	}
+
+	// Check storage quota for additional bytes only
+	newData, _ := json.Marshal(record)
+	oldData, _ := json.Marshal(oldRecord)
+	additionalBytes := int64(len(newData)) - int64(len(oldData))
+	if additionalBytes > 0 {
+		if err := fs.checkStorageQuota(orgID, additionalBytes); err != nil {
+			return err
+		}
 	}
 
 	prev, err := table.Update(record)
@@ -1019,7 +1053,10 @@ func (fs *FileStore) CreateNode(ctx context.Context, orgID jsonldb.ID, title str
 		Modified: now,
 	}
 
-	var files []string
+	// Calculate total storage needed before writing
+	var totalSize int64
+	var pageData []byte
+	var metadataData []byte
 
 	if nodeType == NodeTypeDocument || nodeType == NodeTypeHybrid {
 		p := &page{
@@ -1029,15 +1066,41 @@ func (fs *FileStore) CreateNode(ctx context.Context, orgID jsonldb.ID, title str
 			created:  now,
 			modified: now,
 		}
+		pageData = formatMarkdownFile(p)
+		totalSize += int64(len(pageData))
+	}
 
+	if nodeType == NodeTypeTable || nodeType == NodeTypeHybrid {
+		metadata := map[string]any{
+			"title":      title,
+			"version":    "1.0",
+			"created":    now,
+			"modified":   now,
+			"properties": []Property{},
+		}
+		var err error
+		metadataData, err = json.Marshal(metadata)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal metadata: %w", err)
+		}
+		totalSize += int64(len(metadataData))
+	}
+
+	// Check storage quota before writing any files
+	if err := fs.checkStorageQuota(orgID, totalSize); err != nil {
+		return nil, err
+	}
+
+	var files []string
+
+	if nodeType == NodeTypeDocument || nodeType == NodeTypeHybrid {
 		pageDir := fs.pageDir(orgID, id)
 		if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}
 
 		filePath := fs.pageIndexFile(orgID, id)
-		data := formatMarkdownFile(p)
-		if err := os.WriteFile(filePath, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
+		if err := os.WriteFile(filePath, pageData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
 			return nil, fmt.Errorf("failed to write page: %w", err)
 		}
 		files = append(files, "pages/"+id.String()+"/index.md")
@@ -1049,18 +1112,7 @@ func (fs *FileStore) CreateNode(ctx context.Context, orgID jsonldb.ID, title str
 		}
 
 		metadataFile := fs.tableMetadataFile(orgID, id)
-		metadata := map[string]any{
-			"title":      title,
-			"version":    "1.0",
-			"created":    now,
-			"modified":   now,
-			"properties": []Property{},
-		}
-		data, err := json.Marshal(metadata)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal metadata: %w", err)
-		}
-		if err := os.WriteFile(metadataFile, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
+		if err := os.WriteFile(metadataFile, metadataData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for user data files
 			return nil, fmt.Errorf("failed to write metadata: %w", err)
 		}
 		files = append(files, "pages/"+id.String()+"/metadata.json")

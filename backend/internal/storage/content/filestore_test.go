@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -212,6 +214,385 @@ func TestFileStore(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("EdgeCases", func(t *testing.T) {
+		t.Run("DeletePage_NonExistent", func(t *testing.T) {
+			fs, orgID := testFileStore(t)
+			if err := fs.InitOrg(t.Context(), orgID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+			author := Author{Name: "Test", Email: "test@test.com"}
+
+			nonExistentID := jsonldb.ID(99999)
+			err := fs.DeletePage(t.Context(), orgID, nonExistentID, author)
+
+			if err == nil {
+				t.Error("expected error when deleting non-existent page, got nil")
+			}
+		})
+
+		t.Run("UpdateRecord_SameSizeData", func(t *testing.T) {
+			fs, orgID := testFileStore(t)
+			ctx := t.Context()
+			author := Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitOrg(ctx, orgID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			// Set quota to allow operations
+			_, err := fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
+				o.Quotas.MaxStorage = 1000
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("failed to set quota: %v", err)
+			}
+
+			tableID := jsonldb.NewID()
+			tableNode := &Node{
+				ID:       tableID,
+				Title:    "Test Table",
+				Type:     NodeTypeTable,
+				Created:  time.Now(),
+				Modified: time.Now(),
+			}
+			if err := fs.WriteTable(ctx, orgID, tableNode, true, author); err != nil {
+				t.Fatalf("failed to create table: %v", err)
+			}
+
+			recordID := jsonldb.NewID()
+			record := &DataRecord{
+				ID:       recordID,
+				Data:     map[string]any{"field": strings.Repeat("a", 200)},
+				Created:  time.Now(),
+				Modified: time.Now(),
+			}
+			if err := fs.AppendRecord(ctx, orgID, tableID, record, author); err != nil {
+				t.Fatalf("failed to append record: %v", err)
+			}
+
+			updatedRecord := &DataRecord{
+				ID:       recordID,
+				Data:     map[string]any{"field": strings.Repeat("b", 200)},
+				Created:  record.Created,
+				Modified: time.Now(),
+			}
+
+			err = fs.UpdateRecord(ctx, orgID, tableID, updatedRecord, author)
+			if err != nil {
+				t.Errorf("update with same-size data should succeed, but got: %v", err)
+			}
+		})
+
+		t.Run("IterAssets", func(t *testing.T) {
+			fs, orgID := testFileStore(t)
+			ctx := t.Context()
+			author := Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitOrg(ctx, orgID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			pageID := jsonldb.NewID()
+			_, err := fs.WritePage(ctx, orgID, pageID, "Test Page", "content", author)
+			if err != nil {
+				t.Fatalf("failed to create page: %v", err)
+			}
+
+			assets := []struct {
+				name string
+				data []byte
+			}{
+				{"image.png", []byte("fake png data")},
+				{"document.pdf", []byte("fake pdf data")},
+				{"data.csv", []byte("a,b,c\n1,2,3")},
+			}
+
+			for _, a := range assets {
+				_, err := fs.SaveAsset(ctx, orgID, pageID, a.name, a.data, author)
+				if err != nil {
+					t.Fatalf("failed to save asset %s: %v", a.name, err)
+				}
+			}
+
+			iter, err := fs.IterAssets(orgID, pageID)
+			if err != nil {
+				t.Fatalf("failed to get asset iterator: %v", err)
+			}
+
+			var found []string
+			for asset := range iter {
+				found = append(found, asset.Name)
+			}
+
+			if len(found) != len(assets) {
+				t.Errorf("expected %d assets, found %d: %v", len(assets), len(found), found)
+			}
+
+			for _, name := range found {
+				if name == "index.md" || name == "metadata.json" || name == "data.jsonl" {
+					t.Errorf("internal file %q should not be listed as asset", name)
+				}
+			}
+		})
+
+		t.Run("IterAssets_NonExistentPage", func(t *testing.T) {
+			fs, orgID := testFileStore(t)
+			if err := fs.InitOrg(t.Context(), orgID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			iter, err := fs.IterAssets(orgID, jsonldb.ID(99999))
+			if err != nil {
+				t.Fatalf("expected nil error for non-existent page, got: %v", err)
+			}
+
+			count := 0
+			for range iter {
+				count++
+			}
+			if count != 0 {
+				t.Errorf("expected 0 assets for non-existent page, got %d", count)
+			}
+		})
+
+		t.Run("CreateNode_AllTypes", func(t *testing.T) {
+			fs, orgID := testFileStore(t)
+			ctx := t.Context()
+			author := Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitOrg(ctx, orgID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			tests := []struct {
+				name     string
+				nodeType NodeType
+				wantPage bool
+				wantMeta bool
+			}{
+				{"Document", NodeTypeDocument, true, false},
+				{"Table", NodeTypeTable, false, true},
+				{"Hybrid", NodeTypeHybrid, true, true},
+			}
+
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					node, err := fs.CreateNode(ctx, orgID, "Test "+tc.name, tc.nodeType, author)
+					if err != nil {
+						t.Fatalf("CreateNode failed: %v", err)
+					}
+
+					if node.Type != tc.nodeType {
+						t.Errorf("expected type %v, got %v", tc.nodeType, node.Type)
+					}
+
+					pageDir := filepath.Join(fs.rootDir, orgID.String(), "pages", node.ID.String())
+					indexPath := filepath.Join(pageDir, "index.md")
+					metaPath := filepath.Join(pageDir, "metadata.json")
+
+					_, indexErr := os.Stat(indexPath)
+					_, metaErr := os.Stat(metaPath)
+					indexExists := indexErr == nil
+					metaExists := metaErr == nil
+
+					if tc.wantPage && !indexExists {
+						t.Error("expected index.md to exist")
+					}
+					if !tc.wantPage && indexExists {
+						t.Error("expected index.md to NOT exist")
+					}
+					if tc.wantMeta && !metaExists {
+						t.Error("expected metadata.json to exist")
+					}
+					if !tc.wantMeta && metaExists {
+						t.Error("expected metadata.json to NOT exist")
+					}
+				})
+			}
+		})
+	})
+
+	t.Run("Quota", func(t *testing.T) {
+		t.Run("UpdatePage_StorageQuota", func(t *testing.T) {
+			fs, orgID := testFileStore(t)
+			ctx := t.Context()
+			author := Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitOrg(ctx, orgID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			_, err := fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
+				o.Quotas.MaxStorage = 500
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("failed to set quota: %v", err)
+			}
+
+			pageID := jsonldb.NewID()
+			_, err = fs.WritePage(ctx, orgID, pageID, "Small", "x", author)
+			if err != nil {
+				t.Fatalf("failed to create small page: %v", err)
+			}
+
+			// Update to exceed storage quota
+			largeContent := make([]byte, 1000)
+			for i := range largeContent {
+				largeContent[i] = 'x'
+			}
+
+			_, err = fs.UpdatePage(ctx, orgID, pageID, "Large", string(largeContent), author)
+			if err == nil {
+				t.Error("expected quota exceeded error when updating page to exceed storage")
+			}
+		})
+
+		t.Run("CreateNode_StorageQuota", func(t *testing.T) {
+			fs, orgID := testFileStore(t)
+			ctx := t.Context()
+			author := Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitOrg(ctx, orgID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			// Set very low storage quota (50 bytes - less than a single node's files)
+			_, err := fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
+				o.Quotas.MaxStorage = 50
+				o.Quotas.MaxPages = 100
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("failed to set quota: %v", err)
+			}
+
+			_, err = fs.CreateNode(ctx, orgID, "Test Node", NodeTypeDocument, author)
+			if err == nil {
+				t.Error("expected storage quota exceeded error")
+			}
+		})
+
+		t.Run("WriteTable_UpdateStorageQuota", func(t *testing.T) {
+			fs, orgID := testFileStore(t)
+			ctx := t.Context()
+			author := Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitOrg(ctx, orgID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			_, err := fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
+				o.Quotas.MaxStorage = 1000
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("failed to set quota: %v", err)
+			}
+
+			tableID := jsonldb.NewID()
+			tableNode := &Node{
+				ID:       tableID,
+				Title:    "Small",
+				Type:     NodeTypeTable,
+				Created:  time.Now(),
+				Modified: time.Now(),
+			}
+			if err := fs.WriteTable(ctx, orgID, tableNode, true, author); err != nil {
+				t.Fatalf("failed to create table: %v", err)
+			}
+
+			// Reduce storage quota
+			_, err = fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
+				o.Quotas.MaxStorage = 100
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("failed to reduce quota: %v", err)
+			}
+
+			// Update with many properties to exceed quota
+			tableNode.Properties = make([]Property, 50)
+			for i := range tableNode.Properties {
+				tableNode.Properties[i] = Property{
+					Name: strings.Repeat("x", 50),
+					Type: PropertyTypeText,
+				}
+			}
+			tableNode.Modified = time.Now()
+
+			err = fs.WriteTable(ctx, orgID, tableNode, false, author)
+			if err == nil {
+				t.Error("expected storage quota exceeded error on update")
+			}
+		})
+
+		t.Run("UpdateRecord_SameSizeAllowed", func(t *testing.T) {
+			fs, orgID := testFileStore(t)
+			ctx := t.Context()
+			author := Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitOrg(ctx, orgID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			_, err := fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
+				o.Quotas.MaxStorage = 500
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("failed to set quota: %v", err)
+			}
+
+			tableID := jsonldb.NewID()
+			tableNode := &Node{
+				ID:       tableID,
+				Title:    "Test",
+				Type:     NodeTypeTable,
+				Created:  time.Now(),
+				Modified: time.Now(),
+			}
+			if err := fs.WriteTable(ctx, orgID, tableNode, true, author); err != nil {
+				t.Fatalf("failed to create table: %v", err)
+			}
+
+			recordID := jsonldb.NewID()
+			record := &DataRecord{
+				ID:       recordID,
+				Data:     map[string]any{"field": strings.Repeat("a", 100)},
+				Created:  time.Now(),
+				Modified: time.Now(),
+			}
+			if err := fs.AppendRecord(ctx, orgID, tableID, record, author); err != nil {
+				t.Fatalf("failed to create record: %v", err)
+			}
+
+			// Set quota to exactly current usage
+			_, storageUsage, _ := fs.GetOrganizationUsage(orgID)
+			_, err = fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
+				o.Quotas.MaxStorage = storageUsage
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("failed to reduce quota: %v", err)
+			}
+
+			// Same-size update should succeed
+			updatedRecord := &DataRecord{
+				ID:       recordID,
+				Data:     map[string]any{"field": strings.Repeat("b", 100)},
+				Created:  record.Created,
+				Modified: time.Now(),
+			}
+
+			err = fs.UpdateRecord(ctx, orgID, tableID, updatedRecord, author)
+			if err != nil {
+				t.Errorf("same-size update should succeed: %v", err)
+			}
+		})
+	})
 }
 
 func TestAsset(t *testing.T) {
@@ -356,6 +737,109 @@ func TestMarkdown(t *testing.T) {
 				t.Error("expected three sections separated by ---")
 			}
 		})
+	})
+}
+
+func TestGetOrganizationUsage(t *testing.T) {
+	t.Run("CountsTablesAndPages", func(t *testing.T) {
+		fs, orgID := testFileStore(t)
+		ctx := t.Context()
+		author := Author{Name: "Test", Email: "test@test.com"}
+
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
+		}
+
+		// Set quota to allow 2 items
+		_, err := fs.orgSvc.Modify(orgID, func(o *identity.Organization) error {
+			o.Quotas.MaxPages = 2
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("failed to set quota: %v", err)
+		}
+
+		// Create one page
+		pageID := jsonldb.NewID()
+		_, err = fs.WritePage(ctx, orgID, pageID, "Page 1", "content", author)
+		if err != nil {
+			t.Fatalf("failed to create page: %v", err)
+		}
+
+		// Create one table
+		tableID := jsonldb.NewID()
+		tableNode := &Node{
+			ID:       tableID,
+			Title:    "Table 1",
+			Type:     NodeTypeTable,
+			Created:  time.Now(),
+			Modified: time.Now(),
+		}
+		if err := fs.WriteTable(ctx, orgID, tableNode, true, author); err != nil {
+			t.Fatalf("failed to create table: %v", err)
+		}
+
+		// Get usage - should count both page and table
+		pageCount, _, err := fs.GetOrganizationUsage(orgID)
+		if err != nil {
+			t.Fatalf("failed to get usage: %v", err)
+		}
+
+		if pageCount != 2 {
+			t.Errorf("expected pageCount=2 (page + table), got %d", pageCount)
+		}
+
+		// With MaxPages=2, creating a third item should fail
+		tableID2 := jsonldb.NewID()
+		tableNode2 := &Node{
+			ID:       tableID2,
+			Title:    "Table 2",
+			Type:     NodeTypeTable,
+			Created:  time.Now(),
+			Modified: time.Now(),
+		}
+		err = fs.WriteTable(ctx, orgID, tableNode2, true, author)
+		if err == nil {
+			t.Error("expected quota exceeded error when creating third item")
+		}
+	})
+
+	t.Run("HybridNodeCountedOnce", func(t *testing.T) {
+		fs, orgID := testFileStore(t)
+		ctx := t.Context()
+		author := Author{Name: "Test", Email: "test@test.com"}
+
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
+		}
+
+		// Create a hybrid node (page + table)
+		hybridID := jsonldb.NewID()
+		_, err := fs.WritePage(ctx, orgID, hybridID, "Hybrid", "content", author)
+		if err != nil {
+			t.Fatalf("failed to create page: %v", err)
+		}
+
+		hybridNode := &Node{
+			ID:       hybridID,
+			Title:    "Hybrid",
+			Type:     NodeTypeTable,
+			Created:  time.Now(),
+			Modified: time.Now(),
+		}
+		if err := fs.WriteTable(ctx, orgID, hybridNode, false, author); err != nil {
+			t.Fatalf("failed to add table metadata: %v", err)
+		}
+
+		pageCount, _, err := fs.GetOrganizationUsage(orgID)
+		if err != nil {
+			t.Fatalf("failed to get usage: %v", err)
+		}
+
+		// Hybrid node should be counted once, not twice
+		if pageCount != 1 {
+			t.Errorf("expected pageCount=1 for hybrid node, got %d", pageCount)
+		}
 	})
 }
 

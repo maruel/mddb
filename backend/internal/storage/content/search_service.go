@@ -164,25 +164,30 @@ func (s *SearchService) searchTables(orgID jsonldb.ID, query string, opts Search
 }
 
 func (s *SearchService) createSnippet(content, query string) string {
-	idx := strings.Index(strings.ToLower(content), query)
-	if idx == -1 {
+	lowerContent := strings.ToLower(content)
+	lowerQuery := strings.ToLower(query)
+
+	// Find byte index first
+	byteIdx := strings.Index(lowerContent, lowerQuery)
+	if byteIdx == -1 {
 		return truncate(content, 100)
 	}
 
-	start := idx - 50
-	if start < 0 {
-		start = 0
-	}
-	end := idx + len(query) + 50
-	if end > len(content) {
-		end = len(content)
-	}
+	// Convert to rune slice to avoid splitting multi-byte characters
+	runes := []rune(content)
 
-	snippet := content[start:end]
+	// Calculate rune index by counting runes up to byteIdx
+	runeIdx := len([]rune(content[:byteIdx]))
+	queryRuneLen := len([]rune(query))
+
+	start := max(runeIdx-50, 0)
+	end := min(runeIdx+queryRuneLen+50, len(runes))
+
+	snippet := string(runes[start:end])
 	if start > 0 {
 		snippet = "..." + snippet
 	}
-	if end < len(content) {
+	if end < len(runes) {
 		snippet += "..."
 	}
 	return snippet
@@ -220,10 +225,11 @@ func formatBool(b bool) string {
 	return "false"
 }
 
-// truncate limits string length with ellipsis.
+// truncate limits string length with ellipsis using rune count.
 func truncate(s string, maxLen int) string {
-	if len(s) > maxLen {
-		return s[:maxLen] + "..."
+	runes := []rune(s)
+	if len(runes) > maxLen {
+		return string(runes[:maxLen]) + "..."
 	}
 	return s
 }
