@@ -1,4 +1,4 @@
-// Command apiclient generates a TypeScript API client from router.go and dto types.
+// Command apiclient generates a TypeScript API client from router.go and handler signatures.
 package main
 
 import (
@@ -18,12 +18,20 @@ func main() {
 	root := findRepoRoot()
 	routerPath := filepath.Join(root, "internal", "server", "router.go")
 	dtoPath := filepath.Join(root, "internal", "server", "dto", "request.go")
+	handlersDir := filepath.Join(root, "internal", "server", "handlers")
 	outPath := filepath.Clean(filepath.Join(root, "..", "frontend", "src", "api.ts"))
 
-	// Parse DTO request types
+	// Parse DTO request types for field info
 	dtoTypes, err := parseDTOTypes(dtoPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "parse dto error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Parse handler signatures to get actual request/response types
+	handlerSigs, err := parseHandlerSignatures(handlersDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "parse handlers error: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -35,7 +43,11 @@ func main() {
 	}
 
 	// Match routes to request/response types
-	endpoints := matchEndpoints(routes, dtoTypes)
+	endpoints, err := matchEndpoints(routes, dtoTypes, handlerSigs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "match endpoints error: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Generate TypeScript
 	if err := generateTypeScript(outPath, endpoints); err != nil {
@@ -62,29 +74,36 @@ func findRepoRoot() string {
 	}
 }
 
+// HandlerSig represents a parsed handler function signature.
+type HandlerSig struct {
+	MethodName   string // e.g., "GetPage"
+	RequestType  string // e.g., "GetPageRequest"
+	ResponseType string // e.g., "GetPageResponse"
+}
+
 // DTOType represents a parsed request struct with its field tags.
 type DTOType struct {
 	Name        string
-	PathFields  []FieldInfo // Fields with path:"xxx" tag
-	QueryFields []FieldInfo // Fields with query:"xxx" tag
-	JSONFields  []FieldInfo // Fields with json:"xxx" tag
+	PathFields  []FieldInfo
+	QueryFields []FieldInfo
+	JSONFields  []FieldInfo
 }
 
 // FieldInfo represents a struct field with its tag info.
 type FieldInfo struct {
-	GoName   string // Go field name
-	TagName  string // Tag value (path/query/json name)
-	TSName   string // TypeScript property name (from json tag, or lowercased GoName)
-	TypeName string // Go type name
-	Optional bool   // Has omitempty
+	GoName   string
+	TagName  string
+	TSName   string
+	TypeName string
+	Optional bool
 }
 
 // Route represents a parsed route from router.go.
 type Route struct {
 	Method      string
 	Path        string
-	HandlerName string
-	WrapperType string // "Wrap", "WrapAuth", "WrapAuthRaw", "WrapGlobalAdmin"
+	HandlerName string // e.g., "GetPage" (method name only)
+	IsRaw       bool   // WrapAuthRaw - no JSON body parsing
 }
 
 // Endpoint represents a fully resolved API endpoint.
@@ -97,7 +116,90 @@ type Endpoint struct {
 	PathFields   []FieldInfo
 	QueryFields  []FieldInfo
 	JSONFields   []FieldInfo
-	IsRaw        bool // WrapAuthRaw - no JSON body parsing
+}
+
+// parseHandlerSignatures parses all handler files and extracts function signatures.
+func parseHandlerSignatures(dir string) (map[string]*HandlerSig, error) {
+	sigs := make(map[string]*HandlerSig)
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	fset := token.NewFileSet()
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+
+		path := filepath.Join(dir, entry.Name())
+		f, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			return nil, fmt.Errorf("parse %s: %w", entry.Name(), err)
+		}
+
+		for _, decl := range f.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Recv == nil || len(fn.Recv.List) == 0 {
+				continue
+			}
+
+			// Check if this is a method on a *Handler type
+			recvType := exprToString(fn.Recv.List[0].Type)
+			if !strings.HasSuffix(recvType, "Handler") {
+				continue
+			}
+
+			// Extract request and response types from function signature
+			sig := extractSignature(fn)
+			if sig != nil {
+				sigs[sig.MethodName] = sig
+			}
+		}
+	}
+
+	return sigs, nil
+}
+
+// extractSignature extracts request/response types from a handler function.
+func extractSignature(fn *ast.FuncDecl) *HandlerSig {
+	if fn.Type.Params == nil || fn.Type.Results == nil {
+		return nil
+	}
+
+	// Find the last parameter that's a pointer to dto.XXXRequest
+	var reqType string
+	for _, param := range fn.Type.Params.List {
+		typeStr := exprToString(param.Type)
+		if strings.HasPrefix(typeStr, "*dto.") && strings.HasSuffix(typeStr, "Request") {
+			reqType = strings.TrimPrefix(typeStr, "*dto.")
+		}
+	}
+
+	if reqType == "" {
+		return nil
+	}
+
+	// Find the first result that's a pointer to dto.XXX (response type)
+	var respType string
+	for _, result := range fn.Type.Results.List {
+		typeStr := exprToString(result.Type)
+		if strings.HasPrefix(typeStr, "*dto.") {
+			respType = strings.TrimPrefix(typeStr, "*dto.")
+			break
+		}
+	}
+
+	if respType == "" {
+		return nil
+	}
+
+	return &HandlerSig{
+		MethodName:   fn.Name.Name,
+		RequestType:  reqType,
+		ResponseType: respType,
+	}
 }
 
 // parseDTOTypes parses dto/request.go and extracts struct definitions with tags.
@@ -124,21 +226,16 @@ func parseDTOTypes(path string) (map[string]*DTOType, error) {
 		dt := &DTOType{Name: ts.Name.Name}
 
 		for _, field := range st.Fields.List {
-			if len(field.Names) == 0 {
+			if len(field.Names) == 0 || field.Tag == nil {
 				continue
 			}
 			fieldName := field.Names[0].Name
 			fieldType := exprToString(field.Type)
-
-			if field.Tag == nil {
-				continue
-			}
-			tag := field.Tag.Value
-			tag = strings.Trim(tag, "`")
+			tag := strings.Trim(field.Tag.Value, "`")
 
 			// Determine TSName: use json tag name if present, else Go field name
 			jsonTag := extractTag(tag, "json")
-			tsName := fieldName // Default to Go field name (what tygo uses when no json tag)
+			tsName := fieldName
 			if jsonTag != "" {
 				name, _ := parseJSONTag(jsonTag)
 				if name != "-" && name != "" {
@@ -146,36 +243,23 @@ func parseDTOTypes(path string) (map[string]*DTOType, error) {
 				}
 			}
 
-			// Parse path tag
 			if pathTag := extractTag(tag, "path"); pathTag != "" {
 				dt.PathFields = append(dt.PathFields, FieldInfo{
-					GoName:   fieldName,
-					TagName:  pathTag,
-					TSName:   tsName,
-					TypeName: fieldType,
+					GoName: fieldName, TagName: pathTag, TSName: tsName, TypeName: fieldType,
 				})
 			}
 
-			// Parse query tag
 			if queryTag := extractTag(tag, "query"); queryTag != "" {
 				dt.QueryFields = append(dt.QueryFields, FieldInfo{
-					GoName:   fieldName,
-					TagName:  queryTag,
-					TSName:   tsName,
-					TypeName: fieldType,
+					GoName: fieldName, TagName: queryTag, TSName: tsName, TypeName: fieldType,
 				})
 			}
 
-			// Parse json tag
 			if jsonTag != "" {
 				name, optional := parseJSONTag(jsonTag)
 				if name != "-" {
 					dt.JSONFields = append(dt.JSONFields, FieldInfo{
-						GoName:   fieldName,
-						TagName:  name,
-						TSName:   name, // JSON fields use json tag name
-						TypeName: fieldType,
-						Optional: optional,
+						GoName: fieldName, TagName: name, TSName: name, TypeName: fieldType, Optional: optional,
 					})
 				}
 			}
@@ -245,11 +329,7 @@ func parseRoutes(path string) ([]Route, error) {
 		}
 
 		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return true
-		}
-
-		if sel.Sel.Name != "Handle" && sel.Sel.Name != "HandleFunc" {
+		if !ok || (sel.Sel.Name != "Handle" && sel.Sel.Name != "HandleFunc") {
 			return true
 		}
 
@@ -257,7 +337,6 @@ func parseRoutes(path string) ([]Route, error) {
 			return true
 		}
 
-		// First arg is the pattern string
 		lit, ok := call.Args[0].(*ast.BasicLit)
 		if !ok || lit.Kind != token.STRING {
 			return true
@@ -266,15 +345,13 @@ func parseRoutes(path string) ([]Route, error) {
 		pattern := strings.Trim(lit.Value, `"`)
 		method, urlPath := parsePattern(pattern)
 
-		// Second arg is the handler (possibly wrapped)
 		wrapperType, handlerName := parseHandlerExpr(call.Args[1])
-
 		if handlerName != "" && handlerName != "?" {
 			routes = append(routes, Route{
 				Method:      method,
 				Path:        urlPath,
 				HandlerName: handlerName,
-				WrapperType: wrapperType,
+				IsRaw:       wrapperType == "WrapAuthRaw",
 			})
 		}
 
@@ -293,10 +370,11 @@ func parsePattern(p string) (method, path string) {
 	return "GET", parts[0]
 }
 
-// parseHandlerExpr extracts wrapper type and handler name from the handler expression.
+// parseHandlerExpr extracts wrapper type and handler method name from the handler expression.
 func parseHandlerExpr(expr ast.Expr) (wrapperType, handlerName string) {
 	call, ok := expr.(*ast.CallExpr)
 	if !ok {
+		// Direct handler reference (shouldn't happen in this codebase)
 		return "none", exprName(expr)
 	}
 
@@ -323,13 +401,13 @@ func parseHandlerExpr(expr ast.Expr) (wrapperType, handlerName string) {
 	return "unknown", funcName
 }
 
-// exprName extracts a name from an expression.
+// exprName extracts the method name from an expression like `ph.GetPage`.
 func exprName(e ast.Expr) string {
 	switch v := e.(type) {
 	case *ast.Ident:
 		return v.Name
 	case *ast.SelectorExpr:
-		return v.Sel.Name
+		return v.Sel.Name // Return just the method name
 	case *ast.CallExpr:
 		return exprName(v.Fun)
 	}
@@ -337,8 +415,9 @@ func exprName(e ast.Expr) string {
 }
 
 // matchEndpoints matches routes to their request/response types.
-func matchEndpoints(routes []Route, dtoTypes map[string]*DTOType) []Endpoint {
+func matchEndpoints(routes []Route, dtoTypes map[string]*DTOType, handlerSigs map[string]*HandlerSig) ([]Endpoint, error) {
 	var endpoints []Endpoint
+	var errs []string
 
 	for _, r := range routes {
 		// Skip non-API routes
@@ -351,97 +430,41 @@ func matchEndpoints(routes []Route, dtoTypes map[string]*DTOType) []Endpoint {
 			continue
 		}
 
-		// Derive request/response type names from handler name
-		// e.g., "ListPages" -> "ListPagesRequest", "ListPagesResponse"
-		handlerName := r.HandlerName
-		reqTypeName := handlerName + "Request"
-		respTypeName := handlerName + "Response"
-
-		// Special cases
-		switch handlerName {
-		case "Health":
-			reqTypeName = "HealthRequest"
-			respTypeName = "HealthResponse"
-		case "Me":
-			reqTypeName = "MeRequest"
-			respTypeName = "UserResponse"
-		case "Register":
-			respTypeName = "LoginResponse"
-		case "AcceptInvitation":
-			respTypeName = "LoginResponse"
-		case "CreateOrganization":
-			respTypeName = "OrganizationResponse"
-		case "UpdateUserSettings":
-			respTypeName = "UserResponse"
-		case "UpdateMembershipSettings":
-			respTypeName = "MembershipResponse"
-		case "UpdateOrganization":
-			respTypeName = "OrganizationResponse"
-		case "GetOnboarding":
-			respTypeName = "OnboardingState"
-		case "UpdateOnboarding":
-			respTypeName = "OnboardingState"
-		case "CreateInvitation":
-			respTypeName = "InvitationResponse"
-		case "GetNode":
-			respTypeName = "NodeResponse"
-		case "CreateNode":
-			respTypeName = "NodeResponse"
-		case "Stats":
-			reqTypeName = "AdminStatsRequest"
-			respTypeName = "AdminStatsResponse"
-		case "ListAllUsers":
-			reqTypeName = "AdminUsersRequest"
-			respTypeName = "AdminUsersResponse"
-		case "ListAllOrgs":
-			reqTypeName = "AdminOrgsRequest"
-			respTypeName = "AdminOrgsResponse"
-		case "GetOrganization":
-			reqTypeName = "GetOnboardingRequest" // Uses same request shape
-			respTypeName = "OrganizationResponse"
-		case "UpdateSettings":
-			reqTypeName = "UpdateOrgSettingsRequest"
-			respTypeName = "OkResponse"
-		case "GetRemote":
-			reqTypeName = "GetGitRemoteRequest"
-			respTypeName = "GitRemoteResponse"
-		case "SetRemote":
-			reqTypeName = "SetGitRemoteRequest"
-			respTypeName = "GitRemoteResponse"
-		case "DeleteRemote":
-			reqTypeName = "DeleteGitRemoteRequest"
-			respTypeName = "OkResponse"
-		case "Push":
-			reqTypeName = "PushGitRemoteRequest"
-			respTypeName = "OkResponse"
-		case "UpdateUserRole":
-			reqTypeName = "UpdateRoleRequest"
-			respTypeName = "OkResponse"
-		case "SwitchOrg":
-			reqTypeName = "SwitchOrgRequest"
-			respTypeName = "SwitchOrgResponse"
-		}
-
-		dto := dtoTypes[reqTypeName]
-		if dto == nil {
-			fmt.Fprintf(os.Stderr, "warning: no DTO found for %s (handler: %s)\n", reqTypeName, handlerName)
+		// Skip raw handlers (they don't follow the typed pattern)
+		if r.IsRaw {
 			continue
 		}
 
-		// Generate function name: method + path-based name
-		funcName := generateFuncName(r.Method, r.Path)
+		// Look up handler signature
+		sig := handlerSigs[r.HandlerName]
+		if sig == nil {
+			errs = append(errs, "no handler signature found for "+r.HandlerName)
+			continue
+		}
+
+		// Look up DTO for field info
+		dto := dtoTypes[sig.RequestType]
+		if dto == nil {
+			errs = append(errs, "no DTO found for "+sig.RequestType+" (handler: "+r.HandlerName+")")
+			continue
+		}
+
+		funcName := toLowerCamel(r.HandlerName)
 
 		endpoints = append(endpoints, Endpoint{
 			Method:       r.Method,
 			Path:         r.Path,
 			FuncName:     funcName,
-			RequestType:  reqTypeName,
-			ResponseType: respTypeName,
+			RequestType:  sig.RequestType,
+			ResponseType: sig.ResponseType,
 			PathFields:   dto.PathFields,
 			QueryFields:  dto.QueryFields,
 			JSONFields:   dto.JSONFields,
-			IsRaw:        r.WrapperType == "WrapAuthRaw",
 		})
+	}
+
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("matching errors:\n  %s", strings.Join(errs, "\n  "))
 	}
 
 	// Sort by function name for consistent output
@@ -449,101 +472,25 @@ func matchEndpoints(routes []Route, dtoTypes map[string]*DTOType) []Endpoint {
 		return endpoints[i].FuncName < endpoints[j].FuncName
 	})
 
-	return endpoints
+	return endpoints, nil
 }
 
-// title capitalizes the first letter of a string (ASCII only).
-func title(s string) string {
+// toLowerCamel converts a PascalCase string to lowerCamelCase.
+func toLowerCamel(s string) string {
 	if s == "" {
 		return s
 	}
 	r := []rune(s)
-	if r[0] >= 'a' && r[0] <= 'z' {
-		r[0] = r[0] - 'a' + 'A'
+	if r[0] >= 'A' && r[0] <= 'Z' {
+		r[0] = r[0] - 'A' + 'a'
 	}
 	return string(r)
-}
-
-// generateFuncName generates a TypeScript function name from method and path.
-func generateFuncName(method, path string) string {
-	// Remove /api/ prefix and {orgID}
-	path = strings.TrimPrefix(path, "/api/")
-	path = strings.TrimPrefix(path, "{orgID}/")
-
-	// Replace path params with "ById" or similar
-	re := regexp.MustCompile(`\{([^}]+)\}`)
-	path = re.ReplaceAllStringFunc(path, func(match string) string {
-		param := strings.Trim(match, "{}")
-		// Keep meaningful param names for uniqueness
-		if param == "id" {
-			return "ById"
-		}
-		if param == "rid" {
-			return "ByRid"
-		}
-		if param == "hash" {
-			return "ByHash"
-		}
-		if param == "name" {
-			return "ByName"
-		}
-		return ""
-	})
-
-	// Replace hyphens with nothing (next char will be capitalized)
-	path = strings.ReplaceAll(path, "-", "/")
-	path = strings.ReplaceAll(path, "//", "/")
-	path = strings.Trim(path, "/")
-
-	// Convert to camelCase
-	parts := strings.Split(path, "/")
-	var resultParts []string
-	for _, part := range parts {
-		if part == "" {
-			continue
-		}
-		if len(resultParts) == 0 {
-			resultParts = append(resultParts, strings.ToLower(part))
-		} else {
-			resultParts = append(resultParts, title(part))
-		}
-	}
-	result := strings.Join(resultParts, "")
-
-	// Add method prefix for non-GET
-	switch method {
-	case "POST":
-		if !strings.HasPrefix(result, "create") && !strings.HasPrefix(result, "accept") &&
-			!strings.HasPrefix(result, "search") && !strings.HasPrefix(result, "organizations") {
-			result = "create" + title(result)
-		}
-	case "PUT":
-		if !strings.HasPrefix(result, "update") {
-			result = "update" + title(result)
-		}
-	case "PATCH":
-		if !strings.HasPrefix(result, "patch") {
-			result = "patch" + title(result)
-		}
-	case "DELETE":
-		if !strings.HasPrefix(result, "delete") {
-			result = "delete" + title(result)
-		}
-	}
-
-	// Handle special cases
-	if result == "" {
-		result = "health"
-	}
-
-	return result
 }
 
 // generateTypeScript generates the TypeScript API client file.
 func generateTypeScript(outPath string, endpoints []Endpoint) error {
 	var b strings.Builder
 
-	// Header
 	b.WriteString("// Code generated by apiclient. DO NOT EDIT.\n\n")
 
 	// Collect all types needed for imports
@@ -566,11 +513,9 @@ func generateTypeScript(outPath string, endpoints []Endpoint) error {
 	}
 	b.WriteString("} from './types';\n\n")
 
-	// FetchFn type
 	b.WriteString("/** Fetch function type - implement to add auth headers */\n")
 	b.WriteString("export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;\n\n")
 
-	// APIError class
 	b.WriteString(`/** API error with parsed error response */
 export class APIError extends Error {
   constructor(
@@ -592,7 +537,6 @@ async function parseResponse<T>(res: Response): Promise<T> {
 
 `)
 
-	// Client factory function
 	b.WriteString("/** Creates a typed API client */\n")
 	b.WriteString("export function createAPIClient(fetch: FetchFn) {\n")
 	b.WriteString("  return {\n")
@@ -604,7 +548,6 @@ async function parseResponse<T>(res: Response): Promise<T> {
 	b.WriteString("  };\n")
 	b.WriteString("}\n\n")
 
-	// Type export
 	b.WriteString("export type APIClient = ReturnType<typeof createAPIClient>;\n")
 
 	return os.WriteFile(outPath, []byte(b.String()), 0o600)
@@ -612,13 +555,6 @@ async function parseResponse<T>(res: Response): Promise<T> {
 
 // writeEndpointMethod writes a single endpoint method to the builder.
 func writeEndpointMethod(b *strings.Builder, ep *Endpoint) {
-	// Skip raw endpoints (like file upload) - they need special handling
-	if ep.IsRaw {
-		fmt.Fprintf(b, "    // %s: raw endpoint, implement manually\n\n", ep.FuncName)
-		return
-	}
-
-	// Determine if req is used
 	hasBody := len(ep.JSONFields) > 0 && (ep.Method == http.MethodPost || ep.Method == http.MethodPut || ep.Method == http.MethodPatch)
 	reqUsed := len(ep.PathFields) > 0 || len(ep.QueryFields) > 0 || hasBody
 	reqParam := "req"
@@ -626,17 +562,14 @@ func writeEndpointMethod(b *strings.Builder, ep *Endpoint) {
 		reqParam = "_req"
 	}
 
-	// Build the function signature
 	fmt.Fprintf(b, "    async %s(%s: %s): Promise<%s> {\n", ep.FuncName, reqParam, ep.RequestType, ep.ResponseType)
 
-	// Build URL with path params (use TSName for TypeScript field access)
 	urlTemplate := ep.Path
 	for _, pf := range ep.PathFields {
 		placeholder := "{" + pf.TagName + "}"
 		urlTemplate = strings.Replace(urlTemplate, placeholder, "${req."+pf.TSName+"}", 1)
 	}
 
-	// Handle query params
 	hasQuery := len(ep.QueryFields) > 0
 	if hasQuery {
 		b.WriteString("      const params = new URLSearchParams();\n")
@@ -652,10 +585,8 @@ func writeEndpointMethod(b *strings.Builder, ep *Endpoint) {
 		fmt.Fprintf(b, "      const url = `%s`;\n", urlTemplate)
 	}
 
-	// Build fetch options
 	switch {
 	case hasBody:
-		// Extract only JSON fields for body (use TSName for access, TagName for JSON key)
 		b.WriteString("      const body = {\n")
 		for _, jf := range ep.JSONFields {
 			fmt.Fprintf(b, "        %s: req.%s,\n", jf.TagName, jf.TSName)
