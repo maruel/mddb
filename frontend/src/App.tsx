@@ -66,11 +66,7 @@ export default function App() {
   const authFetch = async (url: string, options: RequestInit = {}) => {
     let finalUrl = url;
     // Automatically prepend organization ID for data-acting API calls
-    if (
-      url.startsWith('/api/') &&
-      !url.startsWith('/api/auth/') &&
-      !url.startsWith('/api/health')
-    ) {
+    if (url.startsWith('/api/') && !url.startsWith('/api/auth/') && !url.startsWith('/api/health')) {
       const orgID = user()?.organization_id;
       if (orgID) {
         // Convert /api/nodes to /api/{orgID}/nodes
@@ -126,11 +122,7 @@ export default function App() {
     }
   }
 
-  async function createOrganization(data: {
-    name: string;
-    welcomePageTitle: string;
-    welcomePageContent: string;
-  }) {
+  async function createOrganization(data: { name: string; welcomePageTitle: string; welcomePageContent: string }) {
     const res = await fetch('/api/organizations', {
       method: 'POST',
       headers: {
@@ -382,10 +374,7 @@ export default function App() {
   }
 
   async function loadVersion(nodeId: string, hash: string) {
-    if (
-      !confirm(t('editor.restoreConfirm') || 'This will replace current editor content. Continue?')
-    )
-      return;
+    if (!confirm(t('editor.restoreConfirm') || 'This will replace current editor content. Continue?')) return;
 
     try {
       setLoading(true);
@@ -588,9 +577,7 @@ export default function App() {
     try {
       setLoading(true);
       const offset = records().length;
-      const res = await authFetch(
-        `/api/tables/${nodeId}/records?offset=${offset}&limit=${PAGE_SIZE}`
-      );
+      const res = await authFetch(`/api/tables/${nodeId}/records?offset=${offset}&limit=${PAGE_SIZE}`);
       const data = await res.json();
       const newRecords = data.records || [];
       setRecords([...records(), ...newRecords]);
@@ -610,11 +597,7 @@ export default function App() {
             <>
               {/* First org creation for new users with no memberships */}
               <Show when={(user()?.memberships?.length ?? 0) === 0}>
-                <CreateOrgModal
-                  isFirstOrg={true}
-                  onClose={() => {}}
-                  onCreate={createOrganization}
-                />
+                <CreateOrgModal isFirstOrg={true} onClose={() => {}} onCreate={createOrganization} />
               </Show>
               <Show when={user()?.role === 'admin' && !user()?.onboarding?.completed}>
                 <Onboarding
@@ -647,11 +630,7 @@ export default function App() {
                         onChange={(e) => switchOrg(e.target.value)}
                       >
                         <For each={user()?.memberships}>
-                          {(m) => (
-                            <option value={m.organization_id}>
-                              {m.organization_name || m.organization_id}
-                            </option>
-                          )}
+                          {(m) => <option value={m.organization_id}>{m.organization_name || m.organization_id}</option>}
                         </For>
                       </select>
                     </Show>
@@ -718,12 +697,7 @@ export default function App() {
                     <ul class={styles.pageList}>
                       <For each={nodes()}>
                         {(node) => (
-                          <SidebarNode
-                            node={node}
-                            selectedId={selectedNodeId()}
-                            onSelect={handleNodeClick}
-                            depth={0}
-                          />
+                          <SidebarNode node={node} selectedId={selectedNodeId()} onSelect={handleNodeClick} depth={0} />
                         )}
                       </For>
                     </ul>
@@ -771,10 +745,7 @@ export default function App() {
                                 <Show when={i() > 0}>
                                   <span class={styles.breadcrumbSeparator}>/</span>
                                 </Show>
-                                <span
-                                  class={styles.breadcrumbItem}
-                                  onClick={() => handleNodeClick(crumb)}
-                                >
+                                <span class={styles.breadcrumbItem} onClick={() => handleNodeClick(crumb)}>
                                   {crumb.title}
                                 </span>
                               </>
@@ -802,16 +773,10 @@ export default function App() {
                                 class={styles.titleInput}
                               />
                               <div class={styles.welcomeActions}>
-                                <button
-                                  onClick={() => createNode('document')}
-                                  class={styles.createButton}
-                                >
+                                <button onClick={() => createNode('document')} class={styles.createButton}>
                                   {t('welcome.createPage')}
                                 </button>
-                                <button
-                                  onClick={() => createNode('table')}
-                                  class={styles.createButton}
-                                >
+                                <button onClick={() => createNode('table')} class={styles.createButton}>
                                   {t('welcome.createTable')}
                                 </button>
                               </div>
@@ -879,9 +844,7 @@ export default function App() {
                                         <span class={styles.historyDate}>
                                           {new Date(commit.timestamp).toLocaleString()}
                                         </span>
-                                        <span class={styles.historyHash}>
-                                          {commit.hash.substring(0, 7)}
-                                        </span>
+                                        <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
                                       </div>
                                       <div class={styles.historyMessage}>{commit.message}</div>
                                     </li>
@@ -905,16 +868,10 @@ export default function App() {
                                     setHasUnsavedChanges(true);
                                     debouncedAutoSave();
                                   }}
-                                  placeholder={
-                                    t('editor.contentPlaceholder') ||
-                                    'Write your content in markdown...'
-                                  }
+                                  placeholder={t('editor.contentPlaceholder') || 'Write your content in markdown...'}
                                   class={styles.contentInput}
                                 />
-                                <MarkdownPreview
-                                  content={content()}
-                                  orgId={user()?.organization_id}
-                                />
+                                <MarkdownPreview content={content()} orgId={user()?.organization_id} />
                               </div>
                             </Show>
 

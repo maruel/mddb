@@ -18,10 +18,7 @@ export default function TableGrid(props: TableGridProps) {
           <div class={styles.card}>
             <div class={styles.cardHeader}>
               <strong>
-                {String(
-                  (props.columns[0] ? record.data[props.columns[0].name] : null) ||
-                    t('table.untitled')
-                )}
+                {String((props.columns[0] ? record.data[props.columns[0].name] : null) || t('table.untitled'))}
               </strong>
               <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>
                 ✕

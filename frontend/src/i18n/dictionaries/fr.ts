@@ -60,8 +60,7 @@ export const dict: Dictionary = {
 
   welcome: {
     title: 'Bienvenue sur mddb',
-    subtitle:
-      'Sélectionnez un élément dans la barre latérale ou créez-en un nouveau pour commencer.',
+    subtitle: 'Sélectionnez un élément dans la barre latérale ou créez-en un nouveau pour commencer.',
     createPage: 'Créer une page',
     createTable: 'Créer une table',
   },
@@ -132,8 +131,7 @@ export const dict: Dictionary = {
     allowPublicAccess: "Autoriser l'accès public (Lecture seule)",
     allowedDomains: 'Domaines e-mail autorisés (séparés par des virgules)',
     allowedDomainsPlaceholder: 'exemple.com, entreprise.org',
-    allowedDomainsHint:
-      'Les utilisateurs avec ces domaines e-mail peuvent rejoindre automatiquement.',
+    allowedDomainsHint: 'Les utilisateurs avec ces domaines e-mail peuvent rejoindre automatiquement.',
     saveWorkspaceSettings: "Enregistrer les paramètres de l'espace",
     // Git sync tab
     gitSynchronization: 'Synchronisation Git',

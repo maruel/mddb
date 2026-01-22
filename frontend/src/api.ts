@@ -95,7 +95,7 @@ export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 export class APIError extends Error {
   constructor(
     public status: number,
-    public response: ErrorResponse,
+    public response: ErrorResponse
   ) {
     super(response.error.message);
     this.name = 'APIError';
@@ -574,7 +574,6 @@ export function createAPIClient(fetch: FetchFn) {
       });
       return parseResponse<UserResponse>(res);
     },
-
   };
 }
 

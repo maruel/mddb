@@ -46,7 +46,5 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
 export default function MarkdownPreview(props: MarkdownPreviewProps) {
   const html = () => md.render(props.content, { orgId: props.orgId });
 
-  return (
-    <div class={styles.preview} innerHTML={html()} role="region" aria-label="Markdown preview" />
-  );
+  return <div class={styles.preview} innerHTML={html()} role="region" aria-label="Markdown preview" />;
 }

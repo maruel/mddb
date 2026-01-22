@@ -520,7 +520,7 @@ func generateTypeScript(outPath string, endpoints []Endpoint) error {
 export class APIError extends Error {
   constructor(
     public status: number,
-    public response: ErrorResponse,
+    public response: ErrorResponse
   ) {
     super(response.error.message);
     this.name = 'APIError';
@@ -542,6 +542,9 @@ async function parseResponse<T>(res: Response): Promise<T> {
 	b.WriteString("  return {\n")
 
 	for i := range endpoints {
+		if i > 0 {
+			b.WriteString("\n")
+		}
 		writeEndpointMethod(&b, &endpoints[i])
 	}
 
@@ -562,7 +565,13 @@ func writeEndpointMethod(b *strings.Builder, ep *Endpoint) {
 		reqParam = "_req"
 	}
 
-	fmt.Fprintf(b, "    async %s(%s: %s): Promise<%s> {\n", ep.FuncName, reqParam, ep.RequestType, ep.ResponseType)
+	// Break long function signatures (printWidth)
+	sigLine := fmt.Sprintf("    async %s(%s: %s): Promise<%s> {", ep.FuncName, reqParam, ep.RequestType, ep.ResponseType)
+	if len(sigLine) <= 120 {
+		fmt.Fprintf(b, "%s\n", sigLine)
+	} else {
+		fmt.Fprintf(b, "    async %s(\n      %s: %s\n    ): Promise<%s> {\n", ep.FuncName, reqParam, ep.RequestType, ep.ResponseType)
+	}
 
 	urlTemplate := ep.Path
 	for _, pf := range ep.PathFields {
@@ -604,5 +613,5 @@ func writeEndpointMethod(b *strings.Builder, ep *Endpoint) {
 	}
 
 	fmt.Fprintf(b, "      return parseResponse<%s>(res);\n", ep.ResponseType)
-	b.WriteString("    },\n\n")
+	b.WriteString("    },\n")
 }

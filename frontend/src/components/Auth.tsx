@@ -1,12 +1,6 @@
 import { createSignal, Show } from 'solid-js';
 import styles from './Auth.module.css';
-import type {
-  UserResponse,
-  LoginResponse,
-  LoginRequest,
-  RegisterRequest,
-  ErrorResponse,
-} from '../types';
+import type { UserResponse, LoginResponse, LoginRequest, RegisterRequest, ErrorResponse } from '../types';
 import { useI18n } from '../i18n';
 
 interface AuthProps {

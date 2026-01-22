@@ -118,15 +118,11 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
       if (activeTab() === 'sync' && props.user.role === 'admin' && lastResult) {
         const remoteData = (await lastResult.json()) as { remotes?: GitRemoteResponse[] };
-        setRemotes(
-          remoteData.remotes?.filter((r: GitRemoteResponse): r is GitRemoteResponse => !!r) || []
-        );
+        setRemotes(remoteData.remotes?.filter((r: GitRemoteResponse): r is GitRemoteResponse => !!r) || []);
       }
 
       // Load membership settings (notifications)
-      const currentMembership = props.user.memberships?.find(
-        (m) => m.organization_id === props.user.organization_id
-      );
+      const currentMembership = props.user.memberships?.find((m) => m.organization_id === props.user.organization_id);
       if (currentMembership) {
         setNotifications(currentMembership.settings?.notifications ?? true);
       }
@@ -291,10 +287,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   };
 
   const handleDeleteRemote = async (remoteId: string) => {
-    if (
-      !confirm(t('settings.confirmRemoveRemote') || 'Are you sure you want to remove this remote?')
-    )
-      return;
+    if (!confirm(t('settings.confirmRemoveRemote') || 'Are you sure you want to remove this remote?')) return;
     try {
       setLoading(true);
       setError(null);
@@ -320,29 +313,17 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       </header>
 
       <div class={styles.tabs}>
-        <button
-          class={activeTab() === 'members' ? styles.activeTab : ''}
-          onClick={() => setActiveTab('members')}
-        >
+        <button class={activeTab() === 'members' ? styles.activeTab : ''} onClick={() => setActiveTab('members')}>
           {t('settings.members')}
         </button>
-        <button
-          class={activeTab() === 'personal' ? styles.activeTab : ''}
-          onClick={() => setActiveTab('personal')}
-        >
+        <button class={activeTab() === 'personal' ? styles.activeTab : ''} onClick={() => setActiveTab('personal')}>
           {t('settings.personal')}
         </button>
-        <button
-          class={activeTab() === 'workspace' ? styles.activeTab : ''}
-          onClick={() => setActiveTab('workspace')}
-        >
+        <button class={activeTab() === 'workspace' ? styles.activeTab : ''} onClick={() => setActiveTab('workspace')}>
           {t('settings.workspace')}
         </button>
         <Show when={props.user.role === 'admin'}>
-          <button
-            class={activeTab() === 'sync' ? styles.activeTab : ''}
-            onClick={() => setActiveTab('sync')}
-          >
+          <button class={activeTab() === 'sync' ? styles.activeTab : ''} onClick={() => setActiveTab('sync')}>
             {t('settings.gitSync')}
           </button>
         </Show>
@@ -358,10 +339,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'members'}>
         <section class={styles.section}>
           <h3>{t('settings.members')}</h3>
-          <Show
-            when={props.user.role === 'admin'}
-            fallback={<p>{t('settings.adminOnlyMembers')}</p>}
-          >
+          <Show when={props.user.role === 'admin'} fallback={<p>{t('settings.adminOnlyMembers')}</p>}>
             <table class={styles.table}>
               <thead>
                 <tr>
@@ -406,10 +384,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                     onInput={(e) => setInviteEmail(e.target.value)}
                     required
                   />
-                  <select
-                    value={inviteRole()}
-                    onChange={(e) => setInviteRole(e.target.value as UserRole)}
-                  >
+                  <select value={inviteRole()} onChange={(e) => setInviteRole(e.target.value as UserRole)}>
                     <option value="admin">{t('settings.roleAdmin')}</option>
                     <option value="editor">{t('settings.roleEditor')}</option>
                     <option value="viewer">{t('settings.roleViewer')}</option>
@@ -489,10 +464,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'workspace'}>
         <section class={styles.section}>
           <h3>{t('settings.workspaceSettings')}</h3>
-          <Show
-            when={props.user.role === 'admin'}
-            fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}
-          >
+          <Show when={props.user.role === 'admin'} fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}>
             <form onSubmit={saveWorkspaceSettings} class={styles.settingsForm}>
               <div class={styles.formItem}>
                 <label>{t('settings.organizationName')}</label>
@@ -518,9 +490,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                 <label>{t('settings.allowedDomains')}</label>
                 <input
                   type="text"
-                  placeholder={
-                    t('settings.allowedDomainsPlaceholder') || 'example.com, company.org'
-                  }
+                  placeholder={t('settings.allowedDomainsPlaceholder') || 'example.com, company.org'}
                   value={allowedDomains()}
                   onInput={(e) => setAllowedDomains(e.target.value)}
                 />
@@ -555,11 +525,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                     <tr>
                       <td>{remote.type || t('settings.defaultRemote') || 'Default'}</td>
                       <td>{remote.url}</td>
-                      <td>
-                        {remote.last_sync
-                          ? new Date(remote.last_sync).toLocaleString()
-                          : t('settings.never')}
-                      </td>
+                      <td>{remote.last_sync ? new Date(remote.last_sync).toLocaleString() : t('settings.never')}</td>
                       <td class={styles.actions}>
                         <button
                           onClick={() => handlePush(remote.organization_id)}
@@ -602,9 +568,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                   type="url"
                   value={newRemoteURL()}
                   onInput={(e) => setNewRemoteURL(e.target.value)}
-                  placeholder={
-                    t('settings.repositoryUrlPlaceholder') || 'https://github.com/user/repo.git'
-                  }
+                  placeholder={t('settings.repositoryUrlPlaceholder') || 'https://github.com/user/repo.git'}
                   required
                 />
               </div>
