@@ -174,7 +174,7 @@ export default function App() {
       const orgId = user()?.organization_id;
       if (orgId) {
         const currentPath = window.location.pathname;
-        const newPath = `/${orgId}/${nodeId}${slug ? '-' + slug : ''}`;
+        const newPath = `/${orgId}/${nodeId}${slug ? '+' + slug : ''}`;
         if (currentPath !== newPath) {
           window.history.replaceState(null, '', newPath);
         }
@@ -331,7 +331,7 @@ export default function App() {
       const slug = slugify(nodeData.title);
       const orgId = user()?.organization_id;
       if (orgId) {
-        const url = `/${orgId}/${nodeData.id}${slug ? '-' + slug : ''}`;
+        const url = `/${orgId}/${nodeData.id}${slug ? '+' + slug : ''}`;
         if (pushState) {
           if (window.location.pathname !== url) {
             window.history.pushState(null, '', url);
@@ -450,7 +450,7 @@ export default function App() {
       const currentPath = window.location.pathname;
       const orgId = user()?.organization_id;
       if (orgId) {
-        const newPath = `/${orgId}/${nodeId}${slug ? '-' + slug : ''}`;
+        const newPath = `/${orgId}/${nodeId}${slug ? '+' + slug : ''}`;
         if (currentPath !== newPath) {
           window.history.replaceState(null, '', newPath);
         }
