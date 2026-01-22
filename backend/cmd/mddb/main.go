@@ -36,10 +36,6 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
-var (
-	errNoEnvFile   = errors.New(".env file not found and stdin is not a TTY; cannot run onboarding")
-	errNoJWTSecret = errors.New("JWT_SECRET is required in .env file; run onboarding or create it manually")
-)
 
 func main() {
 	if err := mainImpl(); err != nil && !errors.Is(err, context.Canceled) {
@@ -105,16 +101,13 @@ func mainImpl() error {
 	}))
 	slog.SetDefault(logger)
 
-	// Check if onboarding is needed (no .env file)
+	// Run onboarding if no .env file exists and stdin is a TTY
 	envPath := filepath.Join(*dataDir, ".env")
 	if _, err := os.Stat(envPath); os.IsNotExist(err) {
-		// Only run onboarding if stdin is a TTY
 		if info, err := os.Stdin.Stat(); err == nil && (info.Mode()&os.ModeCharDevice) != 0 {
 			if err := runOnboarding(*dataDir); err != nil {
 				return fmt.Errorf("onboarding failed: %w", err)
 			}
-		} else {
-			return errNoEnvFile
 		}
 	}
 
@@ -125,7 +118,16 @@ func mainImpl() error {
 
 	jwtSecret := env["JWT_SECRET"]
 	if jwtSecret == "" {
-		return errNoJWTSecret
+		var err error
+		jwtSecret, err = utils.GenerateToken(32)
+		if err != nil {
+			return fmt.Errorf("failed to generate JWT secret: %w", err)
+		}
+		env["JWT_SECRET"] = jwtSecret
+		if err := saveDotEnv(*dataDir, env); err != nil {
+			return fmt.Errorf("failed to save .env file: %w", err)
+		}
+		slog.Info("Generated JWT_SECRET and saved to .env")
 	}
 
 	// Override with .env file values if not explicitly set via flags
