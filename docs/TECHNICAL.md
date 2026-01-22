@@ -68,46 +68,139 @@ The following tables are managed in `data/db/` (eventually SQLite).
 | `memberships`  | `Membership`                | User-Org relationship, roles, and status       |
 | `sessions`     | `Session`                   | Active user sessions and revocation             |
 
-## Unified Node Architecture (Planned)
+## Data Model
 
-To achieve a Notion-like experience, mddb is moving towards a unified "Node" concept.
+mddb uses a unified Node-based data model inspired by Notion. All content entities share a common abstraction while supporting different content types.
 
-### Data Model Unification
-A Node is a directory that can contain:
-- `index.md`: Descriptive content (Page).
-- `metadata.json`: Structured schema (Table).
-- `data.jsonl`: Table records.
-- Assets and sub-directories (Sub-pages).
+### Core Entities
 
-### Hierarchical Tree
-The API will provide a tree structure of all nodes, allowing the frontend to render a single, unified sidebar. This replaces the distinct "Pages" and "Tables" silos.
+| Entity | Description | Storage |
+|--------|-------------|---------|
+| **Node** | Unified container; can be document, table, or hybrid | Directory at `data/{orgID}/pages/{nodeID}/` |
+| **Page** | Node with markdown content | `index.md` with YAML front matter |
+| **Table** | Node with schema (Properties) | `metadata.json` for schema |
+| **Record** | Row in a Table | Line in `data.jsonl` |
+| **Asset** | Binary file attached to a Node | File in node directory |
 
-### Component-based Views
-The UI will be refactored into modular "Views". A single Page can display its markdown content followed by one or more views (Table, etc.) of its own table records or even linked records from other nodes.
+### Node Types
 
-## Multi-user Architecture (Planned)
+Defined in `backend/internal/storage/content/types.go`:
+
+- **`document`**: Markdown content only (`Content` field populated)
+- **`table`**: Structured data only (`Properties` schema + `DataRecords`)
+- **`hybrid`**: Both markdown content and structured data
+
+### Storage Layout
+
+```
+data/{orgID}/pages/{nodeID}/
+├── index.md          # Markdown content (document/hybrid)
+├── metadata.json     # Table schema (table/hybrid)
+├── data.jsonl        # Records, one JSON per line (table/hybrid)
+├── image.png         # Asset
+└── document.pdf      # Asset
+```
+
+### Property Types
+
+Table columns support these types:
+
+| Type | Description |
+|------|-------------|
+| `text` | Plain text |
+| `number` | Integer or float |
+| `checkbox` | Boolean |
+| `date` | ISO8601 date string |
+| `select` | Single selection from options |
+| `multi_select` | Multiple selections from options |
+| `url` | Validated URL |
+| `email` | Validated email address |
+| `phone` | Phone number |
+
+### Entity Relationships
+
+```
+Organization
+└── Node (document | table | hybrid)
+    ├── Content (markdown, if document/hybrid)
+    ├── Properties[] (schema, if table/hybrid)
+    ├── Children[] (nested Nodes)
+    └── Assets[] (attached files)
+
+Table Node
+└── DataRecords[] (stored separately in data.jsonl)
+    └── Data: map[string]any (field values keyed by property name)
+```
+
+### Key Design Decisions
+
+1. **Polymorphic Nodes**: Pages and Tables share the same API; `Type` field discriminates behavior
+2. **Separate Record Storage**: Records stored in JSONL for streaming reads, not embedded in Node
+3. **Filename-based Asset IDs**: Assets use original filename as ID (not generated)
+4. **Hierarchical Structure**: Nodes support parent-child relationships via `ParentID`
+
+## Multi-user Architecture
 
 ### Identity & Authentication
-Authentication is handled via JWT. User credentials, profile information, and organization memberships are stored in the `data/db/` directory as JSON files.
 
-**Future Note**: There is a planned migration of the `data/db/` contents to **SQLite** to improve query performance and relational integrity.
+JWT-based authentication with 24-hour token expiry using HS256 signing.
+
+- **Token flow**: Login/register → JWT issued → Bearer token in `Authorization` header
+- **Storage**: User credentials and organization memberships in `data/db/` as JSON files
+- **Implementation**: `backend/internal/server/handlers/auth.go`
+
+**Future**: Migration of `data/db/` to SQLite for query performance.
 
 ### OAuth2 Integration
-mddb will support OpenID Connect (OIDC) flows for Google and Microsoft.
-- **Callback Handling**: Dedicated `/api/auth/oauth/{provider}/callback` endpoints.
-- **Account Linking**: Ability to link local accounts with OAuth identities.
-- **State Management**: CSRF protection using signed `state` parameters.
+
+Supports Google and Microsoft OIDC flows.
+
+| Provider | Endpoint | Scopes |
+|----------|----------|--------|
+| Google | `/api/auth/oauth/google` | profile, email |
+| Microsoft | `/api/auth/oauth/microsoft` | Azure AD common |
+
+- **Callback handling**: `/api/auth/oauth/{provider}/callback`
+- **Account linking**: Auto-links OAuth identity to existing user by email
+- **CSRF protection**: State token validation
+- **Implementation**: `backend/internal/server/handlers/oauth.go`
 
 ### Workspace Isolation
-The `data/pages/` directory will be partitioned or tagged with organization IDs to support multiple organizations within a single mddb instance.
+
+Each organization is a separate tenant with isolated data.
+
+- **Storage**: `data/{orgID}/pages/` per organization
+- **Git**: Independent Git repository per organization
+- **Validation**: All org-scoped endpoints validate membership before access
 
 ### RBAC Model
-Role-Based Access Control will define permissions at two levels:
-1. **Global/Organization**: Admin, Editor, Viewer roles.
-2. **Resource (Page/DB)**: Specific overrides for sensitive content.
+
+Role-based access control at organization level:
+
+| Role | Permissions |
+|------|-------------|
+| `viewer` | Read pages, tables, records, assets |
+| `editor` | Create/modify content, no user management |
+| `admin` | Full org access including user/settings management |
+| `globalAdmin` | Server-wide access (first user auto-assigned) |
+
+- **Implementation**: `backend/internal/server/handlers/middleware.go`, `handler_wrapper.go`
+- **Enforcement**: `WrapAuth()` middleware validates role before handler execution
 
 ### Quota Tracking
-Usage metrics (total bytes, page counts) will be cached in organization metadata. The `FileStore` will perform pre-write checks to ensure quotas are not exceeded.
+
+Enforced at write time via `FileStore` pre-checks.
+
+| Quota | Default | Scope |
+|-------|---------|-------|
+| `MaxPages` | 1000 | per org |
+| `MaxStorage` | 1 GiB | per org |
+| `MaxUsers` | 3 | per org |
+| `MaxRecordsPerTable` | 10,000 | per table |
+| `MaxAssetSize` | 50 MiB | per asset |
+| `MaxOrgs` | 3 | per user |
+
+- **Implementation**: `backend/internal/storage/content/filestore.go`
 
 ## High-Efficiency Caching (Planned)
 

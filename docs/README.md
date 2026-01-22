@@ -8,7 +8,8 @@
 - [AGENTS.md](../AGENTS.md) - Detailed development guidelines and code standards.
 
 ## Quick Reference
-- **Storage**: Numeric directories in `data/pages/`.
+- **Data Model**: Node (unified container) → Page (markdown) | Table (schema+records) | Hybrid (both). Assets attach to nodes.
+- **Storage**: Numeric directories in `data/{orgID}/pages/{nodeID}/`.
 - **Backend**: Go with `http.ServeMux`.
 - **Frontend**: SolidJS + TypeScript.
 - **Versioning**: Automatic Git commits in `data/`.
