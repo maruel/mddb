@@ -5,6 +5,7 @@ DATA_DIR=./data
 PORT?=8080
 LOG_LEVEL?=info
 FRONTEND_STAMP=frontend/node_modules/.stamp
+ENV_FILE=$(DATA_DIR)/.env
 
 help:
 	@echo "mddb - Markdown Document & Database System"
@@ -23,6 +24,8 @@ help:
 	@echo "Environment variables:"
 	@echo "  PORT=8080           - Server port (default: 8080)"
 	@echo "  LOG_LEVEL=info      - Log level (debug|info|warn|error)"
+	@echo ""
+	@echo "Note: 'make dev' auto-creates data/.env from .env.example if missing"
 
 # Install frontend dependencies (only when lockfile changes)
 $(FRONTEND_STAMP): frontend/pnpm-lock.yaml
@@ -38,7 +41,14 @@ types: $(FRONTEND_STAMP)
 	@cd ./backend && go tool tygo generate
 	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --log-level silent --write src/types.gen.ts
 
-dev: build
+# Create data/.env from example if missing (skips interactive onboarding)
+# Order-only prerequisite (|) ensures we don't overwrite existing .env
+$(ENV_FILE): | .env.example
+	@mkdir -p $(DATA_DIR)
+	@cp .env.example $@
+	@echo "Created $@ from .env.example"
+
+dev: build $(ENV_FILE)
 	@mddb -port $(PORT) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
 
 test: $(FRONTEND_STAMP)
