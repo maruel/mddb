@@ -47,6 +47,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
   // Workspace Settings states
   const [orgName, setOrgName] = createSignal('');
+  const [originalOrgName, setOriginalOrgName] = createSignal('');
   const [publicAccess, setPublicAccess] = createSignal(false);
   const [allowedDomains, setAllowedDomains] = createSignal('');
 
@@ -78,6 +79,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       if (activeTab() === 'workspace') {
         const orgData = await org.settings.organization.get();
         setOrgName(orgData.name);
+        setOriginalOrgName(orgData.name);
         setPublicAccess(orgData.settings?.public_access || false);
         setAllowedDomains(orgData.settings?.allowed_domains?.join(', ') || '');
       }
@@ -194,7 +196,15 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         git_auto_push: false, // Preserve default
       };
 
-      await org.settings.preferences.update({ settings: orgSettings });
+      const promises: Promise<unknown>[] = [org.settings.preferences.update({ settings: orgSettings })];
+
+      // Rename org if name changed
+      if (orgName() !== originalOrgName() && orgName().trim()) {
+        promises.push(org.settings.organization.update({ name: orgName().trim() }));
+      }
+
+      await Promise.all(promises);
+      setOriginalOrgName(orgName().trim());
       setSuccess(t('success.workspaceSettingsSaved') || 'Workspace settings saved successfully');
     } catch (err) {
       setError(`${t('errors.failedToSave')}: ${err}`);
@@ -434,8 +444,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                   type="text"
                   value={orgName()}
                   onInput={(e) => setOrgName(e.target.value)}
-                  disabled
-                  title={t('settings.renameNotSupported') || 'Rename is not supported yet'}
+                  required
                 />
               </div>
               <div class={styles.formItem}>
