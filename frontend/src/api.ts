@@ -2,7 +2,6 @@
 
 import type {
   AcceptInvitationRequest,
-  AcceptInvitationResponse,
   AdminOrgsRequest,
   AdminOrgsResponse,
   AdminStatsRequest,
@@ -10,11 +9,8 @@ import type {
   AdminUsersRequest,
   AdminUsersResponse,
   CreateInvitationRequest,
-  CreateInvitationResponse,
   CreateNodeRequest,
-  CreateNodeResponse,
   CreateOrganizationRequest,
-  CreateOrganizationResponse,
   CreatePageRequest,
   CreatePageResponse,
   CreateRecordRequest,
@@ -33,9 +29,7 @@ import type {
   ErrorResponse,
   GetGitRemoteRequest,
   GetNodeRequest,
-  GetNodeResponse,
   GetOnboardingRequest,
-  GetOnboardingResponse,
   GetPageHistoryRequest,
   GetPageHistoryResponse,
   GetPageRequest,
@@ -49,6 +43,7 @@ import type {
   GitRemoteResponse,
   HealthRequest,
   HealthResponse,
+  InvitationResponse,
   ListInvitationsRequest,
   ListInvitationsResponse,
   ListNodesRequest,
@@ -66,23 +61,22 @@ import type {
   LoginRequest,
   LoginResponse,
   MeRequest,
+  MembershipResponse,
+  NodeResponse,
   OkResponse,
+  OnboardingState,
   OrganizationResponse,
   PushGitRemoteRequest,
   RegisterRequest,
-  RegisterResponse,
   SearchRequest,
   SearchResponse,
   SetGitRemoteRequest,
   SwitchOrgRequest,
   SwitchOrgResponse,
   UpdateMembershipSettingsRequest,
-  UpdateMembershipSettingsResponse,
   UpdateOnboardingRequest,
-  UpdateOnboardingResponse,
   UpdateOrgSettingsRequest,
   UpdateOrganizationRequest,
-  UpdateOrganizationResponse,
   UpdatePageRequest,
   UpdatePageResponse,
   UpdateRecordRequest,
@@ -91,7 +85,6 @@ import type {
   UpdateTableRequest,
   UpdateTableResponse,
   UpdateUserSettingsRequest,
-  UpdateUserSettingsResponse,
   UserResponse,
 } from './types';
 
@@ -102,7 +95,7 @@ export type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 export class APIError extends Error {
   constructor(
     public status: number,
-    public response: ErrorResponse,
+    public response: ErrorResponse
   ) {
     super(response.error.message);
     this.name = 'APIError';
@@ -120,31 +113,31 @@ async function parseResponse<T>(res: Response): Promise<T> {
 /** Creates a typed API client */
 export function createAPIClient(fetch: FetchFn) {
   return {
-    async adminOrganizations(req: AdminOrgsRequest): Promise<AdminOrgsResponse> {
+    async adminOrganizations(_req: AdminOrgsRequest): Promise<AdminOrgsResponse> {
       const url = `/api/admin/organizations`;
       const res = await fetch(url);
       return parseResponse<AdminOrgsResponse>(res);
     },
 
-    async adminStats(req: AdminStatsRequest): Promise<AdminStatsResponse> {
+    async adminStats(_req: AdminStatsRequest): Promise<AdminStatsResponse> {
       const url = `/api/admin/stats`;
       const res = await fetch(url);
       return parseResponse<AdminStatsResponse>(res);
     },
 
-    async adminUsers(req: AdminUsersRequest): Promise<AdminUsersResponse> {
+    async adminUsers(_req: AdminUsersRequest): Promise<AdminUsersResponse> {
       const url = `/api/admin/users`;
       const res = await fetch(url);
       return parseResponse<AdminUsersResponse>(res);
     },
 
-    async authMe(req: MeRequest): Promise<UserResponse> {
+    async authMe(_req: MeRequest): Promise<UserResponse> {
       const url = `/api/auth/me`;
       const res = await fetch(url);
       return parseResponse<UserResponse>(res);
     },
 
-    async createAuthInvitationsAccept(req: AcceptInvitationRequest): Promise<AcceptInvitationResponse> {
+    async createAuthInvitationsAccept(req: AcceptInvitationRequest): Promise<LoginResponse> {
       const url = `/api/auth/invitations/accept`;
       const body = {
         token: req.token,
@@ -156,7 +149,7 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<AcceptInvitationResponse>(res);
+      return parseResponse<LoginResponse>(res);
     },
 
     async createAuthLogin(req: LoginRequest): Promise<LoginResponse> {
@@ -173,7 +166,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<LoginResponse>(res);
     },
 
-    async createAuthRegister(req: RegisterRequest): Promise<RegisterResponse> {
+    async createAuthRegister(req: RegisterRequest): Promise<LoginResponse> {
       const url = `/api/auth/register`;
       const body = {
         email: req.email,
@@ -185,7 +178,7 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<RegisterResponse>(res);
+      return parseResponse<LoginResponse>(res);
     },
 
     async createAuthSwitchOrg(req: SwitchOrgRequest): Promise<SwitchOrgResponse> {
@@ -201,7 +194,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<SwitchOrgResponse>(res);
     },
 
-    async createInvitations(req: CreateInvitationRequest): Promise<CreateInvitationResponse> {
+    async createInvitations(req: CreateInvitationRequest): Promise<InvitationResponse> {
       const url = `/api/${req.OrgID}/invitations`;
       const body = {
         email: req.email,
@@ -212,10 +205,10 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<CreateInvitationResponse>(res);
+      return parseResponse<InvitationResponse>(res);
     },
 
-    async createNodes(req: CreateNodeRequest): Promise<CreateNodeResponse> {
+    async createNodes(req: CreateNodeRequest): Promise<NodeResponse> {
       const url = `/api/${req.OrgID}/nodes`;
       const body = {
         parent_id: req.parent_id,
@@ -227,7 +220,7 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<CreateNodeResponse>(res);
+      return parseResponse<NodeResponse>(res);
     },
 
     async createPages(req: CreatePageRequest): Promise<CreatePageResponse> {
@@ -283,7 +276,9 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<DeletePageResponse>(res);
     },
 
-    async deletePagesByIdAssetsByName(req: DeletePageAssetRequest): Promise<DeletePageAssetResponse> {
+    async deletePagesByIdAssetsByName(
+      req: DeletePageAssetRequest
+    ): Promise<DeletePageAssetResponse> {
       const url = `/api/${req.OrgID}/pages/${req.PageID}/assets/${req.AssetName}`;
       const res = await fetch(url, { method: 'DELETE' });
       return parseResponse<DeletePageAssetResponse>(res);
@@ -307,7 +302,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<DeleteRecordResponse>(res);
     },
 
-    async health(req: HealthRequest): Promise<HealthResponse> {
+    async health(_req: HealthRequest): Promise<HealthResponse> {
       const url = `/api/health`;
       const res = await fetch(url);
       return parseResponse<HealthResponse>(res);
@@ -325,19 +320,19 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<ListNodesResponse>(res);
     },
 
-    async nodesById(req: GetNodeRequest): Promise<GetNodeResponse> {
+    async nodesById(req: GetNodeRequest): Promise<NodeResponse> {
       const url = `/api/${req.OrgID}/nodes/${req.ID}`;
       const res = await fetch(url);
-      return parseResponse<GetNodeResponse>(res);
+      return parseResponse<NodeResponse>(res);
     },
 
-    async onboarding(req: GetOnboardingRequest): Promise<GetOnboardingResponse> {
+    async onboarding(req: GetOnboardingRequest): Promise<OnboardingState> {
       const url = `/api/${req.OrgID}/onboarding`;
       const res = await fetch(url);
-      return parseResponse<GetOnboardingResponse>(res);
+      return parseResponse<OnboardingState>(res);
     },
 
-    async organizations(req: CreateOrganizationRequest): Promise<CreateOrganizationResponse> {
+    async organizations(req: CreateOrganizationRequest): Promise<OrganizationResponse> {
       const url = `/api/organizations`;
       const body = {
         name: req.name,
@@ -349,7 +344,7 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<CreateOrganizationResponse>(res);
+      return parseResponse<OrganizationResponse>(res);
     },
 
     async pages(req: ListPagesRequest): Promise<ListPagesResponse> {
@@ -373,7 +368,8 @@ export function createAPIClient(fetch: FetchFn) {
     async pagesByIdHistory(req: GetPageHistoryRequest): Promise<GetPageHistoryResponse> {
       const params = new URLSearchParams();
       if (req.Limit) params.set('limit', String(req.Limit));
-      const url = `/api/${req.OrgID}/pages/${req.ID}/history` + (params.toString() ? `?${params}` : '');
+      const url =
+        `/api/${req.OrgID}/pages/${req.ID}/history` + (params.toString() ? `?${params}` : '');
       const res = await fetch(url);
       return parseResponse<GetPageHistoryResponse>(res);
     },
@@ -384,7 +380,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<GetPageVersionResponse>(res);
     },
 
-    async patchSettingsOrganization(req: UpdateOrganizationRequest): Promise<UpdateOrganizationResponse> {
+    async patchSettingsOrganization(req: UpdateOrganizationRequest): Promise<OrganizationResponse> {
       const url = `/api/${req.OrgID}/settings/organization`;
       const body = {
         name: req.name,
@@ -394,7 +390,7 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<UpdateOrganizationResponse>(res);
+      return parseResponse<OrganizationResponse>(res);
     },
 
     async search(req: SearchRequest): Promise<SearchResponse> {
@@ -442,7 +438,8 @@ export function createAPIClient(fetch: FetchFn) {
       const params = new URLSearchParams();
       if (req.Offset) params.set('offset', String(req.Offset));
       if (req.Limit) params.set('limit', String(req.Limit));
-      const url = `/api/${req.OrgID}/tables/${req.ID}/records` + (params.toString() ? `?${params}` : '');
+      const url =
+        `/api/${req.OrgID}/tables/${req.ID}/records` + (params.toString() ? `?${params}` : '');
       const res = await fetch(url);
       return parseResponse<ListRecordsResponse>(res);
     },
@@ -453,7 +450,7 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<GetRecordResponse>(res);
     },
 
-    async updateAuthSettings(req: UpdateUserSettingsRequest): Promise<UpdateUserSettingsResponse> {
+    async updateAuthSettings(req: UpdateUserSettingsRequest): Promise<UserResponse> {
       const url = `/api/auth/settings`;
       const body = {
         settings: req.settings,
@@ -463,10 +460,10 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<UpdateUserSettingsResponse>(res);
+      return parseResponse<UserResponse>(res);
     },
 
-    async updateOnboarding(req: UpdateOnboardingRequest): Promise<UpdateOnboardingResponse> {
+    async updateOnboarding(req: UpdateOnboardingRequest): Promise<OnboardingState> {
       const url = `/api/${req.OrgID}/onboarding`;
       const body = {
         state: req.state,
@@ -476,7 +473,7 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<UpdateOnboardingResponse>(res);
+      return parseResponse<OnboardingState>(res);
     },
 
     async updatePagesById(req: UpdatePageRequest): Promise<UpdatePageResponse> {
@@ -509,7 +506,9 @@ export function createAPIClient(fetch: FetchFn) {
       return parseResponse<GitRemoteResponse>(res);
     },
 
-    async updateSettingsMembership(req: UpdateMembershipSettingsRequest): Promise<UpdateMembershipSettingsResponse> {
+    async updateSettingsMembership(
+      req: UpdateMembershipSettingsRequest
+    ): Promise<MembershipResponse> {
       const url = `/api/${req.OrgID}/settings/membership`;
       const body = {
         settings: req.settings,
@@ -519,7 +518,7 @@ export function createAPIClient(fetch: FetchFn) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      return parseResponse<UpdateMembershipSettingsResponse>(res);
+      return parseResponse<MembershipResponse>(res);
     },
 
     async updateSettingsOrganization(req: UpdateOrgSettingsRequest): Promise<OkResponse> {
@@ -581,7 +580,6 @@ export function createAPIClient(fetch: FetchFn) {
       const res = await fetch(url);
       return parseResponse<ListUsersResponse>(res);
     },
-
   };
 }
 

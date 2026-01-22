@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,9 +16,9 @@ import (
 
 func main() {
 	root := findRepoRoot()
-	routerPath := filepath.Join(root, "internal/server/router.go")
-	dtoPath := filepath.Join(root, "internal/server/dto/request.go")
-	outPath := filepath.Clean(filepath.Join(root, "../frontend/src/api.ts"))
+	routerPath := filepath.Join(root, "internal", "server", "router.go")
+	dtoPath := filepath.Join(root, "internal", "server", "dto", "request.go")
+	outPath := filepath.Clean(filepath.Join(root, "..", "frontend", "src", "api.ts"))
 
 	// Parse DTO request types
 	dtoTypes, err := parseDTOTypes(dtoPath)
@@ -63,7 +64,7 @@ func findRepoRoot() string {
 
 // DTOType represents a parsed request struct with its field tags.
 type DTOType struct {
-	Name       string
+	Name        string
 	PathFields  []FieldInfo // Fields with path:"xxx" tag
 	QueryFields []FieldInfo // Fields with query:"xxx" tag
 	JSONFields  []FieldInfo // Fields with json:"xxx" tag
@@ -135,7 +136,7 @@ func parseDTOTypes(path string) (map[string]*DTOType, error) {
 			tag := field.Tag.Value
 			tag = strings.Trim(tag, "`")
 
-				// Determine TSName: use json tag name if present, else Go field name
+			// Determine TSName: use json tag name if present, else Go field name
 			jsonTag := extractTag(tag, "json")
 			tsName := fieldName // Default to Go field name (what tygo uses when no json tag)
 			if jsonTag != "" {
@@ -364,6 +365,28 @@ func matchEndpoints(routes []Route, dtoTypes map[string]*DTOType) []Endpoint {
 		case "Me":
 			reqTypeName = "MeRequest"
 			respTypeName = "UserResponse"
+		case "Register":
+			respTypeName = "LoginResponse"
+		case "AcceptInvitation":
+			respTypeName = "LoginResponse"
+		case "CreateOrganization":
+			respTypeName = "OrganizationResponse"
+		case "UpdateUserSettings":
+			respTypeName = "UserResponse"
+		case "UpdateMembershipSettings":
+			respTypeName = "MembershipResponse"
+		case "UpdateOrganization":
+			respTypeName = "OrganizationResponse"
+		case "GetOnboarding":
+			respTypeName = "OnboardingState"
+		case "UpdateOnboarding":
+			respTypeName = "OnboardingState"
+		case "CreateInvitation":
+			respTypeName = "InvitationResponse"
+		case "GetNode":
+			respTypeName = "NodeResponse"
+		case "CreateNode":
+			respTypeName = "NodeResponse"
 		case "Stats":
 			reqTypeName = "AdminStatsRequest"
 			respTypeName = "AdminStatsResponse"
@@ -474,17 +497,18 @@ func generateFuncName(method, path string) string {
 
 	// Convert to camelCase
 	parts := strings.Split(path, "/")
-	var result string
-	for i, part := range parts {
+	var resultParts []string
+	for _, part := range parts {
 		if part == "" {
 			continue
 		}
-		if i == 0 {
-			result += strings.ToLower(part)
+		if len(resultParts) == 0 {
+			resultParts = append(resultParts, strings.ToLower(part))
 		} else {
-			result += title(part)
+			resultParts = append(resultParts, title(part))
 		}
 	}
+	result := strings.Join(resultParts, "")
 
 	// Add method prefix for non-GET
 	switch method {
@@ -524,13 +548,13 @@ func generateTypeScript(outPath string, endpoints []Endpoint) error {
 
 	// Collect all types needed for imports
 	typeSet := make(map[string]bool)
-	for _, ep := range endpoints {
-		typeSet[ep.RequestType] = true
-		typeSet[ep.ResponseType] = true
+	for i := range endpoints {
+		typeSet[endpoints[i].RequestType] = true
+		typeSet[endpoints[i].ResponseType] = true
 	}
 	typeSet["ErrorResponse"] = true
 
-	var types []string
+	types := make([]string, 0, len(typeSet))
 	for t := range typeSet {
 		types = append(types, t)
 	}
@@ -573,8 +597,8 @@ async function parseResponse<T>(res: Response): Promise<T> {
 	b.WriteString("export function createAPIClient(fetch: FetchFn) {\n")
 	b.WriteString("  return {\n")
 
-	for _, ep := range endpoints {
-		writeEndpointMethod(&b, ep)
+	for i := range endpoints {
+		writeEndpointMethod(&b, &endpoints[i])
 	}
 
 	b.WriteString("  };\n")
@@ -583,19 +607,27 @@ async function parseResponse<T>(res: Response): Promise<T> {
 	// Type export
 	b.WriteString("export type APIClient = ReturnType<typeof createAPIClient>;\n")
 
-	return os.WriteFile(outPath, []byte(b.String()), 0644)
+	return os.WriteFile(outPath, []byte(b.String()), 0o600)
 }
 
 // writeEndpointMethod writes a single endpoint method to the builder.
-func writeEndpointMethod(b *strings.Builder, ep Endpoint) {
+func writeEndpointMethod(b *strings.Builder, ep *Endpoint) {
 	// Skip raw endpoints (like file upload) - they need special handling
 	if ep.IsRaw {
 		fmt.Fprintf(b, "    // %s: raw endpoint, implement manually\n\n", ep.FuncName)
 		return
 	}
 
+	// Determine if req is used
+	hasBody := len(ep.JSONFields) > 0 && (ep.Method == http.MethodPost || ep.Method == http.MethodPut || ep.Method == http.MethodPatch)
+	reqUsed := len(ep.PathFields) > 0 || len(ep.QueryFields) > 0 || hasBody
+	reqParam := "req"
+	if !reqUsed {
+		reqParam = "_req"
+	}
+
 	// Build the function signature
-	fmt.Fprintf(b, "    async %s(req: %s): Promise<%s> {\n", ep.FuncName, ep.RequestType, ep.ResponseType)
+	fmt.Fprintf(b, "    async %s(%s: %s): Promise<%s> {\n", ep.FuncName, reqParam, ep.RequestType, ep.ResponseType)
 
 	// Build URL with path params (use TSName for TypeScript field access)
 	urlTemplate := ep.Path
@@ -621,9 +653,8 @@ func writeEndpointMethod(b *strings.Builder, ep Endpoint) {
 	}
 
 	// Build fetch options
-	hasBody := len(ep.JSONFields) > 0 && (ep.Method == "POST" || ep.Method == "PUT" || ep.Method == "PATCH")
-
-	if hasBody {
+	switch {
+	case hasBody:
 		// Extract only JSON fields for body (use TSName for access, TagName for JSON key)
 		b.WriteString("      const body = {\n")
 		for _, jf := range ep.JSONFields {
@@ -635,9 +666,9 @@ func writeEndpointMethod(b *strings.Builder, ep Endpoint) {
 		b.WriteString("        headers: { 'Content-Type': 'application/json' },\n")
 		b.WriteString("        body: JSON.stringify(body),\n")
 		b.WriteString("      });\n")
-	} else if ep.Method != "GET" {
+	case ep.Method != http.MethodGet:
 		fmt.Fprintf(b, "      const res = await fetch(url, { method: '%s' });\n", ep.Method)
-	} else {
+	default:
 		b.WriteString("      const res = await fetch(url);\n")
 	}
 
