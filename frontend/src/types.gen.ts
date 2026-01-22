@@ -30,84 +30,68 @@ Error handling follows a structured pattern:
 /**
  * ErrorCodeValidationFailed is returned when input data fails validation.
  */
-export const ErrorCodeValidationFailed = 'VALIDATION_FAILED';
+export const ErrorCodeValidationFailed = "VALIDATION_FAILED";
 /**
  * ErrorCodeMissingField is returned when a required field is missing.
  */
-export const ErrorCodeMissingField = 'MISSING_FIELD';
+export const ErrorCodeMissingField = "MISSING_FIELD";
 /**
  * ErrorCodeInvalidFormat is returned when a field has an invalid format.
  */
-export const ErrorCodeInvalidFormat = 'INVALID_FORMAT';
+export const ErrorCodeInvalidFormat = "INVALID_FORMAT";
 /**
  * ErrorCodeNotFound is returned when a resource is not found.
  */
-export const ErrorCodeNotFound = 'NOT_FOUND';
+export const ErrorCodeNotFound = "NOT_FOUND";
 /**
  * ErrorCodePageNotFound is returned when a page is not found.
  */
-export const ErrorCodePageNotFound = 'PAGE_NOT_FOUND';
+export const ErrorCodePageNotFound = "PAGE_NOT_FOUND";
 /**
  * ErrorCodeTableNotFound is returned when a table is not found.
  */
-export const ErrorCodeTableNotFound = 'TABLE_NOT_FOUND';
+export const ErrorCodeTableNotFound = "TABLE_NOT_FOUND";
 /**
  * ErrorCodeFileNotFound is returned when a file is not found.
  */
-export const ErrorCodeFileNotFound = 'FILE_NOT_FOUND';
+export const ErrorCodeFileNotFound = "FILE_NOT_FOUND";
 /**
  * ErrorCodeStorageError is returned when a storage operation fails.
  */
-export const ErrorCodeStorageError = 'STORAGE_ERROR';
+export const ErrorCodeStorageError = "STORAGE_ERROR";
 /**
  * ErrorCodeInternal is returned when an unexpected server error occurs.
  */
-export const ErrorCodeInternal = 'INTERNAL_ERROR';
+export const ErrorCodeInternal = "INTERNAL_ERROR";
 /**
  * ErrorCodeNotImplemented is returned when a feature is not implemented.
  */
-export const ErrorCodeNotImplemented = 'NOT_IMPLEMENTED';
+export const ErrorCodeNotImplemented = "NOT_IMPLEMENTED";
 /**
  * ErrorCodeConflict is returned when there is a resource conflict.
  */
-export const ErrorCodeConflict = 'CONFLICT';
+export const ErrorCodeConflict = "CONFLICT";
 /**
  * ErrorCodeUnauthorized is returned when authentication is missing or invalid.
  */
-export const ErrorCodeUnauthorized = 'UNAUTHORIZED';
+export const ErrorCodeUnauthorized = "UNAUTHORIZED";
 /**
  * ErrorCodeForbidden is returned when a user has insufficient permissions.
  */
-export const ErrorCodeForbidden = 'FORBIDDEN';
+export const ErrorCodeForbidden = "FORBIDDEN";
 /**
  * ErrorCodeInvalidProvider is returned when an OAuth provider is unknown.
  */
-export const ErrorCodeInvalidProvider = 'INVALID_PROVIDER';
+export const ErrorCodeInvalidProvider = "INVALID_PROVIDER";
 /**
  * ErrorCodeOAuthError is returned when an OAuth operation fails.
  */
-export const ErrorCodeOAuthError = 'OAUTH_ERROR';
+export const ErrorCodeOAuthError = "OAUTH_ERROR";
 /**
  * ErrorCodeExpired is returned when a resource has expired.
  */
-export const ErrorCodeExpired = 'EXPIRED';
-export type ErrorCode =
-  | typeof ErrorCodeValidationFailed
-  | typeof ErrorCodeMissingField
-  | typeof ErrorCodeInvalidFormat
-  | typeof ErrorCodeNotFound
-  | typeof ErrorCodePageNotFound
-  | typeof ErrorCodeTableNotFound
-  | typeof ErrorCodeFileNotFound
-  | typeof ErrorCodeStorageError
-  | typeof ErrorCodeInternal
-  | typeof ErrorCodeNotImplemented
-  | typeof ErrorCodeConflict
-  | typeof ErrorCodeUnauthorized
-  | typeof ErrorCodeForbidden
-  | typeof ErrorCodeInvalidProvider
-  | typeof ErrorCodeOAuthError
-  | typeof ErrorCodeExpired;
+export const ErrorCodeExpired = "EXPIRED";
+export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodePageNotFound | typeof ErrorCodeTableNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden | typeof ErrorCodeInvalidProvider | typeof ErrorCodeOAuthError | typeof ErrorCodeExpired;
 /**
  * ErrorDetails defines the structured error information in a response.
  */
@@ -120,7 +104,7 @@ export interface ErrorDetails {
  */
 export interface ErrorResponse {
   error: ErrorDetails;
-  details?: { [key: string]: any };
+  details?: { [key: string]: any};
 }
 /**
  * ErrorWithStatus is an error that includes an HTTP status code and error code.
@@ -129,7 +113,8 @@ export type ErrorWithStatus = any;
 /**
  * APIError is a concrete error type with status code and optional details.
  */
-export interface APIError {}
+export interface APIError {
+}
 
 //////////
 // source: request.go
@@ -152,15 +137,18 @@ export interface RegisterRequest {
 /**
  * GetMeRequest is a request to get current user info.
  */
-export interface GetMeRequest {}
+export interface GetMeRequest {
+}
 /**
  * ListPagesRequest is a request to list all pages.
  */
-export interface ListPagesRequest {}
+export interface ListPagesRequest {
+}
 /**
  * GetPageRequest is a request to get a page.
  */
-export interface GetPageRequest {}
+export interface GetPageRequest {
+}
 /**
  * CreatePageRequest is a request to create a page.
  */
@@ -178,7 +166,8 @@ export interface UpdatePageRequest {
 /**
  * DeletePageRequest is a request to delete a page.
  */
-export interface DeletePageRequest {}
+export interface DeletePageRequest {
+}
 /**
  * ListPageVersionsRequest is a request to list page version history.
  */
@@ -188,15 +177,18 @@ export interface ListPageVersionsRequest {
 /**
  * GetPageVersionRequest is a request to get a specific page version.
  */
-export interface GetPageVersionRequest {}
+export interface GetPageVersionRequest {
+}
 /**
  * ListTablesRequest is a request to list tables.
  */
-export interface ListTablesRequest {}
+export interface ListTablesRequest {
+}
 /**
  * GetTableRequest is a request to get a table.
  */
-export interface GetTableRequest {}
+export interface GetTableRequest {
+}
 /**
  * CreateTableRequest is a request to create a table.
  */
@@ -214,7 +206,8 @@ export interface UpdateTableRequest {
 /**
  * DeleteTableRequest is a request to delete a table.
  */
-export interface DeleteTableRequest {}
+export interface DeleteTableRequest {
+}
 /**
  * ListRecordsRequest is a request to list records in a table.
  */
@@ -226,30 +219,34 @@ export interface ListRecordsRequest {
  * CreateRecordRequest is a request to create a record.
  */
 export interface CreateRecordRequest {
-  data: { [key: string]: any };
+  data: { [key: string]: any};
 }
 /**
  * UpdateRecordRequest is a request to update a record.
  */
 export interface UpdateRecordRequest {
-  data: { [key: string]: any };
+  data: { [key: string]: any};
 }
 /**
  * GetRecordRequest is a request to get a record.
  */
-export interface GetRecordRequest {}
+export interface GetRecordRequest {
+}
 /**
  * DeleteRecordRequest is a request to delete a record.
  */
-export interface DeleteRecordRequest {}
+export interface DeleteRecordRequest {
+}
 /**
  * ListNodesRequest is a request to list nodes.
  */
-export interface ListNodesRequest {}
+export interface ListNodesRequest {
+}
 /**
  * GetNodeRequest is a request to get a node.
  */
-export interface GetNodeRequest {}
+export interface GetNodeRequest {
+}
 /**
  * CreateNodeRequest is a request to create a node.
  */
@@ -261,19 +258,23 @@ export interface CreateNodeRequest {
 /**
  * ListPageAssetsRequest is a request to list assets in a page.
  */
-export interface ListPageAssetsRequest {}
+export interface ListPageAssetsRequest {
+}
 /**
  * UploadPageAssetRequest is a request to upload an asset to a page.
  */
-export interface UploadPageAssetRequest {}
+export interface UploadPageAssetRequest {
+}
 /**
  * DeletePageAssetRequest is a request to delete an asset from a page.
  */
-export interface DeletePageAssetRequest {}
+export interface DeletePageAssetRequest {
+}
 /**
  * ServeAssetRequest is a request to serve an asset file directly.
  */
-export interface ServeAssetRequest {}
+export interface ServeAssetRequest {
+}
 /**
  * SearchRequest is a request to search pages and tables.
  */
@@ -294,7 +295,8 @@ export interface CreateInvitationRequest {
 /**
  * ListInvitationsRequest is a request to list invitations for an organization.
  */
-export interface ListInvitationsRequest {}
+export interface ListInvitationsRequest {
+}
 /**
  * AcceptInvitationRequest is a request to accept an invitation.
  */
@@ -324,7 +326,8 @@ export interface UpdateOrgPreferencesRequest {
 /**
  * GetOrganizationRequest is a request to get organization details.
  */
-export interface GetOrganizationRequest {}
+export interface GetOrganizationRequest {
+}
 /**
  * UpdateOrganizationRequest is a request to update organization details.
  */
@@ -342,7 +345,8 @@ export interface CreateOrganizationRequest {
 /**
  * GetOnboardingRequest is a request to get onboarding status.
  */
-export interface GetOnboardingRequest {}
+export interface GetOnboardingRequest {
+}
 /**
  * UpdateOnboardingRequest is a request to update onboarding status.
  */
@@ -352,7 +356,8 @@ export interface UpdateOnboardingRequest {
 /**
  * GetGitRemoteRequest is a request to get the git remote for an organization.
  */
-export interface GetGitRemoteRequest {}
+export interface GetGitRemoteRequest {
+}
 /**
  * UpdateGitRemoteRequest is a request to set (create or update) the git remote for an organization.
  */
@@ -365,19 +370,23 @@ export interface UpdateGitRemoteRequest {
 /**
  * DeleteGitRequest is a request to delete the git remote for an organization.
  */
-export interface DeleteGitRequest {}
+export interface DeleteGitRequest {
+}
 /**
  * PushGitRequest is a request to push to the git remote.
  */
-export interface PushGitRequest {}
+export interface PushGitRequest {
+}
 /**
  * HealthRequest is a request to check system health.
  */
-export interface HealthRequest {}
+export interface HealthRequest {
+}
 /**
  * ListUsersRequest is a request to list users.
  */
-export interface ListUsersRequest {}
+export interface ListUsersRequest {
+}
 /**
  * UpdateUserRoleRequest is a request to update a user's role.
  */
@@ -394,15 +403,18 @@ export interface UpdateUserSettingsRequest {
 /**
  * AdminStatsRequest is a request to get admin stats.
  */
-export interface AdminStatsRequest {}
+export interface AdminStatsRequest {
+}
 /**
  * AdminUsersRequest is a request to list all users (admin only).
  */
-export interface AdminUsersRequest {}
+export interface AdminUsersRequest {
+}
 /**
  * AdminOrgsRequest is a request to list all organizations (admin only).
  */
-export interface AdminOrgsRequest {}
+export interface AdminOrgsRequest {
+}
 
 //////////
 // source: response.go
@@ -535,7 +547,7 @@ export interface UpdateRecordResponse {
  */
 export interface GetRecordResponse {
   id: string;
-  data: { [key: string]: any };
+  data: { [key: string]: any};
   created: string;
   modified: string;
 }
@@ -702,7 +714,7 @@ export interface NodeResponse {
  */
 export interface DataRecordResponse {
   id: string;
-  data: { [key: string]: any };
+  data: { [key: string]: any};
   created: string;
   modified: string;
 }
@@ -735,49 +747,40 @@ export interface AdminOrgsResponse {
 /**
  * PropertyTypeText stores plain text values.
  */
-export const PropertyTypeText = 'text';
+export const PropertyTypeText = "text";
 /**
  * PropertyTypeNumber stores numeric values (integer or float).
  */
-export const PropertyTypeNumber = 'number';
+export const PropertyTypeNumber = "number";
 /**
  * PropertyTypeCheckbox stores boolean values.
  */
-export const PropertyTypeCheckbox = 'checkbox';
+export const PropertyTypeCheckbox = "checkbox";
 /**
  * PropertyTypeDate stores ISO8601 date strings.
  */
-export const PropertyTypeDate = 'date';
+export const PropertyTypeDate = "date";
 /**
  * PropertyTypeSelect stores a single selection from predefined options.
  */
-export const PropertyTypeSelect = 'select';
+export const PropertyTypeSelect = "select";
 /**
  * PropertyTypeMultiSelect stores multiple selections from predefined options.
  */
-export const PropertyTypeMultiSelect = 'multi_select';
+export const PropertyTypeMultiSelect = "multi_select";
 /**
  * PropertyTypeURL stores URLs with validation.
  */
-export const PropertyTypeURL = 'url';
+export const PropertyTypeURL = "url";
 /**
  * PropertyTypeEmail stores email addresses with validation.
  */
-export const PropertyTypeEmail = 'email';
+export const PropertyTypeEmail = "email";
 /**
  * PropertyTypePhone stores phone numbers with validation.
  */
-export const PropertyTypePhone = 'phone';
-export type PropertyType =
-  | typeof PropertyTypeText
-  | typeof PropertyTypeNumber
-  | typeof PropertyTypeCheckbox
-  | typeof PropertyTypeDate
-  | typeof PropertyTypeSelect
-  | typeof PropertyTypeMultiSelect
-  | typeof PropertyTypeURL
-  | typeof PropertyTypeEmail
-  | typeof PropertyTypePhone;
+export const PropertyTypePhone = "phone";
+export type PropertyType = typeof PropertyTypeText | typeof PropertyTypeNumber | typeof PropertyTypeCheckbox | typeof PropertyTypeDate | typeof PropertyTypeSelect | typeof PropertyTypeMultiSelect | typeof PropertyTypeURL | typeof PropertyTypeEmail | typeof PropertyTypePhone;
 /**
  * SelectOption represents an option for select/multi_select properties.
  */
@@ -805,15 +808,15 @@ export interface Property {
 /**
  * UserRoleAdmin has full access to all resources and settings within an organization.
  */
-export const UserRoleAdmin = 'admin';
+export const UserRoleAdmin = "admin";
 /**
  * UserRoleEditor can create and modify content but cannot manage users.
  */
-export const UserRoleEditor = 'editor';
+export const UserRoleEditor = "editor";
 /**
  * UserRoleViewer can only read content.
  */
-export const UserRoleViewer = 'viewer';
+export const UserRoleViewer = "viewer";
 export type UserRole = typeof UserRoleAdmin | typeof UserRoleEditor | typeof UserRoleViewer;
 /**
  * NodeType defines what features are enabled for a node.
@@ -821,15 +824,15 @@ export type UserRole = typeof UserRoleAdmin | typeof UserRoleEditor | typeof Use
 /**
  * NodeTypeDocument represents a markdown document.
  */
-export const NodeTypeDocument = 'document';
+export const NodeTypeDocument = "document";
 /**
  * NodeTypeTable represents a structured table.
  */
-export const NodeTypeTable = 'table';
+export const NodeTypeTable = "table";
 /**
  * NodeTypeHybrid represents an entity that is both a document and a table.
  */
-export const NodeTypeHybrid = 'hybrid';
+export const NodeTypeHybrid = "hybrid";
 export type NodeType = typeof NodeTypeDocument | typeof NodeTypeTable | typeof NodeTypeHybrid;
 /**
  * UserSettings represents global user preferences.
@@ -901,7 +904,7 @@ export interface SearchResult {
   title: string;
   snippet: string;
   score: number /* float64 */;
-  matches: { [key: string]: string };
+  matches: { [key: string]: string};
   modified: string;
 }
 
