@@ -34,8 +34,8 @@ $(FRONTEND_STAMP): frontend/pnpm-lock.yaml
 
 # Build frontend and Go server
 build: types
-	@cd ./backend && go generate ./...
-	@cd ./backend && go install ./cmd/...
+	@go generate ./...
+	@go install ./backend/cmd/...
 
 types: $(FRONTEND_STAMP)
 	@cd ./backend && go tool tygo generate
@@ -52,18 +52,18 @@ dev: build $(ENV_FILE)
 	@mddb -port $(PORT) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
 
 test: $(FRONTEND_STAMP)
-	@cd ./backend && go test -cover ./...
+	@go test -cover ./...
 	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test
 
 coverage: $(FRONTEND_STAMP)
-	@cd ./backend && go test -coverprofile=coverage.out ./...
+	@go test -coverprofile=coverage.out ./...
 	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm coverage
 
 lint: lint-go lint-frontend
 
 lint-go:
 	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
-	@cd ./backend && golangci-lint run ./...
+	@golangci-lint run ./...
 
 lint-frontend: $(FRONTEND_STAMP)
 	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint
@@ -84,5 +84,5 @@ frontend-dev: $(FRONTEND_STAMP)
 	@cd ./frontend && NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm dev
 
 upgrade:
-	@cd ./backend && go get -u ./... && go mod tidy
+	@go get -u ./... && go mod tidy
 	@cd ./frontend && pnpm update --latest

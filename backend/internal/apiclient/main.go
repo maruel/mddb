@@ -19,11 +19,11 @@ var quiet = flag.Bool("q", false, "quiet mode")
 
 func main() {
 	flag.Parse()
-	root := findRepoRoot()
-	routerPath := filepath.Join(root, "internal", "server", "router.go")
-	dtoPath := filepath.Join(root, "internal", "server", "dto", "request.go")
-	handlersDir := filepath.Join(root, "internal", "server", "handlers")
-	outPath := filepath.Clean(filepath.Join(root, "..", "frontend", "src", "api.gen.ts"))
+	// Paths relative to backend/internal/server/ where go:generate runs.
+	routerPath := "router.go"
+	dtoPath := "dto/request.go"
+	handlersDir := "handlers"
+	outPath := "../../../frontend/src/api.gen.ts"
 
 	dtoTypes, err := parseDTOTypes(dtoPath)
 	if err != nil {
@@ -59,20 +59,6 @@ func main() {
 	}
 }
 
-func findRepoRoot() string {
-	dir, _ := os.Getwd()
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			fmt.Fprintln(os.Stderr, "could not find go.mod")
-			os.Exit(1)
-		}
-		dir = parent
-	}
-}
 
 // HandlerSig represents a parsed handler function signature.
 type HandlerSig struct {

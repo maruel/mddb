@@ -8,28 +8,12 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
 
 var quiet = flag.Bool("q", false, "quiet mode")
 
-// findRepoRoot finds the backend directory by looking for go.mod.
-func findRepoRoot() string {
-	dir, _ := os.Getwd()
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			fmt.Fprintln(os.Stderr, "could not find go.mod")
-			os.Exit(1)
-		}
-		dir = parent
-	}
-}
 
 type route struct {
 	Method  string
@@ -40,9 +24,8 @@ type route struct {
 
 func main() {
 	flag.Parse()
-	// Find repo root by looking for go.mod
-	root := findRepoRoot()
-	routerPath := root + "/internal/server/router.go"
+	// Paths relative to backend/internal/server/ where go:generate runs.
+	routerPath := "router.go"
 
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, routerPath, nil, parser.ParseComments)
@@ -96,8 +79,7 @@ func main() {
 	// Group routes by prefix
 	groups := groupRoutes(routes)
 
-	// Write to file (repo root is backend/, docs is at ../docs/)
-	outPath := filepath.Clean(root + "/../docs/API.md")
+	outPath := "../../../docs/API.md"
 	out, err := os.Create(outPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "create file: %v\n", err)
