@@ -14,7 +14,6 @@ import (
 
 var quiet = flag.Bool("q", false, "quiet mode")
 
-
 type route struct {
 	Method  string
 	Path    string

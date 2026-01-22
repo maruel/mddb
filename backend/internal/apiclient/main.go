@@ -59,7 +59,6 @@ func main() {
 	}
 }
 
-
 // HandlerSig represents a parsed handler function signature.
 type HandlerSig struct {
 	MethodName   string
