@@ -1,6 +1,6 @@
 .settings {
-  padding: var(--spacing-xl);
-  max-width: var(--max-width-settings);
+  padding: var(--s-5);
+  max-width: 800px;
   margin: 0 auto;
 }
 
@@ -8,31 +8,30 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-xl);
-  border-bottom: 2px solid var(--color-bg-hover);
-  padding-bottom: var(--spacing-md);
+  margin-bottom: var(--s-5);
+  border-bottom: 1px solid var(--c-border);
+  padding-bottom: var(--s-3);
 }
 
 .closeButton {
   background: none;
   border: none;
-  font-size: var(--font-size-4xl);
+  font-size: 1.5rem;
   cursor: pointer;
-  color: var(--color-text-tertiary);
+  color: var(--c-text-light);
 }
 
 .closeButton:hover {
-  color: var(--color-text-primary);
+  color: var(--c-text);
 }
 
 .section {
-  margin-bottom: var(--spacing-3xl);
+  margin-bottom: var(--s-5);
 }
 
 .section h3 {
-  font-size: var(--font-size-xl);
-  margin-bottom: var(--spacing-md);
-  color: var(--color-text-primary);
+  font-size: 1.1rem;
+  margin-bottom: var(--s-3);
 }
 
 .table {
@@ -42,229 +41,217 @@
 
 .table th,
 .table td {
-  padding: var(--spacing-md);
+  padding: var(--s-3);
   text-align: left;
-  border-bottom: 1px solid var(--color-bg-hover);
+  border-bottom: 1px solid var(--c-border);
 }
 
 .table th {
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
-  background: var(--color-bg-page);
+  font-weight: 600;
+  color: var(--c-text-light);
+  background: var(--c-bg-alt);
 }
 
 .roleSelect {
-  padding: 0.4rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding: var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
 }
 
 .error {
-  padding: var(--spacing-md);
-  background: var(--color-danger-bg);
-  color: var(--color-danger-text);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-lg);
+  padding: var(--s-3);
+  background: #fef2f2;
+  color: var(--c-danger);
+  border-radius: var(--radius);
+  margin-bottom: var(--s-4);
 }
 
 .success {
-  padding: var(--spacing-md);
-  background: var(--color-success-bg);
-  color: var(--color-success-text);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-lg);
-  border: 1px solid var(--color-success-border);
+  padding: var(--s-3);
+  background: #f0fdf4;
+  color: var(--c-success);
+  border-radius: var(--radius);
+  margin-bottom: var(--s-4);
 }
 
 .tabs {
   display: flex;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-xl);
-  border-bottom: 1px solid var(--color-border);
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+  border-bottom: 1px solid var(--c-border);
 }
 
 .tabs button {
   background: none;
   border: none;
-  padding: 0.75rem var(--spacing-lg);
+  padding: var(--s-3) var(--s-4);
   cursor: pointer;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
+  font-weight: 500;
+  color: var(--c-text-light);
   border-bottom: 2px solid transparent;
-  transition: all var(--transition-base);
+  transition: all var(--transition);
 }
 
 .tabs button:hover {
-  color: var(--color-text-primary);
+  color: var(--c-text);
 }
 
 .tabs button.activeTab {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: var(--c-primary);
+  border-bottom-color: var(--c-primary);
 }
 
 .settingsForm {
-  background: var(--color-bg-primary);
-  padding: var(--spacing-lg);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-xl);
+  background: var(--c-bg);
+  padding: var(--s-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
 }
 
 .formItem {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--s-4);
 }
 
 .formItem label {
   display: block;
-  margin-bottom: var(--spacing-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-heading);
+  margin-bottom: var(--s-2);
+  font-weight: 500;
 }
 
 .formItem input[type='text'],
+.formItem input[type='password'],
 .formItem select {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-sizing: border-box;
+  padding: var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
 }
 
 .checkboxLabel {
   display: flex !important;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--s-3);
   cursor: pointer;
   font-weight: normal !important;
 }
 
 .checkboxLabel input {
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .saveButton {
-  padding: 0.75rem var(--spacing-xl);
-  background: var(--color-primary);
+  padding: var(--s-3) var(--s-5);
+  background: var(--c-primary);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   cursor: pointer;
-  font-weight: var(--font-weight-semibold);
+  font-weight: 500;
 }
 
 .saveButton:hover {
-  background: var(--color-primary-hover);
+  background: var(--c-primary-hover);
 }
 
 .saveButton:disabled {
-  background: var(--color-border-input);
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .hint {
-  font-size: 0.85rem;
-  color: var(--color-text-muted);
-  margin-top: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--c-text-light);
+  margin-top: var(--s-1);
 }
 
 .inviteSection {
-  margin-top: var(--spacing-xl);
+  margin-top: var(--s-5);
 }
 
 .inviteForm {
-  margin-top: var(--spacing-xl);
-  padding: var(--spacing-lg);
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-xl);
+  margin-top: var(--s-5);
+  padding: var(--s-4);
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
 }
 
 .inviteForm h4 {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--s-3);
 }
 
 .formGroup {
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--s-3);
+}
+
+.formGroup input,
+.formGroup select {
+  padding: var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
 }
 
 .formGroup input {
   flex: 1;
-  padding: 0.6rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-
-.formGroup select {
-  padding: 0.6rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
 }
 
 .formGroup button {
-  padding: 0.6rem var(--spacing-lg);
-  background: var(--color-primary);
+  padding: var(--s-2) var(--s-4);
+  background: var(--c-primary);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
 .formGroup button:hover {
-  background: var(--color-primary-hover);
+  background: var(--c-primary-hover);
 }
 
 .addRemoteSection {
-  margin-top: var(--spacing-3xl);
-  padding: var(--spacing-lg);
-  background: #fcfcfc;
-  border-radius: var(--radius-xl);
-  border: 1px dashed var(--color-border-input);
+  margin-top: var(--s-5);
+  padding: var(--s-4);
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
+  border: 1px dashed var(--c-border);
 }
 
 .addRemoteSection h4 {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--s-3);
 }
 
 .actions {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: var(--s-2);
 }
 
 .smallButton {
-  padding: 0.4rem 0.8rem;
+  padding: var(--s-2) var(--s-3);
   font-size: 0.85rem;
-  background: var(--color-primary);
+  background: var(--c-primary);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
 .smallButton:hover {
-  background: var(--color-primary-hover);
+  background: var(--c-primary-hover);
 }
 
 .deleteButtonSmall {
-  padding: 0.4rem 0.8rem;
+  padding: var(--s-2) var(--s-3);
   font-size: 0.85rem;
-  background: var(--color-danger-bg);
-  color: var(--color-danger-text);
-  border: 1px solid var(--color-danger-border);
-  border-radius: var(--radius-md);
+  background: #fef2f2;
+  color: var(--c-danger);
+  border: 1px solid #fecaca;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
 .deleteButtonSmall:hover {
-  background: #fdd;
-}
-
-.formItem input[type='password'] {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-sizing: border-box;
+  background: #fee2e2;
 }
 
 .sr-only {

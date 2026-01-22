@@ -3,24 +3,20 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--color-primary-gradient);
+  background: var(--c-primary);
   color: white;
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--s-3) var(--s-4);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-md);
-  box-shadow: var(--shadow-up);
-  z-index: var(--z-banner);
-  animation: slideUp var(--transition-slow);
+  gap: var(--s-3);
+  z-index: 1000;
+  animation: slideUp 0.2s ease-out;
 }
 
 @keyframes slideUp {
   from {
     transform: translateY(100%);
-  }
-  to {
-    transform: translateY(0);
   }
 }
 
@@ -29,51 +25,45 @@
 }
 
 .title {
-  font-weight: var(--font-weight-semibold);
-  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+  margin-bottom: var(--s-1);
 }
 
 .message {
-  font-size: var(--font-size-sm);
+  font-size: 0.85rem;
   opacity: 0.9;
 }
 
 .actions {
   display: flex;
-  gap: 0.75rem;
-  flex-shrink: 0;
+  gap: var(--s-2);
 }
 
 .installButton {
-  background: var(--color-bg-primary);
-  color: var(--color-primary);
+  background: white;
+  color: var(--c-primary);
   border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: var(--radius-md);
-  font-weight: var(--font-weight-semibold);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius);
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color var(--transition-base);
 }
 
 .installButton:hover {
-  background: var(--color-bg-hover);
+  background: var(--c-bg-alt);
 }
 
 .dismissButton {
   background: transparent;
   color: white;
-  border: 1px solid var(--color-overlay-white-border-hover);
-  padding: 0.6rem 1.2rem;
-  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition:
-    background-color var(--transition-base),
-    border-color var(--transition-base);
 }
 
 .dismissButton:hover {
-  background: var(--color-overlay-white-light);
-  border-color: var(--color-overlay-white-border-strong);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 @media (max-width: 480px) {

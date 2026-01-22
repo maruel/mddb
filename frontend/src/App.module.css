@@ -5,9 +5,9 @@
 }
 
 body {
-  font-family: var(--font-family-base);
-  color: var(--color-text-primary);
-  background: var(--color-bg-page);
+  font-family: var(--font);
+  color: var(--c-text);
+  background: var(--c-bg-alt);
 }
 
 .app {
@@ -17,86 +17,75 @@ body {
 }
 
 .header {
-  background: var(--color-primary-gradient);
+  background: var(--c-primary);
   color: white;
-  padding: var(--spacing-lg) var(--spacing-xl);
-  box-shadow: var(--shadow-header);
+  padding: var(--s-3) var(--s-4);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .headerTitle h1 {
-  font-size: var(--font-size-2xl);
-  margin-bottom: var(--spacing-xs);
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .headerTitle p {
-  font-size: var(--font-size-sm);
+  font-size: 0.8rem;
   opacity: 0.9;
 }
 
 .userInfo {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  font-size: var(--font-size-sm);
+  gap: var(--s-3);
+  font-size: 0.85rem;
 }
 
-.logoutButton {
-  background: var(--color-overlay-white-medium);
+.logoutButton,
+.createOrgButton {
+  background: rgba(255, 255, 255, 0.2);
   color: white;
-  border: 1px solid var(--color-overlay-white-border);
-  padding: 0.4rem 0.8rem;
-  border-radius: var(--radius-md);
+  border: none;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: background var(--transition);
 }
 
-.logoutButton:hover {
-  background: var(--color-overlay-white-strong);
+.logoutButton:hover,
+.createOrgButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.createOrgButton {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .orgSwitcher {
   background: rgba(255, 255, 255, 0.15);
   color: white;
-  border: 1px solid var(--color-overlay-white-strong);
-  padding: 0.3rem 0.6rem;
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
-  outline: none;
+  border: none;
+  padding: var(--s-2);
+  border-radius: var(--radius);
   cursor: pointer;
 }
 
 .orgSwitcher option {
-  color: var(--color-text-primary);
+  color: var(--c-text);
 }
 
 .orgName {
-  font-weight: var(--font-weight-semibold);
-  background: var(--color-overlay-white-medium);
-  padding: 0.3rem 0.6rem;
-  border-radius: var(--radius-md);
-}
-
-.createOrgButton {
-  background: var(--color-overlay-white-medium);
-  color: white;
-  border: 1px solid var(--color-overlay-white-border);
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  font-size: 1.2rem;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-base);
-}
-
-.createOrgButton:hover {
-  background: var(--color-overlay-white-strong);
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.2);
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--radius);
 }
 
 .container {
@@ -106,82 +95,77 @@ body {
 }
 
 .sidebar {
-  width: var(--sidebar-width);
-  background: var(--color-bg-primary);
-  border-right: 1px solid var(--color-border-medium);
+  width: 260px;
+  background: var(--c-bg);
+  border-right: 1px solid var(--c-border);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .tabBar {
   display: flex;
-  border-bottom: 1px solid var(--color-border-medium);
-  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--c-border);
 }
 
 .tab {
   flex: 1;
-  padding: 0.75rem;
-  background: transparent;
+  padding: var(--s-3);
+  background: none;
   border: none;
   cursor: pointer;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  border-bottom: 3px solid transparent;
-  transition: all var(--transition-base);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--c-text-light);
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
 }
 
 .tab:hover {
-  color: var(--color-text-primary);
-  background: var(--color-bg-hover);
+  color: var(--c-text);
 }
 
 .tab.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
-  background: var(--color-bg-primary);
+  color: var(--c-primary);
+  border-bottom-color: var(--c-primary);
 }
 
 .sidebarHeader {
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-medium);
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--c-border);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: var(--s-2);
 }
 
 .sidebarHeader h2 {
-  font-size: var(--font-size-lg);
-  flex: 1;
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .sidebarHeader button {
-  padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--color-primary);
+  padding: var(--s-2) var(--s-3);
+  background: var(--c-primary);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: var(--font-size-sm);
-  white-space: nowrap;
+  font-size: 0.85rem;
 }
 
 .sidebarHeader button:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: var(--c-primary-hover);
 }
 
 .sidebarHeader button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .loading {
-  padding: var(--spacing-md);
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-sm);
+  padding: var(--s-3);
+  color: var(--c-text-light);
+  font-size: 0.85rem;
 }
 
 .pageList {
@@ -191,50 +175,48 @@ body {
 }
 
 .sidebarFooter {
-  padding: var(--spacing-md);
-  border-top: 1px solid var(--color-border-medium);
+  padding: var(--s-3);
+  border-top: 1px solid var(--c-border);
   text-align: center;
 }
 
 .sidebarFooter a {
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-xs);
+  color: var(--c-text-light);
+  font-size: 0.75rem;
   text-decoration: none;
-  transition: color var(--transition-base);
 }
 
 .sidebarFooter a:hover {
-  color: var(--color-primary);
+  color: var(--c-primary);
 }
 
 .pageItem {
-  padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-bg-hover);
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--c-border);
   cursor: pointer;
-  transition: background-color var(--transition-base);
+  transition: background var(--transition);
 }
 
 .pageItem:hover {
-  background: var(--color-bg-secondary);
+  background: var(--c-bg-alt);
 }
 
 .pageItem.active {
-  background: var(--color-bg-active);
-  border-left: 4px solid var(--color-primary);
-  padding-left: calc(var(--spacing-lg) - 4px);
+  background: #eff6ff;
+  border-left: 3px solid var(--c-primary);
 }
 
 .pageTitle {
-  font-weight: var(--font-weight-medium);
-  margin-bottom: var(--spacing-xs);
+  font-weight: 500;
+  margin-bottom: var(--s-1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .pageDate {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-tertiary);
+  font-size: 0.75rem;
+  color: var(--c-text-light);
 }
 
 .main {
@@ -242,15 +224,15 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--color-bg-primary);
+  background: var(--c-bg);
 }
 
 .error {
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: var(--color-danger-bg);
-  color: var(--color-danger-text);
-  border-bottom: 1px solid var(--color-danger-border);
-  font-size: var(--font-size-sm);
+  padding: var(--s-3);
+  background: #fef2f2;
+  color: var(--c-danger);
+  border-bottom: 1px solid #fecaca;
+  font-size: 0.85rem;
 }
 
 .welcome {
@@ -259,22 +241,22 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-3xl);
+  padding: var(--s-5);
   text-align: center;
 }
 
 .welcome h2 {
-  font-size: var(--font-size-4xl);
-  margin-bottom: var(--spacing-xl);
-  color: var(--color-primary);
+  font-size: 1.5rem;
+  margin-bottom: var(--s-4);
+  color: var(--c-primary);
 }
 
 .createForm {
   width: 100%;
-  max-width: var(--max-width-form);
+  max-width: 400px;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: var(--s-3);
 }
 
 .editor {
@@ -284,10 +266,10 @@ body {
 }
 
 .editorHeader {
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-medium);
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--c-border);
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--s-3);
   align-items: center;
   flex-wrap: wrap;
 }
@@ -295,31 +277,26 @@ body {
 .editorStatus {
   flex: 1;
   display: flex;
-  gap: var(--spacing-md);
+  gap: var(--s-3);
   align-items: center;
-  font-size: var(--font-size-sm);
+  font-size: 0.85rem;
 }
 
 .unsavedIndicator {
-  color: var(--color-warning);
-  font-weight: var(--font-weight-medium);
+  color: #d97706;
+  font-weight: 500;
 }
 
 .savingIndicator {
-  color: var(--color-info);
-  font-weight: var(--font-weight-medium);
+  color: var(--c-primary);
   animation: spin 1s linear infinite;
 }
 
 .savedIndicator {
-  color: var(--color-success);
-  font-weight: var(--font-weight-medium);
+  color: var(--c-success);
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
   to {
     transform: rotate(360deg);
   }
@@ -327,71 +304,68 @@ body {
 
 .titleInput {
   flex: 1;
-  padding: 0.75rem;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-medium);
+  padding: var(--s-2);
+  font-size: 1.25rem;
+  font-weight: 500;
   border: none;
   outline: none;
   background: transparent;
-  font-family: inherit;
 }
 
 .editorActions {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: var(--s-2);
 }
 
 .editorActions button,
 .createButton {
-  padding: var(--spacing-sm) var(--spacing-lg);
-  background: var(--color-primary);
+  padding: var(--s-2) var(--s-4);
+  background: var(--c-primary);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: var(--font-size-sm);
-  transition: background-color var(--transition-base);
+  font-size: 0.85rem;
+  transition: background var(--transition);
 }
 
 .editorActions button:hover:not(:disabled),
 .createButton:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: var(--c-primary-hover);
 }
 
 .editorActions button:disabled,
 .createButton:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .sidebarActions {
   display: flex;
-  gap: var(--spacing-xs);
+  gap: var(--s-1);
 }
 
 .sidebarActions button {
-  padding: var(--spacing-xs) var(--spacing-sm);
-  background: var(--color-border-light);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-input);
-  border-radius: var(--radius-md);
+  padding: var(--s-1) var(--s-2);
+  background: var(--c-bg-alt);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: var(--font-size-xs);
+  font-size: 0.75rem;
 }
 
 .sidebarActions button:hover {
-  background: var(--color-border);
+  background: var(--c-border);
 }
 
 .nodeIcon {
-  margin-right: var(--spacing-sm);
-  font-size: var(--font-size-base);
+  margin-right: var(--s-2);
 }
 
 .welcomeActions {
   display: flex;
-  gap: var(--spacing-md);
-  margin-top: var(--spacing-md);
+  gap: var(--s-3);
+  margin-top: var(--s-3);
 }
 
 .nodeContent {
@@ -404,15 +378,13 @@ body {
 .editorContent {
   display: flex;
   height: 60vh;
-  min-height: var(--min-height-content);
+  min-height: 400px;
   overflow: hidden;
-  gap: 1px;
-  background: var(--color-border-medium);
 }
 
 .tableView {
-  border-top: 4px solid var(--color-bg-hover);
-  padding: var(--spacing-lg);
+  border-top: 3px solid var(--c-bg-alt);
+  padding: var(--s-3);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -422,40 +394,33 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--s-3);
 }
 
 .viewToggle {
   display: flex;
-  background: var(--color-border-light);
+  background: var(--c-bg-alt);
   padding: 2px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
 }
 
 .viewToggle button {
-  padding: 4px 12px;
+  padding: var(--s-1) var(--s-3);
   border: none;
   background: none;
   font-size: 0.8rem;
   cursor: pointer;
-  border-radius: var(--radius-md);
+  border-radius: 4px;
 }
 
 .viewToggle button.active {
-  background: var(--color-bg-primary);
-  box-shadow: var(--shadow-sm);
+  background: var(--c-bg);
+  box-shadow: var(--shadow);
 }
 
-.sidebarNodeWrapper {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
+.sidebarNodeWrapper,
 .childList {
   list-style: none;
-  padding: 0;
-  margin: 0;
 }
 
 .pageTitleText {
@@ -472,9 +437,9 @@ body {
   font-size: 8px;
   line-height: 16px;
   text-align: center;
-  transition: transform var(--transition-base);
+  transition: transform var(--transition);
   cursor: pointer;
-  color: var(--color-text-secondary);
+  color: var(--c-text-light);
 }
 
 .expandIcon.expanded {
@@ -488,11 +453,11 @@ body {
 .breadcrumbs {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-sm) var(--spacing-lg);
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  border-bottom: 1px solid var(--color-bg-hover);
+  color: var(--c-text-light);
+  border-bottom: 1px solid var(--c-border);
 }
 
 .breadcrumbItem {
@@ -501,92 +466,84 @@ body {
 
 .breadcrumbItem:hover {
   text-decoration: underline;
-  color: var(--color-text-primary);
+  color: var(--c-text);
 }
 
 .breadcrumbSeparator {
-  color: var(--color-border-input);
+  color: var(--c-border);
 }
 
 .contentInput {
   flex: 1;
-  padding: var(--spacing-lg);
-  font-family: var(--font-family-mono);
-  font-size: 0.95rem;
+  padding: var(--s-3);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
   border: none;
   outline: none;
   resize: none;
-  line-height: var(--line-height-base);
-  background: var(--color-bg-primary);
-  min-width: 0;
+  line-height: 1.6;
 }
 
 .createButton {
   width: 100%;
-  padding: var(--spacing-md);
-  font-size: var(--font-size-base);
+  padding: var(--s-3);
 }
 
 .historyPanel {
-  background: #f5f7fa;
-  border-bottom: 1px solid var(--color-border-medium);
-  padding: var(--spacing-md);
+  background: var(--c-bg-alt);
+  border-bottom: 1px solid var(--c-border);
+  padding: var(--s-3);
   max-height: 250px;
   overflow-y: auto;
 }
 
 .historyPanel h3 {
-  font-size: var(--font-size-base);
-  margin-bottom: 0.75rem;
-  color: #555;
-  font-weight: var(--font-weight-semibold);
+  font-size: 0.9rem;
+  margin-bottom: var(--s-3);
+  font-weight: 600;
 }
 
 .historyList {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--s-2);
 }
 
 .historyItem {
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border-medium);
-  border-radius: var(--radius-md);
-  padding: 0.75rem;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-3);
   cursor: pointer;
-  transition: all var(--transition-base);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
+  transition: border-color var(--transition);
 }
 
 .historyItem:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-xs);
+  border-color: var(--c-primary);
 }
 
 .historyMeta {
   display: flex;
   justify-content: space-between;
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  color: var(--c-text-light);
+  margin-bottom: var(--s-1);
 }
 
 .historyDate {
-  font-weight: var(--font-weight-medium);
+  font-weight: 500;
 }
 
 .historyHash {
-  font-family: monospace;
-  background: var(--color-border-light);
+  font-family: var(--font-mono);
+  background: var(--c-bg-alt);
   padding: 0 4px;
-  border-radius: var(--radius-xs);
+  border-radius: 3px;
 }
 
 .historyMessage {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
+  font-size: 0.85rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

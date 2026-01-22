@@ -1,170 +1,28 @@
 :root {
-  /* ===========================================
-     COLOR SYSTEM
-     =========================================== */
+  /* Colors */
+  --c-primary: #2563eb;
+  --c-primary-hover: #1d4ed8;
+  --c-text: #1f2937;
+  --c-text-light: #6b7280;
+  --c-bg: #fff;
+  --c-bg-alt: #f9fafb;
+  --c-border: #e5e7eb;
+  --c-success: #16a34a;
+  --c-danger: #dc2626;
 
-  /* Primary Colors */
-  --color-primary: #667eea;
-  --color-primary-hover: #5568d3;
-  --color-primary-light: rgba(102, 126, 234, 0.1);
-  --color-primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  /* Spacing */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 1rem;
+  --s-4: 1.5rem;
+  --s-5: 2rem;
 
-  /* Semantic Colors - Success */
-  --color-success: #4caf50;
-  --color-success-dark: #388e3c;
-  --color-success-bg: #eff;
-  --color-success-text: #088;
-  --color-success-border: #0bb;
+  /* Typography */
+  --font: system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, monospace;
 
-  /* Semantic Colors - Danger/Error */
-  --color-danger: #f44336;
-  --color-danger-dark: #da190b;
-  --color-danger-bg: #fee;
-  --color-danger-text: #c33;
-  --color-danger-border: #fcc;
-  --color-error-bg: #f8d7da;
-  --color-error-text: #721c24;
-
-  /* Semantic Colors - Warning */
-  --color-warning: #ff9800;
-
-  /* Semantic Colors - Info */
-  --color-info: #2196f3;
-
-  /* Text Colors */
-  --color-text-primary: #333;
-  --color-text-secondary: #666;
-  --color-text-tertiary: #999;
-  --color-text-muted: #888;
-  --color-text-heading: #444;
-  --color-text-dark: #172b4d;
-  --color-text-subtle: #5e6c84;
-  --color-text-code: #d63384;
-
-  /* Background Colors */
-  --color-bg-primary: #ffffff;
-  --color-bg-page: #fafafa;
-  --color-bg-secondary: #f9f9f9;
-  --color-bg-tertiary: #f5f5f5;
-  --color-bg-hover: #f0f0f0;
-  --color-bg-active: #f0f4ff;
-  --color-bg-kanban: #f4f5f7;
-  --color-bg-kanban-count: #dfe1e6;
-  --color-bg-cell-editing: #e8f4f8;
-  --color-bg-new-row: #f0f8ff;
-  --color-bg-delete-hover: #ffebee;
-
-  /* Border Colors */
-  --color-border: #ddd;
-  --color-border-light: #eee;
-  --color-border-medium: #e0e0e0;
-  --color-border-input: #ccc;
-
-  /* Overlay Colors */
-  --color-overlay: rgba(0, 0, 0, 0.5);
-  --color-overlay-white-light: rgba(255, 255, 255, 0.1);
-  --color-overlay-white-medium: rgba(255, 255, 255, 0.2);
-  --color-overlay-white-strong: rgba(255, 255, 255, 0.3);
-  --color-overlay-white-border: rgba(255, 255, 255, 0.4);
-  --color-overlay-white-border-hover: rgba(255, 255, 255, 0.5);
-  --color-overlay-white-border-strong: rgba(255, 255, 255, 0.8);
-
-  /* OAuth Brand Colors */
-  --color-oauth-google-bg: #fff;
-  --color-oauth-google-text: #757575;
-  --color-oauth-google-hover: #f1f1f1;
-  --color-oauth-microsoft-bg: #2f2f2f;
-
-  /* ===========================================
-     SPACING SYSTEM
-     =========================================== */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --spacing-2xl: 2.5rem;
-  --spacing-3xl: 3rem;
-
-  /* ===========================================
-     TYPOGRAPHY
-     =========================================== */
-
-  /* Font Families */
-  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue',
-    sans-serif;
-  --font-family-mono: 'Monaco', 'Courier New', monospace;
-
-  /* Font Sizes */
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.1rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 1.5rem;
-  --font-size-3xl: 1.75rem;
-  --font-size-4xl: 2rem;
-  --font-size-5xl: 2.5rem;
-
-  /* Font Weights */
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-
-  /* Line Heights */
-  --line-height-tight: 1.4;
-  --line-height-base: 1.6;
-
-  /* ===========================================
-     BORDER RADIUS
-     =========================================== */
-  --radius-xs: 2px;
-  --radius-sm: 3px;
-  --radius-md: 4px;
-  --radius-lg: 6px;
-  --radius-xl: 8px;
-  --radius-2xl: 12px;
-  --radius-pill: 10px;
-  --radius-full: 50%;
-
-  /* ===========================================
-     SHADOWS
-     =========================================== */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 10px 25px rgba(0, 0, 0, 0.2);
-  --shadow-header: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --shadow-card: 0 1px 2px rgba(9, 30, 66, 0.25);
-  --shadow-card-hover: 0 2px 4px rgba(9, 30, 66, 0.3);
-  --shadow-focus: 0 0 0 2px var(--color-primary-light);
-  --shadow-up: 0 -2px 10px rgba(0, 0, 0, 0.15);
-
-  /* ===========================================
-     TRANSITIONS
-     =========================================== */
-  --transition-fast: 0.15s ease;
-  --transition-base: 0.2s ease;
-  --transition-slow: 0.3s ease;
-
-  /* ===========================================
-     Z-INDEX LAYERS
-     =========================================== */
-  --z-sticky: 10;
-  --z-banner: 1000;
-  --z-modal: 2000;
-
-  /* ===========================================
-     LAYOUT
-     =========================================== */
-  --sidebar-width: 280px;
-  --max-width-form: 500px;
-  --max-width-content: 800px;
-  --max-width-settings: 900px;
-  --max-width-auth: 400px;
-  --min-height-content: 400px;
-  --gallery-image-height: 140px;
-  --kanban-column-width: 280px;
+  /* Misc */
+  --radius: 6px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --transition: 0.15s ease;
 }

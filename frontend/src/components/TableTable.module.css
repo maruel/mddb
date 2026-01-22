@@ -2,41 +2,39 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--color-bg-tertiary);
-  padding: 16px;
-  border-radius: var(--radius-xl);
+  background: var(--c-bg-alt);
+  padding: var(--s-3);
+  border-radius: var(--radius);
 }
 
 .tableWrapper {
   flex: 1;
   overflow: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg-primary);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
-  font-family: var(--font-family-base);
+  font-size: 0.9rem;
 }
 
 .headerRow {
-  background: var(--color-bg-secondary);
-  border-bottom: 2px solid var(--color-border);
+  background: var(--c-bg-alt);
+  border-bottom: 2px solid var(--c-border);
   position: sticky;
   top: 0;
-  z-index: var(--z-sticky);
+  z-index: 10;
 }
 
 .headerCell {
-  padding: 12px 16px;
+  padding: var(--s-3);
   text-align: left;
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
+  font-weight: 600;
   white-space: nowrap;
-  border-right: 1px solid var(--color-border-light);
+  border-right: 1px solid var(--c-border);
 }
 
 .headerCell:last-child {
@@ -44,22 +42,20 @@
 }
 
 .row {
-  border-bottom: 1px solid var(--color-border-light);
-  transition: background-color var(--transition-fast);
+  border-bottom: 1px solid var(--c-border);
+  transition: background var(--transition);
 }
 
 .row:hover {
-  background: var(--color-bg-page);
+  background: var(--c-bg-alt);
 }
 
 .cell {
-  padding: 12px 16px;
-  border-right: 1px solid var(--color-border-light);
+  padding: var(--s-3);
+  border-right: 1px solid var(--c-border);
   cursor: pointer;
-  vertical-align: middle;
   max-width: 300px;
   word-wrap: break-word;
-  position: relative;
 }
 
 .cell:last-child {
@@ -67,146 +63,130 @@
 }
 
 .cell.editing {
-  background: var(--color-bg-cell-editing);
-  padding: 8px;
+  background: #eff6ff;
+  padding: var(--s-2);
 }
 
 .cellContent {
   min-height: 20px;
   word-break: break-word;
-  overflow-wrap: break-word;
-  white-space: normal;
-  color: var(--color-text-primary);
 }
 
 .editContainer {
   display: flex;
-  gap: 8px;
+  gap: var(--s-2);
   align-items: center;
 }
 
 .input {
   flex: 1;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border-input);
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-family: inherit;
-  background: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  padding: var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-focus);
+  border-color: var(--c-primary);
 }
 
 .editActions {
   display: flex;
-  gap: 4px;
+  gap: var(--s-1);
 }
 
 .saveBtn,
 .cancelBtn {
-  padding: 4px 8px;
+  padding: var(--s-1) var(--s-2);
   border: none;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
   cursor: pointer;
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
-  transition: background var(--transition-fast);
+  background: var(--c-bg-alt);
 }
 
 .saveBtn:hover {
-  background: var(--color-success);
+  background: var(--c-success);
   color: white;
 }
 
 .cancelBtn:hover {
-  background: var(--color-danger);
+  background: var(--c-danger);
   color: white;
 }
 
 .actionsCell {
-  padding: 8px 12px;
+  padding: var(--s-2) var(--s-3);
   text-align: center;
-  border-right: 1px solid var(--color-border-light);
-  background: var(--color-bg-page);
+  border-right: 1px solid var(--c-border);
+  background: var(--c-bg-alt);
   min-width: 50px;
 }
 
 .deleteBtn {
-  padding: 4px 8px;
+  padding: var(--s-1) var(--s-2);
   border: none;
-  background: var(--color-danger);
+  background: var(--c-danger);
   color: white;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: 12px;
-  transition: background var(--transition-fast);
+  font-size: 0.75rem;
 }
 
 .deleteBtn:hover {
-  background: var(--color-danger-dark);
+  opacity: 0.9;
 }
 
 .addBtn {
-  padding: 6px 12px;
+  padding: var(--s-2) var(--s-3);
   border: none;
-  background: var(--color-success);
+  background: var(--c-success);
   color: white;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: bold;
-  transition: background var(--transition-fast);
+  font-weight: 600;
 }
 
 .addBtn:hover {
-  background: var(--color-success-dark);
+  opacity: 0.9;
 }
 
 .newRow {
-  background: var(--color-bg-new-row);
-  border-bottom: 2px solid var(--color-primary);
+  background: #eff6ff;
+  border-bottom: 2px solid var(--c-primary);
 }
 
 .newRow .cell {
-  padding: 8px;
+  padding: var(--s-2);
 }
 
 .required {
-  color: var(--color-danger);
-  margin-left: 4px;
-  font-size: 14px;
+  color: var(--c-danger);
+  margin-left: var(--s-1);
 }
 
 .empty {
-  padding: 32px 16px;
+  padding: var(--s-5);
   text-align: center;
-  color: var(--color-text-tertiary);
+  color: var(--c-text-light);
   font-style: italic;
 }
 
 .loadMore {
-  padding: 16px;
+  padding: var(--s-3);
   display: flex;
   justify-content: center;
 }
 
 .loadMore button {
-  padding: 8px 24px;
-  background: var(--color-bg-primary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding: var(--s-2) var(--s-4);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: 14px;
-  transition: all var(--transition-base);
 }
 
 .loadMore button:hover {
-  background: var(--color-bg-hover);
-  border-color: var(--color-border-input);
+  background: var(--c-bg-alt);
 }

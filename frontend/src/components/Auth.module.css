@@ -2,140 +2,132 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;
-  background-color: var(--color-bg-tertiary);
+  min-height: 100vh;
+  background: var(--c-bg-alt);
 }
 
 .authForm {
-  background: var(--color-bg-primary);
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
+  background: var(--c-bg);
+  padding: var(--s-5);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   width: 100%;
-  max-width: var(--max-width-auth);
+  max-width: 380px;
 }
 
 .authForm h2 {
-  margin-top: 0;
-  margin-bottom: var(--spacing-lg);
+  margin: 0 0 var(--s-4);
   text-align: center;
-  color: var(--color-text-primary);
+  font-size: 1.25rem;
 }
 
 .formGroup {
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--s-3);
 }
 
 .formGroup label {
   display: block;
-  margin-bottom: var(--spacing-sm);
-  color: var(--color-text-secondary);
+  margin-bottom: var(--s-2);
+  font-size: 0.85rem;
+  color: var(--c-text-light);
 }
 
 .formGroup input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-sizing: border-box;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
 }
 
 .authForm button[type='submit'] {
   width: 100%;
-  padding: 0.75rem;
-  background-color: var(--color-primary);
+  padding: var(--s-3);
+  background: var(--c-primary);
   color: white;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius);
   cursor: pointer;
-  font-size: var(--font-size-base);
-  margin-top: var(--spacing-md);
+  font-size: 0.9rem;
+  margin-top: var(--s-3);
 }
 
 .authForm button[type='submit']:hover {
-  background-color: var(--color-primary-hover);
+  background: var(--c-primary-hover);
 }
 
 .authForm button[type='submit']:disabled {
-  background-color: var(--color-border-input);
+  opacity: 0.5;
 }
 
 .error {
-  background-color: var(--color-error-bg);
-  color: var(--color-error-text);
-  padding: 0.75rem;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-md);
+  background: #fef2f2;
+  color: var(--c-danger);
+  padding: var(--s-3);
+  border-radius: var(--radius);
+  margin-bottom: var(--s-3);
   text-align: center;
+  font-size: 0.85rem;
 }
 
 .toggle {
-  margin-top: var(--spacing-lg);
+  margin-top: var(--s-4);
   text-align: center;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  color: var(--c-text-light);
 }
 
 .toggle button {
   background: none;
   border: none;
-  color: var(--color-primary);
+  color: var(--c-primary);
   cursor: pointer;
-  padding: 0;
-  margin-left: var(--spacing-sm);
-  font-size: 0.9rem;
-  text-decoration: underline;
-}
-
-.toggle button:hover {
   text-decoration: underline;
 }
 
 .authFooter {
-  margin-top: var(--spacing-lg);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border-light);
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--c-border);
   text-align: center;
 }
 
 .authFooter a {
-  color: var(--color-text-tertiary);
-  font-size: 0.8rem;
+  color: var(--c-text-light);
+  font-size: 0.75rem;
   text-decoration: none;
-  transition: color var(--transition-base);
 }
 
 .authFooter a:hover {
-  color: var(--color-primary);
+  color: var(--c-primary);
 }
 
 .oauthSection {
-  margin-top: var(--spacing-lg);
+  margin-top: var(--s-4);
 }
 
 .divider {
   display: flex;
   align-items: center;
-  text-align: center;
-  margin-bottom: var(--spacing-md);
-  color: var(--color-text-tertiary);
+  margin-bottom: var(--s-3);
+  color: var(--c-text-light);
+  font-size: 0.85rem;
 }
 
 .divider::before,
 .divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--c-border);
 }
 
 .divider span {
-  padding: 0 10px;
+  padding: 0 var(--s-3);
 }
 
 .oauthButtons {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--s-2);
 }
 
 .googleButton,
@@ -143,27 +135,26 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 0.75rem;
-  border-radius: var(--radius-md);
+  padding: var(--s-3);
+  border-radius: var(--radius);
   text-decoration: none;
-  font-weight: var(--font-weight-medium);
-  font-size: 0.9rem;
-  transition: opacity var(--transition-base);
+  font-size: 0.85rem;
+  transition: opacity var(--transition);
 }
 
 .googleButton {
-  background-color: var(--color-oauth-google-bg);
-  color: var(--color-oauth-google-text);
-  border: 1px solid var(--color-border);
+  background: var(--c-bg);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
 }
 
 .googleButton:hover {
-  background-color: var(--color-oauth-google-hover);
+  background: var(--c-bg-alt);
 }
 
 .microsoftButton {
-  background-color: var(--color-oauth-microsoft-bg);
-  color: var(--color-bg-primary);
+  background: #2f2f2f;
+  color: white;
   border: none;
 }
 

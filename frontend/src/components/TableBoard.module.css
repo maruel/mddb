@@ -1,104 +1,93 @@
 .board {
-  padding: var(--spacing-md) 0;
+  padding: var(--s-3) 0;
   overflow-x: auto;
-  min-height: var(--min-height-content);
+  min-height: 400px;
 }
 
 .noGroup {
-  padding: var(--spacing-xl);
+  padding: var(--s-5);
   text-align: center;
-  color: var(--color-text-secondary);
-  background: var(--color-bg-secondary);
-  border-radius: var(--radius-xl);
-  border: 2px dashed var(--color-border-light);
+  color: var(--c-text-light);
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
+  border: 2px dashed var(--c-border);
 }
 
 .columns {
   display: flex;
-  gap: var(--spacing-lg);
+  gap: var(--s-3);
   align-items: flex-start;
-  padding-bottom: var(--spacing-md);
 }
 
 .column {
-  flex: 0 0 var(--kanban-column-width);
-  background: var(--color-bg-kanban);
-  border-radius: var(--radius-xl);
+  flex: 0 0 280px;
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
   max-height: calc(100vh - 300px);
   display: flex;
   flex-direction: column;
 }
 
 .columnHeader {
-  padding: var(--spacing-md);
+  padding: var(--s-3);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .columnName {
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-heading);
-  font-size: 0.9rem;
+  font-weight: 600;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .columnCount {
-  background: var(--color-bg-kanban-count);
-  color: var(--color-text-heading);
-  font-size: var(--font-size-xs);
+  background: var(--c-border);
+  font-size: 0.75rem;
   padding: 2px 8px;
-  border-radius: var(--radius-pill);
-  font-weight: var(--font-weight-semibold);
+  border-radius: 10px;
+  font-weight: 600;
 }
 
 .cards {
-  padding: 0 0.75rem 0.75rem;
+  padding: 0 var(--s-3) var(--s-3);
   overflow-y: auto;
   flex-grow: 1;
 }
 
 .card {
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  padding: 0.75rem;
-  margin-bottom: 0.75rem;
-  box-shadow: var(--shadow-card);
+  background: var(--c-bg);
+  border-radius: var(--radius);
+  padding: var(--s-3);
+  margin-bottom: var(--s-2);
+  box-shadow: var(--shadow);
   cursor: grab;
-  transition: box-shadow var(--transition-base);
-}
-
-.card:hover {
-  box-shadow: var(--shadow-card-hover);
 }
 
 .cardHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: var(--spacing-sm);
+  margin-bottom: var(--s-2);
 }
 
 .cardHeader strong {
   font-size: 0.9rem;
-  color: var(--color-text-dark);
-  display: block;
   word-break: break-word;
 }
 
 .deleteBtn {
-  background: transparent;
+  background: none;
   border: none;
-  color: var(--color-border-input);
+  color: var(--c-border);
   cursor: pointer;
   padding: 0 5px;
-  font-size: var(--font-size-lg);
-  line-height: 1;
+  font-size: 1rem;
 }
 
 .deleteBtn:hover {
-  color: var(--color-danger);
+  color: var(--c-danger);
 }
 
 .cardBody {
@@ -106,14 +95,14 @@
 }
 
 .field {
-  margin-top: var(--spacing-xs);
+  margin-top: var(--s-1);
   display: flex;
-  color: var(--color-text-subtle);
+  color: var(--c-text-light);
 }
 
 .fieldName {
-  margin-right: var(--spacing-sm);
-  font-weight: var(--font-weight-medium);
+  margin-right: var(--s-2);
+  font-weight: 500;
 }
 
 .fieldValue {
