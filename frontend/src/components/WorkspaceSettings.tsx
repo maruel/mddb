@@ -440,12 +440,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
             <form onSubmit={saveWorkspaceSettings} class={styles.settingsForm}>
               <div class={styles.formItem}>
                 <label>{t('settings.organizationName')}</label>
-                <input
-                  type="text"
-                  value={orgName()}
-                  onInput={(e) => setOrgName(e.target.value)}
-                  required
-                />
+                <input type="text" value={orgName()} onInput={(e) => setOrgName(e.target.value)} required />
               </div>
               <div class={styles.formItem}>
                 <label class={styles.checkboxLabel}>
