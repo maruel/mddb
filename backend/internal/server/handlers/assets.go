@@ -26,7 +26,7 @@ func NewAssetHandler(fs *content.FileStore) *AssetHandler {
 }
 
 // ListPageAssets returns a list of assets associated with a page.
-func (h *AssetHandler) ListPageAssets(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListPageAssetsRequest) (*dto.ListPageAssetsResponse, error) {
+func (h *AssetHandler) ListPageAssets(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListPageAssetsRequest) (*dto.ListPageAssetsResponse, error) {
 	pageID, err := decodeID(req.PageID, "page_id")
 	if err != nil {
 		return nil, err
@@ -132,7 +132,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePageAsset deletes an asset.
-func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
+func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
 	pageID, err := decodeID(req.PageID, "page_id")
 	if err != nil {
 		return nil, err

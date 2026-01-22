@@ -22,7 +22,7 @@ func NewTableHandler(fs *content.FileStore) *TableHandler {
 }
 
 // ListTables returns a list of all tables.
-func (h *TableHandler) ListTables(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListTablesRequest) (*dto.ListTablesResponse, error) {
+func (h *TableHandler) ListTables(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListTablesRequest) (*dto.ListTablesResponse, error) {
 	it, err := h.fs.IterTables(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list tables", err)
@@ -31,7 +31,7 @@ func (h *TableHandler) ListTables(ctx context.Context, orgID jsonldb.ID, _ *iden
 }
 
 // GetTable returns a specific table by ID.
-func (h *TableHandler) GetTable(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetTableRequest) (*dto.GetTableResponse, error) {
+func (h *TableHandler) GetTable(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetTableRequest) (*dto.GetTableResponse, error) {
 	id, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (h *TableHandler) GetTable(ctx context.Context, orgID jsonldb.ID, _ *identi
 }
 
 // CreateTable creates a new table.
-func (h *TableHandler) CreateTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateTableRequest) (*dto.CreateTableResponse, error) {
+func (h *TableHandler) CreateTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreateTableRequest) (*dto.CreateTableResponse, error) {
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
 	}
@@ -74,7 +74,7 @@ func (h *TableHandler) CreateTable(ctx context.Context, orgID jsonldb.ID, user *
 }
 
 // UpdateTable updates a table schema.
-func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
+func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
 	id, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *
 }
 
 // DeleteTable deletes a table.
-func (h *TableHandler) DeleteTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeleteTableRequest) (*dto.DeleteTableResponse, error) {
+func (h *TableHandler) DeleteTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeleteTableRequest) (*dto.DeleteTableResponse, error) {
 	id, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (h *TableHandler) DeleteTable(ctx context.Context, orgID jsonldb.ID, user *
 }
 
 // ListRecords returns all records in a table.
-func (h *TableHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
+func (h *TableHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
 	tableID, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (h *TableHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *ide
 }
 
 // CreateRecord creates a new record in a table.
-func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
+func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
 	tableID, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
@@ -159,7 +159,7 @@ func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user 
 }
 
 // UpdateRecord updates an existing record in a table.
-func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
+func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
 	tableID, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
@@ -209,7 +209,7 @@ func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user 
 }
 
 // GetRecord retrieves a single record from a table.
-func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
+func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
 	tableID, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err
@@ -237,7 +237,7 @@ func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *ident
 }
 
 // DeleteRecord deletes a record from a table.
-func (h *TableHandler) DeleteRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
+func (h *TableHandler) DeleteRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
 	tableID, err := decodeID(req.ID, "table_id")
 	if err != nil {
 		return nil, err

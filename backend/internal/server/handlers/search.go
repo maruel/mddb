@@ -22,7 +22,7 @@ func NewSearchHandler(fileStore *content.FileStore) *SearchHandler {
 }
 
 // Search performs a full-text search across all nodes.
-func (h *SearchHandler) Search(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.SearchRequest) (*dto.SearchResponse, error) {
+func (h *SearchHandler) Search(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.SearchRequest) (*dto.SearchResponse, error) {
 	results, err := h.searchService.Search(ctx, orgID, content.SearchOptions{
 		Query:       req.Query,
 		Limit:       req.Limit,

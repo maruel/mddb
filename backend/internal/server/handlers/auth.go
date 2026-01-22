@@ -33,7 +33,7 @@ func NewAuthHandler(userService *identity.UserService, memService *identity.Memb
 }
 
 // Login handles user login and returns a JWT token.
-func (h *AuthHandler) Login(ctx context.Context, req dto.LoginRequest) (*dto.LoginResponse, error) {
+func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.LoginResponse, error) {
 	if req.Email == "" || req.Password == "" {
 		return nil, dto.MissingField("email or password")
 	}
@@ -68,7 +68,7 @@ func (h *AuthHandler) Login(ctx context.Context, req dto.LoginRequest) (*dto.Log
 
 // Register handles user registration.
 // Note: Organization creation is handled by the frontend after registration.
-func (h *AuthHandler) Register(ctx context.Context, req dto.RegisterRequest) (*dto.LoginResponse, error) {
+func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.LoginResponse, error) {
 	if req.Email == "" || req.Password == "" || req.Name == "" {
 		return nil, dto.MissingField("email, password, or name")
 	}
@@ -116,7 +116,7 @@ func (h *AuthHandler) GenerateToken(user *identity.User) (string, error) {
 }
 
 // Me returns the current user info.
-func (h *AuthHandler) Me(ctx context.Context, _ jsonldb.ID, user *identity.User, req dto.MeRequest) (*dto.UserResponse, error) {
+func (h *AuthHandler) Me(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.MeRequest) (*dto.UserResponse, error) {
 	// Build user response with memberships
 	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
 	if err != nil {
@@ -134,7 +134,7 @@ func (h *AuthHandler) Me(ctx context.Context, _ jsonldb.ID, user *identity.User,
 }
 
 // CreateOrganization creates a new organization for the authenticated user.
-func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user *identity.User, req dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
+func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
 	if req.Name == "" {
 		return nil, dto.MissingField("name")
 	}

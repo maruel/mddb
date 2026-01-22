@@ -25,7 +25,7 @@ func NewUserHandler(userService *identity.UserService, memService *identity.Memb
 }
 
 // ListUsers returns all users in the organization.
-func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
+func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
 	// Filter by organization membership and convert to response
 	var users []dto.UserResponse
 	for user := range h.userService.Iter(0) {
@@ -45,7 +45,7 @@ func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *identi
 }
 
 // UpdateUserRole updates a user's role.
-func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.UpdateRoleRequest) (*dto.UserResponse, error) {
+func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateRoleRequest) (*dto.UserResponse, error) {
 	if req.UserID == "" || req.Role == "" {
 		return nil, dto.MissingField("user_id or role")
 	}
@@ -78,7 +78,7 @@ func (h *UserHandler) UpdateUserRole(ctx context.Context, orgID jsonldb.ID, _ *i
 }
 
 // UpdateUserSettings updates user global settings.
-func (h *UserHandler) UpdateUserSettings(ctx context.Context, _ jsonldb.ID, user *identity.User, req dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
+func (h *UserHandler) UpdateUserSettings(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
 	_, err := h.userService.Modify(user.ID, func(u *identity.User) error {
 		u.Settings = userSettingsToEntity(req.Settings)
 		return nil

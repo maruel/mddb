@@ -24,7 +24,7 @@ func NewAdminHandler(userService *identity.UserService, orgService *identity.Org
 }
 
 // Stats returns server-wide statistics.
-func (h *AdminHandler) Stats(ctx context.Context, _ *identity.User, _ struct{}) (*dto.AdminStatsResponse, error) {
+func (h *AdminHandler) Stats(ctx context.Context, _ *identity.User, _ *dto.AdminStatsRequest) (*dto.AdminStatsResponse, error) {
 	var userCount, orgCount int
 	for range h.userService.Iter(0) {
 		userCount++
@@ -39,7 +39,7 @@ func (h *AdminHandler) Stats(ctx context.Context, _ *identity.User, _ struct{}) 
 }
 
 // ListAllUsers returns all users in the system.
-func (h *AdminHandler) ListAllUsers(ctx context.Context, _ *identity.User, _ struct{}) (*dto.AdminUsersResponse, error) {
+func (h *AdminHandler) ListAllUsers(ctx context.Context, _ *identity.User, _ *dto.AdminUsersRequest) (*dto.AdminUsersResponse, error) {
 	users := make([]dto.UserResponse, 0) //nolint:prealloc // size unknown from iterator
 	for user := range h.userService.Iter(0) {
 		users = append(users, *userToResponse(user))
@@ -48,7 +48,7 @@ func (h *AdminHandler) ListAllUsers(ctx context.Context, _ *identity.User, _ str
 }
 
 // ListAllOrgs returns all organizations in the system.
-func (h *AdminHandler) ListAllOrgs(ctx context.Context, _ *identity.User, _ struct{}) (*dto.AdminOrgsResponse, error) {
+func (h *AdminHandler) ListAllOrgs(ctx context.Context, _ *identity.User, _ *dto.AdminOrgsRequest) (*dto.AdminOrgsResponse, error) {
 	orgs := make([]dto.OrganizationResponse, 0) //nolint:prealloc // size unknown from iterator
 	for org := range h.orgService.Iter(0) {
 		orgs = append(orgs, dto.OrganizationResponse{

@@ -29,7 +29,7 @@ func NewGitRemoteHandler(orgService *identity.OrganizationService, gitService *g
 }
 
 // GetRemote returns the git remote for an organization, or null if none exists.
-func (h *GitRemoteHandler) GetRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+func (h *GitRemoteHandler) GetRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (h *GitRemoteHandler) SetRemote(ctx context.Context, orgID jsonldb.ID, _ *i
 }
 
 // Push pushes changes to the git remote.
-func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.PushGitRemoteRequest) (*dto.OkResponse, error) {
+func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.PushGitRemoteRequest) (*dto.OkResponse, error) {
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (h *GitRemoteHandler) Push(ctx context.Context, orgID jsonldb.ID, _ *identi
 }
 
 // DeleteRemote deletes the git remote for an organization.
-func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.DeleteGitRemoteRequest) (*dto.OkResponse, error) {
+func (h *GitRemoteHandler) DeleteRemote(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.DeleteGitRemoteRequest) (*dto.OkResponse, error) {
 	_, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
 		if org.GitRemote.IsZero() {
 			return dto.NotFound("remote")

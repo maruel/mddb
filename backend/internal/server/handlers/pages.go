@@ -27,7 +27,7 @@ func NewPageHandler(fs *content.FileStore) *PageHandler {
 }
 
 // ListPages returns a list of all pages.
-func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.ListPagesRequest) (*dto.ListPagesResponse, error) {
+func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListPagesRequest) (*dto.ListPagesResponse, error) {
 	it, err := h.fs.IterPages(orgID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list pages", err)
@@ -36,7 +36,7 @@ func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *identi
 }
 
 // GetPage returns a specific page by ID.
-func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetPageRequest) (*dto.GetPageResponse, error) {
+func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetPageRequest) (*dto.GetPageResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *identity
 }
 
 // CreatePage creates a new page.
-func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
+func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
 	}
@@ -67,7 +67,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *id
 }
 
 // UpdatePage updates an existing page.
-func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
+func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *id
 }
 
 // DeletePage deletes a page.
-func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
+func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
 		return nil, err
@@ -94,7 +94,7 @@ func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *id
 }
 
 // GetPageHistory returns the history of a page.
-func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetPageHistoryRequest) (*dto.GetPageHistoryResponse, error) {
+func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetPageHistoryRequest) (*dto.GetPageHistoryResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (h *PageHandler) GetPageHistory(ctx context.Context, orgID jsonldb.ID, _ *i
 }
 
 // GetPageVersion returns a specific version of a page.
-func (h *PageHandler) GetPageVersion(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req dto.GetPageVersionRequest) (*dto.GetPageVersionResponse, error) {
+func (h *PageHandler) GetPageVersion(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetPageVersionRequest) (*dto.GetPageVersionResponse, error) {
 	id, err := decodeID(req.ID, "page_id")
 	if err != nil {
 		return nil, err

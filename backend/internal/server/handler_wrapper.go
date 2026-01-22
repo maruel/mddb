@@ -20,9 +20,10 @@ import (
 )
 
 // Wrap wraps a handler function to work as an http.Handler.
-// The function must have signature: func(context.Context, In) (*Out, error)
+// The function must have signature: func(context.Context, *In) (*Out, error)
 // where In can be unmarshalled from JSON and Out is a struct.
 // Path parameters can be extracted by tagging struct fields with `path:"name"`.
+// *In must implement dto.Validatable.
 //
 // Example:
 //
@@ -30,8 +31,11 @@ import (
 //	    ID string `path:"id"`
 //	}
 //
-//	func (h *Handler) GetPage(ctx context.Context, req GetPageRequest) (*Response, error)
-func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Handler {
+//	func (h *Handler) GetPage(ctx context.Context, req *GetPageRequest) (*Response, error)
+func Wrap[In any, PtrIn interface {
+	*In
+	dto.Validatable
+}, Out any](fn func(context.Context, PtrIn) (*Out, error)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		// Read request body
@@ -44,11 +48,11 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 			writeBadRequestError(w, "Failed to read request body")
 			return
 		}
-		var input In
+		input := new(In)
 		if len(body) > 0 {
 			d := json.NewDecoder(bytes.NewReader(body))
 			d.DisallowUnknownFields()
-			if err := d.Decode(&input); err != nil {
+			if err := d.Decode(input); err != nil {
 				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
 				writeBadRequestError(w, "Invalid request body")
 				return
@@ -56,11 +60,17 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 		}
 
 		// Extract path parameters and populate request struct
-		populatePathParams(r, &input)
+		populatePathParams(r, input)
 		// Extract query parameters and populate request struct
-		populateQueryParams(r, &input)
+		populateQueryParams(r, input)
 
-		output, err := fn(ctx, input)
+		// Validate the request
+		if err := PtrIn(input).Validate(); err != nil {
+			handleValidationError(ctx, w, err)
+			return
+		}
+
+		output, err := fn(ctx, PtrIn(input))
 		if err != nil {
 			statusCode := http.StatusInternalServerError
 			errorCode := dto.ErrorCodeInternal
@@ -90,15 +100,19 @@ func Wrap[In any, Out any](fn func(context.Context, In) (*Out, error)) http.Hand
 
 // WrapAuth wraps an authenticated handler function to work as an http.Handler.
 // It combines JWT validation, organization membership checking, and request parsing.
-// The function must have signature: func(context.Context, jsonldb.ID, *identity.User, In) (*Out, error)
+// The function must have signature: func(context.Context, jsonldb.ID, *identity.User, *In) (*Out, error)
 // where orgID is the organization ID from the path (zero if not present),
 // user is the authenticated user, In can be unmarshalled from JSON, and Out is a struct.
-func WrapAuth[In any, Out any](
+// *In must implement dto.Validatable.
+func WrapAuth[In any, PtrIn interface {
+	*In
+	dto.Validatable
+}, Out any](
 	userService *identity.UserService,
 	memService *identity.MembershipService,
 	jwtSecret []byte,
 	requiredRole identity.UserRole,
-	fn func(context.Context, jsonldb.ID, *identity.User, In) (*Out, error),
+	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -142,21 +156,27 @@ func WrapAuth[In any, Out any](
 			writeBadRequestError(w, "Failed to read request body")
 			return
 		}
-		var input In
+		input := new(In)
 		if len(body) > 0 {
 			d := json.NewDecoder(bytes.NewReader(body))
 			d.DisallowUnknownFields()
-			if err := d.Decode(&input); err != nil {
+			if err := d.Decode(input); err != nil {
 				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
 				writeBadRequestError(w, "Invalid request body")
 				return
 			}
 		}
 
-		populatePathParams(r, &input)
-		populateQueryParams(r, &input)
+		populatePathParams(r, input)
+		populateQueryParams(r, input)
 
-		output, err := fn(ctx, orgID, user, input)
+		// Validate the request
+		if err := PtrIn(input).Validate(); err != nil {
+			handleValidationError(ctx, w, err)
+			return
+		}
+
+		output, err := fn(ctx, orgID, user, PtrIn(input))
 		if err != nil {
 			statusCode := http.StatusInternalServerError
 			errorCode := dto.ErrorCodeInternal
@@ -238,10 +258,14 @@ func WrapAuthRaw(
 // WrapGlobalAdmin wraps a handler that requires global admin privileges.
 // These endpoints are for server-wide administration (stats, all users, all orgs).
 // No organization context is required - just valid JWT and IsGlobalAdmin flag.
-func WrapGlobalAdmin[In any, Out any](
+// *In must implement dto.Validatable.
+func WrapGlobalAdmin[In any, PtrIn interface {
+	*In
+	dto.Validatable
+}, Out any](
 	userService *identity.UserService,
 	jwtSecret []byte,
-	fn func(context.Context, *identity.User, In) (*Out, error),
+	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -266,21 +290,27 @@ func WrapGlobalAdmin[In any, Out any](
 			writeBadRequestError(w, "Failed to read request body")
 			return
 		}
-		var input In
+		input := new(In)
 		if len(body) > 0 {
 			d := json.NewDecoder(bytes.NewReader(body))
 			d.DisallowUnknownFields()
-			if err := d.Decode(&input); err != nil {
+			if err := d.Decode(input); err != nil {
 				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
 				writeBadRequestError(w, "Invalid request body")
 				return
 			}
 		}
 
-		populatePathParams(r, &input)
-		populateQueryParams(r, &input)
+		populatePathParams(r, input)
+		populateQueryParams(r, input)
 
-		output, err := fn(ctx, user, input)
+		// Validate the request
+		if err := PtrIn(input).Validate(); err != nil {
+			handleValidationError(ctx, w, err)
+			return
+		}
+
+		output, err := fn(ctx, user, PtrIn(input))
 		if err != nil {
 			statusCode := http.StatusInternalServerError
 			errorCode := dto.ErrorCodeInternal
@@ -437,6 +467,25 @@ func populateQueryParams(r *http.Request, input any) {
 			// Other types are not supported for query params yet
 		}
 	}
+}
+
+// handleValidationError handles a validation error from a request's Validate method.
+func handleValidationError(ctx context.Context, w http.ResponseWriter, err error) {
+	statusCode := http.StatusBadRequest
+	errorCode := dto.ErrorCodeValidationFailed
+	details := make(map[string]any)
+
+	var ewsErr dto.ErrorWithStatus
+	if errors.As(err, &ewsErr) {
+		statusCode = ewsErr.StatusCode()
+		errorCode = ewsErr.Code()
+		if d := ewsErr.Details(); d != nil {
+			details = d
+		}
+	}
+
+	slog.ErrorContext(ctx, "Validation error", "err", err, "statusCode", statusCode, "code", errorCode)
+	writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
 }
 
 // writeBadRequestError writes a 400 Bad Request error response as JSON (internal use).
