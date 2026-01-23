@@ -18,9 +18,16 @@ vi.mock('./Auth.module.css', () => ({
     oauthButtons: 'oauthButtons',
     googleButton: 'googleButton',
     microsoftButton: 'microsoftButton',
+    oauthButton: 'oauthButton',
     authFooter: 'authFooter',
   },
 }));
+
+// Mock response for providers endpoint
+const mockProvidersResponse = {
+  ok: true,
+  json: () => Promise.resolve({ providers: ['google', 'microsoft'] }),
+};
 
 // Mock fetch
 const mockFetch = vi.fn();
@@ -43,6 +50,13 @@ describe('Auth', () => {
     cleanup();
     vi.clearAllMocks();
     mockFetch.mockReset();
+    // Default mock for providers endpoint (called on component mount)
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/auth/providers') {
+        return Promise.resolve(mockProvidersResponse);
+      }
+      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
+    });
   });
 
   afterEach(() => {
@@ -99,9 +113,17 @@ describe('Auth', () => {
       user: mockUser,
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockResponse),
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/auth/providers') {
+        return Promise.resolve(mockProvidersResponse);
+      }
+      if (url === '/api/auth/login') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockResponse),
+        });
+      }
+      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
     });
 
     renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
@@ -143,9 +165,17 @@ describe('Auth', () => {
       },
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: () => Promise.resolve(errorResponse),
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/auth/providers') {
+        return Promise.resolve(mockProvidersResponse);
+      }
+      if (url === '/api/auth/login') {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve(errorResponse),
+        });
+      }
+      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
     });
 
     renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
@@ -172,7 +202,12 @@ describe('Auth', () => {
   });
 
   it('handles network error', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('Network error'));
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/auth/providers') {
+        return Promise.resolve(mockProvidersResponse);
+      }
+      return Promise.reject(new Error('Network error'));
+    });
 
     renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
 
@@ -212,9 +247,17 @@ describe('Auth', () => {
       user: mockUser,
     };
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve(mockResponse),
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/auth/providers') {
+        return Promise.resolve(mockProvidersResponse);
+      }
+      if (url === '/api/auth/register') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(mockResponse),
+        });
+      }
+      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
     });
 
     renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
@@ -297,8 +340,14 @@ describe('Auth', () => {
   });
 
   it('disables submit button while loading', async () => {
-    // Make fetch hang
-    mockFetch.mockImplementationOnce(() => new Promise((resolve) => setTimeout(resolve, 10000)));
+    // Make login fetch hang
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/auth/providers') {
+        return Promise.resolve(mockProvidersResponse);
+      }
+      // Make login request hang
+      return new Promise((resolve) => setTimeout(resolve, 10000));
+    });
 
     renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
 
@@ -322,9 +371,17 @@ describe('Auth', () => {
   });
 
   it('handles response without token or user', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({}), // Empty response
+    mockFetch.mockImplementation((url: string) => {
+      if (url === '/api/auth/providers') {
+        return Promise.resolve(mockProvidersResponse);
+      }
+      if (url === '/api/auth/login') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({}), // Empty response
+        });
+      }
+      return Promise.reject(new Error(`Unexpected fetch to ${url}`));
     });
 
     renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
