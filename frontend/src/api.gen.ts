@@ -5,6 +5,7 @@ import type {
   AdminOrgsResponse,
   AdminStatsResponse,
   AdminUsersResponse,
+  AuthResponse,
   CreateInvitationRequest,
   CreateNodeRequest,
   CreateOrganizationRequest,
@@ -37,7 +38,6 @@ import type {
   ListTablesResponse,
   ListUsersResponse,
   LoginRequest,
-  LoginResponse,
   MembershipResponse,
   NodeResponse,
   OkResponse,
@@ -115,7 +115,7 @@ export function createAPIClient(fetchFn: FetchFn) {
     },
     auth: {
       invitations: {
-        acceptInvitation: (options: AcceptInvitationRequest) => post<LoginResponse>(fetchFn, `/api/auth/invitations/accept`, options),
+        acceptInvitation: (options: AcceptInvitationRequest) => post<AuthResponse>(fetchFn, `/api/auth/invitations/accept`, options),
       },
       me: {
         get: () => get<UserResponse>(fetchFn, `/api/auth/me`),
@@ -123,8 +123,8 @@ export function createAPIClient(fetchFn: FetchFn) {
       settings: {
         update: (options: UpdateUserSettingsRequest) => post<UserResponse>(fetchFn, `/api/auth/settings`, options),
       },
-      login: (options: LoginRequest) => post<LoginResponse>(fetchFn, `/api/auth/login`, options),
-      register: (options: RegisterRequest) => post<LoginResponse>(fetchFn, `/api/auth/register`, options),
+      login: (options: LoginRequest) => post<AuthResponse>(fetchFn, `/api/auth/login`, options),
+      register: (options: RegisterRequest) => post<AuthResponse>(fetchFn, `/api/auth/register`, options),
       switchOrg: (options: SwitchOrgRequest) => post<SwitchOrgResponse>(fetchFn, `/api/auth/switch-org`, options),
     },
     health: {

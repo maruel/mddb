@@ -55,7 +55,7 @@ func (h *InvitationHandler) ListInvitations(ctx context.Context, orgID jsonldb.I
 
 // AcceptInvitation handles a user accepting an invitation.
 // This is a public endpoint (no auth required).
-func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req *dto.AcceptInvitationRequest) (*dto.LoginResponse, error) {
+func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req *dto.AcceptInvitationRequest) (*dto.AuthResponse, error) {
 	if req.Token == "" {
 		return nil, dto.MissingField("token")
 	}
@@ -100,7 +100,7 @@ func (h *InvitationHandler) AcceptInvitation(ctx context.Context, req *dto.Accep
 	userResp := userWithMembershipsToResponse(uwm)
 
 	// Return response (Note: Token generation requires AuthHandler)
-	return &dto.LoginResponse{
+	return &dto.AuthResponse{
 		User: userResp,
 	}, nil
 }

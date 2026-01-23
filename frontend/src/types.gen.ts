@@ -415,9 +415,10 @@ export interface OkResponse {
   ok: boolean;
 }
 /**
- * LoginResponse is a response from logging in.
+ * AuthResponse is a response containing authentication token and user info.
+ * Used by login, register, and invitation acceptance endpoints.
  */
-export interface LoginResponse {
+export interface AuthResponse {
   token: string;
   user?: UserResponse;
 }

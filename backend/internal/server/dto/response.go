@@ -9,8 +9,9 @@ type OkResponse struct {
 
 // --- Auth Responses ---
 
-// LoginResponse is a response from logging in.
-type LoginResponse struct {
+// AuthResponse is a response containing authentication token and user info.
+// Used by login, register, and invitation acceptance endpoints.
+type AuthResponse struct {
 	Token string        `json:"token"`
 	User  *UserResponse `json:"user"`
 }

@@ -33,7 +33,7 @@ func NewAuthHandler(userService *identity.UserService, memService *identity.Memb
 }
 
 // Login handles user login and returns a JWT token.
-func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.LoginResponse, error) {
+func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.AuthResponse, error) {
 	if req.Email == "" || req.Password == "" {
 		return nil, dto.MissingField("email or password")
 	}
@@ -60,7 +60,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Lo
 		h.PopulateActiveContext(userResp, userResp.Memberships[0].OrganizationID)
 	}
 
-	return &dto.LoginResponse{
+	return &dto.AuthResponse{
 		Token: token,
 		User:  userResp,
 	}, nil
@@ -68,7 +68,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Lo
 
 // Register handles user registration.
 // Note: Organization creation is handled by the frontend after registration.
-func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.LoginResponse, error) {
+func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.AuthResponse, error) {
 	if req.Email == "" || req.Password == "" || req.Name == "" {
 		return nil, dto.MissingField("email, password, or name")
 	}
@@ -96,7 +96,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 	userResp := userWithMembershipsToResponse(uwm)
 
-	return &dto.LoginResponse{
+	return &dto.AuthResponse{
 		Token: token,
 		User:  userResp,
 	}, nil

@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-li
 import type { JSX } from 'solid-js';
 import Auth from './Auth';
 import { I18nProvider } from '../i18n';
-import type { UserResponse, LoginResponse, ErrorResponse } from '../types.gen';
+import type { UserResponse, AuthResponse, ErrorResponse } from '../types.gen';
 
 // Mock CSS module
 vi.mock('./Auth.module.css', () => ({
@@ -94,7 +94,7 @@ describe('Auth', () => {
       modified: '2024-01-01T00:00:00Z',
     };
 
-    const mockResponse: LoginResponse = {
+    const mockResponse: AuthResponse = {
       token: 'test-token-123',
       user: mockUser,
     };
@@ -207,7 +207,7 @@ describe('Auth', () => {
       modified: '2024-01-01T00:00:00Z',
     };
 
-    const mockResponse: LoginResponse = {
+    const mockResponse: AuthResponse = {
       token: 'new-token-123',
       user: mockUser,
     };

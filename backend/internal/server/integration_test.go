@@ -28,7 +28,6 @@ type testEnv struct {
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
-	t.Helper()
 	ctx := context.Background()
 	tempDir := t.TempDir()
 
@@ -86,7 +85,6 @@ func setupTestEnv(t *testing.T) *testEnv {
 // doJSON performs an HTTP request, decodes the JSON response, and returns the status code.
 // Body is always read and closed before returning.
 func (e *testEnv) doJSON(t *testing.T, method, path string, body, response any, token string) int {
-	t.Helper()
 	var bodyReader io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
@@ -157,10 +155,10 @@ func TestIntegration(t *testing.T) {
 		// Register a new user
 		registerReq := dto.RegisterRequest{
 			Email:    "alice@example.com",
-			Password: "securepassword123",
+			Password: "securePass1234",
 			Name:     "Alice",
 		}
-		var loginResp dto.LoginResponse
+		var loginResp dto.AuthResponse
 		status := env.doJSON(t, http.MethodPost, "/api/auth/register", registerReq, &loginResp, "")
 		if status != http.StatusOK {
 			t.Fatalf("POST /api/auth/register: got status %d, want %d", status, http.StatusOK)
@@ -192,9 +190,9 @@ func TestIntegration(t *testing.T) {
 		// Login with the same credentials
 		loginReq := dto.LoginRequest{
 			Email:    "alice@example.com",
-			Password: "securepassword123",
+			Password: "securePass1234",
 		}
-		var loginResp2 dto.LoginResponse
+		var loginResp2 dto.AuthResponse
 		status = env.doJSON(t, http.MethodPost, "/api/auth/login", loginReq, &loginResp2, "")
 		if status != http.StatusOK {
 			t.Fatalf("POST /api/auth/login: got status %d, want %d", status, http.StatusOK)
@@ -236,10 +234,10 @@ func TestIntegration(t *testing.T) {
 		// Register user first
 		registerReq := dto.RegisterRequest{
 			Email:    "bob@example.com",
-			Password: "password123",
+			Password: "Pass1234",
 			Name:     "Bob",
 		}
-		var loginResp dto.LoginResponse
+		var loginResp dto.AuthResponse
 		status := env.doJSON(t, http.MethodPost, "/api/auth/register", registerReq, &loginResp, "")
 		if status != http.StatusOK {
 			t.Fatalf("Register: got status %d", status)
@@ -284,10 +282,10 @@ func TestIntegration(t *testing.T) {
 		// Setup: register user and create org
 		registerReq := dto.RegisterRequest{
 			Email:    "charlie@example.com",
-			Password: "password123",
+			Password: "Pass1234",
 			Name:     "Charlie",
 		}
-		var loginResp dto.LoginResponse
+		var loginResp dto.AuthResponse
 		env.doJSON(t, http.MethodPost, "/api/auth/register", registerReq, &loginResp, "")
 		token := loginResp.Token
 
@@ -374,15 +372,15 @@ func TestIntegration(t *testing.T) {
 		env := setupTestEnv(t)
 
 		// Register two users
-		var daveLogin dto.LoginResponse
+		var daveLogin dto.AuthResponse
 		env.doJSON(t, http.MethodPost, "/api/auth/register", dto.RegisterRequest{
-			Email: "dave@example.com", Password: "password123", Name: "Dave",
+			Email: "dave@example.com", Password: "Pass1234", Name: "Dave",
 		}, &daveLogin, "")
 		daveToken := daveLogin.Token
 
-		var eveLogin dto.LoginResponse
+		var eveLogin dto.AuthResponse
 		env.doJSON(t, http.MethodPost, "/api/auth/register", dto.RegisterRequest{
-			Email: "eve@example.com", Password: "password123", Name: "Eve",
+			Email: "eve@example.com", Password: "Pass1234", Name: "Eve",
 		}, &eveLogin, "")
 		eveToken := eveLogin.Token
 
@@ -414,7 +412,7 @@ func TestIntegration(t *testing.T) {
 
 		// Register with empty email
 		status := env.doJSON(t, http.MethodPost, "/api/auth/register", dto.RegisterRequest{
-			Email: "", Password: "password123", Name: "Test",
+			Email: "", Password: "Pass1234", Name: "Test",
 		}, nil, "")
 		if status != http.StatusBadRequest {
 			t.Errorf("Register with empty email: got status %d, want %d", status, http.StatusBadRequest)
@@ -422,7 +420,7 @@ func TestIntegration(t *testing.T) {
 
 		// Register with empty name
 		status = env.doJSON(t, http.MethodPost, "/api/auth/register", dto.RegisterRequest{
-			Email: "valid@example.com", Password: "password123", Name: "",
+			Email: "valid@example.com", Password: "Pass1234", Name: "",
 		}, nil, "")
 		if status != http.StatusBadRequest {
 			t.Errorf("Register with empty name: got status %d, want %d", status, http.StatusBadRequest)
@@ -443,7 +441,7 @@ func TestIntegration(t *testing.T) {
 
 		// Register user first time
 		status := env.doJSON(t, http.MethodPost, "/api/auth/register", dto.RegisterRequest{
-			Email: "duplicate@example.com", Password: "password123", Name: "First",
+			Email: "duplicate@example.com", Password: "Pass1234", Name: "First",
 		}, nil, "")
 		if status != http.StatusOK {
 			t.Fatalf("First registration: got status %d", status)
@@ -451,7 +449,7 @@ func TestIntegration(t *testing.T) {
 
 		// Register user second time with same email - should fail
 		status = env.doJSON(t, http.MethodPost, "/api/auth/register", dto.RegisterRequest{
-			Email: "duplicate@example.com", Password: "password456", Name: "Second",
+			Email: "duplicate@example.com", Password: "Pass4567", Name: "Second",
 		}, nil, "")
 		if status != http.StatusConflict {
 			t.Errorf("Duplicate registration: got status %d, want %d", status, http.StatusConflict)

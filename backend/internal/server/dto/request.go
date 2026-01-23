@@ -1,5 +1,48 @@
 package dto
 
+import (
+	"net/mail"
+	"unicode"
+)
+
+// validateEmail checks if the email has valid format.
+func validateEmail(email string) error {
+	if email == "" {
+		return MissingField("email")
+	}
+	if _, err := mail.ParseAddress(email); err != nil {
+		return InvalidField("email", "invalid email format")
+	}
+	return nil
+}
+
+// validatePassword checks password meets requirements.
+// Requires 8-1024 characters with at least one letter and one digit.
+func validatePassword(password string) error {
+	if password == "" {
+		return MissingField("password")
+	}
+	if len(password) < 8 {
+		return InvalidField("password", "must be at least 8 characters")
+	}
+	if len(password) > 1024 {
+		return InvalidField("password", "must be at most 1024 characters")
+	}
+	var hasLetter, hasDigit bool
+	for _, r := range password {
+		if unicode.IsLetter(r) {
+			hasLetter = true
+		}
+		if unicode.IsDigit(r) {
+			hasDigit = true
+		}
+	}
+	if !hasLetter || !hasDigit {
+		return InvalidField("password", "must contain at least one letter and one digit")
+	}
+	return nil
+}
+
 // --- Auth ---
 
 // LoginRequest is a request to log in.
@@ -10,8 +53,8 @@ type LoginRequest struct {
 
 // Validate validates the login request fields.
 func (r *LoginRequest) Validate() error {
-	if r.Email == "" {
-		return MissingField("email")
+	if err := validateEmail(r.Email); err != nil {
+		return err
 	}
 	if r.Password == "" {
 		return MissingField("password")
@@ -28,11 +71,11 @@ type RegisterRequest struct {
 
 // Validate validates the register request fields.
 func (r *RegisterRequest) Validate() error {
-	if r.Email == "" {
-		return MissingField("email")
+	if err := validateEmail(r.Email); err != nil {
+		return err
 	}
-	if r.Password == "" {
-		return MissingField("password")
+	if err := validatePassword(r.Password); err != nil {
+		return err
 	}
 	if r.Name == "" {
 		return MissingField("name")

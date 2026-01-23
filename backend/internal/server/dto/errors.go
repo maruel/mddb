@@ -175,6 +175,11 @@ func MissingField(fieldName string) *APIError {
 	return NewAPIError(http.StatusBadRequest, ErrorCodeMissingField, "Missing required field: "+fieldName)
 }
 
+// InvalidField creates a 400 Bad Request error for an invalid field value.
+func InvalidField(fieldName, reason string) *APIError {
+	return NewAPIError(http.StatusBadRequest, ErrorCodeInvalidFormat, fieldName+": "+reason)
+}
+
 // Forbidden returns a 403 Forbidden error.
 func Forbidden(message string) error {
 	return NewAPIError(403, ErrorCodeForbidden, message)
