@@ -16,8 +16,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
+
+// addRequestMetadataToContext adds client IP and User-Agent to the context.
+func addRequestMetadataToContext(ctx context.Context, r *http.Request) context.Context {
+	ctx = reqctx.WithClientIP(ctx, reqctx.GetClientIP(r))
+	ctx = reqctx.WithUserAgent(ctx, r.Header.Get("User-Agent"))
+	return ctx
+}
 
 // Wrap wraps a handler function to work as an http.Handler.
 // The function must have signature: func(context.Context, *In) (*Out, error)
@@ -37,7 +45,7 @@ func Wrap[In any, PtrIn interface {
 	dto.Validatable
 }, Out any](fn func(context.Context, PtrIn) (*Out, error)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		ctx := addRequestMetadataToContext(r.Context(), r)
 		// Read request body
 		body, err := io.ReadAll(r.Body)
 		if err2 := r.Body.Close(); err == nil {
@@ -110,15 +118,22 @@ func WrapAuth[In any, PtrIn interface {
 }, Out any](
 	userService *identity.UserService,
 	memService *identity.MembershipService,
+	sessionService *identity.SessionService,
 	jwtSecret []byte,
 	requiredRole identity.UserRole,
 	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		ctx := addRequestMetadataToContext(r.Context(), r)
 
-		// Validate JWT
-		user, err := validateJWT(r, userService, jwtSecret)
+		// Validate JWT and session
+		user, sessionID, tokenString, err := validateJWTAndSession(r, userService, sessionService, jwtSecret)
+		if sessionID != 0 {
+			ctx = reqctx.WithSessionID(ctx, sessionID)
+		}
+		if tokenString != "" {
+			ctx = reqctx.WithTokenString(ctx, tokenString)
+		}
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -211,13 +226,14 @@ func WrapAuth[In any, PtrIn interface {
 func WrapAuthRaw(
 	userService *identity.UserService,
 	memService *identity.MembershipService,
+	sessionService *identity.SessionService,
 	jwtSecret []byte,
 	requiredRole identity.UserRole,
 	fn http.HandlerFunc,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Validate JWT
-		_, err := validateJWT(r, userService, jwtSecret)
+		// Validate JWT and session
+		user, _, _, err := validateJWTAndSession(r, userService, sessionService, jwtSecret)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -232,12 +248,6 @@ func WrapAuthRaw(
 				return
 			}
 
-			// Re-validate JWT to get user (we already validated above, so this should not fail)
-			user, err := validateJWT(r, userService, jwtSecret)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
-				return
-			}
 			membership, err := memService.Get(user.ID, orgID)
 			if err != nil {
 				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
@@ -264,13 +274,14 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 	dto.Validatable
 }, Out any](
 	userService *identity.UserService,
+	sessionService *identity.SessionService,
 	jwtSecret []byte,
 	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		ctx := addRequestMetadataToContext(r.Context(), r)
 
-		user, err := validateJWT(r, userService, jwtSecret)
+		user, _, _, err := validateJWTAndSession(r, userService, sessionService, jwtSecret)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -346,18 +357,21 @@ var (
 	errInvalidUserIDToken = errors.New("invalid user ID in token")
 	errInvalidUserIDFmt   = errors.New("invalid user ID format")
 	errUserNotFound       = errors.New("user not found")
+	errSessionRevoked     = errors.New("session revoked")
 )
 
-// validateJWT extracts and validates the JWT token from the request.
-func validateJWT(r *http.Request, userService *identity.UserService, jwtSecret []byte) (*identity.User, error) {
+// validateJWTAndSession extracts and validates the JWT token and session from the request.
+// Returns the user, session ID, token string, and any error.
+// If sessionService is nil, session validation is skipped (backwards compatible).
+func validateJWTAndSession(r *http.Request, userService *identity.UserService, sessionService *identity.SessionService, jwtSecret []byte) (*identity.User, jsonldb.ID, string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
-		return nil, errUnauthorized
+		return nil, 0, "", errUnauthorized
 	}
 
 	parts := strings.Split(authHeader, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
-		return nil, errInvalidAuthHdr
+		return nil, 0, "", errInvalidAuthHdr
 	}
 
 	tokenString := parts[1]
@@ -369,30 +383,49 @@ func validateJWT(r *http.Request, userService *identity.UserService, jwtSecret [
 	})
 
 	if err != nil || !token.Valid {
-		return nil, errInvalidToken
+		return nil, 0, "", errInvalidToken
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return nil, errInvalidClaims
+		return nil, 0, "", errInvalidClaims
 	}
 
 	userIDStr, ok := claims["sub"].(string)
 	if !ok {
-		return nil, errInvalidUserIDToken
+		return nil, 0, "", errInvalidUserIDToken
 	}
 
 	userID, err := jsonldb.DecodeID(userIDStr)
 	if err != nil {
-		return nil, errInvalidUserIDFmt
+		return nil, 0, "", errInvalidUserIDFmt
 	}
 
 	user, err := userService.Get(userID)
 	if err != nil {
-		return nil, errUserNotFound
+		return nil, 0, "", errUserNotFound
 	}
 
-	return user, nil
+	// Validate session if sessionService is provided and token has session ID
+	var sessionID jsonldb.ID
+	if sessionService != nil {
+		if sidStr, ok := claims["sid"].(string); ok && sidStr != "" {
+			sessionID, err = jsonldb.DecodeID(sidStr)
+			if err != nil {
+				return nil, 0, "", errInvalidToken
+			}
+
+			valid, err := sessionService.IsValid(sessionID)
+			if err != nil {
+				return nil, 0, "", errInvalidToken
+			}
+			if !valid {
+				return nil, 0, "", errSessionRevoked
+			}
+		}
+	}
+
+	return user, sessionID, tokenString, nil
 }
 
 // populatePathParams extracts path parameters from the request and populates

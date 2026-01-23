@@ -798,6 +798,45 @@ func (r *ProvidersRequest) Validate() error {
 	return nil
 }
 
+// --- Sessions ---
+
+// LogoutRequest is a request to logout (revoke current session).
+type LogoutRequest struct{}
+
+// Validate is a no-op for LogoutRequest.
+func (r *LogoutRequest) Validate() error {
+	return nil
+}
+
+// ListSessionsRequest is a request to list user's active sessions.
+type ListSessionsRequest struct{}
+
+// Validate is a no-op for ListSessionsRequest.
+func (r *ListSessionsRequest) Validate() error {
+	return nil
+}
+
+// RevokeSessionRequest is a request to revoke a specific session.
+type RevokeSessionRequest struct {
+	SessionID string `json:"session_id"`
+}
+
+// Validate validates the revoke session request fields.
+func (r *RevokeSessionRequest) Validate() error {
+	if r.SessionID == "" {
+		return MissingField("session_id")
+	}
+	return nil
+}
+
+// RevokeAllSessionsRequest is a request to revoke all sessions (logout everywhere).
+type RevokeAllSessionsRequest struct{}
+
+// Validate is a no-op for RevokeAllSessionsRequest.
+func (r *RevokeAllSessionsRequest) Validate() error {
+	return nil
+}
+
 // --- Users ---
 
 // ListUsersRequest is a request to list users.

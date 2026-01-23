@@ -10,17 +10,16 @@ package server
 
 import (
 	"embed"
-	"errors"
 	"io"
 	"io/fs"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -28,7 +27,7 @@ import (
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
-func NewRouter(fileStore *content.FileStore, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
+func NewRouter(fileStore *content.FileStore, userService *identity.UserService, orgService *identity.OrganizationService, invService *identity.InvitationService, memService *identity.MembershipService, sessionService *identity.SessionService, jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string) http.Handler {
 	mux := &http.ServeMux{}
 	jwtSecretBytes := []byte(jwtSecret)
 
@@ -37,7 +36,7 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	nh := handlers.NewNodeHandler(fileStore)
 	ah := handlers.NewAssetHandler(fileStore)
 	sh := handlers.NewSearchHandler(fileStore)
-	authh := handlers.NewAuthHandler(userService, memService, orgService, fileStore, jwtSecret)
+	authh := handlers.NewAuthHandler(userService, memService, orgService, sessionService, fileStore, jwtSecret)
 	uh := handlers.NewUserHandler(userService, memService, orgService)
 	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
 	mh := handlers.NewMembershipHandler(memService, userService, orgService, authh)
@@ -55,9 +54,9 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 
 	// Global admin endpoints (requires IsGlobalAdmin)
 	adminh := handlers.NewAdminHandler(userService, orgService, memService)
-	mux.Handle("GET /api/admin/stats", WrapGlobalAdmin(userService, jwtSecretBytes, adminh.GetAdminStats))
-	mux.Handle("GET /api/admin/users", WrapGlobalAdmin(userService, jwtSecretBytes, adminh.ListAllUsers))
-	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(userService, jwtSecretBytes, adminh.ListAllOrgs))
+	mux.Handle("GET /api/admin/stats", WrapGlobalAdmin(userService, sessionService, jwtSecretBytes, adminh.GetAdminStats))
+	mux.Handle("GET /api/admin/users", WrapGlobalAdmin(userService, sessionService, jwtSecretBytes, adminh.ListAllUsers))
+	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(userService, sessionService, jwtSecretBytes, adminh.ListAllOrgs))
 
 	// Auth endpoints (public)
 	mux.Handle("POST /api/auth/login", Wrap(authh.Login))
@@ -65,22 +64,28 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	mux.Handle("POST /api/auth/invitations/accept", Wrap(ih.AcceptInvitation))
 
 	// Auth endpoints (authenticated, no org)
-	mux.Handle("GET /api/auth/me", WrapAuth(userService, memService, jwtSecretBytes, viewer, authh.GetMe))
-	mux.Handle("POST /api/auth/switch-org", WrapAuth(userService, memService, jwtSecretBytes, viewer, mh.SwitchOrg))
-	mux.Handle("POST /api/auth/settings", WrapAuth(userService, memService, jwtSecretBytes, viewer, uh.UpdateUserSettings))
-	mux.Handle("POST /api/organizations", WrapAuth(userService, memService, jwtSecretBytes, viewer, authh.CreateOrganization))
+	mux.Handle("GET /api/auth/me", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, authh.GetMe))
+	mux.Handle("POST /api/auth/switch-org", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, mh.SwitchOrg))
+	mux.Handle("POST /api/auth/settings", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, uh.UpdateUserSettings))
+	mux.Handle("POST /api/organizations", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, authh.CreateOrganization))
+
+	// Session management endpoints (authenticated, no org)
+	mux.Handle("POST /api/auth/logout", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, authh.Logout))
+	mux.Handle("GET /api/auth/sessions", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, authh.ListSessions))
+	mux.Handle("POST /api/auth/sessions/revoke", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, authh.RevokeSession))
+	mux.Handle("POST /api/auth/sessions/revoke-all", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, authh.RevokeAllSessions))
 
 	// Settings endpoints (authenticated with org)
-	mux.Handle("POST /api/{orgID}/settings/membership", WrapAuth(userService, memService, jwtSecretBytes, viewer, mh.UpdateMembershipSettings))
-	mux.Handle("GET /api/{orgID}/settings/organization", WrapAuth(userService, memService, jwtSecretBytes, viewer, orgh.GetOrganization))
-	mux.Handle("POST /api/{orgID}/settings/organization", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateOrganization))
-	mux.Handle("POST /api/{orgID}/settings/preferences", WrapAuth(userService, memService, jwtSecretBytes, admin, orgh.UpdateOrgPreferences))
+	mux.Handle("POST /api/{orgID}/settings/membership", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, mh.UpdateMembershipSettings))
+	mux.Handle("GET /api/{orgID}/settings/organization", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, orgh.GetOrganization))
+	mux.Handle("POST /api/{orgID}/settings/organization", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, orgh.UpdateOrganization))
+	mux.Handle("POST /api/{orgID}/settings/preferences", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, orgh.UpdateOrgPreferences))
 
 	// Git Remote endpoints (one remote per org)
-	mux.Handle("GET /api/{orgID}/settings/git", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.GetGitRemote))
-	mux.Handle("POST /api/{orgID}/settings/git", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.UpdateGitRemote))
-	mux.Handle("POST /api/{orgID}/settings/git/push", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.PushGit))
-	mux.Handle("POST /api/{orgID}/settings/git/delete", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.DeleteGitRemote))
+	mux.Handle("GET /api/{orgID}/settings/git", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, grh.GetGitRemote))
+	mux.Handle("POST /api/{orgID}/settings/git", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, grh.UpdateGitRemote))
+	mux.Handle("POST /api/{orgID}/settings/git/push", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, grh.PushGit))
+	mux.Handle("POST /api/{orgID}/settings/git/delete", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, grh.DeleteGitRemote))
 
 	// OAuth endpoints (public) - always registered, returns error if provider not configured
 	oh := handlers.NewOAuthHandler(userService, memService, orgService, fileStore, authh)
@@ -104,48 +109,48 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", oh.Callback)
 
 	// User management endpoints
-	mux.Handle("GET /api/{orgID}/users", WrapAuth(userService, memService, jwtSecretBytes, admin, uh.ListUsers))
-	mux.Handle("POST /api/{orgID}/users/role", WrapAuth(userService, memService, jwtSecretBytes, admin, uh.UpdateUserRole))
+	mux.Handle("GET /api/{orgID}/users", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, uh.ListUsers))
+	mux.Handle("POST /api/{orgID}/users/role", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, uh.UpdateUserRole))
 
 	// Invitation endpoints
-	mux.Handle("GET /api/{orgID}/invitations", WrapAuth(userService, memService, jwtSecretBytes, admin, ih.ListInvitations))
-	mux.Handle("POST /api/{orgID}/invitations", WrapAuth(userService, memService, jwtSecretBytes, admin, ih.CreateInvitation))
+	mux.Handle("GET /api/{orgID}/invitations", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, ih.ListInvitations))
+	mux.Handle("POST /api/{orgID}/invitations", WrapAuth(userService, memService, sessionService, jwtSecretBytes, admin, ih.CreateInvitation))
 
 	// Unified Nodes endpoints
-	mux.Handle("GET /api/{orgID}/nodes", WrapAuth(userService, memService, jwtSecretBytes, viewer, nh.ListNodes))
-	mux.Handle("GET /api/{orgID}/nodes/{id}", WrapAuth(userService, memService, jwtSecretBytes, viewer, nh.GetNode))
-	mux.Handle("POST /api/{orgID}/nodes", WrapAuth(userService, memService, jwtSecretBytes, editor, nh.CreateNode))
+	mux.Handle("GET /api/{orgID}/nodes", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, nh.ListNodes))
+	mux.Handle("GET /api/{orgID}/nodes/{id}", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, nh.GetNode))
+	mux.Handle("POST /api/{orgID}/nodes", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, nh.CreateNode))
 
 	// Pages endpoints
-	mux.Handle("GET /api/{orgID}/pages", WrapAuth(userService, memService, jwtSecretBytes, viewer, ph.ListPages))
-	mux.Handle("GET /api/{orgID}/pages/{id}", WrapAuth(userService, memService, jwtSecretBytes, viewer, ph.GetPage))
-	mux.Handle("GET /api/{orgID}/pages/{id}/history", WrapAuth(userService, memService, jwtSecretBytes, viewer, ph.ListPageVersions))
-	mux.Handle("GET /api/{orgID}/pages/{id}/history/{hash}", WrapAuth(userService, memService, jwtSecretBytes, viewer, ph.GetPageVersion))
-	mux.Handle("POST /api/{orgID}/pages", WrapAuth(userService, memService, jwtSecretBytes, editor, ph.CreatePage))
-	mux.Handle("POST /api/{orgID}/pages/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, ph.UpdatePage))
-	mux.Handle("POST /api/{orgID}/pages/{id}/delete", WrapAuth(userService, memService, jwtSecretBytes, editor, ph.DeletePage))
+	mux.Handle("GET /api/{orgID}/pages", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, ph.ListPages))
+	mux.Handle("GET /api/{orgID}/pages/{id}", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, ph.GetPage))
+	mux.Handle("GET /api/{orgID}/pages/{id}/history", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, ph.ListPageVersions))
+	mux.Handle("GET /api/{orgID}/pages/{id}/history/{hash}", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, ph.GetPageVersion))
+	mux.Handle("POST /api/{orgID}/pages", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, ph.CreatePage))
+	mux.Handle("POST /api/{orgID}/pages/{id}", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, ph.UpdatePage))
+	mux.Handle("POST /api/{orgID}/pages/{id}/delete", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, ph.DeletePage))
 
 	// Table endpoints
-	mux.Handle("GET /api/{orgID}/tables", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.ListTables))
-	mux.Handle("GET /api/{orgID}/tables/{id}", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.GetTable))
-	mux.Handle("POST /api/{orgID}/tables", WrapAuth(userService, memService, jwtSecretBytes, editor, th.CreateTable))
-	mux.Handle("POST /api/{orgID}/tables/{id}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.UpdateTable))
-	mux.Handle("POST /api/{orgID}/tables/{id}/delete", WrapAuth(userService, memService, jwtSecretBytes, editor, th.DeleteTable))
+	mux.Handle("GET /api/{orgID}/tables", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, th.ListTables))
+	mux.Handle("GET /api/{orgID}/tables/{id}", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, th.GetTable))
+	mux.Handle("POST /api/{orgID}/tables", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, th.CreateTable))
+	mux.Handle("POST /api/{orgID}/tables/{id}", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, th.UpdateTable))
+	mux.Handle("POST /api/{orgID}/tables/{id}/delete", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, th.DeleteTable))
 
 	// Records endpoints
-	mux.Handle("GET /api/{orgID}/tables/{id}/records", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.ListRecords))
-	mux.Handle("GET /api/{orgID}/tables/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, viewer, th.GetRecord))
-	mux.Handle("POST /api/{orgID}/tables/{id}/records", WrapAuth(userService, memService, jwtSecretBytes, editor, th.CreateRecord))
-	mux.Handle("POST /api/{orgID}/tables/{id}/records/{rid}", WrapAuth(userService, memService, jwtSecretBytes, editor, th.UpdateRecord))
-	mux.Handle("POST /api/{orgID}/tables/{id}/records/{rid}/delete", WrapAuth(userService, memService, jwtSecretBytes, editor, th.DeleteRecord))
+	mux.Handle("GET /api/{orgID}/tables/{id}/records", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, th.ListRecords))
+	mux.Handle("GET /api/{orgID}/tables/{id}/records/{rid}", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, th.GetRecord))
+	mux.Handle("POST /api/{orgID}/tables/{id}/records", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, th.CreateRecord))
+	mux.Handle("POST /api/{orgID}/tables/{id}/records/{rid}", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, th.UpdateRecord))
+	mux.Handle("POST /api/{orgID}/tables/{id}/records/{rid}/delete", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, th.DeleteRecord))
 
 	// Assets endpoints (page-based)
-	mux.Handle("GET /api/{orgID}/pages/{id}/assets", WrapAuth(userService, memService, jwtSecretBytes, viewer, ah.ListPageAssets))
-	mux.Handle("POST /api/{orgID}/pages/{id}/assets", WrapAuthRaw(userService, memService, jwtSecretBytes, editor, ah.UploadPageAssetHandler))
-	mux.Handle("POST /api/{orgID}/pages/{id}/assets/{name}/delete", WrapAuth(userService, memService, jwtSecretBytes, editor, ah.DeletePageAsset))
+	mux.Handle("GET /api/{orgID}/pages/{id}/assets", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, ah.ListPageAssets))
+	mux.Handle("POST /api/{orgID}/pages/{id}/assets", WrapAuthRaw(userService, memService, sessionService, jwtSecretBytes, editor, ah.UploadPageAssetHandler))
+	mux.Handle("POST /api/{orgID}/pages/{id}/assets/{name}/delete", WrapAuth(userService, memService, sessionService, jwtSecretBytes, editor, ah.DeletePageAsset))
 
 	// Search endpoint
-	mux.Handle("POST /api/{orgID}/search", WrapAuth(userService, memService, jwtSecretBytes, viewer, sh.Search))
+	mux.Handle("POST /api/{orgID}/search", WrapAuth(userService, memService, sessionService, jwtSecretBytes, viewer, sh.Search))
 
 	// File serving (raw asset files) - public for now
 	mux.HandleFunc("GET /assets/{orgID}/{id}/{name}", ah.ServeAssetFile)
@@ -159,17 +164,11 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	mux.Handle("/", NewEmbeddedSPAHandler(frontend.Files))
 
 	f := func(w http.ResponseWriter, r *http.Request) {
-		clientIP, err := getRealIP(r)
-		ctx := r.Context()
-		if err != nil {
-			slog.ErrorContext(ctx, "Failed to determine client IP", "err", err)
-			http.Error(w, "Can't determine IP address", http.StatusPreconditionFailed)
-			return
-		}
+		clientIP := reqctx.GetClientIP(r)
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 		mux.ServeHTTP(rw, r)
-		slog.InfoContext(ctx, "http",
+		slog.InfoContext(r.Context(), "http",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", rw.status,
@@ -265,40 +264,4 @@ func containsDot(path string) bool {
 		}
 	}
 	return false
-}
-
-// getRealIP extracts the client's real IP address from an HTTP request,
-// taking into account X-Forwarded-For or other proxy headers.
-func getRealIP(r *http.Request) (net.IP, error) {
-	// Check X-Forwarded-For header (most common proxy header)
-	if xForwardedFor := r.Header.Get("X-Forwarded-For"); xForwardedFor != "" {
-		// X-Forwarded-For can contain multiple IPs, the client's IP is the first one
-		ip := net.ParseIP(strings.TrimSpace(strings.Split(xForwardedFor, ",")[0]))
-		if ip != nil {
-			return ip, nil
-		}
-	}
-
-	// Check X-Real-IP header (used by some proxies)
-	if xRealIP := r.Header.Get("X-Real-IP"); xRealIP != "" {
-		if ip := net.ParseIP(xRealIP); ip != nil {
-			return ip, nil
-		}
-	}
-
-	// If no proxy headers found, get the remote address
-	if remoteAddr := r.RemoteAddr; remoteAddr != "" {
-		// RemoteAddr might be in the format IP:port
-		if host, _, err := net.SplitHostPort(remoteAddr); err == nil {
-			if ip := net.ParseIP(host); ip != nil {
-				return ip, nil
-			}
-		} else {
-			// If SplitHostPort fails, try parsing the whole RemoteAddr as an IP
-			if ip := net.ParseIP(remoteAddr); ip != nil {
-				return ip, nil
-			}
-		}
-	}
-	return nil, errors.New("could not determine client IP address")
 }

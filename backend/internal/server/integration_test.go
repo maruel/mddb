@@ -61,8 +61,13 @@ func setupTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("NewFileStore: %v", err)
 	}
 
+	sessionService, err := identity.NewSessionService(filepath.Join(tempDir, "sessions.jsonl"))
+	if err != nil {
+		t.Fatalf("NewSessionService: %v", err)
+	}
+
 	router := NewRouter(
-		fileStore, userService, orgService, invService, memService,
+		fileStore, userService, orgService, invService, memService, sessionService,
 		testJWTSecret,
 		"http://localhost:8080",
 		"", "", // google OAuth (disabled)

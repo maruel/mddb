@@ -377,6 +377,27 @@ export interface HealthRequest {
 export interface ProvidersRequest {
 }
 /**
+ * LogoutRequest is a request to logout (revoke current session).
+ */
+export interface LogoutRequest {
+}
+/**
+ * ListSessionsRequest is a request to list user's active sessions.
+ */
+export interface ListSessionsRequest {
+}
+/**
+ * RevokeSessionRequest is a request to revoke a specific session.
+ */
+export interface RevokeSessionRequest {
+  session_id: string;
+}
+/**
+ * RevokeAllSessionsRequest is a request to revoke all sessions (logout everywhere).
+ */
+export interface RevokeAllSessionsRequest {
+}
+/**
  * ListUsersRequest is a request to list users.
  */
 export interface ListUsersRequest {
@@ -432,6 +453,37 @@ export interface AuthResponse {
  */
 export interface ProvidersResponse {
   providers: OAuthProvider[];
+}
+/**
+ * SessionResponse is the API representation of a session.
+ */
+export interface SessionResponse {
+  id: string;
+  device_info: string;
+  ip_address: string;
+  created: string;
+  last_used: string;
+  is_current: boolean;
+}
+/**
+ * ListSessionsResponse is a response containing user's sessions.
+ */
+export interface ListSessionsResponse {
+  sessions: SessionResponse[];
+}
+/**
+ * LogoutResponse is a response from logout.
+ */
+export type LogoutResponse = OkResponse;
+/**
+ * RevokeSessionResponse is a response from revoking a session.
+ */
+export type RevokeSessionResponse = OkResponse;
+/**
+ * RevokeAllSessionsResponse is a response from revoking all sessions.
+ */
+export interface RevokeAllSessionsResponse {
+  revoked_count: number /* int */;
 }
 /**
  * ListPagesResponse is a response containing a list of pages.

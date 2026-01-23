@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
@@ -208,8 +209,10 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Generate JWT token
-	jwtToken, err := h.authHandler.GenerateToken(user)
+	// Generate JWT token with session tracking
+	clientIP := reqctx.GetClientIP(r)
+	userAgent := r.Header.Get("User-Agent")
+	jwtToken, err := h.authHandler.GenerateTokenWithSession(user, clientIP, userAgent)
 	if err != nil {
 		slog.ErrorContext(r.Context(), "OAuth: failed to generate token", "error", err, "userID", user.ID)
 		writeErrorResponse(w, dto.Internal("token_generation"))

@@ -30,6 +30,11 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("NewMembershipService failed: %v", err)
 	}
 
+	sessionService, err := identity.NewSessionService(filepath.Join(tempDir, "sessions.jsonl"))
+	if err != nil {
+		t.Fatalf("NewSessionService failed: %v", err)
+	}
+
 	gitService, err := git.New(ctx, tempDir, "test", "test@test.com")
 	if err != nil {
 		t.Fatalf("git.New failed: %v", err)
@@ -40,7 +45,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("NewFileStore failed: %v", err)
 	}
 
-	authHandler := NewAuthHandler(userService, memService, orgService, fileStore, "secret")
+	authHandler := NewAuthHandler(userService, memService, orgService, sessionService, fileStore, "secret")
 
 	// Register Joe - should not create organization (frontend handles that)
 	req1 := &dto.RegisterRequest{

@@ -21,6 +21,34 @@ type ProvidersResponse struct {
 	Providers []OAuthProvider `json:"providers"`
 }
 
+// --- Session Responses ---
+
+// SessionResponse is the API representation of a session.
+type SessionResponse struct {
+	ID         string `json:"id" jsonschema:"description=Unique session identifier"`
+	DeviceInfo string `json:"device_info" jsonschema:"description=Browser/OS info"`
+	IPAddress  string `json:"ip_address" jsonschema:"description=IP address"`
+	Created    string `json:"created" jsonschema:"description=Session creation timestamp (RFC3339)"`
+	LastUsed   string `json:"last_used" jsonschema:"description=Last activity timestamp (RFC3339)"`
+	IsCurrent  bool   `json:"is_current" jsonschema:"description=Whether this is the current session"`
+}
+
+// ListSessionsResponse is a response containing user's sessions.
+type ListSessionsResponse struct {
+	Sessions []SessionResponse `json:"sessions"`
+}
+
+// LogoutResponse is a response from logout.
+type LogoutResponse = OkResponse
+
+// RevokeSessionResponse is a response from revoking a session.
+type RevokeSessionResponse = OkResponse
+
+// RevokeAllSessionsResponse is a response from revoking all sessions.
+type RevokeAllSessionsResponse struct {
+	RevokedCount int `json:"revoked_count" jsonschema:"description=Number of sessions revoked"`
+}
+
 // --- Page Responses ---
 
 // ListPagesResponse is a response containing a list of pages.

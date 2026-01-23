@@ -247,6 +247,18 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize invitation service: %w", err)
 	}
 
+	sessionService, err := identity.NewSessionService(filepath.Join(dbDir, "sessions.jsonl"))
+	if err != nil {
+		return fmt.Errorf("failed to initialize session service: %w", err)
+	}
+
+	// Cleanup old expired sessions (older than 7 days past expiration)
+	if count, err := sessionService.CleanupExpired(7 * 24 * time.Hour); err != nil {
+		slog.WarnContext(ctx, "Failed to cleanup expired sessions", "error", err)
+	} else if count > 0 {
+		slog.InfoContext(ctx, "Cleaned up expired sessions", "count", count)
+	}
+
 	// Watch own executable for modifications (for development restarts)
 	if err := watchExecutable(ctx, stop); err != nil {
 		return fmt.Errorf("failed to watch executable: %w", err)
@@ -255,7 +267,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(fileStore, userService, orgService, invService, memService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
+		Handler:           server.NewRouter(fileStore, userService, orgService, invService, memService, sessionService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}

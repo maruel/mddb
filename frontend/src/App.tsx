@@ -56,7 +56,20 @@ export default function App() {
   const [hasMore, setHasMore] = createSignal(false);
   const PAGE_SIZE = 50;
 
-  const logout = () => {
+  const logout = async () => {
+    // Call logout API to revoke the session server-side
+    const currentToken = token();
+    if (currentToken) {
+      try {
+        const logoutApi = createApi(
+          () => currentToken,
+          () => {}
+        );
+        await logoutApi.auth.logout();
+      } catch {
+        // Ignore errors - proceed with local logout even if server call fails
+      }
+    }
     localStorage.removeItem('mddb_token');
     setToken(null);
     setUser(null);
