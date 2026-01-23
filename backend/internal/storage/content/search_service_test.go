@@ -3,8 +3,6 @@ package content
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -21,12 +19,9 @@ func TestSearchService(t *testing.T) {
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create test pages
@@ -118,12 +113,9 @@ func TestSearchService(t *testing.T) {
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create test table with records
@@ -226,12 +218,9 @@ func TestSearchService(t *testing.T) {
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create pages where title match should score higher
@@ -271,12 +260,9 @@ func TestSearchService(t *testing.T) {
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create multiple pages
@@ -307,12 +293,9 @@ func TestSearchService(t *testing.T) {
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create mixed content - page

@@ -35,12 +35,9 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("NewSessionService failed: %v", err)
 	}
 
-	gitService, err := git.New(ctx, tempDir, "test", "test@test.com")
-	if err != nil {
-		t.Fatalf("git.New failed: %v", err)
-	}
+	gitMgr := git.NewManager(tempDir, "test", "test@test.com")
 
-	fileStore, err := content.NewFileStore(tempDir, gitService, orgService)
+	fileStore, err := content.NewFileStore(tempDir, gitMgr, orgService)
 	if err != nil {
 		t.Fatalf("NewFileStore failed: %v", err)
 	}

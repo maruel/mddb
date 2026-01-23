@@ -1,7 +1,8 @@
 package git
 
 import (
-	"fmt"
+	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestClient(t *testing.T) {
+func TestRepo(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Init", func(t *testing.T) {
@@ -17,10 +18,12 @@ func TestClient(t *testing.T) {
 		tmpDir := t.TempDir()
 		ctx := t.Context()
 
-		client, err := New(ctx, tmpDir, "Test User", "test@example.com")
+		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
-			t.Fatalf("New() failed: %v", err)
+			t.Fatalf("Repo() failed: %v", err)
 		}
+		_ = repo
 
 		// Check .git exists
 		if _, err := os.Stat(filepath.Join(tmpDir, ".git")); os.IsNotExist(err) {
@@ -37,8 +40,9 @@ func TestClient(t *testing.T) {
 			t.Fatalf("failed to create subdir: %v", err)
 		}
 
-		if err := client.Init(ctx, "subdir"); err != nil {
-			t.Fatalf("Init(subdir) failed: %v", err)
+		_, err = mgr.Repo(ctx, "subdir")
+		if err != nil {
+			t.Fatalf("Repo(subdir) failed: %v", err)
 		}
 
 		if _, err := os.Stat(filepath.Join(subDir, ".git")); os.IsNotExist(err) {
@@ -51,9 +55,10 @@ func TestClient(t *testing.T) {
 		tmpDir := t.TempDir()
 		ctx := t.Context()
 
-		client, err := New(ctx, tmpDir, "Test User", "test@example.com")
+		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
-			t.Fatalf("New() failed: %v", err)
+			t.Fatalf("Repo() failed: %v", err)
 		}
 
 		// Create a file
@@ -62,13 +67,17 @@ func TestClient(t *testing.T) {
 			t.Fatalf("failed to write file: %v", err)
 		}
 
-		// Commit
-		if err := client.Commit(ctx, "", "Author", "author@example.com", "Initial commit", []string{testFile}); err != nil {
-			t.Fatalf("Commit() failed: %v", err)
+		// Commit using CommitTx
+		author := Author{Name: "Author", Email: "author@example.com"}
+		err = repo.CommitTx(ctx, author, func() (string, []string, error) {
+			return "Initial commit", []string{testFile}, nil
+		})
+		if err != nil {
+			t.Fatalf("CommitTx() failed: %v", err)
 		}
 
 		// Verify log
-		history, err := client.GetHistory(ctx, "", testFile, 1)
+		history, err := repo.GetHistory(ctx, testFile, 1)
 		if err != nil {
 			t.Fatalf("GetHistory() failed: %v", err)
 		}
@@ -88,17 +97,22 @@ func TestClient(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "Test User", "test@example.com")
+		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
-			t.Fatalf("New() failed: %v", err)
+			t.Fatalf("Repo() failed: %v", err)
 		}
 
 		testFile := "test.txt"
+		author := Author{}
+
 		// Commit 1
 		if err := os.WriteFile(filepath.Join(tmpDir, testFile), []byte("v1"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "Commit 1", []string{testFile}); err != nil {
+		if err := repo.CommitTx(ctx, author, func() (string, []string, error) {
+			return "Commit 1", []string{testFile}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
@@ -106,11 +120,13 @@ func TestClient(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tmpDir, testFile), []byte("v2"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "Commit 2", []string{testFile}); err != nil {
+		if err := repo.CommitTx(ctx, author, func() (string, []string, error) {
+			return "Commit 2", []string{testFile}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
-		history, err := client.GetHistory(ctx, "", testFile, 10)
+		history, err := repo.GetHistory(ctx, testFile, 10)
 		if err != nil {
 			t.Fatalf("GetHistory() failed: %v", err)
 		}
@@ -130,21 +146,26 @@ func TestClient(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "Test User", "test@example.com")
+		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
-			t.Fatalf("New() failed: %v", err)
+			t.Fatalf("Repo() failed: %v", err)
 		}
 
 		testFile := "test.txt"
+		author := Author{}
+
 		// Commit 1
 		if err := os.WriteFile(filepath.Join(tmpDir, testFile), []byte("content v1"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "Commit 1", []string{testFile}); err != nil {
+		if err := repo.CommitTx(ctx, author, func() (string, []string, error) {
+			return "Commit 1", []string{testFile}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
-		history, err := client.GetHistory(ctx, "", testFile, 1)
+		history, err := repo.GetHistory(ctx, testFile, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -154,12 +175,14 @@ func TestClient(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tmpDir, testFile), []byte("content v2"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "Commit 2", []string{testFile}); err != nil {
+		if err := repo.CommitTx(ctx, author, func() (string, []string, error) {
+			return "Commit 2", []string{testFile}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
 		// Get v1 content
-		content, err := client.GetFileAtCommit(ctx, "", v1Hash, testFile)
+		content, err := repo.GetFileAtCommit(ctx, v1Hash, testFile)
 		if err != nil {
 			t.Fatalf("GetFileAtCommit() failed: %v", err)
 		}
@@ -173,13 +196,14 @@ func TestClient(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "Test User", "test@example.com")
+		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		remoteURL := "https://github.com/example/repo.git"
-		if err := client.SetRemote(ctx, "", "origin", remoteURL); err != nil {
+		if err := repo.SetRemote(ctx, "origin", remoteURL); err != nil {
 			t.Fatalf("SetRemote() failed: %v", err)
 		}
 
@@ -196,7 +220,7 @@ func TestClient(t *testing.T) {
 		}
 
 		// Test removing remote
-		if err := client.SetRemote(ctx, "", "origin", ""); err != nil {
+		if err := repo.SetRemote(ctx, "origin", ""); err != nil {
 			t.Fatalf("SetRemote(empty) failed: %v", err)
 		}
 
@@ -226,7 +250,8 @@ func TestClient(t *testing.T) {
 		// Local repo
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "Test User", "test@example.com")
+		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -236,17 +261,19 @@ func TestClient(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tmpDir, testFile), []byte("test"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "Initial commit", []string{testFile}); err != nil {
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "Initial commit", []string{testFile}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
 		// Add remote
-		if err := client.SetRemote(ctx, "", "origin", remoteDir); err != nil {
+		if err := repo.SetRemote(ctx, "origin", remoteDir); err != nil {
 			t.Fatal(err)
 		}
 
 		// Push
-		if err := client.Push(ctx, "", "origin", "master"); err != nil {
+		if err := repo.Push(ctx, "origin", "master"); err != nil {
 			t.Fatalf("Push() failed: %v", err)
 		}
 
@@ -263,71 +290,74 @@ func TestClient(t *testing.T) {
 		}
 	})
 
-	t.Run("SubdirCommitSync", func(t *testing.T) {
+	t.Run("SeparateRepos", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
 
-		client, err := New(ctx, tmpDir, "Root User", "root@example.com")
+		mgr := NewManager(tmpDir, "Root User", "root@example.com")
+
+		// Create root repo
+		rootRepo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// Create subdir as a separate repo
+		// Create subdir repo
 		subDirName := "subrepo"
-		subDir := filepath.Join(tmpDir, subDirName)
-		if err := os.Mkdir(subDir, 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := client.Init(ctx, subDirName); err != nil {
+		subRepo, err := mgr.Repo(ctx, subDirName)
+		if err != nil {
 			t.Fatal(err)
 		}
 
 		// File in subdir
+		subDir := filepath.Join(tmpDir, subDirName)
 		testFile := "file_in_sub.txt"
 		if err := os.WriteFile(filepath.Join(subDir, testFile), []byte("content"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
-		if err := client.Commit(ctx, subDirName, "Sub User", "sub@example.com", "Sub commit", []string{testFile}); err != nil {
-			t.Fatalf("Commit(subdir) failed: %v", err)
+		author := Author{Name: "Sub User", Email: "sub@example.com"}
+		if err := subRepo.CommitTx(ctx, author, func() (string, []string, error) {
+			return "Sub commit", []string{testFile}, nil
+		}); err != nil {
+			t.Fatalf("CommitTx(subdir) failed: %v", err)
 		}
 
 		// Verify subdir commit
-		history, err := client.GetHistory(ctx, subDirName, testFile, 1)
+		history, err := subRepo.GetHistory(ctx, testFile, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if len(history) == 0 {
 			t.Fatal("subdir should have history")
 		}
+		if history[0].Message != "Sub commit" {
+			t.Errorf("expected 'Sub commit', got '%s'", history[0].Message)
+		}
 
-		rootHistory, err := client.GetHistory(ctx, "", ".", 5)
+		// Root repo should NOT have subdir commits (they are independent now)
+		rootHistory, err := rootRepo.GetHistory(ctx, ".", 5)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		foundSync := false
 		for _, h := range rootHistory {
-			if strings.Contains(h.Message, fmt.Sprintf("sync: %s update", subDirName)) {
-				foundSync = true
-				break
+			if strings.Contains(h.Message, "Sub commit") || strings.Contains(h.Message, "sync:") {
+				t.Errorf("root repo should not have subdir or sync commits, found: %s", h.Message)
 			}
-		}
-
-		if !foundSync {
-			t.Error("root repo should have a sync commit for the subdir")
 		}
 	})
 
-	t.Run("NewDefaults", func(t *testing.T) {
+	t.Run("NewManagerDefaults", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
 
-		_, err := New(ctx, tmpDir, "", "")
+		mgr := NewManager(tmpDir, "", "")
+		_, err := mgr.Repo(ctx, "")
 		if err != nil {
-			t.Fatalf("New() failed: %v", err)
+			t.Fatalf("Repo() failed: %v", err)
 		}
 
 		// Verify defaults were set in git config
@@ -347,7 +377,8 @@ func TestClient(t *testing.T) {
 		// Local
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "email")
+		mgr := NewManager(tmpDir, "User", "email")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -357,17 +388,19 @@ func TestClient(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tmpDir, file), []byte("content"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "msg", []string{file}); err != nil {
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "msg", []string{file}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
 		// Add remote
-		if err := client.SetRemote(ctx, "", "origin", remoteDir); err != nil {
+		if err := repo.SetRemote(ctx, "origin", remoteDir); err != nil {
 			t.Fatal(err)
 		}
 
 		// Push with empty branch (should detect master/main)
-		if err := client.Push(ctx, "", "origin", ""); err != nil {
+		if err := repo.Push(ctx, "origin", ""); err != nil {
 			t.Fatalf("Push(empty branch) failed: %v", err)
 		}
 
@@ -382,36 +415,43 @@ func TestClient(t *testing.T) {
 		}
 	})
 
-	t.Run("CommitEdgeCases", func(t *testing.T) {
+	t.Run("CommitTxEdgeCases", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "email")
+		mgr := NewManager(tmpDir, "User", "email")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// Empty files list
-		if err := client.Commit(ctx, "", "", "", "msg", nil); err != nil {
-			t.Errorf("Commit(nil) failed: %v", err)
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "msg", nil, nil
+		}); err != nil {
+			t.Errorf("CommitTx(nil) failed: %v", err)
 		}
 
-		// No changes
+		// Commit a file
 		file := "f.txt"
 		if err := os.WriteFile(filepath.Join(tmpDir, file), []byte("content"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "msg", []string{file}); err != nil {
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "msg", []string{file}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
-		// Try to commit same file again without changes
-		if err := client.Commit(ctx, "", "", "", "msg2", []string{file}); err != nil {
-			t.Errorf("Commit(no changes) failed: %v", err)
+		// Try to commit same file again without changes - should be no-op
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "msg2", []string{file}, nil
+		}); err != nil {
+			t.Errorf("CommitTx(no changes) failed: %v", err)
 		}
 
 		// Verify no new commit
-		history, err := client.GetHistory(ctx, "", file, 10)
+		history, err := repo.GetHistory(ctx, file, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -420,31 +460,12 @@ func TestClient(t *testing.T) {
 		}
 	})
 
-	t.Run("DirEscape", func(t *testing.T) {
-		t.Parallel()
-		tmpDir := t.TempDir()
-		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "email")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Test Init with escape
-		if err := client.Init(ctx, "../escape"); err == nil {
-			t.Error("Init(../escape) should fail")
-		}
-
-		// Test Commit with escape
-		if err := client.Commit(ctx, "/abs/path", "", "", "msg", nil); err == nil {
-			t.Error("Commit(/abs/path) should fail")
-		}
-	})
-
 	t.Run("GetHistoryEdgeCases", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "email")
+		mgr := NewManager(tmpDir, "User", "email")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -453,12 +474,14 @@ func TestClient(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tmpDir, file), []byte("c"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "msg", []string{file}); err != nil {
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "msg", []string{file}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
 		// n=0 => default to 1000
-		h, err := client.GetHistory(ctx, "", file, 0)
+		h, err := repo.GetHistory(ctx, file, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -467,7 +490,7 @@ func TestClient(t *testing.T) {
 		}
 
 		// invalid path
-		h, err = client.GetHistory(ctx, "", "nonexistent", 1)
+		h, err = repo.GetHistory(ctx, "nonexistent", 1)
 		if err != nil {
 			t.Errorf("GetHistory(nonexistent) should not error but returned: %v", err)
 		}
@@ -478,11 +501,10 @@ func TestClient(t *testing.T) {
 
 	t.Run("ParseDate", func(t *testing.T) {
 		t.Parallel()
-		// However, we can verify that the time.Time objects in GetHistory are valid
-
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "email")
+		mgr := NewManager(tmpDir, "User", "email")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -491,11 +513,13 @@ func TestClient(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tmpDir, file), []byte("d"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "msg", []string{file}); err != nil {
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "msg", []string{file}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
-		history, err := client.GetHistory(ctx, "", file, 1)
+		history, err := repo.GetHistory(ctx, file, 1)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -513,13 +537,14 @@ func TestClient(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "email")
+		mgr := NewManager(tmpDir, "User", "email")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// No commit yet
-		if _, err := client.GetFileAtCommit(ctx, "", "HEAD", "file"); err == nil {
+		if _, err := repo.GetFileAtCommit(ctx, "HEAD", "file"); err == nil {
 			t.Error("GetFileAtCommit(HEAD) should fail on empty repo")
 		}
 
@@ -528,50 +553,63 @@ func TestClient(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(tmpDir, file), []byte("c"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := client.Commit(ctx, "", "", "", "msg", []string{file}); err != nil {
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "msg", []string{file}, nil
+		}); err != nil {
 			t.Fatal(err)
 		}
 
 		// Invalid hash
-		if _, err := client.GetFileAtCommit(ctx, "", "invalidhash", file); err == nil {
+		if _, err := repo.GetFileAtCommit(ctx, "invalidhash", file); err == nil {
 			t.Error("GetFileAtCommit(invalidhash) should fail")
 		}
 
 		// File not in commit
-		if _, err := client.GetFileAtCommit(ctx, "", "HEAD", "missing.txt"); err == nil {
+		if _, err := repo.GetFileAtCommit(ctx, "HEAD", "missing.txt"); err == nil {
 			t.Error("GetFileAtCommit(missing) should fail")
 		}
 	})
 
-	t.Run("InitIdempotent", func(t *testing.T) {
+	t.Run("RepoIdempotent", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "email")
+		mgr := NewManager(tmpDir, "User", "email")
+
+		repo1, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		// Init again
-		if err := client.Init(ctx, ""); err != nil {
-			t.Fatalf("Init() second time failed: %v", err)
+		// Get again - should return cached repo
+		repo2, err := mgr.Repo(ctx, "")
+		if err != nil {
+			t.Fatalf("Repo() second time failed: %v", err)
+		}
+
+		// Should be same instance
+		if repo1 != repo2 {
+			t.Error("expected same repo instance")
 		}
 
 		// Verify config still there (not overwritten or errored)
 		checkConfig(t, tmpDir, "user.name", "User")
 	})
 
-	t.Run("CommitNonExistentFile", func(t *testing.T) {
+	t.Run("CommitTxNonExistentFile", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "email")
+		mgr := NewManager(tmpDir, "User", "email")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if err := client.Commit(ctx, "", "", "", "msg", []string{"missing.txt"}); err == nil {
-			t.Error("Commit(missing file) should fail")
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "msg", []string{"missing.txt"}, nil
+		}); err == nil {
+			t.Error("CommitTx(missing file) should fail")
 		}
 	})
 
@@ -579,13 +617,14 @@ func TestClient(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "email")
+		mgr := NewManager(tmpDir, "User", "email")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// Remove non-existent remote should be no-op
-		if err := client.SetRemote(ctx, "", "origin", ""); err != nil {
+		if err := repo.SetRemote(ctx, "origin", ""); err != nil {
 			t.Errorf("SetRemote(remove non-existent) failed: %v", err)
 		}
 	})
@@ -594,7 +633,8 @@ func TestClient(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "user@example.com")
+		mgr := NewManager(tmpDir, "User", "user@example.com")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -611,7 +651,7 @@ func TestClient(t *testing.T) {
 
 		// Commit both files in a single transaction
 		author := Author{Name: "Tx Author", Email: "tx@example.com"}
-		err = client.CommitTx(ctx, "", author, func() (string, []string, error) {
+		err = repo.CommitTx(ctx, author, func() (string, []string, error) {
 			return "create: file1 and file2", []string{file1, file2}, nil
 		})
 		if err != nil {
@@ -619,7 +659,7 @@ func TestClient(t *testing.T) {
 		}
 
 		// Verify single commit
-		history, err := client.GetHistory(ctx, "", ".", 10)
+		history, err := repo.GetHistory(ctx, ".", 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -638,7 +678,8 @@ func TestClient(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "user@example.com")
+		mgr := NewManager(tmpDir, "User", "user@example.com")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -650,16 +691,16 @@ func TestClient(t *testing.T) {
 		}
 
 		// Transaction that returns error - should not commit
-		testErr := fmt.Errorf("test error")
-		err = client.CommitTx(ctx, "", Author{}, func() (string, []string, error) {
+		testErr := errors.New("test error")
+		err = repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
 			return "msg", []string{file}, testErr
 		})
-		if err != testErr {
+		if !errors.Is(err, testErr) {
 			t.Errorf("expected testErr, got %v", err)
 		}
 
 		// Verify no commit was made
-		history, err := client.GetHistory(ctx, "", file, 10)
+		history, err := repo.GetHistory(ctx, file, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -672,17 +713,119 @@ func TestClient(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		client, err := New(ctx, tmpDir, "User", "user@example.com")
+		mgr := NewManager(tmpDir, "User", "user@example.com")
+		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		// Transaction that returns no files - should be no-op
-		err = client.CommitTx(ctx, "", Author{}, func() (string, []string, error) {
+		err = repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
 			return "", nil, nil
 		})
 		if err != nil {
 			t.Errorf("CommitTx(empty) failed: %v", err)
+		}
+	})
+
+	t.Run("FS", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		ctx := t.Context()
+		mgr := NewManager(tmpDir, "User", "user@example.com")
+		repo, err := mgr.Repo(ctx, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a file
+		file := "test.txt"
+		content := []byte("hello world")
+		if err := os.WriteFile(filepath.Join(tmpDir, file), content, 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		// Get FS and read file
+		fs := repo.FS()
+		f, err := fs.Open(file)
+		if err != nil {
+			t.Fatalf("FS.Open() failed: %v", err)
+		}
+		defer func() {
+			if err := f.Close(); err != nil {
+				t.Errorf("Close() failed: %v", err)
+			}
+		}()
+
+		data := make([]byte, len(content))
+		n, err := f.Read(data)
+		if err != nil {
+			t.Fatalf("Read() failed: %v", err)
+		}
+		if n != len(content) || !bytes.Equal(data, content) {
+			t.Errorf("expected %q, got %q", string(content), string(data))
+		}
+	})
+
+	t.Run("FSAtCommit", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		ctx := t.Context()
+		mgr := NewManager(tmpDir, "User", "user@example.com")
+		repo, err := mgr.Repo(ctx, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		file := "test.txt"
+		v1Content := []byte("version 1")
+		v2Content := []byte("version 2")
+
+		// Commit v1
+		if err := os.WriteFile(filepath.Join(tmpDir, file), v1Content, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "v1", []string{file}, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		history, err := repo.GetHistory(ctx, file, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		v1Hash := history[0].Hash
+
+		// Commit v2
+		if err := os.WriteFile(filepath.Join(tmpDir, file), v2Content, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := repo.CommitTx(ctx, Author{}, func() (string, []string, error) {
+			return "v2", []string{file}, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		// Get FS at v1 commit
+		fs := repo.FSAtCommit(ctx, v1Hash)
+		f, err := fs.Open(file)
+		if err != nil {
+			t.Fatalf("FSAtCommit.Open() failed: %v", err)
+		}
+		defer func() {
+			if err := f.Close(); err != nil {
+				t.Errorf("Close() failed: %v", err)
+			}
+		}()
+
+		data := make([]byte, len(v1Content))
+		n, err := f.Read(data)
+		if err != nil {
+			t.Fatalf("Read() failed: %v", err)
+		}
+		if n != len(v1Content) || !bytes.Equal(data, v1Content) {
+			t.Errorf("expected %q, got %q", string(v1Content), string(data))
 		}
 	})
 }

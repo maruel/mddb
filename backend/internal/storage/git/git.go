@@ -2,9 +2,8 @@ package git
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,12 +12,44 @@ import (
 	"time"
 )
 
-// Client handles version control operations using git.
-type Client struct {
-	root         string // Root directory (contains .git/ and subdirectories with their own repos).
-	defaultName  string // Default author/committer name.
-	defaultEmail string // Default author/committer email.
-	mu           sync.Mutex
+// Manager creates and caches git repositories.
+type Manager struct {
+	rootDir      string
+	defaultName  string
+	defaultEmail string
+	repos        sync.Map // path -> *Repo
+}
+
+// NewManager creates a new git repository manager.
+func NewManager(rootDir, defaultName, defaultEmail string) *Manager {
+	if defaultName == "" {
+		defaultName = "mddb"
+	}
+	if defaultEmail == "" {
+		defaultEmail = "mddb@localhost"
+	}
+	return &Manager{
+		rootDir:      rootDir,
+		defaultName:  defaultName,
+		defaultEmail: defaultEmail,
+	}
+}
+
+// Repo returns or creates a repository for the given subdirectory.
+// The subdir is relative to the manager's root directory.
+func (m *Manager) Repo(ctx context.Context, subdir string) (*Repo, error) {
+	dir := filepath.Join(m.rootDir, subdir)
+	if r, ok := m.repos.Load(dir); ok {
+		return r.(*Repo), nil
+	}
+
+	r, err := newRepo(ctx, dir, m.defaultName, m.defaultEmail)
+	if err != nil {
+		return nil, err
+	}
+
+	actual, _ := m.repos.LoadOrStore(dir, r)
+	return actual.(*Repo), nil
 }
 
 // Author identifies who made a change for git commits.
@@ -26,8 +57,6 @@ type Author struct {
 	Name  string
 	Email string
 }
-
-var errInvalidSubdir = errors.New("subdir path escapes root directory")
 
 // Commit represents a commit in git history.
 type Commit struct {
@@ -42,140 +71,109 @@ type Commit struct {
 	CommitDate     time.Time `json:"commit_date"`
 }
 
-// New initializes git service for the given root directory.
-func New(ctx context.Context, root, defaultName, defaultEmail string) (*Client, error) {
-	if defaultName == "" {
-		defaultName = "mddb"
-	}
-	if defaultEmail == "" {
-		defaultEmail = "mddb@localhost"
-	}
-	c := &Client{root: root, defaultName: defaultName, defaultEmail: defaultEmail}
+// Repo represents a single git repository.
+type Repo struct {
+	dir          string
+	defaultName  string
+	defaultEmail string
+	mu           sync.Mutex
+}
 
-	// Check if root .git exists, initialize if not
-	if err := c.Init(ctx, ""); err != nil {
+func newRepo(ctx context.Context, dir, defaultName, defaultEmail string) (*Repo, error) {
+	r := &Repo{
+		dir:          dir,
+		defaultName:  defaultName,
+		defaultEmail: defaultEmail,
+	}
+	if err := r.init(ctx); err != nil {
 		return nil, err
 	}
-
-	return c, nil
+	return r, nil
 }
 
-// Init initializes a git repository in the target subdirectory if it doesn't exist.
-// If subdir is empty, initializes the root repository.
-func (c *Client) Init(ctx context.Context, subdir string) error {
-	dir, err := c.dir(subdir)
-	if err != nil {
-		return err
-	}
-	gitDir := filepath.Join(dir, ".git")
+func (r *Repo) init(ctx context.Context) error {
+	gitDir := filepath.Join(r.dir, ".git")
 	if _, err := os.Stat(gitDir); os.IsNotExist(err) {
-		if err := git(ctx, dir, "init").Run(); err != nil {
-			return fmt.Errorf("failed to initialize git repo in %s: %w", dir, err)
+		if err := os.MkdirAll(r.dir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
+			return fmt.Errorf("failed to create repo directory: %w", err)
 		}
-		if err := git(ctx, dir, "config", "user.email", c.defaultEmail).Run(); err != nil {
-			return fmt.Errorf("failed to configure git user.email in %s: %w", dir, err)
+		if err := r.git(ctx, "init").Run(); err != nil {
+			return fmt.Errorf("failed to initialize git repo: %w", err)
 		}
-		if err := git(ctx, dir, "config", "user.name", c.defaultName).Run(); err != nil {
-			return fmt.Errorf("failed to configure git user.name in %s: %w", dir, err)
+		if err := r.git(ctx, "config", "user.email", r.defaultEmail).Run(); err != nil {
+			return fmt.Errorf("failed to configure git user.email: %w", err)
+		}
+		if err := r.git(ctx, "config", "user.name", r.defaultName).Run(); err != nil {
+			return fmt.Errorf("failed to configure git user.name: %w", err)
 		}
 	}
 	return nil
 }
 
-// Commit stages the specified files and commits them to the repository.
-// If subdir is non-empty, it commits to that subdirectory's repository.
-// Files are paths relative to the subdir (or root if subdir is empty).
-// If authorName or authorEmail are empty, defaults are used.
-func (c *Client) Commit(ctx context.Context, subdir, authorName, authorEmail, message string, files []string) error {
-	dir, err := c.dir(subdir)
-	if err != nil {
-		return err
-	}
+// FS returns a read-only filesystem view of the repository's working directory.
+func (r *Repo) FS() fs.FS {
+	return os.DirFS(r.dir)
+}
 
-	if len(files) == 0 {
-		return nil
-	}
-
-	// Stage specified files
-	args := append([]string{"add", "--"}, files...)
-	if err := git(ctx, dir, args...).Run(); err != nil {
-		return fmt.Errorf("failed to stage files in %s: %w", dir, err)
-	}
-
-	// Check if there are staged changes
-	out, err := git(ctx, dir, "status", "--porcelain").CombinedOutput()
-	if err != nil {
-		return err
-	}
-
-	if strings.TrimSpace(string(out)) == "" {
-		return nil
-	}
-
-	// Use defaults if not provided
-	if authorName == "" {
-		authorName = c.defaultName
-	}
-	if authorEmail == "" {
-		authorEmail = c.defaultEmail
-	}
-
-	author := fmt.Sprintf("%s <%s>", authorName, authorEmail)
-
-	if err := git(ctx, dir, "commit", "-m", message, "--author", author).Run(); err != nil {
-		return fmt.Errorf("failed to commit in %s: %w", dir, err)
-	}
-
-	// If we committed to a subdirectory repo, we should also update the root repo
-	// if it's tracking the subdir as a submodule or directory
-	if subdir != "" {
-		if err := git(ctx, c.root, "add", subdir).Run(); err != nil {
-			return fmt.Errorf("failed to stage subdir %s in root: %w", subdir, err)
-		}
-		if err := git(ctx, c.root, "commit", "-m", fmt.Sprintf("sync: %s update", subdir), "--author", author).Run(); err != nil {
-			return fmt.Errorf("failed to commit sync in root: %w", err)
-		}
-	}
-
-	return nil
+// FSAtCommit returns a read-only filesystem view at a specific commit.
+func (r *Repo) FSAtCommit(ctx context.Context, hash string) fs.FS {
+	return &commitFS{repo: r, ctx: ctx, hash: hash}
 }
 
 // CommitTx executes fn while holding a lock and commits the returned files atomically.
 // If fn returns an error or no files, no commit is made.
-// The lock is held for the duration of fn and the commit to ensure atomicity.
-func (c *Client) CommitTx(ctx context.Context, subdir string, author Author, fn func() (msg string, files []string, err error)) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (r *Repo) CommitTx(ctx context.Context, author Author, fn func() (msg string, files []string, err error)) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	msg, files, err := fn()
 	if err != nil {
 		return err
 	}
-
 	if len(files) == 0 {
 		return nil
 	}
 
+	return r.commit(ctx, author, msg, files)
+}
+
+func (r *Repo) commit(ctx context.Context, author Author, message string, files []string) error {
+	// Stage specified files
+	args := append([]string{"add", "--"}, files...)
+	if err := r.git(ctx, args...).Run(); err != nil {
+		return fmt.Errorf("failed to stage files: %w", err)
+	}
+
+	// Check if there are staged changes
+	out, err := r.git(ctx, "status", "--porcelain").CombinedOutput()
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(string(out)) == "" {
+		return nil
+	}
+
+	// Use defaults if not provided
 	name := author.Name
 	email := author.Email
 	if name == "" {
-		name = c.defaultName
+		name = r.defaultName
 	}
 	if email == "" {
-		email = c.defaultEmail
+		email = r.defaultEmail
 	}
 
-	return c.Commit(ctx, subdir, name, email, msg, files)
+	authorStr := fmt.Sprintf("%s <%s>", name, email)
+	if err := r.git(ctx, "commit", "-m", message, "--author", authorStr).Run(); err != nil {
+		return fmt.Errorf("failed to commit: %w", err)
+	}
+
+	return nil
 }
 
 // GetHistory returns commit history for a specific path, limited to n commits.
 // n is capped at 1000. If n <= 0, defaults to 1000.
-func (c *Client) GetHistory(ctx context.Context, subdir, path string, n int) ([]*Commit, error) {
-	dir, err := c.dir(subdir)
-	if err != nil {
-		return nil, err
-	}
-
+func (r *Repo) GetHistory(ctx context.Context, path string, n int) ([]*Commit, error) {
 	if n <= 0 || n > 1000 {
 		n = 1000
 	}
@@ -183,7 +181,7 @@ func (c *Client) GetHistory(ctx context.Context, subdir, path string, n int) ([]
 	// Use record separator (%x1e) between commits since body can contain newlines
 	format := "%H%x00%an%x00%ae%x00%ai%x00%cn%x00%ce%x00%ci%x00%s%x00%b%x1e"
 	args := []string{"log", "--pretty=format:" + format, fmt.Sprintf("-n%d", n), "--", path}
-	out, err := git(ctx, dir, args...).CombinedOutput()
+	out, err := r.git(ctx, args...).CombinedOutput()
 	if err != nil {
 		return nil, nil //nolint:nilerr // git log returns error for paths with no history, which is not an error condition
 	}
@@ -200,14 +198,8 @@ func (c *Client) GetHistory(ctx context.Context, subdir, path string, n int) ([]
 			continue
 		}
 
-		authorDate, err := time.Parse("2006-01-02 15:04:05 -0700", parts[3])
-		if err != nil {
-			slog.Warn("Failed to parse author date in git log", "value", parts[3], "error", err)
-		}
-		commitDate, err := time.Parse("2006-01-02 15:04:05 -0700", parts[6])
-		if err != nil {
-			slog.Warn("Failed to parse commit date in git log", "value", parts[6], "error", err)
-		}
+		authorDate, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[3])
+		commitDate, _ := time.Parse("2006-01-02 15:04:05 -0700", parts[6])
 
 		commits = append(commits, &Commit{
 			Hash:           parts[0],
@@ -226,41 +218,24 @@ func (c *Client) GetHistory(ctx context.Context, subdir, path string, n int) ([]
 }
 
 // GetFileAtCommit retrieves the content of a file at a specific commit.
-func (c *Client) GetFileAtCommit(ctx context.Context, subdir, hash, filePath string) ([]byte, error) {
-	dir, err := c.dir(subdir)
-	if err != nil {
-		return nil, err
-	}
-
-	// Strip subdir prefix if present
-	if subdir != "" {
-		if after, found := strings.CutPrefix(filePath, subdir+"/"); found {
-			filePath = after
-		}
-	}
-
+func (r *Repo) GetFileAtCommit(ctx context.Context, hash, filePath string) ([]byte, error) {
 	fullPath := fmt.Sprintf("%s:%s", hash, filePath)
-	out, err := git(ctx, dir, "show", fullPath).Output()
+	out, err := r.git(ctx, "show", fullPath).Output()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get file at commit in %s: %w", dir, err)
+		return nil, fmt.Errorf("failed to get file at commit: %w", err)
 	}
 	return out, nil
 }
 
-// SetRemote adds or updates a remote in the repository for the given subdirectory.
+// SetRemote adds or updates a remote in the repository.
 // If url is empty, the remote is removed.
-func (c *Client) SetRemote(ctx context.Context, subdir, name, url string) error {
-	dir, err := c.dir(subdir)
-	if err != nil {
-		return err
-	}
-
+func (r *Repo) SetRemote(ctx context.Context, name, url string) error {
 	// Check if remote already exists
-	out, err := git(ctx, dir, "remote").CombinedOutput()
+	out, err := r.git(ctx, "remote").CombinedOutput()
 	exists := false
 	if err == nil {
-		for r := range strings.SplitSeq(string(out), "\n") {
-			if strings.TrimSpace(r) == name {
+		for rem := range strings.SplitSeq(string(out), "\n") {
+			if strings.TrimSpace(rem) == name {
 				exists = true
 				break
 			}
@@ -269,57 +244,154 @@ func (c *Client) SetRemote(ctx context.Context, subdir, name, url string) error 
 
 	if url == "" {
 		if exists {
-			return git(ctx, dir, "remote", "remove", name).Run()
+			return r.git(ctx, "remote", "remove", name).Run()
 		}
 		return nil
 	}
 
 	if exists {
-		return git(ctx, dir, "remote", "set-url", name, url).Run()
+		return r.git(ctx, "remote", "set-url", name, url).Run()
 	}
-	return git(ctx, dir, "remote", "add", name, url).Run()
+	return r.git(ctx, "remote", "add", name, url).Run()
 }
 
-// Push pushes changes to a remote repository for the given subdirectory.
-func (c *Client) Push(ctx context.Context, subdir, remoteName, branch string) error {
-	dir, err := c.dir(subdir)
-	if err != nil {
-		return err
-	}
-
+// Push pushes changes to a remote repository.
+func (r *Repo) Push(ctx context.Context, remoteName, branch string) error {
 	if branch == "" {
-		branch = "master" // Default to master
-		// Check if current branch is main
-		out, err := git(ctx, dir, "rev-parse", "--abbrev-ref", "HEAD").CombinedOutput()
+		branch = "master"
+		// Check if current branch is different
+		out, err := r.git(ctx, "rev-parse", "--abbrev-ref", "HEAD").CombinedOutput()
 		if err == nil {
 			branch = strings.TrimSpace(string(out))
 		}
 	}
 
-	return git(ctx, dir, "push", remoteName, branch).Run()
+	return r.git(ctx, "push", remoteName, branch).Run()
 }
 
-// dir returns the absolute directory path for a subdir, validating it doesn't escape root.
-func (c *Client) dir(subdir string) (string, error) {
-	if subdir == "" {
-		return c.root, nil
-	}
-	// Clean the path to resolve any .. or . components
-	cleaned := filepath.Clean(subdir)
-	// Reject absolute paths or paths that try to escape
-	if filepath.IsAbs(cleaned) || strings.HasPrefix(cleaned, "..") {
-		return "", errInvalidSubdir
-	}
-	return filepath.Join(c.root, cleaned), nil
-}
-
-// git returns a configured exec.Cmd for running git in the specified directory.
-func git(ctx context.Context, dir string, args ...string) *exec.Cmd {
+func (r *Repo) git(ctx context.Context, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Dir = dir
+	cmd.Dir = r.dir
 	cmd.Env = append(os.Environ(),
 		"GIT_CONFIG_GLOBAL=/dev/null",
 		"GIT_CONFIG_SYSTEM=/dev/null",
 	)
 	return cmd
 }
+
+// commitFS implements fs.FS for a specific commit.
+type commitFS struct {
+	repo *Repo
+	ctx  context.Context
+	hash string
+}
+
+func (c *commitFS) Open(name string) (fs.File, error) {
+	// Clean the path
+	name = strings.TrimPrefix(name, "/")
+	if name == "" {
+		name = "."
+	}
+
+	// Check if it's a directory using git ls-tree
+	out, err := c.repo.git(c.ctx, "ls-tree", c.hash, name).CombinedOutput()
+	if err != nil {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+	}
+
+	line := strings.TrimSpace(string(out))
+	if line == "" {
+		// Could be a directory - check with trailing slash
+		out, err = c.repo.git(c.ctx, "ls-tree", c.hash, name+"/").CombinedOutput()
+		if err != nil || strings.TrimSpace(string(out)) == "" {
+			return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+		}
+		// It's a directory
+		return &commitDir{fs: c, name: name}, nil
+	}
+
+	// Parse ls-tree output: "mode type hash\tname"
+	parts := strings.Fields(line)
+	if len(parts) < 3 {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+	}
+
+	if parts[1] == "tree" {
+		return &commitDir{fs: c, name: name}, nil
+	}
+
+	// It's a file - get the content
+	data, err := c.repo.GetFileAtCommit(c.ctx, c.hash, name)
+	if err != nil {
+		return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+	}
+
+	return &memFile{name: filepath.Base(name), data: data}, nil
+}
+
+// commitDir implements fs.File for a directory in a commit.
+type commitDir struct {
+	fs   *commitFS
+	name string
+}
+
+func (d *commitDir) Stat() (fs.FileInfo, error) {
+	return &dirInfo{name: filepath.Base(d.name)}, nil
+}
+
+func (d *commitDir) Read([]byte) (int, error) {
+	return 0, &fs.PathError{Op: "read", Path: d.name, Err: fs.ErrInvalid}
+}
+
+func (d *commitDir) Close() error {
+	return nil
+}
+
+// dirInfo implements fs.FileInfo for a directory.
+type dirInfo struct {
+	name string
+}
+
+func (d *dirInfo) Name() string       { return d.name }
+func (d *dirInfo) Size() int64        { return 0 }
+func (d *dirInfo) Mode() fs.FileMode  { return fs.ModeDir | 0o755 }
+func (d *dirInfo) ModTime() time.Time { return time.Time{} }
+func (d *dirInfo) IsDir() bool        { return true }
+func (d *dirInfo) Sys() any           { return nil }
+
+// memFile implements fs.File for an in-memory file.
+type memFile struct {
+	name   string
+	data   []byte
+	offset int
+}
+
+func (f *memFile) Stat() (fs.FileInfo, error) {
+	return &fileInfo{name: f.name, size: int64(len(f.data))}, nil
+}
+
+func (f *memFile) Read(b []byte) (int, error) {
+	if f.offset >= len(f.data) {
+		return 0, &fs.PathError{Op: "read", Path: f.name, Err: fs.ErrClosed}
+	}
+	n := copy(b, f.data[f.offset:])
+	f.offset += n
+	return n, nil
+}
+
+func (f *memFile) Close() error {
+	return nil
+}
+
+// fileInfo implements fs.FileInfo for a file.
+type fileInfo struct {
+	name string
+	size int64
+}
+
+func (f *fileInfo) Name() string       { return f.name }
+func (f *fileInfo) Size() int64        { return f.size }
+func (f *fileInfo) Mode() fs.FileMode  { return 0o644 }
+func (f *fileInfo) ModTime() time.Time { return time.Time{} }
+func (f *fileInfo) IsDir() bool        { return false }
+func (f *fileInfo) Sys() any           { return nil }

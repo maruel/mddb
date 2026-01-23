@@ -20,7 +20,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-
 // FileStore is a versioned file storage system. All mutations are committed to git.
 // Storage model: Each page (document or table) is an ID-based directory.
 //   - Pages: ID directory containing index.md with YAML front matter.
@@ -28,7 +27,7 @@ import (
 //   - Assets: files within each page's directory namespace.
 type FileStore struct {
 	rootDir string
-	Git     *git.Client
+	git     *git.Manager
 	orgSvc  *identity.OrganizationService
 }
 
@@ -44,11 +43,11 @@ type page struct {
 }
 
 // NewFileStore creates a versioned file store.
-// gitClient is required - all operations are versioned.
+// gitMgr is required - all operations are versioned.
 // orgSvc provides quota limits for organizations.
-func NewFileStore(rootDir string, gitClient *git.Client, orgSvc *identity.OrganizationService) (*FileStore, error) {
-	if gitClient == nil {
-		return nil, errors.New("git client is required")
+func NewFileStore(rootDir string, gitMgr *git.Manager, orgSvc *identity.OrganizationService) (*FileStore, error) {
+	if gitMgr == nil {
+		return nil, errors.New("git manager is required")
 	}
 	if orgSvc == nil {
 		return nil, errors.New("organization service is required")
@@ -59,7 +58,7 @@ func NewFileStore(rootDir string, gitClient *git.Client, orgSvc *identity.Organi
 
 	return &FileStore{
 		rootDir: rootDir,
-		Git:     gitClient,
+		git:     gitMgr,
 		orgSvc:  orgSvc,
 	}, nil
 }
@@ -75,7 +74,8 @@ func (fs *FileStore) InitOrg(ctx context.Context, orgID jsonldb.ID) error {
 	if err := os.MkdirAll(pagesDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return fmt.Errorf("failed to create organization directory: %w", err)
 	}
-	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
+	// Getting the repo initializes git if needed
+	if _, err := fs.Repo(ctx, orgID); err != nil {
 		return fmt.Errorf("failed to initialize git repo for org %s: %w", orgID, err)
 	}
 	return nil
@@ -187,8 +187,13 @@ func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*Node, error) {
 
 // WritePage creates a new page on disk, commits to git, and returns it as a Node.
 func (fs *FileStore) WritePage(ctx context.Context, orgID, id jsonldb.ID, title, content string, author git.Author) (*Node, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
 	var node *Node
-	err := fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	err = repo.CommitTx(ctx, author, func() (string, []string, error) {
 		var err error
 		node, err = fs.writePage(orgID, id, title, content)
 		if err != nil {
@@ -247,8 +252,13 @@ func (fs *FileStore) writePage(orgID, id jsonldb.ID, title, content string) (*No
 
 // UpdatePage updates an existing page, commits to git, and returns it as a Node.
 func (fs *FileStore) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title, content string, author git.Author) (*Node, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
 	var node *Node
-	err := fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	err = repo.CommitTx(ctx, author, func() (string, []string, error) {
 		var err error
 		node, err = fs.updatePage(orgID, id, title, content)
 		if err != nil {
@@ -308,7 +318,12 @@ func (fs *FileStore) updatePage(orgID, id jsonldb.ID, title, content string) (*N
 
 // DeletePage deletes a page directory and commits to git.
 func (fs *FileStore) DeletePage(ctx context.Context, orgID, id jsonldb.ID, author git.Author) error {
-	return fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	return repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := fs.deletePage(orgID, id); err != nil {
 			return "", nil, err
 		}
@@ -588,7 +603,12 @@ func (fs *FileStore) ReadTable(orgID, id jsonldb.ID) (*Node, error) {
 // The JSONL records file is created lazily when the first record is added.
 // isNew should be true for create operations (triggers quota check), false for updates.
 func (fs *FileStore) WriteTable(ctx context.Context, orgID jsonldb.ID, node *Node, isNew bool, author git.Author) error {
-	return fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	return repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := fs.writeTable(orgID, node, isNew); err != nil {
 			return "", nil, err
 		}
@@ -657,7 +677,12 @@ func (fs *FileStore) writeTable(orgID jsonldb.ID, node *Node, isNew bool) error 
 
 // DeleteTable deletes a table and all its records, commits to git.
 func (fs *FileStore) DeleteTable(ctx context.Context, orgID, id jsonldb.ID, author git.Author) error {
-	return fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	return repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := fs.deleteTable(orgID, id); err != nil {
 			return "", nil, err
 		}
@@ -714,7 +739,12 @@ func (fs *FileStore) IterTables(orgID jsonldb.ID) (iter.Seq[*Node], error) {
 
 // AppendRecord appends a record to a table and commits to git.
 func (fs *FileStore) AppendRecord(ctx context.Context, orgID, tableID jsonldb.ID, record *DataRecord, author git.Author) error {
-	return fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	return repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := fs.appendRecord(orgID, tableID, record); err != nil {
 			return "", nil, err
 		}
@@ -816,7 +846,12 @@ func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([
 
 // UpdateRecord updates an existing record in a table and commits to git.
 func (fs *FileStore) UpdateRecord(ctx context.Context, orgID, tableID jsonldb.ID, record *DataRecord, author git.Author) error {
-	return fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	return repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := fs.updateRecord(orgID, tableID, record); err != nil {
 			return "", nil, err
 		}
@@ -868,7 +903,12 @@ func (fs *FileStore) updateRecord(orgID, tableID jsonldb.ID, record *DataRecord)
 
 // DeleteRecord deletes a record from a table and commits to git.
 func (fs *FileStore) DeleteRecord(ctx context.Context, orgID, tableID, recordID jsonldb.ID, author git.Author) error {
-	return fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	return repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := fs.deleteRecord(orgID, tableID, recordID); err != nil {
 			return "", nil, err
 		}
@@ -914,8 +954,13 @@ func (fs *FileStore) tableMetadataFile(orgID, id jsonldb.ID) string {
 
 // SaveAsset saves an asset associated with a page and commits to git.
 func (fs *FileStore) SaveAsset(ctx context.Context, orgID, pageID jsonldb.ID, assetName string, data []byte, author git.Author) (*Asset, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
 	var asset *Asset
-	err := fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	err = repo.CommitTx(ctx, author, func() (string, []string, error) {
 		var err error
 		asset, err = fs.saveAsset(orgID, pageID, assetName, data)
 		if err != nil {
@@ -983,7 +1028,12 @@ func (fs *FileStore) ReadAsset(orgID, pageID jsonldb.ID, assetName string) ([]by
 
 // DeleteAsset deletes an asset associated with a page and commits to git.
 func (fs *FileStore) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID, assetName string, author git.Author) error {
-	return fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return err
+	}
+
+	return repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := fs.deleteAsset(orgID, pageID, assetName); err != nil {
 			return "", nil, err
 		}
@@ -1116,18 +1166,31 @@ func formatMarkdownFile(p *page) []byte {
 // GetHistory returns the commit history for a page, limited to n commits.
 // n is capped at 1000. If n <= 0, defaults to 1000.
 func (fs *FileStore) GetHistory(ctx context.Context, orgID, id jsonldb.ID, n int) ([]*git.Commit, error) {
-	return fs.Git.GetHistory(ctx, orgID.String(), "pages/"+id.String(), n)
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	return repo.GetHistory(ctx, "pages/"+id.String(), n)
 }
 
 // GetFileAtCommit returns the content of a file at a specific commit.
 func (fs *FileStore) GetFileAtCommit(ctx context.Context, orgID jsonldb.ID, hash, path string) ([]byte, error) {
-	return fs.Git.GetFileAtCommit(ctx, orgID.String(), hash, path)
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	return repo.GetFileAtCommit(ctx, hash, path)
 }
 
 // CreateNode creates a new node (can be document, table, or hybrid) and commits to git.
 func (fs *FileStore) CreateNode(ctx context.Context, orgID jsonldb.ID, title string, nodeType NodeType, author git.Author) (*Node, error) {
+	repo, err := fs.Repo(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
 	var node *Node
-	err := fs.Git.CommitTx(ctx, orgID.String(), author, func() (string, []string, error) {
+	err = repo.CommitTx(ctx, author, func() (string, []string, error) {
 		var files []string
 		var err error
 		node, files, err = fs.createNode(orgID, title, nodeType)
@@ -1223,4 +1286,10 @@ func (fs *FileStore) createNode(orgID jsonldb.ID, title string, nodeType NodeTyp
 	}
 
 	return node, files, nil
+}
+
+// Repo returns the git.Repo for an organization. This is exported for handlers
+// that need direct git operations (e.g., git remotes).
+func (fs *FileStore) Repo(ctx context.Context, orgID jsonldb.ID) (*git.Repo, error) {
+	return fs.git.Repo(ctx, orgID.String())
 }

@@ -232,12 +232,9 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize membership service: %w", err)
 	}
 
-	gitService, err := git.New(context.Background(), *dataDir, "", "")
-	if err != nil {
-		return fmt.Errorf("failed to initialize git service: %w", err)
-	}
+	gitMgr := git.NewManager(*dataDir, "", "")
 
-	fileStore, err := content.NewFileStore(*dataDir, gitService, orgService)
+	fileStore, err := content.NewFileStore(*dataDir, gitMgr, orgService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}

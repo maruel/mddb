@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -28,7 +27,6 @@ type testEnv struct {
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
-	ctx := context.Background()
 	tempDir := t.TempDir()
 
 	userService, err := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))
@@ -51,12 +49,9 @@ func setupTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("NewInvitationService: %v", err)
 	}
 
-	gitService, err := git.New(ctx, tempDir, "test", "test@example.com")
-	if err != nil {
-		t.Fatalf("git.New: %v", err)
-	}
+	gitMgr := git.NewManager(tempDir, "test", "test@example.com")
 
-	fileStore, err := content.NewFileStore(tempDir, gitService, orgService)
+	fileStore, err := content.NewFileStore(tempDir, gitMgr, orgService)
 	if err != nil {
 		t.Fatalf("NewFileStore: %v", err)
 	}

@@ -8,7 +8,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/git"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -17,14 +17,14 @@ const gitRemoteName = "origin"
 // GitRemoteHandler handles git remote operations.
 type GitRemoteHandler struct {
 	orgService *identity.OrganizationService
-	gitService *git.Client
+	fileStore  *content.FileStore
 }
 
 // NewGitRemoteHandler creates a new git remote handler.
-func NewGitRemoteHandler(orgService *identity.OrganizationService, gitService *git.Client) *GitRemoteHandler {
+func NewGitRemoteHandler(orgService *identity.OrganizationService, fileStore *content.FileStore) *GitRemoteHandler {
 	return &GitRemoteHandler{
 		orgService: orgService,
-		gitService: gitService,
+		fileStore:  fileStore,
 	}
 }
 
@@ -65,7 +65,11 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, orgID jsonldb.ID
 	}
 
 	// Actually add it to the local git repo
-	subdir := orgID.String()
+	repo, err := h.fileStore.Repo(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get git repo: %w", err)
+	}
+
 	url := req.URL
 
 	// If token-based auth, inject token into URL if it's GitHub/GitLab
@@ -77,7 +81,7 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, orgID jsonldb.ID
 		}
 	}
 
-	if err := h.gitService.SetRemote(ctx, subdir, gitRemoteName, url); err != nil {
+	if err := repo.SetRemote(ctx, gitRemoteName, url); err != nil {
 		return nil, fmt.Errorf("failed to set git remote: %w", err)
 	}
 
@@ -94,7 +98,10 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, orgID jsonldb.ID, _ *ide
 		return nil, dto.NotFound("remote")
 	}
 
-	subdir := orgID.String()
+	repo, err := h.fileStore.Repo(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get git repo: %w", err)
+	}
 
 	url := org.GitRemote.URL
 	if org.GitRemote.AuthType == "token" && org.GitRemote.Token != "" {
@@ -105,11 +112,11 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, orgID jsonldb.ID, _ *ide
 		}
 	}
 
-	if err := h.gitService.SetRemote(ctx, subdir, gitRemoteName, url); err != nil {
+	if err := repo.SetRemote(ctx, gitRemoteName, url); err != nil {
 		return nil, fmt.Errorf("failed to set git remote: %w", err)
 	}
 
-	if err := h.gitService.Push(ctx, subdir, gitRemoteName, ""); err != nil {
+	if err := repo.Push(ctx, gitRemoteName, ""); err != nil {
 		return nil, fmt.Errorf("failed to push to git remote: %w", err)
 	}
 
@@ -138,7 +145,12 @@ func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, orgID jsonldb.ID
 	}
 
 	// Also remove from local git repo
-	if err := h.gitService.SetRemote(ctx, orgID.String(), gitRemoteName, ""); err != nil {
+	repo, err := h.fileStore.Repo(ctx, orgID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get git repo: %w", err)
+	}
+
+	if err := repo.SetRemote(ctx, gitRemoteName, ""); err != nil {
 		return nil, fmt.Errorf("failed to remove git remote: %w", err)
 	}
 

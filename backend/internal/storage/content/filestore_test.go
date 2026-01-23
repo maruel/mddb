@@ -20,10 +20,7 @@ func testFileStore(t *testing.T) (*FileStore, jsonldb.ID) {
 	t.Helper()
 	tmpDir := t.TempDir()
 
-	gitClient, err := git.New(context.Background(), tmpDir, "test", "test@test.com")
-	if err != nil {
-		t.Fatalf("failed to create git client: %v", err)
-	}
+	gitMgr := git.NewManager(tmpDir, "test", "test@test.com")
 
 	orgService, err := identity.NewOrganizationService(filepath.Join(tmpDir, "organizations.jsonl"))
 	if err != nil {
@@ -46,7 +43,7 @@ func testFileStore(t *testing.T) (*FileStore, jsonldb.ID) {
 		t.Fatalf("failed to set unlimited quotas: %v", err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitClient, orgService)
+	fs, err := NewFileStore(tmpDir, gitMgr, orgService)
 	if err != nil {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
@@ -59,17 +56,14 @@ func testFileStoreWithQuota(t *testing.T) *FileStore {
 	t.Helper()
 	tmpDir := t.TempDir()
 
-	gitClient, err := git.New(context.Background(), tmpDir, "test", "test@test.com")
-	if err != nil {
-		t.Fatalf("failed to create git client: %v", err)
-	}
+	gitMgr := git.NewManager(tmpDir, "test", "test@test.com")
 
 	orgService, err := identity.NewOrganizationService(filepath.Join(tmpDir, "organizations.jsonl"))
 	if err != nil {
 		t.Fatalf("failed to create OrganizationService: %v", err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitClient, orgService)
+	fs, err := NewFileStore(tmpDir, gitMgr, orgService)
 	if err != nil {
 		t.Fatalf("failed to create FileStore: %v", err)
 	}
@@ -83,12 +77,9 @@ func TestFileStore(t *testing.T) {
 		ctx := context.Background()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		pageID := jsonldb.ID(1)
@@ -167,12 +158,9 @@ func TestFileStore(t *testing.T) {
 		ctx := context.Background()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create multiple pages with numeric IDs
@@ -609,12 +597,9 @@ func TestAsset(t *testing.T) {
 
 		pageID := jsonldb.ID(1)
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		t.Run("MaxAssetSize", func(t *testing.T) {
@@ -680,12 +665,9 @@ func TestMarkdown(t *testing.T) {
 		ctx := context.Background()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Write page with specific content

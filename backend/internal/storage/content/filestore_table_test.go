@@ -3,7 +3,6 @@ package content
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"slices"
 	"testing"
 	"time"
@@ -19,12 +18,9 @@ func TestTable(t *testing.T) {
 		ctx := context.Background()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		tests := []struct {
@@ -115,12 +111,9 @@ func TestTable(t *testing.T) {
 		ctx := context.Background()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		node := &Node{
@@ -155,12 +148,9 @@ func TestTable(t *testing.T) {
 		ctx := context.Background()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create multiple tables
@@ -211,12 +201,9 @@ func TestTable(t *testing.T) {
 		ctx := context.Background()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		node := &Node{
@@ -258,12 +245,9 @@ func TestTable(t *testing.T) {
 		ctx := context.Background()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create table with base64 encoded ID
@@ -309,12 +293,9 @@ func TestRecord(t *testing.T) {
 
 		dbID := jsonldb.ID(1)
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create table first
@@ -403,12 +384,9 @@ func TestRecord(t *testing.T) {
 
 		dbID := jsonldb.ID(1)
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create table
@@ -465,12 +443,9 @@ func TestRecord(t *testing.T) {
 
 		dbID := jsonldb.ID(1)
 
-		// Create org directory and initialize git repo
-		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
-			t.Fatalf("failed to create org dir: %v", err)
-		}
-		if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-			t.Fatalf("failed to init org git repo: %v", err)
+		// Initialize git repo for org
+		if err := fs.InitOrg(ctx, orgID); err != nil {
+			t.Fatalf("failed to init org: %v", err)
 		}
 
 		// Create table

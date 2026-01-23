@@ -41,7 +41,7 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	ih := handlers.NewInvitationHandler(invService, userService, orgService, memService)
 	mh := handlers.NewMembershipHandler(memService, userService, orgService, authh)
 	orgh := handlers.NewOrganizationHandler(orgService)
-	grh := handlers.NewGitRemoteHandler(orgService, fileStore.Git)
+	grh := handlers.NewGitRemoteHandler(orgService, fileStore)
 
 	// Helper to create WrapAuth with common deps
 	viewer := identity.UserRoleViewer

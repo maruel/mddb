@@ -2,7 +2,6 @@ package content
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -18,10 +17,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	ctx := context.Background()
 	author := git.Author{Name: "Benchmark", Email: "bench@test.com"}
 
-	gitClient, err := git.New(ctx, tmpDir, "test", "test@test.com")
-	if err != nil {
-		b.Fatal(err)
-	}
+	gitMgr := git.NewManager(tmpDir, "test", "test@test.com")
 
 	orgService, err := identity.NewOrganizationService(filepath.Join(tmpDir, "organizations.jsonl"))
 	if err != nil {
@@ -44,19 +40,16 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitClient, orgService)
+	fs, err := NewFileStore(tmpDir, gitMgr, orgService)
 	if err != nil {
 		b.Fatal(err)
 	}
 
 	orgID := org.ID
 
-	// Create org directory and initialize git repo
-	if err := os.MkdirAll(filepath.Join(tmpDir, orgID.String()), 0o750); err != nil {
-		b.Fatalf("failed to create org dir: %v", err)
-	}
-	if err := fs.Git.Init(ctx, orgID.String()); err != nil {
-		b.Fatalf("failed to init org git repo: %v", err)
+	// Initialize git repo for org
+	if err := fs.InitOrg(ctx, orgID); err != nil {
+		b.Fatalf("failed to init org: %v", err)
 	}
 
 	dbID := jsonldb.NewID()
