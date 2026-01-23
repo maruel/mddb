@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"mime"
 	"net/http"
+	"path/filepath"
 	"slices"
 	"strconv"
 
@@ -14,6 +16,21 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
+
+func init() {
+	// Register MIME types not in the standard library.
+	for _, pair := range [][2]string{
+		{".aac", "audio/aac"},
+		{".flac", "audio/flac"},
+		{".jsonl", "application/jsonl"},
+		{".md", "text/markdown"},
+		{".wav", "audio/wav"},
+	} {
+		if err := mime.AddExtensionType(pair[0], pair[1]); err != nil {
+			panic(err)
+		}
+	}
+}
 
 // AssetHandler handles asset/file-related HTTP requests.
 type AssetHandler struct {
@@ -122,9 +139,11 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simple MIME detection
-	mime := "application/octet-stream"
-	w.Header().Set("Content-Type", mime)
+	mimeType := mime.TypeByExtension(filepath.Ext(assetName))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+	w.Header().Set("Content-Type", mimeType)
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 	if _, err := w.Write(data); err != nil {
 		slog.Error("Failed to write asset data", "error", err, "asset", assetName)
