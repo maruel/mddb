@@ -16,6 +16,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -43,9 +44,25 @@ func addRequestMetadataToContext(ctx context.Context, r *http.Request) context.C
 func Wrap[In any, PtrIn interface {
 	*In
 	dto.Validatable
-}, Out any](fn func(context.Context, PtrIn) (*Out, error)) http.Handler {
+}, Out any](fn func(context.Context, PtrIn) (*Out, error), rlConfig *ratelimit.Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
+
+		// Rate limit check for unauthenticated endpoints
+		if tier := rlConfig.MatchUnauth(r.Method, r.URL.Path); tier != nil {
+			clientIP := reqctx.GetClientIP(r)
+			key := ratelimit.BuildKey(tier.Scope, clientIP, tier.Name)
+			result := tier.Limiter.Allow(key)
+
+			// Wrap response writer to inject headers
+			w = ratelimit.NewResponseWriter(w, result)
+
+			if !result.Allowed {
+				writeRateLimitError(w, result)
+				return
+			}
+		}
+
 		// Read request body
 		body, err := io.ReadAll(r.Body)
 		if err2 := r.Body.Close(); err == nil {
@@ -122,6 +139,7 @@ func WrapAuth[In any, PtrIn interface {
 	jwtSecret []byte,
 	requiredRole identity.UserRole,
 	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
+	rlConfig *ratelimit.Config,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -137,6 +155,27 @@ func WrapAuth[In any, PtrIn interface {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
+		}
+
+		// Rate limit check for authenticated endpoints (after auth validation)
+		if tier := rlConfig.MatchAuth(r.Method, r.URL.Path); tier != nil {
+			// Use user ID for user-scoped limits, IP for IP-scoped
+			var identifier string
+			if tier.Scope == ratelimit.ScopeUser {
+				identifier = user.ID.String()
+			} else {
+				identifier = reqctx.GetClientIP(r)
+			}
+			key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
+			result := tier.Limiter.Allow(key)
+
+			// Wrap response writer to inject headers
+			w = ratelimit.NewResponseWriter(w, result)
+
+			if !result.Allowed {
+				writeRateLimitError(w, result)
+				return
+			}
 		}
 
 		// Check organization membership if orgID is in path
@@ -230,6 +269,7 @@ func WrapAuthRaw(
 	jwtSecret []byte,
 	requiredRole identity.UserRole,
 	fn http.HandlerFunc,
+	rlConfig *ratelimit.Config,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate JWT and session
@@ -237,6 +277,26 @@ func WrapAuthRaw(
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
+		}
+
+		// Rate limit check for authenticated endpoints (after auth validation)
+		if tier := rlConfig.MatchAuth(r.Method, r.URL.Path); tier != nil {
+			var identifier string
+			if tier.Scope == ratelimit.ScopeUser {
+				identifier = user.ID.String()
+			} else {
+				identifier = reqctx.GetClientIP(r)
+			}
+			key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
+			result := tier.Limiter.Allow(key)
+
+			// Wrap response writer to inject headers
+			w = ratelimit.NewResponseWriter(w, result)
+
+			if !result.Allowed {
+				writeRateLimitError(w, result)
+				return
+			}
 		}
 
 		// Check organization membership if orgID is in path
@@ -277,6 +337,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 	sessionService *identity.SessionService,
 	jwtSecret []byte,
 	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
+	rlConfig *ratelimit.Config,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -290,6 +351,26 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 		if !user.IsGlobalAdmin {
 			http.Error(w, "Forbidden: global admin required", http.StatusForbidden)
 			return
+		}
+
+		// Rate limit check for admin endpoints (after auth validation)
+		if tier := rlConfig.MatchAuth(r.Method, r.URL.Path); tier != nil {
+			var identifier string
+			if tier.Scope == ratelimit.ScopeUser {
+				identifier = user.ID.String()
+			} else {
+				identifier = reqctx.GetClientIP(r)
+			}
+			key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
+			result := tier.Limiter.Allow(key)
+
+			// Wrap response writer to inject headers
+			w = ratelimit.NewResponseWriter(w, result)
+
+			if !result.Allowed {
+				writeRateLimitError(w, result)
+				return
+			}
 		}
 
 		body, err := io.ReadAll(r.Body)
@@ -542,4 +623,11 @@ func writeErrorResponseWithCode(w http.ResponseWriter, statusCode int, code dto.
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		slog.Error("Failed to encode error response", "error", err)
 	}
+}
+
+// writeRateLimitError writes a 429 rate limit error response.
+func writeRateLimitError(w http.ResponseWriter, result ratelimit.Result) {
+	retryAfter := int(result.RetryAfter.Seconds())
+	apiErr := dto.RateLimitExceeded(retryAfter)
+	writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
 }

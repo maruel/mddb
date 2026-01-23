@@ -65,6 +65,8 @@ const (
 	ErrorCodeOAuthError ErrorCode = "OAUTH_ERROR"
 	// ErrorCodeExpired is returned when a resource has expired.
 	ErrorCodeExpired ErrorCode = "EXPIRED"
+	// ErrorCodeRateLimitExceeded is returned when rate limit is exceeded.
+	ErrorCodeRateLimitExceeded ErrorCode = "RATE_LIMIT_EXCEEDED"
 )
 
 // ErrorDetails defines the structured error information in a response.
@@ -218,4 +220,11 @@ func OAuthError(operation string) *APIError {
 // Expired creates a 400 error for expired resources.
 func Expired(resource string) *APIError {
 	return NewAPIError(http.StatusBadRequest, ErrorCodeExpired, resource+" expired")
+}
+
+// RateLimitExceeded creates a 429 error for rate limit violations.
+func RateLimitExceeded(retryAfterSeconds int) *APIError {
+	return NewAPIError(http.StatusTooManyRequests, ErrorCodeRateLimitExceeded,
+		fmt.Sprintf("Too many requests. Please retry after %d seconds.", retryAfterSeconds)).
+		WithDetail("retry_after_seconds", retryAfterSeconds)
 }
