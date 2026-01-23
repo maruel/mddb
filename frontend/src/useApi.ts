@@ -43,18 +43,17 @@ function getRetryDelay(attempt: number, retryAfterMs: number | null): number {
 /** Wraps a fetch function with retry logic for 429 and 5xx errors */
 function withRetry(fetchFn: FetchFn): FetchFn {
   return async (url: string, init?: RequestInit): Promise<Response> => {
-    let lastResponse: Response | null = null;
-    for (let attempt = 0; attempt <= RETRY_CONFIG.maxRetries; attempt++) {
+    let attempt = 0;
+    for (;;) {
       const response = await fetchFn(url, init);
-      if (!isRetryableStatus(response.status) || attempt === RETRY_CONFIG.maxRetries) {
+      if (!isRetryableStatus(response.status) || attempt >= RETRY_CONFIG.maxRetries) {
         return response;
       }
-      lastResponse = response;
       const retryAfterMs = parseRetryAfter(response.headers.get('Retry-After'));
       const delay = getRetryDelay(attempt, retryAfterMs);
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      attempt++;
     }
-    return lastResponse!;
   };
 }
 
