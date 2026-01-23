@@ -82,19 +82,17 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	mux.Handle("POST /api/{orgID}/settings/git/push", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.PushGit))
 	mux.Handle("POST /api/{orgID}/settings/git/delete", WrapAuth(userService, memService, jwtSecretBytes, admin, grh.DeleteGitRemote))
 
-	// OAuth endpoints (public)
-	if (googleClientID != "" && googleClientSecret != "") || (msClientID != "" && msClientSecret != "") {
-		oh := handlers.NewOAuthHandler(userService, memService, orgService, fileStore, authh)
-		base := strings.TrimRight(baseURL, "/")
-		if googleClientID != "" && googleClientSecret != "" {
-			oh.AddProvider("google", googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")
-		}
-		if msClientID != "" && msClientSecret != "" {
-			oh.AddProvider("microsoft", msClientID, msClientSecret, base+"/api/auth/oauth/microsoft/callback")
-		}
-		mux.HandleFunc("GET /api/auth/oauth/{provider}", oh.LoginRedirect)
-		mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", oh.Callback)
+	// OAuth endpoints (public) - always registered, returns error if provider not configured
+	oh := handlers.NewOAuthHandler(userService, memService, orgService, fileStore, authh)
+	base := strings.TrimRight(baseURL, "/")
+	if googleClientID != "" && googleClientSecret != "" {
+		oh.AddProvider("google", googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")
 	}
+	if msClientID != "" && msClientSecret != "" {
+		oh.AddProvider("microsoft", msClientID, msClientSecret, base+"/api/auth/oauth/microsoft/callback")
+	}
+	mux.HandleFunc("GET /api/auth/oauth/{provider}", oh.LoginRedirect)
+	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", oh.Callback)
 
 	// User management endpoints
 	mux.Handle("GET /api/{orgID}/users", WrapAuth(userService, memService, jwtSecretBytes, admin, uh.ListUsers))
@@ -142,6 +140,11 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 
 	// File serving (raw asset files) - public for now
 	mux.HandleFunc("GET /assets/{orgID}/{id}/{name}", ah.ServeAssetFile)
+
+	// API catch-all - return 404 for any unmatched /api/ routes (never fall through to SPA)
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Not found", http.StatusNotFound)
+	})
 
 	// Serve embedded SolidJS frontend with SPA fallback
 	mux.Handle("/", NewEmbeddedSPAHandler(frontend.Files))

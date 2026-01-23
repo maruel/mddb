@@ -118,5 +118,6 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 
 | Method | Path | Auth |
 |--------|------|------|
+| * | `/api/` | public |
 | POST | `/api/organizations` | viewer |
 
