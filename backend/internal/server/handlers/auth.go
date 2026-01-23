@@ -10,6 +10,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
@@ -203,7 +204,7 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 	// Create welcome page if content provided
 	if req.WelcomePageTitle != "" && req.WelcomePageContent != "" {
 		pageID := jsonldb.NewID()
-		author := content.Author{Name: user.Name, Email: user.Email}
+		author := git.Author{Name: user.Name, Email: user.Email}
 		if _, err := h.fs.WritePage(ctx, org.ID, pageID, req.WelcomePageTitle, req.WelcomePageContent, author); err != nil {
 			slog.ErrorContext(ctx, "Failed to create welcome page", "error", err, "org_id", org.ID)
 			return nil, dto.InternalWithError("Failed to initialize organization", err)

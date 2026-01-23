@@ -11,13 +11,14 @@ import (
 	"unicode/utf8"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 func TestSearchService(t *testing.T) {
 	t.Run("SearchPages", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
 		// Create org directory and initialize git repo
@@ -114,7 +115,7 @@ func TestSearchService(t *testing.T) {
 	t.Run("SearchRecords", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
 		// Create org directory and initialize git repo
@@ -222,7 +223,7 @@ func TestSearchService(t *testing.T) {
 	t.Run("Scoring", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
 		// Create org directory and initialize git repo
@@ -267,7 +268,7 @@ func TestSearchService(t *testing.T) {
 	t.Run("Limit", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
 		// Create org directory and initialize git repo
@@ -303,7 +304,7 @@ func TestSearchService(t *testing.T) {
 	t.Run("Integration", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
 		// Create org directory and initialize git repo

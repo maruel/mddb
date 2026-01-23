@@ -589,6 +589,102 @@ func TestClient(t *testing.T) {
 			t.Errorf("SetRemote(remove non-existent) failed: %v", err)
 		}
 	})
+
+	t.Run("CommitTx", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		ctx := t.Context()
+		client, err := New(ctx, tmpDir, "User", "user@example.com")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create multiple files
+		file1 := "file1.txt"
+		file2 := "file2.txt"
+		if err := os.WriteFile(filepath.Join(tmpDir, file1), []byte("content1"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(tmpDir, file2), []byte("content2"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		// Commit both files in a single transaction
+		author := Author{Name: "Tx Author", Email: "tx@example.com"}
+		err = client.CommitTx(ctx, "", author, func() (string, []string, error) {
+			return "create: file1 and file2", []string{file1, file2}, nil
+		})
+		if err != nil {
+			t.Fatalf("CommitTx() failed: %v", err)
+		}
+
+		// Verify single commit
+		history, err := client.GetHistory(ctx, "", ".", 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(history) != 1 {
+			t.Fatalf("expected 1 commit, got %d", len(history))
+		}
+		if history[0].Message != "create: file1 and file2" {
+			t.Errorf("expected message 'create: file1 and file2', got '%s'", history[0].Message)
+		}
+		if history[0].Author != "Tx Author" {
+			t.Errorf("expected author 'Tx Author', got '%s'", history[0].Author)
+		}
+	})
+
+	t.Run("CommitTxError", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		ctx := t.Context()
+		client, err := New(ctx, tmpDir, "User", "user@example.com")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Create a file
+		file := "file.txt"
+		if err := os.WriteFile(filepath.Join(tmpDir, file), []byte("content"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+
+		// Transaction that returns error - should not commit
+		testErr := fmt.Errorf("test error")
+		err = client.CommitTx(ctx, "", Author{}, func() (string, []string, error) {
+			return "msg", []string{file}, testErr
+		})
+		if err != testErr {
+			t.Errorf("expected testErr, got %v", err)
+		}
+
+		// Verify no commit was made
+		history, err := client.GetHistory(ctx, "", file, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(history) != 0 {
+			t.Errorf("expected 0 commits after error, got %d", len(history))
+		}
+	})
+
+	t.Run("CommitTxEmpty", func(t *testing.T) {
+		t.Parallel()
+		tmpDir := t.TempDir()
+		ctx := t.Context()
+		client, err := New(ctx, tmpDir, "User", "user@example.com")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Transaction that returns no files - should be no-op
+		err = client.CommitTx(ctx, "", Author{}, func() (string, []string, error) {
+			return "", nil, nil
+		})
+		if err != nil {
+			t.Errorf("CommitTx(empty) failed: %v", err)
+		}
+	})
 }
 
 func checkConfig(t *testing.T, dir, key, expected string) {

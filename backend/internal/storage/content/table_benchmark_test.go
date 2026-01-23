@@ -16,7 +16,7 @@ import (
 func BenchmarkTableOperations(b *testing.B) {
 	tmpDir := b.TempDir()
 	ctx := context.Background()
-	author := Author{Name: "Benchmark", Email: "bench@test.com"}
+	author := git.Author{Name: "Benchmark", Email: "bench@test.com"}
 
 	gitClient, err := git.New(ctx, tmpDir, "test", "test@test.com")
 	if err != nil {

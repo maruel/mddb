@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -16,7 +17,7 @@ func TestTable(t *testing.T) {
 	t.Run("ReadWrite", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create org directory and initialize git repo
 		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -112,7 +113,7 @@ func TestTable(t *testing.T) {
 	t.Run("Exists", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create org directory and initialize git repo
 		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -152,7 +153,7 @@ func TestTable(t *testing.T) {
 	t.Run("List", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create org directory and initialize git repo
 		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -208,7 +209,7 @@ func TestTable(t *testing.T) {
 	t.Run("Delete", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create org directory and initialize git repo
 		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -255,7 +256,7 @@ func TestTable(t *testing.T) {
 	t.Run("NestedPath", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create org directory and initialize git repo
 		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -304,7 +305,7 @@ func TestRecord(t *testing.T) {
 	t.Run("AppendRead", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		dbID := jsonldb.ID(1)
 
@@ -392,7 +393,7 @@ func TestRecord(t *testing.T) {
 	t.Run("Quota", func(t *testing.T) {
 		fs := testFileStoreWithQuota(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		org, err := fs.orgSvc.Create(ctx, "Test Org")
 		if err != nil {
@@ -460,7 +461,7 @@ func TestRecord(t *testing.T) {
 	t.Run("EmptyTable", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		dbID := jsonldb.ID(1)
 

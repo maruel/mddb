@@ -8,6 +8,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -66,7 +67,7 @@ func (h *TableHandler) CreateTable(ctx context.Context, orgID jsonldb.ID, user *
 		Type:       content.NodeTypeTable,
 	}
 
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.WriteTable(ctx, orgID, node, true, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create table", err)
 	}
@@ -89,7 +90,7 @@ func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *
 	node.Properties = propertiesToEntity(req.Properties)
 	node.Modified = time.Now()
 
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.WriteTable(ctx, orgID, node, false, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
@@ -102,7 +103,7 @@ func (h *TableHandler) DeleteTable(ctx context.Context, orgID jsonldb.ID, user *
 	if err != nil {
 		return nil, err
 	}
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.DeleteTable(ctx, orgID, id, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
@@ -151,7 +152,7 @@ func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user 
 		Modified: now,
 	}
 
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.AppendRecord(ctx, orgID, tableID, record, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create record", err)
 	}
@@ -201,7 +202,7 @@ func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user 
 		Modified: time.Now(),
 	}
 
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.UpdateRecord(ctx, orgID, tableID, record, author); err != nil {
 		return nil, dto.NotFound("record")
 	}
@@ -246,7 +247,7 @@ func (h *TableHandler) DeleteRecord(ctx context.Context, orgID jsonldb.ID, user 
 	if err != nil {
 		return nil, err
 	}
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.DeleteRecord(ctx, orgID, tableID, recordID, author); err != nil {
 		return nil, dto.NotFound("record")
 	}

@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,13 @@ type Client struct {
 	root         string // Root directory (contains .git/ and subdirectories with their own repos).
 	defaultName  string // Default author/committer name.
 	defaultEmail string // Default author/committer email.
+	mu           sync.Mutex
+}
+
+// Author identifies who made a change for git commits.
+type Author struct {
+	Name  string
+	Email string
 }
 
 var errInvalidSubdir = errors.New("subdir path escapes root directory")
@@ -130,6 +138,34 @@ func (c *Client) Commit(ctx context.Context, subdir, authorName, authorEmail, me
 	}
 
 	return nil
+}
+
+// CommitTx executes fn while holding a lock and commits the returned files atomically.
+// If fn returns an error or no files, no commit is made.
+// The lock is held for the duration of fn and the commit to ensure atomicity.
+func (c *Client) CommitTx(ctx context.Context, subdir string, author Author, fn func() (msg string, files []string, err error)) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	msg, files, err := fn()
+	if err != nil {
+		return err
+	}
+
+	if len(files) == 0 {
+		return nil
+	}
+
+	name := author.Name
+	email := author.Email
+	if name == "" {
+		name = c.defaultName
+	}
+	if email == "" {
+		email = c.defaultEmail
+	}
+
+	return c.Commit(ctx, subdir, name, email, msg, files)
 }
 
 // GetHistory returns commit history for a specific path, limited to n commits.

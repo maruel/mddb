@@ -14,6 +14,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -102,7 +103,7 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	asset, err := h.fs.SaveAsset(r.Context(), orgID, pageID, header.Filename, data, author)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("asset_save"))
@@ -156,7 +157,7 @@ func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, us
 	if err != nil {
 		return nil, err
 	}
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.DeleteAsset(ctx, orgID, pageID, req.AssetName, author); err != nil {
 		return nil, dto.NotFound("asset")
 	}

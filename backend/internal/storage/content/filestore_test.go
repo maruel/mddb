@@ -81,7 +81,7 @@ func TestFileStore(t *testing.T) {
 	t.Run("PageOperations", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create org directory and initialize git repo
 		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -165,7 +165,7 @@ func TestFileStore(t *testing.T) {
 	t.Run("ListPages", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create org directory and initialize git repo
 		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -221,7 +221,7 @@ func TestFileStore(t *testing.T) {
 			if err := fs.InitOrg(t.Context(), orgID); err != nil {
 				t.Fatalf("failed to init org: %v", err)
 			}
-			author := Author{Name: "Test", Email: "test@test.com"}
+			author := git.Author{Name: "Test", Email: "test@test.com"}
 
 			nonExistentID := jsonldb.ID(99999)
 			err := fs.DeletePage(t.Context(), orgID, nonExistentID, author)
@@ -234,7 +234,7 @@ func TestFileStore(t *testing.T) {
 		t.Run("UpdateRecord_SameSizeData", func(t *testing.T) {
 			fs, orgID := testFileStore(t)
 			ctx := t.Context()
-			author := Author{Name: "Test", Email: "test@test.com"}
+			author := git.Author{Name: "Test", Email: "test@test.com"}
 
 			if err := fs.InitOrg(ctx, orgID); err != nil {
 				t.Fatalf("failed to init org: %v", err)
@@ -288,7 +288,7 @@ func TestFileStore(t *testing.T) {
 		t.Run("IterAssets", func(t *testing.T) {
 			fs, orgID := testFileStore(t)
 			ctx := t.Context()
-			author := Author{Name: "Test", Email: "test@test.com"}
+			author := git.Author{Name: "Test", Email: "test@test.com"}
 
 			if err := fs.InitOrg(ctx, orgID); err != nil {
 				t.Fatalf("failed to init org: %v", err)
@@ -360,7 +360,7 @@ func TestFileStore(t *testing.T) {
 		t.Run("CreateNode_AllTypes", func(t *testing.T) {
 			fs, orgID := testFileStore(t)
 			ctx := t.Context()
-			author := Author{Name: "Test", Email: "test@test.com"}
+			author := git.Author{Name: "Test", Email: "test@test.com"}
 
 			if err := fs.InitOrg(ctx, orgID); err != nil {
 				t.Fatalf("failed to init org: %v", err)
@@ -418,7 +418,7 @@ func TestFileStore(t *testing.T) {
 		t.Run("UpdatePage_StorageQuota", func(t *testing.T) {
 			fs, orgID := testFileStore(t)
 			ctx := t.Context()
-			author := Author{Name: "Test", Email: "test@test.com"}
+			author := git.Author{Name: "Test", Email: "test@test.com"}
 
 			if err := fs.InitOrg(ctx, orgID); err != nil {
 				t.Fatalf("failed to init org: %v", err)
@@ -453,7 +453,7 @@ func TestFileStore(t *testing.T) {
 		t.Run("CreateNode_StorageQuota", func(t *testing.T) {
 			fs, orgID := testFileStore(t)
 			ctx := t.Context()
-			author := Author{Name: "Test", Email: "test@test.com"}
+			author := git.Author{Name: "Test", Email: "test@test.com"}
 
 			if err := fs.InitOrg(ctx, orgID); err != nil {
 				t.Fatalf("failed to init org: %v", err)
@@ -478,7 +478,7 @@ func TestFileStore(t *testing.T) {
 		t.Run("WriteTable_UpdateStorageQuota", func(t *testing.T) {
 			fs, orgID := testFileStore(t)
 			ctx := t.Context()
-			author := Author{Name: "Test", Email: "test@test.com"}
+			author := git.Author{Name: "Test", Email: "test@test.com"}
 
 			if err := fs.InitOrg(ctx, orgID); err != nil {
 				t.Fatalf("failed to init org: %v", err)
@@ -532,7 +532,7 @@ func TestFileStore(t *testing.T) {
 		t.Run("UpdateRecord_SameSizeAllowed", func(t *testing.T) {
 			fs, orgID := testFileStore(t)
 			ctx := t.Context()
-			author := Author{Name: "Test", Email: "test@test.com"}
+			author := git.Author{Name: "Test", Email: "test@test.com"}
 
 			if err := fs.InitOrg(ctx, orgID); err != nil {
 				t.Fatalf("failed to init org: %v", err)
@@ -599,7 +599,7 @@ func TestAsset(t *testing.T) {
 	t.Run("Quota", func(t *testing.T) {
 		fs := testFileStoreWithQuota(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		org, err := fs.orgSvc.Create(ctx, "Test Org")
 		if err != nil {
@@ -678,7 +678,7 @@ func TestMarkdown(t *testing.T) {
 	t.Run("Formatting", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := context.Background()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create org directory and initialize git repo
 		if err := os.MkdirAll(filepath.Join(fs.rootDir, orgID.String()), 0o750); err != nil {
@@ -744,7 +744,7 @@ func TestGetOrganizationUsage(t *testing.T) {
 	t.Run("CountsTablesAndPages", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := t.Context()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		if err := fs.InitOrg(ctx, orgID); err != nil {
 			t.Fatalf("failed to init org: %v", err)
@@ -807,7 +807,7 @@ func TestGetOrganizationUsage(t *testing.T) {
 	t.Run("HybridNodeCountedOnce", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
 		ctx := t.Context()
-		author := Author{Name: "Test", Email: "test@test.com"}
+		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		if err := fs.InitOrg(ctx, orgID); err != nil {
 			t.Fatalf("failed to init org: %v", err)

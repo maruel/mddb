@@ -13,6 +13,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -58,7 +59,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *id
 		return nil, dto.MissingField("title")
 	}
 	id := jsonldb.NewID()
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	page, err := h.fs.WritePage(ctx, orgID, id, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
@@ -72,7 +73,7 @@ func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *id
 	if err != nil {
 		return nil, err
 	}
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	page, err := h.fs.UpdatePage(ctx, orgID, id, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.NotFound("page")
@@ -86,7 +87,7 @@ func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *id
 	if err != nil {
 		return nil, err
 	}
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.DeletePage(ctx, orgID, id, author); err != nil {
 		return nil, dto.NotFound("page")
 	}

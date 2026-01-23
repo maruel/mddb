@@ -7,6 +7,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -65,7 +66,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *id
 		return nil, dto.BadRequest("Invalid node type")
 	}
 
-	author := content.Author{Name: user.Name, Email: user.Email}
+	author := git.Author{Name: user.Name, Email: user.Email}
 	node, err := h.fs.CreateNode(ctx, orgID, req.Title, nodeType, author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create node", err)
