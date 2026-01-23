@@ -85,11 +85,19 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	// OAuth endpoints (public) - always registered, returns error if provider not configured
 	oh := handlers.NewOAuthHandler(userService, memService, orgService, fileStore, authh)
 	base := strings.TrimRight(baseURL, "/")
+	var providers []string
 	if googleClientID != "" && googleClientSecret != "" {
 		oh.AddProvider("google", googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")
+		providers = append(providers, "google")
 	}
 	if msClientID != "" && msClientSecret != "" {
 		oh.AddProvider("microsoft", msClientID, msClientSecret, base+"/api/auth/oauth/microsoft/callback")
+		providers = append(providers, "microsoft")
+	}
+	if len(providers) > 0 {
+		slog.Info("OAuth providers initialized", "providers", providers)
+	} else {
+		slog.Info("No OAuth providers configured")
 	}
 	mux.HandleFunc("GET /api/auth/oauth/{provider}", oh.LoginRedirect)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", oh.Callback)
