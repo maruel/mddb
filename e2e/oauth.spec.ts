@@ -13,32 +13,41 @@ test.describe('API routing', () => {
 });
 
 test.describe('OAuth Login', () => {
-  test('login page loads and shows OAuth buttons', async ({ page }) => {
+  test('login page loads with OAuth buttons', async ({ page }) => {
     await page.goto('/');
 
     // Should show login form
     await expect(page.getByRole('heading', { name: /login|sign in/i })).toBeVisible();
 
-    // Should show OAuth buttons
+    // In test mode (TEST_OAUTH=1), OAuth buttons should be visible
     const googleButton = page.getByRole('link', { name: /google/i });
     await expect(googleButton).toBeVisible();
     await expect(googleButton).toHaveAttribute('href', '/api/auth/oauth/google');
   });
 
-  test('clicking Google OAuth button navigates to OAuth endpoint', async ({ page }) => {
+  test('providers endpoint returns configured providers', async ({ request }) => {
+    const response = await request.get('/api/auth/providers');
+    expect(response.ok()).toBe(true);
+
+    const { providers } = await response.json();
+    // In test mode, both providers should be configured
+    expect(providers).toContain('google');
+    expect(providers).toContain('microsoft');
+  });
+
+  test('clicking Google OAuth button redirects to Google', async ({ page }) => {
     await page.goto('/');
 
     const googleButton = page.getByRole('link', { name: /google/i });
 
-    // Listen for navigation to the OAuth endpoint
+    // Click and wait for navigation to Google OAuth
     const [response] = await Promise.all([
       page.waitForResponse(resp => resp.url().includes('/api/auth/oauth/google')),
       googleButton.click(),
     ]);
 
-    // Should get either a redirect (307 if OAuth configured) or 404 (if provider not configured)
-    // Never 200 (which would mean SPA fallback)
-    expect([307, 404]).toContain(response.status());
+    // Should get 307 redirect (to Google) since test credentials are configured
+    expect(response.status()).toBe(307);
   });
 
   test('OAuth callback with token sets auth and redirects', async ({ page, context }) => {

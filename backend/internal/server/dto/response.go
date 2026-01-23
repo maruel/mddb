@@ -16,6 +16,11 @@ type AuthResponse struct {
 	User  *UserResponse `json:"user"`
 }
 
+// ProvidersResponse is a response containing the list of configured OAuth providers.
+type ProvidersResponse struct {
+	Providers []OAuthProvider `json:"providers"`
+}
+
 // --- Page Responses ---
 
 // ListPagesResponse is a response containing a list of pages.

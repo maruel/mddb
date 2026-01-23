@@ -19,9 +19,9 @@ export default defineConfig({
   ],
   // Start the server before running tests
   webServer: {
-    command: 'make dev',
+    command: 'TEST_OAUTH=1 make dev',
     url: 'http://localhost:8080/api/health',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false, // Always start fresh to ensure TEST_OAUTH is set
     timeout: 30000,
   },
 });

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -65,6 +66,15 @@ func (h *OAuthHandler) AddProvider(name, clientID, clientSecret, redirectURL str
 		Scopes:       scopes,
 		Endpoint:     endpoint,
 	}
+}
+
+// ListProviders returns the list of configured OAuth providers.
+func (h *OAuthHandler) ListProviders(_ context.Context, _ *dto.ProvidersRequest) (*dto.ProvidersResponse, error) {
+	providers := make([]dto.OAuthProvider, 0, len(h.providers))
+	for name := range h.providers {
+		providers = append(providers, dto.OAuthProvider(name))
+	}
+	return &dto.ProvidersResponse{Providers: providers}, nil
 }
 
 // LoginRedirect redirects the user to the OAuth provider.

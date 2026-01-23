@@ -343,11 +343,13 @@ func parseRoutes(path string) ([]Route, error) {
 
 		wrapperType, handlerName := parseHandlerExpr(call.Args[1])
 		if handlerName != "" && handlerName != "?" {
+			// Mark as raw if using WrapAuthRaw or if no wrapper (direct HandleFunc)
+			isRaw := wrapperType == "WrapAuthRaw" || wrapperType == "none"
 			routes = append(routes, Route{
 				Method:      method,
 				Path:        urlPath,
 				HandlerName: handlerName,
-				IsRaw:       wrapperType == "WrapAuthRaw",
+				IsRaw:       isRaw,
 			})
 		}
 

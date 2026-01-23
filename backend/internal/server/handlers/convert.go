@@ -202,7 +202,7 @@ func userSettingsToDTO(s identity.UserSettings) dto.UserSettings {
 
 func oauthIdentityToDTO(o identity.OAuthIdentity) dto.OAuthIdentity {
 	return dto.OAuthIdentity{
-		Provider:   o.Provider,
+		Provider:   dto.OAuthProvider(o.Provider),
 		ProviderID: o.ProviderID,
 		Email:      o.Email,
 		LastLogin:  formatTime(o.LastLogin),

@@ -42,6 +42,7 @@ import type {
   NodeResponse,
   OkResponse,
   OrganizationResponse,
+  ProvidersResponse,
   RegisterRequest,
   SearchRequest,
   SearchResponse,
@@ -119,6 +120,9 @@ export function createAPIClient(fetchFn: FetchFn) {
       },
       me: {
         get: () => get<UserResponse>(fetchFn, `/api/auth/me`),
+      },
+      providers: {
+        list: () => get<ProvidersResponse>(fetchFn, `/api/auth/providers`),
       },
       settings: {
         update: (options: UpdateUserSettingsRequest) => post<UserResponse>(fetchFn, `/api/auth/settings`, options),

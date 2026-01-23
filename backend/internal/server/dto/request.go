@@ -788,6 +788,16 @@ func (r *HealthRequest) Validate() error {
 	return nil
 }
 
+// --- OAuth Providers ---
+
+// ProvidersRequest is a request to list configured OAuth providers.
+type ProvidersRequest struct{}
+
+// Validate is a no-op for ProvidersRequest.
+func (r *ProvidersRequest) Validate() error {
+	return nil
+}
+
 // --- Users ---
 
 // ListUsersRequest is a request to list users.

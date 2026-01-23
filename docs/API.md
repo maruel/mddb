@@ -33,6 +33,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | GET | `/api/auth/me` | viewer |
 | GET | `/api/auth/oauth/{provider}` | public |
 | GET | `/api/auth/oauth/{provider}/callback` | public |
+| GET | `/api/auth/providers` | public |
 | POST | `/api/auth/register` | public |
 | POST | `/api/auth/settings` | viewer |
 | POST | `/api/auth/switch-org` | viewer |

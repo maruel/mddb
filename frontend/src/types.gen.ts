@@ -372,6 +372,11 @@ export interface PushGitRequest {
 export interface HealthRequest {
 }
 /**
+ * ProvidersRequest is a request to list configured OAuth providers.
+ */
+export interface ProvidersRequest {
+}
+/**
  * ListUsersRequest is a request to list users.
  */
 export interface ListUsersRequest {
@@ -421,6 +426,12 @@ export interface OkResponse {
 export interface AuthResponse {
   token: string;
   user?: UserResponse;
+}
+/**
+ * ProvidersResponse is a response containing the list of configured OAuth providers.
+ */
+export interface ProvidersResponse {
+  providers: OAuthProvider[];
 }
 /**
  * ListPagesResponse is a response containing a list of pages.
@@ -830,10 +841,22 @@ export interface UserSettings {
   language: string;
 }
 /**
+ * OAuthProvider represents a supported OAuth2 provider.
+ */
+/**
+ * OAuthProviderGoogle represents Google OAuth.
+ */
+export const OAuthProviderGoogle = "google";
+/**
+ * OAuthProviderMicrosoft represents Microsoft OAuth.
+ */
+export const OAuthProviderMicrosoft = "microsoft";
+export type OAuthProvider = typeof OAuthProviderGoogle | typeof OAuthProviderMicrosoft;
+/**
  * OAuthIdentity represents a link between a local user and an OAuth2 provider.
  */
 export interface OAuthIdentity {
-  provider: string;
+  provider: OAuthProvider;
   provider_id: string;
   email: string;
   last_login: string;

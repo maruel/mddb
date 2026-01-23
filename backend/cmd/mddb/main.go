@@ -171,6 +171,20 @@ func mainImpl() error {
 		}
 	}
 
+	// Test mode: use fake OAuth credentials for testing OAuth UI flow
+	if os.Getenv("TEST_OAUTH") == "1" {
+		if *googleClientID == "" {
+			*googleClientID = "test-google-client-id"
+			*googleClientSecret = "test-google-client-secret"
+			slog.Info("TEST_OAUTH=1: Using fake Google OAuth credentials")
+		}
+		if *msClientID == "" {
+			*msClientID = "test-ms-client-id"
+			*msClientSecret = "test-ms-client-secret"
+			slog.Info("TEST_OAUTH=1: Using fake Microsoft OAuth credentials")
+		}
+	}
+
 	// Validate OAuth credentials: both ID and secret must be set, or neither
 	if (*googleClientID == "") != (*googleClientSecret == "") {
 		return errors.New("google-client-id and google-client-secret must both be set or both be empty")

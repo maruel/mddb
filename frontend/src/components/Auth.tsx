@@ -1,6 +1,7 @@
-import { createSignal, Show } from 'solid-js';
+import { createSignal, createResource, Show, For } from 'solid-js';
 import { createAPIClient, APIError } from '../api.gen';
-import type { UserResponse } from '../types.gen';
+import type { UserResponse, OAuthProvider } from '../types.gen';
+import { OAuthProviderGoogle, OAuthProviderMicrosoft } from '../types.gen';
 import styles from './Auth.module.css';
 import { useI18n } from '../i18n';
 
@@ -8,11 +9,27 @@ interface AuthProps {
   onLogin: (token: string, user: UserResponse) => void;
 }
 
+// Provider-specific configuration for OAuth buttons
+const providerConfig: Record<OAuthProvider, { style: string; labelKey: string }> = {
+  [OAuthProviderGoogle]: { style: styles.googleButton ?? '', labelKey: 'auth.loginWithGoogle' },
+  [OAuthProviderMicrosoft]: { style: styles.microsoftButton ?? '', labelKey: 'auth.loginWithMicrosoft' },
+};
+
+function getProviderConfig(provider: OAuthProvider): { style: string; label: string } {
+  const config = providerConfig[provider];
+  if (config) {
+    return { style: config.style, label: config.labelKey };
+  }
+  // Fallback for unknown providers: use generic style and capitalize provider name
+  return { style: styles.oauthButton ?? '', label: provider.charAt(0).toUpperCase() + provider.slice(1) };
+}
+
 // Create an unauthenticated API client for login/register
 const api = createAPIClient((url, init) => fetch(url, init));
 
 export default function Auth(props: AuthProps) {
   const { t } = useI18n();
+  const [providers] = createResource(() => api.auth.providers.list().then((r) => r.providers));
   const [isRegister, setIsRegister] = createSignal(false);
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
@@ -98,19 +115,26 @@ export default function Auth(props: AuthProps) {
           {loading() ? t('auth.pleaseWait') : isRegister() ? t('auth.register') : t('auth.login')}
         </button>
 
-        <div class={styles.oauthSection}>
-          <div class={styles.divider}>
-            <span>{t('auth.or')}</span>
+        <Show when={(providers() ?? []).length > 0}>
+          <div class={styles.oauthSection}>
+            <div class={styles.divider}>
+              <span>{t('auth.or')}</span>
+            </div>
+            <div class={styles.oauthButtons}>
+              <For each={providers()}>
+                {(provider) => {
+                  const config = getProviderConfig(provider);
+                  const isKnown = provider in providerConfig;
+                  return (
+                    <a href={`/api/auth/oauth/${provider}`} class={config.style}>
+                      {isKnown ? t(config.label) : config.label}
+                    </a>
+                  );
+                }}
+              </For>
+            </div>
           </div>
-          <div class={styles.oauthButtons}>
-            <a href="/api/auth/oauth/google" class={styles.googleButton}>
-              {t('auth.loginWithGoogle')}
-            </a>
-            <a href="/api/auth/oauth/microsoft" class={styles.microsoftButton}>
-              {t('auth.loginWithMicrosoft')}
-            </a>
-          </div>
-        </div>
+        </Show>
 
         <p class={styles.toggle}>
           {isRegister() ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}

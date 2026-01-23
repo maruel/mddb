@@ -131,7 +131,8 @@
 }
 
 .googleButton,
-.microsoftButton {
+.microsoftButton,
+.oauthButton {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -160,4 +161,14 @@
 
 .microsoftButton:hover {
   opacity: 0.9;
+}
+
+.oauthButton {
+  background: var(--c-bg);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+}
+
+.oauthButton:hover {
+  background: var(--c-bg-alt);
 }

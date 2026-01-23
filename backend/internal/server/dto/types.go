@@ -80,12 +80,22 @@ type UserSettings struct {
 	Language string `json:"language" jsonschema:"description=Preferred language code (en/fr/etc)"`
 }
 
+// OAuthProvider represents a supported OAuth2 provider.
+type OAuthProvider string
+
+const (
+	// OAuthProviderGoogle represents Google OAuth.
+	OAuthProviderGoogle OAuthProvider = "google"
+	// OAuthProviderMicrosoft represents Microsoft OAuth.
+	OAuthProviderMicrosoft OAuthProvider = "microsoft"
+)
+
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
 type OAuthIdentity struct {
-	Provider   string `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft)"`
-	ProviderID string `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
-	Email      string `json:"email" jsonschema:"description=Email address from OAuth provider"`
-	LastLogin  string `json:"last_login" jsonschema:"description=Last login timestamp via this provider (RFC3339)"`
+	Provider   OAuthProvider `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft)"`
+	ProviderID string        `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
+	Email      string        `json:"email" jsonschema:"description=Email address from OAuth provider"`
+	LastLogin  string        `json:"last_login" jsonschema:"description=Last login timestamp via this provider (RFC3339)"`
 }
 
 // MembershipSettings represents user preferences within a specific organization.

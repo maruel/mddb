@@ -99,6 +99,7 @@ func NewRouter(fileStore *content.FileStore, userService *identity.UserService, 
 	} else {
 		slog.Info("No OAuth providers configured")
 	}
+	mux.Handle("GET /api/auth/providers", Wrap(oh.ListProviders))
 	mux.HandleFunc("GET /api/auth/oauth/{provider}", oh.LoginRedirect)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", oh.Callback)
 
