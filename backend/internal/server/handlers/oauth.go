@@ -94,7 +94,11 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, dto.Internal("state_generation"))
 		return
 	}
-	authURL := config.AuthCodeURL(state)
+	var opts []oauth2.AuthCodeOption
+	if provider == "google" {
+		opts = append(opts, oauth2.SetAuthURLParam("prompt", "select_account"))
+	}
+	authURL := config.AuthCodeURL(state, opts...)
 	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
 }
 
