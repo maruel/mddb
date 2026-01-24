@@ -242,7 +242,7 @@ func TestJsonFieldName(t *testing.T) {
 			{"ComplexTag", "complex"},
 		}
 
-		typ := reflect.TypeOf(testStruct{})
+		typ := reflect.TypeFor[testStruct]()
 		for _, tt := range tests {
 			t.Run(tt.fieldName, func(t *testing.T) {
 				field, _ := typ.FieldByName(tt.fieldName)
@@ -264,43 +264,43 @@ func TestGoTypeToColumnType(t *testing.T) {
 			want columnType
 		}{
 			// Basic types
-			{"string", reflect.TypeOf(""), columnTypeText},
-			{"bool", reflect.TypeOf(true), columnTypeBool},
-			{"int", reflect.TypeOf(0), columnTypeNumber},
-			{"int8", reflect.TypeOf(int8(0)), columnTypeNumber},
-			{"int16", reflect.TypeOf(int16(0)), columnTypeNumber},
-			{"int32", reflect.TypeOf(int32(0)), columnTypeNumber},
-			{"int64", reflect.TypeOf(int64(0)), columnTypeNumber},
-			{"uint", reflect.TypeOf(uint(0)), columnTypeNumber},
-			{"uint8", reflect.TypeOf(uint8(0)), columnTypeNumber},
-			{"uint16", reflect.TypeOf(uint16(0)), columnTypeNumber},
-			{"uint32", reflect.TypeOf(uint32(0)), columnTypeNumber},
-			{"uint64", reflect.TypeOf(uint64(0)), columnTypeNumber},
-			{"float32", reflect.TypeOf(float32(0)), columnTypeNumber},
-			{"float64", reflect.TypeOf(float64(0)), columnTypeNumber},
+			{"string", reflect.TypeFor[string](), columnTypeText},
+			{"bool", reflect.TypeFor[bool](), columnTypeBool},
+			{"int", reflect.TypeFor[int](), columnTypeNumber},
+			{"int8", reflect.TypeFor[int8](), columnTypeNumber},
+			{"int16", reflect.TypeFor[int16](), columnTypeNumber},
+			{"int32", reflect.TypeFor[int32](), columnTypeNumber},
+			{"int64", reflect.TypeFor[int64](), columnTypeNumber},
+			{"uint", reflect.TypeFor[uint](), columnTypeNumber},
+			{"uint8", reflect.TypeFor[uint8](), columnTypeNumber},
+			{"uint16", reflect.TypeFor[uint16](), columnTypeNumber},
+			{"uint32", reflect.TypeFor[uint32](), columnTypeNumber},
+			{"uint64", reflect.TypeFor[uint64](), columnTypeNumber},
+			{"float32", reflect.TypeFor[float32](), columnTypeNumber},
+			{"float64", reflect.TypeFor[float64](), columnTypeNumber},
 
 			// Special types
-			{"time.Time", reflect.TypeOf(time.Time{}), columnTypeDate},
-			{"[]byte", reflect.TypeOf([]byte{}), columnTypeBlob},
+			{"time.Time", reflect.TypeFor[time.Time](), columnTypeDate},
+			{"[]byte", reflect.TypeFor[[]byte](), columnTypeBlob},
 
 			// Complex types -> JSONB
-			{"struct", reflect.TypeOf(struct{}{}), columnTypeJSONB},
-			{"slice", reflect.TypeOf([]string{}), columnTypeJSONB},
-			{"array", reflect.TypeOf([5]int{}), columnTypeJSONB},
-			{"map", reflect.TypeOf(map[string]int{}), columnTypeJSONB},
-			{"complex64", reflect.TypeOf(complex64(0)), columnTypeJSONB},
-			{"complex128", reflect.TypeOf(complex128(0)), columnTypeJSONB},
+			{"struct", reflect.TypeFor[struct{}](), columnTypeJSONB},
+			{"slice", reflect.TypeFor[[]string](), columnTypeJSONB},
+			{"array", reflect.TypeFor[[5]int](), columnTypeJSONB},
+			{"map", reflect.TypeFor[map[string]int](), columnTypeJSONB},
+			{"complex64", reflect.TypeFor[complex64](), columnTypeJSONB},
+			{"complex128", reflect.TypeFor[complex128](), columnTypeJSONB},
 
 			// Pointer types (should dereference)
-			{"*string", reflect.TypeOf((*string)(nil)), columnTypeText},
-			{"*int", reflect.TypeOf((*int)(nil)), columnTypeNumber},
-			{"*bool", reflect.TypeOf((*bool)(nil)), columnTypeBool},
-			{"*time.Time", reflect.TypeOf((*time.Time)(nil)), columnTypeDate},
+			{"*string", reflect.TypeFor[*string](), columnTypeText},
+			{"*int", reflect.TypeFor[*int](), columnTypeNumber},
+			{"*bool", reflect.TypeFor[*bool](), columnTypeBool},
+			{"*time.Time", reflect.TypeFor[*time.Time](), columnTypeDate},
 
 			// Unsupported types -> text fallback
-			{"chan", reflect.TypeOf(make(chan int)), columnTypeText},
-			{"func", reflect.TypeOf(func() {}), columnTypeText},
-			{"interface", reflect.TypeOf((*interface{})(nil)).Elem(), columnTypeText},
+			{"chan", reflect.TypeFor[chan int](), columnTypeText},
+			{"func", reflect.TypeFor[func()](), columnTypeText},
+			{"interface", reflect.TypeFor[any](), columnTypeText},
 		}
 
 		for _, tt := range tests {

@@ -513,7 +513,7 @@ func validateJWTAndSession(r *http.Request, userService *identity.UserService, s
 // struct fields tagged with `path:"paramName"`.
 func populatePathParams(r *http.Request, input any) {
 	val := reflect.ValueOf(input)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return // Skip if not a pointer
 	}
 
@@ -546,7 +546,7 @@ func populatePathParams(r *http.Request, input any) {
 // struct fields tagged with `query:"paramName"`.
 func populateQueryParams(r *http.Request, input any) {
 	val := reflect.ValueOf(input)
-	if val.Kind() != reflect.Ptr {
+	if val.Kind() != reflect.Pointer {
 		return // Skip if not a pointer
 	}
 
