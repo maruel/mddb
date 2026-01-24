@@ -100,6 +100,9 @@ func mainImpl() error {
 	}))
 	slog.SetDefault(logger)
 
+	if err := os.MkdirAll(*dataDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
+		return fmt.Errorf("failed to create data directory: %w", err)
+	}
 	// Run onboarding if no .env file exists and stdin is a TTY
 	envPath := filepath.Join(*dataDir, ".env")
 	if _, err := os.Stat(envPath); os.IsNotExist(err) {
@@ -459,10 +462,6 @@ func runOnboarding(dataDir string) error {
 	}
 
 	fmt.Println("")
-	if err := os.MkdirAll(dataDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
-		return fmt.Errorf("failed to create data directory: %w", err)
-	}
-
 	if err := saveDotEnv(dataDir, env); err != nil {
 		return fmt.Errorf("failed to save .env file: %w", err)
 	}
