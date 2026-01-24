@@ -160,6 +160,19 @@ vi.mock('./components/CreateOrgModal', () => ({
   ),
 }));
 
+vi.mock('./components/UserMenu', () => ({
+  default: (props: { user: UserResponse; onLogout: () => void }) => (
+    <div data-testid="user-menu">
+      <span data-testid="user-info">
+        {props.user.name} ({props.user.role})
+      </span>
+      <button data-testid="logout-button" onClick={props.onLogout}>
+        Logout
+      </button>
+    </div>
+  ),
+}));
+
 // Mock fetch
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
