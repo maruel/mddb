@@ -263,9 +263,8 @@ func TestFileStore(t *testing.T) {
 				ID:       recordID,
 				Data:     map[string]any{"field": strings.Repeat("b", 200)},
 				Created:  record.Created,
-				Modified: time.Now(),
+				Modified: record.Modified,
 			}
-
 			err = fs.UpdateRecord(ctx, orgID, tableID, updatedRecord, author)
 			if err != nil {
 				t.Errorf("update with same-size data should succeed, but got: %v", err)
@@ -571,7 +570,7 @@ func TestFileStore(t *testing.T) {
 				ID:       recordID,
 				Data:     map[string]any{"field": strings.Repeat("b", 100)},
 				Created:  record.Created,
-				Modified: time.Now(),
+				Modified: record.Modified,
 			}
 
 			err = fs.UpdateRecord(ctx, orgID, tableID, updatedRecord, author)
