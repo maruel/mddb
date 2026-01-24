@@ -146,7 +146,7 @@ func WrapAuth[In any, PtrIn interface {
 
 		// Validate JWT and session
 		user, sessionID, tokenString, err := validateJWTAndSession(r, userService, sessionService, jwtSecret)
-		if sessionID != 0 {
+		if !sessionID.IsZero() {
 			ctx = reqctx.WithSessionID(ctx, sessionID)
 		}
 		if tokenString != "" {

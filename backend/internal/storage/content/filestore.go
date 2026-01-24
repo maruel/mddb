@@ -138,7 +138,7 @@ func (fs *FileStore) checkAssetSizeQuota(orgID jsonldb.ID, size int64) error {
 }
 
 func (fs *FileStore) orgPagesDir(orgID jsonldb.ID) string {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return ""
 	}
 	dir := filepath.Join(fs.rootDir, orgID.String(), "pages")
@@ -150,7 +150,7 @@ func (fs *FileStore) orgPagesDir(orgID jsonldb.ID) string {
 
 // PageExists checks if a page directory exists.
 func (fs *FileStore) PageExists(orgID, id jsonldb.ID) bool {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return false
 	}
 	path := fs.pageDir(orgID, id)
@@ -160,7 +160,7 @@ func (fs *FileStore) PageExists(orgID, id jsonldb.ID) bool {
 
 // ReadPage reads a page from disk and returns it as a Node.
 func (fs *FileStore) ReadPage(orgID, id jsonldb.ID) (*Node, error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	filePath := fs.pageIndexFile(orgID, id)
@@ -273,7 +273,7 @@ func (fs *FileStore) UpdatePage(ctx context.Context, orgID, id jsonldb.ID, title
 
 // updatePage updates an existing page on disk without committing.
 func (fs *FileStore) updatePage(orgID, id jsonldb.ID, title, content string) (*Node, error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	filePath := fs.pageIndexFile(orgID, id)
@@ -335,7 +335,7 @@ func (fs *FileStore) DeletePage(ctx context.Context, orgID, id jsonldb.ID, autho
 
 // deletePage deletes a page directory without committing.
 func (fs *FileStore) deletePage(orgID, id jsonldb.ID) error {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return errOrgIDRequired
 	}
 	pageDir := fs.pageDir(orgID, id)
@@ -350,7 +350,7 @@ func (fs *FileStore) deletePage(orgID, id jsonldb.ID) error {
 
 // IterPages returns an iterator over all pages for an organization as Nodes.
 func (fs *FileStore) IterPages(orgID jsonldb.ID) (iter.Seq[*Node], error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	dir := fs.orgPagesDir(orgID)
@@ -383,7 +383,7 @@ func (fs *FileStore) IterPages(orgID jsonldb.ID) (iter.Seq[*Node], error) {
 
 // ReadNode reads a unified node from disk.
 func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*Node, error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	nodeDir := fs.pageDir(orgID, id)
@@ -435,7 +435,7 @@ func (fs *FileStore) ReadNode(orgID, id jsonldb.ID) (*Node, error) {
 
 // ReadNodeTree returns the full hierarchical tree of nodes.
 func (fs *FileStore) ReadNodeTree(orgID jsonldb.ID) ([]*Node, error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	return fs.readNodesRecursive(orgID, fs.orgPagesDir(orgID), 0)
@@ -521,7 +521,7 @@ func (fs *FileStore) ReadNodeFromPath(orgID jsonldb.ID, path string, id, parentI
 // Pages are counted as directories containing index.md (documents) or metadata.json (tables).
 // Hybrid nodes (both files) are counted once.
 func (fs *FileStore) GetOrganizationUsage(orgID jsonldb.ID) (pageCount int, storageUsage int64, err error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return 0, 0, errOrgIDRequired
 	}
 	dir := fs.orgPagesDir(orgID)
@@ -565,7 +565,7 @@ func (fs *FileStore) TableExists(orgID, id jsonldb.ID) bool {
 
 // ReadTable reads a table definition from metadata.json and returns it as a Node.
 func (fs *FileStore) ReadTable(orgID, id jsonldb.ID) (*Node, error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 
@@ -694,7 +694,7 @@ func (fs *FileStore) DeleteTable(ctx context.Context, orgID, id jsonldb.ID, auth
 
 // deleteTable deletes a table directory without committing.
 func (fs *FileStore) deleteTable(orgID, id jsonldb.ID) error {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return errOrgIDRequired
 	}
 	pageDir := fs.pageDir(orgID, id)
@@ -706,7 +706,7 @@ func (fs *FileStore) deleteTable(orgID, id jsonldb.ID) error {
 
 // IterTables returns an iterator over all tables for the given organization as Nodes.
 func (fs *FileStore) IterTables(orgID jsonldb.ID) (iter.Seq[*Node], error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	dir := fs.orgPagesDir(orgID)
@@ -792,7 +792,7 @@ func (fs *FileStore) appendRecord(orgID, tableID jsonldb.ID, record *DataRecord)
 
 // IterRecords returns an iterator over all records for a table.
 func (fs *FileStore) IterRecords(orgID, id jsonldb.ID) (iter.Seq[*DataRecord], error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	filePath := fs.tableRecordsFile(orgID, id)
@@ -810,7 +810,7 @@ func (fs *FileStore) IterRecords(orgID, id jsonldb.ID) (iter.Seq[*DataRecord], e
 
 // ReadRecordsPage reads a page of records for a table using jsonldb abstraction.
 func (fs *FileStore) ReadRecordsPage(orgID, id jsonldb.ID, offset, limit int) ([]*DataRecord, error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	filePath := fs.tableRecordsFile(orgID, id)
@@ -920,7 +920,7 @@ func (fs *FileStore) DeleteRecord(ctx context.Context, orgID, tableID, recordID 
 
 // deleteRecord deletes a record without committing.
 func (fs *FileStore) deleteRecord(orgID, tableID, recordID jsonldb.ID) error {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return errOrgIDRequired
 	}
 
@@ -1012,7 +1012,7 @@ func (fs *FileStore) saveAsset(orgID, pageID jsonldb.ID, assetName string, data 
 
 // ReadAsset reads an asset associated with a page.
 func (fs *FileStore) ReadAsset(orgID, pageID jsonldb.ID, assetName string) ([]byte, error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
@@ -1045,7 +1045,7 @@ func (fs *FileStore) DeleteAsset(ctx context.Context, orgID, pageID jsonldb.ID, 
 
 // deleteAsset deletes an asset without committing.
 func (fs *FileStore) deleteAsset(orgID, pageID jsonldb.ID, assetName string) error {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return errOrgIDRequired
 	}
 	assetPath := filepath.Join(fs.pageDir(orgID, pageID), assetName)
@@ -1060,7 +1060,7 @@ func (fs *FileStore) deleteAsset(orgID, pageID jsonldb.ID, assetName string) err
 
 // IterAssets returns an iterator over all assets associated with a page.
 func (fs *FileStore) IterAssets(orgID, pageID jsonldb.ID) (iter.Seq[*Asset], error) {
-	if orgID == 0 {
+	if orgID.IsZero() {
 		return nil, errOrgIDRequired
 	}
 	pageDir := fs.pageDir(orgID, pageID)
