@@ -217,7 +217,7 @@ func (fs *FileStore) writePage(wsID, id jsonldb.ID, title, content string) (*Nod
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 	p := &page{
 		id:       id,
 		title:    title,
@@ -290,7 +290,7 @@ func (fs *FileStore) updatePage(wsID, id jsonldb.ID, title, content string) (*No
 	p := parseMarkdownFile(id, data)
 	p.title = title
 	p.content = content
-	p.modified = time.Now()
+	p.modified = time.Now().UTC()
 
 	updatedData := formatMarkdownFile(p)
 
@@ -641,8 +641,8 @@ func (fs *FileStore) writeTable(wsID jsonldb.ID, node *Node, isNew bool) error {
 	metadata := map[string]any{
 		"title":      node.Title,
 		"version":    "1.0",
-		"created":    node.Created,
-		"modified":   node.Modified,
+		"created":    node.Created.UTC(),
+		"modified":   node.Modified.UTC(),
 		"properties": node.Properties,
 	}
 	data, err := json.Marshal(metadata)
@@ -1132,10 +1132,10 @@ func parseMarkdownFile(id jsonldb.ID, data []byte) *page {
 	}
 
 	if created.IsZero() {
-		created = time.Now()
+		created = time.Now().UTC()
 	}
 	if modified.IsZero() {
-		modified = time.Now()
+		modified = time.Now().UTC()
 	}
 
 	return &page{
@@ -1212,7 +1212,7 @@ func (fs *FileStore) createNode(wsID jsonldb.ID, title string, nodeType NodeType
 	}
 
 	id := jsonldb.NewID()
-	now := time.Now()
+	now := time.Now().UTC()
 
 	node := &Node{
 		ID:       id,
