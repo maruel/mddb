@@ -23,15 +23,15 @@ Example ` + "`" + `users.jsonl` + "`" + `:
 Binary data is stored in a sibling ` + "`" + `.blobs/` + "`" + ` directory:
 - ` + "`" + `users.jsonl` + "`" + ` → ` + "`" + `users.blobs/` + "`" + `
 
-Blob references in JSON: ` + "`" + `sha256:<BASE32>-<size>` + "`" + `
-- 52 uppercase base32 characters (A-Z, 2-7) encoding SHA-256 hash
+Blob references in JSON: ` + "`" + `sha256:<BASE32HEX>-<size>` + "`" + `
+- 52 uppercase base32 hex characters (0-9, A-V) encoding SHA-256 hash
 - Decimal byte size after the dash
 
 File path: ` + "`" + `<table>.blobs/<char0-1>/<char2-51>-<size>` + "`" + `
 
 Example:
-- Reference: ` + "`" + `sha256:4OYMIQUY7QOBJGX36TEJS35ZEQT24QPEMSNZGTFESWMRW6CSXBKQ-1024` + "`" + `
-- File path: ` + "`" + `users.blobs/4O/YMIQUY7QOBJGX36TEJS35ZEQT24QPEMSNZGTFESWMRW6CSXBKQ-1024` + "`" + `
+- Reference: ` + "`" + `sha256:SEOC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-1024` + "`" + `
+- File path: ` + "`" + `users.blobs/SE/OC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-1024` + "`" + `
 
 ## File Layout
 
@@ -40,8 +40,8 @@ workspace/
 ├── AGENTS.md
 ├── users.jsonl
 ├── users.blobs/
-│   └── 4O/
-│       └── YMIQUY7QOBJGX36TEJS35ZEQT24QPEMSNZGTFESWMRW6CSXBKQ-1024
+│   └── SE/
+│       └── OC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-1024
 └── documents.jsonl
 ` + "```" + `
 `

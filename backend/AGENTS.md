@@ -75,19 +75,19 @@ Example `data.jsonl`:
 
 **Row Requirements:**
 - Must implement `Row[T]` interface: `Clone()`, `GetID()`, `Validate()`
-- IDs are 64-bit integers encoded as base32 strings (ULID-like, time-sortable)
+- IDs are 64-bit integers encoded as base32 hex strings (0-9A-V, time-sortable, case-insensitive safe)
 - Rows are kept sorted by ID on disk
 
 #### Blob Storage Format
 
 Large binary data is stored separately from JSONL rows:
 - **Location**: Sibling directory with `.blobs` suffix (e.g., `data.jsonl` → `data.blobs/`)
-- **Structure**: 256-way fan-out by first 2 chars of hash (e.g., `data.blobs/4O/YMIQUY7Q...`)
-- **Reference Format**: `sha256:<BASE32>-<size>` (52 uppercase base32 chars + decimal size)
+- **Structure**: 256-way fan-out by first 2 chars of hash (e.g., `data.blobs/SE/OC8G...`)
+- **Reference Format**: `sha256:<BASE32HEX>-<size>` (52 uppercase base32 hex chars (0-9A-V) + decimal size)
 - **Content-Addressed**: Identical content shares the same file (deduplication)
 - **Garbage Collection**: Orphaned blobs are removed on table load
 
-Example blob ref: `sha256:4OYMIQUY7QOBJGX36TEJS35ZEQT24QPEMSNZGTFESWMRW6CSXBKQ-0`
+Example blob ref: `sha256:SEOC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-0`
 
 **Using Blobs in Rows:**
 ```go

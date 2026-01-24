@@ -36,8 +36,8 @@ func TestBlobWriter(t *testing.T) {
 			if blob.IsZero() {
 				t.Error("Close() returned unset blob")
 			}
-			// SHA-256 of "hello, world!" with size 13 (base32 encoded).
-			wantHash := "sha256:NDTFNMSR4Z7IGWF67BEDVMGVDRTBT47HUGU7BZ2YHDKB743I64UA-13"
+			// SHA-256 of "hello, world!" with size 13 (base32 hex encoded).
+			wantHash := "sha256:D3J5DCIHSPV86M5UV143LC6L3HJ1JSV7K6KV1PQO73A1VSR8USK0-13"
 			if string(blob.Ref) != wantHash {
 				t.Errorf("Close() hash = %q, want %q", blob.Ref, wantHash)
 			}
@@ -59,7 +59,7 @@ func TestBlobWriter(t *testing.T) {
 				t.Fatalf("Close() error = %v", err)
 			}
 			// Empty blob returns the hardcoded empty hash with size 0.
-			if blob.Ref != "sha256:4OYMIQUY7QOBJGX36TEJS35ZEQT24QPEMSNZGTFESWMRW6CSXBKQ-0" {
+			if blob.Ref != "sha256:SEOC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-0" {
 				t.Errorf("Close() with no data should return empty hash, got %q", blob.Ref)
 			}
 
@@ -325,7 +325,7 @@ func TestBlobStore(t *testing.T) {
 		}
 
 		// Should have the hardcoded empty hash with size 0.
-		const emptyHash = "sha256:4OYMIQUY7QOBJGX36TEJS35ZEQT24QPEMSNZGTFESWMRW6CSXBKQ-0"
+		const emptyHash = "sha256:SEOC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-0"
 		if blob.Ref != emptyHash {
 			t.Errorf("empty blob hash = %q, want %q", blob.Ref, emptyHash)
 		}

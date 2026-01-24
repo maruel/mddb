@@ -13,8 +13,9 @@ import (
 	"strings"
 )
 
-// base32Enc is standard base32 encoding without padding for blob refs.
-var base32Enc = base32.StdEncoding.WithPadding(base32.NoPadding)
+// base32Enc uses base32 "Extended Hex" alphabet (0-9A-V) which is ASCII-sorted
+// and case-insensitive safe for filesystems.
+var base32Enc = base32.HexEncoding.WithPadding(base32.NoPadding)
 
 // BlobWriter streams data to a blob, computing the SHA-256 hash as data is written.
 //
@@ -105,7 +106,7 @@ const (
 
 	// emptyBlobRef is the ref for empty content (SHA-256 of nothing with size 0).
 	// Used as an optimization to avoid file I/O for empty blobs.
-	emptyBlobRef = BlobRef("sha256:4OYMIQUY7QOBJGX36TEJS35ZEQT24QPEMSNZGTFESWMRW6CSXBKQ-0")
+	emptyBlobRef = BlobRef("sha256:SEOC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-0")
 )
 
 // blobStore manages content-addressed files in a directory.
@@ -265,11 +266,12 @@ func (bs *blobStore) pathForRef(ref BlobRef) string {
 	return filepath.Join(bs.dir, hashPart[:2], hashPart[2:])
 }
 
-// isValidBase32Prefix checks if a string is a valid 2-character lowercase base32 prefix.
+// isValidBase32Prefix checks if a string is a valid 2-character base32 hex prefix.
 func isValidBase32Prefix(s string) bool {
-	return len(s) == 2 && isBase32Char(s[0]) && isBase32Char(s[1])
+	return len(s) == 2 && isBase32HexChar(s[0]) && isBase32HexChar(s[1])
 }
 
-func isBase32Char(c byte) bool {
-	return (c >= 'A' && c <= 'Z') || (c >= '2' && c <= '7')
+// isBase32HexChar checks if a byte is a valid base32 hex character (0-9, A-V uppercase only).
+func isBase32HexChar(c byte) bool {
+	return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'V')
 }

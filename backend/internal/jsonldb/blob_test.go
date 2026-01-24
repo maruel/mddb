@@ -107,15 +107,17 @@ func TestBlob(t *testing.T) {
 
 func TestBlobRef(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
+		// Base32 hex alphabet: 0-9, A-V (uppercase only)
 		tests := []struct {
 			name    string
 			ref     string
 			wantErr bool
 		}{
 			{"empty is valid", "", false},
-			{"valid uppercase", "sha256:" + strings.Repeat("A", 52) + "-0", false},
-			{"valid with digits", "sha256:" + strings.Repeat("2", 52) + "-123", false},
-			{"valid mixed", "sha256:" + strings.Repeat("Z", 26) + strings.Repeat("7", 26) + "-999999", false},
+			{"valid uppercase A-V", "sha256:" + strings.Repeat("A", 52) + "-0", false},
+			{"valid with digits", "sha256:" + strings.Repeat("5", 52) + "-123", false},
+			{"valid V boundary", "sha256:" + strings.Repeat("V", 52) + "-999999", false},
+			{"valid mixed", "sha256:" + strings.Repeat("0", 26) + strings.Repeat("V", 26) + "-1", false},
 			{"missing prefix", strings.Repeat("A", 52) + "-0", true},
 			{"wrong prefix", "sha512:" + strings.Repeat("A", 52) + "-0", true},
 			{"no size", "sha256:" + strings.Repeat("A", 52), true},
@@ -124,9 +126,9 @@ func TestBlobRef(t *testing.T) {
 			{"long hash", "sha256:" + strings.Repeat("A", 53) + "-0", true},
 			{"lowercase rejected", "sha256:" + strings.Repeat("a", 52) + "-1", true},
 			{"mixed case rejected", "sha256:" + strings.Repeat("A", 26) + strings.Repeat("a", 26) + "-1", true},
-			{"invalid base32 char 0", "sha256:" + strings.Repeat("0", 52) + "-0", true},
-			{"invalid base32 char 1", "sha256:" + strings.Repeat("1", 52) + "-0", true},
-			{"invalid base32 char 8", "sha256:" + strings.Repeat("8", 52) + "-0", true},
+			{"invalid char W", "sha256:" + strings.Repeat("W", 52) + "-0", true},
+			{"invalid char X", "sha256:" + strings.Repeat("X", 52) + "-0", true},
+			{"invalid char Z", "sha256:" + strings.Repeat("Z", 52) + "-0", true},
 			{"invalid char", "sha256:" + strings.Repeat("!", 52) + "-0", true},
 			{"empty size", "sha256:" + strings.Repeat("A", 52) + "-", true},
 			{"non-digit size", "sha256:" + strings.Repeat("A", 52) + "-abc", true},

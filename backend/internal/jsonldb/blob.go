@@ -13,7 +13,7 @@ type BlobRef string
 const blobRefPrefix = "sha256:"
 
 // Validate checks if the blob reference is valid.
-// Format: "sha256:<hash>-<size>" where hash is 52 uppercase base32 chars and size is decimal digits.
+// Format: "sha256:<hash>-<size>" where hash is 52 uppercase base32 hex chars (0-9, A-V) and size is decimal digits.
 func (r BlobRef) Validate() error {
 	if r == "" {
 		return nil // Empty ref is valid (unset).
@@ -24,7 +24,8 @@ func (r BlobRef) Validate() error {
 	}
 	for i := 7; i < 59; i++ {
 		c := r[i]
-		if (c < 'A' || c > 'Z') && (c < '2' || c > '7') {
+		// Base32 hex alphabet: 0-9, A-V (uppercase only)
+		if (c < '0' || c > '9') && (c < 'A' || c > 'V') {
 			return errInvalidBlobRef
 		}
 	}

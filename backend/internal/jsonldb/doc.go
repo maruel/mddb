@@ -32,6 +32,6 @@
 //
 // JSONL files with line 1 as schema header, subsequent lines as JSON rows.
 // Rows are sorted by ID on load if out of order (handles clock drift, manual edits).
-// Blob references use the format "sha256:<BASE32>-<size>" for self-describing,
-// content-addressed storage with compact encoding.
+// Blob references use the format "sha256:<BASE32HEX>-<size>" for self-describing,
+// content-addressed storage with compact, case-insensitive-safe encoding.
 package jsonldb

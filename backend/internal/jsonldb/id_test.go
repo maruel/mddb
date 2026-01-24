@@ -103,7 +103,7 @@ func TestID(t *testing.T) {
 				want string
 			}{
 				{"zero ID", 0, `"0"`},
-				{"small ID", 1, `"1"`},        // ID 1 encodes to "1" in sortable alphabet
+				{"small ID", 1, `"2"`},        // ID 1 encodes to "2" in base32 hex
 				{"generated ID", NewID(), ""}, // Will verify round-trip
 			}
 
@@ -150,7 +150,7 @@ func TestID(t *testing.T) {
 			}{
 				{"zero ID zero char", `"0"`, 0},
 				{"zero ID empty", `""`, 0},
-				{"small ID", `"1"`, 1}, // "1" decodes to ID 1 in sortable alphabet
+				{"small ID", `"2"`, 1}, // "2" decodes to ID 1 in base32 hex
 			}
 
 			for _, tt := range tests {
@@ -173,9 +173,10 @@ func TestID(t *testing.T) {
 			}{
 				{"JSON number instead of string", `123`},     // Valid JSON but wrong type
 				{"JSON object instead of string", `{"a":1}`}, // Valid JSON but wrong type
-				{"invalid ID too long", `"abcdefghijklm"`},
+				{"invalid ID too long", `"ABCDEFGHIJKLMNO"`}, // 15 chars > 13 max
 				{"invalid ID character", `"!!!"`},
 				{"invalid high byte character", `"` + string([]byte{200}) + `"`},
+				{"lowercase rejected", `"abc"`},
 			}
 
 			for _, tt := range tests {
@@ -220,7 +221,7 @@ func TestID(t *testing.T) {
 			}{
 				{"empty string", "", 0},
 				{"zero char", "0", 0},
-				{"small ID encoded", "1", 1}, // "1" decodes to ID 1 in sortable alphabet
+				{"small ID encoded", "2", 1}, // "2" decodes to ID 1 in base32 hex
 			}
 
 			for _, tt := range tests {
@@ -256,11 +257,14 @@ func TestID(t *testing.T) {
 				name  string
 				input string
 			}{
-				{"too long", "abcdefghijklm"},
+				{"too long", "ABCDEFGHIJKLMNO"}, // 15 chars > 13 max
 				{"invalid char low", "!!!"},
 				{"invalid char dash", "-"},
 				{"invalid char high", string([]byte{200})},
-				{"mixed valid invalid", "abc!def"},
+				{"mixed valid invalid", "ABC!DEF"},
+				{"lowercase rejected", "abc"},
+				{"invalid char W", "W"},
+				{"invalid char Z", "Z"},
 			}
 
 			for _, tt := range tests {

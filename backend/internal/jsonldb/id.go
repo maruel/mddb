@@ -1,6 +1,7 @@
 package jsonldb
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -23,30 +24,12 @@ const (
 	epoch int64 = 176722560000000
 
 	// idEncodedLen is the fixed length of encoded IDs.
-	// 64 bits / 6 bits per char = 10.67, rounded up to 11.
-	idEncodedLen = 11
+	// 64 bits / 5 bits per char = 12.8, rounded up to 13.
+	idEncodedLen = 13
 
 	// sliceMask is the bitmask for extracting the 15-bit slice value.
 	sliceMask = 0x7FFF
 )
-
-// sortableAlphabet is a 64-character alphabet in ASCII order for lexicographic sorting.
-// Characters: 0-9 (0x30-39), A-Z (0x41-5A), _ (0x5F), a-z (0x61-7A), ~ (0x7E).
-// This is NOT standard base64; it uses ASCII-ordered characters so that
-// lexicographic string comparison matches numeric comparison.
-const sortableAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~"
-
-// decodeMap maps ASCII characters back to their 6-bit values.
-var decodeMap [128]byte
-
-func init() {
-	for i := range decodeMap {
-		decodeMap[i] = 0xFF // invalid
-	}
-	for i, c := range sortableAlphabet {
-		decodeMap[c] = byte(i)
-	}
-}
 
 // ID is a time-sortable 64-bit identifier inspired by LUCI IDs.
 //
@@ -145,30 +128,23 @@ func newIDFromParts(t10us, slice uint64) ID {
 
 // String encodes the ID as a compact, sortable string.
 //
-// Uses a custom 64-character alphabet ordered by ASCII value (not base64),
-// encoding 6 bits per character in big-endian order. This ensures lexicographic
-// string comparison matches numeric comparison, making IDs sortable as strings.
+// Uses base32 "Extended Hex" alphabet (0-9A-V) which is ASCII-sorted,
+// ensuring lexicographic string comparison matches numeric comparison.
 // Leading zero-characters are stripped for compactness. Zero IDs return "0".
 func (id ID) String() string {
 	if id == 0 {
 		return "0"
 	}
-	// Encode 64 bits into up to 11 characters (6 bits each)
-	var buf [idEncodedLen]byte
-	v := uint64(id)
-	// Process from right to left, 6 bits at a time
-	for i := idEncodedLen - 1; i >= 0; i-- {
-		buf[i] = sortableAlphabet[v&0x3F]
-		v >>= 6
-	}
+	// Encode 64 bits as big-endian bytes, then base32 encode
+	var buf [8]byte
+	binary.BigEndian.PutUint64(buf[:], uint64(id))
+	encoded := base32Enc.EncodeToString(buf[:])
 	// Strip leading '0' (zeros)
-	for i := range idEncodedLen {
-		if buf[i] != '0' { //nolint:gosec // i is bounded by idEncodedLen (11), buf has length idEncodedLen
-			return string(buf[i:])
+	for i := range len(encoded) {
+		if encoded[i] != '0' {
+			return encoded[i:]
 		}
 	}
-	// Unreachable: any non-zero ID has at least one non-'0' character.
-	// Kept as safety fallback.
 	return "0"
 }
 
@@ -199,6 +175,7 @@ func (id ID) IsZero() bool {
 // DecodeID parses an encoded string back to an ID.
 //
 // Empty string or "0" decode to zero ID. Returns an error for invalid input.
+// Only uppercase letters (0-9, A-V) are accepted.
 func DecodeID(s string) (ID, error) {
 	if s == "0" || s == "" {
 		return 0, nil
@@ -206,23 +183,22 @@ func DecodeID(s string) (ID, error) {
 	if len(s) > idEncodedLen {
 		return 0, fmt.Errorf("invalid ID length: got %d, max %d", len(s), idEncodedLen)
 	}
-	// Left-pad with '0' (zero char) to full length
+	// Reject lowercase letters
+	for i := range len(s) {
+		c := s[i]
+		if c >= 'a' && c <= 'z' {
+			return 0, fmt.Errorf("invalid ID character at position %d: %c (lowercase not allowed)", i, c)
+		}
+	}
+	// Left-pad with '0' to full length for base32 decoding
 	for len(s) < idEncodedLen {
 		s = "0" + s
 	}
-	var v uint64
-	for i := range idEncodedLen {
-		c := s[i]
-		if c >= 128 {
-			return 0, fmt.Errorf("invalid ID character at position %d: %c", i, c)
-		}
-		val := decodeMap[c]
-		if val == 0xFF {
-			return 0, fmt.Errorf("invalid ID character at position %d: %c", i, c)
-		}
-		v = (v << 6) | uint64(val)
+	decoded, err := base32Enc.DecodeString(s)
+	if err != nil {
+		return 0, fmt.Errorf("invalid ID encoding: %w", err)
 	}
-	return ID(v), nil
+	return ID(binary.BigEndian.Uint64(decoded)), nil
 }
 
 // Time extracts the timestamp from an ID.
