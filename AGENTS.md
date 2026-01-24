@@ -3,8 +3,8 @@
 Development guidelines and commands for mddb project.
 
 For specific guidelines, see:
-- [Backend Guidelines](backend/AGENTS.md)
-- [Frontend Guidelines](frontend/AGENTS.md)
+- [Backend Guidelines](backend/AGENTS.md) - Read before editing Go code in backend/
+- [Frontend Guidelines](frontend/AGENTS.md) - Read before editing App.tsx, components, or CSS
 
 ## Project Overview
 

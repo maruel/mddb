@@ -19,20 +19,15 @@ body {
 .header {
   background: var(--c-primary);
   color: white;
-  padding: var(--s-3) var(--s-4);
+  padding: var(--s-2) var(--s-4);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .headerTitle h1 {
-  font-size: 1.25rem;
+  font-size: 1.1rem;
   font-weight: 600;
-}
-
-.headerTitle p {
-  font-size: 0.8rem;
-  opacity: 0.9;
 }
 
 .userInfo {

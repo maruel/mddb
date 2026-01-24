@@ -591,7 +591,6 @@ export default function App() {
                 <header class={styles.header}>
                   <div class={styles.headerTitle}>
                     <h1>{t('app.title')}</h1>
-                    <p>{t('app.tagline')}</p>
                   </div>
                   <div class={styles.userInfo}>
                     <Show when={(user()?.memberships?.length ?? 0) > 1}>
