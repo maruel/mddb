@@ -49,6 +49,7 @@ export default function App() {
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
   const [showCreateOrg, setShowCreateOrg] = createSignal(false);
   const [showGitSetup, setShowGitSetup] = createSignal(false);
+  const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
@@ -591,6 +592,13 @@ export default function App() {
               <div class={styles.app}>
                 <header class={styles.header}>
                   <div class={styles.headerTitle}>
+                    <button
+                      class={styles.hamburger}
+                      onClick={() => setShowMobileSidebar(!showMobileSidebar())}
+                      aria-label="Toggle menu"
+                    >
+                      ☰
+                    </button>
                     <h1>{t('app.title')}</h1>
                   </div>
                   <div class={styles.userInfo}>
@@ -607,7 +615,10 @@ export default function App() {
                 </header>
 
                 <div class={styles.container}>
-                  <aside class={styles.sidebar}>
+                  <Show when={showMobileSidebar()}>
+                    <div class={styles.mobileBackdrop} onClick={() => setShowMobileSidebar(false)} />
+                  </Show>
+                  <aside class={`${styles.sidebar} ${showMobileSidebar() ? styles.mobileOpen : ''}`}>
                     <div class={styles.sidebarHeader}>
                       <h2>{t('app.workspace')}</h2>
                       <div class={styles.sidebarActions}>
