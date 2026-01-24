@@ -9,6 +9,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -285,8 +286,8 @@ func (h *AuthHandler) ListSessions(ctx context.Context, _ jsonldb.ID, user *iden
 			ID:         session.ID,
 			DeviceInfo: session.DeviceInfo,
 			IPAddress:  session.IPAddress,
-			Created:    session.Created.Format(time.RFC3339),
-			LastUsed:   session.LastUsed.Format(time.RFC3339),
+			Created:    storage.ToTime(session.Created),
+			LastUsed:   storage.ToTime(session.LastUsed),
 			IsCurrent:  session.ID == currentSessionID,
 		})
 	}

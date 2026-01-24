@@ -490,8 +490,8 @@ export interface SessionResponse {
   id: string;
   device_info: string;
   ip_address: string;
-  created: string;
-  last_used: string;
+  created: any /* storage.Time */;
+  last_used: any /* storage.Time */;
   is_current: boolean;
 }
 /**
@@ -526,8 +526,8 @@ export interface ListPagesResponse {
 export interface PageSummary {
   id: string;
   title: string;
-  created: string;
-  modified: string;
+  created: any /* storage.Time */;
+  modified: any /* storage.Time */;
 }
 /**
  * GetPageResponse is a response containing a page.
@@ -577,8 +577,8 @@ export interface ListTablesResponse {
 export interface TableSummary {
   id: string;
   title: string;
-  created: string;
-  modified: string;
+  created: any /* storage.Time */;
+  modified: any /* storage.Time */;
 }
 /**
  * GetTableResponse is a response containing a table.
@@ -587,8 +587,8 @@ export interface GetTableResponse {
   id: string;
   title: string;
   properties: Property[];
-  created: string;
-  modified: string;
+  created: any /* storage.Time */;
+  modified: any /* storage.Time */;
 }
 /**
  * CreateTableResponse is a response from creating a table.
@@ -630,8 +630,8 @@ export interface UpdateRecordResponse {
 export interface GetRecordResponse {
   id: string;
   data: { [key: string]: any};
-  created: string;
-  modified: string;
+  created: any /* storage.Time */;
+  modified: any /* storage.Time */;
 }
 /**
  * DeleteRecordResponse is a response from deleting a record.
@@ -657,7 +657,7 @@ export interface AssetSummary {
   name: string;
   size: number /* int64 */;
   mime_type: string;
-  created: string;
+  created: any /* storage.Time */;
   url: string;
 }
 /**
@@ -735,8 +735,8 @@ export interface UserResponse {
   is_global_admin?: boolean;
   oauth_identities?: OAuthIdentity[];
   settings: UserSettings;
-  created: string;
-  modified: string;
+  created: any /* storage.Time */;
+  modified: any /* storage.Time */;
   /**
    * Current context
    */
@@ -759,7 +759,7 @@ export interface OrgMembershipResponse {
   organization_id: string;
   organization_name?: string;
   role: OrganizationRole;
-  created: string;
+  created: any /* storage.Time */;
 }
 /**
  * WSMembershipResponse is the API representation of a workspace membership.
@@ -772,7 +772,7 @@ export interface WSMembershipResponse {
   organization_id: string;
   role: WorkspaceRole;
   settings: WorkspaceMembershipSettings;
-  created: string;
+  created: any /* storage.Time */;
 }
 /**
  * OrgInvitationResponse is the API representation of an organization invitation (excludes Token).
@@ -783,8 +783,8 @@ export interface OrgInvitationResponse {
   organization_id: string;
   role: OrganizationRole;
   invited_by: string;
-  expires_at: string;
-  created: string;
+  expires_at: any /* storage.Time */;
+  created: any /* storage.Time */;
 }
 /**
  * WSInvitationResponse is the API representation of a workspace invitation (excludes Token).
@@ -795,8 +795,8 @@ export interface WSInvitationResponse {
   workspace_id: string;
   role: WorkspaceRole;
   invited_by: string;
-  expires_at: string;
-  created: string;
+  expires_at: any /* storage.Time */;
+  created: any /* storage.Time */;
 }
 /**
  * OrganizationResponse is the API representation of an organization.
@@ -809,7 +809,7 @@ export interface OrganizationResponse {
   settings: OrganizationSettings;
   member_count: number /* int */;
   workspace_count: number /* int */;
-  created: string;
+  created: any /* storage.Time */;
 }
 /**
  * WorkspaceResponse is the API representation of a workspace.
@@ -823,7 +823,7 @@ export interface WorkspaceResponse {
   settings: WorkspaceSettings;
   git_remote?: GitRemoteResponse;
   member_count: number /* int */;
-  created: string;
+  created: any /* storage.Time */;
 }
 /**
  * GitRemoteResponse is the API representation of a git remote.
@@ -833,8 +833,8 @@ export interface GitRemoteResponse {
   url: string;
   type: string;
   auth_type: string;
-  created: string;
-  last_sync?: string;
+  created: any /* storage.Time */;
+  last_sync?: any /* storage.Time */;
 }
 /**
  * NodeResponse is the API representation of a node.
@@ -845,8 +845,8 @@ export interface NodeResponse {
   title: string;
   content?: string;
   properties?: Property[];
-  created: string;
-  modified: string;
+  created: any /* storage.Time */;
+  modified: any /* storage.Time */;
   tags?: string[];
   favicon_url?: string;
   type: NodeType;
@@ -858,8 +858,8 @@ export interface NodeResponse {
 export interface DataRecordResponse {
   id: string;
   data: { [key: string]: any};
-  created: string;
-  modified: string;
+  created: any /* storage.Time */;
+  modified: any /* storage.Time */;
 }
 /**
  * AdminStatsResponse contains server-wide statistics.
@@ -1033,7 +1033,7 @@ export interface OAuthIdentity {
   provider_id: string;
   email: string;
   avatar_url?: string;
-  last_login: string;
+  last_login: any /* storage.Time */;
 }
 /**
  * WorkspaceMembershipSettings represents user preferences within a specific workspace.
@@ -1087,7 +1087,7 @@ export interface WorkspaceSettings {
 export interface Commit {
   hash: string;
   message: string;
-  timestamp: string;
+  timestamp: any /* storage.Time */;
 }
 /**
  * SearchResult represents a single search result.
@@ -1100,7 +1100,7 @@ export interface SearchResult {
   snippet: string;
   score: number /* float64 */;
   matches: { [key: string]: string};
-  modified: string;
+  modified: any /* storage.Time */;
 }
 
 //////////

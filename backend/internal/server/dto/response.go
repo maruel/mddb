@@ -1,6 +1,9 @@
 package dto
 
-import "github.com/maruel/mddb/backend/internal/jsonldb"
+import (
+	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
+)
 
 // --- Common Responses ---
 
@@ -27,12 +30,12 @@ type ProvidersResponse struct {
 
 // SessionResponse is the API representation of a session.
 type SessionResponse struct {
-	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique session identifier"`
-	DeviceInfo string     `json:"device_info" jsonschema:"description=Browser/OS info"`
-	IPAddress  string     `json:"ip_address" jsonschema:"description=IP address"`
-	Created    string     `json:"created" jsonschema:"description=Session creation timestamp (RFC3339)"`
-	LastUsed   string     `json:"last_used" jsonschema:"description=Last activity timestamp (RFC3339)"`
-	IsCurrent  bool       `json:"is_current" jsonschema:"description=Whether this is the current session"`
+	ID         jsonldb.ID   `json:"id" jsonschema:"description=Unique session identifier"`
+	DeviceInfo string       `json:"device_info" jsonschema:"description=Browser/OS info"`
+	IPAddress  string       `json:"ip_address" jsonschema:"description=IP address"`
+	Created    storage.Time `json:"created" jsonschema:"description=Session creation Unix timestamp"`
+	LastUsed   storage.Time `json:"last_used" jsonschema:"description=Last activity Unix timestamp"`
+	IsCurrent  bool         `json:"is_current" jsonschema:"description=Whether this is the current session"`
 }
 
 // ListSessionsResponse is a response containing user's sessions.
@@ -60,10 +63,10 @@ type ListPagesResponse struct {
 
 // PageSummary is a brief representation of a page for list responses.
 type PageSummary struct {
-	ID       jsonldb.ID `json:"id"`
-	Title    string     `json:"title"`
-	Created  string     `json:"created"`
-	Modified string     `json:"modified"`
+	ID       jsonldb.ID   `json:"id"`
+	Title    string       `json:"title"`
+	Created  storage.Time `json:"created"`
+	Modified storage.Time `json:"modified"`
 }
 
 // GetPageResponse is a response containing a page.
@@ -105,19 +108,19 @@ type ListTablesResponse struct {
 
 // TableSummary is a brief representation of a table for list responses.
 type TableSummary struct {
-	ID       jsonldb.ID `json:"id"`
-	Title    string     `json:"title"`
-	Created  string     `json:"created"`
-	Modified string     `json:"modified"`
+	ID       jsonldb.ID   `json:"id"`
+	Title    string       `json:"title"`
+	Created  storage.Time `json:"created"`
+	Modified storage.Time `json:"modified"`
 }
 
 // GetTableResponse is a response containing a table.
 type GetTableResponse struct {
-	ID         jsonldb.ID `json:"id"`
-	Title      string     `json:"title"`
-	Properties []Property `json:"properties"`
-	Created    string     `json:"created"`
-	Modified   string     `json:"modified"`
+	ID         jsonldb.ID   `json:"id"`
+	Title      string       `json:"title"`
+	Properties []Property   `json:"properties"`
+	Created    storage.Time `json:"created"`
+	Modified   storage.Time `json:"modified"`
 }
 
 // CreateTableResponse is a response from creating a table.
@@ -152,8 +155,8 @@ type UpdateRecordResponse struct {
 type GetRecordResponse struct {
 	ID       jsonldb.ID     `json:"id"`
 	Data     map[string]any `json:"data"`
-	Created  string         `json:"created"`
-	Modified string         `json:"modified"`
+	Created  storage.Time   `json:"created"`
+	Modified storage.Time   `json:"modified"`
 }
 
 // DeleteRecordResponse is a response from deleting a record.
@@ -175,12 +178,12 @@ type ListPageAssetsResponse struct {
 
 // AssetSummary is a brief representation of an asset for list responses.
 type AssetSummary struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Size     int64  `json:"size"`
-	MimeType string `json:"mime_type"`
-	Created  string `json:"created"`
-	URL      string `json:"url"`
+	ID       string       `json:"id"`
+	Name     string       `json:"name"`
+	Size     int64        `json:"size"`
+	MimeType string       `json:"mime_type"`
+	Created  storage.Time `json:"created"`
+	URL      string       `json:"url"`
 }
 
 // UploadPageAssetResponse is a response from uploading an asset.
@@ -260,8 +263,8 @@ type UserResponse struct {
 	IsGlobalAdmin   bool            `json:"is_global_admin,omitempty" jsonschema:"description=Whether user has server-wide administrative access"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
 	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
-	Created         string          `json:"created" jsonschema:"description=Account creation timestamp (RFC3339)"`
-	Modified        string          `json:"modified" jsonschema:"description=Last modification timestamp (RFC3339)"`
+	Created         storage.Time    `json:"created" jsonschema:"description=Account creation Unix timestamp"`
+	Modified        storage.Time    `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 
 	// Current context
 	OrganizationID jsonldb.ID       `json:"organization_id,omitempty" jsonschema:"description=Active organization ID"`
@@ -281,7 +284,7 @@ type OrgMembershipResponse struct {
 	OrganizationID   jsonldb.ID       `json:"organization_id" jsonschema:"description=Organization ID the user is a member of"`
 	OrganizationName string           `json:"organization_name,omitempty" jsonschema:"description=Organization name"`
 	Role             OrganizationRole `json:"role" jsonschema:"description=User role within the organization"`
-	Created          string           `json:"created" jsonschema:"description=Membership creation timestamp (RFC3339)"`
+	Created          storage.Time     `json:"created" jsonschema:"description=Membership creation Unix timestamp"`
 }
 
 // WSMembershipResponse is the API representation of a workspace membership.
@@ -293,7 +296,7 @@ type WSMembershipResponse struct {
 	OrganizationID jsonldb.ID                  `json:"organization_id" jsonschema:"description=Parent organization ID"`
 	Role           WorkspaceRole               `json:"role" jsonschema:"description=User role within the workspace"`
 	Settings       WorkspaceMembershipSettings `json:"settings" jsonschema:"description=User preferences within this workspace"`
-	Created        string                      `json:"created" jsonschema:"description=Membership creation timestamp (RFC3339)"`
+	Created        storage.Time                `json:"created" jsonschema:"description=Membership creation Unix timestamp"`
 }
 
 // OrgInvitationResponse is the API representation of an organization invitation (excludes Token).
@@ -303,8 +306,8 @@ type OrgInvitationResponse struct {
 	OrganizationID jsonldb.ID       `json:"organization_id" jsonschema:"description=Organization the user is invited to"`
 	Role           OrganizationRole `json:"role" jsonschema:"description=Role assigned upon acceptance"`
 	InvitedBy      jsonldb.ID       `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
-	ExpiresAt      string           `json:"expires_at" jsonschema:"description=Invitation expiration timestamp (RFC3339)"`
-	Created        string           `json:"created" jsonschema:"description=Invitation creation timestamp (RFC3339)"`
+	ExpiresAt      storage.Time     `json:"expires_at" jsonschema:"description=Invitation expiration Unix timestamp"`
+	Created        storage.Time     `json:"created" jsonschema:"description=Invitation creation Unix timestamp"`
 }
 
 // WSInvitationResponse is the API representation of a workspace invitation (excludes Token).
@@ -314,8 +317,8 @@ type WSInvitationResponse struct {
 	WorkspaceID jsonldb.ID    `json:"workspace_id" jsonschema:"description=Workspace the user is invited to"`
 	Role        WorkspaceRole `json:"role" jsonschema:"description=Role assigned upon acceptance"`
 	InvitedBy   jsonldb.ID    `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
-	ExpiresAt   string        `json:"expires_at" jsonschema:"description=Invitation expiration timestamp (RFC3339)"`
-	Created     string        `json:"created" jsonschema:"description=Invitation creation timestamp (RFC3339)"`
+	ExpiresAt   storage.Time  `json:"expires_at" jsonschema:"description=Invitation expiration Unix timestamp"`
+	Created     storage.Time  `json:"created" jsonschema:"description=Invitation creation Unix timestamp"`
 }
 
 // OrganizationResponse is the API representation of an organization.
@@ -327,7 +330,7 @@ type OrganizationResponse struct {
 	Settings       OrganizationSettings `json:"settings" jsonschema:"description=Organization-wide configuration"`
 	MemberCount    int                  `json:"member_count" jsonschema:"description=Number of members"`
 	WorkspaceCount int                  `json:"workspace_count" jsonschema:"description=Number of workspaces"`
-	Created        string               `json:"created" jsonschema:"description=Organization creation timestamp (RFC3339)"`
+	Created        storage.Time         `json:"created" jsonschema:"description=Organization creation Unix timestamp"`
 }
 
 // WorkspaceResponse is the API representation of a workspace.
@@ -340,17 +343,17 @@ type WorkspaceResponse struct {
 	Settings       WorkspaceSettings  `json:"settings" jsonschema:"description=Workspace-wide configuration"`
 	GitRemote      *GitRemoteResponse `json:"git_remote,omitempty" jsonschema:"description=Git remote configuration"`
 	MemberCount    int                `json:"member_count" jsonschema:"description=Number of members"`
-	Created        string             `json:"created" jsonschema:"description=Workspace creation timestamp (RFC3339)"`
+	Created        storage.Time       `json:"created" jsonschema:"description=Workspace creation Unix timestamp"`
 }
 
 // GitRemoteResponse is the API representation of a git remote.
 type GitRemoteResponse struct {
-	WorkspaceID jsonldb.ID `json:"workspace_id" jsonschema:"description=Workspace this remote belongs to"`
-	URL         string     `json:"url" jsonschema:"description=Git repository URL"`
-	Type        string     `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
-	AuthType    string     `json:"auth_type" jsonschema:"description=Authentication method (token/ssh)"`
-	Created     string     `json:"created" jsonschema:"description=Remote creation timestamp (RFC3339)"`
-	LastSync    string     `json:"last_sync,omitempty" jsonschema:"description=Last synchronization timestamp (RFC3339)"`
+	WorkspaceID jsonldb.ID   `json:"workspace_id" jsonschema:"description=Workspace this remote belongs to"`
+	URL         string       `json:"url" jsonschema:"description=Git repository URL"`
+	Type        string       `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
+	AuthType    string       `json:"auth_type" jsonschema:"description=Authentication method (token/ssh)"`
+	Created     storage.Time `json:"created" jsonschema:"description=Remote creation Unix timestamp"`
+	LastSync    storage.Time `json:"last_sync,omitempty" jsonschema:"description=Last synchronization Unix timestamp"`
 }
 
 // NodeResponse is the API representation of a node.
@@ -360,8 +363,8 @@ type NodeResponse struct {
 	Title      string         `json:"title" jsonschema:"description=Node title"`
 	Content    string         `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
 	Properties []Property     `json:"properties,omitempty" jsonschema:"description=Schema (Table part)"`
-	Created    string         `json:"created" jsonschema:"description=Node creation timestamp (RFC3339)"`
-	Modified   string         `json:"modified" jsonschema:"description=Last modification timestamp (RFC3339)"`
+	Created    storage.Time   `json:"created" jsonschema:"description=Node creation Unix timestamp"`
+	Modified   storage.Time   `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 	Tags       []string       `json:"tags,omitempty" jsonschema:"description=Node tags"`
 	FaviconURL string         `json:"favicon_url,omitempty" jsonschema:"description=Favicon URL"`
 	Type       NodeType       `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
@@ -372,8 +375,8 @@ type NodeResponse struct {
 type DataRecordResponse struct {
 	ID       jsonldb.ID     `json:"id" jsonschema:"description=Unique record identifier"`
 	Data     map[string]any `json:"data" jsonschema:"description=Record field values keyed by property name"`
-	Created  string         `json:"created" jsonschema:"description=Record creation timestamp (RFC3339)"`
-	Modified string         `json:"modified" jsonschema:"description=Last modification timestamp (RFC3339)"`
+	Created  storage.Time   `json:"created" jsonschema:"description=Record creation Unix timestamp"`
+	Modified storage.Time   `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 }
 
 // --- Global Admin Responses ---

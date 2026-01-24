@@ -7,6 +7,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -41,8 +42,8 @@ func (h *TableHandler) GetTable(ctx context.Context, orgID jsonldb.ID, _ *identi
 		ID:         table.ID,
 		Title:      table.Title,
 		Properties: propertiesToDTO(table.Properties),
-		Created:    formatTime(table.Created),
-		Modified:   formatTime(table.Modified),
+		Created:    storage.ToTime(table.Created),
+		Modified:   storage.ToTime(table.Modified),
 	}, nil
 }
 
@@ -189,8 +190,8 @@ func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *ident
 			return &dto.GetRecordResponse{
 				ID:       record.ID,
 				Data:     record.Data,
-				Created:  formatTime(record.Created),
-				Modified: formatTime(record.Modified),
+				Created:  storage.ToTime(record.Created),
+				Modified: storage.ToTime(record.Modified),
 			}, nil
 		}
 	}
