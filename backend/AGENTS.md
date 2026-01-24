@@ -45,11 +45,69 @@ When you add or modify an API endpoint, add the Request/Response structs to `int
 - UTF-8 encoding always
 - Normalize line endings (LF)
 
-### Database Storage Format
+### Database Storage Format (jsonldb)
 
-- **Schema**: `metadata.json`
-- **Records**: `data.jsonl` (one JSON object per line)
-- **Column Types**: text, number, select, multi_select, checkbox, date
+The `internal/jsonldb` package provides a generic, concurrent-safe, JSONL-backed data store.
+
+#### JSONL Table Format
+
+Tables are stored as `.jsonl` files with:
+- **Line 1**: Schema header (JSON object with `version` and `columns`)
+- **Lines 2+**: Data rows (one JSON object per line)
+
+Example `data.jsonl`:
+```jsonl
+{"version":"1","columns":[{"name":"id","type":"id"},{"name":"title","type":"string"}]}
+{"id":"01JWAB...","title":"First row"}
+{"id":"01JWAC...","title":"Second row"}
+```
+
+**Row Requirements:**
+- Must implement `Row[T]` interface: `Clone()`, `GetID()`, `Validate()`
+- IDs are 64-bit integers encoded as base32 strings (ULID-like, time-sortable)
+- Rows are kept sorted by ID on disk
+
+#### Blob Storage Format
+
+Large binary data is stored separately from JSONL rows:
+- **Location**: Sibling directory with `.blobs` suffix (e.g., `data.jsonl` → `data.blobs/`)
+- **Structure**: 256-way fan-out by first 2 chars of hash (e.g., `data.blobs/4O/YMIQUY7Q...`)
+- **Reference Format**: `sha256:<BASE32>-<size>` (52 uppercase base32 chars + decimal size)
+- **Content-Addressed**: Identical content shares the same file (deduplication)
+- **Garbage Collection**: Orphaned blobs are removed on table load
+
+Example blob ref: `sha256:4OYMIQUY7QOBJGX36TEJS35ZEQT24QPEMSNZGTFESWMRW6CSXBKQ-0`
+
+**Using Blobs in Rows:**
+```go
+type MyRow struct {
+    ID      jsonldb.ID
+    Content jsonldb.Blob  // Automatically discovered via reflection
+}
+
+// Creating a blob:
+writer, _ := table.NewBlob()
+writer.Write(data)
+blob, _ := writer.Close()
+row.Content = blob
+table.Append(&row)
+
+// Reading a blob:
+reader, _ := row.Content.Reader()
+io.Copy(dst, reader)
+reader.Close()
+```
+
+Blob fields are discovered automatically via reflection, including nested structs and slices.
+
+#### Column Types
+
+- `id` - Row identifier (required, unique)
+- `string` - Text
+- `int`, `float` - Numbers
+- `bool` - Boolean
+- `time` - Timestamp
+- `blob_ref` - Reference to external blob file
 
 ## Build & Test
 

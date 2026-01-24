@@ -1,7 +1,9 @@
 package jsonldb
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -69,6 +71,29 @@ func (r *alwaysInvalidRow) Validate() error {
 	return errors.New("always invalid")
 }
 
+// blobTestRow is a row type with a blob field for integration testing.
+type blobTestRow struct {
+	ID      int    `json:"id"`
+	Name    string `json:"name"`
+	Content Blob   `json:"content"`
+}
+
+func (r *blobTestRow) Clone() *blobTestRow {
+	return &blobTestRow{
+		ID:      r.ID,
+		Name:    r.Name,
+		Content: r.Content.Clone(),
+	}
+}
+
+func (r *blobTestRow) GetID() ID {
+	return ID(r.ID) //nolint:gosec // test code
+}
+
+func (r *blobTestRow) Validate() error {
+	return nil
+}
+
 // setupTable creates a table in the test's temp directory.
 func setupTable(t *testing.T) (table *Table[*testRow], path string) {
 	path = filepath.Join(t.TempDir(), "test.jsonl")
@@ -97,224 +122,6 @@ func (m *mockObserver) OnUpdate(prev, curr *testRow) {
 
 func (m *mockObserver) OnDelete(row *testRow) {
 	m.deletes = append(m.deletes, row.ID)
-}
-
-func TestTable_Observers(t *testing.T) {
-	table, _ := setupTable(t)
-
-	obs := &mockObserver{}
-	table.AddObserver(obs)
-
-	// Test OnAppend
-	if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
-		t.Fatal(err)
-	}
-	if !slices.Equal(obs.appends, []int{1}) {
-		t.Errorf("OnAppend calls = %v, want [1]", obs.appends)
-	}
-
-	// Test OnUpdate
-	if _, err := table.Update(&testRow{ID: 1, Name: "updated"}); err != nil {
-		t.Fatal(err)
-	}
-	if len(obs.updates) != 1 || obs.updates[0] != [2]int{1, 1} {
-		t.Errorf("OnUpdate calls = %v, want [[1,1]]", obs.updates)
-	}
-
-	// Test OnDelete
-	if _, err := table.Delete(ID(1)); err != nil {
-		t.Fatal(err)
-	}
-	if !slices.Equal(obs.deletes, []int{1}) {
-		t.Errorf("OnDelete calls = %v, want [1]", obs.deletes)
-	}
-}
-
-func TestTable_MultipleObservers(t *testing.T) {
-	table, _ := setupTable(t)
-
-	obs1 := &mockObserver{}
-	obs2 := &mockObserver{}
-	table.AddObserver(obs1)
-	table.AddObserver(obs2)
-
-	if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
-		t.Fatal(err)
-	}
-
-	if !slices.Equal(obs1.appends, []int{1}) {
-		t.Errorf("obs1 OnAppend = %v, want [1]", obs1.appends)
-	}
-	if !slices.Equal(obs2.appends, []int{1}) {
-		t.Errorf("obs2 OnAppend = %v, want [1]", obs2.appends)
-	}
-}
-
-func TestTable_AddObserverWithExistingData(t *testing.T) {
-	table, _ := setupTable(t)
-
-	// Add data before observer
-	if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := table.Append(&testRow{ID: 2, Name: "two"}); err != nil {
-		t.Fatal(err)
-	}
-
-	obs := &mockObserver{}
-	table.AddObserver(obs)
-
-	// Observer should receive OnAppend for existing rows
-	slices.Sort(obs.appends)
-	if !slices.Equal(obs.appends, []int{1, 2}) {
-		t.Errorf("OnAppend for existing = %v, want [1, 2]", obs.appends)
-	}
-}
-
-func TestTable_AppendToReadOnlyDir(t *testing.T) {
-	// Create a read-only directory
-	dir := t.TempDir()
-	path := filepath.Join(dir, "subdir", "test.jsonl")
-
-	// Don't create subdir - Append should fail when trying to create file
-	table := &Table[*testRow]{
-		path:   path,
-		rows:   nil,
-		byID:   make(map[ID]int),
-		schema: schemaHeader{Version: "1.0"},
-	}
-
-	err := table.Append(&testRow{ID: 1, Name: "test"})
-	if err == nil {
-		t.Error("Append to non-existent directory should fail")
-	}
-}
-
-func TestTable_UpdateNonExistentReturnsNil(t *testing.T) {
-	table, _ := setupTable(t)
-
-	prev, err := table.Update(&testRow{ID: 999, Name: "ghost"})
-	if err != nil {
-		t.Fatalf("Update error: %v", err)
-	}
-	if prev != nil {
-		t.Errorf("Update non-existent returned %v, want nil", prev)
-	}
-}
-
-func TestTable_DeleteNonExistentReturnsNil(t *testing.T) {
-	table, _ := setupTable(t)
-
-	deleted, err := table.Delete(ID(999))
-	if err != nil {
-		t.Fatalf("Delete error: %v", err)
-	}
-	if deleted != nil {
-		t.Errorf("Delete non-existent returned %v, want nil", deleted)
-	}
-}
-
-func TestTable_Modify(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		table, _ := setupTable(t)
-		_ = table.Append(&testRow{ID: 1, Name: "original"})
-
-		result, err := table.Modify(ID(1), func(row *testRow) error {
-			row.Name = "modified"
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("Modify error: %v", err)
-		}
-		if result.Name != "modified" {
-			t.Errorf("Modify returned Name = %q, want %q", result.Name, "modified")
-		}
-
-		// Verify persisted
-		got := table.Get(ID(1))
-		if got.Name != "modified" {
-			t.Errorf("Get after Modify = %q, want %q", got.Name, "modified")
-		}
-	})
-
-	t.Run("not found", func(t *testing.T) {
-		table, _ := setupTable(t)
-
-		_, err := table.Modify(ID(999), func(row *testRow) error {
-			return nil
-		})
-		if err == nil {
-			t.Error("Modify non-existent should return error")
-		}
-	})
-
-	t.Run("callback error", func(t *testing.T) {
-		table, _ := setupTable(t)
-		_ = table.Append(&testRow{ID: 1, Name: "original"})
-
-		_, err := table.Modify(ID(1), func(row *testRow) error {
-			return errors.New("callback failed")
-		})
-		if err == nil {
-			t.Error("Modify with failing callback should return error")
-		}
-
-		// Verify unchanged
-		got := table.Get(ID(1))
-		if got.Name != "original" {
-			t.Errorf("Row changed despite callback error: %q", got.Name)
-		}
-	})
-
-	t.Run("validation error", func(t *testing.T) {
-		path := filepath.Join(t.TempDir(), "test.jsonl")
-		table, _ := NewTable[*validatingRow](path)
-		_ = table.Append(&validatingRow{ID: 1, Name: "valid"})
-
-		_, err := table.Modify(ID(1), func(row *validatingRow) error {
-			row.FailValidate = true
-			return nil
-		})
-		if err == nil {
-			t.Error("Modify with invalid result should return error")
-		}
-	})
-
-	t.Run("notifies observers", func(t *testing.T) {
-		table, _ := setupTable(t)
-		_ = table.Append(&testRow{ID: 1, Name: "original"})
-
-		obs := &mockObserver{}
-		table.AddObserver(obs)
-
-		_, _ = table.Modify(ID(1), func(row *testRow) error {
-			row.Name = "modified"
-			return nil
-		})
-
-		if len(obs.updates) != 1 {
-			t.Errorf("Observer updates = %d, want 1", len(obs.updates))
-		}
-	})
-
-	t.Run("returns clone", func(t *testing.T) {
-		table, _ := setupTable(t)
-		_ = table.Append(&testRow{ID: 1, Name: "original"})
-
-		result, _ := table.Modify(ID(1), func(row *testRow) error {
-			row.Name = "modified"
-			return nil
-		})
-
-		// Mutate returned value
-		result.Name = "mutated"
-
-		// Verify table unaffected
-		got := table.Get(ID(1))
-		if got.Name != "modified" {
-			t.Errorf("Table affected by mutating returned clone: %q", got.Name)
-		}
-	})
 }
 
 // TestTable tests all Table methods using table-driven tests.
@@ -831,6 +638,683 @@ not valid json
 					t.Error("Append() expected validation error, got nil")
 				}
 			})
+
+			t.Run("non-existent directory", func(t *testing.T) {
+				dir := t.TempDir()
+				path := filepath.Join(dir, "subdir", "test.jsonl")
+
+				// Don't create subdir - Append should fail when trying to create file
+				table := &Table[*testRow]{
+					path:   path,
+					rows:   nil,
+					byID:   make(map[ID]int),
+					schema: schemaHeader{Version: "1.0"},
+				}
+
+				err := table.Append(&testRow{ID: 1, Name: "test"})
+				if err == nil {
+					t.Error("Append to non-existent directory should fail")
+				}
+			})
+		})
+	})
+
+	t.Run("Blob", func(t *testing.T) {
+		t.Run("create and read", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, err := NewTable[*blobTestRow](path)
+			if err != nil {
+				t.Fatalf("NewTable error: %v", err)
+			}
+
+			// Create blob
+			w, err := table.NewBlob()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := io.Copy(w, bytes.NewReader([]byte("blob data"))); err != nil {
+				t.Fatal(err)
+			}
+			blob, err := w.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Append row with blob
+			row := &blobTestRow{ID: 1, Name: "test", Content: blob}
+			if err := table.Append(row); err != nil {
+				t.Fatalf("Append error: %v", err)
+			}
+
+			// Read back
+			loaded := table.Get(ID(1))
+			if loaded.Content.Ref != blob.Ref {
+				t.Errorf("loaded hash = %q, want %q", loaded.Content.Ref, blob.Ref)
+			}
+
+			r, err := loaded.Content.Reader()
+			if err != nil {
+				t.Fatalf("Reader() error: %v", err)
+			}
+			content, err := io.ReadAll(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if string(content) != "blob data" {
+				t.Errorf("content = %q, want %q", content, "blob data")
+			}
+		})
+
+		t.Run("reload preserves blobs", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, err := NewTable[*blobTestRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			w, err := table.NewBlob()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := w.Write([]byte("persistent")); err != nil {
+				t.Fatal(err)
+			}
+			blob, err := w.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err := table.Append(&blobTestRow{ID: 1, Name: "doc", Content: blob}); err != nil {
+				t.Fatal(err)
+			}
+
+			// Reload table
+			table2, err := NewTable[*blobTestRow](path)
+			if err != nil {
+				t.Fatalf("reload error: %v", err)
+			}
+
+			loaded := table2.Get(ID(1))
+			if loaded.Content.Ref != blob.Ref {
+				t.Errorf("reloaded hash = %q, want %q", loaded.Content.Ref, blob.Ref)
+			}
+
+			// Reader should work after reload
+			r, err := loaded.Content.Reader()
+			if err != nil {
+				t.Fatalf("Reader() after reload error: %v", err)
+			}
+			content, err := io.ReadAll(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if string(content) != "persistent" {
+				t.Errorf("content = %q, want %q", content, "persistent")
+			}
+		})
+
+		t.Run("unset blob field", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, err := NewTable[*blobTestRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if err := table.Append(&blobTestRow{ID: 1, Name: "no-blob"}); err != nil {
+				t.Fatal(err)
+			}
+
+			loaded := table.Get(ID(1))
+			if !loaded.Content.IsZero() {
+				t.Error("expected unset blob")
+			}
+		})
+
+		t.Run("delete row deletes blob", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, err := NewTable[*blobTestRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Create blob
+			w, err := table.NewBlob()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := w.Write([]byte("to be deleted")); err != nil {
+				t.Fatal(err)
+			}
+			blob, err := w.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Append and then delete
+			if err := table.Append(&blobTestRow{ID: 1, Name: "doc", Content: blob}); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := table.Delete(ID(1)); err != nil {
+				t.Fatal(err)
+			}
+
+			// Blob should be deleted - check file system directly
+			blobDir := deriveBlobDir(path)
+			blobPath := filepath.Join(blobDir, string(blob.Ref)[:2], string(blob.Ref)[2:])
+			if _, err := os.Stat(blobPath); !os.IsNotExist(err) {
+				t.Error("blob still exists after row deletion")
+			}
+		})
+
+		t.Run("shared blob not deleted when one row deleted", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, err := NewTable[*blobTestRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Create a single blob
+			w, err := table.NewBlob()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := w.Write([]byte("shared content")); err != nil {
+				t.Fatal(err)
+			}
+			blob, err := w.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Two rows reference the same blob
+			if err := table.Append(&blobTestRow{ID: 1, Name: "row1", Content: blob}); err != nil {
+				t.Fatal(err)
+			}
+			if err := table.Append(&blobTestRow{ID: 2, Name: "row2", Content: blob}); err != nil {
+				t.Fatal(err)
+			}
+
+			// Delete one row
+			if _, err := table.Delete(ID(1)); err != nil {
+				t.Fatal(err)
+			}
+
+			// Blob should still exist because row2 still references it
+			row2 := table.Get(ID(2))
+			r, err := row2.Content.Reader()
+			if err != nil {
+				t.Fatalf("Reader() error after deleting row1: %v", err)
+			}
+			content, err := io.ReadAll(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if string(content) != "shared content" {
+				t.Errorf("content = %q, want %q", content, "shared content")
+			}
+		})
+
+		t.Run("update with same blob preserves blob", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, err := NewTable[*blobTestRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Create a blob
+			w, err := table.NewBlob()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := w.Write([]byte("preserved content")); err != nil {
+				t.Fatal(err)
+			}
+			blob, err := w.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Append row with blob
+			if err := table.Append(&blobTestRow{ID: 1, Name: "original", Content: blob}); err != nil {
+				t.Fatal(err)
+			}
+
+			// Update row, keeping the same blob
+			row := table.Get(ID(1))
+			row.Name = "updated"
+			if _, err := table.Update(row); err != nil {
+				t.Fatal(err)
+			}
+
+			// Blob should still exist
+			updated := table.Get(ID(1))
+			r, err := updated.Content.Reader()
+			if err != nil {
+				t.Fatalf("Reader() error after update: %v", err)
+			}
+			content, err := io.ReadAll(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if string(content) != "preserved content" {
+				t.Errorf("content = %q, want %q", content, "preserved content")
+			}
+		})
+
+		t.Run("GC removes orphaned blobs on reload", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, err := NewTable[*blobTestRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Create two blobs
+			w1, err := table.NewBlob()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := w1.Write([]byte("keep")); err != nil {
+				t.Fatal(err)
+			}
+			keep, err := w1.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			w2, err := table.NewBlob()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := w2.Write([]byte("orphan")); err != nil {
+				t.Fatal(err)
+			}
+			orphan, err := w2.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Only use the first blob
+			if err := table.Append(&blobTestRow{ID: 1, Name: "row", Content: keep}); err != nil {
+				t.Fatal(err)
+			}
+
+			blobDir := deriveBlobDir(path)
+			// Skip "sha256:" prefix (7 chars) to get hash portion for path.
+			keepHash := string(keep.Ref)[7:]
+			orphanHash := string(orphan.Ref)[7:]
+			keepPath := filepath.Join(blobDir, keepHash[:2], keepHash[2:])
+			orphanPath := filepath.Join(blobDir, orphanHash[:2], orphanHash[2:])
+
+			// Both blobs exist before reload
+			if _, err := os.Stat(keepPath); err != nil {
+				t.Fatalf("kept blob missing before reload: %v", err)
+			}
+			if _, err := os.Stat(orphanPath); err != nil {
+				t.Fatalf("orphan blob missing before reload: %v", err)
+			}
+
+			// Reload table - GC runs automatically
+			if _, err := NewTable[*blobTestRow](path); err != nil {
+				t.Fatalf("reload error: %v", err)
+			}
+
+			// Kept blob should still exist
+			if _, err := os.Stat(keepPath); err != nil {
+				t.Errorf("kept blob was deleted: %v", err)
+			}
+			// Orphan should be removed
+			if _, err := os.Stat(orphanPath); !os.IsNotExist(err) {
+				t.Error("orphan blob still exists after reload")
+			}
+		})
+
+		t.Run("lazy store creation", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, err := NewTable[*blobTestRow](path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			blobDir := deriveBlobDir(path)
+
+			// Before NewBlobWriter() is called, directory shouldn't exist
+			if _, err := os.Stat(blobDir); !os.IsNotExist(err) {
+				t.Error("blob directory created too early")
+			}
+
+			// Call NewBlobWriter() to trigger directory creation
+			w, err := table.NewBlob()
+			if err != nil {
+				t.Fatalf("NewBlobWriter() error: %v", err)
+			}
+			_ = w.Abort()
+
+			// Now it should exist (tmp subdirectory is created)
+			tmpDir := filepath.Join(blobDir, "tmp")
+			if _, err := os.Stat(tmpDir); err != nil {
+				t.Errorf("blob tmp directory not created: %v", err)
+			}
+		})
+	})
+
+	t.Run("Modify", func(t *testing.T) {
+		t.Run("success", func(t *testing.T) {
+			table, _ := setupTable(t)
+			_ = table.Append(&testRow{ID: 1, Name: "original"})
+
+			result, err := table.Modify(ID(1), func(row *testRow) error {
+				row.Name = "modified"
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("Modify error: %v", err)
+			}
+			if result.Name != "modified" {
+				t.Errorf("Modify returned Name = %q, want %q", result.Name, "modified")
+			}
+
+			// Verify persisted
+			got := table.Get(ID(1))
+			if got.Name != "modified" {
+				t.Errorf("Get after Modify = %q, want %q", got.Name, "modified")
+			}
+		})
+
+		t.Run("not found", func(t *testing.T) {
+			table, _ := setupTable(t)
+
+			_, err := table.Modify(ID(999), func(row *testRow) error {
+				return nil
+			})
+			if err == nil {
+				t.Error("Modify non-existent should return error")
+			}
+		})
+
+		t.Run("callback error", func(t *testing.T) {
+			table, _ := setupTable(t)
+			_ = table.Append(&testRow{ID: 1, Name: "original"})
+
+			_, err := table.Modify(ID(1), func(row *testRow) error {
+				return errors.New("callback failed")
+			})
+			if err == nil {
+				t.Error("Modify with failing callback should return error")
+			}
+
+			// Verify unchanged
+			got := table.Get(ID(1))
+			if got.Name != "original" {
+				t.Errorf("Row changed despite callback error: %q", got.Name)
+			}
+		})
+
+		t.Run("validation error", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, _ := NewTable[*validatingRow](path)
+			_ = table.Append(&validatingRow{ID: 1, Name: "valid"})
+
+			_, err := table.Modify(ID(1), func(row *validatingRow) error {
+				row.FailValidate = true
+				return nil
+			})
+			if err == nil {
+				t.Error("Modify with invalid result should return error")
+			}
+		})
+
+		t.Run("notifies observers", func(t *testing.T) {
+			table, _ := setupTable(t)
+			_ = table.Append(&testRow{ID: 1, Name: "original"})
+
+			obs := &mockObserver{}
+			table.AddObserver(obs)
+
+			_, _ = table.Modify(ID(1), func(row *testRow) error {
+				row.Name = "modified"
+				return nil
+			})
+
+			if len(obs.updates) != 1 {
+				t.Errorf("Observer updates = %d, want 1", len(obs.updates))
+			}
+		})
+
+		t.Run("returns clone", func(t *testing.T) {
+			table, _ := setupTable(t)
+			_ = table.Append(&testRow{ID: 1, Name: "original"})
+
+			result, _ := table.Modify(ID(1), func(row *testRow) error {
+				row.Name = "modified"
+				return nil
+			})
+
+			// Mutate returned value
+			result.Name = "mutated"
+
+			// Verify table unaffected
+			got := table.Get(ID(1))
+			if got.Name != "modified" {
+				t.Errorf("Table affected by mutating returned clone: %q", got.Name)
+			}
+		})
+	})
+
+	t.Run("Observers", func(t *testing.T) {
+		t.Run("notifies on operations", func(t *testing.T) {
+			table, _ := setupTable(t)
+
+			obs := &mockObserver{}
+			table.AddObserver(obs)
+
+			// Test OnAppend
+			if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(obs.appends, []int{1}) {
+				t.Errorf("OnAppend calls = %v, want [1]", obs.appends)
+			}
+
+			// Test OnUpdate
+			if _, err := table.Update(&testRow{ID: 1, Name: "updated"}); err != nil {
+				t.Fatal(err)
+			}
+			if len(obs.updates) != 1 || obs.updates[0] != [2]int{1, 1} {
+				t.Errorf("OnUpdate calls = %v, want [[1,1]]", obs.updates)
+			}
+
+			// Test OnDelete
+			if _, err := table.Delete(ID(1)); err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(obs.deletes, []int{1}) {
+				t.Errorf("OnDelete calls = %v, want [1]", obs.deletes)
+			}
+		})
+
+		t.Run("multiple observers", func(t *testing.T) {
+			table, _ := setupTable(t)
+
+			obs1 := &mockObserver{}
+			obs2 := &mockObserver{}
+			table.AddObserver(obs1)
+			table.AddObserver(obs2)
+
+			if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
+				t.Fatal(err)
+			}
+
+			if !slices.Equal(obs1.appends, []int{1}) {
+				t.Errorf("obs1 OnAppend = %v, want [1]", obs1.appends)
+			}
+			if !slices.Equal(obs2.appends, []int{1}) {
+				t.Errorf("obs2 OnAppend = %v, want [1]", obs2.appends)
+			}
+		})
+
+		t.Run("with existing data", func(t *testing.T) {
+			table, _ := setupTable(t)
+
+			// Add data before observer
+			if err := table.Append(&testRow{ID: 1, Name: "one"}); err != nil {
+				t.Fatal(err)
+			}
+			if err := table.Append(&testRow{ID: 2, Name: "two"}); err != nil {
+				t.Fatal(err)
+			}
+
+			obs := &mockObserver{}
+			table.AddObserver(obs)
+
+			// Observer should receive OnAppend for existing rows
+			slices.Sort(obs.appends)
+			if !slices.Equal(obs.appends, []int{1, 2}) {
+				t.Errorf("OnAppend for existing = %v, want [1, 2]", obs.appends)
+			}
+		})
+	})
+
+	t.Run("Sort", func(t *testing.T) {
+		t.Run("on append out-of-order", func(t *testing.T) {
+			table, _ := setupTable(t)
+
+			// Append rows in order
+			_ = table.Append(&testRow{ID: 10, Name: "ten"})
+			_ = table.Append(&testRow{ID: 20, Name: "twenty"})
+			_ = table.Append(&testRow{ID: 30, Name: "thirty"})
+
+			// Append row with lower ID (simulating clock drift)
+			err := table.Append(&testRow{ID: 15, Name: "fifteen"})
+			if err != nil {
+				t.Fatalf("Append error: %v", err)
+			}
+
+			// Verify rows are sorted
+			ids := make([]int, 0, 4)
+			for row := range table.Iter(0) {
+				ids = append(ids, row.ID)
+			}
+
+			want := []int{10, 15, 20, 30}
+			if !slices.Equal(ids, want) {
+				t.Errorf("rows not sorted after append: got %v, want %v", ids, want)
+			}
+
+			// Verify Iter with startID works
+			idsFrom15 := make([]int, 0, 2)
+			for row := range table.Iter(ID(15)) {
+				idsFrom15 = append(idsFrom15, row.ID)
+			}
+			wantFrom15 := []int{20, 30}
+			if !slices.Equal(idsFrom15, wantFrom15) {
+				t.Errorf("Iter(15) not working: got %v, want %v", idsFrom15, wantFrom15)
+			}
+		})
+
+		t.Run("on append in order", func(t *testing.T) {
+			table, _ := setupTable(t)
+
+			_ = table.Append(&testRow{ID: 1, Name: "one"})
+			_ = table.Append(&testRow{ID: 2, Name: "two"})
+			_ = table.Append(&testRow{ID: 3, Name: "three"})
+
+			ids := make([]int, 0, 3)
+			for row := range table.Iter(0) {
+				ids = append(ids, row.ID)
+			}
+
+			want := []int{1, 2, 3}
+			if !slices.Equal(ids, want) {
+				t.Errorf("unexpected order: got %v, want %v", ids, want)
+			}
+		})
+
+		t.Run("on load out-of-order", func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "unsorted.jsonl")
+
+			// Write a JSONL file with out-of-order IDs (simulating clock drift)
+			content := `{"version":"1","columns":[]}
+{"id":4,"name":"fourth"}
+{"id":1,"name":"first"}
+{"id":5,"name":"fifth"}
+{"id":2,"name":"second"}
+{"id":3,"name":"third"}
+`
+			if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			table, err := NewTable[*testRow](path)
+			if err != nil {
+				t.Fatalf("NewTable error: %v", err)
+			}
+
+			// Verify rows are sorted
+			ids := make([]int, 0, 5)
+			for row := range table.Iter(0) {
+				ids = append(ids, row.ID)
+			}
+
+			want := []int{1, 2, 3, 4, 5}
+			if !slices.Equal(ids, want) {
+				t.Errorf("rows not sorted: got %v, want %v", ids, want)
+			}
+
+			// Verify Iter with startID works correctly after sorting
+			idsFrom2 := make([]int, 0, 3)
+			for row := range table.Iter(ID(2)) {
+				idsFrom2 = append(idsFrom2, row.ID)
+			}
+
+			wantFrom2 := []int{3, 4, 5}
+			if !slices.Equal(idsFrom2, wantFrom2) {
+				t.Errorf("Iter(2) not working: got %v, want %v", idsFrom2, wantFrom2)
+			}
+		})
+
+		t.Run("on load already sorted", func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "sorted.jsonl")
+
+			// Write a JSONL file with sorted IDs
+			content := `{"version":"1","columns":[]}
+{"id":1,"name":"first"}
+{"id":2,"name":"second"}
+{"id":3,"name":"third"}
+`
+			if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			table, err := NewTable[*testRow](path)
+			if err != nil {
+				t.Fatalf("NewTable error: %v", err)
+			}
+
+			// Verify order preserved
+			ids := make([]int, 0, 3)
+			for row := range table.Iter(0) {
+				ids = append(ids, row.ID)
+			}
+
+			want := []int{1, 2, 3}
+			if !slices.Equal(ids, want) {
+				t.Errorf("rows order changed: got %v, want %v", ids, want)
+			}
 		})
 	})
 }
@@ -897,136 +1381,21 @@ func TestRow(t *testing.T) {
 	})
 }
 
-func TestTable_SortOnAppend(t *testing.T) {
-	t.Run("sorts when appending out-of-order ID", func(t *testing.T) {
-		table, _ := setupTable(t)
-
-		// Append rows in order
-		_ = table.Append(&testRow{ID: 10, Name: "ten"})
-		_ = table.Append(&testRow{ID: 20, Name: "twenty"})
-		_ = table.Append(&testRow{ID: 30, Name: "thirty"})
-
-		// Append row with lower ID (simulating clock drift)
-		err := table.Append(&testRow{ID: 15, Name: "fifteen"})
-		if err != nil {
-			t.Fatalf("Append error: %v", err)
-		}
-
-		// Verify rows are sorted
-		ids := make([]int, 0, 4)
-		for row := range table.Iter(0) {
-			ids = append(ids, row.ID)
-		}
-
-		want := []int{10, 15, 20, 30}
-		if !slices.Equal(ids, want) {
-			t.Errorf("rows not sorted after append: got %v, want %v", ids, want)
-		}
-
-		// Verify Iter with startID works
-		idsFrom15 := make([]int, 0, 2)
-		for row := range table.Iter(ID(15)) {
-			idsFrom15 = append(idsFrom15, row.ID)
-		}
-		wantFrom15 := []int{20, 30}
-		if !slices.Equal(idsFrom15, wantFrom15) {
-			t.Errorf("Iter(15) not working: got %v, want %v", idsFrom15, wantFrom15)
-		}
-	})
-
-	t.Run("no sort when appending in order", func(t *testing.T) {
-		table, _ := setupTable(t)
-
-		_ = table.Append(&testRow{ID: 1, Name: "one"})
-		_ = table.Append(&testRow{ID: 2, Name: "two"})
-		_ = table.Append(&testRow{ID: 3, Name: "three"})
-
-		ids := make([]int, 0, 3)
-		for row := range table.Iter(0) {
-			ids = append(ids, row.ID)
-		}
-
-		want := []int{1, 2, 3}
-		if !slices.Equal(ids, want) {
-			t.Errorf("unexpected order: got %v, want %v", ids, want)
-		}
-	})
-}
-
-func TestTable_SortOnLoad(t *testing.T) {
-	t.Run("sorts out-of-order rows", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "unsorted.jsonl")
-
-		// Write a JSONL file with out-of-order IDs (simulating clock drift)
-		content := `{"version":"1","columns":[]}
-{"id":4,"name":"fourth"}
-{"id":2,"name":"second"}
-{"id":5,"name":"fifth"}
-{"id":1,"name":"first"}
-{"id":3,"name":"third"}
-`
-		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
-			t.Fatal(err)
-		}
-
-		// Load table - should sort automatically
-		table, err := NewTable[*testRow](path)
-		if err != nil {
-			t.Fatalf("NewTable error: %v", err)
-		}
-
-		// Verify rows are now sorted by ID
-		ids := make([]int, 0, 5)
-		for row := range table.Iter(0) {
-			ids = append(ids, row.ID)
-		}
-
-		want := []int{1, 2, 3, 4, 5}
-		if !slices.Equal(ids, want) {
-			t.Errorf("rows not sorted: got %v, want %v", ids, want)
-		}
-
-		// Verify Iter with startID works correctly after sorting
-		idsFrom2 := make([]int, 0, 3)
-		for row := range table.Iter(ID(2)) {
-			idsFrom2 = append(idsFrom2, row.ID)
-		}
-
-		wantFrom2 := []int{3, 4, 5}
-		if !slices.Equal(idsFrom2, wantFrom2) {
-			t.Errorf("Iter(2) not working: got %v, want %v", idsFrom2, wantFrom2)
-		}
-	})
-
-	t.Run("already sorted rows not re-sorted", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, "sorted.jsonl")
-
-		// Write a JSONL file with sorted IDs
-		content := `{"version":"1","columns":[]}
-{"id":1,"name":"first"}
-{"id":2,"name":"second"}
-{"id":3,"name":"third"}
-`
-		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
-			t.Fatal(err)
-		}
-
-		table, err := NewTable[*testRow](path)
-		if err != nil {
-			t.Fatalf("NewTable error: %v", err)
-		}
-
-		// Verify order preserved
-		ids := make([]int, 0, 3)
-		for row := range table.Iter(0) {
-			ids = append(ids, row.ID)
-		}
-
-		want := []int{1, 2, 3}
-		if !slices.Equal(ids, want) {
-			t.Errorf("rows order changed: got %v, want %v", ids, want)
-		}
-	})
+func TestDeriveBlobDir(t *testing.T) {
+	tests := []struct {
+		path string
+		want string
+	}{
+		{"data.jsonl", "data.blobs"},
+		{"/path/to/table.jsonl", "/path/to/table.blobs"},
+		{"noext", "noext.blobs"},
+		{"/path/file.data", "/path/file.blobs"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			if got := deriveBlobDir(tt.path); got != tt.want {
+				t.Errorf("deriveBlobDir(%q) = %q, want %q", tt.path, got, tt.want)
+			}
+		})
+	}
 }

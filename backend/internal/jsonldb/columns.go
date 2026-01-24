@@ -18,12 +18,13 @@ const currentVersion = "1.0"
 type columnType string
 
 const (
-	columnTypeText   columnType = "text"
-	columnTypeNumber columnType = "number"
-	columnTypeBool   columnType = "bool"
-	columnTypeDate   columnType = "date"
-	columnTypeBlob   columnType = "blob"
-	columnTypeJSONB  columnType = "jsonb"
+	columnTypeText    columnType = "text"
+	columnTypeNumber  columnType = "number"
+	columnTypeBool    columnType = "bool"
+	columnTypeDate    columnType = "date"
+	columnTypeBlob    columnType = "blob"
+	columnTypeBlobRef columnType = "blob_ref" // content-addressed external blob
+	columnTypeJSONB   columnType = "jsonb"
 )
 
 // column represents a table column in storage.
@@ -143,6 +144,11 @@ func goTypeToColumnType(t reflect.Type) columnType {
 	// Dereference pointers
 	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
+	}
+
+	// Check for Blob type (content-addressed external blob)
+	if t == reflect.TypeFor[Blob]() {
+		return columnTypeBlobRef
 	}
 
 	// Check for time.Time first (before switch)

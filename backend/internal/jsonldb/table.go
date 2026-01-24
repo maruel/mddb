@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"iter"
 	"os"
+	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -56,12 +58,14 @@ type TableObserver[T Row[T]] interface {
 // Rows are stored in insertion order and indexed by ID for O(1) lookups.
 // All returned rows are clones to prevent accidental mutation of cached data.
 type Table[T Row[T]] struct {
-	path      string
-	mu        sync.RWMutex
-	schema    schemaHeader
-	rows      []T
-	byID      map[ID]int // maps ID to index in rows
-	observers []TableObserver[T]
+	path         string
+	mu           sync.RWMutex
+	schema       schemaHeader
+	rows         []T
+	byID         map[ID]int // maps ID to index in rows
+	blobRefCount map[BlobRef]int
+	observers    []TableObserver[T]
+	blobStore    blobStore // lazily initialized for tables with blob fields
 }
 
 // AddObserver registers an observer to receive mutation notifications.
@@ -76,6 +80,24 @@ func (t *Table[T]) AddObserver(obs TableObserver[T]) {
 		obs.OnAppend(row)
 	}
 	t.observers = append(t.observers, obs)
+}
+
+// NewBlob creates a writer for streaming blob creation.
+//
+// Data is written to a temp file; Close() finalizes and returns a Blob
+// that can be assigned to row fields before Append().
+func (t *Table[T]) NewBlob() (*BlobWriter, error) {
+	return t.blobStore.newBlob()
+}
+
+// deriveBlobDir returns the blob directory path for a table file.
+// Example: mytable.jsonl → mytable.blobs/.
+func deriveBlobDir(tablePath string) string {
+	ext := filepath.Ext(tablePath)
+	if ext != "" {
+		return strings.TrimSuffix(tablePath, ext) + blobDirSuffix
+	}
+	return tablePath + blobDirSuffix
 }
 
 // Len returns the number of rows in the table.
@@ -100,6 +122,7 @@ func (t *Table[T]) Get(id ID) T {
 //
 // Returns the deleted row, or nil if no row with that ID exists.
 // The entire table is rewritten to disk on success.
+// Blobs are only deleted if no other rows reference them.
 func (t *Table[T]) Delete(id ID) (T, error) {
 	var zero T
 	t.mu.Lock()
@@ -121,13 +144,46 @@ func (t *Table[T]) Delete(id ID) (T, error) {
 		t.byID[row.GetID()] = i
 	}
 
-	if err := t.save(); err != nil {
+	if err := t.saveLocked(); err != nil {
 		return zero, err
 	}
+
+	// Decrement blob refcounts, delete blobs with refcount 0.
+	if err := t.untrackBlobRefsLocked(deleted); err != nil {
+		return zero, fmt.Errorf("failed to untrack blobs: %w", err)
+	}
+
 	for _, obs := range t.observers {
 		obs.OnDelete(deleted)
 	}
 	return deleted, nil
+}
+
+// trackBlobRefsLocked increments the refcount for all blobs in the row. Caller must hold t.mu.
+func (t *Table[T]) trackBlobRefsLocked(row T) {
+	for _, blob := range blobFields(row) {
+		if !blob.IsZero() {
+			t.blobRefCount[blob.Ref]++
+		}
+	}
+}
+
+// untrackBlobRefsLocked decrements the refcount for all blobs in the row
+// and removes blobs whose refcount reaches zero. Caller must hold t.mu.
+func (t *Table[T]) untrackBlobRefsLocked(row T) error {
+	var errs []error
+	for _, blob := range blobFields(row) {
+		if !blob.IsZero() {
+			t.blobRefCount[blob.Ref]--
+			if t.blobRefCount[blob.Ref] <= 0 {
+				delete(t.blobRefCount, blob.Ref)
+				if err := t.blobStore.remove(blob.Ref); err != nil {
+					errs = append(errs, err)
+				}
+			}
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // Update replaces an existing row (matched by ID) and persists the change.
@@ -150,9 +206,16 @@ func (t *Table[T]) Update(row T) (T, error) {
 
 	prev := t.rows[idx]
 	t.rows[idx] = row
-	if err := t.save(); err != nil {
+	if err := t.saveLocked(); err != nil {
 		return zero, err
 	}
+
+	// Update blob refcounts: track new first to avoid deleting shared blobs.
+	t.trackBlobRefsLocked(row)
+	if err := t.untrackBlobRefsLocked(prev); err != nil {
+		return zero, fmt.Errorf("failed to untrack old blobs: %w", err)
+	}
+
 	for _, obs := range t.observers {
 		obs.OnUpdate(prev, row)
 	}
@@ -195,10 +258,17 @@ func (t *Table[T]) Modify(id ID, fn func(row T) error) (T, error) {
 	}
 
 	t.rows[idx] = row
-	if err := t.save(); err != nil {
+	if err := t.saveLocked(); err != nil {
 		t.rows[idx] = prev // Rollback on save failure
 		return zero, err
 	}
+
+	// Update blob refcounts: track new first to avoid deleting shared blobs.
+	t.trackBlobRefsLocked(row)
+	if err := t.untrackBlobRefsLocked(prev); err != nil {
+		return zero, fmt.Errorf("failed to untrack old blobs: %w", err)
+	}
+
 	for _, obs := range t.observers {
 		obs.OnUpdate(prev, row)
 	}
@@ -233,10 +303,13 @@ func (t *Table[T]) load() error {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
+	t.blobStore.dir = deriveBlobDir(t.path)
+
 	data, err := os.ReadFile(t.path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			t.byID = make(map[ID]int)
+			t.blobRefCount = make(map[BlobRef]int)
 			return nil
 		}
 		return fmt.Errorf("failed to read table file %s: %w", t.path, err)
@@ -245,6 +318,7 @@ func (t *Table[T]) load() error {
 	n := bytes.Count(data, []byte{'\n'})
 	t.rows = make([]T, 0, n)
 	t.byID = make(map[ID]int, n)
+	t.blobRefCount = make(map[BlobRef]int)
 	lineNum := 0
 	var prevID ID
 	needsSort := false
@@ -270,6 +344,10 @@ func (t *Table[T]) load() error {
 		if err := json.Unmarshal(line, &row); err != nil {
 			return fmt.Errorf("failed to unmarshal row in %s: %w", t.path, err)
 		}
+		// Inject blob store reference if row has blob fields
+		t.injectBlobStoreLocked(row)
+		// Track blob references for refcount
+		t.trackBlobRefsLocked(row)
 		if err := row.Validate(); err != nil {
 			return fmt.Errorf("invalid row in %s line %d: %w", t.path, lineNum, err)
 		}
@@ -299,7 +377,19 @@ func (t *Table[T]) load() error {
 			t.byID[row.GetID()] = i
 		}
 	}
+
+	// Clean up orphaned blob files.
+	if err := t.blobStore.gc(t.blobRefCount); err != nil {
+		return fmt.Errorf("failed to run blob GC: %w", err)
+	}
 	return nil
+}
+
+// injectBlobStoreLocked sets the store reference on all blob fields in the row. Caller must hold t.mu.
+func (t *Table[T]) injectBlobStoreLocked(row T) {
+	for _, blob := range blobFields(row) {
+		blob.store = &t.blobStore
+	}
 }
 
 // Iter returns an iterator over clones of rows with ID strictly greater than startID.
@@ -363,7 +453,7 @@ func (t *Table[T]) Append(row T) (err error) {
 			t.byID[t.rows[i].GetID()] = i
 		}
 		// Rewrite entire file in sorted order
-		if err := t.save(); err != nil {
+		if err := t.saveLocked(); err != nil {
 			return fmt.Errorf("failed to save table: %w", err)
 		}
 	} else {
@@ -395,6 +485,9 @@ func (t *Table[T]) Append(row T) (err error) {
 		t.byID[id] = len(t.rows)
 		t.rows = append(t.rows, row)
 	}
+
+	// Track blob references.
+	t.trackBlobRefsLocked(row)
 
 	for _, obs := range t.observers {
 		obs.OnAppend(row)
@@ -431,8 +524,8 @@ func (t *Table[T]) saveSchemaHeaderLocked() (err error) {
 	return nil
 }
 
-// save writes the schema header and all rows to the file. Caller must hold t.mu.
-func (t *Table[T]) save() (err error) {
+// saveLocked writes the schema header and all rows to the file. Caller must hold t.mu.
+func (t *Table[T]) saveLocked() (err error) {
 	f, err := os.Create(t.path)
 	if err != nil {
 		return fmt.Errorf("failed to create table file: %w", err)
