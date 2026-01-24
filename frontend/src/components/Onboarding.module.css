@@ -73,18 +73,6 @@
   color: var(--c-text-light);
 }
 
-.hint {
-  font-size: 0.8rem;
-  color: var(--c-text-light);
-  margin-top: var(--s-2);
-}
-
-.illustration {
-  font-size: 4rem;
-  text-align: center;
-  margin: var(--s-4) 0;
-}
-
 .primaryButton {
   display: block;
   width: 100%;
@@ -144,28 +132,6 @@
   margin-bottom: var(--s-4);
   text-align: center;
   font-size: 0.85rem;
-}
-
-.footer {
-  margin-top: var(--s-4);
-  display: flex;
-  justify-content: center;
-}
-
-.progress {
-  display: flex;
-  gap: var(--s-2);
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--c-border);
-}
-
-.dot.active {
-  background: var(--c-primary);
 }
 
 .gitForm {

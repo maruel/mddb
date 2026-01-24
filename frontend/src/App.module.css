@@ -37,20 +37,6 @@ body {
   font-size: 0.85rem;
 }
 
-.logoutButton {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-  border: none;
-  padding: var(--s-2) var(--s-3);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: background var(--transition);
-}
-
-.logoutButton:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
 .container {
   display: flex;
   flex: 1;
@@ -63,33 +49,6 @@ body {
   border-right: 1px solid var(--c-border);
   display: flex;
   flex-direction: column;
-}
-
-.tabBar {
-  display: flex;
-  border-bottom: 1px solid var(--c-border);
-}
-
-.tab {
-  flex: 1;
-  padding: var(--s-3);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: var(--c-text-light);
-  border-bottom: 2px solid transparent;
-  transition: all var(--transition);
-}
-
-.tab:hover {
-  color: var(--c-text);
-}
-
-.tab.active {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
 }
 
 .sidebarHeader {
@@ -167,19 +126,6 @@ body {
 .pageItem.active {
   background: #eff6ff;
   border-left: 3px solid var(--c-primary);
-}
-
-.pageTitle {
-  font-weight: 500;
-  margin-bottom: var(--s-1);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.pageDate {
-  font-size: 0.75rem;
-  color: var(--c-text-light);
 }
 
 .main {
@@ -381,7 +327,6 @@ body {
   box-shadow: var(--shadow);
 }
 
-.sidebarNodeWrapper,
 .childList {
   list-style: none;
 }

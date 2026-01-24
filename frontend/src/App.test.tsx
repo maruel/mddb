@@ -13,7 +13,6 @@ vi.mock('./App.module.css', () => ({
     header: 'header',
     headerTitle: 'headerTitle',
     userInfo: 'userInfo',
-    logoutButton: 'logoutButton',
     container: 'container',
     sidebar: 'sidebar',
     sidebarHeader: 'sidebarHeader',
@@ -187,9 +186,7 @@ vi.mock('./components/OrgMenu', () => ({
         onChange={(e) => props.onSwitchOrg((e.target as HTMLSelectElement).value)}
       >
         {props.memberships.map((m) => (
-          <option key={m.organization_id} value={m.organization_id}>
-            {m.organization_name || m.organization_id}
-          </option>
+          <option value={m.organization_id}>{m.organization_name || m.organization_id}</option>
         ))}
       </select>
       <button data-testid="create-org-button" onClick={props.onCreateOrg}>

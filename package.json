@@ -11,7 +11,7 @@
     "test:e2e:ui": "playwright test --ui",
     "coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
-    "lint": "tsc --noEmit && eslint frontend/src && prettier --check frontend/src",
+    "lint": "tsc --noEmit && eslint frontend/src && prettier --check frontend/src && node frontend/scripts/check-css-modules.mjs",
     "lint:fix": "eslint frontend/src --fix && prettier --write frontend/src",
     "format": "prettier --write frontend/src"
   },
