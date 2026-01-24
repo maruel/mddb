@@ -1,4 +1,4 @@
-.PHONY: help build dev test coverage lint lint-go lint-frontend lint-fix git-hooks frontend-dev types upgrade
+.PHONY: help build dev test coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade
 
 # Variables
 DATA_DIR=./data
@@ -59,7 +59,7 @@ coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm coverage
 
-lint: lint-go lint-frontend
+lint: lint-go lint-frontend lint-binaries
 
 lint-go:
 	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
@@ -67,6 +67,14 @@ lint-go:
 
 lint-frontend: $(FRONTEND_STAMP)
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint
+
+lint-binaries:
+	@binaries=$$(git ls-files -z | xargs -0 -r file --mime-type | grep -E 'application/(x-executable|x-mach-binary|x-dosexec|x-pie-executable|x-sharedlib)' | cut -d: -f1); \
+	if [ -n "$$binaries" ]; then \
+		echo "Error: Binary executables found in repository:"; \
+		echo "$$binaries"; \
+		exit 1; \
+	fi
 
 lint-fix: $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run ./... --fix || true

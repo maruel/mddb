@@ -21,6 +21,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - uses: golangci/golangci-lint-action@v9
       - run: make lint-frontend
+      - run: make lint-binaries
       - run: make coverage
       - uses: codecov/codecov-action@v5
         with:
