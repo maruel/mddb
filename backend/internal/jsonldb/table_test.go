@@ -2,6 +2,7 @@ package jsonldb
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -1314,6 +1315,71 @@ not valid json
 			want := []int{1, 2, 3}
 			if !slices.Equal(ids, want) {
 				t.Errorf("rows order changed: got %v, want %v", ids, want)
+			}
+		})
+	})
+
+	t.Run("OnDiskFormat", func(t *testing.T) {
+		t.Run("schema header columns", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "test.jsonl")
+			table, err := NewTable[*testRow](path)
+			if err != nil {
+				t.Fatalf("NewTable error: %v", err)
+			}
+
+			// Append a row to trigger file creation
+			if err := table.Append(&testRow{ID: 1, Name: "Test"}); err != nil {
+				t.Fatalf("Append error: %v", err)
+			}
+
+			// Read back raw file content
+			content, err := os.ReadFile(path) //nolint:gosec // G304: path is controlled by test
+			if err != nil {
+				t.Fatalf("ReadFile error: %v", err)
+			}
+
+			// Split into lines
+			lines := bytes.Split(content, []byte{'\n'})
+			if len(lines) < 2 {
+				t.Fatalf("expected at least 2 lines, got %d", len(lines))
+			}
+
+			// Parse schema header (first line)
+			var header schemaHeader
+			if err := json.Unmarshal(lines[0], &header); err != nil {
+				t.Fatalf("failed to parse schema header: %v", err)
+			}
+
+			// Verify version
+			if header.Version != currentVersion {
+				t.Errorf("schema version = %q, want %q", header.Version, currentVersion)
+			}
+
+			// Verify columns are populated
+			if len(header.Columns) == 0 {
+				t.Error("schema columns is empty, expected columns derived from testRow type")
+			}
+
+			// Verify expected columns exist
+			columnNames := make(map[string]columnType)
+			for _, col := range header.Columns {
+				columnNames[col.Name] = col.Type
+			}
+
+			// testRow has fields: ID int, Name string
+			if _, ok := columnNames["id"]; !ok {
+				t.Error("schema missing 'id' column")
+			}
+			if _, ok := columnNames["name"]; !ok {
+				t.Error("schema missing 'name' column")
+			}
+
+			// Verify column types
+			if colType, ok := columnNames["id"]; ok && colType != columnTypeNumber {
+				t.Errorf("column 'id' type = %q, want %q", colType, columnTypeNumber)
+			}
+			if colType, ok := columnNames["name"]; ok && colType != columnTypeText {
+				t.Errorf("column 'name' type = %q, want %q", colType, columnTypeText)
 			}
 		})
 	})

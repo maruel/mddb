@@ -78,20 +78,20 @@ func schemaFromType[T any]() ([]column, error) {
 		return nil, fmt.Errorf("type must be a struct or pointer to struct, got %s", t.Kind())
 	}
 
-	// Generate JSON Schema from type
-	reflector := &jsonschema.Reflector{}
-	schema := reflector.Reflect(new(T))
+	// Get the struct type for Go type mapping
+	structType := t
+	if t.Kind() == reflect.Pointer {
+		structType = t.Elem()
+	}
+
+	// Generate JSON Schema from type with inline properties (no $ref).
+	r := jsonschema.Reflector{Anonymous: true, DoNotReference: true}
+	schema := r.ReflectFromType(structType)
 
 	// Build required set for quick lookup
 	required := make(map[string]bool)
 	for _, name := range schema.Required {
 		required[name] = true
-	}
-
-	// Get the struct type for Go type mapping
-	structType := t
-	if t.Kind() == reflect.Pointer {
-		structType = t.Elem()
 	}
 
 	// Build columns from schema properties
