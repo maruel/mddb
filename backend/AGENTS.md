@@ -4,18 +4,25 @@
 
 ### Standard Patterns
 
-**Errors**: Use `errors.NewAPIError(statusCode, code, message)` from internal/errors for HTTP errors. Implement `ErrorWithStatus` interface.
+**Logging**:
+- Use context-aware slog methods: `slog.InfoContext()`, `slog.ErrorContext()`, etc.
+- Error fields should use `"err"` not `"error"`.
 
-**Logging**: Use context-aware slog methods: `slog.InfoContext()`, `slog.ErrorContext()`, etc. Error fields should use `"err"` not `"error"`.
+**Testing**:
+- Use table-driven tests.
+- Store tests in `*_test.go` files next to implementation.
+- Target 95% coverage.
+- Use subtest. Create TestFoo then for each method create a subtest.
+- Use t.Context()
+
+### HTTP handlers
+
+**Errors**: Use `errors.NewAPIError(statusCode, code, message)` from internal/errors for HTTP errors. Implement `ErrorWithStatus` interface.
 
 **Handler Signature**: All HTTP handlers wrapped with `Wrap()` must have signature:
 ```go
 func(context.Context, RequestType) (*ResponseType, error)
 ```
-
-**Git Integration**: `Git` automatically commits changes to the `data/` directory. Ensure `GIT_CONFIG_GLOBAL` and `GIT_CONFIG_SYSTEM` are ignored (set to `/dev/null`) to prevent user config interference.
-
-**Testing**: Use table-driven tests. Store tests in `*_test.go` files next to implementation. Target 100% coverage for service layers.
 
 ## API Development
 
@@ -118,7 +125,7 @@ Run these commands to verify changes:
 
 ## Code Quality & Linting
 
-**All code must pass linting before commits.**
+**All code must pass `make lint` before commits.**
 
 ### Go Backend (golangci-lint)
 
@@ -129,7 +136,3 @@ Run with:
 make lint
 make lint-fix
 ```
-
-## Useful Resources
-
-- [Go Effective Go](https://golang.org/doc/effective_go)
