@@ -14,12 +14,11 @@ func TestOrganization(t *testing.T) {
 			valid := &Organization{
 				ID:   jsonldb.ID(1),
 				Name: "Test Org",
-				Quotas: OrganizationQuota{
-					MaxPages:           100,
-					MaxStorage:         1024,
-					MaxUsers:           10,
-					MaxRecordsPerTable: 1000,
-					MaxAssetSize:       1024,
+				Quotas: OrganizationQuotas{
+					MaxWorkspaces:          3,
+					MaxMembersPerOrg:       10,
+					MaxMembersPerWorkspace: 10,
+					MaxTotalStorageGB:      5,
 				},
 			}
 			if err := valid.Validate(); err != nil {
@@ -31,12 +30,11 @@ func TestOrganization(t *testing.T) {
 			zeroID := &Organization{
 				ID:   jsonldb.ID(0),
 				Name: "Test Org",
-				Quotas: OrganizationQuota{
-					MaxPages:           100,
-					MaxStorage:         1024,
-					MaxUsers:           10,
-					MaxRecordsPerTable: 1000,
-					MaxAssetSize:       1024,
+				Quotas: OrganizationQuotas{
+					MaxWorkspaces:          3,
+					MaxMembersPerOrg:       10,
+					MaxMembersPerWorkspace: 10,
+					MaxTotalStorageGB:      5,
 				},
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -48,12 +46,11 @@ func TestOrganization(t *testing.T) {
 			emptyName := &Organization{
 				ID:   jsonldb.ID(1),
 				Name: "",
-				Quotas: OrganizationQuota{
-					MaxPages:           100,
-					MaxStorage:         1024,
-					MaxUsers:           10,
-					MaxRecordsPerTable: 1000,
-					MaxAssetSize:       1024,
+				Quotas: OrganizationQuotas{
+					MaxWorkspaces:          3,
+					MaxMembersPerOrg:       10,
+					MaxMembersPerWorkspace: 10,
+					MaxTotalStorageGB:      5,
 				},
 			}
 			if err := emptyName.Validate(); err == nil {
@@ -64,12 +61,11 @@ func TestOrganization(t *testing.T) {
 			invalidQuota := &Organization{
 				ID:   jsonldb.ID(1),
 				Name: "Test Org",
-				Quotas: OrganizationQuota{
-					MaxPages:           0,
-					MaxStorage:         1024,
-					MaxUsers:           10,
-					MaxRecordsPerTable: 1000,
-					MaxAssetSize:       1024,
+				Quotas: OrganizationQuotas{
+					MaxWorkspaces:          0,
+					MaxMembersPerOrg:       10,
+					MaxMembersPerWorkspace: 10,
+					MaxTotalStorageGB:      5,
 				},
 			}
 			if err := invalidQuota.Validate(); err == nil {
@@ -79,13 +75,13 @@ func TestOrganization(t *testing.T) {
 	})
 
 	t.Run("Clone", func(t *testing.T) {
-		t.Run("with AllowedDomains", func(t *testing.T) {
+		t.Run("with AllowedEmailDomains", func(t *testing.T) {
 			original := &Organization{
 				ID:   jsonldb.ID(1),
 				Name: "Test Org",
 				Settings: OrganizationSettings{
-					AllowedDomains: []string{"example.com", "test.com"},
-					PublicAccess:   true,
+					AllowedEmailDomains: []string{"example.com", "test.com"},
+					RequireSSO:          true,
 				},
 			}
 
@@ -98,20 +94,20 @@ func TestOrganization(t *testing.T) {
 				t.Error("Clone Name should match")
 			}
 
-			clone.Settings.AllowedDomains[0] = "modified.com"
-			if original.Settings.AllowedDomains[0] == "modified.com" {
-				t.Error("Clone AllowedDomains should be independent of original")
+			clone.Settings.AllowedEmailDomains[0] = "modified.com"
+			if original.Settings.AllowedEmailDomains[0] == "modified.com" {
+				t.Error("Clone AllowedEmailDomains should be independent of original")
 			}
 		})
 
-		t.Run("nil AllowedDomains", func(t *testing.T) {
+		t.Run("nil AllowedEmailDomains", func(t *testing.T) {
 			noAllowed := &Organization{
 				ID:   jsonldb.ID(1),
 				Name: "No Domains",
 			}
 			cloneNoAllowed := noAllowed.Clone()
-			if cloneNoAllowed.Settings.AllowedDomains != nil {
-				t.Error("Clone of nil AllowedDomains should be nil")
+			if cloneNoAllowed.Settings.AllowedEmailDomains != nil {
+				t.Error("Clone of nil AllowedEmailDomains should be nil")
 			}
 		})
 	})
@@ -155,7 +151,7 @@ func TestOrganizationService(t *testing.T) {
 	t.Run("Create", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			var createErr error
-			org, createErr = service.Create(t.Context(), "Test Organization")
+			org, createErr = service.Create(t.Context(), "Test Organization", "billing@example.com")
 			if createErr != nil {
 				t.Fatalf("Create failed: %v", createErr)
 			}
@@ -172,7 +168,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("empty name", func(t *testing.T) {
-			_, createErr := service.Create(t.Context(), "")
+			_, createErr := service.Create(t.Context(), "", "billing@example.com")
 			if createErr == nil {
 				t.Error("Expected error when creating organization with empty name")
 			}
@@ -201,8 +197,8 @@ func TestOrganizationService(t *testing.T) {
 	t.Run("Modify", func(t *testing.T) {
 		t.Run("settings", func(t *testing.T) {
 			newSettings := OrganizationSettings{
-				AllowedDomains: []string{"example.com"},
-				PublicAccess:   true,
+				AllowedEmailDomains: []string{"example.com"},
+				RequireSSO:          true,
 			}
 			_, modErr := service.Modify(org.ID, func(o *Organization) error {
 				o.Settings = newSettings
@@ -213,11 +209,11 @@ func TestOrganizationService(t *testing.T) {
 			}
 
 			updatedOrg, _ := service.Get(org.ID)
-			if !updatedOrg.Settings.PublicAccess {
-				t.Error("Expected Settings.PublicAccess = true after update")
+			if !updatedOrg.Settings.RequireSSO {
+				t.Error("Expected Settings.RequireSSO = true after update")
 			}
-			if len(updatedOrg.Settings.AllowedDomains) != 1 {
-				t.Errorf("AllowedDomains length = %d, want 1", len(updatedOrg.Settings.AllowedDomains))
+			if len(updatedOrg.Settings.AllowedEmailDomains) != 1 {
+				t.Errorf("AllowedEmailDomains length = %d, want 1", len(updatedOrg.Settings.AllowedEmailDomains))
 			}
 		})
 
@@ -249,7 +245,7 @@ func TestOrganizationService(t *testing.T) {
 			t.Fatal(svcErr)
 		}
 
-		persistOrg, createErr := svc1.Create(t.Context(), "Persistent Org")
+		persistOrg, createErr := svc1.Create(t.Context(), "Persistent Org", "billing@example.com")
 		if createErr != nil {
 			t.Fatal(createErr)
 		}

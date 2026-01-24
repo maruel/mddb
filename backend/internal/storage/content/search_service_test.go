@@ -13,24 +13,24 @@ import (
 
 func TestSearchService(t *testing.T) {
 	t.Run("SearchPages", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
-			t.Fatalf("failed to init org: %v", err)
+		// Initialize git repo for workspace
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
 		}
 
 		// Create test pages
-		if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Getting Started", "This is a guide to get started with mddb project", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Getting Started", "This is a guide to get started with mddb project", author); err != nil {
 			t.Fatalf("WritePage Getting Started failed: %v", err)
 		}
-		if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Advanced Topics", "Learn about advanced mddb configuration and optimization", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Advanced Topics", "Learn about advanced mddb configuration and optimization", author); err != nil {
 			t.Fatalf("WritePage Advanced Topics failed: %v", err)
 		}
-		if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "API Reference", "Complete mddb API documentation for developers", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "API Reference", "Complete mddb API documentation for developers", author); err != nil {
 			t.Fatalf("WritePage API Reference failed: %v", err)
 		}
 
@@ -77,7 +77,7 @@ func TestSearchService(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				results, err := searchService.Search(ctx, orgID, SearchOptions{
+				results, err := searchService.Search(ctx, wsID, SearchOptions{
 					Query:      tt.query,
 					MatchTitle: true,
 					MatchBody:  true,
@@ -107,14 +107,14 @@ func TestSearchService(t *testing.T) {
 	})
 
 	t.Run("SearchRecords", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
-			t.Fatalf("failed to init org: %v", err)
+		// Initialize git repo for workspace
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
 		}
 
 		// Create test table with records
@@ -131,7 +131,7 @@ func TestSearchService(t *testing.T) {
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("WriteTable failed: %v", err)
 		}
 
@@ -148,7 +148,7 @@ func TestSearchService(t *testing.T) {
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
-			if err := fs.AppendRecord(ctx, orgID, dbID, rec, author); err != nil {
+			if err := fs.AppendRecord(ctx, wsID, dbID, rec, author); err != nil {
 				t.Fatalf("AppendRecord failed: %v", err)
 			}
 		}
@@ -187,7 +187,7 @@ func TestSearchService(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				results, err := searchService.Search(ctx, orgID, SearchOptions{
+				results, err := searchService.Search(ctx, wsID, SearchOptions{
 					Query:       tt.query,
 					MatchFields: true,
 				})
@@ -212,25 +212,25 @@ func TestSearchService(t *testing.T) {
 	})
 
 	t.Run("Scoring", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
-			t.Fatalf("failed to init org: %v", err)
+		// Initialize git repo for workspace
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
 		}
 
 		// Create pages where title match should score higher
-		if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Python Programming", "This is about Java not Python", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Python Programming", "This is about Java not Python", author); err != nil {
 			t.Fatalf("WritePage Python Programming failed: %v", err)
 		}
-		if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Java Basics", "Learn Python programming fundamentals", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Java Basics", "Learn Python programming fundamentals", author); err != nil {
 			t.Fatalf("WritePage Java Basics failed: %v", err)
 		}
 
-		results, err := searchService.Search(ctx, orgID, SearchOptions{
+		results, err := searchService.Search(ctx, wsID, SearchOptions{
 			Query:      "python",
 			MatchTitle: true,
 			MatchBody:  true,
@@ -254,24 +254,24 @@ func TestSearchService(t *testing.T) {
 	})
 
 	t.Run("Limit", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
-			t.Fatalf("failed to init org: %v", err)
+		// Initialize git repo for workspace
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
 		}
 
 		// Create multiple pages
 		for i := range 10 {
-			if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), fmt.Sprintf("Test Page %d", i), "This is test content", author); err != nil {
+			if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), fmt.Sprintf("Test Page %d", i), "This is test content", author); err != nil {
 				t.Fatalf("WritePage Test Page %d failed: %v", i, err)
 			}
 		}
 
-		results, err := searchService.Search(ctx, orgID, SearchOptions{
+		results, err := searchService.Search(ctx, wsID, SearchOptions{
 			Query:      "test",
 			Limit:      2,
 			MatchTitle: true,
@@ -287,18 +287,18 @@ func TestSearchService(t *testing.T) {
 	})
 
 	t.Run("Integration", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
-		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
-			t.Fatalf("failed to init org: %v", err)
+		// Initialize git repo for workspace
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
 		}
 
 		// Create mixed content - page
-		if _, err := fs.WritePage(ctx, orgID, jsonldb.NewID(), "Blog Post", "Article about searchable content and web development", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Blog Post", "Article about searchable content and web development", author); err != nil {
 			t.Fatalf("WritePage Blog Post failed: %v", err)
 		}
 
@@ -315,7 +315,7 @@ func TestSearchService(t *testing.T) {
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("WriteTable failed: %v", err)
 		}
 		rec := &DataRecord{
@@ -324,12 +324,12 @@ func TestSearchService(t *testing.T) {
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.AppendRecord(ctx, orgID, dbID, rec, author); err != nil {
+		if err := fs.AppendRecord(ctx, wsID, dbID, rec, author); err != nil {
 			t.Fatalf("AppendRecord failed: %v", err)
 		}
 
 		// Search should find both page and record
-		results, err := searchService.Search(ctx, orgID, SearchOptions{
+		results, err := searchService.Search(ctx, wsID, SearchOptions{
 			Query:       "searchable",
 			MatchTitle:  true,
 			MatchBody:   true,

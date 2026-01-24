@@ -2,11 +2,11 @@ import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
 import { createApi } from '../useApi';
 import type {
   UserResponse,
-  InvitationResponse,
+  WSInvitationResponse,
   UserSettings,
-  MembershipSettings,
+  WorkspaceMembershipSettings,
   OrganizationSettings,
-  UserRole,
+  WorkspaceRole,
   GitRemoteResponse,
 } from '../types.gen';
 import styles from './WorkspaceSettings.module.css';
@@ -24,7 +24,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = createSignal<Tab>('members');
   const [members, setMembers] = createSignal<UserResponse[]>([]);
-  const [invitations, setInvitations] = createSignal<InvitationResponse[]>([]);
+  const [invitations, setInvitations] = createSignal<WSInvitationResponse[]>([]);
 
   // Git Remote state (single remote per org)
   const [gitRemote, setGitRemote] = createSignal<GitRemoteResponse | null>(null);
@@ -61,6 +61,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     const orgID = props.user.organization_id;
     return orgID ? api().org(orgID) : null;
   });
+  const wsApi = createMemo(() => {
+    const wsID = props.user.workspace_id;
+    return wsID ? api().ws(wsID) : null;
+  });
 
   const loadData = async () => {
     const org = orgApi();
@@ -70,23 +74,27 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       setLoading(true);
       setError(null);
 
-      if (activeTab() === 'members' && props.user.role === 'admin') {
-        const [membersData, invsData] = await Promise.all([org.users.list(), org.invitations.list()]);
+      const ws = wsApi();
+      if (activeTab() === 'members' && props.user.workspace_role === 'admin') {
+        const [membersData, invsData] = await Promise.all([
+          org.users.list(),
+          ws ? ws.invitations.list() : Promise.resolve({ invitations: [] }),
+        ]);
         setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
-        setInvitations(invsData.invitations?.filter((i): i is InvitationResponse => !!i) || []);
+        setInvitations(invsData.invitations?.filter((i): i is WSInvitationResponse => !!i) || []);
       }
 
       if (activeTab() === 'workspace') {
-        const orgData = await org.settings.organization.get();
+        const orgData = await org.organizations.get();
         setOrgName(orgData.name);
         setOriginalOrgName(orgData.name);
-        setPublicAccess(orgData.settings?.public_access || false);
-        setAllowedDomains(orgData.settings?.allowed_domains?.join(', ') || '');
+        setPublicAccess(false); // TODO: workspace settings
+        setAllowedDomains(orgData.settings?.allowed_email_domains?.join(', ') || '');
       }
 
-      if (activeTab() === 'sync' && props.user.role === 'admin') {
+      if (activeTab() === 'sync' && props.user.workspace_role === 'admin' && ws) {
         try {
-          const remoteData = await org.settings.git.get();
+          const remoteData = await ws.settings.git.get();
           setGitRemote(remoteData);
         } catch {
           // No remote configured is a valid state
@@ -95,9 +103,9 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       }
 
       // Load membership settings (notifications)
-      const currentMembership = props.user.memberships?.find((m) => m.organization_id === props.user.organization_id);
-      if (currentMembership) {
-        setNotifications(currentMembership.settings?.notifications ?? true);
+      const currentWsMembership = props.user.workspaces?.find((m) => m.workspace_id === props.user.workspace_id);
+      if (currentWsMembership) {
+        setNotifications(currentWsMembership.settings?.notifications ?? true);
       }
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
@@ -112,12 +120,12 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
   const handleInvite = async (e: Event) => {
     e.preventDefault();
-    const org = orgApi();
-    if (!inviteEmail() || !org) return;
+    const ws = wsApi();
+    if (!inviteEmail() || !ws) return;
 
     try {
       setLoading(true);
-      await org.invitations.create({ email: inviteEmail(), role: inviteRole() });
+      await ws.invitations.create({ email: inviteEmail(), role: inviteRole() });
       setInviteEmail('');
       setSuccess(t('success.invitationSent') || 'Invitation sent successfully');
       loadData();
@@ -128,13 +136,13 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     }
   };
 
-  const handleUpdateRole = async (userId: string, role: UserRole) => {
-    const org = orgApi();
-    if (!org) return;
+  const handleUpdateRole = async (userId: string, role: WorkspaceRole) => {
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
-      await org.users.role.update({ user_id: userId, role });
+      await ws.users.update({ user_id: userId, role });
       setSuccess(t('success.roleUpdated') || 'Role updated');
       loadData();
     } catch (err) {
@@ -146,8 +154,8 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
   const savePersonalSettings = async (e: Event) => {
     e.preventDefault();
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
@@ -159,13 +167,13 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         language: language(),
       };
 
-      const memSettings: MembershipSettings = {
+      const memSettings: WorkspaceMembershipSettings = {
         notifications: notifications(),
       };
 
       await Promise.all([
         api().auth.settings.update({ settings: userSettings }),
-        org.settings.membership.update({ settings: memSettings }),
+        ws.settings.membership.update({ settings: memSettings }),
       ]);
 
       setSuccess(t('success.personalSettingsSaved') || 'Personal settings saved successfully');
@@ -187,20 +195,25 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       setSuccess(null);
 
       const orgSettings: OrganizationSettings = {
-        public_access: publicAccess(),
-        allowed_domains: allowedDomains()
+        allowed_email_domains: allowedDomains()
           ? allowedDomains()
               .split(',')
               .map((d) => d.trim())
           : [],
-        git_auto_push: false, // Preserve default
+        require_sso: false,
+        default_workspace_quotas: {
+          max_pages: 1000,
+          max_storage_mb: 1024,
+          max_records_per_table: 10000,
+          max_asset_size_mb: 50,
+        },
       };
 
-      const promises: Promise<unknown>[] = [org.settings.preferences.update({ settings: orgSettings })];
+      const promises: Promise<unknown>[] = [org.settings.update({ settings: orgSettings })];
 
       // Rename org if name changed
       if (orgName() !== originalOrgName() && orgName().trim()) {
-        promises.push(org.settings.organization.update({ name: orgName().trim() }));
+        promises.push(org.organizations.update({ name: orgName().trim() }));
       }
 
       await Promise.all(promises);
@@ -215,13 +228,13 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
   const handleAddOrUpdateRemote = async (e: Event) => {
     e.preventDefault();
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
       setError(null);
-      const remoteData = await org.settings.git.update({
+      const remoteData = await ws.settings.git.update({
         url: newRemoteURL(),
         token: newRemoteToken(),
         type: 'custom',
@@ -239,14 +252,14 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   };
 
   const handlePush = async () => {
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
-      await org.settings.git.pushGit();
+      await ws.settings.git.pushGit();
       setSuccess(t('success.pushSuccessful') || 'Push successful');
       loadData();
     } catch (err) {
@@ -259,13 +272,13 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const handleDeleteRemote = async () => {
     if (!confirm(t('settings.confirmRemoveRemote') || 'Are you sure you want to remove this remote?')) return;
 
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
       setError(null);
-      await org.settings.git.delete();
+      await ws.settings.git.delete();
       setGitRemote(null);
       setSuccess(t('success.remoteRemoved') || 'Remote removed');
     } catch (err) {
@@ -294,7 +307,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         <button class={activeTab() === 'workspace' ? styles.activeTab : ''} onClick={() => setActiveTab('workspace')}>
           {t('settings.workspace')}
         </button>
-        <Show when={props.user.role === 'admin'}>
+        <Show when={props.user.workspace_role === 'admin'}>
           <button class={activeTab() === 'sync' ? styles.activeTab : ''} onClick={() => setActiveTab('sync')}>
             {t('settings.gitSync')}
           </button>
@@ -311,7 +324,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'members'}>
         <section class={styles.section}>
           <h3>{t('settings.members')}</h3>
-          <Show when={props.user.role === 'admin'} fallback={<p>{t('settings.adminOnlyMembers')}</p>}>
+          <Show when={props.user.workspace_role === 'admin'} fallback={<p>{t('settings.adminOnlyMembers')}</p>}>
             <table class={styles.table}>
               <thead>
                 <tr>
@@ -327,10 +340,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                       <td>{member.name}</td>
                       <td>{member.email}</td>
                       <td>
-                        <Show when={member.id !== props.user.id} fallback={member.role}>
+                        <Show when={member.id !== props.user.id} fallback={member.workspace_role}>
                           <select
-                            value={member.role}
-                            onChange={(e) => handleUpdateRole(member.id, e.target.value as UserRole)}
+                            value={member.workspace_role}
+                            onChange={(e) => handleUpdateRole(member.id, e.target.value as WorkspaceRole)}
                             class={styles.roleSelect}
                           >
                             <option value="admin">{t('settings.roleAdmin')}</option>
@@ -356,7 +369,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                     onInput={(e) => setInviteEmail(e.target.value)}
                     required
                   />
-                  <select value={inviteRole()} onChange={(e) => setInviteRole(e.target.value as UserRole)}>
+                  <select
+                    value={inviteRole()}
+                    onChange={(e) => setInviteRole(e.target.value as 'admin' | 'editor' | 'viewer')}
+                  >
                     <option value="admin">{t('settings.roleAdmin')}</option>
                     <option value="editor">{t('settings.roleEditor')}</option>
                     <option value="viewer">{t('settings.roleViewer')}</option>
@@ -436,7 +452,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'workspace'}>
         <section class={styles.section}>
           <h3>{t('settings.workspaceSettings')}</h3>
-          <Show when={props.user.role === 'admin'} fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}>
+          <Show when={props.user.workspace_role === 'admin'} fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}>
             <form onSubmit={saveWorkspaceSettings} class={styles.settingsForm}>
               <div class={styles.formItem}>
                 <label>{t('settings.organizationName')}</label>

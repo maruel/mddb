@@ -33,16 +33,12 @@ func (h *TableHandler) ListTables(ctx context.Context, orgID jsonldb.ID, _ *iden
 
 // GetTable returns a specific table by ID.
 func (h *TableHandler) GetTable(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetTableRequest) (*dto.GetTableResponse, error) {
-	id, err := decodeID(req.ID, "table_id")
-	if err != nil {
-		return nil, err
-	}
-	table, err := h.fs.ReadTable(orgID, id)
+	table, err := h.fs.ReadTable(orgID, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
 	}
 	return &dto.GetTableResponse{
-		ID:         table.ID.String(),
+		ID:         table.ID,
 		Title:      table.Title,
 		Properties: propertiesToDTO(table.Properties),
 		Created:    formatTime(table.Created),
@@ -71,17 +67,12 @@ func (h *TableHandler) CreateTable(ctx context.Context, orgID jsonldb.ID, user *
 	if err := h.fs.WriteTable(ctx, orgID, node, true, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create table", err)
 	}
-	return &dto.CreateTableResponse{ID: id.String()}, nil
+	return &dto.CreateTableResponse{ID: id}, nil
 }
 
 // UpdateTable updates a table schema.
 func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
-	id, err := decodeID(req.ID, "table_id")
-	if err != nil {
-		return nil, err
-	}
-
-	node, err := h.fs.ReadTable(orgID, id)
+	node, err := h.fs.ReadTable(orgID, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
 	}
@@ -94,17 +85,13 @@ func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *
 	if err := h.fs.WriteTable(ctx, orgID, node, false, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
-	return &dto.UpdateTableResponse{ID: id.String()}, nil
+	return &dto.UpdateTableResponse{ID: req.ID}, nil
 }
 
 // DeleteTable deletes a table.
 func (h *TableHandler) DeleteTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeleteTableRequest) (*dto.DeleteTableResponse, error) {
-	id, err := decodeID(req.ID, "table_id")
-	if err != nil {
-		return nil, err
-	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.DeleteTable(ctx, orgID, id, author); err != nil {
+	if err := h.fs.DeleteTable(ctx, orgID, req.ID, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
 	return &dto.DeleteTableResponse{Ok: true}, nil
@@ -112,11 +99,7 @@ func (h *TableHandler) DeleteTable(ctx context.Context, orgID jsonldb.ID, user *
 
 // ListRecords returns all records in a table.
 func (h *TableHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
-	tableID, err := decodeID(req.ID, "table_id")
-	if err != nil {
-		return nil, err
-	}
-	records, err := h.fs.ReadRecordsPage(orgID, tableID, req.Offset, req.Limit)
+	records, err := h.fs.ReadRecordsPage(orgID, req.ID, req.Offset, req.Limit)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list records", err)
 	}
@@ -129,13 +112,8 @@ func (h *TableHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *ide
 
 // CreateRecord creates a new record in a table.
 func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
-	tableID, err := decodeID(req.ID, "table_id")
-	if err != nil {
-		return nil, err
-	}
-
 	// Read table to get columns for type coercion
-	node, err := h.fs.ReadTable(orgID, tableID)
+	node, err := h.fs.ReadTable(orgID, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
 	}
@@ -153,37 +131,28 @@ func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user 
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.AppendRecord(ctx, orgID, tableID, record, author); err != nil {
+	if err := h.fs.AppendRecord(ctx, orgID, req.ID, record, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create record", err)
 	}
-	return &dto.CreateRecordResponse{ID: id.String()}, nil
+	return &dto.CreateRecordResponse{ID: id}, nil
 }
 
 // UpdateRecord updates an existing record in a table.
 func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
-	tableID, err := decodeID(req.ID, "table_id")
-	if err != nil {
-		return nil, err
-	}
-	recordID, err := decodeID(req.RID, "record_id")
-	if err != nil {
-		return nil, err
-	}
-
 	// Read table to get columns for type coercion
-	node, err := h.fs.ReadTable(orgID, tableID)
+	node, err := h.fs.ReadTable(orgID, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
 	}
 
 	// Find existing record to preserve Created time
-	it, err := h.fs.IterRecords(orgID, tableID)
+	it, err := h.fs.IterRecords(orgID, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("record")
 	}
 	var existing *content.DataRecord
 	for r := range it {
-		if r.ID == recordID {
+		if r.ID == req.RID {
 			existing = r
 			break
 		}
@@ -196,38 +165,29 @@ func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user 
 	coercedData := content.CoerceRecordData(req.Data, node.Properties)
 
 	record := &content.DataRecord{
-		ID:       recordID,
+		ID:       req.RID,
 		Data:     coercedData,
 		Created:  existing.Created,
 		Modified: time.Now(),
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.UpdateRecord(ctx, orgID, tableID, record, author); err != nil {
+	if err := h.fs.UpdateRecord(ctx, orgID, req.ID, record, author); err != nil {
 		return nil, dto.NotFound("record")
 	}
-	return &dto.UpdateRecordResponse{ID: recordID.String()}, nil
+	return &dto.UpdateRecordResponse{ID: req.RID}, nil
 }
 
 // GetRecord retrieves a single record from a table.
 func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
-	tableID, err := decodeID(req.ID, "table_id")
-	if err != nil {
-		return nil, err
-	}
-	recordID, err := decodeID(req.RID, "record_id")
-	if err != nil {
-		return nil, err
-	}
-
-	it, err := h.fs.IterRecords(orgID, tableID)
+	it, err := h.fs.IterRecords(orgID, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("record")
 	}
 	for record := range it {
-		if record.ID == recordID {
+		if record.ID == req.RID {
 			return &dto.GetRecordResponse{
-				ID:       record.ID.String(),
+				ID:       record.ID,
 				Data:     record.Data,
 				Created:  formatTime(record.Created),
 				Modified: formatTime(record.Modified),
@@ -239,16 +199,8 @@ func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *ident
 
 // DeleteRecord deletes a record from a table.
 func (h *TableHandler) DeleteRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
-	tableID, err := decodeID(req.ID, "table_id")
-	if err != nil {
-		return nil, err
-	}
-	recordID, err := decodeID(req.RID, "record_id")
-	if err != nil {
-		return nil, err
-	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.DeleteRecord(ctx, orgID, tableID, recordID, author); err != nil {
+	if err := h.fs.DeleteRecord(ctx, orgID, req.ID, req.RID, author); err != nil {
 		return nil, dto.NotFound("record")
 	}
 	return &dto.DeleteRecordResponse{Ok: true}, nil

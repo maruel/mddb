@@ -82,10 +82,10 @@ export default function App() {
   // Create API client with auth
   const api = createMemo(() => createApi(() => token(), logout));
 
-  // Get org-scoped API client
-  const orgApi = createMemo(() => {
-    const orgID = user()?.organization_id;
-    return orgID ? api().org(orgID) : null;
+  // Get workspace-scoped API client
+  const wsApi = createMemo(() => {
+    const wsID = user()?.workspace_id;
+    return wsID ? api().ws(wsID) : null;
   });
 
   const handleLogin = (newToken: string, userData: UserResponse) => {
@@ -134,12 +134,12 @@ export default function App() {
   // Debounced auto-save function
   const debouncedAutoSave = debounce(async () => {
     const nodeId = selectedNodeId();
-    const org = orgApi();
-    if (!nodeId || !hasUnsavedChanges() || !org) return;
+    const ws = wsApi();
+    if (!nodeId || !hasUnsavedChanges() || !ws) return;
 
     try {
       setAutoSaveStatus('saving');
-      await org.pages.update(nodeId, { title: title(), content: content() });
+      await ws.pages.update(nodeId, { title: title(), content: content() });
       setHasUnsavedChanges(false);
       setAutoSaveStatus('saved');
 
@@ -239,7 +239,7 @@ export default function App() {
       if (user() && user()?.organization_id !== orgId) {
         try {
           // Check if we are member of this org
-          const isMember = user()?.memberships?.some((m) => m.organization_id === orgId);
+          const isMember = user()?.organizations?.some((m) => m.organization_id === orgId);
           if (isMember) {
             await switchOrg(orgId, false); // Don't redirect to /
           } else {
@@ -280,12 +280,12 @@ export default function App() {
   });
 
   async function loadNodes() {
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
-      const data = await org.nodes.list();
+      const data = await ws.nodes.list();
       setNodes((data.nodes?.filter(Boolean) as NodeResponse[]) || []);
       setError(null);
     } catch (err) {
@@ -296,13 +296,13 @@ export default function App() {
   }
 
   async function loadNode(id: string, pushState = true) {
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
       setShowHistory(false);
-      const nodeData = await org.nodes.get(id);
+      const nodeData = await ws.nodes.get(id);
 
       setSelectedNodeId(nodeData.id);
       setTitle(nodeData.title);
@@ -330,7 +330,7 @@ export default function App() {
 
       // If it's a table or hybrid, load records
       if (nodeData.type === 'table' || nodeData.type === 'hybrid') {
-        const recordsData = await org.tables.records.list(id, { Offset: 0, Limit: PAGE_SIZE });
+        const recordsData = await ws.tables.records.list(id, { Offset: 0, Limit: PAGE_SIZE });
         const loadedRecords = (recordsData.records || []) as DataRecordResponse[];
         setRecords(loadedRecords);
         setHasMore(loadedRecords.length === PAGE_SIZE);
@@ -351,12 +351,12 @@ export default function App() {
       return;
     }
 
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
-      const data = await org.pages.history.list(nodeId, { Limit: 100 });
+      const data = await ws.pages.history.list(nodeId, { Limit: 100 });
       setHistory((data.history?.filter(Boolean) as Commit[]) || []);
       setShowHistory(true);
     } catch (err) {
@@ -369,12 +369,12 @@ export default function App() {
   async function loadVersion(nodeId: string, hash: string) {
     if (!confirm(t('editor.restoreConfirm') || 'This will replace current editor content. Continue?')) return;
 
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
-      const data = await org.pages.history.get(nodeId, hash);
+      const data = await ws.pages.history.get(nodeId, hash);
       setContent(data.content || '');
       setHasUnsavedChanges(true); // Mark as modified
       setShowHistory(false);
@@ -391,12 +391,12 @@ export default function App() {
       return;
     }
 
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
-      const newNode = await org.nodes.create({ title: title(), type });
+      const newNode = await ws.nodes.create({ title: title(), type });
       await loadNodes();
       loadNode(newNode.id);
       setTitle('');
@@ -413,12 +413,12 @@ export default function App() {
 
   async function saveNode() {
     const nodeId = selectedNodeId();
-    const org = orgApi();
-    if (!nodeId || !org) return;
+    const ws = wsApi();
+    if (!nodeId || !ws) return;
 
     try {
       setLoading(true);
-      await org.pages.update(nodeId, { title: title(), content: content() });
+      await ws.pages.update(nodeId, { title: title(), content: content() });
       await loadNodes();
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
@@ -443,14 +443,14 @@ export default function App() {
 
   async function deleteCurrentNode() {
     const nodeId = selectedNodeId();
-    const org = orgApi();
-    if (!nodeId || !org) return;
+    const ws = wsApi();
+    if (!nodeId || !ws) return;
 
     if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
       setLoading(true);
-      await org.pages.delete(nodeId);
+      await ws.pages.delete(nodeId);
       await loadNodes();
       setSelectedNodeId(null);
       setTitle('');
@@ -518,12 +518,12 @@ export default function App() {
 
   async function handleAddRecord(data: Record<string, unknown>) {
     const nodeId = selectedNodeId();
-    const org = orgApi();
-    if (!nodeId || !org) return;
+    const ws = wsApi();
+    if (!nodeId || !ws) return;
 
     try {
       setLoading(true);
-      await org.tables.records.create(nodeId, { data });
+      await ws.tables.records.create(nodeId, { data });
       // Reload records
       loadNode(nodeId);
       setError(null);
@@ -536,14 +536,14 @@ export default function App() {
 
   async function handleDeleteRecord(recordId: string) {
     const nodeId = selectedNodeId();
-    const org = orgApi();
-    if (!nodeId || !org) return;
+    const ws = wsApi();
+    if (!nodeId || !ws) return;
 
     if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
       setLoading(true);
-      await org.tables.records.delete(nodeId, recordId);
+      await ws.tables.records.delete(nodeId, recordId);
       loadNode(nodeId);
       setError(null);
     } catch (err) {
@@ -555,13 +555,13 @@ export default function App() {
 
   async function loadMoreRecords() {
     const nodeId = selectedNodeId();
-    const org = orgApi();
-    if (!nodeId || loading() || !org) return;
+    const ws = wsApi();
+    if (!nodeId || loading() || !ws) return;
 
     try {
       setLoading(true);
       const offset = records().length;
-      const data = await org.tables.records.list(nodeId, { Offset: offset, Limit: PAGE_SIZE });
+      const data = await ws.tables.records.list(nodeId, { Offset: offset, Limit: PAGE_SIZE });
       const newRecords = (data.records || []) as DataRecordResponse[];
       setRecords([...records(), ...newRecords]);
       setHasMore(newRecords.length === PAGE_SIZE);
@@ -579,7 +579,7 @@ export default function App() {
           <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
             <>
               {/* First org creation for new users with no memberships */}
-              <Show when={(user()?.memberships?.length ?? 0) === 0}>
+              <Show when={(user()?.organizations?.length ?? 0) === 0}>
                 <CreateOrgModal isFirstOrg={true} onClose={() => {}} onCreate={createOrganization} />
               </Show>
               <Show when={showGitSetup()}>
@@ -602,9 +602,9 @@ export default function App() {
                     <h1>{t('app.title')}</h1>
                   </div>
                   <div class={styles.userInfo}>
-                    <Show when={(user()?.memberships?.length ?? 0) > 0}>
+                    <Show when={(user()?.organizations?.length ?? 0) > 0}>
                       <OrgMenu
-                        memberships={user()?.memberships || []}
+                        memberships={user()?.organizations || []}
                         currentOrgId={user()?.organization_id || ''}
                         onSwitchOrg={(orgId) => switchOrg(orgId)}
                         onCreateOrg={() => setShowCreateOrg(true)}

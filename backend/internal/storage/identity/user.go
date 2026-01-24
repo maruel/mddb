@@ -43,7 +43,7 @@ type UserSettings struct {
 
 // UserQuota defines limits for a user.
 type UserQuota struct {
-	MaxOrgs int `json:"max_orgs" jsonschema:"description=Maximum number of organizations the user can be a member of"`
+	MaxOrganizations int `json:"max_organizations" jsonschema:"description=Maximum number of organizations the user can create"`
 }
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
@@ -98,7 +98,7 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 			Name:          name,
 			IsGlobalAdmin: isFirstUser,
 			Quotas: UserQuota{
-				MaxOrgs: 3,
+				MaxOrganizations: 3,
 			},
 			Created:  now,
 			Modified: now,
@@ -271,7 +271,7 @@ func (u *userStorage) Validate() error {
 	if u.Email == "" {
 		return errEmailEmpty
 	}
-	if u.Quotas.MaxOrgs <= 0 {
+	if u.Quotas.MaxOrganizations <= 0 {
 		return errInvalidUserQuota
 	}
 	return nil

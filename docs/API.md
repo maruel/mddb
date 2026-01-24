@@ -28,101 +28,106 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 
 | Method | Path | Auth |
 |--------|------|------|
-| POST | `/api/auth/invitations/accept` | public |
+| POST | `/api/auth/invitations/org/accept` | public |
+| POST | `/api/auth/invitations/ws/accept` | public |
 | POST | `/api/auth/login` | public |
-| POST | `/api/auth/logout` | viewer |
-| GET | `/api/auth/me` | viewer |
+| POST | `/api/auth/logout` | member |
+| GET | `/api/auth/me` | member |
 | GET | `/api/auth/oauth/{provider}` | public |
 | GET | `/api/auth/oauth/{provider}/callback` | public |
 | GET | `/api/auth/providers` | public |
 | POST | `/api/auth/register` | public |
-| GET | `/api/auth/sessions` | viewer |
-| POST | `/api/auth/sessions/revoke` | viewer |
-| POST | `/api/auth/sessions/revoke-all` | viewer |
-| POST | `/api/auth/settings` | viewer |
-| POST | `/api/auth/switch-org` | viewer |
+| GET | `/api/auth/sessions` | member |
+| POST | `/api/auth/sessions/revoke` | member |
+| POST | `/api/auth/sessions/revoke-all` | member |
+| POST | `/api/auth/settings` | member |
+| POST | `/api/auth/switch-org` | member |
+| POST | `/api/auth/switch-workspace` | member |
 
 ## Settings
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/{orgID}/settings/git` | admin |
-| POST | `/api/{orgID}/settings/git` | admin |
-| POST | `/api/{orgID}/settings/git/delete` | admin |
-| POST | `/api/{orgID}/settings/git/push` | admin |
-| POST | `/api/{orgID}/settings/membership` | viewer |
-| GET | `/api/{orgID}/settings/organization` | viewer |
-| POST | `/api/{orgID}/settings/organization` | admin |
-| POST | `/api/{orgID}/settings/preferences` | admin |
+| GET | `/api/workspaces/{wsID}/settings/git` | wsAdmin |
+| POST | `/api/workspaces/{wsID}/settings/git` | wsAdmin |
+| POST | `/api/workspaces/{wsID}/settings/git/delete` | wsAdmin |
+| POST | `/api/workspaces/{wsID}/settings/git/push` | wsAdmin |
+| POST | `/api/workspaces/{wsID}/settings/membership` | wsViewer |
 
 ## Users
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/{orgID}/users` | admin |
-| POST | `/api/{orgID}/users/role` | admin |
+| GET | `/api/organizations/{orgID}/users` | orgAdmin |
+| POST | `/api/organizations/{orgID}/users/role` | orgAdmin |
+| POST | `/api/workspaces/{wsID}/users/role` | wsAdmin |
 
 ## Invitations
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/{orgID}/invitations` | admin |
-| POST | `/api/{orgID}/invitations` | admin |
+| GET | `/api/organizations/{orgID}/invitations` | orgAdmin |
+| POST | `/api/organizations/{orgID}/invitations` | orgAdmin |
+| GET | `/api/workspaces/{wsID}/invitations` | wsAdmin |
+| POST | `/api/workspaces/{wsID}/invitations` | wsAdmin |
 
 ## Nodes
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/{orgID}/nodes` | viewer |
-| POST | `/api/{orgID}/nodes` | editor |
-| GET | `/api/{orgID}/nodes/{id}` | viewer |
+| GET | `/api/workspaces/{wsID}/nodes` | wsViewer |
+| POST | `/api/workspaces/{wsID}/nodes` | wsEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}` | wsViewer |
 
 ## Pages
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/{orgID}/pages` | viewer |
-| POST | `/api/{orgID}/pages` | editor |
-| GET | `/api/{orgID}/pages/{id}` | viewer |
-| POST | `/api/{orgID}/pages/{id}` | editor |
-| POST | `/api/{orgID}/pages/{id}/delete` | editor |
-| GET | `/api/{orgID}/pages/{id}/history` | viewer |
-| GET | `/api/{orgID}/pages/{id}/history/{hash}` | viewer |
+| GET | `/api/workspaces/{wsID}/pages` | wsViewer |
+| POST | `/api/workspaces/{wsID}/pages` | wsEditor |
+| GET | `/api/workspaces/{wsID}/pages/{id}` | wsViewer |
+| POST | `/api/workspaces/{wsID}/pages/{id}` | wsEditor |
+| POST | `/api/workspaces/{wsID}/pages/{id}/delete` | wsEditor |
+| GET | `/api/workspaces/{wsID}/pages/{id}/history` | wsViewer |
+| GET | `/api/workspaces/{wsID}/pages/{id}/history/{hash}` | wsViewer |
 
 ## Tables
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/{orgID}/tables` | viewer |
-| POST | `/api/{orgID}/tables` | editor |
-| GET | `/api/{orgID}/tables/{id}` | viewer |
-| POST | `/api/{orgID}/tables/{id}` | editor |
-| POST | `/api/{orgID}/tables/{id}/delete` | editor |
-| GET | `/api/{orgID}/tables/{id}/records` | viewer |
-| POST | `/api/{orgID}/tables/{id}/records` | editor |
-| GET | `/api/{orgID}/tables/{id}/records/{rid}` | viewer |
-| POST | `/api/{orgID}/tables/{id}/records/{rid}` | editor |
-| POST | `/api/{orgID}/tables/{id}/records/{rid}/delete` | editor |
+| GET | `/api/workspaces/{wsID}/tables` | wsViewer |
+| POST | `/api/workspaces/{wsID}/tables` | wsEditor |
+| GET | `/api/workspaces/{wsID}/tables/{id}` | wsViewer |
+| POST | `/api/workspaces/{wsID}/tables/{id}` | wsEditor |
+| POST | `/api/workspaces/{wsID}/tables/{id}/delete` | wsEditor |
+| GET | `/api/workspaces/{wsID}/tables/{id}/records` | wsViewer |
+| POST | `/api/workspaces/{wsID}/tables/{id}/records` | wsEditor |
+| GET | `/api/workspaces/{wsID}/tables/{id}/records/{rid}` | wsViewer |
+| POST | `/api/workspaces/{wsID}/tables/{id}/records/{rid}` | wsEditor |
+| POST | `/api/workspaces/{wsID}/tables/{id}/records/{rid}/delete` | wsEditor |
 
 ## Search
 
 | Method | Path | Auth |
 |--------|------|------|
-| POST | `/api/{orgID}/search` | viewer |
+| POST | `/api/workspaces/{wsID}/search` | wsViewer |
 
 ## Assets
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/{orgID}/pages/{id}/assets` | viewer |
-| POST | `/api/{orgID}/pages/{id}/assets` | editor |
-| POST | `/api/{orgID}/pages/{id}/assets/{name}/delete` | editor |
-| GET | `/assets/{orgID}/{id}/{name}` | public |
+| GET | `/api/workspaces/{wsID}/pages/{id}/assets` | wsViewer |
+| POST | `/api/workspaces/{wsID}/pages/{id}/assets` | wsEditor |
+| POST | `/api/workspaces/{wsID}/pages/{id}/assets/{name}/delete` | wsEditor |
+| GET | `/assets/{wsID}/{id}/{name}` | public |
 
 ## Other
 
 | Method | Path | Auth |
 |--------|------|------|
 | * | `/api/` | public |
-| POST | `/api/organizations` | viewer |
+| POST | `/api/organizations` | member |
+| GET | `/api/organizations/{orgID}` | member |
+| POST | `/api/organizations/{orgID}` | orgAdmin |
+| POST | `/api/organizations/{orgID}/settings` | orgAdmin |
 

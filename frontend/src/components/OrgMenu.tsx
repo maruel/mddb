@@ -1,10 +1,10 @@
 import { createSignal, For, onMount, onCleanup, Show } from 'solid-js';
 import { useI18n } from '../i18n';
-import type { MembershipResponse } from '../types.gen';
+import type { OrgMembershipResponse } from '../types.gen';
 import styles from './OrgMenu.module.css';
 
 interface OrgMenuProps {
-  memberships: MembershipResponse[];
+  memberships: OrgMembershipResponse[];
   currentOrgId: string;
   onSwitchOrg: (orgId: string) => void;
   onCreateOrg: () => void;

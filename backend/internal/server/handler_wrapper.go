@@ -134,10 +134,10 @@ func WrapAuth[In any, PtrIn interface {
 	dto.Validatable
 }, Out any](
 	userService *identity.UserService,
-	memService *identity.MembershipService,
+	orgMemService *identity.OrganizationMembershipService,
 	sessionService *identity.SessionService,
 	jwtSecret []byte,
-	requiredRole identity.UserRole,
+	requiredRole identity.OrganizationRole,
 	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
 	rlConfig *ratelimit.Config,
 ) http.Handler {
@@ -188,13 +188,13 @@ func WrapAuth[In any, PtrIn interface {
 				return
 			}
 
-			membership, err := memService.Get(user.ID, orgID)
+			membership, err := orgMemService.Get(user.ID, orgID)
 			if err != nil {
 				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
 				return
 			}
 
-			if !hasPermission(membership.Role, requiredRole) {
+			if !hasOrgPermission(membership.Role, requiredRole) {
 				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
 				return
 			}
@@ -258,16 +258,172 @@ func WrapAuth[In any, PtrIn interface {
 	})
 }
 
+// WrapWSAuth wraps an authenticated handler function for workspace-scoped routes.
+// It validates JWT, checks workspace membership (or org admin access), and parses the request.
+// The function must have signature: func(context.Context, jsonldb.ID, *identity.User, *In) (*Out, error)
+// where wsID is the workspace ID from the path, user is the authenticated user.
+// Org admins/owners automatically have admin access to workspaces within their org.
+// *In must implement dto.Validatable.
+func WrapWSAuth[In any, PtrIn interface {
+	*In
+	dto.Validatable
+}, Out any](
+	userService *identity.UserService,
+	orgMemService *identity.OrganizationMembershipService,
+	wsMemService *identity.WorkspaceMembershipService,
+	wsService *identity.WorkspaceService,
+	sessionService *identity.SessionService,
+	jwtSecret []byte,
+	requiredRole identity.WorkspaceRole,
+	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
+	rlConfig *ratelimit.Config,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := addRequestMetadataToContext(r.Context(), r)
+
+		// Validate JWT and session
+		user, sessionID, tokenString, err := validateJWTAndSession(r, userService, sessionService, jwtSecret)
+		if sessionID != 0 {
+			ctx = reqctx.WithSessionID(ctx, sessionID)
+		}
+		if tokenString != "" {
+			ctx = reqctx.WithTokenString(ctx, tokenString)
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		// Rate limit check
+		if tier := rlConfig.MatchAuth(r.Method, r.URL.Path); tier != nil {
+			var identifier string
+			if tier.Scope == ratelimit.ScopeUser {
+				identifier = user.ID.String()
+			} else {
+				identifier = reqctx.GetClientIP(r)
+			}
+			key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
+			result := tier.Limiter.Allow(key)
+			w = ratelimit.NewResponseWriter(w, result)
+			if !result.Allowed {
+				writeRateLimitError(w, result)
+				return
+			}
+		}
+
+		// Check workspace membership
+		var wsID jsonldb.ID
+		wsIDStr := r.PathValue("wsID")
+		if wsIDStr != "" {
+			wsID, err = jsonldb.DecodeID(wsIDStr)
+			if err != nil {
+				http.Error(w, "Invalid workspace ID format", http.StatusBadRequest)
+				return
+			}
+
+			// Get workspace to find org
+			ws, err := wsService.Get(wsID)
+			if err != nil {
+				http.Error(w, "Workspace not found", http.StatusNotFound)
+				return
+			}
+
+			// Check org membership first
+			orgMem, err := orgMemService.Get(user.ID, ws.OrganizationID)
+			if err != nil {
+				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
+				return
+			}
+
+			// Org owners and admins have implicit admin access to all workspaces
+			var effectiveRole identity.WorkspaceRole
+			if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
+				effectiveRole = identity.WSRoleAdmin
+			} else {
+				// Check explicit workspace membership
+				wsMem, err := wsMemService.Get(user.ID, wsID)
+				if err != nil {
+					http.Error(w, "Forbidden: not a member of this workspace", http.StatusForbidden)
+					return
+				}
+				effectiveRole = wsMem.Role
+			}
+
+			if !hasWSPermission(effectiveRole, requiredRole) {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+		}
+
+		// Parse request body
+		body, err := io.ReadAll(r.Body)
+		if err2 := r.Body.Close(); err == nil {
+			err = err2
+		}
+		if err != nil {
+			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
+			writeBadRequestError(w, "Failed to read request body")
+			return
+		}
+		input := new(In)
+		if len(body) > 0 {
+			d := json.NewDecoder(bytes.NewReader(body))
+			d.DisallowUnknownFields()
+			if err := d.Decode(input); err != nil {
+				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
+				writeBadRequestError(w, "Invalid request body")
+				return
+			}
+		}
+
+		populatePathParams(r, input)
+		populateQueryParams(r, input)
+
+		if err := PtrIn(input).Validate(); err != nil {
+			handleValidationError(ctx, w, err)
+			return
+		}
+
+		output, err := fn(ctx, wsID, user, PtrIn(input))
+		if err != nil {
+			statusCode := http.StatusInternalServerError
+			errorCode := dto.ErrorCodeInternal
+			details := make(map[string]any)
+
+			var ewsErr dto.ErrorWithStatus
+			if errors.As(err, &ewsErr) {
+				statusCode = ewsErr.StatusCode()
+				errorCode = ewsErr.Code()
+				if d := ewsErr.Details(); d != nil {
+					details = d
+				}
+			}
+
+			slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode, "code", errorCode)
+			writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(output); err != nil {
+			slog.ErrorContext(ctx, "Failed to encode response", "err", err)
+		}
+	})
+}
+
 // WrapAuthRaw wraps a raw http.HandlerFunc with authentication and role checking.
 // Use this for handlers that need to handle requests directly (e.g., multipart forms).
 // The wrapped handler receives the request with validated auth - the handler should
-// extract orgID from the path via r.PathValue("orgID") if needed.
+// extract wsID from the path via r.PathValue("wsID") if needed.
 func WrapAuthRaw(
 	userService *identity.UserService,
-	memService *identity.MembershipService,
+	orgMemService *identity.OrganizationMembershipService,
+	wsMemService *identity.WorkspaceMembershipService,
+	wsService *identity.WorkspaceService,
 	sessionService *identity.SessionService,
 	jwtSecret []byte,
-	requiredRole identity.UserRole,
+	requiredRole identity.WorkspaceRole,
 	fn http.HandlerFunc,
 	rlConfig *ratelimit.Config,
 ) http.Handler {
@@ -299,22 +455,40 @@ func WrapAuthRaw(
 			}
 		}
 
-		// Check organization membership if orgID is in path
-		orgIDStr := r.PathValue("orgID")
-		if orgIDStr != "" {
-			orgID, err := jsonldb.DecodeID(orgIDStr)
+		// Check workspace membership if wsID is in path
+		wsIDStr := r.PathValue("wsID")
+		if wsIDStr != "" {
+			wsID, err := jsonldb.DecodeID(wsIDStr)
 			if err != nil {
-				http.Error(w, "Invalid organization ID format", http.StatusBadRequest)
+				http.Error(w, "Invalid workspace ID format", http.StatusBadRequest)
 				return
 			}
 
-			membership, err := memService.Get(user.ID, orgID)
+			ws, err := wsService.Get(wsID)
+			if err != nil {
+				http.Error(w, "Workspace not found", http.StatusNotFound)
+				return
+			}
+
+			orgMem, err := orgMemService.Get(user.ID, ws.OrganizationID)
 			if err != nil {
 				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
 				return
 			}
 
-			if !hasPermission(membership.Role, requiredRole) {
+			var effectiveRole identity.WorkspaceRole
+			if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
+				effectiveRole = identity.WSRoleAdmin
+			} else {
+				wsMem, err := wsMemService.Get(user.ID, wsID)
+				if err != nil {
+					http.Error(w, "Forbidden: not a member of this workspace", http.StatusForbidden)
+					return
+				}
+				effectiveRole = wsMem.Role
+			}
+
+			if !hasWSPermission(effectiveRole, requiredRole) {
 				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
 				return
 			}
@@ -509,6 +683,28 @@ func validateJWTAndSession(r *http.Request, userService *identity.UserService, s
 	return user, sessionID, tokenString, nil
 }
 
+// hasOrgPermission checks if the user's org role meets the required level.
+// Role hierarchy: owner > admin > member.
+func hasOrgPermission(userRole, requiredRole identity.OrganizationRole) bool {
+	roleLevel := map[identity.OrganizationRole]int{
+		identity.OrgRoleMember: 0,
+		identity.OrgRoleAdmin:  1,
+		identity.OrgRoleOwner:  2,
+	}
+	return roleLevel[userRole] >= roleLevel[requiredRole]
+}
+
+// hasWSPermission checks if the user's workspace role meets the required level.
+// Role hierarchy: admin > editor > viewer.
+func hasWSPermission(userRole, requiredRole identity.WorkspaceRole) bool {
+	roleLevel := map[identity.WorkspaceRole]int{
+		identity.WSRoleViewer: 0,
+		identity.WSRoleEditor: 1,
+		identity.WSRoleAdmin:  2,
+	}
+	return roleLevel[userRole] >= roleLevel[requiredRole]
+}
+
 // populatePathParams extracts path parameters from the request and populates
 // struct fields tagged with `path:"paramName"`.
 func populatePathParams(r *http.Request, input any) {
@@ -523,6 +719,7 @@ func populatePathParams(r *http.Request, input any) {
 	}
 
 	typ := elem.Type()
+	jsonldbIDType := reflect.TypeFor[jsonldb.ID]()
 	for i := range typ.NumField() {
 		field := typ.Field(i)
 		tag := field.Tag.Get("path")
@@ -535,9 +732,14 @@ func populatePathParams(r *http.Request, input any) {
 			continue
 		}
 
-		// Set the field value if it's a string field
-		if field.Type.Kind() == reflect.String {
+		// Set the field value based on type
+		switch {
+		case field.Type.Kind() == reflect.String:
 			elem.Field(i).SetString(paramValue)
+		case field.Type == jsonldbIDType:
+			if id, err := jsonldb.DecodeID(paramValue); err == nil {
+				elem.Field(i).Set(reflect.ValueOf(id))
+			}
 		}
 	}
 }

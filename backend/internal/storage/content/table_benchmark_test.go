@@ -18,37 +18,37 @@ func BenchmarkTableOperations(b *testing.B) {
 
 	gitMgr := git.NewManager(tmpDir, "test", "test@test.com")
 
-	orgService, err := identity.NewOrganizationService(filepath.Join(tmpDir, "organizations.jsonl"))
+	wsService, err := identity.NewWorkspaceService(filepath.Join(tmpDir, "workspaces.jsonl"))
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	// Create a test organization with very high quotas (practically unlimited)
-	org, err := orgService.Create(ctx, "Benchmark Org")
+	// Create a test workspace with very high quotas (practically unlimited)
+	ws, err := wsService.Create(ctx, jsonldb.ID(1), "Benchmark Workspace", "bench")
 	if err != nil {
 		b.Fatal(err)
 	}
-	_, err = orgService.Modify(org.ID, func(o *identity.Organization) error {
-		o.Quotas.MaxPages = 1_000_000
-		o.Quotas.MaxStorage = 1_000_000_000_000 // 1TB
-		o.Quotas.MaxRecordsPerTable = 1_000_000
-		o.Quotas.MaxAssetSize = 1_000_000_000 // 1GB
+	_, err = wsService.Modify(ws.ID, func(w *identity.Workspace) error {
+		w.Quotas.MaxPages = 1_000_000
+		w.Quotas.MaxStorageMB = 1_000_000 // 1TB
+		w.Quotas.MaxRecordsPerTable = 1_000_000
+		w.Quotas.MaxAssetSizeMB = 1_000 // 1GB
 		return nil
 	})
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitMgr, orgService)
+	fs, err := NewFileStore(tmpDir, gitMgr, wsService)
 	if err != nil {
 		b.Fatal(err)
 	}
 
-	orgID := org.ID
+	wsID := ws.ID
 
-	// Initialize git repo for org
-	if err := fs.InitOrg(ctx, orgID); err != nil {
-		b.Fatalf("failed to init org: %v", err)
+	// Initialize git repo for workspace
+	if err := fs.InitWorkspace(ctx, wsID); err != nil {
+		b.Fatalf("failed to init workspace: %v", err)
 	}
 
 	dbID := jsonldb.NewID()
@@ -64,7 +64,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		},
 	}
 
-	if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+	if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 		b.Fatal(err)
 	}
 
@@ -80,7 +80,7 @@ func BenchmarkTableOperations(b *testing.B) {
 					"c2": i,
 				},
 			}
-			if err := fs.AppendRecord(ctx, orgID, dbID, record, author); err != nil {
+			if err := fs.AppendRecord(ctx, wsID, dbID, record, author); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -93,7 +93,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		// Prepare a table with 1000 records
 		readDBID := jsonldb.NewID()
 		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteTable(ctx, orgID, readNode, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
@@ -103,14 +103,14 @@ func BenchmarkTableOperations(b *testing.B) {
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
-			if err := fs.AppendRecord(ctx, orgID, readDBID, record, author); err != nil {
+			if err := fs.AppendRecord(ctx, wsID, readDBID, record, author); err != nil {
 				b.Fatal(err)
 			}
 		}
 
 		b.ResetTimer()
 		for range b.N {
-			it, err := fs.IterRecords(orgID, readDBID)
+			it, err := fs.IterRecords(wsID, readDBID)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -125,7 +125,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := jsonldb.ID(100)
 		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: time.Now(), Modified: time.Now()}
-		if err := fs.WriteTable(ctx, orgID, readNode, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		// Write 10,000 records
@@ -136,7 +136,7 @@ func BenchmarkTableOperations(b *testing.B) {
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
-			if err := fs.AppendRecord(ctx, orgID, readDBID, record, author); err != nil {
+			if err := fs.AppendRecord(ctx, wsID, readDBID, record, author); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -144,7 +144,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.ResetTimer()
 		for range b.N {
 			// Read 50 records from middle
-			records, err := fs.ReadRecordsPage(orgID, readDBID, 5000, 50)
+			records, err := fs.ReadRecordsPage(wsID, readDBID, 5000, 50)
 			if err != nil {
 				b.Fatal(err)
 			}

@@ -24,9 +24,19 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("NewOrganizationService failed: %v", err)
 	}
 
-	memService, err := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"), userService, orgService)
+	wsService, err := identity.NewWorkspaceService(filepath.Join(tempDir, "workspaces.jsonl"))
 	if err != nil {
-		t.Fatalf("NewMembershipService failed: %v", err)
+		t.Fatalf("NewWorkspaceService failed: %v", err)
+	}
+
+	orgMemService, err := identity.NewOrganizationMembershipService(filepath.Join(tempDir, "org_memberships.jsonl"), userService, orgService)
+	if err != nil {
+		t.Fatalf("NewOrganizationMembershipService failed: %v", err)
+	}
+
+	wsMemService, err := identity.NewWorkspaceMembershipService(filepath.Join(tempDir, "ws_memberships.jsonl"), wsService, orgService)
+	if err != nil {
+		t.Fatalf("NewWorkspaceMembershipService failed: %v", err)
 	}
 
 	sessionService, err := identity.NewSessionService(filepath.Join(tempDir, "sessions.jsonl"))
@@ -36,12 +46,12 @@ func TestRegister(t *testing.T) {
 
 	gitMgr := git.NewManager(tempDir, "test", "test@test.com")
 
-	fileStore, err := content.NewFileStore(tempDir, gitMgr, orgService)
+	fileStore, err := content.NewFileStore(tempDir, gitMgr, wsService)
 	if err != nil {
 		t.Fatalf("NewFileStore failed: %v", err)
 	}
 
-	authHandler := NewAuthHandler(userService, memService, orgService, sessionService, fileStore, "secret")
+	authHandler := NewAuthHandler(userService, orgMemService, wsMemService, orgService, wsService, sessionService, fileStore, "secret")
 
 	// Register Joe - should not create organization (frontend handles that)
 	req1 := &dto.RegisterRequest{
@@ -58,9 +68,12 @@ func TestRegister(t *testing.T) {
 		t.Errorf("Expected name Joe, got %s", resp1.User.Name)
 	}
 
-	// New users should have no memberships (org creation is frontend-driven)
-	if len(resp1.User.Memberships) != 0 {
-		t.Errorf("Expected Joe to have no memberships after registration, got %d", len(resp1.User.Memberships))
+	// New users should have no org/workspace memberships
+	if len(resp1.User.Organizations) != 0 {
+		t.Errorf("Expected Joe to have no org memberships after registration, got %d", len(resp1.User.Organizations))
+	}
+	if len(resp1.User.Workspaces) != 0 {
+		t.Errorf("Expected Joe to have no workspace memberships after registration, got %d", len(resp1.User.Workspaces))
 	}
 
 	// Register Alice
@@ -79,8 +92,8 @@ func TestRegister(t *testing.T) {
 	}
 
 	// Alice should also have no memberships
-	if len(resp2.User.Memberships) != 0 {
-		t.Errorf("Expected Alice to have no memberships after registration, got %d", len(resp2.User.Memberships))
+	if len(resp2.User.Organizations) != 0 {
+		t.Errorf("Expected Alice to have no org memberships after registration, got %d", len(resp2.User.Organizations))
 	}
 
 	// Verify token is returned

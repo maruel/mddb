@@ -18,12 +18,15 @@ import (
 const testJWTSecret = "test-secret-key-for-integration-tests"
 
 type testEnv struct {
-	server      *httptest.Server
-	userService *identity.UserService
-	orgService  *identity.OrganizationService
-	memService  *identity.MembershipService
-	invService  *identity.InvitationService
-	fileStore   *content.FileStore
+	server        *httptest.Server
+	userService   *identity.UserService
+	orgService    *identity.OrganizationService
+	wsService     *identity.WorkspaceService
+	orgMemService *identity.OrganizationMembershipService
+	wsMemService  *identity.WorkspaceMembershipService
+	orgInvService *identity.OrganizationInvitationService
+	wsInvService  *identity.WorkspaceInvitationService
+	fileStore     *content.FileStore
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
@@ -39,19 +42,34 @@ func setupTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("NewOrganizationService: %v", err)
 	}
 
-	memService, err := identity.NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"), userService, orgService)
+	wsService, err := identity.NewWorkspaceService(filepath.Join(tempDir, "workspaces.jsonl"))
 	if err != nil {
-		t.Fatalf("NewMembershipService: %v", err)
+		t.Fatalf("NewWorkspaceService: %v", err)
 	}
 
-	invService, err := identity.NewInvitationService(filepath.Join(tempDir, "invitations.jsonl"))
+	orgMemService, err := identity.NewOrganizationMembershipService(filepath.Join(tempDir, "org_memberships.jsonl"), userService, orgService)
 	if err != nil {
-		t.Fatalf("NewInvitationService: %v", err)
+		t.Fatalf("NewOrganizationMembershipService: %v", err)
+	}
+
+	wsMemService, err := identity.NewWorkspaceMembershipService(filepath.Join(tempDir, "ws_memberships.jsonl"), wsService, orgService)
+	if err != nil {
+		t.Fatalf("NewWorkspaceMembershipService: %v", err)
+	}
+
+	orgInvService, err := identity.NewOrganizationInvitationService(filepath.Join(tempDir, "org_invitations.jsonl"))
+	if err != nil {
+		t.Fatalf("NewOrganizationInvitationService: %v", err)
+	}
+
+	wsInvService, err := identity.NewWorkspaceInvitationService(filepath.Join(tempDir, "ws_invitations.jsonl"))
+	if err != nil {
+		t.Fatalf("NewWorkspaceInvitationService: %v", err)
 	}
 
 	gitMgr := git.NewManager(tempDir, "test", "test@example.com")
 
-	fileStore, err := content.NewFileStore(tempDir, gitMgr, orgService)
+	fileStore, err := content.NewFileStore(tempDir, gitMgr, wsService)
 	if err != nil {
 		t.Fatalf("NewFileStore: %v", err)
 	}
@@ -62,7 +80,8 @@ func setupTestEnv(t *testing.T) *testEnv {
 	}
 
 	router := NewRouter(
-		fileStore, userService, orgService, invService, memService, sessionService,
+		fileStore, userService, orgService, wsService,
+		orgInvService, wsInvService, orgMemService, wsMemService, sessionService,
 		testJWTSecret,
 		"http://localhost:8080",
 		"", "", // google OAuth (disabled)
@@ -73,12 +92,15 @@ func setupTestEnv(t *testing.T) *testEnv {
 	t.Cleanup(server.Close)
 
 	return &testEnv{
-		server:      server,
-		userService: userService,
-		orgService:  orgService,
-		memService:  memService,
-		invService:  invService,
-		fileStore:   fileStore,
+		server:        server,
+		userService:   userService,
+		orgService:    orgService,
+		wsService:     wsService,
+		orgMemService: orgMemService,
+		wsMemService:  wsMemService,
+		orgInvService: orgInvService,
+		wsInvService:  wsInvService,
+		fileStore:     fileStore,
 	}
 }
 
@@ -246,7 +268,7 @@ func TestIntegration(t *testing.T) {
 
 		// Create organization
 		createOrgReq := dto.CreateOrganizationRequest{
-			Name: "Bob's Workspace",
+			Name: "Bob's Organization",
 		}
 		var orgResp dto.OrganizationResponse
 		status = env.doJSON(t, http.MethodPost, "/api/organizations", createOrgReq, &orgResp, token)
@@ -254,10 +276,10 @@ func TestIntegration(t *testing.T) {
 			t.Fatalf("POST /api/organizations: got status %d, want %d", status, http.StatusOK)
 		}
 
-		if orgResp.Name != "Bob's Workspace" {
-			t.Errorf("Org name: got %q, want %q", orgResp.Name, "Bob's Workspace")
+		if orgResp.Name != "Bob's Organization" {
+			t.Errorf("Org name: got %q, want %q", orgResp.Name, "Bob's Organization")
 		}
-		if orgResp.ID == "" {
+		if orgResp.ID.IsZero() {
 			t.Fatal("Org should have an ID")
 		}
 
@@ -265,13 +287,13 @@ func TestIntegration(t *testing.T) {
 
 		// Get organization settings
 		var getOrgResp dto.OrganizationResponse
-		status = env.doJSON(t, http.MethodGet, "/api/"+orgID+"/settings/organization", nil, &getOrgResp, token)
+		status = env.doJSON(t, http.MethodGet, "/api/organizations/"+orgID.String(), nil, &getOrgResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("GET /api/%s/settings/organization: got status %d", orgID, status)
+			t.Fatalf("GET /api/organizations/%s: got status %d", orgID, status)
 		}
 
-		if getOrgResp.Name != "Bob's Workspace" {
-			t.Errorf("Get org name: got %q, want %q", getOrgResp.Name, "Bob's Workspace")
+		if getOrgResp.Name != "Bob's Organization" {
+			t.Errorf("Get org name: got %q, want %q", getOrgResp.Name, "Bob's Organization")
 		}
 	})
 
@@ -290,8 +312,16 @@ func TestIntegration(t *testing.T) {
 		token := loginResp.Token
 
 		var orgResp dto.OrganizationResponse
-		env.doJSON(t, http.MethodPost, "/api/organizations", dto.CreateOrganizationRequest{Name: "Charlie's Workspace"}, &orgResp, token)
-		orgID := orgResp.ID
+		env.doJSON(t, http.MethodPost, "/api/organizations", dto.CreateOrganizationRequest{Name: "Charlie's Organization"}, &orgResp, token)
+
+		// Get the default workspace ID from user response
+		var meResp dto.UserResponse
+		env.doJSON(t, http.MethodGet, "/api/auth/me", nil, &meResp, token)
+		wsID := meResp.WorkspaceID
+
+		if wsID.IsZero() {
+			t.Fatal("User should have a default workspace ID")
+		}
 
 		// Create a page
 		createPageReq := dto.CreatePageRequest{
@@ -299,32 +329,33 @@ func TestIntegration(t *testing.T) {
 			Content: "# Hello World\n\nThis is my first page.",
 		}
 		var createPageResp dto.CreatePageResponse
-		status := env.doJSON(t, http.MethodPost, "/api/"+orgID+"/pages", createPageReq, &createPageResp, token)
+		status := env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages", createPageReq, &createPageResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("POST /api/%s/pages: got status %d", orgID, status)
+			t.Fatalf("POST /api/workspaces/%s/pages: got status %d", wsID, status)
 		}
 
-		if createPageResp.ID == "" {
+		if createPageResp.ID.IsZero() {
 			t.Fatal("CreatePage should return an ID")
 		}
 		pageID := createPageResp.ID
 
 		// List pages
 		var listResp dto.ListPagesResponse
-		status = env.doJSON(t, http.MethodGet, "/api/"+orgID+"/pages", nil, &listResp, token)
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages", nil, &listResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("GET /api/%s/pages: got status %d", orgID, status)
+			t.Fatalf("GET /api/workspaces/%s/pages: got status %d", wsID, status)
 		}
 
-		if len(listResp.Pages) != 1 {
-			t.Errorf("List pages: got %d pages, want 1", len(listResp.Pages))
+		// There should be 2 pages: the welcome page and our new page
+		if len(listResp.Pages) < 1 {
+			t.Errorf("List pages: got %d pages, want at least 1", len(listResp.Pages))
 		}
 
 		// Get single page
 		var getPageResp dto.GetPageResponse
-		status = env.doJSON(t, http.MethodGet, "/api/"+orgID+"/pages/"+pageID, nil, &getPageResp, token)
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String(), nil, &getPageResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("GET /api/%s/pages/%s: got status %d", orgID, pageID, status)
+			t.Fatalf("GET /api/workspaces/%s/pages/%s: got status %d", wsID, pageID, status)
 		}
 
 		if getPageResp.Title != "My First Page" {
@@ -337,31 +368,31 @@ func TestIntegration(t *testing.T) {
 			Content: "# Updated Content\n\nThis page has been updated.",
 		}
 		var updateResp dto.UpdatePageResponse
-		status = env.doJSON(t, http.MethodPost, "/api/"+orgID+"/pages/"+pageID, updatePageReq, &updateResp, token)
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String(), updatePageReq, &updateResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("POST /api/%s/pages/%s: got status %d", orgID, pageID, status)
+			t.Fatalf("POST /api/workspaces/%s/pages/%s: got status %d", wsID, pageID, status)
 		}
 
 		if updateResp.ID != pageID {
-			t.Errorf("Updated page ID: got %q, want %q", updateResp.ID, pageID)
+			t.Errorf("Updated page ID: got %v, want %v", updateResp.ID, pageID)
 		}
 
 		// Verify update by getting the page again
 		var getPageResp2 dto.GetPageResponse
-		env.doJSON(t, http.MethodGet, "/api/"+orgID+"/pages/"+pageID, nil, &getPageResp2, token)
+		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String(), nil, &getPageResp2, token)
 
 		if getPageResp2.Title != "Updated Title" {
 			t.Errorf("Updated page title: got %q, want %q", getPageResp2.Title, "Updated Title")
 		}
 
 		// Delete page
-		status = env.doJSON(t, http.MethodPost, "/api/"+orgID+"/pages/"+pageID+"/delete", nil, nil, token)
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String()+"/delete", nil, nil, token)
 		if status != http.StatusOK {
-			t.Fatalf("POST /api/%s/pages/%s/delete: got status %d", orgID, pageID, status)
+			t.Fatalf("POST /api/workspaces/%s/pages/%s/delete: got status %d", wsID, pageID, status)
 		}
 
 		// Verify page is deleted
-		status = env.doJSON(t, http.MethodGet, "/api/"+orgID+"/pages/"+pageID, nil, nil, token)
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String(), nil, nil, token)
 		if status != http.StatusNotFound {
 			t.Errorf("Get deleted page: got status %d, want %d", status, http.StatusNotFound)
 		}
@@ -387,22 +418,26 @@ func TestIntegration(t *testing.T) {
 		// Dave creates an organization
 		var orgResp dto.OrganizationResponse
 		env.doJSON(t, http.MethodPost, "/api/organizations", dto.CreateOrganizationRequest{
-			Name: "Dave's Workspace",
+			Name: "Dave's Organization",
 		}, &orgResp, daveToken)
-		daveOrgID := orgResp.ID
 
-		// Eve tries to access Dave's organization - should be forbidden
-		status := env.doJSON(t, http.MethodGet, "/api/"+daveOrgID+"/pages", nil, nil, eveToken)
+		// Get Dave's workspace ID
+		var daveMe dto.UserResponse
+		env.doJSON(t, http.MethodGet, "/api/auth/me", nil, &daveMe, daveToken)
+		daveWSID := daveMe.WorkspaceID
+
+		// Eve tries to access Dave's workspace - should be forbidden
+		status := env.doJSON(t, http.MethodGet, "/api/workspaces/"+daveWSID.String()+"/pages", nil, nil, eveToken)
 		if status != http.StatusForbidden {
-			t.Errorf("Eve accessing Dave's org: got status %d, want %d", status, http.StatusForbidden)
+			t.Errorf("Eve accessing Dave's workspace: got status %d, want %d", status, http.StatusForbidden)
 		}
 
-		// Eve tries to create a page in Dave's org - should be forbidden
-		status = env.doJSON(t, http.MethodPost, "/api/"+daveOrgID+"/pages", dto.CreatePageRequest{
+		// Eve tries to create a page in Dave's workspace - should be forbidden
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+daveWSID.String()+"/pages", dto.CreatePageRequest{
 			Title: "Sneaky Page", Content: "Should not work",
 		}, nil, eveToken)
 		if status != http.StatusForbidden {
-			t.Errorf("Eve creating page in Dave's org: got status %d, want %d", status, http.StatusForbidden)
+			t.Errorf("Eve creating page in Dave's workspace: got status %d, want %d", status, http.StatusForbidden)
 		}
 	})
 

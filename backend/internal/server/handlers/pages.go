@@ -38,16 +38,12 @@ func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *identi
 
 // GetPage returns a specific page by ID.
 func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetPageRequest) (*dto.GetPageResponse, error) {
-	id, err := decodeID(req.ID, "page_id")
-	if err != nil {
-		return nil, err
-	}
-	page, err := h.fs.ReadPage(orgID, id)
+	page, err := h.fs.ReadPage(orgID, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
 	return &dto.GetPageResponse{
-		ID:      page.ID.String(),
+		ID:      page.ID,
 		Title:   page.Title,
 		Content: page.Content,
 	}, nil
@@ -64,31 +60,23 @@ func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *id
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
-	return &dto.CreatePageResponse{ID: page.ID.String()}, nil
+	return &dto.CreatePageResponse{ID: page.ID}, nil
 }
 
 // UpdatePage updates an existing page.
 func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
-	id, err := decodeID(req.ID, "page_id")
-	if err != nil {
-		return nil, err
-	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	page, err := h.fs.UpdatePage(ctx, orgID, id, req.Title, req.Content, author)
+	page, err := h.fs.UpdatePage(ctx, orgID, req.ID, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
-	return &dto.UpdatePageResponse{ID: page.ID.String()}, nil
+	return &dto.UpdatePageResponse{ID: page.ID}, nil
 }
 
 // DeletePage deletes a page.
 func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
-	id, err := decodeID(req.ID, "page_id")
-	if err != nil {
-		return nil, err
-	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.DeletePage(ctx, orgID, id, author); err != nil {
+	if err := h.fs.DeletePage(ctx, orgID, req.ID, author); err != nil {
 		return nil, dto.NotFound("page")
 	}
 	return &dto.DeletePageResponse{Ok: true}, nil
@@ -96,11 +84,7 @@ func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *id
 
 // ListPageVersions returns the version history of a page.
 func (h *PageHandler) ListPageVersions(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListPageVersionsRequest) (*dto.ListPageVersionsResponse, error) {
-	id, err := decodeID(req.ID, "page_id")
-	if err != nil {
-		return nil, err
-	}
-	history, err := h.fs.GetHistory(ctx, orgID, id, req.Limit)
+	history, err := h.fs.GetHistory(ctx, orgID, req.ID, req.Limit)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page history", err)
 	}
@@ -109,11 +93,7 @@ func (h *PageHandler) ListPageVersions(ctx context.Context, orgID jsonldb.ID, _ 
 
 // GetPageVersion returns a specific version of a page.
 func (h *PageHandler) GetPageVersion(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetPageVersionRequest) (*dto.GetPageVersionResponse, error) {
-	id, err := decodeID(req.ID, "page_id")
-	if err != nil {
-		return nil, err
-	}
-	path := fmt.Sprintf("%s/pages/%s/index.md", orgID.String(), id.String())
+	path := fmt.Sprintf("%s/pages/%s/index.md", orgID.String(), req.ID.String())
 	contentBytes, err := h.fs.GetFileAtCommit(ctx, orgID, req.Hash, path)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page version", err)

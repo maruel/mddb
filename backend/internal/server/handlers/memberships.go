@@ -10,31 +10,38 @@ import (
 
 // MembershipHandler handles membership-related requests.
 type MembershipHandler struct {
-	memService  *identity.MembershipService
-	userService *identity.UserService
-	orgService  *identity.OrganizationService
-	authHandler *AuthHandler
+	orgMemService *identity.OrganizationMembershipService
+	wsMemService  *identity.WorkspaceMembershipService
+	userService   *identity.UserService
+	orgService    *identity.OrganizationService
+	wsService     *identity.WorkspaceService
+	authHandler   *AuthHandler
 }
 
 // NewMembershipHandler creates a new membership handler.
-func NewMembershipHandler(memService *identity.MembershipService, userService *identity.UserService, orgService *identity.OrganizationService, authHandler *AuthHandler) *MembershipHandler {
+func NewMembershipHandler(
+	orgMemService *identity.OrganizationMembershipService,
+	wsMemService *identity.WorkspaceMembershipService,
+	userService *identity.UserService,
+	orgService *identity.OrganizationService,
+	wsService *identity.WorkspaceService,
+	authHandler *AuthHandler,
+) *MembershipHandler {
 	return &MembershipHandler{
-		memService:  memService,
-		userService: userService,
-		orgService:  orgService,
-		authHandler: authHandler,
+		orgMemService: orgMemService,
+		wsMemService:  wsMemService,
+		userService:   userService,
+		orgService:    orgService,
+		wsService:     wsService,
+		authHandler:   authHandler,
 	}
 }
 
 // SwitchOrg switches the user's active organization and returns a new token.
 func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.SwitchOrgRequest) (*dto.SwitchOrgResponse, error) {
-	orgID, err := decodeOrgID(req.OrgID)
-	if err != nil {
-		return nil, err
-	}
-
 	// Verify membership
-	if _, err = h.memService.Get(user.ID, orgID); err != nil {
+	orgMem, err := h.orgMemService.Get(user.ID, req.OrgID)
+	if err != nil {
 		return nil, dto.Forbidden("User is not a member of this organization")
 	}
 
@@ -44,13 +51,24 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *i
 	}
 
 	// Build user response with memberships
-	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
 
-	h.authHandler.PopulateActiveContext(userResp, req.OrgID)
+	// Set the switched org as active
+	userResp.OrganizationID = req.OrgID
+	userResp.OrgRole = dto.OrganizationRole(orgMem.Role)
+
+	// Find first workspace in this org
+	for _, ws := range uwm.WSMemberships {
+		if ws.OrganizationID == req.OrgID {
+			userResp.WorkspaceID = ws.WorkspaceID
+			userResp.WorkspaceRole = dto.WorkspaceRole(ws.Role)
+			break
+		}
+	}
 
 	return &dto.SwitchOrgResponse{
 		Token: token,
@@ -58,18 +76,67 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *i
 	}, nil
 }
 
-// UpdateMembershipSettings updates user preferences within an organization.
-func (h *MembershipHandler) UpdateMembershipSettings(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdateMembershipSettingsRequest) (*dto.MembershipResponse, error) {
-	m, err := h.memService.Get(user.ID, orgID)
+// SwitchWorkspace switches the user's active workspace and returns a new token.
+func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.SwitchWorkspaceRequest) (*dto.SwitchWorkspaceResponse, error) {
+	// Get workspace to check org membership
+	ws, err := h.wsService.Get(req.WsID)
 	if err != nil {
-		return nil, dto.InternalWithError("Failed to get membership", err)
+		return nil, dto.NotFound("workspace")
 	}
-	m, err = h.memService.Modify(m.ID, func(m *identity.Membership) error {
-		m.Settings = membershipSettingsToEntity(req.Settings)
+
+	// Verify org membership
+	orgMem, err := h.orgMemService.Get(user.ID, ws.OrganizationID)
+	if err != nil {
+		return nil, dto.Forbidden("User is not a member of this organization")
+	}
+
+	// Verify workspace membership (or org admin)
+	wsMem, err := h.wsMemService.Get(user.ID, req.WsID)
+	if err != nil && orgMem.Role != identity.OrgRoleOwner && orgMem.Role != identity.OrgRoleAdmin {
+		return nil, dto.Forbidden("User is not a member of this workspace")
+	}
+
+	token, err := h.authHandler.GenerateToken(user)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to generate token", err)
+	}
+
+	// Build user response with memberships
+	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get user response", err)
+	}
+	userResp := userWithMembershipsToResponse(uwm)
+
+	// Set the switched workspace as active
+	userResp.OrganizationID = ws.OrganizationID
+	userResp.OrgRole = dto.OrganizationRole(orgMem.Role)
+	userResp.WorkspaceID = req.WsID
+	if wsMem != nil {
+		userResp.WorkspaceRole = dto.WorkspaceRole(wsMem.Role)
+	} else {
+		// Org admin gets admin access to workspace
+		userResp.WorkspaceRole = dto.WSRoleAdmin
+	}
+
+	return &dto.SwitchWorkspaceResponse{
+		Token: token,
+		User:  userResp,
+	}, nil
+}
+
+// UpdateWSMembershipSettings updates user preferences within a workspace.
+func (h *MembershipHandler) UpdateWSMembershipSettings(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateWSMembershipSettingsRequest) (*dto.WSMembershipResponse, error) {
+	m, err := h.wsMemService.Get(user.ID, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace membership", err)
+	}
+	m, err = h.wsMemService.Modify(m.ID, func(m *identity.WorkspaceMembership) error {
+		m.Settings = wsMembershipSettingsToEntity(req.Settings)
 		return nil
 	})
 	if err != nil {
-		return nil, dto.InternalWithError("Failed to update membership settings", err)
+		return nil, dto.InternalWithError("Failed to update workspace membership settings", err)
 	}
-	return membershipToResponse(m), nil
+	return wsMembershipToResponse(m), nil
 }

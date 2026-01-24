@@ -290,16 +290,28 @@ export interface SearchRequest {
   match_fields?: boolean;
 }
 /**
- * CreateInvitationRequest is a request to create an invitation.
+ * CreateOrgInvitationRequest is a request to create an organization invitation.
  */
-export interface CreateInvitationRequest {
+export interface CreateOrgInvitationRequest {
   email: string;
-  role: UserRole;
+  role: OrganizationRole;
 }
 /**
- * ListInvitationsRequest is a request to list invitations for an organization.
+ * CreateWSInvitationRequest is a request to create a workspace invitation.
  */
-export interface ListInvitationsRequest {
+export interface CreateWSInvitationRequest {
+  email: string;
+  role: WorkspaceRole;
+}
+/**
+ * ListOrgInvitationsRequest is a request to list invitations for an organization.
+ */
+export interface ListOrgInvitationsRequest {
+}
+/**
+ * ListWSInvitationsRequest is a request to list invitations for a workspace.
+ */
+export interface ListWSInvitationsRequest {
 }
 /**
  * AcceptInvitationRequest is a request to accept an invitation.
@@ -316,10 +328,16 @@ export interface SwitchOrgRequest {
   org_id: string;
 }
 /**
- * UpdateMembershipSettingsRequest is a request to update user preferences within an organization.
+ * SwitchWorkspaceRequest is a request to switch active workspace.
  */
-export interface UpdateMembershipSettingsRequest {
-  settings: MembershipSettings;
+export interface SwitchWorkspaceRequest {
+  ws_id: string;
+}
+/**
+ * UpdateWSMembershipSettingsRequest is a request to update user preferences within a workspace.
+ */
+export interface UpdateWSMembershipSettingsRequest {
+  settings: WorkspaceMembershipSettings;
 }
 /**
  * UpdateOrgPreferencesRequest is a request to update organization-wide preferences.
@@ -347,12 +365,12 @@ export interface CreateOrganizationRequest {
   welcome_page_content?: string;
 }
 /**
- * GetGitRemoteRequest is a request to get the git remote for an organization.
+ * GetGitRemoteRequest is a request to get the git remote for a workspace.
  */
 export interface GetGitRemoteRequest {
 }
 /**
- * UpdateGitRemoteRequest is a request to set (create or update) the git remote for an organization.
+ * UpdateGitRemoteRequest is a request to set (create or update) the git remote for a workspace.
  */
 export interface UpdateGitRemoteRequest {
   url: string;
@@ -361,7 +379,7 @@ export interface UpdateGitRemoteRequest {
   token?: string;
 }
 /**
- * DeleteGitRequest is a request to delete the git remote for an organization.
+ * DeleteGitRequest is a request to delete the git remote for a workspace.
  */
 export interface DeleteGitRequest {
 }
@@ -407,11 +425,18 @@ export interface RevokeAllSessionsRequest {
 export interface ListUsersRequest {
 }
 /**
- * UpdateUserRoleRequest is a request to update a user's role.
+ * UpdateOrgMemberRoleRequest is a request to update a user's organization role.
  */
-export interface UpdateUserRoleRequest {
+export interface UpdateOrgMemberRoleRequest {
   user_id: string;
-  role: UserRole;
+  role: OrganizationRole;
+}
+/**
+ * UpdateWSMemberRoleRequest is a request to update a user's workspace role.
+ */
+export interface UpdateWSMemberRoleRequest {
+  user_id: string;
+  role: WorkspaceRole;
 }
 /**
  * UpdateUserSettingsRequest is a request to update user global settings.
@@ -662,15 +687,28 @@ export interface SearchResponse {
   results: SearchResult[];
 }
 /**
- * ListInvitationsResponse is a response containing a list of invitations.
+ * ListOrgInvitationsResponse is a response containing a list of organization invitations.
  */
-export interface ListInvitationsResponse {
-  invitations: InvitationResponse[];
+export interface ListOrgInvitationsResponse {
+  invitations: OrgInvitationResponse[];
+}
+/**
+ * ListWSInvitationsResponse is a response containing a list of workspace invitations.
+ */
+export interface ListWSInvitationsResponse {
+  invitations: WSInvitationResponse[];
 }
 /**
  * SwitchOrgResponse is a response from switching organization.
  */
 export interface SwitchOrgResponse {
+  token: string;
+  user?: UserResponse;
+}
+/**
+ * SwitchWorkspaceResponse is a response from switching workspace.
+ */
+export interface SwitchWorkspaceResponse {
   token: string;
   user?: UserResponse;
 }
@@ -699,30 +737,64 @@ export interface UserResponse {
   settings: UserSettings;
   created: string;
   modified: string;
-  memberships?: MembershipResponse[];
+  /**
+   * Current context
+   */
   organization_id?: string;
-  role?: UserRole;
+  org_role?: OrganizationRole;
+  workspace_id?: string;
+  workspace_role?: WorkspaceRole;
+  /**
+   * All memberships
+   */
+  organizations?: OrgMembershipResponse[];
+  workspaces?: WSMembershipResponse[];
 }
 /**
- * MembershipResponse is the API representation of a membership.
+ * OrgMembershipResponse is the API representation of an organization membership.
  */
-export interface MembershipResponse {
+export interface OrgMembershipResponse {
   id: string;
   user_id: string;
   organization_id: string;
   organization_name?: string;
-  role: UserRole;
-  settings: MembershipSettings;
+  role: OrganizationRole;
   created: string;
 }
 /**
- * InvitationResponse is the API representation of an invitation (excludes Token).
+ * WSMembershipResponse is the API representation of a workspace membership.
  */
-export interface InvitationResponse {
+export interface WSMembershipResponse {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  workspace_name?: string;
+  organization_id: string;
+  role: WorkspaceRole;
+  settings: WorkspaceMembershipSettings;
+  created: string;
+}
+/**
+ * OrgInvitationResponse is the API representation of an organization invitation (excludes Token).
+ */
+export interface OrgInvitationResponse {
   id: string;
   email: string;
   organization_id: string;
-  role: UserRole;
+  role: OrganizationRole;
+  invited_by: string;
+  expires_at: string;
+  created: string;
+}
+/**
+ * WSInvitationResponse is the API representation of a workspace invitation (excludes Token).
+ */
+export interface WSInvitationResponse {
+  id: string;
+  email: string;
+  workspace_id: string;
+  role: WorkspaceRole;
+  invited_by: string;
   expires_at: string;
   created: string;
 }
@@ -732,16 +804,32 @@ export interface InvitationResponse {
 export interface OrganizationResponse {
   id: string;
   name: string;
-  quotas: OrganizationQuota;
+  billing_email?: string;
+  quotas: OrganizationQuotas;
   settings: OrganizationSettings;
+  member_count: number /* int */;
+  workspace_count: number /* int */;
+  created: string;
+}
+/**
+ * WorkspaceResponse is the API representation of a workspace.
+ */
+export interface WorkspaceResponse {
+  id: string;
+  organization_id: string;
+  name: string;
+  slug: string;
+  quotas: WorkspaceQuotas;
+  settings: WorkspaceSettings;
+  git_remote?: GitRemoteResponse;
+  member_count: number /* int */;
   created: string;
 }
 /**
  * GitRemoteResponse is the API representation of a git remote.
- * Each organization has at most one remote, identified by OrganizationID.
  */
 export interface GitRemoteResponse {
-  organization_id: string;
+  workspace_id: string;
   url: string;
   type: string;
   auth_type: string;
@@ -779,6 +867,7 @@ export interface DataRecordResponse {
 export interface AdminStatsResponse {
   user_count: number /* int */;
   org_count: number /* int */;
+  workspace_count: number /* int */;
 }
 /**
  * AdminUsersResponse contains all users in the system.
@@ -791,6 +880,18 @@ export interface AdminUsersResponse {
  */
 export interface AdminOrgsResponse {
   organizations: OrganizationResponse[];
+}
+/**
+ * AdminWorkspacesResponse contains all workspaces in the system.
+ */
+export interface AdminWorkspacesResponse {
+  workspaces: WorkspaceResponse[];
+}
+/**
+ * ListWorkspacesResponse is a response containing a list of workspaces.
+ */
+export interface ListWorkspacesResponse {
+  workspaces: WorkspaceResponse[];
 }
 
 //////////
@@ -858,21 +959,37 @@ export interface Property {
   options?: SelectOption[];
 }
 /**
- * UserRole defines the permissions for a user.
+ * OrganizationRole defines the role of a user within an organization.
  */
+export type OrganizationRole = string;
 /**
- * UserRoleAdmin has full access to all resources and settings within an organization.
+ * OrgRoleOwner has full control including billing.
  */
-export const UserRoleAdmin = "admin";
+export const OrgRoleOwner: OrganizationRole = "owner";
 /**
- * UserRoleEditor can create and modify content but cannot manage users.
+ * OrgRoleAdmin can manage workspaces and members.
  */
-export const UserRoleEditor = "editor";
+export const OrgRoleAdmin: OrganizationRole = "admin";
 /**
- * UserRoleViewer can only read content.
+ * OrgRoleMember can only access granted workspaces.
  */
-export const UserRoleViewer = "viewer";
-export type UserRole = typeof UserRoleAdmin | typeof UserRoleEditor | typeof UserRoleViewer;
+export const OrgRoleMember: OrganizationRole = "member";
+/**
+ * WorkspaceRole defines the permissions for a user within a workspace.
+ */
+export type WorkspaceRole = string;
+/**
+ * WSRoleAdmin has full workspace control.
+ */
+export const WSRoleAdmin: WorkspaceRole = "admin";
+/**
+ * WSRoleEditor can create and modify content.
+ */
+export const WSRoleEditor: WorkspaceRole = "editor";
+/**
+ * WSRoleViewer can only read content.
+ */
+export const WSRoleViewer: WorkspaceRole = "viewer";
 /**
  * NodeType defines what features are enabled for a node.
  */
@@ -919,29 +1036,47 @@ export interface OAuthIdentity {
   last_login: string;
 }
 /**
- * MembershipSettings represents user preferences within a specific organization.
+ * WorkspaceMembershipSettings represents user preferences within a specific workspace.
  */
-export interface MembershipSettings {
+export interface WorkspaceMembershipSettings {
   notifications: boolean;
 }
 /**
- * OrganizationQuota defines limits for an organization.
+ * OrganizationQuotas defines limits for an organization.
  */
-export interface OrganizationQuota {
+export interface OrganizationQuotas {
+  max_workspaces: number /* int */;
+  max_members_per_org: number /* int */;
+  max_members_per_workspace: number /* int */;
+  max_total_storage_gb: number /* int */;
+}
+/**
+ * WorkspaceQuotas defines limits for a workspace.
+ */
+export interface WorkspaceQuotas {
   max_pages: number /* int */;
-  max_storage: number /* int64 */;
-  max_users: number /* int */;
+  max_storage_mb: number /* int */;
+  max_records_per_table: number /* int */;
+  max_asset_size_mb: number /* int */;
 }
 /**
  * UserQuota defines limits for a user.
  */
 export interface UserQuota {
-  max_orgs: number /* int */;
+  max_organizations: number /* int */;
 }
 /**
  * OrganizationSettings represents organization-wide settings.
  */
 export interface OrganizationSettings {
+  allowed_email_domains?: string[];
+  require_sso: boolean;
+  default_workspace_quotas: WorkspaceQuotas;
+}
+/**
+ * WorkspaceSettings represents workspace-wide settings.
+ */
+export interface WorkspaceSettings {
   allowed_domains?: string[];
   public_access: boolean;
   git_auto_push: boolean;

@@ -50,16 +50,28 @@ type Property struct {
 	Options []SelectOption `json:"options,omitempty"`
 }
 
-// UserRole defines the permissions for a user.
-type UserRole string
+// OrganizationRole defines the role of a user within an organization.
+type OrganizationRole string
 
 const (
-	// UserRoleAdmin has full access to all resources and settings within an organization.
-	UserRoleAdmin UserRole = "admin"
-	// UserRoleEditor can create and modify content but cannot manage users.
-	UserRoleEditor UserRole = "editor"
-	// UserRoleViewer can only read content.
-	UserRoleViewer UserRole = "viewer"
+	// OrgRoleOwner has full control including billing.
+	OrgRoleOwner OrganizationRole = "owner"
+	// OrgRoleAdmin can manage workspaces and members.
+	OrgRoleAdmin OrganizationRole = "admin"
+	// OrgRoleMember can only access granted workspaces.
+	OrgRoleMember OrganizationRole = "member"
+)
+
+// WorkspaceRole defines the permissions for a user within a workspace.
+type WorkspaceRole string
+
+const (
+	// WSRoleAdmin has full workspace control.
+	WSRoleAdmin WorkspaceRole = "admin"
+	// WSRoleEditor can create and modify content.
+	WSRoleEditor WorkspaceRole = "editor"
+	// WSRoleViewer can only read content.
+	WSRoleViewer WorkspaceRole = "viewer"
 )
 
 // NodeType defines what features are enabled for a node.
@@ -99,26 +111,42 @@ type OAuthIdentity struct {
 	LastLogin  string        `json:"last_login" jsonschema:"description=Last login timestamp via this provider (RFC3339)"`
 }
 
-// MembershipSettings represents user preferences within a specific organization.
-type MembershipSettings struct {
-	Notifications bool `json:"notifications" jsonschema:"description=Whether email notifications are enabled"`
+// WorkspaceMembershipSettings represents user preferences within a specific workspace.
+type WorkspaceMembershipSettings struct {
+	Notifications bool `json:"notifications" jsonschema:"description=Whether notifications are enabled"`
 }
 
-// OrganizationQuota defines limits for an organization.
-type OrganizationQuota struct {
-	MaxPages   int   `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
-	MaxStorage int64 `json:"max_storage" jsonschema:"description=Maximum storage in bytes"`
-	MaxUsers   int   `json:"max_users" jsonschema:"description=Maximum number of users allowed"`
+// OrganizationQuotas defines limits for an organization.
+type OrganizationQuotas struct {
+	MaxWorkspaces          int `json:"max_workspaces" jsonschema:"description=Maximum number of workspaces in this org"`
+	MaxMembersPerOrg       int `json:"max_members_per_org" jsonschema:"description=Maximum members at org level"`
+	MaxMembersPerWorkspace int `json:"max_members_per_workspace" jsonschema:"description=Maximum members per workspace"`
+	MaxTotalStorageGB      int `json:"max_total_storage_gb" jsonschema:"description=Total storage across all workspaces in GB"`
+}
+
+// WorkspaceQuotas defines limits for a workspace.
+type WorkspaceQuotas struct {
+	MaxPages           int `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
+	MaxStorageMB       int `json:"max_storage_mb" jsonschema:"description=Maximum storage in megabytes"`
+	MaxRecordsPerTable int `json:"max_records_per_table" jsonschema:"description=Maximum records per table"`
+	MaxAssetSizeMB     int `json:"max_asset_size_mb" jsonschema:"description=Maximum size of a single asset in megabytes"`
 }
 
 // UserQuota defines limits for a user.
 type UserQuota struct {
-	MaxOrgs int `json:"max_orgs" jsonschema:"description=Maximum number of organizations the user can be a member of"`
+	MaxOrganizations int `json:"max_organizations" jsonschema:"description=Maximum number of organizations the user can create"`
 }
 
 // OrganizationSettings represents organization-wide settings.
 type OrganizationSettings struct {
-	AllowedDomains []string `json:"allowed_domains,omitempty" jsonschema:"description=Email domains allowed for membership"`
+	AllowedEmailDomains    []string        `json:"allowed_email_domains,omitempty" jsonschema:"description=Restrict membership to these email domains"`
+	RequireSSO             bool            `json:"require_sso" jsonschema:"description=Require SSO for all members"`
+	DefaultWorkspaceQuotas WorkspaceQuotas `json:"default_workspace_quotas" jsonschema:"description=Default quotas for new workspaces"`
+}
+
+// WorkspaceSettings represents workspace-wide settings.
+type WorkspaceSettings struct {
+	AllowedDomains []string `json:"allowed_domains,omitempty" jsonschema:"description=Additional email domain restrictions"`
 	PublicAccess   bool     `json:"public_access" jsonschema:"description=Whether content is publicly accessible"`
 	GitAutoPush    bool     `json:"git_auto_push" jsonschema:"description=Automatically push changes to remote"`
 }

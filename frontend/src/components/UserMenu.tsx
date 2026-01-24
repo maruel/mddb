@@ -73,8 +73,8 @@ export default function UserMenu(props: UserMenuProps) {
           <div class={styles.userInfo}>
             <span class={styles.userName}>{props.user.name}</span>
             <span class={styles.userEmail}>{props.user.email}</span>
-            <Show when={props.user.role}>
-              <span class={styles.userRole}>{props.user.role}</span>
+            <Show when={props.user.workspace_role}>
+              <span class={styles.userRole}>{props.user.workspace_role}</span>
             </Show>
           </div>
           <div class={styles.divider} />

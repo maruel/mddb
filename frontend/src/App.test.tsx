@@ -4,7 +4,7 @@ import type { JSX } from 'solid-js';
 import App from './App';
 import { I18nProvider } from './i18n';
 import type { UserResponse, NodeResponse, DataRecordResponse } from './types.gen';
-import { UserRoleViewer, UserRoleAdmin } from './types.gen';
+import { WSRoleViewer } from './types.gen';
 
 // Mock CSS modules
 vi.mock('./App.module.css', () => ({
@@ -109,13 +109,26 @@ vi.mock('./components/Auth', () => ({
             email: 'test@example.com',
             name: 'Test User',
             organization_id: 'org-1',
-            role: 'viewer',
-            memberships: [
+            org_role: 'member',
+            workspace_id: 'ws-1',
+            workspace_role: 'viewer',
+            organizations: [
               {
                 id: 'mem-1',
                 user_id: 'user-1',
                 organization_id: 'org-1',
                 organization_name: 'Test Org',
+                role: 'member',
+                created: '2024-01-01T00:00:00Z',
+              },
+            ],
+            workspaces: [
+              {
+                id: 'wsmem-1',
+                user_id: 'user-1',
+                workspace_id: 'ws-1',
+                workspace_name: 'Default Workspace',
+                organization_id: 'org-1',
                 role: 'viewer',
                 settings: { notifications: true },
                 created: '2024-01-01T00:00:00Z',
@@ -160,7 +173,7 @@ vi.mock('./components/UserMenu', () => ({
   default: (props: { user: UserResponse; onLogout: () => void }) => (
     <div data-testid="user-menu">
       <span data-testid="user-info">
-        {props.user.name} ({props.user.role})
+        {props.user.name} ({props.user.workspace_role})
       </span>
       <button data-testid="logout-button" onClick={props.onLogout}>
         Logout
@@ -265,14 +278,27 @@ const mockUser: UserResponse = {
   email: 'test@example.com',
   name: 'Test User',
   organization_id: 'org-1',
-  role: UserRoleViewer,
-  memberships: [
+  org_role: 'member',
+  workspace_id: 'ws-1',
+  workspace_role: WSRoleViewer,
+  organizations: [
     {
       id: 'mem-1',
       user_id: 'user-1',
       organization_id: 'org-1',
       organization_name: 'Test Org',
-      role: UserRoleViewer,
+      role: 'member',
+      created: '2024-01-01T00:00:00Z',
+    },
+  ],
+  workspaces: [
+    {
+      id: 'wsmem-1',
+      user_id: 'user-1',
+      workspace_id: 'ws-1',
+      workspace_name: 'Default Workspace',
+      organization_id: 'org-1',
+      role: WSRoleViewer,
       settings: { notifications: true },
       created: '2024-01-01T00:00:00Z',
     },
@@ -545,13 +571,13 @@ describe('App', () => {
             json: () => Promise.resolve(mockUser),
           });
         }
-        if (url === '/api/org-1/nodes') {
+        if (url === '/api/workspaces/ws-1/nodes') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ nodes: mockNodes }),
           });
         }
-        if (url === '/api/org-1/nodes/node-1' && (!init || init.method === 'GET' || !init.method)) {
+        if (url === '/api/workspaces/ws-1/nodes/node-1' && (!init || init.method === 'GET' || !init.method)) {
           return Promise.resolve({
             ok: true,
             json: () =>
@@ -591,13 +617,13 @@ describe('App', () => {
             json: () => Promise.resolve(mockUser),
           });
         }
-        if (url === '/api/org-1/nodes') {
+        if (url === '/api/workspaces/ws-1/nodes') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ nodes: mockNodes }),
           });
         }
-        if (url === '/api/org-1/nodes/node-2') {
+        if (url === '/api/workspaces/ws-1/nodes/node-2') {
           return Promise.resolve({
             ok: true,
             json: () =>
@@ -642,13 +668,13 @@ describe('App', () => {
             json: () => Promise.resolve(mockUser),
           });
         }
-        if (url === '/api/org-1/nodes' && (!init || init.method === 'GET' || !init.method)) {
+        if (url === '/api/workspaces/ws-1/nodes' && (!init || init.method === 'GET' || !init.method)) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ nodes: mockNodes }),
           });
         }
-        if (url === '/api/org-1/nodes' && init?.method === 'POST') {
+        if (url === '/api/workspaces/ws-1/nodes' && init?.method === 'POST') {
           const body = JSON.parse(init.body as string);
           return Promise.resolve({
             ok: true,
@@ -660,7 +686,7 @@ describe('App', () => {
               }),
           });
         }
-        if (url === '/api/org-1/nodes/new-node') {
+        if (url === '/api/workspaces/ws-1/nodes/new-node') {
           return Promise.resolve({
             ok: true,
             json: () =>
@@ -699,7 +725,7 @@ describe('App', () => {
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          '/api/org-1/nodes',
+          '/api/workspaces/ws-1/nodes',
           expect.objectContaining({
             method: 'POST',
             body: JSON.stringify({ title: 'New Page', type: 'document' }),
@@ -740,13 +766,13 @@ describe('App', () => {
             json: () => Promise.resolve(mockUser),
           });
         }
-        if (url === '/api/org-1/nodes') {
+        if (url === '/api/workspaces/ws-1/nodes') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ nodes: mockNodes }),
           });
         }
-        if (url === '/api/org-1/nodes/node-2') {
+        if (url === '/api/workspaces/ws-1/nodes/node-2') {
           return Promise.resolve({
             ok: true,
             json: () =>
@@ -865,7 +891,8 @@ describe('App', () => {
 
       const userWithNoMemberships: UserResponse = {
         ...mockUser,
-        memberships: [],
+        organizations: [],
+        workspaces: [],
       };
 
       mockFetch.mockImplementation((url: string) => {
@@ -890,14 +917,13 @@ describe('App', () => {
 
       const userWithMultipleOrgs: UserResponse = {
         ...mockUser,
-        memberships: [
+        organizations: [
           {
             id: 'mem-1',
             user_id: 'user-1',
             organization_id: 'org-1',
             organization_name: 'Org 1',
-            role: UserRoleViewer,
-            settings: { notifications: true },
+            role: 'member',
             created: '2024-01-01T00:00:00Z',
           },
           {
@@ -905,8 +931,7 @@ describe('App', () => {
             user_id: 'user-1',
             organization_id: 'org-2',
             organization_name: 'Org 2',
-            role: UserRoleAdmin,
-            settings: { notifications: true },
+            role: 'admin',
             created: '2024-01-01T00:00:00Z',
           },
         ],
@@ -1015,13 +1040,13 @@ describe('App', () => {
             json: () => Promise.resolve(mockUser),
           });
         }
-        if (url === '/api/org-1/nodes') {
+        if (url === '/api/workspaces/ws-1/nodes') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ nodes: mockNodes }),
           });
         }
-        if (url === '/api/org-1/nodes/node-1') {
+        if (url === '/api/workspaces/ws-1/nodes/node-1') {
           return Promise.resolve({
             ok: true,
             json: () =>
@@ -1058,14 +1083,14 @@ describe('App', () => {
             json: () => Promise.resolve(mockUser),
           });
         }
-        if (url === '/api/org-1/nodes' && (!init || init.method === 'GET' || !init.method)) {
+        if (url === '/api/workspaces/ws-1/nodes' && (!init || init.method === 'GET' || !init.method)) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ nodes: mockNodes }),
           });
         }
         // Fail the POST request for creating nodes
-        if (url === '/api/org-1/nodes' && init?.method === 'POST') {
+        if (url === '/api/workspaces/ws-1/nodes' && init?.method === 'POST') {
           return Promise.resolve({
             ok: false,
             status: 400,
@@ -1124,13 +1149,13 @@ describe('slugify', () => {
             }),
         });
       }
-      if (url === '/api/org-1/nodes') {
+      if (url === '/api/workspaces/ws-1/nodes') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ nodes: mockNodes }),
         });
       }
-      if (url === '/api/org-1/nodes/node-1') {
+      if (url === '/api/workspaces/ws-1/nodes/node-1') {
         return Promise.resolve({
           ok: true,
           json: () =>

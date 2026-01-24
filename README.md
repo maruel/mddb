@@ -29,11 +29,12 @@ mddb lets you:
 - 🔍 **Search**: Search across documents, tables, and folders
 - 🚀 **Designed for LLM agents**: storage is easy for an agent to navigate
 
-> **Note**: mddb uses different terminology than Notion for clarity:
-> - **Table** instead of "Database" (a collection of records with columns)
-> - **Organization** instead of "Workspace" (a synced collection of pages)
+> **Note**: mddb uses a two-level hierarchy:
+> - **Organization**: Billing and administrative entity (like a company or team)
+> - **Workspace**: Isolated content container within an organization (like a project or department)
+> - **Table** instead of Notion's "Database" (a collection of records with columns)
 >
-> Same functionality, clearer names.
+> Each workspace has its own pages, tables, and git remote for syncing.
 
 ## Getting Started
 
@@ -79,11 +80,12 @@ journalctl --user -u mddb -f
 
 ## File Structure
 
-All data is stored as plain files in a git repository:
+All data is stored as plain files. Each workspace is a separate git repository:
 
 ```
 data/
-└── <org-id>/
+├── db/                             # Identity database (users, orgs, memberships)
+└── <workspace-id>/                 # Each workspace is independent
     └── pages/
         ├── <page-id>/              # Document
         │   ├── index.md            # Content with YAML front matter
@@ -93,11 +95,13 @@ data/
             └── data.jsonl          # Records (one JSON per line)
 ```
 
-Every mutation is a git commit. You can:
+Every content mutation is a git commit. You can:
 - Edit files directly with any text editor
-- Sync to GitHub, GitLab, or any git remote
+- Sync each workspace to GitHub, GitLab, or any git remote
 - Use git history, branches, and merge workflows
 - Back up with standard tools
+
+Organization membership is stored in the identity database, not in the file structure.
 
 ## FAQ
 
@@ -105,7 +109,7 @@ Every mutation is a git commit. You can:
 A: Yes! Everything runs locally. No data is sent anywhere.
 
 **Q: Can I sync across devices?**
-A: Configure a git remote in organization settings—changes push automatically.
+A: Configure a git remote in workspace settings—changes push automatically.
 
 **Q: Can I import/export my data?**
 A: The data is itself in text form.

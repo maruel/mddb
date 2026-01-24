@@ -13,12 +13,12 @@ import (
 
 func TestTable(t *testing.T) {
 	t.Run("ReadWrite", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
 			t.Fatalf("failed to init org: %v", err)
 		}
 
@@ -63,13 +63,13 @@ func TestTable(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				// Write table
-				err := fs.WriteTable(ctx, orgID, tt.node, true, author)
+				err := fs.WriteTable(ctx, wsID, tt.node, true, author)
 				if err != nil {
 					t.Fatalf("Failed to write table: %v", err)
 				}
 
 				// Read table
-				got, err := fs.ReadTable(orgID, tt.node.ID)
+				got, err := fs.ReadTable(wsID, tt.node.ID)
 				if err != nil {
 					t.Fatalf("Failed to read table: %v", err)
 				}
@@ -97,7 +97,7 @@ func TestTable(t *testing.T) {
 				}
 
 				// Verify metadata file exists
-				filePath := fs.tableMetadataFile(orgID, tt.node.ID)
+				filePath := fs.tableMetadataFile(wsID, tt.node.ID)
 				if _, err := os.Stat(filePath); err != nil {
 					t.Errorf("Table metadata file not found: %s", filePath)
 				}
@@ -106,12 +106,12 @@ func TestTable(t *testing.T) {
 	})
 
 	t.Run("Exists", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
 			t.Fatalf("failed to init org: %v", err)
 		}
 
@@ -127,28 +127,28 @@ func TestTable(t *testing.T) {
 		}
 
 		// Should not exist initially
-		if fs.TableExists(orgID, node.ID) {
+		if fs.TableExists(wsID, node.ID) {
 			t.Error("Table should not exist initially")
 		}
 
 		// Write table
-		if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("Failed to write table: %v", err)
 		}
 
 		// Should exist after write
-		if !fs.TableExists(orgID, node.ID) {
+		if !fs.TableExists(wsID, node.ID) {
 			t.Error("Table should exist after write")
 		}
 	})
 
 	t.Run("List", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
 			t.Fatalf("failed to init org: %v", err)
 		}
 
@@ -165,13 +165,13 @@ func TestTable(t *testing.T) {
 				Created:  time.Now(),
 				Modified: time.Now(),
 			}
-			if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+			if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 				t.Fatalf("Failed to write table %v: %v", id, err)
 			}
 		}
 
 		// List tables
-		it, err := fs.IterTables(orgID)
+		it, err := fs.IterTables(wsID)
 		if err != nil {
 			t.Fatalf("Failed to list tables: %v", err)
 		}
@@ -196,12 +196,12 @@ func TestTable(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
 			t.Fatalf("failed to init org: %v", err)
 		}
 
@@ -217,18 +217,18 @@ func TestTable(t *testing.T) {
 		}
 
 		// Write table
-		if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("Failed to write table: %v", err)
 		}
 
 		// Verify metadata file exists
-		metadataPath := fs.tableMetadataFile(orgID, node.ID)
+		metadataPath := fs.tableMetadataFile(wsID, node.ID)
 		if _, err := os.Stat(metadataPath); err != nil {
 			t.Fatalf("Table metadata file not found: %v", err)
 		}
 
 		// Delete table
-		err := fs.DeleteTable(ctx, orgID, node.ID, author)
+		err := fs.DeleteTable(ctx, wsID, node.ID, author)
 		if err != nil {
 			t.Fatalf("Failed to delete table: %v", err)
 		}
@@ -240,12 +240,12 @@ func TestTable(t *testing.T) {
 	})
 
 	t.Run("NestedPath", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
 			t.Fatalf("failed to init org: %v", err)
 		}
 
@@ -262,12 +262,12 @@ func TestTable(t *testing.T) {
 			Modified: time.Now(),
 		}
 
-		if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("Failed to write table: %v", err)
 		}
 
 		// Read back
-		got, err := fs.ReadTable(orgID, dbID)
+		got, err := fs.ReadTable(wsID, dbID)
 		if err != nil {
 			t.Fatalf("Failed to read table: %v", err)
 		}
@@ -277,7 +277,7 @@ func TestTable(t *testing.T) {
 		}
 
 		// Verify metadata file exists at correct path
-		expectedPath := fs.tableMetadataFile(orgID, dbID)
+		expectedPath := fs.tableMetadataFile(wsID, dbID)
 		if _, err := os.Stat(expectedPath); err != nil {
 			t.Errorf("Table metadata file not found at expected path: %s", expectedPath)
 		}
@@ -286,14 +286,14 @@ func TestTable(t *testing.T) {
 
 func TestRecord(t *testing.T) {
 	t.Run("AppendRead", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		dbID := jsonldb.ID(1)
 
 		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
 			t.Fatalf("failed to init org: %v", err)
 		}
 
@@ -308,7 +308,7 @@ func TestRecord(t *testing.T) {
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("Failed to create table: %v", err)
 		}
 
@@ -335,14 +335,14 @@ func TestRecord(t *testing.T) {
 		}
 
 		for _, rec := range records {
-			err := fs.AppendRecord(ctx, orgID, dbID, rec, author)
+			err := fs.AppendRecord(ctx, wsID, dbID, rec, author)
 			if err != nil {
 				t.Fatalf("Failed to append record: %v", err)
 			}
 		}
 
 		// Read records
-		recIt, err := fs.IterRecords(orgID, dbID)
+		recIt, err := fs.IterRecords(wsID, dbID)
 		if err != nil {
 			t.Fatalf("Failed to read records: %v", err)
 		}
@@ -364,7 +364,7 @@ func TestRecord(t *testing.T) {
 		}
 
 		// Verify JSONL file exists
-		recordsPath := fs.tableRecordsFile(orgID, dbID)
+		recordsPath := fs.tableRecordsFile(wsID, dbID)
 		if _, err := os.Stat(recordsPath); err != nil {
 			t.Errorf("Records file not found: %s", recordsPath)
 		}
@@ -375,17 +375,18 @@ func TestRecord(t *testing.T) {
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		org, err := fs.orgSvc.Create(ctx, "Test Org")
+		// Create a workspace for testing
+		ws, err := fs.wsSvc.Create(ctx, jsonldb.ID(1), "Test Workspace", "test-ws")
 		if err != nil {
-			t.Fatalf("Failed to create org: %v", err)
+			t.Fatalf("Failed to create workspace: %v", err)
 		}
-		orgID := org.ID
+		wsID := ws.ID
 
 		dbID := jsonldb.ID(1)
 
-		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
-			t.Fatalf("failed to init org: %v", err)
+		// Initialize git repo for workspace
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
 		}
 
 		// Create table
@@ -399,7 +400,7 @@ func TestRecord(t *testing.T) {
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("Failed to create table: %v", err)
 		}
 
@@ -410,17 +411,17 @@ func TestRecord(t *testing.T) {
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.AppendRecord(ctx, orgID, dbID, rec, author); err != nil {
+		if err := fs.AppendRecord(ctx, wsID, dbID, rec, author); err != nil {
 			t.Fatalf("Failed to append record: %v", err)
 		}
 
 		// Now try to exceed quota by setting a very small quota.
-		_, err = fs.orgSvc.Modify(orgID, func(org *identity.Organization) error {
-			org.Quotas.MaxRecordsPerTable = 1
+		_, err = fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+			w.Quotas.MaxRecordsPerTable = 1
 			return nil
 		})
 		if err != nil {
-			t.Fatalf("Failed to modify org quota: %v", err)
+			t.Fatalf("Failed to modify workspace quota: %v", err)
 		}
 
 		// Try to append second record - should fail
@@ -430,20 +431,20 @@ func TestRecord(t *testing.T) {
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.AppendRecord(ctx, orgID, dbID, rec2, author); err == nil {
+		if err := fs.AppendRecord(ctx, wsID, dbID, rec2, author); err == nil {
 			t.Error("Expected error when exceeding record quota")
 		}
 	})
 
 	t.Run("EmptyTable", func(t *testing.T) {
-		fs, orgID := testFileStore(t)
+		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		dbID := jsonldb.ID(1)
 
 		// Initialize git repo for org
-		if err := fs.InitOrg(ctx, orgID); err != nil {
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
 			t.Fatalf("failed to init org: %v", err)
 		}
 
@@ -458,12 +459,12 @@ func TestRecord(t *testing.T) {
 			Created:  time.Now(),
 			Modified: time.Now(),
 		}
-		if err := fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("Failed to create table: %v", err)
 		}
 
 		// Read records from empty table
-		recIt, err := fs.IterRecords(orgID, dbID)
+		recIt, err := fs.IterRecords(wsID, dbID)
 		if err != nil {
 			t.Fatalf("Failed to read records: %v", err)
 		}

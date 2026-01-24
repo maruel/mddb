@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"strings"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -36,12 +35,7 @@ func (h *NodeHandler) ListNodes(ctx context.Context, orgID jsonldb.ID, _ *identi
 
 // GetNode retrieves a single node's metadata.
 func (h *NodeHandler) GetNode(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetNodeRequest) (*dto.NodeResponse, error) {
-	// Ignore the slug.
-	id, err := decodeID(strings.SplitN(req.ID, "+", 2)[0], "node_id")
-	if err != nil {
-		return nil, err
-	}
-	node, err := h.fs.ReadNode(orgID, id)
+	node, err := h.fs.ReadNode(orgID, req.ID)
 	if err != nil {
 		return nil, dto.NotFound("node")
 	}

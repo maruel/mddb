@@ -1,21 +1,21 @@
 package identity
 
 import (
-	"os"
+	"context"
 	"path/filepath"
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
-func TestMembership(t *testing.T) {
+func TestOrganizationMembership(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
-			valid := &Membership{
+			valid := &OrganizationMembership{
 				ID:             jsonldb.ID(1),
 				UserID:         jsonldb.ID(100),
 				OrganizationID: jsonldb.ID(200),
-				Role:           UserRoleAdmin,
+				Role:           OrgRoleAdmin,
 			}
 			if err := valid.Validate(); err != nil {
 				t.Errorf("Expected valid membership, got error: %v", err)
@@ -23,11 +23,11 @@ func TestMembership(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			zeroID := &Membership{
+			zeroID := &OrganizationMembership{
 				ID:             jsonldb.ID(0),
 				UserID:         jsonldb.ID(100),
 				OrganizationID: jsonldb.ID(200),
-				Role:           UserRoleAdmin,
+				Role:           OrgRoleAdmin,
 			}
 			if err := zeroID.Validate(); err == nil {
 				t.Error("Expected error for zero ID")
@@ -35,11 +35,11 @@ func TestMembership(t *testing.T) {
 		})
 
 		t.Run("zero UserID", func(t *testing.T) {
-			zeroUser := &Membership{
+			zeroUser := &OrganizationMembership{
 				ID:             jsonldb.ID(1),
 				UserID:         jsonldb.ID(0),
 				OrganizationID: jsonldb.ID(200),
-				Role:           UserRoleAdmin,
+				Role:           OrgRoleAdmin,
 			}
 			if err := zeroUser.Validate(); err == nil {
 				t.Error("Expected error for zero UserID")
@@ -47,37 +47,36 @@ func TestMembership(t *testing.T) {
 		})
 
 		t.Run("zero OrganizationID", func(t *testing.T) {
-			zeroOrg := &Membership{
+			zeroOrg := &OrganizationMembership{
 				ID:             jsonldb.ID(1),
 				UserID:         jsonldb.ID(100),
 				OrganizationID: jsonldb.ID(0),
-				Role:           UserRoleAdmin,
+				Role:           OrgRoleAdmin,
 			}
 			if err := zeroOrg.Validate(); err == nil {
 				t.Error("Expected error for zero OrganizationID")
 			}
 		})
 
-		t.Run("empty Role", func(t *testing.T) {
-			emptyRole := &Membership{
+		t.Run("invalid role", func(t *testing.T) {
+			invalidRole := &OrganizationMembership{
 				ID:             jsonldb.ID(1),
 				UserID:         jsonldb.ID(100),
 				OrganizationID: jsonldb.ID(200),
-				Role:           "",
+				Role:           "invalid",
 			}
-			if err := emptyRole.Validate(); err == nil {
-				t.Error("Expected error for empty Role")
+			if err := invalidRole.Validate(); err == nil {
+				t.Error("Expected error for invalid role")
 			}
 		})
 	})
 
 	t.Run("Clone", func(t *testing.T) {
-		original := &Membership{
+		original := &OrganizationMembership{
 			ID:             jsonldb.ID(1),
 			UserID:         jsonldb.ID(100),
 			OrganizationID: jsonldb.ID(200),
-			Role:           UserRoleAdmin,
-			Settings:       MembershipSettings{Notifications: true},
+			Role:           OrgRoleOwner,
 		}
 
 		clone := original.Clone()
@@ -85,453 +84,365 @@ func TestMembership(t *testing.T) {
 		if clone.ID != original.ID {
 			t.Error("Clone ID should match")
 		}
+		if clone.UserID != original.UserID {
+			t.Error("Clone UserID should match")
+		}
 
-		clone.Role = UserRoleViewer
-		if original.Role == UserRoleViewer {
+		clone.Role = OrgRoleMember
+		if original.Role == OrgRoleMember {
 			t.Error("Clone should be independent of original")
 		}
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		m := &Membership{ID: jsonldb.ID(42)}
+		m := &OrganizationMembership{ID: jsonldb.ID(42)}
 		if m.GetID() != jsonldb.ID(42) {
 			t.Errorf("GetID() = %v, want %v", m.GetID(), jsonldb.ID(42))
 		}
 	})
 }
 
-func TestMembershipService(t *testing.T) {
+func TestOrganizationRole(t *testing.T) {
+	t.Run("IsValid", func(t *testing.T) {
+		if !OrgRoleOwner.IsValid() {
+			t.Error("OrgRoleOwner should be valid")
+		}
+		if !OrgRoleAdmin.IsValid() {
+			t.Error("OrgRoleAdmin should be valid")
+		}
+		if !OrgRoleMember.IsValid() {
+			t.Error("OrgRoleMember should be valid")
+		}
+		if OrganizationRole("invalid").IsValid() {
+			t.Error("invalid role should not be valid")
+		}
+	})
+
+	t.Run("CanManageMembers", func(t *testing.T) {
+		if !OrgRoleOwner.CanManageMembers() {
+			t.Error("Owner should be able to manage members")
+		}
+		if !OrgRoleAdmin.CanManageMembers() {
+			t.Error("Admin should be able to manage members")
+		}
+		if OrgRoleMember.CanManageMembers() {
+			t.Error("Member should not be able to manage members")
+		}
+	})
+
+	t.Run("CanManageWorkspaces", func(t *testing.T) {
+		if !OrgRoleOwner.CanManageWorkspaces() {
+			t.Error("Owner should be able to manage workspaces")
+		}
+		if !OrgRoleAdmin.CanManageWorkspaces() {
+			t.Error("Admin should be able to manage workspaces")
+		}
+		if OrgRoleMember.CanManageWorkspaces() {
+			t.Error("Member should not be able to manage workspaces")
+		}
+	})
+
+	t.Run("CanManageBilling", func(t *testing.T) {
+		if !OrgRoleOwner.CanManageBilling() {
+			t.Error("Owner should be able to manage billing")
+		}
+		if OrgRoleAdmin.CanManageBilling() {
+			t.Error("Admin should not be able to manage billing")
+		}
+		if OrgRoleMember.CanManageBilling() {
+			t.Error("Member should not be able to manage billing")
+		}
+	})
+}
+
+func TestWorkspaceMembership(t *testing.T) {
+	t.Run("Validate", func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
+			valid := &WorkspaceMembership{
+				ID:          jsonldb.ID(1),
+				UserID:      jsonldb.ID(100),
+				WorkspaceID: jsonldb.ID(200),
+				Role:        WSRoleEditor,
+			}
+			if err := valid.Validate(); err != nil {
+				t.Errorf("Expected valid membership, got error: %v", err)
+			}
+		})
+
+		t.Run("zero ID", func(t *testing.T) {
+			zeroID := &WorkspaceMembership{
+				ID:          jsonldb.ID(0),
+				UserID:      jsonldb.ID(100),
+				WorkspaceID: jsonldb.ID(200),
+				Role:        WSRoleEditor,
+			}
+			if err := zeroID.Validate(); err == nil {
+				t.Error("Expected error for zero ID")
+			}
+		})
+
+		t.Run("zero UserID", func(t *testing.T) {
+			zeroUser := &WorkspaceMembership{
+				ID:          jsonldb.ID(1),
+				UserID:      jsonldb.ID(0),
+				WorkspaceID: jsonldb.ID(200),
+				Role:        WSRoleEditor,
+			}
+			if err := zeroUser.Validate(); err == nil {
+				t.Error("Expected error for zero UserID")
+			}
+		})
+
+		t.Run("zero WorkspaceID", func(t *testing.T) {
+			zeroWS := &WorkspaceMembership{
+				ID:          jsonldb.ID(1),
+				UserID:      jsonldb.ID(100),
+				WorkspaceID: jsonldb.ID(0),
+				Role:        WSRoleEditor,
+			}
+			if err := zeroWS.Validate(); err == nil {
+				t.Error("Expected error for zero WorkspaceID")
+			}
+		})
+
+		t.Run("invalid role", func(t *testing.T) {
+			invalidRole := &WorkspaceMembership{
+				ID:          jsonldb.ID(1),
+				UserID:      jsonldb.ID(100),
+				WorkspaceID: jsonldb.ID(200),
+				Role:        "invalid",
+			}
+			if err := invalidRole.Validate(); err == nil {
+				t.Error("Expected error for invalid role")
+			}
+		})
+	})
+
+	t.Run("Clone", func(t *testing.T) {
+		original := &WorkspaceMembership{
+			ID:          jsonldb.ID(1),
+			UserID:      jsonldb.ID(100),
+			WorkspaceID: jsonldb.ID(200),
+			Role:        WSRoleAdmin,
+		}
+
+		clone := original.Clone()
+
+		if clone.ID != original.ID {
+			t.Error("Clone ID should match")
+		}
+		if clone.UserID != original.UserID {
+			t.Error("Clone UserID should match")
+		}
+
+		clone.Role = WSRoleViewer
+		if original.Role == WSRoleViewer {
+			t.Error("Clone should be independent of original")
+		}
+	})
+
+	t.Run("GetID", func(t *testing.T) {
+		m := &WorkspaceMembership{ID: jsonldb.ID(42)}
+		if m.GetID() != jsonldb.ID(42) {
+			t.Errorf("GetID() = %v, want %v", m.GetID(), jsonldb.ID(42))
+		}
+	})
+}
+
+func TestWorkspaceRole(t *testing.T) {
+	t.Run("IsValid", func(t *testing.T) {
+		if !WSRoleAdmin.IsValid() {
+			t.Error("WSRoleAdmin should be valid")
+		}
+		if !WSRoleEditor.IsValid() {
+			t.Error("WSRoleEditor should be valid")
+		}
+		if !WSRoleViewer.IsValid() {
+			t.Error("WSRoleViewer should be valid")
+		}
+		if WorkspaceRole("invalid").IsValid() {
+			t.Error("invalid role should not be valid")
+		}
+	})
+
+	t.Run("CanEdit", func(t *testing.T) {
+		if !WSRoleAdmin.CanEdit() {
+			t.Error("Admin should be able to edit")
+		}
+		if !WSRoleEditor.CanEdit() {
+			t.Error("Editor should be able to edit")
+		}
+		if WSRoleViewer.CanEdit() {
+			t.Error("Viewer should not be able to edit")
+		}
+	})
+
+	t.Run("CanManageMembers", func(t *testing.T) {
+		if !WSRoleAdmin.CanManageMembers() {
+			t.Error("Admin should be able to manage members")
+		}
+		if WSRoleEditor.CanManageMembers() {
+			t.Error("Editor should not be able to manage members")
+		}
+		if WSRoleViewer.CanManageMembers() {
+			t.Error("Viewer should not be able to manage members")
+		}
+	})
+}
+
+func TestOrganizationMembershipService(t *testing.T) {
+	// Create services needed for membership service
 	tempDir := t.TempDir()
 	userService, err := NewUserService(filepath.Join(tempDir, "users.jsonl"))
 	if err != nil {
-		t.Fatalf("NewUserService failed: %v", err)
+		t.Fatal(err)
 	}
-
-	orgService, err := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
+	orgService, err := NewOrganizationService(filepath.Join(tempDir, "orgs.jsonl"))
 	if err != nil {
-		t.Fatalf("NewOrganizationService failed: %v", err)
+		t.Fatal(err)
 	}
-
-	service, err := NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"), userService, orgService)
+	service, err := NewOrganizationMembershipService(filepath.Join(tempDir, "org_memberships.jsonl"), userService, orgService)
 	if err != nil {
-		t.Fatalf("NewMembershipService failed: %v", err)
+		t.Fatal(err)
 	}
 
-	// Create a user for testing
+	// Create test user and org
 	user, err := userService.Create("test@example.com", "password", "Test User")
 	if err != nil {
-		t.Fatalf("Failed to create user: %v", err)
+		t.Fatal(err)
 	}
-	userID := user.ID
-
-	// Create an organization for testing
-	org, err := orgService.Create(t.Context(), "Test Org")
+	org, err := orgService.Create(context.Background(), "Test Org", "test@example.com")
 	if err != nil {
-		t.Fatalf("Failed to create org: %v", err)
+		t.Fatal(err)
 	}
-	orgID := org.ID
 
-	var membership *Membership
+	var mem *OrganizationMembership
 
 	t.Run("Create", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			var createErr error
-			membership, createErr = service.Create(userID, orgID, UserRoleAdmin)
+			mem, createErr = service.Create(user.ID, org.ID, OrgRoleOwner)
 			if createErr != nil {
-				t.Fatalf("Create failed: %v", createErr)
+				t.Fatalf("Failed to create membership: %v", createErr)
 			}
 
-			if membership.UserID != userID {
-				t.Errorf("UserID = %v, want %v", membership.UserID, userID)
+			if mem.UserID != user.ID {
+				t.Errorf("Expected UserID %v, got %v", user.ID, mem.UserID)
 			}
-			if membership.OrganizationID != orgID {
-				t.Errorf("OrganizationID = %v, want %v", membership.OrganizationID, orgID)
+			if mem.OrganizationID != org.ID {
+				t.Errorf("Expected OrganizationID %v, got %v", org.ID, mem.OrganizationID)
 			}
-			if membership.Role != UserRoleAdmin {
-				t.Errorf("Role = %v, want %v", membership.Role, UserRoleAdmin)
-			}
-			if membership.ID.IsZero() {
-				t.Error("Expected non-zero membership ID")
+			if mem.Role != OrgRoleOwner {
+				t.Errorf("Expected role %s, got %s", OrgRoleOwner, mem.Role)
 			}
 		})
 
 		t.Run("duplicate", func(t *testing.T) {
-			_, createErr := service.Create(userID, orgID, UserRoleEditor)
+			_, createErr := service.Create(user.ID, org.ID, OrgRoleAdmin)
 			if createErr == nil {
-				t.Error("Expected error when creating duplicate membership")
+				t.Error("Expected error for duplicate membership")
 			}
 		})
 
-		t.Run("zero user ID", func(t *testing.T) {
-			_, createErr := service.Create(jsonldb.ID(0), orgID, UserRoleAdmin)
+		t.Run("empty userID", func(t *testing.T) {
+			_, createErr := service.Create(jsonldb.ID(0), org.ID, OrgRoleAdmin)
 			if createErr == nil {
-				t.Error("Expected error for invalid user ID")
+				t.Error("Expected error for empty userID")
 			}
 		})
 
-		t.Run("zero org ID", func(t *testing.T) {
-			_, createErr := service.Create(userID, jsonldb.ID(0), UserRoleAdmin)
+		t.Run("empty orgID", func(t *testing.T) {
+			_, createErr := service.Create(user.ID, jsonldb.ID(0), OrgRoleAdmin)
 			if createErr == nil {
-				t.Error("Expected error for invalid org ID")
+				t.Error("Expected error for empty orgID")
 			}
 		})
-	})
-
-	t.Run("UserOrgQuota", func(t *testing.T) {
-		tempDir := t.TempDir()
-		quotaUserService, err := NewUserService(filepath.Join(tempDir, "users.jsonl"))
-		if err != nil {
-			t.Fatalf("NewUserService failed: %v", err)
-		}
-
-		quotaOrgService, err := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
-		if err != nil {
-			t.Fatalf("NewOrganizationService failed: %v", err)
-		}
-
-		quotaService, err := NewMembershipService(filepath.Join(tempDir, "quota_memberships.jsonl"), quotaUserService, quotaOrgService)
-		if err != nil {
-			t.Fatalf("NewMembershipService failed: %v", err)
-		}
-
-		quotaUser, err := quotaUserService.Create("quota@example.com", "password", "Quota User")
-		if err != nil {
-			t.Fatalf("Failed to create quota user: %v", err)
-		}
-		quotaUserID := quotaUser.ID
-		maxOrgs := quotaUser.Quotas.MaxOrgs
-
-		// Create memberships up to the limit
-		for i := range maxOrgs {
-			// Create dummy orgs for testing
-			quotaOrg, err := quotaOrgService.Create(t.Context(), "Quota Org")
-			if err != nil {
-				t.Fatalf("Failed to create quota org: %v", err)
-			}
-			quotaOrgID := quotaOrg.ID
-			_, createErr := quotaService.Create(quotaUserID, quotaOrgID, UserRoleViewer)
-			if createErr != nil {
-				t.Fatalf("Create membership %d failed: %v", i+1, createErr)
-			}
-		}
-
-		// Verify count
-		count := quotaService.CountUserMemberships(quotaUserID)
-		if count != maxOrgs {
-			t.Errorf("CountUserMemberships = %d, want %d", count, maxOrgs)
-		}
-
-		// Try to create one more - should fail
-		failOrg, err := quotaOrgService.Create(t.Context(), "Fail Org")
-		if err != nil {
-			t.Fatalf("Failed to create fail org: %v", err)
-		}
-		_, createErr := quotaService.Create(quotaUserID, failOrg.ID, UserRoleViewer)
-		if createErr == nil {
-			t.Error("Expected error when exceeding user org quota")
-		}
-
-		// Different user should still be able to create memberships
-		otherUser, err := quotaUserService.Create("other@example.com", "password", "Other User")
-		if err != nil {
-			t.Fatalf("Failed to create other user: %v", err)
-		}
-		otherUserID := otherUser.ID
-		// Create a new org for other user to avoid org user limit (which is 3 by default)
-		otherOrg, err := quotaOrgService.Create(t.Context(), "Other Org")
-		if err != nil {
-			t.Fatalf("Failed to create other org: %v", err)
-		}
-		_, createErr = quotaService.Create(otherUserID, otherOrg.ID, UserRoleViewer)
-		if createErr != nil {
-			t.Errorf("Different user should be able to create membership: %v", createErr)
-		}
-	})
-
-	t.Run("OrgUserQuota", func(t *testing.T) {
-		tempDir := t.TempDir()
-		userService, err := NewUserService(filepath.Join(tempDir, "users.jsonl"))
-		if err != nil {
-			t.Fatalf("NewUserService failed: %v", err)
-		}
-		orgService, err := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
-		if err != nil {
-			t.Fatalf("NewOrganizationService failed: %v", err)
-		}
-		service, err := NewMembershipService(filepath.Join(tempDir, "memberships.jsonl"), userService, orgService)
-		if err != nil {
-			t.Fatalf("NewMembershipService failed: %v", err)
-		}
-
-		// Create org with small quota
-		org, err := orgService.Create(t.Context(), "Small Org")
-		if err != nil {
-			t.Fatalf("Failed to create org: %v", err)
-		}
-		// Manually update quota to 1 for testing
-		_, err = orgService.Modify(org.ID, func(o *Organization) error {
-			o.Quotas.MaxUsers = 1
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("Failed to modify org quota: %v", err)
-		}
-
-		// Create first user
-		user1, err := userService.Create("user1@example.com", "password", "User 1")
-		if err != nil {
-			t.Fatalf("Failed to create user 1: %v", err)
-		}
-		// Add first user to org
-		_, err = service.Create(user1.ID, org.ID, UserRoleAdmin)
-		if err != nil {
-			t.Fatalf("Failed to add user 1: %v", err)
-		}
-
-		// Create second user
-		user2, err := userService.Create("user2@example.com", "password", "User 2")
-		if err != nil {
-			t.Fatalf("Failed to create user 2: %v", err)
-		}
-		// Try to add second user to org - should fail
-		_, err = service.Create(user2.ID, org.ID, UserRoleViewer)
-		if err == nil {
-			t.Error("Expected error when exceeding org user quota")
-		}
 	})
 
 	t.Run("Get", func(t *testing.T) {
 		t.Run("existing", func(t *testing.T) {
-			retrieved, getErr := service.Get(userID, orgID)
+			found, getErr := service.Get(user.ID, org.ID)
 			if getErr != nil {
-				t.Fatalf("Get failed: %v", getErr)
+				t.Fatalf("Failed to get membership: %v", getErr)
 			}
-			if retrieved.Role != UserRoleAdmin {
-				t.Errorf("Role = %v, want %v", retrieved.Role, UserRoleAdmin)
+			if found.ID != mem.ID {
+				t.Errorf("Expected ID %v, got %v", mem.ID, found.ID)
 			}
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			_, getErr := service.Get(jsonldb.ID(999), orgID)
+			_, getErr := service.Get(jsonldb.ID(99999), org.ID)
 			if getErr == nil {
 				t.Error("Expected error for non-existent membership")
 			}
 		})
 	})
 
-	t.Run("Iter", func(t *testing.T) {
-		// Create second user in same org
-		user2, err := userService.Create("test2@example.com", "password", "Test User 2")
-		if err != nil {
-			t.Fatalf("Failed to create user 2: %v", err)
+	t.Run("IterByUser", func(t *testing.T) {
+		count := 0
+		for range service.IterByUser(user.ID) {
+			count++
 		}
-		userID2 := user2.ID
-		if _, err := service.Create(userID2, orgID, UserRoleViewer); err != nil {
-			t.Fatalf("Create membership for userID2 failed: %v", err)
+		if count != 1 {
+			t.Errorf("Expected 1 membership, got %d", count)
 		}
+	})
 
-		// Create same user in different org
-		org2, err := orgService.Create(t.Context(), "Test Org 2")
-		if err != nil {
-			t.Fatalf("Failed to create org 2: %v", err)
+	t.Run("IterByOrg", func(t *testing.T) {
+		count := 0
+		for range service.IterByOrg(org.ID) {
+			count++
 		}
-		orgID2 := org2.ID
-		if _, err := service.Create(userID, orgID2, UserRoleEditor); err != nil {
-			t.Fatalf("Create membership for orgID2 failed: %v", err)
+		if count != 1 {
+			t.Errorf("Expected 1 membership, got %d", count)
 		}
+	})
 
-		t.Run("by user", func(t *testing.T) {
-			iter, iterErr := service.Iter(userID)
-			if iterErr != nil {
-				t.Fatalf("Iter failed: %v", iterErr)
-			}
-			count := 0
-			for range iter {
-				count++
-			}
-			if count != 2 {
-				t.Errorf("Expected 2 memberships for user, got %d", count)
-			}
-		})
+	t.Run("CountUserMemberships", func(t *testing.T) {
+		count := service.CountUserMemberships(user.ID)
+		if count != 1 {
+			t.Errorf("Expected count 1, got %d", count)
+		}
+	})
 
-		t.Run("zero user ID", func(t *testing.T) {
-			_, iterErr := service.Iter(jsonldb.ID(0))
-			if iterErr == nil {
-				t.Error("Expected error for invalid user ID in Iter")
-			}
-		})
+	t.Run("CountOrgMemberships", func(t *testing.T) {
+		count := service.CountOrgMemberships(org.ID)
+		if count != 1 {
+			t.Errorf("Expected count 1, got %d", count)
+		}
+	})
+
+	t.Run("HasOwner", func(t *testing.T) {
+		if !service.HasOwner(org.ID) {
+			t.Error("Expected org to have an owner")
+		}
 	})
 
 	t.Run("Modify", func(t *testing.T) {
-		t.Run("role change", func(t *testing.T) {
-			toUpdate, _ := service.Get(userID, orgID)
-			_, modErr := service.Modify(toUpdate.ID, func(m *Membership) error {
-				m.Role = UserRoleEditor
-				return nil
-			})
-			if modErr != nil {
-				t.Fatalf("Modify failed: %v", modErr)
-			}
-
-			updated, _ := service.Get(userID, orgID)
-			if updated.Role != UserRoleEditor {
-				t.Errorf("Role after update = %v, want %v", updated.Role, UserRoleEditor)
-			}
+		modified, modErr := service.Modify(mem.ID, func(m *OrganizationMembership) error {
+			m.Role = OrgRoleAdmin
+			return nil
 		})
+		if modErr != nil {
+			t.Fatalf("Failed to modify membership: %v", modErr)
+		}
+		if modified.Role != OrgRoleAdmin {
+			t.Errorf("Expected role %s, got %s", OrgRoleAdmin, modified.Role)
+		}
+	})
 
-		t.Run("settings change", func(t *testing.T) {
-			toUpdate, _ := service.Get(userID, orgID)
-			_, modErr := service.Modify(toUpdate.ID, func(m *Membership) error {
-				m.Settings = MembershipSettings{Notifications: true}
-				return nil
-			})
-			if modErr != nil {
-				t.Fatalf("Modify failed: %v", modErr)
-			}
-
-			updatedSettings, _ := service.Get(userID, orgID)
-			if !updatedSettings.Settings.Notifications {
-				t.Error("Settings.Notifications = false, want true")
+	t.Run("Delete", func(t *testing.T) {
+		t.Run("zero ID", func(t *testing.T) {
+			delErr := service.Delete(jsonldb.ID(0))
+			if delErr == nil {
+				t.Error("Expected error for Delete with zero ID")
 			}
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			_, modErr := service.Modify(jsonldb.ID(999), func(m *Membership) error {
-				return nil
-			})
-			if modErr == nil {
-				t.Error("Expected error when modifying non-existent membership")
-			}
-		})
-
-		t.Run("zero ID", func(t *testing.T) {
-			_, modErr := service.Modify(jsonldb.ID(0), func(m *Membership) error {
-				return nil
-			})
-			if modErr == nil {
-				t.Error("Expected error when modifying with zero ID")
-			}
-		})
-	})
-
-	t.Run("Persistence", func(t *testing.T) {
-		persistDir := t.TempDir()
-		tablePath := filepath.Join(persistDir, "memberships.jsonl")
-		userPath := filepath.Join(persistDir, "users.jsonl")
-
-		userService1, err := NewUserService(userPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		orgService1, err := NewOrganizationService(filepath.Join(persistDir, "organizations.jsonl"))
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		user, err := userService1.Create("persist@example.com", "password", "Persist User")
-		if err != nil {
-			t.Fatal(err)
-		}
-		persistUserID := user.ID
-
-		org, err := orgService1.Create(t.Context(), "Persist Org")
-		if err != nil {
-			t.Fatal(err)
-		}
-		persistOrgID := org.ID
-
-		service1, svcErr := NewMembershipService(tablePath, userService1, orgService1)
-		if svcErr != nil {
-			t.Fatal(svcErr)
-		}
-
-		_, createErr := service1.Create(persistUserID, persistOrgID, UserRoleAdmin)
-		if createErr != nil {
-			t.Fatal(createErr)
-		}
-
-		// Create new service instance (simulating restart)
-		userService2, err := NewUserService(userPath)
-		if err != nil {
-			t.Fatal(err)
-		}
-		orgService2, err := NewOrganizationService(filepath.Join(persistDir, "organizations.jsonl"))
-		if err != nil {
-			t.Fatal(err)
-		}
-		service2, svcErr := NewMembershipService(tablePath, userService2, orgService2)
-		if svcErr != nil {
-			t.Fatal(svcErr)
-		}
-
-		retrieved, getErr := service2.Get(persistUserID, persistOrgID)
-		if getErr != nil {
-			t.Fatalf("Failed to retrieve persisted membership: %v", getErr)
-		}
-		if retrieved.Role != UserRoleAdmin {
-			t.Errorf("Persisted Role = %v, want %v", retrieved.Role, UserRoleAdmin)
-		}
-	})
-
-	t.Run("InvalidJSONL", func(t *testing.T) {
-		t.Run("malformed JSON", func(t *testing.T) {
-			tempDir := t.TempDir()
-			jsonlPath := filepath.Join(tempDir, "invalid_memberships.jsonl")
-			userService, _ := NewUserService(filepath.Join(tempDir, "users.jsonl"))
-			orgService, _ := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
-
-			// Write invalid JSON to the file (malformed JSON)
-			err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
-{"id":1,"user_id":100,"org_id":200,"role":"admin"}
-{"id":2,"user_id":101,"org_id":201,"role":"viewer"
-`), 0o600)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			_, err = NewMembershipService(jsonlPath, userService, orgService)
-			if err == nil {
-				t.Error("Expected error when loading invalid JSONL file")
-			}
-		})
-
-		t.Run("malformed row with empty role", func(t *testing.T) {
-			tempDir := t.TempDir()
-			jsonlPath := filepath.Join(tempDir, "malformed_memberships.jsonl")
-			userService, _ := NewUserService(filepath.Join(tempDir, "users.jsonl"))
-			orgService, _ := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
-
-			// Write JSON with malformed row (missing required fields)
-			err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
-{"id":1,"user_id":100,"org_id":200,"role":""}
-`), 0o600)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			_, err = NewMembershipService(jsonlPath, userService, orgService)
-			if err == nil {
-				t.Error("Expected error when loading JSONL with invalid row (empty role)")
-			}
-		})
-
-		t.Run("row with zero ID", func(t *testing.T) {
-			tempDir := t.TempDir()
-			jsonlPath := filepath.Join(tempDir, "zero_id_memberships.jsonl")
-			userService, _ := NewUserService(filepath.Join(tempDir, "users.jsonl"))
-			orgService, _ := NewOrganizationService(filepath.Join(tempDir, "organizations.jsonl"))
-
-			// Write JSON with zero ID
-			err := os.WriteFile(jsonlPath, []byte(`{"version":"1.0","columns":[]}
-{"id":0,"user_id":100,"org_id":200,"role":"admin"}
-`), 0o600)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			_, err = NewMembershipService(jsonlPath, userService, orgService)
-			if err == nil {
-				t.Error("Expected error when loading JSONL with zero ID")
+			delErr := service.Delete(jsonldb.ID(99999))
+			if delErr == nil {
+				t.Error("Expected error for Delete with non-existent ID")
 			}
 		})
 	})

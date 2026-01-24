@@ -23,23 +23,35 @@ import (
 
 // OAuthHandler handles OAuth2 authentication for multiple providers.
 type OAuthHandler struct {
-	userService *identity.UserService
-	memService  *identity.MembershipService
-	orgService  *identity.OrganizationService
-	fs          *content.FileStore
-	authHandler *AuthHandler
-	providers   map[string]*oauth2.Config
+	userService   *identity.UserService
+	orgMemService *identity.OrganizationMembershipService
+	wsMemService  *identity.WorkspaceMembershipService
+	orgService    *identity.OrganizationService
+	wsService     *identity.WorkspaceService
+	fs            *content.FileStore
+	authHandler   *AuthHandler
+	providers     map[string]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
-func NewOAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, fs *content.FileStore, authHandler *AuthHandler) *OAuthHandler {
+func NewOAuthHandler(
+	userService *identity.UserService,
+	orgMemService *identity.OrganizationMembershipService,
+	wsMemService *identity.WorkspaceMembershipService,
+	orgService *identity.OrganizationService,
+	wsService *identity.WorkspaceService,
+	fs *content.FileStore,
+	authHandler *AuthHandler,
+) *OAuthHandler {
 	return &OAuthHandler{
-		userService: userService,
-		memService:  memService,
-		orgService:  orgService,
-		fs:          fs,
-		authHandler: authHandler,
-		providers:   make(map[string]*oauth2.Config),
+		userService:   userService,
+		orgMemService: orgMemService,
+		wsMemService:  wsMemService,
+		orgService:    orgService,
+		wsService:     wsService,
+		fs:            fs,
+		authHandler:   authHandler,
+		providers:     make(map[string]*oauth2.Config),
 	}
 }
 
@@ -121,6 +133,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 	token, err := config.Exchange(r.Context(), code)
 	if err != nil {
+		slog.ErrorContext(r.Context(), "OAuth: token exchange failed", "error", err, "provider", provider)
 		writeErrorResponse(w, dto.OAuthError("token_exchange"))
 		return
 	}

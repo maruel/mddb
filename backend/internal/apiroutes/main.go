@@ -117,10 +117,15 @@ func parseHandler(expr ast.Expr) (role, handler string) {
 		if len(call.Args) >= 1 {
 			return "public", exprName(call.Args[0])
 		}
-	case "WrapAuth", "WrapAuthRaw":
-		// Args: userService, memService, sessionService, jwtSecret, role, handler
+	case "WrapAuth":
+		// Args: userService, orgMemService, sessionService, jwtSecret, role, handler, rlConfig
 		if len(call.Args) >= 6 {
 			return exprName(call.Args[4]), exprName(call.Args[5])
+		}
+	case "WrapWSAuth", "WrapAuthRaw":
+		// Args: userService, orgMemService, wsMemService, wsService, sessionService, jwtSecret, role, handler, rlConfig
+		if len(call.Args) >= 8 {
+			return exprName(call.Args[6]), exprName(call.Args[7])
 		}
 	case "WrapGlobalAdmin":
 		// Args: userService, sessionService, jwtSecret, handler

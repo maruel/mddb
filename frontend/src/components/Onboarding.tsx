@@ -21,9 +21,9 @@ export default function Onboarding(props: OnboardingProps) {
 
   // Create API client
   const api = createMemo(() => createApi(() => props.token));
-  const orgApi = createMemo(() => {
-    const orgID = props.user.organization_id;
-    return orgID ? api().org(orgID) : null;
+  const wsApi = createMemo(() => {
+    const wsID = props.user.workspace_id;
+    return wsID ? api().ws(wsID) : null;
   });
 
   const handleSkipGit = () => {
@@ -32,15 +32,15 @@ export default function Onboarding(props: OnboardingProps) {
 
   const handleSetupGit = async (e: Event) => {
     e.preventDefault();
-    const org = orgApi();
-    if (!org) return;
+    const ws = wsApi();
+    if (!ws) return;
 
     try {
       setLoading(true);
       setError(null);
 
       // Setup git remote
-      await org.settings.git.update({
+      await ws.settings.git.update({
         url: remoteURL(),
         token: remoteToken(),
         type: 'custom',

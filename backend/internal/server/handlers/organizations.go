@@ -10,23 +10,33 @@ import (
 
 // OrganizationHandler handles organization management requests.
 type OrganizationHandler struct {
-	orgService *identity.OrganizationService
+	orgService    *identity.OrganizationService
+	orgMemService *identity.OrganizationMembershipService
+	wsService     *identity.WorkspaceService
 }
 
 // NewOrganizationHandler creates a new organization handler.
-func NewOrganizationHandler(orgService *identity.OrganizationService) *OrganizationHandler {
+func NewOrganizationHandler(
+	orgService *identity.OrganizationService,
+	orgMemService *identity.OrganizationMembershipService,
+	wsService *identity.WorkspaceService,
+) *OrganizationHandler {
 	return &OrganizationHandler{
-		orgService: orgService,
+		orgService:    orgService,
+		orgMemService: orgMemService,
+		wsService:     wsService,
 	}
 }
 
 // GetOrganization retrieves current organization details.
-func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetOrganizationRequest) (*dto.OrganizationResponse, error) {
+func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID jsonldb.ID, _ *identity.User, _ *dto.GetOrganizationRequest) (*dto.OrganizationResponse, error) {
 	org, err := h.orgService.Get(orgID)
 	if err != nil {
 		return nil, err
 	}
-	return organizationToResponse(org), nil
+	memberCount := h.orgMemService.CountOrgMemberships(orgID)
+	workspaceCount := h.wsService.CountByOrg(orgID)
+	return organizationToResponse(org, memberCount, workspaceCount), nil
 }
 
 // UpdateOrgPreferences updates organization-wide preferences/settings.
@@ -38,7 +48,9 @@ func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID js
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to update organization settings", err)
 	}
-	return organizationToResponse(org), nil
+	memberCount := h.orgMemService.CountOrgMemberships(orgID)
+	workspaceCount := h.wsService.CountByOrg(orgID)
+	return organizationToResponse(org, memberCount, workspaceCount), nil
 }
 
 // UpdateOrganization updates organization details (name).
@@ -50,5 +62,7 @@ func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID json
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to update organization", err)
 	}
-	return organizationToResponse(org), nil
+	memberCount := h.orgMemService.CountOrgMemberships(orgID)
+	workspaceCount := h.wsService.CountByOrg(orgID)
+	return organizationToResponse(org, memberCount, workspaceCount), nil
 }

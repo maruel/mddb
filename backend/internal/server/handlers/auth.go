@@ -20,19 +20,32 @@ const tokenExpiration = 24 * time.Hour
 // AuthHandler handles authentication requests.
 type AuthHandler struct {
 	userService    *identity.UserService
-	memService     *identity.MembershipService
+	orgMemService  *identity.OrganizationMembershipService
+	wsMemService   *identity.WorkspaceMembershipService
 	orgService     *identity.OrganizationService
+	wsService      *identity.WorkspaceService
 	sessionService *identity.SessionService
 	fs             *content.FileStore
 	jwtSecret      []byte
 }
 
 // NewAuthHandler creates a new auth handler.
-func NewAuthHandler(userService *identity.UserService, memService *identity.MembershipService, orgService *identity.OrganizationService, sessionService *identity.SessionService, fs *content.FileStore, jwtSecret string) *AuthHandler {
+func NewAuthHandler(
+	userService *identity.UserService,
+	orgMemService *identity.OrganizationMembershipService,
+	wsMemService *identity.WorkspaceMembershipService,
+	orgService *identity.OrganizationService,
+	wsService *identity.WorkspaceService,
+	sessionService *identity.SessionService,
+	fs *content.FileStore,
+	jwtSecret string,
+) *AuthHandler {
 	return &AuthHandler{
 		userService:    userService,
-		memService:     memService,
+		orgMemService:  orgMemService,
+		wsMemService:   wsMemService,
 		orgService:     orgService,
+		wsService:      wsService,
 		sessionService: sessionService,
 		fs:             fs,
 		jwtSecret:      []byte(jwtSecret),
@@ -60,16 +73,14 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 	}
 
 	// Build user response
-	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
 
-	// Set active context to first membership
-	if len(userResp.Memberships) > 0 {
-		h.PopulateActiveContext(userResp, userResp.Memberships[0].OrganizationID)
-	}
+	// Set active context to first org/workspace
+	h.PopulateActiveContext(userResp, uwm)
 
 	return &dto.AuthResponse{
 		Token: token,
@@ -78,7 +89,6 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 }
 
 // Register handles user registration.
-// Note: Organization creation is handled by the frontend after registration.
 func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.AuthResponse, error) {
 	if req.Email == "" || req.Password == "" || req.Name == "" {
 		return nil, dto.MissingField("email, password, or name")
@@ -105,7 +115,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 
 	// Build user response (will have empty memberships for new users)
-	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -118,7 +128,6 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 }
 
 // GenerateToken generates a JWT token for the given user (without session tracking).
-// Prefer GenerateTokenWithSession for proper session management.
 func (h *AuthHandler) GenerateToken(user *identity.User) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":   user.ID,
@@ -154,7 +163,6 @@ func (h *AuthHandler) GenerateTokenWithSession(user *identity.User, clientIP, us
 	}
 
 	// Create session with the pre-generated ID and token hash
-	// Store user agent directly (truncate if too long)
 	deviceInfo := userAgent
 	if len(deviceInfo) > 200 {
 		deviceInfo = deviceInfo[:200]
@@ -169,17 +177,14 @@ func (h *AuthHandler) GenerateTokenWithSession(user *identity.User, clientIP, us
 // GetMe returns the current user info.
 func (h *AuthHandler) GetMe(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.GetMeRequest) (*dto.UserResponse, error) {
 	// Build user response with memberships
-	uwm, err := getUserWithMemberships(h.userService, h.memService, h.orgService, user.ID)
+	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
 
-	// For /api/auth/me, we need to decide which org is "active"
-	// For now, use the first membership if not specified
-	if len(userResp.Memberships) > 0 {
-		h.PopulateActiveContext(userResp, userResp.Memberships[0].OrganizationID)
-	}
+	// Populate active context
+	h.PopulateActiveContext(userResp, uwm)
 
 	return userResp, nil
 }
@@ -191,43 +196,67 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 	}
 
 	// Create the organization
-	org, err := h.orgService.Create(ctx, req.Name)
+	org, err := h.orgService.Create(ctx, req.Name, user.Email)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create organization", err)
 	}
 
-	// Initialize organization storage
-	if err := h.fs.InitOrg(ctx, org.ID); err != nil {
-		return nil, dto.InternalWithError("Failed to initialize organization storage", err)
+	// Create org membership (user becomes owner of new org)
+	if _, err := h.orgMemService.Create(user.ID, org.ID, identity.OrgRoleOwner); err != nil {
+		return nil, dto.InternalWithError("Failed to create membership", err)
+	}
+
+	// Create default workspace
+	ws, err := h.wsService.Create(ctx, org.ID, "Main", "main")
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to create default workspace", err)
+	}
+
+	// Create workspace membership (user becomes admin of default workspace)
+	if _, err := h.wsMemService.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
+		return nil, dto.InternalWithError("Failed to create workspace membership", err)
+	}
+
+	// Initialize workspace storage
+	if err := h.fs.InitWorkspace(ctx, ws.ID); err != nil {
+		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
 	}
 
 	// Create welcome page if content provided
 	if req.WelcomePageTitle != "" && req.WelcomePageContent != "" {
 		pageID := jsonldb.NewID()
 		author := git.Author{Name: user.Name, Email: user.Email}
-		if _, err := h.fs.WritePage(ctx, org.ID, pageID, req.WelcomePageTitle, req.WelcomePageContent, author); err != nil {
-			slog.ErrorContext(ctx, "Failed to create welcome page", "error", err, "org_id", org.ID)
-			return nil, dto.InternalWithError("Failed to initialize organization", err)
+		if _, err := h.fs.WritePage(ctx, ws.ID, pageID, req.WelcomePageTitle, req.WelcomePageContent, author); err != nil {
+			slog.ErrorContext(ctx, "Failed to create welcome page", "error", err, "ws_id", ws.ID)
+			return nil, dto.InternalWithError("Failed to initialize workspace", err)
 		}
 	}
 
-	// Create membership (user becomes admin of new org)
-	if _, err := h.memService.Create(user.ID, org.ID, identity.UserRoleAdmin); err != nil {
-		return nil, dto.InternalWithError("Failed to create membership", err)
-	}
-
-	return organizationToResponse(org), nil
+	memberCount := h.orgMemService.CountOrgMemberships(org.ID)
+	workspaceCount := h.wsService.CountByOrg(org.ID)
+	return organizationToResponse(org, memberCount, workspaceCount), nil
 }
 
-// PopulateActiveContext populates organization-specific fields in the UserResponse.
-func (h *AuthHandler) PopulateActiveContext(userResp *dto.UserResponse, orgIDStr string) {
-	userResp.OrganizationID = orgIDStr
+// PopulateActiveContext populates organization/workspace context in the UserResponse.
+func (h *AuthHandler) PopulateActiveContext(userResp *dto.UserResponse, uwm *userWithMemberships) {
+	// Set first org as active
+	if len(uwm.OrgMemberships) > 0 {
+		userResp.OrganizationID = uwm.OrgMemberships[0].OrganizationID
+		userResp.OrgRole = dto.OrganizationRole(uwm.OrgMemberships[0].Role)
+		uwm.CurrentOrgID = uwm.OrgMemberships[0].OrganizationID
+		uwm.CurrentOrgRole = uwm.OrgMemberships[0].Role
+	}
 
-	for _, m := range userResp.Memberships {
-		if m.OrganizationID == orgIDStr {
-			userResp.Role = m.Role
-			break
+	// Set first workspace in that org as active
+	for _, ws := range uwm.WSMemberships {
+		if ws.OrganizationID != uwm.CurrentOrgID {
+			continue
 		}
+		userResp.WorkspaceID = ws.WorkspaceID
+		userResp.WorkspaceRole = dto.WorkspaceRole(ws.Role)
+		uwm.CurrentWSID = ws.WorkspaceID
+		uwm.CurrentWSRole = ws.Role
+		break
 	}
 }
 
@@ -235,7 +264,6 @@ func (h *AuthHandler) PopulateActiveContext(userResp *dto.UserResponse, orgIDStr
 func (h *AuthHandler) Logout(ctx context.Context, _ jsonldb.ID, _ *identity.User, _ *dto.LogoutRequest) (*dto.LogoutResponse, error) {
 	sessionID := reqctx.SessionID(ctx)
 	if sessionID.IsZero() {
-		// No session ID in token - old token without session tracking
 		return &dto.LogoutResponse{Ok: true}, nil
 	}
 
@@ -251,10 +279,10 @@ func (h *AuthHandler) Logout(ctx context.Context, _ jsonldb.ID, _ *identity.User
 func (h *AuthHandler) ListSessions(ctx context.Context, _ jsonldb.ID, user *identity.User, _ *dto.ListSessionsRequest) (*dto.ListSessionsResponse, error) {
 	currentSessionID := reqctx.SessionID(ctx)
 
-	sessions := make([]dto.SessionResponse, 0, 8) // Preallocate for typical session count
+	sessions := make([]dto.SessionResponse, 0, 8)
 	for session := range h.sessionService.GetActiveByUserID(user.ID) {
 		sessions = append(sessions, dto.SessionResponse{
-			ID:         session.ID.String(),
+			ID:         session.ID,
 			DeviceInfo: session.DeviceInfo,
 			IPAddress:  session.IPAddress,
 			Created:    session.Created.Format(time.RFC3339),
@@ -268,13 +296,8 @@ func (h *AuthHandler) ListSessions(ctx context.Context, _ jsonldb.ID, user *iden
 
 // RevokeSession revokes a specific session.
 func (h *AuthHandler) RevokeSession(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.RevokeSessionRequest) (*dto.RevokeSessionResponse, error) {
-	sessionID, err := jsonldb.DecodeID(req.SessionID)
-	if err != nil {
-		return nil, dto.InvalidField("session_id", "invalid session ID format")
-	}
-
 	// Verify the session belongs to the user
-	session, err := h.sessionService.Get(sessionID)
+	session, err := h.sessionService.Get(req.SessionID)
 	if err != nil {
 		return nil, dto.NewAPIError(404, dto.ErrorCodeNotFound, "Session not found")
 	}
@@ -282,7 +305,7 @@ func (h *AuthHandler) RevokeSession(ctx context.Context, _ jsonldb.ID, user *ide
 		return nil, dto.NewAPIError(403, dto.ErrorCodeForbidden, "Cannot revoke another user's session")
 	}
 
-	if err := h.sessionService.Revoke(sessionID); err != nil {
+	if err := h.sessionService.Revoke(req.SessionID); err != nil {
 		return nil, dto.InternalWithError("Failed to revoke session", err)
 	}
 
@@ -293,7 +316,6 @@ func (h *AuthHandler) RevokeSession(ctx context.Context, _ jsonldb.ID, user *ide
 func (h *AuthHandler) RevokeAllSessions(ctx context.Context, _ jsonldb.ID, user *identity.User, _ *dto.RevokeAllSessionsRequest) (*dto.RevokeAllSessionsResponse, error) {
 	currentSessionID := reqctx.SessionID(ctx)
 
-	// Collect session IDs to revoke (excluding current)
 	var toRevoke []jsonldb.ID
 	for session := range h.sessionService.GetActiveByUserID(user.ID) {
 		if session.ID != currentSessionID {
@@ -301,7 +323,6 @@ func (h *AuthHandler) RevokeAllSessions(ctx context.Context, _ jsonldb.ID, user 
 		}
 	}
 
-	// Revoke each session
 	revokedCount := 0
 	for _, id := range toRevoke {
 		if err := h.sessionService.Revoke(id); err != nil {

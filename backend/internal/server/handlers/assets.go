@@ -45,16 +45,12 @@ func NewAssetHandler(fs *content.FileStore) *AssetHandler {
 
 // ListPageAssets returns a list of assets associated with a page.
 func (h *AssetHandler) ListPageAssets(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListPageAssetsRequest) (*dto.ListPageAssetsResponse, error) {
-	pageID, err := decodeID(req.PageID, "page_id")
-	if err != nil {
-		return nil, err
-	}
-	it, err := h.fs.IterAssets(orgID, pageID)
+	it, err := h.fs.IterAssets(orgID, req.PageID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list assets", err)
 	}
 	assets := slices.Collect(it)
-	return &dto.ListPageAssetsResponse{Assets: assetsToSummaries(assets, orgID.String(), req.PageID)}, nil
+	return &dto.ListPageAssetsResponse{Assets: assetsToSummaries(assets, orgID.String(), req.PageID.String())}, nil
 }
 
 // UploadPageAssetHandler handles asset uploading (multipart/form-data).
@@ -63,14 +59,14 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 	orgIDStr := r.PathValue("orgID")
 	pageIDStr := r.PathValue("id")
 
-	orgID, err := decodeOrgID(orgIDStr)
+	orgID, err := jsonldb.DecodeID(orgIDStr)
 	if err != nil {
-		writeErrorResponse(w, err)
+		writeErrorResponse(w, dto.BadRequest("invalid_org_id"))
 		return
 	}
-	pageID, err := decodeID(pageIDStr, "page_id")
+	pageID, err := jsonldb.DecodeID(pageIDStr)
 	if err != nil {
-		writeErrorResponse(w, err)
+		writeErrorResponse(w, dto.BadRequest("invalid_page_id"))
 		return
 	}
 
@@ -123,14 +119,14 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 	pageIDStr := r.PathValue("id")
 	assetName := r.PathValue("name")
 
-	orgID, err := decodeOrgID(orgIDStr)
+	orgID, err := jsonldb.DecodeID(orgIDStr)
 	if err != nil {
-		writeErrorResponse(w, err)
+		writeErrorResponse(w, dto.BadRequest("invalid_org_id"))
 		return
 	}
-	pageID, err := decodeID(pageIDStr, "page_id")
+	pageID, err := jsonldb.DecodeID(pageIDStr)
 	if err != nil {
-		writeErrorResponse(w, err)
+		writeErrorResponse(w, dto.BadRequest("invalid_page_id"))
 		return
 	}
 
@@ -153,12 +149,8 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 
 // DeletePageAsset deletes an asset.
 func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
-	pageID, err := decodeID(req.PageID, "page_id")
-	if err != nil {
-		return nil, err
-	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.DeleteAsset(ctx, orgID, pageID, req.AssetName, author); err != nil {
+	if err := h.fs.DeleteAsset(ctx, orgID, req.PageID, req.AssetName, author); err != nil {
 		return nil, dto.NotFound("asset")
 	}
 	return &dto.DeletePageAssetResponse{Ok: true}, nil

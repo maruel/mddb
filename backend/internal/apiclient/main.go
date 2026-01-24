@@ -101,7 +101,8 @@ type Endpoint struct {
 	PathFields   []FieldInfo
 	QueryFields  []FieldInfo
 	JSONFields   []FieldInfo
-	IsOrgScoped  bool
+	IsOrgScoped  bool // Uses {orgID} path parameter
+	IsWSScoped   bool // Uses {wsID} path parameter
 }
 
 // NamespaceNode represents a node in the namespace tree.
@@ -380,14 +381,19 @@ func parseHandlerExpr(expr ast.Expr) (wrapperType, handlerName string) {
 			return "Wrap", exprName(call.Args[0])
 		}
 	case "WrapAuth":
-		// Args: userService, memService, sessionService, jwtSecret, role, handler
+		// Args: userService, orgMemService, sessionService, jwtSecret, role, handler, rlConfig
 		if len(call.Args) >= 6 {
 			return "WrapAuth", exprName(call.Args[5])
 		}
+	case "WrapWSAuth":
+		// Args: userService, orgMemService, wsMemService, wsService, sessionService, jwtSecret, role, handler, rlConfig
+		if len(call.Args) >= 8 {
+			return "WrapWSAuth", exprName(call.Args[7])
+		}
 	case "WrapAuthRaw":
-		// Args: userService, memService, sessionService, jwtSecret, role, handler
-		if len(call.Args) >= 6 {
-			return "WrapAuthRaw", exprName(call.Args[5])
+		// Args: userService, orgMemService, wsMemService, wsService, sessionService, jwtSecret, role, handler, rlConfig
+		if len(call.Args) >= 8 {
+			return "WrapAuthRaw", exprName(call.Args[7])
 		}
 	case "WrapGlobalAdmin":
 		// Args: userService, sessionService, jwtSecret, handler
@@ -440,8 +446,9 @@ func matchEndpoints(routes []Route, dtoTypes map[string]*DTOType, handlerSigs ma
 			continue
 		}
 
-		// Check if org-scoped (has {orgID} in path)
+		// Check if org-scoped or ws-scoped
 		isOrgScoped := strings.Contains(r.Path, "{orgID}")
+		isWSScoped := strings.Contains(r.Path, "{wsID}")
 
 		endpoints = append(endpoints, &Endpoint{
 			Method:       r.Method,
@@ -453,6 +460,7 @@ func matchEndpoints(routes []Route, dtoTypes map[string]*DTOType, handlerSigs ma
 			QueryFields:  dto.QueryFields,
 			JSONFields:   dto.JSONFields,
 			IsOrgScoped:  isOrgScoped,
+			IsWSScoped:   isWSScoped,
 		})
 	}
 
@@ -463,20 +471,41 @@ func matchEndpoints(routes []Route, dtoTypes map[string]*DTOType, handlerSigs ma
 	return endpoints, nil
 }
 
+// ScopeType represents the scope of an endpoint.
+type ScopeType int
+
+const (
+	ScopeGlobal ScopeType = iota
+	ScopeOrg
+	ScopeWS
+)
+
 // buildNamespaceTree builds a tree structure from endpoints.
-func buildNamespaceTree(endpoints []*Endpoint, orgScoped bool) *NamespaceNode {
+func buildNamespaceTree(endpoints []*Endpoint, scope ScopeType) *NamespaceNode {
 	root := &NamespaceNode{
 		Name:     "root",
 		Children: make(map[string]*NamespaceNode),
 	}
 
 	for _, ep := range endpoints {
-		if ep.IsOrgScoped != orgScoped {
-			continue
+		// Filter by scope
+		switch scope {
+		case ScopeGlobal:
+			if ep.IsOrgScoped || ep.IsWSScoped {
+				continue
+			}
+		case ScopeOrg:
+			if !ep.IsOrgScoped || ep.IsWSScoped {
+				continue
+			}
+		case ScopeWS:
+			if !ep.IsWSScoped {
+				continue
+			}
 		}
 
 		// Parse path into namespace parts
-		nsParts, pathArgs := parseNamespacePath(ep.Path, ep.PathFields, orgScoped)
+		nsParts, pathArgs := parseNamespacePath(ep.Path, ep.PathFields, scope)
 
 		// Find or create the namespace node
 		node := root
@@ -547,13 +576,18 @@ func flattenNamespaces(node *NamespaceNode) {
 }
 
 // parseNamespacePath extracts namespace parts and path arguments from a URL path.
-func parseNamespacePath(path string, pathFields []FieldInfo, orgScoped bool) ([]string, []PathArg) {
+func parseNamespacePath(path string, pathFields []FieldInfo, scope ScopeType) ([]string, []PathArg) {
 	// Remove /api/ prefix
 	path = strings.TrimPrefix(path, "/api/")
 
-	// Remove {orgID}/ for org-scoped paths
-	if orgScoped {
-		path = strings.TrimPrefix(path, "{orgID}/")
+	// Remove org/ws prefix for scoped paths
+	switch scope {
+	case ScopeGlobal:
+		// No prefix to remove for global scope
+	case ScopeOrg:
+		path = strings.TrimPrefix(path, "organizations/{orgID}/")
+	case ScopeWS:
+		path = strings.TrimPrefix(path, "workspaces/{wsID}/")
 	}
 
 	parts := strings.Split(path, "/")
@@ -574,8 +608,8 @@ func parseNamespacePath(path string, pathFields []FieldInfo, orgScoped bool) ([]
 		if strings.HasPrefix(part, "{") && strings.HasSuffix(part, "}") {
 			// This is a path parameter
 			paramName := strings.Trim(part, "{}")
-			if paramName == "orgID" {
-				continue // Skip orgID, handled separately
+			if paramName == "orgID" || paramName == "wsID" {
+				continue // Skip orgID/wsID, handled separately
 			}
 
 			// Find the corresponding field info
@@ -718,8 +752,9 @@ async function post<T>(fetchFn: FetchFn, url: string, body?: object): Promise<T>
 `)
 
 	// Build namespace trees
-	globalTree := buildNamespaceTree(endpoints, false)
-	orgTree := buildNamespaceTree(endpoints, true)
+	globalTree := buildNamespaceTree(endpoints, ScopeGlobal)
+	orgTree := buildNamespaceTree(endpoints, ScopeOrg)
+	wsTree := buildNamespaceTree(endpoints, ScopeWS)
 
 	// Generate client
 	b.WriteString("/** Creates a typed API client */\n")
@@ -727,13 +762,21 @@ async function post<T>(fetchFn: FetchFn, url: string, body?: object): Promise<T>
 	b.WriteString("  return {\n")
 
 	// Generate global namespaces
-	writeNamespaceNode(&b, globalTree, "    ", false)
+	writeNamespaceNode(&b, globalTree, "    ", ScopeGlobal)
 
 	// Generate org factory
 	b.WriteString("\n    /** Returns an org-scoped API client */\n")
 	b.WriteString("    org(orgID: string) {\n")
 	b.WriteString("      return {\n")
-	writeNamespaceNode(&b, orgTree, "        ", true)
+	writeNamespaceNode(&b, orgTree, "        ", ScopeOrg)
+	b.WriteString("      };\n")
+	b.WriteString("    },\n")
+
+	// Generate ws factory
+	b.WriteString("\n    /** Returns a workspace-scoped API client */\n")
+	b.WriteString("    ws(wsID: string) {\n")
+	b.WriteString("      return {\n")
+	writeNamespaceNode(&b, wsTree, "        ", ScopeWS)
 	b.WriteString("      };\n")
 	b.WriteString("    },\n")
 
@@ -742,12 +785,13 @@ async function post<T>(fetchFn: FetchFn, url: string, body?: object): Promise<T>
 
 	b.WriteString("export type APIClient = ReturnType<typeof createAPIClient>;\n")
 	b.WriteString("export type OrgAPIClient = ReturnType<APIClient['org']>;\n")
+	b.WriteString("export type WSAPIClient = ReturnType<APIClient['ws']>;\n")
 
 	return os.WriteFile(outPath, []byte(b.String()), 0o600)
 }
 
 // writeNamespaceNode writes a namespace node and its children recursively.
-func writeNamespaceNode(b *strings.Builder, node *NamespaceNode, indent string, isOrgScoped bool) {
+func writeNamespaceNode(b *strings.Builder, node *NamespaceNode, indent string, scope ScopeType) {
 	// Get sorted child keys for consistent output
 	childKeys := make([]string, 0, len(node.Children))
 	for k := range node.Children {
@@ -765,7 +809,7 @@ func writeNamespaceNode(b *strings.Builder, node *NamespaceNode, indent string, 
 
 		if hasChildren || hasMethods {
 			fmt.Fprintf(b, "%s%s: {\n", indent, key)
-			writeNamespaceNode(b, child, indent+"  ", isOrgScoped)
+			writeNamespaceNode(b, child, indent+"  ", scope)
 			fmt.Fprintf(b, "%s},\n", indent)
 		}
 	}
@@ -777,12 +821,12 @@ func writeNamespaceNode(b *strings.Builder, node *NamespaceNode, indent string, 
 	})
 
 	for _, method := range node.Methods {
-		writeMethod(b, method, indent, isOrgScoped)
+		writeMethod(b, method, indent, scope)
 	}
 }
 
 // writeMethod writes a single method using get/post helpers.
-func writeMethod(b *strings.Builder, m *NamespaceMethod, indent string, isOrgScoped bool) {
+func writeMethod(b *strings.Builder, m *NamespaceMethod, indent string, scope ScopeType) {
 	ep := m.Endpoint
 	isGet := ep.Method == http.MethodGet
 
@@ -804,8 +848,13 @@ func writeMethod(b *strings.Builder, m *NamespaceMethod, indent string, isOrgSco
 
 	// Build URL template
 	urlTemplate := ep.Path
-	if isOrgScoped {
+	switch scope {
+	case ScopeGlobal:
+		// No path parameter substitution for global scope
+	case ScopeOrg:
 		urlTemplate = strings.Replace(urlTemplate, "{orgID}", "${orgID}", 1)
+	case ScopeWS:
+		urlTemplate = strings.Replace(urlTemplate, "{wsID}", "${wsID}", 1)
 	}
 	for _, arg := range m.PathArgs {
 		placeholder := "{" + arg.Name + "}"

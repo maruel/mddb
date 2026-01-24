@@ -230,21 +230,36 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize organization service: %w", err)
 	}
 
-	memService, err := identity.NewMembershipService(filepath.Join(dbDir, "memberships.jsonl"), userService, orgService)
+	wsService, err := identity.NewWorkspaceService(filepath.Join(dbDir, "workspaces.jsonl"))
 	if err != nil {
-		return fmt.Errorf("failed to initialize membership service: %w", err)
+		return fmt.Errorf("failed to initialize workspace service: %w", err)
+	}
+
+	orgMemService, err := identity.NewOrganizationMembershipService(filepath.Join(dbDir, "org_memberships.jsonl"), userService, orgService)
+	if err != nil {
+		return fmt.Errorf("failed to initialize organization membership service: %w", err)
+	}
+
+	wsMemService, err := identity.NewWorkspaceMembershipService(filepath.Join(dbDir, "ws_memberships.jsonl"), wsService, orgService)
+	if err != nil {
+		return fmt.Errorf("failed to initialize workspace membership service: %w", err)
+	}
+
+	orgInvService, err := identity.NewOrganizationInvitationService(filepath.Join(dbDir, "org_invitations.jsonl"))
+	if err != nil {
+		return fmt.Errorf("failed to initialize organization invitation service: %w", err)
+	}
+
+	wsInvService, err := identity.NewWorkspaceInvitationService(filepath.Join(dbDir, "ws_invitations.jsonl"))
+	if err != nil {
+		return fmt.Errorf("failed to initialize workspace invitation service: %w", err)
 	}
 
 	gitMgr := git.NewManager(*dataDir, "", "")
 
-	fileStore, err := content.NewFileStore(*dataDir, gitMgr, orgService)
+	fileStore, err := content.NewFileStore(*dataDir, gitMgr, wsService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
-	}
-
-	invService, err := identity.NewInvitationService(filepath.Join(dbDir, "invitations.jsonl"))
-	if err != nil {
-		return fmt.Errorf("failed to initialize invitation service: %w", err)
 	}
 
 	sessionService, err := identity.NewSessionService(filepath.Join(dbDir, "sessions.jsonl"))
@@ -267,7 +282,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(fileStore, userService, orgService, invService, memService, sessionService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
+		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}
