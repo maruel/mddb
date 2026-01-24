@@ -41,8 +41,8 @@ func formatTime(t time.Time) string {
 
 func userToResponse(u *identity.User) *dto.UserResponse {
 	identities := make([]dto.OAuthIdentity, len(u.OAuthIdentities))
-	for i, id := range u.OAuthIdentities {
-		identities[i] = oauthIdentityToDTO(id)
+	for i := range u.OAuthIdentities {
+		identities[i] = oauthIdentityToDTO(&u.OAuthIdentities[i])
 	}
 	return &dto.UserResponse{
 		ID:              u.ID.String(),
@@ -200,11 +200,12 @@ func userSettingsToDTO(s identity.UserSettings) dto.UserSettings {
 	}
 }
 
-func oauthIdentityToDTO(o identity.OAuthIdentity) dto.OAuthIdentity {
+func oauthIdentityToDTO(o *identity.OAuthIdentity) dto.OAuthIdentity {
 	return dto.OAuthIdentity{
 		Provider:   dto.OAuthProvider(o.Provider),
 		ProviderID: o.ProviderID,
 		Email:      o.Email,
+		AvatarURL:  o.AvatarURL,
 		LastLogin:  formatTime(o.LastLogin),
 	}
 }

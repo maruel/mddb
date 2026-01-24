@@ -30,6 +30,11 @@ export const dict: Dictionary = {
     myOrg: 'Meine Organisation',
   },
 
+  userMenu: {
+    logout: 'Abmelden',
+    profile: 'Profil',
+  },
+
   auth: {
     login: 'Anmelden',
     register: 'Registrieren',

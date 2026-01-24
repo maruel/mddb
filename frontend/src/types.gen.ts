@@ -91,7 +91,11 @@ export const ErrorCodeOAuthError = "OAUTH_ERROR";
  * ErrorCodeExpired is returned when a resource has expired.
  */
 export const ErrorCodeExpired = "EXPIRED";
-export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodePageNotFound | typeof ErrorCodeTableNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden | typeof ErrorCodeInvalidProvider | typeof ErrorCodeOAuthError | typeof ErrorCodeExpired;
+/**
+ * ErrorCodeRateLimitExceeded is returned when rate limit is exceeded.
+ */
+export const ErrorCodeRateLimitExceeded = "RATE_LIMIT_EXCEEDED";
+export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodePageNotFound | typeof ErrorCodeTableNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden | typeof ErrorCodeInvalidProvider | typeof ErrorCodeOAuthError | typeof ErrorCodeExpired | typeof ErrorCodeRateLimitExceeded;
 /**
  * ErrorDetails defines the structured error information in a response.
  */
@@ -911,6 +915,7 @@ export interface OAuthIdentity {
   provider: OAuthProvider;
   provider_id: string;
   email: string;
+  avatar_url?: string;
   last_login: string;
 }
 /**

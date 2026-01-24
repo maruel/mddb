@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -126,9 +128,10 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	client := config.Client(ctx, token)
 	var userInfo struct {
-		ID    string `json:"id"`
-		Email string `json:"email"`
-		Name  string `json:"name"`
+		ID        string `json:"id"`
+		Email     string `json:"email"`
+		Name      string `json:"name"`
+		AvatarURL string
 	}
 
 	switch provider {
@@ -143,10 +146,20 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				slog.ErrorContext(ctx, "Failed to close Google API response body", "error", err)
 			}
 		}()
-		if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+		var googleUser struct {
+			ID      string `json:"id"`
+			Email   string `json:"email"`
+			Name    string `json:"name"`
+			Picture string `json:"picture"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
 			writeErrorResponse(w, dto.OAuthError("decode"))
 			return
 		}
+		userInfo.ID = googleUser.ID
+		userInfo.Email = googleUser.Email
+		userInfo.Name = googleUser.Name
+		userInfo.AvatarURL = googleUser.Picture
 	case "microsoft":
 		resp, err := client.Get("https://graph.microsoft.com/v1.0/me")
 		if err != nil {
@@ -175,6 +188,9 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		if userInfo.Email == "" {
 			userInfo.Email = msUser.UserPrincipalName
 		}
+
+		// Fetch Microsoft profile photo and convert to base64 data URL
+		userInfo.AvatarURL = fetchMicrosoftPhoto(ctx, client)
 	}
 
 	// Try to find user by OAuth ID
@@ -204,12 +220,27 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				Provider:   provider,
 				ProviderID: userInfo.ID,
 				Email:      userInfo.Email,
+				AvatarURL:  userInfo.AvatarURL,
 				LastLogin:  time.Now(),
 			})
 			return nil
 		}); err != nil {
 			writeErrorResponse(w, dto.Internal("oauth_link"))
 			return
+		}
+	} else {
+		// Existing OAuth identity - update avatar URL and last login
+		if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+			for i := range u.OAuthIdentities {
+				if u.OAuthIdentities[i].Provider == provider && u.OAuthIdentities[i].ProviderID == userInfo.ID {
+					u.OAuthIdentities[i].AvatarURL = userInfo.AvatarURL
+					u.OAuthIdentities[i].LastLogin = time.Now()
+					break
+				}
+			}
+			return nil
+		}); err != nil {
+			slog.WarnContext(r.Context(), "OAuth: failed to update identity", "error", err)
 		}
 	}
 
@@ -228,4 +259,45 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Redirect back to frontend with token (URL-encode for safety)
 	frontendURL := "/" // Default redirect
 	http.Redirect(w, r, fmt.Sprintf("%s?token=%s", frontendURL, url.QueryEscape(jwtToken)), http.StatusFound)
+}
+
+// fetchMicrosoftPhoto fetches the user's profile photo from Microsoft Graph API
+// and returns it as a base64 data URL. Returns empty string on failure.
+func fetchMicrosoftPhoto(ctx context.Context, client *http.Client) string {
+	resp, err := client.Get("https://graph.microsoft.com/v1.0/me/photo/$value")
+	if err != nil {
+		slog.DebugContext(ctx, "Failed to fetch Microsoft photo", "error", err)
+		return ""
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.ErrorContext(ctx, "Failed to close Microsoft photo response body", "error", err)
+		}
+	}()
+
+	// 404 means no photo set
+	if resp.StatusCode == http.StatusNotFound {
+		return ""
+	}
+	if resp.StatusCode != http.StatusOK {
+		slog.DebugContext(ctx, "Microsoft photo request failed", "status", resp.StatusCode)
+		return ""
+	}
+
+	// Read photo data (limit to 1MB to prevent abuse)
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		slog.DebugContext(ctx, "Failed to read Microsoft photo data", "error", err)
+		return ""
+	}
+
+	// Determine content type from response header, default to JPEG
+	contentType := resp.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "image/jpeg"
+	}
+
+	// Encode as data URL
+	encoded := base64.StdEncoding.EncodeToString(data)
+	return fmt.Sprintf("data:%s;base64,%s", contentType, encoded)
 }

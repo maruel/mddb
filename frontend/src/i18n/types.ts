@@ -32,6 +32,11 @@ export interface Dictionary {
     myOrg: string;
   };
 
+  userMenu: {
+    logout: string;
+    profile: string;
+  };
+
   auth: {
     login: string;
     register: string;

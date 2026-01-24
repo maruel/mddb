@@ -1,0 +1,97 @@
+.userMenu {
+  position: relative;
+}
+
+.avatarButton {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--transition);
+}
+
+.avatarButton:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.avatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.initials {
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.userInfo {
+  padding: var(--s-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.userName {
+  font-weight: 600;
+  color: var(--c-text);
+  font-size: 0.9rem;
+}
+
+.userEmail {
+  color: var(--c-text-light);
+  font-size: 0.8rem;
+}
+
+.userRole {
+  color: var(--c-text-light);
+  font-size: 0.75rem;
+  text-transform: capitalize;
+  background: var(--c-bg-alt);
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.divider {
+  height: 1px;
+  background: var(--c-border);
+}
+
+.menuItem {
+  width: 100%;
+  padding: var(--s-3);
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--c-text);
+  transition: background var(--transition);
+}
+
+.menuItem:hover {
+  background: var(--c-bg-alt);
+}

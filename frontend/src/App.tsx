@@ -12,6 +12,7 @@ import Privacy from './components/Privacy';
 import Terms from './components/Terms';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import CreateOrgModal from './components/CreateOrgModal';
+import UserMenu from './components/UserMenu';
 import { debounce } from './utils/debounce';
 import { useI18n, type Locale } from './i18n';
 import { createApi, APIError } from './useApi';
@@ -616,12 +617,7 @@ export default function App() {
                     >
                       +
                     </button>
-                    <span>
-                      {user()?.name} ({user()?.role})
-                    </span>
-                    <button onClick={logout} class={styles.logoutButton}>
-                      {t('app.logout')}
-                    </button>
+                    <UserMenu user={user() as UserResponse} onLogout={logout} />
                   </div>
                 </header>
 

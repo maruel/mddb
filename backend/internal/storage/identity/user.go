@@ -51,6 +51,7 @@ type OAuthIdentity struct {
 	Provider   string    `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft)"`
 	ProviderID string    `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
 	Email      string    `json:"email" jsonschema:"description=Email address from OAuth provider"`
+	AvatarURL  string    `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
 	LastLogin  time.Time `json:"last_login" jsonschema:"description=Last login timestamp via this provider"`
 }
 
