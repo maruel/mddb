@@ -13,6 +13,7 @@ import Terms from './components/Terms';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import CreateOrgModal from './components/CreateOrgModal';
 import UserMenu from './components/UserMenu';
+import OrgMenu from './components/OrgMenu';
 import { debounce } from './utils/debounce';
 import { useI18n, type Locale } from './i18n';
 import { createApi, APIError } from './useApi';
@@ -593,29 +594,14 @@ export default function App() {
                     <h1>{t('app.title')}</h1>
                   </div>
                   <div class={styles.userInfo}>
-                    <Show when={(user()?.memberships?.length ?? 0) > 1}>
-                      <select
-                        class={styles.orgSwitcher}
-                        value={user()?.organization_id}
-                        onChange={(e) => switchOrg(e.target.value)}
-                      >
-                        <For each={user()?.memberships}>
-                          {(m) => <option value={m.organization_id}>{m.organization_name || m.organization_id}</option>}
-                        </For>
-                      </select>
+                    <Show when={(user()?.memberships?.length ?? 0) > 0}>
+                      <OrgMenu
+                        memberships={user()?.memberships || []}
+                        currentOrgId={user()?.organization_id || ''}
+                        onSwitchOrg={(orgId) => switchOrg(orgId)}
+                        onCreateOrg={() => setShowCreateOrg(true)}
+                      />
                     </Show>
-                    <Show when={user()?.memberships?.length === 1}>
-                      <span class={styles.orgName}>
-                        {user()?.memberships?.[0]?.organization_name || t('app.myOrg')}
-                      </span>
-                    </Show>
-                    <button
-                      class={styles.createOrgButton}
-                      onClick={() => setShowCreateOrg(true)}
-                      title={t('createOrg.title') || 'Create Organization'}
-                    >
-                      +
-                    </button>
                     <UserMenu user={user() as UserResponse} onLogout={logout} />
                   </div>
                 </header>

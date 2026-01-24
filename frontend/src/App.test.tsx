@@ -13,9 +13,6 @@ vi.mock('./App.module.css', () => ({
     header: 'header',
     headerTitle: 'headerTitle',
     userInfo: 'userInfo',
-    orgSwitcher: 'orgSwitcher',
-    orgName: 'orgName',
-    createOrgButton: 'createOrgButton',
     logoutButton: 'logoutButton',
     container: 'container',
     sidebar: 'sidebar',
@@ -168,6 +165,35 @@ vi.mock('./components/UserMenu', () => ({
       </span>
       <button data-testid="logout-button" onClick={props.onLogout}>
         Logout
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('./components/OrgMenu', () => ({
+  default: (props: {
+    memberships: { organization_id: string; organization_name?: string }[];
+    currentOrgId: string;
+    onSwitchOrg: (orgId: string) => void;
+    onCreateOrg: () => void;
+  }) => (
+    <div data-testid="org-menu">
+      <button data-testid="org-menu-button" onClick={() => {}}>
+        {props.memberships.find((m) => m.organization_id === props.currentOrgId)?.organization_name || 'Organization'}
+      </button>
+      <select
+        data-testid="org-switcher"
+        value={props.currentOrgId}
+        onChange={(e) => props.onSwitchOrg((e.target as HTMLSelectElement).value)}
+      >
+        {props.memberships.map((m) => (
+          <option key={m.organization_id} value={m.organization_id}>
+            {m.organization_name || m.organization_id}
+          </option>
+        ))}
+      </select>
+      <button data-testid="create-org-button" onClick={props.onCreateOrg}>
+        Create Organization
       </button>
     </div>
   ),
@@ -908,8 +934,7 @@ describe('App', () => {
       renderWithI18n(() => <App />);
 
       await waitFor(() => {
-        const select = screen.getByRole('combobox');
-        expect(select).toBeTruthy();
+        expect(screen.getByTestId('org-menu')).toBeTruthy();
       });
     });
 
@@ -935,10 +960,10 @@ describe('App', () => {
       renderWithI18n(() => <App />);
 
       await waitFor(() => {
-        expect(screen.getByTitle(/create organization/i)).toBeTruthy();
+        expect(screen.getByTestId('create-org-button')).toBeTruthy();
       });
 
-      fireEvent.click(screen.getByTitle(/create organization/i));
+      fireEvent.click(screen.getByTestId('create-org-button'));
 
       await waitFor(() => {
         expect(screen.getByTestId('create-org-modal')).toBeTruthy();

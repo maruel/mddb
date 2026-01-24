@@ -37,8 +37,7 @@ body {
   font-size: 0.85rem;
 }
 
-.logoutButton,
-.createOrgButton {
+.logoutButton {
   background: rgba(255, 255, 255, 0.2);
   color: white;
   border: none;
@@ -48,39 +47,8 @@ body {
   transition: background var(--transition);
 }
 
-.logoutButton:hover,
-.createOrgButton:hover {
+.logoutButton:hover {
   background: rgba(255, 255, 255, 0.3);
-}
-
-.createOrgButton {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.orgSwitcher {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border: none;
-  padding: var(--s-2);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.orgSwitcher option {
-  color: var(--c-text);
-}
-
-.orgName {
-  font-weight: 500;
-  background: rgba(255, 255, 255, 0.2);
-  padding: var(--s-1) var(--s-2);
-  border-radius: var(--radius);
 }
 
 .container {
