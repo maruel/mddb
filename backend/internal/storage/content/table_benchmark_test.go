@@ -1,7 +1,6 @@
 package content
 
 import (
-	"context"
 	"path/filepath"
 	"slices"
 	"testing"
@@ -14,7 +13,7 @@ import (
 
 func BenchmarkTableOperations(b *testing.B) {
 	tmpDir := b.TempDir()
-	ctx := context.Background()
+	ctx := b.Context()
 	author := git.Author{Name: "Benchmark", Email: "bench@test.com"}
 
 	gitMgr := git.NewManager(tmpDir, "test", "test@test.com")

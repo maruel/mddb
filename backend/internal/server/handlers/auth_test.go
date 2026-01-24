@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func TestRegister(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	tempDir := t.TempDir()
 
 	userService, err := identity.NewUserService(filepath.Join(tempDir, "users.jsonl"))

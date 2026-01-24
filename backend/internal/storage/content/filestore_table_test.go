@@ -1,7 +1,6 @@
 package content
 
 import (
-	"context"
 	"os"
 	"slices"
 	"testing"
@@ -15,7 +14,7 @@ import (
 func TestTable(t *testing.T) {
 	t.Run("ReadWrite", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
@@ -108,7 +107,7 @@ func TestTable(t *testing.T) {
 
 	t.Run("Exists", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
@@ -145,7 +144,7 @@ func TestTable(t *testing.T) {
 
 	t.Run("List", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
@@ -198,7 +197,7 @@ func TestTable(t *testing.T) {
 
 	t.Run("Delete", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
@@ -242,7 +241,7 @@ func TestTable(t *testing.T) {
 
 	t.Run("NestedPath", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
@@ -288,7 +287,7 @@ func TestTable(t *testing.T) {
 func TestRecord(t *testing.T) {
 	t.Run("AppendRead", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		dbID := jsonldb.ID(1)
@@ -373,7 +372,7 @@ func TestRecord(t *testing.T) {
 
 	t.Run("Quota", func(t *testing.T) {
 		fs := testFileStoreWithQuota(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		org, err := fs.orgSvc.Create(ctx, "Test Org")
@@ -438,7 +437,7 @@ func TestRecord(t *testing.T) {
 
 	t.Run("EmptyTable", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		dbID := jsonldb.ID(1)

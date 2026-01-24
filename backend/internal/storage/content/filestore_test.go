@@ -1,7 +1,6 @@
 package content
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"slices"
@@ -28,7 +27,7 @@ func testFileStore(t *testing.T) (*FileStore, jsonldb.ID) {
 	}
 
 	// Create a test organization with very high quotas (practically unlimited)
-	org, err := orgService.Create(context.Background(), "Test Org")
+	org, err := orgService.Create(t.Context(), "Test Org")
 	if err != nil {
 		t.Fatalf("failed to create test org: %v", err)
 	}
@@ -74,7 +73,7 @@ func testFileStoreWithQuota(t *testing.T) *FileStore {
 func TestFileStore(t *testing.T) {
 	t.Run("PageOperations", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
@@ -155,7 +154,7 @@ func TestFileStore(t *testing.T) {
 
 	t.Run("ListPages", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org
@@ -586,7 +585,7 @@ func TestFileStore(t *testing.T) {
 func TestAsset(t *testing.T) {
 	t.Run("Quota", func(t *testing.T) {
 		fs := testFileStoreWithQuota(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		org, err := fs.orgSvc.Create(ctx, "Test Org")
@@ -662,7 +661,7 @@ func TestAsset(t *testing.T) {
 func TestMarkdown(t *testing.T) {
 	t.Run("Formatting", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Initialize git repo for org

@@ -4,6 +4,10 @@
 
 ### Standard Patterns
 
+**Reflection**:
+- Always use reflect.Pointer instead of reflect.Ptr
+- Always use reflect.TypeFor[T]() instead of reflect.TypeOf() when the type is known at compile time.
+
 **Logging**:
 - Use context-aware slog methods: `slog.InfoContext()`, `slog.ErrorContext()`, etc.
 - Error fields should use `"err"` not `"error"`.
@@ -13,7 +17,7 @@
 - Store tests in `*_test.go` files next to implementation.
 - Target 95% coverage.
 - Use subtest. Create TestFoo then for each method create a subtest.
-- Use t.Context()
+- In unit tests, use t.Context(), never context.Background().
 
 ### HTTP handlers
 

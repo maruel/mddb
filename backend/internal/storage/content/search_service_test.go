@@ -1,7 +1,6 @@
 package content
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -15,7 +14,7 @@ import (
 func TestSearchService(t *testing.T) {
 	t.Run("SearchPages", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
@@ -109,7 +108,7 @@ func TestSearchService(t *testing.T) {
 
 	t.Run("SearchRecords", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
@@ -214,7 +213,7 @@ func TestSearchService(t *testing.T) {
 
 	t.Run("Scoring", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
@@ -256,7 +255,7 @@ func TestSearchService(t *testing.T) {
 
 	t.Run("Limit", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
@@ -289,7 +288,7 @@ func TestSearchService(t *testing.T) {
 
 	t.Run("Integration", func(t *testing.T) {
 		fs, orgID := testFileStore(t)
-		ctx := context.Background()
+		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 		searchService := NewSearchService(fs)
 
