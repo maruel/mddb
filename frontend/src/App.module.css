@@ -256,15 +256,19 @@ body {
 
 .sidebarActions button {
   padding: var(--s-1) var(--s-2);
-  background: var(--c-bg-alt);
-  border: 1px solid var(--c-border);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: var(--radius);
   cursor: pointer;
   font-size: 0.75rem;
+  color: var(--c-text-light);
+  transition: all var(--transition);
 }
 
 .sidebarActions button:hover {
-  background: var(--c-border);
+  background: var(--c-bg-alt);
+  border-color: var(--c-border);
+  color: var(--c-text);
 }
 
 .nodeIcon {
