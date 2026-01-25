@@ -6,20 +6,20 @@ mddb uses a multi-tenant directory structure where each organization owns its ow
 
 ### Directory Layout
 - **Root Repository**: `data/`
-  - The `data/` directory is itself a Git repository that tracks organization directories.
-  - `data/db/`: System-wide information (Users, Organizations, Memberships) stored in JSON.
-- **Organization Repositories**: `data/{orgID}/`
-  - Each organization directory is an independent Git repository.
-  - Changes in an organization directory are committed to its local repository, and the state of these repositories is tracked in the root `data/` repository via Git. (Note: Currently implemented as nested repositories rather than formal Git submodules with `.gitmodules`).
-  - `data/{orgID}/pages/`: Page storage using flat numeric IDs.
-  - `data/{orgID}/assets/`: Organization-specific assets.
+  - The `data/` directory is itself a Git repository that tracks workspace directories.
+  - `data/db/`: System-wide information (Users, Organizations, Workspaces, Memberships) stored in JSON.
+- **Workspace Repositories**: `data/{wsID}/`
+  - Each workspace directory is an independent Git repository.
+  - Changes in a workspace directory are committed to its local repository, and the state of these repositories is tracked in the root `data/` repository via Git. (Note: Currently implemented as nested repositories rather than formal Git submodules with `.gitmodules`).
+  - `data/{wsID}/pages/`: Page storage using flat numeric IDs.
+  - `data/{wsID}/assets/`: Workspace-specific assets.
 
 ```
 data/                     # Root Git Repository
 ├── db/                   # System Metadata (Global)
 │   ├── users.json
 │   └── ...
-└── {orgID}/              # Organization Repository (Independent Git Repo)
+└── {wsID}/               # Workspace Repository (Independent Git Repo)
     └── pages/
         ├── 1/            # Page ID 1
         └── ...
@@ -27,8 +27,8 @@ data/                     # Root Git Repository
 
 ### Automatic Versioning
 mddb employs a hierarchical versioning strategy:
-1. **Organization Level**: Changes within `data/{orgID}/` trigger commits to that organization's independent repository.
-2. **Root Level**: The `data/` repository tracks the state of all organizations by staging and committing the organization directory changes. This allows for global backups and state-in-time recovery across the entire system while maintaining tenant isolation.
+1. **Workspace Level**: Changes within `data/{wsID}/` trigger commits to that workspace's independent repository.
+2. **Root Level**: The `data/` repository tracks the state of all workspaces by staging and committing the workspace directory changes. This allows for global backups and state-in-time recovery across the entire system while maintaining tenant isolation.
 
 ## Embedded Build Process
 
@@ -76,7 +76,7 @@ mddb uses a unified Node-based data model inspired by Notion. All content entiti
 
 | Entity | Description | Storage |
 |--------|-------------|---------|
-| **Node** | Unified container; can be document, table, or hybrid | Directory at `data/{orgID}/pages/{nodeID}/` |
+| **Node** | Unified container; can be document, table, or hybrid | Directory at `data/{wsID}/pages/{nodeID}/` |
 | **Page** | Node with markdown content | `index.md` with YAML front matter |
 | **Table** | Node with schema (Properties) | `metadata.json` for schema |
 | **Record** | Row in a Table (`DataRecord` type) | Line in `data.jsonl` |
@@ -93,7 +93,7 @@ Defined in `backend/internal/storage/content/types.go`:
 ### Storage Layout
 
 ```
-data/{orgID}/pages/{nodeID}/
+data/{wsID}/pages/{nodeID}/
 ├── index.md          # Markdown content (document/hybrid)
 ├── metadata.json     # Table schema (table/hybrid)
 ├── data.jsonl        # Records, one JSON per line (table/hybrid)

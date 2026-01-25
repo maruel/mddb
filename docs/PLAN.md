@@ -24,8 +24,8 @@ See [REQUIREMENTS.md](REQUIREMENTS.md) for complete functional and non-functiona
 ### API Architecture
 
 Standard RESTful API for Pages, Tables, Records, and Assets. 
-**Multi-tenant routing**: Data-acting endpoints follow the pattern `/api/{orgID}/resource/...`. 
-The backend validates that the `orgID` in the path matches the user's authenticated session.
+**Multi-tenant routing**: Data-acting endpoints follow the pattern `/api/{wsID}/resource/...`. 
+The backend validates that the `wsID` in the path matches the user's authenticated session.
 
 See `README.md` and `API.md` for details.
 
