@@ -6,6 +6,7 @@
 
 - Components in `frontend/src/components/`
 - Global state in `frontend/src/stores/` (if needed) or Context
+- **CSS Modules**: Each `.tsx` file should have a corresponding `.module.css` file in the same directory. Import styles as `import styles from './ComponentName.module.css'`. This keeps component logic and styling colocated and prevents global CSS pollution.
 
 ### Build & Distribution
 

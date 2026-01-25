@@ -2,7 +2,7 @@ import { For, Show } from 'solid-js';
 import SidebarNode from './SidebarNode';
 import { useI18n } from '../i18n';
 import type { NodeResponse } from '../types.gen';
-import styles from '../App.module.css';
+import styles from './Sidebar.module.css';
 
 interface SidebarProps {
   isOpen: boolean;
