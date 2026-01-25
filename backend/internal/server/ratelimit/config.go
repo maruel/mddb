@@ -33,8 +33,8 @@ type Config struct {
 // DefaultConfig creates a Config with default rate limits per the design doc:
 //   - Auth: 5 req/min, IP scope
 //   - Write: 60 req/min, User scope
-//   - Read (auth): 300 req/min, User scope
-//   - Read (unauth): 60 req/min, IP scope.
+//   - Read (auth): 30,000 req/min, User scope
+//   - Read (unauth): 6,000 req/min, IP scope.
 func DefaultConfig() *Config {
 	return &Config{
 		Auth: Tier{
@@ -49,12 +49,12 @@ func DefaultConfig() *Config {
 		},
 		ReadAuth: Tier{
 			Name:    "read",
-			Limiter: NewLimiter(300, time.Minute, 50),
+			Limiter: NewLimiter(30000, time.Minute, 5000),
 			Scope:   ScopeUser,
 		},
 		ReadUnauth: Tier{
 			Name:    "read",
-			Limiter: NewLimiter(60, time.Minute, 10),
+			Limiter: NewLimiter(6000, time.Minute, 1000),
 			Scope:   ScopeIP,
 		},
 	}
