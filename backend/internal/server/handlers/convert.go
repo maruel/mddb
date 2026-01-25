@@ -93,7 +93,6 @@ func workspaceToResponse(w *identity.Workspace, memberCount int) *dto.WorkspaceR
 		ID:             w.ID,
 		OrganizationID: w.OrganizationID,
 		Name:           w.Name,
-		Slug:           w.Slug,
 		Quotas:         workspaceQuotasToDTO(w.Quotas),
 		Settings:       workspaceSettingsToDTO(w.Settings),
 		MemberCount:    memberCount,

@@ -376,7 +376,7 @@ func TestRecord(t *testing.T) {
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create a workspace for testing
-		ws, err := fs.wsSvc.Create(ctx, orgID, "Test Workspace", "test-ws")
+		ws, err := fs.wsSvc.Create(ctx, orgID, "Test Workspace")
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}

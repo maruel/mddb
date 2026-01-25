@@ -208,7 +208,7 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 	}
 
 	// Create default workspace
-	ws, err := h.wsService.Create(ctx, org.ID, "Main", "main")
+	ws, err := h.wsService.Create(ctx, org.ID, "Main")
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create default workspace", err)
 	}

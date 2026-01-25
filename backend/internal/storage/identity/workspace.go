@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"iter"
-	"regexp"
-	"strings"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -17,7 +15,6 @@ type Workspace struct {
 	ID             jsonldb.ID        `json:"id" jsonschema:"description=Unique workspace identifier"`
 	OrganizationID jsonldb.ID        `json:"organization_id" jsonschema:"description=Parent organization ID"`
 	Name           string            `json:"name" jsonschema:"description=Display name of the workspace"`
-	Slug           string            `json:"slug" jsonschema:"description=URL-friendly identifier"`
 	Quotas         WorkspaceQuotas   `json:"quotas" jsonschema:"description=Resource limits for the workspace"`
 	Settings       WorkspaceSettings `json:"settings" jsonschema:"description=Workspace-wide configuration"`
 	GitRemote      GitRemote         `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
@@ -49,12 +46,6 @@ func (w *Workspace) Validate() error {
 	}
 	if w.Name == "" {
 		return errNameRequired
-	}
-	if w.Slug == "" {
-		return errSlugRequired
-	}
-	if !isValidSlug(w.Slug) {
-		return errInvalidSlug
 	}
 	if w.Quotas.MaxPages <= 0 || w.Quotas.MaxStorageMB <= 0 || w.Quotas.MaxRecordsPerTable <= 0 || w.Quotas.MaxAssetSizeMB <= 0 {
 		return errInvalidWorkspaceQuota
@@ -89,9 +80,8 @@ func DefaultWorkspaceQuotas() WorkspaceQuotas {
 
 // WorkspaceService handles workspace management.
 type WorkspaceService struct {
-	table  *jsonldb.Table[*Workspace]
-	byOrg  *jsonldb.Index[jsonldb.ID, *Workspace]
-	bySlug *workspaceSlugIndex
+	table *jsonldb.Table[*Workspace]
+	byOrg *jsonldb.Index[jsonldb.ID, *Workspace]
 }
 
 // NewWorkspaceService creates a new workspace service.
@@ -101,39 +91,25 @@ func NewWorkspaceService(tablePath string) (*WorkspaceService, error) {
 		return nil, err
 	}
 	byOrg := jsonldb.NewIndex(table, func(w *Workspace) jsonldb.ID { return w.OrganizationID })
-	bySlug := newWorkspaceSlugIndex(table)
 	return &WorkspaceService{
-		table:  table,
-		byOrg:  byOrg,
-		bySlug: bySlug,
+		table: table,
+		byOrg: byOrg,
 	}, nil
 }
 
 // Create creates a new workspace in an organization.
-func (s *WorkspaceService) Create(_ context.Context, orgID jsonldb.ID, name, slug string) (*Workspace, error) {
+func (s *WorkspaceService) Create(_ context.Context, orgID jsonldb.ID, name string) (*Workspace, error) {
 	if orgID.IsZero() {
 		return nil, errOrgIDEmpty
 	}
 	if name == "" {
 		return nil, errWorkspaceNameRequired
 	}
-	if slug == "" {
-		slug = generateSlug(name)
-	}
-	if !isValidSlug(slug) {
-		return nil, errInvalidSlug
-	}
-
-	// Check if slug is unique within the org
-	if s.bySlug.Get(orgID, slug) != nil {
-		return nil, errSlugExists
-	}
 
 	ws := &Workspace{
 		ID:             jsonldb.NewID(),
 		OrganizationID: orgID,
 		Name:           name,
-		Slug:           slug,
 		Quotas:         DefaultWorkspaceQuotas(),
 		Created:        storage.Now(),
 	}
@@ -146,15 +122,6 @@ func (s *WorkspaceService) Create(_ context.Context, orgID jsonldb.ID, name, slu
 // Get retrieves a workspace by ID.
 func (s *WorkspaceService) Get(id jsonldb.ID) (*Workspace, error) {
 	ws := s.table.Get(id)
-	if ws == nil {
-		return nil, errWorkspaceNotFound
-	}
-	return ws, nil
-}
-
-// GetBySlug retrieves a workspace by org ID and slug. O(1) via index.
-func (s *WorkspaceService) GetBySlug(orgID jsonldb.ID, slug string) (*Workspace, error) {
-	ws := s.bySlug.Get(orgID, slug)
 	if ws == nil {
 		return nil, errWorkspaceNotFound
 	}
@@ -208,74 +175,4 @@ var (
 	errWorkspaceNameRequired = errors.New("workspace name is required")
 	errWorkspaceNotFound     = errors.New("workspace not found")
 	errInvalidWorkspaceQuota = errors.New("invalid workspace quota")
-	errSlugRequired          = errors.New("slug is required")
-	errInvalidSlug           = errors.New("invalid slug: must be lowercase alphanumeric with hyphens")
-	errSlugExists            = errors.New("slug already exists in this organization")
 )
-
-// slugRegex validates URL-friendly slugs.
-var slugRegex = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
-
-func isValidSlug(slug string) bool {
-	return len(slug) >= 1 && len(slug) <= 100 && slugRegex.MatchString(slug)
-}
-
-func generateSlug(name string) string {
-	slug := strings.ToLower(name)
-	slug = strings.Map(func(r rune) rune {
-		if r >= 'a' && r <= 'z' || r >= '0' && r <= '9' {
-			return r
-		}
-		if r == ' ' || r == '-' || r == '_' {
-			return '-'
-		}
-		return -1
-	}, slug)
-	// Collapse multiple hyphens
-	for strings.Contains(slug, "--") {
-		slug = strings.ReplaceAll(slug, "--", "-")
-	}
-	slug = strings.Trim(slug, "-")
-	if slug == "" {
-		slug = "workspace"
-	}
-	return slug
-}
-
-// workspaceSlugIndex indexes workspaces by (orgID, slug) for uniqueness within an org.
-type workspaceSlugIndex struct {
-	table *jsonldb.Table[*Workspace]
-	byKey map[orgSlugKey]jsonldb.ID
-}
-
-type orgSlugKey struct {
-	OrgID jsonldb.ID
-	Slug  string
-}
-
-func newWorkspaceSlugIndex(table *jsonldb.Table[*Workspace]) *workspaceSlugIndex {
-	idx := &workspaceSlugIndex{table: table, byKey: make(map[orgSlugKey]jsonldb.ID)}
-	table.AddObserver(idx)
-	return idx
-}
-
-func (idx *workspaceSlugIndex) Get(orgID jsonldb.ID, slug string) *Workspace {
-	id, ok := idx.byKey[orgSlugKey{OrgID: orgID, Slug: slug}]
-	if !ok {
-		return nil
-	}
-	return idx.table.Get(id)
-}
-
-func (idx *workspaceSlugIndex) OnAppend(row *Workspace) {
-	idx.byKey[orgSlugKey{OrgID: row.OrganizationID, Slug: row.Slug}] = row.ID
-}
-
-func (idx *workspaceSlugIndex) OnUpdate(prev, curr *Workspace) {
-	delete(idx.byKey, orgSlugKey{OrgID: prev.OrganizationID, Slug: prev.Slug})
-	idx.byKey[orgSlugKey{OrgID: curr.OrganizationID, Slug: curr.Slug}] = curr.ID
-}
-
-func (idx *workspaceSlugIndex) OnDelete(row *Workspace) {
-	delete(idx.byKey, orgSlugKey{OrgID: row.OrganizationID, Slug: row.Slug})
-}

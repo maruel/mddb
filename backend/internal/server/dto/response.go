@@ -338,7 +338,6 @@ type WorkspaceResponse struct {
 	ID             jsonldb.ID         `json:"id" jsonschema:"description=Unique workspace identifier"`
 	OrganizationID jsonldb.ID         `json:"organization_id" jsonschema:"description=Parent organization ID"`
 	Name           string             `json:"name" jsonschema:"description=Display name of the workspace"`
-	Slug           string             `json:"slug" jsonschema:"description=URL-friendly identifier"`
 	Quotas         WorkspaceQuotas    `json:"quotas" jsonschema:"description=Resource limits for the workspace"`
 	Settings       WorkspaceSettings  `json:"settings" jsonschema:"description=Workspace-wide configuration"`
 	GitRemote      *GitRemoteResponse `json:"git_remote,omitempty" jsonschema:"description=Git remote configuration"`

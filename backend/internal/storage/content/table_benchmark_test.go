@@ -45,7 +45,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	}
 
 	// Create a test workspace with very high quotas (practically unlimited)
-	ws, err := wsService.Create(ctx, org.ID, "Benchmark Workspace", "bench")
+	ws, err := wsService.Create(ctx, org.ID, "Benchmark Workspace")
 	if err != nil {
 		b.Fatal(err)
 	}

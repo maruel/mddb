@@ -819,7 +819,6 @@ export interface WorkspaceResponse {
   id: string;
   organization_id: string;
   name: string;
-  slug: string;
   quotas: WorkspaceQuotas;
   settings: WorkspaceSettings;
   git_remote?: GitRemoteResponse;

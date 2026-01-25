@@ -49,7 +49,7 @@ func testFileStore(t *testing.T) (*FileStore, jsonldb.ID) {
 	}
 
 	// Create a test workspace with very high quotas (practically unlimited)
-	ws, err := wsService.Create(t.Context(), org.ID, "Test Workspace", "test")
+	ws, err := wsService.Create(t.Context(), org.ID, "Test Workspace")
 	if err != nil {
 		t.Fatalf("failed to create test workspace: %v", err)
 	}
@@ -644,7 +644,7 @@ func TestAsset(t *testing.T) {
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create a workspace for testing with reasonable quotas
-		ws, err := fs.wsSvc.Create(ctx, orgID, "Test Workspace", "test-ws")
+		ws, err := fs.wsSvc.Create(ctx, orgID, "Test Workspace")
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
@@ -739,12 +739,11 @@ func TestOrganizationQuota(t *testing.T) {
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create two workspaces in the same organization
-		ws1, err := fs.wsSvc.Create(ctx, orgID, "Workspace 1", "ws1")
+		ws1, err := fs.wsSvc.Create(ctx, orgID, "Workspace 1")
 		if err != nil {
-			t.Fatalf("Failed to create workspace 1: %v", err)
+			t.Fatal(err)
 		}
-
-		ws2, err := fs.wsSvc.Create(ctx, orgID, "Workspace 2", "ws2")
+		ws2, err := fs.wsSvc.Create(ctx, orgID, "Workspace 2")
 		if err != nil {
 			t.Fatalf("Failed to create workspace 2: %v", err)
 		}
@@ -800,7 +799,7 @@ func TestOrganizationQuota(t *testing.T) {
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create a workspace first
-		ws, err := fs.wsSvc.Create(ctx, orgID, "Test Workspace", "test-ws")
+		ws, err := fs.wsSvc.Create(ctx, orgID, "Test Workspace")
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}
