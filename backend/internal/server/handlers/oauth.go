@@ -9,10 +9,10 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
@@ -234,7 +234,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				ProviderID: userInfo.ID,
 				Email:      userInfo.Email,
 				AvatarURL:  userInfo.AvatarURL,
-				LastLogin:  time.Now(),
+				LastLogin:  storage.Now(),
 			})
 			return nil
 		}); err != nil {
@@ -247,7 +247,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			for i := range u.OAuthIdentities {
 				if u.OAuthIdentities[i].Provider == provider && u.OAuthIdentities[i].ProviderID == userInfo.ID {
 					u.OAuthIdentities[i].AvatarURL = userInfo.AvatarURL
-					u.OAuthIdentities[i].LastLogin = time.Now()
+					u.OAuthIdentities[i].LastLogin = storage.Now()
 					break
 				}
 			}

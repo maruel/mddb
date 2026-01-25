@@ -4,4 +4,5 @@ packages:
     type_mappings:
       "time.Time": "string"
       "jsonldb.ID": "string"
+      "storage.Time": "number"
     output_path: "../frontend/src/types.gen.ts"

@@ -6,9 +6,9 @@ import (
 	"iter"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // Workspace represents an isolated content container within an organization.
@@ -21,7 +21,7 @@ type Workspace struct {
 	Quotas         WorkspaceQuotas   `json:"quotas" jsonschema:"description=Resource limits for the workspace"`
 	Settings       WorkspaceSettings `json:"settings" jsonschema:"description=Workspace-wide configuration"`
 	GitRemote      GitRemote         `json:"git_remote,omitzero" jsonschema:"description=Git remote repository configuration"`
-	Created        time.Time         `json:"created" jsonschema:"description=Workspace creation timestamp"`
+	Created        storage.Time      `json:"created" jsonschema:"description=Workspace creation timestamp"`
 }
 
 // Clone returns a deep copy of the Workspace.
@@ -135,7 +135,7 @@ func (s *WorkspaceService) Create(_ context.Context, orgID jsonldb.ID, name, slu
 		Name:           name,
 		Slug:           slug,
 		Quotas:         DefaultWorkspaceQuotas(),
-		Created:        time.Now(),
+		Created:        storage.Now(),
 	}
 	if err := s.table.Append(ws); err != nil {
 		return nil, err

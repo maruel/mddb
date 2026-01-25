@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
@@ -18,8 +19,8 @@ type OrganizationInvitation struct {
 	Role           OrganizationRole `json:"role" jsonschema:"description=Role assigned upon acceptance"`
 	Token          string           `json:"token" jsonschema:"description=Secret token for invitation verification"`
 	InvitedBy      jsonldb.ID       `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
-	ExpiresAt      time.Time        `json:"expires_at" jsonschema:"description=Invitation expiration timestamp"`
-	Created        time.Time        `json:"created" jsonschema:"description=Invitation creation timestamp"`
+	ExpiresAt      storage.Time     `json:"expires_at" jsonschema:"description=Invitation expiration timestamp"`
+	Created        storage.Time     `json:"created" jsonschema:"description=Invitation creation timestamp"`
 }
 
 // Clone returns a copy of the OrganizationInvitation.
@@ -55,7 +56,7 @@ func (i *OrganizationInvitation) Validate() error {
 
 // IsExpired returns true if the invitation has expired.
 func (i *OrganizationInvitation) IsExpired() bool {
-	return time.Now().After(i.ExpiresAt)
+	return storage.Now().After(i.ExpiresAt)
 }
 
 // OrganizationInvitationService handles organization invitations.
@@ -98,8 +99,8 @@ func (s *OrganizationInvitationService) Create(email string, orgID jsonldb.ID, r
 		Role:           role,
 		Token:          token,
 		InvitedBy:      invitedBy,
-		ExpiresAt:      time.Now().Add(7 * 24 * time.Hour), // 7 days
-		Created:        time.Now(),
+		ExpiresAt:      storage.ToTime(time.Now().Add(7 * 24 * time.Hour)), // 7 days
+		Created:        storage.Now(),
 	}
 	if err := s.table.Append(invitation); err != nil {
 		return nil, err

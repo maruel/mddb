@@ -23,8 +23,8 @@ func userToResponse(u *identity.User) *dto.UserResponse {
 		IsGlobalAdmin:   u.IsGlobalAdmin,
 		OAuthIdentities: identities,
 		Settings:        userSettingsToDTO(u.Settings),
-		Created:         storage.ToTime(u.Created),
-		Modified:        storage.ToTime(u.Modified),
+		Created:         u.Created,
+		Modified:        u.Modified,
 	}
 }
 
@@ -35,7 +35,7 @@ func orgMembershipToResponse(m *identity.OrganizationMembership) *dto.OrgMembers
 		UserID:         m.UserID,
 		OrganizationID: m.OrganizationID,
 		Role:           dto.OrganizationRole(m.Role),
-		Created:        storage.ToTime(m.Created),
+		Created:        m.Created,
 	}
 }
 
@@ -46,7 +46,7 @@ func wsMembershipToResponse(m *identity.WorkspaceMembership) *dto.WSMembershipRe
 		WorkspaceID: m.WorkspaceID,
 		Role:        dto.WorkspaceRole(m.Role),
 		Settings:    wsMembershipSettingsToDTO(m.Settings),
-		Created:     storage.ToTime(m.Created),
+		Created:     m.Created,
 	}
 }
 
@@ -57,8 +57,8 @@ func orgInvitationToResponse(i *identity.OrganizationInvitation) *dto.OrgInvitat
 		OrganizationID: i.OrganizationID,
 		Role:           dto.OrganizationRole(i.Role),
 		InvitedBy:      i.InvitedBy,
-		ExpiresAt:      storage.ToTime(i.ExpiresAt),
-		Created:        storage.ToTime(i.Created),
+		ExpiresAt:      i.ExpiresAt,
+		Created:        i.Created,
 	}
 }
 
@@ -69,8 +69,8 @@ func wsInvitationToResponse(i *identity.WorkspaceInvitation) *dto.WSInvitationRe
 		WorkspaceID: i.WorkspaceID,
 		Role:        dto.WorkspaceRole(i.Role),
 		InvitedBy:   i.InvitedBy,
-		ExpiresAt:   storage.ToTime(i.ExpiresAt),
-		Created:     storage.ToTime(i.Created),
+		ExpiresAt:   i.ExpiresAt,
+		Created:     i.Created,
 	}
 }
 
@@ -83,7 +83,7 @@ func organizationToResponse(o *identity.Organization, memberCount, workspaceCoun
 		Settings:       organizationSettingsToDTO(o.Settings),
 		MemberCount:    memberCount,
 		WorkspaceCount: workspaceCount,
-		Created:        storage.ToTime(o.Created),
+		Created:        o.Created,
 	}
 }
 
@@ -97,7 +97,7 @@ func workspaceToResponse(w *identity.Workspace, memberCount int) *dto.WorkspaceR
 		Quotas:         workspaceQuotasToDTO(w.Quotas),
 		Settings:       workspaceSettingsToDTO(w.Settings),
 		MemberCount:    memberCount,
-		Created:        storage.ToTime(w.Created),
+		Created:        w.Created,
 	}
 	if !w.GitRemote.IsZero() {
 		resp.GitRemote = gitRemoteToResponse(w.ID, &w.GitRemote)
@@ -111,8 +111,8 @@ func gitRemoteToResponse(wsID jsonldb.ID, g *identity.GitRemote) *dto.GitRemoteR
 		URL:         g.URL,
 		Type:        g.Type,
 		AuthType:    g.AuthType,
-		Created:     storage.ToTime(g.Created),
-		LastSync:    storage.ToTime(g.LastSync),
+		Created:     g.Created,
+		LastSync:    g.LastSync,
 	}
 }
 
@@ -123,8 +123,8 @@ func nodeToResponse(n *content.Node) *dto.NodeResponse {
 		Title:      n.Title,
 		Content:    n.Content,
 		Properties: propertiesToDTO(n.Properties),
-		Created:    storage.ToTime(n.Created),
-		Modified:   storage.ToTime(n.Modified),
+		Created:    n.Created,
+		Modified:   n.Modified,
 		Tags:       n.Tags,
 		FaviconURL: n.FaviconURL,
 		Type:       dto.NodeType(n.Type),
@@ -144,8 +144,8 @@ func dataRecordToResponse(r *content.DataRecord) *dto.DataRecordResponse {
 	return &dto.DataRecordResponse{
 		ID:       r.ID,
 		Data:     r.Data,
-		Created:  storage.ToTime(r.Created),
-		Modified: storage.ToTime(r.Modified),
+		Created:  r.Created,
+		Modified: r.Modified,
 	}
 }
 
@@ -177,7 +177,7 @@ func searchResultToDTO(r *content.SearchResult) dto.SearchResult {
 		Snippet:  r.Snippet,
 		Score:    r.Score,
 		Matches:  r.Matches,
-		Modified: storage.ToTime(r.Modified),
+		Modified: r.Modified,
 	}
 }
 
@@ -232,7 +232,7 @@ func oauthIdentityToDTO(o *identity.OAuthIdentity) dto.OAuthIdentity {
 		ProviderID: o.ProviderID,
 		Email:      o.Email,
 		AvatarURL:  o.AvatarURL,
-		LastLogin:  storage.ToTime(o.LastLogin),
+		LastLogin:  o.LastLogin,
 	}
 }
 
@@ -387,7 +387,7 @@ func orgMembershipWithNameToResponse(m *orgMembershipWithName) dto.OrgMembership
 		OrganizationID:   m.OrganizationID,
 		OrganizationName: m.OrganizationName,
 		Role:             dto.OrganizationRole(m.Role),
-		Created:          storage.ToTime(m.Created),
+		Created:          m.Created,
 	}
 }
 
@@ -400,7 +400,7 @@ func wsMembershipWithNameToResponse(m *wsMembershipWithName) dto.WSMembershipRes
 		OrganizationID: m.OrganizationID,
 		Role:           dto.WorkspaceRole(m.Role),
 		Settings:       wsMembershipSettingsToDTO(m.Settings),
-		Created:        storage.ToTime(m.Created),
+		Created:        m.Created,
 	}
 }
 
@@ -482,8 +482,8 @@ func pageToSummary(n *content.Node) dto.PageSummary {
 	return dto.PageSummary{
 		ID:       n.ID,
 		Title:    n.Title,
-		Created:  storage.ToTime(n.Created),
-		Modified: storage.ToTime(n.Modified),
+		Created:  n.Created,
+		Modified: n.Modified,
 	}
 }
 
@@ -499,8 +499,8 @@ func tableToSummary(n *content.Node) dto.TableSummary {
 	return dto.TableSummary{
 		ID:       n.ID,
 		Title:    n.Title,
-		Created:  storage.ToTime(n.Created),
-		Modified: storage.ToTime(n.Modified),
+		Created:  n.Created,
+		Modified: n.Modified,
 	}
 }
 
@@ -518,7 +518,7 @@ func assetToSummary(a *content.Asset, wsID, pageID string) dto.AssetSummary {
 		Name:     a.Name,
 		Size:     a.Size,
 		MimeType: a.MimeType,
-		Created:  storage.ToTime(a.Created),
+		Created:  a.Created,
 		URL:      "/api/workspaces/" + wsID + "/assets/" + pageID + "/" + a.Name,
 	}
 }

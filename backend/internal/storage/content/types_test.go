@@ -2,9 +2,9 @@ package content
 
 import (
 	"testing"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 func TestDataRecord(t *testing.T) {
@@ -13,8 +13,8 @@ func TestDataRecord(t *testing.T) {
 			original := &DataRecord{
 				ID:       jsonldb.ID(1),
 				Data:     map[string]any{"name": "test", "count": 42},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			clone := original.Clone()
 			if clone.ID != original.ID {

@@ -3,9 +3,9 @@ package identity
 import (
 	"errors"
 	"iter"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // WorkspaceRole defines the permissions for a user within a workspace.
@@ -51,7 +51,7 @@ type WorkspaceMembership struct {
 	WorkspaceID jsonldb.ID                  `json:"workspace_id" jsonschema:"description=Workspace ID the user is a member of"`
 	Role        WorkspaceRole               `json:"role" jsonschema:"description=User role within the workspace (admin/editor/viewer)"`
 	Settings    WorkspaceMembershipSettings `json:"settings" jsonschema:"description=User preferences within this workspace"`
-	Created     time.Time                   `json:"created" jsonschema:"description=Membership creation timestamp"`
+	Created     storage.Time                `json:"created" jsonschema:"description=Membership creation timestamp"`
 }
 
 // Clone returns a copy of the WorkspaceMembership.
@@ -156,7 +156,7 @@ func (s *WorkspaceMembershipService) Create(userID, wsID jsonldb.ID, role Worksp
 		UserID:      userID,
 		WorkspaceID: wsID,
 		Role:        role,
-		Created:     time.Now(),
+		Created:     storage.Now(),
 	}
 	if err := s.table.Append(membership); err != nil {
 		return nil, err

@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"slices"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -42,8 +41,8 @@ func (h *TableHandler) GetTable(ctx context.Context, orgID jsonldb.ID, _ *identi
 		ID:         table.ID,
 		Title:      table.Title,
 		Properties: propertiesToDTO(table.Properties),
-		Created:    storage.ToTime(table.Created),
-		Modified:   storage.ToTime(table.Modified),
+		Created:    table.Created,
+		Modified:   table.Modified,
 	}, nil
 }
 
@@ -54,7 +53,7 @@ func (h *TableHandler) CreateTable(ctx context.Context, orgID jsonldb.ID, user *
 	}
 
 	id := jsonldb.NewID()
-	now := time.Now()
+	now := storage.Now()
 	node := &content.Node{
 		ID:         id,
 		Title:      req.Title,
@@ -80,7 +79,7 @@ func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *
 
 	node.Title = req.Title
 	node.Properties = propertiesToEntity(req.Properties)
-	node.Modified = time.Now()
+	node.Modified = storage.Now()
 
 	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := h.fs.WriteTable(ctx, orgID, node, false, author); err != nil {
@@ -123,7 +122,7 @@ func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user 
 	coercedData := content.CoerceRecordData(req.Data, node.Properties)
 
 	id := jsonldb.NewID()
-	now := time.Now()
+	now := storage.Now()
 	record := &content.DataRecord{
 		ID:       id,
 		Data:     coercedData,
@@ -169,7 +168,7 @@ func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user 
 		ID:       req.RID,
 		Data:     coercedData,
 		Created:  existing.Created,
-		Modified: time.Now(),
+		Modified: storage.Now(),
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
@@ -190,8 +189,8 @@ func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *ident
 			return &dto.GetRecordResponse{
 				ID:       record.ID,
 				Data:     record.Data,
-				Created:  storage.ToTime(record.Created),
-				Modified: storage.ToTime(record.Modified),
+				Created:  record.Created,
+				Modified: record.Modified,
 			}, nil
 		}
 	}

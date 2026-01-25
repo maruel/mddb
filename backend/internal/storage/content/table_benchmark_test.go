@@ -4,9 +4,9 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -56,8 +56,8 @@ func BenchmarkTableOperations(b *testing.B) {
 		ID:       dbID,
 		Title:    "Benchmark Table",
 		Type:     NodeTypeTable,
-		Created:  time.Now(),
-		Modified: time.Now(),
+		Created:  storage.Now(),
+		Modified: storage.Now(),
 		Properties: []Property{
 			{Name: "Title", Type: "text"},
 			{Name: "Value", Type: "number"},
@@ -73,8 +73,8 @@ func BenchmarkTableOperations(b *testing.B) {
 		for i := range b.N {
 			record := &DataRecord{
 				ID:       jsonldb.NewID(),
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 				Data: map[string]any{
 					"c1": "Item",
 					"c2": i,
@@ -92,7 +92,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a table with 1000 records
 		readDBID := jsonldb.NewID()
-		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: time.Now(), Modified: time.Now()}
+		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
 		if err := fs.WriteTable(ctx, wsID, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
@@ -100,8 +100,8 @@ func BenchmarkTableOperations(b *testing.B) {
 			record := &DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"c1": "test"},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.AppendRecord(ctx, wsID, readDBID, record, author); err != nil {
 				b.Fatal(err)
@@ -124,7 +124,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := jsonldb.ID(100)
-		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: time.Now(), Modified: time.Now()}
+		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
 		if err := fs.WriteTable(ctx, wsID, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
@@ -133,8 +133,8 @@ func BenchmarkTableOperations(b *testing.B) {
 			record := &DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"c1": "test"},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.AppendRecord(ctx, wsID, readDBID, record, author); err != nil {
 				b.Fatal(err)

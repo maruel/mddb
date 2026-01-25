@@ -104,8 +104,8 @@ describe('Auth', () => {
       email: 'test@example.com',
       name: 'Test User',
       settings: { theme: 'light', language: 'en' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     };
 
     const mockResponse: AuthResponse = {
@@ -238,8 +238,8 @@ describe('Auth', () => {
       email: 'new@example.com',
       name: 'New User',
       settings: { theme: 'light', language: 'en' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     };
 
     const mockResponse: AuthResponse = {

@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -241,8 +241,8 @@ func TestFileStore(t *testing.T) {
 				ID:       tableID,
 				Title:    "Test Table",
 				Type:     NodeTypeTable,
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.WriteTable(ctx, wsID, tableNode, true, author); err != nil {
 				t.Fatalf("failed to create table: %v", err)
@@ -252,8 +252,8 @@ func TestFileStore(t *testing.T) {
 			record := &DataRecord{
 				ID:       recordID,
 				Data:     map[string]any{"field": strings.Repeat("a", 200)},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.AppendRecord(ctx, wsID, tableID, record, author); err != nil {
 				t.Fatalf("failed to append record: %v", err)
@@ -460,8 +460,8 @@ func TestFileStore(t *testing.T) {
 				ID:       tableID,
 				Title:    "Test",
 				Type:     NodeTypeTable,
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.WriteTable(ctx, wsID, tableNode, true, author); err != nil {
 				t.Fatalf("failed to create table: %v", err)
@@ -472,8 +472,8 @@ func TestFileStore(t *testing.T) {
 				rec := &DataRecord{
 					ID:       jsonldb.NewID(),
 					Data:     map[string]any{"name": "Record"},
-					Created:  time.Now(),
-					Modified: time.Now(),
+					Created:  storage.Now(),
+					Modified: storage.Now(),
 				}
 				if err := fs.AppendRecord(ctx, wsID, tableID, rec, author); err != nil {
 					t.Fatalf("failed to create record %d: %v", i, err)
@@ -484,8 +484,8 @@ func TestFileStore(t *testing.T) {
 			rec := &DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"name": "Extra"},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.AppendRecord(ctx, wsID, tableID, rec, author); err == nil {
 				t.Error("expected record quota exceeded error")
@@ -547,8 +547,8 @@ func TestFileStore(t *testing.T) {
 				ID:       tableID,
 				Title:    "Test",
 				Type:     NodeTypeTable,
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.WriteTable(ctx, wsID, tableNode, true, author); err != nil {
 				t.Fatalf("failed to create table: %v", err)
@@ -558,8 +558,8 @@ func TestFileStore(t *testing.T) {
 			record := &DataRecord{
 				ID:       recordID,
 				Data:     map[string]any{"field": strings.Repeat("a", 100)},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.AppendRecord(ctx, wsID, tableID, record, author); err != nil {
 				t.Fatalf("failed to create record: %v", err)
@@ -782,8 +782,8 @@ func TestGetWorkspaceUsage(t *testing.T) {
 			ID:       tableID,
 			Title:    "Table 1",
 			Type:     NodeTypeTable,
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.WriteTable(ctx, wsID, tableNode, true, author); err != nil {
 			t.Fatalf("failed to create table: %v", err)
@@ -805,8 +805,8 @@ func TestGetWorkspaceUsage(t *testing.T) {
 			ID:       tableID2,
 			Title:    "Table 2",
 			Type:     NodeTypeTable,
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		err = fs.WriteTable(ctx, wsID, tableNode2, true, author)
 		if err == nil {
@@ -834,8 +834,8 @@ func TestGetWorkspaceUsage(t *testing.T) {
 			ID:       hybridID,
 			Title:    "Hybrid",
 			Type:     NodeTypeTable,
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.WriteTable(ctx, wsID, hybridNode, false, author); err != nil {
 			t.Fatalf("failed to add table metadata: %v", err)

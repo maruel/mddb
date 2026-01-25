@@ -39,14 +39,14 @@ describe('TableGrid', () => {
     {
       id: 'rec-1',
       data: { Title: 'Product A', Description: 'A great product', Price: 99, Status: 'active' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
     {
       id: 'rec-2',
       data: { Title: 'Product B', Description: 'Another product', Price: 149, Status: 'draft' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
   ];
 
@@ -80,8 +80,8 @@ describe('TableGrid', () => {
       {
         id: 'rec-1',
         data: { Description: 'No title', Price: 50 },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
     ];
 
@@ -121,8 +121,8 @@ describe('TableGrid', () => {
       {
         id: 'rec-1',
         data: { Title: 'Partial', Description: null },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
     ];
 

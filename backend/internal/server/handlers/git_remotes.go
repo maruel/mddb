@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -47,7 +47,7 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID,
 		created := ws.GitRemote.Created
 		lastSync := ws.GitRemote.LastSync
 		if ws.GitRemote.IsZero() {
-			created = time.Now()
+			created = storage.Now()
 		}
 
 		ws.GitRemote = identity.GitRemote{
@@ -122,7 +122,7 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 
 	// Update last sync time
 	if _, err := h.wsService.Modify(wsID, func(ws *identity.Workspace) error {
-		ws.GitRemote.LastSync = time.Now()
+		ws.GitRemote.LastSync = storage.Now()
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("failed to update last sync time: %w", err)

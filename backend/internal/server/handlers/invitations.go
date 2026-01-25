@@ -3,10 +3,10 @@ package handlers
 import (
 	"context"
 	"log/slog"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -99,7 +99,7 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 		return nil, dto.NewAPIError(404, dto.ErrorCodeNotFound, "Invitation not found or expired")
 	}
 
-	if time.Now().After(inv.ExpiresAt) {
+	if storage.Now().After(inv.ExpiresAt) {
 		return nil, dto.Expired("invitation")
 	}
 
@@ -160,7 +160,7 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 		return nil, dto.NewAPIError(404, dto.ErrorCodeNotFound, "Invitation not found or expired")
 	}
 
-	if time.Now().After(inv.ExpiresAt) {
+	if storage.Now().After(inv.ExpiresAt) {
 		return nil, dto.Expired("invitation")
 	}
 

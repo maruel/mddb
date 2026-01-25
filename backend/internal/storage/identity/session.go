@@ -6,20 +6,21 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // Session represents an active user session.
 type Session struct {
-	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique session identifier"`
-	UserID     jsonldb.ID `json:"user_id" jsonschema:"description=User who owns this session"`
-	TokenHash  string     `json:"token_hash" jsonschema:"description=SHA-256 hash of the JWT token"`
-	DeviceInfo string     `json:"device_info" jsonschema:"description=Parsed User-Agent (browser/OS)"`
-	IPAddress  string     `json:"ip_address" jsonschema:"description=Client IP address at login"`
-	Created    time.Time  `json:"created" jsonschema:"description=Session creation timestamp"`
-	LastUsed   time.Time  `json:"last_used" jsonschema:"description=Last activity timestamp"`
-	ExpiresAt  time.Time  `json:"expires_at" jsonschema:"description=Session expiration timestamp"`
-	Revoked    bool       `json:"revoked" jsonschema:"description=Whether session has been revoked"`
-	RevokedAt  time.Time  `json:"revoked_at,omitempty" jsonschema:"description=Revocation timestamp if revoked"`
+	ID         jsonldb.ID   `json:"id" jsonschema:"description=Unique session identifier"`
+	UserID     jsonldb.ID   `json:"user_id" jsonschema:"description=User who owns this session"`
+	TokenHash  string       `json:"token_hash" jsonschema:"description=SHA-256 hash of the JWT token"`
+	DeviceInfo string       `json:"device_info" jsonschema:"description=Parsed User-Agent (browser/OS)"`
+	IPAddress  string       `json:"ip_address" jsonschema:"description=Client IP address at login"`
+	Created    storage.Time `json:"created" jsonschema:"description=Session creation timestamp"`
+	LastUsed   storage.Time `json:"last_used" jsonschema:"description=Last activity timestamp"`
+	ExpiresAt  storage.Time `json:"expires_at" jsonschema:"description=Session expiration timestamp"`
+	Revoked    bool         `json:"revoked" jsonschema:"description=Whether session has been revoked"`
+	RevokedAt  storage.Time `json:"revoked_at,omitempty" jsonschema:"description=Revocation timestamp if revoked"`
 }
 
 // Clone returns a deep copy of the session.
@@ -64,13 +65,13 @@ func NewSessionService(tablePath string) (*SessionService, error) {
 }
 
 // Create creates a new session with an auto-generated ID.
-func (s *SessionService) Create(userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt time.Time) (*Session, error) {
+func (s *SessionService) Create(userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt storage.Time) (*Session, error) {
 	return s.CreateWithID(jsonldb.NewID(), userID, tokenHash, deviceInfo, ipAddress, expiresAt)
 }
 
 // CreateWithID creates a new session with a pre-specified ID.
 // This is useful when the session ID needs to be included in the JWT before creating the session.
-func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt time.Time) (*Session, error) {
+func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt storage.Time) (*Session, error) {
 	if id.IsZero() {
 		return nil, errSessionIDRequired
 	}
@@ -81,7 +82,7 @@ func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceIn
 		return nil, errSessionTokenHashRequired
 	}
 
-	now := time.Now()
+	now := storage.Now()
 	session := &Session{
 		ID:         id,
 		UserID:     userID,
@@ -122,7 +123,7 @@ func (s *SessionService) GetByUserID(userID jsonldb.ID) iter.Seq[*Session] {
 
 // GetActiveByUserID returns an iterator over active (non-revoked, non-expired) sessions for a user.
 func (s *SessionService) GetActiveByUserID(userID jsonldb.ID) iter.Seq[*Session] {
-	now := time.Now()
+	now := storage.Now()
 	return func(yield func(*Session) bool) {
 		for session := range s.byUserID.Iter(userID) {
 			if !session.Revoked && session.ExpiresAt.After(now) {
@@ -141,7 +142,7 @@ func (s *SessionService) Revoke(id jsonldb.ID) error {
 			return nil // Already revoked
 		}
 		session.Revoked = true
-		session.RevokedAt = time.Now()
+		session.RevokedAt = storage.Now()
 		return nil
 	})
 	return err
@@ -169,7 +170,7 @@ func (s *SessionService) RevokeAllForUser(userID jsonldb.ID) (int, error) {
 // UpdateLastUsed updates the LastUsed timestamp for a session.
 func (s *SessionService) UpdateLastUsed(id jsonldb.ID) error {
 	_, err := s.table.Modify(id, func(session *Session) error {
-		session.LastUsed = time.Now()
+		session.LastUsed = storage.Now()
 		return nil
 	})
 	return err
@@ -184,7 +185,7 @@ func (s *SessionService) IsValid(id jsonldb.ID) (bool, error) {
 	if session.Revoked {
 		return false, nil
 	}
-	if session.ExpiresAt.Before(time.Now()) {
+	if session.ExpiresAt.Before(storage.Now()) {
 		return false, nil
 	}
 	return true, nil
@@ -192,7 +193,7 @@ func (s *SessionService) IsValid(id jsonldb.ID) (bool, error) {
 
 // CleanupExpired removes sessions that have been expired for more than the given duration.
 func (s *SessionService) CleanupExpired(olderThan time.Duration) (int, error) {
-	cutoff := time.Now().Add(-olderThan)
+	cutoff := storage.ToTime(time.Now().Add(-olderThan))
 	var toDelete []jsonldb.ID
 
 	for session := range s.table.Iter(0) {

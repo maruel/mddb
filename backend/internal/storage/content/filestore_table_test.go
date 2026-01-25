@@ -4,9 +4,9 @@ import (
 	"os"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -36,8 +36,8 @@ func TestTable(t *testing.T) {
 						{Name: "title", Type: "text"},
 						{Name: "status", Type: PropertyTypeText},
 					},
-					Created:  time.Now(),
-					Modified: time.Now(),
+					Created:  storage.Now(),
+					Modified: storage.Now(),
 				},
 			},
 			{
@@ -54,8 +54,8 @@ func TestTable(t *testing.T) {
 						{Name: "checkbox_field", Type: "checkbox"},
 						{Name: "date_field", Type: "date"},
 					},
-					Created:  time.Now(),
-					Modified: time.Now(),
+					Created:  storage.Now(),
+					Modified: storage.Now(),
 				},
 			},
 		}
@@ -122,8 +122,8 @@ func TestTable(t *testing.T) {
 			Properties: []Property{
 				{Name: "name", Type: "text"},
 			},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 
 		// Should not exist initially
@@ -162,8 +162,8 @@ func TestTable(t *testing.T) {
 				Properties: []Property{
 					{Name: "name", Type: "text"},
 				},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 				t.Fatalf("Failed to write table %v: %v", id, err)
@@ -212,8 +212,8 @@ func TestTable(t *testing.T) {
 			Properties: []Property{
 				{Name: "name", Type: "text"},
 			},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 
 		// Write table
@@ -258,8 +258,8 @@ func TestTable(t *testing.T) {
 			Properties: []Property{
 				{Name: "name", Type: "text"},
 			},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 
 		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
@@ -305,8 +305,8 @@ func TestRecord(t *testing.T) {
 			Properties: []Property{
 				{Name: "name", Type: "text"},
 			},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("Failed to create table: %v", err)
@@ -317,20 +317,20 @@ func TestRecord(t *testing.T) {
 			{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"name": "Record 1"},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			},
 			{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"name": "Record 2"},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			},
 			{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"name": "Record 3"},
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			},
 		}
 
@@ -397,8 +397,8 @@ func TestRecord(t *testing.T) {
 			Properties: []Property{
 				{Name: "name", Type: "text"},
 			},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("Failed to create table: %v", err)
@@ -408,8 +408,8 @@ func TestRecord(t *testing.T) {
 		rec := &DataRecord{
 			ID:       jsonldb.NewID(),
 			Data:     map[string]any{"name": "Record 1"},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.AppendRecord(ctx, wsID, dbID, rec, author); err != nil {
 			t.Fatalf("Failed to append record: %v", err)
@@ -428,8 +428,8 @@ func TestRecord(t *testing.T) {
 		rec2 := &DataRecord{
 			ID:       jsonldb.NewID(),
 			Data:     map[string]any{"name": "Record 2"},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.AppendRecord(ctx, wsID, dbID, rec2, author); err == nil {
 			t.Error("Expected error when exceeding record quota")
@@ -456,8 +456,8 @@ func TestRecord(t *testing.T) {
 			Properties: []Property{
 				{Name: "name", Type: "text"},
 			},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("Failed to create table: %v", err)

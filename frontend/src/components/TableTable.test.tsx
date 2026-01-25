@@ -60,14 +60,14 @@ describe('TableTable', () => {
     {
       id: 'rec-1',
       data: { Name: 'Alice', Age: 30, Active: true, Birthday: '1994-05-15', Status: 'active' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
     {
       id: 'rec-2',
       data: { Name: 'Bob', Age: 25, Active: false, Birthday: '1999-08-20', Status: 'inactive' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
   ];
 

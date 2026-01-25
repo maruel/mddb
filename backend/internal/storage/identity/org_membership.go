@@ -3,9 +3,9 @@ package identity
 import (
 	"errors"
 	"iter"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // OrganizationRole defines the role of a user within an organization.
@@ -55,7 +55,7 @@ type OrganizationMembership struct {
 	UserID         jsonldb.ID       `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
 	OrganizationID jsonldb.ID       `json:"organization_id" jsonschema:"description=Organization ID the user is a member of"`
 	Role           OrganizationRole `json:"role" jsonschema:"description=User role within the organization (owner/admin/member)"`
-	Created        time.Time        `json:"created" jsonschema:"description=Membership creation timestamp"`
+	Created        storage.Time     `json:"created" jsonschema:"description=Membership creation timestamp"`
 }
 
 // Clone returns a copy of the OrganizationMembership.
@@ -160,7 +160,7 @@ func (s *OrganizationMembershipService) Create(userID, orgID jsonldb.ID, role Or
 		UserID:         userID,
 		OrganizationID: orgID,
 		Role:           role,
-		Created:        time.Now(),
+		Created:        storage.Now(),
 	}
 	if err := s.table.Append(membership); err != nil {
 		return nil, err

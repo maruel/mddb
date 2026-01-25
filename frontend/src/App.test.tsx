@@ -119,7 +119,7 @@ vi.mock('./components/Auth', () => ({
                 organization_id: 'org-1',
                 organization_name: 'Test Org',
                 role: 'member',
-                created: '2024-01-01T00:00:00Z',
+                created: 1704067200,
               },
             ],
             workspaces: [
@@ -131,12 +131,12 @@ vi.mock('./components/Auth', () => ({
                 organization_id: 'org-1',
                 role: 'viewer',
                 settings: { notifications: true },
-                created: '2024-01-01T00:00:00Z',
+                created: 1704067200,
               },
             ],
             settings: { theme: 'light', language: 'en' },
-            created: '2024-01-01T00:00:00Z',
-            modified: '2024-01-01T00:00:00Z',
+            created: 1704067200,
+            modified: 1704067200,
           })
         }
       >
@@ -288,7 +288,7 @@ const mockUser: UserResponse = {
       organization_id: 'org-1',
       organization_name: 'Test Org',
       role: 'member',
-      created: '2024-01-01T00:00:00Z',
+      created: 1704067200,
     },
   ],
   workspaces: [
@@ -300,12 +300,12 @@ const mockUser: UserResponse = {
       organization_id: 'org-1',
       role: WSRoleViewer,
       settings: { notifications: true },
-      created: '2024-01-01T00:00:00Z',
+      created: 1704067200,
     },
   ],
   settings: { theme: 'light', language: 'en' },
-  created: '2024-01-01T00:00:00Z',
-  modified: '2024-01-01T00:00:00Z',
+  created: 1704067200,
+  modified: 1704067200,
 };
 
 const mockNodes: NodeResponse[] = [
@@ -314,8 +314,8 @@ const mockNodes: NodeResponse[] = [
     title: 'Test Page',
     type: 'document',
     content: '# Hello World',
-    created: '2024-01-01T00:00:00Z',
-    modified: '2024-01-01T00:00:00Z',
+    created: 1704067200,
+    modified: 1704067200,
   },
   {
     id: 'node-2',
@@ -332,8 +332,8 @@ const mockNodes: NodeResponse[] = [
         ],
       },
     ],
-    created: '2024-01-01T00:00:00Z',
-    modified: '2024-01-01T00:00:00Z',
+    created: 1704067200,
+    modified: 1704067200,
   },
 ];
 
@@ -341,14 +341,14 @@ const mockRecords: DataRecordResponse[] = [
   {
     id: 'rec-1',
     data: { Name: 'Record 1', Status: 'Todo' },
-    created: '2024-01-01T00:00:00Z',
-    modified: '2024-01-01T00:00:00Z',
+    created: 1704067200,
+    modified: 1704067200,
   },
   {
     id: 'rec-2',
     data: { Name: 'Record 2', Status: 'Done' },
-    created: '2024-01-01T00:00:00Z',
-    modified: '2024-01-01T00:00:00Z',
+    created: 1704067200,
+    modified: 1704067200,
   },
 ];
 
@@ -924,7 +924,7 @@ describe('App', () => {
             organization_id: 'org-1',
             organization_name: 'Org 1',
             role: 'member',
-            created: '2024-01-01T00:00:00Z',
+            created: 1704067200,
           },
           {
             id: 'mem-2',
@@ -932,7 +932,7 @@ describe('App', () => {
             organization_id: 'org-2',
             organization_name: 'Org 2',
             role: 'admin',
-            created: '2024-01-01T00:00:00Z',
+            created: 1704067200,
           },
         ],
       };

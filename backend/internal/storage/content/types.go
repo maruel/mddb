@@ -1,24 +1,23 @@
 package content
 
 import (
-	"time"
-
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // Node represents the unified content entity (can be a Page, a Table, or both).
 type Node struct {
-	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique node identifier"`
-	ParentID   jsonldb.ID `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
-	Title      string     `json:"title" jsonschema:"description=Node title"`
-	Content    string     `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
-	Properties []Property `json:"properties,omitempty" jsonschema:"description=Schema definition (Table part)"`
-	Created    time.Time  `json:"created" jsonschema:"description=Node creation timestamp"`
-	Modified   time.Time  `json:"modified" jsonschema:"description=Last modification timestamp"`
-	Tags       []string   `json:"tags,omitempty" jsonschema:"description=Node tags for categorization"`
-	FaviconURL string     `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
-	Type       NodeType   `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
-	Children   []*Node    `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
+	ID         jsonldb.ID   `json:"id" jsonschema:"description=Unique node identifier"`
+	ParentID   jsonldb.ID   `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
+	Title      string       `json:"title" jsonschema:"description=Node title"`
+	Content    string       `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
+	Properties []Property   `json:"properties,omitempty" jsonschema:"description=Schema definition (Table part)"`
+	Created    storage.Time `json:"created" jsonschema:"description=Node creation timestamp"`
+	Modified   storage.Time `json:"modified" jsonschema:"description=Last modification timestamp"`
+	Tags       []string     `json:"tags,omitempty" jsonschema:"description=Node tags for categorization"`
+	FaviconURL string       `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
+	Type       NodeType     `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
+	Children   []*Node      `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
 }
 
 // NodeType defines what features are enabled for a node.
@@ -37,8 +36,8 @@ const (
 type DataRecord struct {
 	ID       jsonldb.ID     `json:"id" jsonschema:"description=Unique record identifier"`
 	Data     map[string]any `json:"data" jsonschema:"description=Record field values keyed by property name"`
-	Created  time.Time      `json:"created" jsonschema:"description=Record creation timestamp"`
-	Modified time.Time      `json:"modified" jsonschema:"description=Last modification timestamp"`
+	Created  storage.Time   `json:"created" jsonschema:"description=Record creation timestamp"`
+	Modified storage.Time   `json:"modified" jsonschema:"description=Last modification timestamp"`
 }
 
 // Clone returns a deep copy of the DataRecord.
@@ -69,12 +68,12 @@ func (r *DataRecord) Validate() error {
 // Asset represents an uploaded file/image associated with a node.
 // Asset IDs are filenames, not generated IDs, hence the string type.
 type Asset struct {
-	ID       string    `json:"id" jsonschema:"description=Asset identifier (filename)"`
-	Name     string    `json:"name" jsonschema:"description=Original filename"`
-	MimeType string    `json:"mime_type" jsonschema:"description=MIME type of the asset"`
-	Size     int64     `json:"size" jsonschema:"description=File size in bytes"`
-	Created  time.Time `json:"created" jsonschema:"description=Upload timestamp"`
-	Path     string    `json:"path" jsonschema:"description=Storage path on disk"`
+	ID       string       `json:"id" jsonschema:"description=Asset identifier (filename)"`
+	Name     string       `json:"name" jsonschema:"description=Original filename"`
+	MimeType string       `json:"mime_type" jsonschema:"description=MIME type of the asset"`
+	Size     int64        `json:"size" jsonschema:"description=File size in bytes"`
+	Created  storage.Time `json:"created" jsonschema:"description=Upload timestamp"`
+	Path     string       `json:"path" jsonschema:"description=Storage path on disk"`
 }
 
 // SearchResult represents a single search result.
@@ -86,7 +85,7 @@ type SearchResult struct {
 	Snippet  string            `json:"snippet" jsonschema:"description=Text snippet with match context"`
 	Score    float64           `json:"score" jsonschema:"description=Relevance score"`
 	Matches  map[string]string `json:"matches" jsonschema:"description=Matched fields and their values"`
-	Modified time.Time         `json:"modified" jsonschema:"description=Last modification timestamp"`
+	Modified storage.Time      `json:"modified" jsonschema:"description=Last modification timestamp"`
 }
 
 // SearchOptions defines parameters for a search.

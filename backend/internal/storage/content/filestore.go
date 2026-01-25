@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -36,8 +37,8 @@ type page struct {
 	id         jsonldb.ID
 	title      string
 	content    string
-	created    time.Time
-	modified   time.Time
+	created    storage.Time
+	modified   storage.Time
 	tags       []string
 	faviconURL string
 }
@@ -217,7 +218,7 @@ func (fs *FileStore) writePage(wsID, id jsonldb.ID, title, content string) (*Nod
 		return nil, err
 	}
 
-	now := time.Now().UTC()
+	now := storage.Now()
 	p := &page{
 		id:       id,
 		title:    title,
@@ -290,7 +291,7 @@ func (fs *FileStore) updatePage(wsID, id jsonldb.ID, title, content string) (*No
 	p := parseMarkdownFile(id, data)
 	p.title = title
 	p.content = content
-	p.modified = time.Now().UTC()
+	p.modified = storage.Now()
 
 	updatedData := formatMarkdownFile(p)
 
@@ -399,8 +400,8 @@ func (fs *FileStore) ReadNode(wsID, id jsonldb.ID) (*Node, error) {
 
 	node := &Node{
 		ID:       id,
-		Created:  info.ModTime(),
-		Modified: info.ModTime(),
+		Created:  storage.ToTime(info.ModTime()),
+		Modified: storage.ToTime(info.ModTime()),
 	}
 
 	indexFile := fs.pageIndexFile(wsID, id)
@@ -483,8 +484,8 @@ func (fs *FileStore) ReadNodeFromPath(wsID jsonldb.ID, path string, id, parentID
 	node := &Node{
 		ID:       id,
 		ParentID: parentID,
-		Created:  info.ModTime(),
-		Modified: info.ModTime(),
+		Created:  storage.ToTime(info.ModTime()),
+		Modified: storage.ToTime(info.ModTime()),
 	}
 
 	indexFile := filepath.Join(path, "index.md")
@@ -581,11 +582,11 @@ func (fs *FileStore) ReadTable(wsID, id jsonldb.ID) (*Node, error) {
 	}
 
 	var metadata struct {
-		Title      string     `json:"title"`
-		Version    string     `json:"version"`
-		Created    time.Time  `json:"created"`
-		Modified   time.Time  `json:"modified"`
-		Properties []Property `json:"properties"`
+		Title      string       `json:"title"`
+		Version    string       `json:"version"`
+		Created    storage.Time `json:"created"`
+		Modified   storage.Time `json:"modified"`
+		Properties []Property   `json:"properties"`
 	}
 	if err := json.Unmarshal(data, &metadata); err != nil {
 		return nil, fmt.Errorf("failed to parse table metadata: %w", err)
@@ -641,8 +642,8 @@ func (fs *FileStore) writeTable(wsID jsonldb.ID, node *Node, isNew bool) error {
 	metadata := map[string]any{
 		"title":      node.Title,
 		"version":    "1.0",
-		"created":    node.Created.UTC(),
-		"modified":   node.Modified.UTC(),
+		"created":    node.Created,
+		"modified":   node.Modified,
 		"properties": node.Properties,
 	}
 	data, err := json.Marshal(metadata)
@@ -1091,7 +1092,7 @@ func (fs *FileStore) IterAssets(wsID, pageID jsonldb.ID) (iter.Seq[*Asset], erro
 				ID:      name,
 				Name:    name,
 				Size:    info.Size(),
-				Created: info.ModTime(),
+				Created: storage.ToTime(info.ModTime()),
 				Path:    name,
 			}) {
 				return
@@ -1105,7 +1106,7 @@ func (fs *FileStore) IterAssets(wsID, pageID jsonldb.ID) (iter.Seq[*Asset], erro
 func parseMarkdownFile(id jsonldb.ID, data []byte) *page {
 	content := string(data)
 	title := id.String()
-	var created, modified time.Time
+	var created, modified storage.Time
 
 	if strings.HasPrefix(content, "---") {
 		parts := strings.SplitN(content, "\n---", 2)
@@ -1119,12 +1120,12 @@ func parseMarkdownFile(id jsonldb.ID, data []byte) *page {
 				case strings.HasPrefix(line, "created:"):
 					dateStr := strings.TrimSpace(strings.TrimPrefix(line, "created:"))
 					if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
-						created = t
+						created = storage.ToTime(t)
 					}
 				case strings.HasPrefix(line, "modified:"):
 					dateStr := strings.TrimSpace(strings.TrimPrefix(line, "modified:"))
 					if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
-						modified = t
+						modified = storage.ToTime(t)
 					}
 				}
 			}
@@ -1132,10 +1133,10 @@ func parseMarkdownFile(id jsonldb.ID, data []byte) *page {
 	}
 
 	if created.IsZero() {
-		created = time.Now().UTC()
+		created = storage.Now()
 	}
 	if modified.IsZero() {
-		modified = time.Now().UTC()
+		modified = storage.Now()
 	}
 
 	return &page{
@@ -1152,8 +1153,8 @@ func formatMarkdownFile(p *page) []byte {
 	buf.WriteString("---")
 	buf.WriteString("\nid: " + p.id.String() + "\n")
 	buf.WriteString("title: " + p.title + "\n")
-	buf.WriteString("created: " + p.created.Format(time.RFC3339) + "\n")
-	buf.WriteString("modified: " + p.modified.Format(time.RFC3339) + "\n")
+	buf.WriteString("created: " + p.created.AsTime().Format(time.RFC3339) + "\n")
+	buf.WriteString("modified: " + p.modified.AsTime().Format(time.RFC3339) + "\n")
 	if len(p.tags) > 0 {
 		buf.WriteString("tags: [" + strings.Join(p.tags, ", ") + "]\n")
 	}
@@ -1212,7 +1213,7 @@ func (fs *FileStore) createNode(wsID jsonldb.ID, title string, nodeType NodeType
 	}
 
 	id := jsonldb.NewID()
-	now := time.Now().UTC()
+	now := storage.Now()
 
 	node := &Node{
 		ID:       id,

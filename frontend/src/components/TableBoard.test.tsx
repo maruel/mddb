@@ -71,26 +71,26 @@ describe('TableBoard', () => {
     {
       id: 'rec-1',
       data: { Title: 'Task 1', Status: 'todo', Priority: 'High', Assignee: 'Alice' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
     {
       id: 'rec-2',
       data: { Title: 'Task 2', Status: 'in_progress', Priority: 'Medium', Assignee: 'Bob' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
     {
       id: 'rec-3',
       data: { Title: 'Task 3', Status: 'done', Priority: 'Low', Assignee: 'Charlie' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
     {
       id: 'rec-4',
       data: { Title: 'Task 4', Status: '', Priority: 'High', Assignee: 'Diana' },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
   ];
 
@@ -168,8 +168,8 @@ describe('TableBoard', () => {
       {
         id: 'rec-1',
         data: { Status: 'todo', Priority: 'High' },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
     ];
 
@@ -236,14 +236,14 @@ describe('TableBoard', () => {
       {
         id: 'rec-1',
         data: { Name: 'Issue 1', Tags: 'bug' },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
       {
         id: 'rec-2',
         data: { Name: 'Issue 2', Tags: 'feature' },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
     ];
 
@@ -263,8 +263,8 @@ describe('TableBoard', () => {
       {
         id: 'rec-1',
         data: { Title: 'Task 1', Status: 'todo', Priority: 'High' },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
     ];
 
@@ -285,8 +285,8 @@ describe('TableBoard', () => {
       {
         id: 'rec-1',
         data: { Title: 'Task 1', Status: 'custom_status', Priority: 'High' },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
     ];
 

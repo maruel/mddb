@@ -19,6 +19,26 @@ func ToTime(v time.Time) Time {
 	return Time(v.Unix())
 }
 
+// Now returns the current time as a storage.Time.
+func Now() Time {
+	return Time(time.Now().Unix())
+}
+
+// IsZero returns true if the time is zero.
+func (t Time) IsZero() bool {
+	return t == 0
+}
+
+// After reports whether the time instant t is after u.
+func (t Time) After(u Time) bool {
+	return t > u
+}
+
+// Before reports whether the time instant t is before u.
+func (t Time) Before(u Time) bool {
+	return t < u
+}
+
 // UnmarshalJSON decodes JSON numbers as unix timestamps, converting float64 to int64 by rounding.
 func (t *Time) UnmarshalJSON(b []byte) error {
 	var i int64

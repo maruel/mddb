@@ -168,7 +168,7 @@ func (h *AuthHandler) GenerateTokenWithSession(user *identity.User, clientIP, us
 	if len(deviceInfo) > 200 {
 		deviceInfo = deviceInfo[:200]
 	}
-	if _, err := h.sessionService.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, expiresAt); err != nil {
+	if _, err := h.sessionService.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt)); err != nil {
 		return "", err
 	}
 
@@ -286,8 +286,8 @@ func (h *AuthHandler) ListSessions(ctx context.Context, _ jsonldb.ID, user *iden
 			ID:         session.ID,
 			DeviceInfo: session.DeviceInfo,
 			IPAddress:  session.IPAddress,
-			Created:    storage.ToTime(session.Created),
-			LastUsed:   storage.ToTime(session.LastUsed),
+			Created:    session.Created,
+			LastUsed:   session.LastUsed,
 			IsCurrent:  session.ID == currentSessionID,
 		})
 	}

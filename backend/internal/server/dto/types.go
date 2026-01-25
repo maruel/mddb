@@ -2,6 +2,9 @@ package dto
 
 import "github.com/maruel/mddb/backend/internal/storage"
 
+// Time is a type alias for storage.Time to ensure it generates as 'number' in TypeScript.
+type Time = storage.Time
+
 // PropertyType represents the type of a table property.
 type PropertyType string
 
@@ -110,7 +113,7 @@ type OAuthIdentity struct {
 	ProviderID string        `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
 	Email      string        `json:"email" jsonschema:"description=Email address from OAuth provider"`
 	AvatarURL  string        `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
-	LastLogin  storage.Time  `json:"last_login" jsonschema:"description=Last login Unix timestamp via this provider"`
+	LastLogin  Time          `json:"last_login" jsonschema:"description=Last login Unix timestamp via this provider"`
 }
 
 // WorkspaceMembershipSettings represents user preferences within a specific workspace.
@@ -155,9 +158,9 @@ type WorkspaceSettings struct {
 
 // Commit represents a commit in git history.
 type Commit struct {
-	Hash      string       `json:"hash"`
-	Message   string       `json:"message"`
-	Timestamp storage.Time `json:"timestamp"`
+	Hash      string `json:"hash"`
+	Message   string `json:"message"`
+	Timestamp Time   `json:"timestamp"`
 }
 
 // SearchResult represents a single search result.
@@ -169,5 +172,5 @@ type SearchResult struct {
 	Snippet  string            `json:"snippet"`
 	Score    float64           `json:"score"`
 	Matches  map[string]string `json:"matches"`
-	Modified storage.Time      `json:"modified"`
+	Modified Time              `json:"modified"`
 }

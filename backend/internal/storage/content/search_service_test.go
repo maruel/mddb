@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"time"
 	"unicode/utf8"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
@@ -128,8 +128,8 @@ func TestSearchService(t *testing.T) {
 				{Name: "status", Type: PropertyTypeText},
 				{Name: "description", Type: "text"},
 			},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("WriteTable failed: %v", err)
@@ -145,8 +145,8 @@ func TestSearchService(t *testing.T) {
 			rec := &DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     data,
-				Created:  time.Now(),
-				Modified: time.Now(),
+				Created:  storage.Now(),
+				Modified: storage.Now(),
 			}
 			if err := fs.AppendRecord(ctx, wsID, dbID, rec, author); err != nil {
 				t.Fatalf("AppendRecord failed: %v", err)
@@ -312,8 +312,8 @@ func TestSearchService(t *testing.T) {
 				{Name: "title", Type: "text", Required: true},
 				{Name: "content", Type: "text"},
 			},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
 			t.Fatalf("WriteTable failed: %v", err)
@@ -321,8 +321,8 @@ func TestSearchService(t *testing.T) {
 		rec := &DataRecord{
 			ID:       jsonldb.NewID(),
 			Data:     map[string]any{"title": "Getting Started with Go", "content": "Introduction to searchable content"},
-			Created:  time.Now(),
-			Modified: time.Now(),
+			Created:  storage.Now(),
+			Modified: storage.Now(),
 		}
 		if err := fs.AppendRecord(ctx, wsID, dbID, rec, author); err != nil {
 			t.Fatalf("AppendRecord failed: %v", err)

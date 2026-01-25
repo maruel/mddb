@@ -60,8 +60,8 @@ describe('TableGallery', () => {
         Description: 'Great product',
         Price: 99,
       },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
     {
       id: 'rec-2',
@@ -71,8 +71,8 @@ describe('TableGallery', () => {
         Description: 'Another product',
         Price: 149,
       },
-      created: '2024-01-01T00:00:00Z',
-      modified: '2024-01-01T00:00:00Z',
+      created: 1704067200,
+      modified: 1704067200,
     },
   ];
 
@@ -114,8 +114,8 @@ describe('TableGallery', () => {
           Cover: 'https://example.com/cover.jpg',
           Category: 'Music',
         },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
     ];
 
@@ -157,8 +157,8 @@ describe('TableGallery', () => {
       {
         id: 'rec-1',
         data: { Image: 'https://example.com/img.jpg', Description: 'No title' },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
     ];
 
@@ -238,8 +238,8 @@ describe('TableGallery', () => {
       {
         id: 'rec-1',
         data: { Title: 'Article A', Description: 'Some text', Price: 0 },
-        created: '2024-01-01T00:00:00Z',
-        modified: '2024-01-01T00:00:00Z',
+        created: 1704067200,
+        modified: 1704067200,
       },
     ];
 

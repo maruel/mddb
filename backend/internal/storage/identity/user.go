@@ -11,9 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"iter"
-	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -26,8 +26,8 @@ type User struct {
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
 	Quotas          UserQuota       `json:"quotas" jsonschema:"description=Resource limits for the user"`
 	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
-	Created         time.Time       `json:"created" jsonschema:"description=Account creation timestamp"`
-	Modified        time.Time       `json:"modified" jsonschema:"description=Last modification timestamp"`
+	Created         storage.Time    `json:"created" jsonschema:"description=Account creation timestamp"`
+	Modified        storage.Time    `json:"modified" jsonschema:"description=Last modification timestamp"`
 }
 
 // GetID returns the User's ID.
@@ -48,11 +48,11 @@ type UserQuota struct {
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
 type OAuthIdentity struct {
-	Provider   string    `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft)"`
-	ProviderID string    `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
-	Email      string    `json:"email" jsonschema:"description=Email address from OAuth provider"`
-	AvatarURL  string    `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
-	LastLogin  time.Time `json:"last_login" jsonschema:"description=Last login timestamp via this provider"`
+	Provider   string       `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft)"`
+	ProviderID string       `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
+	Email      string       `json:"email" jsonschema:"description=Email address from OAuth provider"`
+	AvatarURL  string       `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
+	LastLogin  storage.Time `json:"last_login" jsonschema:"description=Last login timestamp via this provider"`
 }
 
 // UserService handles user management and authentication.
@@ -90,7 +90,7 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 	// First user becomes global admin
 	isFirstUser := s.table.Len() == 0
 	id := jsonldb.NewID()
-	now := time.Now()
+	now := storage.Now()
 	stored := &userStorage{
 		User: User{
 			ID:            id,
