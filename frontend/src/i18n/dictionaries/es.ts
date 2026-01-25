@@ -28,6 +28,8 @@ export const dict: Dictionary = {
     privacyPolicy: 'Política de privacidad',
     terms: 'Términos',
     myOrg: 'Mi espacio',
+    createSubPage: 'Nueva subpágina',
+    createSubTable: 'Nueva subtabla',
   },
 
   userMenu: {

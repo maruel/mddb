@@ -30,6 +30,8 @@ export interface Dictionary {
     privacyPolicy: string;
     terms: string;
     myOrg: string;
+    createSubPage: string;
+    createSubTable: string;
   };
 
   userMenu: {

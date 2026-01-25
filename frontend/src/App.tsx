@@ -48,6 +48,7 @@ export default function App() {
   const [error, setError] = createSignal<string | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+  const [nodeCreationParentId, setNodeCreationParentId] = createSignal<string | null>(null);
   const [showCreateOrg, setShowCreateOrg] = createSignal(false);
   const [showGitSetup, setShowGitSetup] = createSignal(false);
   const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
@@ -436,7 +437,7 @@ export default function App() {
     }
   }
 
-  async function createNode(type: 'document' | 'table' = 'document') {
+  async function createNode(type: 'document' | 'table' = 'document', parentId?: string) {
     if (!title().trim()) {
       setError(t('errors.titleRequired') || 'Title is required');
       return;
@@ -447,7 +448,11 @@ export default function App() {
 
     try {
       setLoading(true);
-      const newNode = await ws.nodes.create({ title: title(), type });
+      const newNode = await ws.nodes.create({
+        title: title(),
+        type,
+        parent_id: parentId || nodeCreationParentId() || undefined,
+      });
       await loadNodes();
       loadNode(newNode.id);
       setTitle('');
@@ -455,6 +460,7 @@ export default function App() {
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
+      setNodeCreationParentId(null);
     } catch (err) {
       setError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
@@ -682,12 +688,26 @@ export default function App() {
                     }}
                     onCreatePage={() => {
                       setShowSettings(false);
+                      setNodeCreationParentId(null);
                       createNode('document');
                       setShowMobileSidebar(false);
                     }}
                     onCreateTable={() => {
                       setShowSettings(false);
+                      setNodeCreationParentId(null);
                       createNode('table');
+                      setShowMobileSidebar(false);
+                    }}
+                    onCreateChildPage={(parentId: string) => {
+                      setShowSettings(false);
+                      setNodeCreationParentId(parentId);
+                      createNode('document', parentId);
+                      setShowMobileSidebar(false);
+                    }}
+                    onCreateChildTable={(parentId: string) => {
+                      setShowSettings(false);
+                      setNodeCreationParentId(parentId);
+                      createNode('table', parentId);
                       setShowMobileSidebar(false);
                     }}
                     onSelectNode={handleNodeClick}

@@ -12,6 +12,8 @@ interface SidebarProps {
   onToggleSettings: () => void;
   onCreatePage: () => void;
   onCreateTable: () => void;
+  onCreateChildPage: (parentId: string) => void;
+  onCreateChildTable: (parentId: string) => void;
   onSelectNode: (node: NodeResponse) => void;
   onCloseMobileSidebar: () => void;
 }
@@ -43,7 +45,14 @@ export default function Sidebar(props: SidebarProps) {
       <ul class={styles.pageList}>
         <For each={props.nodes}>
           {(node) => (
-            <SidebarNode node={node} selectedId={props.selectedNodeId} onSelect={props.onSelectNode} depth={0} />
+            <SidebarNode
+              node={node}
+              selectedId={props.selectedNodeId}
+              onSelect={props.onSelectNode}
+              onCreateChildPage={props.onCreateChildPage}
+              onCreateChildTable={props.onCreateChildTable}
+              depth={0}
+            />
           )}
         </For>
       </ul>
