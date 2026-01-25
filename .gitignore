@@ -5,6 +5,7 @@
 .npmrc
 coverage.out
 /coverage/
+/mddb
 /node_modules/
 /package-lock.json
 /playwright-report/
