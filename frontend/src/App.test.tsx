@@ -191,7 +191,7 @@ vi.mock('./components/OrgMenu', () => ({
   }) => (
     <div data-testid="org-menu">
       <button data-testid="org-menu-button" onClick={() => {}}>
-        {props.memberships.find((m) => m.organization_id === props.currentOrgId)?.organization_name || 'Organization'}
+        {props.memberships.find((m) => m.organization_id === props.currentOrgId)?.organization_name || 'Workspace'}
       </button>
       <select
         data-testid="org-switcher"
@@ -203,7 +203,7 @@ vi.mock('./components/OrgMenu', () => ({
         ))}
       </select>
       <button data-testid="create-org-button" onClick={props.onCreateOrg}>
-        Create Organization
+        Create Workspace
       </button>
     </div>
   ),
@@ -885,8 +885,8 @@ describe('App', () => {
     });
   });
 
-  describe('Organization Management', () => {
-    it('shows create org modal for new users without memberships', async () => {
+  describe('Workspace Management', () => {
+    it('shows create workspace modal when user has no workspaces', async () => {
       localStorageMock.setItem('mddb_token', 'test-token');
 
       const userWithNoMemberships: UserResponse = {
@@ -912,7 +912,7 @@ describe('App', () => {
       });
     });
 
-    it('shows org switcher for users with multiple orgs', async () => {
+    it('shows workspace switcher for users with multiple workspaces', async () => {
       localStorageMock.setItem('mddb_token', 'test-token');
 
       const userWithMultipleOrgs: UserResponse = {
@@ -960,7 +960,7 @@ describe('App', () => {
       });
     });
 
-    it('opens create org modal when clicking + button', async () => {
+    it('opens create workspace modal when clicking + button', async () => {
       localStorageMock.setItem('mddb_token', 'test-token');
 
       mockFetch.mockImplementation((url: string) => {

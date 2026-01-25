@@ -27,7 +27,7 @@ export const dict: Dictionary = {
     settings: 'Arbeitsbereich-Einstellungen',
     privacyPolicy: 'Datenschutzerklärung',
     terms: 'Nutzungsbedingungen',
-    myOrg: 'Meine Organisation',
+    myOrg: 'Mein Arbeitsbereich',
   },
 
   userMenu: {
@@ -88,11 +88,11 @@ export const dict: Dictionary = {
   },
 
   createOrg: {
-    title: 'Organisation erstellen',
+    title: 'Arbeitsbereich erstellen',
     description: 'Erstellen Sie einen neuen Arbeitsbereich für Ihre Inhalte.',
     firstOrgTitle: 'Arbeitsbereich erstellen',
     firstOrgDescription: 'Willkommen! Richten wir Ihren ersten Arbeitsbereich ein.',
-    nameLabel: 'Name der Organisation',
+    nameLabel: 'Name des Arbeitsbereichs',
     namePlaceholder: 'Mein neuer Arbeitsbereich',
     create: 'Erstellen',
     welcomeTitle: 'Willkommen',
@@ -131,7 +131,7 @@ export const dict: Dictionary = {
     // Workspace tab
     workspaceSettings: 'Arbeitsbereich-Einstellungen',
     adminOnlyWorkspace: 'Nur Administratoren können Arbeitsbereich-Einstellungen ändern.',
-    organizationName: 'Organisationsname',
+    organizationName: 'Arbeitsbereichsname',
     renameNotSupported: 'Umbenennen wird noch nicht unterstützt',
     allowPublicAccess: 'Öffentlichen Zugriff erlauben (Nur Lesen)',
     allowedDomains: 'Erlaubte E-Mail-Domains (kommagetrennt)',
@@ -197,14 +197,14 @@ export const dict: Dictionary = {
     failedToSave: 'Speichern fehlgeschlagen',
     failedToDelete: 'Löschen fehlgeschlagen',
     failedToCreate: 'Erstellen fehlgeschlagen',
-    failedToSwitch: 'Organisationswechsel fehlgeschlagen',
+    failedToSwitch: 'Arbeitsbereichswechsel fehlgeschlagen',
     failedToInvite: 'Einladung senden fehlgeschlagen',
     failedToUpdateRole: 'Rollenaktualisierung fehlgeschlagen',
     failedToAddRemote: 'Remote hinzufügen fehlgeschlagen',
     failedToRemoveRemote: 'Remote entfernen fehlgeschlagen',
     pushFailed: 'Push fehlgeschlagen',
     autoSaveFailed: 'Automatisches Speichern fehlgeschlagen',
-    noAccessToOrg: 'Sie haben keinen Zugriff auf diese Organisation',
+    noAccessToOrg: 'Sie haben keinen Zugriff auf diesen Arbeitsbereich',
   },
 
   success: {

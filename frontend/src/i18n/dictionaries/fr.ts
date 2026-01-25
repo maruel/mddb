@@ -27,7 +27,7 @@ export const dict: Dictionary = {
     settings: "Paramètres de l'espace",
     privacyPolicy: 'Politique de confidentialité',
     terms: 'Conditions',
-    myOrg: 'Mon organisation',
+    myOrg: 'Mon espace',
   },
 
   userMenu: {
@@ -88,11 +88,11 @@ export const dict: Dictionary = {
   },
 
   createOrg: {
-    title: 'Créer une organisation',
+    title: 'Créer un espace',
     description: 'Créez un nouvel espace de travail pour organiser votre contenu.',
     firstOrgTitle: 'Créez votre espace de travail',
     firstOrgDescription: 'Bienvenue ! Configurons votre premier espace de travail.',
-    nameLabel: "Nom de l'organisation",
+    nameLabel: "Nom de l'espace",
     namePlaceholder: 'Mon nouvel espace',
     create: 'Créer',
     welcomeTitle: 'Bienvenue',
@@ -131,7 +131,7 @@ export const dict: Dictionary = {
     // Workspace tab
     workspaceSettings: "Paramètres de l'espace de travail",
     adminOnlyWorkspace: "Seuls les administrateurs peuvent modifier les paramètres de l'espace.",
-    organizationName: "Nom de l'organisation",
+    organizationName: "Nom de l'espace",
     renameNotSupported: "Le renommage n'est pas encore pris en charge",
     allowPublicAccess: "Autoriser l'accès public (Lecture seule)",
     allowedDomains: 'Domaines e-mail autorisés (séparés par des virgules)',
@@ -197,14 +197,14 @@ export const dict: Dictionary = {
     failedToSave: "Échec de l'enregistrement",
     failedToDelete: 'Échec de la suppression',
     failedToCreate: 'Échec de la création',
-    failedToSwitch: "Échec du changement d'organisation",
+    failedToSwitch: "Échec du changement d'espace",
     failedToInvite: "Échec de l'envoi de l'invitation",
     failedToUpdateRole: 'Échec de la mise à jour du rôle',
     failedToAddRemote: "Échec de l'ajout du dépôt distant",
     failedToRemoveRemote: 'Échec de la suppression du dépôt distant',
     pushFailed: 'Échec du push',
     autoSaveFailed: "Échec de l'enregistrement automatique",
-    noAccessToOrg: "Vous n'avez pas accès à cette organisation",
+    noAccessToOrg: "Vous n'avez pas accès à cet espace",
   },
 
   success: {

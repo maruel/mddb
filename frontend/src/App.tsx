@@ -243,7 +243,7 @@ export default function App() {
           if (isMember) {
             await switchOrg(orgId, false); // Don't redirect to /
           } else {
-            setError(t('errors.noAccessToOrg') || 'You do not have access to this organization');
+            setError(t('errors.noAccessToOrg') || 'You do not have access to this workspace');
             return;
           }
         } catch {

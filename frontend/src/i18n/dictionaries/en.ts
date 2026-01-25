@@ -27,7 +27,7 @@ export const dict: Dictionary = {
     settings: 'Workspace Settings',
     privacyPolicy: 'Privacy Policy',
     terms: 'Terms',
-    myOrg: 'My Org',
+    myOrg: 'My Workspace',
   },
 
   userMenu: {
@@ -88,11 +88,11 @@ export const dict: Dictionary = {
   },
 
   createOrg: {
-    title: 'Create Organization',
+    title: 'Create Workspace',
     description: 'Create a new workspace to organize your content.',
     firstOrgTitle: 'Create Your Workspace',
     firstOrgDescription: "Welcome! Let's set up your first workspace to get started.",
-    nameLabel: 'Organization Name',
+    nameLabel: 'Workspace Name',
     namePlaceholder: 'My New Workspace',
     create: 'Create',
     welcomeTitle: 'Welcome',
@@ -131,7 +131,7 @@ export const dict: Dictionary = {
     // Workspace tab
     workspaceSettings: 'Workspace Settings',
     adminOnlyWorkspace: 'Only admins can modify workspace settings.',
-    organizationName: 'Organization Name',
+    organizationName: 'Workspace Name',
     renameNotSupported: 'Rename is not supported yet',
     allowPublicAccess: 'Allow public access (Read-only)',
     allowedDomains: 'Allowed Email Domains (comma separated)',
@@ -197,14 +197,14 @@ export const dict: Dictionary = {
     failedToSave: 'Failed to save',
     failedToDelete: 'Failed to delete',
     failedToCreate: 'Failed to create',
-    failedToSwitch: 'Failed to switch organization',
+    failedToSwitch: 'Failed to switch workspace',
     failedToInvite: 'Failed to send invitation',
     failedToUpdateRole: 'Failed to update role',
     failedToAddRemote: 'Failed to add remote',
     failedToRemoveRemote: 'Failed to remove remote',
     pushFailed: 'Push failed',
     autoSaveFailed: 'Auto-save failed',
-    noAccessToOrg: 'You do not have access to this organization',
+    noAccessToOrg: 'You do not have access to this workspace',
   },
 
   success: {

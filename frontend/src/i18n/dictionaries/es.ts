@@ -27,7 +27,7 @@ export const dict: Dictionary = {
     settings: 'Configuración del espacio',
     privacyPolicy: 'Política de privacidad',
     terms: 'Términos',
-    myOrg: 'Mi organización',
+    myOrg: 'Mi espacio',
   },
 
   userMenu: {
@@ -88,11 +88,11 @@ export const dict: Dictionary = {
   },
 
   createOrg: {
-    title: 'Crear organización',
+    title: 'Crear espacio',
     description: 'Crea un nuevo espacio de trabajo para organizar tu contenido.',
     firstOrgTitle: 'Crea tu espacio de trabajo',
     firstOrgDescription: '¡Bienvenido! Configuremos tu primer espacio de trabajo.',
-    nameLabel: 'Nombre de la organización',
+    nameLabel: 'Nombre del espacio',
     namePlaceholder: 'Mi nuevo espacio',
     create: 'Crear',
     welcomeTitle: 'Bienvenido',
@@ -131,7 +131,7 @@ export const dict: Dictionary = {
     // Workspace tab
     workspaceSettings: 'Configuración del espacio de trabajo',
     adminOnlyWorkspace: 'Solo los administradores pueden modificar la configuración del espacio.',
-    organizationName: 'Nombre de la organización',
+    organizationName: 'Nombre del espacio',
     renameNotSupported: 'El cambio de nombre aún no está soportado',
     allowPublicAccess: 'Permitir acceso público (Solo lectura)',
     allowedDomains: 'Dominios de correo permitidos (separados por comas)',
@@ -197,14 +197,14 @@ export const dict: Dictionary = {
     failedToSave: 'Error al guardar',
     failedToDelete: 'Error al eliminar',
     failedToCreate: 'Error al crear',
-    failedToSwitch: 'Error al cambiar de organización',
+    failedToSwitch: 'Error al cambiar de espacio',
     failedToInvite: 'Error al enviar invitación',
     failedToUpdateRole: 'Error al actualizar rol',
     failedToAddRemote: 'Error al agregar remoto',
     failedToRemoveRemote: 'Error al eliminar remoto',
     pushFailed: 'Error en el envío',
     autoSaveFailed: 'Error en el guardado automático',
-    noAccessToOrg: 'No tienes acceso a esta organización',
+    noAccessToOrg: 'No tienes acceso a este espacio',
   },
 
   success: {
