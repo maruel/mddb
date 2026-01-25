@@ -30,6 +30,7 @@ type FileStore struct {
 	rootDir string
 	git     *git.Manager
 	wsSvc   *identity.WorkspaceService
+	orgSvc  *identity.OrganizationService
 }
 
 // page is an internal type for reading/writing page markdown files.
@@ -46,12 +47,16 @@ type page struct {
 // NewFileStore creates a versioned file store.
 // gitMgr is required - all operations are versioned.
 // wsSvc provides quota limits for workspaces.
-func NewFileStore(rootDir string, gitMgr *git.Manager, wsSvc *identity.WorkspaceService) (*FileStore, error) {
+// orgSvc provides quota limits for organizations.
+func NewFileStore(rootDir string, gitMgr *git.Manager, wsSvc *identity.WorkspaceService, orgSvc *identity.OrganizationService) (*FileStore, error) {
 	if gitMgr == nil {
 		return nil, errors.New("git manager is required")
 	}
 	if wsSvc == nil {
 		return nil, errors.New("workspace service is required")
+	}
+	if orgSvc == nil {
+		return nil, errors.New("organization service is required")
 	}
 	if err := os.MkdirAll(rootDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create root directory: %w", err)
@@ -61,6 +66,7 @@ func NewFileStore(rootDir string, gitMgr *git.Manager, wsSvc *identity.Workspace
 		rootDir: rootDir,
 		git:     gitMgr,
 		wsSvc:   wsSvc,
+		orgSvc:  orgSvc,
 	}, nil
 }
 
@@ -98,8 +104,9 @@ func (fs *FileStore) checkPageQuota(wsID jsonldb.ID) error {
 	return nil
 }
 
-// checkStorageQuota returns an error if adding the given bytes would exceed storage quota.
+// checkStorageQuota returns an error if adding the given bytes would exceed workspace or organization storage quota.
 func (fs *FileStore) checkStorageQuota(wsID jsonldb.ID, additionalBytes int64) error {
+	// Check workspace-level storage quota
 	ws, err := fs.wsSvc.Get(wsID)
 	if err != nil {
 		return err
@@ -112,6 +119,12 @@ func (fs *FileStore) checkStorageQuota(wsID jsonldb.ID, additionalBytes int64) e
 	if usage+additionalBytes > maxStorageBytes {
 		return errQuotaExceeded
 	}
+
+	// Check organization-level storage quota
+	if err := fs.checkOrgStorageQuota(wsID, additionalBytes); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -135,6 +148,30 @@ func (fs *FileStore) checkAssetSizeQuota(wsID jsonldb.ID, size int64) error {
 	}
 	maxAssetSizeBytes := int64(ws.Quotas.MaxAssetSizeMB) * 1024 * 1024
 	if size > maxAssetSizeBytes {
+		return errQuotaExceeded
+	}
+	return nil
+}
+
+// checkOrgStorageQuota returns an error if adding the given bytes would exceed the organization's total storage quota.
+// This checks the sum of storage usage across all workspaces in the organization.
+func (fs *FileStore) checkOrgStorageQuota(wsID jsonldb.ID, additionalBytes int64) error {
+	ws, err := fs.wsSvc.Get(wsID)
+	if err != nil {
+		return err
+	}
+	org, err := fs.orgSvc.Get(ws.OrganizationID)
+	if err != nil {
+		return err
+	}
+
+	orgUsage, err := fs.GetOrganizationUsage(ws.OrganizationID)
+	if err != nil {
+		return err
+	}
+
+	maxOrgStorageBytes := int64(org.Quotas.MaxTotalStorageGB) * 1024 * 1024 * 1024
+	if orgUsage+additionalBytes > maxOrgStorageBytes {
 		return errQuotaExceeded
 	}
 	return nil
@@ -520,7 +557,7 @@ func (fs *FileStore) ReadNodeFromPath(wsID jsonldb.ID, path string, id, parentID
 	return node, nil
 }
 
-// GetWorkspaceUsage calculates the total number of pages and storage usage (in bytes) for an organization.
+// GetWorkspaceUsage calculates the total number of pages and storage usage (in bytes) for a workspace.
 // Pages are counted as directories containing index.md (documents) or metadata.json (tables).
 // Hybrid nodes (both files) are counted once.
 func (fs *FileStore) GetWorkspaceUsage(wsID jsonldb.ID) (pageCount int, storageUsage int64, err error) {
@@ -547,6 +584,24 @@ func (fs *FileStore) GetWorkspaceUsage(wsID jsonldb.ID) (pageCount int, storageU
 		return nil
 	})
 	return
+}
+
+// GetOrganizationUsage calculates the total storage usage (in bytes) across all workspaces in an organization.
+// This iterates through all workspaces belonging to the organization and sums their storage usage.
+func (fs *FileStore) GetOrganizationUsage(orgID jsonldb.ID) (int64, error) {
+	if orgID.IsZero() {
+		return 0, errOrgIDRequired
+	}
+
+	var totalUsage int64
+	for ws := range fs.wsSvc.IterByOrg(orgID) {
+		_, usage, err := fs.GetWorkspaceUsage(ws.ID)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get workspace usage for %s: %w", ws.ID, err)
+		}
+		totalUsage += usage
+	}
+	return totalUsage, nil
 }
 
 func (fs *FileStore) pageDir(wsID, id jsonldb.ID) string {

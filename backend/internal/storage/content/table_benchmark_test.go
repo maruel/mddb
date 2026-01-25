@@ -18,13 +18,34 @@ func BenchmarkTableOperations(b *testing.B) {
 
 	gitMgr := git.NewManager(tmpDir, "test", "test@test.com")
 
+	orgService, err := identity.NewOrganizationService(filepath.Join(tmpDir, "organizations.jsonl"))
+	if err != nil {
+		b.Fatal(err)
+	}
+
 	wsService, err := identity.NewWorkspaceService(filepath.Join(tmpDir, "workspaces.jsonl"))
 	if err != nil {
 		b.Fatal(err)
 	}
 
+	// Create a test organization with very high quotas (practically unlimited)
+	org, err := orgService.Create(ctx, "Benchmark Organization", "bench@test.com")
+	if err != nil {
+		b.Fatal(err)
+	}
+	_, err = orgService.Modify(org.ID, func(o *identity.Organization) error {
+		o.Quotas.MaxWorkspaces = 1_000
+		o.Quotas.MaxMembersPerOrg = 10_000
+		o.Quotas.MaxMembersPerWorkspace = 10_000
+		o.Quotas.MaxTotalStorageGB = 1_000_000 // 1EB
+		return nil
+	})
+	if err != nil {
+		b.Fatal(err)
+	}
+
 	// Create a test workspace with very high quotas (practically unlimited)
-	ws, err := wsService.Create(ctx, jsonldb.ID(1), "Benchmark Workspace", "bench")
+	ws, err := wsService.Create(ctx, org.ID, "Benchmark Workspace", "bench")
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -39,7 +60,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitMgr, wsService)
+	fs, err := NewFileStore(tmpDir, gitMgr, wsService, orgService)
 	if err != nil {
 		b.Fatal(err)
 	}

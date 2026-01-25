@@ -371,12 +371,12 @@ func TestRecord(t *testing.T) {
 	})
 
 	t.Run("Quota", func(t *testing.T) {
-		fs := testFileStoreWithQuota(t)
+		fs, orgID := testFileStoreWithQuota(t)
 		ctx := t.Context()
 		author := git.Author{Name: "Test", Email: "test@test.com"}
 
 		// Create a workspace for testing
-		ws, err := fs.wsSvc.Create(ctx, jsonldb.ID(1), "Test Workspace", "test-ws")
+		ws, err := fs.wsSvc.Create(ctx, orgID, "Test Workspace", "test-ws")
 		if err != nil {
 			t.Fatalf("Failed to create workspace: %v", err)
 		}

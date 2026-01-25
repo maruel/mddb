@@ -69,7 +69,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	gitMgr := git.NewManager(tempDir, "test", "test@example.com")
 
-	fileStore, err := content.NewFileStore(tempDir, gitMgr, wsService)
+	fileStore, err := content.NewFileStore(tempDir, gitMgr, wsService, orgService)
 	if err != nil {
 		t.Fatalf("NewFileStore: %v", err)
 	}

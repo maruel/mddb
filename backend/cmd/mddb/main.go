@@ -257,7 +257,7 @@ func mainImpl() error {
 
 	gitMgr := git.NewManager(*dataDir, "", "")
 
-	fileStore, err := content.NewFileStore(*dataDir, gitMgr, wsService)
+	fileStore, err := content.NewFileStore(*dataDir, gitMgr, wsService, orgService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
 	}
