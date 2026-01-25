@@ -239,3 +239,98 @@ func CoerceRecordData(data map[string]any, properties []Property) map[string]any
 	}
 	return result
 }
+
+// CompareValues compares two values according to SQLite rules:
+// - NULL < INTEGER/REAL < TEXT < BLOB
+// - Values are coerced to the given affinity before comparison.
+// Returns -1 if a < b, 1 if a > b, 0 if a == b.
+func CompareValues(a, b any, aff affinity) int {
+	// 1. Handle NULLs (SQLite NULL is smallest)
+	if a == nil && b == nil {
+		return 0
+	}
+	if a == nil {
+		return -1
+	}
+	if b == nil {
+		return 1
+	}
+
+	// 2. Coerce both to the affinity
+	ca := coerceValue(a, aff)
+	cb := coerceValue(b, aff)
+
+	// 3. Compare based on coerced types
+	switch va := ca.(type) {
+	case int64:
+		switch vb := cb.(type) {
+		case int64:
+			return compareNumbers(float64(va), float64(vb))
+		case float64:
+			return compareNumbers(float64(va), vb)
+		case string:
+			return -1 // INTEGER < TEXT
+		default:
+			return -1
+		}
+	case float64:
+		switch vb := cb.(type) {
+		case int64:
+			return compareNumbers(va, float64(vb))
+		case float64:
+			return compareNumbers(va, vb)
+		case string:
+			return -1 // REAL < TEXT
+		default:
+			return -1
+		}
+	case string:
+		switch vb := cb.(type) {
+		case string:
+			if va < vb {
+				return -1
+			}
+			if va > vb {
+				return 1
+			}
+			return 0
+		case int64, float64:
+			return 1 // TEXT > INTEGER/REAL
+		default:
+			return -1
+		}
+	case bool:
+		// CoerceValue should have turned bool into int64 if not BLOB affinity.
+		// If it's still bool, it must be BLOB or unhandled.
+		ba := 0
+		if va {
+			ba = 1
+		}
+		bb := 0
+		if v, ok := cb.(bool); ok && v {
+			bb = 1
+		}
+		return compareNumbers(float64(ba), float64(bb))
+	default:
+		// Fallback for complex types (BLOB affinity)
+		sa := coerceToText(ca).(string)
+		sb := coerceToText(cb).(string)
+		if sa < sb {
+			return -1
+		}
+		if sa > sb {
+			return 1
+		}
+		return 0
+	}
+}
+
+func compareNumbers(a, b float64) int {
+	if a < b {
+		return -1
+	}
+	if a > b {
+		return 1
+	}
+	return 0
+}

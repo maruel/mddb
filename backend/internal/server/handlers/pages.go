@@ -56,7 +56,7 @@ func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *id
 	}
 	id := jsonldb.NewID()
 	author := git.Author{Name: user.Name, Email: user.Email}
-	page, err := h.fs.WritePage(ctx, orgID, id, req.Title, req.Content, author)
+	page, err := h.fs.WritePage(ctx, orgID, id, 0, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}

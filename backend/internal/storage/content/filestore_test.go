@@ -178,7 +178,7 @@ func TestFileStore(t *testing.T) {
 		pageID := jsonldb.ID(1)
 
 		t.Run("WritePage", func(t *testing.T) {
-			page, err := fs.WritePage(ctx, wsID, pageID, "Test Title", "# Test Content", author)
+			page, err := fs.WritePage(ctx, wsID, pageID, 0, "Test Title", "# Test Content", author)
 			if err != nil {
 				t.Fatalf("failed to write page: %v", err)
 			}
@@ -267,7 +267,7 @@ func TestFileStore(t *testing.T) {
 		}
 
 		for _, p := range pages {
-			_, err := fs.WritePage(ctx, wsID, p.id, p.title, "Content", author)
+			_, err := fs.WritePage(ctx, wsID, p.id, 0, p.title, "Content", author)
 			if err != nil {
 				t.Fatalf("failed to write page %v: %v", p.id, err)
 			}
@@ -375,7 +375,7 @@ func TestFileStore(t *testing.T) {
 			}
 
 			pageID := jsonldb.NewID()
-			_, err := fs.WritePage(ctx, wsID, pageID, "Test Page", "content", author)
+			_, err := fs.WritePage(ctx, wsID, pageID, 0, "Test Page", "content", author)
 			if err != nil {
 				t.Fatalf("failed to create page: %v", err)
 			}
@@ -459,7 +459,7 @@ func TestFileStore(t *testing.T) {
 
 			for _, tc := range tests {
 				t.Run(tc.name, func(t *testing.T) {
-					node, err := fs.CreateNode(ctx, wsID, "Test "+tc.name, tc.nodeType, author)
+					node, err := fs.CreateNode(ctx, wsID, "Test "+tc.name, tc.nodeType, 0, author)
 					if err != nil {
 						t.Fatalf("CreateNode failed: %v", err)
 					}
@@ -494,6 +494,389 @@ func TestFileStore(t *testing.T) {
 		})
 	})
 
+	t.Run("Hierarchy", func(t *testing.T) {
+		t.Run("CreateNestedHierarchy", func(t *testing.T) {
+			fs, wsID := testFileStore(t)
+			ctx := t.Context()
+			author := git.Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitWorkspace(ctx, wsID); err != nil {
+				t.Fatalf("failed to init workspace: %v", err)
+			}
+
+			// Create root
+			root, err := fs.CreateNode(ctx, wsID, "Root", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("failed to create root: %v", err)
+			}
+
+			// Create first level child
+			level1, err := fs.CreateNode(ctx, wsID, "Level 1", NodeTypeDocument, root.ID, author)
+			if err != nil {
+				t.Fatalf("failed to create level 1: %v", err)
+			}
+
+			// Create second level child
+			level2, err := fs.CreateNode(ctx, wsID, "Level 2", NodeTypeDocument, level1.ID, author)
+			if err != nil {
+				t.Fatalf("failed to create level 2: %v", err)
+			}
+
+			// Create third level child
+			level3, err := fs.CreateNode(ctx, wsID, "Level 3", NodeTypeDocument, level2.ID, author)
+			if err != nil {
+				t.Fatalf("failed to create level 3: %v", err)
+			}
+
+			// Verify directory structure using internal pageDir which uses cache
+			expectedLevel3Dir := filepath.Join(
+				fs.pageDir(wsID, root.ID, 0),
+				level1.ID.String(),
+				level2.ID.String(),
+				level3.ID.String(),
+			)
+			if _, err := os.Stat(expectedLevel3Dir); err != nil {
+				t.Errorf("level 3 directory should exist at %s: %v", expectedLevel3Dir, err)
+			}
+
+			// Read tree and verify structure
+			nodes, err := fs.ReadNodeTree(wsID)
+			if err != nil {
+				t.Fatalf("failed to read node tree: %v", err)
+			}
+
+			if len(nodes) != 1 {
+				t.Errorf("expected 1 root node, got %d", len(nodes))
+			}
+
+			if len(nodes[0].Children) != 1 {
+				t.Errorf("expected root to have 1 child, got %d", len(nodes[0].Children))
+			}
+
+			if len(nodes[0].Children[0].Children) != 1 {
+				t.Errorf("expected level 1 to have 1 child, got %d", len(nodes[0].Children[0].Children))
+			}
+
+			if len(nodes[0].Children[0].Children[0].Children) != 1 {
+				t.Errorf("expected level 2 to have 1 child, got %d", len(nodes[0].Children[0].Children[0].Children))
+			}
+
+			// Verify parent IDs are correct
+			if nodes[0].ParentID != 0 {
+				t.Errorf("root ParentID should be 0, got %v", nodes[0].ParentID)
+			}
+			if nodes[0].Children[0].ParentID != root.ID {
+				t.Errorf("level 1 ParentID should be %v, got %v", root.ID, nodes[0].Children[0].ParentID)
+			}
+			if nodes[0].Children[0].Children[0].ParentID != level1.ID {
+				t.Errorf("level 2 ParentID should be %v, got %v", level1.ID, nodes[0].Children[0].Children[0].ParentID)
+			}
+			if nodes[0].Children[0].Children[0].Children[0].ParentID != level2.ID {
+				t.Errorf("level 3 ParentID should be %v, got %v", level2.ID, nodes[0].Children[0].Children[0].Children[0].ParentID)
+			}
+		})
+
+		t.Run("DeepHierarchyOperations", func(t *testing.T) {
+			fs, wsID := testFileStore(t)
+			ctx := t.Context()
+			author := git.Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitWorkspace(ctx, wsID); err != nil {
+				t.Fatalf("failed to init workspace: %v", err)
+			}
+
+			// Create page1/page2/page3
+			p1, _ := fs.CreateNode(ctx, wsID, "P1", NodeTypeDocument, 0, author)
+			p2, _ := fs.CreateNode(ctx, wsID, "P2", NodeTypeDocument, p1.ID, author)
+			p3, _ := fs.CreateNode(ctx, wsID, "P3", NodeTypeDocument, p2.ID, author)
+
+			// PageExists
+			if !fs.PageExists(wsID, p3.ID) {
+				t.Error("PageExists(p3.ID) failed")
+			}
+
+			// ReadPage
+			p, err := fs.ReadPage(wsID, p3.ID)
+			if err != nil || p == nil {
+				t.Errorf("ReadPage(p3.ID) failed: %v", err)
+			}
+
+			// SaveAsset
+			_, err = fs.SaveAsset(ctx, wsID, p3.ID, "test.txt", []byte("test"), author)
+			if err != nil {
+				t.Errorf("SaveAsset(p3.ID) failed: %v", err)
+			}
+
+			// IterAssets
+			it, err := fs.IterAssets(wsID, p3.ID)
+			if err != nil {
+				t.Errorf("IterAssets(p3.ID) failed: %v", err)
+			}
+			found := false
+			for a := range it {
+				if a.Name == "test.txt" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Error("Asset not found")
+			}
+
+			// UpdatePage
+			_, err = fs.UpdatePage(ctx, wsID, p3.ID, "P3 Updated", "Content", author)
+			if err != nil {
+				t.Errorf("UpdatePage(p3.ID) failed: %v", err)
+			}
+
+			// DeletePage
+			err = fs.DeletePage(ctx, wsID, p3.ID, author)
+			if err != nil {
+				t.Errorf("DeletePage(p3.ID) failed: %v", err)
+			}
+			if fs.PageExists(wsID, p3.ID) {
+				t.Error("p3 still exists after deletion")
+			}
+		})
+
+		t.Run("Validation", func(t *testing.T) {
+			fs, wsID := testFileStore(t)
+			ctx := t.Context()
+			author := git.Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitWorkspace(ctx, wsID); err != nil {
+				t.Fatalf("failed to init workspace: %v", err)
+			}
+
+			t.Run("ChildWithNonExistentParent", func(t *testing.T) {
+				_, err := fs.CreateNode(ctx, wsID, "Orphan", NodeTypeDocument, jsonldb.ID(99999), author)
+				if err == nil {
+					t.Error("expected error for non-existent parent")
+				}
+			})
+		})
+	})
+
+	t.Run("Table", func(t *testing.T) {
+		t.Run("ReadWrite", func(t *testing.T) {
+			fs, wsID := testFileStore(t)
+			ctx := t.Context()
+			author := git.Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitWorkspace(ctx, wsID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			tests := []struct {
+				name string
+				node *Node
+			}{
+				{
+					name: "simple table",
+					node: &Node{
+						ID:    jsonldb.ID(1),
+						Title: "Test Table",
+						Type:  NodeTypeTable,
+						Properties: []Property{
+							{Name: "title", Type: "text"},
+							{Name: "status", Type: PropertyTypeText},
+						},
+						Created:  storage.Now(),
+						Modified: storage.Now(),
+					},
+				},
+				{
+					name: "table with all column types",
+					node: &Node{
+						ID:    jsonldb.ID(2),
+						Title: "Complex Table",
+						Type:  NodeTypeTable,
+						Properties: []Property{
+							{Name: "text_field", Type: "text", Required: true},
+							{Name: "number_field", Type: "number"},
+							{Name: "select_field", Type: PropertyTypeText},
+							{Name: "multi_select", Type: PropertyTypeText},
+							{Name: "checkbox_field", Type: "checkbox"},
+							{Name: "date_field", Type: "date"},
+						},
+						Created:  storage.Now(),
+						Modified: storage.Now(),
+					},
+				},
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					err := fs.WriteTable(ctx, wsID, tt.node, true, author)
+					if err != nil {
+						t.Fatalf("Failed to write table: %v", err)
+					}
+
+					got, err := fs.ReadTable(wsID, tt.node.ID)
+					if err != nil {
+						t.Fatalf("Failed to read table: %v", err)
+					}
+
+					if got.ID != tt.node.ID {
+						t.Errorf("ID mismatch: got %v, want %v", got.ID, tt.node.ID)
+					}
+					if got.Title != tt.node.Title {
+						t.Errorf("Title mismatch: got %q, want %q", got.Title, tt.node.Title)
+					}
+					if len(got.Properties) != len(tt.node.Properties) {
+						t.Errorf("Column count mismatch: got %d, want %d", len(got.Properties), len(tt.node.Properties))
+					}
+
+					for i, col := range got.Properties {
+						expCol := tt.node.Properties[i]
+						if col.Name != expCol.Name {
+							t.Errorf("Column[%d] Name mismatch: got %q, want %q", i, col.Name, expCol.Name)
+						}
+						if col.Type != expCol.Type {
+							t.Errorf("Column[%d] Type mismatch: got %q, want %q", i, col.Type, expCol.Type)
+						}
+					}
+
+					filePath := fs.tableMetadataFile(wsID, tt.node.ID, 0)
+					if _, err := os.Stat(filePath); err != nil {
+						t.Errorf("Table metadata file not found: %s", filePath)
+					}
+				})
+			}
+		})
+
+		t.Run("IterTables", func(t *testing.T) {
+			fs, wsID := testFileStore(t)
+			ctx := t.Context()
+			author := git.Author{Name: "Test", Email: "test@test.com"}
+
+			if err := fs.InitWorkspace(ctx, wsID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			tableIDs := []jsonldb.ID{jsonldb.ID(1), jsonldb.ID(2), jsonldb.ID(3)}
+			for _, id := range tableIDs {
+				node := &Node{
+					ID:    id,
+					Title: "Table " + id.String(),
+					Type:  NodeTypeTable,
+					Properties: []Property{
+						{Name: "name", Type: "text"},
+					},
+					Created:  storage.Now(),
+					Modified: storage.Now(),
+				}
+				if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
+					t.Fatalf("Failed to write table %v: %v", id, err)
+				}
+			}
+
+			it, err := fs.IterTables(wsID)
+			if err != nil {
+				t.Fatalf("Failed to list tables: %v", err)
+			}
+			tables := slices.Collect(it)
+
+			if len(tables) != len(tableIDs) {
+				t.Errorf("Table count mismatch: got %d, want %d", len(tables), len(tableIDs))
+			}
+		})
+	})
+
+	t.Run("Record", func(t *testing.T) {
+		t.Run("AppendRead", func(t *testing.T) {
+			fs, wsID := testFileStore(t)
+			ctx := t.Context()
+			author := git.Author{Name: "Test", Email: "test@test.com"}
+
+			dbID := jsonldb.ID(1)
+			if err := fs.InitWorkspace(ctx, wsID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			node := &Node{
+				ID:    dbID,
+				Title: "Test",
+				Type:  NodeTypeTable,
+				Properties: []Property{
+					{Name: "name", Type: "text"},
+				},
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+			}
+			if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
+				t.Fatalf("Failed to create table: %v", err)
+			}
+
+			records := []*DataRecord{
+				{
+					ID:       jsonldb.NewID(),
+					Data:     map[string]any{"name": "Record 1"},
+					Created:  storage.Now(),
+					Modified: storage.Now(),
+				},
+				{
+					ID:       jsonldb.NewID(),
+					Data:     map[string]any{"name": "Record 2"},
+					Created:  storage.Now(),
+					Modified: storage.Now(),
+				},
+			}
+
+			for _, rec := range records {
+				err := fs.AppendRecord(ctx, wsID, dbID, rec, author)
+				if err != nil {
+					t.Fatalf("Failed to append record: %v", err)
+				}
+			}
+
+			recIt, err := fs.IterRecords(wsID, dbID)
+			if err != nil {
+				t.Fatalf("Failed to read records: %v", err)
+			}
+			got := slices.Collect(recIt)
+
+			if len(got) != len(records) {
+				t.Errorf("Record count mismatch: got %d, want %d", len(got), len(records))
+			}
+		})
+
+		t.Run("EmptyTable", func(t *testing.T) {
+			fs, wsID := testFileStore(t)
+			ctx := t.Context()
+			author := git.Author{Name: "Test", Email: "test@test.com"}
+
+			dbID := jsonldb.ID(1)
+			if err := fs.InitWorkspace(ctx, wsID); err != nil {
+				t.Fatalf("failed to init org: %v", err)
+			}
+
+			node := &Node{
+				ID:    dbID,
+				Title: "Empty Table",
+				Type:  NodeTypeTable,
+				Properties: []Property{
+					{Name: "name", Type: "text"},
+				},
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+			}
+			if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
+				t.Fatalf("Failed to create table: %v", err)
+			}
+
+			recIt, err := fs.IterRecords(wsID, dbID)
+			if err != nil {
+				t.Fatalf("Failed to read records: %v", err)
+			}
+			records := slices.Collect(recIt)
+
+			if len(records) != 0 {
+				t.Errorf("Expected 0 records, got %d", len(records))
+			}
+		})
+	})
+
 	t.Run("Quota", func(t *testing.T) {
 		t.Run("PageQuota", func(t *testing.T) {
 			// Test that page quota is enforced
@@ -517,14 +900,14 @@ func TestFileStore(t *testing.T) {
 			// Create 2 pages - should succeed
 			for i := range 2 {
 				pageID := jsonldb.NewID()
-				_, err := fs.WritePage(ctx, wsID, pageID, "Page", "content", author)
+				_, err := fs.WritePage(ctx, wsID, pageID, 0, "Page", "content", author)
 				if err != nil {
 					t.Fatalf("failed to create page %d: %v", i, err)
 				}
 			}
 
 			// Try to create a 3rd page - should fail
-			_, err = fs.WritePage(ctx, wsID, jsonldb.NewID(), "Extra", "content", author)
+			_, err = fs.WritePage(ctx, wsID, jsonldb.NewID(), 0, "Extra", "content", author)
 			if err == nil {
 				t.Error("expected page quota exceeded error")
 			}
@@ -607,7 +990,7 @@ func TestFileStore(t *testing.T) {
 
 			// Create content within quota - should succeed
 			pageID := jsonldb.NewID()
-			_, err = fs.WritePage(ctx, wsID, pageID, "Test", "content", author)
+			_, err = fs.WritePage(ctx, wsID, pageID, 0, "Test", "content", author)
 			if err != nil {
 				t.Fatalf("creating page within quota should succeed: %v", err)
 			}
@@ -707,7 +1090,7 @@ func TestAsset(t *testing.T) {
 		}
 
 		// Create a page for testing assets
-		_, err = fs.WritePage(ctx, wsID, pageID, "Test", "content", author)
+		_, err = fs.WritePage(ctx, wsID, pageID, 0, "Test", "content", author)
 		if err != nil {
 			t.Fatalf("Failed to create page: %v", err)
 		}
@@ -808,13 +1191,13 @@ func TestOrganizationQuota(t *testing.T) {
 		// Create pages in both workspaces
 		content := "test content"
 		pageID1 := jsonldb.NewID()
-		_, err = fs.WritePage(ctx, ws1.ID, pageID1, "Page 1", content, author)
+		_, err = fs.WritePage(ctx, ws1.ID, pageID1, 0, "Page 1", content, author)
 		if err != nil {
 			t.Fatalf("Failed to write page to ws1: %v", err)
 		}
 
 		pageID2 := jsonldb.NewID()
-		_, err = fs.WritePage(ctx, ws2.ID, pageID2, "Page 2", content, author)
+		_, err = fs.WritePage(ctx, ws2.ID, pageID2, 0, "Page 2", content, author)
 		if err != nil {
 			t.Fatalf("Failed to write page to ws2: %v", err)
 		}
@@ -860,7 +1243,7 @@ func TestOrganizationQuota(t *testing.T) {
 
 		// Add a tiny amount of content to organization
 		pageID := jsonldb.NewID()
-		_, err = fs.WritePage(ctx, ws.ID, pageID, "Initial", "test", author)
+		_, err = fs.WritePage(ctx, ws.ID, pageID, 0, "Initial", "test", author)
 		if err != nil {
 			t.Fatalf("Failed to write initial page: %v", err)
 		}
@@ -887,7 +1270,7 @@ func TestOrganizationQuota(t *testing.T) {
 		largeContent := strings.Repeat("x", 512*1024*1024) // 512 MB
 		for i := 1; i < 3; i++ {
 			pageID := jsonldb.NewID()
-			_, err := fs.WritePage(ctx, ws.ID, pageID, "Large", largeContent, author)
+			_, err := fs.WritePage(ctx, ws.ID, pageID, 0, "Large", largeContent, author)
 			if err != nil {
 				// Might hit quota, which is OK
 				break
@@ -896,7 +1279,7 @@ func TestOrganizationQuota(t *testing.T) {
 
 		// Try to write another large page - should eventually fail due to org quota
 		pageID = jsonldb.NewID()
-		_, err = fs.WritePage(ctx, ws.ID, pageID, "Test", largeContent, author)
+		_, err = fs.WritePage(ctx, ws.ID, pageID, 0, "Test", largeContent, author)
 		if err == nil {
 			t.Logf("WritePage succeeded when org quota should be approached")
 		} else if !errors.Is(err, errQuotaExceeded) {
@@ -919,7 +1302,7 @@ func TestMarkdown(t *testing.T) {
 
 		// Write page with specific content
 		pageID := jsonldb.ID(1)
-		_, err := fs.WritePage(ctx, wsID, pageID, "Format Test", "# Content\n\nWith multiple lines", author)
+		_, err := fs.WritePage(ctx, wsID, pageID, 0, "Format Test", "# Content\n\nWith multiple lines", author)
 		if err != nil {
 			t.Fatalf("failed to write page: %v", err)
 		}
@@ -990,7 +1373,7 @@ func TestGetWorkspaceUsage(t *testing.T) {
 
 		// Create one page
 		pageID := jsonldb.NewID()
-		_, err = fs.WritePage(ctx, wsID, pageID, "Page 1", "content", author)
+		_, err = fs.WritePage(ctx, wsID, pageID, 0, "Page 1", "content", author)
 		if err != nil {
 			t.Fatalf("failed to create page: %v", err)
 		}
@@ -1044,7 +1427,7 @@ func TestGetWorkspaceUsage(t *testing.T) {
 
 		// Create a hybrid node (page + table)
 		hybridID := jsonldb.NewID()
-		_, err := fs.WritePage(ctx, wsID, hybridID, "Hybrid", "content", author)
+		_, err := fs.WritePage(ctx, wsID, hybridID, 0, "Hybrid", "content", author)
 		if err != nil {
 			t.Fatalf("failed to create page: %v", err)
 		}

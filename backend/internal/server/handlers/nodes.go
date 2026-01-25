@@ -35,11 +35,30 @@ func (h *NodeHandler) ListNodes(ctx context.Context, orgID jsonldb.ID, _ *identi
 
 // GetNode retrieves a single node's metadata.
 func (h *NodeHandler) GetNode(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetNodeRequest) (*dto.NodeResponse, error) {
-	node, err := h.fs.ReadNode(orgID, req.ID)
+	// Read the full tree to find the node by ID and get its actual parent
+	nodes, err := h.fs.ReadNodeTree(orgID)
 	if err != nil {
+		return nil, dto.InternalWithError("Failed to read node tree", err)
+	}
+
+	node := findNodeByID(nodes, req.ID)
+	if node == nil {
 		return nil, dto.NotFound("node")
 	}
 	return nodeToResponse(node), nil
+}
+
+// findNodeByID recursively searches for a node by ID in the tree.
+func findNodeByID(nodes []*content.Node, id jsonldb.ID) *content.Node {
+	for _, node := range nodes {
+		if node.ID == id {
+			return node
+		}
+		if found := findNodeByID(node.Children, id); found != nil {
+			return found
+		}
+	}
+	return nil
 }
 
 // CreateNode creates a new node (page, table, or hybrid).
@@ -61,7 +80,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *id
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	node, err := h.fs.CreateNode(ctx, orgID, req.Title, nodeType, author)
+	node, err := h.fs.CreateNode(ctx, orgID, req.Title, nodeType, req.ParentID, author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create node", err)
 	}

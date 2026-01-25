@@ -227,9 +227,8 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 	if req.WelcomePageTitle != "" && req.WelcomePageContent != "" {
 		pageID := jsonldb.NewID()
 		author := git.Author{Name: user.Name, Email: user.Email}
-		if _, err := h.fs.WritePage(ctx, ws.ID, pageID, req.WelcomePageTitle, req.WelcomePageContent, author); err != nil {
-			slog.ErrorContext(ctx, "Failed to create welcome page", "error", err, "ws_id", ws.ID)
-			return nil, dto.InternalWithError("Failed to initialize workspace", err)
+		if _, err := h.fs.WritePage(ctx, ws.ID, pageID, 0, req.WelcomePageTitle, req.WelcomePageContent, author); err != nil {
+			return nil, dto.InternalWithError("Failed to create welcome page", err)
 		}
 	}
 

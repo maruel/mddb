@@ -167,6 +167,10 @@ See `README.md` and `API.md` for details.
     - [x] Database metadata (Title, Created, Modified) now stored in separate `metadata.json` file per page.
     - **Future**: Extend schema discovery to support nested structs (object type) and slices (list type).
 - [/] **JSONLDB Type Coercion (Part 3)**: SQLite-compatible type affinity for consistent storage.
+    - [x] **Parent ID Caching**: Implemented global node addressing via `pageID` by caching `parentID` in `FileStore`.
+        - [x] Internal cache `map[wsID][nodeID]parentID` populated on startup/workspace init.
+        - [x] Public read/update/delete signatures simplified (removed `parentID`).
+        - [x] Automatic cache updates on node creation/deletion.
     - [x] **Storage Classes**: Define 5 storage classes matching SQLite: NULL, INTEGER, REAL, TEXT, BLOB.
     - [x] **Affinity Mapping**: Map column types to affinities (jsonldb only handles primitive types):
         - `text` → TEXT (string storage)
@@ -181,8 +185,8 @@ See `README.md` and `API.md` for details.
         - BLOB: Pass through unchanged.
         - NULL: Omitted fields via `omitzero`/`omitempty` struct tags; absent JSON keys = NULL.
     - [x] **Write Path Integration**: Apply coercion in `DatabaseService.CreateRecord()` and `DatabaseService.UpdateRecord()`.
-    - [ ] **Comparison Semantics**: Apply affinity rules during filtering/comparison operations.
-    - [ ] **Migration Tool**: Optional migration script to coerce existing records to new type rules.
+    - [x] **Comparison Semantics**: Apply affinity rules during filtering/comparison operations.
+    - [ ] **Migration Tool**: (Skipped - backward compatibility not required).
     - [x] **Higher-Level Column Types**: Implement `select` and `multi_select` column types in the models/storage layer (not jsonldb). These are UI/application concepts that map to TEXT affinity at storage level.
         - [x] Define `models.ColumnType` with both primitive types (text, number, checkbox, date) and high-level types (select, multi_select)
         - [x] Add `StorageType()` method to map high-level types to jsonldb storage types

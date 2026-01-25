@@ -24,13 +24,13 @@ func TestSearchService(t *testing.T) {
 		}
 
 		// Create test pages
-		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Getting Started", "This is a guide to get started with mddb project", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), 0, "Getting Started", "This is a guide to get started with mddb project", author); err != nil {
 			t.Fatalf("WritePage Getting Started failed: %v", err)
 		}
-		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Advanced Topics", "Learn about advanced mddb configuration and optimization", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), 0, "Advanced Topics", "Learn about advanced mddb configuration and optimization", author); err != nil {
 			t.Fatalf("WritePage Advanced Topics failed: %v", err)
 		}
-		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "API Reference", "Complete mddb API documentation for developers", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), 0, "API Reference", "Complete mddb API documentation for developers", author); err != nil {
 			t.Fatalf("WritePage API Reference failed: %v", err)
 		}
 
@@ -223,10 +223,10 @@ func TestSearchService(t *testing.T) {
 		}
 
 		// Create pages where title match should score higher
-		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Python Programming", "This is about Java not Python", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), 0, "Python Programming", "This is about Java not Python", author); err != nil {
 			t.Fatalf("WritePage Python Programming failed: %v", err)
 		}
-		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Java Basics", "Learn Python programming fundamentals", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), 0, "Java Basics", "Learn Python programming fundamentals", author); err != nil {
 			t.Fatalf("WritePage Java Basics failed: %v", err)
 		}
 
@@ -266,7 +266,7 @@ func TestSearchService(t *testing.T) {
 
 		// Create multiple pages
 		for i := range 10 {
-			if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), fmt.Sprintf("Test Page %d", i), "This is test content", author); err != nil {
+			if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), 0, fmt.Sprintf("Test Page %d", i), "This is test content", author); err != nil {
 				t.Fatalf("WritePage Test Page %d failed: %v", i, err)
 			}
 		}
@@ -298,7 +298,7 @@ func TestSearchService(t *testing.T) {
 		}
 
 		// Create mixed content - page
-		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), "Blog Post", "Article about searchable content and web development", author); err != nil {
+		if _, err := fs.WritePage(ctx, wsID, jsonldb.NewID(), 0, "Blog Post", "Article about searchable content and web development", author); err != nil {
 			t.Fatalf("WritePage Blog Post failed: %v", err)
 		}
 

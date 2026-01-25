@@ -240,6 +240,53 @@ func Test_CoerceRecordData(t *testing.T) {
 	})
 }
 
+func TestCompareValues(t *testing.T) {
+	tests := []struct {
+		name string
+		a, b any
+		aff  affinity
+		want int
+	}{
+		// NULLs
+		{"nil-nil", nil, nil, affinityNUMERIC, 0},
+		{"nil-a", nil, "hello", affinityNUMERIC, -1},
+		{"a-nil", "hello", nil, affinityNUMERIC, 1},
+
+		// NUMERIC
+		{"numeric-int-equal", int64(42), float64(42), affinityNUMERIC, 0},
+		{"numeric-int-less", int64(41), float64(42), affinityNUMERIC, -1},
+		{"numeric-int-greater", int64(43), float64(42), affinityNUMERIC, 1},
+		{"numeric-string-equal", "42", int64(42), affinityNUMERIC, 0},
+		{"numeric-string-less", "41", float64(42), affinityNUMERIC, -1},
+		{"numeric-text-numeric", "a", 42, affinityNUMERIC, 1}, // TEXT > NUMERIC
+
+		// TEXT
+		{"text-equal", "hello", "hello", affinityTEXT, 0},
+		{"text-less", "apple", "banana", affinityTEXT, -1},
+		{"text-greater", "zebra", "yak", affinityTEXT, 1},
+		{"text-coerce-numeric", 42, "42", affinityTEXT, 0},
+		{"text-coerce-numeric-less", 41, "42", affinityTEXT, -1},
+
+		// INTEGER
+		{"integer-equal", int64(10), 10.0, affinityINTEGER, 0},
+		{"integer-truncate-equal", 10.9, 10.1, affinityINTEGER, 0}, // Both truncate to 10
+		{"integer-string-equal", "10", 10, affinityINTEGER, 0},
+
+		// REAL
+		{"real-equal", 10.5, 10.5, affinityREAL, 0},
+		{"real-int-equal", 10.0, int64(10), affinityREAL, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CompareValues(tt.a, tt.b, tt.aff)
+			if got != tt.want {
+				t.Errorf("CompareValues(%v, %v, %v) = %d, want %d", tt.a, tt.b, tt.aff, got, tt.want)
+			}
+		})
+	}
+}
+
 // equalAny compares two any values for equality.
 func equalAny(a, b any) bool {
 	if a == nil && b == nil {
