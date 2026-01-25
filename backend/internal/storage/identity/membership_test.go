@@ -1,7 +1,6 @@
 package identity
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
@@ -311,7 +310,7 @@ func TestOrganizationMembershipService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	org, err := orgService.Create(context.Background(), "Test Org", "test@example.com")
+	org, err := orgService.Create(t.Context(), "Test Org", "test@example.com")
 	if err != nil {
 		t.Fatal(err)
 	}
