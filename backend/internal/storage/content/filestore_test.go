@@ -116,6 +116,55 @@ func testFileStoreWithQuota(t *testing.T) (*FileStore, jsonldb.ID) {
 }
 
 func TestFileStore(t *testing.T) {
+	t.Run("InitWorkspace", func(t *testing.T) {
+		t.Run("AgentsMD", func(t *testing.T) {
+			fs, wsID := testFileStore(t)
+			ctx := t.Context()
+
+			// Initialize workspace
+			if err := fs.InitWorkspace(ctx, wsID); err != nil {
+				t.Fatalf("failed to init workspace: %v", err)
+			}
+
+			// Verify AGENTS.md exists on disk
+			agentsPath := filepath.Join(fs.rootDir, wsID.String(), "AGENTS.md")
+			data, err := os.ReadFile(agentsPath) //nolint:gosec // G304: agentsPath is constructed from validated rootDir and wsID
+			if err != nil {
+				t.Fatalf("failed to read AGENTS.md: %v", err)
+			}
+
+			if string(data) != storage.AgentsMD {
+				t.Errorf("AGENTS.md content mismatch")
+			}
+
+			// Verify it's committed to git
+			repo, err := fs.Repo(ctx, wsID)
+			if err != nil {
+				t.Fatalf("failed to get repo: %v", err)
+			}
+
+			commits, err := repo.GetHistory(ctx, "AGENTS.md", 10)
+			if err != nil {
+				t.Fatalf("failed to get history for AGENTS.md: %v", err)
+			}
+
+			if len(commits) == 0 {
+				t.Error("expected at least one commit for AGENTS.md")
+			}
+
+			found := false
+			for _, c := range commits {
+				if c.Message == "initial: add AGENTS.md" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Error("initial commit message for AGENTS.md not found")
+			}
+		})
+	})
+
 	t.Run("PageOperations", func(t *testing.T) {
 		fs, wsID := testFileStore(t)
 		ctx := t.Context()

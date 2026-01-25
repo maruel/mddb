@@ -81,10 +81,26 @@ func (fs *FileStore) InitWorkspace(ctx context.Context, wsID jsonldb.ID) error {
 	if err := os.MkdirAll(pagesDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for data directories
 		return fmt.Errorf("failed to create workspace directory: %w", err)
 	}
+
 	// Getting the repo initializes git if needed
-	if _, err := fs.Repo(ctx, wsID); err != nil {
+	repo, err := fs.Repo(ctx, wsID)
+	if err != nil {
 		return fmt.Errorf("failed to initialize git repo for workspace %s: %w", wsID, err)
 	}
+
+	// Write AGENTS.md in the root of the workspace.
+	agentsPath := filepath.Join(wsDir, "AGENTS.md")
+	if err := os.WriteFile(agentsPath, []byte(storage.AgentsMD), 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for documentation files
+		return fmt.Errorf("failed to write AGENTS.md: %w", err)
+	}
+
+	// Commit AGENTS.md using default author.
+	if err := repo.CommitTx(ctx, git.Author{}, func() (string, []string, error) {
+		return "initial: add AGENTS.md", []string{"AGENTS.md"}, nil
+	}); err != nil {
+		return fmt.Errorf("failed to commit AGENTS.md: %w", err)
+	}
+
 	return nil
 }
 
