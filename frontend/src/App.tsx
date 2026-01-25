@@ -490,6 +490,7 @@ export default function App() {
 
   const handleNodeClick = (node: NodeResponse) => {
     loadNode(node.id);
+    setShowMobileSidebar(false);
   };
 
   // Recursively find a node by ID in the tree
@@ -648,16 +649,20 @@ export default function App() {
                     onToggleSettings={() => {
                       setShowSettings(true);
                       setSelectedNodeId(null);
+                      setShowMobileSidebar(false);
                     }}
                     onCreatePage={() => {
                       setShowSettings(false);
                       createNode('document');
+                      setShowMobileSidebar(false);
                     }}
                     onCreateTable={() => {
                       setShowSettings(false);
                       createNode('table');
+                      setShowMobileSidebar(false);
                     }}
                     onSelectNode={handleNodeClick}
+                    onCloseMobileSidebar={() => setShowMobileSidebar(false)}
                   />
 
                   <main class={styles.main}>

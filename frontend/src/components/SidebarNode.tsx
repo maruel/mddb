@@ -18,7 +18,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
   };
 
   return (
-    <li class={styles.sidebarNodeResponseWrapper}>
+    <li class={styles.sidebarNodeWrapper}>
       <div
         class={styles.pageItem}
         classList={{ [`${styles.active}`]: props.selectedId === props.node.id }}

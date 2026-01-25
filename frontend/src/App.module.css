@@ -331,6 +331,7 @@ body {
   box-shadow: var(--shadow);
 }
 
+.sidebarNodeWrapper,
 .childList {
   list-style: none;
 }
@@ -360,6 +361,7 @@ body {
 
 .expandIcon.hidden {
   visibility: hidden;
+  pointer-events: none;
 }
 
 .breadcrumbs {

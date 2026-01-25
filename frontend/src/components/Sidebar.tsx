@@ -13,6 +13,7 @@ interface SidebarProps {
   onCreatePage: () => void;
   onCreateTable: () => void;
   onSelectNode: (node: NodeResponse) => void;
+  onCloseMobileSidebar: () => void;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -54,6 +55,7 @@ export default function Sidebar(props: SidebarProps) {
             e.preventDefault();
             window.history.pushState(null, '', '/privacy');
             window.dispatchEvent(new PopStateEvent('popstate'));
+            props.onCloseMobileSidebar();
           }}
         >
           {t('app.privacyPolicy')}
@@ -65,6 +67,7 @@ export default function Sidebar(props: SidebarProps) {
             e.preventDefault();
             window.history.pushState(null, '', '/terms');
             window.dispatchEvent(new PopStateEvent('popstate'));
+            props.onCloseMobileSidebar();
           }}
         >
           {t('app.terms')}
