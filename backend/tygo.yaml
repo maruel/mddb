@@ -5,4 +5,6 @@ packages:
       "time.Time": "string"
       "jsonldb.ID": "string"
       "storage.Time": "number"
+    exclude_files:
+      - validate.go
     output_path: "../frontend/src/types.gen.ts"
