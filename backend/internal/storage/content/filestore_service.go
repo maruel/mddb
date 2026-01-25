@@ -101,10 +101,8 @@ func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID jsonldb
 	}
 
 	wsDir := filepath.Join(svc.rootDir, wsID.String())
-
-	store := newWorkspaceFileStore(wsDir, repo, svc.git, &ws.Quotas, svc.orgSvc)
+	store := newWorkspaceFileStore(wsDir, repo, &ws.Quotas)
 	svc.stores[wsID] = store
-
 	return store, nil
 }
 

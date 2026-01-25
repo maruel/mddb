@@ -1,6 +1,8 @@
 package content
 
 import (
+	"maps"
+
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -44,10 +46,7 @@ type DataRecord struct {
 func (r *DataRecord) Clone() *DataRecord {
 	c := *r
 	if r.Data != nil {
-		c.Data = make(map[string]any, len(r.Data))
-		for k, v := range r.Data {
-			c.Data[k] = v
-		}
+		c.Data = maps.Clone(r.Data)
 	}
 	return &c
 }

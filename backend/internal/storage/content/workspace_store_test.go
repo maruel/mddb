@@ -226,7 +226,7 @@ func TestWorkspaceStore(t *testing.T) {
 
 		t.Run("DirectoryStructure", func(t *testing.T) {
 			for _, pageID := range pageIDs {
-				expectedDir := filepath.Join(fs.rootDir, wsID.String(), "pages", pageID.String())
+				expectedDir := filepath.Join(fs.rootDir, wsID.String(), pageID.String())
 				if _, err := os.Stat(expectedDir); err != nil {
 					t.Errorf("expected page directory %s to exist: %v", expectedDir, err)
 				}
@@ -585,6 +585,49 @@ func TestWorkspaceStore(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("GitPathWithNestedPages", func(t *testing.T) {
+		fs, wsID := testFileStore(t)
+		ctx := t.Context()
+		author := git.Author{Name: "test", Email: "test@test.com"}
+
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
+		}
+
+		ws, err := fs.GetWorkspaceStore(ctx, wsID)
+		if err != nil {
+			t.Fatalf("failed to get workspace store: %v", err)
+		}
+
+		// Create a simpler hierarchy to test gitPath
+		root, err := ws.CreateNode(ctx, "Root", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("failed to create root: %v", err)
+		}
+
+		child1, err := ws.CreateNode(ctx, "Child1", NodeTypeDocument, root.ID, author)
+		if err != nil {
+			t.Fatalf("failed to create child1: %v", err)
+		}
+
+		// gitPath should include all ancestors in the path for a 2-level deep node
+		path := ws.gitPath(child1.ParentID, child1.ID, "index.md")
+
+		// Expected: root/child1/index.md
+		expectedParts := []string{root.ID.String(), child1.ID.String(), "index.md"}
+		expectedPath := filepath.Join(expectedParts...)
+
+		if path != expectedPath {
+			t.Errorf("gitPath mismatch:\n  got:      %s\n  expected: %s", path, expectedPath)
+		}
+
+		// Verify file actually exists at that path
+		filePath := filepath.Join(ws.wsDir, path)
+		if _, err := os.Stat(filePath); err != nil {
+			t.Errorf("expected file to exist at %s: %v", filePath, err)
+		}
+	})
 }
 
 func TestQuotas(t *testing.T) {
@@ -833,7 +876,7 @@ func TestMarkdown(t *testing.T) {
 		}
 
 		// Read the file directly to verify format
-		filePath := filepath.Join(fs.rootDir, wsID.String(), "pages", pageID.String(), "index.md")
+		filePath := filepath.Join(fs.rootDir, wsID.String(), pageID.String(), "index.md")
 		data, err := os.ReadFile(filePath) //nolint:gosec // G304: test code with controlled path
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)

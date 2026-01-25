@@ -11,6 +11,7 @@ import (
 	"mime"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -28,27 +29,21 @@ import (
 //   - Tables: ID directory containing metadata.json + data.jsonl.
 //   - Assets: files within each page's directory namespace.
 type WorkspaceFileStore struct {
-	wsDir    string                        // Pre-computed: rootDir/wsID
-	pagesDir string                        // Pre-computed: wsDir/pages
-	repo     *git.Repo                     // Cached git repository
-	git      *git.Manager                  // For git operations
-	quotas   *identity.WorkspaceQuotas     // Workspace quotas
-	orgSvc   *identity.OrganizationService // For org quota checks
-	mu       sync.RWMutex                  // Protects cache
-	cache    map[jsonldb.ID]jsonldb.ID     // nodeID -> parentID
+	wsDir  string                    // Pre-computed: rootDir/wsID
+	repo   *git.Repo                 // Cached git repository
+	quotas *identity.WorkspaceQuotas // Workspace quotas
+	mu     sync.RWMutex              // Protects cache
+	cache  map[jsonldb.ID]jsonldb.ID // nodeID -> parentID
 }
 
 // newWorkspaceFileStore creates a new workspace store.
 // This is called internally by FileStoreService.GetWorkspaceStore.
-func newWorkspaceFileStore(wsDir string, repo *git.Repo, gitMgr *git.Manager, quotas *identity.WorkspaceQuotas, orgSvc *identity.OrganizationService) *WorkspaceFileStore {
+func newWorkspaceFileStore(wsDir string, repo *git.Repo, quotas *identity.WorkspaceQuotas) *WorkspaceFileStore {
 	return &WorkspaceFileStore{
-		wsDir:    wsDir,
-		pagesDir: filepath.Join(wsDir, "pages"),
-		repo:     repo,
-		git:      gitMgr,
-		quotas:   quotas,
-		orgSvc:   orgSvc,
-		cache:    make(map[jsonldb.ID]jsonldb.ID),
+		wsDir:  wsDir,
+		repo:   repo,
+		quotas: quotas,
+		cache:  make(map[jsonldb.ID]jsonldb.ID),
 	}
 }
 
@@ -57,7 +52,7 @@ func (ws *WorkspaceFileStore) refreshCache() error {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
 	ws.cache = make(map[jsonldb.ID]jsonldb.ID)
-	return ws.walkDirForCache(ws.pagesDir, 0)
+	return ws.walkDirForCache(ws.wsDir, 0)
 }
 
 func (ws *WorkspaceFileStore) walkDirForCache(dir string, parentID jsonldb.ID) error {
@@ -152,9 +147,9 @@ func (ws *WorkspaceFileStore) checkStorageQuota(additionalBytes int64) error {
 
 func (ws *WorkspaceFileStore) pageDir(id, parentID jsonldb.ID) string {
 	if parentID.IsZero() {
-		return filepath.Join(ws.pagesDir, id.String())
+		return filepath.Join(ws.wsDir, id.String())
 	}
-	return filepath.Join(ws.pagesDir, parentID.String(), id.String())
+	return filepath.Join(ws.wsDir, parentID.String(), id.String())
 }
 
 func (ws *WorkspaceFileStore) pageIndexFile(id, parentID jsonldb.ID) string {
@@ -169,11 +164,17 @@ func (ws *WorkspaceFileStore) tableMetadataFile(id, parentID jsonldb.ID) string 
 	return filepath.Join(ws.pageDir(id, parentID), "metadata.json")
 }
 
+// gitPath builds a git-relative path by walking up the parent chain.
+// parentID must be passed explicitly because during node creation,
+// the node doesn't exist in the cache yet (it's added after gitPath is called).
 func (ws *WorkspaceFileStore) gitPath(parentID, id jsonldb.ID, fileName string) string {
-	if parentID.IsZero() {
-		return filepath.Join("pages", id.String(), fileName)
+	var parts []string
+	for p := parentID; !p.IsZero(); p = ws.getParent(p) {
+		parts = append(parts, p.String())
 	}
-	return filepath.Join("pages", parentID.String(), id.String(), fileName)
+	slices.Reverse(parts)
+	parts = append(parts, id.String(), fileName)
+	return filepath.Join(parts...)
 }
 
 // PageExists checks if a page exists.
@@ -255,7 +256,6 @@ func (ws *WorkspaceFileStore) writePageFile(parentID jsonldb.ID, p *page) error 
 	data := formatMarkdownFile(p)
 	pageDir := ws.pageDir(p.id, parentID)
 	filePath := ws.pageIndexFile(p.id, parentID)
-
 	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -344,7 +344,7 @@ func (ws *WorkspaceFileStore) deletePage(id jsonldb.ID) error {
 // Recursively traverses the directory tree to include child pages under parents.
 func (ws *WorkspaceFileStore) IterPages() (iter.Seq[*Node], error) {
 	return func(yield func(*Node) bool) {
-		ws.iterPagesRecursive(ws.pagesDir, 0, yield)
+		ws.iterPagesRecursive(ws.wsDir, 0, yield)
 	}, nil
 }
 
@@ -379,12 +379,12 @@ func (ws *WorkspaceFileStore) iterPagesRecursive(dir string, parentID jsonldb.ID
 // ReadNode reads a node (page or table or hybrid) by ID.
 func (ws *WorkspaceFileStore) ReadNode(id jsonldb.ID) (*Node, error) {
 	parentID := ws.getParent(id)
-	return ws.ReadNodeFromPath(filepath.Join(ws.pagesDir, id.String()), id, parentID)
+	return ws.ReadNodeFromPath(filepath.Join(ws.wsDir, id.String()), id, parentID)
 }
 
 // ReadNodeTree returns the full tree of nodes.
 func (ws *WorkspaceFileStore) ReadNodeTree() ([]*Node, error) {
-	return ws.readNodesRecursive(ws.pagesDir, 0)
+	return ws.readNodesRecursive(ws.wsDir, 0)
 }
 
 // readNodesRecursive recursively reads all nodes.
@@ -496,7 +496,7 @@ func (ws *WorkspaceFileStore) GetWorkspaceUsage() (pageCount int, storageUsage i
 		pageCount++
 	}
 
-	err = filepath.Walk(ws.pagesDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(ws.wsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -670,7 +670,7 @@ func (ws *WorkspaceFileStore) deleteTable(id jsonldb.ID) error {
 // Recursively traverses the directory tree to include child tables under parents.
 func (ws *WorkspaceFileStore) IterTables() (iter.Seq[*Node], error) {
 	return func(yield func(*Node) bool) {
-		ws.iterTablesRecursive(ws.pagesDir, 0, yield)
+		ws.iterTablesRecursive(ws.wsDir, 0, yield)
 	}, nil
 }
 
@@ -997,7 +997,7 @@ func (ws *WorkspaceFileStore) IterAssets(pageID jsonldb.ID) (iter.Seq[*Asset], e
 // GetHistory returns the commit history for a page, limited to n commits.
 // n is capped at 1000. If n <= 0, defaults to 1000.
 func (ws *WorkspaceFileStore) GetHistory(ctx context.Context, id jsonldb.ID, n int) ([]*git.Commit, error) {
-	return ws.repo.GetHistory(ctx, "pages/"+id.String(), n)
+	return ws.repo.GetHistory(ctx, id.String(), n)
 }
 
 // GetFileAtCommit returns the content of a file at a specific commit.
