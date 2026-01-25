@@ -26,7 +26,7 @@ type testEnv struct {
 	wsMemService  *identity.WorkspaceMembershipService
 	orgInvService *identity.OrganizationInvitationService
 	wsInvService  *identity.WorkspaceInvitationService
-	fileStore     *content.FileStore
+	fileStore     *content.FileStoreService
 }
 
 func setupTestEnv(t *testing.T) *testEnv {
@@ -69,7 +69,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	gitMgr := git.NewManager(tempDir, "test", "test@example.com")
 
-	fileStore, err := content.NewFileStore(tempDir, gitMgr, wsService, orgService)
+	fileStore, err := content.NewFileStoreService(tempDir, gitMgr, wsService, orgService)
 	if err != nil {
 		t.Fatalf("NewFileStore: %v", err)
 	}

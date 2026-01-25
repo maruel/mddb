@@ -12,17 +12,21 @@ import (
 
 // NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
-	fs *content.FileStore
+	fs *content.FileStoreService
 }
 
 // NewNodeHandler creates a new node handler.
-func NewNodeHandler(fs *content.FileStore) *NodeHandler {
+func NewNodeHandler(fs *content.FileStoreService) *NodeHandler {
 	return &NodeHandler{fs: fs}
 }
 
 // ListNodes returns the hierarchical node tree.
-func (h *NodeHandler) ListNodes(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListNodesRequest) (*dto.ListNodesResponse, error) {
-	nodes, err := h.fs.ReadNodeTree(orgID)
+func (h *NodeHandler) ListNodes(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListNodesRequest) (*dto.ListNodesResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	nodes, err := ws.ReadNodeTree()
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to read node tree", err)
 	}
@@ -34,9 +38,13 @@ func (h *NodeHandler) ListNodes(ctx context.Context, orgID jsonldb.ID, _ *identi
 }
 
 // GetNode retrieves a single node's metadata.
-func (h *NodeHandler) GetNode(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetNodeRequest) (*dto.NodeResponse, error) {
+func (h *NodeHandler) GetNode(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetNodeRequest) (*dto.NodeResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
 	// Read the full tree to find the node by ID and get its actual parent
-	nodes, err := h.fs.ReadNodeTree(orgID)
+	nodes, err := ws.ReadNodeTree()
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to read node tree", err)
 	}
@@ -62,9 +70,14 @@ func findNodeByID(nodes []*content.Node, id jsonldb.ID) *content.Node {
 }
 
 // CreateNode creates a new node (page, table, or hybrid).
-func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreateNodeRequest) (*dto.NodeResponse, error) {
+func (h *NodeHandler) CreateNode(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreateNodeRequest) (*dto.NodeResponse, error) {
 	if req.Title == "" || req.Type == "" {
 		return nil, dto.MissingField("title or type")
+	}
+
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
 	var nodeType content.NodeType
@@ -80,7 +93,7 @@ func (h *NodeHandler) CreateNode(ctx context.Context, orgID jsonldb.ID, user *id
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	node, err := h.fs.CreateNode(ctx, orgID, req.Title, nodeType, req.ParentID, author)
+	node, err := ws.CreateNode(ctx, req.Title, nodeType, req.ParentID, author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create node", err)
 	}

@@ -14,17 +14,21 @@ import (
 
 // TableHandler handles table-related HTTP requests.
 type TableHandler struct {
-	fs *content.FileStore
+	fs *content.FileStoreService
 }
 
 // NewTableHandler creates a new table handler.
-func NewTableHandler(fs *content.FileStore) *TableHandler {
+func NewTableHandler(fs *content.FileStoreService) *TableHandler {
 	return &TableHandler{fs: fs}
 }
 
 // ListTables returns a list of all tables.
-func (h *TableHandler) ListTables(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListTablesRequest) (*dto.ListTablesResponse, error) {
-	it, err := h.fs.IterTables(orgID)
+func (h *TableHandler) ListTables(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListTablesRequest) (*dto.ListTablesResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	it, err := ws.IterTables()
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list tables", err)
 	}
@@ -32,8 +36,12 @@ func (h *TableHandler) ListTables(ctx context.Context, orgID jsonldb.ID, _ *iden
 }
 
 // GetTable returns a specific table by ID.
-func (h *TableHandler) GetTable(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetTableRequest) (*dto.GetTableResponse, error) {
-	table, err := h.fs.ReadTable(orgID, req.ID)
+func (h *TableHandler) GetTable(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetTableRequest) (*dto.GetTableResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	table, err := ws.ReadTable(req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
 	}
@@ -47,9 +55,14 @@ func (h *TableHandler) GetTable(ctx context.Context, orgID jsonldb.ID, _ *identi
 }
 
 // CreateTable creates a new table.
-func (h *TableHandler) CreateTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreateTableRequest) (*dto.CreateTableResponse, error) {
+func (h *TableHandler) CreateTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreateTableRequest) (*dto.CreateTableResponse, error) {
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
+	}
+
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
 	id := jsonldb.NewID()
@@ -64,15 +77,19 @@ func (h *TableHandler) CreateTable(ctx context.Context, orgID jsonldb.ID, user *
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.WriteTable(ctx, orgID, node, true, author); err != nil {
+	if err := ws.WriteTable(ctx, node, true, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create table", err)
 	}
 	return &dto.CreateTableResponse{ID: id}, nil
 }
 
 // UpdateTable updates a table schema.
-func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
-	node, err := h.fs.ReadTable(orgID, req.ID)
+func (h *TableHandler) UpdateTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	node, err := ws.ReadTable(req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
 	}
@@ -82,24 +99,32 @@ func (h *TableHandler) UpdateTable(ctx context.Context, orgID jsonldb.ID, user *
 	node.Modified = storage.Now()
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.WriteTable(ctx, orgID, node, false, author); err != nil {
+	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
 	return &dto.UpdateTableResponse{ID: req.ID}, nil
 }
 
 // DeleteTable deletes a table.
-func (h *TableHandler) DeleteTable(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeleteTableRequest) (*dto.DeleteTableResponse, error) {
+func (h *TableHandler) DeleteTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeleteTableRequest) (*dto.DeleteTableResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.DeleteTable(ctx, orgID, req.ID, author); err != nil {
+	if err := ws.DeleteTable(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
 	return &dto.DeleteTableResponse{Ok: true}, nil
 }
 
 // ListRecords returns all records in a table.
-func (h *TableHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
-	records, err := h.fs.ReadRecordsPage(orgID, req.ID, req.Offset, req.Limit)
+func (h *TableHandler) ListRecords(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	records, err := ws.ReadRecordsPage(req.ID, req.Offset, req.Limit)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list records", err)
 	}
@@ -111,9 +136,13 @@ func (h *TableHandler) ListRecords(ctx context.Context, orgID jsonldb.ID, _ *ide
 }
 
 // CreateRecord creates a new record in a table.
-func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
+func (h *TableHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
 	// Read table to get columns for type coercion
-	node, err := h.fs.ReadTable(orgID, req.ID)
+	node, err := ws.ReadTable(req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
 	}
@@ -131,22 +160,26 @@ func (h *TableHandler) CreateRecord(ctx context.Context, orgID jsonldb.ID, user 
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.AppendRecord(ctx, orgID, req.ID, record, author); err != nil {
+	if err := ws.AppendRecord(ctx, req.ID, record, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create record", err)
 	}
 	return &dto.CreateRecordResponse{ID: id}, nil
 }
 
 // UpdateRecord updates an existing record in a table.
-func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
+func (h *TableHandler) UpdateRecord(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
 	// Read table to get columns for type coercion
-	node, err := h.fs.ReadTable(orgID, req.ID)
+	node, err := ws.ReadTable(req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
 	}
 
 	// Find existing record to preserve Created time
-	it, err := h.fs.IterRecords(orgID, req.ID)
+	it, err := ws.IterRecords(req.ID)
 	if err != nil {
 		return nil, dto.NotFound("record")
 	}
@@ -172,15 +205,19 @@ func (h *TableHandler) UpdateRecord(ctx context.Context, orgID jsonldb.ID, user 
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.UpdateRecord(ctx, orgID, req.ID, record, author); err != nil {
+	if err := ws.UpdateRecord(ctx, req.ID, record, author); err != nil {
 		return nil, dto.NotFound("record")
 	}
 	return &dto.UpdateRecordResponse{ID: req.RID}, nil
 }
 
 // GetRecord retrieves a single record from a table.
-func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
-	it, err := h.fs.IterRecords(orgID, req.ID)
+func (h *TableHandler) GetRecord(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	it, err := ws.IterRecords(req.ID)
 	if err != nil {
 		return nil, dto.NotFound("record")
 	}
@@ -198,9 +235,13 @@ func (h *TableHandler) GetRecord(ctx context.Context, orgID jsonldb.ID, _ *ident
 }
 
 // DeleteRecord deletes a record from a table.
-func (h *TableHandler) DeleteRecord(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
+func (h *TableHandler) DeleteRecord(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.DeleteRecord(ctx, orgID, req.ID, req.RID, author); err != nil {
+	if err := ws.DeleteRecord(ctx, req.ID, req.RID, author); err != nil {
 		return nil, dto.NotFound("record")
 	}
 	return &dto.DeleteRecordResponse{Ok: true}, nil

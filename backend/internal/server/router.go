@@ -29,7 +29,7 @@ import (
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
 func NewRouter(
-	fileStore *content.FileStore,
+	fileStore *content.FileStoreService,
 	userService *identity.UserService,
 	orgService *identity.OrganizationService,
 	wsService *identity.WorkspaceService,
@@ -129,7 +129,7 @@ func NewRouter(
 	mux.Handle("POST /api/workspaces/{wsID}/settings/git/delete", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, grh.DeleteGitRemote, rlConfig))
 
 	// OAuth endpoints (public) - always registered, returns error if provider not configured
-	oh := handlers.NewOAuthHandler(userService, orgMemService, wsMemService, orgService, wsService, fileStore, authh)
+	oh := handlers.NewOAuthHandler(userService, authh)
 	base := strings.TrimRight(baseURL, "/")
 	var providers []string
 	if googleClientID != "" && googleClientSecret != "" {

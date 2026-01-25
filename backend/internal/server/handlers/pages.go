@@ -19,17 +19,21 @@ import (
 
 // PageHandler handles page-related HTTP requests.
 type PageHandler struct {
-	fs *content.FileStore
+	fs *content.FileStoreService
 }
 
 // NewPageHandler creates a new page handler.
-func NewPageHandler(fs *content.FileStore) *PageHandler {
+func NewPageHandler(fs *content.FileStoreService) *PageHandler {
 	return &PageHandler{fs: fs}
 }
 
 // ListPages returns a list of all pages.
-func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListPagesRequest) (*dto.ListPagesResponse, error) {
-	it, err := h.fs.IterPages(orgID)
+func (h *PageHandler) ListPages(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListPagesRequest) (*dto.ListPagesResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	it, err := ws.IterPages()
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list pages", err)
 	}
@@ -37,8 +41,12 @@ func (h *PageHandler) ListPages(ctx context.Context, orgID jsonldb.ID, _ *identi
 }
 
 // GetPage returns a specific page by ID.
-func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetPageRequest) (*dto.GetPageResponse, error) {
-	page, err := h.fs.ReadPage(orgID, req.ID)
+func (h *PageHandler) GetPage(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetPageRequest) (*dto.GetPageResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	page, err := ws.ReadPage(req.ID)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -50,13 +58,17 @@ func (h *PageHandler) GetPage(ctx context.Context, orgID jsonldb.ID, _ *identity
 }
 
 // CreatePage creates a new page.
-func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
+func (h *PageHandler) CreatePage(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
 	if req.Title == "" {
 		return nil, dto.MissingField("title")
 	}
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
 	id := jsonldb.NewID()
 	author := git.Author{Name: user.Name, Email: user.Email}
-	page, err := h.fs.WritePage(ctx, orgID, id, 0, req.Title, req.Content, author)
+	page, err := ws.WritePage(ctx, id, 0, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
@@ -64,9 +76,13 @@ func (h *PageHandler) CreatePage(ctx context.Context, orgID jsonldb.ID, user *id
 }
 
 // UpdatePage updates an existing page.
-func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
+func (h *PageHandler) UpdatePage(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	page, err := h.fs.UpdatePage(ctx, orgID, req.ID, req.Title, req.Content, author)
+	page, err := ws.UpdatePage(ctx, req.ID, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -74,17 +90,25 @@ func (h *PageHandler) UpdatePage(ctx context.Context, orgID jsonldb.ID, user *id
 }
 
 // DeletePage deletes a page.
-func (h *PageHandler) DeletePage(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
+func (h *PageHandler) DeletePage(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.DeletePage(ctx, orgID, req.ID, author); err != nil {
+	if err := ws.DeletePage(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("page")
 	}
 	return &dto.DeletePageResponse{Ok: true}, nil
 }
 
 // ListPageVersions returns the version history of a page.
-func (h *PageHandler) ListPageVersions(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListPageVersionsRequest) (*dto.ListPageVersionsResponse, error) {
-	history, err := h.fs.GetHistory(ctx, orgID, req.ID, req.Limit)
+func (h *PageHandler) ListPageVersions(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListPageVersionsRequest) (*dto.ListPageVersionsResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	history, err := ws.GetHistory(ctx, req.ID, req.Limit)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page history", err)
 	}
@@ -92,9 +116,13 @@ func (h *PageHandler) ListPageVersions(ctx context.Context, orgID jsonldb.ID, _ 
 }
 
 // GetPageVersion returns a specific version of a page.
-func (h *PageHandler) GetPageVersion(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.GetPageVersionRequest) (*dto.GetPageVersionResponse, error) {
-	path := fmt.Sprintf("%s/pages/%s/index.md", orgID.String(), req.ID.String())
-	contentBytes, err := h.fs.GetFileAtCommit(ctx, orgID, req.Hash, path)
+func (h *PageHandler) GetPageVersion(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetPageVersionRequest) (*dto.GetPageVersionResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	path := fmt.Sprintf("pages/%s/index.md", req.ID.String())
+	contentBytes, err := ws.GetFileAtCommit(ctx, req.Hash, path)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page version", err)
 	}

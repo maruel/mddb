@@ -26,7 +26,7 @@ type AuthHandler struct {
 	orgService     *identity.OrganizationService
 	wsService      *identity.WorkspaceService
 	sessionService *identity.SessionService
-	fs             *content.FileStore
+	fs             *content.FileStoreService
 	jwtSecret      []byte
 }
 
@@ -38,7 +38,7 @@ func NewAuthHandler(
 	orgService *identity.OrganizationService,
 	wsService *identity.WorkspaceService,
 	sessionService *identity.SessionService,
-	fs *content.FileStore,
+	fs *content.FileStoreService,
 	jwtSecret string,
 ) *AuthHandler {
 	return &AuthHandler{
@@ -225,9 +225,13 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 
 	// Create welcome page if content provided
 	if req.WelcomePageTitle != "" && req.WelcomePageContent != "" {
+		wsStore, err := h.fs.GetWorkspaceStore(ctx, ws.ID)
+		if err != nil {
+			return nil, dto.InternalWithError("Failed to get workspace store", err)
+		}
 		pageID := jsonldb.NewID()
 		author := git.Author{Name: user.Name, Email: user.Email}
-		if _, err := h.fs.WritePage(ctx, ws.ID, pageID, 0, req.WelcomePageTitle, req.WelcomePageContent, author); err != nil {
+		if _, err := wsStore.WritePage(ctx, pageID, 0, req.WelcomePageTitle, req.WelcomePageContent, author); err != nil {
 			return nil, dto.InternalWithError("Failed to create welcome page", err)
 		}
 	}

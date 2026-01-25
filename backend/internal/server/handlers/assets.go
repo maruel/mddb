@@ -35,22 +35,26 @@ func init() {
 
 // AssetHandler handles asset/file-related HTTP requests.
 type AssetHandler struct {
-	fs *content.FileStore
+	fs *content.FileStoreService
 }
 
 // NewAssetHandler creates a new asset handler.
-func NewAssetHandler(fs *content.FileStore) *AssetHandler {
+func NewAssetHandler(fs *content.FileStoreService) *AssetHandler {
 	return &AssetHandler{fs: fs}
 }
 
 // ListPageAssets returns a list of assets associated with a page.
-func (h *AssetHandler) ListPageAssets(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.ListPageAssetsRequest) (*dto.ListPageAssetsResponse, error) {
-	it, err := h.fs.IterAssets(orgID, req.PageID)
+func (h *AssetHandler) ListPageAssets(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListPageAssetsRequest) (*dto.ListPageAssetsResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	it, err := ws.IterAssets(req.PageID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list assets", err)
 	}
 	assets := slices.Collect(it)
-	return &dto.ListPageAssetsResponse{Assets: assetsToSummaries(assets, orgID.String(), req.PageID.String())}, nil
+	return &dto.ListPageAssetsResponse{Assets: assetsToSummaries(assets, wsID.String(), req.PageID.String())}, nil
 }
 
 // UploadPageAssetHandler handles asset uploading (multipart/form-data).
@@ -100,7 +104,12 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	asset, err := h.fs.SaveAsset(r.Context(), orgID, pageID, header.Filename, data, author)
+	ws, err := h.fs.GetWorkspaceStore(r.Context(), orgID)
+	if err != nil {
+		writeErrorResponse(w, dto.Internal("workspace"))
+		return
+	}
+	asset, err := ws.SaveAsset(r.Context(), pageID, header.Filename, data, author)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("asset_save"))
 		return
@@ -130,7 +139,12 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data, err := h.fs.ReadAsset(orgID, pageID, assetName)
+	ws, err := h.fs.GetWorkspaceStore(r.Context(), orgID)
+	if err != nil {
+		writeErrorResponse(w, dto.Internal("workspace"))
+		return
+	}
+	data, err := ws.ReadAsset(pageID, assetName)
 	if err != nil {
 		writeErrorResponse(w, dto.NotFound("asset"))
 		return
@@ -148,9 +162,13 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 }
 
 // DeletePageAsset deletes an asset.
-func (h *AssetHandler) DeletePageAsset(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
+func (h *AssetHandler) DeletePageAsset(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeletePageAssetRequest) (*dto.DeletePageAssetResponse, error) {
+	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := h.fs.DeleteAsset(ctx, orgID, req.PageID, req.AssetName, author); err != nil {
+	if err := ws.DeleteAsset(ctx, req.PageID, req.AssetName, author); err != nil {
 		return nil, dto.NotFound("asset")
 	}
 	return &dto.DeletePageAssetResponse{Ok: true}, nil

@@ -13,7 +13,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 	"golang.org/x/oauth2"
@@ -23,35 +22,17 @@ import (
 
 // OAuthHandler handles OAuth2 authentication for multiple providers.
 type OAuthHandler struct {
-	userService   *identity.UserService
-	orgMemService *identity.OrganizationMembershipService
-	wsMemService  *identity.WorkspaceMembershipService
-	orgService    *identity.OrganizationService
-	wsService     *identity.WorkspaceService
-	fs            *content.FileStore
-	authHandler   *AuthHandler
-	providers     map[string]*oauth2.Config
+	userService *identity.UserService
+	authHandler *AuthHandler
+	providers   map[string]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
-func NewOAuthHandler(
-	userService *identity.UserService,
-	orgMemService *identity.OrganizationMembershipService,
-	wsMemService *identity.WorkspaceMembershipService,
-	orgService *identity.OrganizationService,
-	wsService *identity.WorkspaceService,
-	fs *content.FileStore,
-	authHandler *AuthHandler,
-) *OAuthHandler {
+func NewOAuthHandler(userService *identity.UserService, authHandler *AuthHandler) *OAuthHandler {
 	return &OAuthHandler{
-		userService:   userService,
-		orgMemService: orgMemService,
-		wsMemService:  wsMemService,
-		orgService:    orgService,
-		wsService:     wsService,
-		fs:            fs,
-		authHandler:   authHandler,
-		providers:     make(map[string]*oauth2.Config),
+		userService: userService,
+		authHandler: authHandler,
+		providers:   make(map[string]*oauth2.Config),
 	}
 }
 

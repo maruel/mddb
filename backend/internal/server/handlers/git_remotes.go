@@ -17,11 +17,11 @@ const gitRemoteName = "origin"
 // GitRemoteHandler handles git remote operations.
 type GitRemoteHandler struct {
 	wsService *identity.WorkspaceService
-	fileStore *content.FileStore
+	fileStore *content.FileStoreService
 }
 
 // NewGitRemoteHandler creates a new git remote handler.
-func NewGitRemoteHandler(wsService *identity.WorkspaceService, fileStore *content.FileStore) *GitRemoteHandler {
+func NewGitRemoteHandler(wsService *identity.WorkspaceService, fileStore *content.FileStoreService) *GitRemoteHandler {
 	return &GitRemoteHandler{
 		wsService: wsService,
 		fileStore: fileStore,
@@ -65,10 +65,11 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID,
 	}
 
 	// Actually add it to the local git repo
-	repo, err := h.fileStore.Repo(ctx, wsID)
+	wsStore, err := h.fileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get git repo: %w", err)
+		return nil, fmt.Errorf("failed to get workspace store: %w", err)
 	}
+	repo := wsStore.Repo()
 
 	url := req.URL
 
@@ -98,10 +99,11 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 		return nil, dto.NotFound("remote")
 	}
 
-	repo, err := h.fileStore.Repo(ctx, wsID)
+	wsStore, err := h.fileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get git repo: %w", err)
+		return nil, fmt.Errorf("failed to get workspace store: %w", err)
 	}
+	repo := wsStore.Repo()
 
 	url := ws.GitRemote.URL
 	if ws.GitRemote.AuthType == "token" && ws.GitRemote.Token != "" {
@@ -145,10 +147,11 @@ func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, wsID jsonldb.ID,
 	}
 
 	// Also remove from local git repo
-	repo, err := h.fileStore.Repo(ctx, wsID)
+	wsStore, err := h.fileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get git repo: %w", err)
+		return nil, fmt.Errorf("failed to get workspace store: %w", err)
 	}
+	repo := wsStore.Repo()
 
 	if err := repo.SetRemote(ctx, gitRemoteName, ""); err != nil {
 		return nil, fmt.Errorf("failed to remove git remote: %w", err)

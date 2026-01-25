@@ -60,7 +60,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	fs, err := NewFileStore(tmpDir, gitMgr, wsService, orgService)
+	fs, err := NewFileStoreService(tmpDir, gitMgr, wsService, orgService)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -70,6 +70,12 @@ func BenchmarkTableOperations(b *testing.B) {
 	// Initialize git repo for workspace
 	if err := fs.InitWorkspace(ctx, wsID); err != nil {
 		b.Fatalf("failed to init workspace: %v", err)
+	}
+
+	// Get workspace store
+	wsStore, err := fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		b.Fatalf("failed to get workspace store: %v", err)
 	}
 
 	dbID := jsonldb.NewID()
@@ -85,7 +91,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		},
 	}
 
-	if err := fs.WriteTable(ctx, wsID, node, true, author); err != nil {
+	if err := wsStore.WriteTable(ctx, node, true, author); err != nil {
 		b.Fatal(err)
 	}
 
@@ -101,7 +107,7 @@ func BenchmarkTableOperations(b *testing.B) {
 					"c2": i,
 				},
 			}
-			if err := fs.AppendRecord(ctx, wsID, dbID, record, author); err != nil {
+			if err := wsStore.AppendRecord(ctx, dbID, record, author); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -114,7 +120,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		// Prepare a table with 1000 records
 		readDBID := jsonldb.NewID()
 		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
-		if err := fs.WriteTable(ctx, wsID, readNode, true, author); err != nil {
+		if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
@@ -124,14 +130,14 @@ func BenchmarkTableOperations(b *testing.B) {
 				Created:  storage.Now(),
 				Modified: storage.Now(),
 			}
-			if err := fs.AppendRecord(ctx, wsID, readDBID, record, author); err != nil {
+			if err := wsStore.AppendRecord(ctx, readDBID, record, author); err != nil {
 				b.Fatal(err)
 			}
 		}
 
 		b.ResetTimer()
 		for range b.N {
-			it, err := fs.IterRecords(wsID, readDBID)
+			it, err := wsStore.IterRecords(readDBID)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -146,7 +152,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	b.Run("ReadRecordsPage", func(b *testing.B) {
 		readDBID := jsonldb.ID(100)
 		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
-		if err := fs.WriteTable(ctx, wsID, readNode, true, author); err != nil {
+		if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		// Write 10,000 records
@@ -157,7 +163,7 @@ func BenchmarkTableOperations(b *testing.B) {
 				Created:  storage.Now(),
 				Modified: storage.Now(),
 			}
-			if err := fs.AppendRecord(ctx, wsID, readDBID, record, author); err != nil {
+			if err := wsStore.AppendRecord(ctx, readDBID, record, author); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -165,7 +171,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.ResetTimer()
 		for range b.N {
 			// Read 50 records from middle
-			records, err := fs.ReadRecordsPage(wsID, readDBID, 5000, 50)
+			records, err := wsStore.ReadRecordsPage(readDBID, 5000, 50)
 			if err != nil {
 				b.Fatal(err)
 			}
