@@ -429,6 +429,13 @@ func userWithMembershipsToResponse(uwm *userWithMemberships) *dto.UserResponse {
 	if !uwm.CurrentWSID.IsZero() {
 		resp.WorkspaceID = uwm.CurrentWSID
 		resp.WorkspaceRole = dto.WorkspaceRole(uwm.CurrentWSRole)
+		// Find and set the workspace name from memberships
+		for _, wsMem := range uwm.WSMemberships {
+			if wsMem.WorkspaceID == uwm.CurrentWSID {
+				resp.WorkspaceName = wsMem.WorkspaceName
+				break
+			}
+		}
 	}
 
 	return resp

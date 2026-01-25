@@ -743,6 +743,7 @@ export interface UserResponse {
   organization_id?: string;
   org_role?: OrganizationRole;
   workspace_id?: string;
+  workspace_name?: string;
   workspace_role?: WorkspaceRole;
   /**
    * All memberships

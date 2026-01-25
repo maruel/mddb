@@ -120,6 +120,31 @@ export default function App() {
     }
   }
 
+  async function switchWorkspace(wsId: string, redirect = true) {
+    try {
+      setLoading(true);
+      const data = await api().auth.switchWorkspace({ ws_id: wsId });
+      if (!data.user) {
+        throw new Error('No user data returned');
+      }
+      handleLogin(data.token, data.user);
+      setSelectedNodeId(null);
+      if (redirect) {
+        window.history.pushState(null, '', '/');
+      }
+      await loadNodes();
+    } catch (err) {
+      if (err instanceof APIError) {
+        setError(`${t('errors.failedToSwitch')}: ${err.message}`);
+      } else {
+        setError(`${t('errors.failedToSwitch')}: ${err}`);
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function createOrganization(data: { name: string; welcomePageTitle: string; welcomePageContent: string }) {
     const org = await api().organizations.create({
       name: data.name,
@@ -166,11 +191,13 @@ export default function App() {
       setAutoSaveStatus('saved');
 
       // Update URL if title changed
-      const slug = slugify(title());
-      const orgId = user()?.organization_id;
-      if (orgId) {
+      const nodeSlug = slugify(title());
+      const wsId = user()?.workspace_id;
+      const wsName = user()?.workspace_name;
+      if (wsId) {
         const currentPath = window.location.pathname;
-        const newPath = `/${orgId}/${nodeId}${slug ? '+' + slug : ''}`;
+        const wsSlug = slugify(wsName || 'workspace');
+        const newPath = `/${wsId}+${wsSlug}/${nodeId}${nodeSlug ? '+' + nodeSlug : ''}`;
         if (currentPath !== newPath) {
           window.history.replaceState(null, '', newPath);
         }
@@ -251,21 +278,21 @@ export default function App() {
     setIsPrivacyPage(false);
     setIsTermsPage(false);
 
-    // Check for /orgID/nodeID (slug separator is +)
-    const matchWithOrg = path.match(/^\/([^/]+)\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
-    if (matchWithOrg && matchWithOrg[1] && matchWithOrg[2]) {
-      const orgId = matchWithOrg[1];
-      const nodeId = matchWithOrg[2];
+    // Check for /wsID+wsSlug/nodeID+nodeSlug format
+    const matchWithWs = path.match(/^\/([^+/]+)(?:\+[^/]*)?\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
+    if (matchWithWs && matchWithWs[1] && matchWithWs[2]) {
+      const wsId = matchWithWs[1];
+      const nodeId = matchWithWs[2];
 
-      // If we are logged in but in wrong org, switch
-      if (user() && user()?.organization_id !== orgId) {
+      // If we are logged in but in wrong workspace, switch
+      if (user() && user()?.workspace_id !== wsId) {
         try {
-          // Check if we are member of this org
-          const isMember = user()?.organizations?.some((m) => m.organization_id === orgId);
+          // Check if we are member of this workspace
+          const isMember = user()?.workspaces?.some((m) => m.workspace_id === wsId);
           if (isMember) {
-            await switchOrg(orgId, false); // Don't redirect to /
+            await switchWorkspace(wsId, false); // Don't redirect to /
           } else {
-            setError(t('errors.noAccessToOrg') || 'You do not have access to this workspace');
+            setError(t('errors.noAccessToWs') || 'You do not have access to this workspace');
             return;
           }
         } catch {
@@ -333,11 +360,13 @@ export default function App() {
       setAutoSaveStatus('idle');
       setError(null);
 
-      // Update URL to include OrgID
-      const slug = slugify(nodeData.title);
-      const orgId = user()?.organization_id;
-      if (orgId) {
-        const url = `/${orgId}/${nodeData.id}${slug ? '+' + slug : ''}`;
+      // Update URL to include wsID+wsSlug
+      const nodeSlug = slugify(nodeData.title);
+      const wsId = user()?.workspace_id;
+      const wsName = user()?.workspace_name;
+      if (wsId) {
+        const wsSlug = slugify(wsName || 'workspace');
+        const url = `/${wsId}+${wsSlug}/${nodeData.id}${nodeSlug ? '+' + nodeSlug : ''}`;
         if (pushState) {
           if (window.location.pathname !== url) {
             window.history.pushState(null, '', url);

@@ -111,6 +111,7 @@ vi.mock('./components/Auth', () => ({
             organization_id: 'org-1',
             org_role: 'member',
             workspace_id: 'ws-1',
+            workspace_name: 'Test Workspace',
             workspace_role: 'viewer',
             organizations: [
               {
@@ -280,6 +281,7 @@ const mockUser: UserResponse = {
   organization_id: 'org-1',
   org_role: 'member',
   workspace_id: 'ws-1',
+  workspace_name: 'Test Workspace',
   workspace_role: WSRoleViewer,
   organizations: [
     {
@@ -296,7 +298,7 @@ const mockUser: UserResponse = {
       id: 'wsmem-1',
       user_id: 'user-1',
       workspace_id: 'ws-1',
-      workspace_name: 'Default Workspace',
+      workspace_name: 'Test Workspace',
       organization_id: 'org-1',
       role: WSRoleViewer,
       settings: { notifications: true },
@@ -601,7 +603,7 @@ describe('App', () => {
       fireEvent.click(screen.getByTestId('sidebar-node-node-1'));
 
       await waitFor(() => {
-        expect(mockPushState).toHaveBeenCalledWith(null, '', '/org-1/node-1+test-page');
+        expect(mockPushState).toHaveBeenCalledWith(null, '', '/ws-1+test-workspace/node-1+test-page');
       });
 
       await waitFor(() => {
@@ -1031,7 +1033,7 @@ describe('App', () => {
 
     it('loads node from URL on mount', async () => {
       // URL with slug uses + separator
-      mockPathname = '/org-1/node-1+test-page';
+      mockPathname = '/ws-1+test-workspace/node-1+test-page';
 
       mockFetch.mockImplementation((url: string) => {
         if (url === '/api/auth/me') {
@@ -1179,7 +1181,7 @@ describe('slugify', () => {
     fireEvent.click(screen.getByTestId('sidebar-node-node-1'));
 
     await waitFor(() => {
-      expect(mockPushState).toHaveBeenCalledWith(null, '', '/org-1/node-1+hello-world-test');
+      expect(mockPushState).toHaveBeenCalledWith(null, '', '/ws-1+test-workspace/node-1+hello-world-test');
     });
   });
 });

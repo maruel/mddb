@@ -269,6 +269,7 @@ type UserResponse struct {
 	OrganizationID jsonldb.ID       `json:"organization_id,omitempty" jsonschema:"description=Active organization ID"`
 	OrgRole        OrganizationRole `json:"org_role,omitempty" jsonschema:"description=Role in active organization"`
 	WorkspaceID    jsonldb.ID       `json:"workspace_id,omitempty" jsonschema:"description=Active workspace ID"`
+	WorkspaceName  string           `json:"workspace_name,omitempty" jsonschema:"description=Active workspace name"`
 	WorkspaceRole  WorkspaceRole    `json:"workspace_role,omitempty" jsonschema:"description=Role in active workspace"`
 
 	// All memberships
