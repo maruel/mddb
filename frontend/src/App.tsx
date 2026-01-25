@@ -725,8 +725,9 @@ export default function App() {
                               value={title()}
                               onInput={(e) => {
                                 setTitle(e.target.value);
-                                if (selectedNodeId()) {
-                                  updateNodeTitle(selectedNodeId()!, e.target.value);
+                                const id = selectedNodeId();
+                                if (id) {
+                                  updateNodeTitle(id, e.target.value);
                                 }
                                 setHasUnsavedChanges(true);
                                 debouncedAutoSave();

@@ -23,22 +23,13 @@ export default function Sidebar(props: SidebarProps) {
       <div class={styles.sidebarHeader}>
         <h2>{t('app.workspace')}</h2>
         <div class={styles.sidebarActions}>
-          <button
-            onClick={props.onToggleSettings}
-            title={t('app.settings') || 'Workspace Settings'}
-          >
+          <button onClick={props.onToggleSettings} title={t('app.settings') || 'Workspace Settings'}>
             ⚙
           </button>
-          <button
-            onClick={props.onCreatePage}
-            title={t('app.newPage') || 'New Page'}
-          >
+          <button onClick={props.onCreatePage} title={t('app.newPage') || 'New Page'}>
             +P
           </button>
-          <button
-            onClick={props.onCreateTable}
-            title={t('app.newTable') || 'New Table'}
-          >
+          <button onClick={props.onCreateTable} title={t('app.newTable') || 'New Table'}>
             +D
           </button>
         </div>
@@ -51,12 +42,7 @@ export default function Sidebar(props: SidebarProps) {
       <ul class={styles.pageList}>
         <For each={props.nodes}>
           {(node) => (
-            <SidebarNode
-              node={node}
-              selectedId={props.selectedNodeId}
-              onSelect={props.onSelectNode}
-              depth={0}
-            />
+            <SidebarNode node={node} selectedId={props.selectedNodeId} onSelect={props.onSelectNode} depth={0} />
           )}
         </For>
       </ul>
