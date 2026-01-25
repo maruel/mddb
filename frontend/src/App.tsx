@@ -1,5 +1,6 @@
 import { createSignal, createEffect, createMemo, For, Show, onMount, onCleanup } from 'solid-js';
-import SidebarNode from './components/SidebarNode';
+import { createStore, produce, reconcile } from 'solid-js/store';
+import Sidebar from './components/Sidebar';
 import MarkdownPreview from './components/MarkdownPreview';
 import TableTable from './components/TableTable';
 import TableGrid from './components/TableGrid';
@@ -34,7 +35,7 @@ export default function App() {
   const { t, locale, setLocale } = useI18n();
   const [user, setUser] = createSignal<UserResponse | null>(null);
   const [token, setToken] = createSignal<string | null>(localStorage.getItem('mddb_token'));
-  const [nodes, setNodes] = createSignal<NodeResponse[]>([]);
+  const [nodes, setNodes] = createStore<NodeResponse[]>([]);
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
   const [showSettings, setShowSettings] = createSignal(false);
@@ -130,6 +131,27 @@ export default function App() {
     // Show git setup prompt after org creation
     setShowGitSetup(true);
   }
+
+  // Helper to update node title in local state
+  const updateNodeTitle = (nodeId: string, newTitle: string) => {
+    setNodes(
+      produce((list) => {
+        const update = (nodes: NodeResponse[]): boolean => {
+          for (const node of nodes) {
+            if (node.id === nodeId) {
+              node.title = newTitle;
+              return true;
+            }
+            if (node.children) {
+              if (update(node.children)) return true;
+            }
+          }
+          return false;
+        };
+        update(list);
+      })
+    );
+  };
 
   // Debounced auto-save function
   const debouncedAutoSave = debounce(async () => {
@@ -286,7 +308,7 @@ export default function App() {
     try {
       setLoading(true);
       const data = await ws.nodes.list();
-      setNodes((data.nodes?.filter(Boolean) as NodeResponse[]) || []);
+      setNodes(reconcile((data.nodes?.filter(Boolean) as NodeResponse[]) || []));
       setError(null);
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
@@ -485,7 +507,7 @@ export default function App() {
       return undefined;
     };
 
-    return search(nodes());
+    return search(nodes);
   };
 
   const getBreadcrumbs = (nodeId: string | null): NodeResponse[] => {
@@ -512,7 +534,7 @@ export default function App() {
       return false;
     };
 
-    findPath(nodes(), nodeId);
+    findPath(nodes, nodeId);
     return path;
   };
 
@@ -618,76 +640,25 @@ export default function App() {
                   <Show when={showMobileSidebar()}>
                     <div class={styles.mobileBackdrop} onClick={() => setShowMobileSidebar(false)} />
                   </Show>
-                  <aside class={`${styles.sidebar} ${showMobileSidebar() ? styles.mobileOpen : ''}`}>
-                    <div class={styles.sidebarHeader}>
-                      <h2>{t('app.workspace')}</h2>
-                      <div class={styles.sidebarActions}>
-                        <button
-                          onClick={() => {
-                            setShowSettings(true);
-                            setSelectedNodeId(null);
-                          }}
-                          title={t('app.settings') || 'Workspace Settings'}
-                        >
-                          ⚙
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowSettings(false);
-                            createNode('document');
-                          }}
-                          title={t('app.newPage') || 'New Page'}
-                        >
-                          +P
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowSettings(false);
-                            createNode('table');
-                          }}
-                          title={t('app.newTable') || 'New Table'}
-                        >
-                          +D
-                        </button>
-                      </div>
-                    </div>
-
-                    <Show when={loading() && nodes().length === 0} fallback={null}>
-                      <p class={styles.loading}>{t('common.loading')}</p>
-                    </Show>
-
-                    <ul class={styles.pageList}>
-                      <For each={nodes()}>
-                        {(node) => (
-                          <SidebarNode node={node} selectedId={selectedNodeId()} onSelect={handleNodeClick} depth={0} />
-                        )}
-                      </For>
-                    </ul>
-
-                    <div class={styles.sidebarFooter}>
-                      <a
-                        href="/privacy"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          window.history.pushState(null, '', '/privacy');
-                          window.dispatchEvent(new PopStateEvent('popstate'));
-                        }}
-                      >
-                        {t('app.privacyPolicy')}
-                      </a>
-                      <span style={{ margin: '0 0.5rem', color: '#ccc' }}>|</span>
-                      <a
-                        href="/terms"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          window.history.pushState(null, '', '/terms');
-                          window.dispatchEvent(new PopStateEvent('popstate'));
-                        }}
-                      >
-                        {t('app.terms')}
-                      </a>
-                    </div>
-                  </aside>
+                  <Sidebar
+                    isOpen={showMobileSidebar()}
+                    loading={loading()}
+                    nodes={nodes}
+                    selectedNodeId={selectedNodeId()}
+                    onToggleSettings={() => {
+                      setShowSettings(true);
+                      setSelectedNodeId(null);
+                    }}
+                    onCreatePage={() => {
+                      setShowSettings(false);
+                      createNode('document');
+                    }}
+                    onCreateTable={() => {
+                      setShowSettings(false);
+                      createNode('table');
+                    }}
+                    onSelectNode={handleNodeClick}
+                  />
 
                   <main class={styles.main}>
                     <Show when={showSettings() && user() && token()}>
@@ -754,6 +725,9 @@ export default function App() {
                               value={title()}
                               onInput={(e) => {
                                 setTitle(e.target.value);
+                                if (selectedNodeId()) {
+                                  updateNodeTitle(selectedNodeId()!, e.target.value);
+                                }
                                 setHasUnsavedChanges(true);
                                 debouncedAutoSave();
                               }}
