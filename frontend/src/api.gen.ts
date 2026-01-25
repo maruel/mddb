@@ -16,6 +16,7 @@ import type {
   CreateTableRequest,
   CreateTableResponse,
   CreateWSInvitationRequest,
+  CreateWorkspaceRequest,
   DeletePageAssetResponse,
   DeletePageResponse,
   DeleteRecordResponse,
@@ -72,6 +73,7 @@ import type {
   UserResponse,
   WSInvitationResponse,
   WSMembershipResponse,
+  WorkspaceResponse,
 } from './types.gen';
 
 /** Fetch function type - implement to add auth headers */
@@ -176,6 +178,9 @@ export function createAPIClient(fetchFn: FetchFn) {
             update: (options: UpdateOrgMemberRoleRequest) => post<UserResponse>(fetchFn, `/api/organizations/${orgID}/users/role`, options),
           },
           list: () => get<ListUsersResponse>(fetchFn, `/api/organizations/${orgID}/users`),
+        },
+        workspaces: {
+          create: (options: CreateWorkspaceRequest) => post<WorkspaceResponse>(fetchFn, `/api/organizations/${orgID}/workspaces`, options),
         },
       };
     },

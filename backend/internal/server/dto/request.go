@@ -747,13 +747,28 @@ func (r *UpdateOrganizationRequest) Validate() error {
 
 // CreateOrganizationRequest is a request to create a new organization.
 type CreateOrganizationRequest struct {
-	Name               string `json:"name"`
-	WelcomePageTitle   string `json:"welcome_page_title,omitempty"`
-	WelcomePageContent string `json:"welcome_page_content,omitempty"`
+	Name string `json:"name"`
 }
 
 // Validate validates the create organization request fields.
 func (r *CreateOrganizationRequest) Validate() error {
+	if r.Name == "" {
+		return MissingField("name")
+	}
+	return nil
+}
+
+// CreateWorkspaceRequest is a request to create a new workspace within an organization.
+type CreateWorkspaceRequest struct {
+	OrgID jsonldb.ID `path:"orgID" tstype:"-"`
+	Name  string     `json:"name"`
+}
+
+// Validate validates the create workspace request fields.
+func (r *CreateWorkspaceRequest) Validate() error {
+	if r.OrgID.IsZero() {
+		return MissingField("orgID")
+	}
 	if r.Name == "" {
 		return MissingField("name")
 	}

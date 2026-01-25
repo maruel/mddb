@@ -87,7 +87,6 @@ func organizationToResponse(o *identity.Organization, memberCount, workspaceCoun
 	}
 }
 
-//nolint:unused // Reserved for future use
 func workspaceToResponse(w *identity.Workspace, memberCount int) *dto.WorkspaceResponse {
 	resp := &dto.WorkspaceResponse{
 		ID:             w.ID,
@@ -267,7 +266,6 @@ func organizationSettingsToDTO(s identity.OrganizationSettings) dto.Organization
 	}
 }
 
-//nolint:unused // Reserved for future use
 func workspaceSettingsToDTO(s identity.WorkspaceSettings) dto.WorkspaceSettings {
 	return dto.WorkspaceSettings{
 		AllowedDomains: s.AllowedDomains,

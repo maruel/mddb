@@ -2,17 +2,17 @@ import { createSignal, Show } from 'solid-js';
 import { useI18n } from '../i18n';
 import styles from './Onboarding.module.css';
 
-interface CreateOrgData {
+interface CreateWorkspaceData {
   name: string;
 }
 
-interface CreateOrgModalProps {
+interface CreateWorkspaceModalProps {
   onClose: () => void;
-  onCreate: (data: CreateOrgData) => Promise<void>;
-  isFirstOrg?: boolean;
+  onCreate: (data: CreateWorkspaceData) => Promise<void>;
+  isFirstWorkspace?: boolean;
 }
 
-export default function CreateOrgModal(props: CreateOrgModalProps) {
+export default function CreateWorkspaceModal(props: CreateWorkspaceModalProps) {
   const { t } = useI18n();
   const [name, setName] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -37,8 +37,8 @@ export default function CreateOrgModal(props: CreateOrgModalProps) {
   };
 
   const handleOverlayClick = (e: MouseEvent) => {
-    // Only allow closing by clicking overlay if not first org
-    if (!props.isFirstOrg && e.target === e.currentTarget) {
+    // Only allow closing by clicking overlay if not first workspace
+    if (!props.isFirstWorkspace && e.target === e.currentTarget) {
       props.onClose();
     }
   };
@@ -47,26 +47,28 @@ export default function CreateOrgModal(props: CreateOrgModalProps) {
     <div class={styles.overlay} onClick={handleOverlayClick}>
       <div class={styles.modal}>
         <header class={styles.header}>
-          <h2>{props.isFirstOrg ? t('createOrg.firstOrgTitle') : t('createOrg.title')}</h2>
-          <p>{props.isFirstOrg ? t('createOrg.firstOrgDescription') : t('createOrg.description')}</p>
+          <h2>{props.isFirstWorkspace ? t('createWorkspace.firstWorkspaceTitle') : t('createWorkspace.title')}</h2>
+          <p>
+            {props.isFirstWorkspace ? t('createWorkspace.firstWorkspaceDescription') : t('createWorkspace.description')}
+          </p>
         </header>
 
         {error() && <div class={styles.error}>{error()}</div>}
 
         <form onSubmit={handleSubmit}>
           <div class={styles.formGroup}>
-            <label>{t('createOrg.nameLabel')}</label>
+            <label>{t('createWorkspace.nameLabel')}</label>
             <input
               type="text"
               value={name()}
               onInput={(e) => setName(e.target.value)}
-              placeholder={t('createOrg.namePlaceholder') || ''}
+              placeholder={t('createWorkspace.namePlaceholder') || ''}
               autofocus
             />
           </div>
 
           <div class={styles.actions}>
-            <Show when={!props.isFirstOrg}>
+            <Show when={!props.isFirstWorkspace}>
               <button type="button" class={styles.secondaryButton} onClick={props.onClose}>
                 {t('common.cancel')}
               </button>
@@ -75,9 +77,9 @@ export default function CreateOrgModal(props: CreateOrgModalProps) {
               type="submit"
               class={styles.primaryButton}
               disabled={!name().trim() || loading()}
-              style={props.isFirstOrg ? { flex: 1 } : undefined}
+              style={props.isFirstWorkspace ? { flex: 1 } : undefined}
             >
-              {loading() ? t('common.creating') : t('createOrg.create')}
+              {loading() ? t('common.creating') : t('createWorkspace.create')}
             </button>
           </div>
         </form>

@@ -130,4 +130,5 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | GET | `/api/organizations/{orgID}` | member |
 | POST | `/api/organizations/{orgID}` | orgAdmin |
 | POST | `/api/organizations/{orgID}/settings` | orgAdmin |
+| POST | `/api/organizations/{orgID}/workspaces` | orgAdmin |
 

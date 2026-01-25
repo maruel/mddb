@@ -60,7 +60,7 @@ func NewRouter(
 	uh := handlers.NewUserHandler(userService, orgMemService, wsMemService, orgService, wsService)
 	ih := handlers.NewInvitationHandler(orgInvService, wsInvService, userService, orgService, wsService, orgMemService, wsMemService, authh)
 	mh := handlers.NewMembershipHandler(orgMemService, wsMemService, userService, orgService, wsService, authh)
-	orgh := handlers.NewOrganizationHandler(orgService, orgMemService, wsService)
+	orgh := handlers.NewOrganizationHandler(orgService, orgMemService, wsService, wsMemService, fileStore)
 	grh := handlers.NewGitRemoteHandler(wsService, fileStore)
 
 	// Role constants
@@ -111,6 +111,9 @@ func NewRouter(
 	// Organization invitations (org-scoped)
 	mux.Handle("GET /api/organizations/{orgID}/invitations", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, ih.ListOrgInvitations, rlConfig))
 	mux.Handle("POST /api/organizations/{orgID}/invitations", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, ih.CreateOrgInvitation, rlConfig))
+
+	// Workspace creation (org-scoped)
+	mux.Handle("POST /api/organizations/{orgID}/workspaces", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, orgh.CreateWorkspace, rlConfig))
 
 	// Workspace settings (workspace-scoped)
 	mux.Handle("POST /api/workspaces/{wsID}/settings/membership", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, mh.UpdateWSMembershipSettings, rlConfig))

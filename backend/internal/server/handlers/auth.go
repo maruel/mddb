@@ -11,7 +11,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
@@ -205,35 +204,6 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 	// Create org membership (user becomes owner of new org)
 	if _, err := h.orgMemService.Create(user.ID, org.ID, identity.OrgRoleOwner); err != nil {
 		return nil, dto.InternalWithError("Failed to create membership", err)
-	}
-
-	// Create default workspace
-	ws, err := h.wsService.Create(ctx, org.ID, "Main")
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to create default workspace", err)
-	}
-
-	// Create workspace membership (user becomes admin of default workspace)
-	if _, err := h.wsMemService.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
-		return nil, dto.InternalWithError("Failed to create workspace membership", err)
-	}
-
-	// Initialize workspace storage
-	if err := h.fs.InitWorkspace(ctx, ws.ID); err != nil {
-		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
-	}
-
-	// Create welcome page if content provided
-	if req.WelcomePageTitle != "" && req.WelcomePageContent != "" {
-		wsStore, err := h.fs.GetWorkspaceStore(ctx, ws.ID)
-		if err != nil {
-			return nil, dto.InternalWithError("Failed to get workspace store", err)
-		}
-		pageID := jsonldb.NewID()
-		author := git.Author{Name: user.Name, Email: user.Email}
-		if _, err := wsStore.WritePage(ctx, pageID, 0, req.WelcomePageTitle, req.WelcomePageContent, author); err != nil {
-			return nil, dto.InternalWithError("Failed to create welcome page", err)
-		}
 	}
 
 	memberCount := h.orgMemService.CountOrgMemberships(org.ID)

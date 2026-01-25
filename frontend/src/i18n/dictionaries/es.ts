@@ -70,6 +70,9 @@ export const dict: Dictionary = {
     subtitle: 'Selecciona un elemento de la barra lateral o crea uno nuevo para comenzar.',
     createPage: 'Crear página',
     createTable: 'Crear tabla',
+    welcomePageTitle: 'Bienvenido',
+    welcomePageContent:
+      '# Bienvenido a mddb\n\nEste es tu nuevo espacio de trabajo. Puedes crear páginas, tablas y subir archivos aquí.',
   },
 
   onboarding: {
@@ -97,9 +100,16 @@ export const dict: Dictionary = {
     nameLabel: 'Nombre del espacio',
     namePlaceholder: 'Mi nuevo espacio',
     create: 'Crear',
-    welcomeTitle: 'Bienvenido',
-    welcomeContent:
-      '# Bienvenido a mddb\n\nEste es tu nuevo espacio de trabajo. Puedes crear páginas, tablas y subir archivos aquí.',
+  },
+
+  createWorkspace: {
+    title: 'Crear espacio de trabajo',
+    description: 'Crea un nuevo espacio de trabajo para organizar tu contenido.',
+    firstWorkspaceTitle: 'Crea tu primer espacio de trabajo',
+    firstWorkspaceDescription: 'Configuremos tu primer espacio de trabajo.',
+    nameLabel: 'Nombre del espacio de trabajo',
+    namePlaceholder: 'Mi nuevo espacio',
+    create: 'Crear',
   },
 
   settings: {

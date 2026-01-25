@@ -71,6 +71,8 @@ export interface Dictionary {
     subtitle: string;
     createPage: string;
     createTable: string;
+    welcomePageTitle: string;
+    welcomePageContent: string;
   };
 
   onboarding: {
@@ -98,8 +100,16 @@ export interface Dictionary {
     nameLabel: string;
     namePlaceholder: string;
     create: string;
-    welcomeTitle: string;
-    welcomeContent: string;
+  };
+
+  createWorkspace: {
+    title: string;
+    description: string;
+    firstWorkspaceTitle: string;
+    firstWorkspaceDescription: string;
+    nameLabel: string;
+    namePlaceholder: string;
+    create: string;
   };
 
   settings: {

@@ -13,12 +13,22 @@ import Privacy from './components/Privacy';
 import Terms from './components/Terms';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import CreateOrgModal from './components/CreateOrgModal';
+import CreateWorkspaceModal from './components/CreateWorkspaceModal';
 import UserMenu from './components/UserMenu';
 import OrgMenu from './components/OrgMenu';
 import { debounce } from './utils/debounce';
 import { useI18n, type Locale } from './i18n';
 import { createApi, APIError } from './useApi';
-import type { NodeResponse, DataRecordResponse, Commit, UserResponse } from './types.gen';
+import {
+  OrgRoleAdmin,
+  OrgRoleOwner,
+  WSRoleAdmin,
+  WSRoleEditor,
+  type NodeResponse,
+  type DataRecordResponse,
+  type Commit,
+  type UserResponse,
+} from './types.gen';
 import styles from './App.module.css';
 
 const slugify = (text: string) => {
@@ -50,8 +60,10 @@ export default function App() {
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
   const [nodeCreationParentId, setNodeCreationParentId] = createSignal<string | null>(null);
   const [showCreateOrg, setShowCreateOrg] = createSignal(false);
+  const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
   const [showGitSetup, setShowGitSetup] = createSignal(false);
   const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
+  const [firstLoginCheckDone, setFirstLoginCheckDone] = createSignal(false);
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
@@ -146,15 +158,32 @@ export default function App() {
     }
   }
 
-  async function createOrganization(data: { name: string; welcomePageTitle: string; welcomePageContent: string }) {
+  async function createOrganization(data: { name: string }) {
     const org = await api().organizations.create({
       name: data.name,
-      welcome_page_title: data.welcomePageTitle,
-      welcome_page_content: data.welcomePageContent,
     });
     // Refresh user data and switch to the new org
+    // This will trigger first-login check again, showing workspace creation modal
     await switchOrg(org.id);
-    // Show git setup prompt after org creation
+  }
+
+  async function createWorkspace(data: { name: string }) {
+    const u = user();
+    if (!u || !u.organization_id) {
+      throw new Error('No organization selected');
+    }
+
+    // Create workspace via org API
+    const ws = await api().org(u.organization_id).workspaces.create({
+      name: data.name,
+    });
+
+    // Refresh user data to include the new workspace
+    const updatedUser = await api().auth.me.get();
+    setUser(updatedUser);
+
+    // Switch to the new workspace
+    await switchWorkspace(ws.id);
     setShowGitSetup(true);
   }
 
@@ -222,6 +251,37 @@ export default function App() {
     if (userLang && ['en', 'fr', 'de', 'es'].includes(userLang) && userLang !== locale()) {
       setLocale(userLang);
       localStorage.setItem('mddb_locale', userLang);
+    }
+  });
+
+  // First-time login check: ensure user has org and workspace
+  createEffect(() => {
+    const u = user();
+    if (u && !firstLoginCheckDone()) {
+      setFirstLoginCheckDone(true);
+
+      // Check if user has any organizations
+      const orgs = u.organizations || [];
+      if (orgs.length === 0) {
+        // User has no organizations, show create org modal
+        setShowCreateOrg(true);
+        return;
+      }
+
+      // User has organizations, check if first org has any workspaces
+      const firstOrg = orgs[0];
+      if (firstOrg) {
+        const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg.organization_id) || [];
+        if (orgWorkspaces.length === 0) {
+          // Only show create workspace modal if user is admin/owner of the org
+          if (firstOrg.role === OrgRoleAdmin || firstOrg.role === OrgRoleOwner) {
+            setShowCreateWorkspace(true);
+            return;
+          }
+        }
+      }
+
+      // User has org and workspace, proceed normally
     }
   });
 
@@ -336,7 +396,29 @@ export default function App() {
     try {
       setLoading(true);
       const data = await ws.nodes.list();
-      setNodes(reconcile((data.nodes?.filter(Boolean) as NodeResponse[]) || []));
+      const loadedNodes = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
+
+      // If workspace is empty and user has permission, create welcome page
+      if (
+        loadedNodes.length === 0 &&
+        (user()?.workspace_role === WSRoleAdmin || user()?.workspace_role === WSRoleEditor)
+      ) {
+        const newNode = await ws.pages.create({
+          title: t('welcome.welcomePageTitle'),
+          content: t('welcome.welcomePageContent'),
+        });
+        // Reload nodes after creation
+        const refreshedData = await ws.nodes.list();
+        const refreshedNodes = (refreshedData.nodes?.filter(Boolean) as NodeResponse[]) || [];
+        setNodes(reconcile(refreshedNodes));
+
+        // Select the new node
+        if (newNode && newNode.id) {
+          loadNode(newNode.id);
+        }
+      } else {
+        setNodes(reconcile(loadedNodes));
+      }
       setError(null);
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
@@ -946,6 +1028,13 @@ export default function App() {
       <PWAInstallBanner />
       <Show when={showCreateOrg()}>
         <CreateOrgModal onClose={() => setShowCreateOrg(false)} onCreate={createOrganization} />
+      </Show>
+      <Show when={showCreateWorkspace()}>
+        <CreateWorkspaceModal
+          onClose={() => setShowCreateWorkspace(false)}
+          onCreate={createWorkspace}
+          isFirstWorkspace={true}
+        />
       </Show>
     </>
   );

@@ -5,6 +5,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -13,6 +14,8 @@ type OrganizationHandler struct {
 	orgService    *identity.OrganizationService
 	orgMemService *identity.OrganizationMembershipService
 	wsService     *identity.WorkspaceService
+	wsMemService  *identity.WorkspaceMembershipService
+	fs            *content.FileStoreService
 }
 
 // NewOrganizationHandler creates a new organization handler.
@@ -20,11 +23,15 @@ func NewOrganizationHandler(
 	orgService *identity.OrganizationService,
 	orgMemService *identity.OrganizationMembershipService,
 	wsService *identity.WorkspaceService,
+	wsMemService *identity.WorkspaceMembershipService,
+	fs *content.FileStoreService,
 ) *OrganizationHandler {
 	return &OrganizationHandler{
 		orgService:    orgService,
 		orgMemService: orgMemService,
 		wsService:     wsService,
+		wsMemService:  wsMemService,
+		fs:            fs,
 	}
 }
 
@@ -65,4 +72,30 @@ func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID json
 	memberCount := h.orgMemService.CountOrgMemberships(orgID)
 	workspaceCount := h.wsService.CountByOrg(orgID)
 	return organizationToResponse(org, memberCount, workspaceCount), nil
+}
+
+// CreateWorkspace creates a new workspace within an organization.
+func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
+	if req.Name == "" {
+		return nil, dto.MissingField("name")
+	}
+
+	// Create workspace
+	ws, err := h.wsService.Create(ctx, orgID, req.Name)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to create workspace", err)
+	}
+
+	// Create workspace membership (user becomes admin of new workspace)
+	if _, err := h.wsMemService.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
+		return nil, dto.InternalWithError("Failed to create workspace membership", err)
+	}
+
+	// Initialize workspace storage
+	if err := h.fs.InitWorkspace(ctx, ws.ID); err != nil {
+		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
+	}
+
+	memberCount := h.wsMemService.CountWSMemberships(ws.ID)
+	return workspaceToResponse(ws, memberCount), nil
 }

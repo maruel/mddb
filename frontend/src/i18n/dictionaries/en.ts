@@ -70,6 +70,9 @@ export const dict: Dictionary = {
     subtitle: 'Select a node from the sidebar or create a new one to get started.',
     createPage: 'Create Page',
     createTable: 'Create Table',
+    welcomePageTitle: 'Welcome',
+    welcomePageContent:
+      '# Welcome to mddb\n\nThis is your new workspace. You can create pages, tables, and upload assets here.',
   },
 
   onboarding: {
@@ -97,9 +100,16 @@ export const dict: Dictionary = {
     nameLabel: 'Workspace Name',
     namePlaceholder: 'My New Workspace',
     create: 'Create',
-    welcomeTitle: 'Welcome',
-    welcomeContent:
-      '# Welcome to mddb\n\nThis is your new workspace. You can create pages, tables, and upload assets here.',
+  },
+
+  createWorkspace: {
+    title: 'Create Workspace',
+    description: 'Create a new workspace to organize your content.',
+    firstWorkspaceTitle: 'Create Your First Workspace',
+    firstWorkspaceDescription: "Let's set up your first workspace to get started.",
+    nameLabel: 'Workspace Name',
+    namePlaceholder: 'My New Workspace',
+    create: 'Create',
   },
 
   settings: {

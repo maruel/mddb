@@ -361,8 +361,12 @@ export interface UpdateOrganizationRequest {
  */
 export interface CreateOrganizationRequest {
   name: string;
-  welcome_page_title?: string;
-  welcome_page_content?: string;
+}
+/**
+ * CreateWorkspaceRequest is a request to create a new workspace within an organization.
+ */
+export interface CreateWorkspaceRequest {
+  name: string;
 }
 /**
  * GetGitRemoteRequest is a request to get the git remote for a workspace.

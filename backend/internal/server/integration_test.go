@@ -313,14 +313,15 @@ func TestIntegration(t *testing.T) {
 
 		var orgResp dto.OrganizationResponse
 		env.doJSON(t, http.MethodPost, "/api/organizations", dto.CreateOrganizationRequest{Name: "Charlie's Organization"}, &orgResp, token)
+		orgID := orgResp.ID
 
-		// Get the default workspace ID from user response
-		var meResp dto.UserResponse
-		env.doJSON(t, http.MethodGet, "/api/auth/me", nil, &meResp, token)
-		wsID := meResp.WorkspaceID
+		// Create a workspace
+		var wsResp dto.WorkspaceResponse
+		env.doJSON(t, http.MethodPost, "/api/organizations/"+orgID.String()+"/workspaces", dto.CreateWorkspaceRequest{Name: "My Workspace"}, &wsResp, token)
+		wsID := wsResp.ID
 
 		if wsID.IsZero() {
-			t.Fatal("User should have a default workspace ID")
+			t.Fatal("Workspace creation should return a workspace ID")
 		}
 
 		// Create a page
@@ -420,11 +421,14 @@ func TestIntegration(t *testing.T) {
 		env.doJSON(t, http.MethodPost, "/api/organizations", dto.CreateOrganizationRequest{
 			Name: "Dave's Organization",
 		}, &orgResp, daveToken)
+		orgID := orgResp.ID
 
-		// Get Dave's workspace ID
-		var daveMe dto.UserResponse
-		env.doJSON(t, http.MethodGet, "/api/auth/me", nil, &daveMe, daveToken)
-		daveWSID := daveMe.WorkspaceID
+		// Dave creates a workspace
+		var wsResp dto.WorkspaceResponse
+		env.doJSON(t, http.MethodPost, "/api/organizations/"+orgID.String()+"/workspaces", dto.CreateWorkspaceRequest{
+			Name: "Dave's Workspace",
+		}, &wsResp, daveToken)
+		daveWSID := wsResp.ID
 
 		// Eve tries to access Dave's workspace - should be forbidden
 		status := env.doJSON(t, http.MethodGet, "/api/workspaces/"+daveWSID.String()+"/pages", nil, nil, eveToken)
@@ -488,6 +492,102 @@ func TestIntegration(t *testing.T) {
 		}, nil, "")
 		if status != http.StatusConflict {
 			t.Errorf("Duplicate registration: got status %d, want %d", status, http.StatusConflict)
+		}
+	})
+
+	t.Run("WorkspaceCreationEnforcement", func(t *testing.T) {
+		t.Parallel()
+		env := setupTestEnv(t)
+
+		// 1. Register owner
+		var ownerLogin dto.AuthResponse
+		env.doJSON(t, http.MethodPost, "/api/auth/register", dto.RegisterRequest{
+			Email: "owner@example.com", Password: "Pass1234", Name: "Owner",
+		}, &ownerLogin, "")
+		ownerToken := ownerLogin.Token
+
+		// 2. Create organization
+		var orgResp dto.OrganizationResponse
+		env.doJSON(t, http.MethodPost, "/api/organizations", dto.CreateOrganizationRequest{
+			Name: "Enforced Org",
+		}, &orgResp, ownerToken)
+		orgID := orgResp.ID
+
+		// 3. Register member
+		var memberLogin dto.AuthResponse
+		env.doJSON(t, http.MethodPost, "/api/auth/register", dto.RegisterRequest{
+			Email: "member@example.com", Password: "Pass1234", Name: "Member",
+		}, &memberLogin, "")
+		memberToken := memberLogin.Token
+
+		// 4. Invite member to organization with 'member' role
+		inviteReq := dto.CreateOrgInvitationRequest{
+			Email: "member@example.com",
+			Role:  "member", // identity.OrgRoleMember
+		}
+		status := env.doJSON(t, http.MethodPost, "/api/organizations/"+orgID.String()+"/invitations", inviteReq, nil, ownerToken)
+		if status != http.StatusOK {
+			t.Fatalf("Owner inviting member: got status %d, want %d", status, http.StatusOK)
+		}
+
+		// 5. Member accepts invitation (need to list invitations first to get token)
+		// Since we don't have a direct way to get the token without email integration,
+		// we'll fetch invitations as the owner to simulate the member finding it?
+		// Actually, ListOrgInvitations is for the org.
+		var invitesResp dto.ListOrgInvitationsResponse
+		env.doJSON(t, http.MethodGet, "/api/organizations/"+orgID.String()+"/invitations", nil, &invitesResp, ownerToken)
+		if len(invitesResp.Invitations) == 0 {
+			t.Fatal("No invitation found")
+		}
+		// The API response doesn't include the secret token for security.
+		// We have to cheat and look it up in the database or use the direct service if possible.
+		// BUT: Since we are in an integration test with `testEnv`, we can use `orgInvService`.
+		var inviteToken string
+		for inv := range env.orgInvService.IterByOrg(orgID) {
+			if inv.Email == "member@example.com" {
+				inviteToken = inv.Token
+				break
+			}
+		}
+		if inviteToken == "" {
+			t.Fatal("Invitation token not found")
+		}
+
+		// Let's use the authenticated accept flow if possible?
+		// The `AcceptOrgInvitation` handler logic:
+		// If Authorization header is present:
+		//    Validate user.
+		//    Accept invitation for that user.
+		// Else:
+		//    Create user (if new) or login (if exists + password match)
+		//    Then accept.
+
+		// Since member is already registered and logged in (has memberToken),
+		// we can just call accept with the token in the body and Auth header.
+		acceptBody := struct {
+			Token    string `json:"token"`
+			Password string `json:"password"`
+			Name     string `json:"name"`
+		}{
+			Token:    inviteToken,
+			Password: "Pass1234",
+			Name:     "Member",
+		}
+
+		status = env.doJSON(t, http.MethodPost, "/api/auth/invitations/org/accept", acceptBody, nil, memberToken)
+		if status != http.StatusOK {
+			t.Fatalf("Member accepting invitation: got status %d, want %d", status, http.StatusOK)
+		}
+
+		// 6. Member attempts to create workspace
+		createWSReq := dto.CreateWorkspaceRequest{
+			Name: "Unauthorized Workspace",
+		}
+		status = env.doJSON(t, http.MethodPost, "/api/organizations/"+orgID.String()+"/workspaces", createWSReq, nil, memberToken)
+
+		// 7. Expect 403 Forbidden
+		if status != http.StatusForbidden {
+			t.Errorf("Member creating workspace: got status %d, want %d", status, http.StatusForbidden)
 		}
 	})
 }
