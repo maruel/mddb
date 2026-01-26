@@ -26,6 +26,7 @@ mddb is a local-first markdown document and database system. The architecture fo
 - [x] **Filesystem Persistence**: No external database dependencies.
 - [x] **Version Control**: Every change is automatically backed by Git.
 - [x] **Audit Trail**: Full history and recovery capabilities.
+- [ ] **GitHub App Support**: Integration with GitHub as an App for fine-grained repository access and user-controlled permissions.
 
 ### 4. Search & Discovery
 - [x] **Global Search**: Full-text search across all accessible content.
@@ -34,6 +35,9 @@ mddb is a local-first markdown document and database system. The architecture fo
 ### 5. Deployment
 - [x] **Self-Contained**: Distributed as a single, zero-dependency executable.
 - [x] **Cross-Platform**: Support for Linux, macOS, and Windows.
+
+### 6. User Experience
+- [ ] **Notion-like Editing**: Block-based WYSIWYG editor that feels native and intuitive, while preserving the underlying self-describing Markdown format.
 
 ## Globalization
 - [x] **i18n**: Support for multiple languages (infrastructure in place).

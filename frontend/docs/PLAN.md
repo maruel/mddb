@@ -5,26 +5,31 @@ This document outlines the frontend roadmap for the SolidJS web application, foc
 
 ## Core Frontend Roadmap
 
-### Phase 9: Onboarding & Experience
+### Phase 1: Onboarding & Experience
 - [x] **Organization Onboarding**:
     - [x] Guided setup wizard for new users/orgs.
     - [x] Onboarding state tracking and UI integration.
+    - [ ] **Template Selection**: Propose template Git repositories during onboarding to kickstart new workspaces.
 - [x] **Admin Dashboards**:
     - [x] Management UIs for global admins and organization settings.
 
-### Phase 12: Globalization & PWA
+### Phase 2: Globalization & PWA
 - [x] **i18n Infrastructure**: Multilingual support via `@solid-primitives/i18n`.
 - [x] **Localization**: English, French, German, and Spanish translations.
 - [x] **PWA Support**: Offline caching, install banners, and standalone mode.
 - [ ] **Offline Mode**: Client-side storage and data reconciliation logic.
 
-### Phase 16: Table Views System
+### Phase 3: Table Views System
 - [ ] **View Management UI**: Tabs and dropdowns for switching/creating table views.
 - [ ] **Filter Builder**: Visual interface for complex AND/OR query construction.
 - [ ] **Sort/Column UI**: Drag-and-drop interfaces for sorting and column management.
 - [ ] **View Persistence**: Linking UI state to persistent view configurations in the backend.
 
-### Phase 17: Advanced UX & Performance
+### Phase 4: Advanced UX & Performance
+- [ ] **Block-based WYSIWYG Editor**:
+    - [ ] Transition from raw Markdown to a Notion-like block editor (e.g., TipTap or specialized SolidJS implementation).
+    - [ ] High-fidelity Markdown serialization/deserialization to maintain the on-disk format.
+    - [ ] Slash commands and block drag-and-drop.
 - [ ] **Property Management UI**: Safely adding and renaming table columns.
 - [ ] **Inline Editing**: Spreadsheet-like keyboard navigation and cell editing.
 - [ ] **Undo/Redo**: Frontend action history for state recovery.

@@ -5,10 +5,16 @@ This document focuses on the backend roadmap for mddb, covering API design, stor
 
 ## Core Backend Roadmap
 
-### Phase 9: Advanced Sync & Infrastructure
+### Phase 1: Advanced Sync & Infrastructure
 - [x] **Advanced Git Remotes**:
     - [x] Manual push implementation for organization repositories.
     - [x] Secret management for Git credentials.
+- [ ] **GitHub App Integration**:
+    - [ ] Implementation of GitHub App manifest and installation flow.
+    - [ ] Per-installation token management and scoped API client.
+    - [ ] Webhook handler for repository sync and permission changes.
+- [ ] **Template Services**:
+    - [ ] API for initializing workspaces from remote template repositories.
 - [x] **CLI Evolution**:
     - [x] `mddb -version` build metadata.
     - [x] `.env` based local configuration.
@@ -23,19 +29,26 @@ This document focuses on the backend roadmap for mddb, covering API design, stor
 - [ ] **Security Hardening**:
     - [ ] Passkey/WebAuthn support.
 
-### Phase 13: Storage Engine Evolution (JSONLDB)
+### Phase 2: AI Intelligence
+- [ ] **Advanced Search**:
+    - [ ] **BM25 Full-Text Search**: High-quality keyword search implementation.
+    - [ ] **Vector Semantic Search**: Embedding generation for documents and records to support semantic search.
+    - [ ] **LLM Reranking**: Use LLM to rerank search results for relevance.
+    - **Inspiration**: https://github.com/tobi/qmd for search implementation patterns.
+
+### Phase 3: Storage Engine Evolution (JSONLDB)
 - [x] **JSONLDB Unification**: Unified `Table[T]` with `Row[T]` interface.
 - [x] **ID System**: Sortable 64-bit Base64 IDs.
 - [x] **Type Coercion**: SQLite-compatible type affinity system.
 - [x] **Parent ID Caching**: O(1) node addressing via in-memory cache.
 - [ ] **JSONLDB Sharding**: Support for sharding extremely large datasets.
 
-### Phase 14: URL & Path Standardization
+### Phase 4: URL & Path Standardization
 - [ ] **URL Namespace**: Prefix page URLs with `/p/`.
 - [ ] **ID Encoding**: Switch to Base64 URL-encoded IDs.
 - [ ] **Separator Migration**: Transition from `-` to `+` for Base64 compatibility.
 
-### Phase 16: Table Views & Query Engine
+### Phase 5: Table Views & Query Engine
 - [ ] **View Model**: Backend storage for persistent filters, sorts, and layouts in `metadata.json`.
 - [ ] **Filter/Sort Engine**: Server-side query engine for JSONLDB supporting nested logic.
 - [ ] **View API**: CRUD endpoints for managing view configurations.

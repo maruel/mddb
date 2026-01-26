@@ -10,9 +10,8 @@ mddb uses a multi-tenant directory structure where each organization owns its ow
   - `data/db/`: System-wide information (Users, Organizations, Workspaces, Memberships) stored in JSON.
 - **Workspace Repositories**: `data/{wsID}/`
   - Each workspace directory is an independent Git repository.
-  - Changes in a workspace directory are committed to its local repository, and the state of these repositories is tracked in the root `data/` repository via Git. (Note: Currently implemented as nested repositories rather than formal Git submodules with `.gitmodules`).
-  - `data/{wsID}/pages/`: Page storage using flat numeric IDs.
-  - `data/{wsID}/assets/`: Workspace-specific assets.
+  - Changes in a workspace directory are committed to its local repository, and the state of these repositories is tracked in the root `data/` repository via Git.
+  - `data/{wsID}/{nodeID}/`: Node storage using time-sortable unique IDs. Each directory contains the node's content, metadata, and assets.
 
 ```
 data/                     # Root Git Repository
@@ -20,9 +19,11 @@ data/                     # Root Git Repository
 │   ├── users.json
 │   └── ...
 └── {wsID}/               # Workspace Repository (Independent Git Repo)
-    └── pages/
-        ├── 1/            # Page ID 1
-        └── ...
+    └── {nodeID}/         # Node ID (e.g., 01JWAB...)
+        ├── index.md      # Page content
+        ├── metadata.json # Table schema
+        ├── data.jsonl    # Table records
+        └── image.png     # Asset
 ```
 
 ### Automatic Versioning
@@ -64,8 +65,9 @@ The following tables are managed in `data/db/` (eventually SQLite).
 | Table Name     | Go Symbol (internal/models) | Description                                     |
 |----------------|-----------------------------|-------------------------------------------------|
 | `users`        | `User`                      | Core identity and global settings               |
-| `organizations`| `Organization`              | Workspace/tenant definitions                    |
-| `memberships`  | `Membership`                | User-Org relationship, roles, and status       |
+| `organizations`| `Organization`              | Administrative and billing entity               |
+| `workspaces`   | `Workspace`                 | Isolated project container                      |
+| `memberships`  | `Membership`                | User-Org/WS relationships and roles            |
 | `sessions`     | `Session`                   | Active user sessions and revocation             |
 
 ## Data Model
@@ -76,7 +78,7 @@ mddb uses a unified Node-based data model inspired by Notion. All content entiti
 
 | Entity | Description | Storage |
 |--------|-------------|---------|
-| **Node** | Unified container; can be document, table, or hybrid | Directory at `data/{wsID}/pages/{nodeID}/` |
+| **Node** | Unified container; can be document, table, or hybrid | Directory at `data/{wsID}/{nodeID}/` |
 | **Page** | Node with markdown content | `index.md` with YAML front matter |
 | **Table** | Node with schema (Properties) | `metadata.json` for schema |
 | **Record** | Row in a Table (`DataRecord` type) | Line in `data.jsonl` |
@@ -93,7 +95,7 @@ Defined in `backend/internal/storage/content/types.go`:
 ### Storage Layout
 
 ```
-data/{wsID}/pages/{nodeID}/
+data/{wsID}/{nodeID}/
 ├── index.md          # Markdown content (document/hybrid)
 ├── metadata.json     # Table schema (table/hybrid)
 ├── data.jsonl        # Records, one JSON per line (table/hybrid)
@@ -139,7 +141,7 @@ Each `Property` (table column) has:
 ### Entity Relationships
 
 ```
-Organization
+Workspace
 └── Node (document | table | hybrid)
     ├── Content (markdown, if document/hybrid)
     ├── Properties[] (schema, if table/hybrid)
@@ -148,7 +150,7 @@ Organization
 
 Table Node
 └── DataRecord[] (stored separately in data.jsonl, NOT embedded in Node)
-    ├── ID: jsonldb.ID (numeric)
+    ├── ID: jsonldb.ID (uint64)
     ├── Data: map[string]any (field values keyed by Property.Name)
     ├── Created: time.Time
     └── Modified: time.Time
@@ -158,18 +160,24 @@ Table Node
 
 | Entity | ID Type | Example |
 |--------|---------|---------|
-| Node | `jsonldb.ID` (int64) | `1`, `42` |
-| Record | `jsonldb.ID` (int64) | `1`, `42` |
+| Node | `jsonldb.ID` (uint64) | `01JWAB...` |
+| Record | `jsonldb.ID` (uint64) | `01JWAC...` |
 | Asset | `string` (filename) | `"image.png"`, `"doc.pdf"` |
 
-Assets use the original filename as their identifier rather than a generated numeric ID.
+#### ID Format (jsonldb.ID)
+
+IDs are k-sortable 64-bit unique identifiers encoded as Base32 Extended Hex strings (0-9A-V).
+
+- **Structure**: 48-bit timestamp (10µs intervals since 2026-01-01) + 15-bit monotonic slice counter.
+- **Properties**: Case-insensitive, lexicographically sortable, time-ordered, and collision-resistant.
+- **Representation**: Stored numerically as `uint64` in JSONL but represented as strings in URLs and filenames.
 
 ### Key Design Decisions
 
 1. **Polymorphic Nodes**: Pages and Tables share the same API; `Type` field discriminates behavior
 2. **Separate Record Storage**: Records stored in JSONL for streaming reads, not embedded in Node
 3. **Filename-based Asset IDs**: Assets use original filename as ID (not generated numeric ID)
-4. **Hierarchical Structure**: Nodes support parent-child relationships via `ParentID`
+4. **Hierarchical Structure**: Nodes support parent-child relationships via directory nesting
 5. **Type Coercion**: Record field values are coerced to match Property schema types on write
 
 ## Multi-user Architecture
@@ -202,23 +210,46 @@ Supports Google and Microsoft OIDC flows.
 
 Each organization is a separate tenant with isolated data.
 
-- **Storage**: `data/{orgID}/pages/` per organization
-- **Git**: Independent Git repository per organization
-- **Validation**: All org-scoped endpoints validate membership before access
+- **Storage**: `data/{wsID}/pages/` per workspace
+- **Git**: Independent Git repository per workspace
+- **Validation**: All workspace-scoped endpoints validate membership before access
+
+### Multi-tenancy Model
+
+mddb uses a two-level hierarchy for multi-tenancy:
+
+1. **Organization**: Billing and administrative entity representing a company or team.
+2. **Workspace**: Isolated content container within an organization with its own pages, tables, and Git history.
 
 ### RBAC Model
 
-Role-based access control at organization level:
+Role-based access control is enforced at both organization and workspace levels.
+
+#### Organization Roles
+
+| Role | Description |
+|------|-------------|
+| `owner` | Full control including billing and organization deletion |
+| `admin` | Manage workspaces and members, access all workspaces as admin |
+| `member` | View organization details, access workspaces where explicitly granted |
+
+#### Workspace Roles
 
 | Role | Permissions |
 |------|-------------|
 | `viewer` | Read pages, tables, records, assets |
-| `editor` | Create/modify content, no user management |
-| `admin` | Full org access including user/settings management |
-| `globalAdmin` | Server-wide access (first user auto-assigned) |
+| `editor` | Create/modify content, no member management |
+| `admin` | Full workspace control including member management and Git settings |
 
+#### Server-wide Roles
+
+| Role | Permissions |
+|------|-------------|
+| `globalAdmin` | Server-wide access to all data and management endpoints |
+
+- **Implicit Permissions**: Organization admins and owners implicitly have `admin` access to all workspaces in their organization.
 - **Implementation**: `backend/internal/server/handlers/middleware.go`, `handler_wrapper.go`
-- **Enforcement**: `WrapAuth()` middleware validates role before handler execution
+- **Enforcement**: `WrapAuth()` and `WrapWSAuth()` middleware validate roles before handler execution.
 
 ### Quota Tracking
 
@@ -226,24 +257,25 @@ Enforced at write time via `FileStore` pre-checks.
 
 | Quota | Default | Scope |
 |-------|---------|-------|
-| `MaxPages` | 1000 | per org |
-| `MaxStorage` | 1 GiB | per org |
-| `MaxUsers` | 3 | per org |
+| `MaxPages` | 1000 | per ws |
+| `MaxStorage` | 1 GiB | per ws |
+| `MaxUsers` | 3 | per ws |
 | `MaxRecordsPerTable` | 10,000 | per table |
 | `MaxAssetSize` | 50 MiB | per asset |
 | `MaxOrgs` | 3 | per user |
 
 - **Implementation**: `backend/internal/storage/content/filestore.go`
 
-## High-Efficiency Caching (Planned)
+## High-Efficiency Caching
 
 ### In-Memory Cache
-A thread-safe, in-memory cache will be implemented to store:
+A thread-safe, in-memory cache is used to store:
 1. **Metadata**: Table schemas and organization configurations.
 2. **Hot Pages**: Frequently accessed markdown content.
 3. **Record Indexes**: In-memory maps of record IDs to file positions or small record sets.
+4. **Parent Map**: Node ID to parent ID mapping for fast path resolution.
 
 ### Strategy
 - **LRU Policy**: Least Recently Used eviction to maintain a fixed memory footprint.
-- **Write-Through/Invalidation**: Cache will be updated or invalidated on every write operation to ensure consistency with the on-disk storage.
-- **Lazy Loading**: Data will be loaded into the cache on the first read request.
+- **Write-Through/Invalidation**: Cache is updated or invalidated on every write operation to ensure consistency with the on-disk storage.
+- **Lazy Loading**: Data is loaded into the cache on the first read request.

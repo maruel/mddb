@@ -3,7 +3,7 @@
 ## Functional Requirements
 
 ### 1. Document Management (UI)
-- [x] **Editor**: Markdown editing interface with live preview.
+- [ ] **WYSIWYG Editor**: Block-based, Notion-like editor behavior (drag-and-drop blocks, slash commands, inline formatting) replacing the raw Markdown editor.
 - [ ] **Interlinking**: UI for selecting and inserting links to other pages.
 - [ ] **Graph View**: Visual representation of the knowledge graph.
 
@@ -19,6 +19,7 @@
 - [x] **Auto-save**: Background saving with visual indicators.
 - [x] **Search UI**: Global search interface with real-time results.
 - [x] **History UI**: Interface for viewing and restoring page versions.
+- [ ] **Onboarding Templates**: Propose starting from a template Git repository during the initial setup flow.
 
 ### 4. Globalization & PWA
 - [x] **i18n**: Support for English, French, German, and Spanish via `@solid-primitives/i18n`.

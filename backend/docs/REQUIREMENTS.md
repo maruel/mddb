@@ -30,10 +30,12 @@
 - [x] **OAuth2**: Integration with Google and Microsoft OIDC providers.
 - [x] **RBAC**: Server-side enforcement of Admin, Editor, and Viewer roles.
 - [x] **Git Integration**: Backend logic for managing per-organization Git remotes and automated syncing.
+- [ ] **GitHub App Integration**: Support for GitHub App installation to manage organization repository access with fine-grained permissions.
 
 ### 6. Data Interoperability
 - [ ] **Importers**: Logic to ingest Notion (zip) and Obsidian (vault) exports, mapping metadata to mddb structure.
 - [ ] **Portable Export**: Automated generation of standard Markdown + CSV + Assets packages for zero lock-in.
+- [ ] **Template Cloning**: Ability to initialize a workspace by cloning from a template Git repository.
 
 ### 7. Advanced Search & Intelligence
 - [ ] **Semantic Indexing**: Vector-based indexing of nodes to support natural language queries and "related content" discovery.

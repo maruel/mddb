@@ -6,29 +6,30 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 
 ## Status
 
-**Current Phase: Phase 9 (Advanced Sync & Onboarding) - In Progress**
+**Current Phase: Phase 6 (Advanced Sync & Onboarding) - In Progress**
 
-- [x] Phase 1-4: Core Foundation
-- [x] Phase 5: Polish & Features
-- [x] Phase 6: Multi-tenant Foundation
-- [x] Phase 7: Relational Metadata & Identity
-- [x] Phase 8: Experience & Scaling
-- [ ] Phase 9: Advanced Sync & Onboarding
+- [x] Phase 1: Core Foundation
+- [x] Phase 2: Polish & Features
+- [x] Phase 3: Multi-tenant Foundation
+- [x] Phase 4: Relational Metadata & Identity
+- [x] Phase 5: Experience & Scaling
+- [ ] Phase 6: Advanced Sync & Onboarding
 
 ## Implementation Roadmap
 
 ### Completed Milestones
-- **Phases 1-4**: Core document management and filesystem storage.
-- **Phase 5**: Full-text search and Git history.
-- **Phase 6-7**: Multi-tenancy, RBAC, and OAuth2.
-- **Phase 8**: Scaling infrastructure and type-safe API contracts.
+- **Phase 1**: Core document management and filesystem storage.
+- **Phase 2**: Full-text search and Git history.
+- **Phase 3**: Multi-tenancy, RBAC, and OAuth2.
+- **Phase 4**: Relational Metadata & Identity.
+- **Phase 5**: Scaling infrastructure and type-safe API contracts.
 
-### Current Objectives (Phase 9)
-- **Advanced Git Integration**: Secure remote syncing for organizations.
-- **Streamlined Onboarding**: Unified UI and CLI experience for new users.
+### Current Objectives (Phase 6)
+- **Advanced Git Integration**: Secure remote syncing for organizations and **GitHub App support** for simplified access control.
+- **Streamlined Onboarding**: Unified UI and CLI experience for new users, including **template repository starters**.
 - **Global Administration**: Tools for system-wide oversight.
 
-### Next Steps (Phases 10-12)
+### Next Steps (Phase 7+)
 - **Connectivity**: Backlinks and relational data modeling.
 - **Intelligence**: Semantic search and AI agent readiness (MCP).
 - **Global Presence**: Full localization and offline PWA capabilities.
@@ -36,6 +37,7 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 ### Future Evolution
 - **Advanced Table Views**: A sophisticated view system with persistent filters and sorts.
 - **High-Performance UX**: Virtualization, command palettes, and relationship graphs.
+- **Notion-like Editing**: A block-based **WYSIWYG editor** for a seamless, intuitive experience.
 - **Data Integrity**: Migration to SQLite for metadata while preserving the self-describing on-disk format.
 
 ## Requirements
