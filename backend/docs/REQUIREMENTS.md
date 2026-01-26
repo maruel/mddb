@@ -31,6 +31,17 @@
 - [x] **RBAC**: Server-side enforcement of Admin, Editor, and Viewer roles.
 - [x] **Git Integration**: Backend logic for managing per-organization Git remotes and automated syncing.
 
+### 6. Data Interoperability
+- [ ] **Importers**: Logic to ingest Notion (zip) and Obsidian (vault) exports, mapping metadata to mddb structure.
+- [ ] **Portable Export**: Automated generation of standard Markdown + CSV + Assets packages for zero lock-in.
+
+### 7. Advanced Search & Intelligence
+- [ ] **Semantic Indexing**: Vector-based indexing of nodes to support natural language queries and "related content" discovery.
+
+### 8. Storage Resilience
+- [ ] **Conflict Resolution**: Backend engine to detect and expose Git merge conflicts via the API for user reconciliation.
+- [ ] **Snapshotting**: Logic to create named workspace versions using Git tags.
+
 ## Non-Functional Requirements
 
 ### Performance & Scalability

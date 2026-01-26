@@ -25,6 +25,18 @@
 - [ ] **Regional Formatting**: Locale-aware date, time, and number formatting.
 - [/] **PWA**: App installation support and offline-ready UI components.
 
+### 5. Command-Centric UX
+- [ ] **Command Palette**: Central `Ctrl+K` modal for navigation and executing system commands.
+- [ ] **Slash Commands**: Inline `/` commands in the editor for inserting components or calling AI.
+
+### 6. Performance & Scale
+- [ ] **Table Virtualization**: Row and column virtualization for high-performance rendering of 50k+ records.
+- [ ] **Optimistic UI**: Immediate local state updates for reordering and edits to ensure zero-latency feel.
+
+### 7. Visual Intelligence
+- [ ] **Relationship Graph**: High-performance visualization of backlinks and node connections.
+- [ ] **Adaptive Themes**: Per-organization branding and customizable accent colors.
+
 ## Non-Functional Requirements
 
 ### UI/UX Standards

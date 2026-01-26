@@ -15,6 +15,7 @@ mddb is a local-first markdown document and database system. The architecture fo
 - [x] **Nodes**: A single abstraction for documents, tables, and hybrid content.
 - [x] **Hierarchy**: Flexible organization through nested nodes.
 - [x] **Portability**: Data is stored in human-readable formats (Markdown, JSON, JSONL) for maximum portability.
+- [x] **Self-Describing Storage**: On-disk format is designed to be self-describing (e.g., JSONL tables with schema headers), allowing AI agents and external tools to parse and interact with the data directly without requiring the mddb backend code.
 
 ### 2. Multi-User & Multi-Tenant
 - [x] **Organization Isolation**: Complete data isolation between organizations.
