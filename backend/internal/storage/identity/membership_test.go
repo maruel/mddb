@@ -446,3 +446,104 @@ func TestOrganizationMembershipService(t *testing.T) {
 		})
 	})
 }
+
+func TestWorkspaceMembershipService(t *testing.T) {
+	// Create services needed for membership service
+	tempDir := t.TempDir()
+	userService, err := NewUserService(filepath.Join(tempDir, "users.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	orgService, err := NewOrganizationService(filepath.Join(tempDir, "orgs.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wsService, err := NewWorkspaceService(filepath.Join(tempDir, "workspaces.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, err := NewWorkspaceMembershipService(filepath.Join(tempDir, "ws_memberships.jsonl"), wsService, orgService)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create test users and orgs
+	user, err := userService.Create("test@example.com", "password", "Test User")
+	if err != nil {
+		t.Fatal(err)
+	}
+	org1, err := orgService.Create(t.Context(), "Org 1", "org1@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+	org2, err := orgService.Create(t.Context(), "Org 2", "org2@example.com")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create workspaces in each org
+	ws1, err := wsService.Create(t.Context(), org1.ID, "Workspace 1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ws2, err := wsService.Create(t.Context(), org1.ID, "Workspace 2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ws3, err := wsService.Create(t.Context(), org2.ID, "Workspace 3")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("DeleteByUserInOrg", func(t *testing.T) {
+		// Create memberships for user in all workspaces
+		mem1, err := service.Create(user.ID, ws1.ID, WSRoleEditor)
+		if err != nil {
+			t.Fatalf("Failed to create membership 1: %v", err)
+		}
+		mem2, err := service.Create(user.ID, ws2.ID, WSRoleViewer)
+		if err != nil {
+			t.Fatalf("Failed to create membership 2: %v", err)
+		}
+		mem3, err := service.Create(user.ID, ws3.ID, WSRoleAdmin)
+		if err != nil {
+			t.Fatalf("Failed to create membership 3: %v", err)
+		}
+
+		// Verify user has 3 memberships
+		count := 0
+		for range service.IterByUser(user.ID) {
+			count++
+		}
+		if count != 3 {
+			t.Errorf("Expected 3 memberships, got %d", count)
+		}
+
+		// Delete memberships for user in org1
+		if err := service.DeleteByUserInOrg(user.ID, org1.ID); err != nil {
+			t.Fatalf("DeleteByUserInOrg failed: %v", err)
+		}
+
+		// Verify memberships in org1 are deleted
+		if _, err := service.GetByID(mem1.ID); err == nil {
+			t.Error("Expected membership 1 to be deleted")
+		}
+		if _, err := service.GetByID(mem2.ID); err == nil {
+			t.Error("Expected membership 2 to be deleted")
+		}
+
+		// Verify membership in org2 still exists
+		if _, err := service.GetByID(mem3.ID); err != nil {
+			t.Error("Expected membership 3 to still exist")
+		}
+
+		// Verify user now has 1 membership
+		count = 0
+		for range service.IterByUser(user.ID) {
+			count++
+		}
+		if count != 1 {
+			t.Errorf("Expected 1 membership remaining, got %d", count)
+		}
+	})
+}

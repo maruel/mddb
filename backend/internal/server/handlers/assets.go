@@ -3,6 +3,9 @@
 package handlers
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,6 +13,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -33,25 +37,53 @@ func init() {
 	}
 }
 
+// AssetURLExpiry is the default duration for which signed asset URLs are valid.
+const AssetURLExpiry = 1 * time.Hour
+
 // AssetHandler handles asset/file-related HTTP requests.
 type AssetHandler struct {
-	fs *content.FileStoreService
+	fs        *content.FileStoreService
+	jwtSecret []byte
+	baseURL   string
 }
 
 // NewAssetHandler creates a new asset handler.
-func NewAssetHandler(fs *content.FileStoreService) *AssetHandler {
-	return &AssetHandler{fs: fs}
+func NewAssetHandler(fs *content.FileStoreService, jwtSecret []byte, baseURL string) *AssetHandler {
+	return &AssetHandler{fs: fs, jwtSecret: jwtSecret, baseURL: baseURL}
+}
+
+// GenerateSignedAssetURL creates a signed URL for asset access.
+// The signature includes the path and expiry time, binding the URL to a specific asset.
+func (h *AssetHandler) GenerateSignedAssetURL(wsID, nodeID jsonldb.ID, name string) string {
+	expiry := time.Now().Add(AssetURLExpiry).Unix()
+	path := fmt.Sprintf("%s/%s/%s", wsID, nodeID, name)
+	sig := h.generateSignature(path, expiry)
+	return fmt.Sprintf("%s/assets/%s?sig=%s&exp=%d", h.baseURL, path, sig, expiry)
+}
+
+// generateSignature creates an HMAC-SHA256 signature for asset access.
+func (h *AssetHandler) generateSignature(path string, expiry int64) string {
+	data := fmt.Sprintf("%s:%d", path, expiry)
+	mac := hmac.New(sha256.New, h.jwtSecret)
+	mac.Write([]byte(data))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// verifySignature checks if the provided signature is valid.
+func (h *AssetHandler) verifySignature(path, sig string, expiry int64) bool {
+	expected := h.generateSignature(path, expiry)
+	return hmac.Equal([]byte(expected), []byte(sig))
 }
 
 // UploadNodeAssetHandler handles asset uploading (multipart/form-data).
 // This is a raw http.HandlerFunc because it handles multipart forms.
 func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Request) {
-	orgIDStr := r.PathValue("orgID")
+	wsIDStr := r.PathValue("wsID")
 	nodeIDStr := r.PathValue("id")
 
-	orgID, err := jsonldb.DecodeID(orgIDStr)
+	wsID, err := jsonldb.DecodeID(wsIDStr)
 	if err != nil {
-		writeErrorResponse(w, dto.BadRequest("invalid_org_id"))
+		writeErrorResponse(w, dto.BadRequest("invalid_ws_id"))
 		return
 	}
 	nodeID, err := jsonldb.DecodeID(nodeIDStr)
@@ -90,7 +122,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	ws, err := h.fs.GetWorkspaceStore(r.Context(), orgID)
+	ws, err := h.fs.GetWorkspaceStore(r.Context(), wsID)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("workspace"))
 		return
@@ -109,14 +141,35 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 
 // ServeAssetFile serves the binary data of an asset.
 // This is a raw http.HandlerFunc for direct file serving.
+// Requires valid signature query parameters: sig (HMAC signature) and exp (expiry timestamp).
 func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
-	orgIDStr := r.PathValue("orgID")
+	wsIDStr := r.PathValue("wsID")
 	nodeIDStr := r.PathValue("id")
 	assetName := r.PathValue("name")
 
-	orgID, err := jsonldb.DecodeID(orgIDStr)
+	// Verify signature
+	sig := r.URL.Query().Get("sig")
+	expStr := r.URL.Query().Get("exp")
+	if sig == "" || expStr == "" {
+		writeErrorResponse(w, dto.Forbidden("missing_signature"))
+		return
+	}
+
+	expiry, err := strconv.ParseInt(expStr, 10, 64)
 	if err != nil {
-		writeErrorResponse(w, dto.BadRequest("invalid_org_id"))
+		writeErrorResponse(w, dto.Forbidden("invalid_expiry"))
+		return
+	}
+
+	// Check if URL has expired
+	if time.Now().Unix() > expiry {
+		writeErrorResponse(w, dto.Forbidden("expired_url"))
+		return
+	}
+
+	wsID, err := jsonldb.DecodeID(wsIDStr)
+	if err != nil {
+		writeErrorResponse(w, dto.BadRequest("invalid_ws_id"))
 		return
 	}
 	nodeID, err := jsonldb.DecodeID(nodeIDStr)
@@ -125,7 +178,14 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws, err := h.fs.GetWorkspaceStore(r.Context(), orgID)
+	// Verify signature matches the path and expiry
+	path := fmt.Sprintf("%s/%s/%s", wsIDStr, nodeIDStr, assetName)
+	if !h.verifySignature(path, sig, expiry) {
+		writeErrorResponse(w, dto.Forbidden("invalid_signature"))
+		return
+	}
+
+	ws, err := h.fs.GetWorkspaceStore(r.Context(), wsID)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("workspace"))
 		return
@@ -142,6 +202,8 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", mimeType)
 	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
+	// Cache asset for the duration of the URL validity
+	w.Header().Set("Cache-Control", "private, max-age=3600")
 	if _, err := w.Write(data); err != nil {
 		slog.Error("Failed to write asset data", "error", err, "asset", assetName)
 	}

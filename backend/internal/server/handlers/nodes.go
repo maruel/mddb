@@ -16,12 +16,13 @@ import (
 
 // NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
-	fs *content.FileStoreService
+	fs           *content.FileStoreService
+	assetHandler *AssetHandler
 }
 
 // NewNodeHandler creates a new node handler.
-func NewNodeHandler(fs *content.FileStoreService) *NodeHandler {
-	return &NodeHandler{fs: fs}
+func NewNodeHandler(fs *content.FileStoreService, assetHandler *AssetHandler) *NodeHandler {
+	return &NodeHandler{fs: fs, assetHandler: assetHandler}
 }
 
 // ListNodes returns the hierarchical node tree.
@@ -166,7 +167,23 @@ func (h *NodeHandler) ListNodeAssets(ctx context.Context, wsID jsonldb.ID, _ *id
 		return nil, dto.InternalWithError("Failed to list assets", err)
 	}
 	assets := slices.Collect(it)
-	return &dto.ListNodeAssetsResponse{Assets: assetsToSummaries(assets, wsID.String(), req.NodeID.String())}, nil
+	return &dto.ListNodeAssetsResponse{Assets: h.assetsToSummaries(assets, wsID, req.NodeID)}, nil
+}
+
+// assetsToSummaries converts assets to DTOs with signed URLs.
+func (h *NodeHandler) assetsToSummaries(assets []*content.Asset, wsID, nodeID jsonldb.ID) []dto.AssetSummary {
+	result := make([]dto.AssetSummary, len(assets))
+	for i, a := range assets {
+		result[i] = dto.AssetSummary{
+			ID:       a.ID,
+			Name:     a.Name,
+			Size:     a.Size,
+			MimeType: a.MimeType,
+			Created:  a.Created,
+			URL:      h.assetHandler.GenerateSignedAssetURL(wsID, nodeID, a.Name),
+		}
+	}
+	return result
 }
 
 // DeleteNodeAsset deletes an asset from a node.

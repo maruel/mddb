@@ -239,6 +239,29 @@ func (s *WorkspaceMembershipService) DeleteAllByWorkspace(wsID jsonldb.ID) error
 	return nil
 }
 
+// DeleteByUserInOrg removes all workspace memberships for a user
+// in workspaces belonging to a specific organization.
+// This should be called when removing a user from an organization
+// to prevent orphaned workspace memberships.
+func (s *WorkspaceMembershipService) DeleteByUserInOrg(userID, orgID jsonldb.ID) error {
+	var toDelete []jsonldb.ID
+	for m := range s.byUserID.Iter(userID) {
+		ws, err := s.wsService.Get(m.WorkspaceID)
+		if err != nil {
+			continue // Skip if workspace not found
+		}
+		if ws.OrganizationID == orgID {
+			toDelete = append(toDelete, m.ID)
+		}
+	}
+	for _, id := range toDelete {
+		if _, err := s.table.Delete(id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 //
 
 var (

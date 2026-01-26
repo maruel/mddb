@@ -487,24 +487,3 @@ func getUserWithMemberships(
 		WSMemberships:  wsMems,
 	}, nil
 }
-
-// --- List summary conversions ---
-
-func assetToSummary(a *content.Asset, wsID, nodeID string) dto.AssetSummary {
-	return dto.AssetSummary{
-		ID:       a.ID,
-		Name:     a.Name,
-		Size:     a.Size,
-		MimeType: a.MimeType,
-		Created:  a.Created,
-		URL:      "/api/workspaces/" + wsID + "/assets/" + nodeID + "/" + a.Name,
-	}
-}
-
-func assetsToSummaries(assets []*content.Asset, wsID, nodeID string) []dto.AssetSummary {
-	result := make([]dto.AssetSummary, len(assets))
-	for i, a := range assets {
-		result[i] = assetToSummary(a, wsID, nodeID)
-	}
-	return result
-}

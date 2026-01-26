@@ -51,8 +51,8 @@ func NewRouter(
 	rlConfig := ratelimit.DefaultConfig()
 
 	// Content handlers (workspace-scoped)
-	nh := handlers.NewNodeHandler(fileStore)
-	ah := handlers.NewAssetHandler(fileStore)
+	ah := handlers.NewAssetHandler(fileStore, jwtSecretBytes, baseURL)
+	nh := handlers.NewNodeHandler(fileStore, ah)
 	sh := handlers.NewSearchHandler(fileStore)
 
 	// Auth handler
