@@ -497,10 +497,14 @@ export default function App() {
         }
       }
 
-      // At workspace root, clear node selection
-      setSelectedNodeId(null);
-      setTitle('');
-      setContent('');
+      // At workspace root, auto-select the first node if available
+      if (nodes.length > 0 && nodes[0]) {
+        loadNode(nodes[0].id, false);
+      } else {
+        setSelectedNodeId(null);
+        setTitle('');
+        setContent('');
+      }
       return;
     }
 
@@ -536,6 +540,13 @@ export default function App() {
       const loadedNodes = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
       setNodes(reconcile(loadedNodes));
       setError(null);
+
+      // Auto-select first node if at workspace root and no node is selected
+      const path = window.location.pathname;
+      const matchWsRoot = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/?$/);
+      if (matchWsRoot && !selectedNodeId() && loadedNodes.length > 0 && loadedNodes[0]) {
+        loadNode(loadedNodes[0].id, false);
+      }
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
@@ -996,32 +1007,7 @@ export default function App() {
                         <div class={styles.error}>{error()}</div>
                       </Show>
 
-                      <Show
-                        when={selectedNodeId()}
-                        fallback={
-                          <div class={styles.welcome}>
-                            <h2>{t('welcome.title')}</h2>
-                            <p>{t('welcome.subtitle')}</p>
-                            <div class={styles.createForm}>
-                              <input
-                                type="text"
-                                placeholder={t('editor.titlePlaceholder') || 'Title'}
-                                value={title()}
-                                onInput={(e) => setTitle(e.target.value)}
-                                class={styles.titleInput}
-                              />
-                              <div class={styles.welcomeActions}>
-                                <button onClick={() => createNode('document')} class={styles.createButton}>
-                                  {t('welcome.createPage')}
-                                </button>
-                                <button onClick={() => createNode('table')} class={styles.createButton}>
-                                  {t('welcome.createTable')}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        }
-                      >
+                      <Show when={selectedNodeId()}>
                         <div class={styles.editor}>
                           <div class={styles.editorHeader}>
                             <input
