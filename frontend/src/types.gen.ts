@@ -314,6 +314,7 @@ export interface SearchRequest {
 export interface CreateOrgInvitationRequest {
   email: string;
   role: OrganizationRole;
+  locale?: string; // Optional: language for invitation email (en, fr, de, es)
 }
 /**
  * CreateWSInvitationRequest is a request to create a workspace invitation.
@@ -321,6 +322,7 @@ export interface CreateOrgInvitationRequest {
 export interface CreateWSInvitationRequest {
   email: string;
   role: WorkspaceRole;
+  locale?: string; // Optional: language for invitation email (en, fr, de, es)
 }
 /**
  * ListOrgInvitationsRequest is a request to list invitations for an organization.

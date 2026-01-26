@@ -6,6 +6,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -22,6 +23,8 @@ type InvitationHandler struct {
 	orgMemService *identity.OrganizationMembershipService
 	wsMemService  *identity.WorkspaceMembershipService
 	authHandler   *AuthHandler
+	emailService  *email.Service
+	baseURL       string
 }
 
 // NewInvitationHandler creates a new invitation handler.
@@ -34,6 +37,8 @@ func NewInvitationHandler(
 	orgMemService *identity.OrganizationMembershipService,
 	wsMemService *identity.WorkspaceMembershipService,
 	authHandler *AuthHandler,
+	emailService *email.Service,
+	baseURL string,
 ) *InvitationHandler {
 	return &InvitationHandler{
 		orgInvService: orgInvService,
@@ -44,6 +49,8 @@ func NewInvitationHandler(
 		orgMemService: orgMemService,
 		wsMemService:  wsMemService,
 		authHandler:   authHandler,
+		emailService:  emailService,
+		baseURL:       baseURL,
 	}
 }
 
@@ -56,6 +63,27 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID jsonl
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create invitation", err)
 	}
+
+	// Send invitation email if configured
+	if h.emailService != nil {
+		org, err := h.orgService.Get(orgID)
+		if err != nil {
+			slog.WarnContext(ctx, "Failed to get org for invitation email", "err", err, "org_id", orgID)
+		} else {
+			// Determine locale: use request locale, fall back to inviter's settings, then default
+			locale := email.ParseLocale(req.Locale)
+			if req.Locale == "" && user.Settings.Language != "" {
+				locale = email.ParseLocale(user.Settings.Language)
+			}
+			acceptURL := h.baseURL + "/accept-invitation/org?token=" + invitation.Token
+			if err := h.emailService.SendOrgInvitation(ctx, req.Email, org.Name, user.Name, string(req.Role), acceptURL, locale); err != nil {
+				slog.WarnContext(ctx, "Failed to send org invitation email", "err", err, "email", req.Email)
+			} else {
+				slog.InfoContext(ctx, "Org invitation email sent", "email", req.Email, "org_id", orgID, "locale", locale)
+			}
+		}
+	}
+
 	return orgInvitationToResponse(invitation), nil
 }
 
@@ -77,6 +105,32 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID jsonldb
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create invitation", err)
 	}
+
+	// Send invitation email if configured
+	if h.emailService != nil {
+		ws, err := h.wsService.Get(wsID)
+		if err != nil {
+			slog.WarnContext(ctx, "Failed to get workspace for invitation email", "err", err, "ws_id", wsID)
+		} else {
+			org, err := h.orgService.Get(ws.OrganizationID)
+			if err != nil {
+				slog.WarnContext(ctx, "Failed to get org for invitation email", "err", err, "org_id", ws.OrganizationID)
+			} else {
+				// Determine locale: use request locale, fall back to inviter's settings, then default
+				locale := email.ParseLocale(req.Locale)
+				if req.Locale == "" && user.Settings.Language != "" {
+					locale = email.ParseLocale(user.Settings.Language)
+				}
+				acceptURL := h.baseURL + "/accept-invitation/ws?token=" + invitation.Token
+				if err := h.emailService.SendWSInvitation(ctx, req.Email, ws.Name, org.Name, user.Name, string(req.Role), acceptURL, locale); err != nil {
+					slog.WarnContext(ctx, "Failed to send ws invitation email", "err", err, "email", req.Email)
+				} else {
+					slog.InfoContext(ctx, "Workspace invitation email sent", "email", req.Email, "ws_id", wsID, "locale", locale)
+				}
+			}
+		}
+	}
+
 	return wsInvitationToResponse(invitation), nil
 }
 

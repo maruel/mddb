@@ -55,20 +55,20 @@ func (s *Service) Send(ctx context.Context, to, subject, body string) error {
 }
 
 // SendVerification sends an email verification email with a magic link.
-func (s *Service) SendVerification(ctx context.Context, to, name, verifyURL string) error {
-	subject := "Verify your email address"
-	body := fmt.Sprintf(`Hi %s,
+func (s *Service) SendVerification(ctx context.Context, to, name, verifyURL string, locale Locale) error {
+	subject, body := VerificationEmail(locale, name, verifyURL)
+	return s.Send(ctx, to, subject, body)
+}
 
-Please verify your email address by clicking the link below:
+// SendOrgInvitation sends an organization invitation email.
+func (s *Service) SendOrgInvitation(ctx context.Context, to, orgName, inviterName, role, acceptURL string, locale Locale) error {
+	subject, body := OrgInvitationEmail(locale, orgName, inviterName, role, acceptURL)
+	return s.Send(ctx, to, subject, body)
+}
 
-%s
-
-This link will expire in 24 hours.
-
-If you didn't request this verification, you can safely ignore this email.
-
-- The mddb Team
-`, name, verifyURL)
+// SendWSInvitation sends a workspace invitation email.
+func (s *Service) SendWSInvitation(ctx context.Context, to, wsName, orgName, inviterName, role, acceptURL string, locale Locale) error {
+	subject, body := WSInvitationEmail(locale, wsName, orgName, inviterName, role, acceptURL)
 	return s.Send(ctx, to, subject, body)
 }
 

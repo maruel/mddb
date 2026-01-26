@@ -60,7 +60,7 @@ func NewRouter(
 
 	// Other handlers
 	uh := handlers.NewUserHandler(userService, orgMemService, wsMemService, orgService, wsService)
-	ih := handlers.NewInvitationHandler(orgInvService, wsInvService, userService, orgService, wsService, orgMemService, wsMemService, authh)
+	ih := handlers.NewInvitationHandler(orgInvService, wsInvService, userService, orgService, wsService, orgMemService, wsMemService, authh, emailService, baseURL)
 	mh := handlers.NewMembershipHandler(orgMemService, wsMemService, userService, orgService, wsService, authh)
 	orgh := handlers.NewOrganizationHandler(orgService, orgMemService, wsService, wsMemService, fileStore)
 	grh := handlers.NewGitRemoteHandler(wsService, fileStore)

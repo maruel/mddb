@@ -140,9 +140,9 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 	userResp := userWithMembershipsToResponse(uwm)
 
-	// Send verification email if SMTP is configured
+	// Send verification email if SMTP is configured (use default locale for new users)
 	if h.emailService != nil && h.emailVerificationService != nil {
-		h.sendVerificationEmailAsync(ctx, user.ID, user.Email, user.Name)
+		h.sendVerificationEmailAsync(ctx, user.ID, user.Email, user.Name, email.DefaultLocale)
 	}
 
 	return &dto.AuthResponse{
@@ -366,7 +366,8 @@ func (h *AuthHandler) ChangeEmail(ctx context.Context, _ jsonldb.ID, user *ident
 
 	// Send verification email if SMTP is configured
 	if h.emailService != nil && h.emailVerificationService != nil {
-		h.sendVerificationEmailAsync(ctx, user.ID, req.NewEmail, user.Name)
+		locale := email.ParseLocale(user.Settings.Language)
+		h.sendVerificationEmailAsync(ctx, user.ID, req.NewEmail, user.Name, locale)
 	}
 
 	return &dto.ChangeEmailResponse{
@@ -413,13 +414,14 @@ func (h *AuthHandler) SendVerificationEmail(ctx context.Context, _ jsonldb.ID, u
 	// Build verify URL
 	verifyURL := h.baseURL + "/api/auth/email/verify?token=" + verification.Token
 
-	// Send email
-	if err := h.emailService.SendVerification(ctx, user.Email, user.Name, verifyURL); err != nil {
+	// Send email using user's language preference
+	locale := email.ParseLocale(user.Settings.Language)
+	if err := h.emailService.SendVerification(ctx, user.Email, user.Name, verifyURL, locale); err != nil {
 		slog.ErrorContext(ctx, "Failed to send verification email", "err", err, "user_id", user.ID)
 		return nil, dto.InternalWithError("Failed to send verification email", err)
 	}
 
-	slog.InfoContext(ctx, "Verification email sent", "user_id", user.ID, "email", user.Email)
+	slog.InfoContext(ctx, "Verification email sent", "user_id", user.ID, "email", user.Email, "locale", locale)
 
 	return &dto.SendVerificationEmailResponse{
 		Ok:      true,
@@ -472,7 +474,7 @@ func (h *AuthHandler) VerifyEmail(ctx context.Context, req *dto.VerifyEmailReque
 
 // sendVerificationEmailAsync sends a verification email in the background.
 // Errors are logged but don't affect the caller.
-func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID jsonldb.ID, toEmail, name string) {
+func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID jsonldb.ID, toEmail, name string, locale email.Locale) {
 	go func() {
 		// Create verification token
 		verification, err := h.emailVerificationService.Create(userID, toEmail)
@@ -485,12 +487,12 @@ func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID jso
 		verifyURL := h.baseURL + "/api/auth/email/verify?token=" + verification.Token
 
 		// Send email
-		if err := h.emailService.SendVerification(ctx, toEmail, name, verifyURL); err != nil {
+		if err := h.emailService.SendVerification(ctx, toEmail, name, verifyURL, locale); err != nil {
 			slog.ErrorContext(ctx, "Failed to send verification email", "err", err, "user_id", userID)
 			return
 		}
 
-		slog.InfoContext(ctx, "Verification email sent", "user_id", userID, "email", toEmail)
+		slog.InfoContext(ctx, "Verification email sent", "user_id", userID, "email", toEmail, "locale", locale)
 	}()
 }
 

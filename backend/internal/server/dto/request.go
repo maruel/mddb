@@ -539,16 +539,18 @@ func (r *SearchRequest) Validate() error {
 
 // CreateOrgInvitationRequest is a request to create an organization invitation.
 type CreateOrgInvitationRequest struct {
-	OrgID jsonldb.ID       `path:"orgID" tstype:"-"`
-	Email string           `json:"email"`
-	Role  OrganizationRole `json:"role"`
+	OrgID  jsonldb.ID       `path:"orgID" tstype:"-"`
+	Email  string           `json:"email"`
+	Role   OrganizationRole `json:"role"`
+	Locale string           `json:"locale,omitempty"` // Optional: language for invitation email (en, fr, de, es)
 }
 
 // CreateWSInvitationRequest is a request to create a workspace invitation.
 type CreateWSInvitationRequest struct {
-	WsID  jsonldb.ID    `path:"wsID" tstype:"-"`
-	Email string        `json:"email"`
-	Role  WorkspaceRole `json:"role"`
+	WsID   jsonldb.ID    `path:"wsID" tstype:"-"`
+	Email  string        `json:"email"`
+	Role   WorkspaceRole `json:"role"`
+	Locale string        `json:"locale,omitempty"` // Optional: language for invitation email (en, fr, de, es)
 }
 
 // Validate validates the create organization invitation request fields.
