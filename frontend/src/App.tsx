@@ -238,6 +238,42 @@ export default function App() {
     }
   }
 
+  // Auto-create welcome page if no root page exists
+  async function autoCreateWelcomePage() {
+    const ws = wsApi();
+    const u = user();
+    if (!ws || !u) return;
+
+    // Only create if user has permission
+    if (u.workspace_role !== WSRoleAdmin && u.workspace_role !== WSRoleEditor) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await ws.nodes.listNodes();
+      const loadedNodes = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
+
+      // Check if there's any root-level page (parent_id is undefined or '0')
+      const hasRootPage = loadedNodes.length > 0;
+
+      if (!hasRootPage) {
+        const newPage = await ws.nodes.page.createPage('0', {
+          title: t('welcome.welcomePageTitle'),
+        });
+        // Reload nodes and navigate to the new page
+        await loadNodes();
+        if (newPage?.id) {
+          loadNode(String(newPage.id));
+        }
+      }
+    } catch (err) {
+      setError(`${t('errors.failedToCreate')}: ${err}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   // Helper to update node title in local state
   const updateNodeTitle = (nodeId: string, newTitle: string) => {
     setNodes(
@@ -305,7 +341,7 @@ export default function App() {
     }
   });
 
-  // First-time login check: ensure user has org and workspace (auto-create if needed)
+  // First-time login check: ensure user has org, workspace, and welcome page (auto-create if needed)
   createEffect(() => {
     const u = user();
     if (u && !firstLoginCheckDone()) {
@@ -332,12 +368,17 @@ export default function App() {
         }
       }
 
-      // User has org and workspace, redirect to workspace root if at /
+      // User has org and workspace, check for welcome page and redirect
       const wsId = u.workspace_id;
       const wsName = u.workspace_name;
-      if (wsId && window.location.pathname === '/') {
-        const wsSlug = slugify(wsName || 'workspace');
-        window.history.replaceState(null, '', `/w/${wsId}+${wsSlug}/`);
+      if (wsId) {
+        // Ensure welcome page exists
+        autoCreateWelcomePage();
+
+        if (window.location.pathname === '/') {
+          const wsSlug = slugify(wsName || 'workspace');
+          window.history.replaceState(null, '', `/w/${wsId}+${wsSlug}/`);
+        }
       }
     }
   });
@@ -481,27 +522,7 @@ export default function App() {
       setLoading(true);
       const data = await ws.nodes.listNodes();
       const loadedNodes = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
-
-      // If workspace is empty and user has permission, create welcome page
-      if (
-        loadedNodes.length === 0 &&
-        (user()?.workspace_role === WSRoleAdmin || user()?.workspace_role === WSRoleEditor)
-      ) {
-        const newPage = await ws.nodes.page.createPage('0', {
-          title: t('welcome.welcomePageTitle'),
-        });
-        // Reload nodes after creation
-        const refreshedData = await ws.nodes.listNodes();
-        const refreshedNodes = (refreshedData.nodes?.filter(Boolean) as NodeResponse[]) || [];
-        setNodes(reconcile(refreshedNodes));
-
-        // Select the new node
-        if (newPage && newPage.id) {
-          loadNode(String(newPage.id));
-        }
-      } else {
-        setNodes(reconcile(loadedNodes));
-      }
+      setNodes(reconcile(loadedNodes));
       setError(null);
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
