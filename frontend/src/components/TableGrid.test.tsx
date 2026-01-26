@@ -60,8 +60,8 @@ describe('TableGrid', () => {
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Product A')).toBeTruthy();
-      expect(screen.getByText('Product B')).toBeTruthy();
+      expect(screen.getByDisplayValue('Product A')).toBeTruthy();
+      expect(screen.getByDisplayValue('Product B')).toBeTruthy();
     });
   });
 
@@ -69,9 +69,9 @@ describe('TableGrid', () => {
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
-      // First column is Title, so "Product A" and "Product B" should be headers
-      const productA = screen.getByText('Product A');
-      expect(productA.tagName.toLowerCase()).toBe('strong');
+      // First column is Title, so "Product A" and "Product B" should be in inputs inside strong tags
+      const productA = screen.getByDisplayValue('Product A');
+      expect(productA.closest('strong')).toBeTruthy();
     });
   });
 
@@ -90,7 +90,7 @@ describe('TableGrid', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Untitled')).toBeTruthy();
+      expect(screen.getAllByPlaceholderText('Untitled').length).toBeGreaterThan(0);
     });
   });
 
@@ -110,13 +110,13 @@ describe('TableGrid', () => {
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
-      expect(screen.getByText('A great product')).toBeTruthy();
-      expect(screen.getByText('99')).toBeTruthy();
-      expect(screen.getByText('active')).toBeTruthy();
+      expect(screen.getByDisplayValue('A great product')).toBeTruthy();
+      expect(screen.getByDisplayValue('99')).toBeTruthy();
+      expect(screen.getByDisplayValue('active')).toBeTruthy();
     });
   });
 
-  it('shows "-" for missing field values', async () => {
+  it('shows empty input for missing field values', async () => {
     const recordsWithMissingFields: DataRecordResponse[] = [
       {
         id: 'rec-1',
@@ -131,8 +131,8 @@ describe('TableGrid', () => {
     ));
 
     await waitFor(() => {
-      const dashes = screen.getAllByText('-');
-      expect(dashes.length).toBeGreaterThan(0);
+      // Description is missing, should be an empty string in at least one input
+      expect(screen.getAllByDisplayValue('').length).toBeGreaterThan(0);
     });
   });
 
@@ -149,7 +149,7 @@ describe('TableGrid', () => {
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Product A')).toBeTruthy();
+      expect(screen.getByDisplayValue('Product A')).toBeTruthy();
     });
 
     const deleteButtons = screen.getAllByText('✕');
@@ -174,9 +174,9 @@ describe('TableGrid', () => {
   it('handles records with empty columns array', async () => {
     renderWithI18n(() => <TableGrid columns={[]} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
-    // Should render without crashing and show "Untitled" since no first column
+    // Should render without crashing and show "Untitled" placeholder since no first column
     await waitFor(() => {
-      const untitled = screen.getAllByText('Untitled');
+      const untitled = screen.getAllByPlaceholderText('Untitled');
       expect(untitled.length).toBe(2);
     });
   });

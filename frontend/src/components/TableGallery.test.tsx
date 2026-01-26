@@ -88,8 +88,8 @@ describe('TableGallery', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Product A')).toBeTruthy();
-      expect(screen.getByText('Product B')).toBeTruthy();
+      expect(screen.getByDisplayValue('Product A')).toBeTruthy();
+      expect(screen.getByDisplayValue('Product B')).toBeTruthy();
     });
   });
 
@@ -147,8 +147,8 @@ describe('TableGallery', () => {
     ));
 
     await waitFor(() => {
-      const title = screen.getByText('Product A');
-      expect(title.tagName.toLowerCase()).toBe('strong');
+      const title = screen.getByDisplayValue('Product A');
+      expect(title.closest('strong')).toBeTruthy();
     });
   });
 
@@ -167,7 +167,7 @@ describe('TableGallery', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Untitled')).toBeTruthy();
+      expect(screen.getAllByPlaceholderText('Untitled').length).toBeGreaterThan(0);
     });
   });
 
@@ -200,7 +200,7 @@ describe('TableGallery', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Product A')).toBeTruthy();
+      expect(screen.getByDisplayValue('Product A')).toBeTruthy();
     });
 
     const deleteButtons = screen.getAllByText('✕');
@@ -249,7 +249,7 @@ describe('TableGallery', () => {
 
     await waitFor(() => {
       // Should still render the card without image section
-      expect(screen.getByText('Article A')).toBeTruthy();
+      expect(screen.getByDisplayValue('Article A')).toBeTruthy();
     });
   });
 });

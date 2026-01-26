@@ -105,8 +105,35 @@
   font-weight: 500;
 }
 
-.fieldValue {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.titleInput {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: inherit;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.titleInput:focus {
+  outline: none;
+  background: var(--c-bg-hover);
+  border-radius: 4px;
+}
+
+.fieldValueInput {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: inherit;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.fieldValueInput:focus {
+  outline: none;
+  background: var(--c-bg-hover);
+  border-radius: 4px;
 }

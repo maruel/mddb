@@ -129,7 +129,6 @@ export default function App() {
       } else {
         setError(`${t('errors.failedToSwitch')}: ${err}`);
       }
-      throw err;
     } finally {
       setLoading(false);
     }
@@ -154,7 +153,6 @@ export default function App() {
       } else {
         setError(`${t('errors.failedToSwitch')}: ${err}`);
       }
-      throw err;
     } finally {
       setLoading(false);
     }
@@ -695,6 +693,25 @@ export default function App() {
     }
   }
 
+  async function handleUpdateRecord(recordId: string, data: Record<string, unknown>) {
+    const nodeId = selectedNodeId();
+    const ws = wsApi();
+    if (!nodeId || !ws) return;
+
+    try {
+      setLoading(true);
+      await ws.tables.records.update(nodeId, recordId, { data });
+      // Reload records to reflect changes
+      const recordsData = await ws.tables.records.list(nodeId, { Offset: 0, Limit: PAGE_SIZE });
+      setRecords((recordsData.records || []) as DataRecordResponse[]);
+      setError(null);
+    } catch (err) {
+      setError(`${t('errors.failedToSave')}: ${err}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function loadMoreRecords() {
     const nodeId = selectedNodeId();
     const ws = wsApi();
@@ -988,6 +1005,7 @@ export default function App() {
                                     columns={findNodeById(selectedNodeId())?.properties || []}
                                     records={records()}
                                     onAddRecord={handleAddRecord}
+                                    onUpdateRecord={handleUpdateRecord}
                                     onDeleteRecord={handleDeleteRecord}
                                     onLoadMore={loadMoreRecords}
                                     hasMore={hasMore()}
@@ -997,6 +1015,7 @@ export default function App() {
                                   <TableGrid
                                     records={records()}
                                     columns={findNodeById(selectedNodeId())?.properties || []}
+                                    onUpdateRecord={handleUpdateRecord}
                                     onDeleteRecord={handleDeleteRecord}
                                   />
                                 </Show>
@@ -1004,6 +1023,7 @@ export default function App() {
                                   <TableGallery
                                     records={records()}
                                     columns={findNodeById(selectedNodeId())?.properties || []}
+                                    onUpdateRecord={handleUpdateRecord}
                                     onDeleteRecord={handleDeleteRecord}
                                   />
                                 </Show>
@@ -1011,6 +1031,7 @@ export default function App() {
                                   <TableBoard
                                     records={records()}
                                     columns={findNodeById(selectedNodeId())?.properties || []}
+                                    onUpdateRecord={handleUpdateRecord}
                                     onDeleteRecord={handleDeleteRecord}
                                   />
                                 </Show>

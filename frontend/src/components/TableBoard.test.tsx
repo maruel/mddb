@@ -129,13 +129,13 @@ describe('TableBoard', () => {
 
     await waitFor(() => {
       // Task 1 should be in "To Do"
-      expect(screen.getByText('Task 1')).toBeTruthy();
+      expect(screen.getByDisplayValue('Task 1')).toBeTruthy();
       // Task 2 should be in "In Progress"
-      expect(screen.getByText('Task 2')).toBeTruthy();
+      expect(screen.getByDisplayValue('Task 2')).toBeTruthy();
       // Task 3 should be in "Done"
-      expect(screen.getByText('Task 3')).toBeTruthy();
+      expect(screen.getByDisplayValue('Task 3')).toBeTruthy();
       // Task 4 should be in "No Group"
-      expect(screen.getByText('Task 4')).toBeTruthy();
+      expect(screen.getByDisplayValue('Task 4')).toBeTruthy();
     });
   });
 
@@ -158,8 +158,8 @@ describe('TableBoard', () => {
     ));
 
     await waitFor(() => {
-      const task1 = screen.getByText('Task 1');
-      expect(task1.tagName.toLowerCase()).toBe('strong');
+      const task1 = screen.getByDisplayValue('Task 1');
+      expect(task1.closest('strong')).toBeTruthy();
     });
   });
 
@@ -178,7 +178,7 @@ describe('TableBoard', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Untitled')).toBeTruthy();
+      expect(screen.getAllByPlaceholderText('Untitled').length).toBeGreaterThan(0);
     });
   });
 
@@ -211,7 +211,7 @@ describe('TableBoard', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Task 1')).toBeTruthy();
+      expect(screen.getByDisplayValue('Task 1')).toBeTruthy();
     });
 
     const deleteButtons = screen.getAllByText('✕');

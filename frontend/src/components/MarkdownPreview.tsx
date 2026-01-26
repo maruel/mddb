@@ -1,6 +1,7 @@
 // Component for rendering Markdown content with custom plugins.
 
 import MarkdownIt from 'markdown-it';
+import DOMPurify from 'dompurify';
 import styles from './MarkdownPreview.module.css';
 
 interface MarkdownPreviewProps {
@@ -46,7 +47,10 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
 };
 
 export default function MarkdownPreview(props: MarkdownPreviewProps) {
-  const html = () => md.render(props.content, { orgId: props.orgId });
+  const html = () => {
+    const rawHtml = md.render(props.content, { orgId: props.orgId });
+    return DOMPurify.sanitize(rawHtml);
+  };
 
   return <div class={styles.preview} innerHTML={html()} role="region" aria-label="Markdown preview" />;
 }

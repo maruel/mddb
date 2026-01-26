@@ -8,30 +8,37 @@ import { useI18n } from '../i18n';
 interface TableBoardProps {
   records: DataRecordResponse[];
   columns: Property[];
+  onUpdateRecord?: (id: string, data: Record<string, unknown>) => void;
   onDeleteRecord: (id: string) => void;
 }
 
 export default function TableBoard(props: TableBoardProps) {
   const { t } = useI18n();
+
+  const handleUpdate = (record: DataRecordResponse, colName: string, value: string) => {
+    if (record.data[colName] === value || !props.onUpdateRecord) return;
+    const newData = { ...record.data, [colName]: value };
+    props.onUpdateRecord(record.id, newData);
+  };
   // Find the first select column to group by
   const groupColumn = () =>
     props.columns.find((c) => c.type === PropertyTypeSelect || c.type === PropertyTypeMultiSelect);
 
   const groups = createMemo(() => {
     const col = groupColumn();
-    if (!col) return [{ name: 'All Records', records: props.records }];
+    if (!col) return [{ name: 'All Records', records: props.records, fromOptions: true }];
 
-    const grouped: Record<string, { name: string; records: DataRecordResponse[] }> = {};
+    const grouped: Record<string, { name: string; records: DataRecordResponse[]; fromOptions?: boolean }> = {};
 
     // Initialize groups from column options if available
     if (col.options) {
       col.options.forEach((opt) => {
-        grouped[opt.id] = { name: opt.name, records: [] };
+        grouped[opt.id] = { name: opt.name, records: [], fromOptions: true };
       });
     }
 
     // Add "No Group" for records without a value
-    grouped['__none__'] = { name: t('table.noGroup') || 'No Group', records: [] };
+    grouped['__none__'] = { name: t('table.noGroup') || 'No Group', records: [], fromOptions: true };
 
     props.records.forEach((record) => {
       const val = record.data[col.name];
@@ -46,8 +53,7 @@ export default function TableBoard(props: TableBoardProps) {
     });
 
     // Filter to show groups with records, plus empty groups from options
-    const optionNames = (col.options || []).map((opt) => opt.name);
-    return Object.values(grouped).filter((g) => g.records.length > 0 || optionNames.includes(g.name));
+    return Object.values(grouped).filter((g) => g.records.length > 0 || g.fromOptions);
   });
 
   return (
@@ -67,9 +73,18 @@ export default function TableBoard(props: TableBoardProps) {
                       <div class={styles.card}>
                         <div class={styles.cardHeader}>
                           <strong>
-                            {String(
-                              (props.columns[0] ? record.data[props.columns[0].name] : null) || t('table.untitled')
-                            )}
+                            <input
+                              type="text"
+                              value={String((props.columns[0] ? record.data[props.columns[0].name] : null) || '')}
+                              placeholder={t('table.untitled') || 'Untitled'}
+                              onBlur={(e) =>
+                                props.columns[0] && handleUpdate(record, props.columns[0].name, e.target.value)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') e.currentTarget.blur();
+                              }}
+                              class={styles.titleInput}
+                            />
                           </strong>
                           <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>
                             ✕
@@ -80,7 +95,15 @@ export default function TableBoard(props: TableBoardProps) {
                             {(col) => (
                               <div class={styles.field}>
                                 <span class={styles.fieldName}>{col.name}:</span>
-                                <span class={styles.fieldValue}>{String(record.data[col.name] || '-')}</span>
+                                <input
+                                  type="text"
+                                  value={String(record.data[col.name] || '')}
+                                  onBlur={(e) => handleUpdate(record, col.name, e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') e.currentTarget.blur();
+                                  }}
+                                  class={styles.fieldValueInput}
+                                />
                               </div>
                             )}
                           </For>
