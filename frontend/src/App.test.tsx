@@ -891,7 +891,7 @@ describe('App', () => {
   });
 
   describe('Workspace Management', () => {
-    it('shows create workspace modal when user has no workspaces', async () => {
+    it('auto-creates organization when user has no memberships', async () => {
       localStorageMock.setItem('mddb_token', 'test-token');
 
       const userWithNoMemberships: UserResponse = {
@@ -900,11 +900,62 @@ describe('App', () => {
         workspaces: [],
       };
 
-      mockFetch.mockImplementation((url: string) => {
+      // After org creation, user will have an org (named after user's first name)
+      const userAfterOrgCreation: UserResponse = {
+        ...mockUser,
+        organizations: [
+          {
+            id: 'new-membership-1',
+            user_id: 'user-1',
+            organization_id: 'new-org-1',
+            organization_name: "Test's Organization",
+            role: 'owner',
+            created: 1704067200,
+          },
+        ],
+        organization_id: 'new-org-1',
+        workspaces: [],
+      };
+
+      let getMeCallCount = 0;
+      mockFetch.mockImplementation((url: string, options?: RequestInit) => {
         if (url === '/api/auth/me') {
+          getMeCallCount++;
+          // First call returns no memberships, subsequent calls return the new org
+          if (getMeCallCount === 1) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve(userWithNoMemberships),
+            });
+          }
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve(userWithNoMemberships),
+            json: () => Promise.resolve(userAfterOrgCreation),
+          });
+        }
+        if (url === '/api/organizations' && options?.method === 'POST') {
+          // Mock org creation (named after user's first name)
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                id: 'new-org-1',
+                name: "Test's Organization",
+                settings: {},
+                created: 1704067200,
+                member_count: 1,
+                workspace_count: 0,
+              }),
+          });
+        }
+        if (url === '/api/auth/switch-org' && options?.method === 'POST') {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                token: 'new-token',
+                user: userAfterOrgCreation,
+              }),
           });
         }
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -912,9 +963,17 @@ describe('App', () => {
 
       renderWithI18n(() => <App />);
 
-      await waitFor(() => {
-        expect(screen.getByTestId('create-org-modal-first')).toBeTruthy();
-      });
+      // Verify that the org creation API is called
+      await waitFor(
+        () => {
+          const createOrgCalls = mockFetch.mock.calls.filter(
+            (call: unknown[]) =>
+              call[0] === '/api/organizations' && (call[1] as RequestInit | undefined)?.method === 'POST'
+          );
+          expect(createOrgCalls.length).toBeGreaterThan(0);
+        },
+        { timeout: 3000 }
+      );
     });
 
     it('shows workspace switcher for users with multiple workspaces', async () => {

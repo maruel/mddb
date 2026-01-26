@@ -101,3 +101,26 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID jsonldb
 	memberCount := h.wsMemService.CountWSMemberships(ws.ID)
 	return workspaceToResponse(ws, memberCount), nil
 }
+
+// GetWorkspace retrieves workspace details.
+func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.GetWorkspaceRequest) (*dto.WorkspaceResponse, error) {
+	ws, err := h.wsService.Get(wsID)
+	if err != nil {
+		return nil, err
+	}
+	memberCount := h.wsMemService.CountWSMemberships(wsID)
+	return workspaceToResponse(ws, memberCount), nil
+}
+
+// UpdateWorkspace updates workspace details (name).
+func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.UpdateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
+	ws, err := h.wsService.Modify(wsID, func(ws *identity.Workspace) error {
+		ws.Name = req.Name
+		return nil
+	})
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to update workspace", err)
+	}
+	memberCount := h.wsMemService.CountWSMemberships(wsID)
+	return workspaceToResponse(ws, memberCount), nil
+}

@@ -93,6 +93,10 @@ export const dict: Dictionary = {
     patPlaceholder: 'ghp_...',
     skipForNow: 'Vorerst überspringen',
     setupAndFinish: 'Einrichten und abschließen',
+    defaultOrgName: '{{name}}s Organisation',
+    defaultOrgNameFallback: 'Meine Organisation',
+    defaultWorkspaceName: '{{name}}s Arbeitsbereich',
+    defaultWorkspaceNameFallback: 'Haupt',
   },
 
   createOrg: {
@@ -161,8 +165,8 @@ export const dict: Dictionary = {
     // Workspace tab
     workspaceSettings: 'Arbeitsbereich-Einstellungen',
     adminOnlyWorkspace: 'Nur Administratoren können Arbeitsbereich-Einstellungen ändern.',
-    organizationName: 'Arbeitsbereichsname',
-    renameNotSupported: 'Umbenennen wird noch nicht unterstützt',
+    organizationName: 'Organisationsname',
+    workspaceName: 'Arbeitsbereichsname',
     allowPublicAccess: 'Öffentlichen Zugriff erlauben (Nur Lesen)',
     allowedDomains: 'Erlaubte E-Mail-Domains (kommagetrennt)',
     allowedDomainsPlaceholder: 'beispiel.de, firma.org',

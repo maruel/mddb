@@ -71,6 +71,7 @@ import type {
   UpdateUserSettingsRequest,
   UpdateWSMemberRoleRequest,
   UpdateWSMembershipSettingsRequest,
+  UpdateWorkspaceRequest,
   UserResponse,
   WSInvitationResponse,
   WSMembershipResponse,
@@ -235,6 +236,10 @@ export function createAPIClient(fetchFn: FetchFn) {
         },
         users: {
           updateWSMemberRole: (options: UpdateWSMemberRoleRequest) => post<UserResponse>(fetchFn, `/api/workspaces/${wsID}/users/role`, options),
+        },
+        workspaces: {
+          getWorkspace: () => get<WorkspaceResponse>(fetchFn, `/api/workspaces/${wsID}`),
+          updateWorkspace: (options: UpdateWorkspaceRequest) => post<WorkspaceResponse>(fetchFn, `/api/workspaces/${wsID}`, options),
         },
         search: (options: SearchRequest) => post<SearchResponse>(fetchFn, `/api/workspaces/${wsID}/search`, options),
       };

@@ -744,6 +744,36 @@ func (r *CreateWorkspaceRequest) Validate() error {
 	return nil
 }
 
+// GetWorkspaceRequest is a request to get workspace details.
+type GetWorkspaceRequest struct {
+	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+}
+
+// Validate validates the get workspace request fields.
+func (r *GetWorkspaceRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	return nil
+}
+
+// UpdateWorkspaceRequest is a request to update workspace details.
+type UpdateWorkspaceRequest struct {
+	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	Name string     `json:"name,omitempty"`
+}
+
+// Validate validates the update workspace request fields.
+func (r *UpdateWorkspaceRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	if r.Name == "" {
+		return MissingField("name")
+	}
+	return nil
+}
+
 // --- Git Remotes ---
 
 // GetGitRemoteRequest is a request to get the git remote for a workspace.

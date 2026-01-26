@@ -116,6 +116,10 @@ func NewRouter(
 	// Workspace creation (org-scoped)
 	mux.Handle("POST /api/organizations/{orgID}/workspaces", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, orgh.CreateWorkspace, rlConfig))
 
+	// Workspace details (workspace-scoped)
+	mux.Handle("GET /api/workspaces/{wsID}", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, orgh.GetWorkspace, rlConfig))
+	mux.Handle("POST /api/workspaces/{wsID}", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, orgh.UpdateWorkspace, rlConfig))
+
 	// Workspace settings (workspace-scoped)
 	mux.Handle("POST /api/workspaces/{wsID}/settings/membership", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, mh.UpdateWSMembershipSettings, rlConfig))
 

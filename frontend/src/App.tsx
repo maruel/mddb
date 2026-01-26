@@ -9,7 +9,6 @@ import TableGrid from './components/TableGrid';
 import TableGallery from './components/TableGallery';
 import TableBoard from './components/TableBoard';
 import WorkspaceSettings from './components/WorkspaceSettings';
-import Onboarding from './components/Onboarding';
 import Auth from './components/Auth';
 import Privacy from './components/Privacy';
 import Terms from './components/Terms';
@@ -63,7 +62,6 @@ export default function App() {
   const [nodeCreationParentId, setNodeCreationParentId] = createSignal<string | null>(null);
   const [showCreateOrg, setShowCreateOrg] = createSignal(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
-  const [showGitSetup, setShowGitSetup] = createSignal(false);
   const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
   const [firstLoginCheckDone, setFirstLoginCheckDone] = createSignal(false);
 
@@ -163,7 +161,7 @@ export default function App() {
       name: data.name,
     });
     // Refresh user data and switch to the new org
-    // This will trigger first-login check again, showing workspace creation modal
+    // This will trigger first-login check again, which will auto-create workspace
     await switchOrg(org.id);
   }
 
@@ -184,7 +182,46 @@ export default function App() {
 
     // Switch to the new workspace
     await switchWorkspace(ws.id);
-    setShowGitSetup(true);
+  }
+
+  // Get user's first name for default naming
+  function getUserFirstName(): string {
+    const u = user();
+    if (!u?.name) return '';
+    const firstName = u.name.split(' ')[0];
+    return firstName || u.name;
+  }
+
+  // Auto-create organization for first-time users
+  async function autoCreateOrganization() {
+    try {
+      setLoading(true);
+      const firstName = getUserFirstName();
+      const orgName = firstName
+        ? t('onboarding.defaultOrgName', { name: firstName })
+        : t('onboarding.defaultOrgNameFallback');
+      await createOrganization({ name: orgName || 'My Organization' });
+    } catch (err) {
+      setError(`${t('errors.failedToCreate')}: ${err}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Auto-create workspace for users with org but no workspace
+  async function autoCreateWorkspace() {
+    try {
+      setLoading(true);
+      const firstName = getUserFirstName();
+      const wsName = firstName
+        ? t('onboarding.defaultWorkspaceName', { name: firstName })
+        : t('onboarding.defaultWorkspaceNameFallback');
+      await createWorkspace({ name: wsName || 'Main' });
+    } catch (err) {
+      setError(`${t('errors.failedToCreate')}: ${err}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   // Helper to update node title in local state
@@ -254,7 +291,7 @@ export default function App() {
     }
   });
 
-  // First-time login check: ensure user has org and workspace
+  // First-time login check: ensure user has org and workspace (auto-create if needed)
   createEffect(() => {
     const u = user();
     if (u && !firstLoginCheckDone()) {
@@ -263,8 +300,8 @@ export default function App() {
       // Check if user has any organizations
       const orgs = u.organizations || [];
       if (orgs.length === 0) {
-        // User has no organizations, show create org modal
-        setShowCreateOrg(true);
+        // User has no organizations, auto-create one
+        autoCreateOrganization();
         return;
       }
 
@@ -273,9 +310,9 @@ export default function App() {
       if (firstOrg) {
         const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg.organization_id) || [];
         if (orgWorkspaces.length === 0) {
-          // Only show create workspace modal if user is admin/owner of the org
+          // Only auto-create workspace if user is admin/owner of the org
           if (firstOrg.role === OrgRoleAdmin || firstOrg.role === OrgRoleOwner) {
-            setShowCreateWorkspace(true);
+            autoCreateWorkspace();
             return;
           }
         }
@@ -745,17 +782,6 @@ export default function App() {
         <Show when={!isTermsPage()} fallback={<Terms />}>
           <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
             <>
-              {/* First org creation for new users with no memberships */}
-              <Show when={(user()?.organizations?.length ?? 0) === 0}>
-                <CreateOrgModal isFirstOrg={true} onClose={() => {}} onCreate={createOrganization} />
-              </Show>
-              <Show when={showGitSetup()}>
-                <Onboarding
-                  user={user() as UserResponse}
-                  token={token() as string}
-                  onComplete={() => setShowGitSetup(false)}
-                />
-              </Show>
               <div class={styles.app}>
                 <header class={styles.header}>
                   <div class={styles.headerTitle}>

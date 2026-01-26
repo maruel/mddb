@@ -93,6 +93,10 @@ export interface Dictionary {
     patPlaceholder: string;
     skipForNow: string;
     setupAndFinish: string;
+    defaultOrgName: string;
+    defaultOrgNameFallback: string;
+    defaultWorkspaceName: string;
+    defaultWorkspaceNameFallback: string;
   };
 
   createOrg: {
@@ -162,7 +166,7 @@ export interface Dictionary {
     workspaceSettings: string;
     adminOnlyWorkspace: string;
     organizationName: string;
-    renameNotSupported: string;
+    workspaceName: string;
     allowPublicAccess: string;
     allowedDomains: string;
     allowedDomainsPlaceholder: string;

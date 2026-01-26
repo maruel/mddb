@@ -388,6 +388,17 @@ export interface CreateWorkspaceRequest {
   name: string;
 }
 /**
+ * GetWorkspaceRequest is a request to get workspace details.
+ */
+export interface GetWorkspaceRequest {
+}
+/**
+ * UpdateWorkspaceRequest is a request to update workspace details.
+ */
+export interface UpdateWorkspaceRequest {
+  name?: string;
+}
+/**
  * GetGitRemoteRequest is a request to get the git remote for a workspace.
  */
 export interface GetGitRemoteRequest {

@@ -50,6 +50,8 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   // Workspace Settings states
   const [orgName, setOrgName] = createSignal('');
   const [originalOrgName, setOriginalOrgName] = createSignal('');
+  const [wsName, setWsName] = createSignal('');
+  const [originalWsName, setOriginalWsName] = createSignal('');
   const [publicAccess, setPublicAccess] = createSignal(false);
   const [allowedDomains, setAllowedDomains] = createSignal('');
 
@@ -87,9 +89,16 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       }
 
       if (activeTab() === 'workspace') {
-        const orgData = await org.organizations.getOrganization();
+        const [orgData, wsData] = await Promise.all([
+          org.organizations.getOrganization(),
+          ws ? ws.workspaces.getWorkspace() : Promise.resolve(null),
+        ]);
         setOrgName(orgData.name);
         setOriginalOrgName(orgData.name);
+        if (wsData) {
+          setWsName(wsData.name);
+          setOriginalWsName(wsData.name);
+        }
         setPublicAccess(false); // TODO: workspace settings
         setAllowedDomains(orgData.settings?.allowed_email_domains?.join(', ') || '');
       }
@@ -189,6 +198,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const saveWorkspaceSettings = async (e: Event) => {
     e.preventDefault();
     const org = orgApi();
+    const ws = wsApi();
     if (!org) return;
 
     try {
@@ -218,8 +228,14 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         promises.push(org.organizations.updateOrganization({ name: orgName().trim() }));
       }
 
+      // Rename workspace if name changed
+      if (ws && wsName() !== originalWsName() && wsName().trim()) {
+        promises.push(ws.workspaces.updateWorkspace({ name: wsName().trim() }));
+      }
+
       await Promise.all(promises);
       setOriginalOrgName(orgName().trim());
+      setOriginalWsName(wsName().trim());
       setSuccess(t('success.workspaceSettingsSaved') || 'Workspace settings saved successfully');
     } catch (err) {
       setError(`${t('errors.failedToSave')}: ${err}`);
@@ -459,6 +475,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
               <div class={styles.formItem}>
                 <label>{t('settings.organizationName')}</label>
                 <input type="text" value={orgName()} onInput={(e) => setOrgName(e.target.value)} required />
+              </div>
+              <div class={styles.formItem}>
+                <label>{t('settings.workspaceName')}</label>
+                <input type="text" value={wsName()} onInput={(e) => setWsName(e.target.value)} required />
               </div>
               <div class={styles.formItem}>
                 <label class={styles.checkboxLabel}>
