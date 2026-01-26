@@ -95,7 +95,23 @@ export const ErrorCodeExpired = "EXPIRED";
  * ErrorCodeRateLimitExceeded is returned when rate limit is exceeded.
  */
 export const ErrorCodeRateLimitExceeded = "RATE_LIMIT_EXCEEDED";
-export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodeNodeNotFound | typeof ErrorCodeTableNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden | typeof ErrorCodeInvalidProvider | typeof ErrorCodeOAuthError | typeof ErrorCodeExpired | typeof ErrorCodeRateLimitExceeded;
+/**
+ * ErrorCodeCannotUnlinkOnlyAuth is returned when trying to unlink the only authentication method.
+ */
+export const ErrorCodeCannotUnlinkOnlyAuth = "CANNOT_UNLINK_ONLY_AUTH";
+/**
+ * ErrorCodeProviderAlreadyLinked is returned when trying to link an already linked provider.
+ */
+export const ErrorCodeProviderAlreadyLinked = "PROVIDER_ALREADY_LINKED";
+/**
+ * ErrorCodeProviderNotLinked is returned when trying to unlink a provider that is not linked.
+ */
+export const ErrorCodeProviderNotLinked = "PROVIDER_NOT_LINKED";
+/**
+ * ErrorCodeEmailInUse is returned when an email is already in use by another account.
+ */
+export const ErrorCodeEmailInUse = "EMAIL_IN_USE";
+export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodeNodeNotFound | typeof ErrorCodeTableNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden | typeof ErrorCodeInvalidProvider | typeof ErrorCodeOAuthError | typeof ErrorCodeExpired | typeof ErrorCodeRateLimitExceeded | typeof ErrorCodeCannotUnlinkOnlyAuth | typeof ErrorCodeProviderAlreadyLinked | typeof ErrorCodeProviderNotLinked | typeof ErrorCodeEmailInUse;
 /**
  * ErrorDetails defines the structured error information in a response.
  */
@@ -396,6 +412,25 @@ export interface DeleteGitRequest {
 export interface PushGitRequest {
 }
 /**
+ * ChangeEmailRequest is a request to change the user's email address.
+ */
+export interface ChangeEmailRequest {
+  new_email: string;
+  password: string; // Required for security verification
+}
+/**
+ * LinkOAuthAccountRequest is a request to initiate linking an OAuth provider.
+ */
+export interface LinkOAuthAccountRequest {
+  provider: OAuthProvider;
+}
+/**
+ * UnlinkOAuthAccountRequest is a request to unlink an OAuth provider.
+ */
+export interface UnlinkOAuthAccountRequest {
+  provider: OAuthProvider;
+}
+/**
  * HealthRequest is a request to check system health.
  */
 export interface HealthRequest {
@@ -691,6 +726,24 @@ export interface SwitchWorkspaceResponse {
   user?: UserResponse;
 }
 /**
+ * ChangeEmailResponse is a response from changing email.
+ */
+export interface ChangeEmailResponse {
+  ok: boolean;
+  email_verified: boolean;
+  message?: string;
+}
+/**
+ * LinkOAuthAccountResponse is a response from initiating OAuth linking.
+ */
+export interface LinkOAuthAccountResponse {
+  redirect_url: string;
+}
+/**
+ * UnlinkOAuthAccountResponse is a response from unlinking an OAuth provider.
+ */
+export type UnlinkOAuthAccountResponse = OkResponse;
+/**
  * HealthResponse is a response from a health check.
  */
 export interface HealthResponse {
@@ -709,6 +762,7 @@ export interface ListUsersResponse {
 export interface UserResponse {
   id: string;
   email: string;
+  email_verified?: boolean;
   name: string;
   is_global_admin?: boolean;
   oauth_identities?: OAuthIdentity[];
@@ -1039,7 +1093,11 @@ export const OAuthProviderGoogle = "google";
  * OAuthProviderMicrosoft represents Microsoft OAuth.
  */
 export const OAuthProviderMicrosoft = "microsoft";
-export type OAuthProvider = typeof OAuthProviderGoogle | typeof OAuthProviderMicrosoft;
+/**
+ * OAuthProviderGitHub represents GitHub OAuth.
+ */
+export const OAuthProviderGitHub = "github";
+export type OAuthProvider = typeof OAuthProviderGoogle | typeof OAuthProviderMicrosoft | typeof OAuthProviderGitHub;
 /**
  * OAuthIdentity represents a link between a local user and an OAuth2 provider.
  */

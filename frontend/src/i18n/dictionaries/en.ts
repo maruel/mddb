@@ -53,6 +53,7 @@ export const dict: Dictionary = {
     or: 'or',
     loginWithGoogle: 'Login with Google',
     loginWithMicrosoft: 'Login with Microsoft',
+    loginWithGitHub: 'Login with GitHub',
   },
 
   editor: {
@@ -142,6 +143,21 @@ export const dict: Dictionary = {
     languageEs: 'Spanish',
     enableNotifications: 'Enable notifications for this workspace',
     saveChanges: 'Save Changes',
+    // Linked accounts
+    linkedAccounts: 'Linked Accounts',
+    linkedAccountsHint: 'Connect additional login methods to your account.',
+    linkAccount: 'Link',
+    unlinkAccount: 'Unlink',
+    cannotUnlinkOnly: 'Cannot unlink the only authentication method',
+    linked: 'Linked',
+    notLinked: 'Not linked',
+    // Email change
+    changeEmail: 'Change Email',
+    newEmail: 'New Email Address',
+    currentPassword: 'Current Password',
+    emailChangeHint: 'After changing your email, you will need to verify it.',
+    emailVerified: 'Verified',
+    emailNotVerified: 'Not verified',
     // Workspace tab
     workspaceSettings: 'Workspace Settings',
     adminOnlyWorkspace: 'Only admins can modify workspace settings.',

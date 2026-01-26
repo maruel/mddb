@@ -23,6 +23,7 @@ import (
 type User struct {
 	ID              jsonldb.ID      `json:"id" jsonschema:"description=Unique user identifier"`
 	Email           string          `json:"email" jsonschema:"description=User email address"`
+	EmailVerified   bool            `json:"email_verified,omitempty" jsonschema:"description=Whether the email has been verified"`
 	Name            string          `json:"name" jsonschema:"description=User display name"`
 	IsGlobalAdmin   bool            `json:"is_global_admin,omitempty" jsonschema:"description=Whether user has server-wide administrative access"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
@@ -48,13 +49,34 @@ type UserQuota struct {
 	MaxOrganizations int `json:"max_organizations" jsonschema:"description=Maximum number of organizations the user can create"`
 }
 
+// OAuthProvider represents a supported OAuth2 provider.
+type OAuthProvider string
+
+const (
+	// OAuthProviderGoogle represents Google OAuth.
+	OAuthProviderGoogle OAuthProvider = "google"
+	// OAuthProviderMicrosoft represents Microsoft OAuth.
+	OAuthProviderMicrosoft OAuthProvider = "microsoft"
+	// OAuthProviderGitHub represents GitHub OAuth.
+	OAuthProviderGitHub OAuthProvider = "github"
+)
+
+// IsValid checks if the provider is a known valid value.
+func (p OAuthProvider) IsValid() bool {
+	switch p {
+	case OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub:
+		return true
+	}
+	return false
+}
+
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
 type OAuthIdentity struct {
-	Provider   string       `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft)"`
-	ProviderID string       `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
-	Email      string       `json:"email" jsonschema:"description=Email address from OAuth provider"`
-	AvatarURL  string       `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
-	LastLogin  storage.Time `json:"last_login" jsonschema:"description=Last login timestamp via this provider"`
+	Provider   OAuthProvider `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft/github)"`
+	ProviderID string        `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
+	Email      string        `json:"email" jsonschema:"description=Email address from OAuth provider"`
+	AvatarURL  string        `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
+	LastLogin  storage.Time  `json:"last_login" jsonschema:"description=Last login timestamp via this provider"`
 }
 
 // UserService handles user management and authentication.
@@ -151,7 +173,7 @@ func (s *UserService) Authenticate(email, password string) (*User, error) {
 }
 
 // GetByOAuth retrieves a user by their OAuth identity. O(1) via index.
-func (s *UserService) GetByOAuth(provider, providerID string) (*User, error) {
+func (s *UserService) GetByOAuth(provider OAuthProvider, providerID string) (*User, error) {
 	stored := s.byOAuth.Get(provider, providerID)
 	if stored == nil {
 		return nil, errUserNotFound
@@ -187,6 +209,30 @@ func (s *UserService) Iter(startID jsonldb.ID) iter.Seq[*User] {
 	}
 }
 
+// HasPassword checks if the user has a password set.
+func (s *UserService) HasPassword(id jsonldb.ID) bool {
+	if id.IsZero() {
+		return false
+	}
+	stored := s.table.Get(id)
+	if stored == nil {
+		return false
+	}
+	return stored.PasswordHash != ""
+}
+
+// VerifyPassword checks if the provided password matches the user's stored hash.
+func (s *UserService) VerifyPassword(id jsonldb.ID, password string) bool {
+	if id.IsZero() || password == "" {
+		return false
+	}
+	stored := s.table.Get(id)
+	if stored == nil || stored.PasswordHash == "" {
+		return false
+	}
+	return bcrypt.CompareHashAndPassword([]byte(stored.PasswordHash), []byte(password)) == nil
+}
+
 //
 
 var (
@@ -199,7 +245,7 @@ var (
 
 // oauthKey is a composite key for OAuth identity lookups.
 type oauthKey struct {
-	Provider   string
+	Provider   OAuthProvider
 	ProviderID string
 }
 
@@ -215,7 +261,7 @@ func newOAuthIndex(table *jsonldb.Table[*userStorage]) *oauthIndex {
 	return idx
 }
 
-func (idx *oauthIndex) Get(provider, providerID string) *userStorage {
+func (idx *oauthIndex) Get(provider OAuthProvider, providerID string) *userStorage {
 	id, ok := idx.byKey[oauthKey{Provider: provider, ProviderID: providerID}]
 	if !ok {
 		return nil

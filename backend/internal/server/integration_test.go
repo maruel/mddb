@@ -86,6 +86,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 		"http://localhost:8080",
 		"", "", // google OAuth (disabled)
 		"", "", // microsoft OAuth (disabled)
+		"", "", // github OAuth (disabled)
 	)
 
 	server := httptest.NewServer(router)

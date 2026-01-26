@@ -28,6 +28,13 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 - **Advanced Git Integration**: Secure remote syncing for organizations and **GitHub App support** for simplified access control.
 - **Streamlined Onboarding**: Unified UI and CLI experience for new users, including **template repository starters**.
 - **Global Administration**: Tools for system-wide oversight.
+- **Enhanced Authentication**:
+  - [ ] Refactor `OAuthIdentity.Provider` from `string` to typed `OAuthProvider` enum.
+  - [ ] Add GitHub OAuth provider support.
+  - [ ] Implement multi-provider account linking (manual link/unlink endpoints).
+  - [ ] Add `EmailVerified` field to User; trust OAuth emails as pre-verified.
+  - [ ] Support email change with re-verification (when email sending enabled).
+  - [ ] *Deferred*: Email verification via magic links using [smtp2go-go](https://github.com/smtp2go-oss/smtp2go-go).
 
 ### Next Steps (Phase 7+)
 - **Connectivity**: Backlinks and relational data modeling.

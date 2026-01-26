@@ -69,6 +69,15 @@ const (
 	ErrorCodeExpired ErrorCode = "EXPIRED"
 	// ErrorCodeRateLimitExceeded is returned when rate limit is exceeded.
 	ErrorCodeRateLimitExceeded ErrorCode = "RATE_LIMIT_EXCEEDED"
+
+	// ErrorCodeCannotUnlinkOnlyAuth is returned when trying to unlink the only authentication method.
+	ErrorCodeCannotUnlinkOnlyAuth ErrorCode = "CANNOT_UNLINK_ONLY_AUTH"
+	// ErrorCodeProviderAlreadyLinked is returned when trying to link an already linked provider.
+	ErrorCodeProviderAlreadyLinked ErrorCode = "PROVIDER_ALREADY_LINKED"
+	// ErrorCodeProviderNotLinked is returned when trying to unlink a provider that is not linked.
+	ErrorCodeProviderNotLinked ErrorCode = "PROVIDER_NOT_LINKED"
+	// ErrorCodeEmailInUse is returned when an email is already in use by another account.
+	ErrorCodeEmailInUse ErrorCode = "EMAIL_IN_USE"
 )
 
 // ErrorDetails defines the structured error information in a response.
@@ -229,4 +238,28 @@ func RateLimitExceeded(retryAfterSeconds int) *APIError {
 	return NewAPIError(http.StatusTooManyRequests, ErrorCodeRateLimitExceeded,
 		fmt.Sprintf("Too many requests. Please retry after %d seconds.", retryAfterSeconds)).
 		WithDetail("retry_after_seconds", retryAfterSeconds)
+}
+
+// CannotUnlinkOnlyAuth creates a 400 error when trying to unlink the only auth method.
+func CannotUnlinkOnlyAuth() *APIError {
+	return NewAPIError(http.StatusBadRequest, ErrorCodeCannotUnlinkOnlyAuth,
+		"Cannot unlink the only authentication method. Add a password or link another provider first.")
+}
+
+// ProviderAlreadyLinked creates a 409 error when provider is already linked.
+func ProviderAlreadyLinked(provider string) *APIError {
+	return NewAPIError(http.StatusConflict, ErrorCodeProviderAlreadyLinked,
+		provider+" is already linked to your account")
+}
+
+// ProviderNotLinked creates a 404 error when provider is not linked.
+func ProviderNotLinked(provider string) *APIError {
+	return NewAPIError(http.StatusNotFound, ErrorCodeProviderNotLinked,
+		provider+" is not linked to your account")
+}
+
+// EmailInUse creates a 409 error when email is already in use.
+func EmailInUse() *APIError {
+	return NewAPIError(http.StatusConflict, ErrorCodeEmailInUse,
+		"This email address is already in use by another account")
 }

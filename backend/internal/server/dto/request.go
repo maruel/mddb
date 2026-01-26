@@ -811,6 +811,53 @@ func (r *PushGitRequest) Validate() error {
 	return nil
 }
 
+// --- Email Change ---
+
+// ChangeEmailRequest is a request to change the user's email address.
+type ChangeEmailRequest struct {
+	NewEmail string `json:"new_email"`
+	Password string `json:"password"` // Required for security verification
+}
+
+// Validate validates the change email request fields.
+func (r *ChangeEmailRequest) Validate() error {
+	if err := validateEmail(r.NewEmail); err != nil {
+		return InvalidField("new_email", "invalid email format")
+	}
+	if r.Password == "" {
+		return MissingField("password")
+	}
+	return nil
+}
+
+// --- OAuth Linking ---
+
+// LinkOAuthAccountRequest is a request to initiate linking an OAuth provider.
+type LinkOAuthAccountRequest struct {
+	Provider OAuthProvider `json:"provider"`
+}
+
+// Validate validates the link OAuth account request fields.
+func (r *LinkOAuthAccountRequest) Validate() error {
+	if r.Provider == "" {
+		return MissingField("provider")
+	}
+	return nil
+}
+
+// UnlinkOAuthAccountRequest is a request to unlink an OAuth provider.
+type UnlinkOAuthAccountRequest struct {
+	Provider OAuthProvider `json:"provider"`
+}
+
+// Validate validates the unlink OAuth account request fields.
+func (r *UnlinkOAuthAccountRequest) Validate() error {
+	if r.Provider == "" {
+		return MissingField("provider")
+	}
+	return nil
+}
+
 // --- Health ---
 
 // HealthRequest is a request to check system health.

@@ -53,6 +53,7 @@ export const dict: Dictionary = {
     or: 'oder',
     loginWithGoogle: 'Mit Google anmelden',
     loginWithMicrosoft: 'Mit Microsoft anmelden',
+    loginWithGitHub: 'Mit GitHub anmelden',
   },
 
   editor: {
@@ -142,6 +143,21 @@ export const dict: Dictionary = {
     languageEs: 'Spanisch',
     enableNotifications: 'Benachrichtigungen für diesen Arbeitsbereich aktivieren',
     saveChanges: 'Änderungen speichern',
+    // Linked accounts
+    linkedAccounts: 'Verknüpfte Konten',
+    linkedAccountsHint: 'Verbinden Sie zusätzliche Anmeldemethoden mit Ihrem Konto.',
+    linkAccount: 'Verknüpfen',
+    unlinkAccount: 'Trennen',
+    cannotUnlinkOnly: 'Die einzige Authentifizierungsmethode kann nicht getrennt werden',
+    linked: 'Verknüpft',
+    notLinked: 'Nicht verknüpft',
+    // Email change
+    changeEmail: 'E-Mail ändern',
+    newEmail: 'Neue E-Mail-Adresse',
+    currentPassword: 'Aktuelles Passwort',
+    emailChangeHint: 'Nach der E-Mail-Änderung müssen Sie diese verifizieren.',
+    emailVerified: 'Verifiziert',
+    emailNotVerified: 'Nicht verifiziert',
     // Workspace tab
     workspaceSettings: 'Arbeitsbereich-Einstellungen',
     adminOnlyWorkspace: 'Nur Administratoren können Arbeitsbereich-Einstellungen ändern.',

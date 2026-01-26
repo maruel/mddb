@@ -132,6 +132,7 @@
 
 .googleButton,
 .microsoftButton,
+.githubButton,
 .oauthButton {
   display: flex;
   justify-content: center;
@@ -160,6 +161,16 @@
 }
 
 .microsoftButton:hover {
+  opacity: 0.9;
+}
+
+.githubButton {
+  background: #24292e;
+  color: white;
+  border: none;
+}
+
+.githubButton:hover {
   opacity: 0.9;
 }
 

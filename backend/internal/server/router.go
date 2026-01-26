@@ -38,7 +38,7 @@ func NewRouter(
 	orgMemService *identity.OrganizationMembershipService,
 	wsMemService *identity.WorkspaceMembershipService,
 	sessionService *identity.SessionService,
-	jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret string,
+	jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret, githubClientID, githubClientSecret string,
 ) http.Handler {
 	mux := &http.ServeMux{}
 	jwtSecretBytes := []byte(jwtSecret)
@@ -97,6 +97,9 @@ func NewRouter(
 	mux.Handle("POST /api/auth/sessions/revoke", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.RevokeSession, rlConfig))
 	mux.Handle("POST /api/auth/sessions/revoke-all", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.RevokeAllSessions, rlConfig))
 
+	// Email management (authenticated)
+	mux.Handle("POST /api/auth/email", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.ChangeEmail, rlConfig))
+
 	// Organization settings (org-scoped)
 	mux.Handle("GET /api/organizations/{orgID}", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, orgh.GetOrganization, rlConfig))
 	mux.Handle("POST /api/organizations/{orgID}", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, orgh.UpdateOrganization, rlConfig))
@@ -132,14 +135,18 @@ func NewRouter(
 	// OAuth endpoints (public) - always registered, returns error if provider not configured
 	oh := handlers.NewOAuthHandler(userService, authh)
 	base := strings.TrimRight(baseURL, "/")
-	var providers []string
+	var providers []identity.OAuthProvider
 	if googleClientID != "" && googleClientSecret != "" {
-		oh.AddProvider("google", googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")
-		providers = append(providers, "google")
+		oh.AddProvider(identity.OAuthProviderGoogle, googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")
+		providers = append(providers, identity.OAuthProviderGoogle)
 	}
 	if msClientID != "" && msClientSecret != "" {
-		oh.AddProvider("microsoft", msClientID, msClientSecret, base+"/api/auth/oauth/microsoft/callback")
-		providers = append(providers, "microsoft")
+		oh.AddProvider(identity.OAuthProviderMicrosoft, msClientID, msClientSecret, base+"/api/auth/oauth/microsoft/callback")
+		providers = append(providers, identity.OAuthProviderMicrosoft)
+	}
+	if githubClientID != "" && githubClientSecret != "" {
+		oh.AddProvider(identity.OAuthProviderGitHub, githubClientID, githubClientSecret, base+"/api/auth/oauth/github/callback")
+		providers = append(providers, identity.OAuthProviderGitHub)
 	}
 	if len(providers) > 0 {
 		slog.Info("OAuth providers initialized", "providers", providers)
@@ -149,6 +156,10 @@ func NewRouter(
 	mux.Handle("GET /api/auth/providers", Wrap(oh.ListProviders, rlConfig))
 	mux.HandleFunc("GET /api/auth/oauth/{provider}", oh.LoginRedirect)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", oh.Callback)
+
+	// OAuth linking endpoints (authenticated)
+	mux.Handle("POST /api/auth/oauth/link", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, oh.LinkOAuth, rlConfig))
+	mux.Handle("POST /api/auth/oauth/unlink", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, oh.UnlinkOAuth, rlConfig))
 
 	// Nodes endpoints (workspace-scoped)
 	// id=0 is valid for root node

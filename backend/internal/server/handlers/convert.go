@@ -21,6 +21,7 @@ func userToResponse(u *identity.User) *dto.UserResponse {
 	return &dto.UserResponse{
 		ID:              u.ID,
 		Email:           u.Email,
+		EmailVerified:   u.EmailVerified,
 		Name:            u.Name,
 		IsGlobalAdmin:   u.IsGlobalAdmin,
 		OAuthIdentities: identities,

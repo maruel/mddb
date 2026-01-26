@@ -214,6 +214,25 @@ type SwitchWorkspaceResponse struct {
 
 // --- Git Remote Responses ---
 
+// --- Email Change Responses ---
+
+// ChangeEmailResponse is a response from changing email.
+type ChangeEmailResponse struct {
+	Ok            bool   `json:"ok"`
+	EmailVerified bool   `json:"email_verified"`
+	Message       string `json:"message,omitempty"`
+}
+
+// --- OAuth Linking Responses ---
+
+// LinkOAuthAccountResponse is a response from initiating OAuth linking.
+type LinkOAuthAccountResponse struct {
+	RedirectURL string `json:"redirect_url"`
+}
+
+// UnlinkOAuthAccountResponse is a response from unlinking an OAuth provider.
+type UnlinkOAuthAccountResponse = OkResponse
+
 // --- Health Responses ---
 
 // HealthResponse is a response from a health check.
@@ -235,6 +254,7 @@ type ListUsersResponse struct {
 type UserResponse struct {
 	ID              jsonldb.ID      `json:"id" jsonschema:"description=Unique user identifier"`
 	Email           string          `json:"email" jsonschema:"description=User email address"`
+	EmailVerified   bool            `json:"email_verified,omitempty" jsonschema:"description=Whether the email has been verified"`
 	Name            string          `json:"name" jsonschema:"description=User display name"`
 	IsGlobalAdmin   bool            `json:"is_global_admin,omitempty" jsonschema:"description=Whether user has server-wide administrative access"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`

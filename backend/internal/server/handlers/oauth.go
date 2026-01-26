@@ -11,22 +11,28 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/microsoft"
 )
+
+const linkingStatePrefix = "link:"
 
 // OAuthHandler handles OAuth2 authentication for multiple providers.
 type OAuthHandler struct {
 	userService *identity.UserService
 	authHandler *AuthHandler
-	providers   map[string]*oauth2.Config
+	providers   map[identity.OAuthProvider]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
@@ -34,25 +40,28 @@ func NewOAuthHandler(userService *identity.UserService, authHandler *AuthHandler
 	return &OAuthHandler{
 		userService: userService,
 		authHandler: authHandler,
-		providers:   make(map[string]*oauth2.Config),
+		providers:   make(map[identity.OAuthProvider]*oauth2.Config),
 	}
 }
 
 // AddProvider adds an OAuth2 provider configuration.
-func (h *OAuthHandler) AddProvider(name, clientID, clientSecret, redirectURL string) {
+func (h *OAuthHandler) AddProvider(name identity.OAuthProvider, clientID, clientSecret, redirectURL string) {
 	var endpoint oauth2.Endpoint
 	var scopes []string
 
 	switch name {
-	case "google":
+	case identity.OAuthProviderGoogle:
 		endpoint = google.Endpoint
 		scopes = []string{
 			"https://www.googleapis.com/auth/userinfo.email",
 			"https://www.googleapis.com/auth/userinfo.profile",
 		}
-	case "microsoft":
+	case identity.OAuthProviderMicrosoft:
 		endpoint = microsoft.AzureADEndpoint("common")
 		scopes = []string{"openid", "profile", "email", "User.Read"}
+	case identity.OAuthProviderGitHub:
+		endpoint = github.Endpoint
+		scopes = []string{"read:user", "user:email"}
 	default:
 		return
 	}
@@ -70,14 +79,106 @@ func (h *OAuthHandler) AddProvider(name, clientID, clientSecret, redirectURL str
 func (h *OAuthHandler) ListProviders(_ context.Context, _ *dto.ProvidersRequest) (*dto.ProvidersResponse, error) {
 	providers := make([]dto.OAuthProvider, 0, len(h.providers))
 	for name := range h.providers {
-		providers = append(providers, dto.OAuthProvider(name))
+		providers = append(providers, dto.OAuthProvider(string(name)))
 	}
 	return &dto.ProvidersResponse{Providers: providers}, nil
 }
 
+// LinkOAuth initiates linking an OAuth provider to an existing account.
+func (h *OAuthHandler) LinkOAuth(_ context.Context, _ jsonldb.ID, user *identity.User, req *dto.LinkOAuthAccountRequest) (*dto.LinkOAuthAccountResponse, error) {
+	provider := identity.OAuthProvider(req.Provider)
+	config, ok := h.providers[provider]
+	if !ok {
+		return nil, dto.InvalidProvider()
+	}
+
+	// Check if provider is already linked
+	for _, ident := range user.OAuthIdentities {
+		if ident.Provider == provider {
+			return nil, dto.ProviderAlreadyLinked(string(provider))
+		}
+	}
+
+	// Generate linking state with user ID
+	state := generateLinkingState(user.ID, provider)
+
+	var opts []oauth2.AuthCodeOption
+	if provider == identity.OAuthProviderGoogle {
+		opts = append(opts, oauth2.SetAuthURLParam("prompt", "select_account"))
+	}
+	authURL := config.AuthCodeURL(state, opts...)
+
+	return &dto.LinkOAuthAccountResponse{RedirectURL: authURL}, nil
+}
+
+// UnlinkOAuth removes an OAuth provider from the user's account.
+func (h *OAuthHandler) UnlinkOAuth(_ context.Context, _ jsonldb.ID, user *identity.User, req *dto.UnlinkOAuthAccountRequest) (*dto.UnlinkOAuthAccountResponse, error) {
+	provider := identity.OAuthProvider(req.Provider)
+
+	// Check if provider is linked
+	found := false
+	for _, ident := range user.OAuthIdentities {
+		if ident.Provider == provider {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, dto.ProviderNotLinked(string(provider))
+	}
+
+	// Check if user has another auth method (password or other OAuth)
+	hasPassword := h.userService.HasPassword(user.ID)
+	otherOAuthCount := len(user.OAuthIdentities) - 1
+
+	if !hasPassword && otherOAuthCount == 0 {
+		return nil, dto.CannotUnlinkOnlyAuth()
+	}
+
+	// Remove the OAuth identity
+	if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+		newIdentities := make([]identity.OAuthIdentity, 0, len(u.OAuthIdentities)-1)
+		for _, ident := range u.OAuthIdentities {
+			if ident.Provider != provider {
+				newIdentities = append(newIdentities, ident)
+			}
+		}
+		u.OAuthIdentities = newIdentities
+		return nil
+	}); err != nil {
+		return nil, dto.InternalWithError("Failed to unlink provider", err)
+	}
+
+	return &dto.UnlinkOAuthAccountResponse{Ok: true}, nil
+}
+
+// generateLinkingState creates an OAuth state for linking that includes the user ID.
+func generateLinkingState(userID jsonldb.ID, provider identity.OAuthProvider) string {
+	randomPart, _ := utils.GenerateToken(16)
+	return fmt.Sprintf("%s%s:%s:%s", linkingStatePrefix, userID.String(), string(provider), randomPart)
+}
+
+// parseLinkingState parses a linking state and returns the user ID and provider.
+// Returns zero ID if the state is not a linking state.
+func parseLinkingState(state string) (jsonldb.ID, identity.OAuthProvider) {
+	if !strings.HasPrefix(state, linkingStatePrefix) {
+		return 0, ""
+	}
+	state = strings.TrimPrefix(state, linkingStatePrefix)
+	parts := strings.SplitN(state, ":", 3)
+	if len(parts) < 2 {
+		return 0, ""
+	}
+	userID, err := jsonldb.DecodeID(parts[0])
+	if err != nil {
+		return 0, ""
+	}
+	return userID, identity.OAuthProvider(parts[1])
+}
+
 // LoginRedirect redirects the user to the OAuth provider.
 func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
-	provider := r.PathValue("provider")
+	provider := identity.OAuthProvider(r.PathValue("provider"))
 	config, ok := h.providers[provider]
 	if !ok {
 		writeErrorResponse(w, dto.InvalidProvider())
@@ -92,7 +193,7 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var opts []oauth2.AuthCodeOption
-	if provider == "google" {
+	if provider == identity.OAuthProviderGoogle {
 		opts = append(opts, oauth2.SetAuthURLParam("prompt", "select_account"))
 	}
 	authURL := config.AuthCodeURL(state, opts...)
@@ -101,7 +202,7 @@ func (h *OAuthHandler) LoginRedirect(w http.ResponseWriter, r *http.Request) {
 
 // Callback handles the OAuth provider callback.
 func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
-	provider := r.PathValue("provider")
+	provider := identity.OAuthProvider(r.PathValue("provider"))
 	config, ok := h.providers[provider]
 	if !ok {
 		writeErrorResponse(w, dto.InvalidProvider())
@@ -131,7 +232,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	switch provider {
-	case "google":
+	case identity.OAuthProviderGoogle:
 		resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
 		if err != nil {
 			writeErrorResponse(w, dto.OAuthError("user_info"))
@@ -156,7 +257,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		userInfo.Email = googleUser.Email
 		userInfo.Name = googleUser.Name
 		userInfo.AvatarURL = googleUser.Picture
-	case "microsoft":
+	case identity.OAuthProviderMicrosoft:
 		resp, err := client.Get("https://graph.microsoft.com/v1.0/me")
 		if err != nil {
 			writeErrorResponse(w, dto.OAuthError("user_info"))
@@ -187,6 +288,98 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 
 		// Fetch Microsoft profile photo and convert to base64 data URL
 		userInfo.AvatarURL = fetchMicrosoftPhoto(ctx, client)
+	case identity.OAuthProviderGitHub:
+		resp, err := client.Get("https://api.github.com/user")
+		if err != nil {
+			writeErrorResponse(w, dto.OAuthError("user_info"))
+			return
+		}
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				slog.ErrorContext(ctx, "Failed to close GitHub API response body", "error", err)
+			}
+		}()
+		var ghUser struct {
+			ID        int64  `json:"id"`
+			Login     string `json:"login"`
+			Name      string `json:"name"`
+			Email     string `json:"email"`
+			AvatarURL string `json:"avatar_url"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&ghUser); err != nil {
+			writeErrorResponse(w, dto.OAuthError("decode"))
+			return
+		}
+		userInfo.ID = strconv.FormatInt(ghUser.ID, 10)
+		userInfo.Name = ghUser.Name
+		if userInfo.Name == "" {
+			userInfo.Name = ghUser.Login
+		}
+		userInfo.Email = ghUser.Email
+		userInfo.AvatarURL = ghUser.AvatarURL
+
+		// GitHub may not return email if set to private - fetch from emails endpoint
+		if userInfo.Email == "" {
+			userInfo.Email = fetchGitHubPrimaryEmail(ctx, client)
+		}
+	}
+
+	// Check if this is a linking request
+	state := r.URL.Query().Get("state")
+	linkingUserID, linkingProvider := parseLinkingState(state)
+	if !linkingUserID.IsZero() {
+		// This is a linking callback - verify provider matches
+		if linkingProvider != provider {
+			slog.WarnContext(ctx, "OAuth linking: provider mismatch", "expected", linkingProvider, "got", provider)
+			writeErrorResponse(w, dto.BadRequest("Provider mismatch"))
+			return
+		}
+
+		// Check if this OAuth identity is already claimed by another user
+		existingUser, _ := h.userService.GetByOAuth(provider, userInfo.ID)
+		if existingUser != nil && existingUser.ID != linkingUserID {
+			slog.WarnContext(ctx, "OAuth linking: identity already claimed", "oauthID", userInfo.ID, "existingUser", existingUser.ID)
+			// Redirect to frontend with error
+			http.Redirect(w, r, "/?oauth_error=identity_claimed", http.StatusFound)
+			return
+		}
+
+		// Get the user we're linking to
+		linkingUser, err := h.userService.Get(linkingUserID)
+		if err != nil {
+			slog.ErrorContext(ctx, "OAuth linking: user not found", "userID", linkingUserID, "error", err)
+			writeErrorResponse(w, dto.NotFound("user"))
+			return
+		}
+
+		// Check if provider is already linked to this user
+		for _, ident := range linkingUser.OAuthIdentities {
+			if ident.Provider == provider {
+				// Already linked - just redirect to success
+				http.Redirect(w, r, "/?oauth_linked=true", http.StatusFound)
+				return
+			}
+		}
+
+		// Link the OAuth identity
+		if _, err := h.userService.Modify(linkingUserID, func(u *identity.User) error {
+			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
+				Provider:   provider,
+				ProviderID: userInfo.ID,
+				Email:      userInfo.Email,
+				AvatarURL:  userInfo.AvatarURL,
+				LastLogin:  storage.Now(),
+			})
+			return nil
+		}); err != nil {
+			slog.ErrorContext(ctx, "OAuth linking: failed to link identity", "error", err)
+			writeErrorResponse(w, dto.Internal("oauth_link"))
+			return
+		}
+
+		slog.InfoContext(ctx, "OAuth: linked identity", "userID", linkingUserID, "provider", provider)
+		http.Redirect(w, r, "/?oauth_linked=true", http.StatusFound)
+		return
 	}
 
 	// Try to find user by OAuth ID
@@ -210,8 +403,9 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Link OAuth identity
+		// Link OAuth identity and mark email as verified (OAuth emails are trusted)
 		if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+			u.EmailVerified = true
 			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
 				Provider:   provider,
 				ProviderID: userInfo.ID,
@@ -296,4 +490,50 @@ func fetchMicrosoftPhoto(ctx context.Context, client *http.Client) string {
 	// Encode as data URL
 	encoded := base64.StdEncoding.EncodeToString(data)
 	return fmt.Sprintf("data:%s;base64,%s", contentType, encoded)
+}
+
+// fetchGitHubPrimaryEmail fetches the user's primary verified email from GitHub API.
+// Returns empty string on failure or if no verified primary email exists.
+func fetchGitHubPrimaryEmail(ctx context.Context, client *http.Client) string {
+	resp, err := client.Get("https://api.github.com/user/emails")
+	if err != nil {
+		slog.DebugContext(ctx, "Failed to fetch GitHub emails", "error", err)
+		return ""
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.ErrorContext(ctx, "Failed to close GitHub emails response body", "error", err)
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		slog.DebugContext(ctx, "GitHub emails request failed", "status", resp.StatusCode)
+		return ""
+	}
+
+	var emails []struct {
+		Email    string `json:"email"`
+		Primary  bool   `json:"primary"`
+		Verified bool   `json:"verified"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
+		slog.DebugContext(ctx, "Failed to decode GitHub emails", "error", err)
+		return ""
+	}
+
+	// Find primary verified email
+	for _, e := range emails {
+		if e.Primary && e.Verified {
+			return e.Email
+		}
+	}
+
+	// Fall back to any verified email
+	for _, e := range emails {
+		if e.Verified {
+			return e.Email
+		}
+	}
+
+	return ""
 }

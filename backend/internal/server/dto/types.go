@@ -95,6 +95,8 @@ const (
 	OAuthProviderGoogle OAuthProvider = "google"
 	// OAuthProviderMicrosoft represents Microsoft OAuth.
 	OAuthProviderMicrosoft OAuthProvider = "microsoft"
+	// OAuthProviderGitHub represents GitHub OAuth.
+	OAuthProviderGitHub OAuthProvider = "github"
 )
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.

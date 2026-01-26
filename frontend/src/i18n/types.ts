@@ -55,6 +55,7 @@ export interface Dictionary {
     or: string;
     loginWithGoogle: string;
     loginWithMicrosoft: string;
+    loginWithGitHub: string;
   };
 
   editor: {
@@ -142,6 +143,21 @@ export interface Dictionary {
     languageEs: string;
     enableNotifications: string;
     saveChanges: string;
+    // Linked accounts
+    linkedAccounts: string;
+    linkedAccountsHint: string;
+    linkAccount: string;
+    unlinkAccount: string;
+    cannotUnlinkOnly: string;
+    linked: string;
+    notLinked: string;
+    // Email change
+    changeEmail: string;
+    newEmail: string;
+    currentPassword: string;
+    emailChangeHint: string;
+    emailVerified: string;
+    emailNotVerified: string;
     // Workspace tab
     workspaceSettings: string;
     adminOnlyWorkspace: string;

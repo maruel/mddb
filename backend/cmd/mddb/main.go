@@ -53,6 +53,8 @@ func mainImpl() error {
 	googleClientSecret := flag.String("google-client-secret", "", "Google OAuth client secret")
 	msClientID := flag.String("ms-client-id", "", "Microsoft OAuth client ID")
 	msClientSecret := flag.String("ms-client-secret", "", "Microsoft OAuth client secret")
+	githubClientID := flag.String("github-client-id", "", "GitHub OAuth client ID")
+	githubClientSecret := flag.String("github-client-secret", "", "GitHub OAuth client secret")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		return fmt.Errorf("unknown arguments: %v", flag.Args())
@@ -173,6 +175,16 @@ func mainImpl() error {
 			*msClientSecret = v
 		}
 	}
+	if !set["github-client-id"] {
+		if v := env["GITHUB_CLIENT_ID"]; v != "" {
+			*githubClientID = v
+		}
+	}
+	if !set["github-client-secret"] {
+		if v := env["GITHUB_CLIENT_SECRET"]; v != "" {
+			*githubClientSecret = v
+		}
+	}
 
 	// Test mode: use fake OAuth credentials for testing OAuth UI flow
 	if os.Getenv("TEST_OAUTH") == "1" {
@@ -186,6 +198,11 @@ func mainImpl() error {
 			*msClientSecret = "test-ms-client-secret"
 			slog.Info("TEST_OAUTH=1: Using fake Microsoft OAuth credentials")
 		}
+		if *githubClientID == "" {
+			*githubClientID = "test-github-client-id"
+			*githubClientSecret = "test-github-client-secret"
+			slog.Info("TEST_OAUTH=1: Using fake GitHub OAuth credentials")
+		}
 	}
 
 	// Validate OAuth credentials: both ID and secret must be set, or neither
@@ -194,6 +211,9 @@ func mainImpl() error {
 	}
 	if (*msClientID == "") != (*msClientSecret == "") {
 		return errors.New("ms-client-id and ms-client-secret must both be set or both be empty")
+	}
+	if (*githubClientID == "") != (*githubClientSecret == "") {
+		return errors.New("github-client-id and github-client-secret must both be set or both be empty")
 	}
 
 	// Append port to base URL if localhost and no port specified
@@ -282,7 +302,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret),
+		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret, *githubClientID, *githubClientSecret),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -474,6 +494,25 @@ func runOnboarding(dataDir string) error {
 			return fmt.Errorf("failed to read Microsoft Client Secret: %w", err)
 		}
 		env["MS_CLIENT_SECRET"] = strings.TrimSpace(val)
+	}
+
+	// GitHub OAuth
+	fmt.Println("\n--- GitHub OAuth Setup ---")
+	fmt.Println("To use GitHub login, create an OAuth App at https://github.com/settings/developers")
+	fmt.Printf("Configure a redirect URI: %s/api/auth/oauth/github/callback\n", displayBaseURL)
+	fmt.Print("GitHub Client ID (optional): ")
+	val, err = reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("failed to read GitHub Client ID: %w", err)
+	}
+	env["GITHUB_CLIENT_ID"] = strings.TrimSpace(val)
+	if env["GITHUB_CLIENT_ID"] != "" {
+		fmt.Print("GitHub Client Secret: ")
+		val, err = reader.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("failed to read GitHub Client Secret: %w", err)
+		}
+		env["GITHUB_CLIENT_SECRET"] = strings.TrimSpace(val)
 	}
 
 	fmt.Println("")

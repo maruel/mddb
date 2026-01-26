@@ -310,3 +310,41 @@ func (h *AuthHandler) RevokeAllSessions(ctx context.Context, _ jsonldb.ID, user 
 
 	return &dto.RevokeAllSessionsResponse{RevokedCount: revokedCount}, nil
 }
+
+// ChangeEmail changes the user's email address after password verification.
+func (h *AuthHandler) ChangeEmail(_ context.Context, _ jsonldb.ID, user *identity.User, req *dto.ChangeEmailRequest) (*dto.ChangeEmailResponse, error) {
+	// Verify password
+	if !h.userService.VerifyPassword(user.ID, req.Password) {
+		return nil, dto.NewAPIError(401, dto.ErrorCodeUnauthorized, "Invalid password")
+	}
+
+	// Check if new email is same as current
+	if req.NewEmail == user.Email {
+		return &dto.ChangeEmailResponse{
+			Ok:            true,
+			EmailVerified: user.EmailVerified,
+			Message:       "Email unchanged",
+		}, nil
+	}
+
+	// Check if new email is already in use by another account
+	existingUser, _ := h.userService.GetByEmail(req.NewEmail)
+	if existingUser != nil && existingUser.ID != user.ID {
+		return nil, dto.EmailInUse()
+	}
+
+	// Update email and reset EmailVerified
+	if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+		u.Email = req.NewEmail
+		u.EmailVerified = false
+		return nil
+	}); err != nil {
+		return nil, dto.InternalWithError("Failed to update email", err)
+	}
+
+	return &dto.ChangeEmailResponse{
+		Ok:            true,
+		EmailVerified: false,
+		Message:       "Email changed successfully. Please verify your new email.",
+	}, nil
+}

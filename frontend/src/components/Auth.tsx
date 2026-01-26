@@ -3,7 +3,7 @@
 import { createSignal, createResource, Show, For } from 'solid-js';
 import { createAPIClient, APIError } from '../api.gen';
 import type { UserResponse, OAuthProvider } from '../types.gen';
-import { OAuthProviderGoogle, OAuthProviderMicrosoft } from '../types.gen';
+import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from '../types.gen';
 import styles from './Auth.module.css';
 import { useI18n } from '../i18n';
 
@@ -15,6 +15,7 @@ interface AuthProps {
 const providerConfig: Record<OAuthProvider, { style: string; labelKey: string }> = {
   [OAuthProviderGoogle]: { style: styles.googleButton ?? '', labelKey: 'auth.loginWithGoogle' },
   [OAuthProviderMicrosoft]: { style: styles.microsoftButton ?? '', labelKey: 'auth.loginWithMicrosoft' },
+  [OAuthProviderGitHub]: { style: styles.githubButton ?? '', labelKey: 'auth.loginWithGitHub' },
 };
 
 function getProviderConfig(provider: OAuthProvider): { style: string; label: string } {
