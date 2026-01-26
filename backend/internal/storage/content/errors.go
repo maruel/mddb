@@ -1,3 +1,5 @@
+// Defines sentinel errors for content operations.
+
 package content
 
 import "errors"

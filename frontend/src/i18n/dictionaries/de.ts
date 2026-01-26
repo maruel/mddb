@@ -1,3 +1,5 @@
+// German translation dictionary.
+
 import type { Dictionary } from '../types';
 
 export const dict: Dictionary = {

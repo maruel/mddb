@@ -1,3 +1,5 @@
+// Manages invitations for users to join workspaces.
+
 package identity
 
 import (

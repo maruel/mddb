@@ -1,3 +1,5 @@
+// Handles health check endpoints.
+
 package handlers
 
 import (

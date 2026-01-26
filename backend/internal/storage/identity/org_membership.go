@@ -1,3 +1,5 @@
+// Manages user memberships within organizations.
+
 package identity
 
 import (

@@ -1,3 +1,5 @@
+// Handles user context switching (org/workspace) and membership settings.
+
 package handlers
 
 import (

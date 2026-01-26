@@ -1,3 +1,5 @@
+// Provides middleware for standardizing HTTP handlers.
+
 package server
 
 import (

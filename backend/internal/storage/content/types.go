@@ -1,3 +1,5 @@
+// Defines the core data models for content (Node, DataRecord, Asset).
+
 package content
 
 import (

@@ -1,3 +1,5 @@
+// Embeds documentation for AI agents.
+
 // Package storage provides data persistence for mddb workspaces.
 package storage
 

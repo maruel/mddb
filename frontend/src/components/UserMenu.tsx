@@ -1,3 +1,5 @@
+// Dropdown menu for user profile and logout.
+
 import { createSignal, onMount, onCleanup, Show } from 'solid-js';
 import { useI18n } from '../i18n';
 import type { UserResponse } from '../types.gen';

@@ -1,3 +1,5 @@
+// Modal component for creating a new workspace.
+
 import { createSignal, Show } from 'solid-js';
 import { useI18n } from '../i18n';
 import styles from './Onboarding.module.css';

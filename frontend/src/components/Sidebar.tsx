@@ -1,3 +1,5 @@
+// Sidebar navigation component containing the workspace tree.
+
 import { For, Show } from 'solid-js';
 import SidebarNode from './SidebarNode';
 import { useI18n } from '../i18n';

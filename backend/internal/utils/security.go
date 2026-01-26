@@ -1,3 +1,5 @@
+// Provides cryptographic utilities for token generation and hashing.
+
 // Package utils provides shared utility functions across the application.
 package utils
 

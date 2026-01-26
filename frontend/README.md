@@ -1,4 +1,4 @@
-# mddb Frontend
+# mddb Frontend Architecture and Setup
 
 SolidJS-based frontend for mddb - a markdown document and table system.
 

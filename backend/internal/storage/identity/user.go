@@ -1,3 +1,5 @@
+// Manages user accounts, authentication, and profiles.
+
 // Package identity provides services for user authentication and organization management.
 //
 // This package handles internal database tables (JSONL-backed) for:

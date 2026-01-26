@@ -1,3 +1,5 @@
+// Type definitions for internationalization (dictionaries and locales).
+
 // Supported locales
 export type Locale = 'en' | 'fr' | 'de' | 'es';
 

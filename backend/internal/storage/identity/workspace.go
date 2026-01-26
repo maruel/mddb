@@ -1,3 +1,5 @@
+// Manages workspace entities, quotas, and settings.
+
 package identity
 
 import (

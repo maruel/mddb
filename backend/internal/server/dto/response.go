@@ -1,3 +1,5 @@
+// Defines API response payloads.
+
 package dto
 
 import (

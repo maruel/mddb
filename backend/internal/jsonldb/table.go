@@ -1,3 +1,5 @@
+// Implements the concurrent-safe Table[T] for JSONL storage.
+
 package jsonldb
 
 import (

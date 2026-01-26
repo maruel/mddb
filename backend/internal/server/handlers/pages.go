@@ -1,3 +1,5 @@
+// Handles page management endpoints (documents).
+
 // Package handlers provides HTTP request handlers for the REST API.
 //
 // Each handler type wraps storage services, validates inputs, and returns

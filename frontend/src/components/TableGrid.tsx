@@ -1,3 +1,5 @@
+// Grid view for table records, displaying data in cards.
+
 import { For } from 'solid-js';
 import type { DataRecordResponse, Property } from '../types.gen';
 import styles from './TableGrid.module.css';

@@ -1,3 +1,5 @@
+// Defines rate limit tiers and routing rules.
+
 package ratelimit
 
 import (

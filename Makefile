@@ -1,4 +1,4 @@
-.PHONY: help build dev test coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade
+.PHONY: help build dev test coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade docs
 
 # Variables
 DATA_DIR=./data
@@ -15,6 +15,7 @@ help:
 	@echo "  make dev            - Run the server in development mode"
 	@echo "  make test           - Run backend tests"
 	@echo "  make types          - Generate TypeScript types from Go structs"
+	@echo "  make docs           - Update AGENTS.md file index"
 	@echo "  make lint           - Run linters (Go + frontend)"
 	@echo "  make lint-fix       - Fix all linting issues automatically"
 	@echo "  make git-hooks      - Install git pre-commit hooks"
@@ -33,13 +34,16 @@ $(FRONTEND_STAMP): pnpm-lock.yaml
 	@touch $@
 
 # Build frontend and Go server
-build: types
+build: types docs
 	@go generate ./...
 	@go install ./backend/cmd/...
 
 types: $(FRONTEND_STAMP)
 	@cd ./backend && go tool tygo generate
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --log-level silent --write frontend/src/types.gen.ts
+
+docs:
+	@./scripts/update_agents_file_index.py
 
 # Create data/.env from example if missing (skips interactive onboarding)
 # Order-only prerequisite (|) ensures we don't overwrite existing .env
@@ -59,7 +63,7 @@ coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm coverage
 
-lint: lint-go lint-frontend lint-binaries
+lint: lint-go lint-frontend lint-python lint-binaries
 
 lint-go:
 	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
@@ -67,6 +71,9 @@ lint-go:
 
 lint-frontend: $(FRONTEND_STAMP)
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint
+
+lint-python:
+	@ruff check scripts/
 
 lint-binaries:
 	@binaries=$$(git ls-files -z | xargs -0 -r file --mime-type | grep -E 'application/(x-executable|x-mach-binary|x-dosexec|x-pie-executable|x-sharedlib)' | cut -d: -f1); \
@@ -79,6 +86,12 @@ lint-binaries:
 lint-fix: $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run ./... --fix || true
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint:fix
+	@ruff check scripts/ --fix
+	@ruff format scripts/
+
+format-python:
+	@ruff format scripts/
+	@ruff check scripts/ --fix
 
 git-hooks:
 	@echo "Installing git pre-commit hooks..."

@@ -1,3 +1,5 @@
+// Implements a thread-safe token bucket rate limiter.
+
 // Package ratelimit implements token bucket rate limiting for HTTP handlers.
 package ratelimit
 

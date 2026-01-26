@@ -1,3 +1,5 @@
+// Application entry point rendering the root component.
+
 import { render } from 'solid-js/web';
 import { I18nProvider, type Locale } from './i18n';
 import './variables.css';

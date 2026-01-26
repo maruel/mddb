@@ -1,3 +1,5 @@
+// Handles global system administration endpoints.
+
 package handlers
 
 import (

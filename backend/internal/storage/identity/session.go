@@ -1,3 +1,5 @@
+// Handles active user sessions and token management.
+
 package identity
 
 import (

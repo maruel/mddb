@@ -1,3 +1,5 @@
+// Defines structured error types and codes for the API.
+
 // Package dto defines API request/response types and error handling.
 //
 // This package contains all types used for HTTP API communication via goty:

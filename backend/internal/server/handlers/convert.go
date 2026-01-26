@@ -1,3 +1,5 @@
+// Provides helper functions to convert between domain entities and DTOs.
+
 package handlers
 
 import (

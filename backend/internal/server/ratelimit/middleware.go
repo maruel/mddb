@@ -1,3 +1,5 @@
+// Provides HTTP middleware and response writers for rate limiting.
+
 package ratelimit
 
 import (

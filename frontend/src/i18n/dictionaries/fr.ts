@@ -1,3 +1,5 @@
+// French translation dictionary.
+
 import type { Dictionary } from '../types';
 
 export const dict: Dictionary = {

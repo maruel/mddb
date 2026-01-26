@@ -1,3 +1,5 @@
+// Recursive component for rendering navigation tree nodes in the sidebar.
+
 import { createSignal, For, Show, onMount } from 'solid-js';
 import { useI18n } from '../i18n';
 import type { NodeResponse } from '../types.gen';

@@ -1,3 +1,5 @@
+// Handles organization and workspace invitations.
+
 package handlers
 
 import (

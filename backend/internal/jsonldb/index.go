@@ -1,3 +1,5 @@
+// Provides concurrent-safe, in-memory secondary indexes for tables.
+
 package jsonldb
 
 import (

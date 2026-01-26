@@ -1,4 +1,4 @@
-# Technical Documentation
+# mddb Technical Architecture and Storage Model
 
 ## Storage Model
 

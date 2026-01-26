@@ -1,3 +1,5 @@
+// Defines request context keys and helper functions for metadata access.
+
 // Package reqctx provides request context utilities for passing request metadata.
 package reqctx
 

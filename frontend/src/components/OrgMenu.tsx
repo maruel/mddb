@@ -1,3 +1,5 @@
+// Dropdown menu for switching between organizations.
+
 import { createSignal, For, onMount, onCleanup, Show } from 'solid-js';
 import { useI18n } from '../i18n';
 import type { OrgMembershipResponse } from '../types.gen';

@@ -1,3 +1,5 @@
+// Spreadsheet-like table view for editing records inline.
+
 import { createSignal, For, Show } from 'solid-js';
 import {
   type DataRecordResponse,

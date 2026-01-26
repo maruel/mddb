@@ -1,3 +1,5 @@
+// Defines API request payloads and validation logic.
+
 package dto
 
 import (

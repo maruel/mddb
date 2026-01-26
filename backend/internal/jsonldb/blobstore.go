@@ -1,3 +1,5 @@
+// Manages the on-disk storage layout for content-addressed blobs.
+
 package jsonldb
 
 import (

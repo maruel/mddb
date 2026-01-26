@@ -1,3 +1,5 @@
+// Manages workspace-scoped file storage and quotas.
+
 // Package content provides versioned file storage for the mddb system.
 package content
 

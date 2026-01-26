@@ -1,3 +1,5 @@
+// Provides helper functions for writing error responses.
+
 package handlers
 
 import (

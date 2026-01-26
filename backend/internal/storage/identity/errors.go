@@ -1,3 +1,5 @@
+// Defines sentinel errors for identity operations.
+
 package identity
 
 import (

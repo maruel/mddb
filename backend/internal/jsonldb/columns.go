@@ -1,3 +1,5 @@
+// Handles schema definition, column types, and reflection-based schema generation.
+
 package jsonldb
 
 import (

@@ -118,7 +118,6 @@ A: The data is itself in text form.
 
 For developers or advanced setup:
 - Review [AGENTS.md](AGENTS.md) for development guidelines
-- Check [the documentation index](docs/README.md) for more details
 
 ## Building from Source
 

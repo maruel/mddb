@@ -1,3 +1,5 @@
+// Handles file upload and retrieval for page assets.
+
 package handlers
 
 import (

@@ -1,3 +1,5 @@
+// Handles OAuth2 authentication with external providers.
+
 package handlers
 
 import (

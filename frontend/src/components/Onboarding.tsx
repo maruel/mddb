@@ -1,3 +1,5 @@
+// Onboarding wizard for new users to configure their workspace.
+
 import { createSignal, createMemo, Show } from 'solid-js';
 import { createApi } from '../useApi';
 import type { UserResponse } from '../types.gen';

@@ -1,3 +1,5 @@
+// Defines the validation interface for requests.
+
 package dto
 
 // Validatable is implemented by request types that can validate their fields.

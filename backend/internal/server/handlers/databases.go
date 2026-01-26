@@ -1,3 +1,5 @@
+// Handles table management endpoints.
+
 package handlers
 
 import (

@@ -1,3 +1,5 @@
+// Provides a JSON-friendly Time type with millisecond precision.
+
 package storage
 
 import (

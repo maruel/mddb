@@ -1,3 +1,5 @@
+// Component for rendering Markdown content with custom plugins.
+
 import MarkdownIt from 'markdown-it';
 import styles from './MarkdownPreview.module.css';
 

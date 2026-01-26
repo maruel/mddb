@@ -1,3 +1,5 @@
+// Handles organization management endpoints.
+
 package handlers
 
 import (

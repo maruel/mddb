@@ -1,3 +1,5 @@
+// Utility function for debouncing function calls.
+
 /**
  * Creates a debounced version of a function that only calls it after
  * the specified delay has elapsed since the last call.

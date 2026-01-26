@@ -1,3 +1,5 @@
+// Handles file operations within a specific workspace directory.
+
 // Package content provides versioned file storage for the mddb system.
 package content
 

@@ -1,3 +1,5 @@
+// Manages organization entities and their settings.
+
 package identity
 
 import (

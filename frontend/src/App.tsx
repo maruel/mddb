@@ -1,3 +1,5 @@
+// Main application component managing global state, routing, and layout.
+
 import { createSignal, createEffect, createMemo, For, Show, onMount, onCleanup } from 'solid-js';
 import { createStore, produce, reconcile } from 'solid-js/store';
 import Sidebar from './components/Sidebar';

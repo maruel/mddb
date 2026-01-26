@@ -1,3 +1,5 @@
+// Provides a wrapper around the git CLI for repository management.
+
 package git
 
 import (

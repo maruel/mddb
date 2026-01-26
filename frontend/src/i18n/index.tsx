@@ -1,3 +1,5 @@
+// Internationalization provider and context hooks.
+
 import {
   createContext,
   useContext,

@@ -1,3 +1,5 @@
+// Settings panel for managing workspace, members, and personal preferences.
+
 import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
 import { createApi } from '../useApi';
 import type {

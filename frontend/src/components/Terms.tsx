@@ -1,3 +1,5 @@
+// Terms of Service page component.
+
 import styles from './Terms.module.css';
 
 export default function Terms() {

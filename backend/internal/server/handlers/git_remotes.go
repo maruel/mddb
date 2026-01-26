@@ -1,3 +1,5 @@
+// Handles git remote configuration and synchronization.
+
 package handlers
 
 import (

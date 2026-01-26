@@ -1,3 +1,5 @@
+// Banner component prompting users to install the app as a PWA.
+
 import { createSignal, onMount, onCleanup, Show } from 'solid-js';
 import { useI18n } from '../i18n';
 import styles from './PWAInstallBanner.module.css';

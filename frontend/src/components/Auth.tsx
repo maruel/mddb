@@ -1,3 +1,5 @@
+// Authentication component handling login and registration forms.
+
 import { createSignal, createResource, Show, For } from 'solid-js';
 import { createAPIClient, APIError } from '../api.gen';
 import type { UserResponse, OAuthProvider } from '../types.gen';

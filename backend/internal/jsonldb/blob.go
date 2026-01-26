@@ -1,3 +1,5 @@
+// Defines the Blob type and content-addressed reference format.
+
 package jsonldb
 
 import (

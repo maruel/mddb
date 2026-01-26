@@ -1,3 +1,5 @@
+// Implements full-text search across content nodes.
+
 package content
 
 import (

@@ -1,3 +1,5 @@
+// Implements type coercion rules for SQLite compatibility.
+
 package content
 
 import (

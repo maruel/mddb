@@ -1,3 +1,5 @@
+// Handles user authentication, registration, and session management.
+
 package handlers
 
 import (

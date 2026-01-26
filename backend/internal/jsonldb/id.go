@@ -1,3 +1,5 @@
+// Implements a k-sortable, 64-bit unique identifier generator.
+
 package jsonldb
 
 import (

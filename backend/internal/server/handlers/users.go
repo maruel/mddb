@@ -1,3 +1,5 @@
+// Handles user management endpoints.
+
 package handlers
 
 import (

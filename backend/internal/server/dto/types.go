@@ -1,3 +1,5 @@
+// Defines shared data types and enums for the API.
+
 package dto
 
 import "github.com/maruel/mddb/backend/internal/storage"

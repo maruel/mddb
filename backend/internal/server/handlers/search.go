@@ -1,3 +1,5 @@
+// Handles full-text search endpoints.
+
 package handlers
 
 import (

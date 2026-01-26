@@ -1,3 +1,5 @@
+// Handles hierarchical node operations (documents, tables, hybrid).
+
 package handlers
 
 import (

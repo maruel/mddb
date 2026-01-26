@@ -1,3 +1,5 @@
+// Kanban board view for table records, grouped by select/multi-select columns.
+
 import { For, Show, createMemo } from 'solid-js';
 import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '../types.gen';
 import styles from './TableBoard.module.css';
