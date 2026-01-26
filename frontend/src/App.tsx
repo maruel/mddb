@@ -881,60 +881,52 @@ export default function App() {
       <Show when={!isPrivacyPage()} fallback={<Privacy />}>
         <Show when={!isTermsPage()} fallback={<Terms />}>
           <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
-            <Show
-              when={!isProfilePage()}
-              fallback={
-                <UserProfile
-                  user={user() as UserResponse}
-                  token={token() as string}
-                  onClose={() => {
-                    setIsProfilePage(false);
-                    const wsId = user()?.workspace_id;
-                    const wsName = user()?.workspace_name;
-                    if (wsId) {
-                      const wsSlug = slugify(wsName || 'workspace');
-                      window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
-                    } else {
-                      window.history.pushState(null, '', '/');
-                    }
-                  }}
-                />
-              }
-            >
-              <div class={styles.app}>
-                <header class={styles.header}>
-                  <div class={styles.headerTitle}>
-                    <button
-                      class={styles.hamburger}
-                      onClick={() => setShowMobileSidebar(!showMobileSidebar())}
-                      aria-label="Toggle menu"
-                    >
-                      ☰
-                    </button>
-                    <h1>{t('app.title')}</h1>
-                  </div>
-                  <div class={styles.userInfo}>
-                    <Show when={(user()?.organizations?.length ?? 0) > 0}>
-                      <OrgMenu
-                        memberships={user()?.organizations || []}
-                        currentOrgId={user()?.organization_id || ''}
-                        onSwitchOrg={(orgId) => switchOrg(orgId)}
-                        onCreateOrg={() => setShowCreateOrg(true)}
-                      />
-                    </Show>
-                    <UserMenu
-                      user={user() as UserResponse}
-                      onLogout={logout}
-                      onProfile={() => {
-                        setIsProfilePage(true);
-                        setShowSettings(false);
-                        setSelectedNodeId(null);
-                        window.history.pushState(null, '', '/profile');
-                      }}
+            <div class={styles.app}>
+              <header class={styles.header}>
+                <div class={styles.headerTitle}>
+                  <button
+                    class={styles.hamburger}
+                    onClick={() => setShowMobileSidebar(!showMobileSidebar())}
+                    aria-label="Toggle menu"
+                  >
+                    ☰
+                  </button>
+                  <h1>{t('app.title')}</h1>
+                </div>
+                <div class={styles.userInfo}>
+                  <Show when={(user()?.organizations?.length ?? 0) > 0}>
+                    <OrgMenu
+                      memberships={user()?.organizations || []}
+                      currentOrgId={user()?.organization_id || ''}
+                      onSwitchOrg={(orgId) => switchOrg(orgId)}
+                      onCreateOrg={() => setShowCreateOrg(true)}
                     />
-                  </div>
-                </header>
+                  </Show>
+                  <UserMenu
+                    user={user() as UserResponse}
+                    onLogout={logout}
+                    onProfile={() => {
+                      setIsProfilePage(true);
+                      setShowSettings(false);
+                      setSelectedNodeId(null);
+                      window.history.pushState(null, '', '/profile');
+                    }}
+                  />
+                </div>
+              </header>
 
+              <Show
+                when={!isProfilePage()}
+                fallback={
+                  <UserProfile
+                    user={user() as UserResponse}
+                    token={token() as string}
+                    onBack={() => {
+                      window.history.back();
+                    }}
+                  />
+                }
+              >
                 <div class={styles.container}>
                   <Show when={showMobileSidebar()}>
                     <div class={styles.mobileBackdrop} onClick={() => setShowMobileSidebar(false)} />
@@ -1180,8 +1172,8 @@ export default function App() {
                     </Show>
                   </main>
                 </div>
-              </div>
-            </Show>
+              </Show>
+            </div>
           </Show>
         </Show>
       </Show>

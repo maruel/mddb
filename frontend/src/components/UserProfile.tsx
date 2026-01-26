@@ -9,7 +9,7 @@ import { useI18n } from '../i18n';
 interface UserProfileProps {
   user: UserResponse;
   token: string;
-  onClose: () => void;
+  onBack: () => void;
 }
 
 export default function UserProfile(props: UserProfileProps) {
@@ -116,10 +116,10 @@ export default function UserProfile(props: UserProfileProps) {
   return (
     <div class={styles.profile}>
       <header class={styles.header}>
-        <h2>{t('profile.title')}</h2>
-        <button onClick={() => props.onClose()} class={styles.closeButton}>
-          &times;
+        <button onClick={() => props.onBack()} class={styles.backButton}>
+          ← {t('common.back')}
         </button>
+        <h2>{t('profile.title')}</h2>
       </header>
 
       <Show when={error()}>

@@ -13,6 +13,7 @@ export interface Dictionary {
     cancel: string;
     delete: string;
     close: string;
+    back: string;
     confirm: string;
     actions: string;
     invite: string;

@@ -11,6 +11,7 @@ export const dict: Dictionary = {
     cancel: 'Abbrechen',
     delete: 'Löschen',
     close: 'Schließen',
+    back: 'Zurück',
     confirm: 'Bestätigen',
     actions: 'Aktionen',
     invite: 'Einladen',

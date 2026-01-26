@@ -6,23 +6,31 @@
 
 .header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: var(--s-4);
   margin-bottom: var(--s-5);
   border-bottom: 1px solid var(--c-border);
   padding-bottom: var(--s-3);
 }
 
-.closeButton {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--c-text-light);
+.header h2 {
+  margin: 0;
 }
 
-.closeButton:hover {
+.backButton {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--c-text-light);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius);
+  transition: all var(--transition);
+}
+
+.backButton:hover {
   color: var(--c-text);
+  background: var(--c-bg-alt);
 }
 
 .userInfoSection {
