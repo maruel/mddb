@@ -118,7 +118,14 @@ export default function App() {
       handleLogin(data.token, data.user);
       setSelectedNodeId(null);
       if (redirect) {
-        window.history.pushState(null, '', '/');
+        const wsId = data.user.workspace_id;
+        const wsName = data.user.workspace_name;
+        if (wsId) {
+          const wsSlug = slugify(wsName || 'workspace');
+          window.history.pushState(null, '', `/${wsId}+${wsSlug}/`);
+        } else {
+          window.history.pushState(null, '', '/');
+        }
       }
       await loadNodes();
     } catch (err) {
@@ -142,7 +149,14 @@ export default function App() {
       handleLogin(data.token, data.user);
       setSelectedNodeId(null);
       if (redirect) {
-        window.history.pushState(null, '', '/');
+        const newWsId = data.user.workspace_id;
+        const wsName = data.user.workspace_name;
+        if (newWsId) {
+          const wsSlug = slugify(wsName || 'workspace');
+          window.history.pushState(null, '', `/${newWsId}+${wsSlug}/`);
+        } else {
+          window.history.pushState(null, '', '/');
+        }
       }
       await loadNodes();
     } catch (err) {
@@ -318,7 +332,13 @@ export default function App() {
         }
       }
 
-      // User has org and workspace, proceed normally
+      // User has org and workspace, redirect to workspace root if at /
+      const wsId = u.workspace_id;
+      const wsName = u.workspace_name;
+      if (wsId && window.location.pathname === '/') {
+        const wsSlug = slugify(wsName || 'workspace');
+        window.history.replaceState(null, '', `/${wsId}+${wsSlug}/`);
+      }
     }
   });
 
