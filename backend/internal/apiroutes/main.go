@@ -78,7 +78,7 @@ func main() {
 	// Group routes by prefix
 	groups := groupRoutes(routes)
 
-	outPath := "../../../docs/API.md"
+	outPath := "../../docs/API.md"
 	out, err := os.Create(outPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "create file: %v\n", err)
@@ -93,7 +93,7 @@ func main() {
 		os.Exit(1)
 	}
 	if !*quiet {
-		fmt.Fprintf(os.Stderr, "Generated docs/API.md with %d routes\n", len(routes))
+		fmt.Fprintf(os.Stderr, "Generated backend/docs/API.md with %d routes\n", len(routes))
 	}
 }
 

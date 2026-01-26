@@ -27,7 +27,7 @@ Standard RESTful API for Pages, Tables, Records, and Assets.
 **Multi-tenant routing**: Data-acting endpoints follow the pattern `/api/{wsID}/resource/...`. 
 The backend validates that the `wsID` in the path matches the user's authenticated session.
 
-See `README.md` and `API.md` for details.
+See `../README.md` and `../backend/docs/API.md` for details.
 
 ## Implementation Phases
 

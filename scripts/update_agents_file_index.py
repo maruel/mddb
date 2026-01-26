@@ -56,13 +56,10 @@ def get_git_files():
     try:
         # Use -z to handle spaces in filenames correctly, though rare
         result = subprocess.run(
-            ["git", "ls-files", "-z"],
-            capture_output=True,
-            text=True,
-            check=True
+            ["git", "ls-files", "-z"], capture_output=True, text=True, check=True
         )
         # Split by null terminator and filter empty strings
-        return [f for f in result.stdout.split('\0') if f]
+        return [f for f in result.stdout.split("\0") if f]
     except subprocess.CalledProcessError as e:
         print(f"Error listing git files: {e}", file=sys.stderr)
         return []
@@ -140,7 +137,7 @@ def generate_index_for_config(config, all_files):
             if not filepath.startswith(root_dir + "/"):
                 continue
             # relpath is relative to root_dir
-            relpath = filepath[len(root_dir) + 1:]
+            relpath = filepath[len(root_dir) + 1 :]
 
         # Filter ignored files
         if os.path.basename(filepath) in IGNORE_FILES:
@@ -190,7 +187,7 @@ def update_markdown_file(target_file, content):
 
     with open(target_file, "w", encoding="utf-8") as f:
         f.write(updated)
-    print(f"Updated {target_file}")
+    # print(f"Updated {target_file}")
 
 
 def main():
@@ -199,7 +196,7 @@ def main():
         print("No files found in git repository.")
         return
     for config in CONFIGS:
-        print(f"Processing {config['target_file']}...")
+        # print(f"Processing {config['target_file']}...")
         content = generate_index_for_config(config, all_files)
         update_markdown_file(config["target_file"], content)
 
