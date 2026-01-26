@@ -606,7 +606,7 @@ describe('App', () => {
       fireEvent.click(screen.getByTestId('sidebar-node-node-1'));
 
       await waitFor(() => {
-        expect(mockPushState).toHaveBeenCalledWith(null, '', '/ws-1+test-workspace/node-1+test-page');
+        expect(mockPushState).toHaveBeenCalledWith(null, '', '/w/ws-1+test-workspace/node-1+test-page');
       });
 
       await waitFor(() => {
@@ -1095,7 +1095,7 @@ describe('App', () => {
 
     it('loads node from URL on mount', async () => {
       // URL with slug uses + separator
-      mockPathname = '/ws-1+test-workspace/node-1+test-page';
+      mockPathname = '/w/ws-1+test-workspace/node-1+test-page';
 
       mockFetch.mockImplementation((url: string) => {
         if (url === '/api/auth/me') {
@@ -1245,7 +1245,7 @@ describe('slugify', () => {
     fireEvent.click(screen.getByTestId('sidebar-node-node-1'));
 
     await waitFor(() => {
-      expect(mockPushState).toHaveBeenCalledWith(null, '', '/ws-1+test-workspace/node-1+hello-world-test');
+      expect(mockPushState).toHaveBeenCalledWith(null, '', '/w/ws-1+test-workspace/node-1+hello-world-test');
     });
   });
 });

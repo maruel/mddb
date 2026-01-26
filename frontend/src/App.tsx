@@ -122,7 +122,7 @@ export default function App() {
         const wsName = data.user.workspace_name;
         if (wsId) {
           const wsSlug = slugify(wsName || 'workspace');
-          window.history.pushState(null, '', `/${wsId}+${wsSlug}/`);
+          window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
         } else {
           window.history.pushState(null, '', '/');
         }
@@ -153,7 +153,7 @@ export default function App() {
         const wsName = data.user.workspace_name;
         if (newWsId) {
           const wsSlug = slugify(wsName || 'workspace');
-          window.history.pushState(null, '', `/${newWsId}+${wsSlug}/`);
+          window.history.pushState(null, '', `/w/${newWsId}+${wsSlug}/`);
         } else {
           window.history.pushState(null, '', '/');
         }
@@ -278,7 +278,7 @@ export default function App() {
       if (wsId) {
         const currentPath = window.location.pathname;
         const wsSlug = slugify(wsName || 'workspace');
-        const newPath = `/${wsId}+${wsSlug}/${nodeId}${nodeSlug ? '+' + nodeSlug : ''}`;
+        const newPath = `/w/${wsId}+${wsSlug}/${nodeId}${nodeSlug ? '+' + nodeSlug : ''}`;
         if (currentPath !== newPath) {
           window.history.replaceState(null, '', newPath);
         }
@@ -337,7 +337,7 @@ export default function App() {
       const wsName = u.workspace_name;
       if (wsId && window.location.pathname === '/') {
         const wsSlug = slugify(wsName || 'workspace');
-        window.history.replaceState(null, '', `/${wsId}+${wsSlug}/`);
+        window.history.replaceState(null, '', `/w/${wsId}+${wsSlug}/`);
       }
     }
   });
@@ -396,8 +396,8 @@ export default function App() {
     setIsPrivacyPage(false);
     setIsTermsPage(false);
 
-    // Check for /wsID+wsSlug/nodeID+nodeSlug format
-    const matchWithWs = path.match(/^\/([^+/]+)(?:\+[^/]*)?\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
+    // Check for /w/wsID+wsSlug/nodeID+nodeSlug format
+    const matchWithWs = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
     if (matchWithWs && matchWithWs[1] && matchWithWs[2]) {
       const wsId = matchWithWs[1];
       const nodeId = matchWithWs[2];
@@ -421,6 +421,33 @@ export default function App() {
       if (nodeId !== selectedNodeId()) {
         loadNode(nodeId, false);
       }
+      return;
+    }
+
+    // Check for /w/wsID+wsSlug/ format (workspace root without node)
+    const matchWsRoot = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/?$/);
+    if (matchWsRoot && matchWsRoot[1]) {
+      const wsId = matchWsRoot[1];
+
+      // If we are logged in but in wrong workspace, switch
+      if (user() && user()?.workspace_id !== wsId) {
+        try {
+          const isMember = user()?.workspaces?.some((m) => m.workspace_id === wsId);
+          if (isMember) {
+            await switchWorkspace(wsId, false);
+          } else {
+            setError(t('errors.noAccessToWs') || 'You do not have access to this workspace');
+            return;
+          }
+        } catch {
+          return;
+        }
+      }
+
+      // At workspace root, clear node selection
+      setSelectedNodeId(null);
+      setTitle('');
+      setContent('');
       return;
     }
 
@@ -505,7 +532,7 @@ export default function App() {
       const wsName = user()?.workspace_name;
       if (wsId) {
         const wsSlug = slugify(wsName || 'workspace');
-        const url = `/${wsId}+${wsSlug}/${nodeData.id}${nodeSlug ? '+' + nodeSlug : ''}`;
+        const url = `/w/${wsId}+${wsSlug}/${nodeData.id}${nodeSlug ? '+' + nodeSlug : ''}`;
         if (pushState) {
           if (window.location.pathname !== url) {
             window.history.pushState(null, '', url);
@@ -631,9 +658,11 @@ export default function App() {
       // Update URL if title changed
       const slug = slugify(title());
       const currentPath = window.location.pathname;
-      const orgId = user()?.organization_id;
-      if (orgId) {
-        const newPath = `/${orgId}/${nodeId}${slug ? '+' + slug : ''}`;
+      const wsId = user()?.workspace_id;
+      const wsName = user()?.workspace_name;
+      if (wsId) {
+        const wsSlug = slugify(wsName || 'workspace');
+        const newPath = `/w/${wsId}+${wsSlug}/${nodeId}${slug ? '+' + slug : ''}`;
         if (currentPath !== newPath) {
           window.history.replaceState(null, '', newPath);
         }
@@ -662,7 +691,14 @@ export default function App() {
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
-      window.history.pushState(null, '', '/');
+      const wsId = user()?.workspace_id;
+      const wsName = user()?.workspace_name;
+      if (wsId) {
+        const wsSlug = slugify(wsName || 'workspace');
+        window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
+      } else {
+        window.history.pushState(null, '', '/');
+      }
     } catch (err) {
       setError(`${t('errors.failedToDelete')}: ${err}`);
     } finally {
