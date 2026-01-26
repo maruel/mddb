@@ -15,11 +15,12 @@
 ```
 workspace/
 ├── AGENTS.md
-├── data.jsonl
-├── data.blobs/
-│   └── SE/
-│       └── OC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-1024
-└── index.md
+└── <node-id>/
+    ├── index.md
+    ├── data.jsonl
+    └── data.blobs/
+        └── SE/
+            └── OC8GKOVGE196NRUJ49IRTP4GJQSGF4CIDP6J54IMCHMU2IN1AG-1024
 ```
 
 ## JSONL Tables

@@ -115,15 +115,15 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Fatalf("failed to get workspace store: %v", err)
 		}
 
-		pageID := jsonldb.NewID()
+		nodeID := jsonldb.NewID()
 
 		t.Run("WritePage", func(t *testing.T) {
-			page, err := ws.WritePage(ctx, pageID, 0, "Test Title", "# Test Content", author)
+			page, err := ws.WritePage(ctx, nodeID, 0, "Test Title", "# Test Content", author)
 			if err != nil {
 				t.Fatalf("failed to write page: %v", err)
 			}
-			if page.ID != pageID {
-				t.Errorf("expected ID %v, got %v", pageID, page.ID)
+			if page.ID != nodeID {
+				t.Errorf("expected ID %v, got %v", nodeID, page.ID)
 			}
 			if page.Title != "Test Title" {
 				t.Errorf("expected title 'Test Title', got %q", page.Title)
@@ -131,7 +131,7 @@ func TestWorkspaceStore(t *testing.T) {
 		})
 
 		t.Run("ReadPage", func(t *testing.T) {
-			readPage, err := ws.ReadPage(pageID)
+			readPage, err := ws.ReadPage(nodeID)
 			if err != nil {
 				t.Fatalf("failed to read page: %v", err)
 			}
@@ -144,7 +144,7 @@ func TestWorkspaceStore(t *testing.T) {
 		})
 
 		t.Run("UpdatePage", func(t *testing.T) {
-			updated, err := ws.UpdatePage(ctx, pageID, "Updated Title", "# Updated Content", author)
+			updated, err := ws.UpdatePage(ctx, nodeID, "Updated Title", "# Updated Content", author)
 			if err != nil {
 				t.Fatalf("failed to update page: %v", err)
 			}
@@ -153,7 +153,7 @@ func TestWorkspaceStore(t *testing.T) {
 			}
 
 			// Verify update persisted
-			readUpdated, err := ws.ReadPage(pageID)
+			readUpdated, err := ws.ReadPage(nodeID)
 			if err != nil {
 				t.Fatalf("failed to read updated page: %v", err)
 			}
@@ -163,13 +163,13 @@ func TestWorkspaceStore(t *testing.T) {
 		})
 
 		t.Run("DeletePage", func(t *testing.T) {
-			err := ws.DeletePage(ctx, pageID, author)
+			err := ws.DeletePage(ctx, nodeID, author)
 			if err != nil {
 				t.Fatalf("failed to delete page: %v", err)
 			}
 
 			// Verify deletion
-			_, err = ws.ReadPage(pageID)
+			_, err = ws.ReadPage(nodeID)
 			if err == nil {
 				t.Error("expected error reading deleted page")
 			}
@@ -198,10 +198,10 @@ func TestWorkspaceStore(t *testing.T) {
 		}
 
 		// Create multiple pages
-		var pageIDs []jsonldb.ID
+		var nodeIDs []jsonldb.ID
 		for i := 0; i < 3; i++ {
 			id := jsonldb.NewID()
-			pageIDs = append(pageIDs, id)
+			nodeIDs = append(nodeIDs, id)
 			if _, err := ws.WritePage(ctx, id, 0, "Page "+string(rune(48+i)), "content", author); err != nil {
 				t.Fatalf("failed to write page %d: %v", i, err)
 			}
@@ -225,8 +225,8 @@ func TestWorkspaceStore(t *testing.T) {
 		}
 
 		t.Run("DirectoryStructure", func(t *testing.T) {
-			for _, pageID := range pageIDs {
-				expectedDir := filepath.Join(fs.rootDir, wsID.String(), pageID.String())
+			for _, nodeID := range nodeIDs {
+				expectedDir := filepath.Join(fs.rootDir, wsID.String(), nodeID.String())
 				if _, err := os.Stat(expectedDir); err != nil {
 					t.Errorf("expected page directory %s to exist: %v", expectedDir, err)
 				}
@@ -388,8 +388,8 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Fatalf("failed to get workspace store: %v", err)
 		}
 
-		pageID := jsonldb.NewID()
-		if _, err := ws.WritePage(ctx, pageID, 0, "With Assets", "content", author); err != nil {
+		nodeID := jsonldb.NewID()
+		if _, err := ws.WritePage(ctx, nodeID, 0, "With Assets", "content", author); err != nil {
 			t.Fatalf("failed to write page: %v", err)
 		}
 
@@ -397,7 +397,7 @@ func TestWorkspaceStore(t *testing.T) {
 		assetData := []byte("test asset content")
 
 		t.Run("SaveAsset", func(t *testing.T) {
-			asset, err := ws.SaveAsset(ctx, pageID, assetName, assetData, author)
+			asset, err := ws.SaveAsset(ctx, nodeID, assetName, assetData, author)
 			if err != nil {
 				t.Fatalf("failed to save asset: %v", err)
 			}
@@ -407,7 +407,7 @@ func TestWorkspaceStore(t *testing.T) {
 		})
 
 		t.Run("ReadAsset", func(t *testing.T) {
-			data, err := ws.ReadAsset(pageID, assetName)
+			data, err := ws.ReadAsset(nodeID, assetName)
 			if err != nil {
 				t.Fatalf("failed to read asset: %v", err)
 			}
@@ -417,7 +417,7 @@ func TestWorkspaceStore(t *testing.T) {
 		})
 
 		t.Run("IterAssets", func(t *testing.T) {
-			it, err := ws.IterAssets(pageID)
+			it, err := ws.IterAssets(nodeID)
 			if err != nil {
 				t.Fatalf("failed to iter assets: %v", err)
 			}
@@ -436,12 +436,12 @@ func TestWorkspaceStore(t *testing.T) {
 		})
 
 		t.Run("DeleteAsset", func(t *testing.T) {
-			if err := ws.DeleteAsset(ctx, pageID, assetName, author); err != nil {
+			if err := ws.DeleteAsset(ctx, nodeID, assetName, author); err != nil {
 				t.Fatalf("failed to delete asset: %v", err)
 			}
 
 			// Verify deletion
-			_, err := ws.ReadAsset(pageID, assetName)
+			_, err := ws.ReadAsset(nodeID, assetName)
 			if err == nil {
 				t.Error("expected error reading deleted asset")
 			}
@@ -462,20 +462,20 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Fatalf("failed to get workspace store: %v", err)
 		}
 
-		pageID := jsonldb.NewID()
+		nodeID := jsonldb.NewID()
 
 		// Create initial version
-		if _, err := ws.WritePage(ctx, pageID, 0, "Initial", "initial content", author); err != nil {
+		if _, err := ws.WritePage(ctx, nodeID, 0, "Initial", "initial content", author); err != nil {
 			t.Fatalf("failed to write initial page: %v", err)
 		}
 
 		// Create second version
-		if _, err := ws.UpdatePage(ctx, pageID, "Updated", "updated content", author); err != nil {
+		if _, err := ws.UpdatePage(ctx, nodeID, "Updated", "updated content", author); err != nil {
 			t.Fatalf("failed to update page: %v", err)
 		}
 
 		// Get history
-		history, err := ws.GetHistory(ctx, pageID, 10)
+		history, err := ws.GetHistory(ctx, nodeID, 10)
 		if err != nil {
 			t.Fatalf("failed to get history: %v", err)
 		}
@@ -869,14 +869,14 @@ func TestMarkdown(t *testing.T) {
 		}
 
 		// Write page with specific content
-		pageID := jsonldb.NewID()
-		_, err = ws.WritePage(ctx, pageID, 0, "Format Test", "# Content\n\nWith multiple lines", author)
+		nodeID := jsonldb.NewID()
+		_, err = ws.WritePage(ctx, nodeID, 0, "Format Test", "# Content\n\nWith multiple lines", author)
 		if err != nil {
 			t.Fatalf("failed to write page: %v", err)
 		}
 
 		// Read the file directly to verify format
-		filePath := filepath.Join(fs.rootDir, wsID.String(), pageID.String(), "index.md")
+		filePath := filepath.Join(fs.rootDir, wsID.String(), nodeID.String(), "index.md")
 		data, err := os.ReadFile(filePath) //nolint:gosec // G304: test code with controlled path
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
@@ -891,7 +891,7 @@ func TestMarkdown(t *testing.T) {
 		})
 
 		t.Run("FrontMatterID", func(t *testing.T) {
-			if !strings.Contains(content, "id: "+pageID.String()) {
+			if !strings.Contains(content, "id: "+nodeID.String()) {
 				t.Error("expected id in front matter")
 			}
 		})
@@ -937,8 +937,8 @@ func TestGetWorkspaceUsage(t *testing.T) {
 
 		// Create multiple pages
 		for i := range 3 {
-			pageID := jsonldb.NewID()
-			_, err = ws.WritePage(ctx, pageID, 0, "Page "+string(rune(49+i)), "content", author)
+			nodeID := jsonldb.NewID()
+			_, err = ws.WritePage(ctx, nodeID, 0, "Page "+string(rune(49+i)), "content", author)
 			if err != nil {
 				t.Fatalf("failed to create page: %v", err)
 			}
@@ -970,14 +970,14 @@ func TestGetWorkspaceUsage(t *testing.T) {
 		}
 
 		// Create a hybrid node (page + table)
-		hybridID := jsonldb.NewID()
-		_, err = ws.WritePage(ctx, hybridID, 0, "Hybrid", "content", author)
+		nodeID := jsonldb.NewID()
+		_, err = ws.WritePage(ctx, nodeID, 0, "Hybrid", "content", author)
 		if err != nil {
 			t.Fatalf("failed to create page: %v", err)
 		}
 
 		hybridNode := &Node{
-			ID:       hybridID,
+			ID:       nodeID,
 			Title:    "Hybrid",
 			Type:     NodeTypeTable,
 			Created:  storage.Now(),

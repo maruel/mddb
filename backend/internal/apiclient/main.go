@@ -123,7 +123,7 @@ type NamespaceMethod struct {
 
 // PathArg represents a path parameter that becomes a function argument.
 type PathArg struct {
-	Name   string // Argument name (e.g., "id", "pageId")
+	Name   string // Argument name (e.g., "id", "nodeId")
 	TSName string // TypeScript field name from DTO
 }
 

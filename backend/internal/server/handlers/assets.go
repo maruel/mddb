@@ -51,28 +51,28 @@ func (h *AssetHandler) ListPageAssets(ctx context.Context, wsID jsonldb.ID, _ *i
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	it, err := ws.IterAssets(req.PageID)
+	it, err := ws.IterAssets(req.NodeID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to list assets", err)
 	}
 	assets := slices.Collect(it)
-	return &dto.ListPageAssetsResponse{Assets: assetsToSummaries(assets, wsID.String(), req.PageID.String())}, nil
+	return &dto.ListPageAssetsResponse{Assets: assetsToSummaries(assets, wsID.String(), req.NodeID.String())}, nil
 }
 
 // UploadPageAssetHandler handles asset uploading (multipart/form-data).
 // This is a raw http.HandlerFunc because it handles multipart forms.
 func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Request) {
 	orgIDStr := r.PathValue("orgID")
-	pageIDStr := r.PathValue("id")
+	nodeIDStr := r.PathValue("id")
 
 	orgID, err := jsonldb.DecodeID(orgIDStr)
 	if err != nil {
 		writeErrorResponse(w, dto.BadRequest("invalid_org_id"))
 		return
 	}
-	pageID, err := jsonldb.DecodeID(pageIDStr)
+	nodeID, err := jsonldb.DecodeID(nodeIDStr)
 	if err != nil {
-		writeErrorResponse(w, dto.BadRequest("invalid_page_id"))
+		writeErrorResponse(w, dto.BadRequest("invalid_node_id"))
 		return
 	}
 
@@ -111,7 +111,7 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 		writeErrorResponse(w, dto.Internal("workspace"))
 		return
 	}
-	asset, err := ws.SaveAsset(r.Context(), pageID, header.Filename, data, author)
+	asset, err := ws.SaveAsset(r.Context(), nodeID, header.Filename, data, author)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("asset_save"))
 		return
@@ -127,7 +127,7 @@ func (h *AssetHandler) UploadPageAssetHandler(w http.ResponseWriter, r *http.Req
 // This is a raw http.HandlerFunc for direct file serving.
 func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 	orgIDStr := r.PathValue("orgID")
-	pageIDStr := r.PathValue("id")
+	nodeIDStr := r.PathValue("id")
 	assetName := r.PathValue("name")
 
 	orgID, err := jsonldb.DecodeID(orgIDStr)
@@ -135,9 +135,9 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, dto.BadRequest("invalid_org_id"))
 		return
 	}
-	pageID, err := jsonldb.DecodeID(pageIDStr)
+	nodeID, err := jsonldb.DecodeID(nodeIDStr)
 	if err != nil {
-		writeErrorResponse(w, dto.BadRequest("invalid_page_id"))
+		writeErrorResponse(w, dto.BadRequest("invalid_node_id"))
 		return
 	}
 
@@ -146,7 +146,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		writeErrorResponse(w, dto.Internal("workspace"))
 		return
 	}
-	data, err := ws.ReadAsset(pageID, assetName)
+	data, err := ws.ReadAsset(nodeID, assetName)
 	if err != nil {
 		writeErrorResponse(w, dto.NotFound("asset"))
 		return
@@ -170,7 +170,7 @@ func (h *AssetHandler) DeletePageAsset(ctx context.Context, wsID jsonldb.ID, use
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 	author := git.Author{Name: user.Name, Email: user.Email}
-	if err := ws.DeleteAsset(ctx, req.PageID, req.AssetName, author); err != nil {
+	if err := ws.DeleteAsset(ctx, req.NodeID, req.AssetName, author); err != nil {
 		return nil, dto.NotFound("asset")
 	}
 	return &dto.DeletePageAssetResponse{Ok: true}, nil

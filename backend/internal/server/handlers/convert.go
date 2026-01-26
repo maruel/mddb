@@ -518,21 +518,21 @@ func tablesToSummaries(nodes []*content.Node) []dto.TableSummary {
 	return result
 }
 
-func assetToSummary(a *content.Asset, wsID, pageID string) dto.AssetSummary {
+func assetToSummary(a *content.Asset, wsID, nodeID string) dto.AssetSummary {
 	return dto.AssetSummary{
 		ID:       a.ID,
 		Name:     a.Name,
 		Size:     a.Size,
 		MimeType: a.MimeType,
 		Created:  a.Created,
-		URL:      "/api/workspaces/" + wsID + "/assets/" + pageID + "/" + a.Name,
+		URL:      "/api/workspaces/" + wsID + "/assets/" + nodeID + "/" + a.Name,
 	}
 }
 
-func assetsToSummaries(assets []*content.Asset, wsID, pageID string) []dto.AssetSummary {
+func assetsToSummaries(assets []*content.Asset, wsID, nodeID string) []dto.AssetSummary {
 	result := make([]dto.AssetSummary, len(assets))
 	for i, a := range assets {
-		result[i] = assetToSummary(a, wsID, pageID)
+		result[i] = assetToSummary(a, wsID, nodeID)
 	}
 	return result
 }

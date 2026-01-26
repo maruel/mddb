@@ -863,28 +863,28 @@ func (ws *WorkspaceFileStore) deleteRecord(tableID, tableParentID, recordID json
 }
 
 // SaveAsset saves an asset and commits to git.
-func (ws *WorkspaceFileStore) SaveAsset(ctx context.Context, pageID jsonldb.ID, assetName string, data []byte, author git.Author) (*Asset, error) {
-	parentID := ws.getParent(pageID)
+func (ws *WorkspaceFileStore) SaveAsset(ctx context.Context, nodeID jsonldb.ID, assetName string, data []byte, author git.Author) (*Asset, error) {
+	parentID := ws.getParent(nodeID)
 	var asset *Asset
 	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
 		var err error
-		asset, err = ws.saveAsset(pageID, parentID, assetName, data)
+		asset, err = ws.saveAsset(nodeID, parentID, assetName, data)
 		if err != nil {
 			return "", nil, err
 		}
-		files := []string{ws.gitPath(parentID, pageID, assetName)}
+		files := []string{ws.gitPath(parentID, nodeID, assetName)}
 		return "create: asset " + assetName, files, nil
 	})
 	return asset, err
 }
 
 // saveAsset saves an asset without committing.
-func (ws *WorkspaceFileStore) saveAsset(pageID, pageParentID jsonldb.ID, assetName string, data []byte) (*Asset, error) {
+func (ws *WorkspaceFileStore) saveAsset(nodeID, parentID jsonldb.ID, assetName string, data []byte) (*Asset, error) {
 	if err := ws.checkStorageQuota(int64(len(data))); err != nil {
 		return nil, err
 	}
 
-	dir := ws.pageDir(pageID, pageParentID)
+	dir := ws.pageDir(nodeID, parentID)
 	if err := os.MkdirAll(dir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -910,9 +910,9 @@ func (ws *WorkspaceFileStore) saveAsset(pageID, pageParentID jsonldb.ID, assetNa
 }
 
 // ReadAsset reads an asset.
-func (ws *WorkspaceFileStore) ReadAsset(pageID jsonldb.ID, assetName string) ([]byte, error) {
-	parentID := ws.getParent(pageID)
-	filePath := filepath.Join(ws.pageDir(pageID, parentID), assetName)
+func (ws *WorkspaceFileStore) ReadAsset(nodeID jsonldb.ID, assetName string) ([]byte, error) {
+	parentID := ws.getParent(nodeID)
+	filePath := filepath.Join(ws.pageDir(nodeID, parentID), assetName)
 
 	data, err := os.ReadFile(filePath) //nolint:gosec // G304: filePath is constructed from validated ids
 	if err != nil {
@@ -925,20 +925,20 @@ func (ws *WorkspaceFileStore) ReadAsset(pageID jsonldb.ID, assetName string) ([]
 }
 
 // DeleteAsset deletes an asset and commits to git.
-func (ws *WorkspaceFileStore) DeleteAsset(ctx context.Context, pageID jsonldb.ID, assetName string, author git.Author) error {
-	parentID := ws.getParent(pageID)
+func (ws *WorkspaceFileStore) DeleteAsset(ctx context.Context, nodeID jsonldb.ID, assetName string, author git.Author) error {
+	parentID := ws.getParent(nodeID)
 	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
-		if err := ws.deleteAsset(pageID, parentID, assetName); err != nil {
+		if err := ws.deleteAsset(nodeID, parentID, assetName); err != nil {
 			return "", nil, err
 		}
-		files := []string{ws.gitPath(parentID, pageID, assetName)}
+		files := []string{ws.gitPath(parentID, nodeID, assetName)}
 		return "delete: asset " + assetName, files, nil
 	})
 }
 
 // deleteAsset deletes an asset without committing.
-func (ws *WorkspaceFileStore) deleteAsset(pageID, pageParentID jsonldb.ID, assetName string) error {
-	filePath := filepath.Join(ws.pageDir(pageID, pageParentID), assetName)
+func (ws *WorkspaceFileStore) deleteAsset(nodeID, parentID jsonldb.ID, assetName string) error {
+	filePath := filepath.Join(ws.pageDir(nodeID, parentID), assetName)
 
 	if err := os.Remove(filePath); err != nil {
 		if os.IsNotExist(err) {
@@ -950,9 +950,9 @@ func (ws *WorkspaceFileStore) deleteAsset(pageID, pageParentID jsonldb.ID, asset
 }
 
 // IterAssets returns an iterator over all assets for a page.
-func (ws *WorkspaceFileStore) IterAssets(pageID jsonldb.ID) (iter.Seq[*Asset], error) {
-	parentID := ws.getParent(pageID)
-	dir := ws.pageDir(pageID, parentID)
+func (ws *WorkspaceFileStore) IterAssets(nodeID jsonldb.ID) (iter.Seq[*Asset], error) {
+	parentID := ws.getParent(nodeID)
+	dir := ws.pageDir(nodeID, parentID)
 
 	// Check if directory exists
 	if _, err := os.Stat(dir); err != nil {

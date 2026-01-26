@@ -472,7 +472,7 @@ func (r *CreateNodeRequest) Validate() error {
 // ListPageAssetsRequest is a request to list assets in a page.
 type ListPageAssetsRequest struct {
 	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	PageID jsonldb.ID `path:"id" tstype:"-"`
+	NodeID jsonldb.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the list page assets request fields.
@@ -480,7 +480,7 @@ func (r *ListPageAssetsRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.PageID.IsZero() {
+	if r.NodeID.IsZero() {
 		return MissingField("id")
 	}
 	return nil
@@ -489,7 +489,7 @@ func (r *ListPageAssetsRequest) Validate() error {
 // UploadPageAssetRequest is a request to upload an asset to a page.
 type UploadPageAssetRequest struct {
 	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	PageID jsonldb.ID `path:"id" tstype:"-"`
+	NodeID jsonldb.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the upload page asset request fields.
@@ -497,7 +497,7 @@ func (r *UploadPageAssetRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.PageID.IsZero() {
+	if r.NodeID.IsZero() {
 		return MissingField("id")
 	}
 	return nil
@@ -506,7 +506,7 @@ func (r *UploadPageAssetRequest) Validate() error {
 // DeletePageAssetRequest is a request to delete an asset from a page.
 type DeletePageAssetRequest struct {
 	WsID      jsonldb.ID `path:"wsID" tstype:"-"`
-	PageID    jsonldb.ID `path:"id" tstype:"-"`
+	NodeID    jsonldb.ID `path:"id" tstype:"-"`
 	AssetName string     `path:"name" tstype:"-"`
 }
 
@@ -515,7 +515,7 @@ func (r *DeletePageAssetRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.PageID.IsZero() {
+	if r.NodeID.IsZero() {
 		return MissingField("id")
 	}
 	if r.AssetName == "" {
@@ -527,7 +527,7 @@ func (r *DeletePageAssetRequest) Validate() error {
 // ServeAssetRequest is a request to serve an asset file directly.
 type ServeAssetRequest struct {
 	WsID      jsonldb.ID `path:"wsID" tstype:"-"`
-	PageID    jsonldb.ID `path:"id" tstype:"-"`
+	NodeID    jsonldb.ID `path:"id" tstype:"-"`
 	AssetName string     `path:"name" tstype:"-"`
 }
 
@@ -536,7 +536,7 @@ func (r *ServeAssetRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.PageID.IsZero() {
+	if r.NodeID.IsZero() {
 		return MissingField("id")
 	}
 	if r.AssetName == "" {

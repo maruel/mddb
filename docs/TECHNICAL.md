@@ -210,7 +210,7 @@ Supports Google and Microsoft OIDC flows.
 
 Each organization is a separate tenant with isolated data.
 
-- **Storage**: `data/{wsID}/pages/` per workspace
+- **Storage**: `data/{wsID}/` per workspace with nodes stored directly as subdirectories
 - **Git**: Independent Git repository per workspace
 - **Validation**: All workspace-scoped endpoints validate membership before access
 

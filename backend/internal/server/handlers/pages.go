@@ -9,7 +9,6 @@ package handlers
 
 import (
 	"context"
-	"fmt"
 	"slices"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -123,7 +122,7 @@ func (h *PageHandler) GetPageVersion(ctx context.Context, wsID jsonldb.ID, _ *id
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	path := fmt.Sprintf("pages/%s/index.md", req.ID.String())
+	path := req.ID.String() + "/index.md"
 	contentBytes, err := ws.GetFileAtCommit(ctx, req.Hash, path)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get page version", err)

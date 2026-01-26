@@ -86,13 +86,12 @@ All data is stored as plain files. Each workspace is a separate git repository:
 data/
 ├── db/                             # Identity database (users, orgs, memberships)
 └── <workspace-id>/                 # Each workspace is independent
-    └── pages/
-        ├── <page-id>/              # Document
-        │   ├── index.md            # Content with YAML front matter
-        │   └── photo.png           # Assets stored alongside
-        └── <page-id>/              # Table
-            ├── metadata.json       # Schema definition
-            └── data.jsonl          # Records (one JSON per line)
+    ├── AGENTS.md                   # Workspace documentation for AI agents
+    └── <node-id>/                  # Node (document, table, or hybrid)
+        ├── index.md                # Document content with YAML front matter
+        ├── data.jsonl              # Table records (one JSON per line)
+        ├── data.blobs/             # Binary assets (images, files)
+        └── <asset-files>           # Asset files stored alongside
 ```
 
 Every content mutation is a git commit. You can:

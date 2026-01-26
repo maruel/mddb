@@ -338,7 +338,7 @@ func TestIntegration(t *testing.T) {
 		if createPageResp.ID.IsZero() {
 			t.Fatal("CreatePage should return an ID")
 		}
-		pageID := createPageResp.ID
+		nodeID := createPageResp.ID
 
 		// List pages
 		var listResp dto.ListPagesResponse
@@ -354,9 +354,9 @@ func TestIntegration(t *testing.T) {
 
 		// Get single page
 		var getPageResp dto.GetPageResponse
-		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String(), nil, &getPageResp, token)
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String(), nil, &getPageResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("GET /api/workspaces/%s/pages/%s: got status %d", wsID, pageID, status)
+			t.Fatalf("GET /api/workspaces/%s/pages/%s: got status %d", wsID, nodeID, status)
 		}
 
 		if getPageResp.Title != "My First Page" {
@@ -369,31 +369,31 @@ func TestIntegration(t *testing.T) {
 			Content: "# Updated Content\n\nThis page has been updated.",
 		}
 		var updateResp dto.UpdatePageResponse
-		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String(), updatePageReq, &updateResp, token)
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String(), updatePageReq, &updateResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("POST /api/workspaces/%s/pages/%s: got status %d", wsID, pageID, status)
+			t.Fatalf("POST /api/workspaces/%s/pages/%s: got status %d", wsID, nodeID, status)
 		}
 
-		if updateResp.ID != pageID {
-			t.Errorf("Updated page ID: got %v, want %v", updateResp.ID, pageID)
+		if updateResp.ID != nodeID {
+			t.Errorf("Updated page ID: got %v, want %v", updateResp.ID, nodeID)
 		}
 
 		// Verify update by getting the page again
 		var getPageResp2 dto.GetPageResponse
-		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String(), nil, &getPageResp2, token)
+		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String(), nil, &getPageResp2, token)
 
 		if getPageResp2.Title != "Updated Title" {
 			t.Errorf("Updated page title: got %q, want %q", getPageResp2.Title, "Updated Title")
 		}
 
 		// Delete page
-		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String()+"/delete", nil, nil, token)
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String()+"/delete", nil, nil, token)
 		if status != http.StatusOK {
-			t.Fatalf("POST /api/workspaces/%s/pages/%s/delete: got status %d", wsID, pageID, status)
+			t.Fatalf("POST /api/workspaces/%s/pages/%s/delete: got status %d", wsID, nodeID, status)
 		}
 
 		// Verify page is deleted
-		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+pageID.String(), nil, nil, token)
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String(), nil, nil, token)
 		if status != http.StatusNotFound {
 			t.Errorf("Get deleted page: got status %d, want %d", status, http.StatusNotFound)
 		}
