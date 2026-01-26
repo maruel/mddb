@@ -130,6 +130,13 @@
   gap: var(--s-2);
 }
 
+.oauthIcon {
+  width: 18px;
+  height: 18px;
+  margin-right: var(--s-2);
+  flex-shrink: 0;
+}
+
 .googleButton,
 .microsoftButton,
 .githubButton,
