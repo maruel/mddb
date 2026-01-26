@@ -140,8 +140,8 @@ func (r *Repo) CommitTx(ctx context.Context, author Author, fn func() (msg strin
 func (r *Repo) commit(ctx context.Context, author Author, message string, files []string) error {
 	// Stage specified files
 	args := append([]string{"add", "--"}, files...)
-	if err := r.git(ctx, args...).Run(); err != nil {
-		return fmt.Errorf("failed to stage files: %w", err)
+	if out, err := r.git(ctx, args...).CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to stage files: %w\nOutput: %s", err, string(out))
 	}
 
 	// Check if there are staged changes

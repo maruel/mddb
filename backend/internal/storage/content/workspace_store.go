@@ -145,11 +145,18 @@ func (ws *WorkspaceFileStore) checkStorageQuota(additionalBytes int64) error {
 
 // Path helpers
 
-func (ws *WorkspaceFileStore) pageDir(id, parentID jsonldb.ID) string {
-	if parentID.IsZero() {
-		return filepath.Join(ws.wsDir, id.String())
+func (ws *WorkspaceFileStore) relativeDir(id, parentID jsonldb.ID) string {
+	var parts []string
+	for p := parentID; !p.IsZero(); p = ws.getParent(p) {
+		parts = append(parts, p.String())
 	}
-	return filepath.Join(ws.wsDir, parentID.String(), id.String())
+	slices.Reverse(parts)
+	parts = append(parts, id.String())
+	return filepath.Join(parts...)
+}
+
+func (ws *WorkspaceFileStore) pageDir(id, parentID jsonldb.ID) string {
+	return filepath.Join(ws.wsDir, ws.relativeDir(id, parentID))
 }
 
 func (ws *WorkspaceFileStore) pageIndexFile(id, parentID jsonldb.ID) string {
@@ -168,13 +175,7 @@ func (ws *WorkspaceFileStore) tableMetadataFile(id, parentID jsonldb.ID) string 
 // parentID must be passed explicitly because during node creation,
 // the node doesn't exist in the cache yet (it's added after gitPath is called).
 func (ws *WorkspaceFileStore) gitPath(parentID, id jsonldb.ID, fileName string) string {
-	var parts []string
-	for p := parentID; !p.IsZero(); p = ws.getParent(p) {
-		parts = append(parts, p.String())
-	}
-	slices.Reverse(parts)
-	parts = append(parts, id.String(), fileName)
-	return filepath.Join(parts...)
+	return filepath.Join(ws.relativeDir(id, parentID), fileName)
 }
 
 // PageExists checks if a page exists.
