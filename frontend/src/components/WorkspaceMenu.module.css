@@ -1,0 +1,120 @@
+.wsMenu {
+  position: relative;
+}
+
+.wsButton {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: none;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--transition);
+  font-size: 0.85rem;
+}
+
+.wsButton:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.wsName {
+  font-weight: 500;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevron {
+  font-size: 0.6rem;
+  opacity: 0.8;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.wsList {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.wsItem {
+  width: 100%;
+  padding: var(--s-3);
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--c-text);
+  transition: background var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wsItem:hover {
+  background: var(--c-bg-alt);
+}
+
+.wsItem.active {
+  background: var(--c-bg-alt);
+}
+
+.wsItemName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkmark {
+  color: var(--c-primary);
+  font-weight: 600;
+}
+
+.divider {
+  height: 1px;
+  background: var(--c-border);
+}
+
+.menuItem {
+  width: 100%;
+  padding: var(--s-3);
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--c-text);
+  transition: background var(--transition);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.menuItem:hover {
+  background: var(--c-bg-alt);
+}
+
+.icon {
+  opacity: 0.7;
+}
+
+.plusIcon {
+  color: var(--c-primary);
+  font-weight: 600;
+  font-size: 1rem;
+}

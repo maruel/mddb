@@ -1,4 +1,4 @@
-// Settings panel for managing workspace and members.
+// Workspace settings page for managing workspace and members.
 
 import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
 import { createApi } from '../useApi';
@@ -15,7 +15,7 @@ import { useI18n } from '../i18n';
 interface WorkspaceSettingsProps {
   user: UserResponse;
   token: string;
-  onClose: () => void;
+  onBack: () => void;
 }
 
 type Tab = 'members' | 'workspace' | 'sync';
@@ -259,10 +259,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   return (
     <div class={styles.settings}>
       <header class={styles.header}>
-        <h2>{t('settings.title')}</h2>
-        <button onClick={() => props.onClose()} class={styles.closeButton}>
-          &times;
+        <button onClick={() => props.onBack()} class={styles.backButton}>
+          ← {t('common.back')}
         </button>
+        <h2>{t('settings.title')}</h2>
       </header>
 
       <div class={styles.tabs}>

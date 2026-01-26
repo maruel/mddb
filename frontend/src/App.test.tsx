@@ -84,9 +84,9 @@ vi.mock('./components/TableBoard', () => ({
 }));
 
 vi.mock('./components/WorkspaceSettings', () => ({
-  default: (props: { onClose: () => void }) => (
+  default: (props: { onBack: () => void }) => (
     <div data-testid="workspace-settings">
-      <button onClick={props.onClose}>Close Settings</button>
+      <button onClick={props.onBack}>Back</button>
     </div>
   ),
 }));
@@ -170,6 +170,15 @@ vi.mock('./components/CreateOrgModal', () => ({
   ),
 }));
 
+vi.mock('./components/CreateWorkspaceModal', () => ({
+  default: (props: { isFirstWorkspace?: boolean; onClose: () => void; onCreate: (data: unknown) => void }) => (
+    <div data-testid={props.isFirstWorkspace ? 'create-workspace-modal-first' : 'create-workspace-modal'}>
+      <button onClick={props.onClose}>Close</button>
+      <button onClick={() => props.onCreate({ name: 'New Workspace' })}>Create</button>
+    </div>
+  ),
+}));
+
 vi.mock('./components/UserMenu', () => ({
   default: (props: { user: UserResponse; onLogout: () => void }) => (
     <div data-testid="user-menu">
@@ -210,6 +219,36 @@ vi.mock('./components/OrgMenu', () => ({
   ),
 }));
 
+vi.mock('./components/WorkspaceMenu', () => ({
+  default: (props: {
+    workspaces: { workspace_id: string; workspace_name?: string; organization_id: string }[];
+    currentOrgId: string;
+    currentWsId: string;
+    onSwitchWorkspace: (wsId: string) => void;
+    onOpenSettings: () => void;
+    onCreateWorkspace: () => void;
+  }) => {
+    const currentWs = props.workspaces.find((ws) => ws.workspace_id === props.currentWsId);
+    return (
+      <div data-testid="workspace-menu">
+        <button
+          data-testid="workspace-menu-button"
+          title={currentWs?.workspace_name || 'Workspace'}
+          onClick={props.onOpenSettings}
+        >
+          {currentWs?.workspace_name || 'Workspace'}
+        </button>
+        <button data-testid="workspace-settings-button" onClick={props.onOpenSettings}>
+          Workspace Settings
+        </button>
+        <button data-testid="create-workspace-button" onClick={props.onCreateWorkspace}>
+          Create Workspace
+        </button>
+      </div>
+    );
+  },
+}));
+
 // Mock fetch
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
@@ -235,10 +274,12 @@ Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 // Mock window.history
 const mockPushState = vi.fn();
 const mockReplaceState = vi.fn();
+const mockBack = vi.fn();
 Object.defineProperty(window, 'history', {
   value: {
     pushState: mockPushState,
     replaceState: mockReplaceState,
+    back: mockBack,
   },
   writable: true,
 });
@@ -849,14 +890,16 @@ describe('App', () => {
       });
     });
 
-    it('opens settings panel when clicking settings button', async () => {
+    it('opens settings panel when clicking settings in workspace menu', async () => {
       renderWithI18n(() => <App />);
 
+      // Wait for workspace menu to appear
       await waitFor(() => {
-        expect(screen.getByTitle(/settings/i)).toBeTruthy();
+        expect(screen.getByTestId('workspace-settings-button')).toBeTruthy();
       });
 
-      fireEvent.click(screen.getByTitle(/settings/i));
+      // Click settings button
+      fireEvent.click(screen.getByTestId('workspace-settings-button'));
 
       await waitFor(() => {
         expect(screen.getByTestId('workspace-settings')).toBeTruthy();
@@ -866,17 +909,24 @@ describe('App', () => {
     it('closes settings panel', async () => {
       renderWithI18n(() => <App />);
 
+      // Wait for workspace menu to appear
       await waitFor(() => {
-        expect(screen.getByTitle(/settings/i)).toBeTruthy();
+        expect(screen.getByTestId('workspace-settings-button')).toBeTruthy();
       });
 
-      fireEvent.click(screen.getByTitle(/settings/i));
+      // Click settings button - this navigates to /settings
+      fireEvent.click(screen.getByTestId('workspace-settings-button'));
 
       await waitFor(() => {
         expect(screen.getByTestId('workspace-settings')).toBeTruthy();
       });
 
-      fireEvent.click(screen.getByText('Close Settings'));
+      // Simulate browser back navigation by clicking Back button and then simulating popstate
+      fireEvent.click(screen.getByText('Back'));
+
+      // Simulate the effect of history.back() by changing pathname and dispatching popstate
+      mockPathname = '/';
+      window.dispatchEvent(new PopStateEvent('popstate'));
 
       await waitFor(() => {
         expect(screen.queryByTestId('workspace-settings')).toBeFalsy();
@@ -1018,7 +1068,7 @@ describe('App', () => {
       });
     });
 
-    it('opens create workspace modal when clicking + button', async () => {
+    it('opens create workspace modal from workspace menu', async () => {
       localStorageMock.setItem('mddb_token', 'test-token');
 
       mockFetch.mockImplementation((url: string) => {
@@ -1039,14 +1089,16 @@ describe('App', () => {
 
       renderWithI18n(() => <App />);
 
+      // Wait for workspace menu to appear
       await waitFor(() => {
-        expect(screen.getByTestId('create-org-button')).toBeTruthy();
+        expect(screen.getByTestId('create-workspace-button')).toBeTruthy();
       });
 
-      fireEvent.click(screen.getByTestId('create-org-button'));
+      // Click "Create Workspace" button
+      fireEvent.click(screen.getByTestId('create-workspace-button'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('create-org-modal')).toBeTruthy();
+        expect(screen.getByTestId('create-workspace-modal-first')).toBeTruthy();
       });
     });
   });

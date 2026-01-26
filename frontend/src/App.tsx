@@ -18,6 +18,7 @@ import CreateOrgModal from './components/CreateOrgModal';
 import CreateWorkspaceModal from './components/CreateWorkspaceModal';
 import UserMenu from './components/UserMenu';
 import OrgMenu from './components/OrgMenu';
+import WorkspaceMenu from './components/WorkspaceMenu';
 import { debounce } from './utils/debounce';
 import { useI18n, type Locale } from './i18n';
 import { createApi, APIError } from './useApi';
@@ -50,7 +51,7 @@ export default function App() {
   const [nodes, setNodes] = createStore<NodeResponse[]>([]);
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
-  const [showSettings, setShowSettings] = createSignal(false);
+  const [isSettingsPage, setIsSettingsPage] = createSignal(false);
   const [isProfilePage, setIsProfilePage] = createSignal(false);
   const [isPrivacyPage, setIsPrivacyPage] = createSignal(false);
   const [isTermsPage, setIsTermsPage] = createSignal(false);
@@ -440,12 +441,20 @@ export default function App() {
     }
     if (path === '/profile') {
       setIsProfilePage(true);
+      setIsSettingsPage(false);
       setIsPrivacyPage(false);
       setIsTermsPage(false);
-      setShowSettings(false);
+      return;
+    }
+    if (path === '/settings') {
+      setIsSettingsPage(true);
+      setIsProfilePage(false);
+      setIsPrivacyPage(false);
+      setIsTermsPage(false);
       return;
     }
     setIsProfilePage(false);
+    setIsSettingsPage(false);
     setIsPrivacyPage(false);
     setIsTermsPage(false);
 
@@ -894,7 +903,7 @@ export default function App() {
                   <h1>{t('app.title')}</h1>
                 </div>
                 <div class={styles.userInfo}>
-                  <Show when={(user()?.organizations?.length ?? 0) > 0}>
+                  <Show when={(user()?.organizations?.length ?? 0) > 1}>
                     <OrgMenu
                       memberships={user()?.organizations || []}
                       currentOrgId={user()?.organization_id || ''}
@@ -902,12 +911,25 @@ export default function App() {
                       onCreateOrg={() => setShowCreateOrg(true)}
                     />
                   </Show>
+                  <WorkspaceMenu
+                    workspaces={user()?.workspaces || []}
+                    currentOrgId={user()?.organization_id || ''}
+                    currentWsId={user()?.workspace_id || ''}
+                    onSwitchWorkspace={(wsId) => switchWorkspace(wsId)}
+                    onOpenSettings={() => {
+                      setIsSettingsPage(true);
+                      setSelectedNodeId(null);
+                      setShowMobileSidebar(false);
+                      window.history.pushState(null, '', '/settings');
+                    }}
+                    onCreateWorkspace={() => setShowCreateWorkspace(true)}
+                  />
                   <UserMenu
                     user={user() as UserResponse}
                     onLogout={logout}
                     onProfile={() => {
                       setIsProfilePage(true);
-                      setShowSettings(false);
+                      setIsSettingsPage(false);
                       setSelectedNodeId(null);
                       window.history.pushState(null, '', '/profile');
                     }}
@@ -915,18 +937,27 @@ export default function App() {
                 </div>
               </header>
 
-              <Show
-                when={!isProfilePage()}
-                fallback={
-                  <UserProfile
-                    user={user() as UserResponse}
-                    token={token() as string}
-                    onBack={() => {
-                      window.history.back();
-                    }}
-                  />
-                }
-              >
+              <Show when={isProfilePage()}>
+                <UserProfile
+                  user={user() as UserResponse}
+                  token={token() as string}
+                  onBack={() => {
+                    window.history.back();
+                  }}
+                />
+              </Show>
+
+              <Show when={isSettingsPage()}>
+                <WorkspaceSettings
+                  user={user() as UserResponse}
+                  token={token() as string}
+                  onBack={() => {
+                    window.history.back();
+                  }}
+                />
+              </Show>
+
+              <Show when={!isProfilePage() && !isSettingsPage()}>
                 <div class={styles.container}>
                   <Show when={showMobileSidebar()}>
                     <div class={styles.mobileBackdrop} onClick={() => setShowMobileSidebar(false)} />
@@ -936,31 +967,22 @@ export default function App() {
                     loading={loading()}
                     nodes={nodes}
                     selectedNodeId={selectedNodeId()}
-                    onToggleSettings={() => {
-                      setShowSettings(true);
-                      setSelectedNodeId(null);
-                      setShowMobileSidebar(false);
-                    }}
                     onCreatePage={() => {
-                      setShowSettings(false);
                       setNodeCreationParentId(null);
                       createNode('document');
                       setShowMobileSidebar(false);
                     }}
                     onCreateTable={() => {
-                      setShowSettings(false);
                       setNodeCreationParentId(null);
                       createNode('table');
                       setShowMobileSidebar(false);
                     }}
                     onCreateChildPage={(parentId: string) => {
-                      setShowSettings(false);
                       setNodeCreationParentId(parentId);
                       createNode('document', parentId);
                       setShowMobileSidebar(false);
                     }}
                     onCreateChildTable={(parentId: string) => {
-                      setShowSettings(false);
                       setNodeCreationParentId(parentId);
                       createNode('table', parentId);
                       setShowMobileSidebar(false);
@@ -970,205 +992,195 @@ export default function App() {
                   />
 
                   <main class={styles.main}>
-                    <Show when={showSettings() && user() && token()}>
-                      <WorkspaceSettings
-                        user={user() as UserResponse}
-                        token={token() as string}
-                        onClose={() => setShowSettings(false)}
-                      />
+                    <Show when={selectedNodeId()}>
+                      <nav class={styles.breadcrumbs}>
+                        <For each={getBreadcrumbs(selectedNodeId())}>
+                          {(crumb, i) => (
+                            <>
+                              <Show when={i() > 0}>
+                                <span class={styles.breadcrumbSeparator}>/</span>
+                              </Show>
+                              <span class={styles.breadcrumbItem} onClick={() => handleNodeClick(crumb)}>
+                                {crumb.title}
+                              </span>
+                            </>
+                          )}
+                        </For>
+                      </nav>
                     </Show>
 
-                    <Show when={!showSettings()}>
-                      <Show when={selectedNodeId()}>
-                        <nav class={styles.breadcrumbs}>
-                          <For each={getBreadcrumbs(selectedNodeId())}>
-                            {(crumb, i) => (
-                              <>
-                                <Show when={i() > 0}>
-                                  <span class={styles.breadcrumbSeparator}>/</span>
-                                </Show>
-                                <span class={styles.breadcrumbItem} onClick={() => handleNodeClick(crumb)}>
-                                  {crumb.title}
-                                </span>
-                              </>
-                            )}
-                          </For>
-                        </nav>
-                      </Show>
+                    <Show when={error()} fallback={null}>
+                      <div class={styles.error}>{error()}</div>
+                    </Show>
 
-                      <Show when={error()} fallback={null}>
-                        <div class={styles.error}>{error()}</div>
-                      </Show>
-
-                      <Show when={selectedNodeId()}>
-                        <div class={styles.editor}>
-                          <div class={styles.editorHeader}>
-                            <input
-                              type="text"
-                              placeholder={t('editor.titlePlaceholder') || 'Title'}
-                              value={title()}
-                              onInput={(e) => {
-                                setTitle(e.target.value);
-                                const id = selectedNodeId();
-                                if (id) {
-                                  updateNodeTitle(id, e.target.value);
-                                }
-                                setHasUnsavedChanges(true);
-                                debouncedAutoSave();
-                              }}
-                              class={styles.titleInput}
-                            />
-                            <div class={styles.editorStatus}>
-                              <Show when={hasUnsavedChanges()}>
-                                <span class={styles.unsavedIndicator}>● {t('editor.unsaved')}</span>
-                              </Show>
-                              <Show when={autoSaveStatus() === 'saving'}>
-                                <span class={styles.savingIndicator}>⟳ {t('common.saving')}</span>
-                              </Show>
-                              <Show when={autoSaveStatus() === 'saved'}>
-                                <span class={styles.savedIndicator}>✓ {t('common.saved')}</span>
-                              </Show>
-                            </div>
-                            <div class={styles.editorActions}>
-                              <button
-                                onClick={() => {
-                                  const id = selectedNodeId();
-                                  if (id) loadHistory(id);
-                                }}
-                                disabled={loading()}
-                              >
-                                {showHistory() ? t('editor.hideHistory') : t('editor.history')}
-                              </button>
-                              <button onClick={saveNode} disabled={loading()}>
-                                {loading() ? t('common.saving') : t('common.save')}
-                              </button>
-                              <button onClick={deleteCurrentNode} disabled={loading()}>
-                                {t('common.delete')}
-                              </button>
-                            </div>
+                    <Show when={selectedNodeId()}>
+                      <div class={styles.editor}>
+                        <div class={styles.editorHeader}>
+                          <input
+                            type="text"
+                            placeholder={t('editor.titlePlaceholder') || 'Title'}
+                            value={title()}
+                            onInput={(e) => {
+                              setTitle(e.target.value);
+                              const id = selectedNodeId();
+                              if (id) {
+                                updateNodeTitle(id, e.target.value);
+                              }
+                              setHasUnsavedChanges(true);
+                              debouncedAutoSave();
+                            }}
+                            class={styles.titleInput}
+                          />
+                          <div class={styles.editorStatus}>
+                            <Show when={hasUnsavedChanges()}>
+                              <span class={styles.unsavedIndicator}>● {t('editor.unsaved')}</span>
+                            </Show>
+                            <Show when={autoSaveStatus() === 'saving'}>
+                              <span class={styles.savingIndicator}>⟳ {t('common.saving')}</span>
+                            </Show>
+                            <Show when={autoSaveStatus() === 'saved'}>
+                              <span class={styles.savedIndicator}>✓ {t('common.saved')}</span>
+                            </Show>
                           </div>
+                          <div class={styles.editorActions}>
+                            <button
+                              onClick={() => {
+                                const id = selectedNodeId();
+                                if (id) loadHistory(id);
+                              }}
+                              disabled={loading()}
+                            >
+                              {showHistory() ? t('editor.hideHistory') : t('editor.history')}
+                            </button>
+                            <button onClick={saveNode} disabled={loading()}>
+                              {loading() ? t('common.saving') : t('common.save')}
+                            </button>
+                            <button onClick={deleteCurrentNode} disabled={loading()}>
+                              {t('common.delete')}
+                            </button>
+                          </div>
+                        </div>
 
-                          <Show when={showHistory()}>
-                            <div class={styles.historyPanel}>
-                              <h3>{t('editor.versionHistory')}</h3>
-                              <ul class={styles.historyList}>
-                                <For each={history()}>
-                                  {(commit) => (
-                                    <li
-                                      class={styles.historyItem}
-                                      onClick={() => {
-                                        const id = selectedNodeId();
-                                        if (id) loadVersion(id, commit.hash);
-                                      }}
-                                    >
-                                      <div class={styles.historyMeta}>
-                                        <span class={styles.historyDate}>
-                                          {new Date(commit.timestamp).toLocaleString()}
-                                        </span>
-                                        <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
-                                      </div>
-                                      <div class={styles.historyMessage}>{commit.message}</div>
-                                    </li>
-                                  )}
-                                </For>
-                                <Show when={history().length === 0}>
-                                  <li class={styles.historyItem}>{t('editor.noHistory')}</li>
-                                </Show>
-                              </ul>
+                        <Show when={showHistory()}>
+                          <div class={styles.historyPanel}>
+                            <h3>{t('editor.versionHistory')}</h3>
+                            <ul class={styles.historyList}>
+                              <For each={history()}>
+                                {(commit) => (
+                                  <li
+                                    class={styles.historyItem}
+                                    onClick={() => {
+                                      const id = selectedNodeId();
+                                      if (id) loadVersion(id, commit.hash);
+                                    }}
+                                  >
+                                    <div class={styles.historyMeta}>
+                                      <span class={styles.historyDate}>
+                                        {new Date(commit.timestamp).toLocaleString()}
+                                      </span>
+                                      <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
+                                    </div>
+                                    <div class={styles.historyMessage}>{commit.message}</div>
+                                  </li>
+                                )}
+                              </For>
+                              <Show when={history().length === 0}>
+                                <li class={styles.historyItem}>{t('editor.noHistory')}</li>
+                              </Show>
+                            </ul>
+                          </div>
+                        </Show>
+
+                        <div class={styles.nodeContent}>
+                          {/* Always show markdown content if it exists or if node has page content */}
+                          <Show when={findNodeById(selectedNodeId())?.has_page}>
+                            <div class={styles.editorContent}>
+                              <textarea
+                                value={content()}
+                                onInput={(e) => {
+                                  setContent(e.target.value);
+                                  setHasUnsavedChanges(true);
+                                  debouncedAutoSave();
+                                }}
+                                placeholder={t('editor.contentPlaceholder') || 'Write your content in markdown...'}
+                                class={styles.contentInput}
+                              />
+                              <MarkdownPreview content={content()} orgId={user()?.organization_id} />
                             </div>
                           </Show>
 
-                          <div class={styles.nodeContent}>
-                            {/* Always show markdown content if it exists or if node has page content */}
-                            <Show when={findNodeById(selectedNodeId())?.has_page}>
-                              <div class={styles.editorContent}>
-                                <textarea
-                                  value={content()}
-                                  onInput={(e) => {
-                                    setContent(e.target.value);
-                                    setHasUnsavedChanges(true);
-                                    debouncedAutoSave();
-                                  }}
-                                  placeholder={t('editor.contentPlaceholder') || 'Write your content in markdown...'}
-                                  class={styles.contentInput}
-                                />
-                                <MarkdownPreview content={content()} orgId={user()?.organization_id} />
-                              </div>
-                            </Show>
-
-                            {/* Show table if node has table content */}
-                            <Show when={findNodeById(selectedNodeId())?.has_table}>
-                              <div class={styles.tableView}>
-                                <div class={styles.tableHeader}>
-                                  <h3>{t('table.records')}</h3>
-                                  <div class={styles.viewToggle}>
-                                    <button
-                                      classList={{ [`${styles.active}`]: viewMode() === 'table' }}
-                                      onClick={() => setViewMode('table')}
-                                    >
-                                      {t('table.table')}
-                                    </button>
-                                    <button
-                                      classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
-                                      onClick={() => setViewMode('grid')}
-                                    >
-                                      {t('table.grid')}
-                                    </button>
-                                    <button
-                                      classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
-                                      onClick={() => setViewMode('gallery')}
-                                    >
-                                      {t('table.gallery')}
-                                    </button>
-                                    <button
-                                      classList={{ [`${styles.active}`]: viewMode() === 'board' }}
-                                      onClick={() => setViewMode('board')}
-                                    >
-                                      {t('table.board')}
-                                    </button>
-                                  </div>
+                          {/* Show table if node has table content */}
+                          <Show when={findNodeById(selectedNodeId())?.has_table}>
+                            <div class={styles.tableView}>
+                              <div class={styles.tableHeader}>
+                                <h3>{t('table.records')}</h3>
+                                <div class={styles.viewToggle}>
+                                  <button
+                                    classList={{ [`${styles.active}`]: viewMode() === 'table' }}
+                                    onClick={() => setViewMode('table')}
+                                  >
+                                    {t('table.table')}
+                                  </button>
+                                  <button
+                                    classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
+                                    onClick={() => setViewMode('grid')}
+                                  >
+                                    {t('table.grid')}
+                                  </button>
+                                  <button
+                                    classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
+                                    onClick={() => setViewMode('gallery')}
+                                  >
+                                    {t('table.gallery')}
+                                  </button>
+                                  <button
+                                    classList={{ [`${styles.active}`]: viewMode() === 'board' }}
+                                    onClick={() => setViewMode('board')}
+                                  >
+                                    {t('table.board')}
+                                  </button>
                                 </div>
-                                <Show when={viewMode() === 'table'}>
-                                  <TableTable
-                                    tableId={selectedNodeId() || ''}
-                                    columns={findNodeById(selectedNodeId())?.properties || []}
-                                    records={records()}
-                                    onAddRecord={handleAddRecord}
-                                    onUpdateRecord={handleUpdateRecord}
-                                    onDeleteRecord={handleDeleteRecord}
-                                    onLoadMore={loadMoreRecords}
-                                    hasMore={hasMore()}
-                                  />
-                                </Show>
-                                <Show when={viewMode() === 'grid'}>
-                                  <TableGrid
-                                    records={records()}
-                                    columns={findNodeById(selectedNodeId())?.properties || []}
-                                    onUpdateRecord={handleUpdateRecord}
-                                    onDeleteRecord={handleDeleteRecord}
-                                  />
-                                </Show>
-                                <Show when={viewMode() === 'gallery'}>
-                                  <TableGallery
-                                    records={records()}
-                                    columns={findNodeById(selectedNodeId())?.properties || []}
-                                    onUpdateRecord={handleUpdateRecord}
-                                    onDeleteRecord={handleDeleteRecord}
-                                  />
-                                </Show>
-                                <Show when={viewMode() === 'board'}>
-                                  <TableBoard
-                                    records={records()}
-                                    columns={findNodeById(selectedNodeId())?.properties || []}
-                                    onUpdateRecord={handleUpdateRecord}
-                                    onDeleteRecord={handleDeleteRecord}
-                                  />
-                                </Show>
                               </div>
-                            </Show>
-                          </div>
+                              <Show when={viewMode() === 'table'}>
+                                <TableTable
+                                  tableId={selectedNodeId() || ''}
+                                  columns={findNodeById(selectedNodeId())?.properties || []}
+                                  records={records()}
+                                  onAddRecord={handleAddRecord}
+                                  onUpdateRecord={handleUpdateRecord}
+                                  onDeleteRecord={handleDeleteRecord}
+                                  onLoadMore={loadMoreRecords}
+                                  hasMore={hasMore()}
+                                />
+                              </Show>
+                              <Show when={viewMode() === 'grid'}>
+                                <TableGrid
+                                  records={records()}
+                                  columns={findNodeById(selectedNodeId())?.properties || []}
+                                  onUpdateRecord={handleUpdateRecord}
+                                  onDeleteRecord={handleDeleteRecord}
+                                />
+                              </Show>
+                              <Show when={viewMode() === 'gallery'}>
+                                <TableGallery
+                                  records={records()}
+                                  columns={findNodeById(selectedNodeId())?.properties || []}
+                                  onUpdateRecord={handleUpdateRecord}
+                                  onDeleteRecord={handleDeleteRecord}
+                                />
+                              </Show>
+                              <Show when={viewMode() === 'board'}>
+                                <TableBoard
+                                  records={records()}
+                                  columns={findNodeById(selectedNodeId())?.properties || []}
+                                  onUpdateRecord={handleUpdateRecord}
+                                  onDeleteRecord={handleDeleteRecord}
+                                />
+                              </Show>
+                            </div>
+                          </Show>
                         </div>
-                      </Show>
+                      </div>
                     </Show>
                   </main>
                 </div>

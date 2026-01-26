@@ -11,7 +11,6 @@ interface SidebarProps {
   loading: boolean;
   nodes: NodeResponse[];
   selectedNodeId: string | null;
-  onToggleSettings: () => void;
   onCreatePage: () => void;
   onCreateTable: () => void;
   onCreateChildPage: (parentId: string) => void;
@@ -28,9 +27,6 @@ export default function Sidebar(props: SidebarProps) {
       <div class={styles.sidebarHeader}>
         <h2>{t('app.workspace')}</h2>
         <div class={styles.sidebarActions}>
-          <button onClick={props.onToggleSettings} title={t('app.settings') || 'Workspace Settings'}>
-            ⚙
-          </button>
           <button onClick={props.onCreatePage} title={t('app.newPage') || 'New Page'}>
             +P
           </button>
