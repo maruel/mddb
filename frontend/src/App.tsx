@@ -9,6 +9,7 @@ import TableGrid from './components/TableGrid';
 import TableGallery from './components/TableGallery';
 import TableBoard from './components/TableBoard';
 import WorkspaceSettings from './components/WorkspaceSettings';
+import UserProfile from './components/UserProfile';
 import Auth from './components/Auth';
 import Privacy from './components/Privacy';
 import Terms from './components/Terms';
@@ -50,6 +51,7 @@ export default function App() {
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
   const [showSettings, setShowSettings] = createSignal(false);
+  const [isProfilePage, setIsProfilePage] = createSignal(false);
   const [isPrivacyPage, setIsPrivacyPage] = createSignal(false);
   const [isTermsPage, setIsTermsPage] = createSignal(false);
   const [viewMode, setViewMode] = createSignal<'table' | 'grid' | 'gallery' | 'board'>('table');
@@ -427,13 +429,23 @@ export default function App() {
     if (path === '/privacy') {
       setIsPrivacyPage(true);
       setIsTermsPage(false);
+      setIsProfilePage(false);
       return;
     }
     if (path === '/terms') {
       setIsTermsPage(true);
       setIsPrivacyPage(false);
+      setIsProfilePage(false);
       return;
     }
+    if (path === '/profile') {
+      setIsProfilePage(true);
+      setIsPrivacyPage(false);
+      setIsTermsPage(false);
+      setShowSettings(false);
+      return;
+    }
+    setIsProfilePage(false);
     setIsPrivacyPage(false);
     setIsTermsPage(false);
 
@@ -880,7 +892,16 @@ export default function App() {
                         onCreateOrg={() => setShowCreateOrg(true)}
                       />
                     </Show>
-                    <UserMenu user={user() as UserResponse} onLogout={logout} />
+                    <UserMenu
+                      user={user() as UserResponse}
+                      onLogout={logout}
+                      onProfile={() => {
+                        setIsProfilePage(true);
+                        setShowSettings(false);
+                        setSelectedNodeId(null);
+                        window.history.pushState(null, '', '/profile');
+                      }}
+                    />
                   </div>
                 </header>
 
@@ -935,7 +956,25 @@ export default function App() {
                       />
                     </Show>
 
-                    <Show when={!showSettings()}>
+                    <Show when={isProfilePage() && user() && token()}>
+                      <UserProfile
+                        user={user() as UserResponse}
+                        token={token() as string}
+                        onClose={() => {
+                          setIsProfilePage(false);
+                          const wsId = user()?.workspace_id;
+                          const wsName = user()?.workspace_name;
+                          if (wsId) {
+                            const wsSlug = slugify(wsName || 'workspace');
+                            window.history.pushState(null, '', `/${wsId}+${wsSlug}/`);
+                          } else {
+                            window.history.pushState(null, '', '/');
+                          }
+                        }}
+                      />
+                    </Show>
+
+                    <Show when={!showSettings() && !isProfilePage()}>
                       <Show when={selectedNodeId()}>
                         <nav class={styles.breadcrumbs}>
                           <For each={getBreadcrumbs(selectedNodeId())}>

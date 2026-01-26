@@ -1,12 +1,10 @@
-// Settings panel for managing workspace, members, and personal preferences.
+// Settings panel for managing workspace and members.
 
 import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
 import { createApi } from '../useApi';
 import type {
   UserResponse,
   WSInvitationResponse,
-  UserSettings,
-  WorkspaceMembershipSettings,
   OrganizationSettings,
   WorkspaceRole,
   GitRemoteResponse,
@@ -20,7 +18,7 @@ interface WorkspaceSettingsProps {
   onClose: () => void;
 }
 
-type Tab = 'members' | 'personal' | 'workspace' | 'sync';
+type Tab = 'members' | 'workspace' | 'sync';
 
 export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const { t } = useI18n();
@@ -36,16 +34,6 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   // Form states
   const [inviteEmail, setInviteEmail] = createSignal('');
   const [inviteRole, setInviteRole] = createSignal<'admin' | 'editor' | 'viewer'>('viewer');
-
-  // Personal Settings states
-  const [theme, setTheme] = createSignal('light');
-  const [language, setLanguage] = createSignal('en');
-  const [notifications, setNotifications] = createSignal(true);
-
-  createEffect(() => {
-    setTheme(props.user.settings?.theme || 'light');
-    setLanguage(props.user.settings?.language || 'en');
-  });
 
   // Workspace Settings states
   const [orgName, setOrgName] = createSignal('');
@@ -112,12 +100,6 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
           setGitRemote(null);
         }
       }
-
-      // Load membership settings (notifications)
-      const currentWsMembership = props.user.workspaces?.find((m) => m.workspace_id === props.user.workspace_id);
-      if (currentWsMembership) {
-        setNotifications(currentWsMembership.settings?.notifications ?? true);
-      }
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
@@ -158,38 +140,6 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       loadData();
     } catch (err) {
       setError(`${t('errors.failedToUpdateRole')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const savePersonalSettings = async (e: Event) => {
-    e.preventDefault();
-    const ws = wsApi();
-    if (!ws) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-      setSuccess(null);
-
-      const userSettings: UserSettings = {
-        theme: theme(),
-        language: language(),
-      };
-
-      const memSettings: WorkspaceMembershipSettings = {
-        notifications: notifications(),
-      };
-
-      await Promise.all([
-        api().auth.updateUserSettings({ settings: userSettings }),
-        ws.settings.updateWSMembershipSettings({ settings: memSettings }),
-      ]);
-
-      setSuccess(t('success.personalSettingsSaved') || 'Personal settings saved successfully');
-    } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -319,9 +269,6 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         <button class={activeTab() === 'members' ? styles.activeTab : ''} onClick={() => setActiveTab('members')}>
           {t('settings.members')}
         </button>
-        <button class={activeTab() === 'personal' ? styles.activeTab : ''} onClick={() => setActiveTab('personal')}>
-          {t('settings.personal')}
-        </button>
         <button class={activeTab() === 'workspace' ? styles.activeTab : ''} onClick={() => setActiveTab('workspace')}>
           {t('settings.workspace')}
         </button>
@@ -426,44 +373,6 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
               </Show>
             </div>
           </Show>
-        </section>
-      </Show>
-
-      <Show when={activeTab() === 'personal'}>
-        <section class={styles.section}>
-          <h3>{t('settings.personalSettings')}</h3>
-          <form onSubmit={savePersonalSettings} class={styles.settingsForm}>
-            <div class={styles.formItem}>
-              <label>{t('settings.theme')}</label>
-              <select value={theme()} onChange={(e) => setTheme(e.target.value)}>
-                <option value="light">{t('settings.themeLight')}</option>
-                <option value="dark">{t('settings.themeDark')}</option>
-                <option value="system">{t('settings.themeSystem')}</option>
-              </select>
-            </div>
-            <div class={styles.formItem}>
-              <label>{t('settings.language')}</label>
-              <select value={language()} onChange={(e) => setLanguage(e.target.value)}>
-                <option value="en">{t('settings.languageEn')}</option>
-                <option value="fr">{t('settings.languageFr')}</option>
-                <option value="de">{t('settings.languageDe')}</option>
-                <option value="es">{t('settings.languageEs')}</option>
-              </select>
-            </div>
-            <div class={styles.formItem}>
-              <label class={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={notifications()}
-                  onChange={(e) => setNotifications(e.currentTarget.checked)}
-                />
-                {t('settings.enableNotifications')}
-              </label>
-            </div>
-            <button type="submit" class={styles.saveButton} disabled={loading()}>
-              {t('settings.saveChanges')}
-            </button>
-          </form>
         </section>
       </Show>
 

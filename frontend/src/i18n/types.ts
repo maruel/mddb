@@ -41,6 +41,10 @@ export interface Dictionary {
     profile: string;
   };
 
+  profile: {
+    title: string;
+  };
+
   auth: {
     login: string;
     register: string;

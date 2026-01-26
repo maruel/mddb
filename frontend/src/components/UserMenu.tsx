@@ -8,6 +8,7 @@ import styles from './UserMenu.module.css';
 interface UserMenuProps {
   user: UserResponse;
   onLogout: () => void;
+  onProfile: () => void;
 }
 
 export default function UserMenu(props: UserMenuProps) {
@@ -56,6 +57,11 @@ export default function UserMenu(props: UserMenuProps) {
     props.onLogout();
   };
 
+  const handleProfile = () => {
+    setIsOpen(false);
+    props.onProfile();
+  };
+
   return (
     <div class={styles.userMenu} ref={menuRef}>
       <button
@@ -80,6 +86,9 @@ export default function UserMenu(props: UserMenuProps) {
             </Show>
           </div>
           <div class={styles.divider} />
+          <button class={styles.menuItem} onClick={handleProfile}>
+            {t('userMenu.profile')}
+          </button>
           <button class={styles.menuItem} onClick={handleLogout}>
             {t('userMenu.logout')}
           </button>

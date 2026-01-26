@@ -39,6 +39,10 @@ export const dict: Dictionary = {
     profile: 'Profil',
   },
 
+  profile: {
+    title: 'Profil',
+  },
+
   auth: {
     login: 'Connexion',
     register: "S'inscrire",
