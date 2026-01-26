@@ -31,7 +31,7 @@ const api = createAPIClient((url, init) => fetch(url, init));
 
 export default function Auth(props: AuthProps) {
   const { t } = useI18n();
-  const [providers] = createResource(() => api.auth.providers.list().then((r) => r.providers));
+  const [providers] = createResource(() => api.auth.listProviders().then((r) => r.providers));
   const [isRegister, setIsRegister] = createSignal(false);
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');

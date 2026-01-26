@@ -314,15 +314,15 @@ const mockNodes: NodeResponse[] = [
   {
     id: 'node-1',
     title: 'Test Page',
-    type: 'document',
     content: '# Hello World',
     created: 1704067200,
     modified: 1704067200,
+    has_page: true,
+    has_table: false,
   },
   {
     id: 'node-2',
     title: 'Test Table',
-    type: 'table',
     properties: [
       { name: 'Name', type: 'text', required: true },
       {
@@ -336,6 +336,8 @@ const mockNodes: NodeResponse[] = [
     ],
     created: 1704067200,
     modified: 1704067200,
+    has_page: false,
+    has_table: true,
   },
 ];
 
@@ -586,8 +588,9 @@ describe('App', () => {
               Promise.resolve({
                 id: 'node-1',
                 title: 'Test Page',
-                type: 'document',
                 content: '# Hello World',
+                has_page: true,
+                has_table: false,
               }),
           });
         }
@@ -632,12 +635,13 @@ describe('App', () => {
               Promise.resolve({
                 id: 'node-2',
                 title: 'Test Table',
-                type: 'table',
                 properties: mockNodes[1]?.properties ?? [],
+                has_page: false,
+                has_table: true,
               }),
           });
         }
-        if (url.includes('/tables/node-2/records')) {
+        if (url.includes('/nodes/node-2/table/records')) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ records: mockRecords }),
@@ -676,15 +680,12 @@ describe('App', () => {
             json: () => Promise.resolve({ nodes: mockNodes }),
           });
         }
-        if (url === '/api/workspaces/ws-1/nodes' && init?.method === 'POST') {
-          const body = JSON.parse(init.body as string);
+        if (url.includes('/nodes/0/page/create') && init?.method === 'POST') {
           return Promise.resolve({
             ok: true,
             json: () =>
               Promise.resolve({
                 id: 'new-node',
-                title: body.title,
-                type: body.type,
               }),
           });
         }
@@ -695,8 +696,9 @@ describe('App', () => {
               Promise.resolve({
                 id: 'new-node',
                 title: 'New Page',
-                type: 'document',
                 content: '',
+                has_page: true,
+                has_table: false,
               }),
           });
         }
@@ -727,10 +729,10 @@ describe('App', () => {
 
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          '/api/workspaces/ws-1/nodes',
+          '/api/workspaces/ws-1/nodes/0/page/create',
           expect.objectContaining({
             method: 'POST',
-            body: JSON.stringify({ title: 'New Page', type: 'document' }),
+            body: JSON.stringify({ title: 'New Page' }),
           })
         );
       });
@@ -781,12 +783,13 @@ describe('App', () => {
               Promise.resolve({
                 id: 'node-2',
                 title: 'Test Table',
-                type: 'table',
                 properties: mockNodes[1]?.properties ?? [],
+                has_page: false,
+                has_table: true,
               }),
           });
         }
-        if (url.includes('/tables/node-2/records')) {
+        if (url.includes('/nodes/node-2/table/records')) {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve({ records: mockRecords }),
@@ -1055,8 +1058,9 @@ describe('App', () => {
               Promise.resolve({
                 id: 'node-1',
                 title: 'Test Page',
-                type: 'document',
                 content: '# Hello',
+                has_page: true,
+                has_table: false,
               }),
           });
         }
@@ -1091,8 +1095,8 @@ describe('App', () => {
             json: () => Promise.resolve({ nodes: mockNodes }),
           });
         }
-        // Fail the POST request for creating nodes
-        if (url === '/api/workspaces/ws-1/nodes' && init?.method === 'POST') {
+        // Fail the POST request for creating pages
+        if (url.includes('/nodes/0/page/create') && init?.method === 'POST') {
           return Promise.resolve({
             ok: false,
             status: 400,
@@ -1164,8 +1168,9 @@ describe('slugify', () => {
             Promise.resolve({
               id: 'node-1',
               title: 'Hello World Test',
-              type: 'document',
               content: '',
+              has_page: true,
+              has_table: false,
             }),
         });
       }

@@ -159,7 +159,7 @@ export default function App() {
   }
 
   async function createOrganization(data: { name: string }) {
-    const org = await api().organizations.create({
+    const org = await api().organizations.createOrganization({
       name: data.name,
     });
     // Refresh user data and switch to the new org
@@ -174,12 +174,12 @@ export default function App() {
     }
 
     // Create workspace via org API
-    const ws = await api().org(u.organization_id).workspaces.create({
+    const ws = await api().org(u.organization_id).workspaces.createWorkspace({
       name: data.name,
     });
 
     // Refresh user data to include the new workspace
-    const updatedUser = await api().auth.me.get();
+    const updatedUser = await api().auth.getMe();
     setUser(updatedUser);
 
     // Switch to the new workspace
@@ -216,7 +216,7 @@ export default function App() {
 
     try {
       setAutoSaveStatus('saving');
-      await ws.pages.update(nodeId, { title: title(), content: content() });
+      await ws.nodes.page.updatePage(nodeId, { title: title(), content: content() });
       setHasUnsavedChanges(false);
       setAutoSaveStatus('saved');
 
@@ -306,7 +306,7 @@ export default function App() {
       fetchingUser = true;
       (async () => {
         try {
-          const data = await api().auth.me.get();
+          const data = await api().auth.getMe();
           setUser(data);
         } catch (err) {
           console.error('Failed to load user', err);
@@ -395,7 +395,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const data = await ws.nodes.list();
+      const data = await ws.nodes.listNodes();
       const loadedNodes = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
 
       // If workspace is empty and user has permission, create welcome page
@@ -403,18 +403,17 @@ export default function App() {
         loadedNodes.length === 0 &&
         (user()?.workspace_role === WSRoleAdmin || user()?.workspace_role === WSRoleEditor)
       ) {
-        const newNode = await ws.pages.create({
+        const newPage = await ws.nodes.page.createPage('0', {
           title: t('welcome.welcomePageTitle'),
-          content: t('welcome.welcomePageContent'),
         });
         // Reload nodes after creation
-        const refreshedData = await ws.nodes.list();
+        const refreshedData = await ws.nodes.listNodes();
         const refreshedNodes = (refreshedData.nodes?.filter(Boolean) as NodeResponse[]) || [];
         setNodes(reconcile(refreshedNodes));
 
         // Select the new node
-        if (newNode && newNode.id) {
-          loadNode(newNode.id);
+        if (newPage && newPage.id) {
+          loadNode(String(newPage.id));
         }
       } else {
         setNodes(reconcile(loadedNodes));
@@ -434,7 +433,7 @@ export default function App() {
     try {
       setLoading(true);
       setShowHistory(false);
-      const nodeData = await ws.nodes.get(id);
+      const nodeData = await ws.nodes.getNode(id);
 
       setSelectedNodeId(nodeData.id);
       setTitle(nodeData.title);
@@ -462,9 +461,9 @@ export default function App() {
         }
       }
 
-      // If it's a table or hybrid, load records
-      if (nodeData.type === 'table' || nodeData.type === 'hybrid') {
-        const recordsData = await ws.tables.records.list(id, { Offset: 0, Limit: PAGE_SIZE });
+      // If it has table content, load records
+      if (nodeData.has_table) {
+        const recordsData = await ws.nodes.table.records.listRecords(id, { Offset: 0, Limit: PAGE_SIZE });
         const loadedRecords = (recordsData.records || []) as DataRecordResponse[];
         setRecords(loadedRecords);
         setHasMore(loadedRecords.length === PAGE_SIZE);
@@ -490,7 +489,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const data = await ws.pages.history.list(nodeId, { Limit: 100 });
+      const data = await ws.nodes.history.listNodeVersions(nodeId, { Limit: 100 });
       setHistory((data.history?.filter(Boolean) as Commit[]) || []);
       setShowHistory(true);
     } catch (err) {
@@ -508,7 +507,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      const data = await ws.pages.history.get(nodeId, hash);
+      const data = await ws.nodes.history.getNodeVersion(nodeId, hash);
       setContent(data.content || '');
       setHasUnsavedChanges(true); // Mark as modified
       setShowHistory(false);
@@ -530,13 +529,22 @@ export default function App() {
 
     try {
       setLoading(true);
-      const newNode = await ws.nodes.create({
-        title: title(),
-        type,
-        parent_id: parentId || nodeCreationParentId() || undefined,
-      });
+      const parent = parentId || nodeCreationParentId() || '0';
+      let newNodeId: string | number;
+      if (type === 'table') {
+        const result = await ws.nodes.table.createTable(parent, {
+          title: title(),
+          properties: [],
+        });
+        newNodeId = result.id;
+      } else {
+        const result = await ws.nodes.page.createPage(parent, {
+          title: title(),
+        });
+        newNodeId = result.id;
+      }
       await loadNodes();
-      loadNode(newNode.id);
+      loadNode(String(newNodeId));
       setTitle('');
       setContent('');
       setHasUnsavedChanges(false);
@@ -557,7 +565,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      await ws.pages.update(nodeId, { title: title(), content: content() });
+      await ws.nodes.page.updatePage(nodeId, { title: title(), content: content() });
       await loadNodes();
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
@@ -589,7 +597,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      await ws.pages.delete(nodeId);
+      await ws.nodes.deleteNode(nodeId);
       await loadNodes();
       setSelectedNodeId(null);
       setTitle('');
@@ -663,7 +671,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      await ws.tables.records.create(nodeId, { data });
+      await ws.nodes.table.records.createRecord(nodeId, { data });
       // Reload records
       loadNode(nodeId);
       setError(null);
@@ -683,7 +691,7 @@ export default function App() {
 
     try {
       setLoading(true);
-      await ws.tables.records.delete(nodeId, recordId);
+      await ws.nodes.table.records.deleteRecord(nodeId, recordId);
       loadNode(nodeId);
       setError(null);
     } catch (err) {
@@ -700,9 +708,9 @@ export default function App() {
 
     try {
       setLoading(true);
-      await ws.tables.records.update(nodeId, recordId, { data });
+      await ws.nodes.table.records.updateRecord(nodeId, recordId, { data });
       // Reload records to reflect changes
-      const recordsData = await ws.tables.records.list(nodeId, { Offset: 0, Limit: PAGE_SIZE });
+      const recordsData = await ws.nodes.table.records.listRecords(nodeId, { Offset: 0, Limit: PAGE_SIZE });
       setRecords((recordsData.records || []) as DataRecordResponse[]);
       setError(null);
     } catch (err) {
@@ -720,7 +728,7 @@ export default function App() {
     try {
       setLoading(true);
       const offset = records().length;
-      const data = await ws.tables.records.list(nodeId, { Offset: offset, Limit: PAGE_SIZE });
+      const data = await ws.nodes.table.records.listRecords(nodeId, { Offset: offset, Limit: PAGE_SIZE });
       const newRecords = (data.records || []) as DataRecordResponse[];
       setRecords([...records(), ...newRecords]);
       setHasMore(newRecords.length === PAGE_SIZE);
@@ -950,8 +958,8 @@ export default function App() {
                           </Show>
 
                           <div class={styles.nodeContent}>
-                            {/* Always show markdown content if it exists or if node is document/hybrid */}
-                            <Show when={findNodeById(selectedNodeId())?.type !== 'table'}>
+                            {/* Always show markdown content if it exists or if node has page content */}
+                            <Show when={findNodeById(selectedNodeId())?.has_page}>
                               <div class={styles.editorContent}>
                                 <textarea
                                   value={content()}
@@ -967,8 +975,8 @@ export default function App() {
                               </div>
                             </Show>
 
-                            {/* Show table if node is table or hybrid */}
-                            <Show when={findNodeById(selectedNodeId())?.type !== 'document'}>
+                            {/* Show table if node has table content */}
+                            <Show when={findNodeById(selectedNodeId())?.has_table}>
                               <div class={styles.tableView}>
                                 <div class={styles.tableHeader}>
                                   <h3>{t('table.records')}</h3>

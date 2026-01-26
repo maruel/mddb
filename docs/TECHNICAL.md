@@ -84,13 +84,17 @@ mddb uses a unified Node-based data model inspired by Notion. All content entiti
 | **Record** | Row in a Table (`DataRecord` type) | Line in `data.jsonl` |
 | **Asset** | Binary file attached to a Node | File in node directory |
 
-### Node Types
+### Node Content Types
 
-Defined in `backend/internal/storage/content/types.go`:
+Node content type is inferred from file existence, exposed via `has_page` and `has_table` boolean flags in the API:
 
-- **`document`**: Markdown content only (`Content` field populated)
-- **`table`**: Structured data only (`Properties` schema + `DataRecords`)
-- **`hybrid`**: Both markdown content and structured data
+| Files Present | has_page | has_table | Description |
+|---------------|----------|-----------|-------------|
+| `index.md` only | true | false | Document with markdown content |
+| `metadata.json` only | false | true | Table with schema and records |
+| Both files | true | true | Hybrid node with both content types |
+
+Storage types defined in `backend/internal/storage/content/types.go`.
 
 ### Storage Layout
 
@@ -174,7 +178,7 @@ IDs are k-sortable 64-bit unique identifiers encoded as Base32 Extended Hex stri
 
 ### Key Design Decisions
 
-1. **Polymorphic Nodes**: Pages and Tables share the same API; `Type` field discriminates behavior
+1. **Polymorphic Nodes**: Pages and Tables share the same API; content type inferred from file existence (`has_page`, `has_table` flags)
 2. **Separate Record Storage**: Records stored in JSONL for streaming reads, not embedded in Node
 3. **Filename-based Asset IDs**: Assets use original filename as ID (not generated numeric ID)
 4. **Hierarchical Structure**: Nodes support parent-child relationships via directory nesting

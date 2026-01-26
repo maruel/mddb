@@ -79,15 +79,15 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       const ws = wsApi();
       if (activeTab() === 'members' && props.user.workspace_role === 'admin') {
         const [membersData, invsData] = await Promise.all([
-          org.users.list(),
-          ws ? ws.invitations.list() : Promise.resolve({ invitations: [] }),
+          org.users.listUsers(),
+          ws ? ws.invitations.listWSInvitations() : Promise.resolve({ invitations: [] }),
         ]);
         setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
         setInvitations(invsData.invitations?.filter((i): i is WSInvitationResponse => !!i) || []);
       }
 
       if (activeTab() === 'workspace') {
-        const orgData = await org.organizations.get();
+        const orgData = await org.organizations.getOrganization();
         setOrgName(orgData.name);
         setOriginalOrgName(orgData.name);
         setPublicAccess(false); // TODO: workspace settings
@@ -96,7 +96,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
       if (activeTab() === 'sync' && props.user.workspace_role === 'admin' && ws) {
         try {
-          const remoteData = await ws.settings.git.get();
+          const remoteData = await ws.settings.git.getGitRemote();
           setGitRemote(remoteData);
         } catch {
           // No remote configured is a valid state
@@ -127,7 +127,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
     try {
       setLoading(true);
-      await ws.invitations.create({ email: inviteEmail(), role: inviteRole() });
+      await ws.invitations.createWSInvitation({ email: inviteEmail(), role: inviteRole() });
       setInviteEmail('');
       setSuccess(t('success.invitationSent') || 'Invitation sent successfully');
       loadData();
@@ -144,7 +144,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
     try {
       setLoading(true);
-      await ws.users.update({ user_id: userId, role });
+      await ws.users.updateWSMemberRole({ user_id: userId, role });
       setSuccess(t('success.roleUpdated') || 'Role updated');
       loadData();
     } catch (err) {
@@ -174,8 +174,8 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       };
 
       await Promise.all([
-        api().auth.settings.update({ settings: userSettings }),
-        ws.settings.membership.update({ settings: memSettings }),
+        api().auth.updateUserSettings({ settings: userSettings }),
+        ws.settings.updateWSMembershipSettings({ settings: memSettings }),
       ]);
 
       setSuccess(t('success.personalSettingsSaved') || 'Personal settings saved successfully');
@@ -211,11 +211,11 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         },
       };
 
-      const promises: Promise<unknown>[] = [org.settings.update({ settings: orgSettings })];
+      const promises: Promise<unknown>[] = [org.settings.updateOrgPreferences({ settings: orgSettings })];
 
       // Rename org if name changed
       if (orgName() !== originalOrgName() && orgName().trim()) {
-        promises.push(org.organizations.update({ name: orgName().trim() }));
+        promises.push(org.organizations.updateOrganization({ name: orgName().trim() }));
       }
 
       await Promise.all(promises);
@@ -236,7 +236,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     try {
       setLoading(true);
       setError(null);
-      const remoteData = await ws.settings.git.update({
+      const remoteData = await ws.settings.git.updateGitRemote({
         url: newRemoteURL(),
         token: newRemoteToken(),
         type: 'custom',
@@ -280,7 +280,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     try {
       setLoading(true);
       setError(null);
-      await ws.settings.git.delete();
+      await ws.settings.git.deleteGitRemote();
       setGitRemote(null);
       setSuccess(t('success.remoteRemoved') || 'Remote removed');
     } catch (err) {

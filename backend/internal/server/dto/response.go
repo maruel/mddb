@@ -55,48 +55,23 @@ type RevokeAllSessionsResponse struct {
 	RevokedCount int `json:"revoked_count" jsonschema:"description=Number of sessions revoked"`
 }
 
-// --- Page Responses ---
+// --- Node Content Responses ---
 
-// ListPagesResponse is a response containing a list of pages.
-type ListPagesResponse struct {
-	Pages []PageSummary `json:"pages"`
-}
-
-// PageSummary is a brief representation of a page for list responses.
-type PageSummary struct {
-	ID       jsonldb.ID `json:"id"`
-	Title    string     `json:"title"`
-	Created  Time       `json:"created"`
-	Modified Time       `json:"modified"`
-}
-
-// GetPageResponse is a response containing a page.
-type GetPageResponse struct {
-	ID      jsonldb.ID `json:"id"`
-	Title   string     `json:"title"`
-	Content string     `json:"content"`
-}
-
-// CreatePageResponse is a response from creating a page.
-type CreatePageResponse struct {
+// UpdateNodeResponse is a response from updating a node.
+type UpdateNodeResponse struct {
 	ID jsonldb.ID `json:"id"`
 }
 
-// UpdatePageResponse is a response from updating a page.
-type UpdatePageResponse struct {
-	ID jsonldb.ID `json:"id"`
-}
+// DeleteNodeResponse is a response from deleting a node.
+type DeleteNodeResponse = OkResponse
 
-// DeletePageResponse is a response from deleting a page.
-type DeletePageResponse = OkResponse
-
-// ListPageVersionsResponse is a response containing page version history.
-type ListPageVersionsResponse struct {
+// ListNodeVersionsResponse is a response containing node version history.
+type ListNodeVersionsResponse struct {
 	History []*Commit `json:"history"`
 }
 
-// GetPageVersionResponse is a response containing page content at a version.
-type GetPageVersionResponse struct {
+// GetNodeVersionResponse is a response containing node content at a version.
+type GetNodeVersionResponse struct {
 	Content string `json:"content"`
 }
 
@@ -172,8 +147,8 @@ type ListNodesResponse struct {
 
 // --- Asset Responses ---
 
-// ListPageAssetsResponse is a response containing a list of assets.
-type ListPageAssetsResponse struct {
+// ListNodeAssetsResponse is a response containing a list of assets.
+type ListNodeAssetsResponse struct {
 	Assets []AssetSummary `json:"assets"`
 }
 
@@ -187,16 +162,16 @@ type AssetSummary struct {
 	URL      string `json:"url"`
 }
 
-// UploadPageAssetResponse is a response from uploading an asset.
-type UploadPageAssetResponse struct {
+// UploadNodeAssetResponse is a response from uploading an asset.
+type UploadNodeAssetResponse struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Size     int64  `json:"size"`
 	MimeType string `json:"mime_type"`
 }
 
-// DeletePageAssetResponse is a response from deleting an asset.
-type DeletePageAssetResponse = OkResponse
+// DeleteNodeAssetResponse is a response from deleting an asset.
+type DeleteNodeAssetResponse = OkResponse
 
 // ServeAssetResponse wraps the binary asset data.
 type ServeAssetResponse struct {
@@ -368,8 +343,50 @@ type NodeResponse struct {
 	Modified   Time           `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 	Tags       []string       `json:"tags,omitempty" jsonschema:"description=Node tags"`
 	FaviconURL string         `json:"favicon_url,omitempty" jsonschema:"description=Favicon URL"`
-	Type       NodeType       `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
+	HasPage    bool           `json:"has_page" jsonschema:"description=Whether node has page content (index.md exists)"`
+	HasTable   bool           `json:"has_table" jsonschema:"description=Whether node has table content (metadata.json exists)"`
 	Children   []NodeResponse `json:"children,omitempty" jsonschema:"description=Nested nodes"`
+}
+
+// GetPageResponse is a response containing page content.
+type GetPageResponse struct {
+	ID       jsonldb.ID `json:"id" jsonschema:"description=Node identifier"`
+	Title    string     `json:"title" jsonschema:"description=Page title"`
+	Content  string     `json:"content" jsonschema:"description=Markdown content"`
+	Created  Time       `json:"created" jsonschema:"description=Page creation Unix timestamp"`
+	Modified Time       `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+}
+
+// CreatePageResponse is a response from creating a page.
+type CreatePageResponse struct {
+	ID jsonldb.ID `json:"id" jsonschema:"description=New node identifier"`
+}
+
+// UpdatePageResponse is a response from updating a page.
+type UpdatePageResponse struct {
+	ID jsonldb.ID `json:"id" jsonschema:"description=Node identifier"`
+}
+
+// DeletePageResponse is a response from deleting a page.
+type DeletePageResponse = OkResponse
+
+// GetTableSchemaResponse is a response containing table schema.
+type GetTableSchemaResponse struct {
+	ID         jsonldb.ID `json:"id" jsonschema:"description=Node identifier"`
+	Title      string     `json:"title" jsonschema:"description=Table title"`
+	Properties []Property `json:"properties" jsonschema:"description=Table schema"`
+	Created    Time       `json:"created" jsonschema:"description=Table creation Unix timestamp"`
+	Modified   Time       `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+}
+
+// CreateTableUnderParentResponse is a response from creating a table under a parent.
+type CreateTableUnderParentResponse struct {
+	ID jsonldb.ID `json:"id" jsonschema:"description=New node identifier"`
+}
+
+// ListNodeChildrenResponse is a response containing children of a node.
+type ListNodeChildrenResponse struct {
+	Nodes []NodeResponse `json:"nodes" jsonschema:"description=Child nodes"`
 }
 
 // DataRecordResponse is the API representation of a data record.

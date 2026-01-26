@@ -195,7 +195,7 @@ export const dict: Dictionary = {
     MISSING_FIELD: 'Un champ obligatoire est manquant',
     INVALID_FORMAT: 'Le format des données est invalide',
     NOT_FOUND: 'La ressource demandée est introuvable',
-    PAGE_NOT_FOUND: 'Page introuvable',
+    NODE_NOT_FOUND: 'Noeud introuvable',
     TABLE_NOT_FOUND: 'Table introuvable',
     FILE_NOT_FOUND: 'Fichier introuvable',
     STORAGE_ERROR: "Une erreur de stockage s'est produite",

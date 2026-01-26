@@ -59,7 +59,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
         >
           ▶
         </span>
-        <span class={styles.nodeIcon}>{props.node.type === 'table' ? '📊' : '📄'}</span>
+        <span class={styles.nodeIcon}>{props.node.has_table && !props.node.has_page ? '📊' : '📄'}</span>
         <span class={styles.pageTitleText}>{props.node.title}</span>
       </div>
 

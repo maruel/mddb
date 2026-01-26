@@ -117,6 +117,10 @@ func gitRemoteToResponse(wsID jsonldb.ID, g *identity.GitRemote) *dto.GitRemoteR
 }
 
 func nodeToResponse(n *content.Node) *dto.NodeResponse {
+	// Derive HasPage/HasTable from Type
+	hasPage := n.Type == content.NodeTypeDocument || n.Type == content.NodeTypeHybrid
+	hasTable := n.Type == content.NodeTypeTable || n.Type == content.NodeTypeHybrid
+
 	resp := &dto.NodeResponse{
 		ID:         n.ID,
 		ParentID:   n.ParentID,
@@ -127,7 +131,8 @@ func nodeToResponse(n *content.Node) *dto.NodeResponse {
 		Modified:   n.Modified,
 		Tags:       n.Tags,
 		FaviconURL: n.FaviconURL,
-		Type:       dto.NodeType(n.Type),
+		HasPage:    hasPage,
+		HasTable:   hasTable,
 	}
 	if len(n.Children) > 0 {
 		resp.Children = make([]dto.NodeResponse, 0, len(n.Children))
@@ -483,40 +488,6 @@ func getUserWithMemberships(
 }
 
 // --- List summary conversions ---
-
-func pageToSummary(n *content.Node) dto.PageSummary {
-	return dto.PageSummary{
-		ID:       n.ID,
-		Title:    n.Title,
-		Created:  n.Created,
-		Modified: n.Modified,
-	}
-}
-
-func pagesToSummaries(nodes []*content.Node) []dto.PageSummary {
-	result := make([]dto.PageSummary, len(nodes))
-	for i, n := range nodes {
-		result[i] = pageToSummary(n)
-	}
-	return result
-}
-
-func tableToSummary(n *content.Node) dto.TableSummary {
-	return dto.TableSummary{
-		ID:       n.ID,
-		Title:    n.Title,
-		Created:  n.Created,
-		Modified: n.Modified,
-	}
-}
-
-func tablesToSummaries(nodes []*content.Node) []dto.TableSummary {
-	result := make([]dto.TableSummary, len(nodes))
-	for i, n := range nodes {
-		result[i] = tableToSummary(n)
-	}
-	return result
-}
 
 func assetToSummary(a *content.Asset, wsID, nodeID string) dto.AssetSummary {
 	return dto.AssetSummary{

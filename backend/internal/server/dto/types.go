@@ -81,18 +81,6 @@ const (
 	WSRoleViewer WorkspaceRole = "viewer"
 )
 
-// NodeType defines what features are enabled for a node.
-type NodeType string
-
-const (
-	// NodeTypeDocument represents a markdown document.
-	NodeTypeDocument NodeType = "document"
-	// NodeTypeTable represents a structured table.
-	NodeTypeTable NodeType = "table"
-	// NodeTypeHybrid represents an entity that is both a document and a table.
-	NodeTypeHybrid NodeType = "hybrid"
-)
-
 // UserSettings represents global user preferences.
 type UserSettings struct {
 	Theme    string `json:"theme" jsonschema:"description=UI theme preference (light/dark/system)"`

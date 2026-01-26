@@ -195,7 +195,7 @@ export interface Dictionary {
     MISSING_FIELD: string;
     INVALID_FORMAT: string;
     NOT_FOUND: string;
-    PAGE_NOT_FOUND: string;
+    NODE_NOT_FOUND: string;
     TABLE_NOT_FOUND: string;
     FILE_NOT_FOUND: string;
     STORAGE_ERROR: string;

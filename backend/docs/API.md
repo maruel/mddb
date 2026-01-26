@@ -76,35 +76,27 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | Method | Path | Auth |
 |--------|------|------|
 | GET | `/api/workspaces/{wsID}/nodes` | wsViewer |
-| POST | `/api/workspaces/{wsID}/nodes` | wsEditor |
 | GET | `/api/workspaces/{wsID}/nodes/{id}` | wsViewer |
-
-## Pages
-
-| Method | Path | Auth |
-|--------|------|------|
-| GET | `/api/workspaces/{wsID}/pages` | wsViewer |
-| POST | `/api/workspaces/{wsID}/pages` | wsEditor |
-| GET | `/api/workspaces/{wsID}/pages/{id}` | wsViewer |
-| POST | `/api/workspaces/{wsID}/pages/{id}` | wsEditor |
-| POST | `/api/workspaces/{wsID}/pages/{id}/delete` | wsEditor |
-| GET | `/api/workspaces/{wsID}/pages/{id}/history` | wsViewer |
-| GET | `/api/workspaces/{wsID}/pages/{id}/history/{hash}` | wsViewer |
-
-## Tables
-
-| Method | Path | Auth |
-|--------|------|------|
-| GET | `/api/workspaces/{wsID}/tables` | wsViewer |
-| POST | `/api/workspaces/{wsID}/tables` | wsEditor |
-| GET | `/api/workspaces/{wsID}/tables/{id}` | wsViewer |
-| POST | `/api/workspaces/{wsID}/tables/{id}` | wsEditor |
-| POST | `/api/workspaces/{wsID}/tables/{id}/delete` | wsEditor |
-| GET | `/api/workspaces/{wsID}/tables/{id}/records` | wsViewer |
-| POST | `/api/workspaces/{wsID}/tables/{id}/records` | wsEditor |
-| GET | `/api/workspaces/{wsID}/tables/{id}/records/{rid}` | wsViewer |
-| POST | `/api/workspaces/{wsID}/tables/{id}/records/{rid}` | wsEditor |
-| POST | `/api/workspaces/{wsID}/tables/{id}/records/{rid}/delete` | wsEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/assets` | wsViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/assets` | wsEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/assets/{name}/delete` | wsEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/children` | wsViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/delete` | wsEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/history` | wsViewer |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/history/{hash}` | wsViewer |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/page` | wsViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/page` | wsEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/page/create` | wsEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/page/delete` | wsEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/table` | wsViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table` | wsEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/create` | wsEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/delete` | wsEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/table/records` | wsViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/create` | wsEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | wsViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | wsEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` | wsEditor |
 
 ## Search
 
@@ -116,9 +108,6 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/workspaces/{wsID}/pages/{id}/assets` | wsViewer |
-| POST | `/api/workspaces/{wsID}/pages/{id}/assets` | wsEditor |
-| POST | `/api/workspaces/{wsID}/pages/{id}/assets/{name}/delete` | wsEditor |
 | GET | `/assets/{wsID}/{id}/{name}` | public |
 
 ## Other

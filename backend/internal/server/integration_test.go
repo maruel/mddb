@@ -324,15 +324,15 @@ func TestIntegration(t *testing.T) {
 			t.Fatal("Workspace creation should return a workspace ID")
 		}
 
-		// Create a page
+		// Create a page under root (parent_id=0)
 		createPageReq := dto.CreatePageRequest{
 			Title:   "My First Page",
-			Content: "# Hello World\n\nThis is my first page.",
+			Content: "",
 		}
 		var createPageResp dto.CreatePageResponse
-		status := env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages", createPageReq, &createPageResp, token)
+		status := env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/nodes/0/page/create", createPageReq, &createPageResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("POST /api/workspaces/%s/pages: got status %d", wsID, status)
+			t.Fatalf("POST /api/workspaces/%s/nodes/0/page/create: got status %d", wsID, status)
 		}
 
 		if createPageResp.ID.IsZero() {
@@ -340,27 +340,27 @@ func TestIntegration(t *testing.T) {
 		}
 		nodeID := createPageResp.ID
 
-		// List pages
-		var listResp dto.ListPagesResponse
-		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages", nil, &listResp, token)
+		// List nodes
+		var listResp dto.ListNodesResponse
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes", nil, &listResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("GET /api/workspaces/%s/pages: got status %d", wsID, status)
+			t.Fatalf("GET /api/workspaces/%s/nodes: got status %d", wsID, status)
 		}
 
-		// There should be 2 pages: the welcome page and our new page
-		if len(listResp.Pages) < 1 {
-			t.Errorf("List pages: got %d pages, want at least 1", len(listResp.Pages))
+		// There should be at least 2 nodes: the welcome page and our new node
+		if len(listResp.Nodes) < 1 {
+			t.Errorf("List nodes: got %d nodes, want at least 1", len(listResp.Nodes))
 		}
 
-		// Get single page
-		var getPageResp dto.GetPageResponse
-		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String(), nil, &getPageResp, token)
+		// Get single node
+		var getNodeResp dto.NodeResponse
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+nodeID.String(), nil, &getNodeResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("GET /api/workspaces/%s/pages/%s: got status %d", wsID, nodeID, status)
+			t.Fatalf("GET /api/workspaces/%s/nodes/%s: got status %d", wsID, nodeID, status)
 		}
 
-		if getPageResp.Title != "My First Page" {
-			t.Errorf("Get page title: got %q, want %q", getPageResp.Title, "My First Page")
+		if getNodeResp.Title != "My First Page" {
+			t.Errorf("Get node title: got %q, want %q", getNodeResp.Title, "My First Page")
 		}
 
 		// Update page
@@ -369,33 +369,33 @@ func TestIntegration(t *testing.T) {
 			Content: "# Updated Content\n\nThis page has been updated.",
 		}
 		var updateResp dto.UpdatePageResponse
-		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String(), updatePageReq, &updateResp, token)
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/nodes/"+nodeID.String()+"/page", updatePageReq, &updateResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("POST /api/workspaces/%s/pages/%s: got status %d", wsID, nodeID, status)
+			t.Fatalf("POST /api/workspaces/%s/nodes/%s/page: got status %d", wsID, nodeID, status)
 		}
 
 		if updateResp.ID != nodeID {
 			t.Errorf("Updated page ID: got %v, want %v", updateResp.ID, nodeID)
 		}
 
-		// Verify update by getting the page again
-		var getPageResp2 dto.GetPageResponse
-		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String(), nil, &getPageResp2, token)
+		// Verify update by getting the node again
+		var getNodeResp2 dto.NodeResponse
+		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+nodeID.String(), nil, &getNodeResp2, token)
 
-		if getPageResp2.Title != "Updated Title" {
-			t.Errorf("Updated page title: got %q, want %q", getPageResp2.Title, "Updated Title")
+		if getNodeResp2.Title != "Updated Title" {
+			t.Errorf("Updated node title: got %q, want %q", getNodeResp2.Title, "Updated Title")
 		}
 
-		// Delete page
-		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String()+"/delete", nil, nil, token)
+		// Delete node
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/nodes/"+nodeID.String()+"/delete", nil, nil, token)
 		if status != http.StatusOK {
-			t.Fatalf("POST /api/workspaces/%s/pages/%s/delete: got status %d", wsID, nodeID, status)
+			t.Fatalf("POST /api/workspaces/%s/nodes/%s/delete: got status %d", wsID, nodeID, status)
 		}
 
-		// Verify page is deleted
-		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/pages/"+nodeID.String(), nil, nil, token)
+		// Verify node is deleted
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+nodeID.String(), nil, nil, token)
 		if status != http.StatusNotFound {
-			t.Errorf("Get deleted page: got status %d, want %d", status, http.StatusNotFound)
+			t.Errorf("Get deleted node: got status %d, want %d", status, http.StatusNotFound)
 		}
 	})
 
@@ -431,14 +431,14 @@ func TestIntegration(t *testing.T) {
 		daveWSID := wsResp.ID
 
 		// Eve tries to access Dave's workspace - should be forbidden
-		status := env.doJSON(t, http.MethodGet, "/api/workspaces/"+daveWSID.String()+"/pages", nil, nil, eveToken)
+		status := env.doJSON(t, http.MethodGet, "/api/workspaces/"+daveWSID.String()+"/nodes", nil, nil, eveToken)
 		if status != http.StatusForbidden {
 			t.Errorf("Eve accessing Dave's workspace: got status %d, want %d", status, http.StatusForbidden)
 		}
 
 		// Eve tries to create a page in Dave's workspace - should be forbidden
-		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+daveWSID.String()+"/pages", dto.CreatePageRequest{
-			Title: "Sneaky Page", Content: "Should not work",
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+daveWSID.String()+"/nodes/0/page/create", dto.CreatePageRequest{
+			Title: "Sneaky Page",
 		}, nil, eveToken)
 		if status != http.StatusForbidden {
 			t.Errorf("Eve creating page in Dave's workspace: got status %d, want %d", status, http.StatusForbidden)

@@ -44,9 +44,9 @@ export const ErrorCodeInvalidFormat = "INVALID_FORMAT";
  */
 export const ErrorCodeNotFound = "NOT_FOUND";
 /**
- * ErrorCodePageNotFound is returned when a page is not found.
+ * ErrorCodeNodeNotFound is returned when a node is not found.
  */
-export const ErrorCodePageNotFound = "PAGE_NOT_FOUND";
+export const ErrorCodeNodeNotFound = "NODE_NOT_FOUND";
 /**
  * ErrorCodeTableNotFound is returned when a table is not found.
  */
@@ -95,7 +95,7 @@ export const ErrorCodeExpired = "EXPIRED";
  * ErrorCodeRateLimitExceeded is returned when rate limit is exceeded.
  */
 export const ErrorCodeRateLimitExceeded = "RATE_LIMIT_EXCEEDED";
-export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodePageNotFound | typeof ErrorCodeTableNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden | typeof ErrorCodeInvalidProvider | typeof ErrorCodeOAuthError | typeof ErrorCodeExpired | typeof ErrorCodeRateLimitExceeded;
+export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodeNodeNotFound | typeof ErrorCodeTableNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden | typeof ErrorCodeInvalidProvider | typeof ErrorCodeOAuthError | typeof ErrorCodeExpired | typeof ErrorCodeRateLimitExceeded;
 /**
  * ErrorDetails defines the structured error information in a response.
  */
@@ -144,57 +144,56 @@ export interface RegisterRequest {
 export interface GetMeRequest {
 }
 /**
- * ListPagesRequest is a request to list all pages.
+ * CreatePageRequest is a request to create a page under a parent node.
+ * The parent ID is in the path ({id}); use "0" for root.
  */
-export interface ListPagesRequest {
+export interface CreatePageRequest {
+  title: string;
+  content?: string;
 }
 /**
- * GetPageRequest is a request to get a page.
+ * GetPageRequest is a request to get a page's content.
  */
 export interface GetPageRequest {
 }
 /**
- * CreatePageRequest is a request to create a page.
- */
-export interface CreatePageRequest {
-  title: string;
-  content: string;
-}
-/**
- * UpdatePageRequest is a request to update a page.
+ * UpdatePageRequest is a request to update a page's content.
  */
 export interface UpdatePageRequest {
   title: string;
   content: string;
 }
 /**
- * DeletePageRequest is a request to delete a page.
+ * DeletePageRequest is a request to delete a page from a node.
+ * This removes the index.md but keeps the node directory if table data exists.
  */
 export interface DeletePageRequest {
 }
 /**
- * ListPageVersionsRequest is a request to list page version history.
+ * DeleteNodeRequest is a request to delete a node.
  */
-export interface ListPageVersionsRequest {
+export interface DeleteNodeRequest {
+}
+/**
+ * ListNodeVersionsRequest is a request to list node version history.
+ */
+export interface ListNodeVersionsRequest {
   Limit: number /* int */; // Max commits to return (1-1000, default 1000).
 }
 /**
- * GetPageVersionRequest is a request to get a specific page version.
+ * GetNodeVersionRequest is a request to get a specific node version.
  */
-export interface GetPageVersionRequest {
-}
-/**
- * ListTablesRequest is a request to list tables.
- */
-export interface ListTablesRequest {
+export interface GetNodeVersionRequest {
 }
 /**
  * GetTableRequest is a request to get a table.
+ * Now used for /nodes/{id}/table endpoint.
  */
 export interface GetTableRequest {
 }
 /**
- * CreateTableRequest is a request to create a table.
+ * CreateTableRequest is a request to create a table under a parent node.
+ * The parent ID is in the path ({id}); use "0" for root.
  */
 export interface CreateTableRequest {
   title: string;
@@ -202,18 +201,21 @@ export interface CreateTableRequest {
 }
 /**
  * UpdateTableRequest is a request to update a table.
+ * Now used for /nodes/{id}/table endpoint.
  */
 export interface UpdateTableRequest {
   title: string;
   properties: Property[];
 }
 /**
- * DeleteTableRequest is a request to delete a table.
+ * DeleteTableRequest is a request to delete a table from a node.
+ * This removes the metadata.json and data.jsonl but keeps the node directory if page exists.
  */
 export interface DeleteTableRequest {
 }
 /**
  * ListRecordsRequest is a request to list records in a table.
+ * Now used for /nodes/{id}/table/records endpoint.
  */
 export interface ListRecordsRequest {
   Offset: number /* int */;
@@ -221,23 +223,27 @@ export interface ListRecordsRequest {
 }
 /**
  * CreateRecordRequest is a request to create a record.
+ * Now used for /nodes/{id}/table/records/create endpoint.
  */
 export interface CreateRecordRequest {
   data: { [key: string]: any};
 }
 /**
  * UpdateRecordRequest is a request to update a record.
+ * Now used for /nodes/{id}/table/records/{rid} endpoint.
  */
 export interface UpdateRecordRequest {
   data: { [key: string]: any};
 }
 /**
  * GetRecordRequest is a request to get a record.
+ * Now used for /nodes/{id}/table/records/{rid} endpoint.
  */
 export interface GetRecordRequest {
 }
 /**
  * DeleteRecordRequest is a request to delete a record.
+ * Now used for /nodes/{id}/table/records/{rid}/delete endpoint.
  */
 export interface DeleteRecordRequest {
 }
@@ -252,27 +258,24 @@ export interface ListNodesRequest {
 export interface GetNodeRequest {
 }
 /**
- * CreateNodeRequest is a request to create a node.
+ * ListNodeChildrenRequest is a request to list children of a node.
  */
-export interface CreateNodeRequest {
-  parent_id?: string;
-  title: string;
-  type: NodeType;
+export interface ListNodeChildrenRequest {
 }
 /**
- * ListPageAssetsRequest is a request to list assets in a page.
+ * ListNodeAssetsRequest is a request to list assets in a node.
  */
-export interface ListPageAssetsRequest {
+export interface ListNodeAssetsRequest {
 }
 /**
- * UploadPageAssetRequest is a request to upload an asset to a page.
+ * UploadNodeAssetRequest is a request to upload an asset to a node.
  */
-export interface UploadPageAssetRequest {
+export interface UploadNodeAssetRequest {
 }
 /**
- * DeletePageAssetRequest is a request to delete an asset from a page.
+ * DeleteNodeAssetRequest is a request to delete an asset from a node.
  */
-export interface DeletePageAssetRequest {
+export interface DeleteNodeAssetRequest {
 }
 /**
  * ServeAssetRequest is a request to serve an asset file directly.
@@ -519,54 +522,25 @@ export interface RevokeAllSessionsResponse {
   revoked_count: number /* int */;
 }
 /**
- * ListPagesResponse is a response containing a list of pages.
+ * UpdateNodeResponse is a response from updating a node.
  */
-export interface ListPagesResponse {
-  pages: PageSummary[];
-}
-/**
- * PageSummary is a brief representation of a page for list responses.
- */
-export interface PageSummary {
-  id: string;
-  title: string;
-  created: Time;
-  modified: Time;
-}
-/**
- * GetPageResponse is a response containing a page.
- */
-export interface GetPageResponse {
-  id: string;
-  title: string;
-  content: string;
-}
-/**
- * CreatePageResponse is a response from creating a page.
- */
-export interface CreatePageResponse {
+export interface UpdateNodeResponse {
   id: string;
 }
 /**
- * UpdatePageResponse is a response from updating a page.
+ * DeleteNodeResponse is a response from deleting a node.
  */
-export interface UpdatePageResponse {
-  id: string;
-}
+export type DeleteNodeResponse = OkResponse;
 /**
- * DeletePageResponse is a response from deleting a page.
+ * ListNodeVersionsResponse is a response containing node version history.
  */
-export type DeletePageResponse = OkResponse;
-/**
- * ListPageVersionsResponse is a response containing page version history.
- */
-export interface ListPageVersionsResponse {
+export interface ListNodeVersionsResponse {
   history: (Commit | undefined)[];
 }
 /**
- * GetPageVersionResponse is a response containing page content at a version.
+ * GetNodeVersionResponse is a response containing node content at a version.
  */
-export interface GetPageVersionResponse {
+export interface GetNodeVersionResponse {
   content: string;
 }
 /**
@@ -648,9 +622,9 @@ export interface ListNodesResponse {
   nodes: NodeResponse[];
 }
 /**
- * ListPageAssetsResponse is a response containing a list of assets.
+ * ListNodeAssetsResponse is a response containing a list of assets.
  */
-export interface ListPageAssetsResponse {
+export interface ListNodeAssetsResponse {
   assets: AssetSummary[];
 }
 /**
@@ -665,18 +639,18 @@ export interface AssetSummary {
   url: string;
 }
 /**
- * UploadPageAssetResponse is a response from uploading an asset.
+ * UploadNodeAssetResponse is a response from uploading an asset.
  */
-export interface UploadPageAssetResponse {
+export interface UploadNodeAssetResponse {
   id: string;
   name: string;
   size: number /* int64 */;
   mime_type: string;
 }
 /**
- * DeletePageAssetResponse is a response from deleting an asset.
+ * DeleteNodeAssetResponse is a response from deleting an asset.
  */
-export type DeletePageAssetResponse = OkResponse;
+export type DeleteNodeAssetResponse = OkResponse;
 /**
  * ServeAssetResponse wraps the binary asset data.
  */
@@ -853,8 +827,57 @@ export interface NodeResponse {
   modified: Time;
   tags?: string[];
   favicon_url?: string;
-  type: NodeType;
+  has_page: boolean;
+  has_table: boolean;
   children?: NodeResponse[];
+}
+/**
+ * GetPageResponse is a response containing page content.
+ */
+export interface GetPageResponse {
+  id: string;
+  title: string;
+  content: string;
+  created: Time;
+  modified: Time;
+}
+/**
+ * CreatePageResponse is a response from creating a page.
+ */
+export interface CreatePageResponse {
+  id: string;
+}
+/**
+ * UpdatePageResponse is a response from updating a page.
+ */
+export interface UpdatePageResponse {
+  id: string;
+}
+/**
+ * DeletePageResponse is a response from deleting a page.
+ */
+export type DeletePageResponse = OkResponse;
+/**
+ * GetTableSchemaResponse is a response containing table schema.
+ */
+export interface GetTableSchemaResponse {
+  id: string;
+  title: string;
+  properties: Property[];
+  created: Time;
+  modified: Time;
+}
+/**
+ * CreateTableUnderParentResponse is a response from creating a table under a parent.
+ */
+export interface CreateTableUnderParentResponse {
+  id: string;
+}
+/**
+ * ListNodeChildrenResponse is a response containing children of a node.
+ */
+export interface ListNodeChildrenResponse {
+  nodes: NodeResponse[];
 }
 /**
  * DataRecordResponse is the API representation of a data record.
@@ -998,22 +1021,6 @@ export const WSRoleEditor: WorkspaceRole = "editor";
  * WSRoleViewer can only read content.
  */
 export const WSRoleViewer: WorkspaceRole = "viewer";
-/**
- * NodeType defines what features are enabled for a node.
- */
-/**
- * NodeTypeDocument represents a markdown document.
- */
-export const NodeTypeDocument = "document";
-/**
- * NodeTypeTable represents a structured table.
- */
-export const NodeTypeTable = "table";
-/**
- * NodeTypeHybrid represents an entity that is both a document and a table.
- */
-export const NodeTypeHybrid = "hybrid";
-export type NodeType = typeof NodeTypeDocument | typeof NodeTypeTable | typeof NodeTypeHybrid;
 /**
  * UserSettings represents global user preferences.
  */

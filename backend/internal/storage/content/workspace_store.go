@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"iter"
 	"log/slog"
@@ -147,7 +148,13 @@ func (ws *WorkspaceFileStore) checkStorageQuota(additionalBytes int64) error {
 
 // Path helpers
 
+// relativeDir returns the relative directory path for a node.
+// If id is zero (root), returns empty string.
 func (ws *WorkspaceFileStore) relativeDir(id, parentID jsonldb.ID) string {
+	// Root node (id=0) maps to workspace root
+	if id.IsZero() {
+		return ""
+	}
 	var parts []string
 	for p := parentID; !p.IsZero(); p = ws.getParent(p) {
 		parts = append(parts, p.String())
@@ -157,8 +164,14 @@ func (ws *WorkspaceFileStore) relativeDir(id, parentID jsonldb.ID) string {
 	return filepath.Join(parts...)
 }
 
+// pageDir returns the absolute directory path for a node.
+// If id is zero (root), returns the workspace directory.
 func (ws *WorkspaceFileStore) pageDir(id, parentID jsonldb.ID) string {
-	return filepath.Join(ws.wsDir, ws.relativeDir(id, parentID))
+	rel := ws.relativeDir(id, parentID)
+	if rel == "" {
+		return ws.wsDir
+	}
+	return filepath.Join(ws.wsDir, rel)
 }
 
 func (ws *WorkspaceFileStore) pageIndexFile(id, parentID jsonldb.ID) string {
@@ -176,8 +189,13 @@ func (ws *WorkspaceFileStore) tableMetadataFile(id, parentID jsonldb.ID) string 
 // gitPath builds a git-relative path by walking up the parent chain.
 // parentID must be passed explicitly because during node creation,
 // the node doesn't exist in the cache yet (it's added after gitPath is called).
+// For root node (id=0), returns just the filename.
 func (ws *WorkspaceFileStore) gitPath(parentID, id jsonldb.ID, fileName string) string {
-	return filepath.Join(ws.relativeDir(id, parentID), fileName)
+	rel := ws.relativeDir(id, parentID)
+	if rel == "" {
+		return fileName
+	}
+	return filepath.Join(rel, fileName)
 }
 
 // PageExists checks if a page exists.
@@ -999,8 +1017,14 @@ func (ws *WorkspaceFileStore) IterAssets(nodeID jsonldb.ID) (iter.Seq[*Asset], e
 
 // GetHistory returns the commit history for a page, limited to n commits.
 // n is capped at 1000. If n <= 0, defaults to 1000.
+// If id is zero (root), returns history for the workspace root files.
 func (ws *WorkspaceFileStore) GetHistory(ctx context.Context, id jsonldb.ID, n int) ([]*git.Commit, error) {
-	return ws.repo.GetHistory(ctx, id.String(), n)
+	path := id.String()
+	if id.IsZero() {
+		// For root, get history of root-level files
+		path = "."
+	}
+	return ws.repo.GetHistory(ctx, path, n)
 }
 
 // GetFileAtCommit returns the content of a file at a specific commit.
@@ -1128,6 +1152,281 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 // that need direct git operations (e.g., git remotes).
 func (ws *WorkspaceFileStore) Repo() *git.Repo {
 	return ws.repo
+}
+
+// --- Root node support ---
+
+// ReadRootNode reads the root node (workspace-level page/table if exists).
+func (ws *WorkspaceFileStore) ReadRootNode() (*Node, error) {
+	return ws.ReadNodeFromPath(ws.wsDir, 0, 0)
+}
+
+// HasPage checks if a node has page content (index.md exists).
+func (ws *WorkspaceFileStore) HasPage(id jsonldb.ID) bool {
+	parentID := ws.getParent(id)
+	filePath := ws.pageIndexFile(id, parentID)
+	_, err := os.Stat(filePath)
+	return err == nil
+}
+
+// HasTable checks if a node has table content (metadata.json exists).
+func (ws *WorkspaceFileStore) HasTable(id jsonldb.ID) bool {
+	parentID := ws.getParent(id)
+	metadataFile := ws.tableMetadataFile(id, parentID)
+	_, err := os.Stat(metadataFile)
+	return err == nil
+}
+
+// --- Page-specific operations ---
+
+// CreatePageUnderParent creates a new page under a parent node and commits to git.
+// Returns the new node with the page content.
+func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentID jsonldb.ID, title, content string, author git.Author) (*Node, error) {
+	// Verify parent exists if parentID is specified (non-root)
+	if !parentID.IsZero() && !ws.PageExists(parentID) && !ws.TableExists(parentID) {
+		return nil, fmt.Errorf("parent node not found: %w", errPageNotFound)
+	}
+
+	if err := ws.checkPageQuota(); err != nil {
+		return nil, err
+	}
+
+	var node *Node
+	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		id := jsonldb.NewID()
+		now := storage.Now()
+
+		p := &page{
+			id:       id,
+			title:    title,
+			content:  content,
+			created:  now,
+			modified: now,
+		}
+		pageData := formatMarkdownFile(p)
+
+		if err := ws.checkStorageQuota(int64(len(pageData))); err != nil {
+			return "", nil, err
+		}
+
+		pageDir := ws.pageDir(id, parentID)
+		if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional
+			return "", nil, fmt.Errorf("failed to create directory: %w", err)
+		}
+
+		filePath := ws.pageIndexFile(id, parentID)
+		if err := os.WriteFile(filePath, pageData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional
+			return "", nil, fmt.Errorf("failed to write page: %w", err)
+		}
+
+		ws.setParent(id, parentID)
+
+		node = &Node{
+			ID:       id,
+			ParentID: parentID,
+			Title:    title,
+			Content:  content,
+			Type:     NodeTypeDocument,
+			Created:  now,
+			Modified: now,
+		}
+
+		files := []string{ws.gitPath(parentID, id, "index.md")}
+		msg := "create: page " + id.String() + " - " + title
+		if !parentID.IsZero() {
+			msg += " (parent: " + parentID.String() + ")"
+		}
+		return msg, files, nil
+	})
+	return node, err
+}
+
+// DeletePageFromNode removes the page content (index.md) from a node.
+// The node directory is kept if table content exists.
+func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id jsonldb.ID, author git.Author) error {
+	if id.IsZero() {
+		return errors.New("cannot delete root page")
+	}
+
+	parentID := ws.getParent(id)
+	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		filePath := ws.pageIndexFile(id, parentID)
+		if err := os.Remove(filePath); err != nil {
+			if os.IsNotExist(err) {
+				return "", nil, errPageNotFound
+			}
+			return "", nil, fmt.Errorf("failed to delete page: %w", err)
+		}
+
+		// If no table content exists, remove the directory too
+		if !ws.TableExists(id) {
+			dir := ws.pageDir(id, parentID)
+			// Check if directory is empty (besides the removed index.md)
+			entries, _ := os.ReadDir(dir)
+			if len(entries) == 0 {
+				_ = os.Remove(dir)
+				ws.deleteFromCache(id)
+			}
+		}
+
+		files := []string{ws.gitPath(parentID, id, "index.md")}
+		return "delete: page " + id.String(), files, nil
+	})
+}
+
+// --- Table-specific operations ---
+
+// CreateTableUnderParent creates a new table under a parent node and commits to git.
+// Returns the new node with the table schema.
+func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parentID jsonldb.ID, title string, properties []Property, author git.Author) (*Node, error) {
+	// Verify parent exists if parentID is specified (non-root)
+	if !parentID.IsZero() && !ws.PageExists(parentID) && !ws.TableExists(parentID) {
+		return nil, fmt.Errorf("parent node not found: %w", errPageNotFound)
+	}
+
+	if err := ws.checkPageQuota(); err != nil {
+		return nil, err
+	}
+
+	var node *Node
+	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		id := jsonldb.NewID()
+		now := storage.Now()
+
+		metadata := map[string]any{
+			"title":      title,
+			"version":    "1.0",
+			"created":    now,
+			"modified":   now,
+			"properties": properties,
+		}
+		metadataData, err := json.Marshal(metadata)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to marshal metadata: %w", err)
+		}
+
+		if err := ws.checkStorageQuota(int64(len(metadataData))); err != nil {
+			return "", nil, err
+		}
+
+		pageDir := ws.pageDir(id, parentID)
+		if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional
+			return "", nil, fmt.Errorf("failed to create directory: %w", err)
+		}
+
+		metadataFile := ws.tableMetadataFile(id, parentID)
+		if err := os.WriteFile(metadataFile, metadataData, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional
+			return "", nil, fmt.Errorf("failed to write metadata: %w", err)
+		}
+
+		ws.setParent(id, parentID)
+
+		node = &Node{
+			ID:         id,
+			ParentID:   parentID,
+			Title:      title,
+			Type:       NodeTypeTable,
+			Properties: properties,
+			Created:    now,
+			Modified:   now,
+		}
+
+		files := []string{ws.gitPath(parentID, id, "metadata.json")}
+		msg := "create: table " + id.String() + " - " + title
+		if !parentID.IsZero() {
+			msg += " (parent: " + parentID.String() + ")"
+		}
+		return msg, files, nil
+	})
+	return node, err
+}
+
+// DeleteTableFromNode removes the table content (metadata.json + data.jsonl) from a node.
+// The node directory is kept if page content exists.
+func (ws *WorkspaceFileStore) DeleteTableFromNode(ctx context.Context, id jsonldb.ID, author git.Author) error {
+	if id.IsZero() {
+		return errors.New("cannot delete root table")
+	}
+
+	parentID := ws.getParent(id)
+	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		var files []string
+
+		metadataFile := ws.tableMetadataFile(id, parentID)
+		if err := os.Remove(metadataFile); err != nil && !os.IsNotExist(err) {
+			return "", nil, fmt.Errorf("failed to delete metadata: %w", err)
+		}
+		files = append(files, ws.gitPath(parentID, id, "metadata.json"))
+
+		recordsFile := ws.tableRecordsFile(id, parentID)
+		if err := os.Remove(recordsFile); err != nil && !os.IsNotExist(err) {
+			return "", nil, fmt.Errorf("failed to delete records: %w", err)
+		}
+		if _, err := os.Stat(recordsFile); err == nil {
+			files = append(files, ws.gitPath(parentID, id, "data.jsonl"))
+		}
+
+		// If no page content exists, remove the directory too
+		if !ws.PageExists(id) {
+			dir := ws.pageDir(id, parentID)
+			// Check if directory is empty
+			entries, _ := os.ReadDir(dir)
+			if len(entries) == 0 {
+				_ = os.Remove(dir)
+				ws.deleteFromCache(id)
+			}
+		}
+
+		return "delete: table " + id.String(), files, nil
+	})
+}
+
+// --- Node reading with root support ---
+
+// ReadNodeByID reads a node by ID, supporting id=0 for root.
+func (ws *WorkspaceFileStore) ReadNodeByID(id jsonldb.ID) (*Node, error) {
+	if id.IsZero() {
+		return ws.ReadRootNode()
+	}
+	return ws.ReadNode(id)
+}
+
+// ListChildren returns all direct children of a node.
+// If parentID is zero, returns root-level nodes.
+func (ws *WorkspaceFileStore) ListChildren(parentID jsonldb.ID) ([]*Node, error) {
+	var dir string
+	if parentID.IsZero() {
+		dir = ws.wsDir
+	} else {
+		parentParentID := ws.getParent(parentID)
+		dir = ws.pageDir(parentID, parentParentID)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	var nodes []*Node
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		id, err := jsonldb.DecodeID(entry.Name())
+		if err != nil {
+			continue
+		}
+
+		nodePath := filepath.Join(dir, entry.Name())
+		if node, err := ws.ReadNodeFromPath(nodePath, id, parentID); err == nil {
+			nodes = append(nodes, node)
+		}
+	}
+
+	return nodes, nil
 }
 
 // Helper functions

@@ -40,8 +40,8 @@ const (
 
 	// ErrorCodeNotFound is returned when a resource is not found.
 	ErrorCodeNotFound ErrorCode = "NOT_FOUND"
-	// ErrorCodePageNotFound is returned when a page is not found.
-	ErrorCodePageNotFound ErrorCode = "PAGE_NOT_FOUND"
+	// ErrorCodeNodeNotFound is returned when a node is not found.
+	ErrorCodeNodeNotFound ErrorCode = "NODE_NOT_FOUND"
 	// ErrorCodeTableNotFound is returned when a table is not found.
 	ErrorCodeTableNotFound ErrorCode = "TABLE_NOT_FOUND"
 

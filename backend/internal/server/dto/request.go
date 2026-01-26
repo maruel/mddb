@@ -95,22 +95,30 @@ func (r *GetMeRequest) Validate() error {
 	return nil
 }
 
-// --- Pages ---
+// --- Node Content (Page) ---
 
-// ListPagesRequest is a request to list all pages.
-type ListPagesRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+// CreatePageRequest is a request to create a page under a parent node.
+// The parent ID is in the path ({id}); use "0" for root.
+type CreatePageRequest struct {
+	WsID     jsonldb.ID `path:"wsID" tstype:"-"`
+	ParentID jsonldb.ID `path:"id" tstype:"-"` // Parent node ID; 0 = root
+	Title    string     `json:"title"`
+	Content  string     `json:"content,omitempty"`
 }
 
-// Validate validates the list pages request fields.
-func (r *ListPagesRequest) Validate() error {
+// Validate validates the create page request fields.
+func (r *CreatePageRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
+	}
+	// ParentID can be zero (root)
+	if r.Title == "" {
+		return MissingField("title")
 	}
 	return nil
 }
 
-// GetPageRequest is a request to get a page.
+// GetPageRequest is a request to get a page's content.
 type GetPageRequest struct {
 	WsID jsonldb.ID `path:"wsID" tstype:"-"`
 	ID   jsonldb.ID `path:"id" tstype:"-"`
@@ -121,31 +129,11 @@ func (r *GetPageRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	return nil
 }
 
-// CreatePageRequest is a request to create a page.
-type CreatePageRequest struct {
-	WsID    jsonldb.ID `path:"wsID" tstype:"-"`
-	Title   string     `json:"title"`
-	Content string     `json:"content"`
-}
-
-// Validate validates the create page request fields.
-func (r *CreatePageRequest) Validate() error {
-	if r.WsID.IsZero() {
-		return MissingField("wsID")
-	}
-	if r.Title == "" {
-		return MissingField("title")
-	}
-	return nil
-}
-
-// UpdatePageRequest is a request to update a page.
+// UpdatePageRequest is a request to update a page's content.
 type UpdatePageRequest struct {
 	WsID    jsonldb.ID `path:"wsID" tstype:"-"`
 	ID      jsonldb.ID `path:"id" tstype:"-"`
@@ -158,16 +146,15 @@ func (r *UpdatePageRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	if r.Title == "" {
 		return MissingField("title")
 	}
 	return nil
 }
 
-// DeletePageRequest is a request to delete a page.
+// DeletePageRequest is a request to delete a page from a node.
+// This removes the index.md but keeps the node directory if table data exists.
 type DeletePageRequest struct {
 	WsID jsonldb.ID `path:"wsID" tstype:"-"`
 	ID   jsonldb.ID `path:"id" tstype:"-"`
@@ -179,44 +166,57 @@ func (r *DeletePageRequest) Validate() error {
 		return MissingField("wsID")
 	}
 	if r.ID.IsZero() {
-		return MissingField("id")
+		return InvalidField("id", "cannot delete root page")
 	}
 	return nil
 }
 
-// ListPageVersionsRequest is a request to list page version history.
-type ListPageVersionsRequest struct {
-	WsID  jsonldb.ID `path:"wsID" tstype:"-"`
-	ID    jsonldb.ID `path:"id" tstype:"-"`
-	Limit int        `query:"limit"` // Max commits to return (1-1000, default 1000).
+// DeleteNodeRequest is a request to delete a node.
+type DeleteNodeRequest struct {
+	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	ID   jsonldb.ID `path:"id" tstype:"-"`
 }
 
-// Validate validates the list page versions request fields.
-func (r *ListPageVersionsRequest) Validate() error {
+// Validate validates the delete node request fields.
+func (r *DeleteNodeRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
 	if r.ID.IsZero() {
-		return MissingField("id")
+		return InvalidField("id", "cannot delete root node")
 	}
 	return nil
 }
 
-// GetPageVersionRequest is a request to get a specific page version.
-type GetPageVersionRequest struct {
+// ListNodeVersionsRequest is a request to list node version history.
+type ListNodeVersionsRequest struct {
+	WsID  jsonldb.ID `path:"wsID" tstype:"-"`
+	ID    jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	Limit int        `query:"limit"`        // Max commits to return (1-1000, default 1000).
+}
+
+// Validate validates the list node versions request fields.
+func (r *ListNodeVersionsRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	// ID can be zero (root)
+	return nil
+}
+
+// GetNodeVersionRequest is a request to get a specific node version.
+type GetNodeVersionRequest struct {
 	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"`
+	ID   jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 	Hash string     `path:"hash" tstype:"-"`
 }
 
-// Validate validates the get page version request fields.
-func (r *GetPageVersionRequest) Validate() error {
+// Validate validates the get node version request fields.
+func (r *GetNodeVersionRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	if r.Hash == "" {
 		return MissingField("hash")
 	}
@@ -225,20 +225,8 @@ func (r *GetPageVersionRequest) Validate() error {
 
 // --- Tables ---
 
-// ListTablesRequest is a request to list tables.
-type ListTablesRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-}
-
-// Validate validates the list tables request fields.
-func (r *ListTablesRequest) Validate() error {
-	if r.WsID.IsZero() {
-		return MissingField("wsID")
-	}
-	return nil
-}
-
 // GetTableRequest is a request to get a table.
+// Now used for /nodes/{id}/table endpoint.
 type GetTableRequest struct {
 	WsID jsonldb.ID `path:"wsID" tstype:"-"`
 	ID   jsonldb.ID `path:"id" tstype:"-"`
@@ -249,15 +237,15 @@ func (r *GetTableRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	return nil
 }
 
-// CreateTableRequest is a request to create a table.
+// CreateTableRequest is a request to create a table under a parent node.
+// The parent ID is in the path ({id}); use "0" for root.
 type CreateTableRequest struct {
 	WsID       jsonldb.ID `path:"wsID" tstype:"-"`
+	ParentID   jsonldb.ID `path:"id" tstype:"-"` // Parent node ID; 0 = root
 	Title      string     `json:"title"`
 	Properties []Property `json:"properties"`
 }
@@ -267,6 +255,7 @@ func (r *CreateTableRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
+	// ParentID can be zero (root)
 	if r.Title == "" {
 		return MissingField("title")
 	}
@@ -274,6 +263,7 @@ func (r *CreateTableRequest) Validate() error {
 }
 
 // UpdateTableRequest is a request to update a table.
+// Now used for /nodes/{id}/table endpoint.
 type UpdateTableRequest struct {
 	WsID       jsonldb.ID `path:"wsID" tstype:"-"`
 	ID         jsonldb.ID `path:"id" tstype:"-"`
@@ -286,16 +276,15 @@ func (r *UpdateTableRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	if r.Title == "" {
 		return MissingField("title")
 	}
 	return nil
 }
 
-// DeleteTableRequest is a request to delete a table.
+// DeleteTableRequest is a request to delete a table from a node.
+// This removes the metadata.json and data.jsonl but keeps the node directory if page exists.
 type DeleteTableRequest struct {
 	WsID jsonldb.ID `path:"wsID" tstype:"-"`
 	ID   jsonldb.ID `path:"id" tstype:"-"`
@@ -307,15 +296,16 @@ func (r *DeleteTableRequest) Validate() error {
 		return MissingField("wsID")
 	}
 	if r.ID.IsZero() {
-		return MissingField("id")
+		return InvalidField("id", "cannot delete root table")
 	}
 	return nil
 }
 
 // ListRecordsRequest is a request to list records in a table.
+// Now used for /nodes/{id}/table/records endpoint.
 type ListRecordsRequest struct {
 	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	ID     jsonldb.ID `path:"id" tstype:"-"`
+	ID     jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 	Offset int        `query:"offset"`
 	Limit  int        `query:"limit"`
 }
@@ -325,16 +315,15 @@ func (r *ListRecordsRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	return nil
 }
 
 // CreateRecordRequest is a request to create a record.
+// Now used for /nodes/{id}/table/records/create endpoint.
 type CreateRecordRequest struct {
 	WsID jsonldb.ID     `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID     `path:"id" tstype:"-"`
+	ID   jsonldb.ID     `path:"id" tstype:"-"` // Node ID; 0 = root
 	Data map[string]any `json:"data"`
 }
 
@@ -343,16 +332,15 @@ func (r *CreateRecordRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	return nil
 }
 
 // UpdateRecordRequest is a request to update a record.
+// Now used for /nodes/{id}/table/records/{rid} endpoint.
 type UpdateRecordRequest struct {
 	WsID jsonldb.ID     `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID     `path:"id" tstype:"-"`
+	ID   jsonldb.ID     `path:"id" tstype:"-"` // Node ID; 0 = root
 	RID  jsonldb.ID     `path:"rid" tstype:"-"`
 	Data map[string]any `json:"data"`
 }
@@ -362,9 +350,7 @@ func (r *UpdateRecordRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	if r.RID.IsZero() {
 		return MissingField("rid")
 	}
@@ -372,9 +358,10 @@ func (r *UpdateRecordRequest) Validate() error {
 }
 
 // GetRecordRequest is a request to get a record.
+// Now used for /nodes/{id}/table/records/{rid} endpoint.
 type GetRecordRequest struct {
 	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"`
+	ID   jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 	RID  jsonldb.ID `path:"rid" tstype:"-"`
 }
 
@@ -383,9 +370,7 @@ func (r *GetRecordRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	if r.RID.IsZero() {
 		return MissingField("rid")
 	}
@@ -393,9 +378,10 @@ func (r *GetRecordRequest) Validate() error {
 }
 
 // DeleteRecordRequest is a request to delete a record.
+// Now used for /nodes/{id}/table/records/{rid}/delete endpoint.
 type DeleteRecordRequest struct {
 	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"`
+	ID   jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 	RID  jsonldb.ID `path:"rid" tstype:"-"`
 }
 
@@ -404,9 +390,7 @@ func (r *DeleteRecordRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root)
 	if r.RID.IsZero() {
 		return MissingField("rid")
 	}
@@ -439,85 +423,70 @@ func (r *GetNodeRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.ID.IsZero() {
-		return MissingField("id")
-	}
+	// ID can be zero (root node)
 	return nil
 }
 
-// CreateNodeRequest is a request to create a node.
-type CreateNodeRequest struct {
+// ListNodeChildrenRequest is a request to list children of a node.
+type ListNodeChildrenRequest struct {
 	WsID     jsonldb.ID `path:"wsID" tstype:"-"`
-	ParentID jsonldb.ID `json:"parent_id,omitempty"`
-	Title    string     `json:"title"`
-	Type     NodeType   `json:"type"`
+	ParentID jsonldb.ID `path:"id" tstype:"-"` // Parent node ID; 0 = root
 }
 
-// Validate validates the create node request fields.
-func (r *CreateNodeRequest) Validate() error {
+// Validate validates the list children request fields.
+func (r *ListNodeChildrenRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.Title == "" {
-		return MissingField("title")
-	}
-	if r.Type == "" {
-		return MissingField("type")
-	}
+	// ParentID can be zero (list root children)
 	return nil
 }
 
 // --- Assets ---
 
-// ListPageAssetsRequest is a request to list assets in a page.
-type ListPageAssetsRequest struct {
+// ListNodeAssetsRequest is a request to list assets in a node.
+type ListNodeAssetsRequest struct {
 	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID jsonldb.ID `path:"id" tstype:"-"`
+	NodeID jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 }
 
-// Validate validates the list page assets request fields.
-func (r *ListPageAssetsRequest) Validate() error {
+// Validate validates the list node assets request fields.
+func (r *ListNodeAssetsRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.NodeID.IsZero() {
-		return MissingField("id")
-	}
+	// NodeID can be zero (root)
 	return nil
 }
 
-// UploadPageAssetRequest is a request to upload an asset to a page.
-type UploadPageAssetRequest struct {
+// UploadNodeAssetRequest is a request to upload an asset to a node.
+type UploadNodeAssetRequest struct {
 	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID jsonldb.ID `path:"id" tstype:"-"`
+	NodeID jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 }
 
-// Validate validates the upload page asset request fields.
-func (r *UploadPageAssetRequest) Validate() error {
+// Validate validates the upload node asset request fields.
+func (r *UploadNodeAssetRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.NodeID.IsZero() {
-		return MissingField("id")
-	}
+	// NodeID can be zero (root)
 	return nil
 }
 
-// DeletePageAssetRequest is a request to delete an asset from a page.
-type DeletePageAssetRequest struct {
+// DeleteNodeAssetRequest is a request to delete an asset from a node.
+type DeleteNodeAssetRequest struct {
 	WsID      jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID    jsonldb.ID `path:"id" tstype:"-"`
+	NodeID    jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 	AssetName string     `path:"name" tstype:"-"`
 }
 
-// Validate validates the delete page asset request fields.
-func (r *DeletePageAssetRequest) Validate() error {
+// Validate validates the delete node asset request fields.
+func (r *DeleteNodeAssetRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.NodeID.IsZero() {
-		return MissingField("id")
-	}
+	// NodeID can be zero (root)
 	if r.AssetName == "" {
 		return MissingField("assetName")
 	}
@@ -527,7 +496,7 @@ func (r *DeletePageAssetRequest) Validate() error {
 // ServeAssetRequest is a request to serve an asset file directly.
 type ServeAssetRequest struct {
 	WsID      jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID    jsonldb.ID `path:"id" tstype:"-"`
+	NodeID    jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 	AssetName string     `path:"name" tstype:"-"`
 }
 
@@ -536,9 +505,7 @@ func (r *ServeAssetRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.NodeID.IsZero() {
-		return MissingField("id")
-	}
+	// NodeID can be zero (root)
 	if r.AssetName == "" {
 		return MissingField("assetName")
 	}

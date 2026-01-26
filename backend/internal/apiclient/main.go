@@ -645,29 +645,9 @@ func hyphenToCamel(s string) string {
 	return strings.Join(parts, "")
 }
 
-// deriveMethodName determines the method name from handler name.
-// Follows a simple convention:
-//   - List* → list
-//   - Get* → get
-//   - Create* → create
-//   - Update* → update
-//   - Delete* → delete
-//   - Other (Login, Register, Search, etc.) → toLowerCamel(name)
+// deriveMethodName converts handler name to method name (e.g., ListNodes → listNodes).
 func deriveMethodName(handlerName string) string {
-	switch {
-	case strings.HasPrefix(handlerName, "List"):
-		return "list"
-	case strings.HasPrefix(handlerName, "Get"):
-		return "get"
-	case strings.HasPrefix(handlerName, "Create"):
-		return "create"
-	case strings.HasPrefix(handlerName, "Update"):
-		return "update"
-	case strings.HasPrefix(handlerName, "Delete"):
-		return "delete"
-	default:
-		return toLowerCamel(handlerName)
-	}
+	return toLowerCamel(handlerName)
 }
 
 func toLowerCamel(s string) string {
