@@ -849,6 +849,29 @@ type ChangeEmailRequest struct {
 	Password string `json:"password"` // Required for security verification
 }
 
+// --- Email Verification ---
+
+// SendVerificationEmailRequest is a request to send a verification email.
+type SendVerificationEmailRequest struct{}
+
+// Validate is a no-op for SendVerificationEmailRequest.
+func (r *SendVerificationEmailRequest) Validate() error {
+	return nil
+}
+
+// VerifyEmailRequest is a request to verify an email via magic link token.
+type VerifyEmailRequest struct {
+	Token string `query:"token" tstype:"-"`
+}
+
+// Validate validates the verify email request fields.
+func (r *VerifyEmailRequest) Validate() error {
+	if r.Token == "" {
+		return MissingField("token")
+	}
+	return nil
+}
+
 // Validate validates the change email request fields.
 func (r *ChangeEmailRequest) Validate() error {
 	if err := validateEmail(r.NewEmail); err != nil {

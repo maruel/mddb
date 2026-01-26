@@ -51,7 +51,7 @@ func TestRegister(t *testing.T) {
 		t.Fatalf("NewFileStore failed: %v", err)
 	}
 
-	authHandler := NewAuthHandler(userService, orgMemService, wsMemService, orgService, wsService, sessionService, fileStore, "secret")
+	authHandler := NewAuthHandler(userService, orgMemService, wsMemService, orgService, wsService, sessionService, nil, nil, fileStore, "secret", "http://localhost:8080")
 
 	// Register Joe - should not create organization (frontend handles that)
 	req1 := &dto.RegisterRequest{

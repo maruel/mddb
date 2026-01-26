@@ -82,6 +82,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 	router := NewRouter(
 		fileStore, userService, orgService, wsService,
 		orgInvService, wsInvService, orgMemService, wsMemService, sessionService,
+		nil, // email verification service (disabled)
 		nil, // email service (disabled)
 		testJWTSecret,
 		"http://localhost:8080",

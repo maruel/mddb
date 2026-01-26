@@ -430,6 +430,16 @@ export interface ChangeEmailRequest {
   password: string; // Required for security verification
 }
 /**
+ * SendVerificationEmailRequest is a request to send a verification email.
+ */
+export interface SendVerificationEmailRequest {
+}
+/**
+ * VerifyEmailRequest is a request to verify an email via magic link token.
+ */
+export interface VerifyEmailRequest {
+}
+/**
  * LinkOAuthAccountRequest is a request to initiate linking an OAuth provider.
  */
 export interface LinkOAuthAccountRequest {
@@ -742,6 +752,13 @@ export interface SwitchWorkspaceResponse {
 export interface ChangeEmailResponse {
   ok: boolean;
   email_verified: boolean;
+  message?: string;
+}
+/**
+ * SendVerificationEmailResponse is a response from sending a verification email.
+ */
+export interface SendVerificationEmailResponse {
+  ok: boolean;
   message?: string;
 }
 /**

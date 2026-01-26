@@ -325,7 +325,8 @@ func mainImpl() error {
 		slog.InfoContext(ctx, "Cleaned up expired sessions", "count", count)
 	}
 
-	// Initialize email service (nil if not configured)
+	// Initialize email verification service and email service (nil if SMTP not configured)
+	var emailVerificationService *identity.EmailVerificationService
 	var emailService *email.Service
 	if *smtpHost != "" {
 		smtpConfig := email.Config{
@@ -340,6 +341,12 @@ func mainImpl() error {
 		}
 		emailService = &email.Service{Config: smtpConfig}
 		slog.InfoContext(ctx, "SMTP configured", "host", *smtpHost, "port", *smtpPort)
+
+		// Initialize email verification service only when SMTP is configured
+		emailVerificationService, err = identity.NewEmailVerificationService(filepath.Join(dbDir, "email_verifications.jsonl"))
+		if err != nil {
+			return fmt.Errorf("failed to initialize email verification service: %w", err)
+		}
 	}
 
 	// Watch own executable for modifications (for development restarts)
@@ -350,7 +357,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, emailService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret, *githubClientID, *githubClientSecret),
+		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, emailVerificationService, emailService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret, *githubClientID, *githubClientSecret),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}

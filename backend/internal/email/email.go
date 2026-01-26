@@ -54,6 +54,24 @@ func (s *Service) Send(ctx context.Context, to, subject, body string) error {
 	return s.sendMail(ctx, []string{to}, subject, body)
 }
 
+// SendVerification sends an email verification email with a magic link.
+func (s *Service) SendVerification(ctx context.Context, to, name, verifyURL string) error {
+	subject := "Verify your email address"
+	body := fmt.Sprintf(`Hi %s,
+
+Please verify your email address by clicking the link below:
+
+%s
+
+This link will expire in 24 hours.
+
+If you didn't request this verification, you can safely ignore this email.
+
+- The mddb Team
+`, name, verifyURL)
+	return s.Send(ctx, to, subject, body)
+}
+
 // SendMultiple sends an email to multiple recipients.
 func (s *Service) SendMultiple(ctx context.Context, to []string, subject, body string) error {
 	return s.sendMail(ctx, to, subject, body)

@@ -54,6 +54,7 @@ import type {
   RevokeSessionResponse,
   SearchRequest,
   SearchResponse,
+  SendVerificationEmailResponse,
   SwitchOrgRequest,
   SwitchOrgResponse,
   SwitchWorkspaceRequest,
@@ -126,6 +127,10 @@ export function createAPIClient(fetchFn: FetchFn) {
       listAllUsers: () => get<AdminUsersResponse>(fetchFn, `/api/admin/users`),
     },
     auth: {
+      email: {
+        changeEmail: (options: ChangeEmailRequest) => post<ChangeEmailResponse>(fetchFn, `/api/auth/email`, options),
+        sendVerificationEmail: () => post<SendVerificationEmailResponse>(fetchFn, `/api/auth/email/send-verification`),
+      },
       invitations: {
         acceptOrgInvitation: (options: AcceptInvitationRequest) => post<AuthResponse>(fetchFn, `/api/auth/invitations/org/accept`, options),
         acceptWSInvitation: (options: AcceptInvitationRequest) => post<AuthResponse>(fetchFn, `/api/auth/invitations/ws/accept`, options),
@@ -135,7 +140,6 @@ export function createAPIClient(fetchFn: FetchFn) {
         revokeAllSessions: () => post<RevokeAllSessionsResponse>(fetchFn, `/api/auth/sessions/revoke-all`),
         revokeSession: (options: RevokeSessionRequest) => post<RevokeSessionResponse>(fetchFn, `/api/auth/sessions/revoke`, options),
       },
-      changeEmail: (options: ChangeEmailRequest) => post<ChangeEmailResponse>(fetchFn, `/api/auth/email`, options),
       getMe: () => get<UserResponse>(fetchFn, `/api/auth/me`),
       listProviders: () => get<ProvidersResponse>(fetchFn, `/api/auth/providers`),
       login: (options: LoginRequest) => post<AuthResponse>(fetchFn, `/api/auth/login`, options),

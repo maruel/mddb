@@ -223,6 +223,14 @@ type ChangeEmailResponse struct {
 	Message       string `json:"message,omitempty"`
 }
 
+// --- Email Verification Responses ---
+
+// SendVerificationEmailResponse is a response from sending a verification email.
+type SendVerificationEmailResponse struct {
+	Ok      bool   `json:"ok"`
+	Message string `json:"message,omitempty"`
+}
+
 // --- OAuth Linking Responses ---
 
 // LinkOAuthAccountResponse is a response from initiating OAuth linking.
