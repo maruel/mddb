@@ -881,7 +881,26 @@ export default function App() {
       <Show when={!isPrivacyPage()} fallback={<Privacy />}>
         <Show when={!isTermsPage()} fallback={<Terms />}>
           <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
-            <>
+            <Show
+              when={!isProfilePage()}
+              fallback={
+                <UserProfile
+                  user={user() as UserResponse}
+                  token={token() as string}
+                  onClose={() => {
+                    setIsProfilePage(false);
+                    const wsId = user()?.workspace_id;
+                    const wsName = user()?.workspace_name;
+                    if (wsId) {
+                      const wsSlug = slugify(wsName || 'workspace');
+                      window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
+                    } else {
+                      window.history.pushState(null, '', '/');
+                    }
+                  }}
+                />
+              }
+            >
               <div class={styles.app}>
                 <header class={styles.header}>
                   <div class={styles.headerTitle}>
@@ -967,25 +986,7 @@ export default function App() {
                       />
                     </Show>
 
-                    <Show when={isProfilePage() && user() && token()}>
-                      <UserProfile
-                        user={user() as UserResponse}
-                        token={token() as string}
-                        onClose={() => {
-                          setIsProfilePage(false);
-                          const wsId = user()?.workspace_id;
-                          const wsName = user()?.workspace_name;
-                          if (wsId) {
-                            const wsSlug = slugify(wsName || 'workspace');
-                            window.history.pushState(null, '', `/${wsId}+${wsSlug}/`);
-                          } else {
-                            window.history.pushState(null, '', '/');
-                          }
-                        }}
-                      />
-                    </Show>
-
-                    <Show when={!showSettings() && !isProfilePage()}>
+                    <Show when={!showSettings()}>
                       <Show when={selectedNodeId()}>
                         <nav class={styles.breadcrumbs}>
                           <For each={getBreadcrumbs(selectedNodeId())}>
@@ -1180,7 +1181,7 @@ export default function App() {
                   </main>
                 </div>
               </div>
-            </>
+            </Show>
           </Show>
         </Show>
       </Show>
