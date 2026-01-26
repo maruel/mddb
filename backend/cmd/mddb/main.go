@@ -27,6 +27,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/lmittmann/tint"
+	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -55,6 +56,11 @@ func mainImpl() error {
 	msClientSecret := flag.String("ms-client-secret", "", "Microsoft OAuth client secret")
 	githubClientID := flag.String("github-client-id", "", "GitHub OAuth client ID")
 	githubClientSecret := flag.String("github-client-secret", "", "GitHub OAuth client secret")
+	smtpHost := flag.String("smtp-host", "", "SMTP server host")
+	smtpPort := flag.String("smtp-port", "587", "SMTP server port")
+	smtpUsername := flag.String("smtp-username", "", "SMTP authentication username")
+	smtpPassword := flag.String("smtp-password", "", "SMTP authentication password")
+	smtpFrom := flag.String("smtp-from", "", "SMTP sender address")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		return fmt.Errorf("unknown arguments: %v", flag.Args())
@@ -185,6 +191,31 @@ func mainImpl() error {
 			*githubClientSecret = v
 		}
 	}
+	if !set["smtp-host"] {
+		if v := env["SMTP_HOST"]; v != "" {
+			*smtpHost = v
+		}
+	}
+	if !set["smtp-port"] {
+		if v := env["SMTP_PORT"]; v != "" {
+			*smtpPort = v
+		}
+	}
+	if !set["smtp-username"] {
+		if v := env["SMTP_USERNAME"]; v != "" {
+			*smtpUsername = v
+		}
+	}
+	if !set["smtp-password"] {
+		if v := env["SMTP_PASSWORD"]; v != "" {
+			*smtpPassword = v
+		}
+	}
+	if !set["smtp-from"] {
+		if v := env["SMTP_FROM"]; v != "" {
+			*smtpFrom = v
+		}
+	}
 
 	// Test mode: use fake OAuth credentials for testing OAuth UI flow
 	if os.Getenv("TEST_OAUTH") == "1" {
@@ -294,6 +325,23 @@ func mainImpl() error {
 		slog.InfoContext(ctx, "Cleaned up expired sessions", "count", count)
 	}
 
+	// Initialize email service (nil if not configured)
+	var emailService *email.Service
+	if *smtpHost != "" {
+		smtpConfig := email.Config{
+			Host:     *smtpHost,
+			Port:     *smtpPort,
+			Username: *smtpUsername,
+			Password: *smtpPassword,
+			From:     *smtpFrom,
+		}
+		if err := smtpConfig.Validate(); err != nil {
+			return err
+		}
+		emailService = &email.Service{Config: smtpConfig}
+		slog.InfoContext(ctx, "SMTP configured", "host", *smtpHost, "port", *smtpPort)
+	}
+
 	// Watch own executable for modifications (for development restarts)
 	if err := watchExecutable(ctx, stop); err != nil {
 		return fmt.Errorf("failed to watch executable: %w", err)
@@ -302,7 +350,7 @@ func mainImpl() error {
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret, *githubClientID, *githubClientSecret),
+		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, emailService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret, *githubClientID, *githubClientSecret),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}

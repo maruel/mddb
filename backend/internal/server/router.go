@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/frontend"
+	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
@@ -28,6 +29,7 @@ import (
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
 // baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
+// emailService may be nil if SMTP is not configured.
 func NewRouter(
 	fileStore *content.FileStoreService,
 	userService *identity.UserService,
@@ -38,10 +40,12 @@ func NewRouter(
 	orgMemService *identity.OrganizationMembershipService,
 	wsMemService *identity.WorkspaceMembershipService,
 	sessionService *identity.SessionService,
+	emailService *email.Service,
 	jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret, githubClientID, githubClientSecret string,
 ) http.Handler {
 	mux := &http.ServeMux{}
 	jwtSecretBytes := []byte(jwtSecret)
+	_ = emailService // Available for handlers; nil if SMTP not configured
 
 	// Create rate limit config
 	rlConfig := ratelimit.DefaultConfig()
