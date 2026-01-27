@@ -1,0 +1,14 @@
+/data/
+/data-e2e/
+.env
+.env.*.local
+.env.local
+.npmrc
+coverage.out
+/coverage/
+/mddb
+/node_modules/
+/package-lock.json
+/playwright-report/
+/test-results/
+/tmp/
