@@ -1,8 +1,9 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches-ignore: [gh-pages]
   pull_request:
+    branches-ignore: [gh-pages]
 permissions:
   contents: write
 
@@ -67,23 +68,34 @@ jobs:
               PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
               SHORT_SHA="${{ github.sha }}"
               SHORT_SHA="${SHORT_SHA:0:7}"
-              echo ":page_facing_up: [View Playwright Report](${PAGES_URL}/${SHORT_SHA}/)"
+              echo ":page_facing_up: [View Playwright Report](${PAGES_URL}/reports/${SHORT_SHA}/)"
             } >> "$GITHUB_STEP_SUMMARY"
           fi
       - name: Deploy Playwright Report to gh-pages
         if: always()
         run: |
           SHORT_SHA="${GITHUB_SHA:0:7}"
-          git fetch origin gh-pages:gh-pages || git branch gh-pages --track origin/gh-pages || true
-          git worktree add gh-pages-branch gh-pages || git worktree add gh-pages-branch -b gh-pages
-          rm -rf "gh-pages-branch/${SHORT_SHA}"
-          cp -r playwright-report "gh-pages-branch/${SHORT_SHA}"
-          rm -f gh-pages-branch/latest
-          ln -s "${SHORT_SHA}" gh-pages-branch/latest
+          DEPLOY_DIR=$(mktemp -d)
+          cd "$DEPLOY_DIR"
+          git init
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          # Fetch existing reports if branch exists
+          if git ls-remote --exit-code origin gh-pages >/dev/null 2>&1; then
+            git fetch --depth=1 origin gh-pages
+            git checkout gh-pages
+          fi
+          # Add new report
+          mkdir -p reports
+          rm -rf "reports/${SHORT_SHA}"
+          cp -r "${GITHUB_WORKSPACE}/playwright-report" "reports/${SHORT_SHA}"
+          rm -f reports/latest
+          ln -s "${SHORT_SHA}" reports/latest
           # Keep only the 20 most recent reports
-          cd gh-pages-branch
+          cd reports
           find . -maxdepth 1 -type d ! -name '.' -printf '%T@ %p\n' | sort -rn | tail -n +21 | cut -d' ' -f2- | xargs -r rm -rf
+          cd ..
+          # Commit and push
           git add -A
           git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
             commit -m "Playwright report for ${SHORT_SHA}" || exit 0
-          git push origin gh-pages
+          git push origin HEAD:gh-pages
