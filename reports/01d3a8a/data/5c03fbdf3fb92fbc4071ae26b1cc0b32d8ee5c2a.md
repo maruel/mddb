@@ -1,0 +1,43 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - button "Toggle menu" [ref=e6] [cursor=pointer]: ☰
+      - navigation [ref=e7]:
+        - generic [ref=e8] [cursor=pointer]: Welcome
+    - generic [ref=e9]:
+      - button "mobile-sidebar's Workspace ▼" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: mobile-sidebar's Workspace
+        - generic [ref=e13]: ▼
+      - button "MT" [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: MT
+  - generic [ref=e17]:
+    - complementary [ref=e18]:
+      - generic [ref=e19]:
+        - heading "Workspace" [level=2] [ref=e20]
+        - generic [ref=e21]:
+          - button "+P" [ref=e22] [cursor=pointer]
+          - button "+D" [ref=e23] [cursor=pointer]
+      - list [ref=e24]:
+        - listitem [ref=e25]:
+          - generic [ref=e26] [cursor=pointer]:
+            - generic [ref=e27]: 📄
+            - generic [ref=e28]: Welcome
+            - button "🗑" [ref=e29]
+      - generic [ref=e30]:
+        - link "Privacy Policy" [ref=e31] [cursor=pointer]:
+          - /url: /privacy
+        - text: "|"
+        - link "Terms" [ref=e32] [cursor=pointer]:
+          - /url: /terms
+    - main [ref=e33]:
+      - generic [ref=e34]:
+        - textbox "Title" [ref=e36]: Welcome
+        - generic [ref=e38]:
+          - textbox "Write your content in markdown..." [ref=e39]: "# Welcome to mddb This is your new workspace. You can create pages, tables, and upload assets here."
+          - region "Markdown preview" [ref=e40]:
+            - heading "Welcome to mddb" [level=1] [ref=e41]
+            - paragraph [ref=e42]: This is your new workspace. You can create pages, tables, and upload assets here.
+```

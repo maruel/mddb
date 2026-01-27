@@ -1,0 +1,3555 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/mddb/mddb/playwright.config.ts",
+    "rootDir": "/home/runner/work/mddb/mddb/e2e",
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/maruel/mddb/commit/01d3a8ac9601fa71e27aa4357a7c02079cbfd081",
+        "commitHash": "01d3a8ac9601fa71e27aa4357a7c02079cbfd081",
+        "buildHref": "https://github.com/maruel/mddb/actions/runs/21411824006"
+      },
+      "gitCommit": {
+        "shortHash": "01d3a8a",
+        "hash": "01d3a8ac9601fa71e27aa4357a7c02079cbfd081",
+        "subject": "refactor(app): move breadcrumb navigation into header, adjust header layout and styling, rename bundled assets",
+        "body": "refactor(app): move breadcrumb navigation into header, adjust header layout and styling, rename bundled assets\n\n- Updated `App.module.css` to introduce `.headerLeft` (flex layout), reduce header padding, add min‑height, and refine breadcrumb styling (spacing, colors, overflow handling) for both desktop and mobile.\n- Modified `App.tsx` to render breadcrumbs inside the new header left area, removing the duplicate breadcrumb block from the main content.\n- refactor(app): reduce header padding and gaps, tighten title input padding, and add left padding to mobile header for better layout after breadcrumb move.\n",
+        "author": {
+          "name": "Marc-Antoine Ruel",
+          "email": "maruel@gmail.com",
+          "time": 1769543391000
+        },
+        "committer": {
+          "name": "Marc-Antoine Ruel",
+          "email": "maruel@gmail.com",
+          "time": 1769543395000
+        },
+        "branch": "main"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/mddb/mddb/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/maruel/mddb/commit/01d3a8ac9601fa71e27aa4357a7c02079cbfd081",
+            "commitHash": "01d3a8ac9601fa71e27aa4357a7c02079cbfd081",
+            "buildHref": "https://github.com/maruel/mddb/actions/runs/21411824006"
+          },
+          "gitCommit": {
+            "shortHash": "01d3a8a",
+            "hash": "01d3a8ac9601fa71e27aa4357a7c02079cbfd081",
+            "subject": "refactor(app): move breadcrumb navigation into header, adjust header layout and styling, rename bundled assets",
+            "body": "refactor(app): move breadcrumb navigation into header, adjust header layout and styling, rename bundled assets\n\n- Updated `App.module.css` to introduce `.headerLeft` (flex layout), reduce header padding, add min‑height, and refine breadcrumb styling (spacing, colors, overflow handling) for both desktop and mobile.\n- Modified `App.tsx` to render breadcrumbs inside the new header left area, removing the duplicate breadcrumb block from the main content.\n- refactor(app): reduce header padding and gaps, tighten title input padding, and add left padding to mobile header for better layout after breadcrumb move.\n",
+            "author": {
+              "name": "Marc-Antoine Ruel",
+              "email": "maruel@gmail.com",
+              "time": 1769543391000
+            },
+            "committer": {
+              "name": "Marc-Antoine Ruel",
+              "email": "maruel@gmail.com",
+              "time": 1769543395000
+            },
+            "branch": "main"
+          },
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/runner/work/mddb/mddb/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.0",
+    "workers": 1,
+    "webServer": {
+      "command": "TEST_OAUTH=1 DATA_DIR=./data-e2e make dev",
+      "url": "http://localhost:8080/api/health",
+      "reuseExistingServer": false,
+      "timeout": 30000
+    }
+  },
+  "suites": [
+    {
+      "title": "error-handling.spec.ts",
+      "file": "error-handling.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Error Handling - Invalid Routes",
+          "file": "error-handling.spec.ts",
+          "line": 27,
+          "column": 6,
+          "specs": [
+            {
+              "title": "navigating to non-existent page shows appropriate error or handles gracefully",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 4590,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:05.161Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-1d52d01d872eca08f4f6",
+              "file": "error-handling.spec.ts",
+              "line": 28,
+              "column": 3
+            },
+            {
+              "title": "navigating to non-existent workspace shows error",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/error-handling.spec.ts",
+                        "line": 54,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:14.679Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/error-handling.spec.ts",
+                            "line": 54,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-bfb639cd32f775dfaddf",
+              "file": "error-handling.spec.ts",
+              "line": 54,
+              "column": 8
+            },
+            {
+              "title": "privacy page accessible without login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 194,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:14.687Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-5b619d2df34bcff5a9ce",
+              "file": "error-handling.spec.ts",
+              "line": 76,
+              "column": 3
+            },
+            {
+              "title": "terms page accessible without login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 130,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:14.906Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-b7777a42f860fd0a5255",
+              "file": "error-handling.spec.ts",
+              "line": 84,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Error Handling - API Failures",
+          "file": "error-handling.spec.ts",
+          "line": 91,
+          "column": 6,
+          "specs": [
+            {
+              "title": "network error during save shows error message",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3589,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:15.049Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-70e913925124b7f6bf5b",
+              "file": "error-handling.spec.ts",
+              "line": 92,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Error Handling - Concurrent Edits",
+          "file": "error-handling.spec.ts",
+          "line": 130,
+          "column": 6,
+          "specs": [
+            {
+              "title": "editing same page in two tabs - last writer wins",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7710,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:18.654Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-9c5ae3fda73e6ad56a45",
+              "file": "error-handling.spec.ts",
+              "line": 131,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Edge Cases",
+          "file": "error-handling.spec.ts",
+          "line": 182,
+          "column": 6,
+          "specs": [
+            {
+              "title": "empty page title is handled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3576,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:26.382Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-ad7716d3ce29ef7e0dbe",
+              "file": "error-handling.spec.ts",
+              "line": 183,
+              "column": 3
+            },
+            {
+              "title": "very long title is handled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3419,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:29.971Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-78b013928ba53879774e",
+              "file": "error-handling.spec.ts",
+              "line": 219,
+              "column": 3
+            },
+            {
+              "title": "special characters in title are handled",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 394,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:33.404Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-b2f8691e476cd04695b9",
+              "file": "error-handling.spec.ts",
+              "line": 257,
+              "column": 3
+            },
+            {
+              "title": "markdown with code blocks renders correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 527,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:33.812Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "1a72721d9ac5c938e1fe-fdef788de0ec7e2fa4c2",
+              "file": "error-handling.spec.ts",
+              "line": 291,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "mobile-ui.spec.ts",
+      "file": "mobile-ui.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Mobile UI - Sidebar Toggle",
+          "file": "mobile-ui.spec.ts",
+          "line": 32,
+          "column": 6,
+          "specs": [
+            {
+              "title": "hamburger menu shows and hides sidebar",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10190,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:38:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 38
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 36 |\u001b[39m\n \u001b[90m 37 |\u001b[39m     \u001b[90m// Wait for app to load\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 38 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 39 |\u001b[39m\n \u001b[90m 40 |\u001b[39m     \u001b[90m// On mobile, sidebar should be hidden by default\u001b[39m\n \u001b[90m 41 |\u001b[39m     \u001b[36mconst\u001b[39m sidebar \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'aside'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 38
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  36 |\n  37 |     // Wait for app to load\n> 38 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n     |                                             ^\n  39 |\n  40 |     // On mobile, sidebar should be hidden by default\n  41 |     const sidebar = page.locator('aside');\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:38:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:52:34.364Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-088f8-enu-shows-and-hides-sidebar-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 38
+                      }
+                    },
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10348,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:38:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 38
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 36 |\u001b[39m\n \u001b[90m 37 |\u001b[39m     \u001b[90m// Wait for app to load\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 38 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 39 |\u001b[39m\n \u001b[90m 40 |\u001b[39m     \u001b[90m// On mobile, sidebar should be hidden by default\u001b[39m\n \u001b[90m 41 |\u001b[39m     \u001b[36mconst\u001b[39m sidebar \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'aside'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 38
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  36 |\n  37 |     // Wait for app to load\n> 38 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n     |                                             ^\n  39 |\n  40 |     // On mobile, sidebar should be hidden by default\n  41 |     const sidebar = page.locator('aside');\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:38:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-27T19:52:45.666Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-088f8-enu-shows-and-hides-sidebar-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-088f8-enu-shows-and-hides-sidebar-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 38
+                      }
+                    },
+                    {
+                      "workerIndex": 2,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10243,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:38:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 38
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 36 |\u001b[39m\n \u001b[90m 37 |\u001b[39m     \u001b[90m// Wait for app to load\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 38 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 39 |\u001b[39m\n \u001b[90m 40 |\u001b[39m     \u001b[90m// On mobile, sidebar should be hidden by default\u001b[39m\n \u001b[90m 41 |\u001b[39m     \u001b[36mconst\u001b[39m sidebar \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'aside'\u001b[39m)\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 38
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  36 |\n  37 |     // Wait for app to load\n> 38 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n     |                                             ^\n  39 |\n  40 |     // On mobile, sidebar should be hidden by default\n  41 |     const sidebar = page.locator('aside');\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:38:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-01-27T19:52:57.274Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-088f8-enu-shows-and-hides-sidebar-chromium-retry2/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 38
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "9f47950a20eb93b64d63-53b54fac1cbbb42e2055",
+              "file": "mobile-ui.spec.ts",
+              "line": 33,
+              "column": 3
+            },
+            {
+              "title": "clicking backdrop closes mobile sidebar",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "line": 62,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:53:07.740Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "line": 62,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "9f47950a20eb93b64d63-6c2d1d25d006ac5f1206",
+              "file": "mobile-ui.spec.ts",
+              "line": 62,
+              "column": 8
+            },
+            {
+              "title": "selecting a page closes mobile sidebar",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 3,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10249,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:86:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 86
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 84 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-select'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 85 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 86 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 87 |\u001b[39m\n \u001b[90m 88 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 89 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 86
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  84 |     const { token } = await registerUser(request, 'mobile-select');\n  85 |     await page.goto(`/?token=${token}`);\n> 86 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n     |                                             ^\n  87 |\n  88 |     const wsID = await getWorkspaceId(page);\n  89 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:86:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:53:08.756Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-f3201--page-closes-mobile-sidebar-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 86
+                      }
+                    },
+                    {
+                      "workerIndex": 4,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10340,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:86:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 86
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 84 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-select'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 85 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 86 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 87 |\u001b[39m\n \u001b[90m 88 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 89 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 86
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  84 |     const { token } = await registerUser(request, 'mobile-select');\n  85 |     await page.goto(`/?token=${token}`);\n> 86 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n     |                                             ^\n  87 |\n  88 |     const wsID = await getWorkspaceId(page);\n  89 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:86:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-27T19:53:20.243Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-f3201--page-closes-mobile-sidebar-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-f3201--page-closes-mobile-sidebar-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 86
+                      }
+                    },
+                    {
+                      "workerIndex": 5,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10248,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:86:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 86
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 84 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-select'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 85 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 86 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 87 |\u001b[39m\n \u001b[90m 88 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 89 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 86
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  84 |     const { token } = await registerUser(request, 'mobile-select');\n  85 |     await page.goto(`/?token=${token}`);\n> 86 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n     |                                             ^\n  87 |\n  88 |     const wsID = await getWorkspaceId(page);\n  89 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:86:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-01-27T19:53:31.862Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-f3201--page-closes-mobile-sidebar-chromium-retry2/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 86
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "9f47950a20eb93b64d63-090256b3fbc7a82cfc81",
+              "file": "mobile-ui.spec.ts",
+              "line": 83,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Mobile UI - Layout",
+          "file": "mobile-ui.spec.ts",
+          "line": 120,
+          "column": 6,
+          "specs": [
+            {
+              "title": "content area uses full width on mobile",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 6,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10243,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:124:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 124
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 122 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-layout'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 123 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 124 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 125 |\u001b[39m\n \u001b[90m 126 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 127 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 124
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  122 |     const { token } = await registerUser(request, 'mobile-layout');\n  123 |     await page.goto(`/?token=${token}`);\n> 124 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n      |                                             ^\n  125 |\n  126 |     const wsID = await getWorkspaceId(page);\n  127 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:124:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:53:43.355Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Layo-2e8e4-a-uses-full-width-on-mobile-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 124
+                      }
+                    },
+                    {
+                      "workerIndex": 7,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10348,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:124:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 124
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 122 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-layout'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 123 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 124 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 125 |\u001b[39m\n \u001b[90m 126 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 127 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 124
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  122 |     const { token } = await registerUser(request, 'mobile-layout');\n  123 |     await page.goto(`/?token=${token}`);\n> 124 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n      |                                             ^\n  125 |\n  126 |     const wsID = await getWorkspaceId(page);\n  127 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:124:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-27T19:53:54.831Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Layo-2e8e4-a-uses-full-width-on-mobile-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Layo-2e8e4-a-uses-full-width-on-mobile-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 124
+                      }
+                    },
+                    {
+                      "workerIndex": 8,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10248,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:124:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 124
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 122 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-layout'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 123 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 124 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 125 |\u001b[39m\n \u001b[90m 126 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 127 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 124
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  122 |     const { token } = await registerUser(request, 'mobile-layout');\n  123 |     await page.goto(`/?token=${token}`);\n> 124 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n      |                                             ^\n  125 |\n  126 |     const wsID = await getWorkspaceId(page);\n  127 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:124:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-01-27T19:54:06.422Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Layo-2e8e4-a-uses-full-width-on-mobile-chromium-retry2/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 124
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "9f47950a20eb93b64d63-d87c6fd16471e202ef6c",
+              "file": "mobile-ui.spec.ts",
+              "line": 121,
+              "column": 3
+            },
+            {
+              "title": "editor works on mobile with virtual keyboard consideration",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 9,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10246,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:155:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 155
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 153 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-editor'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 154 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 155 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 156 |\u001b[39m\n \u001b[90m 157 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 158 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 155
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  153 |     const { token } = await registerUser(request, 'mobile-editor');\n  154 |     await page.goto(`/?token=${token}`);\n> 155 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n      |                                             ^\n  156 |\n  157 |     const wsID = await getWorkspaceId(page);\n  158 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:155:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:54:17.905Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Layo-84ff8-tual-keyboard-consideration-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 155
+                      }
+                    },
+                    {
+                      "workerIndex": 10,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10341,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:155:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 155
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 153 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-editor'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 154 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 155 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 156 |\u001b[39m\n \u001b[90m 157 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 158 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 155
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  153 |     const { token } = await registerUser(request, 'mobile-editor');\n  154 |     await page.goto(`/?token=${token}`);\n> 155 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n      |                                             ^\n  156 |\n  157 |     const wsID = await getWorkspaceId(page);\n  158 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:155:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-27T19:54:29.388Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Layo-84ff8-tual-keyboard-consideration-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Layo-84ff8-tual-keyboard-consideration-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 155
+                      }
+                    },
+                    {
+                      "workerIndex": 11,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10252,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:155:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 155
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 153 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-editor'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 154 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 155 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 156 |\u001b[39m\n \u001b[90m 157 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 158 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 155
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  153 |     const { token } = await registerUser(request, 'mobile-editor');\n  154 |     await page.goto(`/?token=${token}`);\n> 155 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n      |                                             ^\n  156 |\n  157 |     const wsID = await getWorkspaceId(page);\n  158 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:155:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-01-27T19:54:41.000Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Layo-84ff8-tual-keyboard-consideration-chromium-retry2/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 155
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "9f47950a20eb93b64d63-986356070b9a18664a4c",
+              "file": "mobile-ui.spec.ts",
+              "line": 152,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Mobile UI - Touch Interactions",
+          "file": "mobile-ui.spec.ts",
+          "line": 201,
+          "column": 6,
+          "specs": [
+            {
+              "title": "tap on sidebar node navigates correctly",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 12,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10248,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:208:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 208
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 206 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-tap'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 207 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 208 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 209 |\u001b[39m\n \u001b[90m 210 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 211 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 208
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  206 |     const { token } = await registerUser(request, 'mobile-tap');\n  207 |     await page.goto(`/?token=${token}`);\n> 208 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n      |                                             ^\n  209 |\n  210 |     const wsID = await getWorkspaceId(page);\n  211 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:208:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:54:52.492Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Touc-f39ea-ar-node-navigates-correctly-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 208
+                      }
+                    },
+                    {
+                      "workerIndex": 13,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10343,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:208:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 208
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 206 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-tap'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 207 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 208 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 209 |\u001b[39m\n \u001b[90m 210 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 211 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 208
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  206 |     const { token } = await registerUser(request, 'mobile-tap');\n  207 |     await page.goto(`/?token=${token}`);\n> 208 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n      |                                             ^\n  209 |\n  210 |     const wsID = await getWorkspaceId(page);\n  211 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:208:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-27T19:55:03.972Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Touc-f39ea-ar-node-navigates-correctly-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Touc-f39ea-ar-node-navigates-correctly-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 208
+                      }
+                    },
+                    {
+                      "workerIndex": 14,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 10248,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:208:45",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                          "column": 45,
+                          "line": 208
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 206 |\u001b[39m     \u001b[36mconst\u001b[39m { token } \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m registerUser(request\u001b[33m,\u001b[39m \u001b[32m'mobile-tap'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 207 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgoto(\u001b[32m`/?token=${token}`\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 208 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible({ timeout\u001b[33m:\u001b[39m \u001b[35m10000\u001b[39m })\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                                             \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 209 |\u001b[39m\n \u001b[90m 210 |\u001b[39m     \u001b[36mconst\u001b[39m wsID \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getWorkspaceId(page)\u001b[33m;\u001b[39m\n \u001b[90m 211 |\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                            "column": 45,
+                            "line": 208
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 10000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 10000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  206 |     const { token } = await registerUser(request, 'mobile-tap');\n  207 |     await page.goto(`/?token=${token}`);\n> 208 |     await expect(page.locator('header h1')).toBeVisible({ timeout: 10000 });\n      |                                             ^\n  209 |\n  210 |     const wsID = await getWorkspaceId(page);\n  211 |\n    at /home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts:208:45"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-01-27T19:55:15.584Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Touc-f39ea-ar-node-navigates-correctly-chromium-retry2/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
+                        "column": 45,
+                        "line": 208
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "9f47950a20eb93b64d63-63052764974434bd2df9",
+              "file": "mobile-ui.spec.ts",
+              "line": 205,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "oauth.spec.ts",
+      "file": "oauth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "API routing",
+          "file": "oauth.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "unknown /api/ routes return 404, not SPA",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 32,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:27.062Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-c22248e6f7e3a1307df1",
+              "file": "oauth.spec.ts",
+              "line": 4,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "OAuth Login",
+          "file": "oauth.spec.ts",
+          "line": 15,
+          "column": 6,
+          "specs": [
+            {
+              "title": "login page loads with OAuth buttons",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 206,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:27.116Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-24bb2271671ed8d27c2d",
+              "file": "oauth.spec.ts",
+              "line": 16,
+              "column": 3
+            },
+            {
+              "title": "providers endpoint returns configured providers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 7,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:27.459Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-db41f15e04d2f888d38a",
+              "file": "oauth.spec.ts",
+              "line": 28,
+              "column": 3
+            },
+            {
+              "title": "clicking Google OAuth button redirects to Google",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 379,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:27.476Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-117b48c048b0ff122b33",
+              "file": "oauth.spec.ts",
+              "line": 38,
+              "column": 3
+            },
+            {
+              "title": "OAuth callback with token sets auth and redirects",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 144,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:27.866Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-f940dc73000d92475ca8",
+              "file": "oauth.spec.ts",
+              "line": 53,
+              "column": 3
+            },
+            {
+              "title": "OAuth callback with valid token logs user in",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 217,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:28.023Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-f8d30098a9f44b418476",
+              "file": "oauth.spec.ts",
+              "line": 69,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "page-crud.spec.ts",
+      "file": "page-crud.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Page CRUD Operations",
+          "file": "page-crud.spec.ts",
+          "line": 27,
+          "column": 6,
+          "specs": [
+            {
+              "title": "delete a page - page removed from sidebar and content area cleared",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                        "line": 29,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:28.260Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                            "line": 29,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-273f25ebbe21e9af5d2f",
+              "file": "page-crud.spec.ts",
+              "line": 29,
+              "column": 8
+            },
+            {
+              "title": "page title updates in sidebar as user types (real-time sync)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                        "line": 91,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:28.260Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                            "line": 91,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-650d076e9d850ba2df24",
+              "file": "page-crud.spec.ts",
+              "line": 91,
+              "column": 8
+            },
+            {
+              "title": "unsaved indicator appears when editing and disappears after save",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                        "line": 130,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:28.260Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                            "line": 130,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-07fef810c7e009047339",
+              "file": "page-crud.spec.ts",
+              "line": 130,
+              "column": 8
+            },
+            {
+              "title": "manual save button triggers immediate save",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                        "line": 179,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:28.260Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                            "line": 179,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-1819ff3e9fb1382a5432",
+              "file": "page-crud.spec.ts",
+              "line": 179,
+              "column": 8
+            }
+          ]
+        },
+        {
+          "title": "Page Navigation",
+          "file": "page-crud.spec.ts",
+          "line": 222,
+          "column": 6,
+          "specs": [
+            {
+              "title": "browser back button navigates between pages",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 717,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:28.274Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-63047fb4f0c7db963257",
+              "file": "page-crud.spec.ts",
+              "line": 223,
+              "column": 3
+            },
+            {
+              "title": "URL updates with page slug when navigating",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 559,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:29.006Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-8812f7d0a9d8411644e9",
+              "file": "page-crud.spec.ts",
+              "line": 265,
+              "column": 3
+            },
+            {
+              "title": "direct URL navigation loads correct page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 439,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:29.585Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-0388e6939036d4ce4514",
+              "file": "page-crud.spec.ts",
+              "line": 290,
+              "column": 3
+            },
+            {
+              "title": "breadcrumb navigation works for nested pages",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                        "line": 317,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:30.042Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                            "line": 317,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-338aceef826492fded4a",
+              "file": "page-crud.spec.ts",
+              "line": 317,
+              "column": 8
+            }
+          ]
+        },
+        {
+          "title": "Editor Features",
+          "file": "page-crud.spec.ts",
+          "line": 371,
+          "column": 6,
+          "specs": [
+            {
+              "title": "markdown preview renders correctly",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 566,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:30.043Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-31b04fc19c57f1089258",
+              "file": "page-crud.spec.ts",
+              "line": 372,
+              "column": 3
+            },
+            {
+              "title": "version history loads and displays commits",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 15,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 30017,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                            "column": 25,
+                            "line": 438
+                          },
+                          "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'History', exact: true })\u001b[22m\n\n\n  436 |     // Click history button (use exact match to avoid matching workspace button)\n  437 |     const historyButton = page.getByRole('button', { name: 'History', exact: true });\n> 438 |     await historyButton.click();\n      |                         ^\n  439 |\n  440 |     // History panel should appear\n  441 |     const historyPanel = page.locator('[class*=\"historyPanel\"]');\n    at /home/runner/work/mddb/mddb/e2e/page-crud.spec.ts:438:25"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:55:30.625Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-crud-Editor-Features--4d302--loads-and-displays-commits-chromium/error-context.md"
+                        }
+                      ]
+                    },
+                    {
+                      "workerIndex": 16,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 30094,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                            "column": 25,
+                            "line": 438
+                          },
+                          "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'History', exact: true })\u001b[22m\n\n\n  436 |     // Click history button (use exact match to avoid matching workspace button)\n  437 |     const historyButton = page.getByRole('button', { name: 'History', exact: true });\n> 438 |     await historyButton.click();\n      |                         ^\n  439 |\n  440 |     // History panel should appear\n  441 |     const historyPanel = page.locator('[class*=\"historyPanel\"]');\n    at /home/runner/work/mddb/mddb/e2e/page-crud.spec.ts:438:25"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-27T19:56:01.737Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-crud-Editor-Features--4d302--loads-and-displays-commits-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-crud-Editor-Features--4d302--loads-and-displays-commits-chromium-retry1/trace.zip"
+                        }
+                      ]
+                    },
+                    {
+                      "workerIndex": 17,
+                      "parallelIndex": 0,
+                      "status": "timedOut",
+                      "duration": 30021,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
+                            "column": 25,
+                            "line": 438
+                          },
+                          "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'History', exact: true })\u001b[22m\n\n\n  436 |     // Click history button (use exact match to avoid matching workspace button)\n  437 |     const historyButton = page.getByRole('button', { name: 'History', exact: true });\n> 438 |     await historyButton.click();\n      |                         ^\n  439 |\n  440 |     // History panel should appear\n  441 |     const historyPanel = page.locator('[class*=\"historyPanel\"]');\n    at /home/runner/work/mddb/mddb/e2e/page-crud.spec.ts:438:25"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-01-27T19:56:33.115Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-crud-Editor-Features--4d302--loads-and-displays-commits-chromium-retry2/error-context.md"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-a3d0d96b3fa8b29755f8",
+              "file": "page-crud.spec.ts",
+              "line": 408,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "page-hierarchy.spec.ts",
+      "file": "page-hierarchy.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Page Hierarchy",
+          "file": "page-hierarchy.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "create and navigate page hierarchy",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 827,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:04.348Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2ada34b412574d884e8-9a9a0e3c76165ed18ba7",
+              "file": "page-hierarchy.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "navigate between sibling pages",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 811,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:05.340Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2ada34b412574d884e8-dbde86b05ff34c3933fa",
+              "file": "page-hierarchy.spec.ts",
+              "line": 107,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "rename-race.spec.ts",
+      "file": "rename-race.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Page rename with navigation",
+          "file": "rename-race.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "rename page then quickly navigate away - rename must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 936,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:06.183Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-2376877f8c55bd71ef28",
+              "file": "rename-race.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "rename page, wait for autosave, then navigate - rename must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3619,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:07.135Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-d80e0c4cb53a1200e8bb",
+              "file": "rename-race.spec.ts",
+              "line": 105,
+              "column": 3
+            },
+            {
+              "title": "rapid renames with navigation - last rename must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 740,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:10.768Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-107a48b1942e03554eb4",
+              "file": "rename-race.spec.ts",
+              "line": 171,
+              "column": 3
+            },
+            {
+              "title": "rename content then navigate - content must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 819,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:11.525Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-e3f39f982e748bed3885",
+              "file": "rename-race.spec.ts",
+              "line": 250,
+              "column": 3
+            },
+            {
+              "title": "rename and content change then navigate - both must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 820,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:12.358Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-e23c75b249f8bee91f46",
+              "file": "rename-race.spec.ts",
+              "line": 331,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "settings.spec.ts",
+      "file": "settings.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "User Profile Settings",
+          "file": "settings.spec.ts",
+          "line": 30,
+          "column": 6,
+          "specs": [
+            {
+              "title": "navigate to profile and verify user info displayed",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 347,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:13.205Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-395868ed9fe50a2cc532",
+              "file": "settings.spec.ts",
+              "line": 31,
+              "column": 3
+            },
+            {
+              "title": "change language setting and verify UI updates",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 476,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:13.563Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-8fdcfeab14dabe540345",
+              "file": "settings.spec.ts",
+              "line": 46,
+              "column": 3
+            },
+            {
+              "title": "change theme setting",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 472,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:14.052Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-e6366e83c8d34e2cfb5d",
+              "file": "settings.spec.ts",
+              "line": 69,
+              "column": 3
+            },
+            {
+              "title": "back button returns to previous page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 352,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:14.538Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-afdf12a7e0928184cd39",
+              "file": "settings.spec.ts",
+              "line": 91,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Workspace Settings",
+          "file": "settings.spec.ts",
+          "line": 109,
+          "column": 6,
+          "specs": [
+            {
+              "title": "navigate to workspace settings via workspace menu",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 347,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:14.904Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-02e71fa822fcf7ab3968",
+              "file": "settings.spec.ts",
+              "line": 110,
+              "column": 3
+            },
+            {
+              "title": "workspace settings tabs navigation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 440,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:15.264Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-51816cf49c29ff63ca1d",
+              "file": "settings.spec.ts",
+              "line": 132,
+              "column": 3
+            },
+            {
+              "title": "members list shows current user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 372,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:15.716Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-d86783313bd32d1b190e",
+              "file": "settings.spec.ts",
+              "line": 161,
+              "column": 3
+            },
+            {
+              "title": "rename workspace",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 537,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:16.101Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-db91ab25914d0193afa5",
+              "file": "settings.spec.ts",
+              "line": 181,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Authentication",
+          "file": "settings.spec.ts",
+          "line": 212,
+          "column": 6,
+          "specs": [
+            {
+              "title": "logout clears session and redirects to login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 424,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:16.651Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-083cf93a5484a7992442",
+              "file": "settings.spec.ts",
+              "line": 213,
+              "column": 3
+            },
+            {
+              "title": "invalid token redirects to login",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 143,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:17.086Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "d877ffdf71ec720167ae-db6638b703e3de751d71",
+              "file": "settings.spec.ts",
+              "line": 227,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "table-operations.spec.ts",
+      "file": "table-operations.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Table Creation and Basic Operations",
+          "file": "table-operations.spec.ts",
+          "line": 27,
+          "column": 6,
+          "specs": [
+            {
+              "title": "create a table with properties and view it",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 531,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:17.253Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2d46daa4b8414b2c6818-ed025093137aac74b81c",
+              "file": "table-operations.spec.ts",
+              "line": 28,
+              "column": 3
+            },
+            {
+              "title": "add and edit records in table",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/table-operations.spec.ts",
+                        "line": 72,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:17.793Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/table-operations.spec.ts",
+                            "line": 72,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2d46daa4b8414b2c6818-bf1a9d1051b195048007",
+              "file": "table-operations.spec.ts",
+              "line": 72,
+              "column": 8
+            },
+            {
+              "title": "delete a record from table",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/table-operations.spec.ts",
+                        "line": 143,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:17.793Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/table-operations.spec.ts",
+                            "line": 143,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2d46daa4b8414b2c6818-066a87693f5eb06c5e8f",
+              "file": "table-operations.spec.ts",
+              "line": 143,
+              "column": 8
+            }
+          ]
+        },
+        {
+          "title": "Table View Modes",
+          "file": "table-operations.spec.ts",
+          "line": 196,
+          "column": 6,
+          "specs": [
+            {
+              "title": "switch between table, grid, gallery, and board views",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 676,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:17.793Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2d46daa4b8414b2c6818-81e9f6d1710822f09f5a",
+              "file": "table-operations.spec.ts",
+              "line": 197,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Table and Page Hybrid",
+          "file": "table-operations.spec.ts",
+          "line": 279,
+          "column": 6,
+          "specs": [
+            {
+              "title": "table node shows table view with records section",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 534,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:18.481Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2d46daa4b8414b2c6818-1d8c1cd2563c4e8a9078",
+              "file": "table-operations.spec.ts",
+              "line": 280,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "workspace-org.spec.ts",
+      "file": "workspace-org.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "First Login Flow",
+          "file": "workspace-org.spec.ts",
+          "line": 27,
+          "column": 6,
+          "specs": [
+            {
+              "title": "new user gets auto-created org, workspace, and welcome page",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 327,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:19.037Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-323207f226f20d1bd7a3",
+              "file": "workspace-org.spec.ts",
+              "line": 28,
+              "column": 3
+            },
+            {
+              "title": "first login creates org named after user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 226,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:19.374Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-dab5c0c592cee82a7ecb",
+              "file": "workspace-org.spec.ts",
+              "line": 48,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Workspace Switching",
+          "file": "workspace-org.spec.ts",
+          "line": 70,
+          "column": 6,
+          "specs": [
+            {
+              "title": "create and switch to a new workspace",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 293,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:19.614Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-f14fe5de5293500b3890",
+              "file": "workspace-org.spec.ts",
+              "line": 71,
+              "column": 3
+            },
+            {
+              "title": "switching workspace clears selected node",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "skip",
+                      "location": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                        "line": 113,
+                        "column": 8
+                      }
+                    }
+                  ],
+                  "expectedStatus": "skipped",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": -1,
+                      "parallelIndex": -1,
+                      "status": "skipped",
+                      "duration": 0,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:19.921Z",
+                      "annotations": [
+                        {
+                          "type": "skip",
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                            "line": 113,
+                            "column": 8
+                          }
+                        }
+                      ],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "skipped"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-20c760e99660343dbaf8",
+              "file": "workspace-org.spec.ts",
+              "line": 113,
+              "column": 8
+            }
+          ]
+        },
+        {
+          "title": "Organization Features",
+          "file": "workspace-org.spec.ts",
+          "line": 162,
+          "column": 6,
+          "specs": [
+            {
+              "title": "create a new organization",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 226,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:19.922Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-9d06b0c2c078ae2872da",
+              "file": "workspace-org.spec.ts",
+              "line": 163,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "User Menu",
+          "file": "workspace-org.spec.ts",
+          "line": 201,
+          "column": 6,
+          "specs": [
+            {
+              "title": "user menu shows user name and email",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 283,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:20.162Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-67aac332a231cf0a2250",
+              "file": "workspace-org.spec.ts",
+              "line": 202,
+              "column": 3
+            },
+            {
+              "title": "user menu has profile and logout options",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 277,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:20.459Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-03e9bef2334d98ef9936",
+              "file": "workspace-org.spec.ts",
+              "line": 216,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Footer Links",
+          "file": "workspace-org.spec.ts",
+          "line": 233,
+          "column": 6,
+          "specs": [
+            {
+              "title": "privacy and terms links in sidebar footer",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 335,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:20.748Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-5bce7ba5b26b7e21f9a1",
+              "file": "workspace-org.spec.ts",
+              "line": 234,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Header Display",
+          "file": "workspace-org.spec.ts",
+          "line": 258,
+          "column": 6,
+          "specs": [
+            {
+              "title": "header shows app title",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 18,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5224,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts:266:31",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                          "column": 31,
+                          "line": 266
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 264 |\u001b[39m     \u001b[90m// Header should have app title\u001b[39m\n \u001b[90m 265 |\u001b[39m     \u001b[36mconst\u001b[39m headerTitle \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 266 |\u001b[39m     \u001b[36mawait\u001b[39m expect(headerTitle)\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 267 |\u001b[39m     \u001b[36mawait\u001b[39m expect(headerTitle)\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoBeEmpty()\u001b[33m;\u001b[39m\n \u001b[90m 268 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 269 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                            "column": 31,
+                            "line": 266
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  264 |     // Header should have app title\n  265 |     const headerTitle = page.locator('header h1');\n> 266 |     await expect(headerTitle).toBeVisible();\n      |                               ^\n  267 |     await expect(headerTitle).not.toBeEmpty();\n  268 |   });\n  269 | });\n    at /home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts:266:31"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T19:57:21.098Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/workspace-org-Header-Display-header-shows-app-title-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                        "column": 31,
+                        "line": 266
+                      }
+                    },
+                    {
+                      "workerIndex": 19,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5406,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts:266:31",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                          "column": 31,
+                          "line": 266
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 264 |\u001b[39m     \u001b[90m// Header should have app title\u001b[39m\n \u001b[90m 265 |\u001b[39m     \u001b[36mconst\u001b[39m headerTitle \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 266 |\u001b[39m     \u001b[36mawait\u001b[39m expect(headerTitle)\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 267 |\u001b[39m     \u001b[36mawait\u001b[39m expect(headerTitle)\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoBeEmpty()\u001b[33m;\u001b[39m\n \u001b[90m 268 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 269 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                            "column": 31,
+                            "line": 266
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  264 |     // Header should have app title\n  265 |     const headerTitle = page.locator('header h1');\n> 266 |     await expect(headerTitle).toBeVisible();\n      |                               ^\n  267 |     await expect(headerTitle).not.toBeEmpty();\n  268 |   });\n  269 | });\n    at /home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts:266:31"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 1,
+                      "startTime": "2026-01-27T19:57:27.399Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/workspace-org-Header-Display-header-shows-app-title-chromium-retry1/error-context.md"
+                        },
+                        {
+                          "name": "trace",
+                          "contentType": "application/zip",
+                          "path": "/home/runner/work/mddb/mddb/test-results/workspace-org-Header-Display-header-shows-app-title-chromium-retry1/trace.zip"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                        "column": 31,
+                        "line": 266
+                      }
+                    },
+                    {
+                      "workerIndex": 20,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5293,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n    at /home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts:266:31",
+                        "location": {
+                          "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                          "column": 31,
+                          "line": 266
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 264 |\u001b[39m     \u001b[90m// Header should have app title\u001b[39m\n \u001b[90m 265 |\u001b[39m     \u001b[36mconst\u001b[39m headerTitle \u001b[33m=\u001b[39m page\u001b[33m.\u001b[39mlocator(\u001b[32m'header h1'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 266 |\u001b[39m     \u001b[36mawait\u001b[39m expect(headerTitle)\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m     |\u001b[39m                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 267 |\u001b[39m     \u001b[36mawait\u001b[39m expect(headerTitle)\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoBeEmpty()\u001b[33m;\u001b[39m\n \u001b[90m 268 |\u001b[39m   })\u001b[33m;\u001b[39m\n \u001b[90m 269 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                            "column": 31,
+                            "line": 266
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('header h1')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('header h1')\u001b[22m\n\n\n  264 |     // Header should have app title\n  265 |     const headerTitle = page.locator('header h1');\n> 266 |     await expect(headerTitle).toBeVisible();\n      |                               ^\n  267 |     await expect(headerTitle).not.toBeEmpty();\n  268 |   });\n  269 | });\n    at /home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts:266:31"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 2,
+                      "startTime": "2026-01-27T19:57:34.065Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/home/runner/work/mddb/mddb/test-results/workspace-org-Header-Display-header-shows-app-title-chromium-retry2/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
+                        "column": 31,
+                        "line": 266
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-41f7c15e7aff2524490a",
+              "file": "workspace-org.spec.ts",
+              "line": 259,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-01-27T19:51:56.522Z",
+    "duration": 343095.451,
+    "expected": 46,
+    "skipped": 10,
+    "unexpected": 7,
+    "flaky": 0
+  }
+}
