@@ -138,6 +138,28 @@ func (m *Mapper) MapDatabase(db *Database) (*content.Node, error) {
 	return node, nil
 }
 
+// MapDatabaseIconCover downloads and sets the icon and cover for a database node.
+// Call this after MapDatabase when you have an AssetDownloader available.
+func (m *Mapper) MapDatabaseIconCover(node *content.Node, db *Database, assets *AssetDownloader) {
+	if assets == nil {
+		return
+	}
+
+	// Process icon
+	if db.Icon != nil {
+		if icon, err := assets.ProcessIcon(node.ID, db.Icon); err == nil && icon != "" {
+			node.Icon = icon
+		}
+	}
+
+	// Process cover
+	if db.Cover != nil {
+		if cover, err := assets.ProcessCover(node.ID, db.Cover); err == nil && cover != "" {
+			node.Cover = cover
+		}
+	}
+}
+
 // mapDBProperty converts a Notion database property definition to mddb Property.
 func (m *Mapper) mapDBProperty(name string, prop *DBProperty) *content.Property {
 	mddbProp := &content.Property{
@@ -266,6 +288,28 @@ func (m *Mapper) MapPage(page *Page) (*content.Node, error) {
 	}
 
 	return node, nil
+}
+
+// MapPageIconCover downloads and sets the icon and cover for a page node.
+// Call this after MapPage when you have an AssetDownloader available.
+func (m *Mapper) MapPageIconCover(node *content.Node, page *Page, assets *AssetDownloader) {
+	if assets == nil {
+		return
+	}
+
+	// Process icon
+	if page.Icon != nil {
+		if icon, err := assets.ProcessIcon(node.ID, page.Icon); err == nil && icon != "" {
+			node.Icon = icon
+		}
+	}
+
+	// Process cover
+	if page.Cover != nil {
+		if cover, err := assets.ProcessCover(node.ID, page.Cover); err == nil && cover != "" {
+			node.Cover = cover
+		}
+	}
 }
 
 // resolveParentID converts a Notion Parent to an mddb node ID.

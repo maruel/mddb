@@ -938,14 +938,14 @@ Files: `client.go`, `types.go`, `extractor.go`, `mapper.go`, `writer.go`, `markd
 - [x] `blocksToMarkdownRecursive` renders nested content with proper indentation
 - [x] Table header separator row added for markdown tables
 
-#### 2.4 Assets (Partial)
+#### 2.4 Assets ✅
 
 - [x] Download images/videos/files from page blocks before URLs expire
 - [x] Store in `{nodeDir}/assets/` directory with hash-prefixed filenames
 - [x] Update markdown references to use local paths
 - [x] Track download stats in extraction summary
-- [ ] Download files from Files property in database records
-- [ ] Download page covers and icons
+- [x] Download files from Files property in database records
+- [x] Download page/database covers and icons (emoji or file)
 
 ### Phase 3: Relational Properties ✅
 
@@ -992,10 +992,11 @@ cat tmp/import/*/XXXX/index.md
 2. ~~**Wire up relation resolution**~~ ✅ Fixed: Two-pass extraction pre-assigns record IDs
 3. ~~**Fix nested block rendering**~~ ✅ Fixed: Block.Children field + recursive markdown
 4. ~~**Set ParentID**~~ ✅ Fixed: Pre-assign node IDs + `nodes.jsonl` manifest
-5. ~~**Add asset downloading**~~ ✅ Partial: Page blocks (image/video/file/pdf) downloaded to `assets/`
+5. ~~**Add asset downloading**~~ ✅ Fixed: Page blocks (image/video/file/pdf) downloaded to `assets/`
 6. ~~**Import child pages/databases**~~ ✅ Fixed: Recursively imports children with deduplication
-7. **Files property assets** - Download files from database record Files properties
-8. **Incremental imports** - Track Notion→mddb ID mapping persistently
+7. ~~**Files property assets**~~ ✅ Fixed: Downloads files from database record Files properties
+8. ~~**Page/database icons and covers**~~ ✅ Fixed: Icon (emoji or file) and cover stored in Node/manifest
+9. **Incremental imports** - Track Notion→mddb ID mapping persistently
 
 ## Dependencies
 

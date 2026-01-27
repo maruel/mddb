@@ -96,6 +96,9 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 			continue
 		}
 
+		// Download icon and cover
+		e.mapper.MapDatabaseIconCover(node, databases[i], e.assets)
+
 		rows, err := e.client.QueryDatabaseAll(ctx, databases[i].ID, nil)
 		if err != nil {
 			e.progress.OnError(fmt.Errorf("database %s: failed to query: %w", databases[i].ID, err))
@@ -279,6 +282,9 @@ func (e *Extractor) extractPage(ctx context.Context, page *Page, opts ExtractOpt
 		return fmt.Errorf("failed to map page: %w", err)
 	}
 
+	// Download icon and cover
+	e.mapper.MapPageIconCover(node, page, e.assets)
+
 	// Get page content if requested
 	var markdown string
 	var childRefs []ChildRef
@@ -347,6 +353,9 @@ func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts Extr
 	if err != nil {
 		return fmt.Errorf("failed to map database: %w", err)
 	}
+
+	// Download icon and cover
+	e.mapper.MapDatabaseIconCover(node, db, e.assets)
 
 	// Clear pending relations for this database
 	e.mapper.ClearPendingRelations()

@@ -68,6 +68,8 @@ type Database struct {
 	URL            string                `json:"url"`
 	Archived       bool                  `json:"archived"`
 	IsInline       bool                  `json:"is_inline"`
+	Icon           *Icon                 `json:"icon,omitempty"`
+	Cover          *File                 `json:"cover,omitempty"`
 }
 
 // DBProperty represents a property definition in a database schema.

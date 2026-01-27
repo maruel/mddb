@@ -198,3 +198,33 @@ func (d *AssetDownloader) ProcessFileValue(nodeID jsonldb.ID, fv *FileValue) (st
 
 	return d.DownloadAsset(nodeID, assetURL)
 }
+
+// ProcessIcon downloads an icon if it's a file and returns the result.
+// Returns the emoji string for emoji icons, or local path for file-based icons.
+func (d *AssetDownloader) ProcessIcon(nodeID jsonldb.ID, icon *Icon) (string, error) {
+	if icon == nil {
+		return "", nil
+	}
+
+	switch icon.Type {
+	case "emoji":
+		return icon.Emoji, nil
+	case "file":
+		if icon.File != nil {
+			return d.DownloadAsset(nodeID, icon.File.URL)
+		}
+	case "external":
+		if icon.External != nil {
+			return d.DownloadAsset(nodeID, icon.External.URL)
+		}
+	}
+	return "", nil
+}
+
+// ProcessCover downloads a cover image and returns the local path.
+func (d *AssetDownloader) ProcessCover(nodeID jsonldb.ID, cover *File) (string, error) {
+	if cover == nil {
+		return "", nil
+	}
+	return d.DownloadAsset(nodeID, cover.URL)
+}

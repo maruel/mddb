@@ -112,6 +112,8 @@ type NodeEntry struct {
 	ParentID jsonldb.ID   `json:"parent_id,omitempty"`
 	Title    string       `json:"title"`
 	Type     string       `json:"type"`
+	Icon     string       `json:"icon,omitempty"`
+	Cover    string       `json:"cover,omitempty"`
 	Created  storage.Time `json:"created"`
 	Modified storage.Time `json:"modified"`
 }
@@ -137,6 +139,8 @@ func (w *Writer) WriteNodeEntry(node *content.Node) (rerr error) {
 		ParentID: node.ParentID,
 		Title:    node.Title,
 		Type:     string(node.Type),
+		Icon:     node.Icon,
+		Cover:    node.Cover,
 		Created:  node.Created,
 		Modified: node.Modified,
 	}

@@ -19,6 +19,8 @@ type Node struct {
 	Modified    storage.Time `json:"modified" jsonschema:"description=Last modification timestamp"`
 	Tags        []string     `json:"tags,omitempty" jsonschema:"description=Node tags for categorization"`
 	FaviconURL  string       `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
+	Icon        string       `json:"icon,omitempty" jsonschema:"description=Node icon (emoji or local asset path)"`
+	Cover       string       `json:"cover,omitempty" jsonschema:"description=Cover image (local asset path)"`
 	Type        NodeType     `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
 	HasChildren bool         `json:"has_children,omitempty" jsonschema:"description=Whether this node has child nodes"`
 	Children    []*Node      `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
