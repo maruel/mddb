@@ -594,6 +594,9 @@ export default function App() {
     // Skip if already loading or loaded this node
     if (loadingNodeId === id || loadedNodeId === id) return;
 
+    // Flush any pending auto-save before switching nodes to prevent data loss
+    debouncedAutoSave.flush();
+
     try {
       loadingNodeId = id;
       setLoading(true);
