@@ -1,0 +1,622 @@
+{
+  "config": {
+    "configFile": "/home/runner/work/mddb/mddb/playwright.config.ts",
+    "rootDir": "/home/runner/work/mddb/mddb/e2e",
+    "forbidOnly": true,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "ci": {
+        "commitHref": "https://github.com/maruel/mddb/commit/14000ccb7c4ce50920e64a3cd2cb0c793252ee67",
+        "commitHash": "14000ccb7c4ce50920e64a3cd2cb0c793252ee67",
+        "buildHref": "https://github.com/maruel/mddb/actions/runs/21407483244"
+      },
+      "gitCommit": {
+        "shortHash": "14000cc",
+        "hash": "14000ccb7c4ce50920e64a3cd2cb0c793252ee67",
+        "subject": "refactor(e2e): simplify verification script and Makefile integration",
+        "body": "refactor(e2e): simplify verification script and Makefile integration\n\n- Replaced the heavyweight `scripts/verify_e2e_data.py` (full workspace/page model, argparse, extensive checks) with a lightweight version that merely scans `./data`, parses minimal front‑matter, and verifies the core e2e expectations (rename‑on‑navigation, rapid rename, content flush, combined title/content, autosave).\n- Dropped the `--verify-e2e` flag and explicit data‑dir argument from the Makefile `e2e` target; the script now runs with default settings.\n- Updated import list and removed unused classes, functions, and CLI handling, reducing the file from 471 lines to ~100 and cutting 391 deletions.\n- Adjusted script shebang and exit handling to match the simplified flow.\n\ntest(e2e): add rename‑race test, verification script and integrate verification into e2e Make target\n\n- New Playwright test `e2e/rename-race.spec.ts` reproduces the page‑rename race condition and includes a control case.\n- New Python script `scripts/verify_e2e_data.py` checks the structure and contents of the e2e data directory (front‑matter, timestamps, expected titles/content, etc.).\n- Updated `Makefile` e2e target to clean `./data-e2e`, run the e2e suite and then invoke the verification script with `--verify-e2e`.\n- fix(editor): flush pending autosave on node navigation to prevent rename loss\n- Added `debouncedAutoSave.flush()` call before loading a new node in `App.tsx` to ensure any pending title/content changes are saved before switching pages.\n- Refactored `utils/debounce.ts` to return a `DebouncedFunction` object with `flush()`, `cancel()`, and `pending()` methods, improving control over debounced calls.\n- Updated the rename‑race e2e test to expect the rename to persist when navigating away quickly and renamed the test suite to “Page rename with navigation”.\n- Added several new e2e tests covering navigation‑flush behavior, rapid renames, content edits, and combined title/content changes.\n- Adjusted asset filenames and updated references in `index.html` and `sw.js` to reflect new hashed build outputs.\n- Enhanced `scripts/verify_e2e_data.py` to verify expectations for the new tests (renamed pages, rapid rename, content modifications, etc.).\n",
+        "author": {
+          "name": "Marc-Antoine Ruel",
+          "email": "maruel@gmail.com",
+          "time": 1769535156000
+        },
+        "committer": {
+          "name": "Marc-Antoine Ruel",
+          "email": "maruel@gmail.com",
+          "time": 1769535156000
+        },
+        "branch": "main"
+      },
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/home/runner/work/mddb/mddb/test-results",
+        "repeatEach": 1,
+        "retries": 2,
+        "metadata": {
+          "ci": {
+            "commitHref": "https://github.com/maruel/mddb/commit/14000ccb7c4ce50920e64a3cd2cb0c793252ee67",
+            "commitHash": "14000ccb7c4ce50920e64a3cd2cb0c793252ee67",
+            "buildHref": "https://github.com/maruel/mddb/actions/runs/21407483244"
+          },
+          "gitCommit": {
+            "shortHash": "14000cc",
+            "hash": "14000ccb7c4ce50920e64a3cd2cb0c793252ee67",
+            "subject": "refactor(e2e): simplify verification script and Makefile integration",
+            "body": "refactor(e2e): simplify verification script and Makefile integration\n\n- Replaced the heavyweight `scripts/verify_e2e_data.py` (full workspace/page model, argparse, extensive checks) with a lightweight version that merely scans `./data`, parses minimal front‑matter, and verifies the core e2e expectations (rename‑on‑navigation, rapid rename, content flush, combined title/content, autosave).\n- Dropped the `--verify-e2e` flag and explicit data‑dir argument from the Makefile `e2e` target; the script now runs with default settings.\n- Updated import list and removed unused classes, functions, and CLI handling, reducing the file from 471 lines to ~100 and cutting 391 deletions.\n- Adjusted script shebang and exit handling to match the simplified flow.\n\ntest(e2e): add rename‑race test, verification script and integrate verification into e2e Make target\n\n- New Playwright test `e2e/rename-race.spec.ts` reproduces the page‑rename race condition and includes a control case.\n- New Python script `scripts/verify_e2e_data.py` checks the structure and contents of the e2e data directory (front‑matter, timestamps, expected titles/content, etc.).\n- Updated `Makefile` e2e target to clean `./data-e2e`, run the e2e suite and then invoke the verification script with `--verify-e2e`.\n- fix(editor): flush pending autosave on node navigation to prevent rename loss\n- Added `debouncedAutoSave.flush()` call before loading a new node in `App.tsx` to ensure any pending title/content changes are saved before switching pages.\n- Refactored `utils/debounce.ts` to return a `DebouncedFunction` object with `flush()`, `cancel()`, and `pending()` methods, improving control over debounced calls.\n- Updated the rename‑race e2e test to expect the rename to persist when navigating away quickly and renamed the test suite to “Page rename with navigation”.\n- Added several new e2e tests covering navigation‑flush behavior, rapid renames, content edits, and combined title/content changes.\n- Adjusted asset filenames and updated references in `index.html` and `sw.js` to reflect new hashed build outputs.\n- Enhanced `scripts/verify_e2e_data.py` to verify expectations for the new tests (renamed pages, rapid rename, content modifications, etc.).\n",
+            "author": {
+              "name": "Marc-Antoine Ruel",
+              "email": "maruel@gmail.com",
+              "time": 1769535156000
+            },
+            "committer": {
+              "name": "Marc-Antoine Ruel",
+              "email": "maruel@gmail.com",
+              "time": 1769535156000
+            },
+            "branch": "main"
+          },
+          "actualWorkers": 1
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/home/runner/work/mddb/mddb/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "html",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "playwright-report/results.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.0",
+    "workers": 1,
+    "webServer": {
+      "command": "TEST_OAUTH=1 DATA_DIR=./data-e2e make dev",
+      "url": "http://localhost:8080/api/health",
+      "reuseExistingServer": false,
+      "timeout": 30000
+    }
+  },
+  "suites": [
+    {
+      "title": "oauth.spec.ts",
+      "file": "oauth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "API routing",
+          "file": "oauth.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "unknown /api/ routes return 404, not SPA",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 33,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:13.721Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-c22248e6f7e3a1307df1",
+              "file": "oauth.spec.ts",
+              "line": 4,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "OAuth Login",
+          "file": "oauth.spec.ts",
+          "line": 15,
+          "column": 6,
+          "specs": [
+            {
+              "title": "login page loads with OAuth buttons",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2508,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:13.774Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-24bb2271671ed8d27c2d",
+              "file": "oauth.spec.ts",
+              "line": 16,
+              "column": 3
+            },
+            {
+              "title": "providers endpoint returns configured providers",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 22,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:20.826Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-db41f15e04d2f888d38a",
+              "file": "oauth.spec.ts",
+              "line": 28,
+              "column": 3
+            },
+            {
+              "title": "clicking Google OAuth button redirects to Google",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 591,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:20.867Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-117b48c048b0ff122b33",
+              "file": "oauth.spec.ts",
+              "line": 38,
+              "column": 3
+            },
+            {
+              "title": "OAuth callback with token sets auth and redirects",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 158,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:21.468Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-f940dc73000d92475ca8",
+              "file": "oauth.spec.ts",
+              "line": 53,
+              "column": 3
+            },
+            {
+              "title": "OAuth callback with valid token logs user in",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 233,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:21.640Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "4f3b0ba727013e05bcc4-f8d30098a9f44b418476",
+              "file": "oauth.spec.ts",
+              "line": 69,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "page-hierarchy.spec.ts",
+      "file": "page-hierarchy.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Page Hierarchy",
+          "file": "page-hierarchy.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "create and navigate page hierarchy",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 823,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:21.898Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2ada34b412574d884e8-9a9a0e3c76165ed18ba7",
+              "file": "page-hierarchy.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "navigate between sibling pages",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 818,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:22.735Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "c2ada34b412574d884e8-dbde86b05ff34c3933fa",
+              "file": "page-hierarchy.spec.ts",
+              "line": 107,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "rename-race.spec.ts",
+      "file": "rename-race.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Page rename with navigation",
+          "file": "rename-race.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "rename page then quickly navigate away - rename must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 971,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:23.580Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-2376877f8c55bd71ef28",
+              "file": "rename-race.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "rename page, wait for autosave, then navigate - rename must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3629,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:24.565Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-d80e0c4cb53a1200e8bb",
+              "file": "rename-race.spec.ts",
+              "line": 105,
+              "column": 3
+            },
+            {
+              "title": "rapid renames with navigation - last rename must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 835,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:28.220Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-107a48b1942e03554eb4",
+              "file": "rename-race.spec.ts",
+              "line": 171,
+              "column": 3
+            },
+            {
+              "title": "rename content then navigate - content must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 825,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:29.068Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-e3f39f982e748bed3885",
+              "file": "rename-race.spec.ts",
+              "line": 250,
+              "column": 3
+            },
+            {
+              "title": "rename and content change then navigate - both must persist",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 828,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-27T17:34:29.904Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "917f3a172765af3ff873-e23c75b249f8bee91f46",
+              "file": "rename-race.spec.ts",
+              "line": 331,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-01-27T17:34:05.289Z",
+    "duration": 25605.269,
+    "expected": 13,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
