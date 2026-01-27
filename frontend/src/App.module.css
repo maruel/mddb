@@ -19,15 +19,19 @@ body {
 .header {
   background: var(--c-primary);
   color: white;
-  padding: var(--s-2) var(--s-4);
+  padding: var(--s-1) var(--s-4);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  min-height: 36px;
 }
 
-.headerTitle h1 {
-  font-size: 1.1rem;
-  font-weight: 600;
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 1;
+  min-width: 0;
 }
 
 .userInfo {
@@ -66,10 +70,10 @@ body {
 }
 
 .editorHeader {
-  padding: var(--s-3);
+  padding: var(--s-2);
   border-bottom: 1px solid var(--c-border);
   display: flex;
-  gap: var(--s-3);
+  gap: var(--s-2);
   align-items: center;
   flex-wrap: wrap;
 }
@@ -104,7 +108,7 @@ body {
 
 .titleInput {
   flex: 1;
-  padding: var(--s-2);
+  padding: var(--s-1);
   font-size: 1.25rem;
   font-weight: 500;
   border: none;
@@ -165,24 +169,28 @@ body {
 .breadcrumbs {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
+  gap: var(--s-1);
   font-size: 0.85rem;
-  color: var(--c-text-light);
-  border-bottom: 1px solid var(--c-border);
+  color: rgba(255, 255, 255, 0.85);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .breadcrumbItem {
   cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .breadcrumbItem:hover {
   text-decoration: underline;
-  color: var(--c-text);
+  color: white;
 }
 
 .breadcrumbSeparator {
-  color: var(--c-border);
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
 }
 
 .contentInput {
@@ -299,7 +307,11 @@ body {
   }
 
   /* Adjust header for mobile */
-  .headerTitle h1 {
-    font-size: 1rem;
+  .header {
+    padding-left: var(--s-2);
+  }
+
+  .breadcrumbs {
+    font-size: 0.8rem;
   }
 }

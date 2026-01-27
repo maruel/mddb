@@ -915,7 +915,7 @@ export default function App() {
           <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
             <div class={styles.app}>
               <header class={styles.header}>
-                <div class={styles.headerTitle}>
+                <div class={styles.headerLeft}>
                   <button
                     class={styles.hamburger}
                     onClick={() => setShowMobileSidebar(!showMobileSidebar())}
@@ -923,7 +923,22 @@ export default function App() {
                   >
                     ☰
                   </button>
-                  <h1>{t('app.title')}</h1>
+                  <Show when={selectedNodeId()}>
+                    <nav class={styles.breadcrumbs}>
+                      <For each={getBreadcrumbs(selectedNodeId())}>
+                        {(crumb, i) => (
+                          <>
+                            <Show when={i() > 0}>
+                              <span class={styles.breadcrumbSeparator}>/</span>
+                            </Show>
+                            <span class={styles.breadcrumbItem} onClick={() => handleNodeClick(crumb)}>
+                              {crumb.title}
+                            </span>
+                          </>
+                        )}
+                      </For>
+                    </nav>
+                  </Show>
                 </div>
                 <div class={styles.userInfo}>
                   <Show when={(user()?.organizations?.length ?? 0) > 1}>
@@ -1053,23 +1068,6 @@ export default function App() {
                   />
 
                   <main class={styles.main}>
-                    <Show when={selectedNodeId()}>
-                      <nav class={styles.breadcrumbs}>
-                        <For each={getBreadcrumbs(selectedNodeId())}>
-                          {(crumb, i) => (
-                            <>
-                              <Show when={i() > 0}>
-                                <span class={styles.breadcrumbSeparator}>/</span>
-                              </Show>
-                              <span class={styles.breadcrumbItem} onClick={() => handleNodeClick(crumb)}>
-                                {crumb.title}
-                              </span>
-                            </>
-                          )}
-                        </For>
-                      </nav>
-                    </Show>
-
                     <Show when={error()} fallback={null}>
                       <div class={styles.error}>{error()}</div>
                     </Show>
