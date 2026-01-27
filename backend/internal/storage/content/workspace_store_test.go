@@ -138,8 +138,8 @@ func TestWorkspaceStore(t *testing.T) {
 			if readPage.Title != "Test Title" {
 				t.Errorf("expected title 'Test Title', got %q", readPage.Title)
 			}
-			if readPage.Content != "\n\n# Test Content" {
-				t.Errorf("expected content '\n\n# Test Content', got %q", readPage.Content)
+			if readPage.Content != "# Test Content" {
+				t.Errorf("expected content '# Test Content', got %q", readPage.Content)
 			}
 		})
 

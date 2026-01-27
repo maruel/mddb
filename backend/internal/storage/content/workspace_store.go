@@ -1412,7 +1412,7 @@ func parseMarkdownFile(data []byte) *page {
 		parts := strings.SplitN(content, "\n---", 2)
 		if len(parts) == 2 {
 			frontMatter := parts[0][4:]
-			content = parts[1]
+			content = strings.TrimLeft(parts[1], "\n")
 			for _, line := range strings.Split(frontMatter, "\n") {
 				switch {
 				case strings.HasPrefix(line, "title:"):

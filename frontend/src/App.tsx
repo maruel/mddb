@@ -282,6 +282,7 @@ export default function App() {
       // No pages exist, create a welcome page
       const newPage = await ws.nodes.page.createPage('0', {
         title: t('welcome.welcomePageTitle'),
+        content: t('welcome.welcomePageContent'),
       });
       return newPage?.id ? String(newPage.id) : null;
     } catch (err) {
