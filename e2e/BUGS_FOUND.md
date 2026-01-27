@@ -39,7 +39,7 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 **Verified via**: E2E test `table-operations.spec.ts` - "delete a record from table" (skipped)
 
-**Fix**: The `handleDeleteRecord` function was calling `loadNode(nodeId)` which has a guard that prevents reloading if the node is already loaded (`loadedNodeId === id`). Changed to directly reload records after deletion instead of calling loadNode.
+**Fix**: The `handleDeleteRecord` function was calling `loadNode()` which silently returned early due to a guard condition. Changed to directly reload records after deletion instead of calling loadNode.
 
 ---
 
@@ -63,7 +63,7 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 ---
 
-## Bug 4: Sidebar title not updating in real-time when editing
+## Bug 4: Sidebar title not updating in real-time when editing - FIXED
 
 **Location**: `frontend/src/App.tsx` - `updateNodeTitle` and sidebar rendering
 
@@ -76,6 +76,8 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 **Impact**: Low - The title does eventually sync after save
 
 **Verified via**: E2E test `page-crud.spec.ts` - "page title updates in sidebar" (flaky)
+
+**Fix**: Modified `fetchNodeChildren` to also update the `nodes` store with loaded children, so `updateNodeTitle` can find and update nested nodes. Also update the `breadcrumbPath` signal when the title changes.
 
 ---
 
@@ -120,7 +122,7 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 ---
 
-## Bug 7: Unsaved indicator timing issues
+## Bug 7: Unsaved indicator timing issues - FIXED
 
 **Location**: `frontend/src/App.tsx` - autosave status signals
 
@@ -133,6 +135,8 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 **Impact**: Low - Autosave still works, but user feedback is inconsistent
 
 **Verified via**: E2E test `page-crud.spec.ts` - "unsaved indicator appears when editing" (skipped)
+
+**Fix**: Made the status indicators mutually exclusive. "Unsaved" now only shows when `hasUnsavedChanges && autoSaveStatus === 'idle'`, preventing it from appearing simultaneously with "Saving..." or "Saved".
 
 ---
 
@@ -171,9 +175,11 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 **Verified via**: E2E test `page-crud.spec.ts` - "version history loads and displays commits" (skipped)
 
+**Analysis**: The frontend code is correct. The issue is likely in the backend's git commit batching or timing. The GetHistory function uses `git log` correctly. This needs backend investigation.
+
 ---
 
-## Bug 10: Invalid workspace ID not handled
+## Bug 10: Invalid workspace ID not handled - FIXED
 
 **Location**: Frontend routing / workspace loading
 
@@ -188,6 +194,8 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 **Verified via**: E2E test `error-handling.spec.ts` - "navigating to non-existent workspace shows error" (skipped)
 
+**Fix**: Added `validateWorkspaceAccess` helper function that checks if the user has access to the workspace. If not, shows an error message and redirects to the user's current valid workspace after 2 seconds. Also added `noAccessToWs` translation key to all language dictionaries.
+
 ---
 
 ## Test Issues Fixed (Not Bugs)
@@ -200,19 +208,22 @@ The following test failures were due to incorrect test selectors, not applicatio
 4. **Sidebar title selector** - Fixed: Use `[class*="pageTitleText"]` instead of `.title`
 5. **Table header selectors** - Fixed: Use `th` element locators
 6. **Code block selector** - Fixed: Use `.first()` when multiple code elements exist
+7. **Mobile editor test** - Fixed: Wait for original title to load before filling with new value
 
 ---
 
-## Recommendations
+## Summary
 
-1. **Add error boundaries**: Invalid workspace IDs should show clear error messages.
+**Fixed**: 9 of 10 bugs
+- Bug 1: Table cell inline editing (auto-focus, keyboard support)
+- Bug 2: Table record deletion (direct record reload)
+- Bug 3: Page deletion (clear loadedNodeId state)
+- Bug 4: Sidebar title updates (store children in nodes, update breadcrumbPath)
+- Bug 5: Breadcrumbs (fetch ancestor chain, breadcrumbPath signal)
+- Bug 6: Mobile sidebar backdrop (z-index, overflow)
+- Bug 7: Unsaved indicator timing (mutually exclusive conditions)
+- Bug 8: Workspace switching (clear all node-related state)
+- Bug 10: Invalid workspace ID (validation, error message, redirect)
 
-2. ~~**Fix mobile sidebar z-index**: The backdrop should have higher z-index than sidebar content for proper click handling.~~ DONE
-
-3. **Implement optimistic updates**: The sidebar title should update immediately when typing.
-
-4. ~~**Add data refresh mechanisms**: Tables and lists should refresh automatically when data changes.~~ DONE
-
-5. **Add e2e-friendly test IDs**: More consistent `data-testid` attributes would make tests more reliable.
-
-6. ~~**Fix breadcrumb rendering**: Ensure breadcrumb path is populated when viewing nested pages.~~ DONE
+**Remaining**: 1 bug (needs backend investigation)
+- Bug 9: Version history (backend git commit timing issue)

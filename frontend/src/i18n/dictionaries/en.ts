@@ -243,7 +243,8 @@ export const dict: Dictionary = {
     failedToRemoveRemote: 'Failed to remove remote',
     pushFailed: 'Push failed',
     autoSaveFailed: 'Auto-save failed',
-    noAccessToOrg: 'You do not have access to this workspace',
+    noAccessToOrg: 'You do not have access to this organization',
+    noAccessToWs: 'You do not have access to this workspace',
   },
 
   success: {

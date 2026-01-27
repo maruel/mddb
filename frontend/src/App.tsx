@@ -290,8 +290,9 @@ export default function App() {
     }
   }
 
-  // Helper to update node title in local state
+  // Helper to update node title in local state (sidebar and breadcrumbs)
   const updateNodeTitle = (nodeId: string, newTitle: string) => {
+    // Update the nodes store (for sidebar)
     setNodes(
       produce((list) => {
         const update = (nodes: NodeResponse[]): boolean => {
@@ -309,6 +310,9 @@ export default function App() {
         update(list);
       })
     );
+
+    // Also update breadcrumb path if the node is in the current path
+    setBreadcrumbPath((path) => path.map((node) => (node.id === nodeId ? { ...node, title: newTitle } : node)));
   };
 
   // Debounced auto-save function
@@ -476,6 +480,27 @@ export default function App() {
     setIsPrivacyPage(false);
     setIsTermsPage(false);
 
+    // Helper to validate workspace access and redirect if invalid
+    const validateWorkspaceAccess = async (wsId: string): Promise<boolean> => {
+      const u = user();
+      if (!u) return false;
+
+      // Check if we are member of this workspace
+      const isMember = u.workspaces?.some((m) => m.workspace_id === wsId);
+      if (!isMember) {
+        setError(t('errors.noAccessToWs') || 'You do not have access to this workspace');
+        // Redirect to user's current workspace after a short delay
+        const currentWsId = u.workspace_id;
+        const currentWsName = u.workspace_name;
+        if (currentWsId) {
+          const wsSlug = slugify(currentWsName || 'workspace');
+          setTimeout(() => window.history.replaceState(null, '', `/w/${currentWsId}+${wsSlug}/`), 2000);
+        }
+        return false;
+      }
+      return true;
+    };
+
     // Check for /w/wsID+wsSlug/nodeID+nodeSlug format
     const matchWithWs = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
     if (matchWithWs && matchWithWs[1] && matchWithWs[2]) {
@@ -485,14 +510,10 @@ export default function App() {
       // If we are logged in but in wrong workspace, switch
       if (user() && user()?.workspace_id !== wsId) {
         try {
-          // Check if we are member of this workspace
-          const isMember = user()?.workspaces?.some((m) => m.workspace_id === wsId);
-          if (isMember) {
-            await switchWorkspace(wsId, false); // Don't redirect to /
-          } else {
-            setError(t('errors.noAccessToWs') || 'You do not have access to this workspace');
+          if (!(await validateWorkspaceAccess(wsId))) {
             return;
           }
+          await switchWorkspace(wsId, false); // Don't redirect to /
         } catch {
           return;
         }
@@ -512,13 +533,10 @@ export default function App() {
       // If we are logged in but in wrong workspace, switch
       if (user() && user()?.workspace_id !== wsId) {
         try {
-          const isMember = user()?.workspaces?.some((m) => m.workspace_id === wsId);
-          if (isMember) {
-            await switchWorkspace(wsId, false);
-          } else {
-            setError(t('errors.noAccessToWs') || 'You do not have access to this workspace');
+          if (!(await validateWorkspaceAccess(wsId))) {
             return;
           }
+          await switchWorkspace(wsId, false);
         } catch {
           return;
         }
@@ -835,13 +853,37 @@ export default function App() {
   };
 
   // Fetch children for a node (used for lazy loading in sidebar)
+  // Also updates the nodes store so that title updates propagate correctly
   async function fetchNodeChildren(nodeId: string): Promise<NodeResponse[]> {
     const ws = wsApi();
     if (!ws) return [];
 
     try {
       const data = await ws.nodes.listNodeChildren(nodeId);
-      return (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
+      const children = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
+
+      // Update the nodes store with the loaded children so updateNodeTitle can find them
+      if (children.length > 0) {
+        setNodes(
+          produce((list) => {
+            const updateChildren = (nodes: NodeResponse[]): boolean => {
+              for (const node of nodes) {
+                if (node.id === nodeId) {
+                  node.children = children;
+                  return true;
+                }
+                if (node.children && updateChildren(node.children)) {
+                  return true;
+                }
+              }
+              return false;
+            };
+            updateChildren(list);
+          })
+        );
+      }
+
+      return children;
     } catch (err) {
       console.error('Failed to fetch children:', err);
       return [];
@@ -1081,7 +1123,7 @@ export default function App() {
                             class={styles.titleInput}
                           />
                           <div class={styles.editorStatus}>
-                            <Show when={hasUnsavedChanges()}>
+                            <Show when={hasUnsavedChanges() && autoSaveStatus() === 'idle'}>
                               <span class={styles.unsavedIndicator}>● {t('editor.unsaved')}</span>
                             </Show>
                             <Show when={autoSaveStatus() === 'saving'}>

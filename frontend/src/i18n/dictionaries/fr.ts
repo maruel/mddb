@@ -243,7 +243,8 @@ export const dict: Dictionary = {
     failedToRemoveRemote: 'Échec de la suppression du dépôt distant',
     pushFailed: 'Échec du push',
     autoSaveFailed: "Échec de l'enregistrement automatique",
-    noAccessToOrg: "Vous n'avez pas accès à cet espace",
+    noAccessToOrg: "Vous n'avez pas accès à cette organisation",
+    noAccessToWs: "Vous n'avez pas accès à cet espace de travail",
   },
 
   success: {

@@ -243,7 +243,8 @@ export const dict: Dictionary = {
     failedToRemoveRemote: 'Remote entfernen fehlgeschlagen',
     pushFailed: 'Push fehlgeschlagen',
     autoSaveFailed: 'Automatisches Speichern fehlgeschlagen',
-    noAccessToOrg: 'Sie haben keinen Zugriff auf diesen Arbeitsbereich',
+    noAccessToOrg: 'Sie haben keinen Zugriff auf diese Organisation',
+    noAccessToWs: 'Sie haben keinen Zugriff auf diesen Arbeitsbereich',
   },
 
   success: {

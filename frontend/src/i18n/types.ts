@@ -244,6 +244,7 @@ export interface Dictionary {
     pushFailed: string;
     autoSaveFailed: string;
     noAccessToOrg: string;
+    noAccessToWs: string;
   };
 
   success: {
