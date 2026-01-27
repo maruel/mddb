@@ -485,6 +485,67 @@ func TestWorkspaceStore(t *testing.T) {
 		}
 	})
 
+	t.Run("NestedPageVersionHistory", func(t *testing.T) {
+		// This test verifies that GetHistory works for nested pages.
+		// Bug fix: GetHistory was using just id.String() as the git path,
+		// but nested pages have commits at paths like {parentID}/{id}/index.md.
+		// The fix uses relativeDir() to include the full parent chain.
+		fs, wsID := testFileStore(t)
+		ctx := t.Context()
+		author := git.Author{Name: "Test", Email: "test@test.com"}
+
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
+		}
+
+		ws, err := fs.GetWorkspaceStore(ctx, wsID)
+		if err != nil {
+			t.Fatalf("failed to get workspace store: %v", err)
+		}
+
+		// Create parent page
+		parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("failed to create parent: %v", err)
+		}
+
+		// Create child page under parent
+		child, err := ws.CreatePageUnderParent(ctx, parent.ID, "Child", "initial content", author)
+		if err != nil {
+			t.Fatalf("failed to create child: %v", err)
+		}
+
+		// Update child page multiple times to create history
+		for i := 1; i <= 3; i++ {
+			if _, err := ws.UpdatePage(ctx, child.ID, "Child", "content v"+string(rune(48+i)), author); err != nil {
+				t.Fatalf("failed to update child page (v%d): %v", i, err)
+			}
+		}
+
+		// Get history for the nested child page
+		history, err := ws.GetHistory(ctx, child.ID, 10)
+		if err != nil {
+			t.Fatalf("failed to get history for nested page: %v", err)
+		}
+
+		// Should have at least 4 commits: 1 create + 3 updates
+		if len(history) < 4 {
+			t.Errorf("expected at least 4 commits for nested page, got %d", len(history))
+		}
+
+		// Verify the history is for the correct file (commit messages should contain the child ID)
+		foundChildCommit := false
+		for _, commit := range history {
+			if strings.Contains(commit.Message, child.ID.String()) {
+				foundChildCommit = true
+				break
+			}
+		}
+		if !foundChildCommit {
+			t.Errorf("history should contain commits for child page %s", child.ID)
+		}
+	})
+
 	t.Run("NodeTree", func(t *testing.T) {
 		fs, wsID := testFileStore(t)
 		ctx := t.Context()

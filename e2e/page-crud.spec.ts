@@ -405,8 +405,7 @@ test.describe('Editor Features', () => {
     await expect(preview.locator('code')).toContainText('code inline');
   });
 
-  // BUG: Version history not loading properly - see BUGS_FOUND.md Bug 9
-  test.skip('version history loads and displays commits', async ({ page, request }) => {
+  test('version history loads and displays commits', async ({ page, request }) => {
     const { token } = await registerUser(request, 'version-history');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -422,9 +421,9 @@ test.describe('Editor Features', () => {
 
     // Update the page a few times to create history
     for (let i = 1; i <= 3; i++) {
-      await request.patch(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
+      await request.post(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
         headers: { Authorization: `Bearer ${token}` },
-        data: { content: `Content version ${i}` },
+        data: { title: 'History Test', content: `Content version ${i}` },
       });
     }
 
@@ -434,16 +433,16 @@ test.describe('Editor Features', () => {
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
     await expect(page.locator('input[placeholder*="Title"]')).toHaveValue('History Test', { timeout: 5000 });
 
-    // Click history button
-    const historyButton = page.locator('button', { hasText: /History|history/ });
+    // Click history button (use exact match to avoid matching workspace button)
+    const historyButton = page.getByRole('button', { name: 'History', exact: true });
     await historyButton.click();
 
     // History panel should appear
-    const historyPanel = page.locator('[class*="history"], [class*="History"]');
+    const historyPanel = page.locator('[class*="historyPanel"]');
     await expect(historyPanel).toBeVisible({ timeout: 5000 });
 
-    // Should show commits
-    const historyItems = historyPanel.locator('li, [class*="historyItem"]');
-    await expect(historyItems).toHaveCount(4, { timeout: 5000 }); // Initial + 3 updates
+    // Should show commits (initial create + 3 updates = 4 commits)
+    const historyItems = historyPanel.locator('li[class*="historyItem"]');
+    await expect(historyItems).toHaveCount(4, { timeout: 5000 });
   });
 });

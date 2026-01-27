@@ -995,7 +995,10 @@ func (ws *WorkspaceFileStore) GetHistory(ctx context.Context, id jsonldb.ID, n i
 	if id.IsZero() {
 		return nil, errPageNotFound // No node with ID 0 exists
 	}
-	return ws.repo.GetHistory(ctx, id.String(), n)
+	// Use the full relative path including parent chain, otherwise nested nodes won't find their history.
+	parentID := ws.getParent(id)
+	path := ws.relativeDir(id, parentID)
+	return ws.repo.GetHistory(ctx, path, n)
 }
 
 // GetFileAtCommit returns the content of a file at a specific commit.
