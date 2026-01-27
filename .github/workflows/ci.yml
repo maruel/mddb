@@ -94,6 +94,19 @@ jobs:
           cd reports
           find . -maxdepth 1 -type d ! -name '.' -printf '%T@ %p\n' | sort -rn | tail -n +21 | cut -d' ' -f2- | xargs -r rm -rf
           cd ..
+          # Generate README.md with links to all reports
+          PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
+          {
+            echo "# Playwright Reports"
+            echo ""
+            echo "[**Latest Report**](${PAGES_URL}/reports/latest/)"
+            echo ""
+            echo "| Commit | Report |"
+            echo "|--------|--------|"
+            for dir in $(ls -t reports/ | grep -v '^latest$'); do
+              echo "| \`${dir}\` | [View Report](${PAGES_URL}/reports/${dir}/) |"
+            done
+          } > README.md
           # Commit and push
           git add -A
           git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
