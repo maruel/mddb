@@ -72,7 +72,15 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 	total := len(databases) + len(pages)
 	e.progress.OnStart(total)
 
-	// Phase 1: Fetch all database rows and pre-assign IDs (for cross-database relation resolution)
+	// Phase 0: Pre-assign mddb IDs to all items for parent resolution
+	for i := range databases {
+		e.mapper.AssignNodeID(databases[i].ID)
+	}
+	for i := range pages {
+		e.mapper.AssignNodeID(pages[i].ID)
+	}
+
+	// Phase 1: Fetch all database rows and map databases
 	dbDataList := make([]*databaseData, 0, len(databases))
 	for i := range databases {
 		node, err := e.mapper.MapDatabase(databases[i])
@@ -115,11 +123,14 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 		// Resolve relation target IDs in schema
 		e.mapper.ResolveRelations(data.node)
 
-		// Write node
+		// Write node and manifest entry
 		if err := e.writer.WriteNode(data.node, ""); err != nil {
 			e.progress.OnError(fmt.Errorf("database %s: failed to write node: %w", data.db.ID, err))
 			stats.Errors++
 			continue
+		}
+		if err := e.writer.WriteNodeEntry(data.node); err != nil {
+			e.progress.OnError(fmt.Errorf("database %s: failed to write manifest: %w", data.db.ID, err))
 		}
 
 		// Map and write records
@@ -258,9 +269,12 @@ func (e *Extractor) extractPage(ctx context.Context, page *Page, opts ExtractOpt
 		}
 	}
 
-	// Write node
+	// Write node and manifest entry
 	if err := e.writer.WriteNode(node, markdown); err != nil {
 		return fmt.Errorf("failed to write node: %w", err)
+	}
+	if err := e.writer.WriteNodeEntry(node); err != nil {
+		return fmt.Errorf("failed to write manifest: %w", err)
 	}
 
 	return nil

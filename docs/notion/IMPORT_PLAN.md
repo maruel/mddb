@@ -13,7 +13,7 @@ Run via `go run ./backend/cmd/notion-import -token $NOTION_TOKEN -workspace "My 
 - ~~Nested blocks not rendered~~ → Block.Children field + recursive markdown converter
 
 **Remaining Issues**:
-- No hierarchy (ParentID not set on nodes)
+- ~~No hierarchy (ParentID not set on nodes)~~ → Now tracked via nodes.jsonl manifest
 - Child pages/databases referenced but not imported as separate nodes
 - Assets not downloaded (Notion file URLs expire)
 
@@ -921,9 +921,11 @@ Files: `client.go`, `types.go`, `extractor.go`, `mapper.go`, `writer.go`, `markd
 | Relations not resolved | `extractor.go` | ✅ Fixed: Two-pass extraction with `AssignRecordID()` |
 | Relation values as Notion IDs | `mapper.go` | ✅ Fixed: Resolves to mddb IDs, prefixes unresolved with `notion:` |
 
-#### 2.2 Hierarchy & Structure (TODO)
+#### 2.2 Hierarchy & Structure (Partial)
 
-- [ ] Set `ParentID` on nodes based on Notion's `Parent` field
+- [x] Set `ParentID` on nodes based on Notion's `Parent` field
+- [x] Pre-assign node IDs before mapping for parent resolution
+- [x] Export hierarchy to `nodes.jsonl` manifest file
 - [ ] Import child pages/databases discovered in block content
 - [ ] Track Notion→mddb ID mapping persistently for incremental imports
 
@@ -985,8 +987,9 @@ cat tmp/import/*/XXXX/index.md
 1. ~~**Fix unique ID bug**~~ ✅ Fixed: `fmt.Sprintf("%s-%d", prefix, n)`
 2. ~~**Wire up relation resolution**~~ ✅ Fixed: Two-pass extraction pre-assigns record IDs
 3. ~~**Fix nested block rendering**~~ ✅ Fixed: Block.Children field + recursive markdown
-4. **Add asset downloading** - Download files before URLs expire
-5. **Set ParentID** - Track hierarchy from Notion Parent field
+4. ~~**Set ParentID**~~ ✅ Fixed: Pre-assign node IDs + `nodes.jsonl` manifest
+5. **Add asset downloading** - Download files before URLs expire
+6. **Import child pages/databases** - Discovered in block content (child_page, child_database blocks)
 
 ## Dependencies
 

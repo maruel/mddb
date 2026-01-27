@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
 
@@ -103,6 +104,53 @@ func (w *Writer) writeMetadata(nodeDir string, node *content.Node) error {
 // TableMetadata is the structure stored in metadata.json.
 type TableMetadata struct {
 	Views []content.View `json:"views,omitempty"`
+}
+
+// NodeEntry is a manifest entry for a node (stored in nodes.jsonl).
+type NodeEntry struct {
+	ID       jsonldb.ID   `json:"id"`
+	ParentID jsonldb.ID   `json:"parent_id,omitempty"`
+	Title    string       `json:"title"`
+	Type     string       `json:"type"`
+	Created  storage.Time `json:"created"`
+	Modified storage.Time `json:"modified"`
+}
+
+// WriteNodeEntry appends a node entry to the manifest file (nodes.jsonl).
+func (w *Writer) WriteNodeEntry(node *content.Node) (rerr error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	path := filepath.Join(w.workspacePath(), "nodes.jsonl")
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G304: path is constructed from validated input
+	if err != nil {
+		return fmt.Errorf("failed to open nodes.jsonl: %w", err)
+	}
+	defer func() {
+		if cerr := f.Close(); cerr != nil && rerr == nil {
+			rerr = fmt.Errorf("failed to close nodes.jsonl: %w", cerr)
+		}
+	}()
+
+	entry := NodeEntry{
+		ID:       node.ID,
+		ParentID: node.ParentID,
+		Title:    node.Title,
+		Type:     string(node.Type),
+		Created:  node.Created,
+		Modified: node.Modified,
+	}
+
+	data, err := json.Marshal(entry)
+	if err != nil {
+		return fmt.Errorf("failed to marshal node entry: %w", err)
+	}
+
+	if _, err := f.Write(append(data, '\n')); err != nil {
+		return fmt.Errorf("failed to write node entry: %w", err)
+	}
+
+	return nil
 }
 
 // getTable returns the jsonldb.Table for a node, creating it if needed.

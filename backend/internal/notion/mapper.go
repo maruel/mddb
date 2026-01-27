@@ -80,9 +80,9 @@ func (m *Mapper) ClearPendingRelations() {
 	m.PendingRelations = make(map[string]string)
 }
 
-// AssignRecordID pre-assigns an mddb ID to a Notion page ID without mapping it.
-// This allows relation resolution to work for records in the same database.
-func (m *Mapper) AssignRecordID(notionID string) jsonldb.ID {
+// AssignNodeID pre-assigns an mddb ID to a Notion page or database ID.
+// This allows parent resolution to work when children are processed before parents.
+func (m *Mapper) AssignNodeID(notionID string) jsonldb.ID {
 	if existing, ok := m.NotionToMddb[notionID]; ok {
 		return existing
 	}
@@ -91,13 +91,24 @@ func (m *Mapper) AssignRecordID(notionID string) jsonldb.ID {
 	return id
 }
 
+// AssignRecordID pre-assigns an mddb ID to a Notion page ID without mapping it.
+// This allows relation resolution to work for records in the same database.
+func (m *Mapper) AssignRecordID(notionID string) jsonldb.ID {
+	return m.AssignNodeID(notionID) // Same logic, different semantic name
+}
+
 // MapDatabase converts a Notion database to an mddb Node.
 func (m *Mapper) MapDatabase(db *Database) (*content.Node, error) {
-	nodeID := jsonldb.NewID()
-	m.NotionToMddb[db.ID] = nodeID
+	// Use pre-assigned ID if available, otherwise create new
+	nodeID, ok := m.NotionToMddb[db.ID]
+	if !ok {
+		nodeID = jsonldb.NewID()
+		m.NotionToMddb[db.ID] = nodeID
+	}
 
 	node := &content.Node{
 		ID:       nodeID,
+		ParentID: m.resolveParentID(db.Parent),
 		Title:    richTextToPlain(db.Title),
 		Type:     content.NodeTypeTable,
 		Created:  storage.ToTime(db.CreatedTime),
@@ -225,13 +236,18 @@ func mapStatusOptions(opts []StatusOption) []content.SelectOption {
 
 // MapPage converts a Notion page (standalone) to an mddb Node.
 func (m *Mapper) MapPage(page *Page) (*content.Node, error) {
-	nodeID := jsonldb.NewID()
-	m.NotionToMddb[page.ID] = nodeID
+	// Use pre-assigned ID if available, otherwise create new
+	nodeID, ok := m.NotionToMddb[page.ID]
+	if !ok {
+		nodeID = jsonldb.NewID()
+		m.NotionToMddb[page.ID] = nodeID
+	}
 
 	title := extractPageTitle(page)
 
 	node := &content.Node{
 		ID:       nodeID,
+		ParentID: m.resolveParentID(page.Parent),
 		Title:    title,
 		Type:     content.NodeTypeDocument,
 		Created:  storage.ToTime(page.CreatedTime),
@@ -239,6 +255,44 @@ func (m *Mapper) MapPage(page *Page) (*content.Node, error) {
 	}
 
 	return node, nil
+}
+
+// resolveParentID converts a Notion Parent to an mddb node ID.
+// Returns zero ID for workspace-level items or unresolved parents.
+func (m *Mapper) resolveParentID(parent Parent) jsonldb.ID {
+	var notionID string
+	switch parent.Type {
+	case "page_id":
+		notionID = parent.PageID
+	case "database_id":
+		notionID = parent.DatabaseID
+	case "block_id":
+		notionID = parent.BlockID
+	case "workspace":
+		// Workspace-level items have no parent in mddb
+		return 0
+	default:
+		return 0
+	}
+
+	// Try exact match first
+	if mddbID, ok := m.NotionToMddb[notionID]; ok {
+		return mddbID
+	}
+
+	// Try normalized ID (Notion sometimes uses UUIDs with/without dashes)
+	normalizedID := strings.ReplaceAll(notionID, "-", "")
+	for notionKey, mddbID := range m.NotionToMddb {
+		if strings.ReplaceAll(notionKey, "-", "") == normalizedID {
+			return mddbID
+		}
+	}
+
+	// Parent not yet imported - return zero ID
+	// This happens for:
+	// - Child pages/databases whose parents weren't selected for import
+	// - Block-level inline databases
+	return 0
 }
 
 // MapDatabasePage converts a Notion page (database row) to an mddb DataRecord.
