@@ -121,6 +121,37 @@
   background-color: var(--c-bg-alt);
 }
 
+.contextMenuDivider {
+  height: 1px;
+  background: var(--c-border);
+  margin: var(--s-1) 0;
+}
+
+/* Hover delete button */
+.hoverDeleteButton {
+  margin-left: auto;
+  padding: 2px 4px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  opacity: 0;
+  transition:
+    opacity var(--transition),
+    background var(--transition);
+  line-height: 1;
+}
+
+.pageItem:hover .hoverDeleteButton {
+  opacity: 0.6;
+}
+
+.hoverDeleteButton:hover {
+  opacity: 1;
+  background: var(--c-bg);
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;

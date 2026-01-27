@@ -780,74 +780,6 @@ export default function App() {
     }
   }
 
-  async function saveNode() {
-    const nodeId = selectedNodeId();
-    const ws = wsApi();
-    if (!nodeId || !ws) return;
-
-    try {
-      setLoading(true);
-      await ws.nodes.page.updatePage(nodeId, { title: title(), content: content() });
-      await loadNodes(true);
-      setHasUnsavedChanges(false);
-      setAutoSaveStatus('idle');
-      setError(null);
-
-      // Update URL if title changed
-      const slug = slugify(title());
-      const currentPath = window.location.pathname;
-      const wsId = user()?.workspace_id;
-      const wsName = user()?.workspace_name;
-      if (wsId) {
-        const wsSlug = slugify(wsName || 'workspace');
-        const newPath = `/w/${wsId}+${wsSlug}/${nodeId}${slug ? '+' + slug : ''}`;
-        if (currentPath !== newPath) {
-          window.history.replaceState(null, '', newPath);
-        }
-      }
-    } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function deleteCurrentNode() {
-    const nodeId = selectedNodeId();
-    const ws = wsApi();
-    if (!nodeId || !ws) return;
-
-    if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
-
-    try {
-      setLoading(true);
-      await ws.nodes.deleteNode(nodeId);
-      // Clear loadedNodeId to prevent stale state when navigating to a new page
-      loadedNodeId = null;
-      await loadNodes(true);
-      setSelectedNodeId(null);
-      setSelectedNodeData(null);
-      setTitle('');
-      setContent('');
-      setRecords([]);
-      setHasUnsavedChanges(false);
-      setAutoSaveStatus('idle');
-      setError(null);
-      const wsId = user()?.workspace_id;
-      const wsName = user()?.workspace_name;
-      if (wsId) {
-        const wsSlug = slugify(wsName || 'workspace');
-        window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
-      } else {
-        window.history.pushState(null, '', '/');
-      }
-    } catch (err) {
-      setError(`${t('errors.failedToDelete')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const handleNodeClick = (node: NodeResponse) => {
     loadNode(node.id);
     setShowMobileSidebar(false);
@@ -1081,6 +1013,43 @@ export default function App() {
                     onSelectNode={handleNodeClick}
                     onCloseMobileSidebar={() => setShowMobileSidebar(false)}
                     onFetchChildren={fetchNodeChildren}
+                    onDeleteNode={async (nodeId: string) => {
+                      if (!confirm(t('table.confirmDeleteRecord') || 'Delete this item?')) return;
+                      const ws = wsApi();
+                      if (!ws) return;
+                      try {
+                        setLoading(true);
+                        await ws.nodes.deleteNode(nodeId);
+                        // Clear loadedNodeId if deleting the current node
+                        if (nodeId === selectedNodeId()) {
+                          loadedNodeId = null;
+                          setSelectedNodeId(null);
+                          setSelectedNodeData(null);
+                          setTitle('');
+                          setContent('');
+                          setRecords([]);
+                          const wsId = user()?.workspace_id;
+                          const wsName = user()?.workspace_name;
+                          if (wsId) {
+                            const wsSlug = slugify(wsName || 'workspace');
+                            window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
+                          }
+                        }
+                        await loadNodes(true);
+                      } catch (err) {
+                        setError(`${t('errors.failedToDelete')}: ${err}`);
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    onShowHistory={(nodeId: string) => {
+                      // Navigate to the node first if not already selected
+                      if (nodeId !== selectedNodeId()) {
+                        loadNode(nodeId).then(() => loadHistory(nodeId));
+                      } else {
+                        loadHistory(nodeId);
+                      }
+                    }}
                   />
 
                   <main class={styles.main}>
@@ -1133,23 +1102,6 @@ export default function App() {
                             <Show when={autoSaveStatus() === 'saved'}>
                               <span class={styles.savedIndicator}>✓ {t('common.saved')}</span>
                             </Show>
-                          </div>
-                          <div class={styles.editorActions}>
-                            <button
-                              onClick={() => {
-                                const id = selectedNodeId();
-                                if (id) loadHistory(id);
-                              }}
-                              disabled={loading()}
-                            >
-                              {showHistory() ? t('editor.hideHistory') : t('editor.history')}
-                            </button>
-                            <button onClick={saveNode} disabled={loading()}>
-                              {loading() ? t('common.saving') : t('common.save')}
-                            </button>
-                            <button onClick={deleteCurrentNode} disabled={loading()}>
-                              {t('common.delete')}
-                            </button>
                           </div>
                         </div>
 

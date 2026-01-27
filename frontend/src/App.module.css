@@ -112,31 +112,6 @@ body {
   background: transparent;
 }
 
-.editorActions {
-  display: flex;
-  gap: var(--s-2);
-}
-
-.editorActions button {
-  padding: var(--s-2) var(--s-4);
-  background: var(--c-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: background var(--transition);
-}
-
-.editorActions button:hover:not(:disabled) {
-  background: var(--c-primary-hover);
-}
-
-.editorActions button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .nodeContent {
   display: flex;
   flex-direction: column;

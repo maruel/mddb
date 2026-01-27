@@ -13,6 +13,8 @@ interface SidebarNodeResponseProps {
   onCreateChildPage: (parentId: string) => void;
   onCreateChildTable: (parentId: string) => void;
   onFetchChildren?: (nodeId: string) => Promise<NodeResponse[]>;
+  onDeleteNode?: (nodeId: string) => void;
+  onShowHistory?: (nodeId: string) => void;
   depth: number;
   // Children loaded from parent's pre-fetch
   prefetchedChildren?: Map<string, NodeResponse[]>;
@@ -150,6 +152,16 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
         </span>
         <span class={styles.nodeIcon}>{props.node.has_table && !props.node.has_page ? '📊' : '📄'}</span>
         <span class={styles.pageTitleText}>{props.node.title}</span>
+        <button
+          class={styles.hoverDeleteButton}
+          onClick={(e) => {
+            e.stopPropagation();
+            props.onDeleteNode?.(props.node.id);
+          }}
+          title={t('common.delete') || 'Delete'}
+        >
+          🗑
+        </button>
       </div>
 
       <Show when={showContextMenu()}>
@@ -176,6 +188,16 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
           >
             📊 {t('app.createSubTable')}
           </button>
+          <div class={styles.contextMenuDivider} />
+          <button
+            class={styles.contextMenuItem}
+            onClick={() => {
+              props.onShowHistory?.(props.node.id);
+              setShowContextMenu(false);
+            }}
+          >
+            🕐 {t('editor.history')}
+          </button>
         </div>
       </Show>
 
@@ -190,6 +212,8 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
                 onCreateChildPage={props.onCreateChildPage}
                 onCreateChildTable={props.onCreateChildTable}
                 onFetchChildren={props.onFetchChildren}
+                onDeleteNode={props.onDeleteNode}
+                onShowHistory={props.onShowHistory}
                 depth={props.depth + 1}
                 prefetchedChildren={prefetchCache()}
               />

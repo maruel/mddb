@@ -18,6 +18,8 @@ interface SidebarProps {
   onSelectNode: (node: NodeResponse) => void;
   onCloseMobileSidebar: () => void;
   onFetchChildren?: (nodeId: string) => Promise<NodeResponse[]>;
+  onDeleteNode?: (nodeId: string) => void;
+  onShowHistory?: (nodeId: string) => void;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -51,6 +53,8 @@ export default function Sidebar(props: SidebarProps) {
               onCreateChildPage={props.onCreateChildPage}
               onCreateChildTable={props.onCreateChildTable}
               onFetchChildren={props.onFetchChildren}
+              onDeleteNode={props.onDeleteNode}
+              onShowHistory={props.onShowHistory}
               depth={0}
             />
           )}
