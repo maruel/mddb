@@ -1,7 +1,7 @@
 import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('Table Creation and Basic Operations', () => {
-  test('create a table with properties and view it', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('create a table with properties and view it', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'table-create');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -192,7 +192,7 @@ test.describe('Table Creation and Basic Operations', () => {
 });
 
 test.describe('Table View Modes', () => {
-  test('switch between table, grid, gallery, and board views', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('switch between table, grid, gallery, and board views', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'view-modes');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });

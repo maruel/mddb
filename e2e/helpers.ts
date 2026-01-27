@@ -61,9 +61,9 @@ export const test = base.extend<{ takeScreenshot: ScreenshotFn }>({
         fullPage: options.fullPage ?? false,
       });
 
-      // Add annotation on first screenshot - shows as tag in HTML report
+      // Add annotation on first screenshot - visible in test details panel
       if (!hasScreenshot) {
-        testInfo.annotations.push({ type: 'screenshot', description: 'Has screenshots' });
+        testInfo.annotations.push({ type: 'screenshot', description: 'This test captures screenshots' });
         hasScreenshot = true;
       }
 
@@ -76,5 +76,11 @@ export const test = base.extend<{ takeScreenshot: ScreenshotFn }>({
     await use(screenshotFn);
   }, { scope: 'test' }],
 });
+
+// Helper to create a test with @screenshot tag visible in test list
+// Usage: test.screenshot('test name', async ({ page, takeScreenshot }) => { ... })
+test.screenshot = (title: string, fn: Parameters<typeof test>[1]) => {
+  return test(title, { tag: '@screenshot' }, fn);
+};
 
 export { expect } from '@playwright/test';

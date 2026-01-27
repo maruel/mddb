@@ -64,6 +64,7 @@ e2e: build
 	@rm -rf ./data-e2e
 	@TEST_OAUTH=1 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test:e2e
 	@./scripts/verify_e2e_data.py
+	@node e2e/inject-tag-colors.cjs
 
 coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...

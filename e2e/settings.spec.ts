@@ -13,7 +13,7 @@ async function openUserMenuAndClick(page: any, optionText: string) {
 }
 
 test.describe('User Profile Settings', () => {
-  test('navigate to profile and verify user info displayed', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('navigate to profile and verify user info displayed', async ({ page, request, takeScreenshot }) => {
     const { email, token } = await registerUser(request, 'profile-view');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -116,7 +116,7 @@ test.describe('Workspace Settings', () => {
     await expect(page.getByRole('button', { name: 'Workspace', exact: true })).toBeVisible();
   });
 
-  test('workspace settings tabs navigation', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('workspace settings tabs navigation', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'ws-tabs');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -214,7 +214,7 @@ test.describe('Authentication', () => {
     await expect(page.locator('form')).toBeVisible({ timeout: 10000 });
   });
 
-  test('invalid token redirects to login', async ({ page, takeScreenshot }) => {
+  test.screenshot('invalid token redirects to login', async ({ page, takeScreenshot }) => {
     // Try to access with an invalid token
     await page.goto('/?token=invalid_token_12345');
 

@@ -6,7 +6,7 @@ test.use({
 });
 
 test.describe('Mobile UI - Sidebar Toggle', () => {
-  test('hamburger menu shows and hides sidebar', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('hamburger menu shows and hides sidebar', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'mobile-sidebar');
     await page.goto(`/?token=${token}`);
 
@@ -97,7 +97,7 @@ test.describe('Mobile UI - Sidebar Toggle', () => {
 });
 
 test.describe('Mobile UI - Layout', () => {
-  test('content area uses full width on mobile', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('content area uses full width on mobile', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'mobile-layout');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('header')).toBeVisible({ timeout: 10000 });

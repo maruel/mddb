@@ -156,7 +156,7 @@ test.describe('Page CRUD Operations', () => {
 });
 
 test.describe('Page Navigation', () => {
-  test('browser back button navigates between pages', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('browser back button navigates between pages', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'browser-nav');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -307,7 +307,7 @@ test.describe('Page Navigation', () => {
 });
 
 test.describe('Editor Features', () => {
-  test('markdown preview renders correctly', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('markdown preview renders correctly', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'markdown-preview');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -345,7 +345,7 @@ test.describe('Editor Features', () => {
     await takeScreenshot('markdown-preview');
   });
 
-  test('version history loads and displays commits', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('version history loads and displays commits', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'version-history');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });

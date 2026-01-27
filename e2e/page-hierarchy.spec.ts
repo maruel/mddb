@@ -1,7 +1,7 @@
 import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('Page Hierarchy', () => {
-  test('create and navigate page hierarchy', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('create and navigate page hierarchy', async ({ page, request, takeScreenshot }) => {
     // 1. Register a new user
     const email = `hierarchy-${Date.now()}@example.com`;
     const registerResponse = await request.post('/api/auth/register', {
