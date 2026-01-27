@@ -26,20 +26,50 @@ export async function getWorkspaceId(page: Page): Promise<string> {
   return wsMatch![1];
 }
 
+// Convert text to a filesystem-safe slug
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 50);
+}
+
 // Screenshot helper type
 type ScreenshotFn = (name: string, options?: { fullPage?: boolean }) => Promise<void>;
 
 // Extended test with takeScreenshot fixture
 export const test = base.extend<{ takeScreenshot: ScreenshotFn }>({
   takeScreenshot: [async ({ page }, use, testInfo) => {
+    let hasScreenshot = false;
+    let screenshotIndex = 0;
+
     const screenshotFn: ScreenshotFn = async (name, options = {}) => {
-      const screenshot = await page.screenshot({
+      screenshotIndex++;
+      const nameSlug = slugify(name);
+
+      // Create meaningful filename: index_screenshot-name.png
+      // Playwright stores in test output dir which already has test name in path
+      const filename = `${screenshotIndex.toString().padStart(2, '0')}_${nameSlug}.png`;
+
+      // Use testInfo.outputPath for proper test output directory
+      const screenshotPath = testInfo.outputPath(filename);
+
+      // Save screenshot with meaningful name
+      await page.screenshot({
+        path: screenshotPath,
         fullPage: options.fullPage ?? false,
       });
 
-      // Attach to test report - will be visible in HTML report
+      // Add annotation on first screenshot - shows as tag in HTML report
+      if (!hasScreenshot) {
+        testInfo.annotations.push({ type: 'screenshot', description: 'Has screenshots' });
+        hasScreenshot = true;
+      }
+
+      // Attach to test report for inline viewing (uses the file we just saved)
       await testInfo.attach(name, {
-        body: screenshot,
+        path: screenshotPath,
         contentType: 'image/png',
       });
     };
