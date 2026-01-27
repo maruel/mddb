@@ -1,0 +1,234 @@
+import { test, expect } from '@playwright/test';
+
+// Helper to register a user and get token
+async function registerUser(request: any, prefix: string) {
+  const email = `${prefix}-${Date.now()}@example.com`;
+  const registerResponse = await request.post('/api/auth/register', {
+    data: {
+      email,
+      password: 'testpassword123',
+      name: `${prefix} Test User`,
+    },
+  });
+  expect(registerResponse.ok()).toBe(true);
+  const { token } = await registerResponse.json();
+  return { email, token };
+}
+
+// Helper to open user menu and click an option
+async function openUserMenuAndClick(page: any, optionText: string) {
+  // Click on user menu avatar button (shows initials like "PT")
+  const avatarButton = page.locator('[class*="avatarButton"]').first();
+  await avatarButton.click();
+
+  // Click on option in dropdown (use exact match to avoid matching workspace button)
+  const option = page.getByRole('button', { name: optionText, exact: true });
+  await expect(option).toBeVisible({ timeout: 3000 });
+  await option.click();
+}
+
+test.describe('User Profile Settings', () => {
+  test('navigate to profile and verify user info displayed', async ({ page, request }) => {
+    const { email, token } = await registerUser(request, 'profile-view');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    await openUserMenuAndClick(page, 'Profile');
+
+    // Should navigate to profile page
+    await expect(page).toHaveURL('/profile', { timeout: 5000 });
+
+    // User info should be displayed
+    await expect(page.getByText(email)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('profile-view Test User')).toBeVisible();
+  });
+
+  test('change language setting and verify UI updates', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'language-change');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    await openUserMenuAndClick(page, 'Profile');
+    await expect(page).toHaveURL('/profile', { timeout: 5000 });
+
+    // Find language selector
+    const languageSelect = page.locator('select').filter({ has: page.locator('option[value="en"]') });
+    await expect(languageSelect).toBeVisible({ timeout: 5000 });
+
+    // Change to French
+    await languageSelect.selectOption('fr');
+
+    // Save changes
+    const saveButton = page.locator('button[type="submit"]');
+    await saveButton.click();
+
+    // Should show success message (in French or English)
+    await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('change theme setting', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'theme-change');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    await openUserMenuAndClick(page, 'Profile');
+    await expect(page).toHaveURL('/profile', { timeout: 5000 });
+
+    // Find theme selector
+    const themeSelect = page.locator('select').filter({ has: page.locator('option[value="dark"]') });
+    await expect(themeSelect).toBeVisible({ timeout: 5000 });
+
+    // Change to dark
+    await themeSelect.selectOption('dark');
+
+    // Save
+    const saveButton = page.locator('button[type="submit"]');
+    await saveButton.click();
+
+    await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('back button returns to previous page', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'profile-back');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    await openUserMenuAndClick(page, 'Profile');
+    await expect(page).toHaveURL('/profile', { timeout: 5000 });
+
+    // Click back button
+    const backButton = page.locator('button', { hasText: /Back|←/ });
+    await backButton.click();
+
+    // Should return to workspace view
+    await expect(page.locator('aside')).toBeVisible({ timeout: 5000 });
+    await expect(page).not.toHaveURL('/profile');
+  });
+});
+
+test.describe('Workspace Settings', () => {
+  test('navigate to workspace settings via workspace menu', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'ws-settings');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Click on workspace menu button (shows workspace name with dropdown arrow)
+    const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
+    await wsMenuButton.click();
+
+    // Look for settings option with gear icon
+    const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
+    await expect(settingsOption).toBeVisible({ timeout: 3000 });
+    await settingsOption.click();
+
+    // Should be on settings page
+    await expect(page).toHaveURL('/settings', { timeout: 5000 });
+
+    // Settings tabs should be visible (use exact: true to avoid matching workspace button in header)
+    await expect(page.getByRole('button', { name: 'Members', exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: 'Workspace', exact: true })).toBeVisible();
+  });
+
+  test('workspace settings tabs navigation', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'ws-tabs');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to settings via workspace menu
+    const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
+    await wsMenuButton.click();
+    await page.locator('button', { hasText: /Workspace Settings|⚙/ }).click();
+    await expect(page).toHaveURL('/settings', { timeout: 5000 });
+
+    // Click Members tab (use exact match to avoid conflicts)
+    const membersTab = page.getByRole('button', { name: 'Members', exact: true });
+    await membersTab.click();
+    await expect(membersTab).toHaveClass(/active/i, { timeout: 3000 });
+
+    // Click Workspace tab (use exact match)
+    const workspaceTab = page.getByRole('button', { name: 'Workspace', exact: true });
+    await workspaceTab.click();
+    await expect(workspaceTab).toHaveClass(/active/i, { timeout: 3000 });
+
+    // Git Sync tab (only for admins)
+    const gitTab = page.getByRole('button', { name: 'Git Sync', exact: true });
+    if (await gitTab.isVisible()) {
+      await gitTab.click();
+      await expect(gitTab).toHaveClass(/active/i, { timeout: 3000 });
+    }
+  });
+
+  test('members list shows current user', async ({ page, request }) => {
+    const { email, token } = await registerUser(request, 'members-list');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to settings
+    const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
+    await wsMenuButton.click();
+    await page.locator('button', { hasText: /Workspace Settings|⚙/ }).click();
+    await expect(page).toHaveURL('/settings', { timeout: 5000 });
+
+    // Members tab should be active by default - click to be sure
+    const membersTab = page.getByRole('button', { name: 'Members', exact: true });
+    await membersTab.click();
+
+    // Current user should be in the list
+    await expect(page.getByText(email)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('members-list Test User')).toBeVisible();
+  });
+
+  test('rename workspace', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'rename-ws');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to settings
+    const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
+    await wsMenuButton.click();
+    await page.locator('button', { hasText: /Workspace Settings|⚙/ }).click();
+    await expect(page).toHaveURL('/settings', { timeout: 5000 });
+
+    // Click Workspace tab (use exact match to avoid matching workspace button in header)
+    const workspaceTab = page.getByRole('button', { name: 'Workspace', exact: true });
+    await workspaceTab.click();
+
+    // Find workspace name input (labeled "Workspace Name")
+    const wsNameInput = page.locator('input[type="text"]').nth(1); // Second text input (first is org name)
+    await expect(wsNameInput).toBeVisible({ timeout: 5000 });
+
+    // Change the name
+    await wsNameInput.fill('Renamed Workspace');
+
+    // Save
+    const saveButton = page.locator('button[type="submit"]');
+    await saveButton.click();
+
+    // Should show success
+    await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
+  });
+});
+
+test.describe('Authentication', () => {
+  test('logout clears session and redirects to login', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'logout-test');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    await openUserMenuAndClick(page, 'Logout');
+
+    // Logout is async - wait for the sidebar to disappear first
+    await expect(page.locator('aside')).not.toBeVisible({ timeout: 10000 });
+
+    // Should see login form (auth page)
+    await expect(page.locator('form')).toBeVisible({ timeout: 10000 });
+  });
+
+  test('invalid token redirects to login', async ({ page }) => {
+    // Try to access with an invalid token
+    await page.goto('/?token=invalid_token_12345');
+
+    // Should eventually see login form after auth failure
+    await expect(page.locator('form')).toBeVisible({ timeout: 10000 });
+  });
+});
