@@ -1,28 +1,4 @@
-import { test, expect } from '@playwright/test';
-
-// Helper to register a user and get token
-async function registerUser(request: any, prefix: string) {
-  const email = `${prefix}-${Date.now()}@example.com`;
-  const registerResponse = await request.post('/api/auth/register', {
-    data: {
-      email,
-      password: 'testpassword123',
-      name: `${prefix} Test User`,
-    },
-  });
-  expect(registerResponse.ok()).toBe(true);
-  const { token } = await registerResponse.json();
-  return { email, token };
-}
-
-// Helper to get workspace ID from URL
-async function getWorkspaceId(page: any): Promise<string> {
-  await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-  const url = page.url();
-  const wsMatch = url.match(/\/w\/([^+/]+)/);
-  expect(wsMatch).toBeTruthy();
-  return wsMatch![1];
-}
+import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('Error Handling - Invalid Routes', () => {
   test('navigating to non-existent page shows appropriate error or handles gracefully', async ({ page, request }) => {

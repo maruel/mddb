@@ -1,19 +1,4 @@
-import { test, expect } from '@playwright/test';
-
-// Helper to register a user and get token
-async function registerUser(request: any, prefix: string) {
-  const email = `${prefix}-${Date.now()}@example.com`;
-  const registerResponse = await request.post('/api/auth/register', {
-    data: {
-      email,
-      password: 'testpassword123',
-      name: `${prefix} Test User`,
-    },
-  });
-  expect(registerResponse.ok()).toBe(true);
-  const { token } = await registerResponse.json();
-  return { email, token };
-}
+import { test, expect, registerUser } from './helpers';
 
 // Helper to open user menu and click an option
 async function openUserMenuAndClick(page: any, optionText: string) {
@@ -28,7 +13,7 @@ async function openUserMenuAndClick(page: any, optionText: string) {
 }
 
 test.describe('User Profile Settings', () => {
-  test('navigate to profile and verify user info displayed', async ({ page, request }) => {
+  test('navigate to profile and verify user info displayed', async ({ page, request, takeScreenshot }) => {
     const { email, token } = await registerUser(request, 'profile-view');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -41,6 +26,8 @@ test.describe('User Profile Settings', () => {
     // User info should be displayed
     await expect(page.getByText(email)).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('profile-view Test User')).toBeVisible();
+
+    await takeScreenshot('profile-page');
   });
 
   test('change language setting and verify UI updates', async ({ page, request }) => {
@@ -129,7 +116,7 @@ test.describe('Workspace Settings', () => {
     await expect(page.getByRole('button', { name: 'Workspace', exact: true })).toBeVisible();
   });
 
-  test('workspace settings tabs navigation', async ({ page, request }) => {
+  test('workspace settings tabs navigation', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'ws-tabs');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -144,17 +131,20 @@ test.describe('Workspace Settings', () => {
     const membersTab = page.getByRole('button', { name: 'Members', exact: true });
     await membersTab.click();
     await expect(membersTab).toHaveClass(/active/i, { timeout: 3000 });
+    await takeScreenshot('settings-members');
 
     // Click Workspace tab (use exact match)
     const workspaceTab = page.getByRole('button', { name: 'Workspace', exact: true });
     await workspaceTab.click();
     await expect(workspaceTab).toHaveClass(/active/i, { timeout: 3000 });
+    await takeScreenshot('settings-workspace');
 
     // Git Sync tab (only for admins)
     const gitTab = page.getByRole('button', { name: 'Git Sync', exact: true });
     if (await gitTab.isVisible()) {
       await gitTab.click();
       await expect(gitTab).toHaveClass(/active/i, { timeout: 3000 });
+      await takeScreenshot('settings-git-sync');
     }
   });
 
@@ -224,11 +214,13 @@ test.describe('Authentication', () => {
     await expect(page.locator('form')).toBeVisible({ timeout: 10000 });
   });
 
-  test('invalid token redirects to login', async ({ page }) => {
+  test('invalid token redirects to login', async ({ page, takeScreenshot }) => {
     // Try to access with an invalid token
     await page.goto('/?token=invalid_token_12345');
 
     // Should eventually see login form after auth failure
     await expect(page.locator('form')).toBeVisible({ timeout: 10000 });
+
+    await takeScreenshot('login-page');
   });
 });

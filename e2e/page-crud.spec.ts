@@ -1,28 +1,4 @@
-import { test, expect } from '@playwright/test';
-
-// Helper to register a user and get token
-async function registerUser(request: any, prefix: string) {
-  const email = `${prefix}-${Date.now()}@example.com`;
-  const registerResponse = await request.post('/api/auth/register', {
-    data: {
-      email,
-      password: 'testpassword123',
-      name: `${prefix} Test User`,
-    },
-  });
-  expect(registerResponse.ok()).toBe(true);
-  const { token } = await registerResponse.json();
-  return { email, token };
-}
-
-// Helper to get workspace ID from URL
-async function getWorkspaceId(page: any): Promise<string> {
-  await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-  const url = page.url();
-  const wsMatch = url.match(/\/w\/([^+/]+)/);
-  expect(wsMatch).toBeTruthy();
-  return wsMatch![1];
-}
+import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('Page CRUD Operations', () => {
   // BUG: Page deletion not working - see BUGS_FOUND.md Bug 3
@@ -220,7 +196,7 @@ test.describe('Page CRUD Operations', () => {
 });
 
 test.describe('Page Navigation', () => {
-  test('browser back button navigates between pages', async ({ page, request }) => {
+  test('browser back button navigates between pages', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'browser-nav');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -242,14 +218,17 @@ test.describe('Page Navigation', () => {
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await takeScreenshot('workspace-with-pages');
 
     // Navigate to page 1
     await page.locator(`[data-testid="sidebar-node-${page1Data.id}"]`).click();
     await expect(page.getByText('Content of page 1')).toBeVisible({ timeout: 5000 });
+    await takeScreenshot('page1-view');
 
     // Navigate to page 2
     await page.locator(`[data-testid="sidebar-node-${page2Data.id}"]`).click();
     await expect(page.getByText('Content of page 2')).toBeVisible({ timeout: 5000 });
+    await takeScreenshot('page2-view');
 
     // Click browser back button
     await page.goBack();
@@ -369,7 +348,7 @@ test.describe('Page Navigation', () => {
 });
 
 test.describe('Editor Features', () => {
-  test('markdown preview renders correctly', async ({ page, request }) => {
+  test('markdown preview renders correctly', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'markdown-preview');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -403,9 +382,11 @@ test.describe('Editor Features', () => {
     await expect(preview.locator('strong')).toContainText('Bold text');
     await expect(preview.locator('li').first()).toContainText('List item 1');
     await expect(preview.locator('code')).toContainText('code inline');
+
+    await takeScreenshot('markdown-preview');
   });
 
-  test('version history loads and displays commits', async ({ page, request }) => {
+  test('version history loads and displays commits', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'version-history');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -430,11 +411,13 @@ test.describe('Editor Features', () => {
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
-    await expect(page.locator('input[placeholder*="Title"]')).toHaveValue('History Test', { timeout: 5000 });
+    // Right-click on the sidebar node to open context menu
+    const sidebarNode = page.locator(`[data-testid="sidebar-node-${pageData.id}"]`);
+    await sidebarNode.click({ button: 'right' });
 
-    // Click history button (use exact match to avoid matching workspace button)
-    const historyButton = page.getByRole('button', { name: 'History', exact: true });
+    // Click History option in context menu (has clock emoji prefix)
+    const historyButton = page.locator('button', { hasText: /🕐.*History/ });
+    await expect(historyButton).toBeVisible({ timeout: 3000 });
     await historyButton.click();
 
     // History panel should appear
@@ -444,5 +427,7 @@ test.describe('Editor Features', () => {
     // Should show commits (initial create + 3 updates = 4 commits)
     const historyItems = historyPanel.locator('li[class*="historyItem"]');
     await expect(historyItems).toHaveCount(4, { timeout: 5000 });
+
+    await takeScreenshot('version-history-panel');
   });
 });

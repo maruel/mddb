@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers';
 
 test.describe('API routing', () => {
   test('unknown /api/ routes return 404, not SPA', async ({ request }) => {

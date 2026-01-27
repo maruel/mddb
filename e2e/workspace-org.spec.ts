@@ -1,28 +1,4 @@
-import { test, expect } from '@playwright/test';
-
-// Helper to register a user and get token
-async function registerUser(request: any, prefix: string) {
-  const email = `${prefix}-${Date.now()}@example.com`;
-  const registerResponse = await request.post('/api/auth/register', {
-    data: {
-      email,
-      password: 'testpassword123',
-      name: `${prefix} Test User`,
-    },
-  });
-  expect(registerResponse.ok()).toBe(true);
-  const { token } = await registerResponse.json();
-  return { email, token };
-}
-
-// Helper to get workspace ID from URL
-async function getWorkspaceId(page: any): Promise<string> {
-  await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-  const url = page.url();
-  const wsMatch = url.match(/\/w\/([^+/]+)/);
-  expect(wsMatch).toBeTruthy();
-  return wsMatch![1];
-}
+import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('First Login Flow', () => {
   test('new user gets auto-created org, workspace, and welcome page', async ({ page, request }) => {
@@ -256,14 +232,19 @@ test.describe('Footer Links', () => {
 });
 
 test.describe('Header Display', () => {
-  test('header shows app title', async ({ page, request }) => {
+  test('header shows navigation and menus', async ({ page, request }) => {
     const { token } = await registerUser(request, 'header-title');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    // Header should have app title
-    const headerTitle = page.locator('header h1');
-    await expect(headerTitle).toBeVisible();
-    await expect(headerTitle).not.toBeEmpty();
+    // Header should be visible
+    const header = page.locator('header');
+    await expect(header).toBeVisible();
+
+    // Header should contain user menu (avatar button)
+    await expect(header.locator('[class*="avatarButton"]')).toBeVisible();
+
+    // Header should contain workspace menu
+    await expect(header.locator('button', { hasText: /Workspace/ })).toBeVisible();
   });
 });

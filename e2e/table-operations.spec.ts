@@ -1,31 +1,7 @@
-import { test, expect } from '@playwright/test';
-
-// Helper to register a user and get token
-async function registerUser(request: any, prefix: string) {
-  const email = `${prefix}-${Date.now()}@example.com`;
-  const registerResponse = await request.post('/api/auth/register', {
-    data: {
-      email,
-      password: 'testpassword123',
-      name: `${prefix} Test User`,
-    },
-  });
-  expect(registerResponse.ok()).toBe(true);
-  const { token } = await registerResponse.json();
-  return { email, token };
-}
-
-// Helper to get workspace ID from URL
-async function getWorkspaceId(page: any): Promise<string> {
-  await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-  const url = page.url();
-  const wsMatch = url.match(/\/w\/([^+/]+)/);
-  expect(wsMatch).toBeTruthy();
-  return wsMatch![1];
-}
+import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('Table Creation and Basic Operations', () => {
-  test('create a table with properties and view it', async ({ page, request }) => {
+  test('create a table with properties and view it', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'table-create');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -66,6 +42,8 @@ test.describe('Table Creation and Basic Operations', () => {
     await expect(tableHeaders.getByText('Status')).toBeVisible();
     await expect(tableHeaders.getByText('Priority')).toBeVisible();
     await expect(tableHeaders.getByText('Due Date')).toBeVisible();
+
+    await takeScreenshot('table-view');
   });
 
   // BUG: Cell inline editing doesn't work reliably - see BUGS_FOUND.md
@@ -194,7 +172,7 @@ test.describe('Table Creation and Basic Operations', () => {
 });
 
 test.describe('Table View Modes', () => {
-  test('switch between table, grid, gallery, and board views', async ({ page, request }) => {
+  test('switch between table, grid, gallery, and board views', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'view-modes');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -253,22 +231,26 @@ test.describe('Table View Modes', () => {
 
     // Table view should be active by default
     await expect(tableButton).toHaveClass(/active/i);
+    await takeScreenshot('view-table');
 
     // Switch to Grid view
     await gridButton.click();
     await expect(gridButton).toHaveClass(/active/i);
     // Grid view renders cards
     await expect(page.locator('[class*="grid"], [class*="Grid"]')).toBeVisible({ timeout: 3000 });
+    await takeScreenshot('view-grid');
 
     // Switch to Gallery view
     await galleryButton.click();
     await expect(galleryButton).toHaveClass(/active/i);
     await expect(page.locator('[class*="gallery"], [class*="Gallery"]')).toBeVisible({ timeout: 3000 });
+    await takeScreenshot('view-gallery');
 
     // Switch to Board view
     await boardButton.click();
     await expect(boardButton).toHaveClass(/active/i);
     await expect(page.locator('[class*="board"], [class*="Board"]')).toBeVisible({ timeout: 3000 });
+    await takeScreenshot('view-board');
 
     // Switch back to Table view
     await tableButton.click();

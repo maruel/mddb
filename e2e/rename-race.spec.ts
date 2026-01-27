@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers';
 
 test.describe('Page rename with navigation', () => {
   test('rename page then quickly navigate away - rename must persist', async ({ page, request }) => {

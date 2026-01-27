@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('Page Hierarchy', () => {
-  test('create and navigate page hierarchy', async ({ page, request }) => {
+  test('create and navigate page hierarchy', async ({ page, request, takeScreenshot }) => {
     // 1. Register a new user
     const email = `hierarchy-${Date.now()}@example.com`;
     const registerResponse = await request.post('/api/auth/register', {
@@ -99,9 +99,13 @@ test.describe('Page Hierarchy', () => {
     const grandchildNode = page.locator(`[data-testid="sidebar-node-${grandchildID}"]`);
     await expect(grandchildNode).toBeVisible({ timeout: 5000 });
 
+    await takeScreenshot('hierarchy-expanded');
+
     // 13. Navigate to grandchild and verify
     await grandchildNode.click();
     await expect(page.getByText('This is a grandchild page')).toBeVisible({ timeout: 5000 });
+
+    await takeScreenshot('grandchild-page');
   });
 
   test('navigate between sibling pages', async ({ page, request }) => {
