@@ -10,16 +10,57 @@ import (
 // BlocksToMarkdown converts a slice of Notion blocks to markdown.
 func BlocksToMarkdown(blocks []Block) string {
 	var sb strings.Builder
-	listState := &listState{}
+	blocksToMarkdownRecursive(blocks, &sb, 0)
+	return sb.String()
+}
 
+// blocksToMarkdownRecursive converts blocks and their children to markdown.
+func blocksToMarkdownRecursive(blocks []Block, sb *strings.Builder, depth int) {
+	listState := &listState{}
 	for i := range blocks {
-		md := blockToMarkdown(&blocks[i], listState, 0)
+		md := blockToMarkdown(&blocks[i], listState, depth)
 		if md != "" {
 			sb.WriteString(md)
 		}
+		// Recurse into children
+		if len(blocks[i].Children) > 0 {
+			// Special handling for tables
+			if blocks[i].Type == "table" {
+				renderTableChildren(blocks[i].Children, sb, blocks[i].Table)
+			} else {
+				blocksToMarkdownRecursive(blocks[i].Children, sb, depth+1)
+				// Close toggle if needed
+				if blocks[i].Type == "toggle" {
+					sb.WriteString(strings.Repeat("  ", depth) + "</details>\n\n")
+				}
+			}
+		}
 	}
+}
 
-	return sb.String()
+// renderTableChildren renders table rows with proper markdown table formatting.
+func renderTableChildren(rows []Block, sb *strings.Builder, tableInfo *TableBlock) {
+	for i := range rows {
+		row := &rows[i]
+		if row.Type == "table_row" && row.TableRow != nil {
+			numCells := len(row.TableRow.Cells)
+			cells := make([]string, 0, numCells)
+			for _, cell := range row.TableRow.Cells {
+				cells = append(cells, richTextToMarkdown(cell))
+			}
+			sb.WriteString("| " + strings.Join(cells, " | ") + " |\n")
+
+			// Add separator after header row
+			if i == 0 && tableInfo != nil && tableInfo.HasColumnHeader {
+				seps := make([]string, numCells)
+				for j := range seps {
+					seps[j] = "---"
+				}
+				sb.WriteString("| " + strings.Join(seps, " | ") + " |\n")
+			}
+		}
+	}
+	sb.WriteString("\n")
 }
 
 // listState tracks list context for proper markdown formatting.
@@ -214,7 +255,9 @@ func blockToMarkdown(block *Block, ls *listState, depth int) string {
 		return "" // Content should be in children
 
 	case "table":
-		return "" // Table rows are children
+		// Table content comes from children (table_row blocks)
+		// Return a marker that we'll handle in the recursive processor
+		return ""
 
 	case "table_row":
 		if block.TableRow != nil {

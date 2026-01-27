@@ -294,6 +294,7 @@ func (c *Client) GetBlockChildrenAll(ctx context.Context, blockID string) ([]Blo
 }
 
 // GetBlockChildrenRecursive retrieves all children of a block recursively.
+// Children are stored in each block's Children field, not flattened.
 func (c *Client) GetBlockChildrenRecursive(ctx context.Context, blockID string, maxDepth int) ([]Block, error) {
 	return c.getBlockChildrenRecursiveImpl(ctx, blockID, maxDepth, 0)
 }
@@ -308,18 +309,15 @@ func (c *Client) getBlockChildrenRecursiveImpl(ctx context.Context, blockID stri
 		return nil, err
 	}
 
-	var result []Block
 	for i := range blocks {
-		result = append(result, blocks[i])
-
 		if blocks[i].HasChildren {
 			children, err := c.getBlockChildrenRecursiveImpl(ctx, blocks[i].ID, maxDepth, depth+1)
 			if err != nil {
 				return nil, err
 			}
-			result = append(result, children...)
+			blocks[i].Children = children
 		}
 	}
 
-	return result, nil
+	return blocks, nil
 }

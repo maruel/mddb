@@ -3,6 +3,7 @@
 package notion
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -67,6 +68,17 @@ func (m *Mapper) ResolveRelations(node *content.Node) {
 // ClearPendingRelations clears the pending relations map for the next database.
 func (m *Mapper) ClearPendingRelations() {
 	m.PendingRelations = make(map[string]string)
+}
+
+// AssignRecordID pre-assigns an mddb ID to a Notion page ID without mapping it.
+// This allows relation resolution to work for records in the same database.
+func (m *Mapper) AssignRecordID(notionID string) jsonldb.ID {
+	if existing, ok := m.NotionToMddb[notionID]; ok {
+		return existing
+	}
+	id := jsonldb.NewID()
+	m.NotionToMddb[notionID] = id
+	return id
 }
 
 // MapDatabase converts a Notion database to an mddb Node.
@@ -221,8 +233,12 @@ func (m *Mapper) MapPage(page *Page) (*content.Node, error) {
 
 // MapDatabasePage converts a Notion page (database row) to an mddb DataRecord.
 func (m *Mapper) MapDatabasePage(page *Page, schema map[string]DBProperty) (*content.DataRecord, error) {
-	recordID := jsonldb.NewID()
-	m.NotionToMddb[page.ID] = recordID
+	// Use pre-assigned ID if available (from AssignRecordID), otherwise create new
+	recordID, ok := m.NotionToMddb[page.ID]
+	if !ok {
+		recordID = jsonldb.NewID()
+		m.NotionToMddb[page.ID] = recordID
+	}
 
 	record := &content.DataRecord{
 		ID:       recordID,
@@ -331,13 +347,17 @@ func (m *Mapper) mapPropertyValue(pv *PropertyValue, _ string) any {
 		}
 		return nil
 	case "relation":
-		// For now, return page IDs as comma-separated string
-		// Phase 2 will handle proper relation mapping
+		// Return mddb IDs for resolved relations, Notion IDs for unresolved
 		var ids []string
 		for _, rel := range pv.Relation {
-			ids = append(ids, rel.ID)
+			if mddbID, ok := m.NotionToMddb[rel.ID]; ok {
+				ids = append(ids, mddbID.String())
+			} else {
+				// Keep Notion ID as fallback (cross-database relations may not be resolved yet)
+				ids = append(ids, "notion:"+rel.ID)
+			}
 		}
-		return strings.Join(ids, ",")
+		return ids
 	case "rollup":
 		if pv.Rollup != nil {
 			return mapRollupValue(pv.Rollup)
@@ -357,7 +377,7 @@ func (m *Mapper) mapPropertyValue(pv *PropertyValue, _ string) any {
 	case "unique_id":
 		if pv.UniqueID != nil {
 			if pv.UniqueID.Prefix != nil {
-				return *pv.UniqueID.Prefix + "-" + string(rune(pv.UniqueID.Number))
+				return fmt.Sprintf("%s-%d", *pv.UniqueID.Prefix, pv.UniqueID.Number)
 			}
 			return pv.UniqueID.Number
 		}

@@ -1,13 +1,21 @@
 # Notion Import Plan
 
-Plan for extracting Notion workspace data and building mddb's view system.
+Plan for extracting Notion workspace data into mddb.
 
-## Problem Statement
+## Current Status
 
-1. **Data extraction**: Pull pages, databases, records, relations, rollups, formulas from Notion
-2. **View definitions**: Notion API does not expose saved views (filters, sorts, groups, layout)
-3. **View system**: mddb needs a view abstraction to match Notion's capabilities
-4. **User experience**: Support both technical (CLI) and non-technical (Web UI) users
+**Working**: Basic import of pages and databases with primitive property types.
+Run via `go run ./backend/cmd/notion-import -token $NOTION_TOKEN -workspace "My Workspace" -output ./data`
+
+**Issues Fixed**:
+- ~~Relations stored as Notion IDs~~ → Now resolved to mddb IDs via two-pass extraction
+- ~~Unique ID formatting bug~~ → Fixed with `fmt.Sprintf`
+- ~~Nested blocks not rendered~~ → Block.Children field + recursive markdown converter
+
+**Remaining Issues**:
+- No hierarchy (ParentID not set on nodes)
+- Child pages/databases referenced but not imported as separate nodes
+- Assets not downloaded (Notion file URLs expire)
 
 ## Architecture Decision: Layered Approach
 
@@ -898,101 +906,98 @@ func (m *ViewManifest) ViewsForDatabase(notionID string) []ViewConfig
 ## Implementation Phases
 
 ### Phase 1: Core Extraction (MVP) ✅
-- [x] `internal/notion/client.go` - API client with rate limiting
-- [x] `internal/notion/types.go` - Notion API response types
-- [x] `internal/notion/extractor.go` - Basic extraction (pages, databases)
-- [x] `internal/notion/mapper.go` - Type mapping for primitive properties
-- [x] `internal/notion/writer.go` - Write to mddb storage format
-- [x] `internal/notion/markdown.go` - Block to markdown conversion
-- [x] `internal/notion/progress.go` - Progress reporting
-- [x] `cmd/notion-import/main.go` - CLI entry point
-- [x] Unit tests for mapper and markdown
 
-**Deliverable**: CLI that imports pages and databases with primitive properties
+Complete. Basic CLI imports pages/databases with primitive properties.
 
-### Phase 2: Relational Properties ✅
-- [x] Add `PropertyTypeRelation` to mddb types
-- [x] Add `RelationConfig` struct
-- [x] Map Notion relations to mddb
-- [x] Add `PropertyTypeRollup` with `RollupConfig`
-- [x] Add `PropertyTypeFormula` with `FormulaConfig`
-- [x] Store computed values (rollup/formula results from Notion)
-- [x] Add `RollupAggregation` type and mapRollupAggregation function
-- [x] Add relation resolution (PendingRelations map + ResolveRelations method)
-- [x] Unit tests for relational property mapping
-- [ ] Update frontend to display relation/rollup/formula fields (deferred to Phase 5/6)
+Files: `client.go`, `types.go`, `extractor.go`, `mapper.go`, `writer.go`, `markdown.go`, `progress.go`, `cmd/notion-import/main.go`
 
-**Deliverable**: CLI imports all property types including relations
+### Phase 2: Bug Fixes & Data Fidelity
 
-### Phase 3: View System Foundation (Backend Complete)
-- [x] Add `View` type and related structs to mddb (`views.go`)
-- [x] Add `Filter`, `Sort`, `Group`, `ViewColumn` types
-- [x] Add `FilterOp` and `SortDir` constants
-- [x] Update `Node` struct to include `Views` field
-- [x] Backend filter/sort application to records query (`query.go`)
-- [x] Unit tests for query/filter/sort logic
-- [ ] View CRUD API endpoints (deferred to Phase 5)
-- [ ] Frontend `ViewSwitcher` component (deferred to Phase 5)
-- [ ] Frontend `TableView` with column visibility/ordering (deferred to Phase 5)
+#### 2.1 Bug Fixes ✅
 
-**Deliverable**: Backend view types and query logic ready for use
+| Bug | Location | Status |
+|-----|----------|--------|
+| Unique ID formatting | `mapper.go` | ✅ Fixed: `fmt.Sprintf("%s-%d", ...)` |
+| Relations not resolved | `extractor.go` | ✅ Fixed: Two-pass extraction with `AssignRecordID()` |
+| Relation values as Notion IDs | `mapper.go` | ✅ Fixed: Resolves to mddb IDs, prefixes unresolved with `notion:` |
 
-### Phase 4: View Import ✅
-- [x] `internal/notion/manifest.go` - YAML manifest parser
-- [x] Validate manifest (version, required fields, valid view types)
-- [x] Apply manifest views during import (`extractDatabase` adds views to node)
-- [x] CLI `--views` flag
-- [x] Error reporting for invalid view configs
-- [x] Unit tests for manifest parsing and conversion
+#### 2.2 Hierarchy & Structure (TODO)
 
-**Deliverable**: CLI can import views from manifest file
+- [ ] Set `ParentID` on nodes based on Notion's `Parent` field
+- [ ] Import child pages/databases discovered in block content
+- [ ] Track Notion→mddb ID mapping persistently for incremental imports
 
-### Phase 5: Import API & Web UI
-- [ ] `internal/server/handlers/import.go` - Import job management
-- [ ] Import preview endpoint
-- [ ] Async import with progress reporting
-- [ ] `frontend/src/components/import/NotionImport.tsx` - Wizard
-- [ ] `NotionConnect.tsx` - Token input / OAuth
-- [ ] `NotionPreview.tsx` - Content selection tree
-- [ ] `NotionProgress.tsx` - Real-time progress
-- [ ] `NotionComplete.tsx` - Results summary
+#### 2.3 Nested Content ✅
 
-**Deliverable**: Non-technical users can import via web UI
+- [x] Block.Children field added to store nested blocks
+- [x] `GetBlockChildrenRecursive` populates Children instead of flattening
+- [x] `blocksToMarkdownRecursive` renders nested content with proper indentation
+- [x] Table header separator row added for markdown tables
 
-### Phase 6: Advanced Views
-- [ ] `BoardView.tsx` - Kanban board layout
-- [ ] `GalleryView.tsx` - Card grid layout
-- [ ] `CalendarView.tsx` - Calendar layout
-- [ ] `FilterBuilder.tsx` - Visual filter editor
-- [ ] `SortBuilder.tsx` - Sort configuration UI
-- [ ] `GroupBuilder.tsx` - Grouping configuration
+#### 2.4 Assets (TODO)
 
-**Deliverable**: Full Notion-like view system
+- [ ] Download files/images to local storage before URLs expire
+- [ ] Store in `{nodeDir}/assets/` directory
+- [ ] Update markdown references to use local paths
+- [ ] Track assets in metadata for cleanup
+
+### Phase 3: Relational Properties ✅
+
+Types exist (`relation`, `rollup`, `formula` in `content/types.go`). Relation resolution implemented.
+
+- [x] `AssignRecordID()` pre-assigns mddb IDs before mapping
+- [x] Two-pass extraction: first collect all row IDs, then map with resolution
+- [x] Relation values stored as mddb IDs (or `notion:ID` for unresolved cross-database refs)
+- [x] Rollup/formula values preserved from Notion's computed results
+
+### Phase 4: View System ✅
+
+Backend complete (`views.go`, `query.go`). View manifest import works via `--views` flag.
+
+### Phase 5: Import API & Web UI (Future)
+
+Not started. Requires Phase 2 completion first.
+
+### Phase 6: Advanced Views (Future)
+
+Frontend view components (Board, Gallery, Calendar). Deferred until basic import is solid
 
 ---
 
+## Testing
+
+```bash
+# Full import test
+./tmp/test_import.sh
+
+# Check output structure
+find tmp/import -type f
+
+# View a database's records
+cat tmp/import/*/XXXX/data.jsonl | head -5
+
+# View a page's content
+cat tmp/import/*/XXXX/index.md
+```
+
+## Next Steps (Priority Order)
+
+1. ~~**Fix unique ID bug**~~ ✅ Fixed: `fmt.Sprintf("%s-%d", prefix, n)`
+2. ~~**Wire up relation resolution**~~ ✅ Fixed: Two-pass extraction pre-assigns record IDs
+3. ~~**Fix nested block rendering**~~ ✅ Fixed: Block.Children field + recursive markdown
+4. **Add asset downloading** - Download files before URLs expire
+5. **Set ParentID** - Track hierarchy from Notion Parent field
+
 ## Dependencies
 
-| Dependency | Purpose | Required By |
-|------------|---------|-------------|
-| Notion integration token | API authentication | Phase 1 |
-| `gopkg.in/yaml.v3` | Manifest parsing | Phase 4 |
-| OAuth setup (optional) | Browser-based auth | Phase 5 |
-
-## Risks & Mitigations
-
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Notion API changes | Extraction breaks | Pin API version, monitor changelog |
-| Large workspace | Slow extraction, rate limits | Progress reporting, resumable state |
-| Complex formulas | Can't evaluate in mddb | Store expression + Notion's computed value |
-| Circular relations | Infinite loops | Track visited IDs, max depth |
-| View manifest errors | Silent import failures | Strict validation, clear error messages |
+| Dependency | Status |
+|------------|--------|
+| Notion integration token | ✅ Working |
+| `gopkg.in/yaml.v3` | ✅ Working (manifest parsing) |
 
 ## Success Criteria
 
-1. **Data fidelity**: 100% of accessible Notion data extracted (pages, databases, records, all property types)
-2. **Computed values**: Rollups and formulas preserve their Notion-computed values
-3. **View accuracy**: Manifest-defined views render correctly in mddb
-4. **UX options**: Both CLI (power users) and Web UI (end users) available
-5. **Performance**: Small workspace (<100 items) imports in <2 minutes
+1. **Data fidelity**: All pages, databases, records imported with correct property values
+2. **Relations work**: Relation properties link to correct mddb records
+3. **Assets local**: Files/images downloaded and accessible offline
+4. **Hierarchy preserved**: Parent-child relationships match Notion structure

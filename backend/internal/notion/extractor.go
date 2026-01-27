@@ -46,6 +46,13 @@ func NewExtractor(client *Client, writer *Writer, progress ProgressReporter) *Ex
 	}
 }
 
+// databaseData holds fetched data for a database during extraction.
+type databaseData struct {
+	db   *Database
+	node *content.Node
+	rows []Page
+}
+
 // Extract performs the full extraction based on options.
 func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractStats, error) {
 	startTime := time.Now()
@@ -64,24 +71,76 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 
 	total := len(databases) + len(pages)
 	e.progress.OnStart(total)
-	current := 0
 
-	// Extract databases first (need schemas for records)
+	// Phase 1: Fetch all database rows and pre-assign IDs (for cross-database relation resolution)
+	dbDataList := make([]*databaseData, 0, len(databases))
 	for i := range databases {
-		current++
-		e.progress.OnProgress(current, "Database: "+richTextToPlain(databases[i].Title))
-
-		recordCount, err := e.extractDatabase(ctx, databases[i], opts)
+		node, err := e.mapper.MapDatabase(databases[i])
 		if err != nil {
-			e.progress.OnError(fmt.Errorf("database %s: %w", databases[i].ID, err))
+			e.progress.OnError(fmt.Errorf("database %s: failed to map: %w", databases[i].ID, err))
 			stats.Errors++
 			continue
 		}
-		stats.Databases++
-		stats.Records += recordCount
+
+		rows, err := e.client.QueryDatabaseAll(ctx, databases[i].ID, nil)
+		if err != nil {
+			e.progress.OnError(fmt.Errorf("database %s: failed to query: %w", databases[i].ID, err))
+			stats.Errors++
+			continue
+		}
+
+		// Pre-assign mddb IDs to all rows
+		for j := range rows {
+			e.mapper.AssignRecordID(rows[j].ID)
+		}
+
+		dbDataList = append(dbDataList, &databaseData{
+			db:   databases[i],
+			node: node,
+			rows: rows,
+		})
 	}
 
-	// Extract standalone pages
+	// Phase 2: Map and write all database records
+	current := 0
+	for _, data := range dbDataList {
+		current++
+		e.progress.OnProgress(current, "Database: "+richTextToPlain(data.db.Title))
+
+		// Apply views from manifest
+		if opts.Manifest != nil {
+			data.node.Views = opts.Manifest.ToContentViews(data.db.ID)
+		}
+
+		// Write node
+		if err := e.writer.WriteNode(data.node, ""); err != nil {
+			e.progress.OnError(fmt.Errorf("database %s: failed to write node: %w", data.db.ID, err))
+			stats.Errors++
+			continue
+		}
+
+		// Map and write records
+		var records []*content.DataRecord
+		for i := range data.rows {
+			record, err := e.mapper.MapDatabasePage(&data.rows[i], data.db.Properties)
+			if err != nil {
+				e.progress.OnWarning(fmt.Sprintf("Failed to map row %s: %v", data.rows[i].ID, err))
+				continue
+			}
+			records = append(records, record)
+		}
+
+		if err := e.writer.WriteRecords(data.node.ID, data.node.Properties, records); err != nil {
+			e.progress.OnError(fmt.Errorf("database %s: failed to write records: %w", data.db.ID, err))
+			stats.Errors++
+			continue
+		}
+
+		stats.Databases++
+		stats.Records += len(records)
+	}
+
+	// Phase 3: Extract standalone pages
 	for i := range pages {
 		current++
 		title := extractPageTitle(&pages[i])
@@ -175,49 +234,6 @@ func (e *Extractor) discoverContent(ctx context.Context, opts ExtractOptions) ([
 	}
 
 	return databases, pages, nil
-}
-
-// extractDatabase extracts a database and its rows.
-// Returns the number of records extracted.
-func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts ExtractOptions) (int, error) {
-	// Map database to node
-	node, err := e.mapper.MapDatabase(db)
-	if err != nil {
-		return 0, fmt.Errorf("failed to map database: %w", err)
-	}
-
-	// Apply views from manifest if provided
-	if opts.Manifest != nil {
-		node.Views = opts.Manifest.ToContentViews(db.ID)
-	}
-
-	// Write node (table metadata)
-	if err := e.writer.WriteNode(node, ""); err != nil {
-		return 0, fmt.Errorf("failed to write node: %w", err)
-	}
-
-	// Query all rows
-	rows, err := e.client.QueryDatabaseAll(ctx, db.ID, nil)
-	if err != nil {
-		return 0, fmt.Errorf("failed to query database: %w", err)
-	}
-
-	// Map and write records
-	var records []*content.DataRecord
-	for i := range rows {
-		record, err := e.mapper.MapDatabasePage(&rows[i], db.Properties)
-		if err != nil {
-			e.progress.OnWarning(fmt.Sprintf("Failed to map row %s: %v", rows[i].ID, err))
-			continue
-		}
-		records = append(records, record)
-	}
-
-	if err := e.writer.WriteRecords(node.ID, node.Properties, records); err != nil {
-		return 0, fmt.Errorf("failed to write records: %w", err)
-	}
-
-	return len(records), nil
 }
 
 // extractPage extracts a standalone page.

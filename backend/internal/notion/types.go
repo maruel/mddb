@@ -375,6 +375,9 @@ type Block struct {
 	Archived       bool      `json:"archived"`
 	HasChildren    bool      `json:"has_children"`
 
+	// Children are populated by GetBlockChildrenRecursive (not from API directly)
+	Children []Block `json:"-"`
+
 	// Block type content - only the matching type field will be populated
 	Paragraph        *ParagraphBlock     `json:"paragraph,omitempty"`
 	Heading1         *HeadingBlock       `json:"heading_1,omitempty"`
