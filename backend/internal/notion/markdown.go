@@ -5,20 +5,87 @@ package notion
 import (
 	"fmt"
 	"strings"
+
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 )
 
-// BlocksToMarkdown converts a slice of Notion blocks to markdown.
-func BlocksToMarkdown(blocks []Block) string {
+// MarkdownConverter converts Notion blocks to markdown with optional asset downloading.
+type MarkdownConverter struct {
+	assets *AssetDownloader
+	nodeID jsonldb.ID
+	mapper *Mapper // For resolving child page/database links
+}
+
+// NewMarkdownConverter creates a converter, optionally with asset downloading.
+func NewMarkdownConverter(assets *AssetDownloader, nodeID jsonldb.ID) *MarkdownConverter {
+	return &MarkdownConverter{
+		assets: assets,
+		nodeID: nodeID,
+	}
+}
+
+// NewMarkdownConverterWithLinks creates a converter with asset downloading and link resolution.
+func NewMarkdownConverterWithLinks(assets *AssetDownloader, nodeID jsonldb.ID, mapper *Mapper) *MarkdownConverter {
+	return &MarkdownConverter{
+		assets: assets,
+		nodeID: nodeID,
+		mapper: mapper,
+	}
+}
+
+// Convert converts blocks to markdown, downloading assets if configured.
+func (c *MarkdownConverter) Convert(blocks []Block) string {
 	var sb strings.Builder
-	blocksToMarkdownRecursive(blocks, &sb, 0)
+	c.blocksToMarkdownRecursive(blocks, &sb, 0)
 	return sb.String()
 }
 
+// BlocksToMarkdown converts a slice of Notion blocks to markdown (without asset downloading).
+func BlocksToMarkdown(blocks []Block) string {
+	c := &MarkdownConverter{}
+	return c.Convert(blocks)
+}
+
+// resolveChildLink resolves a child page/database Notion ID to an mddb node link.
+func (c *MarkdownConverter) resolveChildLink(notionID string) string {
+	if c.mapper == nil {
+		return ""
+	}
+	if mddbID, ok := c.mapper.NotionToMddb[notionID]; ok {
+		return mddbID.String()
+	}
+	return ""
+}
+
+// resolveMediaURL gets the URL for a media block, downloading if asset downloader is configured.
+func (c *MarkdownConverter) resolveMediaURL(media *MediaBlock) string {
+	if media == nil {
+		return ""
+	}
+
+	var url string
+	if media.File != nil {
+		url = media.File.URL
+	} else if media.External != nil {
+		url = media.External.URL
+	}
+
+	// If we have an asset downloader, try to download and return local path
+	if c.assets != nil && !c.nodeID.IsZero() {
+		if localPath, err := c.assets.DownloadAsset(c.nodeID, url); err == nil && localPath != "" {
+			return localPath
+		}
+		// On error, fall back to original URL
+	}
+
+	return url
+}
+
 // blocksToMarkdownRecursive converts blocks and their children to markdown.
-func blocksToMarkdownRecursive(blocks []Block, sb *strings.Builder, depth int) {
+func (c *MarkdownConverter) blocksToMarkdownRecursive(blocks []Block, sb *strings.Builder, depth int) {
 	listState := &listState{}
 	for i := range blocks {
-		md := blockToMarkdown(&blocks[i], listState, depth)
+		md := c.blockToMarkdown(&blocks[i], listState, depth)
 		if md != "" {
 			sb.WriteString(md)
 		}
@@ -28,7 +95,7 @@ func blocksToMarkdownRecursive(blocks []Block, sb *strings.Builder, depth int) {
 			if blocks[i].Type == "table" {
 				renderTableChildren(blocks[i].Children, sb, blocks[i].Table)
 			} else {
-				blocksToMarkdownRecursive(blocks[i].Children, sb, depth+1)
+				c.blocksToMarkdownRecursive(blocks[i].Children, sb, depth+1)
 				// Close toggle if needed
 				if blocks[i].Type == "toggle" {
 					sb.WriteString(strings.Repeat("  ", depth) + "</details>\n\n")
@@ -71,7 +138,7 @@ type listState struct {
 }
 
 // blockToMarkdown converts a single block to markdown.
-func blockToMarkdown(block *Block, ls *listState, depth int) string {
+func (c *MarkdownConverter) blockToMarkdown(block *Block, ls *listState, depth int) string {
 	indent := strings.Repeat("  ", depth)
 
 	// Reset list state for non-list blocks
@@ -177,12 +244,7 @@ func blockToMarkdown(block *Block, ls *listState, depth int) string {
 
 	case "image":
 		if block.Image != nil {
-			url := ""
-			if block.Image.File != nil {
-				url = block.Image.File.URL
-			} else if block.Image.External != nil {
-				url = block.Image.External.URL
-			}
+			url := c.resolveMediaURL(block.Image)
 			caption := richTextToPlain(block.Image.Caption)
 			if caption == "" {
 				caption = "image"
@@ -192,12 +254,7 @@ func blockToMarkdown(block *Block, ls *listState, depth int) string {
 
 	case "video":
 		if block.Video != nil {
-			url := ""
-			if block.Video.File != nil {
-				url = block.Video.File.URL
-			} else if block.Video.External != nil {
-				url = block.Video.External.URL
-			}
+			url := c.resolveMediaURL(block.Video)
 			return fmt.Sprintf("[Video](%s)\n\n", url)
 		}
 
@@ -209,12 +266,7 @@ func blockToMarkdown(block *Block, ls *listState, depth int) string {
 			media = block.PDF
 		}
 		if media != nil {
-			url := ""
-			if media.File != nil {
-				url = media.File.URL
-			} else if media.External != nil {
-				url = media.External.URL
-			}
+			url := c.resolveMediaURL(media)
 			return fmt.Sprintf("[File](%s)\n\n", url)
 		}
 
@@ -270,12 +322,14 @@ func blockToMarkdown(block *Block, ls *listState, depth int) string {
 
 	case "child_page":
 		if block.ChildPage != nil {
-			return fmt.Sprintf("📄 [%s]()\n\n", block.ChildPage.Title)
+			link := c.resolveChildLink(block.ID)
+			return fmt.Sprintf("📄 [%s](%s)\n\n", block.ChildPage.Title, link)
 		}
 
 	case "child_database":
 		if block.ChildDatabase != nil {
-			return fmt.Sprintf("🗃️ [%s]()\n\n", block.ChildDatabase.Title)
+			link := c.resolveChildLink(block.ID)
+			return fmt.Sprintf("🗃️ [%s](%s)\n\n", block.ChildDatabase.Title, link)
 		}
 	}
 

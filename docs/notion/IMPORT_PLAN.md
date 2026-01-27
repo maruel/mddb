@@ -921,12 +921,14 @@ Files: `client.go`, `types.go`, `extractor.go`, `mapper.go`, `writer.go`, `markd
 | Relations not resolved | `extractor.go` | ✅ Fixed: Two-pass extraction with `AssignRecordID()` |
 | Relation values as Notion IDs | `mapper.go` | ✅ Fixed: Resolves to mddb IDs, prefixes unresolved with `notion:` |
 
-#### 2.2 Hierarchy & Structure (Partial)
+#### 2.2 Hierarchy & Structure (Complete)
 
 - [x] Set `ParentID` on nodes based on Notion's `Parent` field
 - [x] Pre-assign node IDs before mapping for parent resolution
 - [x] Export hierarchy to `nodes.jsonl` manifest file
-- [ ] Import child pages/databases discovered in block content
+- [x] Import child pages/databases discovered in block content
+- [x] Resolve child_page/child_database block links to mddb node IDs
+- [x] Deduplicate imports (items found in both search and block content)
 - [ ] Track Notion→mddb ID mapping persistently for incremental imports
 
 #### 2.3 Nested Content ✅
@@ -936,12 +938,14 @@ Files: `client.go`, `types.go`, `extractor.go`, `mapper.go`, `writer.go`, `markd
 - [x] `blocksToMarkdownRecursive` renders nested content with proper indentation
 - [x] Table header separator row added for markdown tables
 
-#### 2.4 Assets (TODO)
+#### 2.4 Assets (Partial)
 
-- [ ] Download files/images to local storage before URLs expire
-- [ ] Store in `{nodeDir}/assets/` directory
-- [ ] Update markdown references to use local paths
-- [ ] Track assets in metadata for cleanup
+- [x] Download images/videos/files from page blocks before URLs expire
+- [x] Store in `{nodeDir}/assets/` directory with hash-prefixed filenames
+- [x] Update markdown references to use local paths
+- [x] Track download stats in extraction summary
+- [ ] Download files from Files property in database records
+- [ ] Download page covers and icons
 
 ### Phase 3: Relational Properties ✅
 
@@ -988,8 +992,10 @@ cat tmp/import/*/XXXX/index.md
 2. ~~**Wire up relation resolution**~~ ✅ Fixed: Two-pass extraction pre-assigns record IDs
 3. ~~**Fix nested block rendering**~~ ✅ Fixed: Block.Children field + recursive markdown
 4. ~~**Set ParentID**~~ ✅ Fixed: Pre-assign node IDs + `nodes.jsonl` manifest
-5. **Add asset downloading** - Download files before URLs expire
-6. **Import child pages/databases** - Discovered in block content (child_page, child_database blocks)
+5. ~~**Add asset downloading**~~ ✅ Partial: Page blocks (image/video/file/pdf) downloaded to `assets/`
+6. ~~**Import child pages/databases**~~ ✅ Fixed: Recursively imports children with deduplication
+7. **Files property assets** - Download files from database record Files properties
+8. **Incremental imports** - Track Notion→mddb ID mapping persistently
 
 ## Dependencies
 

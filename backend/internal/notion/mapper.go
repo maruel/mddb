@@ -18,6 +18,10 @@ type Mapper struct {
 	NotionToMddb map[string]jsonldb.ID
 	// PendingRelations maps property names to Notion database IDs that need resolution.
 	PendingRelations map[string]string
+
+	// Asset context for downloading files (set before mapping records)
+	assets *AssetDownloader
+	nodeID jsonldb.ID
 }
 
 // NewMapper creates a new type mapper.
@@ -26,6 +30,13 @@ func NewMapper() *Mapper {
 		NotionToMddb:     make(map[string]jsonldb.ID),
 		PendingRelations: make(map[string]string),
 	}
+}
+
+// SetAssetContext configures the mapper to download assets for the given node.
+// Call this before mapping database records to enable file downloading.
+func (m *Mapper) SetAssetContext(assets *AssetDownloader, nodeID jsonldb.ID) {
+	m.assets = assets
+	m.nodeID = nodeID
 }
 
 // parseDateValue converts a Notion date string to epoch seconds (float64).
@@ -428,16 +439,29 @@ func (m *Mapper) mapPropertyValue(pv *PropertyValue, _ string) any {
 		}
 		return nil
 	case "files":
-		// Return file names/URLs as text for now
-		var urls []string
+		// Download Notion-hosted files and return local paths
+		var paths []string
 		for _, f := range pv.Files {
+			var url string
 			if f.File != nil {
-				urls = append(urls, f.File.URL)
+				url = f.File.URL
 			} else if f.External != nil {
-				urls = append(urls, f.External.URL)
+				url = f.External.URL
 			}
+			if url == "" {
+				continue
+			}
+			// Download if asset context is set
+			if m.assets != nil && !m.nodeID.IsZero() {
+				if localPath, err := m.assets.DownloadAsset(m.nodeID, url); err == nil {
+					paths = append(paths, localPath)
+					continue
+				}
+				// Fall through to use original URL on error
+			}
+			paths = append(paths, url)
 		}
-		return strings.Join(urls, "\n")
+		return strings.Join(paths, "\n")
 	case "unique_id":
 		if pv.UniqueID != nil {
 			if pv.UniqueID.Prefix != nil {

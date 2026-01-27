@@ -31,6 +31,8 @@ type Extractor struct {
 	mapper   *Mapper
 	writer   *Writer
 	progress ProgressReporter
+	assets   *AssetDownloader
+	imported map[string]bool // Track already-imported Notion IDs
 }
 
 // NewExtractor creates a new extractor.
@@ -62,6 +64,10 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 	if err := e.writer.EnsureWorkspace(); err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
 	}
+
+	// Create asset downloader and import tracker
+	e.assets = NewAssetDownloader(e.writer.workspacePath())
+	e.imported = make(map[string]bool)
 
 	// Discover content
 	databases, pages, err := e.discoverContent(ctx, opts)
@@ -115,6 +121,9 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 		current++
 		e.progress.OnProgress(current, "Database: "+richTextToPlain(data.db.Title))
 
+		// Mark as imported to prevent duplicate extraction from child blocks
+		e.imported[data.db.ID] = true
+
 		// Apply views from manifest
 		if opts.Manifest != nil {
 			data.node.Views = opts.Manifest.ToContentViews(data.db.ID)
@@ -133,7 +142,8 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 			e.progress.OnError(fmt.Errorf("database %s: failed to write manifest: %w", data.db.ID, err))
 		}
 
-		// Map and write records
+		// Map and write records (set asset context for file downloads)
+		e.mapper.SetAssetContext(e.assets, data.node.ID)
 		var records []*content.DataRecord
 		for i := range data.rows {
 			record, err := e.mapper.MapDatabasePage(&data.rows[i], data.db.Properties)
@@ -166,6 +176,11 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 			continue
 		}
 		stats.Pages++
+	}
+
+	// Gather asset stats
+	if e.assets != nil {
+		stats.Assets = e.assets.Downloaded
 	}
 
 	stats.Duration = time.Since(startTime)
@@ -252,6 +267,12 @@ func (e *Extractor) discoverContent(ctx context.Context, opts ExtractOptions) ([
 
 // extractPage extracts a standalone page.
 func (e *Extractor) extractPage(ctx context.Context, page *Page, opts ExtractOptions) error {
+	// Skip if already imported
+	if e.imported[page.ID] {
+		return nil
+	}
+	e.imported[page.ID] = true
+
 	// Map page to node
 	node, err := e.mapper.MapPage(page)
 	if err != nil {
@@ -260,12 +281,23 @@ func (e *Extractor) extractPage(ctx context.Context, page *Page, opts ExtractOpt
 
 	// Get page content if requested
 	var markdown string
+	var childRefs []ChildRef
 	if opts.IncludeContent {
 		blocks, err := e.client.GetBlockChildrenRecursive(ctx, page.ID, opts.MaxDepth)
 		if err != nil {
 			e.progress.OnWarning(fmt.Sprintf("Failed to get blocks for %s: %v", page.ID, err))
 		} else {
-			markdown = BlocksToMarkdown(blocks)
+			// Collect child page/database references
+			childRefs = collectChildRefs(blocks)
+
+			// Pre-assign IDs to children so we can link to them
+			for _, ref := range childRefs {
+				e.mapper.AssignNodeID(ref.ID)
+			}
+
+			// Use markdown converter with asset downloading and child links
+			converter := NewMarkdownConverterWithLinks(e.assets, node.ID, e.mapper)
+			markdown = converter.Convert(blocks)
 		}
 	}
 
@@ -277,7 +309,129 @@ func (e *Extractor) extractPage(ctx context.Context, page *Page, opts ExtractOpt
 		return fmt.Errorf("failed to write manifest: %w", err)
 	}
 
+	// Import child pages and databases
+	for _, ref := range childRefs {
+		if ref.Type == "page" {
+			childPage, err := e.client.GetPage(ctx, ref.ID)
+			if err != nil {
+				e.progress.OnWarning(fmt.Sprintf("Failed to get child page %s: %v", ref.ID, err))
+				continue
+			}
+			if err := e.extractPage(ctx, childPage, opts); err != nil {
+				e.progress.OnWarning(fmt.Sprintf("Failed to extract child page %s: %v", ref.ID, err))
+			}
+		} else if ref.Type == "database" {
+			db, err := e.client.GetDatabase(ctx, ref.ID)
+			if err != nil {
+				e.progress.OnWarning(fmt.Sprintf("Failed to get child database %s: %v", ref.ID, err))
+				continue
+			}
+			if err := e.extractDatabase(ctx, db, opts); err != nil {
+				e.progress.OnWarning(fmt.Sprintf("Failed to extract child database %s: %v", ref.ID, err))
+			}
+		}
+	}
+
 	return nil
+}
+
+// extractDatabase extracts a single database and its records.
+func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts ExtractOptions) error {
+	// Skip if already imported
+	if e.imported[db.ID] {
+		return nil
+	}
+	e.imported[db.ID] = true
+
+	node, err := e.mapper.MapDatabase(db)
+	if err != nil {
+		return fmt.Errorf("failed to map database: %w", err)
+	}
+
+	// Clear pending relations for this database
+	e.mapper.ClearPendingRelations()
+
+	rows, err := e.client.QueryDatabaseAll(ctx, db.ID, nil)
+	if err != nil {
+		return fmt.Errorf("failed to query database: %w", err)
+	}
+
+	// Pre-assign mddb IDs to all rows
+	for i := range rows {
+		e.mapper.AssignRecordID(rows[i].ID)
+	}
+
+	// Apply views from manifest
+	if opts.Manifest != nil {
+		node.Views = opts.Manifest.ToContentViews(db.ID)
+	}
+
+	// Resolve relation target IDs in schema
+	e.mapper.ResolveRelations(node)
+
+	// Write node and manifest entry
+	if err := e.writer.WriteNode(node, ""); err != nil {
+		return fmt.Errorf("failed to write node: %w", err)
+	}
+	if err := e.writer.WriteNodeEntry(node); err != nil {
+		return fmt.Errorf("failed to write manifest: %w", err)
+	}
+
+	// Map and write records (set asset context for file downloads)
+	e.mapper.SetAssetContext(e.assets, node.ID)
+	var records []*content.DataRecord
+	for i := range rows {
+		record, err := e.mapper.MapDatabasePage(&rows[i], db.Properties)
+		if err != nil {
+			e.progress.OnWarning(fmt.Sprintf("Failed to map row %s: %v", rows[i].ID, err))
+			continue
+		}
+		records = append(records, record)
+	}
+
+	if err := e.writer.WriteRecords(node.ID, node.Properties, records); err != nil {
+		return fmt.Errorf("failed to write records: %w", err)
+	}
+
+	return nil
+}
+
+// ChildRef represents a reference to a child page or database found in block content.
+type ChildRef struct {
+	ID    string
+	Type  string // "page" or "database"
+	Title string
+}
+
+// collectChildRefs extracts child page and database references from blocks.
+func collectChildRefs(blocks []Block) []ChildRef {
+	var refs []ChildRef
+	for i := range blocks {
+		block := &blocks[i]
+		switch block.Type {
+		case "child_page":
+			if block.ChildPage != nil {
+				refs = append(refs, ChildRef{
+					ID:    block.ID,
+					Type:  "page",
+					Title: block.ChildPage.Title,
+				})
+			}
+		case "child_database":
+			if block.ChildDatabase != nil {
+				refs = append(refs, ChildRef{
+					ID:    block.ID,
+					Type:  "database",
+					Title: block.ChildDatabase.Title,
+				})
+			}
+		}
+		// Recurse into children
+		if len(block.Children) > 0 {
+			refs = append(refs, collectChildRefs(block.Children)...)
+		}
+	}
+	return refs
 }
 
 // DryRunResult contains items that would be extracted during a dry run.
