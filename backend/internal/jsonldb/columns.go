@@ -3,15 +3,20 @@
 package jsonldb
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/invopop/jsonschema"
 )
 
-var errSchemaVersionRequired = errors.New("schema version is required")
+var (
+	errSchemaVersionRequired    = errors.New("schema version is required")
+	errSchemaVersionUnsupported = errors.New("unsupported schema version (expected 1.x)")
+)
 
 // currentVersion is the current version of the JSONL table format.
 const currentVersion = "1.0"
@@ -42,12 +47,19 @@ type column struct {
 type schemaHeader struct {
 	Version string   `json:"version"`
 	Columns []column `json:"columns"`
+	// Properties stores application-specific schema for map fields (e.g., DataRecord.Data).
+	// jsonldb treats this as opaque; the application interprets it.
+	Properties json.RawMessage `json:"properties,omitempty"`
 }
 
 // Validate checks that the schema header is well-formed.
 func (h *schemaHeader) Validate() error {
 	if h.Version == "" {
 		return errSchemaVersionRequired
+	}
+	// Accept any 1.x version
+	if !strings.HasPrefix(h.Version, "1.") {
+		return errSchemaVersionUnsupported
 	}
 	// Validate each column
 	for i, col := range h.Columns {

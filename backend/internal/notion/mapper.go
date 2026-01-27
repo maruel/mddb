@@ -27,6 +27,28 @@ func NewMapper() *Mapper {
 	}
 }
 
+// parseDateValue converts a Notion date string to epoch seconds (float64).
+// Date-only values are parsed as midnight UTC.
+// Using float64 ensures clean JSON round-trip; schema indicates it's a date.
+func parseDateValue(s string) any {
+	if s == "" {
+		return nil
+	}
+	// Try datetime format first: "2025-10-22T12:30:00.000Z"
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return float64(t.Unix())
+	}
+	// Try datetime without timezone
+	if t, err := time.Parse("2006-01-02T15:04:05", s); err == nil {
+		return float64(t.Unix())
+	}
+	// Try date-only format: "2025-10-22" → midnight UTC
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		return float64(t.Unix())
+	}
+	return nil // unparseable
+}
+
 // ResolveRelations updates relation properties with resolved mddb node IDs.
 // Call this after all databases have been mapped.
 func (m *Mapper) ResolveRelations(node *content.Node) {
@@ -257,7 +279,7 @@ func (m *Mapper) mapPropertyValue(pv *PropertyValue, _ string) any {
 		return ids
 	case "date":
 		if pv.Date != nil {
-			return pv.Date.Start
+			return parseDateValue(pv.Date.Start)
 		}
 		return nil
 	case "url":
@@ -295,12 +317,12 @@ func (m *Mapper) mapPropertyValue(pv *PropertyValue, _ string) any {
 		return nil
 	case "created_time":
 		if pv.CreatedTime != nil {
-			return pv.CreatedTime.Format(time.RFC3339)
+			return float64(pv.CreatedTime.Unix())
 		}
 		return nil
 	case "last_edited_time":
 		if pv.LastEditedTime != nil {
-			return pv.LastEditedTime.Format(time.RFC3339)
+			return float64(pv.LastEditedTime.Unix())
 		}
 		return nil
 	case "formula":
@@ -362,7 +384,7 @@ func mapFormulaValue(f *FormulaValue) any {
 		}
 	case "date":
 		if f.Date != nil {
-			return f.Date.Start
+			return parseDateValue(f.Date.Start)
 		}
 	}
 	return nil
@@ -377,7 +399,7 @@ func mapRollupValue(r *RollupValue) any {
 		}
 	case "date":
 		if r.Date != nil {
-			return r.Date.Start
+			return parseDateValue(r.Date.Start)
 		}
 	case "array":
 		// For arrays, try to extract simple values
@@ -404,7 +426,7 @@ func mapRollupArrayItem(pv *PropertyValue) any {
 		}
 	case "date":
 		if pv.Date != nil {
-			return pv.Date.Start
+			return parseDateValue(pv.Date.Start)
 		}
 	}
 	return nil

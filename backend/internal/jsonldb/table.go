@@ -109,6 +109,23 @@ func (t *Table[T]) Len() int {
 	return len(t.rows)
 }
 
+// Properties returns the application-specific schema properties stored in the header.
+// Returns nil if no properties are set.
+func (t *Table[T]) Properties() json.RawMessage {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.schema.Properties
+}
+
+// SetProperties sets the application-specific schema properties and persists the change.
+// The entire table is rewritten to update the header.
+func (t *Table[T]) SetProperties(props json.RawMessage) error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.schema.Properties = props
+	return t.saveLocked()
+}
+
 // Get returns a clone of the row with the given ID, or nil if not found.
 func (t *Table[T]) Get(id ID) T {
 	t.mu.RLock()

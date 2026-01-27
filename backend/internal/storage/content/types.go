@@ -3,8 +3,6 @@
 package content
 
 import (
-	"maps"
-
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -50,9 +48,37 @@ type DataRecord struct {
 func (r *DataRecord) Clone() *DataRecord {
 	c := *r
 	if r.Data != nil {
-		c.Data = maps.Clone(r.Data)
+		c.Data = cloneDataMap(r.Data)
 	}
 	return &c
+}
+
+// cloneDataMap performs a deep clone of a record data map.
+func cloneDataMap(m map[string]any) map[string]any {
+	c := make(map[string]any, len(m))
+	for k, v := range m {
+		c[k] = cloneValue(v)
+	}
+	return c
+}
+
+// cloneValue deep clones a value that may appear in record data.
+func cloneValue(v any) any {
+	switch val := v.(type) {
+	case []any:
+		c := make([]any, len(val))
+		for i, item := range val {
+			c[i] = cloneValue(item)
+		}
+		return c
+	case []string:
+		return append([]string(nil), val...)
+	case map[string]any:
+		return cloneDataMap(val)
+	default:
+		// Primitives (string, float64, bool, nil) are immutable
+		return v
+	}
 }
 
 // GetID returns the DataRecord's ID.

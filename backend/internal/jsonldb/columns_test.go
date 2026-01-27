@@ -20,6 +20,14 @@ func TestSchemaHeader(t *testing.T) {
 					schemaHeader{Version: "1.0", Columns: []column{}},
 				},
 				{
+					"version 1.1",
+					schemaHeader{Version: "1.1", Columns: []column{}},
+				},
+				{
+					"version 1.99",
+					schemaHeader{Version: "1.99", Columns: []column{}},
+				},
+				{
 					"header with columns",
 					schemaHeader{
 						Version: "1.0",
@@ -57,6 +65,14 @@ func TestSchemaHeader(t *testing.T) {
 				{
 					"empty version",
 					schemaHeader{Version: "", Columns: []column{}},
+				},
+				{
+					"unsupported version 2.0",
+					schemaHeader{Version: "2.0", Columns: []column{}},
+				},
+				{
+					"unsupported version 0.9",
+					schemaHeader{Version: "0.9", Columns: []column{}},
 				},
 				{
 					"column with empty name",

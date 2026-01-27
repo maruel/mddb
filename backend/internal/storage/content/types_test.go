@@ -28,6 +28,41 @@ func TestDataRecord(t *testing.T) {
 				t.Error("Clone Data should not share reference with original")
 			}
 		})
+		t.Run("deep copies slices", func(t *testing.T) {
+			original := &DataRecord{
+				ID:   jsonldb.ID(1),
+				Data: map[string]any{"tags": []string{"a", "b", "c"}},
+			}
+			clone := original.Clone()
+			// Modify the cloned slice
+			clone.Data["tags"].([]string)[0] = "modified"
+			// Original should be unchanged
+			if original.Data["tags"].([]string)[0] != "a" {
+				t.Error("Clone should deep copy slices")
+			}
+		})
+		t.Run("deep copies any slices", func(t *testing.T) {
+			original := &DataRecord{
+				ID:   jsonldb.ID(1),
+				Data: map[string]any{"values": []any{1, "two", 3.0}},
+			}
+			clone := original.Clone()
+			clone.Data["values"].([]any)[1] = "modified"
+			if original.Data["values"].([]any)[1] != "two" {
+				t.Error("Clone should deep copy []any slices")
+			}
+		})
+		t.Run("deep copies nested maps", func(t *testing.T) {
+			original := &DataRecord{
+				ID:   jsonldb.ID(1),
+				Data: map[string]any{"nested": map[string]any{"key": "value"}},
+			}
+			clone := original.Clone()
+			clone.Data["nested"].(map[string]any)["key"] = "modified"
+			if original.Data["nested"].(map[string]any)["key"] != "value" {
+				t.Error("Clone should deep copy nested maps")
+			}
+		})
 		t.Run("nil data", func(t *testing.T) {
 			original := &DataRecord{ID: jsonldb.ID(1), Data: nil}
 			if original.Clone().Data != nil {

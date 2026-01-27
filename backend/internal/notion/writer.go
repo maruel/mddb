@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -16,6 +17,9 @@ import (
 type Writer struct {
 	OutputDir   string
 	WorkspaceID string
+
+	mu     sync.Mutex
+	tables map[jsonldb.ID]*jsonldb.Table[*content.DataRecord]
 }
 
 // NewWriter creates a new writer for the given output directory and workspace.
@@ -23,6 +27,7 @@ func NewWriter(outputDir, workspaceID string) *Writer {
 	return &Writer{
 		OutputDir:   outputDir,
 		WorkspaceID: workspaceID,
+		tables:      make(map[jsonldb.ID]*jsonldb.Table[*content.DataRecord]),
 	}
 }
 
@@ -55,7 +60,7 @@ func (w *Writer) WriteNode(node *content.Node, markdownContent string) error {
 		}
 	}
 
-	// Write metadata.json for tables/hybrids
+	// Write metadata.json for tables/hybrids (views only, properties go in data.jsonl)
 	if node.Type == content.NodeTypeTable || node.Type == content.NodeTypeHybrid {
 		if err := w.writeMetadata(nodeDir, node); err != nil {
 			return err
@@ -75,12 +80,16 @@ func (w *Writer) writeMarkdown(nodeDir, title, mdContent string) error {
 	return os.WriteFile(path, []byte(md), 0o644) //nolint:gosec // G306: 0o644 is intentional for readable files
 }
 
-// writeMetadata writes the metadata.json file.
+// writeMetadata writes the metadata.json file (views only, properties go in data.jsonl).
 func (w *Writer) writeMetadata(nodeDir string, node *content.Node) error {
-	path := filepath.Join(nodeDir, "metadata.json")
+	// Only write metadata.json if there are views
+	if len(node.Views) == 0 {
+		return nil
+	}
 
+	path := filepath.Join(nodeDir, "metadata.json")
 	meta := TableMetadata{
-		Properties: node.Properties,
+		Views: node.Views,
 	}
 
 	data, err := json.MarshalIndent(meta, "", "  ")
@@ -93,25 +102,52 @@ func (w *Writer) writeMetadata(nodeDir string, node *content.Node) error {
 
 // TableMetadata is the structure stored in metadata.json.
 type TableMetadata struct {
-	Properties []content.Property `json:"properties"`
-	Views      []any              `json:"views,omitempty"` // Placeholder for views
+	Views []content.View `json:"views,omitempty"`
 }
 
-// WriteRecords writes records to a table's data.jsonl file.
-func (w *Writer) WriteRecords(nodeID jsonldb.ID, records []*content.DataRecord) error {
+// getTable returns the jsonldb.Table for a node, creating it if needed.
+func (w *Writer) getTable(nodeID jsonldb.ID) (*jsonldb.Table[*content.DataRecord], error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if table, ok := w.tables[nodeID]; ok {
+		return table, nil
+	}
+
 	nodeDir := w.nodePath(nodeID)
 	path := filepath.Join(nodeDir, "data.jsonl")
 
-	f, err := os.Create(path) //nolint:gosec // G304: path is constructed from nodeID, not user input
+	table, err := jsonldb.NewTable[*content.DataRecord](path)
 	if err != nil {
-		return fmt.Errorf("failed to create data file: %w", err)
+		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
-	defer func() { _ = f.Close() }()
 
-	encoder := json.NewEncoder(f)
+	w.tables[nodeID] = table
+	return table, nil
+}
+
+// WriteRecords writes records to a table's data.jsonl file using jsonldb.Table.
+// Properties are stored in the table header for schema-aware deserialization.
+func (w *Writer) WriteRecords(nodeID jsonldb.ID, properties []content.Property, records []*content.DataRecord) error {
+	table, err := w.getTable(nodeID)
+	if err != nil {
+		return err
+	}
+
+	// Store properties in the table header
+	if len(properties) > 0 {
+		propsJSON, err := json.Marshal(properties)
+		if err != nil {
+			return fmt.Errorf("failed to marshal properties: %w", err)
+		}
+		if err := table.SetProperties(propsJSON); err != nil {
+			return fmt.Errorf("failed to set properties: %w", err)
+		}
+	}
+
 	for _, record := range records {
-		if err := encoder.Encode(record); err != nil {
-			return fmt.Errorf("failed to write record: %w", err)
+		if err := table.Append(record); err != nil {
+			return fmt.Errorf("failed to append record: %w", err)
 		}
 	}
 
@@ -120,18 +156,13 @@ func (w *Writer) WriteRecords(nodeID jsonldb.ID, records []*content.DataRecord) 
 
 // AppendRecord appends a single record to a table's data.jsonl file.
 func (w *Writer) AppendRecord(nodeID jsonldb.ID, record *content.DataRecord) error {
-	nodeDir := w.nodePath(nodeID)
-	path := filepath.Join(nodeDir, "data.jsonl")
-
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644) //nolint:gosec // G302: 0o644 is intentional for readable files
+	table, err := w.getTable(nodeID)
 	if err != nil {
-		return fmt.Errorf("failed to open data file: %w", err)
+		return err
 	}
-	defer func() { _ = f.Close() }()
 
-	encoder := json.NewEncoder(f)
-	if err := encoder.Encode(record); err != nil {
-		return fmt.Errorf("failed to write record: %w", err)
+	if err := table.Append(record); err != nil {
+		return fmt.Errorf("failed to append record: %w", err)
 	}
 
 	return nil

@@ -71,12 +71,14 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 		current++
 		e.progress.OnProgress(current, "Database: "+richTextToPlain(databases[i].Title))
 
-		if err := e.extractDatabase(ctx, databases[i], opts); err != nil {
+		recordCount, err := e.extractDatabase(ctx, databases[i], opts)
+		if err != nil {
 			e.progress.OnError(fmt.Errorf("database %s: %w", databases[i].ID, err))
 			stats.Errors++
 			continue
 		}
 		stats.Databases++
+		stats.Records += recordCount
 	}
 
 	// Extract standalone pages
@@ -176,11 +178,12 @@ func (e *Extractor) discoverContent(ctx context.Context, opts ExtractOptions) ([
 }
 
 // extractDatabase extracts a database and its rows.
-func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts ExtractOptions) error {
+// Returns the number of records extracted.
+func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts ExtractOptions) (int, error) {
 	// Map database to node
 	node, err := e.mapper.MapDatabase(db)
 	if err != nil {
-		return fmt.Errorf("failed to map database: %w", err)
+		return 0, fmt.Errorf("failed to map database: %w", err)
 	}
 
 	// Apply views from manifest if provided
@@ -190,13 +193,13 @@ func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts Extr
 
 	// Write node (table metadata)
 	if err := e.writer.WriteNode(node, ""); err != nil {
-		return fmt.Errorf("failed to write node: %w", err)
+		return 0, fmt.Errorf("failed to write node: %w", err)
 	}
 
 	// Query all rows
 	rows, err := e.client.QueryDatabaseAll(ctx, db.ID, nil)
 	if err != nil {
-		return fmt.Errorf("failed to query database: %w", err)
+		return 0, fmt.Errorf("failed to query database: %w", err)
 	}
 
 	// Map and write records
@@ -210,11 +213,11 @@ func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts Extr
 		records = append(records, record)
 	}
 
-	if err := e.writer.WriteRecords(node.ID, records); err != nil {
-		return fmt.Errorf("failed to write records: %w", err)
+	if err := e.writer.WriteRecords(node.ID, node.Properties, records); err != nil {
+		return 0, fmt.Errorf("failed to write records: %w", err)
 	}
 
-	return nil
+	return len(records), nil
 }
 
 // extractPage extracts a standalone page.
