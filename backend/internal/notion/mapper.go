@@ -15,13 +15,36 @@ import (
 type Mapper struct {
 	// NotionToMddb maps Notion IDs to mddb IDs.
 	NotionToMddb map[string]jsonldb.ID
+	// PendingRelations maps property names to Notion database IDs that need resolution.
+	PendingRelations map[string]string
 }
 
 // NewMapper creates a new type mapper.
 func NewMapper() *Mapper {
 	return &Mapper{
-		NotionToMddb: make(map[string]jsonldb.ID),
+		NotionToMddb:     make(map[string]jsonldb.ID),
+		PendingRelations: make(map[string]string),
 	}
+}
+
+// ResolveRelations updates relation properties with resolved mddb node IDs.
+// Call this after all databases have been mapped.
+func (m *Mapper) ResolveRelations(node *content.Node) {
+	for i := range node.Properties {
+		prop := &node.Properties[i]
+		if prop.Type == content.PropertyTypeRelation && prop.RelationConfig != nil {
+			if notionDBID, ok := m.PendingRelations[prop.Name]; ok {
+				if mddbID, ok := m.NotionToMddb[notionDBID]; ok {
+					prop.RelationConfig.TargetNodeID = mddbID
+				}
+			}
+		}
+	}
+}
+
+// ClearPendingRelations clears the pending relations map for the next database.
+func (m *Mapper) ClearPendingRelations() {
+	m.PendingRelations = make(map[string]string)
 }
 
 // MapDatabase converts a Notion database to an mddb Node.
@@ -90,14 +113,35 @@ func (m *Mapper) mapDBProperty(name string, prop *DBProperty) *content.Property 
 		// Files will be handled separately as assets
 		mddbProp.Type = content.PropertyTypeText
 	case "formula":
-		// Store formula as text for now
-		mddbProp.Type = content.PropertyTypeText
+		mddbProp.Type = content.PropertyTypeFormula
+		if prop.Formula != nil {
+			mddbProp.FormulaConfig = &content.FormulaConfig{
+				Expression: prop.Formula.Expression,
+			}
+		}
 	case "relation":
-		// Relations will be handled in Phase 2
-		mddbProp.Type = content.PropertyTypeText
+		mddbProp.Type = content.PropertyTypeRelation
+		if prop.Relation != nil {
+			// Store the Notion database ID; will be resolved to mddb ID after all DBs are mapped
+			mddbProp.RelationConfig = &content.RelationConfig{
+				// TargetNodeID will be resolved later via ResolveRelations()
+				IsDualLink: prop.Relation.Type == "dual_property",
+			}
+			if prop.Relation.DualProperty != nil {
+				mddbProp.RelationConfig.DualPropertyName = prop.Relation.DualProperty.SyncedPropertyName
+			}
+			// Store Notion DB ID temporarily for resolution
+			m.PendingRelations[name] = prop.Relation.DatabaseID
+		}
 	case "rollup":
-		// Rollups will be handled in Phase 2
-		mddbProp.Type = content.PropertyTypeText
+		mddbProp.Type = content.PropertyTypeRollup
+		if prop.Rollup != nil {
+			mddbProp.RollupConfig = &content.RollupConfig{
+				RelationProperty: prop.Rollup.RelationPropertyName,
+				TargetProperty:   prop.Rollup.RollupPropertyName,
+				Aggregation:      mapRollupAggregation(prop.Rollup.Function),
+			}
+		}
 	case "unique_id":
 		// Unique IDs map to text
 		mddbProp.Type = content.PropertyTypeText
@@ -364,6 +408,28 @@ func mapRollupArrayItem(pv *PropertyValue) any {
 		}
 	}
 	return nil
+}
+
+// mapRollupAggregation converts a Notion rollup function to mddb RollupAggregation.
+func mapRollupAggregation(notionFunc string) content.RollupAggregation {
+	switch notionFunc {
+	case "count":
+		return content.RollupCount
+	case "count_values":
+		return content.RollupCountValues
+	case "sum":
+		return content.RollupSum
+	case "average":
+		return content.RollupAverage
+	case "min":
+		return content.RollupMin
+	case "max":
+		return content.RollupMax
+	case "show_original":
+		return content.RollupShowAll
+	default:
+		return content.RollupShowAll
+	}
 }
 
 // richTextToPlain converts rich text to plain text.

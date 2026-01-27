@@ -910,33 +910,40 @@ func (m *ViewManifest) ViewsForDatabase(notionID string) []ViewConfig
 
 **Deliverable**: CLI that imports pages and databases with primitive properties
 
-### Phase 2: Relational Properties
-- [ ] Add `PropertyTypeRelation` to mddb types
-- [ ] Add `RelationConfig` struct
-- [ ] Map Notion relations to mddb
-- [ ] Add `PropertyTypeRollup` with `RollupConfig`
-- [ ] Add `PropertyTypeFormula` with `FormulaConfig`
-- [ ] Store computed values (rollup/formula results from Notion)
-- [ ] Update frontend to display relation/rollup/formula fields
+### Phase 2: Relational Properties ✅
+- [x] Add `PropertyTypeRelation` to mddb types
+- [x] Add `RelationConfig` struct
+- [x] Map Notion relations to mddb
+- [x] Add `PropertyTypeRollup` with `RollupConfig`
+- [x] Add `PropertyTypeFormula` with `FormulaConfig`
+- [x] Store computed values (rollup/formula results from Notion)
+- [x] Add `RollupAggregation` type and mapRollupAggregation function
+- [x] Add relation resolution (PendingRelations map + ResolveRelations method)
+- [x] Unit tests for relational property mapping
+- [ ] Update frontend to display relation/rollup/formula fields (deferred to Phase 5/6)
 
 **Deliverable**: CLI imports all property types including relations
 
-### Phase 3: View System Foundation
-- [ ] Add `View` type and related structs to mddb
-- [ ] Update `metadata.json` schema to include views
-- [ ] View CRUD API endpoints
-- [ ] Backend filter/sort application to records query
-- [ ] Frontend `ViewSwitcher` component
-- [ ] Frontend `TableView` with column visibility/ordering
+### Phase 3: View System Foundation (Backend Complete)
+- [x] Add `View` type and related structs to mddb (`views.go`)
+- [x] Add `Filter`, `Sort`, `Group`, `ViewColumn` types
+- [x] Add `FilterOp` and `SortDir` constants
+- [x] Update `Node` struct to include `Views` field
+- [x] Backend filter/sort application to records query (`query.go`)
+- [x] Unit tests for query/filter/sort logic
+- [ ] View CRUD API endpoints (deferred to Phase 5)
+- [ ] Frontend `ViewSwitcher` component (deferred to Phase 5)
+- [ ] Frontend `TableView` with column visibility/ordering (deferred to Phase 5)
 
-**Deliverable**: Users can create/edit views in mddb, basic table view works
+**Deliverable**: Backend view types and query logic ready for use
 
-### Phase 4: View Import
-- [ ] `internal/notion/manifest.go` - YAML manifest parser
-- [ ] Validate manifest against imported database schemas
-- [ ] Apply manifest views during import
-- [ ] CLI `--views` flag
-- [ ] Error reporting for invalid view configs
+### Phase 4: View Import ✅
+- [x] `internal/notion/manifest.go` - YAML manifest parser
+- [x] Validate manifest (version, required fields, valid view types)
+- [x] Apply manifest views during import (`extractDatabase` adds views to node)
+- [x] CLI `--views` flag
+- [x] Error reporting for invalid view configs
+- [x] Unit tests for manifest parsing and conversion
 
 **Deliverable**: CLI can import views from manifest file
 

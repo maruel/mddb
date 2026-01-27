@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
 
@@ -208,6 +209,175 @@ func TestRichTextToPlain(t *testing.T) {
 				t.Errorf("richTextToPlain() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestMapRollupAggregation(t *testing.T) {
+	tests := []struct {
+		notionFunc string
+		want       content.RollupAggregation
+	}{
+		{"count", content.RollupCount},
+		{"count_values", content.RollupCountValues},
+		{"sum", content.RollupSum},
+		{"average", content.RollupAverage},
+		{"min", content.RollupMin},
+		{"max", content.RollupMax},
+		{"show_original", content.RollupShowAll},
+		{"unknown", content.RollupShowAll},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.notionFunc, func(t *testing.T) {
+			got := mapRollupAggregation(tt.notionFunc)
+			if got != tt.want {
+				t.Errorf("mapRollupAggregation(%q) = %q, want %q", tt.notionFunc, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMapDBPropertyRelational(t *testing.T) {
+	m := NewMapper()
+
+	t.Run("relation", func(t *testing.T) {
+		prop := DBProperty{
+			Type: "relation",
+			Relation: &RelationConfig{
+				DatabaseID: "target-db-123",
+				Type:       "dual_property",
+				DualProperty: &DualPropertyConfig{
+					SyncedPropertyName: "BackRef",
+				},
+			},
+		}
+		result := m.mapDBProperty("Related Items", &prop)
+
+		if result.Type != content.PropertyTypeRelation {
+			t.Errorf("expected type %q, got %q", content.PropertyTypeRelation, result.Type)
+		}
+		if result.RelationConfig == nil {
+			t.Fatal("expected RelationConfig to be set")
+		}
+		if !result.RelationConfig.IsDualLink {
+			t.Error("expected IsDualLink to be true for dual_property")
+		}
+		if result.RelationConfig.DualPropertyName != "BackRef" {
+			t.Errorf("expected DualPropertyName %q, got %q", "BackRef", result.RelationConfig.DualPropertyName)
+		}
+		// Check pending relation was stored
+		if m.PendingRelations["Related Items"] != "target-db-123" {
+			t.Error("expected pending relation to be stored")
+		}
+	})
+
+	t.Run("rollup", func(t *testing.T) {
+		prop := DBProperty{
+			Type: "rollup",
+			Rollup: &RollupConfig{
+				RelationPropertyName: "Related Items",
+				RollupPropertyName:   "Price",
+				Function:             "sum",
+			},
+		}
+		result := m.mapDBProperty("Total", &prop)
+
+		if result.Type != content.PropertyTypeRollup {
+			t.Errorf("expected type %q, got %q", content.PropertyTypeRollup, result.Type)
+		}
+		if result.RollupConfig == nil {
+			t.Fatal("expected RollupConfig to be set")
+		}
+		if result.RollupConfig.RelationProperty != "Related Items" {
+			t.Errorf("expected RelationProperty %q, got %q", "Related Items", result.RollupConfig.RelationProperty)
+		}
+		if result.RollupConfig.TargetProperty != "Price" {
+			t.Errorf("expected TargetProperty %q, got %q", "Price", result.RollupConfig.TargetProperty)
+		}
+		if result.RollupConfig.Aggregation != content.RollupSum {
+			t.Errorf("expected Aggregation %q, got %q", content.RollupSum, result.RollupConfig.Aggregation)
+		}
+	})
+
+	t.Run("formula", func(t *testing.T) {
+		prop := DBProperty{
+			Type: "formula",
+			Formula: &FormulaConfig{
+				Expression: "prop(\"Price\") * prop(\"Quantity\")",
+			},
+		}
+		result := m.mapDBProperty("Total", &prop)
+
+		if result.Type != content.PropertyTypeFormula {
+			t.Errorf("expected type %q, got %q", content.PropertyTypeFormula, result.Type)
+		}
+		if result.FormulaConfig == nil {
+			t.Fatal("expected FormulaConfig to be set")
+		}
+		if result.FormulaConfig.Expression != "prop(\"Price\") * prop(\"Quantity\")" {
+			t.Errorf("expected Expression %q, got %q", "prop(\"Price\") * prop(\"Quantity\")", result.FormulaConfig.Expression)
+		}
+	})
+}
+
+func TestResolveRelations(t *testing.T) {
+	m := NewMapper()
+
+	// Simulate mapping two databases
+	mddbID1 := jsonldb.NewID()
+	mddbID2 := jsonldb.NewID()
+	m.NotionToMddb["notion-db-1"] = mddbID1
+	m.NotionToMddb["notion-db-2"] = mddbID2
+
+	// Store pending relation
+	m.PendingRelations["Tasks"] = "notion-db-2"
+
+	// Create a node with a relation property
+	node := &content.Node{
+		Properties: []content.Property{
+			{
+				Name: "Tasks",
+				Type: content.PropertyTypeRelation,
+				RelationConfig: &content.RelationConfig{
+					// TargetNodeID not set yet
+					IsDualLink: true,
+				},
+			},
+			{
+				Name: "Name",
+				Type: content.PropertyTypeText,
+			},
+		},
+	}
+
+	m.ResolveRelations(node)
+
+	// Check that the relation was resolved
+	var tasksProp *content.Property
+	for i := range node.Properties {
+		if node.Properties[i].Name == "Tasks" {
+			tasksProp = &node.Properties[i]
+			break
+		}
+	}
+
+	if tasksProp == nil {
+		t.Fatal("Tasks property not found")
+	}
+	if tasksProp.RelationConfig.TargetNodeID != mddbID2 {
+		t.Errorf("expected TargetNodeID %v, got %v", mddbID2, tasksProp.RelationConfig.TargetNodeID)
+	}
+}
+
+func TestClearPendingRelations(t *testing.T) {
+	m := NewMapper()
+	m.PendingRelations["Tasks"] = "db-123"
+	m.PendingRelations["Projects"] = "db-456"
+
+	m.ClearPendingRelations()
+
+	if len(m.PendingRelations) != 0 {
+		t.Errorf("expected empty PendingRelations, got %d items", len(m.PendingRelations))
 	}
 }
 

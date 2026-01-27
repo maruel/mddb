@@ -11,5 +11,6 @@ var (
 	errTableNotFound = errors.New("table not found")
 	errAssetNotFound = errors.New("asset not found")
 	errIDRequired    = errors.New("ID is required")
+	errNameRequired  = errors.New("name is required")
 	errQuotaExceeded = errors.New("quota exceeded")
 )

@@ -20,6 +20,9 @@ type ExtractOptions struct {
 	// Behavior
 	IncludeContent bool // fetch page content (blocks)
 	MaxDepth       int  // max nesting depth (0 = unlimited)
+
+	// View manifest for importing views
+	Manifest *ViewManifest
 }
 
 // Extractor orchestrates the extraction of Notion data.
@@ -173,11 +176,16 @@ func (e *Extractor) discoverContent(ctx context.Context, opts ExtractOptions) ([
 }
 
 // extractDatabase extracts a database and its rows.
-func (e *Extractor) extractDatabase(ctx context.Context, db *Database, _ ExtractOptions) error {
+func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts ExtractOptions) error {
 	// Map database to node
 	node, err := e.mapper.MapDatabase(db)
 	if err != nil {
 		return fmt.Errorf("failed to map database: %w", err)
+	}
+
+	// Apply views from manifest if provided
+	if opts.Manifest != nil {
+		node.Views = opts.Manifest.ToContentViews(db.ID)
 	}
 
 	// Write node (table metadata)

@@ -197,7 +197,7 @@ func searchResultsToDTO(results []content.SearchResult) []dto.SearchResult {
 
 // --- Nested type conversions (entity -> dto) ---
 
-func propertyToDTO(p content.Property) dto.Property {
+func propertyToDTO(p *content.Property) dto.Property {
 	options := make([]dto.SelectOption, len(p.Options))
 	for i, o := range p.Options {
 		options[i] = dto.SelectOption{
@@ -219,8 +219,8 @@ func propertiesToDTO(props []content.Property) []dto.Property {
 		return nil
 	}
 	result := make([]dto.Property, len(props))
-	for i, p := range props {
-		result[i] = propertyToDTO(p)
+	for i := range props {
+		result[i] = propertyToDTO(&props[i])
 	}
 	return result
 }

@@ -32,6 +32,7 @@ func run() error {
 	outputDir := flag.String("output", "./data", "Output directory")
 	databaseIDs := flag.String("database", "", "Comma-separated database IDs to import (default: all)")
 	pageIDs := flag.String("page", "", "Comma-separated page IDs to import (default: all)")
+	viewsManifest := flag.String("views", "", "Path to YAML view manifest file")
 	includeContent := flag.Bool("include-content", true, "Fetch page content (blocks)")
 	maxDepth := flag.Int("max-depth", 0, "Max nesting depth for blocks (0=unlimited)")
 	dryRun := flag.Bool("dry-run", false, "Show what would be imported without importing")
@@ -64,6 +65,16 @@ func run() error {
 		}
 	}
 
+	// Parse view manifest if provided
+	var manifest *notion.ViewManifest
+	if *viewsManifest != "" {
+		var err error
+		manifest, err = notion.ParseManifest(*viewsManifest)
+		if err != nil {
+			return fmt.Errorf("failed to parse view manifest: %w", err)
+		}
+	}
+
 	// Setup context with signal handling
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	defer stop()
@@ -82,6 +93,7 @@ func run() error {
 		PageIDs:        pgIDs,
 		IncludeContent: *includeContent,
 		MaxDepth:       *maxDepth,
+		Manifest:       manifest,
 	}
 
 	// Print header
