@@ -4,7 +4,7 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 ---
 
-## Bug 1: Table cell inline editing not working properly
+## Bug 1: Table cell inline editing not working properly - FIXED
 
 **Location**: `frontend/src/components/TableTable.tsx` - cell click handling
 
@@ -20,9 +20,11 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 **Verified via**: E2E test `table-operations.spec.ts` - "add and edit records in table" (skipped)
 
+**Fix**: Added auto-focus to input fields when entering edit mode using a ref callback with setTimeout. Also added keyboard support (Enter to save, Escape to cancel).
+
 ---
 
-## Bug 2: Table record deletion not completing
+## Bug 2: Table record deletion not completing - FIXED
 
 **Location**: `frontend/src/App.tsx` - `handleDeleteRecord` function
 
@@ -37,9 +39,11 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 **Verified via**: E2E test `table-operations.spec.ts` - "delete a record from table" (skipped)
 
+**Fix**: The `handleDeleteRecord` function was calling `loadNode(nodeId)` which has a guard that prevents reloading if the node is already loaded (`loadedNodeId === id`). Changed to directly reload records after deletion instead of calling loadNode.
+
 ---
 
-## Bug 3: Page deletion not working
+## Bug 3: Page deletion not working - FIXED
 
 **Location**: `frontend/src/App.tsx` - page delete functionality
 
@@ -54,6 +58,8 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 **Impact**: High - Users cannot delete pages
 
 **Verified via**: E2E test `page-crud.spec.ts` - "delete a page" (skipped)
+
+**Fix**: Added `loadedNodeId = null` before reloading nodes to clear stale state. Also clear `records` signal to prevent showing old data.
 
 ---
 
@@ -73,7 +79,7 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 ---
 
-## Bug 5: Breadcrumbs not rendering for nested pages
+## Bug 5: Breadcrumbs not rendering for nested pages - FIXED
 
 **Location**: `frontend/src/App.tsx` - breadcrumb rendering
 
@@ -89,9 +95,11 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 **Verified via**: E2E test `page-crud.spec.ts` - "breadcrumb navigation works for nested pages" (skipped)
 
+**Fix**: The `getBreadcrumbs` function only searched the local `nodes` store, which only contains top-level nodes. Children are lazy-loaded and not always present. Added a `breadcrumbPath` signal that is populated by fetching the ancestor chain when loading a node via `loadNode()`.
+
 ---
 
-## Bug 6: Mobile sidebar backdrop click not working
+## Bug 6: Mobile sidebar backdrop click not working - FIXED
 
 **Location**: `frontend/src/components/Sidebar.module.css` or App.tsx - mobile sidebar
 
@@ -107,6 +115,8 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 **Impact**: Medium - Poor mobile UX, users cannot dismiss sidebar by clicking outside
 
 **Verified via**: E2E test `mobile-ui.spec.ts` - "clicking backdrop closes mobile sidebar" (skipped)
+
+**Fix**: Raised backdrop z-index from 40 to 99 (just below sidebar's 100). Added `cursor: pointer` to backdrop. Added `overflow: hidden` to sidebar when closed and `overflow-x: hidden` to pageList to prevent content from extending beyond sidebar bounds.
 
 ---
 
@@ -126,7 +136,7 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 
 ---
 
-## Bug 8: Workspace switching doesn't clear selected node content
+## Bug 8: Workspace switching doesn't clear selected node content - FIXED
 
 **Location**: `frontend/src/App.tsx` - workspace switching logic
 
@@ -141,6 +151,8 @@ This document tracks bugs discovered during comprehensive e2e testing. These are
 **Impact**: Medium - Confusing UX when switching workspaces
 
 **Verified via**: E2E test `workspace-org.spec.ts` - "switching workspace clears selected node" (skipped)
+
+**Fix**: Added clearing of `title`, `content`, `records`, `breadcrumbPath`, `hasUnsavedChanges`, and `autoSaveStatus` signals in both `switchWorkspace` and `switchOrg` functions.
 
 ---
 
@@ -195,12 +207,12 @@ The following test failures were due to incorrect test selectors, not applicatio
 
 1. **Add error boundaries**: Invalid workspace IDs should show clear error messages.
 
-2. **Fix mobile sidebar z-index**: The backdrop should have higher z-index than sidebar content for proper click handling.
+2. ~~**Fix mobile sidebar z-index**: The backdrop should have higher z-index than sidebar content for proper click handling.~~ DONE
 
 3. **Implement optimistic updates**: The sidebar title should update immediately when typing.
 
-4. **Add data refresh mechanisms**: Tables and lists should refresh automatically when data changes.
+4. ~~**Add data refresh mechanisms**: Tables and lists should refresh automatically when data changes.~~ DONE
 
 5. **Add e2e-friendly test IDs**: More consistent `data-testid` attributes would make tests more reliable.
 
-6. **Fix breadcrumb rendering**: Ensure breadcrumb path is populated when viewing nested pages.
+6. ~~**Fix breadcrumb rendering**: Ensure breadcrumb path is populated when viewing nested pages.~~ DONE

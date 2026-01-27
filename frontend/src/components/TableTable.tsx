@@ -50,6 +50,16 @@ export default function TableTable(props: TableTableProps) {
     setEditValue(value);
   };
 
+  const handleKeyDown = (e: KeyboardEvent, recordId: string, columnName: string) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleCellSave(recordId, columnName);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setEditingCell(null);
+    }
+  };
+
   const handleCellSave = (recordId: string, columnName: string) => {
     const column = props.columns.find((c) => c.name === columnName);
     if (!column || !props.onUpdateRecord) return;
@@ -89,14 +99,33 @@ export default function TableTable(props: TableTableProps) {
     }
   };
 
-  const renderCellInput = (column: Property, initialValue: string) => {
+  const renderCellInput = (
+    column: Property,
+    initialValue: string,
+    autoFocus = false,
+    recordId?: string,
+    columnName?: string
+  ) => {
+    // Helper to auto-focus input element
+    const focusRef = (el: HTMLInputElement | HTMLSelectElement) => {
+      if (autoFocus) {
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => el.focus(), 0);
+      }
+    };
+
+    // Keyboard handler for Enter (save) and Escape (cancel)
+    const onKeyDown = recordId && columnName ? (e: KeyboardEvent) => handleKeyDown(e, recordId, columnName) : undefined;
+
     switch (column.type) {
       case PropertyTypeCheckbox:
         return (
           <input
+            ref={focusRef}
             type="checkbox"
             checked={initialValue === 'true'}
             onChange={(e) => handleCellChange(String(e.target.checked))}
+            onKeyDown={onKeyDown}
             class={styles.input}
           />
         );
@@ -104,7 +133,13 @@ export default function TableTable(props: TableTableProps) {
         // Use dropdown if options are defined, otherwise text input
         if (column.options && column.options.length > 0) {
           return (
-            <select value={initialValue} onChange={(e) => handleCellChange(e.target.value)} class={styles.input}>
+            <select
+              ref={focusRef}
+              value={initialValue}
+              onChange={(e) => handleCellChange(e.target.value)}
+              onKeyDown={onKeyDown}
+              class={styles.input}
+            >
               <option value="">--</option>
               <For each={column.options}>{(option) => <option value={option.id}>{option.name}</option>}</For>
             </select>
@@ -112,36 +147,44 @@ export default function TableTable(props: TableTableProps) {
         }
         return (
           <input
+            ref={focusRef}
             type="text"
             value={initialValue}
             onInput={(e) => handleCellChange(e.target.value)}
+            onKeyDown={onKeyDown}
             class={styles.input}
           />
         );
       case PropertyTypeNumber:
         return (
           <input
+            ref={focusRef}
             type="number"
             value={initialValue}
             onInput={(e) => handleCellChange(e.target.value)}
+            onKeyDown={onKeyDown}
             class={styles.input}
           />
         );
       case PropertyTypeDate:
         return (
           <input
+            ref={focusRef}
             type="date"
             value={initialValue}
             onInput={(e) => handleCellChange(e.target.value)}
+            onKeyDown={onKeyDown}
             class={styles.input}
           />
         );
       default:
         return (
           <input
+            ref={focusRef}
             type="text"
             value={initialValue}
             onInput={(e) => handleCellChange(e.target.value)}
+            onKeyDown={onKeyDown}
             class={styles.input}
           />
         );
@@ -198,7 +241,7 @@ export default function TableTable(props: TableTableProps) {
                             fallback={<div class={styles.cellContent}>{renderCellContent(record, column)}</div>}
                           >
                             <div class={styles.editContainer}>
-                              {renderCellInput(column, editValue())}
+                              {renderCellInput(column, editValue(), true, record.id, column.name)}
                               <div class={styles.editActions}>
                                 <button class={styles.saveBtn} onClick={() => handleCellSave(record.id, column.name)}>
                                   ✓

@@ -74,6 +74,9 @@ export default function App() {
   const [showHistory, setShowHistory] = createSignal(false);
   const [history, setHistory] = createSignal<Commit[]>([]);
 
+  // Breadcrumb path for nested nodes (fetched from API when navigating to nested pages)
+  const [breadcrumbPath, setBreadcrumbPath] = createSignal<NodeResponse[]>([]);
+
   // Pagination
   const [hasMore, setHasMore] = createSignal(false);
   const PAGE_SIZE = 50;
@@ -121,8 +124,15 @@ export default function App() {
         throw new Error('No user data returned');
       }
       handleLogin(data.token, data.user);
+      // Clear all node-related state when switching organizations
       setSelectedNodeId(null);
       setSelectedNodeData(null);
+      setTitle('');
+      setContent('');
+      setRecords([]);
+      setBreadcrumbPath([]);
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('idle');
       loadedNodeId = null;
       loadedForWorkspace = null; // Force reload for new org
       if (redirect) {
@@ -155,8 +165,15 @@ export default function App() {
         throw new Error('No user data returned');
       }
       handleLogin(data.token, data.user);
+      // Clear all node-related state when switching workspaces
       setSelectedNodeId(null);
       setSelectedNodeData(null);
+      setTitle('');
+      setContent('');
+      setRecords([]);
+      setBreadcrumbPath([]);
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('idle');
       loadedNodeId = null;
       loadedForWorkspace = null; // Force reload for new workspace
       if (redirect) {
@@ -641,6 +658,21 @@ export default function App() {
         setRecords([]);
         setHasMore(false);
       }
+
+      // Build breadcrumb path by fetching ancestor nodes
+      const path: NodeResponse[] = [nodeData];
+      let currentNode = nodeData;
+      while (currentNode.parent_id && currentNode.parent_id !== '0') {
+        try {
+          const parentNode = await ws.nodes.getNode(currentNode.parent_id);
+          path.unshift(parentNode);
+          currentNode = parentNode;
+        } catch {
+          // Stop if we can't fetch a parent
+          break;
+        }
+      }
+      setBreadcrumbPath(path);
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
@@ -771,11 +803,14 @@ export default function App() {
     try {
       setLoading(true);
       await ws.nodes.deleteNode(nodeId);
+      // Clear loadedNodeId to prevent stale state when navigating to a new page
+      loadedNodeId = null;
       await loadNodes(true);
       setSelectedNodeId(null);
       setSelectedNodeData(null);
       setTitle('');
       setContent('');
+      setRecords([]);
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
@@ -815,30 +850,9 @@ export default function App() {
 
   const getBreadcrumbs = (nodeId: string | null): NodeResponse[] => {
     if (!nodeId) return [];
-    const path: NodeResponse[] = [];
-
-    const findPath = (currentNodes: NodeResponse[], targetId: string): boolean => {
-      for (const node of currentNodes) {
-        if (node.id === targetId) {
-          path.push(node);
-          return true;
-        }
-        if (
-          node.children &&
-          findPath(
-            node.children.filter((c): c is NodeResponse => !!c),
-            targetId
-          )
-        ) {
-          path.unshift(node);
-          return true;
-        }
-      }
-      return false;
-    };
-
-    findPath(nodes, nodeId);
-    return path;
+    // Use the breadcrumbPath signal which is populated when loading a node
+    // This ensures breadcrumbs work for both sidebar navigation and direct URL access
+    return breadcrumbPath();
   };
 
   async function handleAddRecord(data: Record<string, unknown>) {
@@ -869,7 +883,10 @@ export default function App() {
     try {
       setLoading(true);
       await ws.nodes.table.records.deleteRecord(nodeId, recordId);
-      loadNode(nodeId);
+      // Reload records directly instead of calling loadNode (which has a guard that prevents reload)
+      const recordsData = await ws.nodes.table.records.listRecords(nodeId, { Offset: 0, Limit: PAGE_SIZE });
+      setRecords((recordsData.records || []) as DataRecordResponse[]);
+      setHasMore((recordsData.records || []).length === PAGE_SIZE);
       setError(null);
     } catch (err) {
       setError(`${t('errors.failedToDelete')}: ${err}`);

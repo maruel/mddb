@@ -48,6 +48,7 @@
 .pageList {
   list-style: none;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
 }
 
@@ -98,9 +99,13 @@
     z-index: 100;
     transform: translateX(-100%);
     transition: transform var(--transition);
+    /* Ensure sidebar content doesn't overflow and intercept clicks outside */
+    overflow: hidden;
   }
 
   .sidebar.mobileOpen {
     transform: translateX(0);
+    /* Allow internal scrolling when open */
+    overflow: visible;
   }
 }

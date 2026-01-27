@@ -171,12 +171,13 @@ test.describe('Mobile UI - Layout', () => {
     await hamburgerButton.click();
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
-    // Focus on title input
+    // Wait for the page content to fully load (title should show the original value)
     const titleInput = page.locator('input[placeholder*="Title"]');
     await expect(titleInput).toBeVisible({ timeout: 5000 });
-    await titleInput.focus();
+    await expect(titleInput).toHaveValue('Mobile Editor Test', { timeout: 5000 });
 
-    // Type in title
+    // Focus and type in title
+    await titleInput.focus();
     await titleInput.fill('Updated Mobile Title');
     await expect(titleInput).toHaveValue('Updated Mobile Title');
 
