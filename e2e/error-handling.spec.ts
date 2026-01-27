@@ -26,8 +26,8 @@ test.describe('Error Handling - Invalid Routes', () => {
     expect(hasError || hasSidebar).toBe(true);
   });
 
-  // BUG: Invalid workspace ID not handled - see BUGS_FOUND.md Bug 10
-  test.skip('navigating to non-existent workspace shows error', async ({ page, request }) => {
+  // Testing if invalid workspace ID is handled
+  test('navigating to non-existent workspace shows error', async ({ page, request }) => {
     const { token } = await registerUser(request, 'invalid-ws');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });

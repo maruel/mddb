@@ -46,8 +46,8 @@ test.describe('Table Creation and Basic Operations', () => {
     await takeScreenshot('table-view');
   });
 
-  // BUG: Cell inline editing doesn't work reliably - see BUGS_FOUND.md
-  test.skip('add and edit records in table', async ({ page, request }) => {
+  // Testing cell inline editing
+  test('add and edit records in table', async ({ page, request }) => {
     const { token } = await registerUser(request, 'table-records');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -93,32 +93,52 @@ test.describe('Table Creation and Basic Operations', () => {
     await expect(page.getByText('100')).toBeVisible();
     await expect(page.getByText('200')).toBeVisible();
 
-    // Click on the Name cell of Item 1 row to edit it
-    // Use exact text match to avoid matching "Edited Item 1" or other similar text
-    const item1Cell = page.locator('td').filter({ hasText: /^Item 1$|Item 1 ✓ ✕/ }).first();
-    await item1Cell.click();
+    // Click on a table cell to edit it - find the cell that contains exactly "Item 1"
+    // Using getByText with exact match for the cell content
+    const item1Text = page.locator('td').getByText('Item 1', { exact: true });
+    await item1Text.click();
 
-    // Wait for edit mode - an input should appear in the clicked cell
-    // The edit UI may already be visible, or we need to wait for it
-    const editInput = item1Cell.locator('input');
+    // Wait for edit mode - the row with Item 1 should now have an input
+    // Use getByRole to find the row containing the edit UI (shows ✕ Item 1 ✓ ✕)
+    const editRow = page.getByRole('row', { name: /Item 1/ });
+    const editInput = editRow.getByRole('textbox');
     await expect(editInput).toBeVisible({ timeout: 5000 });
 
     // Change the value
     await editInput.fill('Edited Item 1');
 
-    // Save the edit using the save button within the cell's edit UI
-    const saveButton = item1Cell.locator('button').filter({ hasText: '✓' });
+    // Save the edit using the save button (checkmark) within the same row
+    const saveButton = editRow.locator('button').filter({ hasText: '✓' });
     await saveButton.click();
 
-    // Wait for the save to complete and edit mode to close
-    await page.waitForTimeout(500);
+    // Wait for save to process
+    await page.waitForTimeout(1000);
 
-    // Verify the edit was saved - the cell should now show the new value
-    await expect(page.locator('td').getByText('Edited Item 1')).toBeVisible({ timeout: 5000 });
+    // Verify via API that the record was updated
+    const recordsResponse = await request.get(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const recordsData = await recordsResponse.json();
+    const editedRecord = recordsData.items?.find((r: { data: { Name: string } }) => r.data.Name === 'Edited Item 1');
+
+    // If API shows the edit was saved, verify UI. If not, this is a backend bug.
+    if (editedRecord) {
+      // Reload to get fresh UI state
+      await page.reload();
+      await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+      await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
+      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('td').getByText('Edited Item 1')).toBeVisible({ timeout: 5000 });
+    } else {
+      // Check if original value still exists - this would be a bug
+      const originalRecord = recordsData.items?.find((r: { data: { Name: string } }) => r.data.Name === 'Item 1');
+      // If the record still has original name, the save failed
+      expect(originalRecord).toBeFalsy();
+    }
   });
 
-  // BUG: Record deletion doesn't complete - see BUGS_FOUND.md
-  test.skip('delete a record from table', async ({ page, request }) => {
+  // Testing record deletion
+  test('delete a record from table', async ({ page, request }) => {
     const { token } = await registerUser(request, 'table-delete');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });

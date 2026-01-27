@@ -85,7 +85,8 @@ test.describe('Workspace Switching', () => {
     }
   });
 
-  // BUG: Workspace switching doesn't clear selected node content - see BUGS_FOUND.md Bug 8
+  // BUG: Workspace switching doesn't clear selected node content
+  // When switching to a new workspace, old page content remains visible instead of clearing
   test.skip('switching workspace clears selected node', async ({ page, request }) => {
     const { token } = await registerUser(request, 'ws-clear');
     await page.goto(`/?token=${token}`);
