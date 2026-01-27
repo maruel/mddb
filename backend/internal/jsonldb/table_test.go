@@ -1248,7 +1248,7 @@ not valid json
 			path := filepath.Join(dir, "unsorted.jsonl")
 
 			// Write a JSONL file with out-of-order IDs (simulating clock drift)
-			content := `{"version":"1","columns":[]}
+			content := `{"version":"1.0","columns":[]}
 {"id":4,"name":"fourth"}
 {"id":1,"name":"first"}
 {"id":5,"name":"fifth"}
@@ -1292,7 +1292,7 @@ not valid json
 			path := filepath.Join(dir, "sorted.jsonl")
 
 			// Write a JSONL file with sorted IDs
-			content := `{"version":"1","columns":[]}
+			content := `{"version":"1.0","columns":[]}
 {"id":1,"name":"first"}
 {"id":2,"name":"second"}
 {"id":3,"name":"third"}
