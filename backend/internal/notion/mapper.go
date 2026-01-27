@@ -4,6 +4,7 @@ package notion
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -28,6 +29,17 @@ type Mapper struct {
 func NewMapper() *Mapper {
 	return &Mapper{
 		NotionToMddb:     make(map[string]jsonldb.ID),
+		PendingRelations: make(map[string]string),
+	}
+}
+
+// NewMapperWithIDs creates a new type mapper with pre-existing ID mappings.
+// Use this for incremental imports to reuse existing mddb IDs.
+func NewMapperWithIDs(existingIDs map[string]jsonldb.ID) *Mapper {
+	ids := make(map[string]jsonldb.ID, len(existingIDs))
+	maps.Copy(ids, existingIDs)
+	return &Mapper{
+		NotionToMddb:     ids,
 		PendingRelations: make(map[string]string),
 	}
 }
@@ -167,8 +179,10 @@ func (m *Mapper) mapDBProperty(name string, prop *DBProperty) *content.Property 
 	}
 
 	switch prop.Type {
-	case "title", "rich_text":
+	case "title":
 		mddbProp.Type = content.PropertyTypeText
+	case "rich_text":
+		mddbProp.Type = content.PropertyTypeMarkdown
 	case "number":
 		mddbProp.Type = content.PropertyTypeNumber
 	case "checkbox":
@@ -385,7 +399,7 @@ func (m *Mapper) mapPropertyValue(pv *PropertyValue, _ string) any {
 	case "title":
 		return richTextToPlain(pv.Title)
 	case "rich_text":
-		return richTextToPlain(pv.RichText)
+		return richTextToMarkdown(pv.RichText)
 	case "number":
 		if pv.Number != nil {
 			return *pv.Number

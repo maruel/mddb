@@ -170,7 +170,7 @@ func TestMapDBProperty(t *testing.T) {
 		wantType content.PropertyType
 	}{
 		{"title", DBProperty{Type: "title"}, content.PropertyTypeText},
-		{"rich_text", DBProperty{Type: "rich_text"}, content.PropertyTypeText},
+		{"rich_text", DBProperty{Type: "rich_text"}, content.PropertyTypeMarkdown},
 		{"number", DBProperty{Type: "number"}, content.PropertyTypeNumber},
 		{"checkbox", DBProperty{Type: "checkbox"}, content.PropertyTypeCheckbox},
 		{"date", DBProperty{Type: "date"}, content.PropertyTypeDate},

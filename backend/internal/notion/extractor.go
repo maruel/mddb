@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
 
@@ -63,6 +64,22 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 	// Ensure workspace directory exists
 	if err := e.writer.EnsureWorkspace(); err != nil {
 		return nil, fmt.Errorf("failed to create workspace: %w", err)
+	}
+
+	// Load existing ID mapping for incremental imports
+	existingIDs, err := e.writer.LoadIDMapping()
+	if err != nil {
+		e.progress.OnWarning(fmt.Sprintf("Failed to load ID mapping, starting fresh: %v", err))
+		existingIDs = make(map[string]jsonldb.ID)
+	}
+	if len(existingIDs) > 0 {
+		e.progress.OnProgress(0, fmt.Sprintf("Loaded %d existing ID mappings", len(existingIDs)))
+		e.mapper = NewMapperWithIDs(existingIDs)
+	}
+
+	// Clear nodes manifest for fresh import (IDs are preserved via mapping)
+	if err := e.writer.ClearNodesManifest(); err != nil {
+		e.progress.OnWarning(fmt.Sprintf("Failed to clear nodes manifest: %v", err))
 	}
 
 	// Create asset downloader and import tracker
@@ -157,6 +174,10 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 			records = append(records, record)
 		}
 
+		// Clear existing data for re-import (IDs preserved via mapping)
+		if err := e.writer.ClearNodeData(data.node.ID); err != nil {
+			e.progress.OnWarning(fmt.Sprintf("Failed to clear existing data: %v", err))
+		}
 		if err := e.writer.WriteRecords(data.node.ID, data.node.Properties, records); err != nil {
 			e.progress.OnError(fmt.Errorf("database %s: failed to write records: %w", data.db.ID, err))
 			stats.Errors++
@@ -184,6 +205,11 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 	// Gather asset stats
 	if e.assets != nil {
 		stats.Assets = e.assets.Downloaded
+	}
+
+	// Save ID mapping for future incremental imports
+	if err := e.writer.SaveIDMapping(e.mapper.NotionToMddb); err != nil {
+		e.progress.OnWarning(fmt.Sprintf("Failed to save ID mapping: %v", err))
 	}
 
 	stats.Duration = time.Since(startTime)
@@ -398,6 +424,10 @@ func (e *Extractor) extractDatabase(ctx context.Context, db *Database, opts Extr
 		records = append(records, record)
 	}
 
+	// Clear existing data for re-import (IDs preserved via mapping)
+	if err := e.writer.ClearNodeData(node.ID); err != nil {
+		e.progress.OnWarning(fmt.Sprintf("Failed to clear existing data: %v", err))
+	}
 	if err := e.writer.WriteRecords(node.ID, node.Properties, records); err != nil {
 		return fmt.Errorf("failed to write records: %w", err)
 	}

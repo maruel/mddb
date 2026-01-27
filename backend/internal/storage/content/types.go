@@ -136,6 +136,8 @@ const (
 
 	// PropertyTypeText stores plain text values.
 	PropertyTypeText PropertyType = "text"
+	// PropertyTypeMarkdown stores inline markdown (bold, italic, links, code).
+	PropertyTypeMarkdown PropertyType = "markdown"
 	// PropertyTypeNumber stores numeric values (integer or float).
 	PropertyTypeNumber PropertyType = "number"
 	// PropertyTypeCheckbox stores boolean values.

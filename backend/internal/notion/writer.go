@@ -118,6 +118,16 @@ type NodeEntry struct {
 	Modified storage.Time `json:"modified"`
 }
 
+// ClearNodesManifest removes the nodes.jsonl file to prepare for a fresh import.
+// Call this at the start of an import to avoid duplicate entries.
+func (w *Writer) ClearNodesManifest() error {
+	path := filepath.Join(w.workspacePath(), "nodes.jsonl")
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove nodes.jsonl: %w", err)
+	}
+	return nil
+}
+
 // WriteNodeEntry appends a node entry to the manifest file (nodes.jsonl).
 func (w *Writer) WriteNodeEntry(node *content.Node) (rerr error) {
 	w.mu.Lock()
@@ -154,6 +164,22 @@ func (w *Writer) WriteNodeEntry(node *content.Node) (rerr error) {
 		return fmt.Errorf("failed to write node entry: %w", err)
 	}
 
+	return nil
+}
+
+// ClearNodeData removes the data.jsonl file for a node to prepare for re-import.
+func (w *Writer) ClearNodeData(nodeID jsonldb.ID) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// Remove from cache if present
+	delete(w.tables, nodeID)
+
+	nodeDir := w.nodePath(nodeID)
+	path := filepath.Join(nodeDir, "data.jsonl")
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("failed to remove data.jsonl: %w", err)
+	}
 	return nil
 }
 
@@ -215,6 +241,57 @@ func (w *Writer) AppendRecord(nodeID jsonldb.ID, record *content.DataRecord) err
 
 	if err := table.Append(record); err != nil {
 		return fmt.Errorf("failed to append record: %w", err)
+	}
+
+	return nil
+}
+
+// IDMapping stores the Notion ID to mddb ID mapping for incremental imports.
+type IDMapping struct {
+	Version int                   `json:"version"`
+	IDs     map[string]jsonldb.ID `json:"ids"` // Notion ID -> mddb ID
+}
+
+// idMappingPath returns the path to the ID mapping file.
+func (w *Writer) idMappingPath() string {
+	return filepath.Join(w.workspacePath(), "notion_id_mapping.json")
+}
+
+// LoadIDMapping loads the ID mapping from disk if it exists.
+// Returns an empty map if the file doesn't exist.
+func (w *Writer) LoadIDMapping() (map[string]jsonldb.ID, error) {
+	path := w.idMappingPath()
+	data, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from validated input
+	if err != nil {
+		if os.IsNotExist(err) {
+			return make(map[string]jsonldb.ID), nil
+		}
+		return nil, fmt.Errorf("failed to read ID mapping: %w", err)
+	}
+
+	var mapping IDMapping
+	if err := json.Unmarshal(data, &mapping); err != nil {
+		return nil, fmt.Errorf("failed to parse ID mapping: %w", err)
+	}
+
+	return mapping.IDs, nil
+}
+
+// SaveIDMapping saves the ID mapping to disk.
+func (w *Writer) SaveIDMapping(ids map[string]jsonldb.ID) error {
+	mapping := IDMapping{
+		Version: 1,
+		IDs:     ids,
+	}
+
+	data, err := json.MarshalIndent(mapping, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal ID mapping: %w", err)
+	}
+
+	path := w.idMappingPath()
+	if err := os.WriteFile(path, data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional
+		return fmt.Errorf("failed to write ID mapping: %w", err)
 	}
 
 	return nil
