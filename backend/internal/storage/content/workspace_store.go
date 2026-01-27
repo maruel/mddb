@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"iter"
 	"log/slog"
@@ -149,12 +148,10 @@ func (ws *WorkspaceFileStore) checkStorageQuota(additionalBytes int64) error {
 // Path helpers
 
 // relativeDir returns the relative directory path for a node.
-// If id is zero (root), returns empty string.
+// Top-level nodes (parentID=0) are stored directly in workspace dir.
+// Nested nodes include their parent chain in the path.
 func (ws *WorkspaceFileStore) relativeDir(id, parentID jsonldb.ID) string {
-	// Root node (id=0) maps to workspace root
-	if id.IsZero() {
-		return ""
-	}
+	// Build path from parent chain, stopping at workspace level (parentID=0).
 	var parts []string
 	for p := parentID; !p.IsZero(); p = ws.getParent(p) {
 		parts = append(parts, p.String())
@@ -165,13 +162,8 @@ func (ws *WorkspaceFileStore) relativeDir(id, parentID jsonldb.ID) string {
 }
 
 // pageDir returns the absolute directory path for a node.
-// If id is zero (root), returns the workspace directory.
 func (ws *WorkspaceFileStore) pageDir(id, parentID jsonldb.ID) string {
-	rel := ws.relativeDir(id, parentID)
-	if rel == "" {
-		return ws.wsDir
-	}
-	return filepath.Join(ws.wsDir, rel)
+	return filepath.Join(ws.wsDir, ws.relativeDir(id, parentID))
 }
 
 func (ws *WorkspaceFileStore) pageIndexFile(id, parentID jsonldb.ID) string {
@@ -200,6 +192,9 @@ func (ws *WorkspaceFileStore) gitPath(parentID, id jsonldb.ID, fileName string) 
 
 // PageExists checks if a page exists.
 func (ws *WorkspaceFileStore) PageExists(id jsonldb.ID) bool {
+	if id.IsZero() {
+		return false // No node with ID 0 exists
+	}
 	parentID := ws.getParent(id)
 	filePath := ws.pageIndexFile(id, parentID)
 	_, err := os.Stat(filePath)
@@ -219,7 +214,7 @@ func (ws *WorkspaceFileStore) ReadPage(id jsonldb.ID) (*Node, error) {
 		return nil, fmt.Errorf("failed to read page: %w", err)
 	}
 
-	p := parseMarkdownFile(id, data)
+	p := parseMarkdownFile(data)
 	return &Node{
 		ID:       id,
 		ParentID: parentID,
@@ -250,14 +245,13 @@ func (ws *WorkspaceFileStore) WritePage(ctx context.Context, id, parentID jsonld
 func (ws *WorkspaceFileStore) writePage(id, parentID jsonldb.ID, title, content string) (*Node, error) {
 	now := storage.Now()
 	p := &page{
-		id:       id,
 		title:    title,
 		content:  content,
 		created:  now,
 		modified: now,
 	}
 
-	if err := ws.writePageFile(parentID, p); err != nil {
+	if err := ws.writePageFile(id, parentID, p); err != nil {
 		return nil, err
 	}
 
@@ -273,10 +267,10 @@ func (ws *WorkspaceFileStore) writePage(id, parentID jsonldb.ID, title, content 
 }
 
 // writePageFile writes the page file.
-func (ws *WorkspaceFileStore) writePageFile(parentID jsonldb.ID, p *page) error {
+func (ws *WorkspaceFileStore) writePageFile(id, parentID jsonldb.ID, p *page) error {
 	data := formatMarkdownFile(p)
-	pageDir := ws.pageDir(p.id, parentID)
-	filePath := ws.pageIndexFile(p.id, parentID)
+	pageDir := ws.pageDir(id, parentID)
+	filePath := ws.pageIndexFile(id, parentID)
 	if err := os.MkdirAll(pageDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -315,12 +309,12 @@ func (ws *WorkspaceFileStore) updatePage(id jsonldb.ID, title, content string) (
 		return nil, fmt.Errorf("failed to read page: %w", err)
 	}
 
-	p := parseMarkdownFile(id, data)
+	p := parseMarkdownFile(data)
 	p.title = title
 	p.content = content
 	p.modified = storage.Now()
 
-	if err := ws.writePageFile(parentID, p); err != nil {
+	if err := ws.writePageFile(id, parentID, p); err != nil {
 		return nil, err
 	}
 
@@ -337,18 +331,23 @@ func (ws *WorkspaceFileStore) updatePage(id jsonldb.ID, title, content string) (
 
 // DeletePage deletes a page and commits to git.
 func (ws *WorkspaceFileStore) DeletePage(ctx context.Context, id jsonldb.ID, author git.Author) error {
+	parentID := ws.getParent(id)
+	gitPathFile := ws.gitPath(parentID, id, "index.md")
+
 	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := ws.deletePage(id); err != nil {
 			return "", nil, err
 		}
-		parentID := ws.getParent(id)
-		files := []string{ws.gitPath(parentID, id, "index.md")}
-		return "delete: page " + id.String(), files, nil
+		return "delete: page " + id.String(), []string{gitPathFile}, nil
 	})
 }
 
 // deletePage deletes a page without committing.
 func (ws *WorkspaceFileStore) deletePage(id jsonldb.ID) error {
+	if id.IsZero() {
+		return errPageNotFound // No node with ID 0 exists
+	}
+
 	parentID := ws.getParent(id)
 	dir := ws.pageDir(id, parentID)
 	if err := os.RemoveAll(dir); err != nil {
@@ -400,49 +399,24 @@ func (ws *WorkspaceFileStore) iterPagesRecursive(dir string, parentID jsonldb.ID
 // ReadNode reads a node (page or table or hybrid) by ID.
 func (ws *WorkspaceFileStore) ReadNode(id jsonldb.ID) (*Node, error) {
 	parentID := ws.getParent(id)
-	return ws.ReadNodeFromPath(filepath.Join(ws.wsDir, id.String()), id, parentID)
-}
-
-// ReadNodeTree returns the full tree of nodes.
-func (ws *WorkspaceFileStore) ReadNodeTree() ([]*Node, error) {
-	return ws.readNodesRecursive(ws.wsDir, 0)
-}
-
-// readNodesRecursive recursively reads all nodes.
-func (ws *WorkspaceFileStore) readNodesRecursive(dir string, parentID jsonldb.ID) ([]*Node, error) {
-	var nodes []*Node
-
-	entries, err := os.ReadDir(dir)
+	nodeDir := ws.pageDir(id, parentID)
+	node, err := ws.ReadNodeFromPath(nodeDir, id, parentID)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nodes, nil
-		}
 		return nil, err
 	}
 
+	// Detect children for UI to show expand arrow
+	entries, _ := os.ReadDir(nodeDir)
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
+		if entry.IsDir() {
+			if _, err := jsonldb.DecodeID(entry.Name()); err == nil {
+				node.Children = []*Node{} // Has children - set empty slice to indicate expandable
+				break
+			}
 		}
-		id, err := jsonldb.DecodeID(entry.Name())
-		if err != nil {
-			continue
-		}
-
-		nodePath := filepath.Join(dir, entry.Name())
-		if node, err := ws.ReadNodeFromPath(nodePath, id, parentID); err == nil {
-			nodes = append(nodes, node)
-		}
-
-		// Recursively read children
-		children, err := ws.readNodesRecursive(nodePath, id)
-		if err != nil {
-			return nil, err
-		}
-		nodes = append(nodes, children...)
 	}
 
-	return nodes, nil
+	return node, nil
 }
 
 // ReadNodeFromPath reads a node from a specific path.
@@ -477,7 +451,7 @@ func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID jsonldb
 	}
 
 	if hasIndex {
-		p := parseMarkdownFile(id, indexData)
+		p := parseMarkdownFile(indexData)
 		node.Title = p.title
 		node.Content = p.content
 		node.Created = p.created
@@ -1015,16 +989,13 @@ func (ws *WorkspaceFileStore) IterAssets(nodeID jsonldb.ID) (iter.Seq[*Asset], e
 
 // History operations
 
-// GetHistory returns the commit history for a page, limited to n commits.
+// GetHistory returns the commit history for a node, limited to n commits.
 // n is capped at 1000. If n <= 0, defaults to 1000.
-// If id is zero (root), returns history for the workspace root files.
 func (ws *WorkspaceFileStore) GetHistory(ctx context.Context, id jsonldb.ID, n int) ([]*git.Commit, error) {
-	path := id.String()
 	if id.IsZero() {
-		// For root, get history of root-level files
-		path = "."
+		return nil, errPageNotFound // No node with ID 0 exists
 	}
-	return ws.repo.GetHistory(ctx, path, n)
+	return ws.repo.GetHistory(ctx, id.String(), n)
 }
 
 // GetFileAtCommit returns the content of a file at a specific commit.
@@ -1033,11 +1004,11 @@ func (ws *WorkspaceFileStore) GetFileAtCommit(ctx context.Context, hash, path st
 }
 
 // CreateNode creates a new node (can be document, table, or hybrid) and commits to git.
-// If parentID is zero, the node is created at the root level.
-// Otherwise, it is created under the parent node.
+// If parentID is zero, creates a top-level node in the workspace.
+// Otherwise, creates a child under the specified parent node.
 func (ws *WorkspaceFileStore) CreateNode(ctx context.Context, title string, nodeType NodeType, parentID jsonldb.ID, author git.Author) (*Node, error) {
-	// Verify parent exists if parentID is specified
-	if !parentID.IsZero() && !ws.PageExists(parentID) {
+	// Verify parent exists if specified.
+	if !parentID.IsZero() && !ws.PageExists(parentID) && !ws.TableExists(parentID) {
 		return nil, fmt.Errorf("parent node not found: %w", errPageNotFound)
 	}
 
@@ -1085,7 +1056,6 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 
 	if nodeType == NodeTypeDocument || nodeType == NodeTypeHybrid {
 		p := &page{
-			id:       id,
 			title:    title,
 			content:  "",
 			created:  now,
@@ -1154,13 +1124,6 @@ func (ws *WorkspaceFileStore) Repo() *git.Repo {
 	return ws.repo
 }
 
-// --- Root node support ---
-
-// ReadRootNode reads the root node (workspace-level page/table if exists).
-func (ws *WorkspaceFileStore) ReadRootNode() (*Node, error) {
-	return ws.ReadNodeFromPath(ws.wsDir, 0, 0)
-}
-
 // HasPage checks if a node has page content (index.md exists).
 func (ws *WorkspaceFileStore) HasPage(id jsonldb.ID) bool {
 	parentID := ws.getParent(id)
@@ -1180,9 +1143,11 @@ func (ws *WorkspaceFileStore) HasTable(id jsonldb.ID) bool {
 // --- Page-specific operations ---
 
 // CreatePageUnderParent creates a new page under a parent node and commits to git.
+// If parentID is zero, creates a top-level page in the workspace.
+// Otherwise, creates a child under the specified parent node.
 // Returns the new node with the page content.
 func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentID jsonldb.ID, title, content string, author git.Author) (*Node, error) {
-	// Verify parent exists if parentID is specified (non-root)
+	// Verify parent exists if specified.
 	if !parentID.IsZero() && !ws.PageExists(parentID) && !ws.TableExists(parentID) {
 		return nil, fmt.Errorf("parent node not found: %w", errPageNotFound)
 	}
@@ -1197,7 +1162,6 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 		now := storage.Now()
 
 		p := &page{
-			id:       id,
 			title:    title,
 			content:  content,
 			created:  now,
@@ -1232,10 +1196,7 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 		}
 
 		files := []string{ws.gitPath(parentID, id, "index.md")}
-		msg := "create: page " + id.String() + " - " + title
-		if !parentID.IsZero() {
-			msg += " (parent: " + parentID.String() + ")"
-		}
+		msg := "create: page " + id.String() + " - " + title + " (parent: " + parentID.String() + ")"
 		return msg, files, nil
 	})
 	return node, err
@@ -1245,7 +1206,7 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 // The node directory is kept if table content exists.
 func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id jsonldb.ID, author git.Author) error {
 	if id.IsZero() {
-		return errors.New("cannot delete root page")
+		return errPageNotFound // No node with ID 0 exists
 	}
 
 	parentID := ws.getParent(id)
@@ -1345,7 +1306,7 @@ func (ws *WorkspaceFileStore) CreateTableUnderParent(ctx context.Context, parent
 // The node directory is kept if page content exists.
 func (ws *WorkspaceFileStore) DeleteTableFromNode(ctx context.Context, id jsonldb.ID, author git.Author) error {
 	if id.IsZero() {
-		return errors.New("cannot delete root table")
+		return errTableNotFound // No node with ID 0 exists
 	}
 
 	parentID := ws.getParent(id)
@@ -1381,23 +1342,17 @@ func (ws *WorkspaceFileStore) DeleteTableFromNode(ctx context.Context, id jsonld
 	})
 }
 
-// --- Node reading with root support ---
-
-// ReadNodeByID reads a node by ID, supporting id=0 for root.
-func (ws *WorkspaceFileStore) ReadNodeByID(id jsonldb.ID) (*Node, error) {
-	if id.IsZero() {
-		return ws.ReadRootNode()
-	}
-	return ws.ReadNode(id)
-}
-
 // ListChildren returns all direct children of a node.
-// If parentID is zero, returns root-level nodes.
+// In single-root model:
+//   - If parentID is zero (root), returns children from workspace dir.
+//   - Otherwise, returns children from parent's subdirectory.
 func (ws *WorkspaceFileStore) ListChildren(parentID jsonldb.ID) ([]*Node, error) {
 	var dir string
 	if parentID.IsZero() {
+		// Children of root are stored directly in workspace dir.
 		dir = ws.wsDir
 	} else {
+		// Children of non-root nodes are in subdirectories.
 		parentParentID := ws.getParent(parentID)
 		dir = ws.pageDir(parentID, parentParentID)
 	}
@@ -1421,9 +1376,23 @@ func (ws *WorkspaceFileStore) ListChildren(parentID jsonldb.ID) ([]*Node, error)
 		}
 
 		nodePath := filepath.Join(dir, entry.Name())
-		if node, err := ws.ReadNodeFromPath(nodePath, id, parentID); err == nil {
-			nodes = append(nodes, node)
+		node, err := ws.ReadNodeFromPath(nodePath, id, parentID)
+		if err != nil {
+			continue
 		}
+
+		// Check if this child has its own children
+		childEntries, _ := os.ReadDir(nodePath)
+		for _, childEntry := range childEntries {
+			if childEntry.IsDir() {
+				if _, decErr := jsonldb.DecodeID(childEntry.Name()); decErr == nil {
+					node.Children = []*Node{}
+					break
+				}
+			}
+		}
+
+		nodes = append(nodes, node)
 	}
 
 	return nodes, nil
@@ -1431,9 +1400,9 @@ func (ws *WorkspaceFileStore) ListChildren(parentID jsonldb.ID) ([]*Node, error)
 
 // Helper functions
 
-func parseMarkdownFile(id jsonldb.ID, data []byte) *page {
+func parseMarkdownFile(data []byte) *page {
 	content := string(data)
-	title := id.String()
+	var title string
 	var created, modified storage.Time
 
 	if strings.HasPrefix(content, "---") {
@@ -1468,7 +1437,6 @@ func parseMarkdownFile(id jsonldb.ID, data []byte) *page {
 	}
 
 	return &page{
-		id:       id,
 		title:    title,
 		content:  content,
 		created:  created,
@@ -1479,8 +1447,7 @@ func parseMarkdownFile(id jsonldb.ID, data []byte) *page {
 func formatMarkdownFile(p *page) []byte {
 	var buf bytes.Buffer
 	buf.WriteString("---")
-	buf.WriteString("\nid: " + p.id.String() + "\n")
-	buf.WriteString("title: " + p.title + "\n")
+	buf.WriteString("\ntitle: " + p.title + "\n")
 	buf.WriteString("created: " + p.created.AsTime().Format(time.RFC3339) + "\n")
 	buf.WriteString("modified: " + p.modified.AsTime().Format(time.RFC3339) + "\n")
 	if len(p.tags) > 0 {

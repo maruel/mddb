@@ -17,6 +17,7 @@ interface SidebarProps {
   onCreateChildTable: (parentId: string) => void;
   onSelectNode: (node: NodeResponse) => void;
   onCloseMobileSidebar: () => void;
+  onFetchChildren?: (nodeId: string) => Promise<NodeResponse[]>;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -49,6 +50,7 @@ export default function Sidebar(props: SidebarProps) {
               onSelect={props.onSelectNode}
               onCreateChildPage={props.onCreateChildPage}
               onCreateChildTable={props.onCreateChildTable}
+              onFetchChildren={props.onFetchChildren}
               depth={0}
             />
           )}

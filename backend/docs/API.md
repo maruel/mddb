@@ -80,7 +80,6 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/workspaces/{wsID}/nodes` | wsViewer |
 | GET | `/api/workspaces/{wsID}/nodes/{id}` | wsViewer |
 | GET | `/api/workspaces/{wsID}/nodes/{id}/assets` | wsViewer |
 | POST | `/api/workspaces/{wsID}/nodes/{id}/assets` | wsEditor |

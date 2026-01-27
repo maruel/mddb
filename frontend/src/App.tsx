@@ -254,13 +254,11 @@ export default function App() {
 
     try {
       setLoading(true);
-      const data = await ws.nodes.listNodes();
-      const loadedNodes = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
+      // Check if workspace has any top-level nodes
+      const topLevelNodes = await ws.nodes.listNodeChildren('0');
 
-      // Check if there's any root-level page (parent_id is undefined or '0')
-      const hasRootPage = loadedNodes.length > 0;
-
-      if (!hasRootPage) {
+      if (!topLevelNodes?.nodes || topLevelNodes.nodes.length === 0) {
+        // No pages exist, create a welcome page
         const newPage = await ws.nodes.page.createPage('0', {
           title: t('welcome.welcomePageTitle'),
         });
@@ -545,8 +543,9 @@ export default function App() {
 
     try {
       setLoading(true);
-      const data = await ws.nodes.listNodes();
-      const loadedNodes = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
+      // Get top-level nodes (children of workspace root, id=0)
+      const resp = await ws.nodes.listNodeChildren('0');
+      const loadedNodes = resp?.nodes || [];
       setNodes(reconcile(loadedNodes));
       setError(null);
 
@@ -763,6 +762,20 @@ export default function App() {
     loadNode(node.id);
     setShowMobileSidebar(false);
   };
+
+  // Fetch children for a node (used for lazy loading in sidebar)
+  async function fetchNodeChildren(nodeId: string): Promise<NodeResponse[]> {
+    const ws = wsApi();
+    if (!ws) return [];
+
+    try {
+      const data = await ws.nodes.listNodeChildren(nodeId);
+      return (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
+    } catch (err) {
+      console.error('Failed to fetch children:', err);
+      return [];
+    }
+  }
 
   // Recursively find a node by ID in the tree
   const findNodeById = (nodeId: string | null): NodeResponse | undefined => {
@@ -989,6 +1002,7 @@ export default function App() {
                     }}
                     onSelectNode={handleNodeClick}
                     onCloseMobileSidebar={() => setShowMobileSidebar(false)}
+                    onFetchChildren={fetchNodeChildren}
                   />
 
                   <main class={styles.main}>

@@ -499,39 +499,263 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Fatalf("failed to get workspace store: %v", err)
 		}
 
-		// Create some nodes
+		// Create top-level nodes (parentID=0 means top-level, no root node).
 		var zeroID jsonldb.ID
 		node1, err := ws.CreateNode(ctx, "Node 1", NodeTypeDocument, zeroID, author)
 		if err != nil {
 			t.Fatalf("failed to create node 1: %v", err)
 		}
 
-		_, err = ws.CreateNode(ctx, "Node 2", NodeTypeTable, node1.ID, author)
+		// Top-level node should have its own ID (not zero).
+		if node1.ID.IsZero() {
+			t.Errorf("expected node1 to have non-zero ID")
+		}
+
+		node2, err := ws.CreateNode(ctx, "Node 2", NodeTypeTable, node1.ID, author)
 		if err != nil {
 			t.Fatalf("failed to create node 2: %v", err)
 		}
 
-		// Read tree
-		nodes, err := ws.ReadNodeTree()
+		// ReadNode(0) should return error (no root node exists).
+		_, err = ws.ReadNode(0)
+		if err == nil {
+			t.Fatalf("expected error reading node 0, got nil")
+		}
+
+		// ReadNode should work for actual nodes.
+		readNode1, err := ws.ReadNode(node1.ID)
 		if err != nil {
-			t.Fatalf("failed to read node tree: %v", err)
+			t.Fatalf("failed to read node 1: %v", err)
+		}
+		if readNode1.Title != "Node 1" {
+			t.Errorf("expected title 'Node 1', got %q", readNode1.Title)
 		}
 
-		if len(nodes) == 0 {
-			t.Error("expected nodes in tree")
+		// ListChildren(0) returns top-level nodes.
+		topLevel, err := ws.ListChildren(0)
+		if err != nil {
+			t.Fatalf("failed to list children of 0: %v", err)
+		}
+		if len(topLevel) != 1 || topLevel[0].ID != node1.ID {
+			t.Errorf("expected [node1] in ListChildren(0), got %v", topLevel)
 		}
 
-		// Find node1
-		found := false
-		for _, n := range nodes {
-			if n.ID == node1.ID {
-				found = true
-				break
-			}
+		// ListChildren(node1) returns node2.
+		children, err := ws.ListChildren(node1.ID)
+		if err != nil {
+			t.Fatalf("failed to list children: %v", err)
+		}
+		if len(children) != 1 || children[0].ID != node2.ID {
+			t.Errorf("expected [node2], got %v", children)
+		}
+	})
+
+	t.Run("ListChildren_ReturnsOnlyTopLevelNodes", func(t *testing.T) {
+		fs, wsID := testFileStore(t)
+		ctx := t.Context()
+		author := git.Author{Name: "Test", Email: "test@test.com"}
+
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
 		}
 
-		if !found {
-			t.Error("expected to find node1 in tree")
+		ws, err := fs.GetWorkspaceStore(ctx, wsID)
+		if err != nil {
+			t.Fatalf("failed to get workspace store: %v", err)
+		}
+
+		// Create a hierarchy: topLevel -> child -> grandchild
+		var zeroID jsonldb.ID
+		topLevel, err := ws.CreateNode(ctx, "Top Level", NodeTypeDocument, zeroID, author)
+		if err != nil {
+			t.Fatalf("failed to create top-level: %v", err)
+		}
+
+		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, topLevel.ID, author)
+		if err != nil {
+			t.Fatalf("failed to create child: %v", err)
+		}
+
+		grandchild, err := ws.CreateNode(ctx, "Grandchild", NodeTypeDocument, child.ID, author)
+		if err != nil {
+			t.Fatalf("failed to create grandchild: %v", err)
+		}
+
+		// ListChildren(0) returns only top-level nodes.
+		topLevelNodes, err := ws.ListChildren(0)
+		if err != nil {
+			t.Fatalf("failed to list children of 0: %v", err)
+		}
+		if len(topLevelNodes) != 1 {
+			t.Errorf("expected 1 top-level node, got %d", len(topLevelNodes))
+		}
+		if len(topLevelNodes) > 0 && topLevelNodes[0].ID != topLevel.ID {
+			t.Errorf("expected topLevel node, got %v", topLevelNodes[0].ID)
+		}
+
+		// Top-level node should have parentID=0.
+		if !topLevelNodes[0].ParentID.IsZero() {
+			t.Errorf("expected top-level node to have zero ParentID, got %v", topLevelNodes[0].ParentID)
+		}
+
+		// Children should NOT be populated (lazy loading).
+		// But Children should be non-nil empty slice to indicate it has children.
+		if topLevelNodes[0].Children == nil {
+			t.Error("expected Children to be non-nil (indicates has children)")
+		}
+		if len(topLevelNodes[0].Children) != 0 {
+			t.Errorf("expected Children to be empty (lazy load), got %d children", len(topLevelNodes[0].Children))
+		}
+
+		// ListChildren(topLevel) returns only direct children.
+		children, err := ws.ListChildren(topLevel.ID)
+		if err != nil {
+			t.Fatalf("failed to list children: %v", err)
+		}
+		if len(children) != 1 || children[0].ID != child.ID {
+			t.Errorf("expected [child], got %v", children)
+		}
+
+		// ListChildren(child) returns only grandchild.
+		grandchildren, err := ws.ListChildren(child.ID)
+		if err != nil {
+			t.Fatalf("failed to list grandchildren: %v", err)
+		}
+		if len(grandchildren) != 1 || grandchildren[0].ID != grandchild.ID {
+			t.Errorf("expected [grandchild], got %v", grandchildren)
+		}
+	})
+
+	t.Run("TopLevelPages", func(t *testing.T) {
+		// No-root model: workspace is the container.
+		// - Top-level pages are stored at <workspace>/<id>/index.md
+		// - Creating with parentID=0 always creates a top-level page with new ID
+		fs, wsID := testFileStore(t)
+		ctx := t.Context()
+		author := git.Author{Name: "Test", Email: "test@test.com"}
+
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
+		}
+
+		ws, err := fs.GetWorkspaceStore(ctx, wsID)
+		if err != nil {
+			t.Fatalf("failed to get workspace store: %v", err)
+		}
+
+		// Create the first top-level page (parentID=0).
+		var zeroID jsonldb.ID
+		page1, err := ws.CreateNode(ctx, "Welcome", NodeTypeDocument, zeroID, author)
+		if err != nil {
+			t.Fatalf("failed to create page 1: %v", err)
+		}
+
+		// Top-level page should have a non-zero ID.
+		if page1.ID.IsZero() {
+			t.Errorf("expected page1 to have non-zero ID")
+		}
+
+		// Verify page is stored at <workspace>/<id>/index.md.
+		page1Path := filepath.Join(fs.rootDir, wsID.String(), page1.ID.String(), "index.md")
+		if _, err := os.Stat(page1Path); err != nil {
+			t.Errorf("expected page at %s, got error: %v", page1Path, err)
+		}
+
+		// Create another top-level page (parentID=0).
+		page2, err := ws.CreateNode(ctx, "Page 2", NodeTypeDocument, zeroID, author)
+		if err != nil {
+			t.Fatalf("failed to create page 2: %v", err)
+		}
+
+		// Both should have non-zero IDs.
+		if page2.ID.IsZero() {
+			t.Errorf("expected page2 to have non-zero ID")
+		}
+
+		// Verify page2 is stored in its own directory.
+		page2Path := filepath.Join(fs.rootDir, wsID.String(), page2.ID.String(), "index.md")
+		if _, err := os.Stat(page2Path); err != nil {
+			t.Errorf("expected page at %s, got error: %v", page2Path, err)
+		}
+
+		// ReadNode(0) should return error (no root node).
+		_, err = ws.ReadNode(0)
+		if err == nil {
+			t.Fatalf("expected error reading node 0")
+		}
+
+		// ReadNode should work for actual pages.
+		readPage1, err := ws.ReadNode(page1.ID)
+		if err != nil {
+			t.Fatalf("failed to read page1: %v", err)
+		}
+		if readPage1.Title != "Welcome" {
+			t.Errorf("expected title 'Welcome', got %q", readPage1.Title)
+		}
+
+		// ListChildren(0) returns both top-level pages.
+		topLevel, err := ws.ListChildren(zeroID)
+		if err != nil {
+			t.Fatalf("failed to list children: %v", err)
+		}
+		if len(topLevel) != 2 {
+			t.Errorf("expected 2 top-level pages, got %d", len(topLevel))
+		}
+	})
+
+	t.Run("TopLevelPageViaCreatePageUnderParent", func(t *testing.T) {
+		// This test verifies that CreatePageUnderParent with parentID=0
+		// creates a top-level page with a new ID.
+		fs, wsID := testFileStore(t)
+		ctx := t.Context()
+		author := git.Author{Name: "Test", Email: "test@test.com"}
+
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
+		}
+
+		ws, err := fs.GetWorkspaceStore(ctx, wsID)
+		if err != nil {
+			t.Fatalf("failed to get workspace store: %v", err)
+		}
+
+		// Create top-level page using CreatePageUnderParent with parentID=0.
+		var zeroID jsonldb.ID
+		page, err := ws.CreatePageUnderParent(ctx, zeroID, "My First Page", "", author)
+		if err != nil {
+			t.Fatalf("failed to create page: %v", err)
+		}
+
+		t.Logf("Created page with ID: %v", page.ID)
+
+		// Page should have non-zero ID.
+		if page.ID.IsZero() {
+			t.Errorf("expected page to have non-zero ID")
+		}
+
+		// Verify page is stored at <workspace>/<id>/index.md.
+		pagePath := filepath.Join(fs.rootDir, wsID.String(), page.ID.String(), "index.md")
+		if _, err := os.Stat(pagePath); err != nil {
+			t.Errorf("expected page at %s, got error: %v", pagePath, err)
+		}
+
+		// Verify we can read the page.
+		readPage, err := ws.ReadNode(page.ID)
+		if err != nil {
+			t.Fatalf("failed to read page: %v", err)
+		}
+		if readPage.Title != "My First Page" {
+			t.Errorf("expected title 'My First Page', got %q", readPage.Title)
+		}
+
+		// Delete the page.
+		if err := ws.DeletePage(ctx, page.ID, author); err != nil {
+			t.Fatalf("failed to delete page: %v", err)
+		}
+
+		// Verify page is gone.
+		if _, err := os.Stat(pagePath); !os.IsNotExist(err) {
+			t.Errorf("expected page to be deleted, but file still exists")
 		}
 	})
 
@@ -587,6 +811,10 @@ func TestWorkspaceStore(t *testing.T) {
 	})
 
 	t.Run("GitPathWithNestedPages", func(t *testing.T) {
+		// No-root model:
+		// - Top-level page: <workspace>/<id>/index.md (git path: "<id>/index.md")
+		// - Child: <workspace>/<top_level_id>/<child_id>/index.md
+		// - Grandchild: <workspace>/<top_level_id>/<child_id>/<grandchild_id>/index.md
 		fs, wsID := testFileStore(t)
 		ctx := t.Context()
 		author := git.Author{Name: "test", Email: "test@test.com"}
@@ -600,32 +828,52 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Fatalf("failed to get workspace store: %v", err)
 		}
 
-		// Create a simpler hierarchy to test gitPath
-		root, err := ws.CreateNode(ctx, "Root", NodeTypeDocument, 0, author)
+		// Create hierarchy: topLevel -> child -> grandchild
+		topLevel, err := ws.CreateNode(ctx, "Top Level", NodeTypeDocument, 0, author)
 		if err != nil {
-			t.Fatalf("failed to create root: %v", err)
+			t.Fatalf("failed to create top-level: %v", err)
 		}
 
-		child1, err := ws.CreateNode(ctx, "Child1", NodeTypeDocument, root.ID, author)
+		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, topLevel.ID, author)
 		if err != nil {
-			t.Fatalf("failed to create child1: %v", err)
+			t.Fatalf("failed to create child: %v", err)
 		}
 
-		// gitPath should include all ancestors in the path for a 2-level deep node
-		path := ws.gitPath(child1.ParentID, child1.ID, "index.md")
-
-		// Expected: root/child1/index.md
-		expectedParts := []string{root.ID.String(), child1.ID.String(), "index.md"}
-		expectedPath := filepath.Join(expectedParts...)
-
-		if path != expectedPath {
-			t.Errorf("gitPath mismatch:\n  got:      %s\n  expected: %s", path, expectedPath)
+		grandchild, err := ws.CreateNode(ctx, "Grandchild", NodeTypeDocument, child.ID, author)
+		if err != nil {
+			t.Fatalf("failed to create grandchild: %v", err)
 		}
 
-		// Verify file actually exists at that path
-		filePath := filepath.Join(ws.wsDir, path)
-		if _, err := os.Stat(filePath); err != nil {
-			t.Errorf("expected file to exist at %s: %v", filePath, err)
+		// Top-level page is at <id>/index.md.
+		topLevelPath := ws.gitPath(topLevel.ParentID, topLevel.ID, "index.md")
+		expectedTopLevelPath := filepath.Join(topLevel.ID.String(), "index.md")
+		if topLevelPath != expectedTopLevelPath {
+			t.Errorf("topLevel gitPath mismatch: got %s, expected %s", topLevelPath, expectedTopLevelPath)
+		}
+
+		// Child is under top-level's directory.
+		childPath := ws.gitPath(child.ParentID, child.ID, "index.md")
+		expectedChildPath := filepath.Join(topLevel.ID.String(), child.ID.String(), "index.md")
+		if childPath != expectedChildPath {
+			t.Errorf("child gitPath mismatch:\n  got:      %s\n  expected: %s", childPath, expectedChildPath)
+		}
+
+		// Grandchild is under child's directory.
+		grandchildPath := ws.gitPath(grandchild.ParentID, grandchild.ID, "index.md")
+		expectedGrandchildPath := filepath.Join(topLevel.ID.String(), child.ID.String(), grandchild.ID.String(), "index.md")
+		if grandchildPath != expectedGrandchildPath {
+			t.Errorf("grandchild gitPath mismatch:\n  got:      %s\n  expected: %s", grandchildPath, expectedGrandchildPath)
+		}
+
+		// Verify files exist at expected locations.
+		if _, err := os.Stat(filepath.Join(ws.wsDir, topLevel.ID.String(), "index.md")); err != nil {
+			t.Errorf("expected top-level page at workspace/<id>/index.md: %v", err)
+		}
+		if _, err := os.Stat(filepath.Join(ws.wsDir, topLevel.ID.String(), child.ID.String(), "index.md")); err != nil {
+			t.Errorf("expected child page at workspace/<topLevel>/<child>/index.md: %v", err)
+		}
+		if _, err := os.Stat(filepath.Join(ws.wsDir, topLevel.ID.String(), child.ID.String(), grandchild.ID.String(), "index.md")); err != nil {
+			t.Errorf("expected grandchild page at workspace/<topLevel>/<child>/<grandchild>/index.md: %v", err)
 		}
 	})
 }
@@ -887,12 +1135,6 @@ func TestMarkdown(t *testing.T) {
 		t.Run("FrontMatterDelimiters", func(t *testing.T) {
 			if !strings.Contains(content, "---") {
 				t.Error("expected front matter delimiters")
-			}
-		})
-
-		t.Run("FrontMatterID", func(t *testing.T) {
-			if !strings.Contains(content, "id: "+nodeID.String()) {
-				t.Error("expected id in front matter")
 			}
 		})
 

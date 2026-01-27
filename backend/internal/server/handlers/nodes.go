@@ -25,59 +25,22 @@ func NewNodeHandler(fs *content.FileStoreService, assetHandler *AssetHandler) *N
 	return &NodeHandler{fs: fs, assetHandler: assetHandler}
 }
 
-// ListNodes returns the hierarchical node tree.
-func (h *NodeHandler) ListNodes(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListNodesRequest) (*dto.ListNodesResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to get workspace", err)
-	}
-	nodes, err := ws.ReadNodeTree()
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to read node tree", err)
-	}
-	responses := make([]dto.NodeResponse, 0, len(nodes))
-	for _, n := range nodes {
-		responses = append(responses, *nodeToResponse(n))
-	}
-	return &dto.ListNodesResponse{Nodes: responses}, nil
-}
-
 // GetNode retrieves a single node's metadata.
-// Supports id=0 for root node.
 func (h *NodeHandler) GetNode(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetNodeRequest) (*dto.NodeResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	// Handle root node (id=0)
-	if req.ID.IsZero() {
-		node, err := ws.ReadRootNode()
-		if err != nil {
-			return nil, dto.InternalWithError("Failed to read root node", err)
-		}
-		if node == nil {
-			// Return empty root node if it doesn't exist
-			node = &content.Node{ID: 0, Title: "Root"}
-		}
-		return nodeToResponse(node), nil
-	}
-
-	// Read the full tree to find the node by ID and get its actual parent
-	nodes, err := ws.ReadNodeTree()
+	node, err := ws.ReadNode(req.ID)
 	if err != nil {
-		return nil, dto.InternalWithError("Failed to read node tree", err)
-	}
-
-	node := findNodeByID(nodes, req.ID)
-	if node == nil {
 		return nil, dto.NotFound("node")
 	}
 	return nodeToResponse(node), nil
 }
 
 // ListNodeChildren returns the children of a node.
-// Use id=0 to list root-level nodes.
+// Use id=0 to list top-level nodes in the workspace.
 func (h *NodeHandler) ListNodeChildren(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListNodeChildrenRequest) (*dto.ListNodeChildrenResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
@@ -94,19 +57,6 @@ func (h *NodeHandler) ListNodeChildren(ctx context.Context, wsID jsonldb.ID, _ *
 		responses = append(responses, *nodeToResponse(n))
 	}
 	return &dto.ListNodeChildrenResponse{Nodes: responses}, nil
-}
-
-// findNodeByID recursively searches for a node by ID in the tree.
-func findNodeByID(nodes []*content.Node, id jsonldb.ID) *content.Node {
-	for _, node := range nodes {
-		if node.ID == id {
-			return node
-		}
-		if found := findNodeByID(node.Children, id); found != nil {
-			return found
-		}
-	}
-	return nil
 }
 
 // DeleteNode deletes a node.
@@ -136,19 +86,15 @@ func (h *NodeHandler) ListNodeVersions(ctx context.Context, wsID jsonldb.ID, _ *
 }
 
 // GetNodeVersion returns a specific version of a node's content.
-// Supports id=0 for root node.
 func (h *NodeHandler) GetNodeVersion(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetNodeVersionRequest) (*dto.GetNodeVersionResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	// For root node (id=0), the path is just index.md
-	var path string
 	if req.ID.IsZero() {
-		path = "index.md"
-	} else {
-		path = req.ID.String() + "/index.md"
+		return nil, dto.NotFound("node") // No node with ID 0 exists
 	}
+	path := req.ID.String() + "/index.md"
 	contentBytes, err := ws.GetFileAtCommit(ctx, req.Hash, path)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get node version", err)
@@ -219,20 +165,14 @@ func (h *NodeHandler) CreatePage(ctx context.Context, wsID jsonldb.ID, user *ide
 }
 
 // GetPage retrieves a page's content.
-// Supports id=0 for root page.
 func (h *NodeHandler) GetPage(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetPageRequest) (*dto.GetPageResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	var node *content.Node
-	if req.ID.IsZero() {
-		node, err = ws.ReadRootNode()
-	} else {
-		node, err = ws.ReadNode(req.ID)
-	}
-	if err != nil || node == nil {
+	node, err := ws.ReadNode(req.ID)
+	if err != nil {
 		return nil, dto.NotFound("page")
 	}
 
@@ -246,7 +186,6 @@ func (h *NodeHandler) GetPage(ctx context.Context, wsID jsonldb.ID, _ *identity.
 }
 
 // UpdatePage updates a page's title and content.
-// Supports id=0 for root page.
 func (h *NodeHandler) UpdatePage(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
@@ -294,20 +233,14 @@ func (h *NodeHandler) CreateTable(ctx context.Context, wsID jsonldb.ID, user *id
 }
 
 // GetTable retrieves a table's schema.
-// Supports id=0 for root table.
 func (h *NodeHandler) GetTable(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetTableRequest) (*dto.GetTableSchemaResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	var node *content.Node
-	if req.ID.IsZero() {
-		node, err = ws.ReadRootNode()
-	} else {
-		node, err = ws.ReadTable(req.ID)
-	}
-	if err != nil || node == nil {
+	node, err := ws.ReadNode(req.ID)
+	if err != nil {
 		return nil, dto.NotFound("table")
 	}
 
@@ -321,7 +254,6 @@ func (h *NodeHandler) GetTable(ctx context.Context, wsID jsonldb.ID, _ *identity
 }
 
 // UpdateTable updates a table's schema.
-// Supports id=0 for root table.
 func (h *NodeHandler) UpdateTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
@@ -361,7 +293,6 @@ func (h *NodeHandler) DeleteTable(ctx context.Context, wsID jsonldb.ID, user *id
 // --- Record handlers (moved from databases.go) ---
 
 // ListRecords returns all records in a table.
-// Supports id=0 for root table.
 func (h *NodeHandler) ListRecords(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
@@ -379,7 +310,6 @@ func (h *NodeHandler) ListRecords(ctx context.Context, wsID jsonldb.ID, _ *ident
 }
 
 // CreateRecord creates a new record in a table.
-// Supports id=0 for root table.
 func (h *NodeHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
@@ -411,7 +341,6 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 }
 
 // UpdateRecord updates an existing record in a table.
-// Supports id=0 for root table.
 func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
@@ -457,7 +386,6 @@ func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 }
 
 // GetRecord retrieves a single record from a table.
-// Supports id=0 for root table.
 func (h *NodeHandler) GetRecord(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
@@ -481,7 +409,6 @@ func (h *NodeHandler) GetRecord(ctx context.Context, wsID jsonldb.ID, _ *identit
 }
 
 // DeleteRecord deletes a record from a table.
-// Supports id=0 for root table.
 func (h *NodeHandler) DeleteRecord(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {

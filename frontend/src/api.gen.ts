@@ -34,7 +34,6 @@ import type {
   ListNodeChildrenResponse,
   ListNodeVersionsRequest,
   ListNodeVersionsResponse,
-  ListNodesResponse,
   ListOrgInvitationsResponse,
   ListRecordsRequest,
   ListRecordsResponse,
@@ -227,7 +226,6 @@ export function createAPIClient(fetchFn: FetchFn) {
           deleteNode: (id: string) => post<DeleteNodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/delete`),
           getNode: (id: string) => get<NodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}`),
           listNodeChildren: (id: string) => get<ListNodeChildrenResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/children`),
-          listNodes: () => get<ListNodesResponse>(fetchFn, `/api/workspaces/${wsID}/nodes`),
         },
         settings: {
           git: {

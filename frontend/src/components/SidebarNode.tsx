@@ -1,4 +1,5 @@
 // Recursive component for rendering navigation tree nodes in the sidebar.
+// Supports lazy loading of children with pre-fetching one level ahead.
 
 import { createSignal, For, Show, onMount } from 'solid-js';
 import { useI18n } from '../i18n';
@@ -11,24 +12,113 @@ interface SidebarNodeResponseProps {
   onSelect: (node: NodeResponse) => void;
   onCreateChildPage: (parentId: string) => void;
   onCreateChildTable: (parentId: string) => void;
+  onFetchChildren?: (nodeId: string) => Promise<NodeResponse[]>;
   depth: number;
+  // Children loaded from parent's pre-fetch
+  prefetchedChildren?: Map<string, NodeResponse[]>;
 }
 
 export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
   const { t } = useI18n();
-  const [isExpanded, setIsExpanded] = createSignal(true);
+  // Start collapsed by default, except root level (depth 0)
+  const [isExpanded, setIsExpanded] = createSignal(props.depth === 0);
   const [showContextMenu, setShowContextMenu] = createSignal(false);
   const [contextMenuPos, setContextMenuPos] = createSignal({ x: 0, y: 0 });
+  const [loadedChildren, setLoadedChildren] = createSignal<NodeResponse[] | null>(null);
+  const [isLoadingChildren, setIsLoadingChildren] = createSignal(false);
+  const [prefetchCache] = createSignal(new Map<string, NodeResponse[]>());
+
+  // Use prefetched or loaded children
+  const children = () => {
+    // Check prefetched cache from parent first
+    const prefetched = props.prefetchedChildren?.get(props.node.id);
+    if (prefetched) return prefetched;
+
+    // Use locally loaded children if available
+    const loaded = loadedChildren();
+    if (loaded !== null) return loaded;
+
+    return [];
+  };
+
+  // Backend returns children as empty array [] if node has children (but not loaded)
+  // Returns undefined/null if node definitely has no children
+  const mightHaveChildren = () => {
+    // If we've loaded children, check if there are any
+    const loaded = loadedChildren();
+    if (loaded !== null) return loaded.length > 0;
+
+    // Check prefetched cache
+    const prefetched = props.prefetchedChildren?.get(props.node.id);
+    if (prefetched) return prefetched.length > 0;
+
+    // Backend sets children to [] (empty array) to indicate "has children, not loaded"
+    // children is undefined/null means "no children"
+    return props.node.children !== undefined && props.node.children !== null;
+  };
+
+  // Fetch children for this node
+  const fetchChildren = async () => {
+    if (!props.onFetchChildren || loadedChildren() !== null || isLoadingChildren()) return;
+
+    setIsLoadingChildren(true);
+    try {
+      const fetchedChildren = await props.onFetchChildren(props.node.id);
+      setLoadedChildren(fetchedChildren);
+
+      // Pre-fetch grandchildren (one level ahead)
+      prefetchGrandchildren(fetchedChildren);
+    } catch (err) {
+      console.error('Failed to load children:', err);
+      setLoadedChildren([]); // Mark as loaded (empty) to prevent retries
+    } finally {
+      setIsLoadingChildren(false);
+    }
+  };
 
   onMount(() => {
     const handleClickAway = () => {
       setShowContextMenu(false);
     };
     document.addEventListener('click', handleClickAway);
+
+    // When node becomes visible, ensure children are loaded and grandchildren pre-fetched
+    if (mightHaveChildren() && props.onFetchChildren) {
+      // Check if children are already prefetched by parent
+      const prefetched = props.prefetchedChildren?.get(props.node.id);
+      if (prefetched) {
+        // Use prefetched data and pre-fetch grandchildren
+        setLoadedChildren(prefetched);
+        prefetchGrandchildren(prefetched);
+      } else if (loadedChildren() === null) {
+        // Not prefetched, fetch now
+        fetchChildren();
+      }
+    }
+
     return () => document.removeEventListener('click', handleClickAway);
   });
 
-  const toggleExpand = (e: MouseEvent) => {
+  // Pre-fetch grandchildren when expanding
+  const prefetchGrandchildren = (childNodes: NodeResponse[]) => {
+    if (!props.onFetchChildren) return;
+
+    // Fetch children for each child node in parallel (non-blocking)
+    for (const child of childNodes) {
+      if (!prefetchCache().has(child.id) && child.children !== undefined && child.children !== null) {
+        props
+          .onFetchChildren(child.id)
+          .then((grandchildren) => {
+            prefetchCache().set(child.id, grandchildren);
+          })
+          .catch(() => {
+            // Ignore pre-fetch errors
+          });
+      }
+    }
+  };
+
+  const toggleExpand = async (e: MouseEvent) => {
     e.stopPropagation();
     setIsExpanded(!isExpanded());
   };
@@ -53,11 +143,12 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
           class={styles.expandIcon}
           classList={{
             [`${styles.expanded}`]: isExpanded(),
-            [`${styles.hidden}`]: !props.node.children?.length,
+            [`${styles.hidden}`]: !mightHaveChildren(),
+            [`${styles.loading}`]: isLoadingChildren(),
           }}
           onClick={toggleExpand}
         >
-          ▶
+          {isLoadingChildren() ? '○' : '▶'}
         </span>
         <span class={styles.nodeIcon}>{props.node.has_table && !props.node.has_page ? '📊' : '📄'}</span>
         <span class={styles.pageTitleText}>{props.node.title}</span>
@@ -90,9 +181,9 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
         </div>
       </Show>
 
-      <Show when={isExpanded() && props.node.children?.length}>
+      <Show when={isExpanded() && children().length > 0}>
         <ul class={styles.childList}>
-          <For each={props.node.children?.filter((c): c is NodeResponse => !!c)}>
+          <For each={children()}>
             {(child) => (
               <SidebarNodeResponse
                 node={child}
@@ -100,7 +191,9 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
                 onSelect={props.onSelect}
                 onCreateChildPage={props.onCreateChildPage}
                 onCreateChildTable={props.onCreateChildTable}
+                onFetchChildren={props.onFetchChildren}
                 depth={props.depth + 1}
+                prefetchedChildren={prefetchCache()}
               />
             )}
           </For>

@@ -4,9 +4,10 @@
 }
 
 .childList {
-  border-left: 1px solid var(--c-border);
-  margin-left: 8px;
+  border-left: 2px solid var(--c-border);
+  margin-left: 12px;
   padding-left: 0;
+  background: linear-gradient(to right, var(--c-bg-alt) 0px, var(--c-bg-alt) 1px, transparent 1px);
 }
 
 .pageItem {
@@ -49,20 +50,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   margin-right: 4px;
-  font-size: 10px;
+  font-size: 11px;
   transition:
-    transform var(--transition),
-    color var(--transition);
+    transform 0.2s ease,
+    color var(--transition),
+    background var(--transition);
   cursor: pointer;
   color: var(--c-text-light);
+  border-radius: 4px;
 }
 
-.expandIcon:hover:not(.hidden) {
+.expandIcon:hover:not(.hidden):not(.loading) {
   color: var(--c-text);
+  background: var(--c-bg-alt);
 }
 
 .expandIcon.expanded {
@@ -72,6 +76,20 @@
 .expandIcon.hidden {
   visibility: hidden;
   pointer-events: none;
+}
+
+.expandIcon.loading {
+  animation: spin 0.8s linear infinite;
+  color: var(--c-primary);
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .contextMenu {

@@ -327,7 +327,7 @@ func TestIntegration(t *testing.T) {
 			t.Fatal("Workspace creation should return a workspace ID")
 		}
 
-		// Create a page under root (parent_id=0)
+		// Create a top-level page (parent_id=0 means top-level, no root node).
 		createPageReq := dto.CreatePageRequest{
 			Title:   "My First Page",
 			Content: "",
@@ -338,28 +338,41 @@ func TestIntegration(t *testing.T) {
 			t.Fatalf("POST /api/workspaces/%s/nodes/0/page/create: got status %d", wsID, status)
 		}
 
-		if createPageResp.ID.IsZero() {
-			t.Fatal("CreatePage should return an ID")
+		// Top-level page should have a non-zero ID.
+		page1ID := createPageResp.ID
+		if page1ID.IsZero() {
+			t.Fatal("Top-level page should have a non-zero ID")
 		}
-		nodeID := createPageResp.ID
 
-		// List nodes
-		var listResp dto.ListNodesResponse
-		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes", nil, &listResp, token)
+		// Create another top-level page.
+		createPage2Req := dto.CreatePageRequest{
+			Title:   "Second Page",
+			Content: "Some content",
+		}
+		var createPage2Resp dto.CreatePageResponse
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/nodes/0/page/create", createPage2Req, &createPage2Resp, token)
 		if status != http.StatusOK {
-			t.Fatalf("GET /api/workspaces/%s/nodes: got status %d", wsID, status)
+			t.Fatalf("POST /api/workspaces/%s/nodes/0/page/create (page2): got status %d", wsID, status)
 		}
 
-		// There should be at least 2 nodes: the welcome page and our new node
-		if len(listResp.Nodes) < 1 {
-			t.Errorf("List nodes: got %d nodes, want at least 1", len(listResp.Nodes))
+		// Second page should also have a non-zero ID.
+		nodeID := createPage2Resp.ID
+		if nodeID.IsZero() {
+			t.Fatal("Second page should have a non-zero ID")
 		}
 
-		// Get single node
+		// Get node 0 should return 404 (no root node exists).
+		var notFoundResp dto.NodeResponse
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/0", nil, &notFoundResp, token)
+		if status != http.StatusNotFound {
+			t.Fatalf("GET /api/workspaces/%s/nodes/0: got status %d, want 404", wsID, status)
+		}
+
+		// Get single node should work.
 		var getNodeResp dto.NodeResponse
-		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+nodeID.String(), nil, &getNodeResp, token)
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+page1ID.String(), nil, &getNodeResp, token)
 		if status != http.StatusOK {
-			t.Fatalf("GET /api/workspaces/%s/nodes/%s: got status %d", wsID, nodeID, status)
+			t.Fatalf("GET /api/workspaces/%s/nodes/%s: got status %d", wsID, page1ID, status)
 		}
 
 		if getNodeResp.Title != "My First Page" {
@@ -434,7 +447,7 @@ func TestIntegration(t *testing.T) {
 		daveWSID := wsResp.ID
 
 		// Eve tries to access Dave's workspace - should be forbidden
-		status := env.doJSON(t, http.MethodGet, "/api/workspaces/"+daveWSID.String()+"/nodes", nil, nil, eveToken)
+		status := env.doJSON(t, http.MethodGet, "/api/workspaces/"+daveWSID.String()+"/nodes/0", nil, nil, eveToken)
 		if status != http.StatusForbidden {
 			t.Errorf("Eve accessing Dave's workspace: got status %d, want %d", status, http.StatusForbidden)
 		}

@@ -175,7 +175,6 @@ func NewRouter(
 
 	// Nodes endpoints (workspace-scoped)
 	// id=0 is valid for root node
-	mux.Handle("GET /api/workspaces/{wsID}/nodes", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.ListNodes, rlConfig))
 	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.GetNode, rlConfig))
 	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/children", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.ListNodeChildren, rlConfig))
 	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/delete", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.DeleteNode, rlConfig))

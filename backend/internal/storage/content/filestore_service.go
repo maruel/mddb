@@ -32,7 +32,6 @@ type FileStoreService struct {
 
 // page is an internal type for reading/writing page markdown files.
 type page struct {
-	id       jsonldb.ID
 	title    string
 	content  string
 	created  storage.Time
