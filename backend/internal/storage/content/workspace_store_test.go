@@ -599,9 +599,9 @@ func TestWorkspaceStore(t *testing.T) {
 		}
 
 		// Children should NOT be populated (lazy loading).
-		// But Children should be non-nil empty slice to indicate it has children.
-		if topLevelNodes[0].Children == nil {
-			t.Error("expected Children to be non-nil (indicates has children)")
+		// HasChildren should be true to indicate the node has children.
+		if !topLevelNodes[0].HasChildren {
+			t.Error("expected HasChildren to be true (node has children)")
 		}
 		if len(topLevelNodes[0].Children) != 0 {
 			t.Errorf("expected Children to be empty (lazy load), got %d children", len(topLevelNodes[0].Children))

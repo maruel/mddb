@@ -14,12 +14,12 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
     },
   ],
-  // Start the server before running tests
+  // Start the server before running tests with isolated test data directory
   webServer: {
-    command: 'TEST_OAUTH=1 make dev',
+    command: 'TEST_OAUTH=1 DATA_DIR=./data-e2e make dev',
     url: 'http://localhost:8080/api/health',
     reuseExistingServer: false, // Always start fresh to ensure TEST_OAUTH is set
     timeout: 30000,

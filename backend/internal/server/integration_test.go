@@ -415,6 +415,140 @@ func TestIntegration(t *testing.T) {
 		}
 	})
 
+	t.Run("PageHierarchy", func(t *testing.T) {
+		// Tests navigation and child page creation in the no-root workspace model.
+		t.Parallel()
+		env := setupTestEnv(t)
+
+		// Setup: register user, create org and workspace
+		var loginResp dto.AuthResponse
+		env.doJSON(t, http.MethodPost, "/api/auth/register", dto.RegisterRequest{
+			Email: "hierarchy@example.com", Password: "Pass1234", Name: "Hierarchy Test",
+		}, &loginResp, "")
+		token := loginResp.Token
+
+		var orgResp dto.OrganizationResponse
+		env.doJSON(t, http.MethodPost, "/api/organizations", dto.CreateOrganizationRequest{
+			Name: "Hierarchy Org",
+		}, &orgResp, token)
+
+		var wsResp dto.WorkspaceResponse
+		env.doJSON(t, http.MethodPost, "/api/organizations/"+orgResp.ID.String()+"/workspaces", dto.CreateWorkspaceRequest{
+			Name: "Hierarchy Workspace",
+		}, &wsResp, token)
+		wsID := wsResp.ID
+
+		// 1. List children of 0 (top-level nodes) - should be empty initially
+		var emptyChildren dto.ListNodeChildrenResponse
+		status := env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/0/children", nil, &emptyChildren, token)
+		if status != http.StatusOK {
+			t.Fatalf("GET /nodes/0/children: got status %d", status)
+		}
+		if len(emptyChildren.Nodes) != 0 {
+			t.Errorf("expected 0 top-level nodes initially, got %d", len(emptyChildren.Nodes))
+		}
+
+		// 2. Create a top-level page (parent=0)
+		var topLevelResp dto.CreatePageResponse
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/nodes/0/page/create", dto.CreatePageRequest{
+			Title: "Top Level Page",
+		}, &topLevelResp, token)
+		if status != http.StatusOK {
+			t.Fatalf("POST create top-level page: got status %d", status)
+		}
+		topLevelID := topLevelResp.ID
+		if topLevelID.IsZero() {
+			t.Fatal("top-level page should have non-zero ID")
+		}
+
+		// 3. List children of 0 - should now have 1 top-level node
+		var topLevelChildren dto.ListNodeChildrenResponse
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/0/children", nil, &topLevelChildren, token)
+		if status != http.StatusOK {
+			t.Fatalf("GET /nodes/0/children: got status %d", status)
+		}
+		if len(topLevelChildren.Nodes) != 1 {
+			t.Fatalf("expected 1 top-level node, got %d", len(topLevelChildren.Nodes))
+		}
+		if topLevelChildren.Nodes[0].ID != topLevelID {
+			t.Errorf("expected top-level node ID %s, got %s", topLevelID, topLevelChildren.Nodes[0].ID)
+		}
+		if topLevelChildren.Nodes[0].Title != "Top Level Page" {
+			t.Errorf("expected title 'Top Level Page', got %q", topLevelChildren.Nodes[0].Title)
+		}
+
+		// 4. Create a child page under the top-level page
+		var childResp dto.CreatePageResponse
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/nodes/"+topLevelID.String()+"/page/create", dto.CreatePageRequest{
+			Title:   "Child Page",
+			Content: "This is a child page",
+		}, &childResp, token)
+		if status != http.StatusOK {
+			t.Fatalf("POST create child page: got status %d", status)
+		}
+		childID := childResp.ID
+		if childID.IsZero() {
+			t.Fatal("child page should have non-zero ID")
+		}
+
+		// 5. List children of top-level page - should have 1 child
+		var childChildren dto.ListNodeChildrenResponse
+		status = env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+topLevelID.String()+"/children", nil, &childChildren, token)
+		if status != http.StatusOK {
+			t.Fatalf("GET /nodes/%s/children: got status %d", topLevelID, status)
+		}
+		if len(childChildren.Nodes) != 1 {
+			t.Fatalf("expected 1 child node, got %d", len(childChildren.Nodes))
+		}
+		if childChildren.Nodes[0].ID != childID {
+			t.Errorf("expected child node ID %s, got %s", childID, childChildren.Nodes[0].ID)
+		}
+
+		// 6. Create a grandchild page under the child
+		var grandchildResp dto.CreatePageResponse
+		status = env.doJSON(t, http.MethodPost, "/api/workspaces/"+wsID.String()+"/nodes/"+childID.String()+"/page/create", dto.CreatePageRequest{
+			Title:   "Grandchild Page",
+			Content: "This is a grandchild page",
+		}, &grandchildResp, token)
+		if status != http.StatusOK {
+			t.Fatalf("POST create grandchild page: got status %d", status)
+		}
+		grandchildID := grandchildResp.ID
+
+		// 7. Navigate: read each node and verify parent relationships
+		var topLevelNode dto.NodeResponse
+		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+topLevelID.String(), nil, &topLevelNode, token)
+		if !topLevelNode.ParentID.IsZero() {
+			t.Errorf("top-level node parent should be 0, got %s", topLevelNode.ParentID)
+		}
+
+		var childNode dto.NodeResponse
+		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+childID.String(), nil, &childNode, token)
+		if childNode.ParentID != topLevelID {
+			t.Errorf("child node parent should be %s, got %s", topLevelID, childNode.ParentID)
+		}
+
+		var grandchildNode dto.NodeResponse
+		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+grandchildID.String(), nil, &grandchildNode, token)
+		if grandchildNode.ParentID != childID {
+			t.Errorf("grandchild node parent should be %s, got %s", childID, grandchildNode.ParentID)
+		}
+
+		// 8. Verify top-level still has only 1 node (child creation doesn't affect top-level list)
+		var finalTopLevel dto.ListNodeChildrenResponse
+		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/0/children", nil, &finalTopLevel, token)
+		if len(finalTopLevel.Nodes) != 1 {
+			t.Errorf("expected 1 top-level node after hierarchy creation, got %d", len(finalTopLevel.Nodes))
+		}
+
+		// 9. List children of grandchild - should be empty (leaf node)
+		var grandchildChildren dto.ListNodeChildrenResponse
+		env.doJSON(t, http.MethodGet, "/api/workspaces/"+wsID.String()+"/nodes/"+grandchildID.String()+"/children", nil, &grandchildChildren, token)
+		if len(grandchildChildren.Nodes) != 0 {
+			t.Errorf("expected grandchild to have 0 children (leaf), got %d", len(grandchildChildren.Nodes))
+		}
+	})
+
 	t.Run("ForbiddenAccess", func(t *testing.T) {
 		t.Parallel()
 		env := setupTestEnv(t)

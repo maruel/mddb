@@ -1386,7 +1386,7 @@ func (ws *WorkspaceFileStore) ListChildren(parentID jsonldb.ID) ([]*Node, error)
 		for _, childEntry := range childEntries {
 			if childEntry.IsDir() {
 				if _, decErr := jsonldb.DecodeID(childEntry.Name()); decErr == nil {
-					node.Children = []*Node{}
+					node.HasChildren = true
 					break
 				}
 			}

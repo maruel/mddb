@@ -123,17 +123,18 @@ func nodeToResponse(n *content.Node) *dto.NodeResponse {
 	hasTable := n.Type == content.NodeTypeTable || n.Type == content.NodeTypeHybrid
 
 	resp := &dto.NodeResponse{
-		ID:         n.ID,
-		ParentID:   n.ParentID,
-		Title:      n.Title,
-		Content:    n.Content,
-		Properties: propertiesToDTO(n.Properties),
-		Created:    n.Created,
-		Modified:   n.Modified,
-		Tags:       n.Tags,
-		FaviconURL: n.FaviconURL,
-		HasPage:    hasPage,
-		HasTable:   hasTable,
+		ID:          n.ID,
+		ParentID:    n.ParentID,
+		Title:       n.Title,
+		Content:     n.Content,
+		Properties:  propertiesToDTO(n.Properties),
+		Created:     n.Created,
+		Modified:    n.Modified,
+		Tags:        n.Tags,
+		FaviconURL:  n.FaviconURL,
+		HasPage:     hasPage,
+		HasTable:    hasTable,
+		HasChildren: n.HasChildren,
 	}
 	if len(n.Children) > 0 {
 		resp.Children = make([]dto.NodeResponse, 0, len(n.Children))

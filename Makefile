@@ -1,4 +1,4 @@
-.PHONY: help build dev test coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade docs
+.PHONY: help build dev test e2e coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade docs
 
 # Variables
 DATA_DIR=./data
@@ -13,7 +13,8 @@ help:
 	@echo "Available targets:"
 	@echo "  make build          - Build Go server (auto-generates frontend)"
 	@echo "  make dev            - Run the server in development mode"
-	@echo "  make test           - Run backend tests"
+	@echo "  make test           - Run unit tests"
+	@echo "  make e2e            - Run end-to-end browser tests"
 	@echo "  make types          - Generate TypeScript types from Go structs"
 	@echo "  make docs           - Update AGENTS.md file index"
 	@echo "  make lint           - Run linters (Go + frontend)"
@@ -58,6 +59,10 @@ dev: build $(ENV_FILE)
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test
+
+e2e: build
+	@rm -rf ./data-e2e
+	@TEST_OAUTH=1 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test:e2e
 
 coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...

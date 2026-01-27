@@ -3,6 +3,7 @@
 package ratelimit
 
 import (
+	"os"
 	"strings"
 	"time"
 )
@@ -37,26 +38,32 @@ type Config struct {
 //   - Write: 60 req/min, User scope
 //   - Read (auth): 30,000 req/min, User scope
 //   - Read (unauth): 6,000 req/min, IP scope.
+//
+// In test mode (TEST_OAUTH=1), rate limits are increased 10x to allow for faster testing.
 func DefaultConfig() *Config {
+	multiplier := 1
+	if os.Getenv("TEST_OAUTH") == "1" {
+		multiplier = 10
+	}
 	return &Config{
 		Auth: Tier{
 			Name:    "auth",
-			Limiter: NewLimiter(5, time.Minute, 5),
+			Limiter: NewLimiter(5*multiplier, time.Minute, 5*multiplier),
 			Scope:   ScopeIP,
 		},
 		Write: Tier{
 			Name:    "write",
-			Limiter: NewLimiter(60, time.Minute, 10),
+			Limiter: NewLimiter(60*multiplier, time.Minute, 10*multiplier),
 			Scope:   ScopeUser,
 		},
 		ReadAuth: Tier{
 			Name:    "read",
-			Limiter: NewLimiter(30000, time.Minute, 5000),
+			Limiter: NewLimiter(30000*multiplier, time.Minute, 5000*multiplier),
 			Scope:   ScopeUser,
 		},
 		ReadUnauth: Tier{
 			Name:    "read",
-			Limiter: NewLimiter(6000, time.Minute, 1000),
+			Limiter: NewLimiter(6000*multiplier, time.Minute, 1000*multiplier),
 			Scope:   ScopeIP,
 		},
 	}

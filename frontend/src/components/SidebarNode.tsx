@@ -41,8 +41,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
     return [];
   };
 
-  // Backend returns children as empty array [] if node has children (but not loaded)
-  // Returns undefined/null if node definitely has no children
+  // Check if this node might have children
   const mightHaveChildren = () => {
     // If we've loaded children, check if there are any
     const loaded = loadedChildren();
@@ -52,9 +51,8 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
     const prefetched = props.prefetchedChildren?.get(props.node.id);
     if (prefetched) return prefetched.length > 0;
 
-    // Backend sets children to [] (empty array) to indicate "has children, not loaded"
-    // children is undefined/null means "no children"
-    return props.node.children !== undefined && props.node.children !== null;
+    // Backend sets has_children to indicate node has children not yet loaded
+    return props.node.has_children === true;
   };
 
   // Fetch children for this node
@@ -105,7 +103,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
 
     // Fetch children for each child node in parallel (non-blocking)
     for (const child of childNodes) {
-      if (!prefetchCache().has(child.id) && child.children !== undefined && child.children !== null) {
+      if (!prefetchCache().has(child.id) && child.has_children === true) {
         props
           .onFetchChildren(child.id)
           .then((grandchildren) => {
@@ -131,7 +129,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
   };
 
   return (
-    <li class={styles.sidebarNodeWrapper}>
+    <li class={styles.sidebarNodeWrapper} data-testid={`sidebar-node-${props.node.id}`}>
       <div
         class={styles.pageItem}
         classList={{ [`${styles.active}`]: props.selectedId === props.node.id }}

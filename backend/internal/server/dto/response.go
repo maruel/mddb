@@ -362,18 +362,19 @@ type GitRemoteResponse struct {
 
 // NodeResponse is the API representation of a node.
 type NodeResponse struct {
-	ID         jsonldb.ID     `json:"id" jsonschema:"description=Unique node identifier"`
-	ParentID   jsonldb.ID     `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
-	Title      string         `json:"title" jsonschema:"description=Node title"`
-	Content    string         `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
-	Properties []Property     `json:"properties,omitempty" jsonschema:"description=Schema (Table part)"`
-	Created    Time           `json:"created" jsonschema:"description=Node creation Unix timestamp"`
-	Modified   Time           `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
-	Tags       []string       `json:"tags,omitempty" jsonschema:"description=Node tags"`
-	FaviconURL string         `json:"favicon_url,omitempty" jsonschema:"description=Favicon URL"`
-	HasPage    bool           `json:"has_page" jsonschema:"description=Whether node has page content (index.md exists)"`
-	HasTable   bool           `json:"has_table" jsonschema:"description=Whether node has table content (metadata.json exists)"`
-	Children   []NodeResponse `json:"children,omitempty" jsonschema:"description=Nested nodes"`
+	ID          jsonldb.ID     `json:"id" jsonschema:"description=Unique node identifier"`
+	ParentID    jsonldb.ID     `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
+	Title       string         `json:"title" jsonschema:"description=Node title"`
+	Content     string         `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
+	Properties  []Property     `json:"properties,omitempty" jsonschema:"description=Schema (Table part)"`
+	Created     Time           `json:"created" jsonschema:"description=Node creation Unix timestamp"`
+	Modified    Time           `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
+	Tags        []string       `json:"tags,omitempty" jsonschema:"description=Node tags"`
+	FaviconURL  string         `json:"favicon_url,omitempty" jsonschema:"description=Favicon URL"`
+	HasPage     bool           `json:"has_page" jsonschema:"description=Whether node has page content (index.md exists)"`
+	HasTable    bool           `json:"has_table" jsonschema:"description=Whether node has table content (metadata.json exists)"`
+	HasChildren bool           `json:"has_children,omitempty" jsonschema:"description=Whether node has child nodes"`
+	Children    []NodeResponse `json:"children,omitempty" jsonschema:"description=Nested nodes"`
 }
 
 // GetPageResponse is a response containing page content.

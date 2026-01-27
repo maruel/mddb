@@ -11,18 +11,19 @@ import (
 
 // Node represents the unified content entity (can be a Page, a Table, or both).
 type Node struct {
-	ID         jsonldb.ID   `json:"id" jsonschema:"description=Unique node identifier"`
-	ParentID   jsonldb.ID   `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
-	Title      string       `json:"title" jsonschema:"description=Node title"`
-	Content    string       `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
-	Properties []Property   `json:"properties,omitempty" jsonschema:"description=Schema definition (Table part)"`
-	Views      []View       `json:"views,omitempty" jsonschema:"description=Saved view configurations (Table part)"`
-	Created    storage.Time `json:"created" jsonschema:"description=Node creation timestamp"`
-	Modified   storage.Time `json:"modified" jsonschema:"description=Last modification timestamp"`
-	Tags       []string     `json:"tags,omitempty" jsonschema:"description=Node tags for categorization"`
-	FaviconURL string       `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
-	Type       NodeType     `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
-	Children   []*Node      `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
+	ID          jsonldb.ID   `json:"id" jsonschema:"description=Unique node identifier"`
+	ParentID    jsonldb.ID   `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
+	Title       string       `json:"title" jsonschema:"description=Node title"`
+	Content     string       `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
+	Properties  []Property   `json:"properties,omitempty" jsonschema:"description=Schema definition (Table part)"`
+	Views       []View       `json:"views,omitempty" jsonschema:"description=Saved view configurations (Table part)"`
+	Created     storage.Time `json:"created" jsonschema:"description=Node creation timestamp"`
+	Modified    storage.Time `json:"modified" jsonschema:"description=Last modification timestamp"`
+	Tags        []string     `json:"tags,omitempty" jsonschema:"description=Node tags for categorization"`
+	FaviconURL  string       `json:"favicon_url,omitempty" jsonschema:"description=Custom favicon URL"`
+	Type        NodeType     `json:"type" jsonschema:"description=Node type (document/table/hybrid)"`
+	HasChildren bool         `json:"has_children,omitempty" jsonschema:"description=Whether this node has child nodes"`
+	Children    []*Node      `json:"children,omitempty" jsonschema:"description=Nested child nodes"`
 }
 
 // NodeType defines what features are enabled for a node.

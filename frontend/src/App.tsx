@@ -51,6 +51,7 @@ export default function App() {
   const [nodes, setNodes] = createStore<NodeResponse[]>([]);
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
+  const [selectedNodeData, setSelectedNodeData] = createSignal<NodeResponse | null>(null);
   const [isSettingsPage, setIsSettingsPage] = createSignal(false);
   const [isProfilePage, setIsProfilePage] = createSignal(false);
   const [isPrivacyPage, setIsPrivacyPage] = createSignal(false);
@@ -67,6 +68,7 @@ export default function App() {
   const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
   const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
   const [firstLoginCheckDone, setFirstLoginCheckDone] = createSignal(false);
+  const [firstLoginInProgress, setFirstLoginInProgress] = createSignal(false);
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
@@ -120,6 +122,9 @@ export default function App() {
       }
       handleLogin(data.token, data.user);
       setSelectedNodeId(null);
+      setSelectedNodeData(null);
+      loadedNodeId = null;
+      loadedForWorkspace = null; // Force reload for new org
       if (redirect) {
         const wsId = data.user.workspace_id;
         const wsName = data.user.workspace_name;
@@ -151,6 +156,9 @@ export default function App() {
       }
       handleLogin(data.token, data.user);
       setSelectedNodeId(null);
+      setSelectedNodeData(null);
+      loadedNodeId = null;
+      loadedForWorkspace = null; // Force reload for new workspace
       if (redirect) {
         const newWsId = data.user.workspace_id;
         const wsName = data.user.workspace_name;
@@ -242,36 +250,26 @@ export default function App() {
   }
 
   // Auto-create welcome page if no root page exists
-  async function autoCreateWelcomePage() {
+  // Returns the new page ID if created, null otherwise
+  async function createWelcomePageIfNeeded(): Promise<string | null> {
     const ws = wsApi();
     const u = user();
-    if (!ws || !u) return;
+    if (!ws || !u) return null;
 
     // Only create if user has permission
     if (u.workspace_role !== WSRoleAdmin && u.workspace_role !== WSRoleEditor) {
-      return;
+      return null;
     }
 
     try {
-      setLoading(true);
-      // Check if workspace has any top-level nodes
-      const topLevelNodes = await ws.nodes.listNodeChildren('0');
-
-      if (!topLevelNodes?.nodes || topLevelNodes.nodes.length === 0) {
-        // No pages exist, create a welcome page
-        const newPage = await ws.nodes.page.createPage('0', {
-          title: t('welcome.welcomePageTitle'),
-        });
-        // Reload nodes and navigate to the new page
-        await loadNodes();
-        if (newPage?.id) {
-          loadNode(String(newPage.id));
-        }
-      }
+      // No pages exist, create a welcome page
+      const newPage = await ws.nodes.page.createPage('0', {
+        title: t('welcome.welcomePageTitle'),
+      });
+      return newPage?.id ? String(newPage.id) : null;
     } catch (err) {
       setError(`${t('errors.failedToCreate')}: ${err}`);
-    } finally {
-      setLoading(false);
+      return null;
     }
   }
 
@@ -345,42 +343,47 @@ export default function App() {
   // First-time login check: ensure user has org, workspace, and welcome page (auto-create if needed)
   createEffect(() => {
     const u = user();
-    if (u && !firstLoginCheckDone()) {
-      setFirstLoginCheckDone(true);
+    if (!u || firstLoginCheckDone() || firstLoginInProgress()) return;
 
-      // Check if user has any organizations
-      const orgs = u.organizations || [];
-      if (orgs.length === 0) {
-        // User has no organizations, auto-create one
-        autoCreateOrganization();
-        return;
-      }
+    // Check if user has any organizations
+    const orgs = u.organizations || [];
+    if (orgs.length === 0) {
+      // User has no organizations, auto-create one
+      setFirstLoginInProgress(true);
+      autoCreateOrganization().finally(() => setFirstLoginInProgress(false));
+      return;
+    }
 
-      // User has organizations, check if first org has any workspaces
-      const firstOrg = orgs[0];
-      if (firstOrg) {
-        const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg.organization_id) || [];
-        if (orgWorkspaces.length === 0) {
-          // Only auto-create workspace if user is admin/owner of the org
-          if (firstOrg.role === OrgRoleAdmin || firstOrg.role === OrgRoleOwner) {
-            autoCreateWorkspace();
-            return;
-          }
+    // User has organizations, check if first org has any workspaces
+    const firstOrg = orgs[0];
+    if (firstOrg) {
+      const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg.organization_id) || [];
+      if (orgWorkspaces.length === 0) {
+        // Only auto-create workspace if user is admin/owner of the org
+        if (firstOrg.role === OrgRoleAdmin || firstOrg.role === OrgRoleOwner) {
+          setFirstLoginInProgress(true);
+          autoCreateWorkspace().finally(() => setFirstLoginInProgress(false));
+          return;
         }
       }
+    }
 
-      // User has org and workspace, check for welcome page and redirect
-      const wsId = u.workspace_id;
-      const wsName = u.workspace_name;
-      if (wsId) {
-        // Ensure welcome page exists
-        autoCreateWelcomePage();
+    // Check for welcome page and redirect
+    const wsId = u.workspace_id;
+    const wsName = u.workspace_name;
+    if (!wsId) {
+      // Workspace exists in list but not yet switched to - wait for switchWorkspace
+      return;
+    }
 
-        if (window.location.pathname === '/') {
-          const wsSlug = slugify(wsName || 'workspace');
-          window.history.replaceState(null, '', `/w/${wsId}+${wsSlug}/`);
-        }
-      }
+    // User has org and active workspace - mark first login check as done
+    setFirstLoginCheckDone(true);
+
+    // Note: autoCreateWelcomePage() is called by loadNodes() after nodes are loaded
+
+    if (window.location.pathname === '/') {
+      const wsSlug = slugify(wsName || 'workspace');
+      window.history.replaceState(null, '', `/w/${wsId}+${wsSlug}/`);
     }
   });
 
@@ -509,6 +512,7 @@ export default function App() {
         loadNode(nodes[0].id, false);
       } else {
         setSelectedNodeId(null);
+        setSelectedNodeData(null);
         setTitle('');
         setContent('');
       }
@@ -516,6 +520,7 @@ export default function App() {
     }
 
     setSelectedNodeId(null);
+    setSelectedNodeData(null);
     setTitle('');
     setContent('');
   };
@@ -537,16 +542,34 @@ export default function App() {
     }
   });
 
-  async function loadNodes() {
+  let loadingNodes = false;
+  let loadedForWorkspace: string | null = null;
+  async function loadNodes(force = false) {
     const ws = wsApi();
-    if (!ws) return;
+    const wsId = user()?.workspace_id;
+    if (!ws || loadingNodes) return;
+    // Skip if already loaded for this workspace (unless forced)
+    if (!force && wsId && loadedForWorkspace === wsId && nodes.length > 0) return;
 
     try {
+      loadingNodes = true;
       setLoading(true);
       // Get top-level nodes (children of workspace root, id=0)
       const resp = await ws.nodes.listNodeChildren('0');
-      const loadedNodes = resp?.nodes || [];
+      let loadedNodes = resp?.nodes || [];
+
+      // Auto-create welcome page if workspace is empty (first-time user)
+      if (loadedNodes.length === 0 && firstLoginCheckDone()) {
+        const newPageId = await createWelcomePageIfNeeded();
+        if (newPageId) {
+          // Re-fetch nodes after creating welcome page
+          const resp2 = await ws.nodes.listNodeChildren('0');
+          loadedNodes = resp2?.nodes || [];
+        }
+      }
+
       setNodes(reconcile(loadedNodes));
+      loadedForWorkspace = wsId || null;
       setError(null);
 
       // Auto-select first node if at workspace root and no node is selected
@@ -558,20 +581,28 @@ export default function App() {
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
+      loadingNodes = false;
       setLoading(false);
     }
   }
 
+  let loadingNodeId: string | null = null;
+  let loadedNodeId: string | null = null;
   async function loadNode(id: string, pushState = true) {
     const ws = wsApi();
     if (!ws) return;
+    // Skip if already loading or loaded this node
+    if (loadingNodeId === id || loadedNodeId === id) return;
 
     try {
+      loadingNodeId = id;
       setLoading(true);
       setShowHistory(false);
       const nodeData = await ws.nodes.getNode(id);
 
       setSelectedNodeId(nodeData.id);
+      setSelectedNodeData(nodeData);
+      loadedNodeId = nodeData.id;
       setTitle(nodeData.title);
       setContent(nodeData.content || '');
       setHasUnsavedChanges(false);
@@ -610,6 +641,7 @@ export default function App() {
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
+      loadingNodeId = null;
       setLoading(false);
     }
   }
@@ -679,7 +711,7 @@ export default function App() {
         });
         newNodeId = result.id;
       }
-      await loadNodes();
+      await loadNodes(true);
       loadNode(String(newNodeId));
       setTitle('');
       setContent('');
@@ -702,7 +734,7 @@ export default function App() {
     try {
       setLoading(true);
       await ws.nodes.page.updatePage(nodeId, { title: title(), content: content() });
-      await loadNodes();
+      await loadNodes(true);
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setError(null);
@@ -736,8 +768,9 @@ export default function App() {
     try {
       setLoading(true);
       await ws.nodes.deleteNode(nodeId);
-      await loadNodes();
+      await loadNodes(true);
       setSelectedNodeId(null);
+      setSelectedNodeData(null);
       setTitle('');
       setContent('');
       setHasUnsavedChanges(false);
@@ -776,24 +809,6 @@ export default function App() {
       return [];
     }
   }
-
-  // Recursively find a node by ID in the tree
-  const findNodeById = (nodeId: string | null): NodeResponse | undefined => {
-    if (!nodeId) return undefined;
-
-    const search = (nodeList: NodeResponse[]): NodeResponse | undefined => {
-      for (const node of nodeList) {
-        if (node.id === nodeId) return node;
-        if (node.children) {
-          const found = search(node.children.filter((c): c is NodeResponse => !!c));
-          if (found) return found;
-        }
-      }
-      return undefined;
-    };
-
-    return search(nodes);
-  };
 
   const getBreadcrumbs = (nodeId: string | null): NodeResponse[] => {
     if (!nodeId) return [];
@@ -1107,7 +1122,7 @@ export default function App() {
 
                         <div class={styles.nodeContent}>
                           {/* Always show markdown content if it exists or if node has page content */}
-                          <Show when={findNodeById(selectedNodeId())?.has_page}>
+                          <Show when={selectedNodeData()?.has_page}>
                             <div class={styles.editorContent}>
                               <textarea
                                 value={content()}
@@ -1124,7 +1139,7 @@ export default function App() {
                           </Show>
 
                           {/* Show table if node has table content */}
-                          <Show when={findNodeById(selectedNodeId())?.has_table}>
+                          <Show when={selectedNodeData()?.has_table}>
                             <div class={styles.tableView}>
                               <div class={styles.tableHeader}>
                                 <h3>{t('table.records')}</h3>
@@ -1158,7 +1173,7 @@ export default function App() {
                               <Show when={viewMode() === 'table'}>
                                 <TableTable
                                   tableId={selectedNodeId() || ''}
-                                  columns={findNodeById(selectedNodeId())?.properties || []}
+                                  columns={selectedNodeData()?.properties || []}
                                   records={records()}
                                   onAddRecord={handleAddRecord}
                                   onUpdateRecord={handleUpdateRecord}
@@ -1170,7 +1185,7 @@ export default function App() {
                               <Show when={viewMode() === 'grid'}>
                                 <TableGrid
                                   records={records()}
-                                  columns={findNodeById(selectedNodeId())?.properties || []}
+                                  columns={selectedNodeData()?.properties || []}
                                   onUpdateRecord={handleUpdateRecord}
                                   onDeleteRecord={handleDeleteRecord}
                                 />
@@ -1178,7 +1193,7 @@ export default function App() {
                               <Show when={viewMode() === 'gallery'}>
                                 <TableGallery
                                   records={records()}
-                                  columns={findNodeById(selectedNodeId())?.properties || []}
+                                  columns={selectedNodeData()?.properties || []}
                                   onUpdateRecord={handleUpdateRecord}
                                   onDeleteRecord={handleDeleteRecord}
                                 />
@@ -1186,7 +1201,7 @@ export default function App() {
                               <Show when={viewMode() === 'board'}>
                                 <TableBoard
                                   records={records()}
-                                  columns={findNodeById(selectedNodeId())?.properties || []}
+                                  columns={selectedNodeData()?.properties || []}
                                   onUpdateRecord={handleUpdateRecord}
                                   onDeleteRecord={handleDeleteRecord}
                                 />

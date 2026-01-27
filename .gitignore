@@ -1,4 +1,5 @@
 /data/
+/data-e2e/
 .env
 .env.*.local
 .env.local

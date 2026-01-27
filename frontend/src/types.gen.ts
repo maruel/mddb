@@ -913,6 +913,7 @@ export interface NodeResponse {
   favicon_url?: string;
   has_page: boolean;
   has_table: boolean;
+  has_children?: boolean;
   children?: NodeResponse[];
 }
 /**

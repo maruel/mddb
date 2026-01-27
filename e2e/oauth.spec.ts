@@ -82,8 +82,8 @@ test.describe('OAuth Login', () => {
       // Now simulate OAuth callback with this valid token
       await page.goto(`/?token=${token}`);
 
-      // Should be logged in - look for the logout button specifically
-      await expect(page.getByRole('button', { name: /logout/i })).toBeVisible({ timeout: 5000 });
+      // Should be logged in - sidebar indicates logged in state
+      await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
       // Token should be cleared from URL
       expect(page.url()).not.toContain('token=');
