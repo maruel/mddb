@@ -112,6 +112,9 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 			data.node.Views = opts.Manifest.ToContentViews(data.db.ID)
 		}
 
+		// Resolve relation target IDs in schema
+		e.mapper.ResolveRelations(data.node)
+
 		// Write node
 		if err := e.writer.WriteNode(data.node, ""); err != nil {
 			e.progress.OnError(fmt.Errorf("database %s: failed to write node: %w", data.db.ID, err))

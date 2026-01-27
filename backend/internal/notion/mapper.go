@@ -57,8 +57,18 @@ func (m *Mapper) ResolveRelations(node *content.Node) {
 		prop := &node.Properties[i]
 		if prop.Type == content.PropertyTypeRelation && prop.RelationConfig != nil {
 			if notionDBID, ok := m.PendingRelations[prop.Name]; ok {
+				// Try exact match first
 				if mddbID, ok := m.NotionToMddb[notionDBID]; ok {
 					prop.RelationConfig.TargetNodeID = mddbID
+				} else {
+					// Try normalized ID (Notion sometimes uses UUIDs with/without dashes)
+					normalizedID := strings.ReplaceAll(notionDBID, "-", "")
+					for notionID, mddbID := range m.NotionToMddb {
+						if strings.ReplaceAll(notionID, "-", "") == normalizedID {
+							prop.RelationConfig.TargetNodeID = mddbID
+							break
+						}
+					}
 				}
 			}
 		}
