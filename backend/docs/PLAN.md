@@ -43,12 +43,7 @@ This document focuses on the backend roadmap for mddb, covering API design, stor
 - [x] **Parent ID Caching**: O(1) node addressing via in-memory cache.
 - [ ] **JSONLDB Sharding**: Support for sharding extremely large datasets.
 
-### Phase 4: URL & Path Standardization
-- [ ] **URL Namespace**: Prefix page URLs with `/p/`.
-- [ ] **ID Encoding**: Switch to Base64 URL-encoded IDs.
-- [ ] **Separator Migration**: Transition from `-` to `+` for Base64 compatibility.
-
-### Phase 5: Table Views & Query Engine
+### Phase 4: Table Views & Query Engine
 - [ ] **View Model**: Backend storage for persistent filters, sorts, and layouts in `metadata.json`.
 - [ ] **Filter/Sort Engine**: Server-side query engine for JSONLDB supporting nested logic.
 - [ ] **View API**: CRUD endpoints for managing view configurations.
