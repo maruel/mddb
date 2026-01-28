@@ -22,7 +22,7 @@ func TestAssetHandler(t *testing.T) {
 		nodeID := jsonldb.ID(456)
 		name := "test-image.png"
 
-		url := ah.GenerateSignedAssetURL(wsID, nodeID, name)
+		url := cfg.GenerateSignedAssetURL(wsID, nodeID, name)
 
 		// Verify URL format
 		if !strings.HasPrefix(url, cfg.BaseURL+"/assets/") {
@@ -50,28 +50,28 @@ func TestAssetHandler(t *testing.T) {
 		path := "123/456/test.png"
 
 		t.Run("valid_signature", func(t *testing.T) {
-			sig := ah.generateSignature(path, expiry)
-			if !ah.verifySignature(path, sig, expiry) {
+			sig := cfg.generateSignature(path, expiry)
+			if !cfg.VerifyAssetSignature(path, sig, expiry) {
 				t.Error("Expected valid signature to verify")
 			}
 		})
 
 		t.Run("invalid_signature", func(t *testing.T) {
-			if ah.verifySignature(path, "invalid-signature", expiry) {
+			if cfg.VerifyAssetSignature(path, "invalid-signature", expiry) {
 				t.Error("Expected invalid signature to fail verification")
 			}
 		})
 
 		t.Run("wrong_path", func(t *testing.T) {
-			sig := ah.generateSignature(path, expiry)
-			if ah.verifySignature("wrong/path/test.png", sig, expiry) {
+			sig := cfg.generateSignature(path, expiry)
+			if cfg.VerifyAssetSignature("wrong/path/test.png", sig, expiry) {
 				t.Error("Expected signature with wrong path to fail verification")
 			}
 		})
 
 		t.Run("wrong_expiry", func(t *testing.T) {
-			sig := ah.generateSignature(path, expiry)
-			if ah.verifySignature(path, sig, expiry+1000) {
+			sig := cfg.generateSignature(path, expiry)
+			if cfg.VerifyAssetSignature(path, sig, expiry+1000) {
 				t.Error("Expected signature with wrong expiry to fail verification")
 			}
 		})
@@ -95,7 +95,7 @@ func TestAssetHandler(t *testing.T) {
 		t.Run("expired_signature", func(t *testing.T) {
 			expiry := time.Now().Add(-time.Hour).Unix() // Expired
 			path := "123/456/test.png"
-			sig := ah.generateSignature(path, expiry)
+			sig := cfg.generateSignature(path, expiry)
 
 			req := httptest.NewRequest(http.MethodGet, "/assets/123/456/test.png?sig="+sig+"&exp="+string(rune(expiry)), http.NoBody)
 			req.SetPathValue("wsID", "123")

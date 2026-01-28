@@ -65,7 +65,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Content handlers
 	ah := &handlers.AssetHandler{Svc: svc, Cfg: hcfg}
-	nh := &handlers.NodeHandler{Svc: svc, Cfg: hcfg, AssetHandler: ah}
+	nh := &handlers.NodeHandler{Svc: svc, Cfg: hcfg}
 	sh := &handlers.SearchHandler{Svc: svc}
 
 	// Other handlers

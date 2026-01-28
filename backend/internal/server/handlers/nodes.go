@@ -17,9 +17,8 @@ import (
 
 // NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
-	Svc          *Services
-	Cfg          *Config
-	AssetHandler *AssetHandler
+	Svc *Services
+	Cfg *Config
 }
 
 // GetNode retrieves a single node's metadata.
@@ -123,7 +122,7 @@ func (h *NodeHandler) assetsToSummaries(assets []*content.Asset, wsID, nodeID js
 			Size:     a.Size,
 			MimeType: a.MimeType,
 			Created:  a.Created,
-			URL:      h.AssetHandler.GenerateSignedAssetURL(wsID, nodeID, a.Name),
+			URL:      h.Cfg.GenerateSignedAssetURL(wsID, nodeID, a.Name),
 		}
 	}
 	return result

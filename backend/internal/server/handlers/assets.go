@@ -3,9 +3,6 @@
 package handlers
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -38,36 +35,10 @@ func init() {
 	}
 }
 
-// AssetURLExpiry is the default duration for which signed asset URLs are valid.
-const AssetURLExpiry = 1 * time.Hour
-
 // AssetHandler handles asset/file-related HTTP requests.
 type AssetHandler struct {
 	Svc *Services
 	Cfg *Config
-}
-
-// GenerateSignedAssetURL creates a signed URL for asset access.
-// The signature includes the path and expiry time, binding the URL to a specific asset.
-func (h *AssetHandler) GenerateSignedAssetURL(wsID, nodeID jsonldb.ID, name string) string {
-	expiry := time.Now().Add(AssetURLExpiry).Unix()
-	path := fmt.Sprintf("%s/%s/%s", wsID, nodeID, name)
-	sig := h.generateSignature(path, expiry)
-	return fmt.Sprintf("%s/assets/%s?sig=%s&exp=%d", h.Cfg.BaseURL, path, sig, expiry)
-}
-
-// generateSignature creates an HMAC-SHA256 signature for asset access.
-func (h *AssetHandler) generateSignature(path string, expiry int64) string {
-	data := fmt.Sprintf("%s:%d", path, expiry)
-	mac := hmac.New(sha256.New, []byte(h.Cfg.JWTSecret))
-	mac.Write([]byte(data))
-	return hex.EncodeToString(mac.Sum(nil))
-}
-
-// verifySignature checks if the provided signature is valid.
-func (h *AssetHandler) verifySignature(path, sig string, expiry int64) bool {
-	expected := h.generateSignature(path, expiry)
-	return hmac.Equal([]byte(expected), []byte(sig))
 }
 
 // UploadNodeAssetHandler handles asset uploading (multipart/form-data).
@@ -186,7 +157,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 
 	// Verify signature matches the path and expiry
 	path := fmt.Sprintf("%s/%s/%s", wsIDStr, nodeIDStr, assetName)
-	if !h.verifySignature(path, sig, expiry) {
+	if !h.Cfg.VerifyAssetSignature(path, sig, expiry) {
 		writeErrorResponse(w, dto.Forbidden("invalid_signature"))
 		return
 	}
