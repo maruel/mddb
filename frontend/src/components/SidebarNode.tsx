@@ -2,6 +2,7 @@
 // Supports lazy loading of children with pre-fetching one level ahead.
 
 import { createSignal, For, Show, onMount } from 'solid-js';
+import { createStore } from 'solid-js/store';
 import { useI18n } from '../i18n';
 import type { NodeResponse } from '@sdk/types.gen';
 import styles from './SidebarNode.module.css';
@@ -16,8 +17,8 @@ interface SidebarNodeResponseProps {
   onDeleteNode?: (nodeId: string) => void;
   onShowHistory?: (nodeId: string) => void;
   depth: number;
-  // Children loaded from parent's pre-fetch
-  prefetchedChildren?: Map<string, NodeResponse[]>;
+  // Children loaded from parent's pre-fetch (Record for SolidJS store reactivity)
+  prefetchedChildren?: Record<string, NodeResponse[]>;
 }
 
 export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
@@ -28,12 +29,12 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
   const [contextMenuPos, setContextMenuPos] = createSignal({ x: 0, y: 0 });
   const [loadedChildren, setLoadedChildren] = createSignal<NodeResponse[] | null>(null);
   const [isLoadingChildren, setIsLoadingChildren] = createSignal(false);
-  const [prefetchCache] = createSignal(new Map<string, NodeResponse[]>());
+  const [prefetchCache, setPrefetchCache] = createStore<Record<string, NodeResponse[]>>({});
 
   // Use prefetched or loaded children
   const children = () => {
     // Check prefetched cache from parent first
-    const prefetched = props.prefetchedChildren?.get(props.node.id);
+    const prefetched = props.prefetchedChildren?.[props.node.id];
     if (prefetched) return prefetched;
 
     // Use locally loaded children if available
@@ -50,7 +51,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
     if (loaded !== null) return loaded.length > 0;
 
     // Check prefetched cache
-    const prefetched = props.prefetchedChildren?.get(props.node.id);
+    const prefetched = props.prefetchedChildren?.[props.node.id];
     if (prefetched) return prefetched.length > 0;
 
     // Backend sets has_children to indicate node has children not yet loaded
@@ -85,7 +86,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
     // When node becomes visible, ensure children are loaded and grandchildren pre-fetched
     if (mightHaveChildren() && props.onFetchChildren) {
       // Check if children are already prefetched by parent
-      const prefetched = props.prefetchedChildren?.get(props.node.id);
+      const prefetched = props.prefetchedChildren?.[props.node.id];
       if (prefetched) {
         // Use prefetched data and pre-fetch grandchildren
         setLoadedChildren(prefetched);
@@ -105,11 +106,11 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
 
     // Fetch children for each child node in parallel (non-blocking)
     for (const child of childNodes) {
-      if (!prefetchCache().has(child.id) && child.has_children === true) {
+      if (!prefetchCache[child.id] && child.has_children === true) {
         props
           .onFetchChildren(child.id)
           .then((grandchildren) => {
-            prefetchCache().set(child.id, grandchildren);
+            setPrefetchCache(child.id, grandchildren);
           })
           .catch(() => {
             // Ignore pre-fetch errors
@@ -216,7 +217,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
                 onDeleteNode={props.onDeleteNode}
                 onShowHistory={props.onShowHistory}
                 depth={props.depth + 1}
-                prefetchedChildren={prefetchCache()}
+                prefetchedChildren={prefetchCache}
               />
             )}
           </For>

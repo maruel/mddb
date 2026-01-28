@@ -38,9 +38,9 @@ Components receive 10+ props with 6+ callbacks. Use context instead:
   - [ ] Shared cell rendering logic
 - [ ] **URL builders** (`src/utils/urls.ts`)
   - [ ] Centralize URL construction currently scattered in App.tsx
-- [ ] **Fix SidebarNode prefetch cache** (line 31)
-  - [ ] `createSignal(new Map())` creates fresh Map each render
-  - [ ] Switch to `createStore()` for cache persistence
+- [x] **Fix SidebarNode prefetch cache** (line 31)
+  - [x] `createSignal(new Map())` creates fresh Map each render
+  - [x] Switch to `createStore()` for cache persistence
 
 ### Phase A4: Error Handling
 - [ ] **Add ErrorBoundary component** - prevent full app crashes
