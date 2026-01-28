@@ -83,8 +83,9 @@ const (
 
 // UserSettings represents global user preferences.
 type UserSettings struct {
-	Theme    string `json:"theme" jsonschema:"description=UI theme preference (light/dark/system)"`
-	Language string `json:"language" jsonschema:"description=Preferred language code (en/fr/etc)"`
+	Theme                string   `json:"theme" jsonschema:"description=UI theme preference (light/dark/system)"`
+	Language             string   `json:"language" jsonschema:"description=Preferred language code (en/fr/etc)"`
+	LastActiveWorkspaces []string `json:"last_active_workspaces,omitempty" jsonschema:"description=Recently used workspace IDs in LRU order (most recent first)"`
 }
 
 // OAuthProvider represents a supported OAuth2 provider.

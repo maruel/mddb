@@ -1120,6 +1120,7 @@ export const WSRoleViewer: WorkspaceRole = "viewer";
 export interface UserSettings {
   theme: string;
   language: string;
+  last_active_workspaces?: string[];
 }
 /**
  * OAuthProvider represents a supported OAuth2 provider.

@@ -260,7 +260,35 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user
 
 // PopulateActiveContext populates organization/workspace context in the UserResponse.
 func (h *AuthHandler) PopulateActiveContext(userResp *dto.UserResponse, uwm *userWithMemberships) {
-	// Set first org as active
+	// Try workspaces from LRU list in order (most recently used first)
+	for _, savedWsID := range uwm.User.Settings.LastActiveWorkspaces {
+		for _, ws := range uwm.WSMemberships {
+			if ws.WorkspaceID != savedWsID {
+				continue
+			}
+			// Found an accessible workspace from the LRU list
+			userResp.WorkspaceID = ws.WorkspaceID
+			userResp.WorkspaceRole = dto.WorkspaceRole(ws.Role)
+			uwm.CurrentWSID = ws.WorkspaceID
+			uwm.CurrentWSRole = ws.Role
+			// Set the org context for this workspace
+			userResp.OrganizationID = ws.OrganizationID
+			uwm.CurrentOrgID = ws.OrganizationID
+			// Find org role
+			for _, org := range uwm.OrgMemberships {
+				if org.OrganizationID == ws.OrganizationID {
+					userResp.OrgRole = dto.OrganizationRole(org.Role)
+					uwm.CurrentOrgRole = org.Role
+					break
+				}
+			}
+			return
+		}
+	}
+
+	// No saved workspace accessible, fall through to default
+
+	// Default: Set first org as active
 	if len(uwm.OrgMemberships) > 0 {
 		userResp.OrganizationID = uwm.OrgMemberships[0].OrganizationID
 		userResp.OrgRole = dto.OrganizationRole(uwm.OrgMemberships[0].Role)

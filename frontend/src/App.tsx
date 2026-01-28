@@ -534,44 +534,10 @@ export default function App() {
     setIsOrgSettingsPage(false);
     setOrgSettingsId(null);
 
-    // Helper to validate workspace access and redirect if invalid
-    const validateWorkspaceAccess = async (wsId: string): Promise<boolean> => {
-      const u = user();
-      if (!u) return false;
-
-      // Check if we are member of this workspace
-      const isMember = u.workspaces?.some((m) => m.workspace_id === wsId);
-      if (!isMember) {
-        setError(t('errors.noAccessToWs') || 'You do not have access to this workspace');
-        // Redirect to user's current workspace after a short delay
-        const currentWsId = u.workspace_id;
-        const currentWsName = u.workspace_name;
-        if (currentWsId) {
-          const wsSlug = slugify(currentWsName || 'workspace');
-          setTimeout(() => window.history.replaceState(null, '', `/w/${currentWsId}+${wsSlug}/`), 2000);
-        }
-        return false;
-      }
-      return true;
-    };
-
     // Check for /w/wsID+wsSlug/nodeID+nodeSlug format
     const matchWithWs = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
     if (matchWithWs && matchWithWs[1] && matchWithWs[2]) {
-      const wsId = matchWithWs[1];
       const nodeId = matchWithWs[2];
-
-      // If we are logged in but in wrong workspace, switch
-      if (user() && user()?.workspace_id !== wsId) {
-        try {
-          if (!(await validateWorkspaceAccess(wsId))) {
-            return;
-          }
-          await switchWorkspace(wsId, false); // Don't redirect to /
-        } catch {
-          return;
-        }
-      }
 
       if (nodeId !== selectedNodeId()) {
         loadNode(nodeId, false);
@@ -582,20 +548,6 @@ export default function App() {
     // Check for /w/wsID+wsSlug/ format (workspace root without node)
     const matchWsRoot = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/?$/);
     if (matchWsRoot && matchWsRoot[1]) {
-      const wsId = matchWsRoot[1];
-
-      // If we are logged in but in wrong workspace, switch
-      if (user() && user()?.workspace_id !== wsId) {
-        try {
-          if (!(await validateWorkspaceAccess(wsId))) {
-            return;
-          }
-          await switchWorkspace(wsId, false);
-        } catch {
-          return;
-        }
-      }
-
       // At workspace root, auto-select the first node if available
       if (nodes.length > 0 && nodes[0]) {
         loadNode(nodes[0].id, false);

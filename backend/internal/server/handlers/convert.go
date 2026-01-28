@@ -227,9 +227,14 @@ func propertiesToDTO(props []content.Property) []dto.Property {
 }
 
 func userSettingsToDTO(s identity.UserSettings) dto.UserSettings {
+	wsIDs := make([]string, len(s.LastActiveWorkspaces))
+	for i, id := range s.LastActiveWorkspaces {
+		wsIDs[i] = id.String()
+	}
 	return dto.UserSettings{
-		Theme:    s.Theme,
-		Language: s.Language,
+		Theme:                s.Theme,
+		Language:             s.Language,
+		LastActiveWorkspaces: wsIDs,
 	}
 }
 
@@ -326,9 +331,16 @@ func wsMembershipSettingsToEntity(s dto.WorkspaceMembershipSettings) identity.Wo
 }
 
 func userSettingsToEntity(s dto.UserSettings) identity.UserSettings {
+	wsIDs := make([]jsonldb.ID, 0, len(s.LastActiveWorkspaces))
+	for _, idStr := range s.LastActiveWorkspaces {
+		if id, err := jsonldb.DecodeID(idStr); err == nil && !id.IsZero() {
+			wsIDs = append(wsIDs, id)
+		}
+	}
 	return identity.UserSettings{
-		Theme:    s.Theme,
-		Language: s.Language,
+		Theme:                s.Theme,
+		Language:             s.Language,
+		LastActiveWorkspaces: wsIDs,
 	}
 }
 

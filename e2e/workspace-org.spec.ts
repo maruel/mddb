@@ -85,9 +85,7 @@ test.describe('Workspace Switching', () => {
     }
   });
 
-  // BUG: Workspace switching doesn't clear selected node content
-  // When switching to a new workspace, old page content remains visible instead of clearing
-  test.skip('switching workspace clears selected node', async ({ page, request }) => {
+  test('switching workspace clears selected node', async ({ page, request }) => {
     const { token } = await registerUser(request, 'ws-clear');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
@@ -120,18 +118,19 @@ test.describe('Workspace Switching', () => {
     });
     const ws2Data = await ws2Response.json();
 
-    // Switch to second workspace via API
+    // Switch to second workspace via API (this persists the preference)
     const switchResponse = await request.post('/api/auth/switch-workspace', {
       headers: { Authorization: `Bearer ${token}` },
       data: { ws_id: ws2Data.id },
     });
     expect(switchResponse.ok()).toBe(true);
 
-    // Reload with new workspace context
-    await page.reload();
+    // Navigate to root URL - this will redirect to the saved workspace (WS2)
+    // Note: Reloading with explicit /w/ws1/... URL would stay on WS1 (URL is trusted)
+    await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // The first workspace page should NOT be visible
+    // The first workspace page should NOT be visible (we're now in WS2)
     await expect(page.getByText('Content in workspace 1')).not.toBeVisible({ timeout: 3000 });
   });
 });
