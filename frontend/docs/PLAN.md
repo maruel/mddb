@@ -1,48 +1,111 @@
 # Frontend Implementation Plan
 
 ## Overview
-This document outlines the frontend roadmap for the SolidJS web application, focusing on user experience, component architecture, and performance.
+Roadmap for the SolidJS frontend, focusing on architecture, performance, and user experience.
 
-## Core Frontend Roadmap
+## Architecture Improvements (Priority)
+
+### Phase A1: State Management Refactor
+App.tsx is 1242 lines with 15+ concerns mixed together. Extract into proper modules:
+
+- [ ] **Create `src/stores/` directory** for global state
+  - [ ] `authStore.ts` - User authentication, token management
+  - [ ] `nodeStore.ts` - Node/page state, breadcrumb tracking
+  - [ ] `editorStore.ts` - Title, content, unsaved changes
+  - [ ] `recordStore.ts` - Table records state
+  - [ ] `workspaceStore.ts` - Workspace switching logic
+- [ ] **Create `src/contexts/` directory** for React-style context providers
+  - [ ] `AuthContext.tsx` - Auth state provider
+  - [ ] `WorkspaceContext.tsx` - Workspace/org context
+- [ ] **Create `src/composables/` directory** for reusable logic
+  - [ ] `useAutoSave.ts` - Debounced auto-save logic
+  - [ ] `useClickOutside.ts` - Click-outside detection (duplicated in 3+ components)
+  - [ ] `useRouting.ts` - URL parsing and navigation helpers
+- [ ] **Fix state management anti-patterns**
+  - [ ] Replace direct variable mutations (lines 139, 387, 545, 589) with signals
+  - [ ] Standardize on `createStore()` for complex objects
+
+### Phase A2: Reduce Prop Drilling
+Components receive 10+ props with 6+ callbacks. Use context instead:
+
+- [ ] **Refactor Sidebar** - consume workspace context directly
+- [ ] **Refactor WorkspaceMenu** - consume auth/workspace context
+- [ ] **Refactor table views** - share context for record operations
+
+### Phase A3: Extract Shared Utilities
+- [ ] **Table utilities** (`src/components/table/tableUtils.ts`)
+  - [ ] Extract duplicate `handleUpdate()` from TableGrid, TableGallery, TableBoard
+  - [ ] Shared cell rendering logic
+- [ ] **URL builders** (`src/utils/urls.ts`)
+  - [ ] Centralize URL construction currently scattered in App.tsx
+- [ ] **Fix SidebarNode prefetch cache** (line 31)
+  - [ ] `createSignal(new Map())` creates fresh Map each render
+  - [ ] Switch to `createStore()` for cache persistence
+
+### Phase A4: Error Handling
+- [ ] **Add ErrorBoundary component** - prevent full app crashes
+- [ ] **Add retry UI** for failed operations
+- [ ] **Improve error feedback** - use `aria-live` for screen readers
+
+---
+
+## Code Quality
+
+### Accessibility (A11y)
+- [ ] Add `aria-label` to icon-only buttons (Sidebar, menus)
+- [ ] Add `role="alert" aria-live="polite"` to error messages
+- [ ] Replace emoji icons with semantic SVG icons
+
+### Type Safety
+- [ ] Replace unsafe type assertions (`user() as UserResponse`) with type guards
+- [ ] Add validation logging for missing columns in table lookups
+
+### Performance
+- [ ] Memoize `groupColumn()` in TableBoard.tsx
+- [ ] Add `onCleanup()` for debounce flush on unmount
+- [ ] Event listener cleanup audit
+
+---
+
+## Feature Roadmap
 
 ### Phase 1: Onboarding & Experience
-- [x] **Organization Onboarding**:
-    - [x] Guided setup wizard for new users/orgs.
-    - [x] Onboarding state tracking and UI integration.
-    - [ ] **Template Selection**: Propose template Git repositories during onboarding to kickstart new workspaces.
-- [x] **Admin Dashboards**:
-    - [x] Management UIs for global admins and organization settings.
+- [x] Organization onboarding (guided setup wizard)
+- [x] Onboarding state tracking and UI integration
+- [ ] Template selection: Propose template Git repositories during onboarding
+- [x] Admin dashboards for global admins and organization settings
 
 ### Phase 2: Globalization & PWA
-- [x] **i18n Infrastructure**: Multilingual support via `@solid-primitives/i18n`.
-- [x] **Localization**: English, French, German, and Spanish translations.
-- [x] **PWA Support**: Offline caching, install banners, and standalone mode.
-- [ ] **Offline Mode**: Client-side storage and data reconciliation logic.
+- [x] i18n Infrastructure via `@solid-primitives/i18n`
+- [x] Localization: English, French, German, Spanish
+- [x] PWA Support: Offline caching, install banners, standalone mode
+- [ ] Offline Mode: Client-side storage and data reconciliation
 
 ### Phase 3: Table Views System
-- [ ] **View Management UI**: Tabs and dropdowns for switching/creating table views.
-- [ ] **Filter Builder**: Visual interface for complex AND/OR query construction.
-- [ ] **Sort/Column UI**: Drag-and-drop interfaces for sorting and column management.
-- [ ] **View Persistence**: Linking UI state to persistent view configurations in the backend.
+- [ ] View Management UI: Tabs and dropdowns for switching/creating views
+- [ ] Filter Builder: Visual interface for complex AND/OR queries
+- [ ] Sort/Column UI: Drag-and-drop interfaces
+- [ ] View Persistence: Link UI state to backend view configurations
 
-### Phase 4: Advanced UX & Performance
-- [ ] **Block-based WYSIWYG Editor**:
-    - [ ] Transition from raw Markdown to a Notion-like block editor (e.g., TipTap or specialized SolidJS implementation).
-    - [ ] High-fidelity Markdown serialization/deserialization to maintain the on-disk format.
-    - [ ] Slash commands and block drag-and-drop.
-- [ ] **Property Management UI**: Safely adding and renaming table columns.
-- [ ] **Inline Editing**: Spreadsheet-like keyboard navigation and cell editing.
-- [ ] **Undo/Redo**: Frontend action history for state recovery.
-- [ ] **Bulk Actions**: UI for multi-record operations.
+### Phase 4: Advanced UX
+- [ ] Block-based WYSIWYG Editor (TipTap or SolidJS implementation)
+  - [ ] High-fidelity Markdown serialization
+  - [ ] Slash commands and block drag-and-drop
+- [ ] Property Management UI: Adding/renaming table columns
+- [ ] Inline Editing: Spreadsheet-like keyboard navigation
+- [ ] Undo/Redo: See `docs/PLAN_UNDO.md`
+- [ ] Bulk Actions: Multi-record operations
 
-### Proposed Success Drivers
-- [ ] **Command Palette (Ctrl+K)**: Central navigation and action modal.
-- [ ] **Slash Commands**: Inline editor commands for rapid content insertion.
-- [ ] **Table Virtualization**: Handling 50k+ records with zero lag.
-- [ ] **Relationship Graph**: Visualizing backlinks and page connections.
-- [ ] **Adaptive Themes**: Per-organization branding and customization.
+### Future Enhancements
+- [ ] Command Palette (Ctrl+K): Navigation and action modal
+- [ ] Slash Commands: Inline editor commands
+- [ ] Table Virtualization: 50k+ records with zero lag
+- [ ] Relationship Graph: Visualize backlinks and connections
+- [ ] Adaptive Themes: Per-organization branding
+
+---
 
 ## Technical Standards
-- [x] **Type Sync**: Automatic TypeScript generation from Go DTOs.
-- [x] **CSS Modules**: Scoped styling for all components.
-- [x] **SolidJS**: Leveraging fine-grained reactivity for performance.
+- [x] Type Sync: Automatic TypeScript generation from Go DTOs
+- [x] CSS Modules: Scoped styling for all components
+- [x] SolidJS: Fine-grained reactivity for performance
