@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Verify e2e test data integrity after tests run."""
 
+import os
 import sys
 from pathlib import Path
 
-DATA_DIR = Path("./data")
+DATA_DIR = Path(os.environ.get("DATA_DIR", "./data-e2e"))
 
 
 def parse_frontmatter(content: str) -> tuple[dict, str]:
