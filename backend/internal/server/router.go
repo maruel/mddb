@@ -202,11 +202,11 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 		mux.ServeHTTP(rw, r)
 		slog.InfoContext(r.Context(), "http",
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", rw.status,
-			"duration_ms", time.Since(start).Milliseconds(),
-			"size", rw.size,
+			"m", r.Method,
+			"p", r.URL.Path,
+			"s", rw.status,
+			"d", roundDuration(time.Since(start)),
+			"s", rw.size,
 			"ip", clientIP,
 		)
 	}
@@ -297,4 +297,14 @@ func containsDot(path string) bool {
 		}
 	}
 	return false
+}
+
+// roundDuration rounds d to 3 significant digits with minimum 1µs precision.
+func roundDuration(d time.Duration) time.Duration {
+	for t := 100 * time.Second; t >= 100*time.Microsecond; t /= 10 {
+		if d >= t {
+			return d.Round(t / 100)
+		}
+	}
+	return d.Round(time.Microsecond)
 }
