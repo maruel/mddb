@@ -347,8 +347,6 @@ function AppContent() {
 
               <Show when={isProfilePage()}>
                 <UserProfile
-                  user={user() as UserResponse}
-                  token={token() as string}
                   onBack={() => window.history.back()}
                   onOrgSettings={(org: OrgMembershipResponse) => {
                     batch(() => {
