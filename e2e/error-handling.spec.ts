@@ -1,4 +1,4 @@
-import { test, expect, registerUser, getWorkspaceId } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, fillEditorContent, switchToMarkdownMode } from './helpers';
 
 test.describe('Error Handling - Invalid Routes', () => {
   test('navigating to non-existent page shows appropriate error or handles gracefully', async ({ page, request }) => {
@@ -85,9 +85,8 @@ test.describe('Error Handling - API Failures', () => {
       route.abort('failed');
     });
 
-    // Edit content
-    const contentTextarea = page.locator('textarea[placeholder*="markdown"]');
-    await contentTextarea.fill('This should fail to save');
+    // Edit content (switch to markdown mode for reliable interaction)
+    await fillEditorContent(page, 'This should fail to save');
 
     // Should show error (autosave will trigger and fail due to route blocking)
     const errorMessage = page.locator('[class*="error"], [class*="Error"]');
@@ -121,13 +120,11 @@ test.describe('Error Handling - Concurrent Edits', () => {
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
     await expect(page.locator('input[placeholder*="Title"]')).toHaveValue('Concurrent Edit Test', { timeout: 5000 });
 
-    // Edit in first tab
-    const content1 = page.locator('textarea[placeholder*="markdown"]');
-    await content1.fill('Content from tab 1');
+    // Edit in first tab (switch to markdown mode for reliable interaction)
+    await fillEditorContent(page, 'Content from tab 1');
 
     // Edit in second tab (before first tab saves)
-    const content2 = page2.locator('textarea[placeholder*="markdown"]');
-    await content2.fill('Content from tab 2');
+    await fillEditorContent(page2, 'Content from tab 2');
 
     // Poll API until one of the contents is saved (last writer wins)
     await expect(async () => {
@@ -263,7 +260,7 @@ test.describe('Edge Cases', () => {
     // Script tags should be stored as-is (not executed) or sanitized
   });
 
-  test('markdown with code blocks renders correctly', async ({ page, request }) => {
+  test('WYSIWYG editor renders code blocks correctly', async ({ page, request }) => {
     const { token } = await registerUser(request, 'code-blocks');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -292,13 +289,13 @@ Inline \`code\` here.
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
-    // Preview should render code blocks
-    const preview = page.locator('.preview, [class*="preview"], [class*="Preview"]');
-    await expect(preview).toBeVisible({ timeout: 5000 });
+    // WYSIWYG editor should render code blocks
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Should have pre/code elements for the code block
-    await expect(preview.locator('pre')).toBeVisible({ timeout: 3000 });
+    await expect(editor.locator('pre')).toBeVisible({ timeout: 3000 });
     // Use first() since there are multiple code elements (code block + inline code)
-    await expect(preview.locator('code').first()).toBeVisible();
+    await expect(editor.locator('code').first()).toBeVisible();
   });
 });

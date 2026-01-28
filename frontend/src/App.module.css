@@ -66,6 +66,8 @@ body {
 .editor {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0; /* Allow flex shrinking */
   overflow: hidden;
 }
 
@@ -121,13 +123,6 @@ body {
   flex-direction: column;
   flex: 1;
   overflow-y: auto;
-}
-
-.editorContent {
-  display: flex;
-  height: 60vh;
-  min-height: 400px;
-  overflow: hidden;
 }
 
 .tableView {
@@ -191,17 +186,6 @@ body {
 .breadcrumbSeparator {
   color: rgba(255, 255, 255, 0.5);
   flex-shrink: 0;
-}
-
-.contentInput {
-  flex: 1;
-  padding: var(--s-3);
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  border: none;
-  outline: none;
-  resize: none;
-  line-height: 1.6;
 }
 
 .historyPanel {

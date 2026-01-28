@@ -1,4 +1,4 @@
-import { test, expect, registerUser } from './helpers';
+import { test, expect, registerUser, fillEditorContent, switchToMarkdownMode } from './helpers';
 
 test.describe('Page rename with navigation', () => {
   test('rename page then quickly navigate away - rename must persist', async ({ page, request }) => {
@@ -270,23 +270,23 @@ test.describe('Page rename with navigation', () => {
     await page1Node.click();
     await expect(page.getByText('Original content')).toBeVisible({ timeout: 5000 });
 
-    // Edit content
-    const contentTextarea = page.locator('textarea[placeholder*="markdown"]');
-    await expect(contentTextarea).toBeVisible();
-    await contentTextarea.fill('MODIFIED CONTENT - this should persist');
+    // Edit content (switch to markdown mode for reliable interaction)
+    await fillEditorContent(page, 'MODIFIED CONTENT - this should persist');
 
     // Immediately navigate away
     const page2Node = page.locator(`[data-testid="sidebar-node-${page2ID}"]`);
     await page2Node.click();
-    await expect(page.getByText('Other page content')).toBeVisible({ timeout: 5000 });
+    // Wait for navigation by checking title input changes to "Other Page"
+    const titleInput = page.locator('input[placeholder*="Title"]');
+    await expect(titleInput).toHaveValue('Other Page', { timeout: 5000 });
 
     // Navigate back and verify content persisted
     await page1Node.click();
     // Wait for page 1's title to be visible to ensure navigation completed
-    const titleInput = page.locator('input[placeholder*="Title"]');
     await expect(titleInput).toHaveValue('Content Edit Page', { timeout: 5000 });
     // Content may have leading/trailing whitespace from markdown format
-    const contentValue = await contentTextarea.inputValue();
+    const markdownEditor = await switchToMarkdownMode(page);
+    const contentValue = await markdownEditor.inputValue();
     expect(contentValue.trim()).toBe('MODIFIED CONTENT - this should persist');
 
     // Verify via API
@@ -344,21 +344,23 @@ test.describe('Page rename with navigation', () => {
 
     // Edit both title and content
     const titleInput = page.locator('input[placeholder*="Title"]');
-    const contentTextarea = page.locator('textarea[placeholder*="markdown"]');
 
     await titleInput.fill('NEW TITLE');
-    await contentTextarea.fill('NEW CONTENT');
+    // Switch to markdown mode for reliable content editing
+    await fillEditorContent(page, 'NEW CONTENT');
 
     // Immediately navigate away
     const page2Node = page.locator(`[data-testid="sidebar-node-${page2ID}"]`);
     await page2Node.click();
-    await expect(page.getByText('Other page content')).toBeVisible({ timeout: 5000 });
+    // Wait for navigation by checking title input changes to "Other Page"
+    await expect(titleInput).toHaveValue('Other Page', { timeout: 5000 });
 
     // Navigate back and verify both persisted
     await page1Node.click();
     await expect(titleInput).toHaveValue('NEW TITLE');
     // Content may have leading/trailing whitespace from markdown format
-    const contentValue = await contentTextarea.inputValue();
+    const markdownEditor = await switchToMarkdownMode(page);
+    const contentValue = await markdownEditor.inputValue();
     expect(contentValue.trim()).toBe('NEW CONTENT');
 
     // Verify via API

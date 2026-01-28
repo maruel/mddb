@@ -102,4 +102,31 @@ test.screenshot = (title: string, fn: Parameters<typeof test>[1]) => {
   return test(title, { tag: '@screenshot' }, fn);
 };
 
+// Helper to switch editor to markdown mode and get the textarea
+export async function switchToMarkdownMode(page: Page) {
+  const markdownModeButton = page.locator('[data-testid="editor-mode-markdown"]');
+  if (await markdownModeButton.isVisible()) {
+    await markdownModeButton.click();
+  }
+  return page.locator('[data-testid="markdown-editor"]');
+}
+
+// Helper to get editor content (works with both modes)
+export async function getEditorContent(page: Page): Promise<string> {
+  // Check if markdown editor is visible
+  const markdownEditor = page.locator('[data-testid="markdown-editor"]');
+  if (await markdownEditor.isVisible()) {
+    return await markdownEditor.inputValue();
+  }
+  // Otherwise get content from WYSIWYG editor
+  const wysiwygEditor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+  return await wysiwygEditor.innerText();
+}
+
+// Helper to fill editor content (switches to markdown mode for reliability)
+export async function fillEditorContent(page: Page, content: string) {
+  const textarea = await switchToMarkdownMode(page);
+  await textarea.fill(content);
+}
+
 export { expect } from '@playwright/test';

@@ -75,6 +75,8 @@ export interface Dictionary {
     versionHistory: string;
     noHistory: string;
     restoreConfirm: string;
+    wysiwygMode: string;
+    markdownMode: string;
   };
 
   welcome: {

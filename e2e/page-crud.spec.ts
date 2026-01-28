@@ -1,4 +1,4 @@
-import { test, expect, registerUser, getWorkspaceId } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, switchToMarkdownMode, fillEditorContent } from './helpers';
 
 test.describe('Page CRUD Operations', () => {
   test('delete a page - page removed from sidebar and content area cleared', async ({ page, request }) => {
@@ -134,9 +134,8 @@ test.describe('Page CRUD Operations', () => {
     const unsavedIndicator = page.locator('[class*="unsavedIndicator"]');
     await expect(unsavedIndicator).not.toBeVisible();
 
-    // Edit the content
-    const contentTextarea = page.locator('textarea[placeholder*="markdown"]');
-    await contentTextarea.fill('Modified content');
+    // Edit the content (switch to markdown mode for reliable interaction)
+    await fillEditorContent(page, 'Modified content');
 
     // Unsaved indicator should appear
     await expect(unsavedIndicator).toBeVisible({ timeout: 2000 });
@@ -314,8 +313,8 @@ test.describe('Page Navigation', () => {
 });
 
 test.describe('Editor Features', () => {
-  test.screenshot('markdown preview renders correctly', async ({ page, request, takeScreenshot }) => {
-    const { token } = await registerUser(request, 'markdown-preview');
+  test.screenshot('WYSIWYG editor renders markdown correctly', async ({ page, request, takeScreenshot }) => {
+    const { token } = await registerUser(request, 'wysiwyg-editor');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
@@ -336,20 +335,196 @@ test.describe('Editor Features', () => {
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
-    // Wait for content to load
-    await expect(page.locator('textarea[placeholder*="markdown"]')).toBeVisible({ timeout: 5000 });
+    // Wait for WYSIWYG editor to load and render content
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Check that markdown preview section exists and renders
-    const preview = page.locator('.preview, [class*="preview"], [class*="Preview"]');
-    await expect(preview).toBeVisible({ timeout: 5000 });
+    // Check for rendered markdown elements in WYSIWYG editor
+    await expect(editor.locator('h1')).toContainText('Heading 1');
+    await expect(editor.locator('strong')).toContainText('Bold text');
+    await expect(editor.locator('li').first()).toContainText('List item 1');
+    await expect(editor.locator('code')).toContainText('code inline');
 
-    // Check for rendered markdown elements
-    await expect(preview.locator('h1')).toContainText('Heading 1');
-    await expect(preview.locator('strong')).toContainText('Bold text');
-    await expect(preview.locator('li').first()).toContainText('List item 1');
-    await expect(preview.locator('code')).toContainText('code inline');
+    await takeScreenshot('wysiwyg-editor');
+  });
 
-    await takeScreenshot('markdown-preview');
+  test.screenshot('WYSIWYG to markdown round-trip preserves all formatting', async ({ page, request, takeScreenshot }) => {
+    const { token } = await registerUser(request, 'round-trip');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create an empty page via API
+    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Round Trip Test', content: '' },
+    });
+    expect(createResponse.ok()).toBe(true);
+    const pageData = await createResponse.json();
+
+    // Reload and verify in UI
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+
+    // Wait for WYSIWYG editor
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // === Switch to Markdown mode and enter content directly ===
+    await page.locator('[data-testid="editor-mode-markdown"]').click();
+    const markdownEditor = page.locator('[data-testid="markdown-editor"]');
+    await expect(markdownEditor).toBeVisible({ timeout: 3000 });
+
+    // Define comprehensive markdown content with all formatting styles
+    const originalMarkdown = `# Heading One
+
+## Heading Two
+
+### Heading Three
+
+This is **bold text** in a paragraph.
+
+This is *italic text* in a paragraph.
+
+Inline \`code\` here.
+
+- First bullet
+- Second bullet
+- Third bullet
+
+1. First item
+2. Second item
+3. Third item
+
+> This is a blockquote
+> with multiple lines
+
+\`\`\`
+const x = 42;
+function hello() {
+  return "world";
+}
+\`\`\`
+
+---
+
+[Link text](https://example.com)`;
+
+    // Fill the markdown editor
+    await markdownEditor.fill(originalMarkdown);
+
+    await takeScreenshot('markdown-original');
+
+    // === Switch to Visual mode ===
+    await page.locator('[data-testid="editor-mode-visual"]').click();
+    await expect(editor).toBeVisible({ timeout: 3000 });
+
+    await takeScreenshot('wysiwyg-rendered');
+
+    // Verify all elements render correctly in WYSIWYG
+    await expect(editor.locator('h1')).toContainText('Heading One', { timeout: 5000 });
+    await expect(editor.locator('h2')).toContainText('Heading Two', { timeout: 3000 });
+    await expect(editor.locator('h3')).toContainText('Heading Three', { timeout: 3000 });
+    await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
+    await expect(editor.locator('em')).toContainText('italic text', { timeout: 3000 });
+    await expect(editor.locator('p code')).toContainText('code', { timeout: 3000 });
+    await expect(editor.locator('ul li').first()).toContainText('First bullet', { timeout: 3000 });
+    await expect(editor.locator('ul li').nth(1)).toContainText('Second bullet', { timeout: 3000 });
+    await expect(editor.locator('ol li').first()).toContainText('First item', { timeout: 3000 });
+    await expect(editor.locator('ol li').nth(1)).toContainText('Second item', { timeout: 3000 });
+    await expect(editor.locator('blockquote')).toContainText('This is a blockquote', { timeout: 3000 });
+    await expect(editor.locator('pre code')).toContainText('const x = 42;', { timeout: 3000 });
+    await expect(editor.locator('hr')).toBeVisible({ timeout: 3000 });
+    await expect(editor.locator('a[href="https://example.com"]')).toContainText('Link text', { timeout: 3000 });
+
+    // === Switch back to Markdown mode ===
+    await page.locator('[data-testid="editor-mode-markdown"]').click();
+    await expect(markdownEditor).toBeVisible({ timeout: 3000 });
+
+    const markdownAfterRoundTrip = await markdownEditor.inputValue();
+
+    await takeScreenshot('markdown-after-round-trip');
+
+    // Verify markdown still contains all expected elements after round-trip
+    expect(markdownAfterRoundTrip).toContain('# Heading One');
+    expect(markdownAfterRoundTrip).toContain('## Heading Two');
+    expect(markdownAfterRoundTrip).toContain('### Heading Three');
+    expect(markdownAfterRoundTrip).toContain('**bold text**');
+    expect(markdownAfterRoundTrip).toContain('*italic text*');
+    expect(markdownAfterRoundTrip).toContain('`code`');
+    expect(markdownAfterRoundTrip).toContain('- First bullet');
+    expect(markdownAfterRoundTrip).toContain('- Second bullet');
+    expect(markdownAfterRoundTrip).toContain('1. First item');
+    expect(markdownAfterRoundTrip).toContain('2. Second item');
+    expect(markdownAfterRoundTrip).toContain('> This is a blockquote');
+    expect(markdownAfterRoundTrip).toContain('```');
+    expect(markdownAfterRoundTrip).toContain('const x = 42;');
+    expect(markdownAfterRoundTrip).toContain('---');
+    expect(markdownAfterRoundTrip).toContain('[Link text](https://example.com)');
+
+    // === Switch to Visual one more time to confirm stability ===
+    await page.locator('[data-testid="editor-mode-visual"]').click();
+    await expect(editor).toBeVisible({ timeout: 3000 });
+
+    // All elements should still be present
+    await expect(editor.locator('h1')).toContainText('Heading One', { timeout: 5000 });
+    await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
+    await expect(editor.locator('pre code')).toContainText('const x = 42;', { timeout: 3000 });
+
+    await takeScreenshot('wysiwyg-final');
+  });
+
+  test('markdown editor fills available vertical space', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'editor-height');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create a page with 10 lines of content
+    const multiLineContent = Array.from({ length: 10 }, (_, i) => `Line ${i + 1} of content`).join('\n');
+    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Height Test', content: multiLineContent },
+    });
+    expect(createResponse.ok()).toBe(true);
+    const pageData = await createResponse.json();
+
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to the page
+    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+
+    // Switch to markdown mode
+    await page.locator('[data-testid="editor-mode-markdown"]').click();
+    const markdownEditor = page.locator('[data-testid="markdown-editor"]');
+    await expect(markdownEditor).toBeVisible({ timeout: 3000 });
+
+    // Get bounding boxes
+    const editorBox = await markdownEditor.boundingBox();
+    expect(editorBox).toBeTruthy();
+
+    // Get the editor container (parent of toolbar and editor)
+    const editorContainer = page.locator('[data-testid="markdown-editor"]').locator('..');
+    const containerBox = await editorContainer.boundingBox();
+    expect(containerBox).toBeTruthy();
+
+    // The markdown editor should take up significant vertical space
+    // It should be at least 200px tall (reasonable minimum for an editor)
+    expect(editorBox!.height).toBeGreaterThan(200);
+
+    // The editor should extend close to the bottom of its container
+    // Allow some margin for toolbar (roughly 50px) and padding
+    const editorBottom = editorBox!.y + editorBox!.height;
+    const containerBottom = containerBox!.y + containerBox!.height;
+    const bottomGap = containerBottom - editorBottom;
+
+    // The gap between editor bottom and container bottom should be small (< 20px for padding)
+    expect(bottomGap).toBeLessThan(20);
   });
 
   test.screenshot('version history loads and displays commits', async ({ page, request, takeScreenshot }) => {
@@ -364,7 +539,9 @@ test.describe('Editor Features', () => {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: 'History Test', content: 'Initial content' },
     });
+    expect(createResponse.ok()).toBe(true);
     const pageData = await createResponse.json();
+    expect(pageData.id).toBeTruthy();
 
     // Update the page a few times to create history
     for (let i = 1; i <= 3; i++) {

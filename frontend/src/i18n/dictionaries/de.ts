@@ -66,7 +66,7 @@ export const dict: Dictionary = {
 
   editor: {
     titlePlaceholder: 'Titel',
-    contentPlaceholder: 'Schreiben Sie Ihren Inhalt in Markdown...',
+    contentPlaceholder: 'Tippe / für Befehle...',
     unsaved: 'Nicht gespeichert',
     history: 'Verlauf',
     hideHistory: 'Verlauf ausblenden',
@@ -74,6 +74,8 @@ export const dict: Dictionary = {
     noHistory: 'Kein Verlauf verfügbar',
     restoreConfirm:
       'Dies ersetzt den aktuellen Inhalt durch die ausgewählte Version. Nicht gespeicherte Änderungen gehen verloren. Fortfahren?',
+    wysiwygMode: 'Visuell',
+    markdownMode: 'Markdown',
   },
 
   welcome: {

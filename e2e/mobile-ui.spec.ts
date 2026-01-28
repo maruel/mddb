@@ -1,4 +1,4 @@
-import { test, expect, registerUser, getWorkspaceId } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, fillEditorContent } from './helpers';
 
 // Use mobile viewport for all tests in this file
 test.use({
@@ -166,10 +166,8 @@ test.describe('Mobile UI - Layout', () => {
     await titleInput.fill('Updated Mobile Title');
     await expect(titleInput).toHaveValue('Updated Mobile Title');
 
-    // Focus on content
-    const contentTextarea = page.locator('textarea[placeholder*="markdown"]');
-    await contentTextarea.focus();
-    await contentTextarea.fill('Updated mobile content');
+    // Focus on content (switch to markdown mode for reliable interaction)
+    await fillEditorContent(page, 'Updated mobile content');
 
     // Poll API until both title and content are saved
     await expect(async () => {

@@ -3,7 +3,7 @@
 import { createSignal, createEffect, createMemo, For, Show, onMount, onCleanup, batch } from 'solid-js';
 import { createStore, produce, reconcile } from 'solid-js/store';
 import Sidebar from './components/Sidebar';
-import MarkdownPreview from './components/MarkdownPreview';
+import Editor from './components/editor/Editor';
 import TableTable from './components/TableTable';
 import TableGrid from './components/TableGrid';
 import TableGallery from './components/TableGallery';
@@ -1130,19 +1130,16 @@ export default function App() {
                         <div class={styles.nodeContent}>
                           {/* Always show markdown content if it exists or if node has page content */}
                           <Show when={selectedNodeData()?.has_page}>
-                            <div class={styles.editorContent}>
-                              <textarea
-                                value={content()}
-                                onInput={(e) => {
-                                  setContent(e.target.value);
-                                  setHasUnsavedChanges(true);
-                                  debouncedAutoSave();
-                                }}
-                                placeholder={t('editor.contentPlaceholder') || 'Write your content in markdown...'}
-                                class={styles.contentInput}
-                              />
-                              <MarkdownPreview content={content()} orgId={user()?.organization_id} />
-                            </div>
+                            <Editor
+                              content={content()}
+                              pageId={selectedNodeId() ?? undefined}
+                              orgId={user()?.organization_id}
+                              onChange={(md) => {
+                                setContent(md);
+                                setHasUnsavedChanges(true);
+                                debouncedAutoSave();
+                              }}
+                            />
                           </Show>
 
                           {/* Show table if node has table content */}

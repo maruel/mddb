@@ -8,11 +8,16 @@ const srcDir = join(__dirname, '..', 'src');
 /** Extract class names from a CSS module file */
 function extractCssClasses(cssContent) {
   const classes = new Set();
+
+  // Remove :global() blocks first - classes inside these are external/library classes
+  // that aren't meant to be referenced via styles.className
+  const contentWithoutGlobals = cssContent.replace(/:global\([^)]*\)/g, '');
+
   // Match class selectors: .className
   // Handles: .foo, .foo:hover, .foo::before, .foo.bar, .foo > .bar
   const classRegex = /\.([a-zA-Z_][a-zA-Z0-9_-]*)/g;
   let match;
-  while ((match = classRegex.exec(cssContent)) !== null) {
+  while ((match = classRegex.exec(contentWithoutGlobals)) !== null) {
     classes.add(match[1]);
   }
   return classes;
