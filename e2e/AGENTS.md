@@ -102,19 +102,95 @@ expect(data.records.length).toBe(1);
 
 ### Test Isolation
 
-Each test should register its own user for isolation:
+Each test should register its own user for isolation. **Always use the `registerUser` helper** - never call the registration API directly. The helper includes retry logic for rate limiting:
 
 ```typescript
+// GOOD - uses helper with retry logic
 test('my test', async ({ page, request }) => {
   const { token } = await registerUser(request, 'my-test');
   await page.goto(`/?token=${token}`);
   // ... test with isolated user
 });
+
+// BAD - direct API call without retry logic
+const response = await request.post('/api/auth/register', { ... });
+```
+
+### Avoid `page.goBack()` in SPAs
+
+Browser history navigation is unreliable in SPAs. Use fresh navigation instead:
+
+```typescript
+// BAD - unreliable in SPAs, may fail to restore state
+await page.goto('/some-page');
+await page.goBack();
+await expect(page.locator('aside')).toBeVisible(); // May fail!
+
+// GOOD - navigate fresh
+await page.goto('/some-page');
+await page.goto(`/?token=${token}`); // Navigate fresh
+await expect(page.locator('aside')).toBeVisible();
+```
+
+### Wait for Initial Values Before Filling
+
+When editing inputs that load async data, wait for the initial value first:
+
+```typescript
+// BAD - may fill before initial value loads, causing race condition
+const titleInput = page.locator('input[placeholder*="Title"]');
+await titleInput.fill('New Title');
+
+// GOOD - wait for initial value, then fill
+const titleInput = page.locator('input[placeholder*="Title"]');
+await expect(titleInput).toHaveValue('Original Title', { timeout: 5000 });
+await titleInput.fill('New Title');
+```
+
+### Use Specific Selectors
+
+Avoid ambiguous selectors that might match multiple elements:
+
+```typescript
+// BAD - might match multiple links
+const privacyLink = page.getByRole('link', { name: /privacy/i });
+
+// GOOD - specific selector
+const privacyLink = page.locator('aside a[href="/privacy"]');
+```
+
+### Use Promise.all for Click + Navigation
+
+When clicking a link that navigates, use `Promise.all` to avoid race conditions:
+
+```typescript
+// BAD - navigation might complete before waitForURL is called
+await link.click();
+await page.waitForURL('/target');
+
+// GOOD - wait and click simultaneously
+await Promise.all([
+  page.waitForURL('/target', { timeout: 10000 }),
+  link.click(),
+]);
+```
+
+### Handle Multiple Acceptable Outcomes
+
+When a test can have multiple valid end states, use `expect.toPass()`:
+
+```typescript
+// Test passes if either error message OR redirect happens
+await expect(async () => {
+  const hasError = await errorMessage.isVisible();
+  const urlChanged = !page.url().includes('invalid-id');
+  expect(hasError || urlChanged).toBe(true);
+}).toPass({ timeout: 10000 });
 ```
 
 ### Debugging Flaky Tests
 
-Tests may fail in parallel but pass individually due to resource contention:
+Tests have **zero retries** - they must be deterministic. If a test fails:
 
 ```bash
 # Run specific test in isolation
@@ -129,11 +205,11 @@ npx playwright show-trace test-results/.../trace.zip
 
 ## Parallelism and Resource Contention
 
-Tests run with full parallelism locally (half of CPU cores) and 1 worker in CI. The `data-e2e/` directory is automatically cleaned before each test run.
+Tests run with full parallelism. The `data-e2e/` directory is automatically cleaned before each test run.
 
-**Rate limiting**: In test mode (`TEST_OAUTH=1`), rate limits are increased 1000x to effectively disable them. The `registerUser` helper includes retry logic for 429 responses as a safety net.
+**Rate limiting**: With `TEST_FAST_RATE_LIMIT=1` (default in `make e2e`), rate limits are increased 1000x. The `registerUser` helper includes retry logic for 429 responses as a safety net.
 
-If tests fail with `signal: killed` on git operations, it's transient resource contention that usually resolves on retry.
+Use `make e2e-slow` to test with normal rate limits (runs sequentially with single worker).
 
 ## Common Patterns
 

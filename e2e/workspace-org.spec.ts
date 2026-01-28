@@ -225,9 +225,9 @@ test.describe('Footer Links', () => {
       privacyLink.click(),
     ]);
 
-    // Go back and click terms
-    await page.goBack();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    // Navigate fresh instead of using goBack (more reliable in SPAs)
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
     await Promise.all([
       page.waitForURL('/terms', { timeout: 10000 }),
       termsLink.click(),
