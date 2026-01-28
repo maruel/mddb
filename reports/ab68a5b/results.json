@@ -12,24 +12,24 @@
     "maxFailures": 0,
     "metadata": {
       "ci": {
-        "commitHref": "https://github.com/maruel/mddb/commit/3affa7a6e154abfa2de9a116bf56dd877718b49e",
-        "commitHash": "3affa7a6e154abfa2de9a116bf56dd877718b49e",
-        "buildHref": "https://github.com/maruel/mddb/actions/runs/21409010180"
+        "commitHref": "https://github.com/maruel/mddb/commit/ab68a5b12fa53baaa82b51810a7f47f245b58131",
+        "commitHash": "ab68a5b12fa53baaa82b51810a7f47f245b58131",
+        "buildHref": "https://github.com/maruel/mddb/actions/runs/21421814742"
       },
       "gitCommit": {
-        "shortHash": "3affa7a",
-        "hash": "3affa7a6e154abfa2de9a116bf56dd877718b49e",
-        "subject": "refactor(notion): add asset downloading, import child pages/databases and resolve their links",
-        "body": "refactor(notion): add asset downloading, import child pages/databases and resolve their links\n\n- Introduce **AssetDownloader** (assets.go) to fetch Notion‑hosted images, videos, and files, store them under `{nodeDir}/assets` with hash‑prefixed filenames, and expose download statistics.\n- Extend **Extractor** with an asset downloader, an `imported` map for deduplication, and recursive handling of `child_page` / `child_database` blocks, pre‑assigning IDs for these children before conversion.\n- Update extraction flow to write node manifest entries for pages and databases after asset handling.\n- Refactor markdown conversion (markdown.go) into a **MarkdownConverter** that downloads assets during conversion, rewrites URLs to local paths, and resolves child block links to the corresponding mddb node IDs.\n- Adjust documentation (IMPORT_PLAN.md) to mark hierarchy, asset handling, and child import tasks as completed.\n- Extend `Mapper` with `assets *AssetDownloader` and `nodeID jsonldb.ID` fields and add `SetAssetContext` to configure them.\n- `Extractor` now calls `mapper.SetAssetContext(e.assets, node.ID)` before mapping each database page, ensuring the mapper knows where to store assets.\n- Update `mapPropertyValue` handling of the “files” property to download Notion‑hosted assets via the configured `AssetDownloader`, returning the local asset paths (joined by newlines) and falling back to the original URLs on error.\n",
+        "shortHash": "ab68a5b",
+        "hash": "ab68a5b12fa53baaa82b51810a7f47f245b58131",
+        "subject": "feat(org-settings): add organization settings page and routing",
+        "body": "feat(org-settings): add organization settings page and routing\n\n- Introduced `OrganizationSettings` component with UI for managing organization name, members, invitations, and preferences.\n- Added accompanying CSS module `OrganizationSettings.module.css`.\n- Updated `App.tsx` to handle `/o/:orgId+/settings` routes, state flags, and navigation to organization settings.\n- Added link in `WorkspaceSettings` to open organization settings.\n- Extended i18n dictionaries (de, en, es, fr) with new keys for organization settings, roles, and hints.\n- refactor(org-settings): drop email‑domain and SSO fields from organization settings\n- Remove `allowed_email_domains` and `require_sso` from `OrganizationSettings` in DTOs, storage entities, conversion helpers, and generated TypeScript types.\n- Simplify the front‑end `OrganizationSettings` component: eliminate UI for allowed domains and SSO, adjust form handling, and clean up related CSS.\n",
         "author": {
           "name": "Marc-Antoine Ruel",
           "email": "maruel@gmail.com",
-          "time": 1769538035000
+          "time": 1769565285000
         },
         "committer": {
           "name": "Marc-Antoine Ruel",
           "email": "maruel@gmail.com",
-          "time": 1769538079000
+          "time": 1769565286000
         },
         "branch": "main"
       },
@@ -43,24 +43,24 @@
         "retries": 2,
         "metadata": {
           "ci": {
-            "commitHref": "https://github.com/maruel/mddb/commit/3affa7a6e154abfa2de9a116bf56dd877718b49e",
-            "commitHash": "3affa7a6e154abfa2de9a116bf56dd877718b49e",
-            "buildHref": "https://github.com/maruel/mddb/actions/runs/21409010180"
+            "commitHref": "https://github.com/maruel/mddb/commit/ab68a5b12fa53baaa82b51810a7f47f245b58131",
+            "commitHash": "ab68a5b12fa53baaa82b51810a7f47f245b58131",
+            "buildHref": "https://github.com/maruel/mddb/actions/runs/21421814742"
           },
           "gitCommit": {
-            "shortHash": "3affa7a",
-            "hash": "3affa7a6e154abfa2de9a116bf56dd877718b49e",
-            "subject": "refactor(notion): add asset downloading, import child pages/databases and resolve their links",
-            "body": "refactor(notion): add asset downloading, import child pages/databases and resolve their links\n\n- Introduce **AssetDownloader** (assets.go) to fetch Notion‑hosted images, videos, and files, store them under `{nodeDir}/assets` with hash‑prefixed filenames, and expose download statistics.\n- Extend **Extractor** with an asset downloader, an `imported` map for deduplication, and recursive handling of `child_page` / `child_database` blocks, pre‑assigning IDs for these children before conversion.\n- Update extraction flow to write node manifest entries for pages and databases after asset handling.\n- Refactor markdown conversion (markdown.go) into a **MarkdownConverter** that downloads assets during conversion, rewrites URLs to local paths, and resolves child block links to the corresponding mddb node IDs.\n- Adjust documentation (IMPORT_PLAN.md) to mark hierarchy, asset handling, and child import tasks as completed.\n- Extend `Mapper` with `assets *AssetDownloader` and `nodeID jsonldb.ID` fields and add `SetAssetContext` to configure them.\n- `Extractor` now calls `mapper.SetAssetContext(e.assets, node.ID)` before mapping each database page, ensuring the mapper knows where to store assets.\n- Update `mapPropertyValue` handling of the “files” property to download Notion‑hosted assets via the configured `AssetDownloader`, returning the local asset paths (joined by newlines) and falling back to the original URLs on error.\n",
+            "shortHash": "ab68a5b",
+            "hash": "ab68a5b12fa53baaa82b51810a7f47f245b58131",
+            "subject": "feat(org-settings): add organization settings page and routing",
+            "body": "feat(org-settings): add organization settings page and routing\n\n- Introduced `OrganizationSettings` component with UI for managing organization name, members, invitations, and preferences.\n- Added accompanying CSS module `OrganizationSettings.module.css`.\n- Updated `App.tsx` to handle `/o/:orgId+/settings` routes, state flags, and navigation to organization settings.\n- Added link in `WorkspaceSettings` to open organization settings.\n- Extended i18n dictionaries (de, en, es, fr) with new keys for organization settings, roles, and hints.\n- refactor(org-settings): drop email‑domain and SSO fields from organization settings\n- Remove `allowed_email_domains` and `require_sso` from `OrganizationSettings` in DTOs, storage entities, conversion helpers, and generated TypeScript types.\n- Simplify the front‑end `OrganizationSettings` component: eliminate UI for allowed domains and SSO, adjust form handling, and clean up related CSS.\n",
             "author": {
               "name": "Marc-Antoine Ruel",
               "email": "maruel@gmail.com",
-              "time": 1769538035000
+              "time": 1769565285000
             },
             "committer": {
               "name": "Marc-Antoine Ruel",
               "email": "maruel@gmail.com",
-              "time": 1769538079000
+              "time": 1769565286000
             },
             "branch": "main"
           },
@@ -118,7 +118,7 @@
         {
           "title": "Error Handling - Invalid Routes",
           "file": "error-handling.spec.ts",
-          "line": 27,
+          "line": 3,
           "column": 6,
           "specs": [
             {
@@ -137,12 +137,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 4035,
+                      "duration": 5358,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:13.720Z",
+                      "startTime": "2026-01-28T01:56:53.244Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -152,7 +152,7 @@
               ],
               "id": "1a72721d9ac5c938e1fe-1d52d01d872eca08f4f6",
               "file": "error-handling.spec.ts",
-              "line": 28,
+              "line": 4,
               "column": 3
             },
             {
@@ -162,50 +162,32 @@
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/home/runner/work/mddb/mddb/e2e/error-handling.spec.ts",
-                        "line": 54,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
+                  "annotations": [],
+                  "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2362,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:21.157Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "location": {
-                            "file": "/home/runner/work/mddb/mddb/e2e/error-handling.spec.ts",
-                            "line": 54,
-                            "column": 8
-                          }
-                        }
-                      ],
+                      "startTime": "2026-01-28T01:57:05.031Z",
+                      "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
               "id": "1a72721d9ac5c938e1fe-bfb639cd32f775dfaddf",
               "file": "error-handling.spec.ts",
-              "line": 54,
-              "column": 8
+              "line": 30,
+              "column": 3
             },
             {
               "title": "privacy page accessible without login",
@@ -223,12 +205,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 165,
+                      "duration": 183,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:21.162Z",
+                      "startTime": "2026-01-28T01:57:07.414Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -238,7 +220,7 @@
               ],
               "id": "1a72721d9ac5c938e1fe-5b619d2df34bcff5a9ce",
               "file": "error-handling.spec.ts",
-              "line": 76,
+              "line": 51,
               "column": 3
             },
             {
@@ -257,12 +239,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 158,
+                      "duration": 130,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:21.340Z",
+                      "startTime": "2026-01-28T01:57:07.621Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -272,7 +254,7 @@
               ],
               "id": "1a72721d9ac5c938e1fe-b7777a42f860fd0a5255",
               "file": "error-handling.spec.ts",
-              "line": 84,
+              "line": 59,
               "column": 3
             }
           ]
@@ -280,7 +262,7 @@
         {
           "title": "Error Handling - API Failures",
           "file": "error-handling.spec.ts",
-          "line": 91,
+          "line": 66,
           "column": 6,
           "specs": [
             {
@@ -299,12 +281,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3549,
+                      "duration": 3765,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:21.519Z",
+                      "startTime": "2026-01-28T01:57:07.764Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -314,7 +296,7 @@
               ],
               "id": "1a72721d9ac5c938e1fe-70e913925124b7f6bf5b",
               "file": "error-handling.spec.ts",
-              "line": 92,
+              "line": 67,
               "column": 3
             }
           ]
@@ -322,7 +304,7 @@
         {
           "title": "Error Handling - Concurrent Edits",
           "file": "error-handling.spec.ts",
-          "line": 130,
+          "line": 105,
           "column": 6,
           "specs": [
             {
@@ -341,12 +323,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 8700,
+                      "duration": 8741,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:25.088Z",
+                      "startTime": "2026-01-28T01:57:11.541Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -356,7 +338,7 @@
               ],
               "id": "1a72721d9ac5c938e1fe-9c5ae3fda73e6ad56a45",
               "file": "error-handling.spec.ts",
-              "line": 131,
+              "line": 106,
               "column": 3
             }
           ]
@@ -364,7 +346,7 @@
         {
           "title": "Edge Cases",
           "file": "error-handling.spec.ts",
-          "line": 182,
+          "line": 157,
           "column": 6,
           "specs": [
             {
@@ -383,12 +365,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3593,
+                      "duration": 3565,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:33.821Z",
+                      "startTime": "2026-01-28T01:57:20.296Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -398,7 +380,7 @@
               ],
               "id": "1a72721d9ac5c938e1fe-ad7716d3ce29ef7e0dbe",
               "file": "error-handling.spec.ts",
-              "line": 183,
+              "line": 158,
               "column": 3
             },
             {
@@ -417,12 +399,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3487,
+                      "duration": 3424,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:37.428Z",
+                      "startTime": "2026-01-28T01:57:23.873Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -432,7 +414,7 @@
               ],
               "id": "1a72721d9ac5c938e1fe-78b013928ba53879774e",
               "file": "error-handling.spec.ts",
-              "line": 219,
+              "line": 194,
               "column": 3
             },
             {
@@ -451,12 +433,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 427,
+                      "duration": 475,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:40.931Z",
+                      "startTime": "2026-01-28T01:57:27.312Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -466,7 +448,7 @@
               ],
               "id": "1a72721d9ac5c938e1fe-b2f8691e476cd04695b9",
               "file": "error-handling.spec.ts",
-              "line": 257,
+              "line": 232,
               "column": 3
             },
             {
@@ -485,12 +467,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 455,
+                      "duration": 528,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:41.374Z",
+                      "startTime": "2026-01-28T01:57:27.804Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -500,7 +482,7 @@
               ],
               "id": "1a72721d9ac5c938e1fe-fdef788de0ec7e2fa4c2",
               "file": "error-handling.spec.ts",
-              "line": 291,
+              "line": 266,
               "column": 3
             }
           ]
@@ -517,17 +499,24 @@
         {
           "title": "Mobile UI - Sidebar Toggle",
           "file": "mobile-ui.spec.ts",
-          "line": 32,
+          "line": 8,
           "column": 6,
           "specs": [
             {
               "title": "hamburger menu shows and hides sidebar",
               "ok": true,
-              "tags": [],
+              "tags": [
+                "screenshot"
+              ],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [],
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
@@ -536,23 +525,44 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 319,
+                      "duration": 421,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:41.854Z",
-                      "annotations": [],
-                      "attachments": []
+                      "startTime": "2026-01-28T01:57:28.356Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "mobile-initial",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-088f8-enu-shows-and-hides-sidebar-chromium/attachments/mobile-initial-3198aa8950a7353fe00a0b3efcfbe990cdaf0689.png"
+                        },
+                        {
+                          "name": "mobile-sidebar-open",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-088f8-enu-shows-and-hides-sidebar-chromium/attachments/mobile-sidebar-open-6e887a0baf1e2e15fe2569e570bf711461d8836e.png"
+                        },
+                        {
+                          "name": "mobile-sidebar-closed",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Side-088f8-enu-shows-and-hides-sidebar-chromium/attachments/mobile-sidebar-closed-d393d5b104fc7af2e4d827d351abc644801a85f3.png"
+                        }
+                      ]
                     }
                   ],
                   "status": "expected"
                 }
               ],
               "id": "9f47950a20eb93b64d63-53b54fac1cbbb42e2055",
-              "file": "mobile-ui.spec.ts",
-              "line": 33,
-              "column": 3
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             },
             {
               "title": "clicking backdrop closes mobile sidebar",
@@ -566,7 +576,7 @@
                       "type": "skip",
                       "location": {
                         "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
-                        "line": 62,
+                        "line": 41,
                         "column": 8
                       }
                     }
@@ -584,13 +594,13 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:42.186Z",
+                      "startTime": "2026-01-28T01:57:28.786Z",
                       "annotations": [
                         {
                           "type": "skip",
                           "location": {
                             "file": "/home/runner/work/mddb/mddb/e2e/mobile-ui.spec.ts",
-                            "line": 62,
+                            "line": 41,
                             "column": 8
                           }
                         }
@@ -603,7 +613,7 @@
               ],
               "id": "9f47950a20eb93b64d63-6c2d1d25d006ac5f1206",
               "file": "mobile-ui.spec.ts",
-              "line": 62,
+              "line": 41,
               "column": 8
             },
             {
@@ -622,12 +632,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 792,
+                      "duration": 740,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:42.187Z",
+                      "startTime": "2026-01-28T01:57:28.788Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -637,7 +647,7 @@
               ],
               "id": "9f47950a20eb93b64d63-090256b3fbc7a82cfc81",
               "file": "mobile-ui.spec.ts",
-              "line": 83,
+              "line": 62,
               "column": 3
             }
           ]
@@ -645,17 +655,24 @@
         {
           "title": "Mobile UI - Layout",
           "file": "mobile-ui.spec.ts",
-          "line": 120,
+          "line": 99,
           "column": 6,
           "specs": [
             {
               "title": "content area uses full width on mobile",
               "ok": true,
-              "tags": [],
+              "tags": [
+                "screenshot"
+              ],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [],
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
@@ -664,23 +681,34 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 808,
+                      "duration": 868,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:42.992Z",
-                      "annotations": [],
-                      "attachments": []
+                      "startTime": "2026-01-28T01:57:29.540Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "mobile-full-width",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/mobile-ui-Mobile-UI---Layo-2e8e4-a-uses-full-width-on-mobile-chromium/attachments/mobile-full-width-43fa34511b54ed21d59caf10f533bea600c6de34.png"
+                        }
+                      ]
                     }
                   ],
                   "status": "expected"
                 }
               ],
               "id": "9f47950a20eb93b64d63-d87c6fd16471e202ef6c",
-              "file": "mobile-ui.spec.ts",
-              "line": 121,
-              "column": 3
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             },
             {
               "title": "editor works on mobile with virtual keyboard consideration",
@@ -698,12 +726,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3717,
+                      "duration": 3774,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:43.812Z",
+                      "startTime": "2026-01-28T01:57:30.419Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -713,7 +741,7 @@
               ],
               "id": "9f47950a20eb93b64d63-986356070b9a18664a4c",
               "file": "mobile-ui.spec.ts",
-              "line": 152,
+              "line": 133,
               "column": 3
             }
           ]
@@ -721,7 +749,7 @@
         {
           "title": "Mobile UI - Touch Interactions",
           "file": "mobile-ui.spec.ts",
-          "line": 200,
+          "line": 182,
           "column": 6,
           "specs": [
             {
@@ -740,12 +768,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 1245,
+                      "duration": 1202,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:47.543Z",
+                      "startTime": "2026-01-28T01:57:34.203Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -755,7 +783,7 @@
               ],
               "id": "9f47950a20eb93b64d63-63052764974434bd2df9",
               "file": "mobile-ui.spec.ts",
-              "line": 204,
+              "line": 186,
               "column": 3
             }
           ]
@@ -796,7 +824,7 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:48.812Z",
+                      "startTime": "2026-01-28T01:57:35.424Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -833,12 +861,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 150,
+                      "duration": 139,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:48.827Z",
+                      "startTime": "2026-01-28T01:57:35.438Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -867,12 +895,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 19,
+                      "duration": 7,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:48.987Z",
+                      "startTime": "2026-01-28T01:57:35.586Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -901,12 +929,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 407,
+                      "duration": 536,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:49.014Z",
+                      "startTime": "2026-01-28T01:57:35.603Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -935,12 +963,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 148,
+                      "duration": 136,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:49.431Z",
+                      "startTime": "2026-01-28T01:57:36.148Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -969,12 +997,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 231,
+                      "duration": 215,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:49.593Z",
+                      "startTime": "2026-01-28T01:57:36.294Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1001,227 +1029,11 @@
         {
           "title": "Page CRUD Operations",
           "file": "page-crud.spec.ts",
-          "line": 27,
+          "line": 3,
           "column": 6,
           "specs": [
             {
               "title": "delete a page - page removed from sidebar and content area cleared",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                        "line": 29,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-27T18:23:49.837Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "location": {
-                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                            "line": 29,
-                            "column": 8
-                          }
-                        }
-                      ],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "skipped"
-                }
-              ],
-              "id": "fd54c76fab119c796bbd-273f25ebbe21e9af5d2f",
-              "file": "page-crud.spec.ts",
-              "line": 29,
-              "column": 8
-            },
-            {
-              "title": "page title updates in sidebar as user types (real-time sync)",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                        "line": 91,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-27T18:23:49.837Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "location": {
-                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                            "line": 91,
-                            "column": 8
-                          }
-                        }
-                      ],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "skipped"
-                }
-              ],
-              "id": "fd54c76fab119c796bbd-650d076e9d850ba2df24",
-              "file": "page-crud.spec.ts",
-              "line": 91,
-              "column": 8
-            },
-            {
-              "title": "unsaved indicator appears when editing and disappears after save",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                        "line": 130,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-27T18:23:49.837Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "location": {
-                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                            "line": 130,
-                            "column": 8
-                          }
-                        }
-                      ],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "skipped"
-                }
-              ],
-              "id": "fd54c76fab119c796bbd-07fef810c7e009047339",
-              "file": "page-crud.spec.ts",
-              "line": 130,
-              "column": 8
-            },
-            {
-              "title": "manual save button triggers immediate save",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                        "line": 179,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-27T18:23:49.837Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "location": {
-                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                            "line": 179,
-                            "column": 8
-                          }
-                        }
-                      ],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "skipped"
-                }
-              ],
-              "id": "fd54c76fab119c796bbd-1819ff3e9fb1382a5432",
-              "file": "page-crud.spec.ts",
-              "line": 179,
-              "column": 8
-            }
-          ]
-        },
-        {
-          "title": "Page Navigation",
-          "file": "page-crud.spec.ts",
-          "line": 222,
-          "column": 6,
-          "specs": [
-            {
-              "title": "browser back button navigates between pages",
               "ok": true,
               "tags": [],
               "tests": [
@@ -1236,12 +1048,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 677,
+                      "duration": 804,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:49.850Z",
+                      "startTime": "2026-01-28T01:57:36.535Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1249,10 +1061,148 @@
                   "status": "expected"
                 }
               ],
-              "id": "fd54c76fab119c796bbd-63047fb4f0c7db963257",
+              "id": "fd54c76fab119c796bbd-273f25ebbe21e9af5d2f",
               "file": "page-crud.spec.ts",
-              "line": 223,
+              "line": 4,
               "column": 3
+            },
+            {
+              "title": "page title updates in sidebar as user types (real-time sync)",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 520,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-28T01:57:37.349Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-650d076e9d850ba2df24",
+              "file": "page-crud.spec.ts",
+              "line": 66,
+              "column": 3
+            },
+            {
+              "title": "unsaved indicator appears when editing and disappears after save",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 3389,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-28T01:57:37.880Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-07fef810c7e009047339",
+              "file": "page-crud.spec.ts",
+              "line": 107,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Page Navigation",
+          "file": "page-crud.spec.ts",
+          "line": 158,
+          "column": 6,
+          "specs": [
+            {
+              "title": "browser back button navigates between pages",
+              "ok": true,
+              "tags": [
+                "screenshot"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 814,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-28T01:57:41.279Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "workspace-with-pages",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-crud-Page-Navigation--7d0d4-ton-navigates-between-pages-chromium/attachments/workspace-with-pages-5fab51ca3140132aa722213d820000849cbd5653.png"
+                        },
+                        {
+                          "name": "page1-view",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-crud-Page-Navigation--7d0d4-ton-navigates-between-pages-chromium/attachments/page1-view-6469f6da461af2a9d9308ecd93d396090ab3edc9.png"
+                        },
+                        {
+                          "name": "page2-view",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-crud-Page-Navigation--7d0d4-ton-navigates-between-pages-chromium/attachments/page2-view-72ade0ac4aae938af545ecf093e6e91c673916b2.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-63047fb4f0c7db963257",
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             },
             {
               "title": "URL updates with page slug when navigating",
@@ -1270,12 +1220,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 525,
+                      "duration": 521,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:50.536Z",
+                      "startTime": "2026-01-28T01:57:42.105Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1285,7 +1235,7 @@
               ],
               "id": "fd54c76fab119c796bbd-8812f7d0a9d8411644e9",
               "file": "page-crud.spec.ts",
-              "line": 265,
+              "line": 204,
               "column": 3
             },
             {
@@ -1304,12 +1254,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 393,
+                      "duration": 390,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:51.072Z",
+                      "startTime": "2026-01-28T01:57:42.637Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1319,71 +1269,11 @@
               ],
               "id": "fd54c76fab119c796bbd-0388e6939036d4ce4514",
               "file": "page-crud.spec.ts",
-              "line": 290,
+              "line": 229,
               "column": 3
             },
             {
               "title": "breadcrumb navigation works for nested pages",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                        "line": 317,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-27T18:23:51.476Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "location": {
-                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                            "line": 317,
-                            "column": 8
-                          }
-                        }
-                      ],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "skipped"
-                }
-              ],
-              "id": "fd54c76fab119c796bbd-338aceef826492fded4a",
-              "file": "page-crud.spec.ts",
-              "line": 317,
-              "column": 8
-            }
-          ]
-        },
-        {
-          "title": "Editor Features",
-          "file": "page-crud.spec.ts",
-          "line": 371,
-          "column": 6,
-          "specs": [
-            {
-              "title": "markdown preview renders correctly",
               "ok": true,
               "tags": [],
               "tests": [
@@ -1398,12 +1288,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 528,
+                      "duration": 785,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:51.476Z",
+                      "startTime": "2026-01-28T01:57:43.036Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1411,62 +1301,122 @@
                   "status": "expected"
                 }
               ],
-              "id": "fd54c76fab119c796bbd-31b04fc19c57f1089258",
+              "id": "fd54c76fab119c796bbd-338aceef826492fded4a",
               "file": "page-crud.spec.ts",
-              "line": 372,
+              "line": 255,
               "column": 3
-            },
+            }
+          ]
+        },
+        {
+          "title": "Editor Features",
+          "file": "page-crud.spec.ts",
+          "line": 309,
+          "column": 6,
+          "specs": [
             {
-              "title": "version history loads and displays commits",
+              "title": "markdown preview renders correctly",
               "ok": true,
-              "tags": [],
+              "tags": [
+                "screenshot"
+              ],
               "tests": [
                 {
                   "timeout": 30000,
                   "annotations": [
                     {
-                      "type": "skip",
-                      "location": {
-                        "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                        "line": 409,
-                        "column": 8
-                      }
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
                     }
                   ],
-                  "expectedStatus": "skipped",
+                  "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 553,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:52.019Z",
+                      "startTime": "2026-01-28T01:57:43.833Z",
                       "annotations": [
                         {
-                          "type": "skip",
-                          "location": {
-                            "file": "/home/runner/work/mddb/mddb/e2e/page-crud.spec.ts",
-                            "line": 409,
-                            "column": 8
-                          }
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
                         }
                       ],
-                      "attachments": []
+                      "attachments": [
+                        {
+                          "name": "markdown-preview",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-crud-Editor-Features-markdown-preview-renders-correctly-chromium/attachments/markdown-preview-565cb7f2c97ef9322893620e4e54336684cd92cf.png"
+                        }
+                      ]
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
+                }
+              ],
+              "id": "fd54c76fab119c796bbd-31b04fc19c57f1089258",
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
+            },
+            {
+              "title": "version history loads and displays commits",
+              "ok": true,
+              "tags": [
+                "screenshot"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 909,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-28T01:57:44.397Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "version-history-panel",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-crud-Editor-Features--4d302--loads-and-displays-commits-chromium/attachments/version-history-panel-ffeac5d53fea961c9aaa5ac16efd909871c9127c.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
                 }
               ],
               "id": "fd54c76fab119c796bbd-a3d0d96b3fa8b29755f8",
-              "file": "page-crud.spec.ts",
-              "line": 409,
-              "column": 8
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             }
           ]
         }
@@ -1488,11 +1438,18 @@
             {
               "title": "create and navigate page hierarchy",
               "ok": true,
-              "tags": [],
+              "tags": [
+                "screenshot"
+              ],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [],
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
@@ -1501,23 +1458,39 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 728,
+                      "duration": 779,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:52.028Z",
-                      "annotations": [],
-                      "attachments": []
+                      "startTime": "2026-01-28T01:57:45.323Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "hierarchy-expanded",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-hierarchy-Page-Hierar-7e177-and-navigate-page-hierarchy-chromium/attachments/hierarchy-expanded-d1fdcd7b7a138f1b06359ed8c4fac8f2393935d7.png"
+                        },
+                        {
+                          "name": "grandchild-page",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/page-hierarchy-Page-Hierar-7e177-and-navigate-page-hierarchy-chromium/attachments/grandchild-page-8455a8e381cd79dfd4b20d991975905ca631a4b8.png"
+                        }
+                      ]
                     }
                   ],
                   "status": "expected"
                 }
               ],
               "id": "c2ada34b412574d884e8-9a9a0e3c76165ed18ba7",
-              "file": "page-hierarchy.spec.ts",
-              "line": 4,
-              "column": 3
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             },
             {
               "title": "navigate between sibling pages",
@@ -1535,12 +1508,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 804,
+                      "duration": 794,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:52.768Z",
+                      "startTime": "2026-01-28T01:57:46.113Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1550,7 +1523,7 @@
               ],
               "id": "c2ada34b412574d884e8-dbde86b05ff34c3933fa",
               "file": "page-hierarchy.spec.ts",
-              "line": 107,
+              "line": 111,
               "column": 3
             }
           ]
@@ -1586,12 +1559,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 912,
+                      "duration": 894,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:53.593Z",
+                      "startTime": "2026-01-28T01:57:46.926Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1620,12 +1593,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 3610,
+                      "duration": 3593,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:54.515Z",
+                      "startTime": "2026-01-28T01:57:47.828Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1654,12 +1627,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 841,
+                      "duration": 824,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:58.136Z",
+                      "startTime": "2026-01-28T01:57:51.432Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1688,12 +1661,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 822,
+                      "duration": 825,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:58.988Z",
+                      "startTime": "2026-01-28T01:57:52.269Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1722,12 +1695,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 824,
+                      "duration": 804,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:23:59.822Z",
+                      "startTime": "2026-01-28T01:57:53.106Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1754,17 +1727,24 @@
         {
           "title": "User Profile Settings",
           "file": "settings.spec.ts",
-          "line": 30,
+          "line": 15,
           "column": 6,
           "specs": [
             {
               "title": "navigate to profile and verify user info displayed",
               "ok": true,
-              "tags": [],
+              "tags": [
+                "screenshot"
+              ],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [],
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
@@ -1773,23 +1753,34 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 337,
+                      "duration": 405,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:00.666Z",
-                      "annotations": [],
-                      "attachments": []
+                      "startTime": "2026-01-28T01:57:53.931Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "profile-page",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/settings-User-Profile-Sett-0419c--verify-user-info-displayed-chromium/attachments/profile-page-96b906c85401770d90d2511380986790c624fcb1.png"
+                        }
+                      ]
                     }
                   ],
                   "status": "expected"
                 }
               ],
               "id": "d877ffdf71ec720167ae-395868ed9fe50a2cc532",
-              "file": "settings.spec.ts",
-              "line": 31,
-              "column": 3
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             },
             {
               "title": "change language setting and verify UI updates",
@@ -1807,12 +1798,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 465,
+                      "duration": 474,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:01.014Z",
+                      "startTime": "2026-01-28T01:57:54.349Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1822,7 +1813,7 @@
               ],
               "id": "d877ffdf71ec720167ae-8fdcfeab14dabe540345",
               "file": "settings.spec.ts",
-              "line": 46,
+              "line": 33,
               "column": 3
             },
             {
@@ -1841,12 +1832,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 462,
+                      "duration": 457,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:01.493Z",
+                      "startTime": "2026-01-28T01:57:54.835Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1856,7 +1847,7 @@
               ],
               "id": "d877ffdf71ec720167ae-e6366e83c8d34e2cfb5d",
               "file": "settings.spec.ts",
-              "line": 69,
+              "line": 56,
               "column": 3
             },
             {
@@ -1875,12 +1866,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 355,
+                      "duration": 372,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:01.969Z",
+                      "startTime": "2026-01-28T01:57:55.303Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1890,7 +1881,7 @@
               ],
               "id": "d877ffdf71ec720167ae-afdf12a7e0928184cd39",
               "file": "settings.spec.ts",
-              "line": 91,
+              "line": 78,
               "column": 3
             }
           ]
@@ -1898,7 +1889,7 @@
         {
           "title": "Workspace Settings",
           "file": "settings.spec.ts",
-          "line": 109,
+          "line": 96,
           "column": 6,
           "specs": [
             {
@@ -1917,12 +1908,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 351,
+                      "duration": 357,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:02.335Z",
+                      "startTime": "2026-01-28T01:57:55.686Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -1932,17 +1923,24 @@
               ],
               "id": "d877ffdf71ec720167ae-02e71fa822fcf7ab3968",
               "file": "settings.spec.ts",
-              "line": 110,
+              "line": 97,
               "column": 3
             },
             {
               "title": "workspace settings tabs navigation",
               "ok": true,
-              "tags": [],
+              "tags": [
+                "screenshot"
+              ],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [],
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
@@ -1951,23 +1949,44 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 443,
+                      "duration": 572,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:02.697Z",
-                      "annotations": [],
-                      "attachments": []
+                      "startTime": "2026-01-28T01:57:56.052Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "settings-members",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/settings-Workspace-Setting-62a51-ce-settings-tabs-navigation-chromium/attachments/settings-members-5f814e5c10db5638a737ff12a1bc5417b6f47f39.png"
+                        },
+                        {
+                          "name": "settings-workspace",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/settings-Workspace-Setting-62a51-ce-settings-tabs-navigation-chromium/attachments/settings-workspace-f4d757a6e73092542c88f2bad1f2ecd184335fcf.png"
+                        },
+                        {
+                          "name": "settings-git-sync",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/settings-Workspace-Setting-62a51-ce-settings-tabs-navigation-chromium/attachments/settings-git-sync-b6b4e7e4a66d65332768f29dab23d0847cebca87.png"
+                        }
+                      ]
                     }
                   ],
                   "status": "expected"
                 }
               ],
               "id": "d877ffdf71ec720167ae-51816cf49c29ff63ca1d",
-              "file": "settings.spec.ts",
-              "line": 132,
-              "column": 3
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             },
             {
               "title": "members list shows current user",
@@ -1985,12 +2004,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 373,
+                      "duration": 353,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:03.150Z",
+                      "startTime": "2026-01-28T01:57:56.634Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2000,7 +2019,7 @@
               ],
               "id": "d877ffdf71ec720167ae-d86783313bd32d1b190e",
               "file": "settings.spec.ts",
-              "line": 161,
+              "line": 151,
               "column": 3
             },
             {
@@ -2019,12 +2038,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 523,
+                      "duration": 423,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:03.533Z",
+                      "startTime": "2026-01-28T01:57:56.996Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2034,7 +2053,7 @@
               ],
               "id": "d877ffdf71ec720167ae-db91ab25914d0193afa5",
               "file": "settings.spec.ts",
-              "line": 181,
+              "line": 171,
               "column": 3
             }
           ]
@@ -2042,7 +2061,7 @@
         {
           "title": "Authentication",
           "file": "settings.spec.ts",
-          "line": 212,
+          "line": 202,
           "column": 6,
           "specs": [
             {
@@ -2061,12 +2080,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 424,
+                      "duration": 429,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:04.066Z",
+                      "startTime": "2026-01-28T01:57:57.430Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2076,17 +2095,24 @@
               ],
               "id": "d877ffdf71ec720167ae-083cf93a5484a7992442",
               "file": "settings.spec.ts",
-              "line": 213,
+              "line": 203,
               "column": 3
             },
             {
               "title": "invalid token redirects to login",
               "ok": true,
-              "tags": [],
+              "tags": [
+                "screenshot"
+              ],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [],
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
@@ -2095,23 +2121,34 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 141,
+                      "duration": 197,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:04.501Z",
-                      "annotations": [],
-                      "attachments": []
+                      "startTime": "2026-01-28T01:57:57.872Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "login-page",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/settings-Authentication-invalid-token-redirects-to-login-chromium/attachments/login-page-938d619341999ee26e3a4d2e40581388c9066b60.png"
+                        }
+                      ]
                     }
                   ],
                   "status": "expected"
                 }
               ],
               "id": "d877ffdf71ec720167ae-db6638b703e3de751d71",
-              "file": "settings.spec.ts",
-              "line": 227,
-              "column": 3
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             }
           ]
         }
@@ -2127,17 +2164,24 @@
         {
           "title": "Table Creation and Basic Operations",
           "file": "table-operations.spec.ts",
-          "line": 27,
+          "line": 3,
           "column": 6,
           "specs": [
             {
               "title": "create a table with properties and view it",
               "ok": true,
-              "tags": [],
+              "tags": [
+                "screenshot"
+              ],
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [],
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
                   "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
@@ -2146,23 +2190,34 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 522,
+                      "duration": 580,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:04.662Z",
-                      "annotations": [],
-                      "attachments": []
+                      "startTime": "2026-01-28T01:57:58.090Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "table-view",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/table-operations-Table-Cre-5bb4f-with-properties-and-view-it-chromium/attachments/table-view-c6f7784889c5e38b3dfdf41d7112133de71843be.png"
+                        }
+                      ]
                     }
                   ],
                   "status": "expected"
                 }
               ],
               "id": "2d46daa4b8414b2c6818-ed025093137aac74b81c",
-              "file": "table-operations.spec.ts",
-              "line": 28,
-              "column": 3
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             },
             {
               "title": "add and edit records in table",
@@ -2171,113 +2226,35 @@
               "tests": [
                 {
                   "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/home/runner/work/mddb/mddb/e2e/table-operations.spec.ts",
-                        "line": 72,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
+                  "annotations": [],
+                  "expectedStatus": "passed",
                   "projectId": "chromium",
                   "projectName": "chromium",
                   "results": [
                     {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1628,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:05.196Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "location": {
-                            "file": "/home/runner/work/mddb/mddb/e2e/table-operations.spec.ts",
-                            "line": 72,
-                            "column": 8
-                          }
-                        }
-                      ],
+                      "startTime": "2026-01-28T01:57:58.679Z",
+                      "annotations": [],
                       "attachments": []
                     }
                   ],
-                  "status": "skipped"
+                  "status": "expected"
                 }
               ],
               "id": "2d46daa4b8414b2c6818-bf1a9d1051b195048007",
               "file": "table-operations.spec.ts",
-              "line": 72,
-              "column": 8
+              "line": 50,
+              "column": 3
             },
             {
               "title": "delete a record from table",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [
-                    {
-                      "type": "skip",
-                      "location": {
-                        "file": "/home/runner/work/mddb/mddb/e2e/table-operations.spec.ts",
-                        "line": 143,
-                        "column": 8
-                      }
-                    }
-                  ],
-                  "expectedStatus": "skipped",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": -1,
-                      "parallelIndex": -1,
-                      "status": "skipped",
-                      "duration": 0,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-27T18:24:05.196Z",
-                      "annotations": [
-                        {
-                          "type": "skip",
-                          "location": {
-                            "file": "/home/runner/work/mddb/mddb/e2e/table-operations.spec.ts",
-                            "line": 143,
-                            "column": 8
-                          }
-                        }
-                      ],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "skipped"
-                }
-              ],
-              "id": "2d46daa4b8414b2c6818-066a87693f5eb06c5e8f",
-              "file": "table-operations.spec.ts",
-              "line": 143,
-              "column": 8
-            }
-          ]
-        },
-        {
-          "title": "Table View Modes",
-          "file": "table-operations.spec.ts",
-          "line": 196,
-          "column": 6,
-          "specs": [
-            {
-              "title": "switch between table, grid, gallery, and board views",
               "ok": true,
               "tags": [],
               "tests": [
@@ -2292,12 +2269,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 692,
+                      "duration": 1569,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:05.196Z",
+                      "startTime": "2026-01-28T01:58:00.320Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2305,17 +2282,92 @@
                   "status": "expected"
                 }
               ],
-              "id": "2d46daa4b8414b2c6818-81e9f6d1710822f09f5a",
+              "id": "2d46daa4b8414b2c6818-066a87693f5eb06c5e8f",
               "file": "table-operations.spec.ts",
-              "line": 197,
+              "line": 141,
               "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Table View Modes",
+          "file": "table-operations.spec.ts",
+          "line": 194,
+          "column": 6,
+          "specs": [
+            {
+              "title": "switch between table, grid, gallery, and board views",
+              "ok": true,
+              "tags": [
+                "screenshot"
+              ],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [
+                    {
+                      "type": "screenshot",
+                      "description": "This test captures screenshots"
+                    }
+                  ],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 865,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-28T01:58:01.903Z",
+                      "annotations": [
+                        {
+                          "type": "screenshot",
+                          "description": "This test captures screenshots"
+                        }
+                      ],
+                      "attachments": [
+                        {
+                          "name": "view-table",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/table-operations-Table-Vie-ed5a3-rid-gallery-and-board-views-chromium/attachments/view-table-36cbe6295d5eae5a80d9a9880260ac3f93689526.png"
+                        },
+                        {
+                          "name": "view-grid",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/table-operations-Table-Vie-ed5a3-rid-gallery-and-board-views-chromium/attachments/view-grid-f11489ce309c87a555347c4c8d7c1432b6404722.png"
+                        },
+                        {
+                          "name": "view-gallery",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/table-operations-Table-Vie-ed5a3-rid-gallery-and-board-views-chromium/attachments/view-gallery-2238a2cff709b024346e1d17fbdce83a246d94e7.png"
+                        },
+                        {
+                          "name": "view-board",
+                          "contentType": "image/png",
+                          "path": "/home/runner/work/mddb/mddb/test-results/table-operations-Table-Vie-ed5a3-rid-gallery-and-board-views-chromium/attachments/view-board-0a6d7ab34d89c44802c02ed62c53fca2526b13db.png"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2d46daa4b8414b2c6818-81e9f6d1710822f09f5a",
+              "file": "helpers.ts",
+              "line": 95,
+              "column": 10
             }
           ]
         },
         {
           "title": "Table and Page Hybrid",
           "file": "table-operations.spec.ts",
-          "line": 279,
+          "line": 281,
           "column": 6,
           "specs": [
             {
@@ -2334,12 +2386,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 537,
+                      "duration": 519,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:05.897Z",
+                      "startTime": "2026-01-28T01:58:02.781Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2349,7 +2401,7 @@
               ],
               "id": "2d46daa4b8414b2c6818-1d8c1cd2563c4e8a9078",
               "file": "table-operations.spec.ts",
-              "line": 280,
+              "line": 282,
               "column": 3
             }
           ]
@@ -2366,87 +2418,11 @@
         {
           "title": "First Login Flow",
           "file": "workspace-org.spec.ts",
-          "line": 27,
+          "line": 3,
           "column": 6,
           "specs": [
             {
               "title": "new user gets auto-created org, workspace, and welcome page",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 326,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-27T18:24:06.456Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "2a13a00effea8bb17814-323207f226f20d1bd7a3",
-              "file": "workspace-org.spec.ts",
-              "line": 28,
-              "column": 3
-            },
-            {
-              "title": "first login creates org named after user",
-              "ok": true,
-              "tags": [],
-              "tests": [
-                {
-                  "timeout": 30000,
-                  "annotations": [],
-                  "expectedStatus": "passed",
-                  "projectId": "chromium",
-                  "projectName": "chromium",
-                  "results": [
-                    {
-                      "workerIndex": 0,
-                      "parallelIndex": 0,
-                      "status": "passed",
-                      "duration": 225,
-                      "errors": [],
-                      "stdout": [],
-                      "stderr": [],
-                      "retry": 0,
-                      "startTime": "2026-01-27T18:24:06.795Z",
-                      "annotations": [],
-                      "attachments": []
-                    }
-                  ],
-                  "status": "expected"
-                }
-              ],
-              "id": "2a13a00effea8bb17814-dab5c0c592cee82a7ecb",
-              "file": "workspace-org.spec.ts",
-              "line": 48,
-              "column": 3
-            }
-          ]
-        },
-        {
-          "title": "Workspace Switching",
-          "file": "workspace-org.spec.ts",
-          "line": 70,
-          "column": 6,
-          "specs": [
-            {
-              "title": "create and switch to a new workspace",
               "ok": true,
               "tags": [],
               "tests": [
@@ -2466,7 +2442,83 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:07.033Z",
+                      "startTime": "2026-01-28T01:58:03.319Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-323207f226f20d1bd7a3",
+              "file": "workspace-org.spec.ts",
+              "line": 4,
+              "column": 3
+            },
+            {
+              "title": "first login creates org named after user",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 213,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-28T01:58:03.646Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "2a13a00effea8bb17814-dab5c0c592cee82a7ecb",
+              "file": "workspace-org.spec.ts",
+              "line": 24,
+              "column": 3
+            }
+          ]
+        },
+        {
+          "title": "Workspace Switching",
+          "file": "workspace-org.spec.ts",
+          "line": 46,
+          "column": 6,
+          "specs": [
+            {
+              "title": "create and switch to a new workspace",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 295,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-01-28T01:58:03.875Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2476,7 +2528,7 @@
               ],
               "id": "2a13a00effea8bb17814-f14fe5de5293500b3890",
               "file": "workspace-org.spec.ts",
-              "line": 71,
+              "line": 47,
               "column": 3
             },
             {
@@ -2491,7 +2543,7 @@
                       "type": "skip",
                       "location": {
                         "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
-                        "line": 113,
+                        "line": 90,
                         "column": 8
                       }
                     }
@@ -2509,13 +2561,13 @@
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:07.362Z",
+                      "startTime": "2026-01-28T01:58:04.181Z",
                       "annotations": [
                         {
                           "type": "skip",
                           "location": {
                             "file": "/home/runner/work/mddb/mddb/e2e/workspace-org.spec.ts",
-                            "line": 113,
+                            "line": 90,
                             "column": 8
                           }
                         }
@@ -2528,7 +2580,7 @@
               ],
               "id": "2a13a00effea8bb17814-20c760e99660343dbaf8",
               "file": "workspace-org.spec.ts",
-              "line": 113,
+              "line": 90,
               "column": 8
             }
           ]
@@ -2536,7 +2588,7 @@
         {
           "title": "Organization Features",
           "file": "workspace-org.spec.ts",
-          "line": 162,
+          "line": 139,
           "column": 6,
           "specs": [
             {
@@ -2555,12 +2607,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 230,
+                      "duration": 222,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:07.363Z",
+                      "startTime": "2026-01-28T01:58:04.182Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2570,7 +2622,7 @@
               ],
               "id": "2a13a00effea8bb17814-9d06b0c2c078ae2872da",
               "file": "workspace-org.spec.ts",
-              "line": 163,
+              "line": 140,
               "column": 3
             }
           ]
@@ -2578,7 +2630,7 @@
         {
           "title": "User Menu",
           "file": "workspace-org.spec.ts",
-          "line": 201,
+          "line": 178,
           "column": 6,
           "specs": [
             {
@@ -2597,12 +2649,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 290,
+                      "duration": 278,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:07.605Z",
+                      "startTime": "2026-01-28T01:58:04.415Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2612,7 +2664,7 @@
               ],
               "id": "2a13a00effea8bb17814-67aac332a231cf0a2250",
               "file": "workspace-org.spec.ts",
-              "line": 202,
+              "line": 179,
               "column": 3
             },
             {
@@ -2631,12 +2683,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 283,
+                      "duration": 277,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:07.909Z",
+                      "startTime": "2026-01-28T01:58:04.702Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2646,7 +2698,7 @@
               ],
               "id": "2a13a00effea8bb17814-03e9bef2334d98ef9936",
               "file": "workspace-org.spec.ts",
-              "line": 216,
+              "line": 193,
               "column": 3
             }
           ]
@@ -2654,7 +2706,7 @@
         {
           "title": "Footer Links",
           "file": "workspace-org.spec.ts",
-          "line": 233,
+          "line": 210,
           "column": 6,
           "specs": [
             {
@@ -2673,12 +2725,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 329,
+                      "duration": 315,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:08.207Z",
+                      "startTime": "2026-01-28T01:58:04.988Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2688,7 +2740,7 @@
               ],
               "id": "2a13a00effea8bb17814-5bce7ba5b26b7e21f9a1",
               "file": "workspace-org.spec.ts",
-              "line": 234,
+              "line": 211,
               "column": 3
             }
           ]
@@ -2696,11 +2748,11 @@
         {
           "title": "Header Display",
           "file": "workspace-org.spec.ts",
-          "line": 258,
+          "line": 235,
           "column": 6,
           "specs": [
             {
-              "title": "header shows app title",
+              "title": "header shows navigation and menus",
               "ok": true,
               "tags": [],
               "tests": [
@@ -2715,12 +2767,12 @@
                       "workerIndex": 0,
                       "parallelIndex": 0,
                       "status": "passed",
-                      "duration": 235,
+                      "duration": 222,
                       "errors": [],
                       "stdout": [],
                       "stderr": [],
                       "retry": 0,
-                      "startTime": "2026-01-27T18:24:08.548Z",
+                      "startTime": "2026-01-28T01:58:05.315Z",
                       "annotations": [],
                       "attachments": []
                     }
@@ -2728,9 +2780,9 @@
                   "status": "expected"
                 }
               ],
-              "id": "2a13a00effea8bb17814-41f7c15e7aff2524490a",
+              "id": "2a13a00effea8bb17814-96a9ff67670317ee0c02",
               "file": "workspace-org.spec.ts",
-              "line": 259,
+              "line": 236,
               "column": 3
             }
           ]
@@ -2740,10 +2792,10 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-01-27T18:23:05.072Z",
-    "duration": 63861.583999999995,
-    "expected": 52,
-    "skipped": 11,
+    "startTime": "2026-01-28T01:56:44.665Z",
+    "duration": 81063.069,
+    "expected": 60,
+    "skipped": 2,
     "unexpected": 0,
     "flaky": 0
   }
