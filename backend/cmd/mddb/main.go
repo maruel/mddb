@@ -293,7 +293,7 @@ func mainImpl() error {
 	// Initialize email verification service and email service (nil if SMTP not configured)
 	var emailVerificationService *identity.EmailVerificationService
 	var emailService *email.Service
-	if serverCfg.SMTP.Enabled() {
+	if !serverCfg.SMTP.IsZero() {
 		emailService = &email.Service{Config: serverCfg.SMTP}
 		slog.InfoContext(ctx, "SMTP configured", "host", serverCfg.SMTP.Host, "port", serverCfg.SMTP.Port)
 

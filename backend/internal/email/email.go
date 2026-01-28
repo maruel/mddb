@@ -30,11 +30,6 @@ func (c *Config) IsZero() bool {
 	return c.Host == "" && c.Port == 0 && c.Username == "" && c.Password == "" && c.From == ""
 }
 
-// Enabled returns true if SMTP is configured with at least a host.
-func (c *Config) Enabled() bool {
-	return c.Host != ""
-}
-
 // Validate checks that required fields are set and have valid values.
 // An empty config (IsZero) is valid and means SMTP is disabled.
 func (c *Config) Validate() error {
