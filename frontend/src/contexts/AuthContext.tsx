@@ -18,6 +18,7 @@ interface AuthContextValue {
   token: Accessor<string | null>;
   api: Accessor<Api>;
   wsApi: Accessor<ReturnType<Api['ws']> | null>;
+  orgApi: Accessor<ReturnType<Api['org']> | null>;
   login: (token: string, user: UserResponse) => void;
   logout: () => Promise<void>;
   setUser: (user: UserResponse | null) => void;
@@ -56,6 +57,12 @@ export const AuthProvider: ParentComponent = (props) => {
   const wsApi = createMemo(() => {
     const wsID = user()?.workspace_id;
     return wsID ? api().ws(wsID) : null;
+  });
+
+  // Get organization-scoped API client
+  const orgApi = createMemo(() => {
+    const orgID = user()?.organization_id;
+    return orgID ? api().org(orgID) : null;
   });
 
   const login = (newToken: string, userData: UserResponse) => {
@@ -118,6 +125,7 @@ export const AuthProvider: ParentComponent = (props) => {
     token,
     api,
     wsApi,
+    orgApi,
     login,
     logout,
     setUser,

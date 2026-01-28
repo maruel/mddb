@@ -40,13 +40,13 @@ import {
   isStaticRoute,
 } from './utils/urls';
 import { useI18n, type Locale } from './i18n';
-import type { NodeResponse, OrgMembershipResponse, UserResponse } from '@sdk/types.gen';
+import type { NodeResponse, OrgMembershipResponse } from '@sdk/types.gen';
 import styles from './App.module.css';
 
 // Inner app component that uses contexts
 function AppContent() {
   const { t, locale, setLocale } = useI18n();
-  const { user, token, login, wsApi } = useAuth();
+  const { user, login, wsApi } = useAuth();
   const {
     nodes,
     selectedNodeId,
@@ -361,8 +361,6 @@ function AppContent() {
 
               <Show when={isSettingsPage()}>
                 <WorkspaceSettings
-                  user={user() as UserResponse}
-                  token={token() as string}
                   onBack={() => window.history.back()}
                   onOpenOrgSettings={() => {
                     const u = user();
@@ -380,12 +378,7 @@ function AppContent() {
               </Show>
 
               <Show when={isOrgSettingsPage() && orgSettingsId()}>
-                <OrganizationSettings
-                  user={user() as UserResponse}
-                  token={token() as string}
-                  orgId={orgSettingsId() as string}
-                  onBack={() => window.history.back()}
-                />
+                <OrganizationSettings orgId={orgSettingsId() as string} onBack={() => window.history.back()} />
               </Show>
 
               <Show when={!isProfilePage() && !isSettingsPage() && !isOrgSettingsPage()}>

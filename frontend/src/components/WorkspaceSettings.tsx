@@ -1,7 +1,7 @@
 // Workspace settings page for managing workspace and members.
 
-import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
-import { createApi } from '../useApi';
+import { createSignal, createEffect, For, Show } from 'solid-js';
+import { useAuth } from '../contexts';
 import {
   WSRoleAdmin,
   type UserResponse,
@@ -13,8 +13,6 @@ import styles from './WorkspaceSettings.module.css';
 import { useI18n } from '../i18n';
 
 interface WorkspaceSettingsProps {
-  user: UserResponse;
-  token: string;
   onBack: () => void;
   onOpenOrgSettings: () => void;
 }
@@ -23,6 +21,8 @@ type Tab = 'members' | 'workspace' | 'sync';
 
 export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const { t } = useI18n();
+  const { user, orgApi, wsApi } = useAuth();
+
   const [activeTab, setActiveTab] = createSignal<Tab>('members');
   const [members, setMembers] = createSignal<UserResponse[]>([]);
   const [invitations, setInvitations] = createSignal<WSInvitationResponse[]>([]);
@@ -44,16 +44,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const [error, setError] = createSignal<string | null>(null);
   const [success, setSuccess] = createSignal<string | null>(null);
 
-  // Create API client
-  const api = createMemo(() => createApi(() => props.token));
-  const orgApi = createMemo(() => {
-    const orgID = props.user.organization_id;
-    return orgID ? api().org(orgID) : null;
-  });
-  const wsApi = createMemo(() => {
-    const wsID = props.user.workspace_id;
-    return wsID ? api().ws(wsID) : null;
-  });
+  const isAdmin = () => user()?.workspace_role === WSRoleAdmin;
 
   const loadData = async () => {
     const org = orgApi();
@@ -64,7 +55,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       setError(null);
 
       const ws = wsApi();
-      if (activeTab() === 'members' && props.user.workspace_role === WSRoleAdmin) {
+      if (activeTab() === 'members' && isAdmin()) {
         const [membersData, invsData] = await Promise.all([
           org.users.listUsers(),
           ws ? ws.invitations.listWSInvitations() : Promise.resolve({ invitations: [] }),
@@ -79,7 +70,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         setOriginalWsName(wsData.name);
       }
 
-      if (activeTab() === 'sync' && props.user.workspace_role === WSRoleAdmin && ws) {
+      if (activeTab() === 'sync' && isAdmin() && ws) {
         try {
           const remoteData = await ws.settings.git.getGitRemote();
           setGitRemote(remoteData);
@@ -235,7 +226,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         <button class={activeTab() === 'workspace' ? styles.activeTab : ''} onClick={() => setActiveTab('workspace')}>
           {t('settings.workspace')}
         </button>
-        <Show when={props.user.workspace_role === WSRoleAdmin}>
+        <Show when={isAdmin()}>
           <button class={activeTab() === 'sync' ? styles.activeTab : ''} onClick={() => setActiveTab('sync')}>
             {t('settings.gitSync')}
           </button>
@@ -252,7 +243,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'members'}>
         <section class={styles.section}>
           <h3>{t('settings.members')}</h3>
-          <Show when={props.user.workspace_role === WSRoleAdmin} fallback={<p>{t('settings.adminOnlyMembers')}</p>}>
+          <Show when={isAdmin()} fallback={<p>{t('settings.adminOnlyMembers')}</p>}>
             <table class={styles.table}>
               <thead>
                 <tr>
@@ -268,7 +259,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
                       <td>{member.name}</td>
                       <td>{member.email}</td>
                       <td>
-                        <Show when={member.id !== props.user.id} fallback={member.workspace_role}>
+                        <Show when={member.id !== user()?.id} fallback={member.workspace_role}>
                           <select
                             value={member.workspace_role}
                             onChange={(e) => handleUpdateRole(member.id, e.target.value as WorkspaceRole)}
@@ -342,7 +333,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'workspace'}>
         <section class={styles.section}>
           <h3>{t('settings.workspaceSettings')}</h3>
-          <Show when={props.user.workspace_role === WSRoleAdmin} fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}>
+          <Show when={isAdmin()} fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}>
             <form onSubmit={saveWorkspaceSettings} class={styles.settingsForm}>
               <div class={styles.formItem}>
                 <label>{t('settings.workspaceName')}</label>

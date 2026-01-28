@@ -1,15 +1,13 @@
 // Organization settings page for managing organization name, members, and preferences.
 
 import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
-import { createApi } from '../useApi';
+import { useAuth } from '../contexts';
 import type { UserResponse, OrgInvitationResponse, OrganizationRole } from '@sdk/types.gen';
 import { OrgRoleOwner, OrgRoleAdmin } from '@sdk/types.gen';
 import styles from './OrganizationSettings.module.css';
 import { useI18n } from '../i18n';
 
 interface OrganizationSettingsProps {
-  user: UserResponse;
-  token: string;
   orgId: string;
   onBack: () => void;
 }
@@ -18,6 +16,8 @@ type Tab = 'members' | 'settings';
 
 export default function OrganizationSettings(props: OrganizationSettingsProps) {
   const { t } = useI18n();
+  const { user, api } = useAuth();
+
   const [activeTab, setActiveTab] = createSignal<Tab>('members');
   const [members, setMembers] = createSignal<UserResponse[]>([]);
   const [invitations, setInvitations] = createSignal<OrgInvitationResponse[]>([]);
@@ -34,13 +34,12 @@ export default function OrganizationSettings(props: OrganizationSettingsProps) {
   const [error, setError] = createSignal<string | null>(null);
   const [success, setSuccess] = createSignal<string | null>(null);
 
-  // Create API client
-  const api = createMemo(() => createApi(() => props.token));
+  // Create org-scoped API client for the specified orgId
   const orgApi = createMemo(() => api().org(props.orgId));
 
   // Get user's role in this organization
   const userOrgRole = createMemo(() => {
-    const membership = props.user.organizations?.find((m) => m.organization_id === props.orgId);
+    const membership = user()?.organizations?.find((m) => m.organization_id === props.orgId);
     return membership?.role;
   });
 
@@ -181,7 +180,7 @@ export default function OrganizationSettings(props: OrganizationSettingsProps) {
                       <td>{member.name}</td>
                       <td>{member.email}</td>
                       <td>
-                        <Show when={member.id !== props.user.id} fallback={member.org_role}>
+                        <Show when={member.id !== user()?.id} fallback={member.org_role}>
                           <select
                             value={member.org_role}
                             onChange={(e) => handleUpdateRole(member.id, e.target.value as OrganizationRole)}

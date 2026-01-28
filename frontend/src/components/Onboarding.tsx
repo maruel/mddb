@@ -1,32 +1,24 @@
 // Onboarding wizard for new users to configure their workspace.
 
-import { createSignal, createMemo, Show } from 'solid-js';
-import { createApi } from '../useApi';
-import type { UserResponse } from '@sdk/types.gen';
+import { createSignal, Show } from 'solid-js';
+import { useAuth } from '../contexts';
 import styles from './Onboarding.module.css';
 import { useI18n } from '../i18n';
 
 interface OnboardingProps {
-  user: UserResponse;
-  token: string;
   onComplete: () => void;
 }
 
 export default function Onboarding(props: OnboardingProps) {
   const { t } = useI18n();
+  const { wsApi } = useAuth();
+
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
 
   // Git states
   const [remoteURL, setRemoteURL] = createSignal('');
   const [remoteToken, setRemoteToken] = createSignal('');
-
-  // Create API client
-  const api = createMemo(() => createApi(() => props.token));
-  const wsApi = createMemo(() => {
-    const wsID = props.user.workspace_id;
-    return wsID ? api().ws(wsID) : null;
-  });
 
   const handleSkipGit = () => {
     props.onComplete();
