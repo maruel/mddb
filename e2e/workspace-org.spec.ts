@@ -212,22 +212,26 @@ test.describe('Footer Links', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    // Find footer links in sidebar
-    const privacyLink = page.locator('aside a[href="/privacy"], aside').getByText(/Privacy/);
-    const termsLink = page.locator('aside a[href="/terms"], aside').getByText(/Terms/);
+    // Find footer links in sidebar - use specific link selectors
+    const privacyLink = page.locator('aside a[href="/privacy"]');
+    const termsLink = page.locator('aside a[href="/terms"]');
 
     await expect(privacyLink).toBeVisible({ timeout: 5000 });
     await expect(termsLink).toBeVisible();
 
-    // Click privacy link
-    await privacyLink.click();
-    await expect(page).toHaveURL('/privacy', { timeout: 5000 });
+    // Click privacy link and wait for navigation
+    await Promise.all([
+      page.waitForURL('/privacy', { timeout: 10000 }),
+      privacyLink.click(),
+    ]);
 
     // Go back and click terms
     await page.goBack();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-    await termsLink.click();
-    await expect(page).toHaveURL('/terms', { timeout: 5000 });
+    await Promise.all([
+      page.waitForURL('/terms', { timeout: 10000 }),
+      termsLink.click(),
+    ]);
   });
 });
 
