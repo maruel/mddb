@@ -184,7 +184,7 @@ test.describe('Workspace Settings', () => {
     await workspaceTab.click();
 
     // Find workspace name input (labeled "Workspace Name")
-    const wsNameInput = page.locator('input[type="text"]').nth(1); // Second text input (first is org name)
+    const wsNameInput = page.locator('input[type="text"]').first();
     await expect(wsNameInput).toBeVisible({ timeout: 5000 });
 
     // Change the name

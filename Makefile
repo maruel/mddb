@@ -1,7 +1,7 @@
 .PHONY: help build dev test e2e coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade docs
 
 # Variables
-DATA_DIR=./data
+DATA_DIR?=./data
 PORT?=8080
 LOG_LEVEL?=info
 FRONTEND_STAMP=node_modules/.stamp

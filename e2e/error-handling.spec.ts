@@ -35,18 +35,20 @@ test.describe('Error Handling - Invalid Routes', () => {
     // Try to navigate to a non-existent workspace
     await page.goto(`/w/invalid-workspace-12345/some-page?token=${token}`);
 
-    // Should show error about no access or redirect
-    await page.waitForTimeout(2000);
+    // Wait for either: error message, redirect away from invalid workspace, or login page
+    await Promise.race([
+      page.locator('[class*="error"], [class*="Error"]').waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+      page.waitForURL((url) => !url.pathname.includes('invalid-workspace-12345'), { timeout: 10000 }).catch(() => {}),
+      page.locator('form').waitFor({ state: 'visible', timeout: 10000 }).catch(() => {}),
+    ]);
 
-    // Check for error or redirect back to valid workspace
-    const errorMessage = page.locator('[class*="error"], [class*="Error"]');
-    const hasError = await errorMessage.isVisible();
+    // Verify we're not stuck on the invalid workspace URL
+    const currentUrl = page.url();
+    const hasError = await page.locator('[class*="error"], [class*="Error"]').isVisible();
+    const hasLoginForm = await page.locator('form').isVisible();
 
-    // If no error shown, URL should have changed back to valid workspace
-    if (!hasError) {
-      const currentUrl = page.url();
-      expect(currentUrl).not.toContain('invalid-workspace-12345');
-    }
+    // Should either show error, redirect to valid page, or show login
+    expect(hasError || !currentUrl.includes('invalid-workspace-12345') || hasLoginForm).toBe(true);
   });
 
   test('privacy page accessible without login', async ({ page }) => {

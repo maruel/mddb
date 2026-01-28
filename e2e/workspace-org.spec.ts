@@ -234,7 +234,7 @@ test.describe('Footer Links', () => {
 
 test.describe('Header Display', () => {
   test('header shows navigation and menus', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'header-title');
+    const { token } = await registerUser(request, 'header-nav');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
