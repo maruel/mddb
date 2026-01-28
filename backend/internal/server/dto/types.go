@@ -136,8 +136,6 @@ type UserQuota struct {
 
 // OrganizationSettings represents organization-wide settings.
 type OrganizationSettings struct {
-	AllowedEmailDomains    []string        `json:"allowed_email_domains,omitempty" jsonschema:"description=Restrict membership to these email domains"`
-	RequireSSO             bool            `json:"require_sso" jsonschema:"description=Require SSO for all members"`
 	DefaultWorkspaceQuotas WorkspaceQuotas `json:"default_workspace_quotas" jsonschema:"description=Default quotas for new workspaces"`
 }
 

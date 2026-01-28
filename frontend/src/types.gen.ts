@@ -1181,8 +1181,6 @@ export interface UserQuota {
  * OrganizationSettings represents organization-wide settings.
  */
 export interface OrganizationSettings {
-  allowed_email_domains?: string[];
-  require_sso: boolean;
   default_workspace_quotas: WorkspaceQuotas;
 }
 /**

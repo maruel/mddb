@@ -75,41 +75,19 @@ func TestOrganization(t *testing.T) {
 	})
 
 	t.Run("Clone", func(t *testing.T) {
-		t.Run("with AllowedEmailDomains", func(t *testing.T) {
-			original := &Organization{
-				ID:   jsonldb.ID(1),
-				Name: "Test Org",
-				Settings: OrganizationSettings{
-					AllowedEmailDomains: []string{"example.com", "test.com"},
-					RequireSSO:          true,
-				},
-			}
+		original := &Organization{
+			ID:   jsonldb.ID(1),
+			Name: "Test Org",
+		}
 
-			clone := original.Clone()
+		clone := original.Clone()
 
-			if clone.ID != original.ID {
-				t.Error("Clone ID should match")
-			}
-			if clone.Name != original.Name {
-				t.Error("Clone Name should match")
-			}
-
-			clone.Settings.AllowedEmailDomains[0] = "modified.com"
-			if original.Settings.AllowedEmailDomains[0] == "modified.com" {
-				t.Error("Clone AllowedEmailDomains should be independent of original")
-			}
-		})
-
-		t.Run("nil AllowedEmailDomains", func(t *testing.T) {
-			noAllowed := &Organization{
-				ID:   jsonldb.ID(1),
-				Name: "No Domains",
-			}
-			cloneNoAllowed := noAllowed.Clone()
-			if cloneNoAllowed.Settings.AllowedEmailDomains != nil {
-				t.Error("Clone of nil AllowedEmailDomains should be nil")
-			}
-		})
+		if clone.ID != original.ID {
+			t.Error("Clone ID should match")
+		}
+		if clone.Name != original.Name {
+			t.Error("Clone Name should match")
+		}
 	})
 
 	t.Run("GetID", func(t *testing.T) {
@@ -195,13 +173,9 @@ func TestOrganizationService(t *testing.T) {
 	})
 
 	t.Run("Modify", func(t *testing.T) {
-		t.Run("settings", func(t *testing.T) {
-			newSettings := OrganizationSettings{
-				AllowedEmailDomains: []string{"example.com"},
-				RequireSSO:          true,
-			}
+		t.Run("name", func(t *testing.T) {
 			_, modErr := service.Modify(org.ID, func(o *Organization) error {
-				o.Settings = newSettings
+				o.Name = "Updated Org Name"
 				return nil
 			})
 			if modErr != nil {
@@ -209,11 +183,8 @@ func TestOrganizationService(t *testing.T) {
 			}
 
 			updatedOrg, _ := service.Get(org.ID)
-			if !updatedOrg.Settings.RequireSSO {
-				t.Error("Expected Settings.RequireSSO = true after update")
-			}
-			if len(updatedOrg.Settings.AllowedEmailDomains) != 1 {
-				t.Errorf("AllowedEmailDomains length = %d, want 1", len(updatedOrg.Settings.AllowedEmailDomains))
+			if updatedOrg.Name != "Updated Org Name" {
+				t.Errorf("Expected Name = 'Updated Org Name', got '%s'", updatedOrg.Name)
 			}
 		})
 

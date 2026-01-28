@@ -25,10 +25,6 @@ type Organization struct {
 // Clone returns a deep copy of the Organization.
 func (o *Organization) Clone() *Organization {
 	c := *o
-	if o.Settings.AllowedEmailDomains != nil {
-		c.Settings.AllowedEmailDomains = make([]string, len(o.Settings.AllowedEmailDomains))
-		copy(c.Settings.AllowedEmailDomains, o.Settings.AllowedEmailDomains)
-	}
 	return &c
 }
 
@@ -53,10 +49,6 @@ func (o *Organization) Validate() error {
 
 // OrganizationSettings represents organization-wide settings.
 type OrganizationSettings struct {
-	// SSO & Security
-	AllowedEmailDomains []string `json:"allowed_email_domains,omitempty" jsonschema:"description=Restrict membership to these email domains"`
-	RequireSSO          bool     `json:"require_sso" jsonschema:"description=Require SSO for all members"`
-
 	// Defaults for new workspaces
 	DefaultWorkspaceQuotas WorkspaceQuotas `json:"default_workspace_quotas" jsonschema:"description=Default quotas for new workspaces"`
 }

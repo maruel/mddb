@@ -10,6 +10,7 @@ interface WorkspaceSettingsProps {
   user: UserResponse;
   token: string;
   onBack: () => void;
+  onOpenOrgSettings: () => void;
 }
 
 type Tab = 'members' | 'workspace' | 'sync';
@@ -346,6 +347,13 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
               </button>
             </form>
           </Show>
+
+          <div class={styles.orgLink}>
+            <p>{t('settings.orgSettingsHint')}</p>
+            <button onClick={() => props.onOpenOrgSettings()} class={styles.linkButton}>
+              {t('settings.openOrgSettings')} →
+            </button>
+          </div>
         </section>
       </Show>
 

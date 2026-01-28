@@ -154,12 +154,6 @@
   cursor: not-allowed;
 }
 
-.hint {
-  font-size: 0.8rem;
-  color: var(--c-text-light);
-  margin-top: var(--s-1);
-}
-
 .inviteSection {
   margin-top: var(--s-5);
 }
@@ -202,77 +196,4 @@
 
 .formGroup button:hover {
   background: var(--c-primary-hover);
-}
-
-.addRemoteSection {
-  margin-top: var(--s-5);
-  padding: var(--s-4);
-  background: var(--c-bg-alt);
-  border-radius: var(--radius);
-  border: 1px dashed var(--c-border);
-}
-
-.addRemoteSection h4 {
-  margin-bottom: var(--s-3);
-}
-
-.actions {
-  display: flex;
-  gap: var(--s-2);
-}
-
-.smallButton {
-  padding: var(--s-2) var(--s-3);
-  font-size: 0.85rem;
-  background: var(--c-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.smallButton:hover {
-  background: var(--c-primary-hover);
-}
-
-.deleteButtonSmall {
-  padding: var(--s-2) var(--s-3);
-  font-size: 0.85rem;
-  background: #fef2f2;
-  color: var(--c-danger);
-  border: 1px solid #fecaca;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.deleteButtonSmall:hover {
-  background: #fee2e2;
-}
-
-.orgLink {
-  margin-top: var(--s-5);
-  padding: var(--s-4);
-  background: var(--c-bg-alt);
-  border-radius: var(--radius);
-  border: 1px solid var(--c-border);
-}
-
-.orgLink p {
-  margin: 0 0 var(--s-3) 0;
-  color: var(--c-text-light);
-  font-size: 0.9rem;
-}
-
-.linkButton {
-  background: none;
-  border: none;
-  color: var(--c-primary);
-  cursor: pointer;
-  font-weight: 500;
-  padding: 0;
-  font-size: 0.95rem;
-}
-
-.linkButton:hover {
-  text-decoration: underline;
 }

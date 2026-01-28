@@ -197,6 +197,17 @@ export const dict: Dictionary = {
     roleAdmin: 'Administrateur',
     roleEditor: 'Éditeur',
     roleViewer: 'Lecteur',
+    roleOwner: 'Propriétaire',
+    roleMember: 'Membre',
+    // Organization settings
+    organizationSettings: "Paramètres de l'organisation",
+    organizationMembers: "Membres de l'organisation",
+    organizationPreferences: "Préférences de l'organisation",
+    orgSettingsHint:
+      "Pour les paramètres à l'échelle de l'organisation comme les domaines email autorisés, allez dans les paramètres de l'organisation.",
+    openOrgSettings: "Ouvrir les paramètres de l'organisation",
+    adminOnlySettings: "Seuls les administrateurs peuvent modifier les paramètres de l'organisation.",
+    settings: 'Paramètres',
   },
 
   table: {
@@ -252,6 +263,7 @@ export const dict: Dictionary = {
     roleUpdated: 'Rôle mis à jour',
     personalSettingsSaved: 'Paramètres personnels enregistrés',
     workspaceSettingsSaved: "Paramètres de l'espace enregistrés",
+    orgSettingsSaved: "Paramètres de l'organisation enregistrés",
     remoteAdded: 'Dépôt distant ajouté',
     remoteRemoved: 'Dépôt distant supprimé',
     pushSuccessful: 'Push réussi',

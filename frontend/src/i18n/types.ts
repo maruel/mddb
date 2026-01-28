@@ -197,6 +197,16 @@ export interface Dictionary {
     roleAdmin: string;
     roleEditor: string;
     roleViewer: string;
+    roleOwner: string;
+    roleMember: string;
+    // Organization settings
+    organizationSettings: string;
+    organizationMembers: string;
+    organizationPreferences: string;
+    orgSettingsHint: string;
+    openOrgSettings: string;
+    adminOnlySettings: string;
+    settings: string;
   };
 
   table: {
@@ -252,6 +262,7 @@ export interface Dictionary {
     roleUpdated: string;
     personalSettingsSaved: string;
     workspaceSettingsSaved: string;
+    orgSettingsSaved: string;
     remoteAdded: string;
     remoteRemoved: string;
     pushSuccessful: string;

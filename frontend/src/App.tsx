@@ -9,6 +9,7 @@ import TableGrid from './components/TableGrid';
 import TableGallery from './components/TableGallery';
 import TableBoard from './components/TableBoard';
 import WorkspaceSettings from './components/WorkspaceSettings';
+import OrganizationSettings from './components/OrganizationSettings';
 import UserProfile from './components/UserProfile';
 import Auth from './components/Auth';
 import Privacy from './components/Privacy';
@@ -53,6 +54,8 @@ export default function App() {
   const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
   const [selectedNodeData, setSelectedNodeData] = createSignal<NodeResponse | null>(null);
   const [isSettingsPage, setIsSettingsPage] = createSignal(false);
+  const [isOrgSettingsPage, setIsOrgSettingsPage] = createSignal(false);
+  const [orgSettingsId, setOrgSettingsId] = createSignal<string | null>(null);
   const [isProfilePage, setIsProfilePage] = createSignal(false);
   const [isPrivacyPage, setIsPrivacyPage] = createSignal(false);
   const [isTermsPage, setIsTermsPage] = createSignal(false);
@@ -500,9 +503,36 @@ export default function App() {
       }
 
       setIsSettingsPage(true);
+      setIsOrgSettingsPage(false);
       return;
     }
     setIsSettingsPage(false);
+
+    // Check for /o/orgID+orgSlug/settings format (organization settings)
+    const matchOrgSettings = path.match(/^\/o\/([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
+    if (matchOrgSettings && matchOrgSettings[1]) {
+      const orgId = matchOrgSettings[1];
+
+      // Verify user has access to this org
+      const u = user();
+      const isMember = u?.organizations?.some((m) => m.organization_id === orgId);
+      if (!isMember) {
+        setError(t('errors.noAccessToOrg') || 'You do not have access to this organization');
+        const currentWsId = u?.workspace_id;
+        const currentWsName = u?.workspace_name;
+        if (currentWsId) {
+          const wsSlug = slugify(currentWsName || 'workspace');
+          setTimeout(() => window.history.replaceState(null, '', `/w/${currentWsId}+${wsSlug}/`), 2000);
+        }
+        return;
+      }
+
+      setIsOrgSettingsPage(true);
+      setOrgSettingsId(orgId);
+      return;
+    }
+    setIsOrgSettingsPage(false);
+    setOrgSettingsId(null);
 
     // Helper to validate workspace access and redirect if invalid
     const validateWorkspaceAccess = async (wsId: string): Promise<boolean> => {
@@ -1020,10 +1050,34 @@ export default function App() {
                   onBack={() => {
                     window.history.back();
                   }}
+                  onOpenOrgSettings={() => {
+                    const u = user();
+                    const orgId = u?.organization_id;
+                    const orgMembership = u?.organizations?.find((m) => m.organization_id === orgId);
+                    const orgName = orgMembership?.organization_name;
+                    if (orgId) {
+                      setIsOrgSettingsPage(true);
+                      setOrgSettingsId(orgId);
+                      setIsSettingsPage(false);
+                      const orgSlug = slugify(orgName || 'organization');
+                      window.history.pushState(null, '', `/o/${orgId}+${orgSlug}/settings`);
+                    }
+                  }}
                 />
               </Show>
 
-              <Show when={!isProfilePage() && !isSettingsPage()}>
+              <Show when={isOrgSettingsPage() && orgSettingsId()}>
+                <OrganizationSettings
+                  user={user() as UserResponse}
+                  token={token() as string}
+                  orgId={orgSettingsId() as string}
+                  onBack={() => {
+                    window.history.back();
+                  }}
+                />
+              </Show>
+
+              <Show when={!isProfilePage() && !isSettingsPage() && !isOrgSettingsPage()}>
                 <div class={styles.container}>
                   <Show when={showMobileSidebar()}>
                     <div class={styles.mobileBackdrop} onClick={() => setShowMobileSidebar(false)} />

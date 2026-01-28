@@ -269,8 +269,6 @@ func workspaceQuotasToDTO(q identity.WorkspaceQuotas) dto.WorkspaceQuotas {
 
 func organizationSettingsToDTO(s identity.OrganizationSettings) dto.OrganizationSettings {
 	return dto.OrganizationSettings{
-		AllowedEmailDomains:    s.AllowedEmailDomains,
-		RequireSSO:             s.RequireSSO,
 		DefaultWorkspaceQuotas: workspaceQuotasToDTO(s.DefaultWorkspaceQuotas),
 	}
 }
@@ -336,8 +334,6 @@ func userSettingsToEntity(s dto.UserSettings) identity.UserSettings {
 
 func organizationSettingsToEntity(s dto.OrganizationSettings) identity.OrganizationSettings {
 	return identity.OrganizationSettings{
-		AllowedEmailDomains:    s.AllowedEmailDomains,
-		RequireSSO:             s.RequireSSO,
 		DefaultWorkspaceQuotas: workspaceQuotasToEntity(s.DefaultWorkspaceQuotas),
 	}
 }

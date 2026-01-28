@@ -197,6 +197,16 @@ export const dict: Dictionary = {
     roleAdmin: 'Admin',
     roleEditor: 'Editor',
     roleViewer: 'Viewer',
+    roleOwner: 'Owner',
+    roleMember: 'Member',
+    // Organization settings
+    organizationSettings: 'Organization Settings',
+    organizationMembers: 'Organization Members',
+    organizationPreferences: 'Organization Preferences',
+    orgSettingsHint: 'For organization-wide settings like allowed email domains, go to organization settings.',
+    openOrgSettings: 'Open Organization Settings',
+    adminOnlySettings: 'Only admins can modify organization settings.',
+    settings: 'Settings',
   },
 
   table: {
@@ -252,6 +262,7 @@ export const dict: Dictionary = {
     roleUpdated: 'Role updated',
     personalSettingsSaved: 'Personal settings saved successfully',
     workspaceSettingsSaved: 'Workspace settings saved successfully',
+    orgSettingsSaved: 'Organization settings saved successfully',
     remoteAdded: 'Remote added',
     remoteRemoved: 'Remote removed',
     pushSuccessful: 'Push successful',
