@@ -183,6 +183,10 @@ func LoadServerConfig(dataDir string) (*ServerConfig, error) {
 
 // SaveServerConfig saves configuration to dataDir/server_config.json.
 func SaveServerConfig(dataDir string, cfg *ServerConfig) error {
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("invalid config: %w", err)
+	}
+
 	path := filepath.Join(dataDir, "server_config.json")
 
 	data, err := json.MarshalIndent(cfg, "", "  ")
