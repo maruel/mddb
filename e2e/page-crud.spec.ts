@@ -30,16 +30,19 @@ test.describe('Page CRUD Operations', () => {
     await pageNode.click();
     await expect(page.getByText('This page will be deleted')).toBeVisible({ timeout: 5000 });
 
-    // Set up dialog handler to accept confirmation
-    page.on('dialog', (dialog) => dialog.accept());
+    // Set up dialog handler BEFORE any action that might trigger it
+    // Use 'once' to handle exactly one dialog
+    page.once('dialog', async (dialog) => {
+      await dialog.accept();
+    });
 
     // Hover over the sidebar node to reveal the delete button (🗑)
     await pageNode.hover();
 
     // Click the delete button (appears on hover)
-    const deleteButton = pageNode.locator('button[title="Delete"]');
+    const deleteButton = pageNode.locator('button[class*="hoverDeleteButton"]');
     await expect(deleteButton).toBeVisible({ timeout: 2000 });
-    await deleteButton.click();
+    await deleteButton.click({ force: true });
 
     // Wait for the page to be removed from sidebar
     await expect(pageNode).not.toBeVisible({ timeout: 5000 });

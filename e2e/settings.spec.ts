@@ -6,8 +6,8 @@ async function openUserMenuAndClick(page: any, optionText: string) {
   const avatarButton = page.locator('[class*="avatarButton"]').first();
   await avatarButton.click();
 
-  // Click on option in dropdown (use exact match to avoid matching workspace button)
-  const option = page.getByRole('button', { name: optionText, exact: true });
+  // Click on option in dropdown (menuitem role for accessibility)
+  const option = page.getByRole('menuitem', { name: optionText, exact: true });
   await expect(option).toBeVisible({ timeout: 3000 });
   await option.click();
 }

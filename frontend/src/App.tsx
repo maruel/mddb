@@ -232,7 +232,7 @@ function AppContent() {
       setError(t('errors.titleRequired') || 'Title is required');
       return;
     }
-    const ws = useAuth().wsApi();
+    const ws = wsApi();
     if (!ws) return;
 
     try {
@@ -322,10 +322,6 @@ function AppContent() {
                 </div>
                 <div class={styles.userInfo}>
                   <WorkspaceMenu
-                    workspaces={user()?.workspaces || []}
-                    organizations={user()?.organizations || []}
-                    currentWsId={user()?.workspace_id || ''}
-                    onSwitchWorkspace={(wsId) => switchWorkspace(wsId)}
                     onOpenSettings={() => {
                       setIsSettingsPage(true);
                       setSelectedNodeId(null);
@@ -339,8 +335,6 @@ function AppContent() {
                     onCreateWorkspace={() => setShowCreateWorkspace(true)}
                   />
                   <UserMenu
-                    user={user() as UserResponse}
-                    onLogout={logout}
                     onProfile={() => {
                       setIsProfilePage(true);
                       setIsSettingsPage(false);

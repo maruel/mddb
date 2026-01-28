@@ -2,15 +2,13 @@
 
 import { createSignal, For, Show, createMemo } from 'solid-js';
 import { useI18n } from '../i18n';
+import { useAuth } from '../contexts';
+import { useWorkspace } from '../contexts';
 import { useClickOutside } from '../composables/useClickOutside';
-import type { WSMembershipResponse, OrgMembershipResponse } from '@sdk/types.gen';
+import type { WSMembershipResponse } from '@sdk/types.gen';
 import styles from './WorkspaceMenu.module.css';
 
 interface WorkspaceMenuProps {
-  workspaces: WSMembershipResponse[];
-  organizations: OrgMembershipResponse[];
-  currentWsId: string;
-  onSwitchWorkspace: (wsId: string) => void;
   onOpenSettings: () => void;
   onCreateWorkspace: () => void;
 }
@@ -23,15 +21,22 @@ interface OrgWithWorkspaces {
 
 export default function WorkspaceMenu(props: WorkspaceMenuProps) {
   const { t } = useI18n();
+  const { user } = useAuth();
+  const { switchWorkspace } = useWorkspace();
   const [isOpen, setIsOpen] = createSignal(false);
   let menuRef: HTMLDivElement | undefined;
 
   // Group workspaces by organization
   const groupedWorkspaces = createMemo((): OrgWithWorkspaces[] => {
+    const u = user();
+    if (!u) return [];
+
     const orgMap = new Map<string, OrgWithWorkspaces>();
+    const organizations = u.organizations || [];
+    const workspaces = u.workspaces || [];
 
     // Initialize with org info
-    for (const org of props.organizations) {
+    for (const org of organizations) {
       orgMap.set(org.organization_id, {
         orgId: org.organization_id,
         orgName: org.organization_name || org.organization_id,
@@ -40,7 +45,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
     }
 
     // Add workspaces to their orgs
-    for (const ws of props.workspaces) {
+    for (const ws of workspaces) {
       const org = orgMap.get(ws.organization_id);
       if (org) {
         org.workspaces.push(ws);
@@ -51,8 +56,12 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
     return Array.from(orgMap.values()).filter((o) => o.workspaces.length > 0);
   });
 
+  const currentWsId = () => user()?.workspace_id || '';
+
   const currentWsName = () => {
-    const current = props.workspaces.find((ws) => ws.workspace_id === props.currentWsId);
+    const u = user();
+    if (!u) return t('app.workspace');
+    const current = u.workspaces?.find((ws) => ws.workspace_id === u.workspace_id);
     return current?.workspace_name || t('app.workspace');
   };
 
@@ -63,8 +72,8 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
 
   const handleSwitchWorkspace = (wsId: string) => {
     setIsOpen(false);
-    if (wsId !== props.currentWsId) {
-      props.onSwitchWorkspace(wsId);
+    if (wsId !== currentWsId()) {
+      switchWorkspace(wsId);
     }
   };
 
@@ -83,13 +92,22 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
 
   return (
     <div class={styles.wsMenu} ref={menuRef}>
-      <button class={styles.wsButton} onClick={() => setIsOpen(!isOpen())} title={currentWsName()}>
+      <button
+        class={styles.wsButton}
+        onClick={() => setIsOpen(!isOpen())}
+        title={currentWsName()}
+        aria-label={t('app.switchWorkspace') || 'Switch workspace'}
+        aria-expanded={isOpen()}
+        aria-haspopup="menu"
+      >
         <span class={styles.wsName}>{currentWsName()}</span>
-        <span class={styles.chevron}>{isOpen() ? '▲' : '▼'}</span>
+        <span class={styles.chevron} aria-hidden="true">
+          {isOpen() ? '▲' : '▼'}
+        </span>
       </button>
 
       <Show when={isOpen()}>
-        <div class={styles.dropdown}>
+        <div class={styles.dropdown} role="menu">
           <div class={styles.wsList}>
             <For each={groupedWorkspaces()}>
               {(org) => (
@@ -100,12 +118,15 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
                   <For each={org.workspaces}>
                     {(ws) => (
                       <button
-                        class={`${styles.wsItem} ${ws.workspace_id === props.currentWsId ? styles.active : ''}`}
+                        class={`${styles.wsItem} ${ws.workspace_id === currentWsId() ? styles.active : ''}`}
                         onClick={() => handleSwitchWorkspace(ws.workspace_id)}
+                        role="menuitem"
                       >
                         <span class={styles.wsItemName}>{ws.workspace_name || ws.workspace_id}</span>
-                        <Show when={ws.workspace_id === props.currentWsId}>
-                          <span class={styles.checkmark}>✓</span>
+                        <Show when={ws.workspace_id === currentWsId()}>
+                          <span class={styles.checkmark} aria-hidden="true">
+                            ✓
+                          </span>
                         </Show>
                       </button>
                     )}
@@ -115,12 +136,16 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
             </For>
           </div>
           <div class={styles.divider} />
-          <button class={styles.menuItem} onClick={handleOpenSettings}>
-            <span class={styles.icon}>⚙</span>
+          <button class={styles.menuItem} onClick={handleOpenSettings} role="menuitem">
+            <span class={styles.icon} aria-hidden="true">
+              ⚙
+            </span>
             {t('app.settings')}
           </button>
-          <button class={styles.menuItem} onClick={handleCreateWorkspace}>
-            <span class={styles.plusIcon}>+</span>
+          <button class={styles.menuItem} onClick={handleCreateWorkspace} role="menuitem">
+            <span class={styles.plusIcon} aria-hidden="true">
+              +
+            </span>
             {t('createWorkspace.title')}
           </button>
         </div>
