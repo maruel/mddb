@@ -78,6 +78,11 @@ const (
 	ErrorCodeProviderNotLinked ErrorCode = "PROVIDER_NOT_LINKED"
 	// ErrorCodeEmailInUse is returned when an email is already in use by another account.
 	ErrorCodeEmailInUse ErrorCode = "EMAIL_IN_USE"
+
+	// ErrorCodeQuotaExceeded is returned when a server-wide quota is exceeded.
+	ErrorCodeQuotaExceeded ErrorCode = "QUOTA_EXCEEDED"
+	// ErrorCodePayloadTooLarge is returned when the request body exceeds the size limit.
+	ErrorCodePayloadTooLarge ErrorCode = "PAYLOAD_TOO_LARGE"
 )
 
 // ErrorDetails defines the structured error information in a response.
@@ -262,4 +267,27 @@ func ProviderNotLinked(provider string) *APIError {
 func EmailInUse() *APIError {
 	return NewAPIError(http.StatusConflict, ErrorCodeEmailInUse,
 		"This email address is already in use by another account")
+}
+
+// QuotaExceeded creates a 429 error for server-wide quota violations.
+func QuotaExceeded(resource string, limit int) *APIError {
+	return NewAPIError(http.StatusTooManyRequests, ErrorCodeQuotaExceeded,
+		fmt.Sprintf("Quota exceeded: maximum %d %s allowed", limit, resource)).
+		WithDetail("resource", resource).
+		WithDetail("limit", limit)
+}
+
+// QuotaExceededInt64 creates a 429 error for server-wide quota violations with int64 limit.
+func QuotaExceededInt64(resource string, limit int64) *APIError {
+	return NewAPIError(http.StatusTooManyRequests, ErrorCodeQuotaExceeded,
+		fmt.Sprintf("Quota exceeded: maximum %d %s allowed", limit, resource)).
+		WithDetail("resource", resource).
+		WithDetail("limit", limit)
+}
+
+// PayloadTooLarge creates a 413 error for oversized request bodies.
+func PayloadTooLarge(maxBytes int64) *APIError {
+	return NewAPIError(http.StatusRequestEntityTooLarge, ErrorCodePayloadTooLarge,
+		fmt.Sprintf("Request body too large: maximum %d bytes allowed", maxBytes)).
+		WithDetail("max_bytes", maxBytes)
 }

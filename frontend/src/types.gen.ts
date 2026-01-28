@@ -111,7 +111,15 @@ export const ErrorCodeProviderNotLinked = "PROVIDER_NOT_LINKED";
  * ErrorCodeEmailInUse is returned when an email is already in use by another account.
  */
 export const ErrorCodeEmailInUse = "EMAIL_IN_USE";
-export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodeNodeNotFound | typeof ErrorCodeTableNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden | typeof ErrorCodeInvalidProvider | typeof ErrorCodeOAuthError | typeof ErrorCodeExpired | typeof ErrorCodeRateLimitExceeded | typeof ErrorCodeCannotUnlinkOnlyAuth | typeof ErrorCodeProviderAlreadyLinked | typeof ErrorCodeProviderNotLinked | typeof ErrorCodeEmailInUse;
+/**
+ * ErrorCodeQuotaExceeded is returned when a server-wide quota is exceeded.
+ */
+export const ErrorCodeQuotaExceeded = "QUOTA_EXCEEDED";
+/**
+ * ErrorCodePayloadTooLarge is returned when the request body exceeds the size limit.
+ */
+export const ErrorCodePayloadTooLarge = "PAYLOAD_TOO_LARGE";
+export type ErrorCode = typeof ErrorCodeValidationFailed | typeof ErrorCodeMissingField | typeof ErrorCodeInvalidFormat | typeof ErrorCodeNotFound | typeof ErrorCodeNodeNotFound | typeof ErrorCodeTableNotFound | typeof ErrorCodeFileNotFound | typeof ErrorCodeStorageError | typeof ErrorCodeInternal | typeof ErrorCodeNotImplemented | typeof ErrorCodeConflict | typeof ErrorCodeUnauthorized | typeof ErrorCodeForbidden | typeof ErrorCodeInvalidProvider | typeof ErrorCodeOAuthError | typeof ErrorCodeExpired | typeof ErrorCodeRateLimitExceeded | typeof ErrorCodeCannotUnlinkOnlyAuth | typeof ErrorCodeProviderAlreadyLinked | typeof ErrorCodeProviderNotLinked | typeof ErrorCodeEmailInUse | typeof ErrorCodeQuotaExceeded | typeof ErrorCodePayloadTooLarge;
 /**
  * ErrorDetails defines the structured error information in a response.
  */

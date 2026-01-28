@@ -13,4 +13,8 @@ var (
 	errIDRequired    = errors.New("ID is required")
 	errNameRequired  = errors.New("name is required")
 	errQuotaExceeded = errors.New("quota exceeded")
+	// ErrTableQuotaExceeded is returned when the table limit for a workspace is reached.
+	ErrTableQuotaExceeded = errors.New("maximum number of tables per workspace exceeded")
+	// ErrServerStorageQuotaExceeded is returned when the server-wide storage limit is reached.
+	ErrServerStorageQuotaExceeded = errors.New("server storage quota exceeded")
 )

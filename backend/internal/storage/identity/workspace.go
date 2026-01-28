@@ -157,6 +157,11 @@ func (s *WorkspaceService) CountByOrg(orgID jsonldb.ID) int {
 	return count
 }
 
+// Count returns the total number of workspaces.
+func (s *WorkspaceService) Count() int {
+	return s.table.Len()
+}
+
 // Delete deletes a workspace.
 func (s *WorkspaceService) Delete(id jsonldb.ID) error {
 	if id.IsZero() {

@@ -149,6 +149,11 @@ func (s *UserService) Get(id jsonldb.ID) (*User, error) {
 	return &user, nil
 }
 
+// Count returns the total number of users.
+func (s *UserService) Count() int {
+	return s.table.Len()
+}
+
 // GetByEmail retrieves a user by email. O(1) via index.
 func (s *UserService) GetByEmail(email string) (*User, error) {
 	stored := s.byEmail.Get(email)

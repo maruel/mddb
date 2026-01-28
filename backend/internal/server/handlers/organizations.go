@@ -18,6 +18,7 @@ type OrganizationHandler struct {
 	wsService     *identity.WorkspaceService
 	wsMemService  *identity.WorkspaceMembershipService
 	fs            *content.FileStoreService
+	maxWorkspaces int
 }
 
 // NewOrganizationHandler creates a new organization handler.
@@ -27,6 +28,7 @@ func NewOrganizationHandler(
 	wsService *identity.WorkspaceService,
 	wsMemService *identity.WorkspaceMembershipService,
 	fs *content.FileStoreService,
+	maxWorkspaces int,
 ) *OrganizationHandler {
 	return &OrganizationHandler{
 		orgService:    orgService,
@@ -34,6 +36,7 @@ func NewOrganizationHandler(
 		wsService:     wsService,
 		wsMemService:  wsMemService,
 		fs:            fs,
+		maxWorkspaces: maxWorkspaces,
 	}
 }
 
@@ -80,6 +83,11 @@ func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID json
 func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
 	if req.Name == "" {
 		return nil, dto.MissingField("name")
+	}
+
+	// Check server-wide workspace quota
+	if h.maxWorkspaces > 0 && h.wsService.Count() >= h.maxWorkspaces {
+		return nil, dto.QuotaExceeded("workspaces", h.maxWorkspaces)
 	}
 
 	// Create workspace

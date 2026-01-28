@@ -318,6 +318,11 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize session service: %w", err)
 	}
 
+	serverSettingsService, err := identity.NewServerSettingsService(filepath.Join(dbDir, "server_settings.jsonl"))
+	if err != nil {
+		return fmt.Errorf("failed to initialize server settings service: %w", err)
+	}
+
 	// Cleanup old expired sessions (older than 7 days past expiration)
 	if count, err := sessionService.CleanupExpired(7 * 24 * time.Hour); err != nil {
 		slog.WarnContext(ctx, "Failed to cleanup expired sessions", "error", err)
@@ -354,10 +359,13 @@ func mainImpl() error {
 		return fmt.Errorf("failed to watch executable: %w", err)
 	}
 
+	// Get server quotas from settings table
+	serverQuotas := serverSettingsService.GetQuotas()
+
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, emailVerificationService, emailService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret, *githubClientID, *githubClientSecret),
+		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, emailVerificationService, emailService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret, *githubClientID, *githubClientSecret, serverQuotas),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}

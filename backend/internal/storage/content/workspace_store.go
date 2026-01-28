@@ -697,6 +697,23 @@ func (ws *WorkspaceFileStore) iterTablesRecursive(dir string, parentID jsonldb.I
 	}
 }
 
+// CheckTableQuota checks if the workspace has reached its table limit.
+// Returns ErrTableQuotaExceeded if the limit is reached.
+func (ws *WorkspaceFileStore) CheckTableQuota(maxTables int) error {
+	tables, err := ws.IterTables()
+	if err != nil {
+		return err
+	}
+	count := 0
+	for range tables {
+		count++
+		if count >= maxTables {
+			return ErrTableQuotaExceeded
+		}
+	}
+	return nil
+}
+
 // AppendRecord appends a record to a table and commits to git.
 func (ws *WorkspaceFileStore) AppendRecord(ctx context.Context, tableID jsonldb.ID, record *DataRecord, author git.Author) error {
 	parentID := ws.getParent(tableID)
@@ -762,6 +779,23 @@ func (ws *WorkspaceFileStore) IterRecords(id jsonldb.ID) (iter.Seq[*DataRecord],
 	}
 
 	return table.Iter(0), nil
+}
+
+// CountRecords returns the number of records in a table.
+func (ws *WorkspaceFileStore) CountRecords(id jsonldb.ID) (int, error) {
+	parentID := ws.getParent(id)
+	filePath := ws.tableRecordsFile(id, parentID)
+
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return 0, nil
+	}
+
+	table, err := jsonldb.NewTable[*DataRecord](filePath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read records: %w", err)
+	}
+
+	return table.Len(), nil
 }
 
 // ReadRecordsPage reads a page of records for a table using jsonldb abstraction.

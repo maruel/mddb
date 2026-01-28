@@ -46,7 +46,7 @@ func addRequestMetadataToContext(ctx context.Context, r *http.Request) context.C
 func Wrap[In any, PtrIn interface {
 	*In
 	dto.Validatable
-}, Out any](fn func(context.Context, PtrIn) (*Out, error), rlConfig *ratelimit.Config) http.Handler {
+}, Out any](fn func(context.Context, PtrIn) (*Out, error), rlConfig *ratelimit.Config, serverQuotas *identity.ServerQuotas) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
@@ -65,12 +65,23 @@ func Wrap[In any, PtrIn interface {
 			}
 		}
 
+		// Limit request body size
+		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
+		}
+
 		// Read request body
 		body, err := io.ReadAll(r.Body)
 		if err2 := r.Body.Close(); err == nil {
 			err = err2
 		}
 		if err != nil {
+			// Check for MaxBytesError (request body too large)
+			if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
+				apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
+				writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
+				return
+			}
 			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
 			writeBadRequestError(w, "Failed to read request body")
 			return
@@ -125,6 +136,15 @@ func Wrap[In any, PtrIn interface {
 	})
 }
 
+// checkMaxBytesError checks if an error is a MaxBytesError and returns it, or nil.
+func checkMaxBytesError(err error) *http.MaxBytesError {
+	var maxBytesErr *http.MaxBytesError
+	if errors.As(err, &maxBytesErr) {
+		return maxBytesErr
+	}
+	return nil
+}
+
 // WrapAuth wraps an authenticated handler function to work as an http.Handler.
 // It combines JWT validation, organization membership checking, and request parsing.
 // The function must have signature: func(context.Context, jsonldb.ID, *identity.User, *In) (*Out, error)
@@ -142,6 +162,7 @@ func WrapAuth[In any, PtrIn interface {
 	requiredRole identity.OrganizationRole,
 	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
 	rlConfig *ratelimit.Config,
+	serverQuotas *identity.ServerQuotas,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -202,12 +223,23 @@ func WrapAuth[In any, PtrIn interface {
 			}
 		}
 
+		// Limit request body size
+		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
+		}
+
 		// Parse request body
 		body, err := io.ReadAll(r.Body)
 		if err2 := r.Body.Close(); err == nil {
 			err = err2
 		}
 		if err != nil {
+			// Check for MaxBytesError (request body too large)
+			if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
+				apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
+				writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
+				return
+			}
 			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
 			writeBadRequestError(w, "Failed to read request body")
 			return
@@ -279,6 +311,7 @@ func WrapWSAuth[In any, PtrIn interface {
 	requiredRole identity.WorkspaceRole,
 	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
 	rlConfig *ratelimit.Config,
+	serverQuotas *identity.ServerQuotas,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -357,12 +390,23 @@ func WrapWSAuth[In any, PtrIn interface {
 			}
 		}
 
+		// Limit request body size
+		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
+		}
+
 		// Parse request body
 		body, err := io.ReadAll(r.Body)
 		if err2 := r.Body.Close(); err == nil {
 			err = err2
 		}
 		if err != nil {
+			// Check for MaxBytesError (request body too large)
+			if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
+				apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
+				writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
+				return
+			}
 			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
 			writeBadRequestError(w, "Failed to read request body")
 			return
@@ -428,6 +472,7 @@ func WrapAuthRaw(
 	requiredRole identity.WorkspaceRole,
 	fn http.HandlerFunc,
 	rlConfig *ratelimit.Config,
+	serverQuotas *identity.ServerQuotas,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate JWT and session
@@ -496,6 +541,11 @@ func WrapAuthRaw(
 			}
 		}
 
+		// Limit request body size for raw handlers
+		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
+		}
+
 		// Call the raw handler
 		fn(w, r)
 	})
@@ -514,6 +564,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 	jwtSecret []byte,
 	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
 	rlConfig *ratelimit.Config,
+	serverQuotas *identity.ServerQuotas,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
@@ -549,11 +600,22 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 			}
 		}
 
+		// Limit request body size
+		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
+		}
+
 		body, err := io.ReadAll(r.Body)
 		if err2 := r.Body.Close(); err == nil {
 			err = err2
 		}
 		if err != nil {
+			// Check for MaxBytesError (request body too large)
+			if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
+				apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
+				writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
+				return
+			}
 			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
 			writeBadRequestError(w, "Failed to read request body")
 			return

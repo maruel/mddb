@@ -191,3 +191,37 @@ func (svc *FileStoreService) GetOrganizationUsage(orgID jsonldb.ID) (int64, erro
 
 	return totalUsage, nil
 }
+
+// GetServerUsage returns the total storage usage across all workspaces on the server.
+func (svc *FileStoreService) GetServerUsage() (int64, error) {
+	var totalUsage int64
+	err := filepath.Walk(svc.rootDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil //nolint:nilerr // Intentionally continue walking on error
+		}
+		if info != nil && !info.IsDir() {
+			totalUsage += info.Size()
+		}
+		return nil
+	})
+	if err != nil && !os.IsNotExist(err) {
+		return 0, err
+	}
+	return totalUsage, nil
+}
+
+// CheckServerStorageQuota returns an error if adding the given bytes would exceed the server's total storage quota.
+// maxBytes is the server-wide storage limit. Use 0 to disable the check.
+func (svc *FileStoreService) CheckServerStorageQuota(additionalBytes, maxBytes int64) error {
+	if maxBytes <= 0 {
+		return nil
+	}
+	usage, err := svc.GetServerUsage()
+	if err != nil {
+		return err
+	}
+	if usage+additionalBytes > maxBytes {
+		return ErrServerStorageQuotaExceeded
+	}
+	return nil
+}

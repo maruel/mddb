@@ -89,6 +89,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 		"", "", // google OAuth (disabled)
 		"", "", // microsoft OAuth (disabled)
 		"", "", // github OAuth (disabled)
+		identity.DefaultServerQuotas(),
 	)
 
 	server := httptest.NewServer(router)

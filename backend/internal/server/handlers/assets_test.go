@@ -13,7 +13,7 @@ import (
 func TestAssetHandler(t *testing.T) {
 	jwtSecret := []byte("test-secret-key")
 	baseURL := "http://localhost:8080"
-	ah := NewAssetHandler(nil, jwtSecret, baseURL)
+	ah := NewAssetHandler(nil, jwtSecret, baseURL, 0)
 
 	t.Run("GenerateSignedAssetURL", func(t *testing.T) {
 		wsID := jsonldb.ID(123)

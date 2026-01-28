@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"slices"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -16,13 +17,16 @@ import (
 
 // NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
-	fs           *content.FileStoreService
-	assetHandler *AssetHandler
+	fs                    *content.FileStoreService
+	assetHandler          *AssetHandler
+	maxColumnsPerTable    int
+	maxRowsPerTable       int
+	maxTablesPerWorkspace int
 }
 
 // NewNodeHandler creates a new node handler.
-func NewNodeHandler(fs *content.FileStoreService, assetHandler *AssetHandler) *NodeHandler {
-	return &NodeHandler{fs: fs, assetHandler: assetHandler}
+func NewNodeHandler(fs *content.FileStoreService, assetHandler *AssetHandler, maxColumnsPerTable, maxRowsPerTable, maxTablesPerWorkspace int) *NodeHandler {
+	return &NodeHandler{fs: fs, assetHandler: assetHandler, maxColumnsPerTable: maxColumnsPerTable, maxRowsPerTable: maxRowsPerTable, maxTablesPerWorkspace: maxTablesPerWorkspace}
 }
 
 // GetNode retrieves a single node's metadata.
@@ -218,9 +222,24 @@ func (h *NodeHandler) DeletePage(ctx context.Context, wsID jsonldb.ID, user *ide
 // CreateTable creates a new table under a parent node.
 // The parent ID is in req.ParentID; use 0 for root.
 func (h *NodeHandler) CreateTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreateTableRequest) (*dto.CreateTableUnderParentResponse, error) {
+	// Check column quota
+	if h.maxColumnsPerTable > 0 && len(req.Properties) > h.maxColumnsPerTable {
+		return nil, dto.QuotaExceeded("columns per table", h.maxColumnsPerTable)
+	}
+
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+
+	// Check table quota for workspace
+	if h.maxTablesPerWorkspace > 0 {
+		if err := ws.CheckTableQuota(h.maxTablesPerWorkspace); err != nil {
+			if errors.Is(err, content.ErrTableQuotaExceeded) {
+				return nil, dto.QuotaExceeded("tables per workspace", h.maxTablesPerWorkspace)
+			}
+			return nil, dto.InternalWithError("Failed to check table quota", err)
+		}
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
@@ -255,6 +274,11 @@ func (h *NodeHandler) GetTable(ctx context.Context, wsID jsonldb.ID, _ *identity
 
 // UpdateTable updates a table's schema.
 func (h *NodeHandler) UpdateTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
+	// Check column quota
+	if h.maxColumnsPerTable > 0 && len(req.Properties) > h.maxColumnsPerTable {
+		return nil, dto.QuotaExceeded("columns per table", h.maxColumnsPerTable)
+	}
+
 	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -319,6 +343,17 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 	node, err := ws.ReadTable(req.ID)
 	if err != nil {
 		return nil, dto.NotFound("table")
+	}
+
+	// Check row quota
+	if h.maxRowsPerTable > 0 {
+		count, err := ws.CountRecords(req.ID)
+		if err != nil {
+			return nil, dto.InternalWithError("Failed to count records", err)
+		}
+		if count >= h.maxRowsPerTable {
+			return nil, dto.QuotaExceeded("rows per table", h.maxRowsPerTable)
+		}
 	}
 
 	// Coerce data types based on property schema

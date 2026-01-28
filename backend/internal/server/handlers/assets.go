@@ -6,6 +6,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -42,14 +43,15 @@ const AssetURLExpiry = 1 * time.Hour
 
 // AssetHandler handles asset/file-related HTTP requests.
 type AssetHandler struct {
-	fs        *content.FileStoreService
-	jwtSecret []byte
-	baseURL   string
+	fs                   *content.FileStoreService
+	jwtSecret            []byte
+	baseURL              string
+	maxTotalStorageBytes int64
 }
 
 // NewAssetHandler creates a new asset handler.
-func NewAssetHandler(fs *content.FileStoreService, jwtSecret []byte, baseURL string) *AssetHandler {
-	return &AssetHandler{fs: fs, jwtSecret: jwtSecret, baseURL: baseURL}
+func NewAssetHandler(fs *content.FileStoreService, jwtSecret []byte, baseURL string, maxTotalStorageBytes int64) *AssetHandler {
+	return &AssetHandler{fs: fs, jwtSecret: jwtSecret, baseURL: baseURL, maxTotalStorageBytes: maxTotalStorageBytes}
 }
 
 // GenerateSignedAssetURL creates a signed URL for asset access.
@@ -118,6 +120,16 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	user, ok := r.Context().Value(userContextKey).(*identity.User)
 	if !ok || user == nil {
 		writeErrorResponse(w, dto.Internal("user_context"))
+		return
+	}
+
+	// Check server-wide storage quota before saving
+	if err := h.fs.CheckServerStorageQuota(int64(len(data)), h.maxTotalStorageBytes); err != nil {
+		if errors.Is(err, content.ErrServerStorageQuotaExceeded) {
+			writeErrorResponse(w, dto.QuotaExceededInt64("total storage", h.maxTotalStorageBytes))
+			return
+		}
+		writeErrorResponse(w, dto.Internal("storage_quota_check"))
 		return
 	}
 

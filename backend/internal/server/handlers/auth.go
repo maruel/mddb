@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -35,6 +36,9 @@ type AuthHandler struct {
 	fs                       *content.FileStoreService
 	jwtSecret                []byte
 	baseURL                  string
+	maxSessionsPerUser       int
+	maxOrganizations         int
+	maxUsers                 int
 
 	// Rate limiting for verification emails (1 per 10s per user)
 	verifyRateLimitMu sync.Mutex
@@ -54,6 +58,9 @@ func NewAuthHandler(
 	fs *content.FileStoreService,
 	jwtSecret string,
 	baseURL string,
+	maxSessionsPerUser int,
+	maxOrganizations int,
+	maxUsers int,
 ) *AuthHandler {
 	return &AuthHandler{
 		userService:              userService,
@@ -67,6 +74,9 @@ func NewAuthHandler(
 		fs:                       fs,
 		jwtSecret:                []byte(jwtSecret),
 		baseURL:                  baseURL,
+		maxSessionsPerUser:       maxSessionsPerUser,
+		maxOrganizations:         maxOrganizations,
+		maxUsers:                 maxUsers,
 		verifyRateLimit:          make(map[jsonldb.ID]time.Time),
 	}
 }
@@ -111,6 +121,11 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.AuthResponse, error) {
 	if req.Email == "" || req.Password == "" || req.Name == "" {
 		return nil, dto.MissingField("email, password, or name")
+	}
+
+	// Check server-wide user quota
+	if h.maxUsers > 0 && h.userService.Count() >= h.maxUsers {
+		return nil, dto.QuotaExceeded("users", h.maxUsers)
 	}
 
 	// Check if user already exists
@@ -191,7 +206,10 @@ func (h *AuthHandler) GenerateTokenWithSession(user *identity.User, clientIP, us
 	if len(deviceInfo) > 200 {
 		deviceInfo = deviceInfo[:200]
 	}
-	if _, err := h.sessionService.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt)); err != nil {
+	if _, err := h.sessionService.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt), h.maxSessionsPerUser); err != nil {
+		if errors.Is(err, identity.ErrSessionQuotaExceeded) {
+			return "", dto.QuotaExceeded("sessions per user", h.maxSessionsPerUser)
+		}
 		return "", err
 	}
 
@@ -217,6 +235,11 @@ func (h *AuthHandler) GetMe(ctx context.Context, _ jsonldb.ID, user *identity.Us
 func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
 	if req.Name == "" {
 		return nil, dto.MissingField("name")
+	}
+
+	// Check server-wide organization quota
+	if h.maxOrganizations > 0 && h.orgService.Count() >= h.maxOrganizations {
+		return nil, dto.QuotaExceeded("organizations", h.maxOrganizations)
 	}
 
 	// Create the organization

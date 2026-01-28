@@ -67,13 +67,15 @@ func NewSessionService(tablePath string) (*SessionService, error) {
 }
 
 // Create creates a new session with an auto-generated ID.
-func (s *SessionService) Create(userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt storage.Time) (*Session, error) {
-	return s.CreateWithID(jsonldb.NewID(), userID, tokenHash, deviceInfo, ipAddress, expiresAt)
+// maxSessions limits the number of active sessions per user. Use 0 to disable the limit.
+func (s *SessionService) Create(userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt storage.Time, maxSessions int) (*Session, error) {
+	return s.CreateWithID(jsonldb.NewID(), userID, tokenHash, deviceInfo, ipAddress, expiresAt, maxSessions)
 }
 
 // CreateWithID creates a new session with a pre-specified ID.
 // This is useful when the session ID needs to be included in the JWT before creating the session.
-func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt storage.Time) (*Session, error) {
+// maxSessions limits the number of active sessions per user. Use 0 to disable the limit.
+func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt storage.Time, maxSessions int) (*Session, error) {
 	if id.IsZero() {
 		return nil, errSessionIDRequired
 	}
@@ -82,6 +84,17 @@ func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceIn
 	}
 	if tokenHash == "" {
 		return nil, errSessionTokenHashRequired
+	}
+
+	// Check session quota if enabled
+	if maxSessions > 0 {
+		activeCount := 0
+		for range s.GetActiveByUserID(userID) {
+			activeCount++
+		}
+		if activeCount >= maxSessions {
+			return nil, ErrSessionQuotaExceeded
+		}
 	}
 
 	now := storage.Now()
@@ -219,4 +232,6 @@ var (
 	errSessionUserIDRequired    = errors.New("session user_id is required")
 	errSessionTokenHashRequired = errors.New("session token_hash is required")
 	errSessionNotFound          = errors.New("session not found")
+	// ErrSessionQuotaExceeded is returned when a user has too many active sessions.
+	ErrSessionQuotaExceeded = errors.New("maximum number of active sessions exceeded")
 )
