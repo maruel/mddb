@@ -44,7 +44,7 @@ mddb is distributed as a single self-contained binary. This is achieved using Go
 To maintain type safety between the Go backend and SolidJS frontend, mddb uses **tygo**.
 1. **Source**: Go structs in `internal/models/`, `internal/storage/`, and `internal/server/handlers/`.
 2. **Process**: `tygo` parses these Go files and generates TypeScript interfaces.
-3. **Artifact**: A unified `frontend/src/types.ts` file used by the frontend.
+3. **Artifact**: A unified `sdk/types.gen.ts` file used by the frontend.
 4. **Execution**: Triggered via `make types` or automatically during `make build`.
 
 ### Reproducibility

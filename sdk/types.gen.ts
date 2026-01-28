@@ -1079,15 +1079,15 @@ export type OrganizationRole = string;
 /**
  * OrgRoleOwner has full control including billing.
  */
-export const OrgRoleOwner: OrganizationRole = "owner";
+export const OrgRoleOwner: OrganizationRole = "org:owner";
 /**
  * OrgRoleAdmin can manage workspaces and members.
  */
-export const OrgRoleAdmin: OrganizationRole = "admin";
+export const OrgRoleAdmin: OrganizationRole = "org:admin";
 /**
  * OrgRoleMember can only access granted workspaces.
  */
-export const OrgRoleMember: OrganizationRole = "member";
+export const OrgRoleMember: OrganizationRole = "org:member";
 /**
  * WorkspaceRole defines the permissions for a user within a workspace.
  */
@@ -1095,15 +1095,15 @@ export type WorkspaceRole = string;
 /**
  * WSRoleAdmin has full workspace control.
  */
-export const WSRoleAdmin: WorkspaceRole = "admin";
+export const WSRoleAdmin: WorkspaceRole = "ws:admin";
 /**
  * WSRoleEditor can create and modify content.
  */
-export const WSRoleEditor: WorkspaceRole = "editor";
+export const WSRoleEditor: WorkspaceRole = "ws:editor";
 /**
  * WSRoleViewer can only read content.
  */
-export const WSRoleViewer: WorkspaceRole = "viewer";
+export const WSRoleViewer: WorkspaceRole = "ws:viewer";
 /**
  * UserSettings represents global user preferences.
  */

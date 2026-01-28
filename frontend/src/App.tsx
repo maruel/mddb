@@ -46,7 +46,7 @@ import styles from './App.module.css';
 // Inner app component that uses contexts
 function AppContent() {
   const { t, locale, setLocale } = useI18n();
-  const { user, token, login, logout, wsApi } = useAuth();
+  const { user, token, login, wsApi } = useAuth();
   const {
     nodes,
     selectedNodeId,

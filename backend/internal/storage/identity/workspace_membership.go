@@ -15,11 +15,11 @@ type WorkspaceRole string
 
 const (
 	// WSRoleAdmin has full workspace control.
-	WSRoleAdmin WorkspaceRole = "admin"
+	WSRoleAdmin WorkspaceRole = "ws:admin"
 	// WSRoleEditor can create and modify content.
-	WSRoleEditor WorkspaceRole = "editor"
+	WSRoleEditor WorkspaceRole = "ws:editor"
 	// WSRoleViewer can only read content.
-	WSRoleViewer WorkspaceRole = "viewer"
+	WSRoleViewer WorkspaceRole = "ws:viewer"
 )
 
 // IsValid returns true if the role is a valid workspace role.

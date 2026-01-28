@@ -1,4 +1,4 @@
-// Command apiroutes extracts API routes from router.go and generates docs/API.md.
+// Command apiroutes extracts API routes from router.go and generates sdk/API.md.
 package main
 
 import (
@@ -78,7 +78,7 @@ func main() {
 	// Group routes by prefix
 	groups := groupRoutes(routes)
 
-	outPath := "../../docs/API.md"
+	outPath := "../../../sdk/API.md"
 	out, err := os.Create(outPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "create file: %v\n", err)
@@ -93,7 +93,7 @@ func main() {
 		os.Exit(1)
 	}
 	if !*quiet {
-		fmt.Fprintf(os.Stderr, "Generated backend/docs/API.md with %d routes\n", len(routes))
+		fmt.Fprintf(os.Stderr, "Generated sdk/API.md with %d routes\n", len(routes))
 	}
 }
 
@@ -126,7 +126,7 @@ func parseHandler(expr ast.Expr) (role, handler string) {
 	case "WrapOrgAuth", "WrapWSAuth", "WrapAuthRaw":
 		// Args: handler, svc, cfg, role, limiters
 		if len(call.Args) >= 4 {
-			return exprName(call.Args[3]), handler
+			return formatRole(exprName(call.Args[3])), handler
 		}
 	case "WrapGlobalAdmin":
 		return "globalAdmin", handler
@@ -144,6 +144,16 @@ func exprName(e ast.Expr) string {
 		return exprName(v.Fun)
 	}
 	return "?"
+}
+
+func formatRole(role string) string {
+	if suffix, ok := strings.CutPrefix(role, "identity.WSRole"); ok {
+		return "ws:" + suffix
+	}
+	if suffix, ok := strings.CutPrefix(role, "identity.OrgRole"); ok {
+		return "org:" + suffix
+	}
+	return role
 }
 
 type routeGroup struct {

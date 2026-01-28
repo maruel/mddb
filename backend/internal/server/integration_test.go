@@ -702,7 +702,7 @@ func TestIntegration(t *testing.T) {
 		// 4. Invite member to organization with 'member' role
 		inviteReq := dto.CreateOrgInvitationRequest{
 			Email: "member@example.com",
-			Role:  "member", // identity.OrgRoleMember
+			Role:  dto.OrgRoleMember,
 		}
 		status := env.doJSON(t, http.MethodPost, "/api/organizations/"+orgID.String()+"/invitations", inviteReq, nil, ownerToken)
 		if status != http.StatusOK {

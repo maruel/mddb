@@ -62,11 +62,11 @@ type OrganizationRole string
 
 const (
 	// OrgRoleOwner has full control including billing.
-	OrgRoleOwner OrganizationRole = "owner"
+	OrgRoleOwner OrganizationRole = "org:owner"
 	// OrgRoleAdmin can manage workspaces and members.
-	OrgRoleAdmin OrganizationRole = "admin"
+	OrgRoleAdmin OrganizationRole = "org:admin"
 	// OrgRoleMember can only access granted workspaces.
-	OrgRoleMember OrganizationRole = "member"
+	OrgRoleMember OrganizationRole = "org:member"
 )
 
 // WorkspaceRole defines the permissions for a user within a workspace.
@@ -74,11 +74,11 @@ type WorkspaceRole string
 
 const (
 	// WSRoleAdmin has full workspace control.
-	WSRoleAdmin WorkspaceRole = "admin"
+	WSRoleAdmin WorkspaceRole = "ws:admin"
 	// WSRoleEditor can create and modify content.
-	WSRoleEditor WorkspaceRole = "editor"
+	WSRoleEditor WorkspaceRole = "ws:editor"
 	// WSRoleViewer can only read content.
-	WSRoleViewer WorkspaceRole = "viewer"
+	WSRoleViewer WorkspaceRole = "ws:viewer"
 )
 
 // UserSettings represents global user preferences.

@@ -15,11 +15,11 @@ type OrganizationRole string
 
 const (
 	// OrgRoleOwner has full control including billing.
-	OrgRoleOwner OrganizationRole = "owner"
+	OrgRoleOwner OrganizationRole = "org:owner"
 	// OrgRoleAdmin can manage workspaces and members.
-	OrgRoleAdmin OrganizationRole = "admin"
+	OrgRoleAdmin OrganizationRole = "org:admin"
 	// OrgRoleMember can only access granted workspaces.
-	OrgRoleMember OrganizationRole = "member"
+	OrgRoleMember OrganizationRole = "org:member"
 )
 
 // IsValid returns true if the role is a valid organization role.
