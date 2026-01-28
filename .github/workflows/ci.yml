@@ -78,51 +78,9 @@ jobs:
           fi
       - name: Deploy Playwright Report to gh-pages
         if: always()
-        run: |
-          SHORT_SHA="${GITHUB_SHA:0:7}"
-          DEPLOY_DIR=$(mktemp -d)
-          cd "$DEPLOY_DIR"
-          git init
-          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
-          # Fetch existing reports if branch exists
-          if git ls-remote --exit-code origin gh-pages >/dev/null 2>&1; then
-            git fetch --depth=1 origin gh-pages
-            git checkout gh-pages
-          fi
-          # Add new report
-          mkdir -p reports
-          rm -rf "reports/${SHORT_SHA}"
-          cp -r "${GITHUB_WORKSPACE}/playwright-report" "reports/${SHORT_SHA}"
-          date -u '+%Y-%m-%d %H:%M' > "reports/${SHORT_SHA}/.timestamp"
-          rm -f reports/latest
-          ln -s "${SHORT_SHA}" reports/latest
-          # Keep only the 20 most recent reports
-          cd reports
-          find . -maxdepth 1 -type d ! -name '.' -printf '%T@ %p\n' | sort -rn | tail -n +21 | cut -d' ' -f2- | xargs -r rm -rf
-          cd ..
-          # Generate README.md with links to all reports
-          PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
-          {
-            echo "# Playwright Reports"
-            echo ""
-            echo "[**Latest Report**](${PAGES_URL}/reports/latest/)"
-            echo ""
-            echo "| Commit | Generated (UTC) | Report |"
-            echo "|--------|-----------------|--------|"
-            for dir in reports/*/; do
-              dir=$(basename "$dir")
-              [ "$dir" = "latest" ] && continue
-              ts=$(cat "reports/${dir}/.timestamp" 2>/dev/null || echo "unknown")
-              printf '%s\t| `%s` | %s | [View Report](%s/reports/%s/) |\n' "$ts" "$dir" "$ts" "$PAGES_URL" "$dir"
-            done | sort -r | cut -f2-
-          } > README.md
-          # Commit and push
-          git add -A
-          git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
-            commit -m "Playwright report for ${SHORT_SHA}" || exit 0
-          git push origin HEAD:gh-pages
-          # Export deploy directory for pages upload
-          echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
+        env:
+          GIT_REMOTE_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+        run: ./.github/deploy-playwright-report.sh
       - name: Upload Pages artifact
         if: always()
         uses: actions/upload-pages-artifact@v4
