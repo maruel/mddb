@@ -294,20 +294,9 @@ func mainImpl() error {
 	var emailVerificationService *identity.EmailVerificationService
 	var emailService *email.Service
 	if serverCfg.SMTP.Enabled() {
-		smtpConfig := email.Config{
-			Host:     serverCfg.SMTP.Host,
-			Port:     serverCfg.SMTP.Port,
-			Username: serverCfg.SMTP.Username,
-			Password: serverCfg.SMTP.Password,
-			From:     serverCfg.SMTP.From,
-		}
-		if err := smtpConfig.Validate(); err != nil {
-			return err
-		}
-		emailService = &email.Service{Config: smtpConfig}
+		emailService = &email.Service{Config: serverCfg.SMTP}
 		slog.InfoContext(ctx, "SMTP configured", "host", serverCfg.SMTP.Host, "port", serverCfg.SMTP.Port)
 
-		// Initialize email verification service only when SMTP is configured
 		emailVerificationService, err = identity.NewEmailVerificationService(filepath.Join(dbDir, "email_verifications.jsonl"))
 		if err != nil {
 			return fmt.Errorf("failed to initialize email verification service: %w", err)

@@ -117,10 +117,8 @@ func (c *ServerConfig) Validate() error {
 	if len(c.JWTSecret) < 32 {
 		return errors.New("jwt_secret must be at least 32 characters")
 	}
-	if c.SMTP.Enabled() {
-		if err := c.SMTP.Validate(); err != nil {
-			return fmt.Errorf("smtp: %w", err)
-		}
+	if err := c.SMTP.Validate(); err != nil {
+		return fmt.Errorf("smtp: %w", err)
 	}
 	if err := c.Quotas.Validate(); err != nil {
 		return fmt.Errorf("quotas: %w", err)
@@ -130,11 +128,9 @@ func (c *ServerConfig) Validate() error {
 
 // DefaultServerConfig returns a ServerConfig with sensible defaults.
 // JWTSecret is left empty and must be set before use.
+// SMTP is left empty (disabled) by default.
 func DefaultServerConfig() ServerConfig {
 	return ServerConfig{
-		SMTP: email.Config{
-			Port: "587",
-		},
 		Quotas: DefaultServerQuotas(),
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net"
 	"net/smtp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -18,10 +19,15 @@ import (
 // Config holds SMTP configuration.
 type Config struct {
 	Host     string `json:"host"`
-	Port     string `json:"port"`
+	Port     int32  `json:"port"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 	From     string `json:"from"`
+}
+
+// IsZero returns true if the config is completely empty (SMTP disabled).
+func (c *Config) IsZero() bool {
+	return c.Host == "" && c.Port == 0 && c.Username == "" && c.Password == "" && c.From == ""
 }
 
 // Enabled returns true if SMTP is configured with at least a host.
@@ -29,22 +35,29 @@ func (c *Config) Enabled() bool {
 	return c.Host != ""
 }
 
-// Validate checks that required fields are set and applies defaults.
+// Validate checks that required fields are set and have valid values.
+// An empty config (IsZero) is valid and means SMTP is disabled.
 func (c *Config) Validate() error {
+	if c.IsZero() {
+		return nil
+	}
 	if c.Host == "" {
-		return errors.New("smtp: host is required")
+		return errors.New("host is required")
+	}
+	if c.Port < 1 || c.Port > 65535 {
+		return fmt.Errorf("port %d is invalid (must be 1-65535)", c.Port)
 	}
 	if c.Username == "" {
-		return errors.New("smtp: username is required")
+		return errors.New("username is required")
 	}
 	if c.Password == "" {
-		return errors.New("smtp: password is required")
+		return errors.New("password is required")
 	}
 	if c.From == "" {
-		return errors.New("smtp: from is required")
+		return errors.New("from is required")
 	}
-	if c.Port == "" {
-		c.Port = "587"
+	if !strings.Contains(c.From, "@") {
+		return fmt.Errorf("from %q is not a valid email address", c.From)
 	}
 	return nil
 }
@@ -83,7 +96,7 @@ func (s *Service) SendMultiple(ctx context.Context, to []string, subject, body s
 }
 
 func (s *Service) sendMail(ctx context.Context, to []string, subject, body string) error {
-	addr := net.JoinHostPort(s.Config.Host, s.Config.Port)
+	addr := net.JoinHostPort(s.Config.Host, strconv.Itoa(int(s.Config.Port)))
 
 	// Connect with timeout
 	dialer := &net.Dialer{Timeout: 10 * time.Second}
