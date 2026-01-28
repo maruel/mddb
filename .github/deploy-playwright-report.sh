@@ -61,14 +61,14 @@ cat > index.html <<'HEADER'
   <h1>Playwright Reports</h1>
   <p class="latest"><a href="reports/latest/">Latest Report</a></p>
   <table>
-    <tr><th>Commit</th><th>Generated (UTC)</th><th>Report</th></tr>
+    <tr><th>Commit</th><th>Generated (UTC)</th><th>Report</th><th>Server Log</th></tr>
 HEADER
 
 for dir in reports/*/; do
   dir=$(basename "$dir")
   [ "$dir" = "latest" ] && continue
   ts=$(cat "reports/${dir}/.timestamp" 2>/dev/null || echo "unknown")
-  printf '%s\t<tr><td><code>%s</code></td><td>%s</td><td><a href="reports/%s/">View</a></td></tr>\n' "$ts" "$dir" "$ts" "$dir"
+  printf '%s\t<tr><td><code>%s</code></td><td>%s</td><td><a href="reports/%s/">View</a></td><td><a href="reports/%s/server.log">Log</a></td></tr>\n' "$ts" "$dir" "$ts" "$dir" "$dir"
 done | sort -r | cut -f2- >> index.html
 
 echo '</table></body></html>' >> index.html
