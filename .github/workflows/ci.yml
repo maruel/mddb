@@ -6,6 +6,8 @@ on:
     branches-ignore: [gh-pages]
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   ci:
@@ -116,3 +118,13 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
             commit -m "Playwright report for ${SHORT_SHA}" || exit 0
           git push origin HEAD:gh-pages
+          # Export deploy directory for pages upload
+          echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
+      - name: Upload Pages artifact
+        if: always()
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ env.DEPLOY_DIR }}
+      - name: Deploy to GitHub Pages
+        if: always()
+        uses: actions/deploy-pages@v4
