@@ -21,7 +21,6 @@ type Session struct {
 	Created    storage.Time `json:"created" jsonschema:"description=Session creation timestamp"`
 	LastUsed   storage.Time `json:"last_used" jsonschema:"description=Last activity timestamp"`
 	ExpiresAt  storage.Time `json:"expires_at" jsonschema:"description=Session expiration timestamp"`
-	Revoked    bool         `json:"revoked" jsonschema:"description=Whether session has been revoked"`
 	RevokedAt  storage.Time `json:"revoked_at,omitempty" jsonschema:"description=Revocation timestamp if revoked"`
 }
 
@@ -107,7 +106,6 @@ func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceIn
 		Created:    now,
 		LastUsed:   now,
 		ExpiresAt:  expiresAt,
-		Revoked:    false,
 	}
 
 	if err := s.table.Append(session); err != nil {
@@ -141,7 +139,7 @@ func (s *SessionService) GetActiveByUserID(userID jsonldb.ID) iter.Seq[*Session]
 	now := storage.Now()
 	return func(yield func(*Session) bool) {
 		for session := range s.byUserID.Iter(userID) {
-			if !session.Revoked && session.ExpiresAt.After(now) {
+			if session.RevokedAt.IsZero() && session.ExpiresAt.After(now) {
 				if !yield(session.Clone()) {
 					return
 				}
@@ -153,10 +151,9 @@ func (s *SessionService) GetActiveByUserID(userID jsonldb.ID) iter.Seq[*Session]
 // Revoke marks a session as revoked.
 func (s *SessionService) Revoke(id jsonldb.ID) error {
 	_, err := s.table.Modify(id, func(session *Session) error {
-		if session.Revoked {
+		if !session.RevokedAt.IsZero() {
 			return nil // Already revoked
 		}
-		session.Revoked = true
 		session.RevokedAt = storage.Now()
 		return nil
 	})
@@ -167,7 +164,7 @@ func (s *SessionService) Revoke(id jsonldb.ID) error {
 func (s *SessionService) RevokeAllForUser(userID jsonldb.ID) (int, error) {
 	var ids []jsonldb.ID
 	for session := range s.byUserID.Iter(userID) {
-		if !session.Revoked {
+		if session.RevokedAt.IsZero() {
 			ids = append(ids, session.ID)
 		}
 	}
@@ -197,7 +194,7 @@ func (s *SessionService) IsValid(id jsonldb.ID) (bool, error) {
 	if session == nil {
 		return false, errSessionNotFound
 	}
-	if session.Revoked {
+	if !session.RevokedAt.IsZero() {
 		return false, nil
 	}
 	if session.ExpiresAt.Before(storage.Now()) {
