@@ -157,7 +157,50 @@ const privacyLink = page.getByRole('link', { name: /privacy/i });
 
 // GOOD - specific selector
 const privacyLink = page.locator('aside a[href="/privacy"]');
+
+// BAD - fragile positional selector
+await node.locator('span').first().click();
+
+// GOOD - use data-testid
+await page.locator(`[data-testid="expand-icon-${nodeId}"]`).click();
 ```
+
+### Click on Visible Portions of Overlays
+
+When clicking overlays/backdrops that sit behind other elements (lower z-index), Playwright clicks the center by default. If another element covers the center, the click will be intercepted:
+
+```typescript
+// BAD - clicks center of backdrop, which may be covered by sidebar
+const backdrop = page.locator('[class*="backdrop"]');
+await backdrop.click();
+
+// GOOD - calculate click position in visible area
+const backdrop = page.locator('[class*="backdrop"]');
+const sidebarBox = await sidebar.boundingBox();
+const backdropBox = await backdrop.boundingBox();
+// Click horizontally centered between sidebar's right edge and viewport edge
+const clickX = sidebarBox!.width + (backdropBox!.width - sidebarBox!.width) / 2;
+await backdrop.click({ position: { x: clickX, y: backdropBox!.height / 2 } });
+```
+
+### Verify Interactive Elements Have Adequate Size
+
+Small click targets can cause flaky tests. Verify interactive elements meet minimum size requirements:
+
+```typescript
+const expandIcon = page.locator(`[data-testid="expand-icon-${nodeId}"]`);
+await expect(expandIcon).toBeVisible();
+
+// Verify minimum clickable size (at least 16x16 pixels)
+const box = await expandIcon.boundingBox();
+expect(box).toBeTruthy();
+expect(box!.width).toBeGreaterThanOrEqual(16);
+expect(box!.height).toBeGreaterThanOrEqual(16);
+
+await expandIcon.click();
+```
+
+This catches UI regressions where elements become too small to reliably click.
 
 ### Use Promise.all for Click + Navigation
 

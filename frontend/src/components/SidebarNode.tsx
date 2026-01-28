@@ -147,6 +147,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
             [`${styles.loading}`]: isLoadingChildren(),
           }}
           onClick={toggleExpand}
+          data-testid={`expand-icon-${props.node.id}`}
         >
           {isLoadingChildren() ? '○' : '▶'}
         </span>

@@ -286,7 +286,14 @@ test.describe('Page Navigation', () => {
     // Expand hierarchy and navigate to grandchild
     await page.locator(`[data-testid="sidebar-node-${parentData.id}"]`).click();
     await expect(page.locator(`[data-testid="sidebar-node-${childData.id}"]`)).toBeVisible({ timeout: 5000 });
-    await page.locator(`[data-testid="sidebar-node-${childData.id}"]`).locator('span').first().click();
+    // Click the expand icon (verify it's visible and has adequate clickable size)
+    const expandIcon = page.locator(`[data-testid="expand-icon-${childData.id}"]`);
+    await expect(expandIcon).toBeVisible();
+    const box = await expandIcon.boundingBox();
+    expect(box).toBeTruthy();
+    expect(box!.width).toBeGreaterThanOrEqual(16);
+    expect(box!.height).toBeGreaterThanOrEqual(16);
+    await expandIcon.click();
     await expect(page.locator(`[data-testid="sidebar-node-${grandchildData.id}"]`)).toBeVisible({ timeout: 5000 });
     await page.locator(`[data-testid="sidebar-node-${grandchildData.id}"]`).click();
 

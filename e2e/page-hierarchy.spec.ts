@@ -82,7 +82,14 @@ test.describe('Page Hierarchy', () => {
     await expect(childNodeAfterReload).toBeVisible({ timeout: 5000 });
 
     // Click the expand icon next to Child Page (not the text, which navigates)
-    await childNodeAfterReload.locator('span').first().click(); // Click the expand icon
+    const expandIcon = page.locator(`[data-testid="expand-icon-${childID}"]`);
+    await expect(expandIcon).toBeVisible();
+    // Verify the expand icon has a reasonable clickable size (at least 16x16)
+    const box = await expandIcon.boundingBox();
+    expect(box).toBeTruthy();
+    expect(box!.width).toBeGreaterThanOrEqual(16);
+    expect(box!.height).toBeGreaterThanOrEqual(16);
+    await expandIcon.click();
 
     // Wait for grandchild to appear in sidebar
     const grandchildData = await createGrandchildResponse.json();
