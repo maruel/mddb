@@ -12,17 +12,8 @@ import {
 import { createStore, produce, reconcile } from 'solid-js/store';
 import { useAuth } from './AuthContext';
 import { useI18n } from '../i18n';
+import { workspaceUrl, nodeUrl } from '../utils/urls';
 import { OrgRoleAdmin, OrgRoleOwner, WSRoleAdmin, WSRoleEditor, type NodeResponse } from '@sdk/types.gen';
-
-export const slugify = (text: string) => {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]+/g, '')
-    .replace(/--+/g, '-');
-};
 
 interface WorkspaceContextValue {
   // Node tree
@@ -208,8 +199,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         const newWsId = data.user.workspace_id;
         const wsName = data.user.workspace_name;
         if (newWsId) {
-          const wsSlug = slugify(wsName || 'workspace');
-          window.history.pushState(null, '', `/w/${newWsId}+${wsSlug}/`);
+          window.history.pushState(null, '', workspaceUrl(newWsId, wsName));
         } else {
           window.history.pushState(null, '', '/');
         }
@@ -278,12 +268,10 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setError(null);
 
       // Update URL
-      const nodeSlug = slugify(nodeData.title);
       const wsId = user()?.workspace_id;
       const wsName = user()?.workspace_name;
       if (wsId) {
-        const wsSlug = slugify(wsName || 'workspace');
-        const url = `/w/${wsId}+${wsSlug}/${nodeData.id}${nodeSlug ? '+' + nodeSlug : ''}`;
+        const url = nodeUrl(wsId, wsName, nodeData.id, nodeData.title);
         if (pushState) {
           if (window.location.pathname !== url) {
             window.history.pushState(null, '', url);
@@ -385,8 +373,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     setFirstLoginCheckDone(true);
 
     if (window.location.pathname === '/') {
-      const wsSlug = slugify(wsName || 'workspace');
-      window.history.replaceState(null, '', `/w/${wsId}+${wsSlug}/`);
+      window.history.replaceState(null, '', workspaceUrl(wsId, wsName));
     }
   });
 

@@ -2,8 +2,9 @@
 
 import { For, Show, createMemo } from 'solid-js';
 import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '@sdk/types.gen';
-import styles from './TableBoard.module.css';
+import { updateRecordField, handleEnterBlur, getRecordTitle, getFieldValue } from './table/tableUtils';
 import { useI18n } from '../i18n';
+import styles from './TableBoard.module.css';
 
 interface TableBoardProps {
   records: DataRecordResponse[];
@@ -15,14 +16,10 @@ interface TableBoardProps {
 export default function TableBoard(props: TableBoardProps) {
   const { t } = useI18n();
 
-  const handleUpdate = (record: DataRecordResponse, colName: string, value: string) => {
-    if (record.data[colName] === value || !props.onUpdateRecord) return;
-    const newData = { ...record.data, [colName]: value };
-    props.onUpdateRecord(record.id, newData);
-  };
-  // Find the first select column to group by
-  const groupColumn = () =>
-    props.columns.find((c) => c.type === PropertyTypeSelect || c.type === PropertyTypeMultiSelect);
+  // Find the first select column to group by (memoized for performance)
+  const groupColumn = createMemo(() =>
+    props.columns.find((c) => c.type === PropertyTypeSelect || c.type === PropertyTypeMultiSelect)
+  );
 
   const groups = createMemo(() => {
     const col = groupColumn();
@@ -75,14 +72,13 @@ export default function TableBoard(props: TableBoardProps) {
                           <strong>
                             <input
                               type="text"
-                              value={String((props.columns[0] ? record.data[props.columns[0].name] : null) || '')}
+                              value={getRecordTitle(record, props.columns)}
                               placeholder={t('table.untitled') || 'Untitled'}
                               onBlur={(e) =>
-                                props.columns[0] && handleUpdate(record, props.columns[0].name, e.target.value)
+                                props.columns[0] &&
+                                updateRecordField(record, props.columns[0].name, e.target.value, props.onUpdateRecord)
                               }
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') e.currentTarget.blur();
-                              }}
+                              onKeyDown={handleEnterBlur}
                               class={styles.titleInput}
                             />
                           </strong>
@@ -97,11 +93,11 @@ export default function TableBoard(props: TableBoardProps) {
                                 <span class={styles.fieldName}>{col.name}:</span>
                                 <input
                                   type="text"
-                                  value={String(record.data[col.name] || '')}
-                                  onBlur={(e) => handleUpdate(record, col.name, e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') e.currentTarget.blur();
-                                  }}
+                                  value={getFieldValue(record, col.name)}
+                                  onBlur={(e) =>
+                                    updateRecordField(record, col.name, e.target.value, props.onUpdateRecord)
+                                  }
+                                  onKeyDown={handleEnterBlur}
                                   class={styles.fieldValueInput}
                                 />
                               </div>

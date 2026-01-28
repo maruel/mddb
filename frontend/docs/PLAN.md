@@ -6,41 +6,41 @@ Roadmap for the SolidJS frontend, focusing on architecture, performance, and use
 ## Architecture Improvements (Priority)
 
 ### Phase A1: State Management Refactor
-App.tsx reduced from 1238 to 805 lines (~35% reduction) by extracting auth and workspace state into contexts:
+App.tsx reduced from 1238 to ~550 lines (~56% reduction) by extracting state into contexts:
 
 - [x] **Create `src/contexts/` directory** for context providers
   - [x] `AuthContext.tsx` - User, token, login/logout, API clients
   - [x] `WorkspaceContext.tsx` - Nodes, navigation, workspace switching, first-login flow
+  - [x] `EditorContext.tsx` - Title, content, auto-save, version history
+  - [x] `RecordsContext.tsx` - Table records CRUD and pagination
   - [x] `index.ts` - Re-exports for clean imports
 - [x] **Create `src/composables/` directory** for reusable logic
-  - [ ] `useAutoSave.ts` - Debounced auto-save logic (still in App.tsx)
   - [x] `useClickOutside.ts` - Click-outside detection (used by WorkspaceMenu, UserMenu)
-  - [ ] `useRouting.ts` - URL parsing and navigation helpers
 - [ ] **Further extraction** (future work)
-  - [ ] `EditorContext` - Title, content, unsaved changes, auto-save
-  - [ ] `RecordsContext` - Table records CRUD and pagination
+  - [ ] `useRouting.ts` - URL parsing and navigation helpers (partially done in utils/urls.ts)
 
 ### Phase A2: Reduce Prop Drilling
 Components receive 10+ props with 6+ callbacks. Use context instead:
 
 - [ ] **Refactor Sidebar** - consume workspace context directly
 - [ ] **Refactor WorkspaceMenu** - consume auth/workspace context
-- [ ] **Refactor table views** - share context for record operations
+- [x] **Refactor table views** - use shared table utilities
 
 ### Phase A3: Extract Shared Utilities
-- [ ] **Table utilities** (`src/components/table/tableUtils.ts`)
-  - [ ] Extract duplicate `handleUpdate()` from TableGrid, TableGallery, TableBoard
-  - [ ] Shared cell rendering logic
-- [ ] **URL builders** (`src/utils/urls.ts`)
-  - [ ] Centralize URL construction currently scattered in App.tsx
+- [x] **Table utilities** (`src/components/table/tableUtils.ts`)
+  - [x] Extract duplicate `handleUpdate()` from TableGrid, TableGallery, TableBoard
+  - [x] Shared helpers: `updateRecordField`, `handleEnterBlur`, `getFieldValue`, `getRecordTitle`
+- [x] **URL builders** (`src/utils/urls.ts`)
+  - [x] Centralize URL construction: `workspaceUrl`, `nodeUrl`, `workspaceSettingsUrl`, `orgSettingsUrl`
+  - [x] URL parsers: `parseWorkspaceRoot`, `parseNodeUrl`, `parseWorkspaceSettings`, `parseOrgSettings`
 - [x] **Fix SidebarNode prefetch cache** (line 31)
   - [x] `createSignal(new Map())` creates fresh Map each render
   - [x] Switch to `createStore()` for cache persistence
 
 ### Phase A4: Error Handling
-- [ ] **Add ErrorBoundary component** - prevent full app crashes
+- [x] **Add ErrorBoundary component** - prevent full app crashes
 - [ ] **Add retry UI** for failed operations
-- [ ] **Improve error feedback** - use `aria-live` for screen readers
+- [x] **Improve error feedback** - use `aria-live` for screen readers (in App.tsx error display)
 
 ---
 
@@ -48,7 +48,7 @@ Components receive 10+ props with 6+ callbacks. Use context instead:
 
 ### Accessibility (A11y)
 - [ ] Add `aria-label` to icon-only buttons (Sidebar, menus)
-- [ ] Add `role="alert" aria-live="polite"` to error messages
+- [x] Add `role="alert" aria-live="polite"` to error messages
 - [ ] Replace emoji icons with semantic SVG icons
 
 ### Type Safety
@@ -56,8 +56,8 @@ Components receive 10+ props with 6+ callbacks. Use context instead:
 - [ ] Add validation logging for missing columns in table lookups
 
 ### Performance
-- [ ] Memoize `groupColumn()` in TableBoard.tsx
-- [ ] Add `onCleanup()` for debounce flush on unmount
+- [x] Memoize `groupColumn()` in TableBoard.tsx
+- [x] Add `onCleanup()` for debounce flush on unmount (in EditorContext)
 - [ ] Event listener cleanup audit
 
 ---

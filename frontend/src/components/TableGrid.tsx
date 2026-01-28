@@ -2,8 +2,9 @@
 
 import { For } from 'solid-js';
 import type { DataRecordResponse, Property } from '@sdk/types.gen';
-import styles from './TableGrid.module.css';
+import { updateRecordField, handleEnterBlur, getRecordTitle, getFieldValue } from './table/tableUtils';
 import { useI18n } from '../i18n';
+import styles from './TableGrid.module.css';
 
 interface TableGridProps {
   records: DataRecordResponse[];
@@ -15,12 +16,6 @@ interface TableGridProps {
 export default function TableGrid(props: TableGridProps) {
   const { t } = useI18n();
 
-  const handleUpdate = (record: DataRecordResponse, colName: string, value: string) => {
-    if (record.data[colName] === value || !props.onUpdateRecord) return;
-    const newData = { ...record.data, [colName]: value };
-    props.onUpdateRecord(record.id, newData);
-  };
-
   return (
     <div class={styles.grid}>
       <For each={props.records}>
@@ -30,12 +25,13 @@ export default function TableGrid(props: TableGridProps) {
               <strong>
                 <input
                   type="text"
-                  value={String((props.columns[0] ? record.data[props.columns[0].name] : null) || '')}
+                  value={getRecordTitle(record, props.columns)}
                   placeholder={t('table.untitled') || 'Untitled'}
-                  onBlur={(e) => props.columns[0] && handleUpdate(record, props.columns[0].name, e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') e.currentTarget.blur();
-                  }}
+                  onBlur={(e) =>
+                    props.columns[0] &&
+                    updateRecordField(record, props.columns[0].name, e.target.value, props.onUpdateRecord)
+                  }
+                  onKeyDown={handleEnterBlur}
                   class={styles.titleInput}
                 />
               </strong>
@@ -50,11 +46,9 @@ export default function TableGrid(props: TableGridProps) {
                     <span class={styles.fieldName}>{col.name}:</span>
                     <input
                       type="text"
-                      value={String(record.data[col.name] || '')}
-                      onBlur={(e) => handleUpdate(record, col.name, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') e.currentTarget.blur();
-                      }}
+                      value={getFieldValue(record, col.name)}
+                      onBlur={(e) => updateRecordField(record, col.name, e.target.value, props.onUpdateRecord)}
+                      onKeyDown={handleEnterBlur}
                       class={styles.fieldValueInput}
                     />
                   </div>

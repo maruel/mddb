@@ -1,0 +1,64 @@
+/* Error boundary styles */
+
+.errorBoundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+  background: var(--c-bg, #fff);
+  color: var(--c-text, #333);
+  text-align: center;
+}
+
+.errorBoundary h2 {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  color: var(--c-error, #d32f2f);
+}
+
+.errorMessage {
+  margin: 0 0 1.5rem;
+  font-size: 1rem;
+  color: var(--c-text-secondary, #666);
+}
+
+.errorDetails {
+  margin-bottom: 1.5rem;
+  text-align: left;
+  max-width: 600px;
+  width: 100%;
+}
+
+.errorDetails summary {
+  cursor: pointer;
+  color: var(--c-text-secondary, #666);
+  font-size: 0.875rem;
+}
+
+.errorDetails pre {
+  margin-top: 0.5rem;
+  padding: 1rem;
+  background: var(--c-bg-secondary, #f5f5f5);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.retryButton {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  background: var(--c-primary, #1976d2);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.retryButton:hover {
+  background: var(--c-primary-dark, #1565c0);
+}

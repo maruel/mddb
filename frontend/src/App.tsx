@@ -1,4 +1,4 @@
-// Main application component managing routing, editor state, and layout.
+// Main application component managing routing and layout.
 
 import { createSignal, createEffect, For, Show, onMount, onCleanup, batch } from 'solid-js';
 import Sidebar from './components/Sidebar';
@@ -18,16 +18,35 @@ import CreateOrgModal from './components/CreateOrgModal';
 import CreateWorkspaceModal from './components/CreateWorkspaceModal';
 import UserMenu from './components/UserMenu';
 import WorkspaceMenu from './components/WorkspaceMenu';
-import { AuthProvider, useAuth, WorkspaceProvider, useWorkspace, slugify } from './contexts';
-import { debounce } from './utils/debounce';
+import AppErrorBoundary from './components/ErrorBoundary';
+import {
+  AuthProvider,
+  useAuth,
+  WorkspaceProvider,
+  useWorkspace,
+  EditorProvider,
+  useEditor,
+  RecordsProvider,
+  useRecords,
+} from './contexts';
+import {
+  workspaceUrl,
+  workspaceSettingsUrl,
+  orgSettingsUrl,
+  parseWorkspaceRoot,
+  parseNodeUrl,
+  parseWorkspaceSettings,
+  parseOrgSettings,
+  isStaticRoute,
+} from './utils/urls';
 import { useI18n, type Locale } from './i18n';
-import type { NodeResponse, DataRecordResponse, Commit, OrgMembershipResponse, UserResponse } from '@sdk/types.gen';
+import type { NodeResponse, OrgMembershipResponse, UserResponse } from '@sdk/types.gen';
 import styles from './App.module.css';
 
 // Inner app component that uses contexts
 function AppContent() {
   const { t, locale, setLocale } = useI18n();
-  const { user, token, wsApi, login, logout } = useAuth();
+  const { user, token, login, logout } = useAuth();
   const {
     nodes,
     selectedNodeId,
@@ -45,19 +64,23 @@ function AppContent() {
     loadNodes,
     loadNode,
     fetchNodeChildren,
-    updateNodeTitle,
   } = useWorkspace();
 
-  // Editor state
-  const [title, setTitle] = createSignal('');
-  const [content, setContent] = createSignal('');
-  const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
-  const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+  const {
+    title,
+    content,
+    hasUnsavedChanges,
+    autoSaveStatus,
+    showHistory,
+    history,
+    loadHistory,
+    loadVersion,
+    flushAutoSave,
+    handleTitleChange,
+    handleContentChange,
+  } = useEditor();
 
-  // Table records state
-  const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
-  const [hasMore, setHasMore] = createSignal(false);
-  const PAGE_SIZE = 50;
+  const { records, hasMore, loadMoreRecords, addRecord, updateRecord, deleteRecord } = useRecords();
 
   // Page routing state
   const [isSettingsPage, setIsSettingsPage] = createSignal(false);
@@ -74,46 +97,6 @@ function AppContent() {
   const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
   const [nodeCreationParentId, setNodeCreationParentId] = createSignal<string | null>(null);
 
-  // History state
-  const [showHistory, setShowHistory] = createSignal(false);
-  const [history, setHistory] = createSignal<Commit[]>([]);
-
-  // Debounced auto-save function
-  const debouncedAutoSave = debounce(async () => {
-    const nodeId = selectedNodeId();
-    const ws = wsApi();
-    if (!nodeId || !hasUnsavedChanges() || !ws) return;
-
-    try {
-      setAutoSaveStatus('saving');
-      await ws.nodes.page.updatePage(nodeId, { title: title(), content: content() });
-      setHasUnsavedChanges(false);
-      setAutoSaveStatus('saved');
-
-      // Update URL if title changed
-      const nodeSlug = slugify(title());
-      const wsId = user()?.workspace_id;
-      const wsName = user()?.workspace_name;
-      if (wsId) {
-        const currentPath = window.location.pathname;
-        const wsSlug = slugify(wsName || 'workspace');
-        const newPath = `/w/${wsId}+${wsSlug}/${nodeId}${nodeSlug ? '+' + nodeSlug : ''}`;
-        if (currentPath !== newPath) {
-          window.history.replaceState(null, '', newPath);
-        }
-      }
-
-      setTimeout(() => {
-        if (autoSaveStatus() === 'saved') {
-          setAutoSaveStatus('idle');
-        }
-      }, 2000);
-    } catch (err) {
-      setError(`${t('errors.autoSaveFailed')}: ${err}`);
-      setAutoSaveStatus('idle');
-    }
-  }, 2000);
-
   // Sync locale with user settings
   createEffect(() => {
     const u = user();
@@ -124,61 +107,25 @@ function AppContent() {
     }
   });
 
-  // Sync editor state when selected node changes
-  createEffect(() => {
-    const node = selectedNodeData();
-    if (node) {
-      setTitle(node.title);
-      setContent(node.content || '');
-      setHasUnsavedChanges(false);
-      setAutoSaveStatus('idle');
-      setShowHistory(false);
-
-      // Load records if it has table content
-      if (node.has_table) {
-        loadRecords(node.id);
-      } else {
-        setRecords([]);
-        setHasMore(false);
-      }
-    } else {
-      setTitle('');
-      setContent('');
-      setRecords([]);
-    }
-  });
-
-  async function loadRecords(nodeId: string) {
-    const ws = wsApi();
-    if (!ws) return;
-
-    try {
-      const recordsData = await ws.nodes.table.records.listRecords(nodeId, { Offset: 0, Limit: PAGE_SIZE });
-      const loadedRecords = (recordsData.records || []) as DataRecordResponse[];
-      setRecords(loadedRecords);
-      setHasMore(loadedRecords.length === PAGE_SIZE);
-    } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
-    }
-  }
-
   // Handle browser back/forward and initial URL
   const handlePopState = async () => {
     const path = window.location.pathname;
 
-    if (path === '/privacy') {
+    // Check static routes
+    const staticRoute = isStaticRoute(path);
+    if (staticRoute === 'privacy') {
       setIsPrivacyPage(true);
       setIsTermsPage(false);
       setIsProfilePage(false);
       return;
     }
-    if (path === '/terms') {
+    if (staticRoute === 'terms') {
       setIsTermsPage(true);
       setIsPrivacyPage(false);
       setIsProfilePage(false);
       return;
     }
-    if (path === '/profile') {
+    if (staticRoute === 'profile') {
       setIsProfilePage(true);
       setIsSettingsPage(false);
       setIsPrivacyPage(false);
@@ -190,9 +137,9 @@ function AppContent() {
     setIsTermsPage(false);
 
     // Check for workspace settings
-    const matchWsSettings = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
-    if (matchWsSettings && matchWsSettings[1]) {
-      const wsId = matchWsSettings[1];
+    const wsSettings = parseWorkspaceSettings(path);
+    if (wsSettings) {
+      const wsId = wsSettings.id;
       if (user() && user()?.workspace_id !== wsId) {
         try {
           const u = user();
@@ -202,8 +149,7 @@ function AppContent() {
             const currentWsId = u?.workspace_id;
             const currentWsName = u?.workspace_name;
             if (currentWsId) {
-              const wsSlug = slugify(currentWsName || 'workspace');
-              setTimeout(() => window.history.replaceState(null, '', `/w/${currentWsId}+${wsSlug}/`), 2000);
+              setTimeout(() => window.history.replaceState(null, '', workspaceUrl(currentWsId, currentWsName)), 2000);
             }
             return;
           }
@@ -219,9 +165,9 @@ function AppContent() {
     setIsSettingsPage(false);
 
     // Check for organization settings
-    const matchOrgSettings = path.match(/^\/o\/([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
-    if (matchOrgSettings && matchOrgSettings[1]) {
-      const orgId = matchOrgSettings[1];
+    const orgSettings = parseOrgSettings(path);
+    if (orgSettings) {
+      const orgId = orgSettings.id;
       const u = user();
       const isMember = u?.organizations?.some((m) => m.organization_id === orgId);
       if (!isMember) {
@@ -229,8 +175,7 @@ function AppContent() {
         const currentWsId = u?.workspace_id;
         const currentWsName = u?.workspace_name;
         if (currentWsId) {
-          const wsSlug = slugify(currentWsName || 'workspace');
-          setTimeout(() => window.history.replaceState(null, '', `/w/${currentWsId}+${wsSlug}/`), 2000);
+          setTimeout(() => window.history.replaceState(null, '', workspaceUrl(currentWsId, currentWsName)), 2000);
         }
         return;
       }
@@ -242,35 +187,30 @@ function AppContent() {
     setOrgSettingsId(null);
 
     // Check for node URL
-    const matchWithWs = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
-    if (matchWithWs && matchWithWs[1] && matchWithWs[2]) {
-      const nodeId = matchWithWs[2];
+    const nodeMatch = parseNodeUrl(path);
+    if (nodeMatch) {
+      const nodeId = nodeMatch.nodeId;
       if (nodeId !== selectedNodeId()) {
-        // Flush auto-save before switching nodes
-        debouncedAutoSave.flush();
+        flushAutoSave();
         loadNode(nodeId, false);
       }
       return;
     }
 
     // Check for workspace root
-    const matchWsRoot = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/?$/);
-    if (matchWsRoot && matchWsRoot[1]) {
+    const wsRoot = parseWorkspaceRoot(path);
+    if (wsRoot) {
       if (nodes.length > 0 && nodes[0]) {
         loadNode(nodes[0].id, false);
       } else {
         setSelectedNodeId(null);
         setSelectedNodeData(null);
-        setTitle('');
-        setContent('');
       }
       return;
     }
 
     setSelectedNodeId(null);
     setSelectedNodeData(null);
-    setTitle('');
-    setContent('');
   };
 
   onMount(() => {
@@ -287,50 +227,12 @@ function AppContent() {
     }
   });
 
-  async function loadHistory(nodeId: string) {
-    if (showHistory()) {
-      setShowHistory(false);
-      return;
-    }
-    const ws = wsApi();
-    if (!ws) return;
-
-    try {
-      setLoading(true);
-      const data = await ws.nodes.history.listNodeVersions(nodeId, { Limit: 100 });
-      setHistory((data.history?.filter(Boolean) as Commit[]) || []);
-      setShowHistory(true);
-    } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadVersion(nodeId: string, hash: string) {
-    if (!confirm(t('editor.restoreConfirm') || 'This will replace current editor content. Continue?')) return;
-    const ws = wsApi();
-    if (!ws) return;
-
-    try {
-      setLoading(true);
-      const data = await ws.nodes.history.getNodeVersion(nodeId, hash);
-      setContent(data.content || '');
-      setHasUnsavedChanges(true);
-      setShowHistory(false);
-    } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function createNode(type: 'document' | 'table' = 'document', parentId?: string) {
     if (!title().trim()) {
       setError(t('errors.titleRequired') || 'Title is required');
       return;
     }
-    const ws = wsApi();
+    const ws = useAuth().wsApi();
     if (!ws) return;
 
     try {
@@ -346,10 +248,6 @@ function AppContent() {
       }
       await loadNodes(true);
       loadNode(String(newNodeId));
-      setTitle('');
-      setContent('');
-      setHasUnsavedChanges(false);
-      setAutoSaveStatus('idle');
       setError(null);
       setNodeCreationParentId(null);
     } catch (err) {
@@ -360,85 +258,14 @@ function AppContent() {
   }
 
   const handleNodeClick = (node: NodeResponse) => {
-    debouncedAutoSave.flush();
+    flushAutoSave();
     loadNode(node.id);
     setShowMobileSidebar(false);
   };
 
-  async function handleAddRecord(data: Record<string, unknown>) {
-    const nodeId = selectedNodeId();
-    const ws = wsApi();
-    if (!nodeId || !ws) return;
-
-    try {
-      setLoading(true);
-      await ws.nodes.table.records.createRecord(nodeId, { data });
-      await loadRecords(nodeId);
-      setError(null);
-    } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDeleteRecord(recordId: string) {
-    const nodeId = selectedNodeId();
-    const ws = wsApi();
-    if (!nodeId || !ws) return;
-    if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
-
-    try {
-      setLoading(true);
-      await ws.nodes.table.records.deleteRecord(nodeId, recordId);
-      await loadRecords(nodeId);
-      setError(null);
-    } catch (err) {
-      setError(`${t('errors.failedToDelete')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleUpdateRecord(recordId: string, data: Record<string, unknown>) {
-    const nodeId = selectedNodeId();
-    const ws = wsApi();
-    if (!nodeId || !ws) return;
-
-    try {
-      setLoading(true);
-      await ws.nodes.table.records.updateRecord(nodeId, recordId, { data });
-      await loadRecords(nodeId);
-      setError(null);
-    } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadMoreRecords() {
-    const nodeId = selectedNodeId();
-    const ws = wsApi();
-    if (!nodeId || loading() || !ws) return;
-
-    try {
-      setLoading(true);
-      const offset = records().length;
-      const data = await ws.nodes.table.records.listRecords(nodeId, { Offset: offset, Limit: PAGE_SIZE });
-      const newRecords = (data.records || []) as DataRecordResponse[];
-      setRecords([...records(), ...newRecords]);
-      setHasMore(newRecords.length === PAGE_SIZE);
-    } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleDeleteNode(nodeId: string) {
     if (!confirm(t('table.confirmDeleteRecord') || 'Delete this item?')) return;
-    const ws = wsApi();
+    const ws = useAuth().wsApi();
     if (!ws) return;
 
     try {
@@ -447,14 +274,10 @@ function AppContent() {
       if (nodeId === selectedNodeId()) {
         setSelectedNodeId(null);
         setSelectedNodeData(null);
-        setTitle('');
-        setContent('');
-        setRecords([]);
         const wsId = user()?.workspace_id;
         const wsName = user()?.workspace_name;
         if (wsId) {
-          const wsSlug = slugify(wsName || 'workspace');
-          window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
+          window.history.pushState(null, '', workspaceUrl(wsId, wsName));
         }
       }
       await loadNodes(true);
@@ -510,8 +333,7 @@ function AppContent() {
                       const wsId = user()?.workspace_id;
                       const wsName = user()?.workspace_name;
                       if (wsId) {
-                        const wsSlug = slugify(wsName || 'workspace');
-                        window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/settings`);
+                        window.history.pushState(null, '', workspaceSettingsUrl(wsId, wsName));
                       }
                     }}
                     onCreateWorkspace={() => setShowCreateWorkspace(true)}
@@ -540,8 +362,7 @@ function AppContent() {
                       setOrgSettingsId(org.organization_id);
                       setIsProfilePage(false);
                     });
-                    const orgSlug = slugify(org.organization_name || 'organization');
-                    window.history.pushState(null, '', `/o/${org.organization_id}+${orgSlug}/settings`);
+                    window.history.pushState(null, '', orgSettingsUrl(org.organization_id, org.organization_name));
                   }}
                 />
               </Show>
@@ -560,8 +381,7 @@ function AppContent() {
                       setIsOrgSettingsPage(true);
                       setOrgSettingsId(orgId);
                       setIsSettingsPage(false);
-                      const orgSlug = slugify(orgName || 'organization');
-                      window.history.pushState(null, '', `/o/${orgId}+${orgSlug}/settings`);
+                      window.history.pushState(null, '', orgSettingsUrl(orgId, orgName));
                     }
                   }}
                 />
@@ -621,7 +441,9 @@ function AppContent() {
 
                   <main class={styles.main}>
                     <Show when={error()} fallback={null}>
-                      <div class={styles.error}>{error()}</div>
+                      <div class={styles.error} role="alert" aria-live="polite">
+                        {error()}
+                      </div>
                     </Show>
 
                     <Show when={selectedNodeId()}>
@@ -631,15 +453,7 @@ function AppContent() {
                             type="text"
                             placeholder={t('editor.titlePlaceholder') || 'Title'}
                             value={title()}
-                            onInput={(e) => {
-                              setTitle(e.target.value);
-                              const id = selectedNodeId();
-                              if (id) {
-                                updateNodeTitle(id, e.target.value);
-                              }
-                              setHasUnsavedChanges(true);
-                              debouncedAutoSave();
-                            }}
+                            onInput={(e) => handleTitleChange(e.target.value)}
                             class={styles.titleInput}
                           />
                           <div class={styles.editorStatus}>
@@ -691,11 +505,7 @@ function AppContent() {
                               content={content()}
                               pageId={selectedNodeId() ?? undefined}
                               orgId={user()?.organization_id}
-                              onChange={(md) => {
-                                setContent(md);
-                                setHasUnsavedChanges(true);
-                                debouncedAutoSave();
-                              }}
+                              onChange={handleContentChange}
                             />
                           </Show>
 
@@ -735,9 +545,9 @@ function AppContent() {
                                   tableId={selectedNodeId() || ''}
                                   columns={selectedNodeData()?.properties || []}
                                   records={records()}
-                                  onAddRecord={handleAddRecord}
-                                  onUpdateRecord={handleUpdateRecord}
-                                  onDeleteRecord={handleDeleteRecord}
+                                  onAddRecord={addRecord}
+                                  onUpdateRecord={updateRecord}
+                                  onDeleteRecord={deleteRecord}
                                   onLoadMore={loadMoreRecords}
                                   hasMore={hasMore()}
                                 />
@@ -746,24 +556,24 @@ function AppContent() {
                                 <TableGrid
                                   records={records()}
                                   columns={selectedNodeData()?.properties || []}
-                                  onUpdateRecord={handleUpdateRecord}
-                                  onDeleteRecord={handleDeleteRecord}
+                                  onUpdateRecord={updateRecord}
+                                  onDeleteRecord={deleteRecord}
                                 />
                               </Show>
                               <Show when={viewMode() === 'gallery'}>
                                 <TableGallery
                                   records={records()}
                                   columns={selectedNodeData()?.properties || []}
-                                  onUpdateRecord={handleUpdateRecord}
-                                  onDeleteRecord={handleDeleteRecord}
+                                  onUpdateRecord={updateRecord}
+                                  onDeleteRecord={deleteRecord}
                                 />
                               </Show>
                               <Show when={viewMode() === 'board'}>
                                 <TableBoard
                                   records={records()}
                                   columns={selectedNodeData()?.properties || []}
-                                  onUpdateRecord={handleUpdateRecord}
-                                  onDeleteRecord={handleDeleteRecord}
+                                  onUpdateRecord={updateRecord}
+                                  onDeleteRecord={deleteRecord}
                                 />
                               </Show>
                             </div>
@@ -796,10 +606,16 @@ function AppContent() {
 // Root component that provides contexts
 export default function App() {
   return (
-    <AuthProvider>
-      <WorkspaceProvider>
-        <AppContent />
-      </WorkspaceProvider>
-    </AuthProvider>
+    <AppErrorBoundary>
+      <AuthProvider>
+        <WorkspaceProvider>
+          <EditorProvider>
+            <RecordsProvider>
+              <AppContent />
+            </RecordsProvider>
+          </EditorProvider>
+        </WorkspaceProvider>
+      </AuthProvider>
+    </AppErrorBoundary>
   );
 }

@@ -2,8 +2,9 @@
 
 import { For, Show } from 'solid-js';
 import type { DataRecordResponse, Property } from '@sdk/types.gen';
-import styles from './TableGallery.module.css';
+import { updateRecordField, handleEnterBlur, getRecordTitle, getFieldValue } from './table/tableUtils';
 import { useI18n } from '../i18n';
+import styles from './TableGallery.module.css';
 
 interface TableGalleryProps {
   records: DataRecordResponse[];
@@ -15,11 +16,6 @@ interface TableGalleryProps {
 export default function TableGallery(props: TableGalleryProps) {
   const { t } = useI18n();
 
-  const handleUpdate = (record: DataRecordResponse, colName: string, value: string) => {
-    if (record.data[colName] === value || !props.onUpdateRecord) return;
-    const newData = { ...record.data, [colName]: value };
-    props.onUpdateRecord(record.id, newData);
-  };
   // Try to find an image column
   const imageColumn = () =>
     props.columns.find(
@@ -45,7 +41,7 @@ export default function TableGallery(props: TableGalleryProps) {
                     >
                       <img
                         src={String(record.data[col().name])}
-                        alt={String((props.columns[0] ? record.data[props.columns[0].name] : null) || 'Record')}
+                        alt={getRecordTitle(record, props.columns) || 'Record'}
                         class={styles.image}
                       />
                     </Show>
@@ -57,12 +53,13 @@ export default function TableGallery(props: TableGalleryProps) {
                   <strong>
                     <input
                       type="text"
-                      value={String((props.columns[0] ? record.data[props.columns[0].name] : null) || '')}
+                      value={getRecordTitle(record, props.columns)}
                       placeholder={t('table.untitled') || 'Untitled'}
-                      onBlur={(e) => props.columns[0] && handleUpdate(record, props.columns[0].name, e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') e.currentTarget.blur();
-                      }}
+                      onBlur={(e) =>
+                        props.columns[0] &&
+                        updateRecordField(record, props.columns[0].name, e.target.value, props.onUpdateRecord)
+                      }
+                      onKeyDown={handleEnterBlur}
                       class={styles.titleInput}
                     />
                   </strong>
@@ -77,11 +74,9 @@ export default function TableGallery(props: TableGalleryProps) {
                         <span class={styles.fieldName}>{col.name}:</span>
                         <input
                           type="text"
-                          value={String(record.data[col.name] || '')}
-                          onBlur={(e) => handleUpdate(record, col.name, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') e.currentTarget.blur();
-                          }}
+                          value={getFieldValue(record, col.name)}
+                          onBlur={(e) => updateRecordField(record, col.name, e.target.value, props.onUpdateRecord)}
+                          onKeyDown={handleEnterBlur}
                           class={styles.fieldValueInput}
                         />
                       </div>
