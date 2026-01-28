@@ -2,8 +2,8 @@
 //
 // mddb is a local-first markdown database that stores content as files,
 // provides OAuth authentication (Google/Microsoft), and exposes a RESTful
-// HTTP API. Configuration is read from CLI flags and a .env file, with
-// interactive onboarding on first run.
+// HTTP API. Configuration is read from CLI flags, a .env file (for OAuth),
+// and config.json (for JWT secret, SMTP, quotas).
 package main
 
 import (
@@ -31,10 +31,10 @@ import (
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/utils"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
 )
@@ -58,11 +58,6 @@ func mainImpl() error {
 	msClientSecret := flag.String("ms-client-secret", "", "Microsoft OAuth client secret")
 	githubClientID := flag.String("github-client-id", "", "GitHub OAuth client ID")
 	githubClientSecret := flag.String("github-client-secret", "", "GitHub OAuth client secret")
-	smtpHost := flag.String("smtp-host", "", "SMTP server host")
-	smtpPort := flag.String("smtp-port", "587", "SMTP server port")
-	smtpUsername := flag.String("smtp-username", "", "SMTP authentication username")
-	smtpPassword := flag.String("smtp-password", "", "SMTP authentication password")
-	smtpFrom := flag.String("smtp-from", "", "SMTP sender address")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		return fmt.Errorf("unknown arguments: %v", flag.Args())
@@ -123,23 +118,16 @@ func mainImpl() error {
 		}
 	}
 
+	// Load .env for OAuth credentials and bootstrap settings
 	env, err := loadDotEnv(*dataDir)
 	if err != nil {
 		return err
 	}
 
-	jwtSecret := env["JWT_SECRET"]
-	if jwtSecret == "" {
-		var err error
-		jwtSecret, err = utils.GenerateToken(32)
-		if err != nil {
-			return fmt.Errorf("failed to generate JWT secret: %w", err)
-		}
-		env["JWT_SECRET"] = jwtSecret
-		if err := saveDotEnv(*dataDir, env); err != nil {
-			return fmt.Errorf("failed to save .env file: %w", err)
-		}
-		slog.Info("Generated JWT_SECRET and saved to .env")
+	// Load server_config.json for JWT secret, SMTP, and quotas (creates with defaults if missing)
+	serverCfg, err := storage.LoadServerConfig(*dataDir)
+	if err != nil {
+		return fmt.Errorf("failed to load server_config.json: %w", err)
 	}
 
 	// Override with .env file values if not explicitly set via flags
@@ -191,31 +179,6 @@ func mainImpl() error {
 	if !set["github-client-secret"] {
 		if v := env["GITHUB_CLIENT_SECRET"]; v != "" {
 			*githubClientSecret = v
-		}
-	}
-	if !set["smtp-host"] {
-		if v := env["SMTP_HOST"]; v != "" {
-			*smtpHost = v
-		}
-	}
-	if !set["smtp-port"] {
-		if v := env["SMTP_PORT"]; v != "" {
-			*smtpPort = v
-		}
-	}
-	if !set["smtp-username"] {
-		if v := env["SMTP_USERNAME"]; v != "" {
-			*smtpUsername = v
-		}
-	}
-	if !set["smtp-password"] {
-		if v := env["SMTP_PASSWORD"]; v != "" {
-			*smtpPassword = v
-		}
-	}
-	if !set["smtp-from"] {
-		if v := env["SMTP_FROM"]; v != "" {
-			*smtpFrom = v
 		}
 	}
 
@@ -320,11 +283,6 @@ func mainImpl() error {
 		return fmt.Errorf("failed to initialize session service: %w", err)
 	}
 
-	serverSettingsService, err := identity.NewServerSettingsService(filepath.Join(dbDir, "server_settings.jsonl"))
-	if err != nil {
-		return fmt.Errorf("failed to initialize server settings service: %w", err)
-	}
-
 	// Cleanup old expired sessions (older than 7 days past expiration)
 	if count, err := sessionService.CleanupExpired(7 * 24 * time.Hour); err != nil {
 		slog.WarnContext(ctx, "Failed to cleanup expired sessions", "error", err)
@@ -335,19 +293,19 @@ func mainImpl() error {
 	// Initialize email verification service and email service (nil if SMTP not configured)
 	var emailVerificationService *identity.EmailVerificationService
 	var emailService *email.Service
-	if *smtpHost != "" {
+	if serverCfg.SMTP.Enabled() {
 		smtpConfig := email.Config{
-			Host:     *smtpHost,
-			Port:     *smtpPort,
-			Username: *smtpUsername,
-			Password: *smtpPassword,
-			From:     *smtpFrom,
+			Host:     serverCfg.SMTP.Host,
+			Port:     serverCfg.SMTP.Port,
+			Username: serverCfg.SMTP.Username,
+			Password: serverCfg.SMTP.Password,
+			From:     serverCfg.SMTP.From,
 		}
 		if err := smtpConfig.Validate(); err != nil {
 			return err
 		}
 		emailService = &email.Service{Config: smtpConfig}
-		slog.InfoContext(ctx, "SMTP configured", "host", *smtpHost, "port", *smtpPort)
+		slog.InfoContext(ctx, "SMTP configured", "host", serverCfg.SMTP.Host, "port", serverCfg.SMTP.Port)
 
 		// Initialize email verification service only when SMTP is configured
 		emailVerificationService, err = identity.NewEmailVerificationService(filepath.Join(dbDir, "email_verifications.jsonl"))
@@ -360,9 +318,6 @@ func mainImpl() error {
 	if err := watchExecutable(ctx, stop); err != nil {
 		return fmt.Errorf("failed to watch executable: %w", err)
 	}
-
-	// Get server quotas from settings table
-	serverQuotas := serverSettingsService.GetQuotas()
 
 	svc := &handlers.Services{
 		FileStore:     fileStore,
@@ -379,8 +334,8 @@ func mainImpl() error {
 		Email:         emailService,
 	}
 	cfg := &server.Config{
-		JWTSecret: jwtSecret,
-		BaseURL:   *baseURL,
+		ServerConfig: *serverCfg,
+		BaseURL:      *baseURL,
 		OAuth: server.OAuthConfig{
 			GoogleClientID:     *googleClientID,
 			GoogleClientSecret: *googleClientSecret,
@@ -389,8 +344,7 @@ func mainImpl() error {
 			GitHubClientID:     *githubClientID,
 			GitHubClientSecret: *githubClientSecret,
 		},
-		ServerQuotas: serverQuotas,
-		RateLimits:   *ratelimit.DefaultConfig(),
+		RateLimits: *ratelimit.DefaultConfig(),
 	}
 
 	addr := ":" + *port
@@ -518,18 +472,11 @@ func saveDotEnv(dataDir string, env map[string]string) error {
 
 func runOnboarding(dataDir string) error {
 	fmt.Println("Welcome to mddb! Let's set up your configuration.")
-	fmt.Println("This wizard will help you configure OAuth and security settings.")
+	fmt.Println("This wizard will help you configure OAuth settings.")
 	fmt.Println("")
 
 	reader := bufio.NewReader(os.Stdin)
 	env := make(map[string]string)
-
-	// JWT Secret
-	jwtSecret, err := utils.GenerateToken(32)
-	if err != nil {
-		return fmt.Errorf("failed to generate JWT secret: %w", err)
-	}
-	env["JWT_SECRET"] = jwtSecret
 
 	// Base URL
 	fmt.Println("\n--- Base URL Setup ---")

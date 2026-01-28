@@ -38,10 +38,9 @@ type Services struct {
 
 // Config holds configuration values needed by handlers.
 type Config struct {
-	JWTSecret    string
-	BaseURL      string
-	Version      string
-	ServerQuotas identity.ServerQuotas
+	storage.ServerConfig
+	BaseURL string
+	Version string
 }
 
 // AssetURLExpiry is the default duration for which signed asset URLs are valid.
@@ -111,9 +110,9 @@ func (c *Config) GenerateTokenWithSession(sessionSvc *identity.SessionService, u
 	if len(deviceInfo) > 200 {
 		deviceInfo = deviceInfo[:200]
 	}
-	if _, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt), c.ServerQuotas.MaxSessionsPerUser); err != nil {
+	if _, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
 		if errors.Is(err, identity.ErrSessionQuotaExceeded) {
-			return "", dto.QuotaExceeded("sessions per user", c.ServerQuotas.MaxSessionsPerUser)
+			return "", dto.QuotaExceeded("sessions per user", c.Quotas.MaxSessionsPerUser)
 		}
 		return "", err
 	}

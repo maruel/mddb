@@ -58,8 +58,8 @@ func checkRateLimit(w http.ResponseWriter, tier *ratelimit.Tier, identifier stri
 // Returns false if an error occurred and was written to the response.
 func readAndDecodeBody[In any](ctx context.Context, w http.ResponseWriter, r *http.Request, input *In, cfg *handlers.Config) bool {
 	// Limit request body size
-	if cfg != nil && cfg.ServerQuotas.MaxRequestBodyBytes > 0 {
-		r.Body = http.MaxBytesReader(w, r.Body, cfg.ServerQuotas.MaxRequestBodyBytes)
+	if cfg != nil && cfg.Quotas.MaxRequestBodyBytes > 0 {
+		r.Body = http.MaxBytesReader(w, r.Body, cfg.Quotas.MaxRequestBodyBytes)
 	}
 
 	body, err := io.ReadAll(r.Body)
@@ -469,8 +469,8 @@ func WrapAuthRaw(
 		}
 
 		// Limit request body size for raw handlers
-		if cfg != nil && cfg.ServerQuotas.MaxRequestBodyBytes > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, cfg.ServerQuotas.MaxRequestBodyBytes)
+		if cfg != nil && cfg.Quotas.MaxRequestBodyBytes > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, cfg.Quotas.MaxRequestBodyBytes)
 		}
 
 		fn(w, r)

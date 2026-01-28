@@ -62,8 +62,8 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID jsonldb
 	}
 
 	// Check server-wide workspace quota
-	if h.Cfg.ServerQuotas.MaxWorkspaces > 0 && h.Svc.Workspace.Count() >= h.Cfg.ServerQuotas.MaxWorkspaces {
-		return nil, dto.QuotaExceeded("workspaces", h.Cfg.ServerQuotas.MaxWorkspaces)
+	if h.Cfg.Quotas.MaxWorkspaces > 0 && h.Svc.Workspace.Count() >= h.Cfg.Quotas.MaxWorkspaces {
+		return nil, dto.QuotaExceeded("workspaces", h.Cfg.Quotas.MaxWorkspaces)
 	}
 
 	// Create workspace

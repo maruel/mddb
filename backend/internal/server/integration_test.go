@@ -12,6 +12,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -96,11 +97,13 @@ func setupTestEnv(t *testing.T) *testEnv {
 		Email:         nil, // disabled
 	}
 	cfg := &Config{
-		JWTSecret:    testJWTSecret,
-		BaseURL:      "http://localhost:8080",
-		OAuth:        OAuthConfig{}, // all disabled
-		ServerQuotas: identity.DefaultServerQuotas(),
-		RateLimits:   *ratelimit.DefaultConfig(),
+		ServerConfig: storage.ServerConfig{
+			JWTSecret: testJWTSecret,
+			Quotas:    storage.DefaultServerQuotas(),
+		},
+		BaseURL:    "http://localhost:8080",
+		OAuth:      OAuthConfig{}, // all disabled
+		RateLimits: *ratelimit.DefaultConfig(),
 	}
 	router := NewRouter(svc, cfg)
 

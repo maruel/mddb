@@ -17,11 +17,16 @@ import (
 
 // Config holds SMTP configuration.
 type Config struct {
-	Host     string
-	Port     string
-	Username string
-	Password string
-	From     string
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	From     string `json:"from"`
+}
+
+// Enabled returns true if SMTP is configured with at least a host.
+func (c *Config) Enabled() bool {
+	return c.Host != ""
 }
 
 // Validate checks that required fields are set and applies defaults.

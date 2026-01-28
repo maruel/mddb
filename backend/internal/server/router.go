@@ -21,16 +21,16 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // Config holds configuration for the router.
 type Config struct {
-	JWTSecret    string
-	BaseURL      string
-	OAuth        OAuthConfig
-	ServerQuotas identity.ServerQuotas
-	RateLimits   ratelimit.Config
+	storage.ServerConfig
+	BaseURL    string
+	OAuth      OAuthConfig
+	RateLimits ratelimit.Config
 }
 
 // OAuthConfig holds OAuth provider credentials.
@@ -54,10 +54,9 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Create handler config from server config
 	hcfg := &handlers.Config{
-		JWTSecret:    cfg.JWTSecret,
+		ServerConfig: cfg.ServerConfig,
 		BaseURL:      cfg.BaseURL,
 		Version:      "1.0.0",
-		ServerQuotas: cfg.ServerQuotas,
 	}
 
 	// Auth handler (needs New* for map initialization)

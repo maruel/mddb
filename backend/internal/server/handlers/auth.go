@@ -78,8 +78,8 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 
 	// Check server-wide user quota
-	if h.cfg.ServerQuotas.MaxUsers > 0 && h.svc.User.Count() >= h.cfg.ServerQuotas.MaxUsers {
-		return nil, dto.QuotaExceeded("users", h.cfg.ServerQuotas.MaxUsers)
+	if h.cfg.Quotas.MaxUsers > 0 && h.svc.User.Count() >= h.cfg.Quotas.MaxUsers {
+		return nil, dto.QuotaExceeded("users", h.cfg.Quotas.MaxUsers)
 	}
 
 	// Check if user already exists
@@ -142,8 +142,8 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.Use
 	}
 
 	// Check server-wide organization quota
-	if h.cfg.ServerQuotas.MaxOrganizations > 0 && h.svc.Organization.Count() >= h.cfg.ServerQuotas.MaxOrganizations {
-		return nil, dto.QuotaExceeded("organizations", h.cfg.ServerQuotas.MaxOrganizations)
+	if h.cfg.Quotas.MaxOrganizations > 0 && h.svc.Organization.Count() >= h.cfg.Quotas.MaxOrganizations {
+		return nil, dto.QuotaExceeded("organizations", h.cfg.Quotas.MaxOrganizations)
 	}
 
 	// Create the organization

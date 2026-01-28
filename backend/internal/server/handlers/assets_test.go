@@ -8,12 +8,15 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 func TestAssetHandler(t *testing.T) {
 	cfg := &Config{
-		JWTSecret: "test-secret-key",
-		BaseURL:   "http://localhost:8080",
+		ServerConfig: storage.ServerConfig{
+			JWTSecret: "test-secret-key",
+		},
+		BaseURL: "http://localhost:8080",
 	}
 	ah := &AssetHandler{Svc: &Services{}, Cfg: cfg}
 

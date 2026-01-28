@@ -88,7 +88,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Check server-wide storage quota before saving
-	maxStorage := h.Cfg.ServerQuotas.MaxTotalStorageBytes
+	maxStorage := h.Cfg.Quotas.MaxTotalStorageBytes
 	if err := h.Svc.FileStore.CheckServerStorageQuota(int64(len(data)), maxStorage); err != nil {
 		if errors.Is(err, content.ErrServerStorageQuotaExceeded) {
 			writeErrorResponse(w, dto.QuotaExceededInt64("total storage", maxStorage))

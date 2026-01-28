@@ -215,8 +215,8 @@ func (h *NodeHandler) DeletePage(ctx context.Context, wsID jsonldb.ID, user *ide
 // The parent ID is in req.ParentID; use 0 for root.
 func (h *NodeHandler) CreateTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreateTableRequest) (*dto.CreateTableUnderParentResponse, error) {
 	// Check column quota
-	if h.Cfg.ServerQuotas.MaxColumnsPerTable > 0 && len(req.Properties) > h.Cfg.ServerQuotas.MaxColumnsPerTable {
-		return nil, dto.QuotaExceeded("columns per table", h.Cfg.ServerQuotas.MaxColumnsPerTable)
+	if h.Cfg.Quotas.MaxColumnsPerTable > 0 && len(req.Properties) > h.Cfg.Quotas.MaxColumnsPerTable {
+		return nil, dto.QuotaExceeded("columns per table", h.Cfg.Quotas.MaxColumnsPerTable)
 	}
 
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
@@ -225,10 +225,10 @@ func (h *NodeHandler) CreateTable(ctx context.Context, wsID jsonldb.ID, user *id
 	}
 
 	// Check table quota for workspace
-	if h.Cfg.ServerQuotas.MaxTablesPerWorkspace > 0 {
-		if err := ws.CheckTableQuota(h.Cfg.ServerQuotas.MaxTablesPerWorkspace); err != nil {
+	if h.Cfg.Quotas.MaxTablesPerWorkspace > 0 {
+		if err := ws.CheckTableQuota(h.Cfg.Quotas.MaxTablesPerWorkspace); err != nil {
 			if errors.Is(err, content.ErrTableQuotaExceeded) {
-				return nil, dto.QuotaExceeded("tables per workspace", h.Cfg.ServerQuotas.MaxTablesPerWorkspace)
+				return nil, dto.QuotaExceeded("tables per workspace", h.Cfg.Quotas.MaxTablesPerWorkspace)
 			}
 			return nil, dto.InternalWithError("Failed to check table quota", err)
 		}
@@ -267,8 +267,8 @@ func (h *NodeHandler) GetTable(ctx context.Context, wsID jsonldb.ID, _ *identity
 // UpdateTable updates a table's schema.
 func (h *NodeHandler) UpdateTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
 	// Check column quota
-	if h.Cfg.ServerQuotas.MaxColumnsPerTable > 0 && len(req.Properties) > h.Cfg.ServerQuotas.MaxColumnsPerTable {
-		return nil, dto.QuotaExceeded("columns per table", h.Cfg.ServerQuotas.MaxColumnsPerTable)
+	if h.Cfg.Quotas.MaxColumnsPerTable > 0 && len(req.Properties) > h.Cfg.Quotas.MaxColumnsPerTable {
+		return nil, dto.QuotaExceeded("columns per table", h.Cfg.Quotas.MaxColumnsPerTable)
 	}
 
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
@@ -338,13 +338,13 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 	}
 
 	// Check row quota
-	if h.Cfg.ServerQuotas.MaxRowsPerTable > 0 {
+	if h.Cfg.Quotas.MaxRowsPerTable > 0 {
 		count, err := ws.CountRecords(req.ID)
 		if err != nil {
 			return nil, dto.InternalWithError("Failed to count records", err)
 		}
-		if count >= h.Cfg.ServerQuotas.MaxRowsPerTable {
-			return nil, dto.QuotaExceeded("rows per table", h.Cfg.ServerQuotas.MaxRowsPerTable)
+		if count >= h.Cfg.Quotas.MaxRowsPerTable {
+			return nil, dto.QuotaExceeded("rows per table", h.Cfg.Quotas.MaxRowsPerTable)
 		}
 	}
 

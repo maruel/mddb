@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -64,8 +65,10 @@ func TestRegister(t *testing.T) {
 	}
 
 	cfg := &Config{
-		JWTSecret: "secret",
-		BaseURL:   "http://localhost:8080",
+		ServerConfig: storage.ServerConfig{
+			JWTSecret: "secret",
+		},
+		BaseURL: "http://localhost:8080",
 	}
 	authHandler := NewAuthHandler(svc, cfg)
 
