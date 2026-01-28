@@ -28,85 +28,85 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 
 | Method | Path | Auth |
 |--------|------|------|
-| POST | `/api/auth/email` | member |
-| POST | `/api/auth/email/send-verification` | member |
+| POST | `/api/auth/email` | authenticated |
+| POST | `/api/auth/email/send-verification` | authenticated |
 | GET | `/api/auth/email/verify` | public |
 | POST | `/api/auth/invitations/org/accept` | public |
 | POST | `/api/auth/invitations/ws/accept` | public |
 | POST | `/api/auth/login` | public |
-| POST | `/api/auth/logout` | member |
-| GET | `/api/auth/me` | member |
-| POST | `/api/auth/oauth/link` | member |
-| POST | `/api/auth/oauth/unlink` | member |
+| POST | `/api/auth/logout` | authenticated |
+| GET | `/api/auth/me` | authenticated |
+| POST | `/api/auth/oauth/link` | authenticated |
+| POST | `/api/auth/oauth/unlink` | authenticated |
 | GET | `/api/auth/oauth/{provider}` | public |
 | GET | `/api/auth/oauth/{provider}/callback` | public |
 | GET | `/api/auth/providers` | public |
 | POST | `/api/auth/register` | public |
-| GET | `/api/auth/sessions` | member |
-| POST | `/api/auth/sessions/revoke` | member |
-| POST | `/api/auth/sessions/revoke-all` | member |
-| POST | `/api/auth/settings` | member |
-| POST | `/api/auth/switch-org` | member |
-| POST | `/api/auth/switch-workspace` | member |
+| GET | `/api/auth/sessions` | authenticated |
+| POST | `/api/auth/sessions/revoke` | authenticated |
+| POST | `/api/auth/sessions/revoke-all` | authenticated |
+| POST | `/api/auth/settings` | authenticated |
+| POST | `/api/auth/switch-org` | authenticated |
+| POST | `/api/auth/switch-workspace` | authenticated |
 
 ## Settings
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/workspaces/{wsID}/settings/git` | wsAdmin |
-| POST | `/api/workspaces/{wsID}/settings/git` | wsAdmin |
-| POST | `/api/workspaces/{wsID}/settings/git/delete` | wsAdmin |
-| POST | `/api/workspaces/{wsID}/settings/git/push` | wsAdmin |
-| POST | `/api/workspaces/{wsID}/settings/membership` | wsViewer |
+| GET | `/api/workspaces/{wsID}/settings/git` | identity.WSRoleAdmin |
+| POST | `/api/workspaces/{wsID}/settings/git` | identity.WSRoleAdmin |
+| POST | `/api/workspaces/{wsID}/settings/git/delete` | identity.WSRoleAdmin |
+| POST | `/api/workspaces/{wsID}/settings/git/push` | identity.WSRoleAdmin |
+| POST | `/api/workspaces/{wsID}/settings/membership` | identity.WSRoleViewer |
 
 ## Users
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/organizations/{orgID}/users` | orgAdmin |
-| POST | `/api/organizations/{orgID}/users/role` | orgAdmin |
-| POST | `/api/workspaces/{wsID}/users/role` | wsAdmin |
+| GET | `/api/organizations/{orgID}/users` | identity.OrgRoleAdmin |
+| POST | `/api/organizations/{orgID}/users/role` | identity.OrgRoleAdmin |
+| POST | `/api/workspaces/{wsID}/users/role` | identity.WSRoleAdmin |
 
 ## Invitations
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/organizations/{orgID}/invitations` | orgAdmin |
-| POST | `/api/organizations/{orgID}/invitations` | orgAdmin |
-| GET | `/api/workspaces/{wsID}/invitations` | wsAdmin |
-| POST | `/api/workspaces/{wsID}/invitations` | wsAdmin |
+| GET | `/api/organizations/{orgID}/invitations` | identity.OrgRoleAdmin |
+| POST | `/api/organizations/{orgID}/invitations` | identity.OrgRoleAdmin |
+| GET | `/api/workspaces/{wsID}/invitations` | identity.WSRoleAdmin |
+| POST | `/api/workspaces/{wsID}/invitations` | identity.WSRoleAdmin |
 
 ## Nodes
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/workspaces/{wsID}/nodes/{id}` | wsViewer |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/assets` | wsViewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/assets` | wsEditor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/assets/{name}/delete` | wsEditor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/children` | wsViewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/delete` | wsEditor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/history` | wsViewer |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/history/{hash}` | wsViewer |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/page` | wsViewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/page` | wsEditor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/page/create` | wsEditor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/page/delete` | wsEditor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/table` | wsViewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table` | wsEditor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/create` | wsEditor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/delete` | wsEditor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/table/records` | wsViewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/create` | wsEditor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | wsViewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | wsEditor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` | wsEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}` | identity.WSRoleViewer |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/assets` | identity.WSRoleViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/assets` | identity.WSRoleEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/assets/{name}/delete` | identity.WSRoleEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/children` | identity.WSRoleViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/delete` | identity.WSRoleEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/history` | identity.WSRoleViewer |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/history/{hash}` | identity.WSRoleViewer |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/page` | identity.WSRoleViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/page` | identity.WSRoleEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/page/create` | identity.WSRoleEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/page/delete` | identity.WSRoleEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/table` | identity.WSRoleViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table` | identity.WSRoleEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/create` | identity.WSRoleEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/delete` | identity.WSRoleEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/table/records` | identity.WSRoleViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/create` | identity.WSRoleEditor |
+| GET | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | identity.WSRoleViewer |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | identity.WSRoleEditor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` | identity.WSRoleEditor |
 
 ## Search
 
 | Method | Path | Auth |
 |--------|------|------|
-| POST | `/api/workspaces/{wsID}/search` | wsViewer |
+| POST | `/api/workspaces/{wsID}/search` | identity.WSRoleViewer |
 
 ## Assets
 
@@ -119,11 +119,11 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | Method | Path | Auth |
 |--------|------|------|
 | * | `/api/` | public |
-| POST | `/api/organizations` | member |
-| GET | `/api/organizations/{orgID}` | member |
-| POST | `/api/organizations/{orgID}` | orgAdmin |
-| POST | `/api/organizations/{orgID}/settings` | orgAdmin |
-| POST | `/api/organizations/{orgID}/workspaces` | orgAdmin |
-| GET | `/api/workspaces/{wsID}` | wsViewer |
-| POST | `/api/workspaces/{wsID}` | wsAdmin |
+| POST | `/api/organizations` | authenticated |
+| GET | `/api/organizations/{orgID}` | identity.OrgRoleMember |
+| POST | `/api/organizations/{orgID}` | identity.OrgRoleAdmin |
+| POST | `/api/organizations/{orgID}/settings` | identity.OrgRoleAdmin |
+| POST | `/api/organizations/{orgID}/workspaces` | identity.OrgRoleAdmin |
+| GET | `/api/workspaces/{wsID}` | identity.WSRoleViewer |
+| POST | `/api/workspaces/{wsID}` | identity.WSRoleAdmin |
 

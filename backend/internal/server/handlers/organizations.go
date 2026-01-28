@@ -7,75 +7,56 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
-	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // OrganizationHandler handles organization management requests.
 type OrganizationHandler struct {
-	orgService    *identity.OrganizationService
-	orgMemService *identity.OrganizationMembershipService
-	wsService     *identity.WorkspaceService
-	wsMemService  *identity.WorkspaceMembershipService
-	fs            *content.FileStoreService
-	maxWorkspaces int
+	svc *Services
+	cfg *Config
 }
 
 // NewOrganizationHandler creates a new organization handler.
-func NewOrganizationHandler(
-	orgService *identity.OrganizationService,
-	orgMemService *identity.OrganizationMembershipService,
-	wsService *identity.WorkspaceService,
-	wsMemService *identity.WorkspaceMembershipService,
-	fs *content.FileStoreService,
-	maxWorkspaces int,
-) *OrganizationHandler {
-	return &OrganizationHandler{
-		orgService:    orgService,
-		orgMemService: orgMemService,
-		wsService:     wsService,
-		wsMemService:  wsMemService,
-		fs:            fs,
-		maxWorkspaces: maxWorkspaces,
-	}
+func NewOrganizationHandler(svc *Services, cfg *Config) *OrganizationHandler {
+	return &OrganizationHandler{svc: svc, cfg: cfg}
 }
 
 // GetOrganization retrieves current organization details.
 func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID jsonldb.ID, _ *identity.User, _ *dto.GetOrganizationRequest) (*dto.OrganizationResponse, error) {
-	org, err := h.orgService.Get(orgID)
+	org, err := h.svc.Organization.Get(orgID)
 	if err != nil {
 		return nil, err
 	}
-	memberCount := h.orgMemService.CountOrgMemberships(orgID)
-	workspaceCount := h.wsService.CountByOrg(orgID)
+	memberCount := h.svc.OrgMembership.CountOrgMemberships(orgID)
+	workspaceCount := h.svc.Workspace.CountByOrg(orgID)
 	return organizationToResponse(org, memberCount, workspaceCount), nil
 }
 
 // UpdateOrgPreferences updates organization-wide preferences/settings.
 func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateOrgPreferencesRequest) (*dto.OrganizationResponse, error) {
-	org, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
+	org, err := h.svc.Organization.Modify(orgID, func(org *identity.Organization) error {
 		org.Settings = organizationSettingsToEntity(req.Settings)
 		return nil
 	})
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to update organization settings", err)
 	}
-	memberCount := h.orgMemService.CountOrgMemberships(orgID)
-	workspaceCount := h.wsService.CountByOrg(orgID)
+	memberCount := h.svc.OrgMembership.CountOrgMemberships(orgID)
+	workspaceCount := h.svc.Workspace.CountByOrg(orgID)
 	return organizationToResponse(org, memberCount, workspaceCount), nil
 }
 
 // UpdateOrganization updates organization details (name).
 func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateOrganizationRequest) (*dto.OrganizationResponse, error) {
-	org, err := h.orgService.Modify(orgID, func(org *identity.Organization) error {
+	org, err := h.svc.Organization.Modify(orgID, func(org *identity.Organization) error {
 		org.Name = req.Name
 		return nil
 	})
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to update organization", err)
 	}
-	memberCount := h.orgMemService.CountOrgMemberships(orgID)
-	workspaceCount := h.wsService.CountByOrg(orgID)
+	memberCount := h.svc.OrgMembership.CountOrgMemberships(orgID)
+	workspaceCount := h.svc.Workspace.CountByOrg(orgID)
 	return organizationToResponse(org, memberCount, workspaceCount), nil
 }
 
@@ -86,49 +67,49 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID jsonldb
 	}
 
 	// Check server-wide workspace quota
-	if h.maxWorkspaces > 0 && h.wsService.Count() >= h.maxWorkspaces {
-		return nil, dto.QuotaExceeded("workspaces", h.maxWorkspaces)
+	if h.cfg.ServerQuotas.MaxWorkspaces > 0 && h.svc.Workspace.Count() >= h.cfg.ServerQuotas.MaxWorkspaces {
+		return nil, dto.QuotaExceeded("workspaces", h.cfg.ServerQuotas.MaxWorkspaces)
 	}
 
 	// Create workspace
-	ws, err := h.wsService.Create(ctx, orgID, req.Name)
+	ws, err := h.svc.Workspace.Create(ctx, orgID, req.Name)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create workspace", err)
 	}
 
 	// Create workspace membership (user becomes admin of new workspace)
-	if _, err := h.wsMemService.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
+	if _, err := h.svc.WSMembership.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
 		return nil, dto.InternalWithError("Failed to create workspace membership", err)
 	}
 
 	// Initialize workspace storage
-	if err := h.fs.InitWorkspace(ctx, ws.ID); err != nil {
+	if err := h.svc.FileStore.InitWorkspace(ctx, ws.ID); err != nil {
 		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
 	}
 
-	memberCount := h.wsMemService.CountWSMemberships(ws.ID)
+	memberCount := h.svc.WSMembership.CountWSMemberships(ws.ID)
 	return workspaceToResponse(ws, memberCount), nil
 }
 
 // GetWorkspace retrieves workspace details.
 func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.GetWorkspaceRequest) (*dto.WorkspaceResponse, error) {
-	ws, err := h.wsService.Get(wsID)
+	ws, err := h.svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
 	}
-	memberCount := h.wsMemService.CountWSMemberships(wsID)
+	memberCount := h.svc.WSMembership.CountWSMemberships(wsID)
 	return workspaceToResponse(ws, memberCount), nil
 }
 
 // UpdateWorkspace updates workspace details (name).
 func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.UpdateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
-	ws, err := h.wsService.Modify(wsID, func(ws *identity.Workspace) error {
+	ws, err := h.svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		ws.Name = req.Name
 		return nil
 	})
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to update workspace", err)
 	}
-	memberCount := h.wsMemService.CountWSMemberships(wsID)
+	memberCount := h.svc.WSMembership.CountWSMemberships(wsID)
 	return workspaceToResponse(ws, memberCount), nil
 }

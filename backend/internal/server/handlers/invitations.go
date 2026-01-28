@@ -15,42 +15,17 @@ import (
 
 // InvitationHandler handles invitation requests.
 type InvitationHandler struct {
-	orgInvService *identity.OrganizationInvitationService
-	wsInvService  *identity.WorkspaceInvitationService
-	userService   *identity.UserService
-	orgService    *identity.OrganizationService
-	wsService     *identity.WorkspaceService
-	orgMemService *identity.OrganizationMembershipService
-	wsMemService  *identity.WorkspaceMembershipService
-	authHandler   *AuthHandler
-	emailService  *email.Service
-	baseURL       string
+	svc         *Services
+	cfg         *Config
+	authHandler *AuthHandler
 }
 
 // NewInvitationHandler creates a new invitation handler.
-func NewInvitationHandler(
-	orgInvService *identity.OrganizationInvitationService,
-	wsInvService *identity.WorkspaceInvitationService,
-	userService *identity.UserService,
-	orgService *identity.OrganizationService,
-	wsService *identity.WorkspaceService,
-	orgMemService *identity.OrganizationMembershipService,
-	wsMemService *identity.WorkspaceMembershipService,
-	authHandler *AuthHandler,
-	emailService *email.Service,
-	baseURL string,
-) *InvitationHandler {
+func NewInvitationHandler(svc *Services, cfg *Config, authHandler *AuthHandler) *InvitationHandler {
 	return &InvitationHandler{
-		orgInvService: orgInvService,
-		wsInvService:  wsInvService,
-		userService:   userService,
-		orgService:    orgService,
-		wsService:     wsService,
-		orgMemService: orgMemService,
-		wsMemService:  wsMemService,
-		authHandler:   authHandler,
-		emailService:  emailService,
-		baseURL:       baseURL,
+		svc:         svc,
+		cfg:         cfg,
+		authHandler: authHandler,
 	}
 }
 
@@ -59,14 +34,14 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID jsonl
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
-	invitation, err := h.orgInvService.Create(req.Email, orgID, orgRoleToEntity(req.Role), user.ID)
+	invitation, err := h.svc.OrgInvitation.Create(req.Email, orgID, orgRoleToEntity(req.Role), user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create invitation", err)
 	}
 
 	// Send invitation email if configured
-	if h.emailService != nil {
-		org, err := h.orgService.Get(orgID)
+	if h.svc.Email != nil {
+		org, err := h.svc.Organization.Get(orgID)
 		if err != nil {
 			slog.WarnContext(ctx, "Failed to get org for invitation email", "err", err, "org_id", orgID)
 		} else {
@@ -75,8 +50,8 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID jsonl
 			if req.Locale == "" && user.Settings.Language != "" {
 				locale = email.ParseLocale(user.Settings.Language)
 			}
-			acceptURL := h.baseURL + "/accept-invitation/org?token=" + invitation.Token
-			if err := h.emailService.SendOrgInvitation(ctx, req.Email, org.Name, user.Name, string(req.Role), acceptURL, locale); err != nil {
+			acceptURL := h.cfg.BaseURL + "/accept-invitation/org?token=" + invitation.Token
+			if err := h.svc.Email.SendOrgInvitation(ctx, req.Email, org.Name, user.Name, string(req.Role), acceptURL, locale); err != nil {
 				slog.WarnContext(ctx, "Failed to send org invitation email", "err", err, "email", req.Email)
 			} else {
 				slog.InfoContext(ctx, "Org invitation email sent", "email", req.Email, "org_id", orgID, "locale", locale)
@@ -90,7 +65,7 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID jsonl
 // ListOrgInvitations returns all pending invitations for an organization.
 func (h *InvitationHandler) ListOrgInvitations(ctx context.Context, orgID jsonldb.ID, _ *identity.User, _ *dto.ListOrgInvitationsRequest) (*dto.ListOrgInvitationsResponse, error) {
 	var responses []dto.OrgInvitationResponse //nolint:prealloc // Iterator length unknown
-	for inv := range h.orgInvService.IterByOrg(orgID) {
+	for inv := range h.svc.OrgInvitation.IterByOrg(orgID) {
 		responses = append(responses, *orgInvitationToResponse(inv))
 	}
 	return &dto.ListOrgInvitationsResponse{Invitations: responses}, nil
@@ -101,18 +76,18 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID jsonldb
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
-	invitation, err := h.wsInvService.Create(req.Email, wsID, wsRoleToEntity(req.Role), user.ID)
+	invitation, err := h.svc.WSInvitation.Create(req.Email, wsID, wsRoleToEntity(req.Role), user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create invitation", err)
 	}
 
 	// Send invitation email if configured
-	if h.emailService != nil {
-		ws, err := h.wsService.Get(wsID)
+	if h.svc.Email != nil {
+		ws, err := h.svc.Workspace.Get(wsID)
 		if err != nil {
 			slog.WarnContext(ctx, "Failed to get workspace for invitation email", "err", err, "ws_id", wsID)
 		} else {
-			org, err := h.orgService.Get(ws.OrganizationID)
+			org, err := h.svc.Organization.Get(ws.OrganizationID)
 			if err != nil {
 				slog.WarnContext(ctx, "Failed to get org for invitation email", "err", err, "org_id", ws.OrganizationID)
 			} else {
@@ -121,8 +96,8 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID jsonldb
 				if req.Locale == "" && user.Settings.Language != "" {
 					locale = email.ParseLocale(user.Settings.Language)
 				}
-				acceptURL := h.baseURL + "/accept-invitation/ws?token=" + invitation.Token
-				if err := h.emailService.SendWSInvitation(ctx, req.Email, ws.Name, org.Name, user.Name, string(req.Role), acceptURL, locale); err != nil {
+				acceptURL := h.cfg.BaseURL + "/accept-invitation/ws?token=" + invitation.Token
+				if err := h.svc.Email.SendWSInvitation(ctx, req.Email, ws.Name, org.Name, user.Name, string(req.Role), acceptURL, locale); err != nil {
 					slog.WarnContext(ctx, "Failed to send ws invitation email", "err", err, "email", req.Email)
 				} else {
 					slog.InfoContext(ctx, "Workspace invitation email sent", "email", req.Email, "ws_id", wsID, "locale", locale)
@@ -137,7 +112,7 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID jsonldb
 // ListWSInvitations returns all pending invitations for a workspace.
 func (h *InvitationHandler) ListWSInvitations(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.ListWSInvitationsRequest) (*dto.ListWSInvitationsResponse, error) {
 	var responses []dto.WSInvitationResponse //nolint:prealloc // Iterator length unknown
-	for inv := range h.wsInvService.IterByWorkspace(wsID) {
+	for inv := range h.svc.WSInvitation.IterByWorkspace(wsID) {
 		responses = append(responses, *wsInvitationToResponse(inv))
 	}
 	return &dto.ListWSInvitationsResponse{Invitations: responses}, nil
@@ -150,7 +125,7 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 		return nil, dto.MissingField("token")
 	}
 
-	inv, err := h.orgInvService.GetByToken(req.Token)
+	inv, err := h.svc.OrgInvitation.GetByToken(req.Token)
 	if err != nil {
 		return nil, dto.NewAPIError(404, dto.ErrorCodeNotFound, "Invitation not found or expired")
 	}
@@ -160,25 +135,25 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 	}
 
 	// Create user or link to existing
-	user, err := h.userService.GetByEmail(inv.Email)
+	user, err := h.svc.User.GetByEmail(inv.Email)
 	if err != nil {
 		// Create new user if they don't exist
 		if req.Password == "" || req.Name == "" {
 			return nil, dto.MissingField("password and name required for new account")
 		}
-		user, err = h.userService.Create(inv.Email, req.Password, req.Name)
+		user, err = h.svc.User.Create(inv.Email, req.Password, req.Name)
 		if err != nil {
 			return nil, dto.InternalWithError("Failed to create user", err)
 		}
 	}
 
 	// Create organization membership
-	if _, err = h.orgMemService.Create(user.ID, inv.OrganizationID, inv.Role); err != nil {
+	if _, err = h.svc.OrgMembership.Create(user.ID, inv.OrganizationID, inv.Role); err != nil {
 		return nil, dto.InternalWithError("Failed to create organization membership", err)
 	}
 
 	// Delete invitation (best effort - membership already created)
-	if err := h.orgInvService.Delete(inv.ID); err != nil {
+	if err := h.svc.OrgInvitation.Delete(inv.ID); err != nil {
 		slog.Warn("Failed to delete invitation after acceptance", "invitationID", inv.ID, "error", err)
 	}
 
@@ -189,7 +164,7 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 	}
 
 	// Build user response
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -211,7 +186,7 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 		return nil, dto.MissingField("token")
 	}
 
-	inv, err := h.wsInvService.GetByToken(req.Token)
+	inv, err := h.svc.WSInvitation.GetByToken(req.Token)
 	if err != nil {
 		return nil, dto.NewAPIError(404, dto.ErrorCodeNotFound, "Invitation not found or expired")
 	}
@@ -221,38 +196,38 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 	}
 
 	// Get workspace to find org
-	ws, err := h.wsService.Get(inv.WorkspaceID)
+	ws, err := h.svc.Workspace.Get(inv.WorkspaceID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
 	// Create user or link to existing
-	user, err := h.userService.GetByEmail(inv.Email)
+	user, err := h.svc.User.GetByEmail(inv.Email)
 	if err != nil {
 		// Create new user if they don't exist
 		if req.Password == "" || req.Name == "" {
 			return nil, dto.MissingField("password and name required for new account")
 		}
-		user, err = h.userService.Create(inv.Email, req.Password, req.Name)
+		user, err = h.svc.User.Create(inv.Email, req.Password, req.Name)
 		if err != nil {
 			return nil, dto.InternalWithError("Failed to create user", err)
 		}
 	}
 
 	// Ensure user has org membership (as member if not already)
-	if _, err := h.orgMemService.Get(user.ID, ws.OrganizationID); err != nil {
-		if _, err = h.orgMemService.Create(user.ID, ws.OrganizationID, identity.OrgRoleMember); err != nil {
+	if _, err := h.svc.OrgMembership.Get(user.ID, ws.OrganizationID); err != nil {
+		if _, err = h.svc.OrgMembership.Create(user.ID, ws.OrganizationID, identity.OrgRoleMember); err != nil {
 			return nil, dto.InternalWithError("Failed to create organization membership", err)
 		}
 	}
 
 	// Create workspace membership
-	if _, err = h.wsMemService.Create(user.ID, inv.WorkspaceID, inv.Role); err != nil {
+	if _, err = h.svc.WSMembership.Create(user.ID, inv.WorkspaceID, inv.Role); err != nil {
 		return nil, dto.InternalWithError("Failed to create workspace membership", err)
 	}
 
 	// Delete invitation (best effort - membership already created)
-	if err := h.wsInvService.Delete(inv.ID); err != nil {
+	if err := h.svc.WSInvitation.Delete(inv.ID); err != nil {
 		slog.Warn("Failed to delete invitation after acceptance", "invitationID", inv.ID, "error", err)
 	}
 
@@ -263,7 +238,7 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 	}
 
 	// Build user response
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}

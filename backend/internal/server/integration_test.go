@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/handlers"
+	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -79,18 +81,27 @@ func setupTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("NewSessionService: %v", err)
 	}
 
-	router := NewRouter(
-		fileStore, userService, orgService, wsService,
-		orgInvService, wsInvService, orgMemService, wsMemService, sessionService,
-		nil, // email verification service (disabled)
-		nil, // email service (disabled)
-		testJWTSecret,
-		"http://localhost:8080",
-		"", "", // google OAuth (disabled)
-		"", "", // microsoft OAuth (disabled)
-		"", "", // github OAuth (disabled)
-		identity.DefaultServerQuotas(),
-	)
+	svc := &handlers.Services{
+		FileStore:     fileStore,
+		User:          userService,
+		Organization:  orgService,
+		Workspace:     wsService,
+		OrgInvitation: orgInvService,
+		WSInvitation:  wsInvService,
+		OrgMembership: orgMemService,
+		WSMembership:  wsMemService,
+		Session:       sessionService,
+		EmailVerif:    nil, // disabled
+		Email:         nil, // disabled
+	}
+	cfg := &Config{
+		JWTSecret:    testJWTSecret,
+		BaseURL:      "http://localhost:8080",
+		OAuth:        OAuthConfig{}, // all disabled
+		ServerQuotas: identity.DefaultServerQuotas(),
+		RateLimits:   *ratelimit.DefaultConfig(),
+	}
+	router := NewRouter(svc, cfg)
 
 	server := httptest.NewServer(router)
 	t.Cleanup(server.Close)

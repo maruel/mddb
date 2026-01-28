@@ -12,37 +12,19 @@ import (
 
 // MembershipHandler handles membership-related requests.
 type MembershipHandler struct {
-	orgMemService *identity.OrganizationMembershipService
-	wsMemService  *identity.WorkspaceMembershipService
-	userService   *identity.UserService
-	orgService    *identity.OrganizationService
-	wsService     *identity.WorkspaceService
-	authHandler   *AuthHandler
+	svc         *Services
+	authHandler *AuthHandler
 }
 
 // NewMembershipHandler creates a new membership handler.
-func NewMembershipHandler(
-	orgMemService *identity.OrganizationMembershipService,
-	wsMemService *identity.WorkspaceMembershipService,
-	userService *identity.UserService,
-	orgService *identity.OrganizationService,
-	wsService *identity.WorkspaceService,
-	authHandler *AuthHandler,
-) *MembershipHandler {
-	return &MembershipHandler{
-		orgMemService: orgMemService,
-		wsMemService:  wsMemService,
-		userService:   userService,
-		orgService:    orgService,
-		wsService:     wsService,
-		authHandler:   authHandler,
-	}
+func NewMembershipHandler(svc *Services, authHandler *AuthHandler) *MembershipHandler {
+	return &MembershipHandler{svc: svc, authHandler: authHandler}
 }
 
 // SwitchOrg switches the user's active organization and returns a new token.
-func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.SwitchOrgRequest) (*dto.SwitchOrgResponse, error) {
+func (h *MembershipHandler) SwitchOrg(ctx context.Context, user *identity.User, req *dto.SwitchOrgRequest) (*dto.SwitchOrgResponse, error) {
 	// Verify membership
-	orgMem, err := h.orgMemService.Get(user.ID, req.OrgID)
+	orgMem, err := h.svc.OrgMembership.Get(user.ID, req.OrgID)
 	if err != nil {
 		return nil, dto.Forbidden("User is not a member of this organization")
 	}
@@ -53,7 +35,7 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *i
 	}
 
 	// Build user response with memberships
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -79,27 +61,27 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, _ jsonldb.ID, user *i
 }
 
 // SwitchWorkspace switches the user's active workspace and returns a new token.
-func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.SwitchWorkspaceRequest) (*dto.SwitchWorkspaceResponse, error) {
+func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.User, req *dto.SwitchWorkspaceRequest) (*dto.SwitchWorkspaceResponse, error) {
 	// Get workspace to check org membership
-	ws, err := h.wsService.Get(req.WsID)
+	ws, err := h.svc.Workspace.Get(req.WsID)
 	if err != nil {
 		return nil, dto.NotFound("workspace")
 	}
 
 	// Verify org membership
-	orgMem, err := h.orgMemService.Get(user.ID, ws.OrganizationID)
+	orgMem, err := h.svc.OrgMembership.Get(user.ID, ws.OrganizationID)
 	if err != nil {
 		return nil, dto.Forbidden("User is not a member of this organization")
 	}
 
 	// Verify workspace membership (or org admin)
-	wsMem, err := h.wsMemService.Get(user.ID, req.WsID)
+	wsMem, err := h.svc.WSMembership.Get(user.ID, req.WsID)
 	if err != nil && orgMem.Role != identity.OrgRoleOwner && orgMem.Role != identity.OrgRoleAdmin {
 		return nil, dto.Forbidden("User is not a member of this workspace")
 	}
 
 	// Persist active workspace in user settings (LRU: prepend to list, limit to 10)
-	if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+	if _, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
 		// Remove this workspace from current list (if present)
 		newList := make([]jsonldb.ID, 0, len(u.Settings.LastActiveWorkspaces)+1)
 		newList = append(newList, req.WsID) // Prepend as most recent
@@ -124,7 +106,7 @@ func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, _ jsonldb.ID, u
 	}
 
 	// Build user response with memberships
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -149,11 +131,11 @@ func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, _ jsonldb.ID, u
 
 // UpdateWSMembershipSettings updates user preferences within a workspace.
 func (h *MembershipHandler) UpdateWSMembershipSettings(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateWSMembershipSettingsRequest) (*dto.WSMembershipResponse, error) {
-	m, err := h.wsMemService.Get(user.ID, wsID)
+	m, err := h.svc.WSMembership.Get(user.ID, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace membership", err)
 	}
-	m, err = h.wsMemService.Modify(m.ID, func(m *identity.WorkspaceMembership) error {
+	m, err = h.svc.WSMembership.Modify(m.ID, func(m *identity.WorkspaceMembership) error {
 		m.Settings = wsMembershipSettingsToEntity(req.Settings)
 		return nil
 	})

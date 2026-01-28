@@ -375,30 +375,11 @@ func parseHandlerExpr(expr ast.Expr) (wrapperType, handlerName string) {
 	}
 
 	funcName := exprName(call.Fun)
+	// Handler is always the first argument for all WrapFoo functions
 	switch funcName {
-	case "Wrap":
+	case "Wrap", "WrapAuth", "WrapOrgAuth", "WrapWSAuth", "WrapAuthRaw", "WrapGlobalAdmin":
 		if len(call.Args) >= 1 {
-			return "Wrap", exprName(call.Args[0])
-		}
-	case "WrapAuth":
-		// Args: userService, orgMemService, sessionService, jwtSecret, role, handler, rlConfig
-		if len(call.Args) >= 6 {
-			return "WrapAuth", exprName(call.Args[5])
-		}
-	case "WrapWSAuth":
-		// Args: userService, orgMemService, wsMemService, wsService, sessionService, jwtSecret, role, handler, rlConfig
-		if len(call.Args) >= 8 {
-			return "WrapWSAuth", exprName(call.Args[7])
-		}
-	case "WrapAuthRaw":
-		// Args: userService, orgMemService, wsMemService, wsService, sessionService, jwtSecret, role, handler, rlConfig
-		if len(call.Args) >= 8 {
-			return "WrapAuthRaw", exprName(call.Args[7])
-		}
-	case "WrapGlobalAdmin":
-		// Args: userService, sessionService, jwtSecret, handler
-		if len(call.Args) >= 4 {
-			return "WrapGlobalAdmin", exprName(call.Args[3])
+			return funcName, exprName(call.Args[0])
 		}
 	}
 

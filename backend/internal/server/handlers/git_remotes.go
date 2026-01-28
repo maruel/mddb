@@ -10,7 +10,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -18,21 +17,17 @@ const gitRemoteName = "origin"
 
 // GitRemoteHandler handles git remote operations.
 type GitRemoteHandler struct {
-	wsService *identity.WorkspaceService
-	fileStore *content.FileStoreService
+	svc *Services
 }
 
 // NewGitRemoteHandler creates a new git remote handler.
-func NewGitRemoteHandler(wsService *identity.WorkspaceService, fileStore *content.FileStoreService) *GitRemoteHandler {
-	return &GitRemoteHandler{
-		wsService: wsService,
-		fileStore: fileStore,
-	}
+func NewGitRemoteHandler(svc *Services) *GitRemoteHandler {
+	return &GitRemoteHandler{svc: svc}
 }
 
 // GetGitRemote returns the git remote for a workspace, or null if none exists.
 func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	ws, err := h.wsService.Get(wsID)
+	ws, err := h.svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +39,7 @@ func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID jsonldb.ID, _ 
 
 // UpdateGitRemote creates or updates the git remote for a workspace.
 func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.UpdateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	ws, err := h.wsService.Modify(wsID, func(ws *identity.Workspace) error {
+	ws, err := h.svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		// Preserve existing timestamps on update
 		created := ws.GitRemote.Created
 		lastSync := ws.GitRemote.LastSync
@@ -67,7 +62,7 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID,
 	}
 
 	// Actually add it to the local git repo
-	wsStore, err := h.fileStore.GetWorkspaceStore(ctx, wsID)
+	wsStore, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace store: %w", err)
 	}
@@ -93,7 +88,7 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID,
 
 // PushGit pushes changes to the git remote.
 func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.PushGitRequest) (*dto.OkResponse, error) {
-	ws, err := h.wsService.Get(wsID)
+	ws, err := h.svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +96,7 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 		return nil, dto.NotFound("remote")
 	}
 
-	wsStore, err := h.fileStore.GetWorkspaceStore(ctx, wsID)
+	wsStore, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace store: %w", err)
 	}
@@ -125,7 +120,7 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 	}
 
 	// Update last sync time
-	if _, err := h.wsService.Modify(wsID, func(ws *identity.Workspace) error {
+	if _, err := h.svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		ws.GitRemote.LastSync = storage.Now()
 		return nil
 	}); err != nil {
@@ -137,7 +132,7 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 
 // DeleteGitRemote deletes the git remote for a workspace.
 func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.DeleteGitRequest) (*dto.OkResponse, error) {
-	_, err := h.wsService.Modify(wsID, func(ws *identity.Workspace) error {
+	_, err := h.svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		if ws.GitRemote.IsZero() {
 			return dto.NotFound("remote")
 		}
@@ -149,7 +144,7 @@ func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, wsID jsonldb.ID,
 	}
 
 	// Also remove from local git repo
-	wsStore, err := h.fileStore.GetWorkspaceStore(ctx, wsID)
+	wsStore, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace store: %w", err)
 	}

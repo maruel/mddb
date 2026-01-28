@@ -11,9 +11,11 @@ import (
 )
 
 func TestAssetHandler(t *testing.T) {
-	jwtSecret := []byte("test-secret-key")
-	baseURL := "http://localhost:8080"
-	ah := NewAssetHandler(nil, jwtSecret, baseURL, 0)
+	cfg := &Config{
+		JWTSecret: "test-secret-key",
+		BaseURL:   "http://localhost:8080",
+	}
+	ah := NewAssetHandler(&Services{}, cfg)
 
 	t.Run("GenerateSignedAssetURL", func(t *testing.T) {
 		wsID := jsonldb.ID(123)
@@ -23,8 +25,8 @@ func TestAssetHandler(t *testing.T) {
 		url := ah.GenerateSignedAssetURL(wsID, nodeID, name)
 
 		// Verify URL format
-		if !strings.HasPrefix(url, baseURL+"/assets/") {
-			t.Errorf("URL should start with %s/assets/, got %s", baseURL, url)
+		if !strings.HasPrefix(url, cfg.BaseURL+"/assets/") {
+			t.Errorf("URL should start with %s/assets/, got %s", cfg.BaseURL, url)
 		}
 		if !strings.Contains(url, "sig=") {
 			t.Error("URL should contain sig parameter")

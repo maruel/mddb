@@ -10,20 +10,18 @@ import (
 
 // HealthHandler handles health check requests.
 type HealthHandler struct {
-	version string
+	cfg *Config
 }
 
 // NewHealthHandler creates a new health handler.
-func NewHealthHandler(version string) *HealthHandler {
-	return &HealthHandler{
-		version: version,
-	}
+func NewHealthHandler(cfg *Config) *HealthHandler {
+	return &HealthHandler{cfg: cfg}
 }
 
 // GetHealth handles health check requests.
 func (h *HealthHandler) GetHealth(ctx context.Context, req *dto.HealthRequest) (*dto.HealthResponse, error) {
 	return &dto.HealthResponse{
 		Status:  "ok",
-		Version: h.version,
+		Version: h.cfg.Version,
 	}, nil
 }

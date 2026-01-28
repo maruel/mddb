@@ -18,150 +18,149 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/frontend"
-	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
+// Config holds configuration for the router.
+type Config struct {
+	JWTSecret    string
+	BaseURL      string
+	OAuth        OAuthConfig
+	ServerQuotas identity.ServerQuotas
+	RateLimits   ratelimit.Config
+}
+
+// OAuthConfig holds OAuth provider credentials.
+type OAuthConfig struct {
+	GoogleClientID     string
+	GoogleClientSecret string
+	MSClientID         string
+	MSClientSecret     string
+	GitHubClientID     string
+	GitHubClientSecret string
+}
+
 // NewRouter creates and configures the HTTP router.
 // Serves API endpoints at /api/* and static SolidJS frontend at /.
-// baseURL is used for constructing OAuth callback URLs (e.g., "http://localhost:8080" or "https://example.com").
-// emailService and emailVerificationService may be nil if SMTP is not configured.
-func NewRouter(
-	fileStore *content.FileStoreService,
-	userService *identity.UserService,
-	orgService *identity.OrganizationService,
-	wsService *identity.WorkspaceService,
-	orgInvService *identity.OrganizationInvitationService,
-	wsInvService *identity.WorkspaceInvitationService,
-	orgMemService *identity.OrganizationMembershipService,
-	wsMemService *identity.WorkspaceMembershipService,
-	sessionService *identity.SessionService,
-	emailVerificationService *identity.EmailVerificationService,
-	emailService *email.Service,
-	jwtSecret, baseURL, googleClientID, googleClientSecret, msClientID, msClientSecret, githubClientID, githubClientSecret string,
-	serverQuotas identity.ServerQuotas,
-) http.Handler {
+// Services.Email and Services.EmailVerif may be nil if SMTP is not configured.
+func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux := &http.ServeMux{}
-	jwtSecretBytes := []byte(jwtSecret)
 
-	// Create rate limit config
-	rlConfig := ratelimit.DefaultConfig()
+	// Create rate limiters
+	limiters := ratelimit.NewLimiters(&cfg.RateLimits)
 
-	// Pointer to server quotas for passing to wrapper functions
-	sq := &serverQuotas
+	// Create handler config from server config
+	hcfg := &handlers.Config{
+		JWTSecret:    cfg.JWTSecret,
+		BaseURL:      cfg.BaseURL,
+		Version:      "1.0.0",
+		ServerQuotas: cfg.ServerQuotas,
+	}
 
 	// Content handlers (workspace-scoped)
-	ah := handlers.NewAssetHandler(fileStore, jwtSecretBytes, baseURL, serverQuotas.MaxTotalStorageBytes)
-	nh := handlers.NewNodeHandler(fileStore, ah, serverQuotas.MaxColumnsPerTable, serverQuotas.MaxRowsPerTable, serverQuotas.MaxTablesPerWorkspace)
-	sh := handlers.NewSearchHandler(fileStore)
+	ah := handlers.NewAssetHandler(svc, hcfg)
+	nh := handlers.NewNodeHandler(svc, hcfg, ah)
+	sh := handlers.NewSearchHandler(svc)
 
 	// Auth handler
-	authh := handlers.NewAuthHandler(userService, orgMemService, wsMemService, orgService, wsService, sessionService, emailVerificationService, emailService, fileStore, jwtSecret, baseURL, serverQuotas.MaxSessionsPerUser, serverQuotas.MaxOrganizations, serverQuotas.MaxUsers)
+	authh := handlers.NewAuthHandler(svc, hcfg)
 
 	// Other handlers
-	uh := handlers.NewUserHandler(userService, orgMemService, wsMemService, orgService, wsService)
-	ih := handlers.NewInvitationHandler(orgInvService, wsInvService, userService, orgService, wsService, orgMemService, wsMemService, authh, emailService, baseURL)
-	mh := handlers.NewMembershipHandler(orgMemService, wsMemService, userService, orgService, wsService, authh)
-	orgh := handlers.NewOrganizationHandler(orgService, orgMemService, wsService, wsMemService, fileStore, serverQuotas.MaxWorkspaces)
-	grh := handlers.NewGitRemoteHandler(wsService, fileStore)
-
-	// Role constants
-	member := identity.OrgRoleMember
-	orgAdmin := identity.OrgRoleAdmin
-	wsViewer := identity.WSRoleViewer
-	wsEditor := identity.WSRoleEditor
-	wsAdmin := identity.WSRoleAdmin
+	uh := handlers.NewUserHandler(svc)
+	ih := handlers.NewInvitationHandler(svc, hcfg, authh)
+	mh := handlers.NewMembershipHandler(svc, authh)
+	orgh := handlers.NewOrganizationHandler(svc, hcfg)
+	grh := handlers.NewGitRemoteHandler(svc)
 
 	// Health check (public)
-	hh := handlers.NewHealthHandler("1.0.0")
-	mux.Handle("/api/health", Wrap(hh.GetHealth, rlConfig, sq))
+	hh := handlers.NewHealthHandler(hcfg)
+	mux.Handle("/api/health", Wrap(hh.GetHealth, hcfg, limiters))
 
 	// Global admin endpoints (requires IsGlobalAdmin)
-	adminh := handlers.NewAdminHandler(userService, orgService, wsService, orgMemService)
-	mux.Handle("GET /api/admin/stats", WrapGlobalAdmin(userService, sessionService, jwtSecretBytes, adminh.GetAdminStats, rlConfig, sq))
-	mux.Handle("GET /api/admin/users", WrapGlobalAdmin(userService, sessionService, jwtSecretBytes, adminh.ListAllUsers, rlConfig, sq))
-	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(userService, sessionService, jwtSecretBytes, adminh.ListAllOrgs, rlConfig, sq))
+	adminh := handlers.NewAdminHandler(svc)
+	mux.Handle("GET /api/admin/stats", WrapGlobalAdmin(adminh.GetAdminStats, svc, hcfg, limiters))
+	mux.Handle("GET /api/admin/users", WrapGlobalAdmin(adminh.ListAllUsers, svc, hcfg, limiters))
+	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(adminh.ListAllOrgs, svc, hcfg, limiters))
 
 	// Auth endpoints (public)
-	mux.Handle("POST /api/auth/login", Wrap(authh.Login, rlConfig, sq))
-	mux.Handle("POST /api/auth/register", Wrap(authh.Register, rlConfig, sq))
-	mux.Handle("POST /api/auth/invitations/org/accept", Wrap(ih.AcceptOrgInvitation, rlConfig, sq))
-	mux.Handle("POST /api/auth/invitations/ws/accept", Wrap(ih.AcceptWSInvitation, rlConfig, sq))
+	mux.Handle("POST /api/auth/login", Wrap(authh.Login, hcfg, limiters))
+	mux.Handle("POST /api/auth/register", Wrap(authh.Register, hcfg, limiters))
+	mux.Handle("POST /api/auth/invitations/org/accept", Wrap(ih.AcceptOrgInvitation, hcfg, limiters))
+	mux.Handle("POST /api/auth/invitations/ws/accept", Wrap(ih.AcceptWSInvitation, hcfg, limiters))
 
 	// Auth endpoints (authenticated, no org context)
-	mux.Handle("GET /api/auth/me", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.GetMe, rlConfig, sq))
-	mux.Handle("POST /api/auth/switch-org", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, mh.SwitchOrg, rlConfig, sq))
-	mux.Handle("POST /api/auth/switch-workspace", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, mh.SwitchWorkspace, rlConfig, sq))
-	mux.Handle("POST /api/auth/settings", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, uh.UpdateUserSettings, rlConfig, sq))
-	mux.Handle("POST /api/organizations", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.CreateOrganization, rlConfig, sq))
+	mux.Handle("GET /api/auth/me", WrapAuth(authh.GetMe, svc, hcfg, limiters))
+	mux.Handle("POST /api/auth/switch-org", WrapAuth(mh.SwitchOrg, svc, hcfg, limiters))
+	mux.Handle("POST /api/auth/switch-workspace", WrapAuth(mh.SwitchWorkspace, svc, hcfg, limiters))
+	mux.Handle("POST /api/auth/settings", WrapAuth(uh.UpdateUserSettings, svc, hcfg, limiters))
+	mux.Handle("POST /api/organizations", WrapAuth(authh.CreateOrganization, svc, hcfg, limiters))
 
 	// Session management endpoints (authenticated, no org)
-	mux.Handle("POST /api/auth/logout", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.Logout, rlConfig, sq))
-	mux.Handle("GET /api/auth/sessions", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.ListSessions, rlConfig, sq))
-	mux.Handle("POST /api/auth/sessions/revoke", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.RevokeSession, rlConfig, sq))
-	mux.Handle("POST /api/auth/sessions/revoke-all", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.RevokeAllSessions, rlConfig, sq))
+	mux.Handle("POST /api/auth/logout", WrapAuth(authh.Logout, svc, hcfg, limiters))
+	mux.Handle("GET /api/auth/sessions", WrapAuth(authh.ListSessions, svc, hcfg, limiters))
+	mux.Handle("POST /api/auth/sessions/revoke", WrapAuth(authh.RevokeSession, svc, hcfg, limiters))
+	mux.Handle("POST /api/auth/sessions/revoke-all", WrapAuth(authh.RevokeAllSessions, svc, hcfg, limiters))
 
 	// Email management (authenticated)
-	mux.Handle("POST /api/auth/email", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.ChangeEmail, rlConfig, sq))
-	mux.Handle("POST /api/auth/email/send-verification", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, authh.SendVerificationEmail, rlConfig, sq))
+	mux.Handle("POST /api/auth/email", WrapAuth(authh.ChangeEmail, svc, hcfg, limiters))
+	mux.Handle("POST /api/auth/email/send-verification", WrapAuth(authh.SendVerificationEmail, svc, hcfg, limiters))
 
 	// Email verification (public)
 	mux.HandleFunc("GET /api/auth/email/verify", authh.VerifyEmailRedirect)
 
 	// Organization settings (org-scoped)
-	mux.Handle("GET /api/organizations/{orgID}", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, orgh.GetOrganization, rlConfig, sq))
-	mux.Handle("POST /api/organizations/{orgID}", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, orgh.UpdateOrganization, rlConfig, sq))
-	mux.Handle("POST /api/organizations/{orgID}/settings", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, orgh.UpdateOrgPreferences, rlConfig, sq))
+	mux.Handle("GET /api/organizations/{orgID}", WrapOrgAuth(orgh.GetOrganization, svc, hcfg, identity.OrgRoleMember, limiters))
+	mux.Handle("POST /api/organizations/{orgID}", WrapOrgAuth(orgh.UpdateOrganization, svc, hcfg, identity.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/organizations/{orgID}/settings", WrapOrgAuth(orgh.UpdateOrgPreferences, svc, hcfg, identity.OrgRoleAdmin, limiters))
 
 	// Organization user management (org-scoped)
-	mux.Handle("GET /api/organizations/{orgID}/users", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, uh.ListUsers, rlConfig, sq))
-	mux.Handle("POST /api/organizations/{orgID}/users/role", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, uh.UpdateOrgMemberRole, rlConfig, sq))
+	mux.Handle("GET /api/organizations/{orgID}/users", WrapOrgAuth(uh.ListUsers, svc, hcfg, identity.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/organizations/{orgID}/users/role", WrapOrgAuth(uh.UpdateOrgMemberRole, svc, hcfg, identity.OrgRoleAdmin, limiters))
 
 	// Organization invitations (org-scoped)
-	mux.Handle("GET /api/organizations/{orgID}/invitations", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, ih.ListOrgInvitations, rlConfig, sq))
-	mux.Handle("POST /api/organizations/{orgID}/invitations", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, ih.CreateOrgInvitation, rlConfig, sq))
+	mux.Handle("GET /api/organizations/{orgID}/invitations", WrapOrgAuth(ih.ListOrgInvitations, svc, hcfg, identity.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/organizations/{orgID}/invitations", WrapOrgAuth(ih.CreateOrgInvitation, svc, hcfg, identity.OrgRoleAdmin, limiters))
 
 	// Workspace creation (org-scoped)
-	mux.Handle("POST /api/organizations/{orgID}/workspaces", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, orgAdmin, orgh.CreateWorkspace, rlConfig, sq))
+	mux.Handle("POST /api/organizations/{orgID}/workspaces", WrapOrgAuth(orgh.CreateWorkspace, svc, hcfg, identity.OrgRoleAdmin, limiters))
 
 	// Workspace details (workspace-scoped)
-	mux.Handle("GET /api/workspaces/{wsID}", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, orgh.GetWorkspace, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, orgh.UpdateWorkspace, rlConfig, sq))
+	mux.Handle("GET /api/workspaces/{wsID}", WrapWSAuth(orgh.GetWorkspace, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}", WrapWSAuth(orgh.UpdateWorkspace, svc, hcfg, identity.WSRoleAdmin, limiters))
 
 	// Workspace settings (workspace-scoped)
-	mux.Handle("POST /api/workspaces/{wsID}/settings/membership", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, mh.UpdateWSMembershipSettings, rlConfig, sq))
+	mux.Handle("POST /api/workspaces/{wsID}/settings/membership", WrapWSAuth(mh.UpdateWSMembershipSettings, svc, hcfg, identity.WSRoleViewer, limiters))
 
 	// Workspace user management (workspace-scoped)
-	mux.Handle("POST /api/workspaces/{wsID}/users/role", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, uh.UpdateWSMemberRole, rlConfig, sq))
+	mux.Handle("POST /api/workspaces/{wsID}/users/role", WrapWSAuth(uh.UpdateWSMemberRole, svc, hcfg, identity.WSRoleAdmin, limiters))
 
 	// Workspace invitations (workspace-scoped)
-	mux.Handle("GET /api/workspaces/{wsID}/invitations", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, ih.ListWSInvitations, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/invitations", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, ih.CreateWSInvitation, rlConfig, sq))
+	mux.Handle("GET /api/workspaces/{wsID}/invitations", WrapWSAuth(ih.ListWSInvitations, svc, hcfg, identity.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/invitations", WrapWSAuth(ih.CreateWSInvitation, svc, hcfg, identity.WSRoleAdmin, limiters))
 
 	// Git Remote endpoints (workspace-scoped)
-	mux.Handle("GET /api/workspaces/{wsID}/settings/git", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, grh.GetGitRemote, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/settings/git", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, grh.UpdateGitRemote, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/settings/git/push", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, grh.PushGit, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/settings/git/delete", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsAdmin, grh.DeleteGitRemote, rlConfig, sq))
+	mux.Handle("GET /api/workspaces/{wsID}/settings/git", WrapWSAuth(grh.GetGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/settings/git", WrapWSAuth(grh.UpdateGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/settings/git/push", WrapWSAuth(grh.PushGit, svc, hcfg, identity.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/settings/git/delete", WrapWSAuth(grh.DeleteGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
 
 	// OAuth endpoints (public) - always registered, returns error if provider not configured
-	oh := handlers.NewOAuthHandler(userService, authh)
-	base := strings.TrimRight(baseURL, "/")
+	oh := handlers.NewOAuthHandler(svc, authh)
+	base := strings.TrimRight(cfg.BaseURL, "/")
 	var providers []identity.OAuthProvider
-	if googleClientID != "" && googleClientSecret != "" {
-		oh.AddProvider(identity.OAuthProviderGoogle, googleClientID, googleClientSecret, base+"/api/auth/oauth/google/callback")
+	if cfg.OAuth.GoogleClientID != "" && cfg.OAuth.GoogleClientSecret != "" {
+		oh.AddProvider(identity.OAuthProviderGoogle, cfg.OAuth.GoogleClientID, cfg.OAuth.GoogleClientSecret, base+"/api/auth/oauth/google/callback")
 		providers = append(providers, identity.OAuthProviderGoogle)
 	}
-	if msClientID != "" && msClientSecret != "" {
-		oh.AddProvider(identity.OAuthProviderMicrosoft, msClientID, msClientSecret, base+"/api/auth/oauth/microsoft/callback")
+	if cfg.OAuth.MSClientID != "" && cfg.OAuth.MSClientSecret != "" {
+		oh.AddProvider(identity.OAuthProviderMicrosoft, cfg.OAuth.MSClientID, cfg.OAuth.MSClientSecret, base+"/api/auth/oauth/microsoft/callback")
 		providers = append(providers, identity.OAuthProviderMicrosoft)
 	}
-	if githubClientID != "" && githubClientSecret != "" {
-		oh.AddProvider(identity.OAuthProviderGitHub, githubClientID, githubClientSecret, base+"/api/auth/oauth/github/callback")
+	if cfg.OAuth.GitHubClientID != "" && cfg.OAuth.GitHubClientSecret != "" {
+		oh.AddProvider(identity.OAuthProviderGitHub, cfg.OAuth.GitHubClientID, cfg.OAuth.GitHubClientSecret, base+"/api/auth/oauth/github/callback")
 		providers = append(providers, identity.OAuthProviderGitHub)
 	}
 	if len(providers) > 0 {
@@ -169,50 +168,50 @@ func NewRouter(
 	} else {
 		slog.Info("No OAuth providers configured")
 	}
-	mux.Handle("GET /api/auth/providers", Wrap(oh.ListProviders, rlConfig, sq))
+	mux.Handle("GET /api/auth/providers", Wrap(oh.ListProviders, hcfg, limiters))
 	mux.HandleFunc("GET /api/auth/oauth/{provider}", oh.LoginRedirect)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", oh.Callback)
 
 	// OAuth linking endpoints (authenticated)
-	mux.Handle("POST /api/auth/oauth/link", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, oh.LinkOAuth, rlConfig, sq))
-	mux.Handle("POST /api/auth/oauth/unlink", WrapAuth(userService, orgMemService, sessionService, jwtSecretBytes, member, oh.UnlinkOAuth, rlConfig, sq))
+	mux.Handle("POST /api/auth/oauth/link", WrapAuth(oh.LinkOAuth, svc, hcfg, limiters))
+	mux.Handle("POST /api/auth/oauth/unlink", WrapAuth(oh.UnlinkOAuth, svc, hcfg, limiters))
 
 	// Nodes endpoints (workspace-scoped)
 	// id=0 is valid for root node
-	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.GetNode, rlConfig, sq))
-	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/children", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.ListNodeChildren, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/delete", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.DeleteNode, rlConfig, sq))
+	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}", WrapWSAuth(nh.GetNode, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/children", WrapWSAuth(nh.ListNodeChildren, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/delete", WrapWSAuth(nh.DeleteNode, svc, hcfg, identity.WSRoleEditor, limiters))
 
 	// Page endpoints (workspace-scoped, under nodes)
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/page/create", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.CreatePage, rlConfig, sq))
-	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.GetPage, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.UpdatePage, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/page/delete", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.DeletePage, rlConfig, sq))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/page/create", WrapWSAuth(nh.CreatePage, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.GetPage, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.UpdatePage, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/page/delete", WrapWSAuth(nh.DeletePage, svc, hcfg, identity.WSRoleEditor, limiters))
 
 	// Table endpoints (workspace-scoped, under nodes)
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/create", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.CreateTable, rlConfig, sq))
-	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.GetTable, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.UpdateTable, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/delete", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.DeleteTable, rlConfig, sq))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/create", WrapWSAuth(nh.CreateTable, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(nh.GetTable, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(nh.UpdateTable, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/delete", WrapWSAuth(nh.DeleteTable, svc, hcfg, identity.WSRoleEditor, limiters))
 
 	// Records endpoints (workspace-scoped, under nodes/table)
-	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/table/records", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.ListRecords, rlConfig, sq))
-	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/table/records/{rid}", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.GetRecord, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/records/create", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.CreateRecord, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/records/{rid}", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.UpdateRecord, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.DeleteRecord, rlConfig, sq))
+	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/table/records", WrapWSAuth(nh.ListRecords, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/table/records/{rid}", WrapWSAuth(nh.GetRecord, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/records/create", WrapWSAuth(nh.CreateRecord, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/records/{rid}", WrapWSAuth(nh.UpdateRecord, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete", WrapWSAuth(nh.DeleteRecord, svc, hcfg, identity.WSRoleEditor, limiters))
 
 	// History endpoints (workspace-scoped, under nodes)
-	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/history", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.ListNodeVersions, rlConfig, sq))
-	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/history/{hash}", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.GetNodeVersion, rlConfig, sq))
+	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/history", WrapWSAuth(nh.ListNodeVersions, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/history/{hash}", WrapWSAuth(nh.GetNodeVersion, svc, hcfg, identity.WSRoleViewer, limiters))
 
 	// Assets endpoints (workspace-scoped, node-based)
-	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/assets", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, nh.ListNodeAssets, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/assets", WrapAuthRaw(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, ah.UploadNodeAssetHandler, rlConfig, sq))
-	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/assets/{name}/delete", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsEditor, nh.DeleteNodeAsset, rlConfig, sq))
+	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/assets", WrapWSAuth(nh.ListNodeAssets, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/assets", WrapAuthRaw(ah.UploadNodeAssetHandler, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/assets/{name}/delete", WrapWSAuth(nh.DeleteNodeAsset, svc, hcfg, identity.WSRoleEditor, limiters))
 
 	// Search endpoint (workspace-scoped)
-	mux.Handle("POST /api/workspaces/{wsID}/search", WrapWSAuth(userService, orgMemService, wsMemService, wsService, sessionService, jwtSecretBytes, wsViewer, sh.Search, rlConfig, sq))
+	mux.Handle("POST /api/workspaces/{wsID}/search", WrapWSAuth(sh.Search, svc, hcfg, identity.WSRoleViewer, limiters))
 
 	// File serving (raw asset files) - public for now
 	mux.HandleFunc("GET /assets/{wsID}/{id}/{name}", ah.ServeAssetFile)

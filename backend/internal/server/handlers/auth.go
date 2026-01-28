@@ -16,7 +16,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
-	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
@@ -25,20 +24,8 @@ const tokenExpiration = 24 * time.Hour
 
 // AuthHandler handles authentication requests.
 type AuthHandler struct {
-	userService              *identity.UserService
-	orgMemService            *identity.OrganizationMembershipService
-	wsMemService             *identity.WorkspaceMembershipService
-	orgService               *identity.OrganizationService
-	wsService                *identity.WorkspaceService
-	sessionService           *identity.SessionService
-	emailVerificationService *identity.EmailVerificationService
-	emailService             *email.Service
-	fs                       *content.FileStoreService
-	jwtSecret                []byte
-	baseURL                  string
-	maxSessionsPerUser       int
-	maxOrganizations         int
-	maxUsers                 int
+	svc *Services
+	cfg *Config
 
 	// Rate limiting for verification emails (1 per 10s per user)
 	verifyRateLimitMu sync.Mutex
@@ -46,38 +33,11 @@ type AuthHandler struct {
 }
 
 // NewAuthHandler creates a new auth handler.
-func NewAuthHandler(
-	userService *identity.UserService,
-	orgMemService *identity.OrganizationMembershipService,
-	wsMemService *identity.WorkspaceMembershipService,
-	orgService *identity.OrganizationService,
-	wsService *identity.WorkspaceService,
-	sessionService *identity.SessionService,
-	emailVerificationService *identity.EmailVerificationService,
-	emailService *email.Service,
-	fs *content.FileStoreService,
-	jwtSecret string,
-	baseURL string,
-	maxSessionsPerUser int,
-	maxOrganizations int,
-	maxUsers int,
-) *AuthHandler {
+func NewAuthHandler(svc *Services, cfg *Config) *AuthHandler {
 	return &AuthHandler{
-		userService:              userService,
-		orgMemService:            orgMemService,
-		wsMemService:             wsMemService,
-		orgService:               orgService,
-		wsService:                wsService,
-		sessionService:           sessionService,
-		emailVerificationService: emailVerificationService,
-		emailService:             emailService,
-		fs:                       fs,
-		jwtSecret:                []byte(jwtSecret),
-		baseURL:                  baseURL,
-		maxSessionsPerUser:       maxSessionsPerUser,
-		maxOrganizations:         maxOrganizations,
-		maxUsers:                 maxUsers,
-		verifyRateLimit:          make(map[jsonldb.ID]time.Time),
+		svc:             svc,
+		cfg:             cfg,
+		verifyRateLimit: make(map[jsonldb.ID]time.Time),
 	}
 }
 
@@ -87,7 +47,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 		return nil, dto.MissingField("email or password")
 	}
 
-	user, err := h.userService.Authenticate(req.Email, req.Password)
+	user, err := h.svc.User.Authenticate(req.Email, req.Password)
 	if err != nil {
 		return nil, dto.NewAPIError(401, dto.ErrorCodeUnauthorized, "Invalid credentials")
 	}
@@ -102,7 +62,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 	}
 
 	// Build user response
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -124,17 +84,17 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 
 	// Check server-wide user quota
-	if h.maxUsers > 0 && h.userService.Count() >= h.maxUsers {
-		return nil, dto.QuotaExceeded("users", h.maxUsers)
+	if h.cfg.ServerQuotas.MaxUsers > 0 && h.svc.User.Count() >= h.cfg.ServerQuotas.MaxUsers {
+		return nil, dto.QuotaExceeded("users", h.cfg.ServerQuotas.MaxUsers)
 	}
 
 	// Check if user already exists
-	_, err := h.userService.GetByEmail(req.Email)
+	_, err := h.svc.User.GetByEmail(req.Email)
 	if err == nil {
 		return nil, dto.NewAPIError(409, dto.ErrorCodeConflict, "User already exists")
 	}
 
-	user, err := h.userService.Create(req.Email, req.Password, req.Name)
+	user, err := h.svc.User.Create(req.Email, req.Password, req.Name)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create user", err)
 	}
@@ -149,14 +109,14 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 
 	// Build user response (will have empty memberships for new users)
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
 	userResp := userWithMembershipsToResponse(uwm)
 
 	// Send verification email if SMTP is configured (use default locale for new users)
-	if h.emailService != nil && h.emailVerificationService != nil {
+	if h.svc.Email != nil && h.svc.EmailVerif != nil {
 		h.sendVerificationEmailAsync(ctx, user.ID, user.Email, user.Name, email.DefaultLocale)
 	}
 
@@ -175,7 +135,7 @@ func (h *AuthHandler) GenerateToken(user *identity.User) (string, error) {
 		"iat":   time.Now().Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(h.jwtSecret)
+	return token.SignedString([]byte(h.cfg.JWTSecret))
 }
 
 // GenerateTokenWithSession creates a session and generates a JWT token with session ID.
@@ -196,7 +156,7 @@ func (h *AuthHandler) GenerateTokenWithSession(user *identity.User, clientIP, us
 
 	// Generate the token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(h.jwtSecret)
+	tokenString, err := token.SignedString([]byte(h.cfg.JWTSecret))
 	if err != nil {
 		return "", err
 	}
@@ -206,9 +166,9 @@ func (h *AuthHandler) GenerateTokenWithSession(user *identity.User, clientIP, us
 	if len(deviceInfo) > 200 {
 		deviceInfo = deviceInfo[:200]
 	}
-	if _, err := h.sessionService.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt), h.maxSessionsPerUser); err != nil {
+	if _, err := h.svc.Session.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt), h.cfg.ServerQuotas.MaxSessionsPerUser); err != nil {
 		if errors.Is(err, identity.ErrSessionQuotaExceeded) {
-			return "", dto.QuotaExceeded("sessions per user", h.maxSessionsPerUser)
+			return "", dto.QuotaExceeded("sessions per user", h.cfg.ServerQuotas.MaxSessionsPerUser)
 		}
 		return "", err
 	}
@@ -217,9 +177,9 @@ func (h *AuthHandler) GenerateTokenWithSession(user *identity.User, clientIP, us
 }
 
 // GetMe returns the current user info.
-func (h *AuthHandler) GetMe(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.GetMeRequest) (*dto.UserResponse, error) {
+func (h *AuthHandler) GetMe(ctx context.Context, user *identity.User, req *dto.GetMeRequest) (*dto.UserResponse, error) {
 	// Build user response with memberships
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user response", err)
 	}
@@ -232,29 +192,29 @@ func (h *AuthHandler) GetMe(ctx context.Context, _ jsonldb.ID, user *identity.Us
 }
 
 // CreateOrganization creates a new organization for the authenticated user.
-func (h *AuthHandler) CreateOrganization(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
+func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.User, req *dto.CreateOrganizationRequest) (*dto.OrganizationResponse, error) {
 	if req.Name == "" {
 		return nil, dto.MissingField("name")
 	}
 
 	// Check server-wide organization quota
-	if h.maxOrganizations > 0 && h.orgService.Count() >= h.maxOrganizations {
-		return nil, dto.QuotaExceeded("organizations", h.maxOrganizations)
+	if h.cfg.ServerQuotas.MaxOrganizations > 0 && h.svc.Organization.Count() >= h.cfg.ServerQuotas.MaxOrganizations {
+		return nil, dto.QuotaExceeded("organizations", h.cfg.ServerQuotas.MaxOrganizations)
 	}
 
 	// Create the organization
-	org, err := h.orgService.Create(ctx, req.Name, user.Email)
+	org, err := h.svc.Organization.Create(ctx, req.Name, user.Email)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create organization", err)
 	}
 
 	// Create org membership (user becomes owner of new org)
-	if _, err := h.orgMemService.Create(user.ID, org.ID, identity.OrgRoleOwner); err != nil {
+	if _, err := h.svc.OrgMembership.Create(user.ID, org.ID, identity.OrgRoleOwner); err != nil {
 		return nil, dto.InternalWithError("Failed to create membership", err)
 	}
 
-	memberCount := h.orgMemService.CountOrgMemberships(org.ID)
-	workspaceCount := h.wsService.CountByOrg(org.ID)
+	memberCount := h.svc.OrgMembership.CountOrgMemberships(org.ID)
+	workspaceCount := h.svc.Workspace.CountByOrg(org.ID)
 	return organizationToResponse(org, memberCount, workspaceCount), nil
 }
 
@@ -310,13 +270,13 @@ func (h *AuthHandler) PopulateActiveContext(userResp *dto.UserResponse, uwm *use
 }
 
 // Logout revokes the current session.
-func (h *AuthHandler) Logout(ctx context.Context, _ jsonldb.ID, _ *identity.User, _ *dto.LogoutRequest) (*dto.LogoutResponse, error) {
+func (h *AuthHandler) Logout(ctx context.Context, _ *identity.User, _ *dto.LogoutRequest) (*dto.LogoutResponse, error) {
 	sessionID := reqctx.SessionID(ctx)
 	if sessionID.IsZero() {
 		return &dto.LogoutResponse{Ok: true}, nil
 	}
 
-	if err := h.sessionService.Revoke(sessionID); err != nil {
+	if err := h.svc.Session.Revoke(sessionID); err != nil {
 		slog.ErrorContext(ctx, "Failed to revoke session", "error", err, "session_id", sessionID)
 		return nil, dto.InternalWithError("Failed to logout", err)
 	}
@@ -325,11 +285,11 @@ func (h *AuthHandler) Logout(ctx context.Context, _ jsonldb.ID, _ *identity.User
 }
 
 // ListSessions returns all active sessions for the current user.
-func (h *AuthHandler) ListSessions(ctx context.Context, _ jsonldb.ID, user *identity.User, _ *dto.ListSessionsRequest) (*dto.ListSessionsResponse, error) {
+func (h *AuthHandler) ListSessions(ctx context.Context, user *identity.User, _ *dto.ListSessionsRequest) (*dto.ListSessionsResponse, error) {
 	currentSessionID := reqctx.SessionID(ctx)
 
 	sessions := make([]dto.SessionResponse, 0, 8)
-	for session := range h.sessionService.GetActiveByUserID(user.ID) {
+	for session := range h.svc.Session.GetActiveByUserID(user.ID) {
 		sessions = append(sessions, dto.SessionResponse{
 			ID:         session.ID,
 			DeviceInfo: session.DeviceInfo,
@@ -344,9 +304,9 @@ func (h *AuthHandler) ListSessions(ctx context.Context, _ jsonldb.ID, user *iden
 }
 
 // RevokeSession revokes a specific session.
-func (h *AuthHandler) RevokeSession(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.RevokeSessionRequest) (*dto.RevokeSessionResponse, error) {
+func (h *AuthHandler) RevokeSession(ctx context.Context, user *identity.User, req *dto.RevokeSessionRequest) (*dto.RevokeSessionResponse, error) {
 	// Verify the session belongs to the user
-	session, err := h.sessionService.Get(req.SessionID)
+	session, err := h.svc.Session.Get(req.SessionID)
 	if err != nil {
 		return nil, dto.NewAPIError(404, dto.ErrorCodeNotFound, "Session not found")
 	}
@@ -354,7 +314,7 @@ func (h *AuthHandler) RevokeSession(ctx context.Context, _ jsonldb.ID, user *ide
 		return nil, dto.NewAPIError(403, dto.ErrorCodeForbidden, "Cannot revoke another user's session")
 	}
 
-	if err := h.sessionService.Revoke(req.SessionID); err != nil {
+	if err := h.svc.Session.Revoke(req.SessionID); err != nil {
 		return nil, dto.InternalWithError("Failed to revoke session", err)
 	}
 
@@ -362,11 +322,11 @@ func (h *AuthHandler) RevokeSession(ctx context.Context, _ jsonldb.ID, user *ide
 }
 
 // RevokeAllSessions revokes all sessions for the current user except the current one.
-func (h *AuthHandler) RevokeAllSessions(ctx context.Context, _ jsonldb.ID, user *identity.User, _ *dto.RevokeAllSessionsRequest) (*dto.RevokeAllSessionsResponse, error) {
+func (h *AuthHandler) RevokeAllSessions(ctx context.Context, user *identity.User, _ *dto.RevokeAllSessionsRequest) (*dto.RevokeAllSessionsResponse, error) {
 	currentSessionID := reqctx.SessionID(ctx)
 
 	var toRevoke []jsonldb.ID
-	for session := range h.sessionService.GetActiveByUserID(user.ID) {
+	for session := range h.svc.Session.GetActiveByUserID(user.ID) {
 		if session.ID != currentSessionID {
 			toRevoke = append(toRevoke, session.ID)
 		}
@@ -374,7 +334,7 @@ func (h *AuthHandler) RevokeAllSessions(ctx context.Context, _ jsonldb.ID, user 
 
 	revokedCount := 0
 	for _, id := range toRevoke {
-		if err := h.sessionService.Revoke(id); err != nil {
+		if err := h.svc.Session.Revoke(id); err != nil {
 			slog.ErrorContext(ctx, "Failed to revoke session", "error", err, "session_id", id)
 			continue
 		}
@@ -385,9 +345,9 @@ func (h *AuthHandler) RevokeAllSessions(ctx context.Context, _ jsonldb.ID, user 
 }
 
 // ChangeEmail changes the user's email address after password verification.
-func (h *AuthHandler) ChangeEmail(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.ChangeEmailRequest) (*dto.ChangeEmailResponse, error) {
+func (h *AuthHandler) ChangeEmail(ctx context.Context, user *identity.User, req *dto.ChangeEmailRequest) (*dto.ChangeEmailResponse, error) {
 	// Verify password
-	if !h.userService.VerifyPassword(user.ID, req.Password) {
+	if !h.svc.User.VerifyPassword(user.ID, req.Password) {
 		return nil, dto.NewAPIError(401, dto.ErrorCodeUnauthorized, "Invalid password")
 	}
 
@@ -401,13 +361,13 @@ func (h *AuthHandler) ChangeEmail(ctx context.Context, _ jsonldb.ID, user *ident
 	}
 
 	// Check if new email is already in use by another account
-	existingUser, _ := h.userService.GetByEmail(req.NewEmail)
+	existingUser, _ := h.svc.User.GetByEmail(req.NewEmail)
 	if existingUser != nil && existingUser.ID != user.ID {
 		return nil, dto.EmailInUse()
 	}
 
 	// Update email and reset EmailVerified
-	if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+	if _, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
 		u.Email = req.NewEmail
 		u.EmailVerified = false
 		return nil
@@ -416,7 +376,7 @@ func (h *AuthHandler) ChangeEmail(ctx context.Context, _ jsonldb.ID, user *ident
 	}
 
 	// Send verification email if SMTP is configured
-	if h.emailService != nil && h.emailVerificationService != nil {
+	if h.svc.Email != nil && h.svc.EmailVerif != nil {
 		locale := email.ParseLocale(user.Settings.Language)
 		h.sendVerificationEmailAsync(ctx, user.ID, req.NewEmail, user.Name, locale)
 	}
@@ -429,12 +389,12 @@ func (h *AuthHandler) ChangeEmail(ctx context.Context, _ jsonldb.ID, user *ident
 }
 
 // SendVerificationEmail sends a verification email to the current user.
-func (h *AuthHandler) SendVerificationEmail(ctx context.Context, _ jsonldb.ID, user *identity.User, _ *dto.SendVerificationEmailRequest) (*dto.SendVerificationEmailResponse, error) {
+func (h *AuthHandler) SendVerificationEmail(ctx context.Context, user *identity.User, _ *dto.SendVerificationEmailRequest) (*dto.SendVerificationEmailResponse, error) {
 	// Check if SMTP is configured
-	if h.emailService == nil {
+	if h.svc.Email == nil {
 		return nil, dto.NewAPIError(501, dto.ErrorCodeNotImplemented, "Email service not configured")
 	}
-	if h.emailVerificationService == nil {
+	if h.svc.EmailVerif == nil {
 		return nil, dto.NewAPIError(501, dto.ErrorCodeNotImplemented, "Email verification service not configured")
 	}
 
@@ -457,17 +417,17 @@ func (h *AuthHandler) SendVerificationEmail(ctx context.Context, _ jsonldb.ID, u
 	h.verifyRateLimitMu.Unlock()
 
 	// Create verification token
-	verification, err := h.emailVerificationService.Create(user.ID, user.Email)
+	verification, err := h.svc.EmailVerif.Create(user.ID, user.Email)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create verification token", err)
 	}
 
 	// Build verify URL
-	verifyURL := h.baseURL + "/api/auth/email/verify?token=" + verification.Token
+	verifyURL := h.cfg.BaseURL + "/api/auth/email/verify?token=" + verification.Token
 
 	// Send email using user's language preference
 	locale := email.ParseLocale(user.Settings.Language)
-	if err := h.emailService.SendVerification(ctx, user.Email, user.Name, verifyURL, locale); err != nil {
+	if err := h.svc.Email.SendVerification(ctx, user.Email, user.Name, verifyURL, locale); err != nil {
 		slog.ErrorContext(ctx, "Failed to send verification email", "err", err, "user_id", user.ID)
 		return nil, dto.InternalWithError("Failed to send verification email", err)
 	}
@@ -483,25 +443,25 @@ func (h *AuthHandler) SendVerificationEmail(ctx context.Context, _ jsonldb.ID, u
 // VerifyEmail verifies the user's email via magic link token.
 // This is a public endpoint (no auth required) that redirects to the frontend.
 func (h *AuthHandler) VerifyEmail(ctx context.Context, req *dto.VerifyEmailRequest) error {
-	if h.emailVerificationService == nil {
+	if h.svc.EmailVerif == nil {
 		return dto.NewAPIError(501, dto.ErrorCodeNotImplemented, "Email verification service not configured")
 	}
 
 	// Get verification by token
-	verification, err := h.emailVerificationService.GetByToken(req.Token)
+	verification, err := h.svc.EmailVerif.GetByToken(req.Token)
 	if err != nil {
 		return dto.NewAPIError(400, dto.ErrorCodeValidationFailed, "Invalid or expired verification token")
 	}
 
 	// Check if expired
-	if h.emailVerificationService.IsExpired(verification) {
+	if h.svc.EmailVerif.IsExpired(verification) {
 		// Delete expired token
-		_ = h.emailVerificationService.Delete(verification.ID)
+		_ = h.svc.EmailVerif.Delete(verification.ID)
 		return dto.NewAPIError(400, dto.ErrorCodeValidationFailed, "Verification token has expired")
 	}
 
 	// Update user's EmailVerified status
-	_, err = h.userService.Modify(verification.UserID, func(u *identity.User) error {
+	_, err = h.svc.User.Modify(verification.UserID, func(u *identity.User) error {
 		// Only verify if the email matches (user might have changed email since token was created)
 		if u.Email != verification.Email {
 			return dto.NewAPIError(400, dto.ErrorCodeValidationFailed, "Email address has changed since verification was requested")
@@ -514,7 +474,7 @@ func (h *AuthHandler) VerifyEmail(ctx context.Context, req *dto.VerifyEmailReque
 	}
 
 	// Delete the used token
-	if err := h.emailVerificationService.Delete(verification.ID); err != nil {
+	if err := h.svc.EmailVerif.Delete(verification.ID); err != nil {
 		slog.WarnContext(ctx, "Failed to delete verification token", "err", err, "id", verification.ID)
 	}
 
@@ -528,17 +488,17 @@ func (h *AuthHandler) VerifyEmail(ctx context.Context, req *dto.VerifyEmailReque
 func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID jsonldb.ID, toEmail, name string, locale email.Locale) {
 	go func() {
 		// Create verification token
-		verification, err := h.emailVerificationService.Create(userID, toEmail)
+		verification, err := h.svc.EmailVerif.Create(userID, toEmail)
 		if err != nil {
 			slog.ErrorContext(ctx, "Failed to create verification token", "err", err, "user_id", userID)
 			return
 		}
 
 		// Build verify URL
-		verifyURL := h.baseURL + "/api/auth/email/verify?token=" + verification.Token
+		verifyURL := h.cfg.BaseURL + "/api/auth/email/verify?token=" + verification.Token
 
 		// Send email
-		if err := h.emailService.SendVerification(ctx, toEmail, name, verifyURL, locale); err != nil {
+		if err := h.svc.Email.SendVerification(ctx, toEmail, name, verifyURL, locale); err != nil {
 			slog.ErrorContext(ctx, "Failed to send verification email", "err", err, "user_id", userID)
 			return
 		}
@@ -553,8 +513,8 @@ func (h *AuthHandler) VerifyEmailRedirect(w http.ResponseWriter, r *http.Request
 	token := r.URL.Query().Get("token")
 
 	// Redirect URL base
-	successURL := h.baseURL + "/settings?email_verified=true"
-	errorURL := h.baseURL + "/settings?email_verified=false&error="
+	successURL := h.cfg.BaseURL + "/settings?email_verified=true"
+	errorURL := h.cfg.BaseURL + "/settings?email_verified=false&error="
 
 	if token == "" {
 		http.Redirect(w, r, errorURL+"missing_token", http.StatusFound)

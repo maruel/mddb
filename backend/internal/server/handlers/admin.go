@@ -11,37 +11,24 @@ import (
 
 // AdminHandler handles global admin endpoints.
 type AdminHandler struct {
-	userService   *identity.UserService
-	orgService    *identity.OrganizationService
-	wsService     *identity.WorkspaceService
-	orgMemService *identity.OrganizationMembershipService
+	svc *Services
 }
 
 // NewAdminHandler creates a new admin handler.
-func NewAdminHandler(
-	userService *identity.UserService,
-	orgService *identity.OrganizationService,
-	wsService *identity.WorkspaceService,
-	orgMemService *identity.OrganizationMembershipService,
-) *AdminHandler {
-	return &AdminHandler{
-		userService:   userService,
-		orgService:    orgService,
-		wsService:     wsService,
-		orgMemService: orgMemService,
-	}
+func NewAdminHandler(svc *Services) *AdminHandler {
+	return &AdminHandler{svc: svc}
 }
 
 // GetAdminStats returns server-wide statistics.
 func (h *AdminHandler) GetAdminStats(ctx context.Context, _ *identity.User, _ *dto.AdminStatsRequest) (*dto.AdminStatsResponse, error) {
 	var userCount, orgCount, wsCount int
-	for range h.userService.Iter(0) {
+	for range h.svc.User.Iter(0) {
 		userCount++
 	}
-	for range h.orgService.Iter(0) {
+	for range h.svc.Organization.Iter(0) {
 		orgCount++
 	}
-	for range h.wsService.Iter(0) {
+	for range h.svc.Workspace.Iter(0) {
 		wsCount++
 	}
 	return &dto.AdminStatsResponse{
@@ -54,7 +41,7 @@ func (h *AdminHandler) GetAdminStats(ctx context.Context, _ *identity.User, _ *d
 // ListAllUsers returns all users in the system.
 func (h *AdminHandler) ListAllUsers(ctx context.Context, _ *identity.User, _ *dto.AdminUsersRequest) (*dto.AdminUsersResponse, error) {
 	users := make([]dto.UserResponse, 0) //nolint:prealloc // size unknown from iterator
-	for user := range h.userService.Iter(0) {
+	for user := range h.svc.User.Iter(0) {
 		users = append(users, *userToResponse(user))
 	}
 	return &dto.AdminUsersResponse{Users: users}, nil
@@ -63,9 +50,9 @@ func (h *AdminHandler) ListAllUsers(ctx context.Context, _ *identity.User, _ *dt
 // ListAllOrgs returns all organizations in the system.
 func (h *AdminHandler) ListAllOrgs(ctx context.Context, _ *identity.User, _ *dto.AdminOrgsRequest) (*dto.AdminOrgsResponse, error) {
 	orgs := make([]dto.OrganizationResponse, 0) //nolint:prealloc // size unknown from iterator
-	for org := range h.orgService.Iter(0) {
-		memberCount := h.orgMemService.CountOrgMemberships(org.ID)
-		workspaceCount := h.wsService.CountByOrg(org.ID)
+	for org := range h.svc.Organization.Iter(0) {
+		memberCount := h.svc.OrgMembership.CountOrgMemberships(org.ID)
+		workspaceCount := h.svc.Workspace.CountByOrg(org.ID)
 		orgs = append(orgs, *organizationToResponse(org, memberCount, workspaceCount))
 	}
 	return &dto.AdminOrgsResponse{Organizations: orgs}, nil

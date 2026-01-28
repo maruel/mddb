@@ -29,6 +29,8 @@ import (
 	"github.com/lmittmann/tint"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server"
+	"github.com/maruel/mddb/backend/internal/server/handlers"
+	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -362,10 +364,38 @@ func mainImpl() error {
 	// Get server quotas from settings table
 	serverQuotas := serverSettingsService.GetQuotas()
 
+	svc := &handlers.Services{
+		FileStore:     fileStore,
+		User:          userService,
+		Organization:  orgService,
+		Workspace:     wsService,
+		OrgInvitation: orgInvService,
+		WSInvitation:  wsInvService,
+		OrgMembership: orgMemService,
+		WSMembership:  wsMemService,
+		Session:       sessionService,
+		EmailVerif:    emailVerificationService,
+		Email:         emailService,
+	}
+	cfg := &server.Config{
+		JWTSecret: jwtSecret,
+		BaseURL:   *baseURL,
+		OAuth: server.OAuthConfig{
+			GoogleClientID:     *googleClientID,
+			GoogleClientSecret: *googleClientSecret,
+			MSClientID:         *msClientID,
+			MSClientSecret:     *msClientSecret,
+			GitHubClientID:     *githubClientID,
+			GitHubClientSecret: *githubClientSecret,
+		},
+		ServerQuotas: serverQuotas,
+		RateLimits:   *ratelimit.DefaultConfig(),
+	}
+
 	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           server.NewRouter(fileStore, userService, orgService, wsService, orgInvService, wsInvService, orgMemService, wsMemService, sessionService, emailVerificationService, emailService, jwtSecret, *baseURL, *googleClientID, *googleClientSecret, *msClientID, *msClientSecret, *githubClientID, *githubClientSecret, serverQuotas),
+		Handler:           server.NewRouter(svc, cfg),
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}

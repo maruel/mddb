@@ -18,6 +18,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -28,6 +29,150 @@ func addRequestMetadataToContext(ctx context.Context, r *http.Request) context.C
 	ctx = reqctx.WithClientIP(ctx, reqctx.GetClientIP(r))
 	ctx = reqctx.WithUserAgent(ctx, r.Header.Get("User-Agent"))
 	return ctx
+}
+
+// authResult holds the result of JWT/session validation.
+type authResult struct {
+	user        *identity.User
+	sessionID   jsonldb.ID
+	tokenString string
+}
+
+// checkRateLimit checks rate limit and wraps the response writer if needed.
+// Returns the (possibly wrapped) writer and whether the request should proceed.
+func checkRateLimit(w http.ResponseWriter, tier *ratelimit.Tier, identifier string) (http.ResponseWriter, bool) {
+	if tier == nil {
+		return w, true
+	}
+	key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
+	result := tier.Limiter.Allow(key)
+	w = ratelimit.NewResponseWriter(w, result)
+	if !result.Allowed {
+		writeRateLimitError(w, result)
+		return w, false
+	}
+	return w, true
+}
+
+// readAndDecodeBody reads the request body with size limit and decodes JSON into input.
+// Returns false if an error occurred and was written to the response.
+func readAndDecodeBody[In any](ctx context.Context, w http.ResponseWriter, r *http.Request, input *In, cfg *handlers.Config) bool {
+	// Limit request body size
+	if cfg != nil && cfg.ServerQuotas.MaxRequestBodyBytes > 0 {
+		r.Body = http.MaxBytesReader(w, r.Body, cfg.ServerQuotas.MaxRequestBodyBytes)
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err2 := r.Body.Close(); err == nil {
+		err = err2
+	}
+	if err != nil {
+		if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
+			apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
+			writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
+			return false
+		}
+		slog.ErrorContext(ctx, "Failed to read request body", "err", err)
+		writeBadRequestError(w, "Failed to read request body")
+		return false
+	}
+
+	if len(body) > 0 {
+		d := json.NewDecoder(bytes.NewReader(body))
+		d.DisallowUnknownFields()
+		if err := d.Decode(input); err != nil {
+			slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
+			writeBadRequestError(w, "Invalid request body")
+			return false
+		}
+	}
+	return true
+}
+
+// writeJSONResponse writes a JSON response or error response.
+func writeJSONResponse[Out any](ctx context.Context, w http.ResponseWriter, output *Out, err error) {
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		errorCode := dto.ErrorCodeInternal
+		details := make(map[string]any)
+
+		var ewsErr dto.ErrorWithStatus
+		if errors.As(err, &ewsErr) {
+			statusCode = ewsErr.StatusCode()
+			errorCode = ewsErr.Code()
+			if d := ewsErr.Details(); d != nil {
+				details = d
+			}
+		}
+
+		slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode, "code", errorCode)
+		writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(output); err != nil {
+		slog.ErrorContext(ctx, "Failed to encode response", "err", err)
+	}
+}
+
+// getRateLimitIdentifier returns the appropriate identifier for rate limiting based on scope.
+func getRateLimitIdentifier(tier *ratelimit.Tier, user *identity.User, r *http.Request) string {
+	if tier.Scope == ratelimit.ScopeUser && user != nil {
+		return user.ID.String()
+	}
+	return reqctx.GetClientIP(r)
+}
+
+// validateAuthWithContext validates JWT and session, updating context with session info.
+func validateAuthWithContext(ctx context.Context, r *http.Request, svc *handlers.Services, cfg *handlers.Config) (*authResult, context.Context, error) {
+	user, sessionID, tokenString, err := validateJWTAndSession(r, svc.User, svc.Session, []byte(cfg.JWTSecret))
+	if err != nil {
+		return nil, ctx, err
+	}
+	if !sessionID.IsZero() {
+		ctx = reqctx.WithSessionID(ctx, sessionID)
+	}
+	if tokenString != "" {
+		ctx = reqctx.WithTokenString(ctx, tokenString)
+	}
+	return &authResult{user: user, sessionID: sessionID, tokenString: tokenString}, ctx, nil
+}
+
+// checkWSMembership validates workspace membership and returns the effective role.
+// Returns an error string and HTTP status code if access is denied.
+func checkWSMembership(
+	user *identity.User,
+	wsID jsonldb.ID,
+	svc *handlers.Services,
+	requiredRole identity.WorkspaceRole,
+) (errMsg string, statusCode int) {
+	ws, err := svc.Workspace.Get(wsID)
+	if err != nil {
+		return "Workspace not found", http.StatusNotFound
+	}
+
+	orgMem, err := svc.OrgMembership.Get(user.ID, ws.OrganizationID)
+	if err != nil {
+		return "Forbidden: not a member of this organization", http.StatusForbidden
+	}
+
+	var effectiveRole identity.WorkspaceRole
+	if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
+		effectiveRole = identity.WSRoleAdmin
+	} else {
+		wsMem, err := svc.WSMembership.Get(user.ID, wsID)
+		if err != nil {
+			return "Forbidden: not a member of this workspace", http.StatusForbidden
+		}
+		effectiveRole = wsMem.Role
+	}
+
+	if !hasWSPermission(effectiveRole, requiredRole) {
+		return "Forbidden: insufficient permissions", http.StatusForbidden
+	}
+	return "", 0
 }
 
 // Wrap wraps a handler function to work as an http.Handler.
@@ -46,93 +191,34 @@ func addRequestMetadataToContext(ctx context.Context, r *http.Request) context.C
 func Wrap[In any, PtrIn interface {
 	*In
 	dto.Validatable
-}, Out any](fn func(context.Context, PtrIn) (*Out, error), rlConfig *ratelimit.Config, serverQuotas *identity.ServerQuotas) http.Handler {
+}, Out any](fn func(context.Context, PtrIn) (*Out, error), cfg *handlers.Config, limiters *ratelimit.Limiters) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
 		// Rate limit check for unauthenticated endpoints
-		if tier := rlConfig.MatchUnauth(r.Method, r.URL.Path); tier != nil {
-			clientIP := reqctx.GetClientIP(r)
-			key := ratelimit.BuildKey(tier.Scope, clientIP, tier.Name)
-			result := tier.Limiter.Allow(key)
-
-			// Wrap response writer to inject headers
-			w = ratelimit.NewResponseWriter(w, result)
-
-			if !result.Allowed {
-				writeRateLimitError(w, result)
+		var ok bool
+		if tier := limiters.MatchUnauth(r.Method, r.URL.Path); tier != nil {
+			w, ok = checkRateLimit(w, tier, reqctx.GetClientIP(r))
+			if !ok {
 				return
 			}
 		}
 
-		// Limit request body size
-		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
-		}
-
-		// Read request body
-		body, err := io.ReadAll(r.Body)
-		if err2 := r.Body.Close(); err == nil {
-			err = err2
-		}
-		if err != nil {
-			// Check for MaxBytesError (request body too large)
-			if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
-				apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
-				writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
-				return
-			}
-			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
-			writeBadRequestError(w, "Failed to read request body")
+		input := new(In)
+		if !readAndDecodeBody(ctx, w, r, input, cfg) {
 			return
 		}
-		input := new(In)
-		if len(body) > 0 {
-			d := json.NewDecoder(bytes.NewReader(body))
-			d.DisallowUnknownFields()
-			if err := d.Decode(input); err != nil {
-				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
-				writeBadRequestError(w, "Invalid request body")
-				return
-			}
-		}
 
-		// Extract path parameters and populate request struct
 		populatePathParams(r, input)
-		// Extract query parameters and populate request struct
 		populateQueryParams(r, input)
 
-		// Validate the request
 		if err := PtrIn(input).Validate(); err != nil {
 			handleValidationError(ctx, w, err)
 			return
 		}
 
 		output, err := fn(ctx, PtrIn(input))
-		if err != nil {
-			statusCode := http.StatusInternalServerError
-			errorCode := dto.ErrorCodeInternal
-			details := make(map[string]any)
-
-			var ewsErr dto.ErrorWithStatus
-			if errors.As(err, &ewsErr) {
-				statusCode = ewsErr.StatusCode()
-				errorCode = ewsErr.Code()
-				if d := ewsErr.Details(); d != nil {
-					details = d
-				}
-			}
-
-			slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode, "code", errorCode)
-			writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(output); err != nil {
-			slog.ErrorContext(ctx, "Failed to encode response", "err", err)
-		}
+		writeJSONResponse(ctx, w, output, err)
 	})
 }
 
@@ -146,149 +232,127 @@ func checkMaxBytesError(err error) *http.MaxBytesError {
 }
 
 // WrapAuth wraps an authenticated handler function to work as an http.Handler.
-// It combines JWT validation, organization membership checking, and request parsing.
-// The function must have signature: func(context.Context, jsonldb.ID, *identity.User, *In) (*Out, error)
-// where orgID is the organization ID from the path (zero if not present),
-// user is the authenticated user, In can be unmarshalled from JSON, and Out is a struct.
+// Use this for endpoints that require authentication but no organization context.
+// The function must have signature: func(context.Context, *identity.User, *In) (*Out, error)
 // *In must implement dto.Validatable.
 func WrapAuth[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	userService *identity.UserService,
-	orgMemService *identity.OrganizationMembershipService,
-	sessionService *identity.SessionService,
-	jwtSecret []byte,
-	requiredRole identity.OrganizationRole,
-	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
-	rlConfig *ratelimit.Config,
-	serverQuotas *identity.ServerQuotas,
+	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
+	svc *handlers.Services,
+	cfg *handlers.Config,
+	limiters *ratelimit.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
 		// Validate JWT and session
-		user, sessionID, tokenString, err := validateJWTAndSession(r, userService, sessionService, jwtSecret)
-		if !sessionID.IsZero() {
-			ctx = reqctx.WithSessionID(ctx, sessionID)
-		}
-		if tokenString != "" {
-			ctx = reqctx.WithTokenString(ctx, tokenString)
-		}
+		auth, ctx, err := validateAuthWithContext(ctx, r, svc, cfg)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
-		// Rate limit check for authenticated endpoints (after auth validation)
-		if tier := rlConfig.MatchAuth(r.Method, r.URL.Path); tier != nil {
-			// Use user ID for user-scoped limits, IP for IP-scoped
-			var identifier string
-			if tier.Scope == ratelimit.ScopeUser {
-				identifier = user.ID.String()
-			} else {
-				identifier = reqctx.GetClientIP(r)
-			}
-			key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
-			result := tier.Limiter.Allow(key)
-
-			// Wrap response writer to inject headers
-			w = ratelimit.NewResponseWriter(w, result)
-
-			if !result.Allowed {
-				writeRateLimitError(w, result)
+		// Rate limit check for authenticated endpoints
+		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
+			var ok bool
+			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, auth.user, r))
+			if !ok {
 				return
 			}
 		}
 
-		// Check organization membership if orgID is in path
-		var orgID jsonldb.ID
-		orgIDStr := r.PathValue("orgID")
-		if orgIDStr != "" {
-			orgID, err = jsonldb.DecodeID(orgIDStr)
-			if err != nil {
-				http.Error(w, "Invalid organization ID format", http.StatusBadRequest)
-				return
-			}
-
-			membership, err := orgMemService.Get(user.ID, orgID)
-			if err != nil {
-				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
-				return
-			}
-
-			if !hasOrgPermission(membership.Role, requiredRole) {
-				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
-				return
-			}
-		}
-
-		// Limit request body size
-		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
-		}
-
-		// Parse request body
-		body, err := io.ReadAll(r.Body)
-		if err2 := r.Body.Close(); err == nil {
-			err = err2
-		}
-		if err != nil {
-			// Check for MaxBytesError (request body too large)
-			if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
-				apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
-				writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
-				return
-			}
-			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
-			writeBadRequestError(w, "Failed to read request body")
-			return
-		}
 		input := new(In)
-		if len(body) > 0 {
-			d := json.NewDecoder(bytes.NewReader(body))
-			d.DisallowUnknownFields()
-			if err := d.Decode(input); err != nil {
-				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
-				writeBadRequestError(w, "Invalid request body")
-				return
-			}
+		if !readAndDecodeBody(ctx, w, r, input, cfg) {
+			return
 		}
 
 		populatePathParams(r, input)
 		populateQueryParams(r, input)
 
-		// Validate the request
 		if err := PtrIn(input).Validate(); err != nil {
 			handleValidationError(ctx, w, err)
 			return
 		}
 
-		output, err := fn(ctx, orgID, user, PtrIn(input))
+		output, err := fn(ctx, auth.user, PtrIn(input))
+		writeJSONResponse(ctx, w, output, err)
+	})
+}
+
+// WrapOrgAuth wraps an authenticated handler function for organization-scoped routes.
+// It validates JWT, checks organization membership with required role, and parses the request.
+// The function must have signature: func(context.Context, jsonldb.ID, *identity.User, *In) (*Out, error)
+// where orgID is the organization ID from the path.
+// *In must implement dto.Validatable.
+func WrapOrgAuth[In any, PtrIn interface {
+	*In
+	dto.Validatable
+}, Out any](
+	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
+	svc *handlers.Services,
+	cfg *handlers.Config,
+	requiredRole identity.OrganizationRole,
+	limiters *ratelimit.Limiters,
+) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := addRequestMetadataToContext(r.Context(), r)
+
+		// Validate JWT and session
+		auth, ctx, err := validateAuthWithContext(ctx, r, svc, cfg)
 		if err != nil {
-			statusCode := http.StatusInternalServerError
-			errorCode := dto.ErrorCodeInternal
-			details := make(map[string]any)
-
-			var ewsErr dto.ErrorWithStatus
-			if errors.As(err, &ewsErr) {
-				statusCode = ewsErr.StatusCode()
-				errorCode = ewsErr.Code()
-				if d := ewsErr.Details(); d != nil {
-					details = d
-				}
-			}
-
-			slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode, "code", errorCode)
-			writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(output); err != nil {
-			slog.ErrorContext(ctx, "Failed to encode response", "err", err)
+		// Rate limit check for authenticated endpoints
+		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
+			var ok bool
+			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, auth.user, r))
+			if !ok {
+				return
+			}
 		}
+
+		// Extract and validate organization ID from path
+		orgIDStr := r.PathValue("orgID")
+		if orgIDStr == "" {
+			http.Error(w, "Organization ID required", http.StatusBadRequest)
+			return
+		}
+		orgID, err := jsonldb.DecodeID(orgIDStr)
+		if err != nil {
+			http.Error(w, "Invalid organization ID format", http.StatusBadRequest)
+			return
+		}
+
+		// Check organization membership and role
+		membership, err := svc.OrgMembership.Get(auth.user.ID, orgID)
+		if err != nil {
+			http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
+			return
+		}
+		if !hasOrgPermission(membership.Role, requiredRole) {
+			http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+			return
+		}
+
+		input := new(In)
+		if !readAndDecodeBody(ctx, w, r, input, cfg) {
+			return
+		}
+
+		populatePathParams(r, input)
+		populateQueryParams(r, input)
+
+		if err := PtrIn(input).Validate(); err != nil {
+			handleValidationError(ctx, w, err)
+			return
+		}
+
+		output, err := fn(ctx, orgID, auth.user, PtrIn(input))
+		writeJSONResponse(ctx, w, output, err)
 	})
 }
 
@@ -302,46 +366,27 @@ func WrapWSAuth[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	userService *identity.UserService,
-	orgMemService *identity.OrganizationMembershipService,
-	wsMemService *identity.WorkspaceMembershipService,
-	wsService *identity.WorkspaceService,
-	sessionService *identity.SessionService,
-	jwtSecret []byte,
-	requiredRole identity.WorkspaceRole,
 	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
-	rlConfig *ratelimit.Config,
-	serverQuotas *identity.ServerQuotas,
+	svc *handlers.Services,
+	cfg *handlers.Config,
+	requiredRole identity.WorkspaceRole,
+	limiters *ratelimit.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
 		// Validate JWT and session
-		user, sessionID, tokenString, err := validateJWTAndSession(r, userService, sessionService, jwtSecret)
-		if sessionID != 0 {
-			ctx = reqctx.WithSessionID(ctx, sessionID)
-		}
-		if tokenString != "" {
-			ctx = reqctx.WithTokenString(ctx, tokenString)
-		}
+		auth, ctx, err := validateAuthWithContext(ctx, r, svc, cfg)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
 		// Rate limit check
-		if tier := rlConfig.MatchAuth(r.Method, r.URL.Path); tier != nil {
-			var identifier string
-			if tier.Scope == ratelimit.ScopeUser {
-				identifier = user.ID.String()
-			} else {
-				identifier = reqctx.GetClientIP(r)
-			}
-			key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
-			result := tier.Limiter.Allow(key)
-			w = ratelimit.NewResponseWriter(w, result)
-			if !result.Allowed {
-				writeRateLimitError(w, result)
+		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
+			var ok bool
+			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, auth.user, r))
+			if !ok {
 				return
 			}
 		}
@@ -356,70 +401,15 @@ func WrapWSAuth[In any, PtrIn interface {
 				return
 			}
 
-			// Get workspace to find org
-			ws, err := wsService.Get(wsID)
-			if err != nil {
-				http.Error(w, "Workspace not found", http.StatusNotFound)
-				return
-			}
-
-			// Check org membership first
-			orgMem, err := orgMemService.Get(user.ID, ws.OrganizationID)
-			if err != nil {
-				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
-				return
-			}
-
-			// Org owners and admins have implicit admin access to all workspaces
-			var effectiveRole identity.WorkspaceRole
-			if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
-				effectiveRole = identity.WSRoleAdmin
-			} else {
-				// Check explicit workspace membership
-				wsMem, err := wsMemService.Get(user.ID, wsID)
-				if err != nil {
-					http.Error(w, "Forbidden: not a member of this workspace", http.StatusForbidden)
-					return
-				}
-				effectiveRole = wsMem.Role
-			}
-
-			if !hasWSPermission(effectiveRole, requiredRole) {
-				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+			if errMsg, status := checkWSMembership(auth.user, wsID, svc, requiredRole); errMsg != "" {
+				http.Error(w, errMsg, status)
 				return
 			}
 		}
 
-		// Limit request body size
-		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
-		}
-
-		// Parse request body
-		body, err := io.ReadAll(r.Body)
-		if err2 := r.Body.Close(); err == nil {
-			err = err2
-		}
-		if err != nil {
-			// Check for MaxBytesError (request body too large)
-			if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
-				apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
-				writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
-				return
-			}
-			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
-			writeBadRequestError(w, "Failed to read request body")
-			return
-		}
 		input := new(In)
-		if len(body) > 0 {
-			d := json.NewDecoder(bytes.NewReader(body))
-			d.DisallowUnknownFields()
-			if err := d.Decode(input); err != nil {
-				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
-				writeBadRequestError(w, "Invalid request body")
-				return
-			}
+		if !readAndDecodeBody(ctx, w, r, input, cfg) {
+			return
 		}
 
 		populatePathParams(r, input)
@@ -430,31 +420,8 @@ func WrapWSAuth[In any, PtrIn interface {
 			return
 		}
 
-		output, err := fn(ctx, wsID, user, PtrIn(input))
-		if err != nil {
-			statusCode := http.StatusInternalServerError
-			errorCode := dto.ErrorCodeInternal
-			details := make(map[string]any)
-
-			var ewsErr dto.ErrorWithStatus
-			if errors.As(err, &ewsErr) {
-				statusCode = ewsErr.StatusCode()
-				errorCode = ewsErr.Code()
-				if d := ewsErr.Details(); d != nil {
-					details = d
-				}
-			}
-
-			slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode, "code", errorCode)
-			writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(output); err != nil {
-			slog.ErrorContext(ctx, "Failed to encode response", "err", err)
-		}
+		output, err := fn(ctx, wsID, auth.user, PtrIn(input))
+		writeJSONResponse(ctx, w, output, err)
 	})
 }
 
@@ -463,41 +430,25 @@ func WrapWSAuth[In any, PtrIn interface {
 // The wrapped handler receives the request with validated auth - the handler should
 // extract wsID from the path via r.PathValue("wsID") if needed.
 func WrapAuthRaw(
-	userService *identity.UserService,
-	orgMemService *identity.OrganizationMembershipService,
-	wsMemService *identity.WorkspaceMembershipService,
-	wsService *identity.WorkspaceService,
-	sessionService *identity.SessionService,
-	jwtSecret []byte,
-	requiredRole identity.WorkspaceRole,
 	fn http.HandlerFunc,
-	rlConfig *ratelimit.Config,
-	serverQuotas *identity.ServerQuotas,
+	svc *handlers.Services,
+	cfg *handlers.Config,
+	requiredRole identity.WorkspaceRole,
+	limiters *ratelimit.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Validate JWT and session
-		user, _, _, err := validateJWTAndSession(r, userService, sessionService, jwtSecret)
+		// Validate JWT and session (don't need context for raw handlers)
+		user, _, _, err := validateJWTAndSession(r, svc.User, svc.Session, []byte(cfg.JWTSecret))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
-		// Rate limit check for authenticated endpoints (after auth validation)
-		if tier := rlConfig.MatchAuth(r.Method, r.URL.Path); tier != nil {
-			var identifier string
-			if tier.Scope == ratelimit.ScopeUser {
-				identifier = user.ID.String()
-			} else {
-				identifier = reqctx.GetClientIP(r)
-			}
-			key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
-			result := tier.Limiter.Allow(key)
-
-			// Wrap response writer to inject headers
-			w = ratelimit.NewResponseWriter(w, result)
-
-			if !result.Allowed {
-				writeRateLimitError(w, result)
+		// Rate limit check for authenticated endpoints
+		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
+			var ok bool
+			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, user, r))
+			if !ok {
 				return
 			}
 		}
@@ -511,42 +462,17 @@ func WrapAuthRaw(
 				return
 			}
 
-			ws, err := wsService.Get(wsID)
-			if err != nil {
-				http.Error(w, "Workspace not found", http.StatusNotFound)
-				return
-			}
-
-			orgMem, err := orgMemService.Get(user.ID, ws.OrganizationID)
-			if err != nil {
-				http.Error(w, "Forbidden: not a member of this organization", http.StatusForbidden)
-				return
-			}
-
-			var effectiveRole identity.WorkspaceRole
-			if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
-				effectiveRole = identity.WSRoleAdmin
-			} else {
-				wsMem, err := wsMemService.Get(user.ID, wsID)
-				if err != nil {
-					http.Error(w, "Forbidden: not a member of this workspace", http.StatusForbidden)
-					return
-				}
-				effectiveRole = wsMem.Role
-			}
-
-			if !hasWSPermission(effectiveRole, requiredRole) {
-				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+			if errMsg, status := checkWSMembership(user, wsID, svc, requiredRole); errMsg != "" {
+				http.Error(w, errMsg, status)
 				return
 			}
 		}
 
 		// Limit request body size for raw handlers
-		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
+		if cfg != nil && cfg.ServerQuotas.MaxRequestBodyBytes > 0 {
+			r.Body = http.MaxBytesReader(w, r.Body, cfg.ServerQuotas.MaxRequestBodyBytes)
 		}
 
-		// Call the raw handler
 		fn(w, r)
 	})
 }
@@ -559,17 +485,15 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	userService *identity.UserService,
-	sessionService *identity.SessionService,
-	jwtSecret []byte,
 	fn func(context.Context, *identity.User, PtrIn) (*Out, error),
-	rlConfig *ratelimit.Config,
-	serverQuotas *identity.ServerQuotas,
+	svc *handlers.Services,
+	cfg *handlers.Config,
+	limiters *ratelimit.Limiters,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
-		user, _, _, err := validateJWTAndSession(r, userService, sessionService, jwtSecret)
+		user, _, _, err := validateJWTAndSession(r, svc.User, svc.Session, []byte(cfg.JWTSecret))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -580,91 +504,30 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 			return
 		}
 
-		// Rate limit check for admin endpoints (after auth validation)
-		if tier := rlConfig.MatchAuth(r.Method, r.URL.Path); tier != nil {
-			var identifier string
-			if tier.Scope == ratelimit.ScopeUser {
-				identifier = user.ID.String()
-			} else {
-				identifier = reqctx.GetClientIP(r)
-			}
-			key := ratelimit.BuildKey(tier.Scope, identifier, tier.Name)
-			result := tier.Limiter.Allow(key)
-
-			// Wrap response writer to inject headers
-			w = ratelimit.NewResponseWriter(w, result)
-
-			if !result.Allowed {
-				writeRateLimitError(w, result)
+		// Rate limit check for admin endpoints
+		if tier := limiters.MatchAuth(r.Method, r.URL.Path); tier != nil {
+			var ok bool
+			w, ok = checkRateLimit(w, tier, getRateLimitIdentifier(tier, user, r))
+			if !ok {
 				return
 			}
 		}
 
-		// Limit request body size
-		if serverQuotas != nil && serverQuotas.MaxRequestBodyBytes > 0 {
-			r.Body = http.MaxBytesReader(w, r.Body, serverQuotas.MaxRequestBodyBytes)
-		}
-
-		body, err := io.ReadAll(r.Body)
-		if err2 := r.Body.Close(); err == nil {
-			err = err2
-		}
-		if err != nil {
-			// Check for MaxBytesError (request body too large)
-			if maxBytesErr := checkMaxBytesError(err); maxBytesErr != nil {
-				apiErr := dto.PayloadTooLarge(maxBytesErr.Limit)
-				writeErrorResponseWithCode(w, apiErr.StatusCode(), apiErr.Code(), apiErr.Error(), apiErr.Details())
-				return
-			}
-			slog.ErrorContext(ctx, "Failed to read request body", "err", err)
-			writeBadRequestError(w, "Failed to read request body")
-			return
-		}
 		input := new(In)
-		if len(body) > 0 {
-			d := json.NewDecoder(bytes.NewReader(body))
-			d.DisallowUnknownFields()
-			if err := d.Decode(input); err != nil {
-				slog.ErrorContext(ctx, "Failed to decode request body", "err", err)
-				writeBadRequestError(w, "Invalid request body")
-				return
-			}
+		if !readAndDecodeBody(ctx, w, r, input, cfg) {
+			return
 		}
 
 		populatePathParams(r, input)
 		populateQueryParams(r, input)
 
-		// Validate the request
 		if err := PtrIn(input).Validate(); err != nil {
 			handleValidationError(ctx, w, err)
 			return
 		}
 
 		output, err := fn(ctx, user, PtrIn(input))
-		if err != nil {
-			statusCode := http.StatusInternalServerError
-			errorCode := dto.ErrorCodeInternal
-			details := make(map[string]any)
-
-			var ewsErr dto.ErrorWithStatus
-			if errors.As(err, &ewsErr) {
-				statusCode = ewsErr.StatusCode()
-				errorCode = ewsErr.Code()
-				if d := ewsErr.Details(); d != nil {
-					details = d
-				}
-			}
-
-			slog.ErrorContext(ctx, "Handler error", "err", err, "statusCode", statusCode, "code", errorCode)
-			writeErrorResponseWithCode(w, statusCode, errorCode, err.Error(), details)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(output); err != nil {
-			slog.ErrorContext(ctx, "Failed to encode response", "err", err)
-		}
+		writeJSONResponse(ctx, w, output, err)
 	})
 }
 

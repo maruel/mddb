@@ -17,9 +17,9 @@ type SearchHandler struct {
 }
 
 // NewSearchHandler creates a new search handler.
-func NewSearchHandler(fileStore *content.FileStoreService) *SearchHandler {
+func NewSearchHandler(svc *Services) *SearchHandler {
 	return &SearchHandler{
-		searchService: content.NewSearchService(fileStore),
+		searchService: content.NewSearchService(svc.FileStore),
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
-	defer cfg.Close()
 
 	// Verify scopes
 	if cfg.Auth.Scope != ScopeIP {
@@ -21,25 +20,39 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.ReadUnauth.Scope != ScopeIP {
 		t.Error("ReadUnauth tier should have IP scope")
 	}
+}
+
+func TestNewLimiters(t *testing.T) {
+	cfg := DefaultConfig()
+	limiters := NewLimiters(cfg)
+	defer limiters.Close()
 
 	// Verify limiters are initialized
-	if cfg.Auth.Limiter == nil {
+	if limiters.Auth.Limiter == nil {
 		t.Error("Auth limiter should not be nil")
 	}
-	if cfg.Write.Limiter == nil {
+	if limiters.Write.Limiter == nil {
 		t.Error("Write limiter should not be nil")
 	}
-	if cfg.ReadAuth.Limiter == nil {
+	if limiters.ReadAuth.Limiter == nil {
 		t.Error("ReadAuth limiter should not be nil")
 	}
-	if cfg.ReadUnauth.Limiter == nil {
+	if limiters.ReadUnauth.Limiter == nil {
 		t.Error("ReadUnauth limiter should not be nil")
+	}
+
+	// Verify tier config is preserved
+	if limiters.Auth.Scope != ScopeIP {
+		t.Error("Auth tier should have IP scope")
+	}
+	if limiters.Write.Scope != ScopeUser {
+		t.Error("Write tier should have User scope")
 	}
 }
 
-func TestConfig_MatchUnauth(t *testing.T) {
-	cfg := DefaultConfig()
-	defer cfg.Close()
+func TestLimiters_MatchUnauth(t *testing.T) {
+	limiters := NewLimiters(DefaultConfig())
+	defer limiters.Close()
 
 	tests := []struct {
 		method   string
@@ -56,7 +69,7 @@ func TestConfig_MatchUnauth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.method+" "+tt.path, func(t *testing.T) {
-			tier := cfg.MatchUnauth(tt.method, tt.path)
+			tier := limiters.MatchUnauth(tt.method, tt.path)
 			if tt.wantTier == "" {
 				if tier != nil {
 					t.Errorf("expected nil tier, got %s", tier.Name)
@@ -72,9 +85,9 @@ func TestConfig_MatchUnauth(t *testing.T) {
 	}
 }
 
-func TestConfig_MatchAuth(t *testing.T) {
-	cfg := DefaultConfig()
-	defer cfg.Close()
+func TestLimiters_MatchAuth(t *testing.T) {
+	limiters := NewLimiters(DefaultConfig())
+	defer limiters.Close()
 
 	tests := []struct {
 		method   string
@@ -92,7 +105,7 @@ func TestConfig_MatchAuth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.method+" "+tt.path, func(t *testing.T) {
-			tier := cfg.MatchAuth(tt.method, tt.path)
+			tier := limiters.MatchAuth(tt.method, tt.path)
 			if tt.wantTier == "" {
 				if tier != nil {
 					t.Errorf("expected nil tier, got %s", tier.Name)

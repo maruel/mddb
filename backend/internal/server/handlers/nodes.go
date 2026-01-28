@@ -17,21 +17,19 @@ import (
 
 // NodeHandler handles hierarchical node requests.
 type NodeHandler struct {
-	fs                    *content.FileStoreService
-	assetHandler          *AssetHandler
-	maxColumnsPerTable    int
-	maxRowsPerTable       int
-	maxTablesPerWorkspace int
+	svc          *Services
+	cfg          *Config
+	assetHandler *AssetHandler
 }
 
 // NewNodeHandler creates a new node handler.
-func NewNodeHandler(fs *content.FileStoreService, assetHandler *AssetHandler, maxColumnsPerTable, maxRowsPerTable, maxTablesPerWorkspace int) *NodeHandler {
-	return &NodeHandler{fs: fs, assetHandler: assetHandler, maxColumnsPerTable: maxColumnsPerTable, maxRowsPerTable: maxRowsPerTable, maxTablesPerWorkspace: maxTablesPerWorkspace}
+func NewNodeHandler(svc *Services, cfg *Config, assetHandler *AssetHandler) *NodeHandler {
+	return &NodeHandler{svc: svc, cfg: cfg, assetHandler: assetHandler}
 }
 
 // GetNode retrieves a single node's metadata.
 func (h *NodeHandler) GetNode(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetNodeRequest) (*dto.NodeResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -46,7 +44,7 @@ func (h *NodeHandler) GetNode(ctx context.Context, wsID jsonldb.ID, _ *identity.
 // ListNodeChildren returns the children of a node.
 // Use id=0 to list top-level nodes in the workspace.
 func (h *NodeHandler) ListNodeChildren(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListNodeChildrenRequest) (*dto.ListNodeChildrenResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -65,7 +63,7 @@ func (h *NodeHandler) ListNodeChildren(ctx context.Context, wsID jsonldb.ID, _ *
 
 // DeleteNode deletes a node.
 func (h *NodeHandler) DeleteNode(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeleteNodeRequest) (*dto.DeleteNodeResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -78,7 +76,7 @@ func (h *NodeHandler) DeleteNode(ctx context.Context, wsID jsonldb.ID, user *ide
 
 // ListNodeVersions returns the version history of a node.
 func (h *NodeHandler) ListNodeVersions(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListNodeVersionsRequest) (*dto.ListNodeVersionsResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -91,7 +89,7 @@ func (h *NodeHandler) ListNodeVersions(ctx context.Context, wsID jsonldb.ID, _ *
 
 // GetNodeVersion returns a specific version of a node's content.
 func (h *NodeHandler) GetNodeVersion(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetNodeVersionRequest) (*dto.GetNodeVersionResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -108,7 +106,7 @@ func (h *NodeHandler) GetNodeVersion(ctx context.Context, wsID jsonldb.ID, _ *id
 
 // ListNodeAssets returns a list of assets associated with a node.
 func (h *NodeHandler) ListNodeAssets(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListNodeAssetsRequest) (*dto.ListNodeAssetsResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -138,7 +136,7 @@ func (h *NodeHandler) assetsToSummaries(assets []*content.Asset, wsID, nodeID js
 
 // DeleteNodeAsset deletes an asset from a node.
 func (h *NodeHandler) DeleteNodeAsset(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeleteNodeAssetRequest) (*dto.DeleteNodeAssetResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -154,7 +152,7 @@ func (h *NodeHandler) DeleteNodeAsset(ctx context.Context, wsID jsonldb.ID, user
 // CreatePage creates a new page under a parent node.
 // The parent ID is in req.ParentID; use 0 for root.
 func (h *NodeHandler) CreatePage(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -170,7 +168,7 @@ func (h *NodeHandler) CreatePage(ctx context.Context, wsID jsonldb.ID, user *ide
 
 // GetPage retrieves a page's content.
 func (h *NodeHandler) GetPage(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetPageRequest) (*dto.GetPageResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -191,7 +189,7 @@ func (h *NodeHandler) GetPage(ctx context.Context, wsID jsonldb.ID, _ *identity.
 
 // UpdatePage updates a page's title and content.
 func (h *NodeHandler) UpdatePage(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdatePageRequest) (*dto.UpdatePageResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -206,7 +204,7 @@ func (h *NodeHandler) UpdatePage(ctx context.Context, wsID jsonldb.ID, user *ide
 // DeletePage removes the page content from a node.
 // The node directory is kept if table content exists.
 func (h *NodeHandler) DeletePage(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeletePageRequest) (*dto.DeletePageResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -223,20 +221,20 @@ func (h *NodeHandler) DeletePage(ctx context.Context, wsID jsonldb.ID, user *ide
 // The parent ID is in req.ParentID; use 0 for root.
 func (h *NodeHandler) CreateTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreateTableRequest) (*dto.CreateTableUnderParentResponse, error) {
 	// Check column quota
-	if h.maxColumnsPerTable > 0 && len(req.Properties) > h.maxColumnsPerTable {
-		return nil, dto.QuotaExceeded("columns per table", h.maxColumnsPerTable)
+	if h.cfg.ServerQuotas.MaxColumnsPerTable > 0 && len(req.Properties) > h.cfg.ServerQuotas.MaxColumnsPerTable {
+		return nil, dto.QuotaExceeded("columns per table", h.cfg.ServerQuotas.MaxColumnsPerTable)
 	}
 
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
 	// Check table quota for workspace
-	if h.maxTablesPerWorkspace > 0 {
-		if err := ws.CheckTableQuota(h.maxTablesPerWorkspace); err != nil {
+	if h.cfg.ServerQuotas.MaxTablesPerWorkspace > 0 {
+		if err := ws.CheckTableQuota(h.cfg.ServerQuotas.MaxTablesPerWorkspace); err != nil {
 			if errors.Is(err, content.ErrTableQuotaExceeded) {
-				return nil, dto.QuotaExceeded("tables per workspace", h.maxTablesPerWorkspace)
+				return nil, dto.QuotaExceeded("tables per workspace", h.cfg.ServerQuotas.MaxTablesPerWorkspace)
 			}
 			return nil, dto.InternalWithError("Failed to check table quota", err)
 		}
@@ -253,7 +251,7 @@ func (h *NodeHandler) CreateTable(ctx context.Context, wsID jsonldb.ID, user *id
 
 // GetTable retrieves a table's schema.
 func (h *NodeHandler) GetTable(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetTableRequest) (*dto.GetTableSchemaResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -275,11 +273,11 @@ func (h *NodeHandler) GetTable(ctx context.Context, wsID jsonldb.ID, _ *identity
 // UpdateTable updates a table's schema.
 func (h *NodeHandler) UpdateTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateTableRequest) (*dto.UpdateTableResponse, error) {
 	// Check column quota
-	if h.maxColumnsPerTable > 0 && len(req.Properties) > h.maxColumnsPerTable {
-		return nil, dto.QuotaExceeded("columns per table", h.maxColumnsPerTable)
+	if h.cfg.ServerQuotas.MaxColumnsPerTable > 0 && len(req.Properties) > h.cfg.ServerQuotas.MaxColumnsPerTable {
+		return nil, dto.QuotaExceeded("columns per table", h.cfg.ServerQuotas.MaxColumnsPerTable)
 	}
 
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -303,7 +301,7 @@ func (h *NodeHandler) UpdateTable(ctx context.Context, wsID jsonldb.ID, user *id
 // DeleteTable removes the table content from a node.
 // The node directory is kept if page content exists.
 func (h *NodeHandler) DeleteTable(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeleteTableRequest) (*dto.DeleteTableResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -318,7 +316,7 @@ func (h *NodeHandler) DeleteTable(ctx context.Context, wsID jsonldb.ID, user *id
 
 // ListRecords returns all records in a table.
 func (h *NodeHandler) ListRecords(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.ListRecordsRequest) (*dto.ListRecordsResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -335,7 +333,7 @@ func (h *NodeHandler) ListRecords(ctx context.Context, wsID jsonldb.ID, _ *ident
 
 // CreateRecord creates a new record in a table.
 func (h *NodeHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreateRecordRequest) (*dto.CreateRecordResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -346,13 +344,13 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 	}
 
 	// Check row quota
-	if h.maxRowsPerTable > 0 {
+	if h.cfg.ServerQuotas.MaxRowsPerTable > 0 {
 		count, err := ws.CountRecords(req.ID)
 		if err != nil {
 			return nil, dto.InternalWithError("Failed to count records", err)
 		}
-		if count >= h.maxRowsPerTable {
-			return nil, dto.QuotaExceeded("rows per table", h.maxRowsPerTable)
+		if count >= h.cfg.ServerQuotas.MaxRowsPerTable {
+			return nil, dto.QuotaExceeded("rows per table", h.cfg.ServerQuotas.MaxRowsPerTable)
 		}
 	}
 
@@ -377,7 +375,7 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 
 // UpdateRecord updates an existing record in a table.
 func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateRecordRequest) (*dto.UpdateRecordResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -422,7 +420,7 @@ func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 
 // GetRecord retrieves a single record from a table.
 func (h *NodeHandler) GetRecord(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetRecordRequest) (*dto.GetRecordResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
@@ -445,7 +443,7 @@ func (h *NodeHandler) GetRecord(ctx context.Context, wsID jsonldb.ID, _ *identit
 
 // DeleteRecord deletes a record from a table.
 func (h *NodeHandler) DeleteRecord(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeleteRecordRequest) (*dto.DeleteRecordResponse, error) {
-	ws, err := h.fs.GetWorkspaceStore(ctx, wsID)
+	ws, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}

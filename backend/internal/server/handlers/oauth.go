@@ -30,15 +30,15 @@ const linkingStatePrefix = "link:"
 
 // OAuthHandler handles OAuth2 authentication for multiple providers.
 type OAuthHandler struct {
-	userService *identity.UserService
+	svc         *Services
 	authHandler *AuthHandler
 	providers   map[identity.OAuthProvider]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
-func NewOAuthHandler(userService *identity.UserService, authHandler *AuthHandler) *OAuthHandler {
+func NewOAuthHandler(svc *Services, authHandler *AuthHandler) *OAuthHandler {
 	return &OAuthHandler{
-		userService: userService,
+		svc:         svc,
 		authHandler: authHandler,
 		providers:   make(map[identity.OAuthProvider]*oauth2.Config),
 	}
@@ -85,7 +85,7 @@ func (h *OAuthHandler) ListProviders(_ context.Context, _ *dto.ProvidersRequest)
 }
 
 // LinkOAuth initiates linking an OAuth provider to an existing account.
-func (h *OAuthHandler) LinkOAuth(_ context.Context, _ jsonldb.ID, user *identity.User, req *dto.LinkOAuthAccountRequest) (*dto.LinkOAuthAccountResponse, error) {
+func (h *OAuthHandler) LinkOAuth(_ context.Context, user *identity.User, req *dto.LinkOAuthAccountRequest) (*dto.LinkOAuthAccountResponse, error) {
 	provider := identity.OAuthProvider(req.Provider)
 	config, ok := h.providers[provider]
 	if !ok {
@@ -112,7 +112,7 @@ func (h *OAuthHandler) LinkOAuth(_ context.Context, _ jsonldb.ID, user *identity
 }
 
 // UnlinkOAuth removes an OAuth provider from the user's account.
-func (h *OAuthHandler) UnlinkOAuth(_ context.Context, _ jsonldb.ID, user *identity.User, req *dto.UnlinkOAuthAccountRequest) (*dto.UnlinkOAuthAccountResponse, error) {
+func (h *OAuthHandler) UnlinkOAuth(_ context.Context, user *identity.User, req *dto.UnlinkOAuthAccountRequest) (*dto.UnlinkOAuthAccountResponse, error) {
 	provider := identity.OAuthProvider(req.Provider)
 
 	// Check if provider is linked
@@ -128,7 +128,7 @@ func (h *OAuthHandler) UnlinkOAuth(_ context.Context, _ jsonldb.ID, user *identi
 	}
 
 	// Check if user has another auth method (password or other OAuth)
-	hasPassword := h.userService.HasPassword(user.ID)
+	hasPassword := h.svc.User.HasPassword(user.ID)
 	otherOAuthCount := len(user.OAuthIdentities) - 1
 
 	if !hasPassword && otherOAuthCount == 0 {
@@ -136,7 +136,7 @@ func (h *OAuthHandler) UnlinkOAuth(_ context.Context, _ jsonldb.ID, user *identi
 	}
 
 	// Remove the OAuth identity
-	if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+	if _, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
 		newIdentities := make([]identity.OAuthIdentity, 0, len(u.OAuthIdentities)-1)
 		for _, ident := range u.OAuthIdentities {
 			if ident.Provider != provider {
@@ -336,7 +336,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Check if this OAuth identity is already claimed by another user
-		existingUser, _ := h.userService.GetByOAuth(provider, userInfo.ID)
+		existingUser, _ := h.svc.User.GetByOAuth(provider, userInfo.ID)
 		if existingUser != nil && existingUser.ID != linkingUserID {
 			slog.WarnContext(ctx, "OAuth linking: identity already claimed", "oauthID", userInfo.ID, "existingUser", existingUser.ID)
 			// Redirect to frontend with error
@@ -345,7 +345,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Get the user we're linking to
-		linkingUser, err := h.userService.Get(linkingUserID)
+		linkingUser, err := h.svc.User.Get(linkingUserID)
 		if err != nil {
 			slog.ErrorContext(ctx, "OAuth linking: user not found", "userID", linkingUserID, "error", err)
 			writeErrorResponse(w, dto.NotFound("user"))
@@ -362,7 +362,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Link the OAuth identity
-		if _, err := h.userService.Modify(linkingUserID, func(u *identity.User) error {
+		if _, err := h.svc.User.Modify(linkingUserID, func(u *identity.User) error {
 			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
 				Provider:   provider,
 				ProviderID: userInfo.ID,
@@ -383,10 +383,10 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Try to find user by OAuth ID
-	user, err := h.userService.GetByOAuth(provider, userInfo.ID)
+	user, err := h.svc.User.GetByOAuth(provider, userInfo.ID)
 	if err != nil {
 		// Try to find user by email
-		user, err = h.userService.GetByEmail(userInfo.Email)
+		user, err = h.svc.User.GetByEmail(userInfo.Email)
 		if err != nil {
 			// Create new user without organization (frontend will prompt for org creation)
 			// Password is not used for OAuth users
@@ -396,7 +396,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 				writeErrorResponse(w, dto.Internal("password_generation"))
 				return
 			}
-			user, err = h.userService.Create(userInfo.Email, password, userInfo.Name)
+			user, err = h.svc.User.Create(userInfo.Email, password, userInfo.Name)
 			if err != nil {
 				writeErrorResponse(w, dto.Internal("user_creation"))
 				return
@@ -404,7 +404,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Link OAuth identity and mark email as verified (OAuth emails are trusted)
-		if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+		if _, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
 			u.EmailVerified = true
 			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
 				Provider:   provider,
@@ -420,7 +420,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Existing OAuth identity - update avatar URL and last login
-		if _, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+		if _, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
 			for i := range u.OAuthIdentities {
 				if u.OAuthIdentities[i].Provider == provider && u.OAuthIdentities[i].ProviderID == userInfo.ID {
 					u.OAuthIdentities[i].AvatarURL = userInfo.AvatarURL

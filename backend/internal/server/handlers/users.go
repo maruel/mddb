@@ -12,36 +12,20 @@ import (
 
 // UserHandler handles user management requests.
 type UserHandler struct {
-	userService   *identity.UserService
-	orgMemService *identity.OrganizationMembershipService
-	wsMemService  *identity.WorkspaceMembershipService
-	orgService    *identity.OrganizationService
-	wsService     *identity.WorkspaceService
+	svc *Services
 }
 
 // NewUserHandler creates a new user handler.
-func NewUserHandler(
-	userService *identity.UserService,
-	orgMemService *identity.OrganizationMembershipService,
-	wsMemService *identity.WorkspaceMembershipService,
-	orgService *identity.OrganizationService,
-	wsService *identity.WorkspaceService,
-) *UserHandler {
-	return &UserHandler{
-		userService:   userService,
-		orgMemService: orgMemService,
-		wsMemService:  wsMemService,
-		orgService:    orgService,
-		wsService:     wsService,
-	}
+func NewUserHandler(svc *Services) *UserHandler {
+	return &UserHandler{svc: svc}
 }
 
 // ListUsers returns all users in the organization.
 func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *identity.User, _ *dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
 	// Filter by organization membership and convert to response
 	var users []dto.UserResponse
-	for user := range h.userService.Iter(0) {
-		uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	for user := range h.svc.User.Iter(0) {
+		uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 		if err != nil {
 			continue
 		}
@@ -63,14 +47,14 @@ func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID jsonldb.ID,
 	}
 
 	// Update or create org membership
-	m, err := h.orgMemService.Get(req.UserID, orgID)
+	m, err := h.svc.OrgMembership.Get(req.UserID, orgID)
 	if err != nil {
-		if _, err = h.orgMemService.Create(req.UserID, orgID, orgRoleToEntity(req.Role)); err != nil {
+		if _, err = h.svc.OrgMembership.Create(req.UserID, orgID, orgRoleToEntity(req.Role)); err != nil {
 			return nil, dto.InternalWithError("Failed to create org membership", err)
 		}
 	} else {
 		newRole := orgRoleToEntity(req.Role)
-		if _, err = h.orgMemService.Modify(m.ID, func(m *identity.OrganizationMembership) error {
+		if _, err = h.svc.OrgMembership.Modify(m.ID, func(m *identity.OrganizationMembership) error {
 			m.Role = newRole
 			return nil
 		}); err != nil {
@@ -78,7 +62,7 @@ func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID jsonldb.ID,
 		}
 	}
 
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, req.UserID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, req.UserID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}
@@ -92,14 +76,14 @@ func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID jsonldb.ID, _
 	}
 
 	// Update or create workspace membership
-	m, err := h.wsMemService.Get(req.UserID, wsID)
+	m, err := h.svc.WSMembership.Get(req.UserID, wsID)
 	if err != nil {
-		if _, err = h.wsMemService.Create(req.UserID, wsID, wsRoleToEntity(req.Role)); err != nil {
+		if _, err = h.svc.WSMembership.Create(req.UserID, wsID, wsRoleToEntity(req.Role)); err != nil {
 			return nil, dto.InternalWithError("Failed to create workspace membership", err)
 		}
 	} else {
 		newRole := wsRoleToEntity(req.Role)
-		if _, err = h.wsMemService.Modify(m.ID, func(m *identity.WorkspaceMembership) error {
+		if _, err = h.svc.WSMembership.Modify(m.ID, func(m *identity.WorkspaceMembership) error {
 			m.Role = newRole
 			return nil
 		}); err != nil {
@@ -107,7 +91,7 @@ func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID jsonldb.ID, _
 		}
 	}
 
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, req.UserID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, req.UserID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}
@@ -115,15 +99,15 @@ func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID jsonldb.ID, _
 }
 
 // UpdateUserSettings updates user global settings.
-func (h *UserHandler) UpdateUserSettings(ctx context.Context, _ jsonldb.ID, user *identity.User, req *dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
-	_, err := h.userService.Modify(user.ID, func(u *identity.User) error {
+func (h *UserHandler) UpdateUserSettings(ctx context.Context, user *identity.User, req *dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
+	_, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
 		u.Settings = userSettingsToEntity(req.Settings)
 		return nil
 	})
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to update settings", err)
 	}
-	uwm, err := getUserWithMemberships(h.userService, h.orgMemService, h.wsMemService, h.orgService, h.wsService, user.ID)
+	uwm, err := getUserWithMemberships(h.svc.User, h.svc.OrgMembership, h.svc.WSMembership, h.svc.Organization, h.svc.Workspace, user.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}
