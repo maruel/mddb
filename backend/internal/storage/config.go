@@ -187,19 +187,13 @@ func SaveServerConfig(dataDir string, cfg *ServerConfig) error {
 		return fmt.Errorf("invalid config: %w", err)
 	}
 
-	path := filepath.Join(dataDir, "server_config.json")
-
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
-
-	// Write with newline at end
 	data = append(data, '\n')
-
-	if err := os.WriteFile(path, data, 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dataDir, "server_config.json"), data, 0o600); err != nil {
 		return fmt.Errorf("failed to write config.json: %w", err)
 	}
-
 	return nil
 }
