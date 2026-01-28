@@ -1,2 +1,3 @@
-# Generated frontend assets - keep ours on merge conflicts
+# Generated files - keep ours on merge conflicts (regenerate after merge)
 backend/frontend/dist/** merge=ours
+sdk/*.gen.ts merge=ours
