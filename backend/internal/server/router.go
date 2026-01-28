@@ -248,6 +248,9 @@ func NewEmbeddedSPAHandler(f embed.FS) *EmbeddedSPAHandler {
 
 // ServeHTTP implements http.Handler for embedded SPA routing.
 func (h *EmbeddedSPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Set security headers for all responses
+	setSecurityHeaders(w)
+
 	// Try to serve the exact file from dist/
 	path := "dist" + r.URL.Path
 	f, err := h.fs.Open(path)
@@ -263,10 +266,8 @@ func (h *EmbeddedSPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		fileServer := http.FileServer(http.FS(fsys))
-		// Set cache headers for static assets with extensions
-		if containsDot(r.URL.Path) {
-			w.Header().Set("Cache-Control", "public, max-age=3600")
-		}
+		// Set appropriate cache headers based on file type
+		setCacheHeaders(w, r.URL.Path)
 		fileServer.ServeHTTP(w, r)
 		return
 	}
@@ -308,6 +309,69 @@ func containsDot(path string) bool {
 		}
 	}
 	return false
+}
+
+// setSecurityHeaders sets security-related HTTP headers.
+func setSecurityHeaders(w http.ResponseWriter) {
+	// Prevent MIME type sniffing
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	// Prevent clickjacking
+	w.Header().Set("X-Frame-Options", "DENY")
+	// Control referrer information
+	w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+	// Prevent XSS in older browsers (modern browsers ignore this)
+	w.Header().Set("X-XSS-Protection", "1; mode=block")
+}
+
+// setCacheHeaders sets Cache-Control headers based on file path.
+// Caching strategy:
+//   - /assets/* (Vite hashed files): immutable, 1 year
+//   - workbox-*.js (hashed): immutable, 1 year
+//   - sw.js, registerSW.js: no-cache (service workers must be fresh)
+//   - manifest.webmanifest, manifest.json: 1 hour
+//   - icons (png, svg, ico): 1 hour
+//   - other files with extensions: 1 hour
+func setCacheHeaders(w http.ResponseWriter, path string) {
+	// Vite-hashed assets under /assets/ - immutable, cache 1 year
+	if strings.HasPrefix(path, "/assets/") {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		return
+	}
+
+	// Get the filename from the path
+	filename := path
+	if idx := strings.LastIndex(path, "/"); idx >= 0 {
+		filename = path[idx+1:]
+	}
+
+	// Service worker files must always be revalidated
+	if filename == "sw.js" || filename == "registerSW.js" {
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		return
+	}
+
+	// Workbox runtime is hashed, can be cached long-term
+	if strings.HasPrefix(filename, "workbox-") && strings.HasSuffix(filename, ".js") {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		return
+	}
+
+	// PWA manifests - cache 1 hour (increase later)
+	if filename == "manifest.webmanifest" || filename == "manifest.json" {
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		return
+	}
+
+	// Icons and static images - cache 1 hour (increase later)
+	if strings.HasSuffix(filename, ".png") || strings.HasSuffix(filename, ".svg") || strings.HasSuffix(filename, ".ico") {
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+		return
+	}
+
+	// Other files with extensions - default 1 hour cache
+	if containsDot(path) {
+		w.Header().Set("Cache-Control", "public, max-age=3600")
+	}
 }
 
 // roundDuration rounds d to 3 significant digits with minimum 1µs precision.
