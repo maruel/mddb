@@ -13,19 +13,12 @@ import (
 
 // SearchHandler handles search-related HTTP requests.
 type SearchHandler struct {
-	searchService *content.SearchService
-}
-
-// NewSearchHandler creates a new search handler.
-func NewSearchHandler(svc *Services) *SearchHandler {
-	return &SearchHandler{
-		searchService: content.NewSearchService(svc.FileStore),
-	}
+	Svc *Services
 }
 
 // Search performs a full-text search across all nodes.
-func (h *SearchHandler) Search(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.SearchRequest) (*dto.SearchResponse, error) {
-	results, err := h.searchService.Search(ctx, orgID, content.SearchOptions{
+func (h *SearchHandler) Search(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.SearchRequest) (*dto.SearchResponse, error) {
+	results, err := h.Svc.Search.Search(ctx, wsID, content.SearchOptions{
 		Query:       req.Query,
 		Limit:       req.Limit,
 		MatchTitle:  req.MatchTitle,

@@ -83,6 +83,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	svc := &handlers.Services{
 		FileStore:     fileStore,
+		Search:        content.NewSearchService(fileStore),
 		User:          userService,
 		Organization:  orgService,
 		Workspace:     wsService,

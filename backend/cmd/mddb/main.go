@@ -366,6 +366,7 @@ func mainImpl() error {
 
 	svc := &handlers.Services{
 		FileStore:     fileStore,
+		Search:        content.NewSearchService(fileStore),
 		User:          userService,
 		Organization:  orgService,
 		Workspace:     wsService,

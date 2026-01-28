@@ -11,6 +11,7 @@ import (
 // Services holds all service dependencies for handlers.
 type Services struct {
 	FileStore     *content.FileStoreService
+	Search        *content.SearchService
 	User          *identity.UserService
 	Organization  *identity.OrganizationService
 	Workspace     *identity.WorkspaceService
