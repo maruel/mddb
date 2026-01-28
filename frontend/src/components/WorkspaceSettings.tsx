@@ -2,7 +2,13 @@
 
 import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
 import { createApi } from '../useApi';
-import type { UserResponse, WSInvitationResponse, WorkspaceRole, GitRemoteResponse } from '@sdk/types.gen';
+import {
+  WSRoleAdmin,
+  type UserResponse,
+  type WSInvitationResponse,
+  type WorkspaceRole,
+  type GitRemoteResponse,
+} from '@sdk/types.gen';
 import styles from './WorkspaceSettings.module.css';
 import { useI18n } from '../i18n';
 
@@ -58,7 +64,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       setError(null);
 
       const ws = wsApi();
-      if (activeTab() === 'members' && props.user.workspace_role === 'admin') {
+      if (activeTab() === 'members' && props.user.workspace_role === WSRoleAdmin) {
         const [membersData, invsData] = await Promise.all([
           org.users.listUsers(),
           ws ? ws.invitations.listWSInvitations() : Promise.resolve({ invitations: [] }),
@@ -73,7 +79,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         setOriginalWsName(wsData.name);
       }
 
-      if (activeTab() === 'sync' && props.user.workspace_role === 'admin' && ws) {
+      if (activeTab() === 'sync' && props.user.workspace_role === WSRoleAdmin && ws) {
         try {
           const remoteData = await ws.settings.git.getGitRemote();
           setGitRemote(remoteData);
@@ -229,7 +235,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         <button class={activeTab() === 'workspace' ? styles.activeTab : ''} onClick={() => setActiveTab('workspace')}>
           {t('settings.workspace')}
         </button>
-        <Show when={props.user.workspace_role === 'admin'}>
+        <Show when={props.user.workspace_role === WSRoleAdmin}>
           <button class={activeTab() === 'sync' ? styles.activeTab : ''} onClick={() => setActiveTab('sync')}>
             {t('settings.gitSync')}
           </button>
@@ -246,7 +252,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'members'}>
         <section class={styles.section}>
           <h3>{t('settings.members')}</h3>
-          <Show when={props.user.workspace_role === 'admin'} fallback={<p>{t('settings.adminOnlyMembers')}</p>}>
+          <Show when={props.user.workspace_role === WSRoleAdmin} fallback={<p>{t('settings.adminOnlyMembers')}</p>}>
             <table class={styles.table}>
               <thead>
                 <tr>
@@ -336,7 +342,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       <Show when={activeTab() === 'workspace'}>
         <section class={styles.section}>
           <h3>{t('settings.workspaceSettings')}</h3>
-          <Show when={props.user.workspace_role === 'admin'} fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}>
+          <Show when={props.user.workspace_role === WSRoleAdmin} fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}>
             <form onSubmit={saveWorkspaceSettings} class={styles.settingsForm}>
               <div class={styles.formItem}>
                 <label>{t('settings.workspaceName')}</label>
