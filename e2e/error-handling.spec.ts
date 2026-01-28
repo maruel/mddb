@@ -35,17 +35,15 @@ test.describe('Error Handling - Invalid Routes', () => {
     // Try to navigate to a non-existent workspace
     await page.goto(`/w/invalid-workspace-12345/some-page?token=${token}`);
 
-    // Wait for page to stabilize - app should handle gracefully
-    await page.waitForTimeout(2000);
-
-    // App should show something - either error, redirect, login form, or sidebar
-    const hasError = await page.locator('[class*="error"], [class*="Error"]').isVisible();
-    const hasLoginForm = await page.locator('form').isVisible();
-    const hasSidebar = await page.locator('aside').isVisible();
-    const redirectedAway = !page.url().includes('invalid-workspace-12345');
-
-    // Should handle gracefully - show something useful, not crash
-    expect(hasError || hasLoginForm || hasSidebar || redirectedAway).toBe(true);
+    // Should show error about no access or redirect back to valid workspace
+    // Wait for either an error message to appear OR the URL to change
+    await expect(async () => {
+      const errorMessage = page.locator('[class*="error"], [class*="Error"]');
+      const hasError = await errorMessage.isVisible();
+      const currentUrl = page.url();
+      const urlChanged = !currentUrl.includes('invalid-workspace-12345');
+      expect(hasError || urlChanged).toBe(true);
+    }).toPass({ timeout: 5000 });
   });
 
   test('privacy page accessible without login', async ({ page }) => {
