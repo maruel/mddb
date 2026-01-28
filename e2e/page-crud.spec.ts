@@ -1,8 +1,7 @@
 import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('Page CRUD Operations', () => {
-  // BUG: Page deletion not working - see BUGS_FOUND.md Bug 3
-  test.skip('delete a page - page removed from sidebar and content area cleared', async ({ page, request }) => {
+  test('delete a page - page removed from sidebar and content area cleared', async ({ page, request }) => {
     const { token } = await registerUser(request, 'delete-page');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -31,17 +30,18 @@ test.describe('Page CRUD Operations', () => {
     await pageNode.click();
     await expect(page.getByText('This page will be deleted')).toBeVisible({ timeout: 5000 });
 
-    // Click delete button
-    const deleteButton = page.locator('button', { hasText: 'Delete' });
-    await expect(deleteButton).toBeVisible();
-
     // Set up dialog handler to accept confirmation
     page.on('dialog', (dialog) => dialog.accept());
 
-    // Click delete
+    // Hover over the sidebar node to reveal the delete button (🗑)
+    await pageNode.hover();
+
+    // Click the delete button (appears on hover)
+    const deleteButton = pageNode.locator('button[title="Delete"]');
+    await expect(deleteButton).toBeVisible({ timeout: 2000 });
     await deleteButton.click();
 
-    // Wait for the page to be removed
+    // Wait for the page to be removed from sidebar
     await expect(pageNode).not.toBeVisible({ timeout: 5000 });
 
     // Content area should be cleared (no title input visible or shows different content)
