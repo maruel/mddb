@@ -46,7 +46,7 @@ import styles from './App.module.css';
 // Inner app component that uses contexts
 function AppContent() {
   const { t, locale, setLocale } = useI18n();
-  const { user, token, login, logout } = useAuth();
+  const { user, token, login, logout, wsApi } = useAuth();
   const {
     nodes,
     selectedNodeId,
@@ -264,9 +264,9 @@ function AppContent() {
   };
 
   async function handleDeleteNode(nodeId: string) {
-    if (!confirm(t('table.confirmDeleteRecord') || 'Delete this item?')) return;
-    const ws = useAuth().wsApi();
+    const ws = wsApi();
     if (!ws) return;
+    if (!confirm(t('table.confirmDeleteRecord') || 'Delete this item?')) return;
 
     try {
       setLoading(true);
