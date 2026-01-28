@@ -4,6 +4,9 @@ import { createAPIClient, APIError, type FetchFn } from '@sdk/api.gen';
 
 export { APIError };
 
+/** Type alias for the API client returned by createApi */
+export type Api = ReturnType<typeof createApi>;
+
 /** Default retry configuration */
 const RETRY_CONFIG = {
   maxRetries: 3,

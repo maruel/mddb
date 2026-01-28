@@ -1,7 +1,6 @@
-// Main application component managing global state, routing, and layout.
+// Main application component managing routing, editor state, and layout.
 
-import { createSignal, createEffect, createMemo, For, Show, onMount, onCleanup, batch } from 'solid-js';
-import { createStore, produce, reconcile } from 'solid-js/store';
+import { createSignal, createEffect, For, Show, onMount, onCleanup, batch } from 'solid-js';
 import Sidebar from './components/Sidebar';
 import Editor from './components/editor/Editor';
 import TableTable from './components/TableTable';
@@ -19,264 +18,65 @@ import CreateOrgModal from './components/CreateOrgModal';
 import CreateWorkspaceModal from './components/CreateWorkspaceModal';
 import UserMenu from './components/UserMenu';
 import WorkspaceMenu from './components/WorkspaceMenu';
+import { AuthProvider, useAuth, WorkspaceProvider, useWorkspace, slugify } from './contexts';
 import { debounce } from './utils/debounce';
 import { useI18n, type Locale } from './i18n';
-import { createApi, APIError } from './useApi';
-import {
-  OrgRoleAdmin,
-  OrgRoleOwner,
-  WSRoleAdmin,
-  WSRoleEditor,
-  type NodeResponse,
-  type DataRecordResponse,
-  type Commit,
-  type UserResponse,
-  type OrgMembershipResponse,
-} from '@sdk/types.gen';
+import type { NodeResponse, DataRecordResponse, Commit, OrgMembershipResponse, UserResponse } from '@sdk/types.gen';
 import styles from './App.module.css';
 
-const slugify = (text: string) => {
-  return text
-    .toString()
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]+/g, '')
-    .replace(/--+/g, '-');
-};
-
-export default function App() {
+// Inner app component that uses contexts
+function AppContent() {
   const { t, locale, setLocale } = useI18n();
-  const [user, setUser] = createSignal<UserResponse | null>(null);
-  const [token, setToken] = createSignal<string | null>(localStorage.getItem('mddb_token'));
-  const [nodes, setNodes] = createStore<NodeResponse[]>([]);
+  const { user, token, wsApi, login, logout } = useAuth();
+  const {
+    nodes,
+    selectedNodeId,
+    setSelectedNodeId,
+    selectedNodeData,
+    setSelectedNodeData,
+    breadcrumbPath,
+    loading,
+    setLoading,
+    error,
+    setError,
+    switchWorkspace,
+    createOrganization,
+    createWorkspace,
+    loadNodes,
+    loadNode,
+    fetchNodeChildren,
+    updateNodeTitle,
+  } = useWorkspace();
+
+  // Editor state
+  const [title, setTitle] = createSignal('');
+  const [content, setContent] = createSignal('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
+  const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+
+  // Table records state
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
-  const [selectedNodeId, setSelectedNodeId] = createSignal<string | null>(null);
-  const [selectedNodeData, setSelectedNodeData] = createSignal<NodeResponse | null>(null);
+  const [hasMore, setHasMore] = createSignal(false);
+  const PAGE_SIZE = 50;
+
+  // Page routing state
   const [isSettingsPage, setIsSettingsPage] = createSignal(false);
   const [isOrgSettingsPage, setIsOrgSettingsPage] = createSignal(false);
   const [orgSettingsId, setOrgSettingsId] = createSignal<string | null>(null);
   const [isProfilePage, setIsProfilePage] = createSignal(false);
   const [isPrivacyPage, setIsPrivacyPage] = createSignal(false);
   const [isTermsPage, setIsTermsPage] = createSignal(false);
+
+  // UI state
   const [viewMode, setViewMode] = createSignal<'table' | 'grid' | 'gallery' | 'board'>('table');
-  const [title, setTitle] = createSignal('');
-  const [content, setContent] = createSignal('');
-  const [loading, setLoading] = createSignal(false);
-  const [error, setError] = createSignal<string | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
-  const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
-  const [nodeCreationParentId, setNodeCreationParentId] = createSignal<string | null>(null);
+  const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
   const [showCreateOrg, setShowCreateOrg] = createSignal(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
-  const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
-  const [firstLoginCheckDone, setFirstLoginCheckDone] = createSignal(false);
-  const [firstLoginInProgress, setFirstLoginInProgress] = createSignal(false);
+  const [nodeCreationParentId, setNodeCreationParentId] = createSignal<string | null>(null);
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
   const [history, setHistory] = createSignal<Commit[]>([]);
-
-  // Breadcrumb path for nested nodes (fetched from API when navigating to nested pages)
-  const [breadcrumbPath, setBreadcrumbPath] = createSignal<NodeResponse[]>([]);
-
-  // Pagination
-  const [hasMore, setHasMore] = createSignal(false);
-  const PAGE_SIZE = 50;
-
-  const logout = async () => {
-    // Call logout API to revoke the session server-side
-    const currentToken = token();
-    if (currentToken) {
-      try {
-        const logoutApi = createApi(
-          () => currentToken,
-          () => {}
-        );
-        await logoutApi.auth.logout();
-      } catch {
-        // Ignore errors - proceed with local logout even if server call fails
-      }
-    }
-    localStorage.removeItem('mddb_token');
-    setToken(null);
-    setUser(null);
-    window.history.pushState(null, '', '/');
-  };
-
-  // Create API client with auth
-  const api = createMemo(() => createApi(() => token(), logout));
-
-  // Get workspace-scoped API client
-  const wsApi = createMemo(() => {
-    const wsID = user()?.workspace_id;
-    return wsID ? api().ws(wsID) : null;
-  });
-
-  const handleLogin = (newToken: string, userData: UserResponse) => {
-    localStorage.setItem('mddb_token', newToken);
-    setToken(newToken);
-    setUser(userData);
-  };
-
-  async function switchWorkspace(wsId: string, redirect = true) {
-    try {
-      setLoading(true);
-      const data = await api().auth.switchWorkspace({ ws_id: wsId });
-      if (!data.user) {
-        throw new Error('No user data returned');
-      }
-      handleLogin(data.token, data.user);
-      // Clear all node-related state when switching workspaces
-      setSelectedNodeId(null);
-      setSelectedNodeData(null);
-      setTitle('');
-      setContent('');
-      setRecords([]);
-      setBreadcrumbPath([]);
-      setHasUnsavedChanges(false);
-      setAutoSaveStatus('idle');
-      loadedNodeId = null;
-      loadedForWorkspace = null; // Force reload for new workspace
-      if (redirect) {
-        const newWsId = data.user.workspace_id;
-        const wsName = data.user.workspace_name;
-        if (newWsId) {
-          const wsSlug = slugify(wsName || 'workspace');
-          window.history.pushState(null, '', `/w/${newWsId}+${wsSlug}/`);
-        } else {
-          window.history.pushState(null, '', '/');
-        }
-      }
-      await loadNodes();
-    } catch (err) {
-      if (err instanceof APIError) {
-        setError(`${t('errors.failedToSwitch')}: ${err.message}`);
-      } else {
-        setError(`${t('errors.failedToSwitch')}: ${err}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function createOrganization(data: { name: string }) {
-    await api().organizations.createOrganization({
-      name: data.name,
-    });
-    // Refresh user data - first-login check will prompt to create a workspace if needed
-    const updatedUser = await api().auth.getMe();
-    setUser(updatedUser);
-  }
-
-  async function createWorkspace(data: { name: string }) {
-    const u = user();
-    if (!u || !u.organization_id) {
-      throw new Error('No organization selected');
-    }
-
-    // Create workspace via org API
-    const ws = await api().org(u.organization_id).workspaces.createWorkspace({
-      name: data.name,
-    });
-
-    // Refresh user data to include the new workspace
-    const updatedUser = await api().auth.getMe();
-    setUser(updatedUser);
-
-    // Switch to the new workspace
-    await switchWorkspace(ws.id);
-  }
-
-  // Get user's first name for default naming
-  function getUserFirstName(): string {
-    const u = user();
-    if (!u?.name) return '';
-    const firstName = u.name.split(' ')[0];
-    return firstName || u.name;
-  }
-
-  // Auto-create organization for first-time users
-  async function autoCreateOrganization() {
-    try {
-      setLoading(true);
-      const firstName = getUserFirstName();
-      const orgName = firstName
-        ? t('onboarding.defaultOrgName', { name: firstName })
-        : t('onboarding.defaultOrgNameFallback');
-      await createOrganization({ name: orgName || 'My Organization' });
-    } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Auto-create workspace for users with org but no workspace
-  async function autoCreateWorkspace() {
-    try {
-      setLoading(true);
-      const firstName = getUserFirstName();
-      const wsName = firstName
-        ? t('onboarding.defaultWorkspaceName', { name: firstName })
-        : t('onboarding.defaultWorkspaceNameFallback');
-      await createWorkspace({ name: wsName || 'Main' });
-    } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // Auto-create welcome page if no root page exists
-  // Returns the new page ID if created, null otherwise
-  async function createWelcomePageIfNeeded(): Promise<string | null> {
-    const ws = wsApi();
-    const u = user();
-    if (!ws || !u) return null;
-
-    // Only create if user has permission
-    if (u.workspace_role !== WSRoleAdmin && u.workspace_role !== WSRoleEditor) {
-      return null;
-    }
-
-    try {
-      // No pages exist, create a welcome page
-      const newPage = await ws.nodes.page.createPage('0', {
-        title: t('welcome.welcomePageTitle'),
-        content: t('welcome.welcomePageContent'),
-      });
-      return newPage?.id ? String(newPage.id) : null;
-    } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
-      return null;
-    }
-  }
-
-  // Helper to update node title in local state (sidebar and breadcrumbs)
-  const updateNodeTitle = (nodeId: string, newTitle: string) => {
-    // Update the nodes store (for sidebar)
-    setNodes(
-      produce((list) => {
-        const update = (nodes: NodeResponse[]): boolean => {
-          for (const node of nodes) {
-            if (node.id === nodeId) {
-              node.title = newTitle;
-              return true;
-            }
-            if (node.children) {
-              if (update(node.children)) return true;
-            }
-          }
-          return false;
-        };
-        update(list);
-      })
-    );
-
-    // Also update breadcrumb path if the node is in the current path
-    setBreadcrumbPath((path) => path.map((node) => (node.id === nodeId ? { ...node, title: newTitle } : node)));
-  };
 
   // Debounced auto-save function
   const debouncedAutoSave = debounce(async () => {
@@ -324,89 +124,43 @@ export default function App() {
     }
   });
 
-  // First-time login check: ensure user has org, workspace, and welcome page (auto-create if needed)
+  // Sync editor state when selected node changes
   createEffect(() => {
-    const u = user();
-    if (!u || firstLoginCheckDone() || firstLoginInProgress()) return;
+    const node = selectedNodeData();
+    if (node) {
+      setTitle(node.title);
+      setContent(node.content || '');
+      setHasUnsavedChanges(false);
+      setAutoSaveStatus('idle');
+      setShowHistory(false);
 
-    // Check if user has any organizations
-    const orgs = u.organizations || [];
-    if (orgs.length === 0) {
-      // User has no organizations, auto-create one
-      setFirstLoginInProgress(true);
-      autoCreateOrganization().finally(() => setFirstLoginInProgress(false));
-      return;
-    }
-
-    // User has organizations, check if first org has any workspaces
-    const firstOrg = orgs[0];
-    if (firstOrg) {
-      const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg.organization_id) || [];
-      if (orgWorkspaces.length === 0) {
-        // Only auto-create workspace if user is admin/owner of the org
-        if (firstOrg.role === OrgRoleAdmin || firstOrg.role === OrgRoleOwner) {
-          setFirstLoginInProgress(true);
-          autoCreateWorkspace().finally(() => setFirstLoginInProgress(false));
-          return;
-        }
+      // Load records if it has table content
+      if (node.has_table) {
+        loadRecords(node.id);
+      } else {
+        setRecords([]);
+        setHasMore(false);
       }
-    }
-
-    // Check for welcome page and redirect
-    const wsId = u.workspace_id;
-    const wsName = u.workspace_name;
-    if (!wsId) {
-      // Workspace exists in list but not yet switched to - wait for switchWorkspace
-      return;
-    }
-
-    // User has org and active workspace - mark first login check as done
-    setFirstLoginCheckDone(true);
-
-    // Note: autoCreateWelcomePage() is called by loadNodes() after nodes are loaded
-
-    if (window.location.pathname === '/') {
-      const wsSlug = slugify(wsName || 'workspace');
-      window.history.replaceState(null, '', `/w/${wsId}+${wsSlug}/`);
+    } else {
+      setTitle('');
+      setContent('');
+      setRecords([]);
     }
   });
 
-  // Handle OAuth token from URL on mount (runs once)
-  onMount(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlToken = urlParams.get('token');
-    if (urlToken) {
-      localStorage.setItem('mddb_token', urlToken);
-      setToken(urlToken);
-      // Clean up URL query params but keep pathname
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  });
+  async function loadRecords(nodeId: string) {
+    const ws = wsApi();
+    if (!ws) return;
 
-  // Fetch user when we have a token but no user data
-  let fetchingUser = false;
-  createEffect(() => {
-    const tok = token();
-    const u = user();
-    if (tok && !u && !fetchingUser) {
-      fetchingUser = true;
-      (async () => {
-        try {
-          const data = await api().auth.getMe();
-          setUser(data);
-        } catch (err) {
-          console.error('Failed to load user', err);
-          // Clear invalid token on auth failure
-          if (err instanceof APIError && err.status === 401) {
-            localStorage.removeItem('mddb_token');
-            setToken(null);
-          }
-        } finally {
-          fetchingUser = false;
-        }
-      })();
+    try {
+      const recordsData = await ws.nodes.table.records.listRecords(nodeId, { Offset: 0, Limit: PAGE_SIZE });
+      const loadedRecords = (recordsData.records || []) as DataRecordResponse[];
+      setRecords(loadedRecords);
+      setHasMore(loadedRecords.length === PAGE_SIZE);
+    } catch (err) {
+      setError(`${t('errors.failedToLoad')}: ${err}`);
     }
-  });
+  }
 
   // Handle browser back/forward and initial URL
   const handlePopState = async () => {
@@ -435,12 +189,10 @@ export default function App() {
     setIsPrivacyPage(false);
     setIsTermsPage(false);
 
-    // Check for /w/wsID+wsSlug/settings format (workspace settings)
+    // Check for workspace settings
     const matchWsSettings = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
     if (matchWsSettings && matchWsSettings[1]) {
       const wsId = matchWsSettings[1];
-
-      // If logged in but in wrong workspace, switch
       if (user() && user()?.workspace_id !== wsId) {
         try {
           const u = user();
@@ -460,19 +212,16 @@ export default function App() {
           return;
         }
       }
-
       setIsSettingsPage(true);
       setIsOrgSettingsPage(false);
       return;
     }
     setIsSettingsPage(false);
 
-    // Check for /o/orgID+orgSlug/settings format (organization settings)
+    // Check for organization settings
     const matchOrgSettings = path.match(/^\/o\/([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
     if (matchOrgSettings && matchOrgSettings[1]) {
       const orgId = matchOrgSettings[1];
-
-      // Verify user has access to this org
       const u = user();
       const isMember = u?.organizations?.some((m) => m.organization_id === orgId);
       if (!isMember) {
@@ -485,7 +234,6 @@ export default function App() {
         }
         return;
       }
-
       setIsOrgSettingsPage(true);
       setOrgSettingsId(orgId);
       return;
@@ -493,21 +241,21 @@ export default function App() {
     setIsOrgSettingsPage(false);
     setOrgSettingsId(null);
 
-    // Check for /w/wsID+wsSlug/nodeID+nodeSlug format
+    // Check for node URL
     const matchWithWs = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
     if (matchWithWs && matchWithWs[1] && matchWithWs[2]) {
       const nodeId = matchWithWs[2];
-
       if (nodeId !== selectedNodeId()) {
+        // Flush auto-save before switching nodes
+        debouncedAutoSave.flush();
         loadNode(nodeId, false);
       }
       return;
     }
 
-    // Check for /w/wsID+wsSlug/ format (workspace root without node)
+    // Check for workspace root
     const matchWsRoot = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/?$/);
     if (matchWsRoot && matchWsRoot[1]) {
-      // At workspace root, auto-select the first node if available
       if (nodes.length > 0 && nodes[0]) {
         loadNode(nodes[0].id, false);
       } else {
@@ -530,146 +278,20 @@ export default function App() {
     onCleanup(() => window.removeEventListener('popstate', handlePopState));
   });
 
-  // Load nodes and initial route when user is available
+  // Handle initial route when user loads
   createEffect(() => {
     if (user()) {
-      loadNodes();
-      // Check URL
       handlePopState();
     } else {
-      // If not logged in, we still need to check for /privacy
       handlePopState();
     }
   });
-
-  let loadingNodes = false;
-  let loadedForWorkspace: string | null = null;
-  async function loadNodes(force = false) {
-    const ws = wsApi();
-    const wsId = user()?.workspace_id;
-    if (!ws || loadingNodes) return;
-    // Skip if already loaded for this workspace (unless forced)
-    if (!force && wsId && loadedForWorkspace === wsId && nodes.length > 0) return;
-
-    try {
-      loadingNodes = true;
-      setLoading(true);
-      // Get top-level nodes (children of workspace root, id=0)
-      const resp = await ws.nodes.listNodeChildren('0');
-      let loadedNodes = resp?.nodes || [];
-
-      // Auto-create welcome page if workspace is empty (first-time user)
-      if (loadedNodes.length === 0 && firstLoginCheckDone()) {
-        const newPageId = await createWelcomePageIfNeeded();
-        if (newPageId) {
-          // Re-fetch nodes after creating welcome page
-          const resp2 = await ws.nodes.listNodeChildren('0');
-          loadedNodes = resp2?.nodes || [];
-        }
-      }
-
-      setNodes(reconcile(loadedNodes));
-      loadedForWorkspace = wsId || null;
-      setError(null);
-
-      // Auto-select first node if at workspace root and no node is selected
-      const path = window.location.pathname;
-      const matchWsRoot = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/?$/);
-      if (matchWsRoot && !selectedNodeId() && loadedNodes.length > 0 && loadedNodes[0]) {
-        loadNode(loadedNodes[0].id, false);
-      }
-    } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
-    } finally {
-      loadingNodes = false;
-      setLoading(false);
-    }
-  }
-
-  let loadingNodeId: string | null = null;
-  let loadedNodeId: string | null = null;
-  async function loadNode(id: string, pushState = true) {
-    const ws = wsApi();
-    if (!ws) return;
-    // Skip if already loading or loaded this node
-    if (loadingNodeId === id || loadedNodeId === id) return;
-
-    // Flush any pending auto-save before switching nodes to prevent data loss
-    debouncedAutoSave.flush();
-
-    try {
-      loadingNodeId = id;
-      setLoading(true);
-      setShowHistory(false);
-      const nodeData = await ws.nodes.getNode(id);
-
-      setSelectedNodeId(nodeData.id);
-      setSelectedNodeData(nodeData);
-      loadedNodeId = nodeData.id;
-      setTitle(nodeData.title);
-      setContent(nodeData.content || '');
-      setHasUnsavedChanges(false);
-      setAutoSaveStatus('idle');
-      setError(null);
-
-      // Update URL to include wsID+wsSlug
-      const nodeSlug = slugify(nodeData.title);
-      const wsId = user()?.workspace_id;
-      const wsName = user()?.workspace_name;
-      if (wsId) {
-        const wsSlug = slugify(wsName || 'workspace');
-        const url = `/w/${wsId}+${wsSlug}/${nodeData.id}${nodeSlug ? '+' + nodeSlug : ''}`;
-        if (pushState) {
-          if (window.location.pathname !== url) {
-            window.history.pushState(null, '', url);
-          }
-        } else {
-          // Canonicalize URL
-          if (window.location.pathname !== url) {
-            window.history.replaceState(null, '', url);
-          }
-        }
-      }
-
-      // If it has table content, load records
-      if (nodeData.has_table) {
-        const recordsData = await ws.nodes.table.records.listRecords(id, { Offset: 0, Limit: PAGE_SIZE });
-        const loadedRecords = (recordsData.records || []) as DataRecordResponse[];
-        setRecords(loadedRecords);
-        setHasMore(loadedRecords.length === PAGE_SIZE);
-      } else {
-        setRecords([]);
-        setHasMore(false);
-      }
-
-      // Build breadcrumb path by fetching ancestor nodes
-      const path: NodeResponse[] = [nodeData];
-      let currentNode = nodeData;
-      while (currentNode.parent_id && currentNode.parent_id !== '0') {
-        try {
-          const parentNode = await ws.nodes.getNode(currentNode.parent_id);
-          path.unshift(parentNode);
-          currentNode = parentNode;
-        } catch {
-          // Stop if we can't fetch a parent
-          break;
-        }
-      }
-      setBreadcrumbPath(path);
-    } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
-    } finally {
-      loadingNodeId = null;
-      setLoading(false);
-    }
-  }
 
   async function loadHistory(nodeId: string) {
     if (showHistory()) {
       setShowHistory(false);
       return;
     }
-
     const ws = wsApi();
     if (!ws) return;
 
@@ -687,7 +309,6 @@ export default function App() {
 
   async function loadVersion(nodeId: string, hash: string) {
     if (!confirm(t('editor.restoreConfirm') || 'This will replace current editor content. Continue?')) return;
-
     const ws = wsApi();
     if (!ws) return;
 
@@ -695,7 +316,7 @@ export default function App() {
       setLoading(true);
       const data = await ws.nodes.history.getNodeVersion(nodeId, hash);
       setContent(data.content || '');
-      setHasUnsavedChanges(true); // Mark as modified
+      setHasUnsavedChanges(true);
       setShowHistory(false);
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
@@ -709,7 +330,6 @@ export default function App() {
       setError(t('errors.titleRequired') || 'Title is required');
       return;
     }
-
     const ws = wsApi();
     if (!ws) return;
 
@@ -718,15 +338,10 @@ export default function App() {
       const parent = parentId || nodeCreationParentId() || '0';
       let newNodeId: string | number;
       if (type === 'table') {
-        const result = await ws.nodes.table.createTable(parent, {
-          title: title(),
-          properties: [],
-        });
+        const result = await ws.nodes.table.createTable(parent, { title: title(), properties: [] });
         newNodeId = result.id;
       } else {
-        const result = await ws.nodes.page.createPage(parent, {
-          title: title(),
-        });
+        const result = await ws.nodes.page.createPage(parent, { title: title() });
         newNodeId = result.id;
       }
       await loadNodes(true);
@@ -745,53 +360,9 @@ export default function App() {
   }
 
   const handleNodeClick = (node: NodeResponse) => {
+    debouncedAutoSave.flush();
     loadNode(node.id);
     setShowMobileSidebar(false);
-  };
-
-  // Fetch children for a node (used for lazy loading in sidebar)
-  // Also updates the nodes store so that title updates propagate correctly
-  async function fetchNodeChildren(nodeId: string): Promise<NodeResponse[]> {
-    const ws = wsApi();
-    if (!ws) return [];
-
-    try {
-      const data = await ws.nodes.listNodeChildren(nodeId);
-      const children = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
-
-      // Update the nodes store with the loaded children so updateNodeTitle can find them
-      if (children.length > 0) {
-        setNodes(
-          produce((list) => {
-            const updateChildren = (nodes: NodeResponse[]): boolean => {
-              for (const node of nodes) {
-                if (node.id === nodeId) {
-                  node.children = children;
-                  return true;
-                }
-                if (node.children && updateChildren(node.children)) {
-                  return true;
-                }
-              }
-              return false;
-            };
-            updateChildren(list);
-          })
-        );
-      }
-
-      return children;
-    } catch (err) {
-      console.error('Failed to fetch children:', err);
-      return [];
-    }
-  }
-
-  const getBreadcrumbs = (nodeId: string | null): NodeResponse[] => {
-    if (!nodeId) return [];
-    // Use the breadcrumbPath signal which is populated when loading a node
-    // This ensures breadcrumbs work for both sidebar navigation and direct URL access
-    return breadcrumbPath();
   };
 
   async function handleAddRecord(data: Record<string, unknown>) {
@@ -802,8 +373,7 @@ export default function App() {
     try {
       setLoading(true);
       await ws.nodes.table.records.createRecord(nodeId, { data });
-      // Reload records
-      loadNode(nodeId);
+      await loadRecords(nodeId);
       setError(null);
     } catch (err) {
       setError(`${t('errors.failedToCreate')}: ${err}`);
@@ -816,16 +386,12 @@ export default function App() {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
-
     if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
       setLoading(true);
       await ws.nodes.table.records.deleteRecord(nodeId, recordId);
-      // Reload records directly instead of calling loadNode (which has a guard that prevents reload)
-      const recordsData = await ws.nodes.table.records.listRecords(nodeId, { Offset: 0, Limit: PAGE_SIZE });
-      setRecords((recordsData.records || []) as DataRecordResponse[]);
-      setHasMore((recordsData.records || []).length === PAGE_SIZE);
+      await loadRecords(nodeId);
       setError(null);
     } catch (err) {
       setError(`${t('errors.failedToDelete')}: ${err}`);
@@ -842,9 +408,7 @@ export default function App() {
     try {
       setLoading(true);
       await ws.nodes.table.records.updateRecord(nodeId, recordId, { data });
-      // Reload records to reflect changes
-      const recordsData = await ws.nodes.table.records.listRecords(nodeId, { Offset: 0, Limit: PAGE_SIZE });
-      setRecords((recordsData.records || []) as DataRecordResponse[]);
+      await loadRecords(nodeId);
       setError(null);
     } catch (err) {
       setError(`${t('errors.failedToSave')}: ${err}`);
@@ -872,11 +436,40 @@ export default function App() {
     }
   }
 
+  async function handleDeleteNode(nodeId: string) {
+    if (!confirm(t('table.confirmDeleteRecord') || 'Delete this item?')) return;
+    const ws = wsApi();
+    if (!ws) return;
+
+    try {
+      setLoading(true);
+      await ws.nodes.deleteNode(nodeId);
+      if (nodeId === selectedNodeId()) {
+        setSelectedNodeId(null);
+        setSelectedNodeData(null);
+        setTitle('');
+        setContent('');
+        setRecords([]);
+        const wsId = user()?.workspace_id;
+        const wsName = user()?.workspace_name;
+        if (wsId) {
+          const wsSlug = slugify(wsName || 'workspace');
+          window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
+        }
+      }
+      await loadNodes(true);
+    } catch (err) {
+      setError(`${t('errors.failedToDelete')}: ${err}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <>
       <Show when={!isPrivacyPage()} fallback={<Privacy />}>
         <Show when={!isTermsPage()} fallback={<Terms />}>
-          <Show when={user()} fallback={<Auth onLogin={handleLogin} />}>
+          <Show when={user()} fallback={<Auth onLogin={login} />}>
             <div class={styles.app}>
               <header class={styles.header}>
                 <div class={styles.headerLeft}>
@@ -889,7 +482,7 @@ export default function App() {
                   </button>
                   <Show when={selectedNodeId()}>
                     <nav class={styles.breadcrumbs}>
-                      <For each={getBreadcrumbs(selectedNodeId())}>
+                      <For each={breadcrumbPath()}>
                         {(crumb, i) => (
                           <>
                             <Show when={i() > 0}>
@@ -940,9 +533,7 @@ export default function App() {
                 <UserProfile
                   user={user() as UserResponse}
                   token={token() as string}
-                  onBack={() => {
-                    window.history.back();
-                  }}
+                  onBack={() => window.history.back()}
                   onOrgSettings={(org: OrgMembershipResponse) => {
                     batch(() => {
                       setIsOrgSettingsPage(true);
@@ -959,9 +550,7 @@ export default function App() {
                 <WorkspaceSettings
                   user={user() as UserResponse}
                   token={token() as string}
-                  onBack={() => {
-                    window.history.back();
-                  }}
+                  onBack={() => window.history.back()}
                   onOpenOrgSettings={() => {
                     const u = user();
                     const orgId = u?.organization_id;
@@ -983,9 +572,7 @@ export default function App() {
                   user={user() as UserResponse}
                   token={token() as string}
                   orgId={orgSettingsId() as string}
-                  onBack={() => {
-                    window.history.back();
-                  }}
+                  onBack={() => window.history.back()}
                 />
               </Show>
 
@@ -1022,37 +609,8 @@ export default function App() {
                     onSelectNode={handleNodeClick}
                     onCloseMobileSidebar={() => setShowMobileSidebar(false)}
                     onFetchChildren={fetchNodeChildren}
-                    onDeleteNode={async (nodeId: string) => {
-                      if (!confirm(t('table.confirmDeleteRecord') || 'Delete this item?')) return;
-                      const ws = wsApi();
-                      if (!ws) return;
-                      try {
-                        setLoading(true);
-                        await ws.nodes.deleteNode(nodeId);
-                        // Clear loadedNodeId if deleting the current node
-                        if (nodeId === selectedNodeId()) {
-                          loadedNodeId = null;
-                          setSelectedNodeId(null);
-                          setSelectedNodeData(null);
-                          setTitle('');
-                          setContent('');
-                          setRecords([]);
-                          const wsId = user()?.workspace_id;
-                          const wsName = user()?.workspace_name;
-                          if (wsId) {
-                            const wsSlug = slugify(wsName || 'workspace');
-                            window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
-                          }
-                        }
-                        await loadNodes(true);
-                      } catch (err) {
-                        setError(`${t('errors.failedToDelete')}: ${err}`);
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
+                    onDeleteNode={handleDeleteNode}
                     onShowHistory={(nodeId: string) => {
-                      // Navigate to the node first if not already selected
                       if (nodeId !== selectedNodeId()) {
                         loadNode(nodeId).then(() => loadHistory(nodeId));
                       } else {
@@ -1128,7 +686,6 @@ export default function App() {
                         </Show>
 
                         <div class={styles.nodeContent}>
-                          {/* Always show markdown content if it exists or if node has page content */}
                           <Show when={selectedNodeData()?.has_page}>
                             <Editor
                               content={content()}
@@ -1142,7 +699,6 @@ export default function App() {
                             />
                           </Show>
 
-                          {/* Show table if node has table content */}
                           <Show when={selectedNodeData()?.has_table}>
                             <div class={styles.tableView}>
                               <div class={styles.tableHeader}>
@@ -1234,5 +790,16 @@ export default function App() {
         />
       </Show>
     </>
+  );
+}
+
+// Root component that provides contexts
+export default function App() {
+  return (
+    <AuthProvider>
+      <WorkspaceProvider>
+        <AppContent />
+      </WorkspaceProvider>
+    </AuthProvider>
   );
 }

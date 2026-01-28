@@ -6,24 +6,19 @@ Roadmap for the SolidJS frontend, focusing on architecture, performance, and use
 ## Architecture Improvements (Priority)
 
 ### Phase A1: State Management Refactor
-App.tsx is 1242 lines with 15+ concerns mixed together. Extract into proper modules:
+App.tsx reduced from 1238 to 805 lines (~35% reduction) by extracting auth and workspace state into contexts:
 
-- [ ] **Create `src/stores/` directory** for global state
-  - [ ] `authStore.ts` - User authentication, token management
-  - [ ] `nodeStore.ts` - Node/page state, breadcrumb tracking
-  - [ ] `editorStore.ts` - Title, content, unsaved changes
-  - [ ] `recordStore.ts` - Table records state
-  - [ ] `workspaceStore.ts` - Workspace switching logic
-- [ ] **Create `src/contexts/` directory** for React-style context providers
-  - [ ] `AuthContext.tsx` - Auth state provider
-  - [ ] `WorkspaceContext.tsx` - Workspace/org context
+- [x] **Create `src/contexts/` directory** for context providers
+  - [x] `AuthContext.tsx` - User, token, login/logout, API clients
+  - [x] `WorkspaceContext.tsx` - Nodes, navigation, workspace switching, first-login flow
+  - [x] `index.ts` - Re-exports for clean imports
 - [x] **Create `src/composables/` directory** for reusable logic
-  - [ ] `useAutoSave.ts` - Debounced auto-save logic
+  - [ ] `useAutoSave.ts` - Debounced auto-save logic (still in App.tsx)
   - [x] `useClickOutside.ts` - Click-outside detection (used by WorkspaceMenu, UserMenu)
   - [ ] `useRouting.ts` - URL parsing and navigation helpers
-- [ ] **Fix state management anti-patterns**
-  - [ ] Replace direct variable mutations (lines 139, 387, 545, 589) with signals
-  - [ ] Standardize on `createStore()` for complex objects
+- [ ] **Further extraction** (future work)
+  - [ ] `EditorContext` - Title, content, unsaved changes, auto-save
+  - [ ] `RecordsContext` - Table records CRUD and pagination
 
 ### Phase A2: Reduce Prop Drilling
 Components receive 10+ props with 6+ callbacks. Use context instead:
