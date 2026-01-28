@@ -271,7 +271,13 @@ func (h *EmbeddedSPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// File not found - fall back to index.html for SPA routing
+	// File not found - check if this is a static asset path that should 404
+	if strings.HasPrefix(r.URL.Path, "/assets/") {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Fall back to index.html for SPA routing
 	indexFile, err := h.fs.Open("dist/index.html")
 	if err != nil {
 		http.NotFound(w, r)
