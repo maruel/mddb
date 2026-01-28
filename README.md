@@ -66,6 +66,9 @@ A hardened systemd user service file is provided in `contrib/`:
 mkdir -p ~/.config/systemd/user
 cp contrib/mddb.service ~/.config/systemd/user/
 
+# Edit as needed. In particular, add the tailscale hostname and change the port if it conflicts on your system.
+nano ~/.config/systemd/user/mddb.service
+
 # Configure data directory (edit paths if needed)
 mkdir -p ~/mddb/data
 
@@ -76,6 +79,39 @@ systemctl --user enable --now mddb
 # View logs
 journalctl --user -u mddb -f
 ```
+
+### Serving over Tailscale
+
+You can expose mddb to your [Tailscale](https://tailscale.com/) network using `tailscale serve`. This provides secure access from any device on your tailnet without opening ports or configuring firewalls.
+
+```bash
+# Expose mddb on your tailnet at https://<hostname>.<tailnet>.ts.net
+tailscale serve --bg 8080
+
+# Check status
+tailscale serve status
+
+# Stop serving
+tailscale serve --bg off
+```
+
+For public access via Tailscale Funnel (exposes to the internet!):
+
+```bash
+# Make mddb publicly accessible at https://<hostname>.<tailnet>.ts.net
+tailscale funnel --bg 8080
+
+# Stop funnel
+tailscale funnel --bg off
+```
+
+> **Note**: Tailscale serve/funnel provides HTTPS automatically. mddb's authentication still applies—users must log in with their credentials.
+
+**OAuth Configuration**: If using OAuth providers (Google, GitHub, etc.), you must add your Tailscale URL to the authorized redirect URIs in each provider's console:
+- `https://<hostname>.<tailnet>.ts.net/auth/google/callback`
+- `https://<hostname>.<tailnet>.ts.net/auth/github/callback`
+
+You can find your exact hostname with `tailscale status`.
 
 
 ## File Structure
