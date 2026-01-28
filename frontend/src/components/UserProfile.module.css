@@ -174,3 +174,54 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.orgList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.orgItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.orgInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.orgName {
+  font-weight: 500;
+}
+
+.orgNameLink {
+  font-weight: 500;
+  color: var(--c-primary);
+  text-decoration: none;
+}
+
+.orgNameLink:hover {
+  text-decoration: underline;
+}
+
+.orgRole {
+  font-size: 0.75rem;
+  padding: var(--s-1) var(--s-2);
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
+  color: var(--c-text-light);
+  text-transform: capitalize;
+}
+
+.emptyState {
+  color: var(--c-text-light);
+  font-style: italic;
+  padding: var(--s-3);
+}

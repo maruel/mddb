@@ -630,19 +630,6 @@ func (r *AcceptInvitationRequest) Validate() error {
 
 // --- Memberships ---
 
-// SwitchOrgRequest is a request to switch active organization.
-type SwitchOrgRequest struct {
-	OrgID jsonldb.ID `json:"org_id"`
-}
-
-// Validate validates the switch org request fields.
-func (r *SwitchOrgRequest) Validate() error {
-	if r.OrgID.IsZero() {
-		return MissingField("org_id")
-	}
-	return nil
-}
-
 // SwitchWorkspaceRequest is a request to switch active workspace.
 type SwitchWorkspaceRequest struct {
 	WsID jsonldb.ID `json:"ws_id"`

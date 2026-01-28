@@ -131,7 +131,6 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("POST /api/auth/sessions/revoke-all", WrapAuth(authh.RevokeAllSessions, svc, hcfg, limiters))
 	mux.Handle("POST /api/auth/email", WrapAuth(authh.ChangeEmail, svc, hcfg, limiters))
 	mux.Handle("POST /api/auth/email/send-verification", WrapAuth(authh.SendVerificationEmail, svc, hcfg, limiters))
-	mux.Handle("POST /api/auth/switch-org", WrapAuth(mh.SwitchOrg, svc, hcfg, limiters))
 	mux.Handle("POST /api/auth/switch-workspace", WrapAuth(mh.SwitchWorkspace, svc, hcfg, limiters))
 	mux.Handle("POST /api/auth/settings", WrapAuth(uh.UpdateUserSettings, svc, hcfg, limiters))
 	mux.Handle("POST /api/auth/oauth/link", WrapAuth(oh.LinkOAuth, svc, hcfg, limiters))

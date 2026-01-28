@@ -51,6 +51,17 @@
   overflow-y: auto;
 }
 
+.orgHeader {
+  padding: var(--s-2) var(--s-3);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: var(--c-bg-alt);
+  border-bottom: 1px solid var(--c-border);
+}
+
 .wsItem {
   width: 100%;
   padding: var(--s-3);

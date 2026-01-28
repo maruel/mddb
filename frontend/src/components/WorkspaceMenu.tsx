@@ -2,16 +2,22 @@
 
 import { createSignal, For, onMount, onCleanup, Show, createMemo } from 'solid-js';
 import { useI18n } from '../i18n';
-import type { WSMembershipResponse } from '@sdk/types.gen';
+import type { WSMembershipResponse, OrgMembershipResponse } from '@sdk/types.gen';
 import styles from './WorkspaceMenu.module.css';
 
 interface WorkspaceMenuProps {
   workspaces: WSMembershipResponse[];
-  currentOrgId: string;
+  organizations: OrgMembershipResponse[];
   currentWsId: string;
   onSwitchWorkspace: (wsId: string) => void;
   onOpenSettings: () => void;
   onCreateWorkspace: () => void;
+}
+
+interface OrgWithWorkspaces {
+  orgId: string;
+  orgName: string;
+  workspaces: WSMembershipResponse[];
 }
 
 export default function WorkspaceMenu(props: WorkspaceMenuProps) {
@@ -19,8 +25,30 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
   const [isOpen, setIsOpen] = createSignal(false);
   let menuRef: HTMLDivElement | undefined;
 
-  // Filter workspaces by current organization
-  const orgWorkspaces = createMemo(() => props.workspaces.filter((ws) => ws.organization_id === props.currentOrgId));
+  // Group workspaces by organization
+  const groupedWorkspaces = createMemo((): OrgWithWorkspaces[] => {
+    const orgMap = new Map<string, OrgWithWorkspaces>();
+
+    // Initialize with org info
+    for (const org of props.organizations) {
+      orgMap.set(org.organization_id, {
+        orgId: org.organization_id,
+        orgName: org.organization_name || org.organization_id,
+        workspaces: [],
+      });
+    }
+
+    // Add workspaces to their orgs
+    for (const ws of props.workspaces) {
+      const org = orgMap.get(ws.organization_id);
+      if (org) {
+        org.workspaces.push(ws);
+      }
+    }
+
+    // Return as array, filtering out orgs with no workspaces
+    return Array.from(orgMap.values()).filter((o) => o.workspaces.length > 0);
+  });
 
   const currentWsName = () => {
     const current = props.workspaces.find((ws) => ws.workspace_id === props.currentWsId);
@@ -57,6 +85,9 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
     props.onCreateWorkspace();
   };
 
+  // Check if we have multiple orgs (to decide whether to show org headers)
+  const hasMultipleOrgs = createMemo(() => groupedWorkspaces().length > 1);
+
   return (
     <div class={styles.wsMenu} ref={menuRef}>
       <button class={styles.wsButton} onClick={() => setIsOpen(!isOpen())} title={currentWsName()}>
@@ -67,17 +98,26 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
       <Show when={isOpen()}>
         <div class={styles.dropdown}>
           <div class={styles.wsList}>
-            <For each={orgWorkspaces()}>
-              {(ws) => (
-                <button
-                  class={`${styles.wsItem} ${ws.workspace_id === props.currentWsId ? styles.active : ''}`}
-                  onClick={() => handleSwitchWorkspace(ws.workspace_id)}
-                >
-                  <span class={styles.wsItemName}>{ws.workspace_name || ws.workspace_id}</span>
-                  <Show when={ws.workspace_id === props.currentWsId}>
-                    <span class={styles.checkmark}>✓</span>
+            <For each={groupedWorkspaces()}>
+              {(org) => (
+                <>
+                  <Show when={hasMultipleOrgs()}>
+                    <div class={styles.orgHeader}>{org.orgName}</div>
                   </Show>
-                </button>
+                  <For each={org.workspaces}>
+                    {(ws) => (
+                      <button
+                        class={`${styles.wsItem} ${ws.workspace_id === props.currentWsId ? styles.active : ''}`}
+                        onClick={() => handleSwitchWorkspace(ws.workspace_id)}
+                      >
+                        <span class={styles.wsItemName}>{ws.workspace_name || ws.workspace_id}</span>
+                        <Show when={ws.workspace_id === props.currentWsId}>
+                          <span class={styles.checkmark}>✓</span>
+                        </Show>
+                      </button>
+                    )}
+                  </For>
+                </>
               )}
             </For>
           </div>

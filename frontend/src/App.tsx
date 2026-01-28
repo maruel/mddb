@@ -1,6 +1,6 @@
 // Main application component managing global state, routing, and layout.
 
-import { createSignal, createEffect, createMemo, For, Show, onMount, onCleanup } from 'solid-js';
+import { createSignal, createEffect, createMemo, For, Show, onMount, onCleanup, batch } from 'solid-js';
 import { createStore, produce, reconcile } from 'solid-js/store';
 import Sidebar from './components/Sidebar';
 import MarkdownPreview from './components/MarkdownPreview';
@@ -18,7 +18,6 @@ import PWAInstallBanner from './components/PWAInstallBanner';
 import CreateOrgModal from './components/CreateOrgModal';
 import CreateWorkspaceModal from './components/CreateWorkspaceModal';
 import UserMenu from './components/UserMenu';
-import OrgMenu from './components/OrgMenu';
 import WorkspaceMenu from './components/WorkspaceMenu';
 import { debounce } from './utils/debounce';
 import { useI18n, type Locale } from './i18n';
@@ -32,6 +31,7 @@ import {
   type DataRecordResponse,
   type Commit,
   type UserResponse,
+  type OrgMembershipResponse,
 } from '@sdk/types.gen';
 import styles from './App.module.css';
 
@@ -119,47 +119,6 @@ export default function App() {
     setUser(userData);
   };
 
-  async function switchOrg(orgId: string, redirect = true) {
-    try {
-      setLoading(true);
-      const data = await api().auth.switchOrg({ org_id: orgId });
-      if (!data.user) {
-        throw new Error('No user data returned');
-      }
-      handleLogin(data.token, data.user);
-      // Clear all node-related state when switching organizations
-      setSelectedNodeId(null);
-      setSelectedNodeData(null);
-      setTitle('');
-      setContent('');
-      setRecords([]);
-      setBreadcrumbPath([]);
-      setHasUnsavedChanges(false);
-      setAutoSaveStatus('idle');
-      loadedNodeId = null;
-      loadedForWorkspace = null; // Force reload for new org
-      if (redirect) {
-        const wsId = data.user.workspace_id;
-        const wsName = data.user.workspace_name;
-        if (wsId) {
-          const wsSlug = slugify(wsName || 'workspace');
-          window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/`);
-        } else {
-          window.history.pushState(null, '', '/');
-        }
-      }
-      await loadNodes();
-    } catch (err) {
-      if (err instanceof APIError) {
-        setError(`${t('errors.failedToSwitch')}: ${err.message}`);
-      } else {
-        setError(`${t('errors.failedToSwitch')}: ${err}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function switchWorkspace(wsId: string, redirect = true) {
     try {
       setLoading(true);
@@ -202,12 +161,12 @@ export default function App() {
   }
 
   async function createOrganization(data: { name: string }) {
-    const org = await api().organizations.createOrganization({
+    await api().organizations.createOrganization({
       name: data.name,
     });
-    // Refresh user data and switch to the new org
-    // This will trigger first-login check again, which will auto-create workspace
-    await switchOrg(org.id);
+    // Refresh user data - first-login check will prompt to create a workspace if needed
+    const updatedUser = await api().auth.getMe();
+    setUser(updatedUser);
   }
 
   async function createWorkspace(data: { name: string }) {
@@ -946,17 +905,9 @@ export default function App() {
                   </Show>
                 </div>
                 <div class={styles.userInfo}>
-                  <Show when={(user()?.organizations?.length ?? 0) > 1}>
-                    <OrgMenu
-                      memberships={user()?.organizations || []}
-                      currentOrgId={user()?.organization_id || ''}
-                      onSwitchOrg={(orgId) => switchOrg(orgId)}
-                      onCreateOrg={() => setShowCreateOrg(true)}
-                    />
-                  </Show>
                   <WorkspaceMenu
                     workspaces={user()?.workspaces || []}
-                    currentOrgId={user()?.organization_id || ''}
+                    organizations={user()?.organizations || []}
                     currentWsId={user()?.workspace_id || ''}
                     onSwitchWorkspace={(wsId) => switchWorkspace(wsId)}
                     onOpenSettings={() => {
@@ -991,6 +942,15 @@ export default function App() {
                   token={token() as string}
                   onBack={() => {
                     window.history.back();
+                  }}
+                  onOrgSettings={(org: OrgMembershipResponse) => {
+                    batch(() => {
+                      setIsOrgSettingsPage(true);
+                      setOrgSettingsId(org.organization_id);
+                      setIsProfilePage(false);
+                    });
+                    const orgSlug = slugify(org.organization_name || 'organization');
+                    window.history.pushState(null, '', `/o/${org.organization_id}+${orgSlug}/settings`);
                   }}
                 />
               </Show>

@@ -42,6 +42,9 @@ export const dict: Dictionary = {
 
   profile: {
     title: 'Profil',
+    myOrganizations: 'Mes organisations',
+    noOrganizations: 'Aucune organisation',
+    adminSettings: 'Paramètres',
   },
 
   auth: {

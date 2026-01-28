@@ -46,7 +46,6 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | POST | `/api/auth/sessions/revoke` | authenticated |
 | POST | `/api/auth/sessions/revoke-all` | authenticated |
 | POST | `/api/auth/settings` | authenticated |
-| POST | `/api/auth/switch-org` | authenticated |
 | POST | `/api/auth/switch-workspace` | authenticated |
 
 ## Settings

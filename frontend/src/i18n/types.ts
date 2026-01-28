@@ -44,6 +44,9 @@ export interface Dictionary {
 
   profile: {
     title: string;
+    myOrganizations: string;
+    noOrganizations: string;
+    adminSettings: string;
   };
 
   auth: {

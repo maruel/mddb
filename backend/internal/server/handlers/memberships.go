@@ -1,4 +1,4 @@
-// Handles user context switching (org/workspace) and membership settings.
+// Handles workspace switching and membership settings.
 
 package handlers
 
@@ -14,45 +14,6 @@ import (
 type MembershipHandler struct {
 	Svc *Services
 	Cfg *Config
-}
-
-// SwitchOrg switches the user's active organization and returns a new token.
-func (h *MembershipHandler) SwitchOrg(ctx context.Context, user *identity.User, req *dto.SwitchOrgRequest) (*dto.SwitchOrgResponse, error) {
-	// Verify membership
-	orgMem, err := h.Svc.OrgMembership.Get(user.ID, req.OrgID)
-	if err != nil {
-		return nil, dto.Forbidden("User is not a member of this organization")
-	}
-
-	token, err := h.Cfg.GenerateToken(user)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to generate token", err)
-	}
-
-	// Build user response with memberships
-	uwm, err := getUserWithMemberships(h.Svc.User, h.Svc.OrgMembership, h.Svc.WSMembership, h.Svc.Organization, h.Svc.Workspace, user.ID)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to get user response", err)
-	}
-	userResp := userWithMembershipsToResponse(uwm)
-
-	// Set the switched org as active
-	userResp.OrganizationID = req.OrgID
-	userResp.OrgRole = dto.OrganizationRole(orgMem.Role)
-
-	// Find first workspace in this org
-	for _, ws := range uwm.WSMemberships {
-		if ws.OrganizationID == req.OrgID {
-			userResp.WorkspaceID = ws.WorkspaceID
-			userResp.WorkspaceRole = dto.WorkspaceRole(ws.Role)
-			break
-		}
-	}
-
-	return &dto.SwitchOrgResponse{
-		Token: token,
-		User:  userResp,
-	}, nil
 }
 
 // SwitchWorkspace switches the user's active workspace and returns a new token.

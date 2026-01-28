@@ -1,15 +1,25 @@
 // User profile page for managing personal settings.
 
-import { createSignal, createEffect, createMemo, Show } from 'solid-js';
+import { createSignal, createEffect, createMemo, Show, For } from 'solid-js';
 import { createApi } from '../useApi';
-import type { UserResponse, UserSettings, WorkspaceMembershipSettings } from '@sdk/types.gen';
+import type { UserResponse, UserSettings, WorkspaceMembershipSettings, OrgMembershipResponse } from '@sdk/types.gen';
+import { OrgRoleAdmin, OrgRoleOwner } from '@sdk/types.gen';
 import styles from './UserProfile.module.css';
 import { useI18n } from '../i18n';
+
+const slugify = (text: string) =>
+  text
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-');
 
 interface UserProfileProps {
   user: UserResponse;
   token: string;
   onBack: () => void;
+  onOrgSettings: (org: OrgMembershipResponse) => void;
 }
 
 export default function UserProfile(props: UserProfileProps) {
@@ -149,6 +159,44 @@ export default function UserProfile(props: UserProfileProps) {
             <span class={styles.userRole}>{props.user.workspace_role}</span>
           </Show>
         </div>
+      </section>
+
+      <section class={styles.section}>
+        <h3>{t('profile.myOrganizations')}</h3>
+        <Show
+          when={props.user.organizations && props.user.organizations.length > 0}
+          fallback={<p class={styles.emptyState}>{t('profile.noOrganizations')}</p>}
+        >
+          <div class={styles.orgList}>
+            <For each={props.user.organizations}>
+              {(org) => {
+                const isAdmin = () => org.role === OrgRoleAdmin || org.role === OrgRoleOwner;
+                const orgSlug = slugify(org.organization_name || 'organization');
+                const settingsHref = `/o/${org.organization_id}+${orgSlug}/settings`;
+                const orgDisplayName = org.organization_name || org.organization_id;
+                return (
+                  <div class={styles.orgItem}>
+                    <div class={styles.orgInfo}>
+                      <Show when={isAdmin()} fallback={<span class={styles.orgName}>{orgDisplayName}</span>}>
+                        <a
+                          href={settingsHref}
+                          class={styles.orgNameLink}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            props.onOrgSettings(org);
+                          }}
+                        >
+                          {orgDisplayName}
+                        </a>
+                      </Show>
+                      <span class={styles.orgRole}>{org.role}</span>
+                    </div>
+                  </div>
+                );
+              }}
+            </For>
+          </div>
+        </Show>
       </section>
 
       <section class={styles.section}>

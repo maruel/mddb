@@ -200,12 +200,6 @@ type ListWSInvitationsResponse struct {
 
 // --- Membership Responses ---
 
-// SwitchOrgResponse is a response from switching organization.
-type SwitchOrgResponse struct {
-	Token string        `json:"token"`
-	User  *UserResponse `json:"user"`
-}
-
 // SwitchWorkspaceResponse is a response from switching workspace.
 type SwitchWorkspaceResponse struct {
 	Token string        `json:"token"`

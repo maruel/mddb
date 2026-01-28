@@ -351,12 +351,6 @@ export interface AcceptInvitationRequest {
   name: string;
 }
 /**
- * SwitchOrgRequest is a request to switch active organization.
- */
-export interface SwitchOrgRequest {
-  org_id: string;
-}
-/**
  * SwitchWorkspaceRequest is a request to switch active workspace.
  */
 export interface SwitchWorkspaceRequest {
@@ -741,13 +735,6 @@ export interface ListOrgInvitationsResponse {
  */
 export interface ListWSInvitationsResponse {
   invitations: WSInvitationResponse[];
-}
-/**
- * SwitchOrgResponse is a response from switching organization.
- */
-export interface SwitchOrgResponse {
-  token: string;
-  user?: UserResponse;
 }
 /**
  * SwitchWorkspaceResponse is a response from switching workspace.

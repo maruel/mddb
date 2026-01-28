@@ -192,37 +192,10 @@ vi.mock('./components/UserMenu', () => ({
   ),
 }));
 
-vi.mock('./components/OrgMenu', () => ({
-  default: (props: {
-    memberships: { organization_id: string; organization_name?: string }[];
-    currentOrgId: string;
-    onSwitchOrg: (orgId: string) => void;
-    onCreateOrg: () => void;
-  }) => (
-    <div data-testid="org-menu">
-      <button data-testid="org-menu-button" onClick={() => {}}>
-        {props.memberships.find((m) => m.organization_id === props.currentOrgId)?.organization_name || 'Workspace'}
-      </button>
-      <select
-        data-testid="org-switcher"
-        value={props.currentOrgId}
-        onChange={(e) => props.onSwitchOrg((e.target as HTMLSelectElement).value)}
-      >
-        {props.memberships.map((m) => (
-          <option value={m.organization_id}>{m.organization_name || m.organization_id}</option>
-        ))}
-      </select>
-      <button data-testid="create-org-button" onClick={props.onCreateOrg}>
-        Create Workspace
-      </button>
-    </div>
-  ),
-}));
-
 vi.mock('./components/WorkspaceMenu', () => ({
   default: (props: {
     workspaces: { workspace_id: string; workspace_name?: string; organization_id: string }[];
-    currentOrgId: string;
+    organizations: { organization_id: string; organization_name?: string }[];
     currentWsId: string;
     onSwitchWorkspace: (wsId: string) => void;
     onOpenSettings: () => void;
@@ -1071,16 +1044,6 @@ describe('App', () => {
               }),
           });
         }
-        if (url === '/api/auth/switch-org' && options?.method === 'POST') {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                token: 'new-token',
-                user: userAfterOrgCreation,
-              }),
-          });
-        }
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
       });
 
@@ -1151,7 +1114,7 @@ describe('App', () => {
       renderWithI18n(() => <App />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('org-menu')).toBeTruthy();
+        expect(screen.getByTestId('workspace-menu')).toBeTruthy();
       });
     });
 
