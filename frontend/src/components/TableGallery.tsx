@@ -1,7 +1,7 @@
 // Gallery view for table records, emphasizing images.
 
 import { For, Show } from 'solid-js';
-import type { DataRecordResponse, Property } from '../types.gen';
+import type { DataRecordResponse, Property } from '@sdk/types.gen';
 import styles from './TableGallery.module.css';
 import { useI18n } from '../i18n';
 

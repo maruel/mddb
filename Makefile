@@ -41,7 +41,7 @@ build: types docs
 
 types: $(FRONTEND_STAMP)
 	@cd ./backend && go tool tygo generate
-	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --log-level silent --write frontend/src/types.gen.ts
+	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --log-level silent --write sdk/types.gen.ts
 
 docs:
 	@./scripts/update_agents_file_index.py

@@ -2,7 +2,7 @@
 
 import { createSignal, createEffect, createMemo, Show } from 'solid-js';
 import { createApi } from '../useApi';
-import type { UserResponse, UserSettings, WorkspaceMembershipSettings } from '../types.gen';
+import type { UserResponse, UserSettings, WorkspaceMembershipSettings } from '@sdk/types.gen';
 import styles from './UserProfile.module.css';
 import { useI18n } from '../i18n';
 

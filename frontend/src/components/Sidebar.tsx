@@ -3,7 +3,7 @@
 import { For, Show } from 'solid-js';
 import SidebarNode from './SidebarNode';
 import { useI18n } from '../i18n';
-import type { NodeResponse } from '../types.gen';
+import type { NodeResponse } from '@sdk/types.gen';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {

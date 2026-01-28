@@ -3,7 +3,7 @@
 
 import { createSignal, For, Show, onMount } from 'solid-js';
 import { useI18n } from '../i18n';
-import type { NodeResponse } from '../types.gen';
+import type { NodeResponse } from '@sdk/types.gen';
 import styles from './SidebarNode.module.css';
 
 interface SidebarNodeResponseProps {

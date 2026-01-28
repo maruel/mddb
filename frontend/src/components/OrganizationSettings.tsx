@@ -2,8 +2,8 @@
 
 import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
 import { createApi } from '../useApi';
-import type { UserResponse, OrgInvitationResponse, OrganizationRole } from '../types.gen';
-import { OrgRoleOwner, OrgRoleAdmin } from '../types.gen';
+import type { UserResponse, OrgInvitationResponse, OrganizationRole } from '@sdk/types.gen';
+import { OrgRoleOwner, OrgRoleAdmin } from '@sdk/types.gen';
 import styles from './OrganizationSettings.module.css';
 import { useI18n } from '../i18n';
 

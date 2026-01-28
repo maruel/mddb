@@ -3,8 +3,8 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-li
 import type { JSX } from 'solid-js';
 import App from './App';
 import { I18nProvider } from './i18n';
-import type { UserResponse, NodeResponse, DataRecordResponse } from './types.gen';
-import { WSRoleViewer } from './types.gen';
+import type { UserResponse, NodeResponse, DataRecordResponse } from '@sdk/types.gen';
+import { WSRoleViewer } from '@sdk/types.gen';
 
 // Mock CSS modules
 vi.mock('./App.module.css', () => ({

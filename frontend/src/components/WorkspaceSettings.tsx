@@ -2,7 +2,7 @@
 
 import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
 import { createApi } from '../useApi';
-import type { UserResponse, WSInvitationResponse, WorkspaceRole, GitRemoteResponse } from '../types.gen';
+import type { UserResponse, WSInvitationResponse, WorkspaceRole, GitRemoteResponse } from '@sdk/types.gen';
 import styles from './WorkspaceSettings.module.css';
 import { useI18n } from '../i18n';
 

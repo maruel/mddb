@@ -32,7 +32,7 @@ import {
   type DataRecordResponse,
   type Commit,
   type UserResponse,
-} from './types.gen';
+} from '@sdk/types.gen';
 import styles from './App.module.css';
 
 const slugify = (text: string) => {

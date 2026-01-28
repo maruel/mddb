@@ -1,6 +1,6 @@
 // Utilities for creating authenticated and retry-enabled API clients.
 
-import { createAPIClient, APIError, type FetchFn } from './api.gen';
+import { createAPIClient, APIError, type FetchFn } from '@sdk/api.gen';
 
 export { APIError };
 

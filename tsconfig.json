@@ -24,8 +24,14 @@
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+
+    /* Paths */
+    "baseUrl": ".",
+    "paths": {
+      "@sdk/*": ["sdk/*"]
+    }
   },
-  "include": ["frontend/src"],
+  "include": ["frontend/src", "sdk"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

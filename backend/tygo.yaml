@@ -7,4 +7,4 @@ packages:
       "storage.Time": "number"
     exclude_files:
       - validate.go
-    output_path: "../frontend/src/types.gen.ts"
+    output_path: "../sdk/types.gen.ts"

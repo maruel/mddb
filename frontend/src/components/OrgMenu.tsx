@@ -2,7 +2,7 @@
 
 import { createSignal, For, onMount, onCleanup, Show } from 'solid-js';
 import { useI18n } from '../i18n';
-import type { OrgMembershipResponse } from '../types.gen';
+import type { OrgMembershipResponse } from '@sdk/types.gen';
 import styles from './OrgMenu.module.css';
 
 interface OrgMenuProps {

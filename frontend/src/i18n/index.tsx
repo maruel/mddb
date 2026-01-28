@@ -11,7 +11,7 @@ import {
 } from 'solid-js';
 import * as i18n from '@solid-primitives/i18n';
 import type { Dictionary, Locale } from './types';
-import type { ErrorCode } from '../types.gen';
+import type { ErrorCode } from '@sdk/types.gen';
 
 // Flatten the dictionary for dot-notation access
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

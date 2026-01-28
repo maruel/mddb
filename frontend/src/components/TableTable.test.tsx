@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-li
 import type { JSX } from 'solid-js';
 import TableTable from './TableTable';
 import { I18nProvider } from '../i18n';
-import type { DataRecordResponse, Property } from '../types.gen';
+import type { DataRecordResponse, Property } from '@sdk/types.gen';
 
 // Mock CSS module
 vi.mock('./TableTable.module.css', () => ({

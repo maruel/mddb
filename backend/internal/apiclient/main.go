@@ -23,7 +23,7 @@ func main() {
 	routerPath := "router.go"
 	dtoPath := "dto/request.go"
 	handlersDir := "handlers"
-	outPath := "../../../frontend/src/api.gen.ts"
+	outPath := "../../../sdk/api.gen.ts"
 
 	dtoTypes, err := parseDTOTypes(dtoPath)
 	if err != nil {

@@ -1,9 +1,9 @@
 // Authentication component handling login and registration forms.
 
 import { createSignal, createResource, Show, For, type JSX } from 'solid-js';
-import { createAPIClient, APIError } from '../api.gen';
-import type { UserResponse, OAuthProvider } from '../types.gen';
-import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from '../types.gen';
+import { createAPIClient, APIError } from '@sdk/api.gen';
+import type { UserResponse, OAuthProvider } from '@sdk/types.gen';
+import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from '@sdk/types.gen';
 import styles from './Auth.module.css';
 import { useI18n } from '../i18n';
 

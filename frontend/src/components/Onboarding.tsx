@@ -2,7 +2,7 @@
 
 import { createSignal, createMemo, Show } from 'solid-js';
 import { createApi } from '../useApi';
-import type { UserResponse } from '../types.gen';
+import type { UserResponse } from '@sdk/types.gen';
 import styles from './Onboarding.module.css';
 import { useI18n } from '../i18n';
 

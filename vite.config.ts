@@ -1,10 +1,16 @@
 import { defineConfig } from 'vite';
 import solid from 'vite-plugin-solid';
 import { VitePWA } from 'vite-plugin-pwa';
+import { resolve } from 'path';
 
 export default defineConfig({
   root: 'frontend',
   cacheDir: '../node_modules/.vite',
+  resolve: {
+    alias: {
+      '@sdk': resolve(__dirname, 'sdk'),
+    },
+  },
   plugins: [
     solid(),
     VitePWA({

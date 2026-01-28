@@ -2,7 +2,7 @@
 
 import { createSignal, For, onMount, onCleanup, Show, createMemo } from 'solid-js';
 import { useI18n } from '../i18n';
-import type { WSMembershipResponse } from '../types.gen';
+import type { WSMembershipResponse } from '@sdk/types.gen';
 import styles from './WorkspaceMenu.module.css';
 
 interface WorkspaceMenuProps {

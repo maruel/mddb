@@ -2,7 +2,7 @@
 
 import { createSignal, onMount, onCleanup, Show } from 'solid-js';
 import { useI18n } from '../i18n';
-import type { UserResponse } from '../types.gen';
+import type { UserResponse } from '@sdk/types.gen';
 import styles from './UserMenu.module.css';
 
 interface UserMenuProps {

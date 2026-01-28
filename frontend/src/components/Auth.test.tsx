@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-li
 import type { JSX } from 'solid-js';
 import Auth from './Auth';
 import { I18nProvider } from '../i18n';
-import type { UserResponse, AuthResponse, ErrorResponse } from '../types.gen';
+import type { UserResponse, AuthResponse, ErrorResponse } from '@sdk/types.gen';
 
 // Mock CSS module
 vi.mock('./Auth.module.css', () => ({
