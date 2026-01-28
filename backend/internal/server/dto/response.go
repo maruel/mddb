@@ -245,8 +245,11 @@ type UnlinkOAuthAccountResponse = OkResponse
 
 // HealthResponse is a response from a health check.
 type HealthResponse struct {
-	Status  string `json:"status"`
-	Version string `json:"version"`
+	Status    string `json:"status"`
+	Version   string `json:"version"`
+	GoVersion string `json:"go_version"`
+	Revision  string `json:"revision"`
+	Dirty     bool   `json:"dirty"`
 }
 
 // --- User Responses ---

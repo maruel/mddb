@@ -102,6 +102,10 @@ func setupTestEnv(t *testing.T) *testEnv {
 			Quotas:    storage.DefaultServerQuotas(),
 		},
 		BaseURL:    "http://localhost:8080",
+		Version:    "test",
+		GoVersion:  "go1.24.0",
+		Revision:   "abc1234",
+		Dirty:      false,
 		OAuth:      OAuthConfig{}, // all disabled
 		RateLimits: *ratelimit.DefaultConfig(),
 	}
@@ -184,8 +188,17 @@ func TestIntegration(t *testing.T) {
 		if health.Status != "ok" {
 			t.Errorf("Health status: got %q, want %q", health.Status, "ok")
 		}
-		if health.Version != "1.0.0" {
-			t.Errorf("Health version: got %q, want %q", health.Version, "1.0.0")
+		if health.Version != "test" {
+			t.Errorf("Health version: got %q, want %q", health.Version, "test")
+		}
+		if health.GoVersion != "go1.24.0" {
+			t.Errorf("Health go_version: got %q, want %q", health.GoVersion, "go1.24.0")
+		}
+		if health.Revision != "abc1234" {
+			t.Errorf("Health revision: got %q, want %q", health.Revision, "abc1234")
+		}
+		if health.Dirty {
+			t.Error("Health dirty: got true, want false")
 		}
 	})
 

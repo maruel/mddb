@@ -322,9 +322,14 @@ func mainImpl() error {
 		EmailVerif:    emailVerificationService,
 		Email:         emailService,
 	}
+	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()
 	cfg := &server.Config{
 		ServerConfig: *serverCfg,
 		BaseURL:      *baseURL,
+		Version:      buildVersion,
+		GoVersion:    buildGoVersion,
+		Revision:     buildRevision,
+		Dirty:        buildDirty,
 		OAuth: server.OAuthConfig{
 			GoogleClientID:     *googleClientID,
 			GoogleClientSecret: *googleClientSecret,
@@ -372,19 +377,28 @@ func mainImpl() error {
 }
 
 func printVersion() {
+	version, goVersion, revision, dirty := getBuildInfo()
+	fmt.Printf("mddb %s\n", version)
+	fmt.Printf("  Go version: %s\n", goVersion)
+	fmt.Printf("  Revision:   %s\n", revision)
+	if dirty {
+		fmt.Printf("  Modified:   true\n")
+	}
+}
+
+func getBuildInfo() (version, goVersion, revision string, dirty bool) {
+	version = "unknown"
+	goVersion = "unknown"
+	revision = "unknown"
 	info, ok := debug.ReadBuildInfo()
 	if !ok {
-		fmt.Println("mddb version unknown")
 		return
 	}
-
-	version := info.Main.Version
+	version = info.Main.Version
 	if version == "" || version == "(devel)" {
 		version = "dev"
 	}
-
-	revision := "unknown"
-	dirty := false
+	goVersion = info.GoVersion
 	for _, setting := range info.Settings {
 		switch setting.Key {
 		case "vcs.revision":
@@ -393,13 +407,7 @@ func printVersion() {
 			dirty = setting.Value == "true"
 		}
 	}
-
-	fmt.Printf("mddb %s\n", version)
-	fmt.Printf("  Go version: %s\n", info.GoVersion)
-	fmt.Printf("  Revision:   %s\n", revision)
-	if dirty {
-		fmt.Printf("  Modified:   true\n")
-	}
+	return
 }
 
 func loadDotEnv(dataDir string) (map[string]string, error) {

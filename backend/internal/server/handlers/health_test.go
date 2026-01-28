@@ -7,53 +7,32 @@ import (
 )
 
 func TestHealthHandler(t *testing.T) {
-	t.Run("New", func(t *testing.T) {
-		cfg := &Config{Version: "1.0.0"}
-		handler := &HealthHandler{Cfg: cfg}
-		if handler.Cfg.Version != "1.0.0" {
-			t.Errorf("version = %q, want %q", handler.Cfg.Version, "1.0.0")
-		}
-	})
-
 	t.Run("GetHealth", func(t *testing.T) {
-		tests := []struct {
-			name           string
-			version        string
-			expectedStatus string
-		}{
-			{
-				name:           "basic health check",
-				version:        "1.0.0",
-				expectedStatus: "ok",
-			},
-			{
-				name:           "dev version",
-				version:        "dev",
-				expectedStatus: "ok",
-			},
-			{
-				name:           "empty version",
-				version:        "",
-				expectedStatus: "ok",
-			},
+		cfg := &Config{
+			Version:   "1.0.0",
+			GoVersion: "go1.24.0",
+			Revision:  "abc1234",
+			Dirty:     true,
 		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				cfg := &Config{Version: tt.version}
-				handler := &HealthHandler{Cfg: cfg}
-				resp, err := handler.GetHealth(t.Context(), &dto.HealthRequest{})
-
-				if err != nil {
-					t.Fatalf("Health() error = %v", err)
-				}
-				if resp.Status != tt.expectedStatus {
-					t.Errorf("Status = %q, want %q", resp.Status, tt.expectedStatus)
-				}
-				if resp.Version != tt.version {
-					t.Errorf("Version = %q, want %q", resp.Version, tt.version)
-				}
-			})
+		handler := &HealthHandler{Cfg: cfg}
+		resp, err := handler.GetHealth(t.Context(), &dto.HealthRequest{})
+		if err != nil {
+			t.Fatalf("GetHealth() error = %v", err)
+		}
+		if resp.Status != "ok" {
+			t.Errorf("Status = %q, want %q", resp.Status, "ok")
+		}
+		if resp.Version != "1.0.0" {
+			t.Errorf("Version = %q, want %q", resp.Version, "1.0.0")
+		}
+		if resp.GoVersion != "go1.24.0" {
+			t.Errorf("GoVersion = %q, want %q", resp.GoVersion, "go1.24.0")
+		}
+		if resp.Revision != "abc1234" {
+			t.Errorf("Revision = %q, want %q", resp.Revision, "abc1234")
+		}
+		if !resp.Dirty {
+			t.Error("Dirty = false, want true")
 		}
 	})
 }

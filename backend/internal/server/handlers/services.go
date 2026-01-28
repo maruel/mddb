@@ -39,8 +39,11 @@ type Services struct {
 // Config holds configuration values needed by handlers.
 type Config struct {
 	storage.ServerConfig
-	BaseURL string
-	Version string
+	BaseURL   string
+	Version   string
+	GoVersion string
+	Revision  string
+	Dirty     bool
 }
 
 // AssetURLExpiry is the default duration for which signed asset URLs are valid.

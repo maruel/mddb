@@ -29,6 +29,10 @@ import (
 type Config struct {
 	storage.ServerConfig
 	BaseURL    string
+	Version    string
+	GoVersion  string
+	Revision   string
+	Dirty      bool
 	OAuth      OAuthConfig
 	RateLimits ratelimit.Config
 }
@@ -56,7 +60,10 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	hcfg := &handlers.Config{
 		ServerConfig: cfg.ServerConfig,
 		BaseURL:      cfg.BaseURL,
-		Version:      "1.0.0",
+		Version:      cfg.Version,
+		GoVersion:    cfg.GoVersion,
+		Revision:     cfg.Revision,
+		Dirty:        cfg.Dirty,
 	}
 
 	// Auth handler (needs New* for map initialization)

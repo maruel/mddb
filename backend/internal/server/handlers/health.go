@@ -16,7 +16,10 @@ type HealthHandler struct {
 // GetHealth handles health check requests.
 func (h *HealthHandler) GetHealth(ctx context.Context, req *dto.HealthRequest) (*dto.HealthResponse, error) {
 	return &dto.HealthResponse{
-		Status:  "ok",
-		Version: h.Cfg.Version,
+		Status:    "ok",
+		Version:   h.Cfg.Version,
+		GoVersion: h.Cfg.GoVersion,
+		Revision:  h.Cfg.Revision,
+		Dirty:     h.Cfg.Dirty,
 	}, nil
 }

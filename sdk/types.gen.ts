@@ -787,6 +787,9 @@ export type UnlinkOAuthAccountResponse = OkResponse;
 export interface HealthResponse {
   status: string;
   version: string;
+  go_version: string;
+  revision: string;
+  dirty: boolean;
 }
 /**
  * ListUsersResponse is a response containing a list of users.
