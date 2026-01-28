@@ -126,22 +126,13 @@ func (c *ServerConfig) Validate() error {
 	return nil
 }
 
-// DefaultServerConfig returns a ServerConfig with sensible defaults.
-// JWTSecret is left empty and must be set before use.
-// SMTP is left empty (disabled) by default.
-func DefaultServerConfig() ServerConfig {
-	return ServerConfig{
-		Quotas: DefaultServerQuotas(),
-	}
-}
-
 // LoadServerConfig loads configuration from dataDir/server_config.json.
 // Creates the file with defaults if it doesn't exist.
 // Auto-generates JWTSecret if empty.
 func LoadServerConfig(dataDir string) (*ServerConfig, error) {
 	path := filepath.Join(dataDir, "server_config.json")
 
-	cfg := DefaultServerConfig()
+	cfg := ServerConfig{Quotas: DefaultServerQuotas()}
 
 	data, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from dataDir, not user input
 	if err != nil {
@@ -167,7 +158,7 @@ func LoadServerConfig(dataDir string) (*ServerConfig, error) {
 
 	// Save if we created defaults or generated a secret
 	if modified || errors.Is(err, os.ErrNotExist) {
-		if err := SaveServerConfig(dataDir, &cfg); err != nil {
+		if err := cfg.Save(dataDir); err != nil {
 			return nil, err
 		}
 	}
@@ -180,13 +171,13 @@ func LoadServerConfig(dataDir string) (*ServerConfig, error) {
 	return &cfg, nil
 }
 
-// SaveServerConfig saves configuration to dataDir/server_config.json.
-func SaveServerConfig(dataDir string, cfg *ServerConfig) error {
-	if err := cfg.Validate(); err != nil {
+// Save saves configuration to dataDir/server_config.json.
+func (c *ServerConfig) Save(dataDir string) error {
+	if err := c.Validate(); err != nil {
 		return fmt.Errorf("invalid config: %w", err)
 	}
 
-	data, err := json.MarshalIndent(cfg, "", "  ")
+	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
