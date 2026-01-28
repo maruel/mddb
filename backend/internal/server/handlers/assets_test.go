@@ -14,7 +14,7 @@ import (
 func TestAssetHandler(t *testing.T) {
 	cfg := &Config{
 		ServerConfig: storage.ServerConfig{
-			JWTSecret: "test-secret-key",
+			JWTSecret: []byte("test-secret-key-32-bytes-long!!!"),
 		},
 		BaseURL: "http://localhost:8080",
 	}

@@ -66,7 +66,7 @@ func TestRegister(t *testing.T) {
 
 	cfg := &Config{
 		ServerConfig: storage.ServerConfig{
-			JWTSecret: "secret",
+			JWTSecret: []byte("test-secret-key-32-bytes-long!!!"),
 		},
 		BaseURL: "http://localhost:8080",
 	}

@@ -127,7 +127,7 @@ func getRateLimitIdentifier(tier *ratelimit.Tier, user *identity.User, r *http.R
 
 // validateAuthWithContext validates JWT and session, updating context with session info.
 func validateAuthWithContext(ctx context.Context, r *http.Request, svc *handlers.Services, cfg *handlers.Config) (*authResult, context.Context, error) {
-	user, sessionID, tokenString, err := validateJWTAndSession(r, svc.User, svc.Session, []byte(cfg.JWTSecret))
+	user, sessionID, tokenString, err := validateJWTAndSession(r, svc.User, svc.Session, cfg.JWTSecret)
 	if err != nil {
 		return nil, ctx, err
 	}
@@ -438,7 +438,7 @@ func WrapAuthRaw(
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate JWT and session (don't need context for raw handlers)
-		user, _, _, err := validateJWTAndSession(r, svc.User, svc.Session, []byte(cfg.JWTSecret))
+		user, _, _, err := validateJWTAndSession(r, svc.User, svc.Session, cfg.JWTSecret)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
@@ -493,7 +493,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := addRequestMetadataToContext(r.Context(), r)
 
-		user, _, _, err := validateJWTAndSession(r, svc.User, svc.Session, []byte(cfg.JWTSecret))
+		user, _, _, err := validateJWTAndSession(r, svc.User, svc.Session, cfg.JWTSecret)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return

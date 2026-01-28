@@ -3,6 +3,7 @@
 package storage
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/maruel/mddb/backend/internal/email"
-	"github.com/maruel/mddb/backend/internal/utils"
 )
 
 // ServerConfig stores all server-wide configuration.
@@ -18,7 +18,7 @@ import (
 type ServerConfig struct {
 	// JWTSecret is the secret used to sign JWT tokens.
 	// Auto-generated if empty on first load.
-	JWTSecret string `json:"jwt_secret"`
+	JWTSecret []byte `json:"jwt_secret"`
 
 	// SMTP holds email configuration. Empty host disables email features.
 	SMTP email.Config `json:"smtp"`
@@ -111,11 +111,11 @@ func DefaultServerQuotas() ServerQuotas {
 
 // Validate checks that the configuration is valid.
 func (c *ServerConfig) Validate() error {
-	if c.JWTSecret == "" {
+	if len(c.JWTSecret) == 0 {
 		return errors.New("jwt_secret is required")
 	}
 	if len(c.JWTSecret) < 32 {
-		return errors.New("jwt_secret must be at least 32 characters")
+		return errors.New("jwt_secret must be at least 32 bytes")
 	}
 	if err := c.SMTP.Validate(); err != nil {
 		return fmt.Errorf("smtp: %w", err)
@@ -157,12 +157,11 @@ func LoadServerConfig(dataDir string) (*ServerConfig, error) {
 
 	// Auto-generate JWT secret if missing
 	modified := false
-	if cfg.JWTSecret == "" {
-		secret, err := utils.GenerateToken(32)
-		if err != nil {
+	if len(cfg.JWTSecret) == 0 {
+		cfg.JWTSecret = make([]byte, 32)
+		if _, err := rand.Read(cfg.JWTSecret); err != nil {
 			return nil, fmt.Errorf("failed to generate JWT secret: %w", err)
 		}
-		cfg.JWTSecret = secret
 		modified = true
 	}
 

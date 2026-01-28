@@ -18,7 +18,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-const testJWTSecret = "test-secret-key-for-integration-tests"
+var testJWTSecret = []byte("test-secret-key-32-bytes-long!!!")
 
 type testEnv struct {
 	server        *httptest.Server

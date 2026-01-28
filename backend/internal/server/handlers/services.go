@@ -57,7 +57,7 @@ func (c *Config) GenerateSignedAssetURL(wsID, nodeID jsonldb.ID, name string) st
 // generateSignature creates an HMAC-SHA256 signature for asset access.
 func (c *Config) generateSignature(path string, expiry int64) string {
 	data := fmt.Sprintf("%s:%d", path, expiry)
-	mac := hmac.New(sha256.New, []byte(c.JWTSecret))
+	mac := hmac.New(sha256.New, c.JWTSecret)
 	mac.Write([]byte(data))
 	return hex.EncodeToString(mac.Sum(nil))
 }
@@ -79,7 +79,7 @@ func (c *Config) GenerateToken(user *identity.User) (string, error) {
 		"iat":   time.Now().Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(c.JWTSecret))
+	return token.SignedString(c.JWTSecret)
 }
 
 // GenerateTokenWithSession creates a session and generates a JWT token with session ID.
@@ -100,7 +100,7 @@ func (c *Config) GenerateTokenWithSession(sessionSvc *identity.SessionService, u
 
 	// Generate the token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(c.JWTSecret))
+	tokenString, err := token.SignedString(c.JWTSecret)
 	if err != nil {
 		return "", err
 	}
