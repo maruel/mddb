@@ -3,6 +3,8 @@
 package identity
 
 import (
+	"os"
+
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
@@ -48,15 +50,20 @@ type ServerQuotas struct {
 
 // DefaultServerQuotas returns the default server-wide quotas.
 func DefaultServerQuotas() ServerQuotas {
+	maxUsers := 50 // 50 users
+	// Increase quota for e2e tests (TEST_OAUTH=1 indicates test mode)
+	if os.Getenv("TEST_OAUTH") == "1" {
+		maxUsers = 200
+	}
 	return ServerQuotas{
-		MaxRequestBodyBytes:   10 * 1024 * 1024,         // 10 MiB
-		MaxSessionsPerUser:    10,                       // 10 sessions
-		MaxTablesPerWorkspace: 100,                      // 100 tables
-		MaxColumnsPerTable:    50,                       // 50 columns
-		MaxRowsPerTable:       1000,                     // 1000 rows
-		MaxOrganizations:      1000,                     // 1000 organizations
-		MaxWorkspaces:         10000,                    // 10000 workspaces
-		MaxUsers:              50,                       // 50 users
+		MaxRequestBodyBytes:   10 * 1024 * 1024, // 10 MiB
+		MaxSessionsPerUser:    10,               // 10 sessions
+		MaxTablesPerWorkspace: 100,              // 100 tables
+		MaxColumnsPerTable:    50,               // 50 columns
+		MaxRowsPerTable:       1000,             // 1000 rows
+		MaxOrganizations:      1000,             // 1000 organizations
+		MaxWorkspaces:         10000,            // 10000 workspaces
+		MaxUsers:              maxUsers,
 		MaxTotalStorageBytes:  100 * 1024 * 1024 * 1024, // 100 GiB
 	}
 }

@@ -12,7 +12,10 @@ export async function registerUser(request: APIRequestContext, prefix: string) {
       name: `${prefix} Test User`,
     },
   });
-  expect(registerResponse.ok()).toBe(true);
+  if (!registerResponse.ok()) {
+    const body = await registerResponse.text();
+    throw new Error(`Registration failed for ${email}: ${registerResponse.status()} - ${body}`);
+  }
   const { token } = await registerResponse.json();
   return { email, token };
 }
