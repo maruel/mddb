@@ -68,6 +68,11 @@
   color: var(--c-primary);
 }
 
+.footerSeparator {
+  margin: 0 var(--s-2);
+  color: var(--c-text-light);
+}
+
 .sidebarActions {
   display: flex;
   gap: var(--s-1);
