@@ -43,13 +43,8 @@ const AssetURLExpiry = 1 * time.Hour
 
 // AssetHandler handles asset/file-related HTTP requests.
 type AssetHandler struct {
-	svc *Services
-	cfg *Config
-}
-
-// NewAssetHandler creates a new asset handler.
-func NewAssetHandler(svc *Services, cfg *Config) *AssetHandler {
-	return &AssetHandler{svc: svc, cfg: cfg}
+	Svc *Services
+	Cfg *Config
 }
 
 // GenerateSignedAssetURL creates a signed URL for asset access.
@@ -58,13 +53,13 @@ func (h *AssetHandler) GenerateSignedAssetURL(wsID, nodeID jsonldb.ID, name stri
 	expiry := time.Now().Add(AssetURLExpiry).Unix()
 	path := fmt.Sprintf("%s/%s/%s", wsID, nodeID, name)
 	sig := h.generateSignature(path, expiry)
-	return fmt.Sprintf("%s/assets/%s?sig=%s&exp=%d", h.cfg.BaseURL, path, sig, expiry)
+	return fmt.Sprintf("%s/assets/%s?sig=%s&exp=%d", h.Cfg.BaseURL, path, sig, expiry)
 }
 
 // generateSignature creates an HMAC-SHA256 signature for asset access.
 func (h *AssetHandler) generateSignature(path string, expiry int64) string {
 	data := fmt.Sprintf("%s:%d", path, expiry)
-	mac := hmac.New(sha256.New, []byte(h.cfg.JWTSecret))
+	mac := hmac.New(sha256.New, []byte(h.Cfg.JWTSecret))
 	mac.Write([]byte(data))
 	return hex.EncodeToString(mac.Sum(nil))
 }
@@ -122,8 +117,8 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	// Check server-wide storage quota before saving
-	maxStorage := h.cfg.ServerQuotas.MaxTotalStorageBytes
-	if err := h.svc.FileStore.CheckServerStorageQuota(int64(len(data)), maxStorage); err != nil {
+	maxStorage := h.Cfg.ServerQuotas.MaxTotalStorageBytes
+	if err := h.Svc.FileStore.CheckServerStorageQuota(int64(len(data)), maxStorage); err != nil {
 		if errors.Is(err, content.ErrServerStorageQuotaExceeded) {
 			writeErrorResponse(w, dto.QuotaExceededInt64("total storage", maxStorage))
 			return
@@ -133,7 +128,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	}
 
 	author := git.Author{Name: user.Name, Email: user.Email}
-	ws, err := h.svc.FileStore.GetWorkspaceStore(r.Context(), wsID)
+	ws, err := h.Svc.FileStore.GetWorkspaceStore(r.Context(), wsID)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("workspace"))
 		return
@@ -196,7 +191,7 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ws, err := h.svc.FileStore.GetWorkspaceStore(r.Context(), wsID)
+	ws, err := h.Svc.FileStore.GetWorkspaceStore(r.Context(), wsID)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("workspace"))
 		return

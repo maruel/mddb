@@ -9,9 +9,9 @@ import (
 func TestHealthHandler(t *testing.T) {
 	t.Run("New", func(t *testing.T) {
 		cfg := &Config{Version: "1.0.0"}
-		handler := NewHealthHandler(cfg)
-		if handler.cfg.Version != "1.0.0" {
-			t.Errorf("version = %q, want %q", handler.cfg.Version, "1.0.0")
+		handler := &HealthHandler{Cfg: cfg}
+		if handler.Cfg.Version != "1.0.0" {
+			t.Errorf("version = %q, want %q", handler.Cfg.Version, "1.0.0")
 		}
 	})
 
@@ -41,7 +41,7 @@ func TestHealthHandler(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				cfg := &Config{Version: tt.version}
-				handler := NewHealthHandler(cfg)
+				handler := &HealthHandler{Cfg: cfg}
 				resp, err := handler.GetHealth(t.Context(), &dto.HealthRequest{})
 
 				if err != nil {

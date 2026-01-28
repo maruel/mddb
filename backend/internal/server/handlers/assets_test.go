@@ -15,7 +15,7 @@ func TestAssetHandler(t *testing.T) {
 		JWTSecret: "test-secret-key",
 		BaseURL:   "http://localhost:8080",
 	}
-	ah := NewAssetHandler(&Services{}, cfg)
+	ah := &AssetHandler{Svc: &Services{}, Cfg: cfg}
 
 	t.Run("GenerateSignedAssetURL", func(t *testing.T) {
 		wsID := jsonldb.ID(123)

@@ -60,27 +60,27 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 		ServerQuotas: cfg.ServerQuotas,
 	}
 
-	// Content handlers (workspace-scoped)
-	ah := handlers.NewAssetHandler(svc, hcfg)
-	nh := handlers.NewNodeHandler(svc, hcfg, ah)
-	sh := handlers.NewSearchHandler(svc)
-
-	// Auth handler
+	// Auth handler (needs New* for map initialization)
 	authh := handlers.NewAuthHandler(svc, hcfg)
 
+	// Content handlers
+	ah := &handlers.AssetHandler{Svc: svc, Cfg: hcfg}
+	nh := &handlers.NodeHandler{Svc: svc, Cfg: hcfg, AssetHandler: ah}
+	sh := handlers.NewSearchHandler(svc)
+
 	// Other handlers
-	uh := handlers.NewUserHandler(svc)
-	ih := handlers.NewInvitationHandler(svc, hcfg, authh)
-	mh := handlers.NewMembershipHandler(svc, authh)
-	orgh := handlers.NewOrganizationHandler(svc, hcfg)
-	grh := handlers.NewGitRemoteHandler(svc)
+	uh := &handlers.UserHandler{Svc: svc}
+	ih := &handlers.InvitationHandler{Svc: svc, Cfg: hcfg, AuthHandler: authh}
+	mh := &handlers.MembershipHandler{Svc: svc, AuthHandler: authh}
+	orgh := &handlers.OrganizationHandler{Svc: svc, Cfg: hcfg}
+	grh := &handlers.GitRemoteHandler{Svc: svc}
 
 	// Health check (public)
-	hh := handlers.NewHealthHandler(hcfg)
+	hh := &handlers.HealthHandler{Cfg: hcfg}
 	mux.Handle("/api/health", Wrap(hh.GetHealth, hcfg, limiters))
 
 	// Admin endpoints (requires IsGlobalAdmin)
-	adminh := handlers.NewAdminHandler(svc)
+	adminh := &handlers.AdminHandler{Svc: svc}
 	mux.Handle("GET /api/admin/stats", WrapGlobalAdmin(adminh.GetAdminStats, svc, hcfg, limiters))
 	mux.Handle("GET /api/admin/users", WrapGlobalAdmin(adminh.ListAllUsers, svc, hcfg, limiters))
 	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(adminh.ListAllOrgs, svc, hcfg, limiters))

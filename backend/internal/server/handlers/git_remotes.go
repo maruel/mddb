@@ -17,17 +17,12 @@ const gitRemoteName = "origin"
 
 // GitRemoteHandler handles git remote operations.
 type GitRemoteHandler struct {
-	svc *Services
-}
-
-// NewGitRemoteHandler creates a new git remote handler.
-func NewGitRemoteHandler(svc *Services) *GitRemoteHandler {
-	return &GitRemoteHandler{svc: svc}
+	Svc *Services
 }
 
 // GetGitRemote returns the git remote for a workspace, or null if none exists.
 func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	ws, err := h.svc.Workspace.Get(wsID)
+	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +34,7 @@ func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID jsonldb.ID, _ 
 
 // UpdateGitRemote creates or updates the git remote for a workspace.
 func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.UpdateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
-	ws, err := h.svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
+	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		// Preserve existing timestamps on update
 		created := ws.GitRemote.Created
 		lastSync := ws.GitRemote.LastSync
@@ -62,7 +57,7 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID,
 	}
 
 	// Actually add it to the local git repo
-	wsStore, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
+	wsStore, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace store: %w", err)
 	}
@@ -88,7 +83,7 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID,
 
 // PushGit pushes changes to the git remote.
 func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.PushGitRequest) (*dto.OkResponse, error) {
-	ws, err := h.svc.Workspace.Get(wsID)
+	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +91,7 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 		return nil, dto.NotFound("remote")
 	}
 
-	wsStore, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
+	wsStore, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace store: %w", err)
 	}
@@ -120,7 +115,7 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 	}
 
 	// Update last sync time
-	if _, err := h.svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
+	if _, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		ws.GitRemote.LastSync = storage.Now()
 		return nil
 	}); err != nil {
@@ -132,7 +127,7 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 
 // DeleteGitRemote deletes the git remote for a workspace.
 func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.DeleteGitRequest) (*dto.OkResponse, error) {
-	_, err := h.svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
+	_, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		if ws.GitRemote.IsZero() {
 			return dto.NotFound("remote")
 		}
@@ -144,7 +139,7 @@ func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, wsID jsonldb.ID,
 	}
 
 	// Also remove from local git repo
-	wsStore, err := h.svc.FileStore.GetWorkspaceStore(ctx, wsID)
+	wsStore, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace store: %w", err)
 	}
