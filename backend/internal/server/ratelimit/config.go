@@ -41,10 +41,10 @@ type Config struct {
 //   - Read (auth): 30,000 req/min, User scope
 //   - Read (unauth): 6,000 req/min, IP scope.
 //
-// In test mode (TEST_OAUTH=1), rate limits are increased 1000x to effectively disable them.
+// Set TEST_FAST_RATE_LIMIT=1 to increase rate limits 1000x (for e2e tests).
 func DefaultConfig() *Config {
 	m := 1 // multiplier
-	if os.Getenv("TEST_OAUTH") == "1" {
+	if os.Getenv("TEST_FAST_RATE_LIMIT") == "1" {
 		m = 1000
 	}
 	return &Config{

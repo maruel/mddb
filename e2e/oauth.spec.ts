@@ -1,4 +1,4 @@
-import { test, expect } from './helpers';
+import { test, expect, registerUser } from './helpers';
 
 test.describe('API routing', () => {
   test('unknown /api/ routes return 404, not SPA', async ({ request }) => {
@@ -67,26 +67,16 @@ test.describe('OAuth Login', () => {
   });
 
   test('OAuth callback with valid token logs user in', async ({ page, request }) => {
-    // First, create a user and get a valid token via the API
-    const loginResponse = await request.post('/api/auth/register', {
-      data: {
-        email: `test-${Date.now()}@example.com`,
-        password: 'testpassword123',
-        name: 'Test User',
-      },
-    });
+    // Create a user and get a valid token via the API (with retry logic for rate limiting)
+    const { token } = await registerUser(request, 'oauth-callback');
 
-    if (loginResponse.ok()) {
-      const { token } = await loginResponse.json();
+    // Now simulate OAuth callback with this valid token
+    await page.goto(`/?token=${token}`);
 
-      // Now simulate OAuth callback with this valid token
-      await page.goto(`/?token=${token}`);
+    // Should be logged in - sidebar indicates logged in state
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-      // Should be logged in - sidebar indicates logged in state
-      await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-      // Token should be cleared from URL
-      expect(page.url()).not.toContain('token=');
-    }
+    // Token should be cleared from URL
+    expect(page.url()).not.toContain('token=');
   });
 });

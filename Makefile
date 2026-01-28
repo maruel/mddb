@@ -1,4 +1,4 @@
-.PHONY: help build dev test e2e coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade docs
+.PHONY: help build dev test e2e e2e-slow coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade docs
 
 # Variables
 DATA_DIR?=./data
@@ -14,7 +14,8 @@ help:
 	@echo "  make build          - Build Go server (auto-generates frontend)"
 	@echo "  make dev            - Run the server in development mode"
 	@echo "  make test           - Run unit tests"
-	@echo "  make e2e            - Run end-to-end browser tests"
+	@echo "  make e2e            - Run end-to-end browser tests (fast, no rate limits)"
+	@echo "  make e2e-slow       - Run e2e tests with normal rate limits (sequential)"
 	@echo "  make types          - Generate TypeScript types from Go structs"
 	@echo "  make docs           - Update AGENTS.md file index"
 	@echo "  make lint           - Run linters (Go + frontend)"
@@ -61,7 +62,19 @@ test: $(FRONTEND_STAMP)
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test
 
 e2e: build
-	@TEST_OAUTH=1 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test:e2e; \
+	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=1 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test:e2e; \
+	e2e_exit=$$?; \
+	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
+	if [ $$e2e_exit -ne 0 ]; then \
+	  echo ""; echo "=== Server Log ==="; cat ./data-e2e/server.log 2>/dev/null || true; \
+	  exit $$e2e_exit; \
+	fi
+	@./scripts/verify_e2e_data.py
+	@node e2e/inject-tag-colors.cjs
+
+e2e-slow: build
+	@echo "Running e2e tests with normal rate limits (single worker)..."
+	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=0 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec playwright test --workers=1; \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
 	if [ $$e2e_exit -ne 0 ]; then \

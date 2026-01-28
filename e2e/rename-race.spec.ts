@@ -1,18 +1,9 @@
-import { test, expect } from './helpers';
+import { test, expect, registerUser } from './helpers';
 
 test.describe('Page rename with navigation', () => {
   test('rename page then quickly navigate away - rename must persist', async ({ page, request }) => {
-    // 1. Register a new user
-    const email = `rename-nav-${Date.now()}@example.com`;
-    const registerResponse = await request.post('/api/auth/register', {
-      data: {
-        email,
-        password: 'testpassword123',
-        name: 'Rename Nav Test User',
-      },
-    });
-    expect(registerResponse.ok()).toBe(true);
-    const { token } = await registerResponse.json();
+    // 1. Register a new user (with retry logic for rate limiting)
+    const { token } = await registerUser(request, 'rename-nav');
 
     // 2. Login via token
     await page.goto(`/?token=${token}`);
@@ -104,16 +95,7 @@ test.describe('Page rename with navigation', () => {
 
   test('rename page, wait for autosave, then navigate - rename must persist', async ({ page, request }) => {
     // Control test: verifies rename works when waiting for autosave
-    const email = `rename-wait-${Date.now()}@example.com`;
-    const registerResponse = await request.post('/api/auth/register', {
-      data: {
-        email,
-        password: 'testpassword123',
-        name: 'Rename Wait Test User',
-      },
-    });
-    expect(registerResponse.ok()).toBe(true);
-    const { token } = await registerResponse.json();
+    const { token } = await registerUser(request, 'rename-wait');
 
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -176,16 +158,7 @@ test.describe('Page rename with navigation', () => {
 
   test('rapid renames with navigation - last rename must persist', async ({ page, request }) => {
     // Stress test: rapidly rename multiple times, then navigate
-    const email = `rename-rapid-${Date.now()}@example.com`;
-    const registerResponse = await request.post('/api/auth/register', {
-      data: {
-        email,
-        password: 'testpassword123',
-        name: 'Rename Rapid Test User',
-      },
-    });
-    expect(registerResponse.ok()).toBe(true);
-    const { token } = await registerResponse.json();
+    const { token } = await registerUser(request, 'rename-rapid');
 
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -255,16 +228,7 @@ test.describe('Page rename with navigation', () => {
 
   test('rename content then navigate - content must persist', async ({ page, request }) => {
     // Test that content changes are also flushed on navigation
-    const email = `content-nav-${Date.now()}@example.com`;
-    const registerResponse = await request.post('/api/auth/register', {
-      data: {
-        email,
-        password: 'testpassword123',
-        name: 'Content Nav Test User',
-      },
-    });
-    expect(registerResponse.ok()).toBe(true);
-    const { token } = await registerResponse.json();
+    const { token } = await registerUser(request, 'content-nav');
 
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -336,16 +300,7 @@ test.describe('Page rename with navigation', () => {
 
   test('rename and content change then navigate - both must persist', async ({ page, request }) => {
     // Test that both title and content changes are flushed together
-    const email = `both-nav-${Date.now()}@example.com`;
-    const registerResponse = await request.post('/api/auth/register', {
-      data: {
-        email,
-        password: 'testpassword123',
-        name: 'Both Nav Test User',
-      },
-    });
-    expect(registerResponse.ok()).toBe(true);
-    const { token } = await registerResponse.json();
+    const { token } = await registerUser(request, 'both-nav');
 
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });

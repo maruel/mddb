@@ -2,17 +2,8 @@ import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('Page Hierarchy', () => {
   test.screenshot('create and navigate page hierarchy', async ({ page, request, takeScreenshot }) => {
-    // 1. Register a new user
-    const email = `hierarchy-${Date.now()}@example.com`;
-    const registerResponse = await request.post('/api/auth/register', {
-      data: {
-        email,
-        password: 'testpassword123',
-        name: 'Hierarchy Test User',
-      },
-    });
-    expect(registerResponse.ok()).toBe(true);
-    const { token } = await registerResponse.json();
+    // 1. Register a new user (with retry logic for rate limiting)
+    const { token } = await registerUser(request, 'hierarchy');
 
     // 2. Login via token in URL (simulating OAuth callback flow)
     await page.goto(`/?token=${token}`);
@@ -109,17 +100,8 @@ test.describe('Page Hierarchy', () => {
   });
 
   test('navigate between sibling pages', async ({ page, request }) => {
-    // Register and login
-    const email = `sibling-${Date.now()}@example.com`;
-    const registerResponse = await request.post('/api/auth/register', {
-      data: {
-        email,
-        password: 'testpassword123',
-        name: 'Sibling Test User',
-      },
-    });
-    expect(registerResponse.ok()).toBe(true);
-    const { token } = await registerResponse.json();
+    // Register and login (with retry logic for rate limiting)
+    const { token } = await registerUser(request, 'sibling');
 
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
