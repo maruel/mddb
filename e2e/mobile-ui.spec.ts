@@ -50,12 +50,17 @@ test.describe('Mobile UI - Sidebar Toggle', () => {
     await expect(sidebar).toHaveClass(/mobileOpen|open/i, { timeout: 3000 });
 
     // Click on backdrop (the dark overlay behind the sidebar)
+    // The backdrop is behind the sidebar (z-index 99 vs 100), so we must click
+    // on the visible portion to the right of the sidebar.
     const backdrop = page.locator('[class*="backdrop"], [class*="Backdrop"]');
-    if (await backdrop.isVisible()) {
-      await backdrop.click();
-      // Sidebar should close
-      await expect(sidebar).not.toHaveClass(/mobileOpen/);
-    }
+    await expect(backdrop).toBeVisible();
+    const sidebarBox = await sidebar.boundingBox();
+    const backdropBox = await backdrop.boundingBox();
+    // Click horizontally centered between sidebar's right edge and backdrop's right edge
+    const clickX = sidebarBox!.width + (backdropBox!.width - sidebarBox!.width) / 2;
+    await backdrop.click({ position: { x: clickX, y: backdropBox!.height / 2 } });
+    // Sidebar should close
+    await expect(sidebar).not.toHaveClass(/mobileOpen/);
   });
 
   test('selecting a page closes mobile sidebar', async ({ page, request }) => {
