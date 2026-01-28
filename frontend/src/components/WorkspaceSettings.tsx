@@ -2,13 +2,7 @@
 
 import { createSignal, createEffect, createMemo, For, Show } from 'solid-js';
 import { createApi } from '../useApi';
-import type {
-  UserResponse,
-  WSInvitationResponse,
-  OrganizationSettings,
-  WorkspaceRole,
-  GitRemoteResponse,
-} from '../types.gen';
+import type { UserResponse, WSInvitationResponse, WorkspaceRole, GitRemoteResponse } from '../types.gen';
 import styles from './WorkspaceSettings.module.css';
 import { useI18n } from '../i18n';
 
@@ -36,12 +30,8 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
   const [inviteRole, setInviteRole] = createSignal<'admin' | 'editor' | 'viewer'>('viewer');
 
   // Workspace Settings states
-  const [orgName, setOrgName] = createSignal('');
-  const [originalOrgName, setOriginalOrgName] = createSignal('');
   const [wsName, setWsName] = createSignal('');
   const [originalWsName, setOriginalWsName] = createSignal('');
-  const [publicAccess, setPublicAccess] = createSignal(false);
-  const [allowedDomains, setAllowedDomains] = createSignal('');
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -76,19 +66,10 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
         setInvitations(invsData.invitations?.filter((i): i is WSInvitationResponse => !!i) || []);
       }
 
-      if (activeTab() === 'workspace') {
-        const [orgData, wsData] = await Promise.all([
-          org.organizations.getOrganization(),
-          ws ? ws.workspaces.getWorkspace() : Promise.resolve(null),
-        ]);
-        setOrgName(orgData.name);
-        setOriginalOrgName(orgData.name);
-        if (wsData) {
-          setWsName(wsData.name);
-          setOriginalWsName(wsData.name);
-        }
-        setPublicAccess(false); // TODO: workspace settings
-        setAllowedDomains(orgData.settings?.allowed_email_domains?.join(', ') || '');
+      if (activeTab() === 'workspace' && ws) {
+        const wsData = await ws.workspaces.getWorkspace();
+        setWsName(wsData.name);
+        setOriginalWsName(wsData.name);
       }
 
       if (activeTab() === 'sync' && props.user.workspace_role === 'admin' && ws) {
@@ -147,44 +128,19 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
   const saveWorkspaceSettings = async (e: Event) => {
     e.preventDefault();
-    const org = orgApi();
     const ws = wsApi();
-    if (!org) return;
+    if (!ws) return;
 
     try {
       setLoading(true);
       setError(null);
       setSuccess(null);
 
-      const orgSettings: OrganizationSettings = {
-        allowed_email_domains: allowedDomains()
-          ? allowedDomains()
-              .split(',')
-              .map((d) => d.trim())
-          : [],
-        require_sso: false,
-        default_workspace_quotas: {
-          max_pages: 1000,
-          max_storage_mb: 1024,
-          max_records_per_table: 10000,
-          max_asset_size_mb: 50,
-        },
-      };
-
-      const promises: Promise<unknown>[] = [org.settings.updateOrgPreferences({ settings: orgSettings })];
-
-      // Rename org if name changed
-      if (orgName() !== originalOrgName() && orgName().trim()) {
-        promises.push(org.organizations.updateOrganization({ name: orgName().trim() }));
-      }
-
       // Rename workspace if name changed
-      if (ws && wsName() !== originalWsName() && wsName().trim()) {
-        promises.push(ws.workspaces.updateWorkspace({ name: wsName().trim() }));
+      if (wsName() !== originalWsName() && wsName().trim()) {
+        await ws.workspaces.updateWorkspace({ name: wsName().trim() });
       }
 
-      await Promise.all(promises);
-      setOriginalOrgName(orgName().trim());
       setOriginalWsName(wsName().trim());
       setSuccess(t('success.workspaceSettingsSaved') || 'Workspace settings saved successfully');
     } catch (err) {
@@ -382,32 +338,8 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
           <Show when={props.user.workspace_role === 'admin'} fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}>
             <form onSubmit={saveWorkspaceSettings} class={styles.settingsForm}>
               <div class={styles.formItem}>
-                <label>{t('settings.organizationName')}</label>
-                <input type="text" value={orgName()} onInput={(e) => setOrgName(e.target.value)} required />
-              </div>
-              <div class={styles.formItem}>
                 <label>{t('settings.workspaceName')}</label>
                 <input type="text" value={wsName()} onInput={(e) => setWsName(e.target.value)} required />
-              </div>
-              <div class={styles.formItem}>
-                <label class={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={publicAccess()}
-                    onChange={(e) => setPublicAccess(e.currentTarget.checked)}
-                  />
-                  {t('settings.allowPublicAccess')}
-                </label>
-              </div>
-              <div class={styles.formItem}>
-                <label>{t('settings.allowedDomains')}</label>
-                <input
-                  type="text"
-                  placeholder={t('settings.allowedDomainsPlaceholder') || 'example.com, company.org'}
-                  value={allowedDomains()}
-                  onInput={(e) => setAllowedDomains(e.target.value)}
-                />
-                <p class={styles.hint}>{t('settings.allowedDomainsHint')}</p>
               </div>
               <button type="submit" class={styles.saveButton} disabled={loading()}>
                 {t('settings.saveWorkspaceSettings')}

@@ -469,17 +469,40 @@ export default function App() {
       setIsTermsPage(false);
       return;
     }
-    if (path === '/settings') {
-      setIsSettingsPage(true);
-      setIsProfilePage(false);
-      setIsPrivacyPage(false);
-      setIsTermsPage(false);
-      return;
-    }
     setIsProfilePage(false);
-    setIsSettingsPage(false);
     setIsPrivacyPage(false);
     setIsTermsPage(false);
+
+    // Check for /w/wsID+wsSlug/settings format (workspace settings)
+    const matchWsSettings = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
+    if (matchWsSettings && matchWsSettings[1]) {
+      const wsId = matchWsSettings[1];
+
+      // If logged in but in wrong workspace, switch
+      if (user() && user()?.workspace_id !== wsId) {
+        try {
+          const u = user();
+          const isMember = u?.workspaces?.some((m) => m.workspace_id === wsId);
+          if (!isMember) {
+            setError(t('errors.noAccessToWs') || 'You do not have access to this workspace');
+            const currentWsId = u?.workspace_id;
+            const currentWsName = u?.workspace_name;
+            if (currentWsId) {
+              const wsSlug = slugify(currentWsName || 'workspace');
+              setTimeout(() => window.history.replaceState(null, '', `/w/${currentWsId}+${wsSlug}/`), 2000);
+            }
+            return;
+          }
+          await switchWorkspace(wsId, false);
+        } catch {
+          return;
+        }
+      }
+
+      setIsSettingsPage(true);
+      return;
+    }
+    setIsSettingsPage(false);
 
     // Helper to validate workspace access and redirect if invalid
     const validateWorkspaceAccess = async (wsId: string): Promise<boolean> => {
@@ -958,7 +981,12 @@ export default function App() {
                       setIsSettingsPage(true);
                       setSelectedNodeId(null);
                       setShowMobileSidebar(false);
-                      window.history.pushState(null, '', '/settings');
+                      const wsId = user()?.workspace_id;
+                      const wsName = user()?.workspace_name;
+                      if (wsId) {
+                        const wsSlug = slugify(wsName || 'workspace');
+                        window.history.pushState(null, '', `/w/${wsId}+${wsSlug}/settings`);
+                      }
                     }}
                     onCreateWorkspace={() => setShowCreateWorkspace(true)}
                   />

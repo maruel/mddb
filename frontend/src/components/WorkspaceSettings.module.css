@@ -135,19 +135,6 @@
   border-radius: var(--radius);
 }
 
-.checkboxLabel {
-  display: flex !important;
-  align-items: center;
-  gap: var(--s-3);
-  cursor: pointer;
-  font-weight: normal !important;
-}
-
-.checkboxLabel input {
-  width: 1.1rem;
-  height: 1.1rem;
-}
-
 .saveButton {
   padding: var(--s-3) var(--s-5);
   background: var(--c-primary);
