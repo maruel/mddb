@@ -124,7 +124,9 @@ test.describe('Workspace Settings', () => {
     // Navigate to settings via workspace menu
     const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
     await wsMenuButton.click();
-    await page.locator('button', { hasText: /Workspace Settings|⚙/ }).click();
+    const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
+    await expect(settingsOption).toBeVisible({ timeout: 3000 });
+    await settingsOption.click();
     await expect(page).toHaveURL(/\/w\/[^/]+\/settings/, { timeout: 5000 });
 
     // Click Members tab (use exact match to avoid conflicts)
@@ -156,7 +158,9 @@ test.describe('Workspace Settings', () => {
     // Navigate to settings
     const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
     await wsMenuButton.click();
-    await page.locator('button', { hasText: /Workspace Settings|⚙/ }).click();
+    const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
+    await expect(settingsOption).toBeVisible({ timeout: 3000 });
+    await settingsOption.click();
     await expect(page).toHaveURL(/\/w\/[^/]+\/settings/, { timeout: 5000 });
 
     // Members tab should be active by default - click to be sure
@@ -176,7 +180,9 @@ test.describe('Workspace Settings', () => {
     // Navigate to settings
     const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
     await wsMenuButton.click();
-    await page.locator('button', { hasText: /Workspace Settings|⚙/ }).click();
+    const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
+    await expect(settingsOption).toBeVisible({ timeout: 3000 });
+    await settingsOption.click();
     await expect(page).toHaveURL(/\/w\/[^/]+\/settings/, { timeout: 5000 });
 
     // Click Workspace tab (use exact match to avoid matching workspace button in header)

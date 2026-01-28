@@ -292,3 +292,32 @@ const deleteButton = nodeItem.locator('[data-testid="delete-node-button"]');
 await expect(deleteButton).toBeVisible({ timeout: 3000 });
 await deleteButton.click();
 ```
+
+### Wait for Animated Elements Before Interacting
+
+Playwright auto-waits for elements to be visible and stable before clicking, so explicit visibility checks are **not needed for static elements**. However, for elements that appear after animations (dropdowns, modals, slide-ins, accordions), add explicit visibility checks:
+
+```typescript
+// Static element - Playwright auto-waits, no explicit check needed
+await page.locator('[data-testid="sidebar-node-123"]').click();
+
+// Dropdown menu - explicit wait needed
+await menuButton.click();
+const option = page.locator('button', { hasText: /Settings/ });
+await expect(option).toBeVisible({ timeout: 3000 });
+await option.click();
+
+// Modal/dialog - explicit wait needed
+await openModalButton.click();
+const modal = page.locator('[role="dialog"]');
+await expect(modal).toBeVisible({ timeout: 3000 });
+await modal.locator('button', { hasText: 'Confirm' }).click();
+
+// Slide-in sidebar - explicit wait needed
+await hamburgerButton.click();
+const sidebar = page.locator('aside');
+await expect(sidebar).toHaveClass(/mobileOpen/, { timeout: 3000 });
+await sidebar.locator('[data-testid="nav-item"]').click();
+```
+
+Why: Animated elements may exist in the DOM before becoming visible/interactive. Playwright's auto-wait might find a stale or animating element. Explicit checks ensure the animation completes.
