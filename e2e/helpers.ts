@@ -2,22 +2,38 @@
 
 import { test as base, expect, Page, APIRequestContext } from '@playwright/test';
 
-// Helper to register a user and get token
+// Helper to register a user and get token (with retry for rate limiting)
 export async function registerUser(request: APIRequestContext, prefix: string) {
   const email = `${prefix}-${Date.now()}@example.com`;
-  const registerResponse = await request.post('/api/auth/register', {
-    data: {
-      email,
-      password: 'testpassword123',
-      name: `${prefix} Test User`,
-    },
-  });
-  if (!registerResponse.ok()) {
+  const maxRetries = 3;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const registerResponse = await request.post('/api/auth/register', {
+      data: {
+        email,
+        password: 'testpassword123',
+        name: `${prefix} Test User`,
+      },
+    });
+
+    if (registerResponse.ok()) {
+      const { token } = await registerResponse.json();
+      return { email, token };
+    }
+
+    // Retry on rate limiting (429)
+    if (registerResponse.status() === 429 && attempt < maxRetries) {
+      const body = await registerResponse.json().catch(() => ({}));
+      const retryAfter = body?.details?.retry_after_seconds || 1;
+      await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000 + 100));
+      continue;
+    }
+
     const body = await registerResponse.text();
     throw new Error(`Registration failed for ${email}: ${registerResponse.status()} - ${body}`);
   }
-  const { token } = await registerResponse.json();
-  return { email, token };
+
+  throw new Error(`Registration failed for ${email} after ${maxRetries} retries`);
 }
 
 // Helper to get workspace ID from URL

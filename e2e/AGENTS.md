@@ -127,6 +127,14 @@ npx playwright test --trace on
 npx playwright show-trace test-results/.../trace.zip
 ```
 
+## Parallelism and Resource Contention
+
+Tests run with full parallelism locally (half of CPU cores) and 1 worker in CI. The `data-e2e/` directory is automatically cleaned before each test run.
+
+**Rate limiting**: In test mode (`TEST_OAUTH=1`), rate limits are increased 1000x to effectively disable them. The `registerUser` helper includes retry logic for 429 responses as a safety net.
+
+If tests fail with `signal: killed` on git operations, it's transient resource contention that usually resolves on retry.
+
 ## Common Patterns
 
 ### Wait for Sidebar Before Interactions

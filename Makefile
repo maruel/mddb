@@ -61,7 +61,6 @@ test: $(FRONTEND_STAMP)
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test
 
 e2e: build
-	@rm -rf ./data-e2e
 	@TEST_OAUTH=1 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test:e2e; \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
