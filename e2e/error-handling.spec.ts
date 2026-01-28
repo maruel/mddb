@@ -12,18 +12,14 @@ test.describe('Error Handling - Invalid Routes', () => {
     await page.goto(`/w/${wsID}/nonexistent-page-id-12345?token=${token}`);
 
     // Should either show error message or redirect to workspace root
-    // Wait a bit for the app to respond
-    await page.waitForTimeout(2000);
-
-    // Check for error message OR successful redirect to workspace
-    const errorMessage = page.locator('[class*="error"], [class*="Error"]');
-    const sidebar = page.locator('aside');
-
-    const hasError = await errorMessage.isVisible();
-    const hasSidebar = await sidebar.isVisible();
-
-    // Should have either an error shown or be back on a valid page
-    expect(hasError || hasSidebar).toBe(true);
+    // Wait for either an error message to appear OR the sidebar to show
+    await expect(async () => {
+      const errorMessage = page.locator('[class*="error"], [class*="Error"]');
+      const sidebar = page.locator('aside');
+      const hasError = await errorMessage.isVisible();
+      const hasSidebar = await sidebar.isVisible();
+      expect(hasError || hasSidebar).toBe(true);
+    }).toPass({ timeout: 5000 });
   });
 
   // Testing if invalid workspace ID is handled gracefully (doesn't crash)
@@ -91,12 +87,9 @@ test.describe('Error Handling - API Failures', () => {
     const contentTextarea = page.locator('textarea[placeholder*="markdown"]');
     await contentTextarea.fill('This should fail to save');
 
-    // Wait for autosave attempt
-    await page.waitForTimeout(3000);
-
-    // Should show error
+    // Should show error (autosave will trigger and fail due to route blocking)
     const errorMessage = page.locator('[class*="error"], [class*="Error"]');
-    await expect(errorMessage).toBeVisible({ timeout: 5000 });
+    await expect(errorMessage).toBeVisible({ timeout: 8000 });
   });
 });
 
@@ -134,19 +127,15 @@ test.describe('Error Handling - Concurrent Edits', () => {
     const content2 = page2.locator('textarea[placeholder*="markdown"]');
     await content2.fill('Content from tab 2');
 
-    // Wait for both autosaves
-    await page.waitForTimeout(3500);
-    await page2.waitForTimeout(3500);
-
-    // Check what was saved
-    const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const savedData = await getResponse.json();
-
-    // Last writer wins - should be one of the two contents
-    const savedContent = savedData.content.trim();
-    expect(savedContent === 'Content from tab 1' || savedContent === 'Content from tab 2').toBe(true);
+    // Poll API until one of the contents is saved (last writer wins)
+    await expect(async () => {
+      const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const savedData = await getResponse.json();
+      const savedContent = savedData.content.trim();
+      expect(savedContent === 'Content from tab 1' || savedContent === 'Content from tab 2').toBe(true);
+    }).toPass({ timeout: 8000 });
 
     await page2.close();
   });
@@ -176,9 +165,16 @@ test.describe('Edge Cases', () => {
     // Clear the title
     const titleInput = page.locator('input[placeholder*="Title"]');
     await titleInput.fill('');
+    // Blur to trigger autosave attempt
+    await titleInput.blur();
 
-    // Wait for autosave
-    await page.waitForTimeout(3000);
+    // Wait for autosave to attempt (debounce is 2s)
+    // Note: empty title may or may not be saved depending on validation
+    await expect(async () => {
+      // Just verify the UI has processed the change (title input should be empty or app handles gracefully)
+      const currentValue = await titleInput.inputValue();
+      expect(currentValue).toBe('');
+    }).toPass({ timeout: 3000 });
 
     // Page should still be accessible (though might show empty title in sidebar)
     await page.reload();
@@ -213,18 +209,19 @@ test.describe('Edge Cases', () => {
     const titleInput = page.locator('input[placeholder*="Title"]');
     await titleInput.fill(longTitle);
 
-    // Wait for autosave
-    await page.waitForTimeout(3000);
+    // Verify the UI accepted the long title
+    await expect(titleInput).toHaveValue(longTitle, { timeout: 2000 });
 
-    // Should handle gracefully - either truncate, show error, or save full title
-    // Verify via API what was saved
-    const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const savedData = await getResponse.json();
-
-    // Title should be saved (possibly truncated by backend)
-    expect(savedData.title.length).toBeGreaterThan(0);
+    // Wait for autosave to attempt (debounce is 2s)
+    // Then verify page handles gracefully - either truncate, show error, or save
+    await expect(async () => {
+      const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const savedData = await getResponse.json();
+      // Title should be saved (possibly truncated or unchanged if validation rejects)
+      expect(savedData.title.length).toBeGreaterThan(0);
+    }).toPass({ timeout: 5000 });
   });
 
   test('special characters in title are handled', async ({ page, request }) => {

@@ -149,8 +149,14 @@ test.describe('Page rename with navigation', () => {
     const titleInput = page.locator('input[placeholder*="Title"]');
     await titleInput.fill('Updated Title');
 
-    // Wait for autosave to complete (debounce is 2s, plus some buffer)
-    await page.waitForTimeout(3000);
+    // Poll API until title is saved
+    await expect(async () => {
+      const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageID}/page`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const savedData = await getResponse.json();
+      expect(savedData.title).toBe('Updated Title');
+    }).toPass({ timeout: 8000 });
 
     // Reload and verify the rename persisted
     await page.reload();

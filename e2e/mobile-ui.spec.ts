@@ -167,15 +167,15 @@ test.describe('Mobile UI - Layout', () => {
     await contentTextarea.focus();
     await contentTextarea.fill('Updated mobile content');
 
-    // Wait for autosave
-    await page.waitForTimeout(3000);
-
-    // Verify via API
-    const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const savedData = await getResponse.json();
-    expect(savedData.title).toBe('Updated Mobile Title');
+    // Poll API until both title and content are saved
+    await expect(async () => {
+      const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const savedData = await getResponse.json();
+      expect(savedData.title).toBe('Updated Mobile Title');
+      expect(savedData.content.trim()).toBe('Updated mobile content');
+    }).toPass({ timeout: 8000 });
   });
 });
 

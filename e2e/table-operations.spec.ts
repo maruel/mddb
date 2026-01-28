@@ -111,15 +111,20 @@ test.describe('Table Creation and Basic Operations', () => {
     const saveButton = editRow.locator('button').filter({ hasText: '✓' });
     await saveButton.click();
 
-    // Wait for save to process
-    await page.waitForTimeout(1000);
+    // Wait for save to complete by polling API
+    let recordsData: { records?: Array<{ data: { Name: string } }> } = {};
+    let editedRecord: { data: { Name: string } } | undefined;
 
-    // Verify via API that the record was updated
-    const recordsResponse = await request.get(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const recordsData = await recordsResponse.json();
-    const editedRecord = recordsData.items?.find((r: { data: { Name: string } }) => r.data.Name === 'Edited Item 1');
+    await expect(async () => {
+      const recordsResponse = await request.get(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      recordsData = await recordsResponse.json();
+      // Check that we got a response with records
+      expect(recordsData.records).toBeDefined();
+    }).toPass({ timeout: 3000 });
+
+    editedRecord = recordsData.records?.find((r: { data: { Name: string } }) => r.data.Name === 'Edited Item 1');
 
     // If API shows the edit was saved, verify UI. If not, this is a backend bug.
     if (editedRecord) {
@@ -131,7 +136,7 @@ test.describe('Table Creation and Basic Operations', () => {
       await expect(page.locator('td').getByText('Edited Item 1')).toBeVisible({ timeout: 5000 });
     } else {
       // Check if original value still exists - this would be a bug
-      const originalRecord = recordsData.items?.find((r: { data: { Name: string } }) => r.data.Name === 'Item 1');
+      const originalRecord = recordsData.records?.find((r: { data: { Name: string } }) => r.data.Name === 'Item 1');
       // If the record still has original name, the save failed
       expect(originalRecord).toBeFalsy();
     }
@@ -182,9 +187,6 @@ test.describe('Table Creation and Basic Operations', () => {
     const recordRow = page.locator('tr').filter({ hasText: 'Record To Delete' });
     const deleteButton = recordRow.locator('button', { hasText: '✕' });
     await deleteButton.click();
-
-    // Wait a moment for the delete to process
-    await page.waitForTimeout(1000);
 
     // Record should disappear from the table
     await expect(page.locator('td').filter({ hasText: 'Record To Delete' })).not.toBeVisible({ timeout: 5000 });
