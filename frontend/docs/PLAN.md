@@ -17,9 +17,9 @@ App.tsx is 1242 lines with 15+ concerns mixed together. Extract into proper modu
 - [ ] **Create `src/contexts/` directory** for React-style context providers
   - [ ] `AuthContext.tsx` - Auth state provider
   - [ ] `WorkspaceContext.tsx` - Workspace/org context
-- [ ] **Create `src/composables/` directory** for reusable logic
+- [x] **Create `src/composables/` directory** for reusable logic
   - [ ] `useAutoSave.ts` - Debounced auto-save logic
-  - [ ] `useClickOutside.ts` - Click-outside detection (duplicated in 3+ components)
+  - [x] `useClickOutside.ts` - Click-outside detection (used by WorkspaceMenu, UserMenu)
   - [ ] `useRouting.ts` - URL parsing and navigation helpers
 - [ ] **Fix state management anti-patterns**
   - [ ] Replace direct variable mutations (lines 139, 387, 545, 589) with signals

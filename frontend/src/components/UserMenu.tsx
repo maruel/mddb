@@ -1,7 +1,8 @@
 // Dropdown menu for user profile and logout.
 
-import { createSignal, onMount, onCleanup, Show } from 'solid-js';
+import { createSignal, Show } from 'solid-js';
 import { useI18n } from '../i18n';
+import { useClickOutside } from '../composables/useClickOutside';
 import type { UserResponse } from '@sdk/types.gen';
 import styles from './UserMenu.module.css';
 
@@ -38,19 +39,10 @@ export default function UserMenu(props: UserMenuProps) {
     return name.slice(0, 2).toUpperCase();
   };
 
-  // Click outside to close
-  const handleClickOutside = (e: MouseEvent) => {
-    if (menuRef && !menuRef.contains(e.target as Node)) {
-      setIsOpen(false);
-    }
-  };
-
-  onMount(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    onCleanup(() => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    });
-  });
+  useClickOutside(
+    () => menuRef,
+    () => setIsOpen(false)
+  );
 
   const handleLogout = () => {
     setIsOpen(false);

@@ -1,7 +1,8 @@
 // Dropdown menu for switching workspaces and accessing workspace settings.
 
-import { createSignal, For, onMount, onCleanup, Show, createMemo } from 'solid-js';
+import { createSignal, For, Show, createMemo } from 'solid-js';
 import { useI18n } from '../i18n';
+import { useClickOutside } from '../composables/useClickOutside';
 import type { WSMembershipResponse, OrgMembershipResponse } from '@sdk/types.gen';
 import styles from './WorkspaceMenu.module.css';
 
@@ -55,18 +56,10 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
     return current?.workspace_name || t('app.workspace');
   };
 
-  const handleClickOutside = (e: MouseEvent) => {
-    if (menuRef && !menuRef.contains(e.target as Node)) {
-      setIsOpen(false);
-    }
-  };
-
-  onMount(() => {
-    document.addEventListener('mousedown', handleClickOutside);
-    onCleanup(() => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    });
-  });
+  useClickOutside(
+    () => menuRef,
+    () => setIsOpen(false)
+  );
 
   const handleSwitchWorkspace = (wsId: string) => {
     setIsOpen(false);
