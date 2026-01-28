@@ -37,8 +37,7 @@ test.describe('Mobile UI - Sidebar Toggle', () => {
     await takeScreenshot('mobile-sidebar-closed');
   });
 
-  // BUG: Mobile sidebar backdrop click not working - see BUGS_FOUND.md Bug 6
-  test.skip('clicking backdrop closes mobile sidebar', async ({ page, request }) => {
+  test('clicking backdrop closes mobile sidebar', async ({ page, request }) => {
     const { token } = await registerUser(request, 'mobile-backdrop');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('header')).toBeVisible({ timeout: 10000 });
