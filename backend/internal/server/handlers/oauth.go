@@ -30,17 +30,17 @@ const linkingStatePrefix = "link:"
 
 // OAuthHandler handles OAuth2 authentication for multiple providers.
 type OAuthHandler struct {
-	svc         *Services
-	authHandler *AuthHandler
-	providers   map[identity.OAuthProvider]*oauth2.Config
+	svc       *Services
+	cfg       *Config
+	providers map[identity.OAuthProvider]*oauth2.Config
 }
 
 // NewOAuthHandler creates a new OAuth handler.
-func NewOAuthHandler(svc *Services, authHandler *AuthHandler) *OAuthHandler {
+func NewOAuthHandler(svc *Services, cfg *Config) *OAuthHandler {
 	return &OAuthHandler{
-		svc:         svc,
-		authHandler: authHandler,
-		providers:   make(map[identity.OAuthProvider]*oauth2.Config),
+		svc:       svc,
+		cfg:       cfg,
+		providers: make(map[identity.OAuthProvider]*oauth2.Config),
 	}
 }
 
@@ -437,7 +437,7 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT token with session tracking
 	clientIP := reqctx.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
-	jwtToken, err := h.authHandler.GenerateTokenWithSession(user, clientIP, userAgent)
+	jwtToken, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent)
 	if err != nil {
 		slog.ErrorContext(r.Context(), "OAuth: failed to generate token", "error", err, "userID", user.ID)
 		writeErrorResponse(w, dto.Internal("token_generation"))

@@ -15,9 +15,8 @@ import (
 
 // InvitationHandler handles invitation requests.
 type InvitationHandler struct {
-	Svc         *Services
-	Cfg         *Config
-	AuthHandler *AuthHandler
+	Svc *Services
+	Cfg *Config
 }
 
 // CreateOrgInvitation creates a new organization invitation.
@@ -149,7 +148,7 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 	}
 
 	// Generate token
-	token, err := h.AuthHandler.GenerateToken(user)
+	token, err := h.Cfg.GenerateToken(user)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to generate token", err)
 	}
@@ -162,7 +161,7 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 	userResp := userWithMembershipsToResponse(uwm)
 
 	// Set active context
-	h.AuthHandler.PopulateActiveContext(userResp, uwm)
+	uwm.populateActiveContext(userResp)
 
 	return &dto.AuthResponse{
 		Token: token,
@@ -223,7 +222,7 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 	}
 
 	// Generate token
-	token, err := h.AuthHandler.GenerateToken(user)
+	token, err := h.Cfg.GenerateToken(user)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to generate token", err)
 	}
@@ -236,7 +235,7 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 	userResp := userWithMembershipsToResponse(uwm)
 
 	// Set active context
-	h.AuthHandler.PopulateActiveContext(userResp, uwm)
+	uwm.populateActiveContext(userResp)
 
 	return &dto.AuthResponse{
 		Token: token,

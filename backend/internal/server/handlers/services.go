@@ -6,13 +6,18 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/utils"
 )
 
 // Services holds all service dependencies for handlers.
@@ -62,4 +67,56 @@ func (c *Config) generateSignature(path string, expiry int64) string {
 func (c *Config) VerifyAssetSignature(path, sig string, expiry int64) bool {
 	expected := c.generateSignature(path, expiry)
 	return hmac.Equal([]byte(expected), []byte(sig))
+}
+
+const tokenExpiration = 24 * time.Hour
+
+// GenerateToken generates a JWT token for the given user (without session tracking).
+func (c *Config) GenerateToken(user *identity.User) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":   user.ID,
+		"email": user.Email,
+		"exp":   time.Now().Add(tokenExpiration).Unix(),
+		"iat":   time.Now().Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(c.JWTSecret))
+}
+
+// GenerateTokenWithSession creates a session and generates a JWT token with session ID.
+func (c *Config) GenerateTokenWithSession(sessionSvc *identity.SessionService, user *identity.User, clientIP, userAgent string) (string, error) {
+	expiresAt := time.Now().Add(tokenExpiration)
+
+	// Pre-generate session ID so we can include it in the JWT
+	sessionID := jsonldb.NewID()
+
+	// Build claims with session ID
+	claims := jwt.MapClaims{
+		"sub":   user.ID,
+		"email": user.Email,
+		"sid":   sessionID.String(),
+		"exp":   expiresAt.Unix(),
+		"iat":   time.Now().Unix(),
+	}
+
+	// Generate the token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString([]byte(c.JWTSecret))
+	if err != nil {
+		return "", err
+	}
+
+	// Create session with the pre-generated ID and token hash
+	deviceInfo := userAgent
+	if len(deviceInfo) > 200 {
+		deviceInfo = deviceInfo[:200]
+	}
+	if _, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt), c.ServerQuotas.MaxSessionsPerUser); err != nil {
+		if errors.Is(err, identity.ErrSessionQuotaExceeded) {
+			return "", dto.QuotaExceeded("sessions per user", c.ServerQuotas.MaxSessionsPerUser)
+		}
+		return "", err
+	}
+
+	return tokenString, nil
 }

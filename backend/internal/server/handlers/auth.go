@@ -4,23 +4,17 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
-	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
-	"github.com/maruel/mddb/backend/internal/utils"
 )
-
-const tokenExpiration = 24 * time.Hour
 
 // AuthHandler handles authentication requests.
 type AuthHandler struct {
@@ -56,7 +50,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 	clientIP := reqctx.ClientIP(ctx)
 	userAgent := reqctx.UserAgent(ctx)
 
-	token, err := h.GenerateTokenWithSession(user, clientIP, userAgent)
+	token, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to generate token", err)
 	}
@@ -69,7 +63,7 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 	userResp := userWithMembershipsToResponse(uwm)
 
 	// Set active context to first org/workspace
-	h.PopulateActiveContext(userResp, uwm)
+	uwm.populateActiveContext(userResp)
 
 	return &dto.AuthResponse{
 		Token: token,
@@ -103,7 +97,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	clientIP := reqctx.ClientIP(ctx)
 	userAgent := reqctx.UserAgent(ctx)
 
-	token, err := h.GenerateTokenWithSession(user, clientIP, userAgent)
+	token, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to generate token", err)
 	}
@@ -126,56 +120,6 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}, nil
 }
 
-// GenerateToken generates a JWT token for the given user (without session tracking).
-func (h *AuthHandler) GenerateToken(user *identity.User) (string, error) {
-	claims := jwt.MapClaims{
-		"sub":   user.ID,
-		"email": user.Email,
-		"exp":   time.Now().Add(tokenExpiration).Unix(),
-		"iat":   time.Now().Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(h.cfg.JWTSecret))
-}
-
-// GenerateTokenWithSession creates a session and generates a JWT token with session ID.
-func (h *AuthHandler) GenerateTokenWithSession(user *identity.User, clientIP, userAgent string) (string, error) {
-	expiresAt := time.Now().Add(tokenExpiration)
-
-	// Pre-generate session ID so we can include it in the JWT
-	sessionID := jsonldb.NewID()
-
-	// Build claims with session ID
-	claims := jwt.MapClaims{
-		"sub":   user.ID,
-		"email": user.Email,
-		"sid":   sessionID.String(),
-		"exp":   expiresAt.Unix(),
-		"iat":   time.Now().Unix(),
-	}
-
-	// Generate the token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString([]byte(h.cfg.JWTSecret))
-	if err != nil {
-		return "", err
-	}
-
-	// Create session with the pre-generated ID and token hash
-	deviceInfo := userAgent
-	if len(deviceInfo) > 200 {
-		deviceInfo = deviceInfo[:200]
-	}
-	if _, err := h.svc.Session.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt), h.cfg.ServerQuotas.MaxSessionsPerUser); err != nil {
-		if errors.Is(err, identity.ErrSessionQuotaExceeded) {
-			return "", dto.QuotaExceeded("sessions per user", h.cfg.ServerQuotas.MaxSessionsPerUser)
-		}
-		return "", err
-	}
-
-	return tokenString, nil
-}
-
 // GetMe returns the current user info.
 func (h *AuthHandler) GetMe(ctx context.Context, user *identity.User, req *dto.GetMeRequest) (*dto.UserResponse, error) {
 	// Build user response with memberships
@@ -186,7 +130,7 @@ func (h *AuthHandler) GetMe(ctx context.Context, user *identity.User, req *dto.G
 	userResp := userWithMembershipsToResponse(uwm)
 
 	// Populate active context
-	h.PopulateActiveContext(userResp, uwm)
+	uwm.populateActiveContext(userResp)
 
 	return userResp, nil
 }
@@ -218,8 +162,8 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.Use
 	return organizationToResponse(org, memberCount, workspaceCount), nil
 }
 
-// PopulateActiveContext populates organization/workspace context in the UserResponse.
-func (h *AuthHandler) PopulateActiveContext(userResp *dto.UserResponse, uwm *userWithMemberships) {
+// populateActiveContext populates organization/workspace context in the UserResponse.
+func (uwm *userWithMemberships) populateActiveContext(userResp *dto.UserResponse) {
 	// Try workspaces from LRU list in order (most recently used first)
 	for _, savedWsID := range uwm.User.Settings.LastActiveWorkspaces {
 		for _, ws := range uwm.WSMemberships {

@@ -12,8 +12,8 @@ import (
 
 // MembershipHandler handles membership-related requests.
 type MembershipHandler struct {
-	Svc         *Services
-	AuthHandler *AuthHandler
+	Svc *Services
+	Cfg *Config
 }
 
 // SwitchOrg switches the user's active organization and returns a new token.
@@ -24,7 +24,7 @@ func (h *MembershipHandler) SwitchOrg(ctx context.Context, user *identity.User, 
 		return nil, dto.Forbidden("User is not a member of this organization")
 	}
 
-	token, err := h.AuthHandler.GenerateToken(user)
+	token, err := h.Cfg.GenerateToken(user)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to generate token", err)
 	}
@@ -95,7 +95,7 @@ func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.
 		return nil, dto.InternalWithError("Failed to save workspace preference", err)
 	}
 
-	token, err := h.AuthHandler.GenerateToken(user)
+	token, err := h.Cfg.GenerateToken(user)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to generate token", err)
 	}

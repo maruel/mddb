@@ -70,8 +70,8 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Other handlers
 	uh := &handlers.UserHandler{Svc: svc}
-	ih := &handlers.InvitationHandler{Svc: svc, Cfg: hcfg, AuthHandler: authh}
-	mh := &handlers.MembershipHandler{Svc: svc, AuthHandler: authh}
+	ih := &handlers.InvitationHandler{Svc: svc, Cfg: hcfg}
+	mh := &handlers.MembershipHandler{Svc: svc, Cfg: hcfg}
 	orgh := &handlers.OrganizationHandler{Svc: svc, Cfg: hcfg}
 	grh := &handlers.GitRemoteHandler{Svc: svc}
 
@@ -86,7 +86,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(adminh.ListAllOrgs, svc, hcfg, limiters))
 
 	// OAuth handler setup (needed before auth routes)
-	oh := handlers.NewOAuthHandler(svc, authh)
+	oh := handlers.NewOAuthHandler(svc, hcfg)
 	base := strings.TrimRight(cfg.BaseURL, "/")
 	var providers []identity.OAuthProvider
 	if cfg.OAuth.GoogleClientID != "" && cfg.OAuth.GoogleClientSecret != "" {
