@@ -159,7 +159,12 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
 
   const toggleExpand = async (e: MouseEvent) => {
     e.stopPropagation();
-    setIsExpanded(!isExpanded());
+    const newExpanded = !isExpanded();
+    setIsExpanded(newExpanded);
+    // When expanding, ensure children are loaded (onMount may not have completed yet)
+    if (newExpanded && loadedChildren() === null && !isLoadingChildren()) {
+      fetchChildren();
+    }
   };
 
   const handleContextMenu = (e: MouseEvent) => {

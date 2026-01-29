@@ -76,12 +76,14 @@ test.describe('Page Hierarchy', () => {
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // Expand to see all levels
-    await page.locator(`[data-testid="sidebar-node-${topLevelPageId}"]`).click();
+    // Navigate to parent page by clicking on its pageItem (not the whole li, which may click child)
+    const parentPageItem = page.locator(`[data-testid="sidebar-node-${topLevelPageId}"] > div`).first();
+    await parentPageItem.click();
     const childNodeAfterReload = page.locator(`[data-testid="sidebar-node-${childID}"]`);
     await expect(childNodeAfterReload).toBeVisible({ timeout: 5000 });
 
     // Click the expand icon next to Child Page (not the text, which navigates)
+    // Note: Child Page may already be expanded if we reloaded at its URL (ancestorIds includes it)
     const expandIcon = page.locator(`[data-testid="expand-icon-${childID}"]`);
     await expect(expandIcon).toBeVisible();
     // Verify the expand icon has a reasonable clickable size (at least 16x16)
@@ -89,13 +91,20 @@ test.describe('Page Hierarchy', () => {
     expect(box).toBeTruthy();
     expect(box!.width).toBeGreaterThanOrEqual(16);
     expect(box!.height).toBeGreaterThanOrEqual(16);
-    await expandIcon.click();
+
+    // Check if Child Page is already expanded (transform indicates rotation)
+    const transform = await expandIcon.evaluate((el) => getComputedStyle(el).transform);
+    const isAlreadyExpanded = transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)';
+    if (!isAlreadyExpanded) {
+      await expandIcon.click();
+    }
 
     // Wait for grandchild to appear in sidebar
     const grandchildData = await createGrandchildResponse.json();
     const grandchildID = grandchildData.id;
     const grandchildNode = page.locator(`[data-testid="sidebar-node-${grandchildID}"]`);
-    await expect(grandchildNode).toBeVisible({ timeout: 5000 });
+    // Give more time for the async fetch to complete
+    await expect(grandchildNode).toBeVisible({ timeout: 10000 });
 
     await takeScreenshot('hierarchy-expanded');
 
