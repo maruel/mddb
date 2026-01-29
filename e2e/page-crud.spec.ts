@@ -154,7 +154,6 @@ test.describe('Page CRUD Operations', () => {
     const savedData = await getResponse.json();
     expect(savedData.content).toBe('Modified content');
   });
-
 });
 
 test.describe('Page Navigation', () => {
@@ -351,38 +350,40 @@ test.describe('Editor Features', () => {
     await takeScreenshot('wysiwyg-editor');
   });
 
-  test.screenshot('WYSIWYG to markdown round-trip preserves all formatting', async ({ page, request, takeScreenshot }) => {
-    const { token } = await registerUser(request, 'round-trip');
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+  test.screenshot(
+    'WYSIWYG to markdown round-trip preserves all formatting',
+    async ({ page, request, takeScreenshot }) => {
+      const { token } = await registerUser(request, 'round-trip');
+      await page.goto(`/?token=${token}`);
+      await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    const wsID = await getWorkspaceId(page);
+      const wsID = await getWorkspaceId(page);
 
-    // Create an empty page via API
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Round Trip Test', content: '' },
-    });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
+      // Create an empty page via API
+      const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { title: 'Round Trip Test', content: '' },
+      });
+      expect(createResponse.ok()).toBe(true);
+      const pageData = await createResponse.json();
 
-    // Reload and verify in UI
-    await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+      // Reload and verify in UI
+      await page.reload();
+      await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+      await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
-    // Wait for WYSIWYG editor
-    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
-    await expect(editor).toBeVisible({ timeout: 5000 });
+      // Wait for WYSIWYG editor
+      const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+      await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // === Switch to Markdown mode and enter content directly ===
-    await page.locator('[data-testid="editor-mode-markdown"]').click();
-    const markdownEditor = page.locator('[data-testid="markdown-editor"]');
-    await expect(markdownEditor).toBeVisible({ timeout: 3000 });
+      // === Switch to Markdown mode and enter content directly ===
+      await page.locator('[data-testid="editor-mode-markdown"]').click();
+      const markdownEditor = page.locator('[data-testid="markdown-editor"]');
+      await expect(markdownEditor).toBeVisible({ timeout: 3000 });
 
-    // Define comprehensive markdown content with all formatting styles
-    const originalMarkdown = `# Heading One
+      // Define comprehensive markdown content with all formatting styles
+      const originalMarkdown = `# Heading One
 
 ## Heading Two
 
@@ -402,6 +403,10 @@ Inline \`code\` here.
 2. Second item
 3. Third item
 
+- [ ] Unchecked task
+- [x] Checked task
+- [ ] Another unchecked task
+
 > This is a blockquote
 > with multiple lines
 
@@ -416,69 +421,89 @@ function hello() {
 
 [Link text](https://example.com)`;
 
-    // Fill the markdown editor
-    await markdownEditor.fill(originalMarkdown);
+      // Fill the markdown editor
+      await markdownEditor.fill(originalMarkdown);
 
-    await takeScreenshot('markdown-original');
+      await takeScreenshot('markdown-original');
 
-    // === Switch to Visual mode ===
-    await page.locator('[data-testid="editor-mode-visual"]').click();
-    await expect(editor).toBeVisible({ timeout: 3000 });
+      // === Switch to Visual mode ===
+      await page.locator('[data-testid="editor-mode-visual"]').click();
+      await expect(editor).toBeVisible({ timeout: 3000 });
 
-    await takeScreenshot('wysiwyg-rendered');
+      await takeScreenshot('wysiwyg-rendered');
 
-    // Verify all elements render correctly in WYSIWYG
-    await expect(editor.locator('h1')).toContainText('Heading One', { timeout: 5000 });
-    await expect(editor.locator('h2')).toContainText('Heading Two', { timeout: 3000 });
-    await expect(editor.locator('h3')).toContainText('Heading Three', { timeout: 3000 });
-    await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
-    await expect(editor.locator('em')).toContainText('italic text', { timeout: 3000 });
-    await expect(editor.locator('p code')).toContainText('code', { timeout: 3000 });
-    await expect(editor.locator('ul li').first()).toContainText('First bullet', { timeout: 3000 });
-    await expect(editor.locator('ul li').nth(1)).toContainText('Second bullet', { timeout: 3000 });
-    await expect(editor.locator('ol li').first()).toContainText('First item', { timeout: 3000 });
-    await expect(editor.locator('ol li').nth(1)).toContainText('Second item', { timeout: 3000 });
-    await expect(editor.locator('blockquote')).toContainText('This is a blockquote', { timeout: 3000 });
-    await expect(editor.locator('pre code')).toContainText('const x = 42;', { timeout: 3000 });
-    await expect(editor.locator('hr')).toBeVisible({ timeout: 3000 });
-    await expect(editor.locator('a[href="https://example.com"]')).toContainText('Link text', { timeout: 3000 });
+      // Verify all elements render correctly in WYSIWYG
+      await expect(editor.locator('h1')).toContainText('Heading One', { timeout: 5000 });
+      await expect(editor.locator('h2')).toContainText('Heading Two', { timeout: 3000 });
+      await expect(editor.locator('h3')).toContainText('Heading Three', { timeout: 3000 });
+      await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
+      await expect(editor.locator('em')).toContainText('italic text', { timeout: 3000 });
+      await expect(editor.locator('p code')).toContainText('code', { timeout: 3000 });
+      await expect(editor.locator('ul li').first()).toContainText('First bullet', { timeout: 3000 });
+      await expect(editor.locator('ul li').nth(1)).toContainText('Second bullet', { timeout: 3000 });
+      await expect(editor.locator('ol li').first()).toContainText('First item', { timeout: 3000 });
+      await expect(editor.locator('ol li').nth(1)).toContainText('Second item', { timeout: 3000 });
 
-    // === Switch back to Markdown mode ===
-    await page.locator('[data-testid="editor-mode-markdown"]').click();
-    await expect(markdownEditor).toBeVisible({ timeout: 3000 });
+      // Verify task list items (checkboxes)
+      const taskItems = editor.locator('li.task-list-item');
+      await expect(taskItems).toHaveCount(3, { timeout: 3000 });
+      await expect(taskItems.first()).toContainText('Unchecked task', { timeout: 3000 });
+      await expect(taskItems.nth(1)).toContainText('Checked task', { timeout: 3000 });
+      // Verify checkbox states via data-checked attribute
+      await expect(taskItems.first()).toHaveAttribute('data-checked', 'false');
+      await expect(taskItems.nth(1)).toHaveAttribute('data-checked', 'true');
+      await expect(taskItems.nth(2)).toHaveAttribute('data-checked', 'false');
 
-    const markdownAfterRoundTrip = await markdownEditor.inputValue();
+      await expect(editor.locator('blockquote')).toContainText('This is a blockquote', { timeout: 3000 });
+      await expect(editor.locator('pre code')).toContainText('const x = 42;', { timeout: 3000 });
+      await expect(editor.locator('hr')).toBeVisible({ timeout: 3000 });
+      await expect(editor.locator('a[href="https://example.com"]')).toContainText('Link text', { timeout: 3000 });
 
-    await takeScreenshot('markdown-after-round-trip');
+      // === Switch back to Markdown mode ===
+      await page.locator('[data-testid="editor-mode-markdown"]').click();
+      await expect(markdownEditor).toBeVisible({ timeout: 3000 });
 
-    // Verify markdown still contains all expected elements after round-trip
-    expect(markdownAfterRoundTrip).toContain('# Heading One');
-    expect(markdownAfterRoundTrip).toContain('## Heading Two');
-    expect(markdownAfterRoundTrip).toContain('### Heading Three');
-    expect(markdownAfterRoundTrip).toContain('**bold text**');
-    expect(markdownAfterRoundTrip).toContain('*italic text*');
-    expect(markdownAfterRoundTrip).toContain('`code`');
-    expect(markdownAfterRoundTrip).toContain('- First bullet');
-    expect(markdownAfterRoundTrip).toContain('- Second bullet');
-    expect(markdownAfterRoundTrip).toContain('1. First item');
-    expect(markdownAfterRoundTrip).toContain('2. Second item');
-    expect(markdownAfterRoundTrip).toContain('> This is a blockquote');
-    expect(markdownAfterRoundTrip).toContain('```');
-    expect(markdownAfterRoundTrip).toContain('const x = 42;');
-    expect(markdownAfterRoundTrip).toContain('---');
-    expect(markdownAfterRoundTrip).toContain('[Link text](https://example.com)');
+      const markdownAfterRoundTrip = await markdownEditor.inputValue();
 
-    // === Switch to Visual one more time to confirm stability ===
-    await page.locator('[data-testid="editor-mode-visual"]').click();
-    await expect(editor).toBeVisible({ timeout: 3000 });
+      await takeScreenshot('markdown-after-round-trip');
 
-    // All elements should still be present
-    await expect(editor.locator('h1')).toContainText('Heading One', { timeout: 5000 });
-    await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
-    await expect(editor.locator('pre code')).toContainText('const x = 42;', { timeout: 3000 });
+      // Verify markdown still contains all expected elements after round-trip
+      expect(markdownAfterRoundTrip).toContain('# Heading One');
+      expect(markdownAfterRoundTrip).toContain('## Heading Two');
+      expect(markdownAfterRoundTrip).toContain('### Heading Three');
+      expect(markdownAfterRoundTrip).toContain('**bold text**');
+      expect(markdownAfterRoundTrip).toContain('*italic text*');
+      expect(markdownAfterRoundTrip).toContain('`code`');
+      expect(markdownAfterRoundTrip).toContain('- First bullet');
+      expect(markdownAfterRoundTrip).toContain('- Second bullet');
+      expect(markdownAfterRoundTrip).toContain('1. First item');
+      expect(markdownAfterRoundTrip).toContain('2. Second item');
+      // Verify task list syntax is preserved
+      expect(markdownAfterRoundTrip).toContain('[ ] Unchecked task');
+      expect(markdownAfterRoundTrip).toContain('[x] Checked task');
+      expect(markdownAfterRoundTrip).toContain('[ ] Another unchecked task');
+      expect(markdownAfterRoundTrip).toContain('> This is a blockquote');
+      expect(markdownAfterRoundTrip).toContain('```');
+      expect(markdownAfterRoundTrip).toContain('const x = 42;');
+      expect(markdownAfterRoundTrip).toContain('---');
+      expect(markdownAfterRoundTrip).toContain('[Link text](https://example.com)');
 
-    await takeScreenshot('wysiwyg-final');
-  });
+      // === Switch to Visual one more time to confirm stability ===
+      await page.locator('[data-testid="editor-mode-visual"]').click();
+      await expect(editor).toBeVisible({ timeout: 3000 });
+
+      // All elements should still be present
+      await expect(editor.locator('h1')).toContainText('Heading One', { timeout: 5000 });
+      await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
+      await expect(editor.locator('pre code')).toContainText('const x = 42;', { timeout: 3000 });
+      // Task list items should still be present with correct states
+      const finalTaskItems = editor.locator('li.task-list-item');
+      await expect(finalTaskItems).toHaveCount(3, { timeout: 3000 });
+      await expect(finalTaskItems.nth(1)).toHaveAttribute('data-checked', 'true');
+
+      await takeScreenshot('wysiwyg-final');
+    }
+  );
 
   test('markdown editor fills available vertical space', async ({ page, request }) => {
     const { token } = await registerUser(request, 'editor-height');

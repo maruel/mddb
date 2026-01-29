@@ -3,10 +3,9 @@
 import { createSignal, onMount, onCleanup, createEffect, on, createMemo } from 'solid-js';
 import { EditorView } from 'prosemirror-view';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
-import { defaultMarkdownParser, schema } from 'prosemirror-markdown';
 import { useI18n } from '../../i18n';
 import { rewriteAssetUrls, reverseRewriteAssetUrls } from './markdown-utils';
-import { markdownSerializer, createEditorState } from './prosemirror-config';
+import { nodes, marks, markdownParser, markdownSerializer, createEditorState } from './prosemirror-config';
 import EditorToolbar, { type FormatState } from './EditorToolbar';
 import styles from './Editor.module.css';
 
@@ -38,6 +37,7 @@ export default function Editor(props: EditorProps) {
     headingLevel: null,
     isBulletList: false,
     isOrderedList: false,
+    isTaskList: false,
     isBlockquote: false,
     isCodeBlock: false,
   });
@@ -45,7 +45,7 @@ export default function Editor(props: EditorProps) {
   // Parse markdown to ProseMirror document, handling asset URLs
   const parseMarkdown = (md: string): ProseMirrorNode | null => {
     const processed = rewriteAssetUrls(md, props.orgId);
-    return defaultMarkdownParser.parse(processed);
+    return markdownParser.parse(processed);
   };
 
   // Serialize ProseMirror document to markdown, handling asset URLs
@@ -61,27 +61,26 @@ export default function Editor(props: EditorProps) {
 
     // Check marks
     const currentMarks = empty ? state.storedMarks || $from.marks() : [];
-    const isBold =
-      schema.marks.strong.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, schema.marks.strong);
-    const isItalic =
-      schema.marks.em.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, schema.marks.em);
-    const isCode =
-      schema.marks.code.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, schema.marks.code);
+    const isBold = marks.strong.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.strong);
+    const isItalic = marks.em.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.em);
+    const isCode = marks.code.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.code);
 
     // Check block types
     const node = $from.node($from.depth);
-    const headingLevel = node.type === schema.nodes.heading ? (node.attrs.level as number) : null;
-    const isCodeBlock = node.type === schema.nodes.code_block;
+    const headingLevel = node.type === nodes.heading ? (node.attrs.level as number) : null;
+    const isCodeBlock = node.type === nodes.code_block;
 
     // Check list types by walking up ancestors
     let isBulletList = false;
     let isOrderedList = false;
+    let isTaskList = false;
     let isBlockquote = false;
     for (let d = $from.depth; d > 0; d--) {
       const n = $from.node(d);
-      if (n.type === schema.nodes.bullet_list) isBulletList = true;
-      if (n.type === schema.nodes.ordered_list) isOrderedList = true;
-      if (n.type === schema.nodes.blockquote) isBlockquote = true;
+      if (n.type === nodes.bullet_list) isBulletList = true;
+      if (n.type === nodes.ordered_list) isOrderedList = true;
+      if (n.type === nodes.list_item && n.attrs.checked !== null) isTaskList = true;
+      if (n.type === nodes.blockquote) isBlockquote = true;
     }
 
     setFormatState({
@@ -91,6 +90,7 @@ export default function Editor(props: EditorProps) {
       headingLevel,
       isBulletList,
       isOrderedList,
+      isTaskList,
       isBlockquote,
       isCodeBlock,
     });
@@ -120,6 +120,12 @@ export default function Editor(props: EditorProps) {
         updateActiveStates(editorView);
       },
     });
+
+    // Store view reference on DOM element for checkbox plugin access
+    const pmEl = editorRef.querySelector('.ProseMirror') as HTMLElement & { pmView?: EditorView };
+    if (pmEl) {
+      pmEl.pmView = editorView;
+    }
 
     setView(editorView);
     updateActiveStates(editorView);

@@ -171,6 +171,26 @@
   margin: 0;
 }
 
+/* Task list items */
+.prosemirrorEditor :global(.ProseMirror li.task-list-item) {
+  list-style: none;
+  position: relative;
+}
+
+.prosemirrorEditor :global(.ProseMirror .task-checkbox) {
+  position: absolute;
+  left: -1.5rem;
+  top: 0.3em;
+  cursor: pointer;
+  width: 1rem;
+  height: 1rem;
+}
+
+.prosemirrorEditor :global(.ProseMirror li.task-list-item[data-checked='true'] > p) {
+  text-decoration: line-through;
+  color: var(--c-text-light);
+}
+
 /* Blockquotes */
 .prosemirrorEditor :global(.ProseMirror blockquote) {
   margin: 1em 0;

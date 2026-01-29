@@ -2,9 +2,9 @@
 
 import { Show } from 'solid-js';
 import type { EditorView } from 'prosemirror-view';
-import { schema } from 'prosemirror-markdown';
 import { toggleMark, setBlockType, wrapIn, lift } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
+import { nodes, marks } from './prosemirror-config';
 import { useI18n } from '../../i18n';
 import styles from './Editor.module.css';
 
@@ -15,6 +15,7 @@ export interface FormatState {
   headingLevel: number | null;
   isBulletList: boolean;
   isOrderedList: boolean;
+  isTaskList: boolean;
   isBlockquote: boolean;
   isCodeBlock: boolean;
 }
@@ -38,19 +39,19 @@ export default function EditorToolbar(props: EditorToolbarProps) {
 
   const toggleBold = () => {
     if (!props.view) return;
-    toggleMark(schema.marks.strong)(props.view.state, props.view.dispatch);
+    toggleMark(marks.strong)(props.view.state, props.view.dispatch);
     props.view.focus();
   };
 
   const toggleItalic = () => {
     if (!props.view) return;
-    toggleMark(schema.marks.em)(props.view.state, props.view.dispatch);
+    toggleMark(marks.em)(props.view.state, props.view.dispatch);
     props.view.focus();
   };
 
   const toggleCode = () => {
     if (!props.view) return;
-    toggleMark(schema.marks.code)(props.view.state, props.view.dispatch);
+    toggleMark(marks.code)(props.view.state, props.view.dispatch);
     props.view.focus();
   };
 
@@ -58,9 +59,9 @@ export default function EditorToolbar(props: EditorToolbarProps) {
     if (!props.view) return;
     const { state, dispatch } = props.view;
     if (props.formatState.headingLevel === level) {
-      setBlockType(schema.nodes.paragraph)(state, dispatch);
+      setBlockType(nodes.paragraph)(state, dispatch);
     } else {
-      setBlockType(schema.nodes.heading, { level })(state, dispatch);
+      setBlockType(nodes.heading, { level })(state, dispatch);
     }
     props.view.focus();
   };
@@ -71,7 +72,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
     if (props.formatState.isBulletList) {
       lift(state, dispatch);
     } else {
-      wrapInList(schema.nodes.bullet_list)(state, dispatch);
+      wrapInList(nodes.bullet_list)(state, dispatch);
     }
     props.view.focus();
   };
@@ -82,9 +83,46 @@ export default function EditorToolbar(props: EditorToolbarProps) {
     if (props.formatState.isOrderedList) {
       lift(state, dispatch);
     } else {
-      wrapInList(schema.nodes.ordered_list)(state, dispatch);
+      wrapInList(nodes.ordered_list)(state, dispatch);
     }
     props.view.focus();
+  };
+
+  const toggleTaskList = () => {
+    if (!props.view) return;
+    const { state, dispatch } = props.view;
+    const { $from } = state.selection;
+
+    if (props.formatState.isTaskList) {
+      // Convert task list item to regular list item
+      for (let d = $from.depth; d > 0; d--) {
+        const node = $from.node(d);
+        if (node.type === nodes.list_item && node.attrs.checked !== null) {
+          const tr = state.tr.setNodeMarkup($from.before(d), undefined, { checked: null });
+          dispatch(tr);
+          props.view.focus();
+          return;
+        }
+      }
+    } else if (props.formatState.isBulletList || props.formatState.isOrderedList) {
+      // Convert regular list item to task list item
+      for (let d = $from.depth; d > 0; d--) {
+        const node = $from.node(d);
+        if (node.type === nodes.list_item) {
+          const tr = state.tr.setNodeMarkup($from.before(d), undefined, { checked: false });
+          dispatch(tr);
+          props.view.focus();
+          return;
+        }
+      }
+    } else {
+      // Create new task list
+      const listItem = nodes.list_item.create({ checked: false }, nodes.paragraph.create());
+      const bulletList = nodes.bullet_list.create(null, listItem);
+      const tr = state.tr.replaceSelectionWith(bulletList);
+      dispatch(tr);
+      props.view.focus();
+    }
   };
 
   const toggleBlockquote = () => {
@@ -93,7 +131,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
     if (props.formatState.isBlockquote) {
       lift(state, dispatch);
     } else {
-      wrapIn(schema.nodes.blockquote)(state, dispatch);
+      wrapIn(nodes.blockquote)(state, dispatch);
     }
     props.view.focus();
   };
@@ -102,9 +140,9 @@ export default function EditorToolbar(props: EditorToolbarProps) {
     if (!props.view) return;
     const { state, dispatch } = props.view;
     if (props.formatState.isCodeBlock) {
-      setBlockType(schema.nodes.paragraph)(state, dispatch);
+      setBlockType(nodes.paragraph)(state, dispatch);
     } else {
-      setBlockType(schema.nodes.code_block)(state, dispatch);
+      setBlockType(nodes.code_block)(state, dispatch);
     }
     props.view.focus();
   };
@@ -177,6 +215,9 @@ export default function EditorToolbar(props: EditorToolbarProps) {
             title="Numbered List"
           >
             1.
+          </button>
+          <button class={formatButtonClass(props.formatState.isTaskList)} onClick={toggleTaskList} title="Task List">
+            ☐
           </button>
           <button class={formatButtonClass(props.formatState.isBlockquote)} onClick={toggleBlockquote} title="Quote">
             "

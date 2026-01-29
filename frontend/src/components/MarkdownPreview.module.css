@@ -46,6 +46,23 @@
   margin: var(--s-2) 0;
 }
 
+/* Task list items - using :global() since class names are injected via innerHTML */
+.preview :global(li.task-list-item) {
+  list-style: none;
+  position: relative;
+}
+
+.preview :global(li.task-list-item .task-checkbox) {
+  position: absolute;
+  left: -1.5rem;
+  top: 0.15em;
+}
+
+.preview :global(li.task-list-item[data-checked='true']) {
+  text-decoration: line-through;
+  color: var(--c-text-light);
+}
+
 .preview blockquote {
   margin: var(--s-3) 0;
   padding-left: var(--s-3);
