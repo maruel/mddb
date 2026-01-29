@@ -1,8 +1,8 @@
 // Main application component managing routing and layout.
 
-import { createSignal, createEffect, For, Show, onMount, onCleanup, batch } from 'solid-js';
+import { createSignal, createEffect, For, Show, onMount, onCleanup, batch, lazy, Suspense } from 'solid-js';
 import Sidebar from './components/Sidebar';
-import Editor from './components/editor/Editor';
+const Editor = lazy(() => import('./components/editor/Editor'));
 import TableTable from './components/TableTable';
 import TableGrid from './components/TableGrid';
 import TableGallery from './components/TableGallery';
@@ -611,12 +611,14 @@ function AppContent() {
 
                         <div class={styles.nodeContent}>
                           <Show when={selectedNodeData()?.has_page}>
-                            <Editor
-                              content={content()}
-                              nodeId={selectedNodeId() ?? undefined}
-                              assetUrls={assetUrls()}
-                              onChange={handleContentChange}
-                            />
+                            <Suspense fallback={<div class={styles.editorLoading}>{t('common.loading')}</div>}>
+                              <Editor
+                                content={content()}
+                                nodeId={selectedNodeId() ?? undefined}
+                                assetUrls={assetUrls()}
+                                onChange={handleContentChange}
+                              />
+                            </Suspense>
                           </Show>
 
                           <Show when={selectedNodeData()?.has_table}>

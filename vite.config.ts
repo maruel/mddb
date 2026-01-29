@@ -79,9 +79,17 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        // Deterministic chunk naming to ensure reproducible builds
+        // Split chunks for better caching and lazy loading
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
+            // ProseMirror and markdown-it are lazy-loaded with Editor
+            if (id.includes('prosemirror') || id.includes('markdown-it') ||
+                id.includes('entities') || id.includes('linkify-it') ||
+                id.includes('mdurl') || id.includes('uc.micro') ||
+                id.includes('punycode')) {
+              return 'editor-vendor';
+            }
+            // Core dependencies always loaded
             return 'vendor';
           }
         },
