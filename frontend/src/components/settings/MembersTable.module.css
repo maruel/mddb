@@ -1,0 +1,30 @@
+/* Members table styles. */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--s-3);
+  text-align: left;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--c-text-light);
+  background: var(--c-bg-alt);
+}
+
+.roleSelect {
+  padding: var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.roleSelect:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -33,14 +33,17 @@ import {
 } from './contexts';
 import {
   workspaceUrl,
-  workspaceSettingsUrl,
   orgSettingsUrl,
+  settingsUrl,
   parseWorkspaceRoot,
   parseNodeUrl,
   parseWorkspaceSettings,
   parseOrgSettings,
+  parseUnifiedSettings,
   isStaticRoute,
+  type UnifiedSettingsMatch,
 } from './utils/urls';
+import { Settings } from './components/settings';
 import { useI18n, type Locale } from './i18n';
 import type { NodeResponse, OrgMembershipResponse, NotionImportStatusResponse } from '@sdk/types.gen';
 import styles from './App.module.css';
@@ -92,6 +95,7 @@ function AppContent() {
   const [isProfilePage, setIsProfilePage] = createSignal(false);
   const [isPrivacyPage, setIsPrivacyPage] = createSignal(false);
   const [isTermsPage, setIsTermsPage] = createSignal(false);
+  const [settingsRoute, setSettingsRoute] = createSignal<UnifiedSettingsMatch | null>(null);
 
   // UI state
   const [viewMode, setViewMode] = createSignal<'table' | 'grid' | 'gallery' | 'board'>('table');
@@ -132,51 +136,64 @@ function AppContent() {
       return;
     }
     if (staticRoute === 'profile') {
-      setIsProfilePage(true);
+      // Redirect old /profile to new /settings/user
+      window.history.replaceState(null, '', settingsUrl('user'));
+      setSettingsRoute({ type: 'profile' });
+      setIsProfilePage(false);
       setIsSettingsPage(false);
+      setIsOrgSettingsPage(false);
       setIsPrivacyPage(false);
       setIsTermsPage(false);
       return;
     }
+    if (staticRoute === 'settings') {
+      // Handle new unified settings routes
+      const settings = parseUnifiedSettings(path);
+      if (settings) {
+        setSettingsRoute(settings);
+        setIsProfilePage(false);
+        setIsSettingsPage(false);
+        setIsOrgSettingsPage(false);
+        setIsPrivacyPage(false);
+        setIsTermsPage(false);
+        return;
+      }
+    }
+    setSettingsRoute(null);
     setIsProfilePage(false);
     setIsPrivacyPage(false);
     setIsTermsPage(false);
 
-    // Check for workspace settings
+    // Check for workspace settings (old routes - redirect to new)
     const wsSettings = parseWorkspaceSettings(path);
     if (wsSettings) {
       const wsId = wsSettings.id;
-      if (user() && user()?.workspace_id !== wsId) {
-        try {
-          const u = user();
-          const isMember = u?.workspaces?.some((m) => m.workspace_id === wsId);
-          if (!isMember) {
-            setError(t('errors.noAccessToWs') || 'You do not have access to this workspace');
-            const currentWsId = u?.workspace_id;
-            const currentWsName = u?.workspace_name;
-            if (currentWsId) {
-              setTimeout(() => window.history.replaceState(null, '', workspaceUrl(currentWsId, currentWsName)), 2000);
-            }
-            return;
-          }
-          await switchWorkspace(wsId, false);
-        } catch {
-          return;
+      const u = user();
+      const wsMembership = u?.workspaces?.find((m) => m.workspace_id === wsId);
+      if (!wsMembership) {
+        setError(t('errors.noAccessToWs') || 'You do not have access to this workspace');
+        const currentWsId = u?.workspace_id;
+        const currentWsName = u?.workspace_name;
+        if (currentWsId) {
+          setTimeout(() => window.history.replaceState(null, '', workspaceUrl(currentWsId, currentWsName)), 2000);
         }
+        return;
       }
-      setIsSettingsPage(true);
-      setIsOrgSettingsPage(false);
+      // Redirect to new unified settings URL
+      const newUrl = settingsUrl('workspace', wsId, wsMembership.workspace_name);
+      window.history.replaceState(null, '', newUrl);
+      setSettingsRoute({ type: 'workspace', id: wsId });
       return;
     }
     setIsSettingsPage(false);
 
-    // Check for organization settings
+    // Check for organization settings (old routes - redirect to new)
     const orgSettings = parseOrgSettings(path);
     if (orgSettings) {
       const orgId = orgSettings.id;
       const u = user();
-      const isMember = u?.organizations?.some((m) => m.organization_id === orgId);
-      if (!isMember) {
+      const orgMembership = u?.organizations?.find((m) => m.organization_id === orgId);
+      if (!orgMembership) {
         setError(t('errors.noAccessToOrg') || 'You do not have access to this organization');
         const currentWsId = u?.workspace_id;
         const currentWsName = u?.workspace_name;
@@ -185,8 +202,10 @@ function AppContent() {
         }
         return;
       }
-      setIsOrgSettingsPage(true);
-      setOrgSettingsId(orgId);
+      // Redirect to new unified settings URL
+      const newUrl = settingsUrl('org', orgId, orgMembership.organization_name);
+      window.history.replaceState(null, '', newUrl);
+      setSettingsRoute({ type: 'org', id: orgId });
       return;
     }
     setIsOrgSettingsPage(false);
@@ -386,14 +405,21 @@ function AppContent() {
                   </button>
                   <WorkspaceMenu
                     onOpenSettings={() => {
-                      setIsSettingsPage(true);
-                      setSelectedNodeId(null);
-                      setShowMobileSidebar(false);
                       const wsId = user()?.workspace_id;
                       const wsName = user()?.workspace_name;
                       if (wsId) {
-                        window.history.pushState(null, '', workspaceSettingsUrl(wsId, wsName));
+                        setSettingsRoute({ type: 'workspace', id: wsId });
+                        setIsSettingsPage(false);
+                        setSelectedNodeId(null);
+                        setShowMobileSidebar(false);
+                        window.history.pushState(null, '', settingsUrl('workspace', wsId, wsName));
                       }
+                    }}
+                    onSwitchWorkspace={() => {
+                      setSettingsRoute(null);
+                      setIsSettingsPage(false);
+                      setIsOrgSettingsPage(false);
+                      setIsProfilePage(false);
                     }}
                     onCreateWorkspace={() => setShowCreateWorkspace(true)}
                     onImportFromNotion={() => setShowNotionImport(true)}
@@ -418,10 +444,11 @@ function AppContent() {
                 <div class={styles.userInfo}>
                   <UserMenu
                     onProfile={() => {
-                      setIsProfilePage(true);
+                      setSettingsRoute({ type: 'profile' });
+                      setIsProfilePage(false);
                       setIsSettingsPage(false);
                       setSelectedNodeId(null);
-                      window.history.pushState(null, '', '/profile');
+                      window.history.pushState(null, '', settingsUrl('user'));
                     }}
                   />
                 </div>
@@ -463,7 +490,23 @@ function AppContent() {
                 <OrganizationSettings orgId={orgSettingsId() as string} onBack={() => window.history.back()} />
               </Show>
 
-              <Show when={!isProfilePage() && !isSettingsPage() && !isOrgSettingsPage()}>
+              <Show when={settingsRoute()}>
+                {(route) => (
+                  <Settings
+                    route={route()}
+                    onClose={() => {
+                      setSettingsRoute(null);
+                      const wsId = user()?.workspace_id;
+                      const wsName = user()?.workspace_name;
+                      if (wsId) {
+                        window.history.pushState(null, '', workspaceUrl(wsId, wsName));
+                      }
+                    }}
+                  />
+                )}
+              </Show>
+
+              <Show when={!isProfilePage() && !isSettingsPage() && !isOrgSettingsPage() && !settingsRoute()}>
                 <div class={styles.container}>
                   <Show when={showMobileSidebar()}>
                     <div class={styles.mobileBackdrop} onClick={() => setShowMobileSidebar(false)} />

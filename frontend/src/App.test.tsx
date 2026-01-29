@@ -85,8 +85,17 @@ vi.mock('./components/TableBoard', () => ({
 
 vi.mock('./components/WorkspaceSettings', () => ({
   default: (props: { onBack: () => void }) => (
-    <div data-testid="workspace-settings">
+    <div data-testid="workspace-settings-old">
       <button onClick={props.onBack}>Back</button>
+    </div>
+  ),
+}));
+
+vi.mock('./components/settings', () => ({
+  Settings: (props: { route: { type: string; id?: string }; onClose: () => void }) => (
+    <div data-testid="workspace-settings">
+      <span data-testid="settings-route-type">{props.route.type}</span>
+      <button onClick={props.onClose}>Back</button>
     </div>
   ),
 }));

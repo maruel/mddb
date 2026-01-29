@@ -1,0 +1,93 @@
+/* Settings navigation item styles. */
+
+.navItemWrapper {
+  /* Container for item and its children */
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  padding-right: var(--s-3);
+  cursor: pointer;
+  color: var(--c-text);
+  text-decoration: none;
+  transition:
+    background var(--transition),
+    border-color var(--transition);
+  border-left: 3px solid transparent;
+  font-size: 0.9rem;
+}
+
+.navItem:hover {
+  background: var(--c-bg-alt);
+}
+
+.navItem.active {
+  background: #eff6ff;
+  border-left-color: var(--c-primary);
+  color: var(--c-primary);
+  font-weight: 500;
+}
+
+.navItem.section {
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--c-text-light);
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+  border-top: 1px solid var(--c-border);
+}
+
+.navItem.section:first-child {
+  margin-top: 0;
+  padding-top: var(--s-2);
+  border-top: none;
+}
+
+.navItem.section:hover {
+  background: transparent;
+  color: var(--c-text);
+}
+
+.expandIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  font-size: 9px;
+  transition: transform 0.2s ease;
+  color: var(--c-text-light);
+  border-radius: 3px;
+}
+
+.expandIcon:hover {
+  background: var(--c-bg-alt);
+  color: var(--c-text);
+}
+
+.expandIcon.expanded {
+  transform: rotate(90deg);
+}
+
+.expandSpacer {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.children {
+  /* Children container - indentation handled by paddingLeft */
+}

@@ -1,0 +1,101 @@
+/* Organization settings panel styles. */
+
+.panel {
+  /* Container - max-width handled by parent */
+}
+
+.tabs {
+  display: flex;
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.tabs button {
+  background: none;
+  border: none;
+  padding: var(--s-3) var(--s-4);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--c-text-light);
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+}
+
+.tabs button:hover {
+  color: var(--c-text);
+}
+
+.tabs button.activeTab {
+  color: var(--c-primary);
+  border-bottom-color: var(--c-primary);
+}
+
+.section {
+  margin-bottom: var(--s-5);
+}
+
+.section h3 {
+  font-size: 1.1rem;
+  margin-bottom: var(--s-3);
+}
+
+.error {
+  padding: var(--s-3);
+  background: #fef2f2;
+  color: var(--c-danger);
+  border-radius: var(--radius);
+  margin-bottom: var(--s-4);
+}
+
+.success {
+  padding: var(--s-3);
+  background: #f0fdf4;
+  color: var(--c-success);
+  border-radius: var(--radius);
+  margin-bottom: var(--s-4);
+}
+
+.settingsForm {
+  background: var(--c-bg);
+  padding: var(--s-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.formItem {
+  margin-bottom: var(--s-4);
+}
+
+.formItem label {
+  display: block;
+  margin-bottom: var(--s-2);
+  font-weight: 500;
+}
+
+.formItem input[type='text'],
+.formItem select {
+  width: 100%;
+  padding: var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.saveButton {
+  padding: var(--s-3) var(--s-5);
+  background: var(--c-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.saveButton:hover {
+  background: var(--c-primary-hover);
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,0 +1,81 @@
+/* Invite form styles. */
+
+.inviteSection {
+  margin-top: var(--s-5);
+}
+
+.inviteForm {
+  padding: var(--s-4);
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
+}
+
+.inviteForm h4 {
+  margin: 0 0 var(--s-3) 0;
+}
+
+.formGroup {
+  display: flex;
+  gap: var(--s-3);
+}
+
+.formGroup input,
+.formGroup select {
+  padding: var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.formGroup input {
+  flex: 1;
+}
+
+.formGroup input:disabled,
+.formGroup select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.formGroup button {
+  padding: var(--s-2) var(--s-4);
+  background: var(--c-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.formGroup button:hover:not(:disabled) {
+  background: var(--c-primary-hover);
+}
+
+.formGroup button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pendingSection {
+  margin-top: var(--s-5);
+}
+
+.pendingSection h4 {
+  margin: 0 0 var(--s-3) 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--s-3);
+  text-align: left;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.table th {
+  font-weight: 600;
+  color: var(--c-text-light);
+  background: var(--c-bg-alt);
+}

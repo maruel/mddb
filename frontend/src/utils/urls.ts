@@ -108,9 +108,51 @@ export function parseOrgSettings(path: string): SettingsMatch | null {
 /**
  * Checks if path is a static route.
  */
-export function isStaticRoute(path: string): 'privacy' | 'terms' | 'profile' | null {
+export function isStaticRoute(path: string): 'privacy' | 'terms' | 'profile' | 'settings' | null {
   if (path === '/privacy') return 'privacy';
   if (path === '/terms') return 'terms';
   if (path === '/profile') return 'profile';
+  if (path.startsWith('/settings')) return 'settings';
+  return null;
+}
+
+/** Unified Settings URL types */
+
+export interface UnifiedSettingsMatch {
+  type: 'profile' | 'workspace' | 'org' | 'redirect';
+  id?: string;
+  section?: string;
+}
+
+/**
+ * Builds a unified settings URL.
+ */
+export function settingsUrl(type?: 'user' | 'workspace' | 'org', id?: string, name?: string): string {
+  if (!type || type === 'user') return '/settings/user';
+  const slug = slugify(name || type);
+  return `/settings/${type}/${id}+${slug}`;
+}
+
+/**
+ * Parses unified settings URL. Returns null if no match.
+ */
+export function parseUnifiedSettings(path: string): UnifiedSettingsMatch | null {
+  // Redirect bare /settings to /settings/user
+  if (path === '/settings' || path === '/settings/') {
+    return { type: 'redirect', id: '/settings/user' };
+  }
+  if (path === '/settings/user' || path === '/settings/user/') {
+    return { type: 'profile' };
+  }
+  const wsMatch = path.match(/^\/settings\/workspace\/([^+/]+)/);
+  if (wsMatch) {
+    const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+    return { type: 'workspace', id: wsMatch[1], section: hash || undefined };
+  }
+  const orgMatch = path.match(/^\/settings\/org\/([^+/]+)/);
+  if (orgMatch) {
+    const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+    return { type: 'org', id: orgMatch[1], section: hash || undefined };
+  }
   return null;
 }

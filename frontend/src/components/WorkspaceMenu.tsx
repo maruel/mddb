@@ -12,6 +12,7 @@ interface WorkspaceMenuProps {
   onOpenSettings: () => void;
   onCreateWorkspace: () => void;
   onImportFromNotion: () => void;
+  onSwitchWorkspace?: () => void;
 }
 
 interface OrgWithWorkspaces {
@@ -73,6 +74,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
 
   const handleSwitchWorkspace = (wsId: string) => {
     setIsOpen(false);
+    props.onSwitchWorkspace?.();
     if (wsId !== currentWsId()) {
       switchWorkspace(wsId);
     }

@@ -134,6 +134,8 @@ export interface Dictionary {
     members: string;
     personal: string;
     workspace: string;
+    workspaces: string;
+    organizations: string;
     gitSync: string;
     // Members tab
     nameColumn: string;

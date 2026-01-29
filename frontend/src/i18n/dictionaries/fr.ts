@@ -134,6 +134,8 @@ export const dict: Dictionary = {
     members: 'Membres',
     personal: 'Personnel',
     workspace: 'Espace de travail',
+    workspaces: 'Espaces de travail',
+    organizations: 'Organisations',
     gitSync: 'Sync Git',
     // Members tab
     nameColumn: 'Nom',

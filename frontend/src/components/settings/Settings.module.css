@@ -1,0 +1,105 @@
+/* Unified settings page layout styles. */
+
+.settingsPage {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--c-bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-bg);
+  flex-shrink: 0;
+  height: 56px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: var(--s-2);
+  color: var(--c-text);
+}
+
+.backButton {
+  background: none;
+  border: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: var(--c-text-light);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--radius);
+  transition: all var(--transition);
+}
+
+.backButton:hover {
+  color: var(--c-text);
+  background: var(--c-bg-alt);
+}
+
+.title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  cursor: pointer;
+}
+
+.title:hover {
+  color: var(--c-primary);
+}
+
+.layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s-5);
+}
+
+.content > div {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.error {
+  padding: var(--s-3);
+  background: #fef2f2;
+  color: var(--c-danger);
+  border-radius: var(--radius);
+}
+
+.mobileBackdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .hamburger {
+    display: block;
+  }
+
+  .mobileBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    top: 56px;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 99;
+  }
+}

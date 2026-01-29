@@ -1,0 +1,38 @@
+/* Settings sidebar navigation styles. */
+
+.sidebar {
+  width: 240px;
+  background: var(--c-bg);
+  border-right: 1px solid var(--c-border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.nav {
+  padding: var(--s-3) 0;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 56px;
+    height: calc(100vh - 56px);
+    z-index: 100;
+    transform: translateX(-100%);
+    transition:
+      transform var(--transition),
+      visibility 0s 0.15s;
+    visibility: hidden;
+  }
+
+  .sidebar.mobileOpen {
+    transform: translateX(0);
+    transition:
+      transform var(--transition),
+      visibility 0s 0s;
+    visibility: visible;
+  }
+}
