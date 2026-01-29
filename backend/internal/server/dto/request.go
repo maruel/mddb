@@ -404,6 +404,23 @@ type ListNodesRequest struct {
 	WsID jsonldb.ID `path:"wsID" tstype:"-"`
 }
 
+// GetNodeTitlesRequest is a request to get titles for multiple nodes.
+type GetNodeTitlesRequest struct {
+	WsID jsonldb.ID     `path:"wsID" tstype:"-"`
+	IDs  jsonldb.IDList `query:"ids" tstype:"string"` // Comma-separated node IDs
+}
+
+// Validate validates the get node titles request fields.
+func (r *GetNodeTitlesRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	if len(r.IDs) == 0 {
+		return MissingField("ids")
+	}
+	return nil
+}
+
 // Validate validates the list nodes request fields.
 func (r *ListNodesRequest) Validate() error {
 	if r.WsID.IsZero() {

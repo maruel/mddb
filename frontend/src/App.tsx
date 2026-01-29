@@ -84,6 +84,7 @@ function AppContent() {
     flushAutoSave,
     handleTitleChange,
     handleContentChange,
+    linkedNodeTitles,
   } = useEditor();
 
   const { records, hasMore, loadMoreRecords, addRecord, updateRecord, deleteRecord } = useRecords();
@@ -619,6 +620,7 @@ function AppContent() {
                                 content={content()}
                                 nodeId={selectedNodeId() ?? undefined}
                                 assetUrls={assetUrls()}
+                                linkedNodeTitles={linkedNodeTitles()}
                                 onChange={handleContentChange}
                                 wsId={user()?.workspace_id}
                                 getToken={() => token()}

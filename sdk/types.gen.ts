@@ -277,6 +277,12 @@ export interface DeleteRecordRequest {
 export interface ListNodesRequest {
 }
 /**
+ * GetNodeTitlesRequest is a request to get titles for multiple nodes.
+ */
+export interface GetNodeTitlesRequest {
+  IDs: string; // Comma-separated node IDs
+}
+/**
  * GetNodeRequest is a request to get a node.
  */
 export interface GetNodeRequest {
@@ -967,6 +973,7 @@ export interface NodeResponse {
   has_children?: boolean;
   children?: NodeResponse[];
   asset_urls?: { [key: string]: string};
+  backlinks?: BacklinkInfo[];
 }
 /**
  * GetPageResponse is a response containing page content.
@@ -1015,6 +1022,19 @@ export interface CreateTableUnderParentResponse {
  */
 export interface ListNodeChildrenResponse {
   nodes: NodeResponse[];
+}
+/**
+ * GetNodeTitlesResponse is a response containing a map of node IDs to titles.
+ */
+export interface GetNodeTitlesResponse {
+  titles: { [key: string]: string};
+}
+/**
+ * BacklinkInfo represents a page that links to this page.
+ */
+export interface BacklinkInfo {
+  node_id: string;
+  title: string;
 }
 /**
  * DataRecordResponse is the API representation of a data record.

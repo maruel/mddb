@@ -14,10 +14,14 @@ import { useWorkspace } from './WorkspaceContext';
 import { useI18n } from '../i18n';
 import { debounce } from '../utils/debounce';
 import { nodeUrl } from '../utils/urls';
+import { extractLinkedNodeIds } from '../components/editor/markdown-utils';
 import type { Commit } from '@sdk/types.gen';
 
 /** Map of asset filename to signed URL */
 export type AssetUrlMap = Record<string, string>;
+
+/** Map of node ID to title for resolving internal page links */
+export type NodeTitleMap = Record<string, string>;
 
 interface EditorContextValue {
   // Editor state
@@ -31,6 +35,9 @@ interface EditorContextValue {
 
   // Asset URLs (filename -> signed URL)
   assetUrls: Accessor<AssetUrlMap>;
+
+  // Linked node titles (for resolving page link display text)
+  linkedNodeTitles: Accessor<NodeTitleMap>;
 
   // History
   showHistory: Accessor<boolean>;
@@ -62,6 +69,9 @@ export const EditorProvider: ParentComponent = (props) => {
 
   // Asset URLs accessor - derived from selectedNodeData
   const assetUrls = (): AssetUrlMap => selectedNodeData()?.asset_urls || {};
+
+  // Linked node titles for resolving page link display text
+  const [linkedNodeTitles, setLinkedNodeTitles] = createSignal<NodeTitleMap>({});
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
@@ -106,6 +116,31 @@ export const EditorProvider: ParentComponent = (props) => {
     debouncedAutoSave.flush();
   });
 
+  // Fetch linked node titles when content has internal links
+  async function fetchLinkedNodeTitles(nodeContent: string) {
+    const ws = wsApi();
+    const wsId = user()?.workspace_id;
+    if (!ws || !wsId || !nodeContent) {
+      setLinkedNodeTitles({});
+      return;
+    }
+
+    // Extract node IDs from internal links
+    const linkedIds = extractLinkedNodeIds(nodeContent, wsId);
+    if (linkedIds.length === 0) {
+      setLinkedNodeTitles({});
+      return;
+    }
+
+    try {
+      const resp = await ws.nodes.getNodeTitles({ IDs: linkedIds.join(',') });
+      setLinkedNodeTitles(resp.titles || {});
+    } catch {
+      // Silent failure - just use stored titles in links
+      setLinkedNodeTitles({});
+    }
+  }
+
   // Sync editor state when selected node changes
   createEffect(() => {
     const node = selectedNodeData();
@@ -115,6 +150,8 @@ export const EditorProvider: ParentComponent = (props) => {
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setShowHistory(false);
+      // Fetch linked node titles in the background
+      fetchLinkedNodeTitles(node.content || '');
     } else {
       resetEditor();
     }
@@ -127,6 +164,7 @@ export const EditorProvider: ParentComponent = (props) => {
     setAutoSaveStatus('idle');
     setShowHistory(false);
     setHistory([]);
+    setLinkedNodeTitles({});
   }
 
   function handleTitleChange(newTitle: string) {
@@ -192,6 +230,7 @@ export const EditorProvider: ParentComponent = (props) => {
     setHasUnsavedChanges,
     autoSaveStatus,
     assetUrls,
+    linkedNodeTitles,
     showHistory,
     setShowHistory,
     history,

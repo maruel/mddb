@@ -13,6 +13,7 @@ import (
 	"mime"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"sync"
@@ -1494,4 +1495,165 @@ func formatMarkdownFile(p *page) []byte {
 	buf.WriteString("\n\n")
 	buf.WriteString(p.content)
 	return buf.Bytes()
+}
+
+// --- Page Links Extraction and Backlinks Index ---
+
+// internalLinkPattern matches markdown links to internal pages: [text](/w/{wsID}+{slug}/{nodeID}+{slug})
+// The nodeID is captured in group 1.
+var internalLinkPattern = regexp.MustCompile(`\[[^\]]*\]\(/w/[^/+]+(?:\+[^/]*)*/([A-Za-z0-9]+)(?:\+[^)]*)?\)`)
+
+// ExtractLinkedNodeIDs extracts all node IDs from internal page links in markdown content.
+// Looks for patterns like [text](/w/{wsID}+{slug}/{nodeID}+{slug}) and returns unique node IDs.
+func ExtractLinkedNodeIDs(content string) []jsonldb.ID {
+	matches := internalLinkPattern.FindAllStringSubmatch(content, -1)
+	seen := make(map[string]bool)
+	var ids []jsonldb.ID
+
+	for _, match := range matches {
+		if len(match) < 2 {
+			continue
+		}
+		nodeIDStr := match[1]
+		if seen[nodeIDStr] {
+			continue
+		}
+		seen[nodeIDStr] = true
+
+		id, err := jsonldb.DecodeID(nodeIDStr)
+		if err == nil && !id.IsZero() {
+			ids = append(ids, id)
+		}
+	}
+	return ids
+}
+
+// linksIndexFile returns the path to the workspace links index file.
+func (ws *WorkspaceFileStore) linksIndexFile() string {
+	return filepath.Join(ws.wsDir, "links.json")
+}
+
+// readLinksIndex reads the links index from disk.
+func (ws *WorkspaceFileStore) readLinksIndex() (*LinksIndex, error) {
+	data, err := os.ReadFile(ws.linksIndexFile())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &LinksIndex{Links: make(map[string][]string)}, nil
+		}
+		return nil, fmt.Errorf("failed to read links index: %w", err)
+	}
+
+	var index LinksIndex
+	if err := json.Unmarshal(data, &index); err != nil {
+		return nil, fmt.Errorf("failed to parse links index: %w", err)
+	}
+	if index.Links == nil {
+		index.Links = make(map[string][]string)
+	}
+	return &index, nil
+}
+
+// writeLinksIndex writes the links index to disk.
+func (ws *WorkspaceFileStore) writeLinksIndex(index *LinksIndex) error {
+	data, err := json.Marshal(index)
+	if err != nil {
+		return fmt.Errorf("failed to marshal links index: %w", err)
+	}
+	if err := os.WriteFile(ws.linksIndexFile(), data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional
+		return fmt.Errorf("failed to write links index: %w", err)
+	}
+	return nil
+}
+
+// UpdateLinksForNode updates the links index with the outgoing links from a node.
+func (ws *WorkspaceFileStore) UpdateLinksForNode(sourceID jsonldb.ID, targetIDs []jsonldb.ID) error {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	index, err := ws.readLinksIndex()
+	if err != nil {
+		return err
+	}
+
+	// Convert target IDs to strings
+	targetStrs := make([]string, len(targetIDs))
+	for i, id := range targetIDs {
+		targetStrs[i] = id.String()
+	}
+
+	// Update the index
+	sourceStr := sourceID.String()
+	if len(targetStrs) == 0 {
+		delete(index.Links, sourceStr)
+	} else {
+		index.Links[sourceStr] = targetStrs
+	}
+
+	return ws.writeLinksIndex(index)
+}
+
+// RemoveLinksForNode removes all outgoing links from a node from the index.
+func (ws *WorkspaceFileStore) RemoveLinksForNode(sourceID jsonldb.ID) error {
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	index, err := ws.readLinksIndex()
+	if err != nil {
+		return err
+	}
+
+	delete(index.Links, sourceID.String())
+	return ws.writeLinksIndex(index)
+}
+
+// GetBacklinks returns all nodes that link to the given node.
+func (ws *WorkspaceFileStore) GetBacklinks(targetID jsonldb.ID) ([]BacklinkInfo, error) {
+	ws.mu.RLock()
+	defer ws.mu.RUnlock()
+
+	index, err := ws.readLinksIndex()
+	if err != nil {
+		return nil, err
+	}
+
+	targetStr := targetID.String()
+	var backlinks []BacklinkInfo
+
+	for sourceStr, targets := range index.Links {
+		for _, t := range targets {
+			if t != targetStr {
+				continue
+			}
+			sourceID, err := jsonldb.DecodeID(sourceStr)
+			if err != nil {
+				continue
+			}
+			// Read the source node to get its title
+			node, err := ws.ReadNode(sourceID)
+			if err != nil {
+				continue
+			}
+			backlinks = append(backlinks, BacklinkInfo{
+				NodeID: sourceID,
+				Title:  node.Title,
+			})
+			break
+		}
+	}
+
+	return backlinks, nil
+}
+
+// GetNodeTitles returns a map of node IDs to their titles for the given IDs.
+func (ws *WorkspaceFileStore) GetNodeTitles(ids []jsonldb.ID) (map[jsonldb.ID]string, error) {
+	titles := make(map[jsonldb.ID]string)
+	for _, id := range ids {
+		node, err := ws.ReadNode(id)
+		if err != nil {
+			// Node might have been deleted, skip it
+			continue
+		}
+		titles[id] = node.Title
+	}
+	return titles, nil
 }

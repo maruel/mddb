@@ -4,7 +4,12 @@ import { createSignal, onMount, onCleanup, createEffect, on, createMemo } from '
 import { EditorView } from 'prosemirror-view';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import { useI18n } from '../../i18n';
-import { rewriteAssetUrls, reverseRewriteAssetUrls } from './markdown-utils';
+import {
+  rewriteAssetUrls,
+  reverseRewriteAssetUrls,
+  rewriteInternalLinkTitles,
+  type NodeTitleMap,
+} from './markdown-utils';
 import { schema, nodes, marks, markdownParser, markdownSerializer, createEditorState } from './prosemirror-config';
 import { createSlashCommandPlugin, type SlashMenuState } from './slashCommandPlugin';
 import { createDropUploadPlugin } from './dropUploadPlugin';
@@ -18,6 +23,7 @@ interface EditorProps {
   content: string;
   nodeId?: string;
   assetUrls?: AssetUrlMap;
+  linkedNodeTitles?: NodeTitleMap;
   onChange: (markdown: string) => void;
   placeholder?: string;
   readOnly?: boolean;
@@ -117,9 +123,13 @@ export default function Editor(props: EditorProps) {
     isCodeBlock: false,
   });
 
-  // Parse markdown to ProseMirror document, handling asset URLs
+  // Parse markdown to ProseMirror document, handling asset URLs and link titles
   const parseMarkdown = (md: string): ProseMirrorNode | null => {
-    const processed = rewriteAssetUrls(md, props.assetUrls || {});
+    let processed = rewriteAssetUrls(md, props.assetUrls || {});
+    // Rewrite internal link titles to current titles if wsId is available
+    if (props.wsId && props.linkedNodeTitles && Object.keys(props.linkedNodeTitles).length > 0) {
+      processed = rewriteInternalLinkTitles(processed, props.linkedNodeTitles, props.wsId);
+    }
     return markdownParser.parse(processed);
   };
 

@@ -24,6 +24,8 @@ import type {
   DeleteRecordResponse,
   DeleteTableResponse,
   ErrorResponse,
+  GetNodeTitlesRequest,
+  GetNodeTitlesResponse,
   GetNodeVersionResponse,
   GetPageResponse,
   GetRecordResponse,
@@ -237,6 +239,12 @@ export function createAPIClient(fetchFn: FetchFn) {
           },
           deleteNode: (id: string) => post<DeleteNodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/delete`),
           getNode: (id: string) => get<NodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}`),
+          async getNodeTitles(options: GetNodeTitlesRequest): Promise<GetNodeTitlesResponse> {
+            const params = new URLSearchParams();
+            if (options.IDs) params.set('ids', options.IDs);
+            const url = `/api/workspaces/${wsID}/nodes/titles` + (params.toString() ? `?${params}` : '');
+            return get<GetNodeTitlesResponse>(fetchFn, url);
+          },
           listNodeChildren: (id: string) => get<ListNodeChildrenResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/children`),
         },
         notion: {

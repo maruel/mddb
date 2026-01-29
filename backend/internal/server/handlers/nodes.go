@@ -46,6 +46,18 @@ func (h *NodeHandler) GetNode(ctx context.Context, wsID jsonldb.ID, _ *identity.
 		}
 	}
 
+	// Add backlinks (pages that link to this page)
+	backlinks, err := ws.GetBacklinks(req.ID)
+	if err == nil && len(backlinks) > 0 {
+		resp.Backlinks = make([]dto.BacklinkInfo, len(backlinks))
+		for i, bl := range backlinks {
+			resp.Backlinks[i] = dto.BacklinkInfo{
+				NodeID: bl.NodeID,
+				Title:  bl.Title,
+			}
+		}
+	}
+
 	return resp, nil
 }
 
@@ -69,6 +81,22 @@ func (h *NodeHandler) ListNodeChildren(ctx context.Context, wsID jsonldb.ID, _ *
 	return &dto.ListNodeChildrenResponse{Nodes: responses}, nil
 }
 
+// GetNodeTitles returns a map of node IDs to their titles.
+// The IDs are passed as a comma-separated query parameter.
+func (h *NodeHandler) GetNodeTitles(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.GetNodeTitlesRequest) (*dto.GetNodeTitlesResponse, error) {
+	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+
+	titles, err := ws.GetNodeTitles(req.IDs)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get node titles", err)
+	}
+
+	return &dto.GetNodeTitlesResponse{Titles: titles}, nil
+}
+
 // DeleteNode deletes a node.
 func (h *NodeHandler) DeleteNode(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeleteNodeRequest) (*dto.DeleteNodeResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
@@ -79,6 +107,10 @@ func (h *NodeHandler) DeleteNode(ctx context.Context, wsID jsonldb.ID, user *ide
 	if err := ws.DeletePage(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("node")
 	}
+
+	// Remove links index for this node
+	_ = ws.RemoveLinksForNode(req.ID)
+
 	return &dto.DeleteNodeResponse{Ok: true}, nil
 }
 
@@ -171,6 +203,14 @@ func (h *NodeHandler) CreatePage(ctx context.Context, wsID jsonldb.ID, user *ide
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
 
+	// Update links index for this page if it has content with links
+	if req.Content != "" {
+		linkedNodeIDs := content.ExtractLinkedNodeIDs(req.Content)
+		if len(linkedNodeIDs) > 0 {
+			_ = ws.UpdateLinksForNode(node.ID, linkedNodeIDs)
+		}
+	}
+
 	return &dto.CreatePageResponse{ID: node.ID}, nil
 }
 
@@ -206,6 +246,15 @@ func (h *NodeHandler) UpdatePage(ctx context.Context, wsID jsonldb.ID, user *ide
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
+
+	// Update links index for this page
+	linkedNodeIDs := content.ExtractLinkedNodeIDs(req.Content)
+	if err := ws.UpdateLinksForNode(req.ID, linkedNodeIDs); err != nil {
+		// Log the error but don't fail the request
+		// The links index is a cache and can be rebuilt
+		_ = err
+	}
+
 	return &dto.UpdatePageResponse{ID: node.ID}, nil
 }
 
@@ -220,6 +269,10 @@ func (h *NodeHandler) DeletePage(ctx context.Context, wsID jsonldb.ID, user *ide
 	if err := ws.DeletePageFromNode(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("page")
 	}
+
+	// Remove links index for this page
+	_ = ws.RemoveLinksForNode(req.ID)
+
 	return &dto.DeletePageResponse{Ok: true}, nil
 }
 

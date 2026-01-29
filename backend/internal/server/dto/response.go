@@ -374,6 +374,7 @@ type NodeResponse struct {
 	HasChildren bool              `json:"has_children,omitempty" jsonschema:"description=Whether node has child nodes"`
 	Children    []NodeResponse    `json:"children,omitempty" jsonschema:"description=Nested nodes"`
 	AssetURLs   map[string]string `json:"asset_urls,omitempty" jsonschema:"description=Map of asset filename to signed URL"`
+	Backlinks   []BacklinkInfo    `json:"backlinks,omitempty" jsonschema:"description=Pages that link to this page"`
 }
 
 // GetPageResponse is a response containing page content.
@@ -415,6 +416,17 @@ type CreateTableUnderParentResponse struct {
 // ListNodeChildrenResponse is a response containing children of a node.
 type ListNodeChildrenResponse struct {
 	Nodes []NodeResponse `json:"nodes" jsonschema:"description=Child nodes"`
+}
+
+// GetNodeTitlesResponse is a response containing a map of node IDs to titles.
+type GetNodeTitlesResponse struct {
+	Titles map[jsonldb.ID]string `json:"titles" jsonschema:"description=Map of node ID to title"`
+}
+
+// BacklinkInfo represents a page that links to this page.
+type BacklinkInfo struct {
+	NodeID jsonldb.ID `json:"node_id" jsonschema:"description=ID of the linking page"`
+	Title  string     `json:"title" jsonschema:"description=Title of the linking page"`
 }
 
 // DataRecordResponse is the API representation of a data record.
