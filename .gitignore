@@ -12,3 +12,4 @@ coverage.out
 /playwright-report/
 /test-results/
 /tmp/
+bundle-stats.html

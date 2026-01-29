@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import solid from 'vite-plugin-solid';
 import { VitePWA } from 'vite-plugin-pwa';
+import { visualizer } from 'rollup-plugin-visualizer';
 import { resolve } from 'path';
 
 export default defineConfig({
@@ -63,6 +64,12 @@ export default defineConfig({
           },
         ],
       },
+    }),
+    visualizer({
+      filename: 'bundle-stats.html',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
     }),
   ],
   build: {
