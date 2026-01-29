@@ -766,6 +766,35 @@ function hello() {
     await page.locator('input[placeholder*="Title"]').click();
     await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
 
+    // Test menu position is correct when filtering with "/pag"
+    // Type characters one by one to test position stability during filtering
+    await editor.click();
+    await page.keyboard.press('End');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('/');
+    await expect(slashMenu).toBeVisible({ timeout: 3000 });
+    await page.keyboard.type('p');
+    await page.keyboard.type('a');
+    await page.keyboard.type('g');
+
+    // Verify menu is positioned near the cursor, not at (0, 0)
+    // Wait for menu to have valid position (it starts hidden while calculating)
+    await expect(async () => {
+      const menuBox = await slashMenu.boundingBox();
+      expect(menuBox).toBeTruthy();
+      // Menu should not be at top-left corner (0, 0) - it should be within the editor area
+      // The editor starts after the sidebar (~260px) and below the toolbar (~140px)
+      expect(menuBox!.x).toBeGreaterThan(200);
+      expect(menuBox!.y).toBeGreaterThan(100);
+    }).toPass({ timeout: 3000 });
+    await takeScreenshot('slash-menu-pag-position');
+
+    // Should show matches for "pag" (Subpage, Paragraph, Code Block via fuzzy match on "programming")
+    const pagMenuItems = slashMenu.locator('[class*="slashMenuItem"]');
+    const pagItemCount = await pagMenuItems.count();
+    expect(pagItemCount).toBeGreaterThan(0);
+    await page.keyboard.press('Escape');
+
     // Verify slash command does NOT trigger mid-word
     await editor.click();
     await page.keyboard.press('End'); // Go to end of current line

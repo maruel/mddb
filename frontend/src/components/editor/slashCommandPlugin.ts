@@ -109,13 +109,23 @@ export function createSlashCommandPlugin(onStateChange: (state: SlashMenuState) 
             // Calculate menu position based on trigger position
             try {
               const coords = view.coordsAtPos(pluginState.triggerPos);
+              const newTop = coords.bottom + 4;
+              const newLeft = coords.left;
+
+              // Only update position if we get valid coordinates (not 0,0)
+              // This can happen during rapid typing or when position is off-screen
+              const hasValidPosition = newTop > 0 || newLeft > 0;
+              const position = hasValidPosition ? { top: newTop, left: newLeft } : pluginState.position; // Keep existing position if new one is invalid
+
               const newState: SlashMenuState = {
                 ...pluginState,
-                position: { top: coords.bottom + 4, left: coords.left },
+                position,
               };
               onStateChange(newState);
             } catch {
               // Position calculation may fail during rapid updates
+              // Still notify state change to update query filtering
+              onStateChange(pluginState);
             }
           }
         },

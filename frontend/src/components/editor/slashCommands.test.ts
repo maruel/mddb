@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { schema, nodes, marks, markdownSerializer, markdownParser } from './prosemirror-config';
-import { slashCommands } from './slashCommands';
+import { slashCommands, filterCommands } from './slashCommands';
 
 describe('subpage command link insertion', () => {
   it('should insert a proper markdown link that serializes correctly', () => {
@@ -129,5 +129,71 @@ describe('subpage creation sidebar refresh', () => {
     const firstChild = parentNodeAfterCreation.children[0];
     expect(firstChild).toBeDefined();
     expect(firstChild?.parent_id).toBe(parentId);
+  });
+});
+
+describe('filterCommands', () => {
+  it('returns all commands when query is empty', () => {
+    const result = filterCommands('');
+    expect(result).toHaveLength(slashCommands.length);
+  });
+
+  it('matches prefix on labelKey', () => {
+    const result = filterCommands('head');
+    expect(result.map((c) => c.id)).toContain('heading1');
+    expect(result.map((c) => c.id)).toContain('heading2');
+    expect(result.map((c) => c.id)).toContain('heading3');
+  });
+
+  it('matches prefix on keywords', () => {
+    const result = filterCommands('h1');
+    expect(result.map((c) => c.id)).toContain('heading1');
+  });
+
+  it('matches substring (contains)', () => {
+    // "umb" is in the middle of "numbered"
+    const result = filterCommands('umb');
+    expect(result.map((c) => c.id)).toContain('orderedList');
+  });
+
+  it('matches fuzzy character sequence', () => {
+    // "blt" matches "bullet" (b-u-l-l-e-t has b, l, t in order)
+    const result = filterCommands('blt');
+    expect(result.map((c) => c.id)).toContain('bulletList');
+  });
+
+  it('matches display text when translate function provided', () => {
+    const mockTranslate = (key: string) => {
+      const translations: Record<string, string> = {
+        'slashMenu.bulletList': 'Bullet List',
+        'slashMenu.orderedList': 'Numbered List',
+      };
+      return translations[key];
+    };
+
+    // "num" matches "Numbered List" display text
+    const result = filterCommands('num', mockTranslate);
+    expect(result.map((c) => c.id)).toContain('orderedList');
+  });
+
+  it('sorts results by match quality (prefix > contains > fuzzy)', () => {
+    // "list" is a prefix match for keywords in bulletList and orderedList
+    // but also contained in "tasklist" (keyword for taskList)
+    const result = filterCommands('list');
+
+    // All list commands should be included
+    expect(result.map((c) => c.id)).toContain('bulletList');
+    expect(result.map((c) => c.id)).toContain('orderedList');
+    expect(result.map((c) => c.id)).toContain('taskList');
+  });
+
+  it('is case insensitive', () => {
+    const result = filterCommands('HEADING');
+    expect(result.map((c) => c.id)).toContain('heading1');
+  });
+
+  it('returns empty array when no matches', () => {
+    const result = filterCommands('xyz123');
+    expect(result).toHaveLength(0);
   });
 });

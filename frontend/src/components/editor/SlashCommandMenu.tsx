@@ -28,8 +28,8 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   const [adjustedPosition, setAdjustedPosition] = createSignal<{ top: number; left: number } | null>(null);
   let menuRef: HTMLDivElement | undefined;
 
-  // Filter commands based on query
-  const filteredCommands = () => filterCommands(props.state.query);
+  // Filter commands based on query (pass translate function for display text matching)
+  const filteredCommands = () => filterCommands(props.state.query, t);
 
   // Reset selection and position when query changes or menu activates
   createEffect(() => {
@@ -54,6 +54,17 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
 
       let newTop = props.state.position.top;
       let newLeft = props.state.position.left;
+
+      // If position is (0, 0), it's likely invalid - recalculate from trigger position
+      if (newTop === 0 && newLeft === 0) {
+        try {
+          const coords = props.view.coordsAtPos(props.state.triggerPos);
+          newTop = coords.bottom + 4;
+          newLeft = coords.left;
+        } catch {
+          // If we can't get coords, keep (0, 0) - will be hidden by Show condition below
+        }
+      }
 
       // If menu extends beyond viewport bottom, position it above the cursor
       if (newTop + menuRect.height > viewportHeight) {
@@ -115,7 +126,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
       const pluginState = slashMenuKey.getState(props.view.state);
       if (!pluginState?.active) return;
 
-      const commands = filterCommands(pluginState.query);
+      const commands = filterCommands(pluginState.query, t);
       if (commands.length === 0) return;
 
       switch (e.key) {
@@ -222,6 +233,12 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   // Use adjusted position if available, otherwise use original position
   const menuPosition = () => adjustedPosition() ?? props.state.position;
 
+  // Hide menu visually while position is being calculated (0, 0)
+  const hasValidPosition = () => {
+    const pos = menuPosition();
+    return pos.top !== 0 || pos.left !== 0;
+  };
+
   return (
     <Show when={props.state.active}>
       <div
@@ -231,6 +248,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         style={{
           top: `${menuPosition().top}px`,
           left: `${menuPosition().left}px`,
+          visibility: hasValidPosition() ? 'visible' : 'hidden',
         }}
       >
         <Show

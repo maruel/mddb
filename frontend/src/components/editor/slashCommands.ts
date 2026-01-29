@@ -196,16 +196,74 @@ export const slashCommands: SlashCommand[] = [
 ];
 
 /**
- * Filter commands by query string (prefix match on keywords and label key).
+ * Check if query matches text with fuzzy character sequence matching.
+ * Returns true if all characters of query appear in order in text.
+ * E.g., "bl" matches "bullet", "blt" matches "bullet list".
  */
-export function filterCommands(query: string): SlashCommand[] {
+function fuzzyMatch(query: string, text: string): boolean {
+  let qi = 0;
+  for (let ti = 0; ti < text.length && qi < query.length; ti++) {
+    if (text[ti] === query[qi]) qi++;
+  }
+  return qi === query.length;
+}
+
+/**
+ * Score how well a query matches text.
+ * Higher score = better match. Returns 0 if no match.
+ * - 100: Exact match
+ * - 90: Prefix match
+ * - 70: Contains match
+ * - 50: Fuzzy match
+ */
+function matchScore(query: string, text: string): number {
+  const lowerText = text.toLowerCase();
+  if (lowerText === query) return 100;
+  if (lowerText.startsWith(query)) return 90;
+  if (lowerText.includes(query)) return 70;
+  if (fuzzyMatch(query, lowerText)) return 50;
+  return 0;
+}
+
+type TranslateFn = (key: string) => string | undefined;
+
+/**
+ * Filter commands by query string with fuzzy matching.
+ * Matches against labelKey, keywords, and display text (via translate function).
+ * Results are sorted by match quality.
+ */
+export function filterCommands(query: string, translate?: TranslateFn): SlashCommand[] {
   if (!query) return slashCommands;
 
   const lowerQuery = query.toLowerCase();
-  return slashCommands.filter((cmd) => {
-    // Match on label key
-    if (cmd.labelKey.toLowerCase().startsWith(lowerQuery)) return true;
-    // Match on any keyword
-    return cmd.keywords.some((kw) => kw.toLowerCase().startsWith(lowerQuery));
-  });
+
+  // Score each command
+  const scored = slashCommands
+    .map((cmd) => {
+      let bestScore = 0;
+
+      // Match on label key
+      bestScore = Math.max(bestScore, matchScore(lowerQuery, cmd.labelKey));
+
+      // Match on keywords
+      for (const kw of cmd.keywords) {
+        bestScore = Math.max(bestScore, matchScore(lowerQuery, kw));
+      }
+
+      // Match on display text if translate function provided
+      if (translate) {
+        const displayText = translate(`slashMenu.${cmd.labelKey}`);
+        if (displayText) {
+          bestScore = Math.max(bestScore, matchScore(lowerQuery, displayText));
+        }
+      }
+
+      return { cmd, score: bestScore };
+    })
+    .filter((item) => item.score > 0);
+
+  // Sort by score descending
+  scored.sort((a, b) => b.score - a.score);
+
+  return scored.map((item) => item.cmd);
 }
