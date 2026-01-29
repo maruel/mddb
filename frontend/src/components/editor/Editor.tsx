@@ -157,6 +157,19 @@ export default function Editor(props: EditorProps) {
       if (n.type === nodes.list_item && n.attrs.checked !== null) isTaskList = true;
       if (n.type === nodes.blockquote) isBlockquote = true;
     }
+    // Also check nodes in selection range (for Ctrl+A selection where $from is at doc root)
+    if (!isBulletList && !isOrderedList && !isTaskList) {
+      state.doc.nodesBetween(from, to, (n) => {
+        if (n.type === nodes.bullet_list) isBulletList = true;
+        if (n.type === nodes.ordered_list) isOrderedList = true;
+        if (n.type === nodes.list_item && n.attrs.checked !== null) isTaskList = true;
+        if (n.type === nodes.blockquote) isBlockquote = true;
+      });
+    }
+    // Task lists are implemented as bullet lists with checked attrs, so they're mutually exclusive
+    if (isTaskList) {
+      isBulletList = false;
+    }
 
     setFormatState({
       isBold,
