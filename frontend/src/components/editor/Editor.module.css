@@ -121,6 +121,7 @@
   outline: none;
   min-height: 100%;
   height: 100%;
+  white-space: pre-wrap;
 }
 
 .prosemirrorEditor :global(.ProseMirror p.is-editor-empty:first-child::before) {
