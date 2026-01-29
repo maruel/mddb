@@ -640,6 +640,10 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await page.keyboard.press('Shift+ArrowDown'); // Extend to start of line 3
     await page.keyboard.press('Shift+End'); // Select to end of line 3
 
+    // Wait for floating toolbar to appear (needed on slower CI machines)
+    const toolbar = page.locator('[data-testid="floating-toolbar"]');
+    await expect(toolbar).toBeVisible({ timeout: 3000 });
+
     // Step 1: Click bullet list - should convert lines 2-3 to bullet list
     await bulletButton.click();
     await expect(editor.locator('ul > li')).toHaveCount(2, { timeout: 3000 });
