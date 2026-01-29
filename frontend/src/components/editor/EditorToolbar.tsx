@@ -12,6 +12,7 @@ import styles from './Editor.module.css';
 export interface FormatState {
   isBold: boolean;
   isItalic: boolean;
+  isUnderline: boolean;
   isCode: boolean;
   headingLevel: number | null;
   isBulletList: boolean;
@@ -73,6 +74,12 @@ export default function EditorToolbar(props: EditorToolbarProps) {
   const toggleItalic = () => {
     if (!props.view) return;
     toggleMark(marks.em)(props.view.state, props.view.dispatch);
+    props.view.focus();
+  };
+
+  const toggleUnderline = () => {
+    if (!props.view) return;
+    toggleMark(marks.underline)(props.view.state, props.view.dispatch);
     props.view.focus();
   };
 
@@ -469,6 +476,13 @@ export default function EditorToolbar(props: EditorToolbarProps) {
           <button class={formatButtonClass(props.formatState.isItalic)} onClick={toggleItalic} title="Italic (Ctrl+I)">
             I
           </button>
+          <button
+            class={formatButtonClass(props.formatState.isUnderline)}
+            onClick={toggleUnderline}
+            title="Underline (Ctrl+U)"
+          >
+            <u>U</u>
+          </button>
           <button class={formatButtonClass(props.formatState.isCode)} onClick={toggleCode} title="Code (Ctrl+`)">
             {'</>'}
           </button>
@@ -516,7 +530,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
             "
           </button>
           <button class={formatButtonClass(props.formatState.isCodeBlock)} onClick={toggleCodeBlock} title="Code Block">
-            {'{ }'}
+            {'</>'}
           </button>
         </div>
       </div>

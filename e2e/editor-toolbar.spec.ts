@@ -729,8 +729,61 @@ test.describe('Editor Toolbar Edge Cases', () => {
     markdown = await markdownEditor.inputValue();
     expect(markdown).toBe('Line one\n\nReplaced\n\nLine four');
   });
+});
 
+test.describe('Editor Toolbar Inline Formatting', () => {
+  test('underline formatting is preserved when switching to markdown mode', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'toolbar-underline');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
+    const wsID = await getWorkspaceId(page);
+
+    // Create a page with plain text
+    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        title: 'Underline Test',
+        content: 'Some text to underline',
+      },
+    });
+    expect(createResponse.ok()).toBe(true);
+    const pageData = await createResponse.json();
+
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to the page
+    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+
+    // Wait for WYSIWYG editor to load
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
+    await expect(editor.locator('p')).toContainText('Some text', { timeout: 5000 });
+
+    // Triple-click to select the entire paragraph
+    const paragraph = editor.locator('p').first();
+    await paragraph.click({ clickCount: 3 });
+
+    // Wait for the floating toolbar to appear
+    const underlineButton = page.locator('button[title="Underline (Ctrl+U)"]');
+    await expect(underlineButton).toBeVisible({ timeout: 3000 });
+
+    // Click the underline button
+    await underlineButton.click();
+
+    // Verify the text is underlined in the editor
+    await expect(editor.locator('u')).toBeVisible({ timeout: 3000 });
+
+    // Switch to markdown mode and verify underline syntax
+    const markdownEditor = await switchToMarkdownMode(page);
+    const markdown = await markdownEditor.inputValue();
+
+    // Should have <u> tags for underline
+    expect(markdown).toContain('<u>');
+    expect(markdown).toContain('</u>');
+    expect(markdown).toMatch(/<u>Some text to underline<\/u>/);
+  });
 });
 
 test.describe('Editor Toolbar Button States', () => {

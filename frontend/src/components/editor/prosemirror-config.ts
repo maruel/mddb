@@ -54,7 +54,12 @@ export const schema = new Schema({
       },
     ],
   }),
-  marks: baseSchema.spec.marks,
+  marks: baseSchema.spec.marks.addToEnd('underline', {
+    parseDOM: [{ tag: 'u' }, { style: 'text-decoration=underline' }],
+    toDOM(): DOMOutputSpec {
+      return ['u', 0];
+    },
+  }),
 });
 
 // Helper to get node type with runtime check
@@ -88,10 +93,41 @@ export const marks = {
   em: getMarkType('em'),
   code: getMarkType('code'),
   link: getMarkType('link'),
+  underline: getMarkType('underline'),
 };
 
 // Create markdown-it instance with task list detection
 const md = new MarkdownIt();
+
+// Add inline rule to parse <u>text</u> as underline
+md.inline.ruler.before('html_inline', 'underline', (state, silent) => {
+  const start = state.pos;
+  const max = state.posMax;
+  const src = state.src;
+
+  // Check for opening <u>
+  if (src.slice(start, start + 3).toLowerCase() !== '<u>') return false;
+
+  // Find closing </u>
+  const closeTag = '</u>';
+  const closePos = src.toLowerCase().indexOf(closeTag, start + 3);
+  if (closePos === -1 || closePos >= max) return false;
+
+  if (!silent) {
+    const openToken = state.push('underline_open', 'u', 1);
+    openToken.markup = '<u>';
+
+    const content = src.slice(start + 3, closePos);
+    const textToken = state.push('text', '', 0);
+    textToken.content = content;
+
+    const closeToken = state.push('underline_close', 'u', -1);
+    closeToken.markup = '</u>';
+  }
+
+  state.pos = closePos + closeTag.length;
+  return true;
+});
 
 // Add core rule to detect checkbox syntax in list items
 md.core.ruler.after('inline', 'task_list', (state) => {
@@ -150,6 +186,7 @@ export const markdownParser = new MarkdownParser(schema, md, {
   hardbreak: { node: 'hard_break' },
   em: { mark: 'em' },
   strong: { mark: 'strong' },
+  underline: { mark: 'underline' },
   link: {
     mark: 'link',
     getAttrs: (tok: Token) => ({
@@ -183,7 +220,10 @@ export const markdownSerializer = new MarkdownSerializer(
       state.renderContent(node);
     },
   },
-  defaultMarkdownSerializer.marks
+  {
+    ...defaultMarkdownSerializer.marks,
+    underline: { open: '<u>', close: '</u>', mixable: true, expelEnclosingWhitespace: true },
+  }
 );
 
 // Input rule for task list items: - [ ] or - [x] at start of line
@@ -257,6 +297,7 @@ function buildKeymap() {
   // Formatting marks
   keys['Mod-b'] = toggleMark(marks.strong);
   keys['Mod-i'] = toggleMark(marks.em);
+  keys['Mod-u'] = toggleMark(marks.underline);
   keys['Mod-`'] = toggleMark(marks.code);
 
   // List operations - custom splitListItem that preserves task list state

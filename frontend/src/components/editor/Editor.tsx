@@ -115,6 +115,7 @@ export default function Editor(props: EditorProps) {
   const [formatState, setFormatState] = createSignal<FormatState>({
     isBold: false,
     isItalic: false,
+    isUnderline: false,
     isCode: false,
     headingLevel: null,
     isBulletList: false,
@@ -179,6 +180,8 @@ export default function Editor(props: EditorProps) {
     const currentMarks = empty ? state.storedMarks || $from.marks() : [];
     const isBold = marks.strong.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.strong);
     const isItalic = marks.em.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.em);
+    const isUnderline =
+      marks.underline.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.underline);
     const isCode = marks.code.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.code);
 
     // Check block types
@@ -215,6 +218,7 @@ export default function Editor(props: EditorProps) {
     setFormatState({
       isBold,
       isItalic,
+      isUnderline,
       isCode,
       headingLevel,
       isBulletList,

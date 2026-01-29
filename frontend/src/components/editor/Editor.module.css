@@ -24,7 +24,8 @@
     opacity 0.2s,
     transform 0.2s;
   transform: translate(-50%, -100%);
-  margin-top: -8px; /* Gap above selection */
+  margin-top: -8px;
+  /* Gap above selection */
 }
 
 .formattingButtons {
@@ -43,7 +44,7 @@
   background: none;
   border-radius: var(--radius);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.65rem;
   font-weight: 600;
   color: var(--c-text-light);
   transition: all var(--transition);
@@ -113,7 +114,8 @@
   overflow-y: auto;
   padding: var(--s-3);
   line-height: 1.7;
-  min-height: 0; /* Allow flex shrinking below content size */
+  min-height: 0;
+  /* Allow flex shrinking below content size */
 }
 
 /* ProseMirror content styling */
@@ -351,7 +353,8 @@
 /* Markdown Editor (raw mode) */
 .markdownEditor {
   flex: 1;
-  min-height: 0; /* Allow flex shrinking below content size */
+  min-height: 0;
+  /* Allow flex shrinking below content size */
   padding: var(--s-3);
   font-family: var(--font-mono);
   font-size: 0.9rem;
