@@ -51,9 +51,9 @@ func BenchmarkTableOperations(b *testing.B) {
 	}
 	_, err = wsService.Modify(ws.ID, func(w *identity.Workspace) error {
 		w.Quotas.MaxPages = 1_000_000
-		w.Quotas.MaxStorageMB = 1_000_000 // 1TB
+		w.Quotas.MaxStorageBytes = 1_000_000_000_000 // 1TB
 		w.Quotas.MaxRecordsPerTable = 1_000_000
-		w.Quotas.MaxAssetSizeMB = 1_000 // 1GB
+		w.Quotas.MaxAssetSizeBytes = 1024 * 1024 * 1024 // 1GB
 		return nil
 	})
 	if err != nil {

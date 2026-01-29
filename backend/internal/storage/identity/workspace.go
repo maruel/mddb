@@ -49,7 +49,7 @@ func (w *Workspace) Validate() error {
 	if w.Name == "" {
 		return errNameRequired
 	}
-	if w.Quotas.MaxPages <= 0 || w.Quotas.MaxStorageMB <= 0 || w.Quotas.MaxRecordsPerTable <= 0 || w.Quotas.MaxAssetSizeMB <= 0 {
+	if w.Quotas.MaxPages <= 0 || w.Quotas.MaxStorageBytes <= 0 || w.Quotas.MaxRecordsPerTable <= 0 || w.Quotas.MaxAssetSizeBytes <= 0 {
 		return errInvalidWorkspaceQuota
 	}
 	return nil
@@ -64,19 +64,19 @@ type WorkspaceSettings struct {
 
 // WorkspaceQuotas defines limits for a workspace.
 type WorkspaceQuotas struct {
-	MaxPages           int `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
-	MaxStorageMB       int `json:"max_storage_mb" jsonschema:"description=Maximum storage in megabytes"`
-	MaxRecordsPerTable int `json:"max_records_per_table" jsonschema:"description=Maximum records per table"`
-	MaxAssetSizeMB     int `json:"max_asset_size_mb" jsonschema:"description=Maximum size of a single asset in megabytes"`
+	MaxPages           int   `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
+	MaxStorageBytes    int64 `json:"max_storage_bytes" jsonschema:"description=Maximum storage in bytes"`
+	MaxRecordsPerTable int   `json:"max_records_per_table" jsonschema:"description=Maximum records per table"`
+	MaxAssetSizeBytes  int64 `json:"max_asset_size_bytes" jsonschema:"description=Maximum size of a single asset in bytes"`
 }
 
 // DefaultWorkspaceQuotas returns the default quotas for a new workspace.
 func DefaultWorkspaceQuotas() WorkspaceQuotas {
 	return WorkspaceQuotas{
 		MaxPages:           1000,
-		MaxStorageMB:       1024, // 1 GiB
+		MaxStorageBytes:    1024 * 1024 * 1024, // 1 GiB
 		MaxRecordsPerTable: 10000,
-		MaxAssetSizeMB:     50, // 50 MiB
+		MaxAssetSizeBytes:  50 * 1024 * 1024, // 50 MiB
 	}
 }
 

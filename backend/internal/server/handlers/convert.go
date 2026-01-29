@@ -266,9 +266,9 @@ func organizationQuotasToDTO(q identity.OrganizationQuotas) dto.OrganizationQuot
 func workspaceQuotasToDTO(q identity.WorkspaceQuotas) dto.WorkspaceQuotas {
 	return dto.WorkspaceQuotas{
 		MaxPages:           q.MaxPages,
-		MaxStorageMB:       q.MaxStorageMB,
+		MaxStorageBytes:    q.MaxStorageBytes,
 		MaxRecordsPerTable: q.MaxRecordsPerTable,
-		MaxAssetSizeMB:     q.MaxAssetSizeMB,
+		MaxAssetSizeBytes:  q.MaxAssetSizeBytes,
 	}
 }
 
@@ -362,9 +362,9 @@ func organizationQuotasToEntity(q dto.OrganizationQuotas) identity.OrganizationQ
 func workspaceQuotasToEntity(q dto.WorkspaceQuotas) identity.WorkspaceQuotas {
 	return identity.WorkspaceQuotas{
 		MaxPages:           q.MaxPages,
-		MaxStorageMB:       q.MaxStorageMB,
+		MaxStorageBytes:    q.MaxStorageBytes,
 		MaxRecordsPerTable: q.MaxRecordsPerTable,
-		MaxAssetSizeMB:     q.MaxAssetSizeMB,
+		MaxAssetSizeBytes:  q.MaxAssetSizeBytes,
 	}
 }
 

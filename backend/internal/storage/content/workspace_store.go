@@ -139,8 +139,7 @@ func (ws *WorkspaceFileStore) checkStorageQuota(additionalBytes int64) error {
 	if err != nil {
 		return err
 	}
-	maxStorageBytes := int64(ws.quotas.MaxStorageMB) * 1024 * 1024
-	if usage+additionalBytes > maxStorageBytes {
+	if usage+additionalBytes > ws.quotas.MaxStorageBytes {
 		return errQuotaExceeded
 	}
 	return nil

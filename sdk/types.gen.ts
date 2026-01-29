@@ -1318,9 +1318,9 @@ export interface OrganizationQuotas {
  */
 export interface WorkspaceQuotas {
   max_pages: number /* int */;
-  max_storage_mb: number /* int */;
+  max_storage_bytes: number /* int64 */;
   max_records_per_table: number /* int */;
-  max_asset_size_mb: number /* int */;
+  max_asset_size_bytes: number /* int64 */;
 }
 /**
  * UserQuota defines limits for a user.

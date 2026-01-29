@@ -55,9 +55,9 @@ func testFileStore(t *testing.T) (*FileStoreService, jsonldb.ID) {
 	}
 	_, err = wsService.Modify(ws.ID, func(w *identity.Workspace) error {
 		w.Quotas.MaxPages = 1_000_000
-		w.Quotas.MaxStorageMB = 1_000_000 // 1TB
+		w.Quotas.MaxStorageBytes = 1_000_000_000_000 // 1TB
 		w.Quotas.MaxRecordsPerTable = 1_000_000
-		w.Quotas.MaxAssetSizeMB = 1_000 // 1GB
+		w.Quotas.MaxAssetSizeBytes = 1024 * 1024 * 1024 // 1GB
 		return nil
 	})
 	if err != nil {
@@ -994,7 +994,7 @@ func TestQuotas(t *testing.T) {
 
 		// Set workspace quota to 1 MB
 		_, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
-			w.Quotas.MaxStorageMB = 1
+			w.Quotas.MaxStorageBytes = 1024 * 1024 // 1 MB
 			return nil
 		})
 		if err != nil {
@@ -1101,7 +1101,7 @@ func TestQuotas(t *testing.T) {
 		}
 
 		_, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
-			w.Quotas.MaxStorageMB = 1 // 1MB
+			w.Quotas.MaxStorageBytes = 1024 * 1024 // 1MB
 			return nil
 		})
 		if err != nil {
@@ -1136,11 +1136,10 @@ func TestQuotas(t *testing.T) {
 			t.Fatalf("failed to create record: %v", err)
 		}
 
-		// Set quota to exactly current usage (in MB, rounded up)
+		// Set quota to exactly current usage
 		_, storageUsage, _ := ws.GetWorkspaceUsage()
-		storageMB := (storageUsage + 1024*1024 - 1) / (1024 * 1024) // Round up to MB
 		_, err = fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
-			w.Quotas.MaxStorageMB = int(storageMB)
+			w.Quotas.MaxStorageBytes = storageUsage
 			return nil
 		})
 		if err != nil {
