@@ -83,6 +83,12 @@ func mainImpl() error {
 			if underSystemd && a.Key == slog.TimeKey && len(groups) == 0 {
 				return slog.Attr{}
 			}
+			// Drop localhost IPs (not useful in logs).
+			if a.Key == "ip" {
+				if v := a.Value.String(); v == "127.0.0.1" || v == "::1" {
+					return slog.Attr{}
+				}
+			}
 			val := a.Value.Any()
 			skip := false
 			switch t := val.(type) {
