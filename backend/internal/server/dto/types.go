@@ -130,6 +130,27 @@ type WorkspaceQuotas struct {
 	MaxAssetSizeBytes  int64 `json:"max_asset_size_bytes" jsonschema:"description=Maximum size of a single asset in bytes"`
 }
 
+// Validate checks that all quota values are positive.
+// The prefix is prepended to field names in error messages (e.g., "quotas").
+func (q *WorkspaceQuotas) Validate(prefix string) error {
+	if prefix != "" {
+		prefix += "."
+	}
+	if q.MaxPages <= 0 {
+		return InvalidField(prefix+"max_pages", "must be positive")
+	}
+	if q.MaxStorageBytes <= 0 {
+		return InvalidField(prefix+"max_storage_bytes", "must be positive")
+	}
+	if q.MaxRecordsPerTable <= 0 {
+		return InvalidField(prefix+"max_records_per_table", "must be positive")
+	}
+	if q.MaxAssetSizeBytes <= 0 {
+		return InvalidField(prefix+"max_asset_size_bytes", "must be positive")
+	}
+	return nil
+}
+
 // UserQuota defines limits for a user.
 type UserQuota struct {
 	MaxOrganizations int `json:"max_organizations" jsonschema:"description=Maximum number of organizations the user can create"`

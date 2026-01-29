@@ -89,7 +89,7 @@
 
 .formGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: var(--s-4);
   margin-bottom: var(--s-4);
 }
@@ -100,6 +100,12 @@
 
 .formGrid .formItem {
   margin-bottom: 0;
+}
+
+.settingsForm h3 {
+  font-size: 1rem;
+  margin: var(--s-4) 0 var(--s-3) 0;
+  color: var(--c-text-light);
 }
 
 .formItem label {

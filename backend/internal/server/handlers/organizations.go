@@ -101,10 +101,15 @@ func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID jsonldb.ID, _
 	return workspaceToResponse(ws, memberCount), nil
 }
 
-// UpdateWorkspace updates workspace details (name).
+// UpdateWorkspace updates workspace details (name and/or quotas).
 func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.UpdateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
 	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
-		ws.Name = req.Name
+		if req.Name != "" {
+			ws.Name = req.Name
+		}
+		if req.Quotas != nil {
+			ws.Quotas = workspaceQuotasToEntity(*req.Quotas)
+		}
 		return nil
 	})
 	if err != nil {

@@ -215,6 +215,12 @@ export interface Dictionary {
     maxMembersPerOrg: string;
     maxMembersPerWorkspace: string;
     maxTotalStorageBytes: string;
+    // Workspace quotas
+    workspaceQuotas: string;
+    maxPages: string;
+    maxStorageBytes: string;
+    maxRecordsPerTable: string;
+    maxAssetSizeBytes: string;
     orgSettingsHint: string;
     openOrgSettings: string;
     adminOnlySettings: string;

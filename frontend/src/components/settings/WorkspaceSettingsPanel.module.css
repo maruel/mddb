@@ -76,11 +76,33 @@
 .formItem input[type='text'],
 .formItem input[type='url'],
 .formItem input[type='password'],
+.formItem input[type='number'],
 .formItem select {
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.formGrid .formItem {
+  margin-bottom: 0;
+}
+
+.settingsForm h4 {
+  font-size: 1rem;
+  margin: var(--s-4) 0 var(--s-3) 0;
+  color: var(--c-text-light);
+}
+
+.settingsForm h4:first-of-type {
+  margin-top: 0;
 }
 
 .saveButton {

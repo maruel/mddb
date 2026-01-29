@@ -780,8 +780,9 @@ func (r *GetWorkspaceRequest) Validate() error {
 
 // UpdateWorkspaceRequest is a request to update workspace details.
 type UpdateWorkspaceRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	Name string     `json:"name,omitempty"`
+	WsID   jsonldb.ID       `path:"wsID" tstype:"-"`
+	Name   string           `json:"name,omitempty"`
+	Quotas *WorkspaceQuotas `json:"quotas,omitempty"`
 }
 
 // Validate validates the update workspace request fields.
@@ -789,8 +790,14 @@ func (r *UpdateWorkspaceRequest) Validate() error {
 	if r.WsID.IsZero() {
 		return MissingField("wsID")
 	}
-	if r.Name == "" {
-		return MissingField("name")
+	// At least one field must be set
+	if r.Name == "" && r.Quotas == nil {
+		return MissingField("name or quotas")
+	}
+	if r.Quotas != nil {
+		if err := r.Quotas.Validate("quotas"); err != nil {
+			return err
+		}
 	}
 	return nil
 }

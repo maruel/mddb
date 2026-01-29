@@ -408,6 +408,7 @@ export interface GetWorkspaceRequest {
  */
 export interface UpdateWorkspaceRequest {
   name?: string;
+  quotas?: WorkspaceQuotas;
 }
 /**
  * GetGitRemoteRequest is a request to get the git remote for a workspace.

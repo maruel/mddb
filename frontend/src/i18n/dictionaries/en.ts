@@ -215,6 +215,12 @@ export const dict: Dictionary = {
     maxMembersPerOrg: 'Max Members (Org)',
     maxMembersPerWorkspace: 'Max Members (Workspace)',
     maxTotalStorageBytes: 'Max Storage (bytes)',
+    // Workspace quotas
+    workspaceQuotas: 'Workspace Quotas',
+    maxPages: 'Max Pages',
+    maxStorageBytes: 'Max Storage (bytes)',
+    maxRecordsPerTable: 'Max Records per Table',
+    maxAssetSizeBytes: 'Max Asset Size (bytes)',
     orgSettingsHint: 'For organization-wide settings like allowed email domains, go to organization settings.',
     openOrgSettings: 'Open Organization Settings',
     adminOnlySettings: 'Only admins can modify organization settings.',
