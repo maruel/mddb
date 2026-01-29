@@ -71,7 +71,8 @@ body {
   overflow: hidden;
 }
 
-.editorLoading {
+.editorLoading,
+.settingsLoading {
   padding: var(--s-2);
   color: var(--c-text-muted);
 }

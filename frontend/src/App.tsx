@@ -43,7 +43,7 @@ import {
   isStaticRoute,
   type UnifiedSettingsMatch,
 } from './utils/urls';
-import { Settings } from './components/settings';
+const Settings = lazy(() => import('./components/settings').then((m) => ({ default: m.Settings })));
 import { useI18n, type Locale } from './i18n';
 import type { NodeResponse, OrgMembershipResponse, NotionImportStatusResponse } from '@sdk/types.gen';
 import styles from './App.module.css';
@@ -492,17 +492,19 @@ function AppContent() {
 
               <Show when={settingsRoute()}>
                 {(route) => (
-                  <Settings
-                    route={route()}
-                    onClose={() => {
-                      setSettingsRoute(null);
-                      const wsId = user()?.workspace_id;
-                      const wsName = user()?.workspace_name;
-                      if (wsId) {
-                        window.history.pushState(null, '', workspaceUrl(wsId, wsName));
-                      }
-                    }}
-                  />
+                  <Suspense fallback={<div class={styles.settingsLoading}>{t('common.loading')}</div>}>
+                    <Settings
+                      route={route()}
+                      onClose={() => {
+                        setSettingsRoute(null);
+                        const wsId = user()?.workspace_id;
+                        const wsName = user()?.workspace_name;
+                        if (wsId) {
+                          window.history.pushState(null, '', workspaceUrl(wsId, wsName));
+                        }
+                      }}
+                    />
+                  </Suspense>
                 )}
               </Show>
 
