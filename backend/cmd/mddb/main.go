@@ -72,9 +72,14 @@ func mainImpl() error {
 	defer stop()
 	ll := &slog.LevelVar{}
 	ll.Set(slog.LevelInfo)
+	// Skip timestamps when running under systemd (it adds its own).
+	timeFormat := "15:04:05.000" // Like time.TimeOnly plus milliseconds.
+	if os.Getenv("JOURNAL_STREAM") != "" {
+		timeFormat = ""
+	}
 	logger := slog.New(tint.NewHandler(colorable.NewColorable(os.Stderr), &tint.Options{
 		Level:      ll,
-		TimeFormat: "15:04:05.000", // Like time.TimeOnly plus milliseconds.
+		TimeFormat: timeFormat,
 		NoColor:    !isatty.IsTerminal(os.Stderr.Fd()),
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			val := a.Value.Any()
