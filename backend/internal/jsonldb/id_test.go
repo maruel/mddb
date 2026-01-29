@@ -464,6 +464,232 @@ func TestInitIDSlice(t *testing.T) {
 	})
 }
 
+func TestIDMarshalText(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		tests := []struct {
+			name string
+			id   ID
+			want string
+		}{
+			{"zero ID", 0, "0"},
+			{"small ID", 1, "2"},
+			{"generated ID", NewID(), ""},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got, err := tt.id.MarshalText()
+				if err != nil {
+					t.Fatalf("MarshalText error: %v", err)
+				}
+				if tt.want != "" && string(got) != tt.want {
+					t.Errorf("MarshalText() = %q, want %q", got, tt.want)
+				}
+			})
+		}
+	})
+
+	t.Run("round trip", func(t *testing.T) {
+		original := NewID()
+		data, err := original.MarshalText()
+		if err != nil {
+			t.Fatalf("MarshalText error: %v", err)
+		}
+		var decoded ID
+		if err := decoded.UnmarshalText(data); err != nil {
+			t.Fatalf("UnmarshalText error: %v", err)
+		}
+		if decoded != original {
+			t.Errorf("Round trip failed: got %d, want %d", decoded, original)
+		}
+	})
+
+	t.Run("map key JSON encoding", func(t *testing.T) {
+		id1 := NewID()
+		id2 := NewID()
+
+		m := map[ID]string{
+			id1: "first",
+			id2: "second",
+		}
+
+		data, err := json.Marshal(m)
+		if err != nil {
+			t.Fatalf("Marshal map error: %v", err)
+		}
+
+		var decoded map[ID]string
+		if err := json.Unmarshal(data, &decoded); err != nil {
+			t.Fatalf("Unmarshal map error: %v", err)
+		}
+
+		if decoded[id1] != "first" {
+			t.Errorf("decoded[id1] = %q, want %q", decoded[id1], "first")
+		}
+		if decoded[id2] != "second" {
+			t.Errorf("decoded[id2] = %q, want %q", decoded[id2], "second")
+		}
+	})
+}
+
+func TestIDUnmarshalText(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			input string
+			want  ID
+		}{
+			{"zero char", "0", 0},
+			{"empty string", "", 0},
+			{"small ID", "2", 1},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				var got ID
+				if err := got.UnmarshalText([]byte(tt.input)); err != nil {
+					t.Fatalf("UnmarshalText error: %v", err)
+				}
+				if got != tt.want {
+					t.Errorf("UnmarshalText() = %d, want %d", got, tt.want)
+				}
+			})
+		}
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			input string
+		}{
+			{"invalid ID too long", "ABCDEFGHIJKLMNO"},
+			{"invalid character", "!!!"},
+			{"lowercase rejected", "abc"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				var id ID
+				if err := id.UnmarshalText([]byte(tt.input)); err == nil {
+					t.Error("expected error, got nil")
+				}
+			})
+		}
+	})
+}
+
+func TestIDList(t *testing.T) {
+	t.Run("UnmarshalText", func(t *testing.T) {
+		id1 := NewID()
+		id2 := NewID()
+		id3 := NewID()
+
+		t.Run("valid", func(t *testing.T) {
+			tests := []struct {
+				name  string
+				input string
+				want  IDList
+			}{
+				{"empty string", "", nil},
+				{"single ID", id1.String(), IDList{id1}},
+				{"multiple IDs", id1.String() + "," + id2.String() + "," + id3.String(), IDList{id1, id2, id3}},
+				{"with spaces", id1.String() + " , " + id2.String(), IDList{id1, id2}},
+				{"trailing comma", id1.String() + ",", IDList{id1}},
+				{"leading comma", "," + id1.String(), IDList{id1}},
+				{"empty parts skipped", id1.String() + ",," + id2.String(), IDList{id1, id2}},
+				{"zero IDs skipped", id1.String() + ",0," + id2.String(), IDList{id1, id2}},
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					var got IDList
+					if err := got.UnmarshalText([]byte(tt.input)); err != nil {
+						t.Fatalf("UnmarshalText error: %v", err)
+					}
+					if len(got) != len(tt.want) {
+						t.Fatalf("UnmarshalText() len = %d, want %d", len(got), len(tt.want))
+					}
+					for i := range got {
+						if got[i] != tt.want[i] {
+							t.Errorf("UnmarshalText()[%d] = %v, want %v", i, got[i], tt.want[i])
+						}
+					}
+				})
+			}
+		})
+
+		t.Run("errors", func(t *testing.T) {
+			tests := []struct {
+				name  string
+				input string
+			}{
+				{"invalid ID", "ABC,invalid!!!,DEF"},
+				{"lowercase rejected", "ABC,abc,DEF"},
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					var list IDList
+					if err := list.UnmarshalText([]byte(tt.input)); err == nil {
+						t.Error("expected error, got nil")
+					}
+				})
+			}
+		})
+	})
+
+	t.Run("MarshalText", func(t *testing.T) {
+		id1 := NewID()
+		id2 := NewID()
+		id3 := NewID()
+
+		t.Run("valid", func(t *testing.T) {
+			tests := []struct {
+				name string
+				list IDList
+				want string
+			}{
+				{"nil list", nil, ""},
+				{"empty list", IDList{}, ""},
+				{"single ID", IDList{id1}, id1.String()},
+				{"multiple IDs", IDList{id1, id2, id3}, id1.String() + "," + id2.String() + "," + id3.String()},
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					got, err := tt.list.MarshalText()
+					if err != nil {
+						t.Fatalf("MarshalText error: %v", err)
+					}
+					if string(got) != tt.want {
+						t.Errorf("MarshalText() = %q, want %q", got, tt.want)
+					}
+				})
+			}
+		})
+
+		t.Run("round trip", func(t *testing.T) {
+			original := IDList{id1, id2, id3}
+			data, err := original.MarshalText()
+			if err != nil {
+				t.Fatalf("MarshalText error: %v", err)
+			}
+			var decoded IDList
+			if err := decoded.UnmarshalText(data); err != nil {
+				t.Fatalf("UnmarshalText error: %v", err)
+			}
+			if len(decoded) != len(original) {
+				t.Fatalf("Round trip len = %d, want %d", len(decoded), len(original))
+			}
+			for i := range decoded {
+				if decoded[i] != original[i] {
+					t.Errorf("Round trip[%d] = %v, want %v", i, decoded[i], original[i])
+				}
+			}
+		})
+	})
+}
+
 func BenchmarkNewID(b *testing.B) {
 	for b.Loop() {
 		NewID()

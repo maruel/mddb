@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -173,6 +174,23 @@ func (id *ID) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalText implements encoding.TextMarshaler.
+// This allows ID to be used as a map key in JSON encoding.
+func (id ID) MarshalText() ([]byte, error) {
+	return []byte(id.String()), nil
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+// This allows ID to be used as a map key in JSON decoding.
+func (id *ID) UnmarshalText(text []byte) error {
+	parsed, err := DecodeID(string(text))
+	if err != nil {
+		return err
+	}
+	*id = parsed
+	return nil
+}
+
 // IsZero returns true if the ID is the zero value.
 func (id ID) IsZero() bool {
 	return id == 0
@@ -231,4 +249,47 @@ func (id ID) Compare(other ID) int {
 		return 1
 	}
 	return 0
+}
+
+// IDList is a slice of IDs that can unmarshal from a comma-separated string.
+// Useful for query parameters like ?ids=ABC,DEF,GHI.
+type IDList []ID
+
+// UnmarshalText implements encoding.TextUnmarshaler for query param parsing.
+func (l *IDList) UnmarshalText(text []byte) error {
+	s := string(text)
+	if s == "" {
+		*l = nil
+		return nil
+	}
+
+	parts := strings.Split(s, ",")
+	ids := make([]ID, 0, len(parts))
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		id, err := DecodeID(part)
+		if err != nil {
+			return fmt.Errorf("invalid ID %q: %w", part, err)
+		}
+		if !id.IsZero() {
+			ids = append(ids, id)
+		}
+	}
+	*l = ids
+	return nil
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (l IDList) MarshalText() ([]byte, error) {
+	if len(l) == 0 {
+		return nil, nil
+	}
+	strs := make([]string, len(l))
+	for i, id := range l {
+		strs[i] = id.String()
+	}
+	return []byte(strings.Join(strs, ",")), nil
 }
