@@ -168,6 +168,7 @@ type UploadNodeAssetResponse struct {
 	Name     string `json:"name"`
 	Size     int64  `json:"size"`
 	MimeType string `json:"mime_type"`
+	URL      string `json:"url"`
 }
 
 // DeleteNodeAssetResponse is a response from deleting an asset.

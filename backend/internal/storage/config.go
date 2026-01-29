@@ -55,6 +55,9 @@ type ServerQuotas struct {
 
 	// MaxTotalStorageBytes limits total storage across all workspaces.
 	MaxTotalStorageBytes int64 `json:"max_total_storage_bytes"`
+
+	// MaxAssetSizeBytes limits the size of a single uploaded asset file.
+	MaxAssetSizeBytes int64 `json:"max_asset_size_bytes"`
 }
 
 // Validate checks that all quota values are non-negative.
@@ -86,6 +89,9 @@ func (q *ServerQuotas) Validate() error {
 	if q.MaxTotalStorageBytes < 0 {
 		return errors.New("max_total_storage_bytes must be non-negative")
 	}
+	if q.MaxAssetSizeBytes <= 0 {
+		return errors.New("max_asset_size_bytes must be positive")
+	}
 	return nil
 }
 
@@ -106,6 +112,7 @@ func DefaultServerQuotas() ServerQuotas {
 		MaxWorkspaces:         10000,            // 10000 workspaces
 		MaxUsers:              maxUsers,
 		MaxTotalStorageBytes:  100 * 1024 * 1024 * 1024, // 100 GiB
+		MaxAssetSizeBytes:     10 * 1024 * 1024,         // 10 MiB
 	}
 }
 

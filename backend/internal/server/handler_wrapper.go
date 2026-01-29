@@ -473,7 +473,9 @@ func WrapAuthRaw(
 			r.Body = http.MaxBytesReader(w, r.Body, cfg.Quotas.MaxRequestBodyBytes)
 		}
 
-		fn(w, r)
+		// Store user in context for raw handlers
+		ctx := reqctx.WithUser(r.Context(), user)
+		fn(w, r.WithContext(ctx))
 	})
 }
 

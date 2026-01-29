@@ -5,8 +5,10 @@ import { EditorView } from 'prosemirror-view';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import { useI18n } from '../../i18n';
 import { rewriteAssetUrls, reverseRewriteAssetUrls } from './markdown-utils';
-import { nodes, marks, markdownParser, markdownSerializer, createEditorState } from './prosemirror-config';
+import { schema, nodes, marks, markdownParser, markdownSerializer, createEditorState } from './prosemirror-config';
 import { createSlashCommandPlugin, type SlashMenuState } from './slashCommandPlugin';
+import { createDropUploadPlugin } from './dropUploadPlugin';
+import { useAssetUpload, isImageMimeType } from './useAssetUpload';
 import SlashCommandMenu from './SlashCommandMenu';
 import EditorToolbar, { type FormatState } from './EditorToolbar';
 import type { AssetUrlMap } from '../../contexts/EditorContext';
@@ -19,6 +21,10 @@ interface EditorProps {
   onChange: (markdown: string) => void;
   placeholder?: string;
   readOnly?: boolean;
+  wsId?: string;
+  getToken?: () => string | null;
+  onAssetUploaded?: () => void;
+  onError?: (error: string) => void;
 }
 
 export default function Editor(props: EditorProps) {
@@ -36,6 +42,63 @@ export default function Editor(props: EditorProps) {
 
   // Create slash command plugin with callback
   const slashPlugin = createSlashCommandPlugin(setSlashMenuState);
+
+  // Handle file drop uploads
+  const handleFileDrop = async (files: File[], pos: number) => {
+    const editorView = view();
+    if (!editorView || !props.wsId || !props.nodeId || !props.getToken) return;
+
+    const { uploadFile, error } = useAssetUpload({
+      wsId: props.wsId,
+      nodeId: props.nodeId,
+      getToken: props.getToken,
+    });
+
+    for (const file of files) {
+      const result = await uploadFile(file);
+      if (result) {
+        const isImage = isImageMimeType(result.mimeType);
+        let tr = editorView.state.tr;
+
+        if (isImage) {
+          // Insert image node with signed URL for immediate display.
+          // reverseRewriteAssetUrls will extract the filename when saving.
+          const imageType = schema.nodes.image;
+          if (imageType) {
+            const imageNode = imageType.create({
+              src: result.url,
+              alt: result.name,
+              title: null,
+            });
+            tr = tr.insert(pos, imageNode);
+          }
+        } else {
+          // Insert link with signed URL for immediate display.
+          // reverseRewriteAssetUrls will extract the filename when saving.
+          const linkType = schema.marks.link;
+          if (linkType) {
+            const linkMark = linkType.create({ href: result.url, title: null });
+            const textNode = schema.text(result.name, [linkMark]);
+            tr = tr.insert(pos, textNode);
+          }
+        }
+
+        editorView.dispatch(tr);
+
+        // Notify parent to reload node (updates asset URLs)
+        props.onAssetUploaded?.();
+      } else {
+        // Report error to parent
+        const errMsg = error();
+        if (errMsg) {
+          props.onError?.(errMsg);
+        }
+      }
+    }
+  };
+
+  // Create drop upload plugin
+  const dropPlugin = createDropUploadPlugin({ onFileDrop: handleFileDrop });
 
   // Track what we've emitted to distinguish our own changes from external updates
   let lastLoadedNodeId: string | undefined = props.nodeId;
@@ -113,7 +176,7 @@ export default function Editor(props: EditorProps) {
 
     const doc = parseMarkdown(props.content);
     if (!doc) return;
-    const state = createEditorState(doc, [slashPlugin]);
+    const state = createEditorState(doc, [slashPlugin, dropPlugin]);
 
     const editorView = new EditorView(editorRef, {
       state,
@@ -165,7 +228,7 @@ export default function Editor(props: EditorProps) {
           if (editorView) {
             const doc = parseMarkdown(content);
             if (doc) {
-              const state = createEditorState(doc, [slashPlugin]);
+              const state = createEditorState(doc, [slashPlugin, dropPlugin]);
               editorView.updateState(state);
             }
           }
@@ -186,7 +249,7 @@ export default function Editor(props: EditorProps) {
     if (editorView) {
       const doc = parseMarkdown(markdownContent());
       if (doc) {
-        const state = createEditorState(doc, [slashPlugin]);
+        const state = createEditorState(doc, [slashPlugin, dropPlugin]);
         editorView.updateState(state);
         updateActiveStates(editorView);
       }

@@ -52,6 +52,7 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 - **High-Performance UX**: Virtualization, command palettes, and relationship graphs.
 - **Notion-like Editing**: A block-based **WYSIWYG editor** for a seamless, intuitive experience.
 - **Data Integrity**: Migration to SQLite for metadata while preserving the self-describing on-disk format.
+- **Large File Uploads**: Streaming uploads for video/large assets (avoid memory buffering), chunked/resumable uploads (tus protocol), progress tracking.
 
 ## Requirements
 See [REQUIREMENTS.md](REQUIREMENTS.md) for complete system requirements.

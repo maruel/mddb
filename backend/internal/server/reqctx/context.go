@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // GetClientIP extracts the client IP from an HTTP request,
@@ -52,6 +53,7 @@ const (
 	keyUserAgent   contextKey = "userAgent"
 	keySessionID   contextKey = "sessionID"
 	keyTokenString contextKey = "tokenString"
+	keyUser        contextKey = "user"
 )
 
 // WithClientIP adds the client IP to the context.
@@ -104,4 +106,17 @@ func TokenString(ctx context.Context) string {
 		return v
 	}
 	return ""
+}
+
+// WithUser adds the authenticated user to the context.
+func WithUser(ctx context.Context, user *identity.User) context.Context {
+	return context.WithValue(ctx, keyUser, user)
+}
+
+// User extracts the authenticated user from the context.
+func User(ctx context.Context) *identity.User {
+	if v, ok := ctx.Value(keyUser).(*identity.User); ok {
+		return v
+	}
+	return nil
 }

@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,9 +16,9 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 func init() {
@@ -80,9 +81,15 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Get user from context (set by auth middleware)
-	user, ok := r.Context().Value(userContextKey).(*identity.User)
-	if !ok || user == nil {
+	// Enforce maximum asset file size
+	if int64(len(data)) > h.Cfg.Quotas.MaxAssetSizeBytes {
+		writeErrorResponse(w, dto.PayloadTooLarge(h.Cfg.Quotas.MaxAssetSizeBytes))
+		return
+	}
+
+	// Get user from context (set by WrapAuthRaw middleware)
+	user := reqctx.User(r.Context())
+	if user == nil {
 		writeErrorResponse(w, dto.Internal("user_context"))
 		return
 	}
@@ -104,14 +111,30 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		writeErrorResponse(w, dto.Internal("workspace"))
 		return
 	}
+
+	// Verify node exists before saving asset
+	if _, err := ws.ReadNode(nodeID); err != nil {
+		writeErrorResponse(w, dto.NotFound("node"))
+		return
+	}
+
 	asset, err := ws.SaveAsset(r.Context(), nodeID, header.Filename, data, author)
 	if err != nil {
+		slog.Error("Failed to save asset", "error", err, "nodeID", nodeID, "filename", header.Filename, "wsID", wsID, "author", author)
 		writeErrorResponse(w, dto.Internal("asset_save"))
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	if _, err := fmt.Fprintf(w, `{"id":"%s","name":"%s"}`, asset.ID, asset.Name); err != nil {
+	resp := dto.UploadNodeAssetResponse{
+		ID:       asset.ID,
+		Name:     asset.Name,
+		Size:     asset.Size,
+		MimeType: asset.MimeType,
+		URL:      h.Cfg.GenerateSignedAssetURL(wsID, nodeID, asset.Name),
+	}
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		slog.Error("Failed to write asset response", "error", err)
 	}
 }
@@ -185,9 +208,3 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		slog.Error("Failed to write asset data", "error", err, "asset", assetName)
 	}
 }
-
-// userContextKey is the context key for the authenticated user.
-// This should match what the auth middleware uses.
-type contextKey string
-
-const userContextKey contextKey = "user"

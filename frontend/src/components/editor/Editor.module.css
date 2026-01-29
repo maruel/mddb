@@ -292,6 +292,13 @@
   color: var(--c-primary);
 }
 
+/* Drop target highlight for file uploads */
+.prosemirrorEditor :global(.ProseMirror.drop-target-active) {
+  outline: 2px dashed var(--c-primary);
+  outline-offset: -2px;
+  background: rgba(var(--c-primary-rgb, 99, 102, 241), 0.05);
+}
+
 /* Gap cursor (for placing cursor where no content exists) */
 .prosemirrorEditor :global(.ProseMirror-gapcursor) {
   display: none;

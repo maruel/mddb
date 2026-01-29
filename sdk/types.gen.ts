@@ -758,6 +758,7 @@ export interface UploadNodeAssetResponse {
   name: string;
   size: number /* int64 */;
   mime_type: string;
+  url: string;
 }
 /**
  * DeleteNodeAssetResponse is a response from deleting an asset.

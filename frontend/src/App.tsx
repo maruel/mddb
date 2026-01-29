@@ -51,7 +51,7 @@ import styles from './App.module.css';
 // Inner app component that uses contexts
 function AppContent() {
   const { t, locale, setLocale } = useI18n();
-  const { user, login, wsApi, orgApi } = useAuth();
+  const { user, token, login, wsApi, orgApi } = useAuth();
   const {
     nodes,
     selectedNodeId,
@@ -619,6 +619,13 @@ function AppContent() {
                                 nodeId={selectedNodeId() ?? undefined}
                                 assetUrls={assetUrls()}
                                 onChange={handleContentChange}
+                                wsId={user()?.workspace_id}
+                                getToken={() => token()}
+                                onAssetUploaded={() => {
+                                  const nodeId = selectedNodeId();
+                                  if (nodeId) loadNode(nodeId, false);
+                                }}
+                                onError={setError}
                               />
                             </Suspense>
                           </Show>
