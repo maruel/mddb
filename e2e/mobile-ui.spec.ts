@@ -34,6 +34,13 @@ test.describe('Mobile UI - Sidebar Toggle', () => {
 
     // Sidebar should be hidden again (or lose the open class)
     await expect(sidebar).not.toHaveClass(/mobileOpen/);
+
+    // Wait for close animation to complete (sidebar fully off-screen)
+    await expect(async () => {
+      const box = await sidebar.boundingBox();
+      expect(box === null || box.x + box.width <= 0).toBe(true);
+    }).toPass({ timeout: 500 });
+
     await takeScreenshot('mobile-sidebar-closed');
   });
 

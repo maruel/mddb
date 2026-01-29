@@ -103,13 +103,22 @@
     height: calc(100vh - 56px);
     z-index: 100;
     transform: translateX(-100%);
-    transition: transform var(--transition);
+    /* Delay visibility:hidden until after close animation completes */
+    transition:
+      transform var(--transition),
+      visibility 0s 0.15s;
+    visibility: hidden;
     /* Ensure sidebar content doesn't overflow and intercept clicks outside */
     overflow: hidden;
   }
 
   .sidebar.mobileOpen {
     transform: translateX(0);
+    /* Instantly visible when opening, animate transform */
+    transition:
+      transform var(--transition),
+      visibility 0s 0s;
+    visibility: visible;
     /* Allow internal scrolling when open */
     overflow: visible;
   }
