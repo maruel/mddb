@@ -124,6 +124,8 @@ export default function Editor(props: EditorProps) {
     isCodeBlock: false,
   });
 
+  const [toolbarPosition, setToolbarPosition] = createSignal<{ top: number; left: number } | null>(null);
+
   // Parse markdown to ProseMirror document, handling asset URLs and link titles
   const parseMarkdown = (md: string): ProseMirrorNode | null => {
     let processed = rewriteAssetUrls(md, props.assetUrls || {});
@@ -144,6 +146,34 @@ export default function Editor(props: EditorProps) {
   const updateActiveStates = (editorView: EditorView) => {
     const { state } = editorView;
     const { from, $from, to, empty } = state.selection;
+
+    // Update toolbar position
+    if (empty || editorMode() === 'markdown') {
+      setToolbarPosition(null);
+    } else {
+      try {
+        const start = editorView.coordsAtPos(from);
+        const end = editorView.coordsAtPos(to);
+
+        // Calculate horizontal center
+        // If on same line (approx), center between start and end
+        const isSameLine = Math.abs(start.top - end.top) < 20;
+        let left = start.left;
+        if (isSameLine) {
+          left = (start.left + end.right) / 2;
+        } else {
+          // Multi-line: position near the start
+          left = start.left + 40;
+        }
+
+        setToolbarPosition({
+          top: start.top,
+          left,
+        });
+      } catch {
+        setToolbarPosition(null);
+      }
+    }
 
     // Check marks
     const currentMarks = empty ? state.storedMarks || $from.marks() : [];
@@ -296,6 +326,30 @@ export default function Editor(props: EditorProps) {
     setEditorMode('markdown');
   };
 
+  const toggleMode = () => {
+    if (editorMode() === 'wysiwyg') {
+      switchToMarkdown();
+    } else {
+      switchToWysiwyg();
+    }
+  };
+
+  // Keyboard shortcut: Ctrl+Shift+M to toggle mode
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'm') {
+      e.preventDefault();
+      toggleMode();
+    }
+  };
+
+  onMount(() => {
+    document.addEventListener('keydown', handleKeyDown);
+  });
+
+  onCleanup(() => {
+    document.removeEventListener('keydown', handleKeyDown);
+  });
+
   const wysiwygClass = createMemo(() =>
     editorMode() === 'wysiwyg' ? styles.prosemirrorEditor : `${styles.prosemirrorEditor} ${styles.hidden}`
   );
@@ -306,13 +360,7 @@ export default function Editor(props: EditorProps) {
 
   return (
     <div class={styles.editorContainer}>
-      <EditorToolbar
-        editorMode={editorMode()}
-        formatState={formatState()}
-        view={view()}
-        onSwitchToWysiwyg={switchToWysiwyg}
-        onSwitchToMarkdown={switchToMarkdown}
-      />
+      <EditorToolbar formatState={formatState()} view={view()} position={toolbarPosition()} />
 
       <div ref={editorRef} class={wysiwygClass()} data-testid="wysiwyg-editor" />
 
@@ -324,6 +372,26 @@ export default function Editor(props: EditorProps) {
         readOnly={props.readOnly}
         data-testid="markdown-editor"
       />
+
+      {/* Mode toggle at bottom-right */}
+      <div class={styles.modeIndicator}>
+        <button
+          class={editorMode() === 'wysiwyg' ? styles.modeIndicatorActive : undefined}
+          onClick={switchToWysiwyg}
+          title="Visual mode (Ctrl+Shift+M)"
+          data-testid="editor-mode-visual"
+        >
+          Visual
+        </button>
+        <button
+          class={editorMode() === 'markdown' ? styles.modeIndicatorActive : undefined}
+          onClick={switchToMarkdown}
+          title="Markdown mode (Ctrl+Shift+M)"
+          data-testid="editor-mode-markdown"
+        >
+          MD
+        </button>
+      </div>
 
       {(() => {
         const v = view();

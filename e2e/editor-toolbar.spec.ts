@@ -84,7 +84,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor.locator('ol')).toBeVisible({ timeout: 3000 });
 
     // Click inside the first list item
-    await editor.locator('ol li').first().click();
+    await editor.locator('ol li p').first().dblclick();
 
     // The numbered list button should be active (indicating we're inside an ordered list)
     const numberedListButton = page.locator('button[title="Numbered List"]');
@@ -136,7 +136,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor.locator('ul')).toBeVisible({ timeout: 3000 });
 
     // Click inside the first list item
-    await editor.locator('ul li').first().click();
+    await editor.locator('ul li p').first().dblclick();
 
     // The bullet list button should be active
     const bulletListButton = page.locator('button[title="Bullet List"]');
@@ -190,8 +190,8 @@ test.describe('Editor Toolbar Formatting', () => {
     // Verify task list items are rendered
     await expect(editor.locator('li.task-list-item')).toHaveCount(3, { timeout: 3000 });
 
-    // Click inside the first task list item
-    await editor.locator('li.task-list-item').first().click();
+    // Click inside the first task list item and select text
+    await editor.locator('li.task-list-item p').first().selectText();
 
     // The checkbox button should be active
     const checkboxButton = page.locator('button[title="Task List"]');
@@ -342,7 +342,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Click inside the text
-    await editor.locator('p').first().click();
+    await editor.locator('p').first().dblclick();
 
     // Click the checkbox button
     const checkboxButton = page.locator('button[title="Task List"]');
@@ -382,7 +382,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Click inside the first bullet item
-    await editor.locator('ul li').first().click();
+    await editor.locator('ul li p').first().dblclick();
 
     // Click the checkbox button
     const checkboxButton = page.locator('button[title="Task List"]');
@@ -502,7 +502,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Click inside the bullet list
-    await editor.locator('ul li').first().click();
+    await editor.locator('ul li p').first().dblclick();
 
     // Click numbered list button
     const numberedListButton = page.locator('button[title="Numbered List"]');
@@ -534,13 +534,14 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
+    // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Click inside the numbered list
-    await editor.locator('ol li').first().click();
+    await editor.locator('ol li p').first().dblclick();
 
     // Click bullet list button
     const bulletListButton = page.locator('button[title="Bullet List"]');
@@ -574,11 +575,12 @@ test.describe('Editor Toolbar Edge Cases', () => {
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
+    // Wait for WYSIWYG editor to load
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Click inside the task list
-    await editor.locator('li.task-list-item').first().click();
+    // Click inside the task list and select text
+    await editor.locator('li.task-list-item p').first().selectText();
 
     // Click numbered list button
     const numberedListButton = page.locator('button[title="Numbered List"]');
@@ -648,7 +650,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     expect(markdown).not.toContain('- Line four');
 
     // Switch back to WYSIWYG
-    await page.locator('button[data-testid="editor-mode-visual"]').click();
+    await page.locator('[data-testid="editor-mode-visual"]').click();
     await expect(editor).toBeVisible({ timeout: 3000 });
 
     // Re-select the list items (click first list item, shift-click second)
@@ -670,7 +672,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     expect(markdown).toContain('Line four');
 
     // Switch back to WYSIWYG
-    await page.locator('button[data-testid="editor-mode-visual"]').click();
+    await page.locator('[data-testid="editor-mode-visual"]').click();
     await expect(editor).toBeVisible({ timeout: 3000 });
 
     // Re-select the list items
@@ -691,7 +693,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     expect(markdown).toContain('Line four');
 
     // Switch back to WYSIWYG
-    await page.locator('button[data-testid="editor-mode-visual"]').click();
+    await page.locator('[data-testid="editor-mode-visual"]').click();
     await expect(editor).toBeVisible({ timeout: 3000 });
 
     // Re-select the task list items
@@ -717,43 +719,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     expect(markdown).toBe('Line one\n\nReplaced\n\nLine four');
   });
 
-  test('clicking checkbox in empty editor creates task list', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-empty-task');
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    const wsID = await getWorkspaceId(page);
-
-    // Create an empty page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Empty Task Test',
-        content: '',
-      },
-    });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
-
-    await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
-
-    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
-    await expect(editor).toBeVisible({ timeout: 5000 });
-
-    // Click in the editor to focus
-    await editor.click();
-
-    // Click checkbox button
-    const checkboxButton = page.locator('button[title="Task List"]');
-    await checkboxButton.click();
-
-    // Should create a task list
-    const taskItems = editor.locator('li.task-list-item');
-    await expect(taskItems).toHaveCount(1, { timeout: 3000 });
-  });
 });
 
 test.describe('Editor Toolbar Button States', () => {
@@ -785,8 +751,8 @@ test.describe('Editor Toolbar Button States', () => {
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Click inside the first task list item
-    await editor.locator('li.task-list-item').first().click();
+    // Click inside the first task list item and select text
+    await editor.locator('li.task-list-item p').first().selectText();
 
     // The checkbox button should be active
     const checkboxButton = page.locator('button[title="Task List"]');
@@ -829,8 +795,8 @@ test.describe('Editor Toolbar Button States', () => {
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Click inside the first bullet list item
-    await editor.locator('ul li').first().click();
+    // Click inside the first bullet list item and select text
+    await editor.locator('ul li p').first().selectText();
 
     // The bullet list button should be active
     const bulletListButton = page.locator('button[title="Bullet List"]');
@@ -873,8 +839,8 @@ test.describe('Editor Toolbar Button States', () => {
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Click inside the first numbered list item
-    await editor.locator('ol li').first().click();
+    // Click inside the first numbered list item and select text
+    await editor.locator('ol li p').first().selectText();
 
     // The numbered list button should be active
     const numberedListButton = page.locator('button[title="Numbered List"]');

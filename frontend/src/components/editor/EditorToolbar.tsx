@@ -1,4 +1,4 @@
-// Editor toolbar component with mode toggle and formatting buttons.
+// Floating editor toolbar with formatting buttons (appears on text selection).
 
 import { Show } from 'solid-js';
 import type { EditorView } from 'prosemirror-view';
@@ -7,7 +7,6 @@ import { Selection, TextSelection, AllSelection } from 'prosemirror-state';
 import { toggleMark, setBlockType, wrapIn, lift } from 'prosemirror-commands';
 import { wrapInList } from 'prosemirror-schema-list';
 import { nodes, marks } from './prosemirror-config';
-import { useI18n } from '../../i18n';
 import styles from './Editor.module.css';
 
 export interface FormatState {
@@ -23,19 +22,12 @@ export interface FormatState {
 }
 
 interface EditorToolbarProps {
-  editorMode: 'wysiwyg' | 'markdown';
   formatState: FormatState;
   view: EditorView | undefined;
-  onSwitchToWysiwyg: () => void;
-  onSwitchToMarkdown: () => void;
+  position?: { top: number; left: number } | null;
 }
 
 export default function EditorToolbar(props: EditorToolbarProps) {
-  const { t } = useI18n();
-
-  const modeButtonClass = (isActive: boolean) =>
-    isActive ? `${styles.modeButton} ${styles.active}` : styles.modeButton;
-
   const formatButtonClass = (isActive: boolean) =>
     isActive ? `${styles.formatButton} ${styles.isActive}` : styles.formatButton;
 
@@ -461,27 +453,15 @@ export default function EditorToolbar(props: EditorToolbarProps) {
   };
 
   return (
-    <div class={styles.editorToolbar}>
-      <div class={styles.modeToggle}>
-        <button
-          class={modeButtonClass(props.editorMode === 'wysiwyg')}
-          onClick={props.onSwitchToWysiwyg}
-          title={t('editor.wysiwygMode') || 'Visual'}
-          data-testid="editor-mode-visual"
-        >
-          {t('editor.wysiwygMode') || 'Visual'}
-        </button>
-        <button
-          class={modeButtonClass(props.editorMode === 'markdown')}
-          onClick={props.onSwitchToMarkdown}
-          title={t('editor.markdownMode') || 'Markdown'}
-          data-testid="editor-mode-markdown"
-        >
-          {t('editor.markdownMode') || 'Markdown'}
-        </button>
-      </div>
-
-      <Show when={props.editorMode === 'wysiwyg'}>
+    <Show when={props.position}>
+      <div
+        class={styles.floatingToolbar}
+        data-testid="floating-toolbar"
+        style={{
+          top: `${props.position?.top ?? 0}px`,
+          left: `${props.position?.left ?? 0}px`,
+        }}
+      >
         <div class={styles.formattingButtons}>
           <button class={formatButtonClass(props.formatState.isBold)} onClick={toggleBold} title="Bold (Ctrl+B)">
             B
@@ -539,7 +519,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
             {'{ }'}
           </button>
         </div>
-      </Show>
-    </div>
+      </div>
+    </Show>
   );
 }

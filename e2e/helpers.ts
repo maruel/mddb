@@ -104,11 +104,15 @@ test.screenshot = (title: string, fn: Parameters<typeof test>[1]) => {
 
 // Helper to switch editor to markdown mode and get the textarea
 export async function switchToMarkdownMode(page: Page) {
-  const markdownModeButton = page.locator('[data-testid="editor-mode-markdown"]');
-  if (await markdownModeButton.isVisible()) {
-    await markdownModeButton.click();
+  const markdownEditor = page.locator('[data-testid="markdown-editor"]');
+  // If already in markdown mode, just return the editor
+  if (await markdownEditor.isVisible()) {
+    return markdownEditor;
   }
-  return page.locator('[data-testid="markdown-editor"]');
+  // Click the markdown mode button (always visible at bottom-right)
+  await page.locator('[data-testid="editor-mode-markdown"]').click();
+  await expect(markdownEditor).toBeVisible({ timeout: 3000 });
+  return markdownEditor;
 }
 
 // Helper to get editor content (works with both modes)

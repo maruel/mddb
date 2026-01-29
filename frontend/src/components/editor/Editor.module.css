@@ -8,43 +8,23 @@
   background: var(--c-bg);
 }
 
-/* Toolbar */
-.editorToolbar {
+/* Floating Toolbar */
+.floatingToolbar {
+  position: fixed;
+  z-index: 100;
   display: flex;
   align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-2);
-  border-bottom: 1px solid var(--c-border);
+  gap: var(--s-1);
+  padding: var(--s-1);
   background: var(--c-bg);
-  flex-wrap: wrap;
-}
-
-.modeToggle {
-  display: flex;
-  background: var(--c-bg-alt);
-  padding: 2px;
+  border: 1px solid var(--c-border);
   border-radius: var(--radius);
-}
-
-.modeButton {
-  padding: var(--s-1) var(--s-3);
-  border: none;
-  background: none;
-  font-size: 0.8rem;
-  cursor: pointer;
-  border-radius: 4px;
-  color: var(--c-text-light);
-  transition: all var(--transition);
-}
-
-.modeButton:hover {
-  color: var(--c-text);
-}
-
-.modeButton.active {
-  background: var(--c-bg);
-  color: var(--c-text);
   box-shadow: var(--shadow);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  transform: translate(-50%, -100%);
+  margin-top: -8px; /* Gap above selection */
 }
 
 .formattingButtons {
@@ -84,6 +64,47 @@
   height: 20px;
   background: var(--c-border);
   margin: 0 var(--s-1);
+}
+
+/* Mode toggle at bottom-right */
+.modeIndicator {
+  position: absolute;
+  bottom: var(--s-2);
+  right: var(--s-2);
+  display: flex;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
+  padding: 2px;
+  opacity: 0.6;
+  transition: opacity var(--transition);
+  z-index: 10;
+}
+
+.modeIndicator:hover {
+  opacity: 1;
+}
+
+.modeIndicator button {
+  padding: 3px 8px;
+  border: none;
+  background: none;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--c-text-light);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all var(--transition);
+}
+
+.modeIndicator button:hover {
+  color: var(--c-text);
+}
+
+.modeIndicatorActive {
+  background: var(--c-bg) !important;
+  color: var(--c-text) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 /* ProseMirror Editor */
@@ -407,7 +428,7 @@
 
 /* Mobile adjustments */
 @media (max-width: 768px) {
-  .editorToolbar {
+  .floatingToolbar {
     padding: var(--s-1);
     gap: var(--s-2);
   }
