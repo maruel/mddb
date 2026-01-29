@@ -250,7 +250,7 @@ npx playwright show-trace test-results/.../trace.zip
 
 Tests run with full parallelism. The `data-e2e/` directory is automatically cleaned before each test run.
 
-**Rate limiting**: With `TEST_FAST_RATE_LIMIT=1` (default in `make e2e`), rate limits are increased 1000x. The `registerUser` helper includes retry logic for 429 responses as a safety net.
+**Rate limiting**: With `TEST_FAST_RATE_LIMIT=1` (default in `make e2e`), rate limits are increased 10000x. The `registerUser` helper includes retry logic for 429 responses as a safety net.
 
 Use `make e2e-slow` to test with normal rate limits (runs sequentially with single worker).
 

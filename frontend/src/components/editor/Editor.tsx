@@ -109,6 +109,7 @@ export default function Editor(props: EditorProps) {
   // Track what we've emitted to distinguish our own changes from external updates
   let lastLoadedNodeId: string | undefined = props.nodeId;
   let lastEmittedContent: string = props.content;
+  let lastLinkedNodeTitles: NodeTitleMap | undefined = props.linkedNodeTitles;
 
   // Track active formatting states for toolbar buttons
   const [formatState, setFormatState] = createSignal<FormatState>({
@@ -233,19 +234,25 @@ export default function Editor(props: EditorProps) {
     view()?.destroy();
   });
 
-  // Sync when node changes or content changes externally
+  // Sync when node changes, content changes externally, or linked node titles are fetched
   createEffect(
     on(
-      () => [props.nodeId, props.content] as const,
-      ([nodeId, content]) => {
+      () => [props.nodeId, props.content, props.linkedNodeTitles] as const,
+      ([nodeId, content, linkedNodeTitles]) => {
         const nodeChanged = nodeId !== lastLoadedNodeId;
         const contentChangedExternally = content !== lastEmittedContent;
+        const titlesChanged = linkedNodeTitles !== lastLinkedNodeTitles;
 
-        if (nodeChanged || contentChangedExternally) {
+        if (nodeChanged || contentChangedExternally || titlesChanged) {
           lastLoadedNodeId = nodeId;
           lastEmittedContent = content;
-          setMarkdownContent(content);
-          setEditorMode('wysiwyg');
+          lastLinkedNodeTitles = linkedNodeTitles;
+
+          // Only reset markdown content and mode when node or content changes, not just titles
+          if (nodeChanged || contentChangedExternally) {
+            setMarkdownContent(content);
+            setEditorMode('wysiwyg');
+          }
 
           const editorView = view();
           if (editorView) {

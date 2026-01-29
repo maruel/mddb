@@ -5,6 +5,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"encoding"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -701,15 +702,21 @@ func populateQueryParams(r *http.Request, input any) {
 		}
 
 		// Set the field value based on its type
+		fieldVal := elem.Field(i)
 		switch field.Type.Kind() {
 		case reflect.String:
-			elem.Field(i).SetString(paramValue)
+			fieldVal.SetString(paramValue)
 		case reflect.Int:
 			if intVal, err := strconv.Atoi(paramValue); err == nil {
-				elem.Field(i).SetInt(int64(intVal))
+				fieldVal.SetInt(int64(intVal))
 			}
 		default:
-			// Other types are not supported for query params yet
+			// Try to use encoding.TextUnmarshaler interface for custom types
+			if fieldVal.CanAddr() {
+				if unmarshaler, ok := fieldVal.Addr().Interface().(encoding.TextUnmarshaler); ok {
+					_ = unmarshaler.UnmarshalText([]byte(paramValue))
+				}
+			}
 		}
 	}
 }

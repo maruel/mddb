@@ -41,11 +41,11 @@ type Config struct {
 //   - Read (auth): 30,000 req/min, User scope
 //   - Read (unauth): 6,000 req/min, IP scope.
 //
-// Set TEST_FAST_RATE_LIMIT=1 to increase rate limits 1000x (for e2e tests).
+// Set TEST_FAST_RATE_LIMIT=1 to increase rate limits 10000x (for e2e tests).
 func DefaultConfig() *Config {
 	m := 1 // multiplier
 	if os.Getenv("TEST_FAST_RATE_LIMIT") == "1" {
-		m = 1000
+		m = 10000
 	}
 	return &Config{
 		Auth:       TierConfig{Name: "auth", Rate: 5 * m, Window: time.Minute, Burst: 5 * m, Scope: ScopeIP},
