@@ -73,6 +73,7 @@ function AppContent() {
     content,
     hasUnsavedChanges,
     autoSaveStatus,
+    assetUrls,
     showHistory,
     history,
     loadHistory,
@@ -569,8 +570,8 @@ function AppContent() {
                           <Show when={selectedNodeData()?.has_page}>
                             <Editor
                               content={content()}
-                              pageId={selectedNodeId() ?? undefined}
-                              orgId={user()?.organization_id}
+                              nodeId={selectedNodeId() ?? undefined}
+                              assetUrls={assetUrls()}
                               onChange={handleContentChange}
                             />
                           </Show>

@@ -49,12 +49,12 @@ type Config struct {
 // AssetURLExpiry is the default duration for which signed asset URLs are valid.
 const AssetURLExpiry = 1 * time.Hour
 
-// GenerateSignedAssetURL creates a signed URL for asset access.
+// GenerateSignedAssetURL creates a signed rooted path for asset access.
 func (c *Config) GenerateSignedAssetURL(wsID, nodeID jsonldb.ID, name string) string {
 	expiry := time.Now().Add(AssetURLExpiry).Unix()
 	path := fmt.Sprintf("%s/%s/%s", wsID, nodeID, name)
 	sig := c.generateSignature(path, expiry)
-	return fmt.Sprintf("%s/assets/%s?sig=%s&exp=%d", c.BaseURL, path, sig, expiry)
+	return fmt.Sprintf("/assets/%s?sig=%s&exp=%d", path, sig, expiry)
 }
 
 // generateSignature creates an HMAC-SHA256 signature for asset access.

@@ -197,7 +197,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	// Search
 	mux.Handle("POST /api/workspaces/{wsID}/search", WrapWSAuth(sh.Search, svc, hcfg, identity.WSRoleViewer, limiters))
 
-	// File serving (raw asset files) - public for now
+	// File serving (raw asset files) - requires signed URL (sig + exp query params)
 	mux.HandleFunc("GET /assets/{wsID}/{id}/{name}", ah.ServeAssetFile)
 
 	// API catch-all - return 404 for any unmatched /api/ routes (never fall through to SPA)

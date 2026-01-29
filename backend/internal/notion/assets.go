@@ -89,14 +89,14 @@ func (d *AssetDownloader) DownloadAsset(nodeID jsonldb.ID, assetURL string) (str
 	hashPrefix := hex.EncodeToString(hash[:8])
 	uniqueFilename := hashPrefix + "-" + filename
 
-	// Create assets directory
-	assetsDir := filepath.Join(d.outputDir, nodeID.String(), "assets")
-	if err := os.MkdirAll(assetsDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional
+	// Create node directory (assets stored alongside index.md)
+	nodeDir := filepath.Join(d.outputDir, nodeID.String())
+	if err := os.MkdirAll(nodeDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional
 		d.Errors++
-		return "", fmt.Errorf("failed to create assets dir: %w", err)
+		return "", fmt.Errorf("failed to create node dir: %w", err)
 	}
 
-	localPath := filepath.Join(assetsDir, uniqueFilename)
+	localPath := filepath.Join(nodeDir, uniqueFilename)
 
 	// Download the file
 	resp, err := d.client.Get(assetURL)
@@ -129,8 +129,8 @@ func (d *AssetDownloader) DownloadAsset(nodeID jsonldb.ID, assetURL string) (str
 		return "", fmt.Errorf("failed to close file: %w", err)
 	}
 
-	// Store relative path for use in markdown
-	relativePath := "assets/" + uniqueFilename
+	// Store relative path for use in markdown (just filename, same directory as index.md)
+	relativePath := uniqueFilename
 
 	d.mu.Lock()
 	d.downloaded[assetURL] = relativePath

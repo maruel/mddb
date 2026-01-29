@@ -118,6 +118,7 @@ md.core.ruler.after('inline', 'task_list', (state) => {
 });
 
 // Custom markdown parser using our schema
+// Note: Table tokens are mapped to paragraph/ignore since ProseMirror schema doesn't support tables
 export const markdownParser = new MarkdownParser(schema, md, {
   blockquote: { block: 'blockquote' },
   paragraph: { block: 'paragraph' },
@@ -155,6 +156,13 @@ export const markdownParser = new MarkdownParser(schema, md, {
     }),
   },
   code_inline: { mark: 'code' },
+  // Table support: render table cells as paragraphs (tables not fully supported in editor)
+  table: { block: 'paragraph', noCloseToken: false },
+  thead: { ignore: true },
+  tbody: { ignore: true },
+  tr: { ignore: true },
+  th: { block: 'paragraph' },
+  td: { block: 'paragraph' },
 });
 
 // Custom markdown serializer that uses "-" for bullet lists and handles task list items

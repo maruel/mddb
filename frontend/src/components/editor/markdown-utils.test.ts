@@ -2,90 +2,113 @@
 
 import { describe, it, expect } from 'vitest';
 import { rewriteAssetUrls, reverseRewriteAssetUrls } from './markdown-utils';
+import type { AssetUrlMap } from '../../contexts/EditorContext';
 
 describe('rewriteAssetUrls', () => {
-  it('rewrites markdown image paths to org-scoped paths', () => {
-    const markdown = '![alt](assets/image.png)';
-    expect(rewriteAssetUrls(markdown, 'org123')).toBe('![alt](/assets/org123/image.png)');
+  const assetUrls: AssetUrlMap = {
+    'image.png': 'https://example.com/assets/ws/node/image.png?sig=abc&exp=123',
+    'photo.jpg': 'https://example.com/assets/ws/node/photo.jpg?sig=def&exp=456',
+    'abc123-image.png': 'https://example.com/assets/ws/node/abc123-image.png?sig=xyz&exp=789',
+  };
+
+  it('rewrites local image filenames to signed URLs', () => {
+    const markdown = '![alt](image.png)';
+    expect(rewriteAssetUrls(markdown, assetUrls)).toBe(
+      '![alt](https://example.com/assets/ws/node/image.png?sig=abc&exp=123)'
+    );
   });
 
-  it('rewrites HTML img src paths', () => {
-    const html = '<img src="assets/image.png">';
-    expect(rewriteAssetUrls(html, 'org123')).toBe('<img src="/assets/org123/image.png">');
+  it('rewrites multiple local images', () => {
+    const markdown = '![a](image.png) ![b](photo.jpg)';
+    const expected =
+      '![a](https://example.com/assets/ws/node/image.png?sig=abc&exp=123) ![b](https://example.com/assets/ws/node/photo.jpg?sig=def&exp=456)';
+    expect(rewriteAssetUrls(markdown, assetUrls)).toBe(expected);
   });
 
-  it('rewrites multiple asset paths', () => {
-    const markdown = '![a](assets/a.png) ![b](assets/b.png)';
-    const expected = '![a](/assets/org123/a.png) ![b](/assets/org123/b.png)';
-    expect(rewriteAssetUrls(markdown, 'org123')).toBe(expected);
+  it('does not modify external URLs', () => {
+    const markdown = '![alt](https://cdn.example.com/image.png)';
+    expect(rewriteAssetUrls(markdown, assetUrls)).toBe(markdown);
   });
 
-  it('does not modify non-asset paths', () => {
-    const markdown = '![alt](https://example.com/image.png)';
-    expect(rewriteAssetUrls(markdown, 'org123')).toBe(markdown);
+  it('does not modify absolute paths', () => {
+    const markdown = '![alt](/some/path/image.png)';
+    expect(rewriteAssetUrls(markdown, assetUrls)).toBe(markdown);
   });
 
-  it('returns unchanged if orgId is undefined', () => {
-    const markdown = '![alt](assets/image.png)';
-    expect(rewriteAssetUrls(markdown, undefined)).toBe(markdown);
+  it('returns unchanged if assetUrls is empty', () => {
+    const markdown = '![alt](image.png)';
+    expect(rewriteAssetUrls(markdown, {})).toBe(markdown);
   });
 
-  it('returns unchanged if orgId is empty string', () => {
-    const markdown = '![alt](assets/image.png)';
-    expect(rewriteAssetUrls(markdown, '')).toBe(markdown);
+  it('keeps filename if not in asset map', () => {
+    const markdown = '![alt](unknown.png)';
+    expect(rewriteAssetUrls(markdown, assetUrls)).toBe(markdown);
   });
 
-  it('handles nested paths', () => {
-    const markdown = '![alt](assets/folder/subfolder/image.png)';
-    expect(rewriteAssetUrls(markdown, 'org123')).toBe('![alt](/assets/org123/folder/subfolder/image.png)');
+  it('handles filenames with hash prefixes', () => {
+    const markdown = '![alt](abc123-image.png)';
+    expect(rewriteAssetUrls(markdown, assetUrls)).toBe(
+      '![alt](https://example.com/assets/ws/node/abc123-image.png?sig=xyz&exp=789)'
+    );
+  });
+
+  it('preserves alt text', () => {
+    const markdown = '![My Image Alt](image.png)';
+    expect(rewriteAssetUrls(markdown, assetUrls)).toBe(
+      '![My Image Alt](https://example.com/assets/ws/node/image.png?sig=abc&exp=123)'
+    );
   });
 });
 
 describe('reverseRewriteAssetUrls', () => {
-  it('converts org-scoped paths back to relative paths', () => {
-    const markdown = '![alt](/assets/org123/image.png)';
-    expect(reverseRewriteAssetUrls(markdown, 'org123')).toBe('![alt](assets/image.png)');
+  const assetUrls: AssetUrlMap = {
+    'image.png': 'https://example.com/assets/ws/node/image.png?sig=abc&exp=123',
+    'photo.jpg': 'https://example.com/assets/ws/node/photo.jpg?sig=def&exp=456',
+  };
+
+  it('converts signed URLs back to filenames', () => {
+    const markdown = '![alt](https://example.com/assets/ws/node/image.png?sig=abc&exp=123)';
+    expect(reverseRewriteAssetUrls(markdown, assetUrls)).toBe('![alt](image.png)');
   });
 
-  it('converts multiple paths', () => {
-    const markdown = '![a](/assets/org123/a.png) ![b](/assets/org123/b.png)';
-    expect(reverseRewriteAssetUrls(markdown, 'org123')).toBe('![a](assets/a.png) ![b](assets/b.png)');
+  it('converts multiple URLs', () => {
+    const markdown =
+      '![a](https://example.com/assets/ws/node/image.png?sig=abc&exp=123) ![b](https://example.com/assets/ws/node/photo.jpg?sig=def&exp=456)';
+    expect(reverseRewriteAssetUrls(markdown, assetUrls)).toBe('![a](image.png) ![b](photo.jpg)');
   });
 
-  it('does not modify paths for other orgs', () => {
-    const markdown = '![alt](/assets/other-org/image.png)';
-    expect(reverseRewriteAssetUrls(markdown, 'org123')).toBe(markdown);
+  it('does not modify URLs not in asset map', () => {
+    const markdown = '![alt](https://other.com/image.png)';
+    expect(reverseRewriteAssetUrls(markdown, assetUrls)).toBe(markdown);
   });
 
-  it('returns unchanged if orgId is undefined', () => {
-    const markdown = '![alt](/assets/org123/image.png)';
-    expect(reverseRewriteAssetUrls(markdown, undefined)).toBe(markdown);
-  });
-
-  it('returns unchanged if orgId is empty string', () => {
-    const markdown = '![alt](/assets/org123/image.png)';
-    expect(reverseRewriteAssetUrls(markdown, '')).toBe(markdown);
-  });
-
-  it('handles nested paths', () => {
-    const markdown = '![alt](/assets/org123/folder/subfolder/image.png)';
-    expect(reverseRewriteAssetUrls(markdown, 'org123')).toBe('![alt](assets/folder/subfolder/image.png)');
+  it('returns unchanged if assetUrls is empty', () => {
+    const markdown = '![alt](https://example.com/assets/ws/node/image.png?sig=abc&exp=123)';
+    expect(reverseRewriteAssetUrls(markdown, {})).toBe(markdown);
   });
 });
 
 describe('round-trip asset URL handling', () => {
+  const assetUrls: AssetUrlMap = {
+    'image.png': 'https://example.com/signed-url',
+  };
+
   it('asset URLs survive rewrite and reverse', () => {
-    const original = '![alt](assets/image.png)';
-    const rewritten = rewriteAssetUrls(original, 'org123');
-    expect(rewritten).toBe('![alt](/assets/org123/image.png)');
-    const reversed = reverseRewriteAssetUrls(rewritten, 'org123');
+    const original = '![alt](image.png)';
+    const rewritten = rewriteAssetUrls(original, assetUrls);
+    expect(rewritten).toBe('![alt](https://example.com/signed-url)');
+    const reversed = reverseRewriteAssetUrls(rewritten, assetUrls);
     expect(reversed).toBe(original);
   });
 
   it('multiple assets survive round-trip', () => {
-    const original = '![a](assets/a.png)\n\n![b](assets/b.png)';
-    const rewritten = rewriteAssetUrls(original, 'org123');
-    const reversed = reverseRewriteAssetUrls(rewritten, 'org123');
+    const urls: AssetUrlMap = {
+      'a.png': 'https://example.com/a',
+      'b.png': 'https://example.com/b',
+    };
+    const original = '![a](a.png)\n\n![b](b.png)';
+    const rewritten = rewriteAssetUrls(original, urls);
+    const reversed = reverseRewriteAssetUrls(rewritten, urls);
     expect(reversed).toBe(original);
   });
 });

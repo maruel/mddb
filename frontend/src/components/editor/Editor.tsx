@@ -9,12 +9,13 @@ import { nodes, marks, markdownParser, markdownSerializer, createEditorState } f
 import { createSlashCommandPlugin, type SlashMenuState } from './slashCommandPlugin';
 import SlashCommandMenu from './SlashCommandMenu';
 import EditorToolbar, { type FormatState } from './EditorToolbar';
+import type { AssetUrlMap } from '../../contexts/EditorContext';
 import styles from './Editor.module.css';
 
 interface EditorProps {
   content: string;
-  pageId?: string;
-  orgId?: string;
+  nodeId?: string;
+  assetUrls?: AssetUrlMap;
   onChange: (markdown: string) => void;
   placeholder?: string;
   readOnly?: boolean;
@@ -37,7 +38,7 @@ export default function Editor(props: EditorProps) {
   const slashPlugin = createSlashCommandPlugin(setSlashMenuState);
 
   // Track what we've emitted to distinguish our own changes from external updates
-  let lastLoadedPageId: string | undefined = props.pageId;
+  let lastLoadedNodeId: string | undefined = props.nodeId;
   let lastEmittedContent: string = props.content;
 
   // Track active formatting states for toolbar buttons
@@ -55,14 +56,14 @@ export default function Editor(props: EditorProps) {
 
   // Parse markdown to ProseMirror document, handling asset URLs
   const parseMarkdown = (md: string): ProseMirrorNode | null => {
-    const processed = rewriteAssetUrls(md, props.orgId);
+    const processed = rewriteAssetUrls(md, props.assetUrls || {});
     return markdownParser.parse(processed);
   };
 
   // Serialize ProseMirror document to markdown, handling asset URLs
   const serializeMarkdown = (doc: ProseMirrorNode): string => {
     const md = markdownSerializer.serialize(doc);
-    return reverseRewriteAssetUrls(md, props.orgId);
+    return reverseRewriteAssetUrls(md, props.assetUrls || {});
   };
 
   // Update active state signals based on current selection
@@ -146,16 +147,16 @@ export default function Editor(props: EditorProps) {
     view()?.destroy();
   });
 
-  // Sync when page changes or content changes externally
+  // Sync when node changes or content changes externally
   createEffect(
     on(
-      () => [props.pageId, props.content] as const,
-      ([pageId, content]) => {
-        const pageChanged = pageId !== lastLoadedPageId;
+      () => [props.nodeId, props.content] as const,
+      ([nodeId, content]) => {
+        const nodeChanged = nodeId !== lastLoadedNodeId;
         const contentChangedExternally = content !== lastEmittedContent;
 
-        if (pageChanged || contentChangedExternally) {
-          lastLoadedPageId = pageId;
+        if (nodeChanged || contentChangedExternally) {
+          lastLoadedNodeId = nodeId;
           lastEmittedContent = content;
           setMarkdownContent(content);
           setEditorMode('wysiwyg');

@@ -32,7 +32,21 @@ func (h *NodeHandler) GetNode(ctx context.Context, wsID jsonldb.ID, _ *identity.
 	if err != nil {
 		return nil, dto.NotFound("node")
 	}
-	return nodeToResponse(node), nil
+
+	resp := nodeToResponse(node)
+
+	// Add signed asset URLs if node has content
+	if node.Content != "" {
+		it, err := ws.IterAssets(req.ID)
+		if err == nil {
+			resp.AssetURLs = make(map[string]string)
+			for a := range it {
+				resp.AssetURLs[a.Name] = h.Cfg.GenerateSignedAssetURL(wsID, req.ID, a.Name)
+			}
+		}
+	}
+
+	return resp, nil
 }
 
 // ListNodeChildren returns the children of a node.

@@ -16,6 +16,9 @@ import { debounce } from '../utils/debounce';
 import { nodeUrl } from '../utils/urls';
 import type { Commit } from '@sdk/types.gen';
 
+/** Map of asset filename to signed URL */
+export type AssetUrlMap = Record<string, string>;
+
 interface EditorContextValue {
   // Editor state
   title: Accessor<string>;
@@ -25,6 +28,9 @@ interface EditorContextValue {
   hasUnsavedChanges: Accessor<boolean>;
   setHasUnsavedChanges: (has: boolean) => void;
   autoSaveStatus: Accessor<'idle' | 'saving' | 'saved'>;
+
+  // Asset URLs (filename -> signed URL)
+  assetUrls: Accessor<AssetUrlMap>;
 
   // History
   showHistory: Accessor<boolean>;
@@ -53,6 +59,9 @@ export const EditorProvider: ParentComponent = (props) => {
   const [content, setContent] = createSignal('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+
+  // Asset URLs accessor - derived from selectedNodeData
+  const assetUrls = (): AssetUrlMap => selectedNodeData()?.asset_urls || {};
 
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
@@ -182,6 +191,7 @@ export const EditorProvider: ParentComponent = (props) => {
     hasUnsavedChanges,
     setHasUnsavedChanges,
     autoSaveStatus,
+    assetUrls,
     showHistory,
     setShowHistory,
     history,

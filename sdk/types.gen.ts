@@ -929,6 +929,7 @@ export interface NodeResponse {
   has_table: boolean;
   has_children?: boolean;
   children?: NodeResponse[];
+  asset_urls?: { [key: string]: string};
 }
 /**
  * GetPageResponse is a response containing page content.

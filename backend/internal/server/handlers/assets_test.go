@@ -27,9 +27,9 @@ func TestAssetHandler(t *testing.T) {
 
 		url := cfg.GenerateSignedAssetURL(wsID, nodeID, name)
 
-		// Verify URL format
-		if !strings.HasPrefix(url, cfg.BaseURL+"/assets/") {
-			t.Errorf("URL should start with %s/assets/, got %s", cfg.BaseURL, url)
+		// Verify URL format (rooted path, no hostname)
+		if !strings.HasPrefix(url, "/assets/") {
+			t.Errorf("URL should start with /assets/, got %s", url)
 		}
 		if !strings.Contains(url, "sig=") {
 			t.Error("URL should contain sig parameter")

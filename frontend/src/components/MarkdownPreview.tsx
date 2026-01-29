@@ -2,11 +2,12 @@
 
 import MarkdownIt from 'markdown-it';
 import DOMPurify from 'dompurify';
+import type { AssetUrlMap } from '../contexts/EditorContext';
 import styles from './MarkdownPreview.module.css';
 
 interface MarkdownPreviewProps {
   content: string;
-  orgId?: string;
+  assetUrls?: AssetUrlMap;
 }
 
 const md = new MarkdownIt({
@@ -54,7 +55,7 @@ md.renderer.rules.checkbox = (tokens, idx) => {
   return `<input type="checkbox" class="task-checkbox" disabled${isChecked ? ' checked' : ''}> `;
 };
 
-// Custom renderer for images to support organization-aware asset URLs
+// Custom renderer for images to support signed asset URLs
 const originalImageRenderer =
   md.renderer.rules.image ||
   function (tokens, idx, options, _env, self) {
@@ -68,17 +69,15 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
   }
   const srcIndex = token.attrIndex('src');
   const attrs = token.attrs;
-  const orgId = env?.orgId;
+  const assetUrls = env?.assetUrls as AssetUrlMap | undefined;
   const srcAttr = attrs?.[srcIndex];
-  if (srcAttr && orgId) {
-    let src = srcAttr[1];
-    // If it's a relative path starting with assets/, rewrite it
-    if (src.startsWith('assets/')) {
-      const parts = src.split('/');
-      if (parts.length >= 2) {
-        // Change assets/1/img.png to /assets/{orgId}/1/img.png
-        src = `/assets/${orgId}/${parts.slice(1).join('/')}`;
-        srcAttr[1] = src;
+  if (srcAttr && assetUrls) {
+    const src = srcAttr[1];
+    // If it's a local filename (not a URL or absolute path), look up signed URL
+    if (!src.includes('://') && !src.startsWith('/')) {
+      const signedUrl = assetUrls[src];
+      if (signedUrl) {
+        srcAttr[1] = signedUrl;
       }
     }
   }
@@ -87,7 +86,7 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
 
 export default function MarkdownPreview(props: MarkdownPreviewProps) {
   const html = () => {
-    const rawHtml = md.render(props.content, { orgId: props.orgId });
+    const rawHtml = md.render(props.content, { assetUrls: props.assetUrls });
     return DOMPurify.sanitize(rawHtml);
   };
 

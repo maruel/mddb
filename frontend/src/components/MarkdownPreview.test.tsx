@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, cleanup } from '@solidjs/testing-library';
 import MarkdownPreview from './MarkdownPreview';
+import type { AssetUrlMap } from '../contexts/EditorContext';
 
 // Mock CSS module
 vi.mock('./MarkdownPreview.module.css', () => ({
@@ -69,28 +70,62 @@ describe('MarkdownPreview', () => {
     expect(preview?.innerHTML).toContain('Item 1');
   });
 
-  it('renders images without orgId unchanged', () => {
+  it('renders external image URLs unchanged', () => {
     const { container } = render(() => <MarkdownPreview content="![Alt](https://example.com/image.png)" />);
 
     const preview = container.querySelector('[role="region"]');
     expect(preview?.innerHTML).toContain('src="https://example.com/image.png"');
   });
 
-  it('rewrites relative asset paths when orgId is provided', () => {
-    const { container } = render(() => <MarkdownPreview content="![Alt](assets/123/image.png)" orgId="org-456" />);
+  it('rewrites local filenames to signed URLs when assetUrls provided', () => {
+    const assetUrls: AssetUrlMap = {
+      'image.png': 'https://signed.example.com/image.png?sig=abc',
+    };
+    const { container } = render(() => <MarkdownPreview content="![Alt](image.png)" assetUrls={assetUrls} />);
 
     const preview = container.querySelector('[role="region"]');
-    // Should rewrite assets/123/image.png to /assets/org-456/123/image.png
-    expect(preview?.innerHTML).toContain('src="/assets/org-456/123/image.png"');
+    expect(preview?.innerHTML).toContain('src="https://signed.example.com/image.png?sig=abc"');
   });
 
-  it('does not rewrite non-assets paths', () => {
+  it('keeps filename if not in asset map', () => {
+    const assetUrls: AssetUrlMap = {
+      'other.png': 'https://signed.example.com/other.png?sig=abc',
+    };
+    const { container } = render(() => <MarkdownPreview content="![Alt](unknown.png)" assetUrls={assetUrls} />);
+
+    const preview = container.querySelector('[role="region"]');
+    expect(preview?.innerHTML).toContain('src="unknown.png"');
+  });
+
+  it('keeps filename if assetUrls is empty', () => {
+    const { container } = render(() => <MarkdownPreview content="![Alt](image.png)" assetUrls={{}} />);
+
+    const preview = container.querySelector('[role="region"]');
+    expect(preview?.innerHTML).toContain('src="image.png"');
+  });
+
+  it('does not rewrite external URLs even with assetUrls', () => {
+    const assetUrls: AssetUrlMap = {
+      'image.png': 'https://signed.example.com/image.png?sig=abc',
+    };
     const { container } = render(() => (
-      <MarkdownPreview content="![Alt](https://cdn.example.com/image.png)" orgId="org-456" />
+      <MarkdownPreview content="![Alt](https://cdn.example.com/image.png)" assetUrls={assetUrls} />
     ));
 
     const preview = container.querySelector('[role="region"]');
     expect(preview?.innerHTML).toContain('src="https://cdn.example.com/image.png"');
+  });
+
+  it('does not rewrite absolute paths even with assetUrls', () => {
+    const assetUrls: AssetUrlMap = {
+      'image.png': 'https://signed.example.com/image.png?sig=abc',
+    };
+    const { container } = render(() => (
+      <MarkdownPreview content="![Alt](/some/path/image.png)" assetUrls={assetUrls} />
+    ));
+
+    const preview = container.querySelector('[role="region"]');
+    expect(preview?.innerHTML).toContain('src="/some/path/image.png"');
   });
 
   it('renders empty content correctly', () => {
@@ -98,7 +133,6 @@ describe('MarkdownPreview', () => {
 
     const preview = container.querySelector('[role="region"]');
     expect(preview).toBeTruthy();
-    // Empty content should produce empty or minimal HTML
     expect(preview?.innerHTML.trim()).toBe('');
   });
 
@@ -124,15 +158,5 @@ describe('MarkdownPreview', () => {
     const preview = container.querySelector('[role="region"]');
     expect(preview?.innerHTML).toContain('<blockquote>');
     expect(preview?.innerHTML).toContain('This is a quote');
-  });
-
-  it('handles complex asset paths correctly', () => {
-    const { container } = render(() => (
-      <MarkdownPreview content="![Alt](assets/page-id/subfolder/image.png)" orgId="my-org" />
-    ));
-
-    const preview = container.querySelector('[role="region"]');
-    // Should preserve subfolder structure
-    expect(preview?.innerHTML).toContain('src="/assets/my-org/page-id/subfolder/image.png"');
   });
 });
