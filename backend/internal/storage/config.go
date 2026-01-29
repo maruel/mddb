@@ -58,6 +58,10 @@ type ServerQuotas struct {
 
 	// MaxAssetSizeBytes limits the size of a single uploaded asset file.
 	MaxAssetSizeBytes int64 `json:"max_asset_size_bytes"`
+
+	// MaxEgressBandwidthBps limits total egress bandwidth in bytes per second.
+	// 0 means unlimited.
+	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps"`
 }
 
 // Validate checks that all quota values are non-negative.
@@ -92,6 +96,9 @@ func (q *ServerQuotas) Validate() error {
 	if q.MaxAssetSizeBytes <= 0 {
 		return errors.New("max_asset_size_bytes must be positive")
 	}
+	if q.MaxEgressBandwidthBps < 0 {
+		return errors.New("max_egress_bandwidth_bps must be non-negative")
+	}
 	return nil
 }
 
@@ -113,6 +120,7 @@ func DefaultServerQuotas() ServerQuotas {
 		MaxUsers:              maxUsers,
 		MaxTotalStorageBytes:  100 * 1024 * 1024 * 1024, // 100 GiB
 		MaxAssetSizeBytes:     10 * 1024 * 1024,         // 10 MiB
+		MaxEgressBandwidthBps: 0,                        // unlimited
 	}
 }
 

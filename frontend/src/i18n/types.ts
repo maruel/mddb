@@ -357,6 +357,7 @@ export interface Dictionary {
     maxWorkspaces: string;
     maxUsers: string;
     maxTotalStorageBytes: string;
+    maxEgressBandwidthBps: string;
     saveConfiguration: string;
     configurationSaved: string;
     smtpEnabled: string;

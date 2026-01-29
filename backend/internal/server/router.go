@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/frontend"
+	"github.com/maruel/mddb/backend/internal/server/bandwidth"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
@@ -57,6 +58,9 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	// Create rate limiters
 	limiters := ratelimit.NewLimiters(&cfg.RateLimits)
 
+	// Create bandwidth limiter
+	bandwidthLim := bandwidth.NewLimiter(cfg.Quotas.MaxEgressBandwidthBps)
+
 	// Create handler config from server config
 	hcfg := &handlers.Config{
 		ServerConfig: *cfg.ServerConfig,
@@ -93,7 +97,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(adminh.ListAllOrgs, svc, hcfg, limiters))
 
 	// Server config endpoints (requires IsGlobalAdmin)
-	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, DataDir: cfg.DataDir}
+	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, DataDir: cfg.DataDir, BandwidthLimiter: bandwidthLim}
 	mux.Handle("GET /api/server/config", WrapGlobalAdmin(serverh.GetConfig, svc, hcfg, limiters))
 	mux.Handle("POST /api/server/config", WrapGlobalAdmin(serverh.UpdateConfig, svc, hcfg, limiters))
 
@@ -218,7 +222,11 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	f := func(w http.ResponseWriter, r *http.Request) {
 		clientIP := reqctx.GetClientIP(r)
 		start := time.Now()
-		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+		rw := &responseWriter{
+			ResponseWriter:   w,
+			status:           http.StatusOK,
+			bandwidthLimiter: bandwidthLim,
+		}
 		mux.ServeHTTP(rw, r)
 		slog.InfoContext(r.Context(), "http",
 			"m", r.Method,
@@ -232,11 +240,12 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	return http.HandlerFunc(f)
 }
 
-// responseWriter wraps http.ResponseWriter to capture status code and response size.
+// responseWriter wraps http.ResponseWriter to capture status code, response size, and apply bandwidth limiting.
 type responseWriter struct {
 	http.ResponseWriter
-	status int
-	size   int
+	status           int
+	size             int
+	bandwidthLimiter *bandwidth.Limiter
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
@@ -245,6 +254,14 @@ func (rw *responseWriter) WriteHeader(code int) {
 }
 
 func (rw *responseWriter) Write(b []byte) (int, error) {
+	// Apply bandwidth limiting before writing
+	if rw.bandwidthLimiter != nil {
+		waitDuration := rw.bandwidthLimiter.Allow(int64(len(b)))
+		if waitDuration > 0 {
+			time.Sleep(waitDuration)
+		}
+	}
+
 	n, err := rw.ResponseWriter.Write(b)
 	rw.size += n
 	return n, err

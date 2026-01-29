@@ -32,6 +32,7 @@ export default function ServerSettingsPanel() {
   const [maxWorkspaces, setMaxWorkspaces] = createSignal(0);
   const [maxUsers, setMaxUsers] = createSignal(0);
   const [maxTotalStorageBytes, setMaxTotalStorageBytes] = createSignal(0);
+  const [maxEgressBandwidthBps, setMaxEgressBandwidthBps] = createSignal(0);
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -61,6 +62,7 @@ export default function ServerSettingsPanel() {
       setMaxWorkspaces(data.quotas.max_workspaces);
       setMaxUsers(data.quotas.max_users);
       setMaxTotalStorageBytes(data.quotas.max_total_storage_bytes);
+      setMaxEgressBandwidthBps(data.quotas.max_egress_bandwidth_bps);
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
@@ -117,6 +119,7 @@ export default function ServerSettingsPanel() {
           max_workspaces: maxWorkspaces(),
           max_users: maxUsers(),
           max_total_storage_bytes: maxTotalStorageBytes(),
+          max_egress_bandwidth_bps: maxEgressBandwidthBps(),
         },
       });
 
@@ -306,6 +309,16 @@ export default function ServerSettingsPanel() {
                   type="number"
                   value={maxTotalStorageBytes()}
                   onInput={(e) => setMaxTotalStorageBytes(parseInt(e.target.value) || 0)}
+                  min="0"
+                />
+              </div>
+
+              <div class={styles.formItem}>
+                <label>{t('server.maxEgressBandwidthBps')}</label>
+                <input
+                  type="number"
+                  value={maxEgressBandwidthBps()}
+                  onInput={(e) => setMaxEgressBandwidthBps(parseInt(e.target.value) || 0)}
                   min="0"
                 />
               </div>

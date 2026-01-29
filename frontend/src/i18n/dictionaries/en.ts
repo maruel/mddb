@@ -354,6 +354,7 @@ export const dict: Dictionary = {
     maxWorkspaces: 'Max Workspaces',
     maxUsers: 'Max Users',
     maxTotalStorageBytes: 'Max Total Storage (bytes)',
+    maxEgressBandwidthBps: 'Max Egress Bandwidth (bytes/sec)',
     saveConfiguration: 'Save Configuration',
     configurationSaved: 'Configuration saved successfully',
     smtpEnabled: 'SMTP Enabled',

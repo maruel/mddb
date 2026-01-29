@@ -1083,6 +1083,7 @@ type QuotasConfigUpdate struct {
 	MaxWorkspaces         int   `json:"max_workspaces"`
 	MaxUsers              int   `json:"max_users"`
 	MaxTotalStorageBytes  int64 `json:"max_total_storage_bytes"`
+	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps"`
 }
 
 // UpdateServerConfigRequest is a request to update server configuration.

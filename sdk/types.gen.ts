@@ -550,6 +550,7 @@ export interface QuotasConfigUpdate {
   max_workspaces: number /* int */;
   max_users: number /* int */;
   max_total_storage_bytes: number /* int64 */;
+  max_egress_bandwidth_bps: number /* int64 */;
 }
 /**
  * UpdateServerConfigRequest is a request to update server configuration.
@@ -1126,6 +1127,7 @@ export interface QuotasConfigResponse {
   max_workspaces: number /* int */;
   max_users: number /* int */;
   max_total_storage_bytes: number /* int64 */;
+  max_egress_bandwidth_bps: number /* int64 */;
 }
 /**
  * ServerConfigResponse is a response containing server configuration.

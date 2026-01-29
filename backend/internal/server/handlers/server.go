@@ -14,8 +14,9 @@ import (
 
 // ServerHandler handles server configuration endpoints.
 type ServerHandler struct {
-	Cfg     *storage.ServerConfig
-	DataDir string
+	Cfg              *storage.ServerConfig
+	DataDir          string
+	BandwidthLimiter BandwidthUpdater // for hot-reload of bandwidth limit
 }
 
 // GetConfig returns the current server configuration with masked password.
@@ -38,6 +39,7 @@ func (h *ServerHandler) GetConfig(ctx context.Context, _ *identity.User, _ *dto.
 			MaxWorkspaces:         h.Cfg.Quotas.MaxWorkspaces,
 			MaxUsers:              h.Cfg.Quotas.MaxUsers,
 			MaxTotalStorageBytes:  h.Cfg.Quotas.MaxTotalStorageBytes,
+			MaxEgressBandwidthBps: h.Cfg.Quotas.MaxEgressBandwidthBps,
 		},
 	}, nil
 }
@@ -76,6 +78,7 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 			MaxWorkspaces:         req.Quotas.MaxWorkspaces,
 			MaxUsers:              req.Quotas.MaxUsers,
 			MaxTotalStorageBytes:  req.Quotas.MaxTotalStorageBytes,
+			MaxEgressBandwidthBps: req.Quotas.MaxEgressBandwidthBps,
 		}
 		// Validate the new quotas
 		if err := newQuotas.Validate(); err != nil {
@@ -87,6 +90,11 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 	// Save to disk
 	if err := h.Cfg.Save(h.DataDir); err != nil {
 		return nil, dto.Internal(fmt.Sprintf("failed to save config: %v", err))
+	}
+
+	// Hot-reload bandwidth limiter if quotas were updated
+	if req.Quotas != nil && h.BandwidthLimiter != nil {
+		h.BandwidthLimiter.Update(h.Cfg.Quotas.MaxEgressBandwidthBps)
 	}
 
 	return &dto.UpdateServerConfigResponse{Ok: true}, nil

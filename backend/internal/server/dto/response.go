@@ -515,6 +515,7 @@ type QuotasConfigResponse struct {
 	MaxWorkspaces         int   `json:"max_workspaces" jsonschema:"description=Maximum total workspaces"`
 	MaxUsers              int   `json:"max_users" jsonschema:"description=Maximum total users"`
 	MaxTotalStorageBytes  int64 `json:"max_total_storage_bytes" jsonschema:"description=Maximum total storage in bytes"`
+	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps" jsonschema:"description=Maximum egress bandwidth in bytes per second"`
 }
 
 // ServerConfigResponse is a response containing server configuration.

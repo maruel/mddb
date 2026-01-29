@@ -36,6 +36,11 @@ type Services struct {
 	Email         *email.Service                     // may be nil
 }
 
+// BandwidthUpdater allows updating bandwidth limits at runtime.
+type BandwidthUpdater interface {
+	Update(maxBytesPerSecond int64)
+}
+
 // Config holds configuration values needed by handlers.
 type Config struct {
 	storage.ServerConfig
