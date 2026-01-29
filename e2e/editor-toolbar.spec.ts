@@ -337,15 +337,22 @@ test.describe('Editor Toolbar Formatting', () => {
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
-    // Wait for WYSIWYG editor to load
+    // Wait for WYSIWYG editor to load with actual page content
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
+    await expect(editor.locator('p')).toContainText('Some', { timeout: 5000 });
 
-    // Click inside the text
-    await editor.locator('p').first().dblclick();
+    // Double-click to select text and trigger the floating toolbar
+    // Note: Use mouse.dblclick with coordinates near text start because
+    // locator.dblclick() clicks center which may miss the text
+    const paragraph = editor.locator('p').first();
+    const box = await paragraph.boundingBox();
+    expect(box).toBeTruthy();
+    await page.mouse.dblclick(box!.x + 30, box!.y + box!.height / 2);
 
-    // Click the checkbox button
+    // Wait for the floating toolbar to appear, then click the checkbox button
     const checkboxButton = page.locator('button[title="Task List"]');
+    await expect(checkboxButton).toBeVisible({ timeout: 3000 });
     await checkboxButton.click();
 
     // Should create a task list item

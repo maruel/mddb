@@ -55,4 +55,56 @@ test.describe('Floating Toolbar Visibility', () => {
     // Mode toggle should STILL be visible
     await expect(modeToggle).toBeVisible();
   });
+
+  test('toolbar appears on double-click word selection', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'float-toolbar-dblclick');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create a page with multiple words
+    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: {
+        title: 'Double Click Test',
+        content: 'Hello world testing',
+      },
+    });
+    expect(createResponse.ok()).toBe(true);
+    const pageData = await createResponse.json();
+
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // Wait for the actual page content to load (not just editor visibility)
+    await expect(editor.locator('p')).toContainText('Hello', { timeout: 5000 });
+
+    const toolbar = page.locator('[data-testid="floating-toolbar"]');
+    await expect(toolbar).not.toBeVisible();
+
+    // Double-click on text to select a word
+    // Note: We use mouse.dblclick with coordinates near the text start because
+    // locator.dblclick() clicks the center of the element which may be empty space
+    const paragraph = editor.locator('p').first();
+    const box = await paragraph.boundingBox();
+    expect(box).toBeTruthy();
+
+    // Click near the start of the paragraph (where the text begins)
+    const x = box!.x + 30;
+    const y = box!.y + box!.height / 2;
+    await page.mouse.dblclick(x, y);
+
+    // Toolbar should appear when text is selected
+    await expect(toolbar).toBeVisible({ timeout: 3000 });
+
+    // Verify text is selected
+    const selection = await page.evaluate(() => window.getSelection()?.toString());
+    expect(selection?.length).toBeGreaterThan(0);
+  });
 });
