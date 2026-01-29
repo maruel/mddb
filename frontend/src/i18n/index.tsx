@@ -28,6 +28,7 @@ interface I18nContextValue {
   setLocale: (locale: Locale) => void;
   t: i18n.NullableTranslator<FlatDict>;
   translateError: (code: ErrorCode | string) => string;
+  ready: Accessor<boolean>;
 }
 
 const I18nContext = createContext<I18nContextValue>();
@@ -37,6 +38,9 @@ export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props)
   const [dict] = createResource(locale, fetchDictionary);
 
   const t = i18n.translator(dict, i18n.resolveTemplate);
+
+  // Expose whether translations are loaded
+  const ready = () => dict.state === 'ready';
 
   const translateError = (code: ErrorCode | string): string => {
     // Try to find error message by code
@@ -54,6 +58,7 @@ export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props)
     setLocale,
     t,
     translateError,
+    ready,
   }));
 
   return <I18nContext.Provider value={value()}>{props.children}</I18nContext.Provider>;

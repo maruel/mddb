@@ -53,7 +53,7 @@ interface WorkspaceContextValue {
 const WorkspaceContext = createContext<WorkspaceContextValue>();
 
 export const WorkspaceProvider: ParentComponent = (props) => {
-  const { t } = useI18n();
+  const { t, ready: i18nReady } = useI18n();
   const { user, setUser, api, wsApi, login } = useAuth();
 
   // Node state
@@ -136,7 +136,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       const orgName = firstName
         ? t('onboarding.defaultOrgName', { name: firstName })
         : t('onboarding.defaultOrgNameFallback');
-      await createOrganization({ name: orgName || 'My Organization' });
+      await createOrganization({ name: orgName as string });
     } catch (err) {
       setError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
@@ -152,7 +152,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       const wsName = firstName
         ? t('onboarding.defaultWorkspaceName', { name: firstName })
         : t('onboarding.defaultWorkspaceNameFallback');
-      await createWorkspace({ name: wsName || 'Main' });
+      await createWorkspace({ name: wsName as string });
     } catch (err) {
       setError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
@@ -342,10 +342,10 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   }
 
-  // First-time login check
+  // First-time login check (wait for translations to be ready)
   createEffect(() => {
     const u = user();
-    if (!u || firstLoginCheckDone() || firstLoginInProgress()) return;
+    if (!u || !i18nReady() || firstLoginCheckDone() || firstLoginInProgress()) return;
 
     const orgs = u.organizations || [];
     if (orgs.length === 0) {
