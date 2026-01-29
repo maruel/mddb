@@ -259,7 +259,7 @@ func organizationQuotasToDTO(q identity.OrganizationQuotas) dto.OrganizationQuot
 		MaxWorkspaces:          q.MaxWorkspaces,
 		MaxMembersPerOrg:       q.MaxMembersPerOrg,
 		MaxMembersPerWorkspace: q.MaxMembersPerWorkspace,
-		MaxTotalStorageGB:      q.MaxTotalStorageGB,
+		MaxTotalStorageBytes:   q.MaxTotalStorageBytes,
 	}
 }
 
@@ -347,6 +347,15 @@ func userSettingsToEntity(s dto.UserSettings) identity.UserSettings {
 func organizationSettingsToEntity(s dto.OrganizationSettings) identity.OrganizationSettings {
 	return identity.OrganizationSettings{
 		DefaultWorkspaceQuotas: workspaceQuotasToEntity(s.DefaultWorkspaceQuotas),
+	}
+}
+
+func organizationQuotasToEntity(q dto.OrganizationQuotas) identity.OrganizationQuotas {
+	return identity.OrganizationQuotas{
+		MaxWorkspaces:          q.MaxWorkspaces,
+		MaxMembersPerOrg:       q.MaxMembersPerOrg,
+		MaxMembersPerWorkspace: q.MaxMembersPerWorkspace,
+		MaxTotalStorageBytes:   q.MaxTotalStorageBytes,
 	}
 }
 

@@ -116,10 +116,10 @@ type WorkspaceMembershipSettings struct {
 
 // OrganizationQuotas defines limits for an organization.
 type OrganizationQuotas struct {
-	MaxWorkspaces          int `json:"max_workspaces" jsonschema:"description=Maximum number of workspaces in this org"`
-	MaxMembersPerOrg       int `json:"max_members_per_org" jsonschema:"description=Maximum members at org level"`
-	MaxMembersPerWorkspace int `json:"max_members_per_workspace" jsonschema:"description=Maximum members per workspace"`
-	MaxTotalStorageGB      int `json:"max_total_storage_gb" jsonschema:"description=Total storage across all workspaces in GB"`
+	MaxWorkspaces          int   `json:"max_workspaces" jsonschema:"description=Maximum number of workspaces in this org"`
+	MaxMembersPerOrg       int   `json:"max_members_per_org" jsonschema:"description=Maximum members at org level"`
+	MaxMembersPerWorkspace int   `json:"max_members_per_workspace" jsonschema:"description=Maximum members per workspace"`
+	MaxTotalStorageBytes   int64 `json:"max_total_storage_bytes" jsonschema:"description=Total storage across all workspaces in bytes"`
 }
 
 // WorkspaceQuotas defines limits for a workspace.

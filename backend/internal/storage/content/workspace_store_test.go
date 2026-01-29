@@ -41,7 +41,7 @@ func testFileStore(t *testing.T) (*FileStoreService, jsonldb.ID) {
 		o.Quotas.MaxWorkspaces = 1_000
 		o.Quotas.MaxMembersPerOrg = 10_000
 		o.Quotas.MaxMembersPerWorkspace = 10_000
-		o.Quotas.MaxTotalStorageGB = 1_000_000 // 1EB
+		o.Quotas.MaxTotalStorageBytes = 1_000_000_000_000_000_000 // 1EB
 		return nil
 	})
 	if err != nil {
@@ -1006,7 +1006,7 @@ func TestQuotas(t *testing.T) {
 		var zeroOrgID jsonldb.ID
 		if err == nil && org.OrganizationID != zeroOrgID {
 			_, _ = fs.orgSvc.Modify(org.OrganizationID, func(o *identity.Organization) error {
-				o.Quotas.MaxTotalStorageGB = 1000
+				o.Quotas.MaxTotalStorageBytes = 1000 * 1024 * 1024 * 1024 // 1TB
 				return nil
 			})
 		}

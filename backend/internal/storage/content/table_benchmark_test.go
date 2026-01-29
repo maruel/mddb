@@ -37,7 +37,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		o.Quotas.MaxWorkspaces = 1_000
 		o.Quotas.MaxMembersPerOrg = 10_000
 		o.Quotas.MaxMembersPerWorkspace = 10_000
-		o.Quotas.MaxTotalStorageGB = 1_000_000 // 1EB
+		o.Quotas.MaxTotalStorageBytes = 1_000_000_000_000_000_000 // 1EB
 		return nil
 	})
 	if err != nil {

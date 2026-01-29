@@ -678,14 +678,29 @@ func (r *UpdateWSMembershipSettingsRequest) Validate() error {
 
 // UpdateOrgPreferencesRequest is a request to update organization-wide preferences.
 type UpdateOrgPreferencesRequest struct {
-	OrgID    jsonldb.ID           `path:"orgID" tstype:"-"`
-	Settings OrganizationSettings `json:"settings"`
+	OrgID    jsonldb.ID            `path:"orgID" tstype:"-"`
+	Settings *OrganizationSettings `json:"settings,omitempty"`
+	Quotas   *OrganizationQuotas   `json:"quotas,omitempty"`
 }
 
 // Validate validates the update org preferences request fields.
 func (r *UpdateOrgPreferencesRequest) Validate() error {
 	if r.OrgID.IsZero() {
 		return MissingField("orgID")
+	}
+	if r.Quotas != nil {
+		if r.Quotas.MaxWorkspaces <= 0 {
+			return InvalidField("quotas.max_workspaces", "must be positive")
+		}
+		if r.Quotas.MaxMembersPerOrg <= 0 {
+			return InvalidField("quotas.max_members_per_org", "must be positive")
+		}
+		if r.Quotas.MaxMembersPerWorkspace <= 0 {
+			return InvalidField("quotas.max_members_per_workspace", "must be positive")
+		}
+		if r.Quotas.MaxTotalStorageBytes <= 0 {
+			return InvalidField("quotas.max_total_storage_bytes", "must be positive")
+		}
 	}
 	return nil
 }

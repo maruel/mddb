@@ -18,7 +18,7 @@ func TestOrganization(t *testing.T) {
 					MaxWorkspaces:          3,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
-					MaxTotalStorageGB:      5,
+					MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024,
 				},
 			}
 			if err := valid.Validate(); err != nil {
@@ -34,7 +34,7 @@ func TestOrganization(t *testing.T) {
 					MaxWorkspaces:          3,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
-					MaxTotalStorageGB:      5,
+					MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024,
 				},
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -50,7 +50,7 @@ func TestOrganization(t *testing.T) {
 					MaxWorkspaces:          3,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
-					MaxTotalStorageGB:      5,
+					MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024,
 				},
 			}
 			if err := emptyName.Validate(); err == nil {
@@ -65,7 +65,7 @@ func TestOrganization(t *testing.T) {
 					MaxWorkspaces:          0,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
-					MaxTotalStorageGB:      5,
+					MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024,
 				},
 			}
 			if err := invalidQuota.Validate(); err == nil {

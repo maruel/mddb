@@ -158,8 +158,7 @@ func (svc *FileStoreService) CheckOrgStorageQuota(wsID jsonldb.ID, additionalByt
 		return err
 	}
 
-	maxOrgStorageBytes := int64(org.Quotas.MaxTotalStorageGB) * 1024 * 1024 * 1024
-	if orgUsage+additionalBytes > maxOrgStorageBytes {
+	if orgUsage+additionalBytes > org.Quotas.MaxTotalStorageBytes {
 		return errQuotaExceeded
 	}
 	return nil

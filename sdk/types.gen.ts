@@ -372,7 +372,8 @@ export interface UpdateWSMembershipSettingsRequest {
  * UpdateOrgPreferencesRequest is a request to update organization-wide preferences.
  */
 export interface UpdateOrgPreferencesRequest {
-  settings: OrganizationSettings;
+  settings?: OrganizationSettings;
+  quotas?: OrganizationQuotas;
 }
 /**
  * GetOrganizationRequest is a request to get organization details.
@@ -1310,7 +1311,7 @@ export interface OrganizationQuotas {
   max_workspaces: number /* int */;
   max_members_per_org: number /* int */;
   max_members_per_workspace: number /* int */;
-  max_total_storage_gb: number /* int */;
+  max_total_storage_bytes: number /* int64 */;
 }
 /**
  * WorkspaceQuotas defines limits for a workspace.

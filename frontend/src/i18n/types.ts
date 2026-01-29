@@ -210,6 +210,11 @@ export interface Dictionary {
     organizationSettings: string;
     organizationMembers: string;
     organizationPreferences: string;
+    organizationQuotas: string;
+    maxWorkspaces: string;
+    maxMembersPerOrg: string;
+    maxMembersPerWorkspace: string;
+    maxTotalStorageBytes: string;
     orgSettingsHint: string;
     openOrgSettings: string;
     adminOnlySettings: string;

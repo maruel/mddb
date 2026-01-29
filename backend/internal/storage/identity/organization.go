@@ -41,7 +41,7 @@ func (o *Organization) Validate() error {
 	if o.Name == "" {
 		return errNameRequired
 	}
-	if o.Quotas.MaxWorkspaces <= 0 || o.Quotas.MaxMembersPerOrg <= 0 || o.Quotas.MaxMembersPerWorkspace <= 0 || o.Quotas.MaxTotalStorageGB <= 0 {
+	if o.Quotas.MaxWorkspaces <= 0 || o.Quotas.MaxMembersPerOrg <= 0 || o.Quotas.MaxMembersPerWorkspace <= 0 || o.Quotas.MaxTotalStorageBytes <= 0 {
 		return errInvalidOrgQuota
 	}
 	return nil
@@ -55,10 +55,10 @@ type OrganizationSettings struct {
 
 // OrganizationQuotas defines limits for an organization.
 type OrganizationQuotas struct {
-	MaxWorkspaces          int `json:"max_workspaces" jsonschema:"description=Maximum number of workspaces in this org"`
-	MaxMembersPerOrg       int `json:"max_members_per_org" jsonschema:"description=Maximum members at org level"`
-	MaxMembersPerWorkspace int `json:"max_members_per_workspace" jsonschema:"description=Maximum members per workspace"`
-	MaxTotalStorageGB      int `json:"max_total_storage_gb" jsonschema:"description=Total storage across all workspaces in GB"`
+	MaxWorkspaces          int   `json:"max_workspaces" jsonschema:"description=Maximum number of workspaces in this org"`
+	MaxMembersPerOrg       int   `json:"max_members_per_org" jsonschema:"description=Maximum members at org level"`
+	MaxMembersPerWorkspace int   `json:"max_members_per_workspace" jsonschema:"description=Maximum members per workspace"`
+	MaxTotalStorageBytes   int64 `json:"max_total_storage_bytes" jsonschema:"description=Total storage across all workspaces in bytes"`
 }
 
 // DefaultOrganizationQuotas returns the default quotas for a new organization.
@@ -67,7 +67,7 @@ func DefaultOrganizationQuotas() OrganizationQuotas {
 		MaxWorkspaces:          3,
 		MaxMembersPerOrg:       10,
 		MaxMembersPerWorkspace: 10,
-		MaxTotalStorageGB:      5,
+		MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024, // 5 GiB
 	}
 }
 

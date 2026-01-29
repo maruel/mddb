@@ -34,6 +34,12 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const [orgName, setOrgName] = createSignal('');
   const [originalOrgName, setOriginalOrgName] = createSignal('');
 
+  // Organization quotas
+  const [maxWorkspaces, setMaxWorkspaces] = createSignal(0);
+  const [maxMembersPerOrg, setMaxMembersPerOrg] = createSignal(0);
+  const [maxMembersPerWorkspace, setMaxMembersPerWorkspace] = createSignal(0);
+  const [maxTotalStorageBytes, setMaxTotalStorageBytes] = createSignal(0);
+
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [success, setSuccess] = createSignal<string | null>(null);
@@ -80,6 +86,11 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
         const orgData = await org.organizations.getOrganization();
         setOrgName(orgData.name);
         setOriginalOrgName(orgData.name);
+        // Load quotas
+        setMaxWorkspaces(orgData.quotas.max_workspaces);
+        setMaxMembersPerOrg(orgData.quotas.max_members_per_org);
+        setMaxMembersPerWorkspace(orgData.quotas.max_members_per_workspace);
+        setMaxTotalStorageBytes(orgData.quotas.max_total_storage_bytes);
       }
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
@@ -138,11 +149,22 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setError(null);
       setSuccess(null);
 
+      // Update org name if changed
       if (orgName() !== originalOrgName() && orgName().trim()) {
         await org.organizations.updateOrganization({ name: orgName().trim() });
+        setOriginalOrgName(orgName().trim());
       }
 
-      setOriginalOrgName(orgName().trim());
+      // Update quotas
+      await org.settings.updateOrgPreferences({
+        quotas: {
+          max_workspaces: maxWorkspaces(),
+          max_members_per_org: maxMembersPerOrg(),
+          max_members_per_workspace: maxMembersPerWorkspace(),
+          max_total_storage_bytes: maxTotalStorageBytes(),
+        },
+      });
+
       setSuccess(t('success.orgSettingsSaved') || 'Organization settings saved');
     } catch (err) {
       setError(`${t('errors.failedToSave')}: ${err}`);
@@ -219,6 +241,47 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
                 <label>{t('settings.organizationName')}</label>
                 <input type="text" value={orgName()} onInput={(e) => setOrgName(e.target.value)} required />
               </div>
+
+              <h4>{t('settings.organizationQuotas')}</h4>
+              <div class={styles.formGrid}>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxWorkspaces')}</label>
+                  <input
+                    type="number"
+                    value={maxWorkspaces()}
+                    onInput={(e) => setMaxWorkspaces(parseInt(e.target.value) || 1)}
+                    min="1"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxMembersPerOrg')}</label>
+                  <input
+                    type="number"
+                    value={maxMembersPerOrg()}
+                    onInput={(e) => setMaxMembersPerOrg(parseInt(e.target.value) || 1)}
+                    min="1"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxMembersPerWorkspace')}</label>
+                  <input
+                    type="number"
+                    value={maxMembersPerWorkspace()}
+                    onInput={(e) => setMaxMembersPerWorkspace(parseInt(e.target.value) || 1)}
+                    min="1"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxTotalStorageBytes')}</label>
+                  <input
+                    type="number"
+                    value={maxTotalStorageBytes()}
+                    onInput={(e) => setMaxTotalStorageBytes(parseInt(e.target.value) || 1)}
+                    min="1"
+                  />
+                </div>
+              </div>
+
               <button type="submit" class={styles.saveButton} disabled={loading()}>
                 {t('common.save')}
               </button>

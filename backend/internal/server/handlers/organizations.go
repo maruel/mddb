@@ -27,10 +27,15 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID jsonldb
 	return organizationToResponse(org, memberCount, workspaceCount), nil
 }
 
-// UpdateOrgPreferences updates organization-wide preferences/settings.
+// UpdateOrgPreferences updates organization-wide preferences/settings and quotas.
 func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateOrgPreferencesRequest) (*dto.OrganizationResponse, error) {
 	org, err := h.Svc.Organization.Modify(orgID, func(org *identity.Organization) error {
-		org.Settings = organizationSettingsToEntity(req.Settings)
+		if req.Settings != nil {
+			org.Settings = organizationSettingsToEntity(*req.Settings)
+		}
+		if req.Quotas != nil {
+			org.Quotas = organizationQuotasToEntity(*req.Quotas)
+		}
 		return nil
 	})
 	if err != nil {

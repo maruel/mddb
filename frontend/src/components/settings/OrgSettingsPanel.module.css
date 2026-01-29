@@ -74,11 +74,23 @@
 }
 
 .formItem input[type='text'],
+.formItem input[type='number'],
 .formItem select {
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.formGrid .formItem {
+  margin-bottom: 0;
 }
 
 .saveButton {
