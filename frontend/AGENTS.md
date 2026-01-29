@@ -113,6 +113,7 @@ make build            # Build Go binary
 - Error messages from API use `translateError(code)` helper
 - Keep translations concise - UI space is limited
 - Test with longer languages (German) to catch overflow issues
+- Dismissable popups (modals, dropdowns, menus) must be dismissable with the Escape key
 
 ## Code Quality & Linting
 
