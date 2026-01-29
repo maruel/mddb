@@ -1,0 +1,46 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - button "Switch workspace" [ref=e7] [cursor=pointer]:
+        - generic [ref=e8]: toolbar-checkbox-create's Workspace
+        - generic [ref=e9]: ▼
+      - navigation [ref=e10]:
+        - generic [ref=e11] [cursor=pointer]: Create Task List Test
+    - button "Profile" [ref=e14] [cursor=pointer]:
+      - generic [ref=e15]: TT
+  - generic [ref=e16]:
+    - complementary [ref=e17]:
+      - generic [ref=e18]:
+        - heading "Workspace" [level=2] [ref=e19]
+        - generic [ref=e20]:
+          - button "+P" [ref=e21] [cursor=pointer]
+          - button "+D" [ref=e22] [cursor=pointer]
+      - list [ref=e23]:
+        - listitem [ref=e24]:
+          - generic [ref=e25] [cursor=pointer]:
+            - generic [ref=e26]: 📄
+            - generic [ref=e27]: Welcome
+            - button "🗑" [ref=e28]
+        - listitem [ref=e29]:
+          - generic [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]: 📄
+            - generic [ref=e32]: Create Task List Test
+            - button "🗑" [ref=e33]
+      - generic [ref=e34]:
+        - link "Privacy Policy" [ref=e35] [cursor=pointer]:
+          - /url: /privacy
+        - text: "|"
+        - link "Terms" [ref=e36] [cursor=pointer]:
+          - /url: /terms
+    - main [ref=e37]:
+      - generic [ref=e38]:
+        - textbox "Title" [ref=e40]: Create Task List Test
+        - generic [ref=e42]:
+          - paragraph [ref=e45]: Some regular text
+          - generic [ref=e46]:
+            - button "Visual" [ref=e47] [cursor=pointer]
+            - button "MD" [ref=e48] [cursor=pointer]
+```
