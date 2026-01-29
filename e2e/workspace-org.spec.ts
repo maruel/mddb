@@ -251,4 +251,130 @@ test.describe('Header Display', () => {
     // Header should contain workspace menu
     await expect(header.locator('button', { hasText: /Workspace/ })).toBeVisible();
   });
+
+  test('workspace menu is fully visible within header', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'ws-menu-visible');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    const header = page.locator('header');
+    const wsMenuButton = header.locator('[class*="wsButton"]').first();
+    await expect(wsMenuButton).toBeVisible();
+
+    // Get bounding boxes
+    const headerBox = await header.boundingBox();
+    const menuBox = await wsMenuButton.boundingBox();
+    const viewport = page.viewportSize();
+
+    expect(headerBox).toBeTruthy();
+    expect(menuBox).toBeTruthy();
+    expect(viewport).toBeTruthy();
+
+    // Workspace menu should be fully within header bounds (not clipped)
+    expect(menuBox!.x).toBeGreaterThanOrEqual(headerBox!.x);
+    expect(menuBox!.y).toBeGreaterThanOrEqual(headerBox!.y);
+    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(headerBox!.x + headerBox!.width);
+    expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(headerBox!.y + headerBox!.height);
+
+    // Also verify not cut off by viewport
+    expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(viewport!.width);
+  });
+
+  test('workspace menu dropdown is fully visible when opened', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'ws-dropdown-visible');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    // Open the workspace menu
+    const wsMenuButton = page.locator('[class*="wsButton"]').first();
+    await wsMenuButton.click();
+
+    // Wait for dropdown to appear
+    const dropdown = page.locator('[class*="dropdown"]').first();
+    await expect(dropdown).toBeVisible({ timeout: 3000 });
+
+    // Get bounding boxes
+    const buttonBox = await wsMenuButton.boundingBox();
+    const dropdownBox = await dropdown.boundingBox();
+    const viewport = page.viewportSize();
+
+    expect(buttonBox).toBeTruthy();
+    expect(dropdownBox).toBeTruthy();
+    expect(viewport).toBeTruthy();
+
+    // Dropdown should be left-aligned with the button (within 5px tolerance)
+    expect(Math.abs(dropdownBox!.x - buttonBox!.x)).toBeLessThanOrEqual(5);
+
+    // Dropdown should not extend past the left edge of the viewport
+    expect(dropdownBox!.x).toBeGreaterThanOrEqual(0);
+    // Dropdown should not extend past the right edge of the viewport
+    expect(dropdownBox!.x + dropdownBox!.width).toBeLessThanOrEqual(viewport!.width);
+  });
+
+  test('workspace menu is fully visible on mobile viewport', async ({ page, request }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 });
+
+    const { token } = await registerUser(request, 'ws-menu-mobile');
+    await page.goto(`/?token=${token}`);
+    // On mobile, sidebar is hidden by default, wait for header instead
+    const header = page.locator('header');
+    await expect(header).toBeVisible({ timeout: 15000 });
+
+    const wsMenuButton = header.locator('[class*="wsButton"]').first();
+    await expect(wsMenuButton).toBeVisible();
+
+    // Get bounding boxes
+    const menuBox = await wsMenuButton.boundingBox();
+    const viewport = page.viewportSize();
+
+    expect(menuBox).toBeTruthy();
+    expect(viewport).toBeTruthy();
+
+    // Workspace menu should not be cut off by viewport edges
+    expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(viewport!.width);
+  });
+
+  test('workspace menu visible with long breadcrumbs', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'ws-breadcrumb');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    // Get workspace ID
+    const wsId = await getWorkspaceId(page);
+
+    // Create a page with a very long title
+    const longTitle = 'This Is A Very Long Page Title That Should Test Breadcrumb Overflow Behavior';
+    const resp = await request.post(`/api/workspaces/${wsId}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: longTitle },
+    });
+    const pageData = await resp.json();
+
+    // Reload and navigate to the page
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+
+    // Wait for breadcrumbs to appear
+    const breadcrumbs = page.locator('nav[class*="breadcrumb"]');
+    await expect(breadcrumbs).toBeVisible({ timeout: 5000 });
+
+    // Check workspace menu is still fully visible
+    const header = page.locator('header');
+    const wsMenuButton = header.locator('[class*="wsButton"]').first();
+    await expect(wsMenuButton).toBeVisible();
+
+    const menuBox = await wsMenuButton.boundingBox();
+    const headerBox = await header.boundingBox();
+
+    expect(menuBox).toBeTruthy();
+    expect(headerBox).toBeTruthy();
+
+    // Workspace menu should not be pushed off-screen by long breadcrumbs
+    expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+    expect(menuBox!.width).toBeGreaterThanOrEqual(50); // Should have reasonable width
+  });
 });

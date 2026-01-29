@@ -303,6 +303,19 @@ function AppContent() {
                   >
                     ☰
                   </button>
+                  <WorkspaceMenu
+                    onOpenSettings={() => {
+                      setIsSettingsPage(true);
+                      setSelectedNodeId(null);
+                      setShowMobileSidebar(false);
+                      const wsId = user()?.workspace_id;
+                      const wsName = user()?.workspace_name;
+                      if (wsId) {
+                        window.history.pushState(null, '', workspaceSettingsUrl(wsId, wsName));
+                      }
+                    }}
+                    onCreateWorkspace={() => setShowCreateWorkspace(true)}
+                  />
                   <Show when={selectedNodeId()}>
                     <nav class={styles.breadcrumbs}>
                       <For each={breadcrumbPath()}>
@@ -321,19 +334,6 @@ function AppContent() {
                   </Show>
                 </div>
                 <div class={styles.userInfo}>
-                  <WorkspaceMenu
-                    onOpenSettings={() => {
-                      setIsSettingsPage(true);
-                      setSelectedNodeId(null);
-                      setShowMobileSidebar(false);
-                      const wsId = user()?.workspace_id;
-                      const wsName = user()?.workspace_name;
-                      if (wsId) {
-                        window.history.pushState(null, '', workspaceSettingsUrl(wsId, wsName));
-                      }
-                    }}
-                    onCreateWorkspace={() => setShowCreateWorkspace(true)}
-                  />
                   <UserMenu
                     onProfile={() => {
                       setIsProfilePage(true);
