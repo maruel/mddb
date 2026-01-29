@@ -1,7 +1,7 @@
 // Recursive component for rendering navigation tree nodes in the sidebar.
 // Supports lazy loading of children with pre-fetching one level ahead.
 
-import { createSignal, For, Show, onMount } from 'solid-js';
+import { createSignal, createEffect, For, Show, onMount } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { useI18n } from '../i18n';
 import type { NodeResponse } from '@sdk/types.gen';
@@ -37,6 +37,11 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
     const prefetched = props.prefetchedChildren?.[props.node.id];
     if (prefetched) return prefetched;
 
+    // Check store's node.children (updated by fetchNodeChildren)
+    if (props.node.children && props.node.children.length > 0) {
+      return props.node.children;
+    }
+
     // Use locally loaded children if available
     const loaded = loadedChildren();
     if (loaded !== null) return loaded;
@@ -54,9 +59,23 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
     const prefetched = props.prefetchedChildren?.[props.node.id];
     if (prefetched) return prefetched.length > 0;
 
+    // Check store's node.children (updated by fetchNodeChildren)
+    if (props.node.children && props.node.children.length > 0) {
+      return true;
+    }
+
     // Backend sets has_children to indicate node has children not yet loaded
     return props.node.has_children === true;
   };
+
+  // Auto-expand when the selected node is a direct child of this node
+  createEffect(() => {
+    const selectedId = props.selectedId;
+    const nodeChildren = children();
+    if (selectedId && nodeChildren.some((child) => child.id === selectedId)) {
+      setIsExpanded(true);
+    }
+  });
 
   // Fetch children for this node
   const fetchChildren = async () => {

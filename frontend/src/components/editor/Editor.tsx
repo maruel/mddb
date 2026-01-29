@@ -297,7 +297,7 @@ export default function Editor(props: EditorProps) {
 
       {(() => {
         const v = view();
-        return v ? <SlashCommandMenu view={v} state={slashMenuState()} /> : null;
+        return v ? <SlashCommandMenu view={v} state={slashMenuState()} nodeId={props.nodeId} /> : null;
       })()}
     </div>
   );

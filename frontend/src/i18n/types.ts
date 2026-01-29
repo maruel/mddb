@@ -333,6 +333,8 @@ export interface Dictionary {
     blockquote: string;
     codeBlock: string;
     divider: string;
+    subpage: string;
+    untitledSubpage: string;
   };
 
   server: {

@@ -2,8 +2,13 @@
 
 import { createSignal, createEffect, For, Show, onMount, onCleanup } from 'solid-js';
 import type { EditorView } from 'prosemirror-view';
+import { schema, marks } from './prosemirror-config';
 import { useI18n } from '../../i18n';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useEditor } from '../../contexts/EditorContext';
 import { useClickOutside } from '../../composables/useClickOutside';
+import { nodeUrl } from '../../utils/urls';
 import { filterCommands, type SlashCommand } from './slashCommands';
 import { closeSlashMenu, slashMenuKey, type SlashMenuState } from './slashCommandPlugin';
 import styles from './Editor.module.css';
@@ -11,10 +16,14 @@ import styles from './Editor.module.css';
 interface SlashCommandMenuProps {
   view: EditorView;
   state: SlashMenuState;
+  nodeId?: string;
 }
 
 export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   const { t } = useI18n();
+  const { user, wsApi } = useAuth();
+  const { loadNode, fetchNodeChildren } = useWorkspace();
+  const { flushAutoSave } = useEditor();
   const [selectedIndex, setSelectedIndex] = createSignal(0);
   const [adjustedPosition, setAdjustedPosition] = createSignal<{ top: number; left: number } | null>(null);
   let menuRef: HTMLDivElement | undefined;
@@ -140,7 +149,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
     });
   });
 
-  const executeCommand = (command: SlashCommand | undefined) => {
+  const executeCommand = async (command: SlashCommand | undefined) => {
     if (!command) return;
 
     // Get current plugin state from ProseMirror (authoritative source)
@@ -149,6 +158,51 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
 
     const { triggerPos } = pluginState;
     const cursorPos = props.view.state.selection.from;
+
+    // Handle async actions
+    if (command.asyncAction === 'createSubpage') {
+      const ws = wsApi();
+      const u = user();
+      const parentId = props.nodeId;
+      if (!ws || !u || !parentId) return;
+
+      // Delete the slash text first
+      const tr = props.view.state.tr.delete(triggerPos, cursorPos);
+      props.view.dispatch(tr);
+
+      try {
+        // Create the subpage
+        const untitledTitle = t('slashMenu.untitledSubpage') || 'Untitled';
+        const newPage = await ws.nodes.page.createPage(parentId, { title: untitledTitle });
+        if (!newPage?.id) return;
+
+        // Build the URL for the new page
+        const wsId = u.workspace_id;
+        const wsName = u.workspace_name;
+        const url = nodeUrl(wsId || '', wsName, newPage.id, untitledTitle);
+
+        // Insert a proper link node with link mark (not raw markdown text)
+        const linkMark = marks.link.create({ href: url, title: null });
+        const linkNode = schema.text(untitledTitle, [linkMark]);
+        const insertTr = props.view.state.tr.insert(props.view.state.selection.from, linkNode);
+        props.view.dispatch(insertTr);
+
+        // Flush auto-save to persist the link immediately
+        flushAutoSave();
+
+        // Refresh parent's children in sidebar to show new subpage
+        // (loadNodes only refreshes root nodes, fetchNodeChildren refreshes the parent's children)
+        await fetchNodeChildren(parentId);
+
+        // Navigate to the new page
+        await loadNode(newPage.id);
+      } catch (err) {
+        console.error('Failed to create subpage:', err);
+      }
+
+      props.view.focus();
+      return;
+    }
 
     // Execute the command (it will delete the "/" and query text)
     command.execute(props.view, triggerPos, cursorPos);

@@ -12,6 +12,7 @@ export interface SlashCommand {
   keywords: string[];
   icon: string;
   execute: (view: EditorView, from: number, to: number) => void;
+  asyncAction?: 'createSubpage'; // Async actions handled by SlashCommandMenu
 }
 
 // Helper to delete the "/" trigger text and execute a command
@@ -180,6 +181,16 @@ export const slashCommands: SlashCommand[] = [
       tr = view.state.tr.insert(insertPos, [hr, paragraph]);
       tr.setSelection(Selection.near(tr.doc.resolve(insertPos + 2)));
       view.dispatch(tr);
+    },
+  },
+  {
+    id: 'subpage',
+    labelKey: 'subpage',
+    keywords: ['subpage', 'page', 'child', 'nested', 'link'],
+    icon: '📄',
+    asyncAction: 'createSubpage',
+    execute: () => {
+      // Handled by SlashCommandMenu via asyncAction
     },
   },
 ];

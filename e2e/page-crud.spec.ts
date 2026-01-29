@@ -594,9 +594,9 @@ function hello() {
     await expect(slashMenu).toBeVisible({ timeout: 3000 });
     await takeScreenshot('slash-menu-visible');
 
-    // Menu should show command options
+    // Menu should show command options (11 including subpage)
     const menuItems = slashMenu.locator('[class*="slashMenuItem"]');
-    await expect(menuItems).toHaveCount(10, { timeout: 3000 });
+    await expect(menuItems).toHaveCount(11, { timeout: 3000 });
 
     // First item should be selected by default
     await expect(menuItems.first()).toHaveClass(/selected/);
@@ -773,6 +773,110 @@ function hello() {
     }
 
     await takeScreenshot('slash-menu-scrolled-to-last');
+  });
+
+  test.screenshot('slash command /page creates subpage and shows in sidebar', async ({
+    page,
+    request,
+    takeScreenshot,
+  }) => {
+    const { token } = await registerUser(request, 'slash-subpage');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create a page at root level
+    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Test Page', content: '' },
+    });
+    expect(createResponse.ok()).toBe(true);
+    const pageData = await createResponse.json();
+    const pageId = pageData.id;
+
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to the page
+    const pageNode = page.locator(`[data-testid="sidebar-node-${pageId}"]`);
+    await expect(pageNode).toBeVisible({ timeout: 5000 });
+    await pageNode.click();
+
+    // Wait for page to load
+    const titleInput = page.locator('input[placeholder*="Title"]');
+    await expect(titleInput).toHaveValue('Test Page', { timeout: 5000 });
+
+    // Wait for WYSIWYG editor to load
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // Click in the editor to focus it
+    await editor.click();
+
+    // Type "/page" to trigger slash menu and filter to subpage command
+    await page.keyboard.type('/page');
+
+    // Slash menu should appear with subpage option
+    const slashMenu = page.locator('[data-testid="slash-command-menu"]');
+    await expect(slashMenu).toBeVisible({ timeout: 3000 });
+
+    // Should show subpage command (matches "page" keyword)
+    const menuItems = slashMenu.locator('[class*="slashMenuItem"]');
+    await expect(menuItems).toHaveCount(1, { timeout: 3000 });
+
+    await takeScreenshot('slash-menu-subpage');
+
+    // Press Enter to select the subpage command (creates child)
+    await page.keyboard.press('Enter');
+
+    // Menu should close
+    await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
+
+    // After /page creates a child, it navigates to the child page
+    // Wait for the child page to load (title changes from "Test Page" to "Untitled")
+    await expect(titleInput).toHaveValue('Untitled', { timeout: 10000 });
+
+    await takeScreenshot('child-page-loaded');
+
+    // The parent should be expanded in the sidebar and child should be visible and active
+    const expandIcon = page.locator(`[data-testid="expand-icon-${pageId}"]`);
+    await expect(expandIcon).toBeVisible({ timeout: 5000 });
+    // Expand icon should not be hidden (has children) and should be expanded
+    await expect(expandIcon).not.toHaveClass(/hidden/);
+
+    // Find the child node in the sidebar (nested under parent)
+    const childNode = page.locator(`[data-testid="sidebar-node-${pageId}"] [data-testid^="sidebar-node-"]`).first();
+    await expect(childNode).toBeVisible({ timeout: 5000 });
+
+    // Get the child's ID
+    const childTestId = await childNode.getAttribute('data-testid');
+    expect(childTestId).toBeTruthy();
+    const childId = childTestId!.replace('sidebar-node-', '');
+
+    // Child should be highlighted (active)
+    const childPageItem = childNode.locator('> [class*="pageItem"]');
+    await expect(childPageItem).toHaveClass(/active/, { timeout: 3000 });
+
+    await takeScreenshot('child-highlighted-in-sidebar');
+
+    // Navigate back to parent page to verify the link was inserted
+    await pageNode.locator('> [class*="pageItem"]').click();
+
+    // Wait for parent page to load
+    await expect(titleInput).toHaveValue('Test Page', { timeout: 5000 });
+    await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // The editor should contain a link to the child
+    const link = editor.locator('a').first();
+    await expect(link).toBeVisible({ timeout: 5000 });
+    await expect(link).toContainText('Untitled');
+
+    // Verify the link href contains the child ID
+    const href = await link.getAttribute('href');
+    expect(href).toContain(childId);
+
+    await takeScreenshot('link-in-parent-page');
   });
 
   test.screenshot('version history loads and displays commits', async ({ page, request, takeScreenshot }) => {

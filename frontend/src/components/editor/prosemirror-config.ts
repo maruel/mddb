@@ -73,6 +73,7 @@ function getMarkType(name: string) {
 
 // Extract node and mark types with runtime checks for type safety
 export const nodes = {
+  doc: getNodeType('doc'),
   list_item: getNodeType('list_item'),
   bullet_list: getNodeType('bullet_list'),
   ordered_list: getNodeType('ordered_list'),
@@ -86,6 +87,7 @@ export const marks = {
   strong: getMarkType('strong'),
   em: getMarkType('em'),
   code: getMarkType('code'),
+  link: getMarkType('link'),
 };
 
 // Create markdown-it instance with task list detection

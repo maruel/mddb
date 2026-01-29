@@ -331,6 +331,8 @@ export const dict: Dictionary = {
     blockquote: 'Zitat',
     codeBlock: 'Codeblock',
     divider: 'Trennlinie',
+    subpage: 'Unterseite',
+    untitledSubpage: 'Ohne Titel',
   },
 
   server: {
