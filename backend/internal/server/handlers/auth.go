@@ -172,6 +172,7 @@ func (uwm *userWithMemberships) populateActiveContext(userResp *dto.UserResponse
 			}
 			// Found an accessible workspace from the LRU list
 			userResp.WorkspaceID = ws.WorkspaceID
+			userResp.WorkspaceName = ws.WorkspaceName
 			userResp.WorkspaceRole = dto.WorkspaceRole(ws.Role)
 			uwm.CurrentWSID = ws.WorkspaceID
 			uwm.CurrentWSRole = ws.Role
@@ -206,6 +207,7 @@ func (uwm *userWithMemberships) populateActiveContext(userResp *dto.UserResponse
 			continue
 		}
 		userResp.WorkspaceID = ws.WorkspaceID
+		userResp.WorkspaceName = ws.WorkspaceName
 		userResp.WorkspaceRole = dto.WorkspaceRole(ws.Role)
 		uwm.CurrentWSID = ws.WorkspaceID
 		uwm.CurrentWSRole = ws.Role
