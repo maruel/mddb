@@ -334,4 +334,30 @@ export interface Dictionary {
     codeBlock: string;
     divider: string;
   };
+
+  server: {
+    title: string;
+    serverSettings: string;
+    smtpConfiguration: string;
+    smtpHost: string;
+    smtpPort: string;
+    smtpUsername: string;
+    smtpPassword: string;
+    smtpPasswordHint: string;
+    smtpFrom: string;
+    quotas: string;
+    maxRequestBodyBytes: string;
+    maxSessionsPerUser: string;
+    maxTablesPerWorkspace: string;
+    maxColumnsPerTable: string;
+    maxRowsPerTable: string;
+    maxOrganizations: string;
+    maxWorkspaces: string;
+    maxUsers: string;
+    maxTotalStorageBytes: string;
+    saveConfiguration: string;
+    configurationSaved: string;
+    smtpEnabled: string;
+    smtpDisabled: string;
+  };
 }

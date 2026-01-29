@@ -9,6 +9,7 @@ import SettingsSidebar from './SettingsSidebar';
 import ProfileSettings from './ProfileSettings';
 import WorkspaceSettingsPanel from './WorkspaceSettingsPanel';
 import OrgSettingsPanel from './OrgSettingsPanel';
+import ServerSettingsPanel from './ServerSettingsPanel';
 import styles from './Settings.module.css';
 
 interface SettingsProps {
@@ -127,6 +128,10 @@ export default function Settings(props: SettingsProps) {
                 <OrgSettingsPanel orgId={orgId()} section={props.route.section} />
               </Show>
             )}
+          </Show>
+
+          <Show when={props.route.type === 'server'}>
+            <ServerSettingsPanel />
           </Show>
         </main>
       </div>

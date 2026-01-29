@@ -58,6 +58,7 @@ import type {
   SearchRequest,
   SearchResponse,
   SendVerificationEmailResponse,
+  ServerConfigResponse,
   SwitchWorkspaceRequest,
   SwitchWorkspaceResponse,
   UpdateGitRemoteRequest,
@@ -68,6 +69,8 @@ import type {
   UpdatePageResponse,
   UpdateRecordRequest,
   UpdateRecordResponse,
+  UpdateServerConfigRequest,
+  UpdateServerConfigResponse,
   UpdateTableRequest,
   UpdateTableResponse,
   UpdateUserSettingsRequest,
@@ -151,6 +154,10 @@ export function createAPIClient(fetchFn: FetchFn) {
     },
     organizations: {
       createOrganization: (options: CreateOrganizationRequest) => post<OrganizationResponse>(fetchFn, `/api/organizations`, options),
+    },
+    server: {
+      getConfig: () => get<ServerConfigResponse>(fetchFn, `/api/server/config`),
+      updateConfig: (options: UpdateServerConfigRequest) => post<UpdateServerConfigResponse>(fetchFn, `/api/server/config`, options),
     },
     getHealth: () => get<HealthResponse>(fetchFn, `/api/health`),
 

@@ -8,7 +8,7 @@ import styles from './SettingsNavItem.module.css';
 interface SettingsNavItemProps {
   item: NavItem;
   depth: number;
-  isActive: (url: string) => boolean;
+  isActive: (url: string, route: UnifiedSettingsMatch) => boolean;
   onNavigate: (url: string) => void;
   currentRoute: UnifiedSettingsMatch;
 }
@@ -19,9 +19,10 @@ export default function SettingsNavItem(props: SettingsNavItemProps) {
   // Auto-expand if any child is active
   const shouldAutoExpand = (): boolean => {
     if (!hasChildren()) return false;
+    const route = props.currentRoute;
     const checkActive = (items: NavItem[]): boolean => {
       for (const item of items) {
-        if (props.isActive(item.url)) return true;
+        if (props.isActive(item.url, route)) return true;
         if (item.children && checkActive(item.children)) return true;
       }
       return false;
@@ -64,7 +65,7 @@ export default function SettingsNavItem(props: SettingsNavItemProps) {
 
   const navItemClass = () => {
     let classes = styles.navItem;
-    if (props.isActive(props.item.url)) classes += ' ' + styles.active;
+    if (props.isActive(props.item.url, props.currentRoute)) classes += ' ' + styles.active;
     if (props.depth === 0 && hasChildren()) classes += ' ' + styles.section;
     return classes;
   };

@@ -119,7 +119,7 @@ export function isStaticRoute(path: string): 'privacy' | 'terms' | 'profile' | '
 /** Unified Settings URL types */
 
 export interface UnifiedSettingsMatch {
-  type: 'profile' | 'workspace' | 'org' | 'redirect';
+  type: 'profile' | 'workspace' | 'org' | 'server' | 'redirect';
   id?: string;
   section?: string;
 }
@@ -127,8 +127,9 @@ export interface UnifiedSettingsMatch {
 /**
  * Builds a unified settings URL.
  */
-export function settingsUrl(type?: 'user' | 'workspace' | 'org', id?: string, name?: string): string {
+export function settingsUrl(type?: 'user' | 'workspace' | 'org' | 'server', id?: string, name?: string): string {
   if (!type || type === 'user') return '/settings/user';
+  if (type === 'server') return '/settings/server';
   const slug = slugify(name || type);
   return `/settings/${type}/${id}+${slug}`;
 }
@@ -143,6 +144,9 @@ export function parseUnifiedSettings(path: string): UnifiedSettingsMatch | null 
   }
   if (path === '/settings/user' || path === '/settings/user/') {
     return { type: 'profile' };
+  }
+  if (path === '/settings/server' || path === '/settings/server/') {
+    return { type: 'server' };
   }
   const wsMatch = path.match(/^\/settings\/workspace\/([^+/]+)/);
   if (wsMatch) {

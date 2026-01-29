@@ -517,6 +517,42 @@ export interface UpdateUserSettingsRequest {
 export interface AdminStatsRequest {
 }
 /**
+ * ServerConfigRequest is a request to get server configuration.
+ */
+export interface ServerConfigRequest {
+}
+/**
+ * SMTPConfigUpdate contains SMTP configuration fields for updates.
+ */
+export interface SMTPConfigUpdate {
+  host: string;
+  port: number /* int32 */;
+  username: string;
+  password: string; // Empty preserves existing
+  from: string;
+}
+/**
+ * QuotasConfigUpdate contains quota configuration fields for updates.
+ */
+export interface QuotasConfigUpdate {
+  max_request_body_bytes: number /* int64 */;
+  max_sessions_per_user: number /* int */;
+  max_tables_per_workspace: number /* int */;
+  max_columns_per_table: number /* int */;
+  max_rows_per_table: number /* int */;
+  max_organizations: number /* int */;
+  max_workspaces: number /* int */;
+  max_users: number /* int */;
+  max_total_storage_bytes: number /* int64 */;
+}
+/**
+ * UpdateServerConfigRequest is a request to update server configuration.
+ */
+export interface UpdateServerConfigRequest {
+  smtp?: SMTPConfigUpdate;
+  quotas?: QuotasConfigUpdate;
+}
+/**
  * AdminUsersRequest is a request to list all users (admin only).
  */
 export interface AdminUsersRequest {
@@ -1047,6 +1083,40 @@ export interface NotionImportStatusResponse {
  * NotionImportCancelResponse is a response from cancelling a Notion import.
  */
 export type NotionImportCancelResponse = OkResponse;
+/**
+ * SMTPConfigResponse contains SMTP configuration for the response (password masked).
+ */
+export interface SMTPConfigResponse {
+  host: string;
+  port: number /* int32 */;
+  username: string;
+  from: string;
+}
+/**
+ * QuotasConfigResponse contains quota configuration for the response.
+ */
+export interface QuotasConfigResponse {
+  max_request_body_bytes: number /* int64 */;
+  max_sessions_per_user: number /* int */;
+  max_tables_per_workspace: number /* int */;
+  max_columns_per_table: number /* int */;
+  max_rows_per_table: number /* int */;
+  max_organizations: number /* int */;
+  max_workspaces: number /* int */;
+  max_users: number /* int */;
+  max_total_storage_bytes: number /* int64 */;
+}
+/**
+ * ServerConfigResponse is a response containing server configuration.
+ */
+export interface ServerConfigResponse {
+  smtp: SMTPConfigResponse;
+  quotas: QuotasConfigResponse;
+}
+/**
+ * UpdateServerConfigResponse is a response from updating server configuration.
+ */
+export type UpdateServerConfigResponse = OkResponse;
 
 //////////
 // source: types.go

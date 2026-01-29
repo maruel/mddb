@@ -324,7 +324,8 @@ func mainImpl() error {
 	}
 	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()
 	cfg := &server.Config{
-		ServerConfig: *serverCfg,
+		ServerConfig: serverCfg,
+		DataDir:      *dataDir,
 		BaseURL:      *baseURL,
 		Version:      buildVersion,
 		GoVersion:    buildGoVersion,

@@ -125,6 +125,8 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | GET | `/api/organizations/{orgID}/notion/import/{importWsID}/status` | org:Member |
 | POST | `/api/organizations/{orgID}/settings` | org:Admin |
 | POST | `/api/organizations/{orgID}/workspaces` | org:Admin |
+| GET | `/api/server/config` | globalAdmin |
+| POST | `/api/server/config` | globalAdmin |
 | GET | `/api/workspaces/{wsID}` | ws:Viewer |
 | POST | `/api/workspaces/{wsID}` | ws:Admin |
 | POST | `/api/workspaces/{wsID}/notion/import/cancel` | ws:Admin |

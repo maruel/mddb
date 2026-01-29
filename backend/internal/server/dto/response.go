@@ -480,3 +480,35 @@ type NotionImportStatusResponse struct {
 
 // NotionImportCancelResponse is a response from cancelling a Notion import.
 type NotionImportCancelResponse = OkResponse
+
+// --- Server Config Responses ---
+
+// SMTPConfigResponse contains SMTP configuration for the response (password masked).
+type SMTPConfigResponse struct {
+	Host     string `json:"host" jsonschema:"description=SMTP server hostname"`
+	Port     int32  `json:"port" jsonschema:"description=SMTP server port"`
+	Username string `json:"username" jsonschema:"description=SMTP username"`
+	From     string `json:"from" jsonschema:"description=Sender email address"`
+}
+
+// QuotasConfigResponse contains quota configuration for the response.
+type QuotasConfigResponse struct {
+	MaxRequestBodyBytes   int64 `json:"max_request_body_bytes" jsonschema:"description=Maximum HTTP request body size in bytes"`
+	MaxSessionsPerUser    int   `json:"max_sessions_per_user" jsonschema:"description=Maximum active sessions per user"`
+	MaxTablesPerWorkspace int   `json:"max_tables_per_workspace" jsonschema:"description=Maximum tables per workspace"`
+	MaxColumnsPerTable    int   `json:"max_columns_per_table" jsonschema:"description=Maximum columns per table"`
+	MaxRowsPerTable       int   `json:"max_rows_per_table" jsonschema:"description=Maximum rows per table"`
+	MaxOrganizations      int   `json:"max_organizations" jsonschema:"description=Maximum total organizations"`
+	MaxWorkspaces         int   `json:"max_workspaces" jsonschema:"description=Maximum total workspaces"`
+	MaxUsers              int   `json:"max_users" jsonschema:"description=Maximum total users"`
+	MaxTotalStorageBytes  int64 `json:"max_total_storage_bytes" jsonschema:"description=Maximum total storage in bytes"`
+}
+
+// ServerConfigResponse is a response containing server configuration.
+type ServerConfigResponse struct {
+	SMTP   SMTPConfigResponse   `json:"smtp" jsonschema:"description=SMTP configuration (password masked)"`
+	Quotas QuotasConfigResponse `json:"quotas" jsonschema:"description=Server quotas"`
+}
+
+// UpdateServerConfigResponse is a response from updating server configuration.
+type UpdateServerConfigResponse = OkResponse

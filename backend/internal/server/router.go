@@ -27,7 +27,8 @@ import (
 
 // Config holds configuration for the router.
 type Config struct {
-	storage.ServerConfig
+	*storage.ServerConfig
+	DataDir    string
 	BaseURL    string
 	Version    string
 	GoVersion  string
@@ -58,7 +59,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Create handler config from server config
 	hcfg := &handlers.Config{
-		ServerConfig: cfg.ServerConfig,
+		ServerConfig: *cfg.ServerConfig,
 		BaseURL:      cfg.BaseURL,
 		Version:      cfg.Version,
 		GoVersion:    cfg.GoVersion,
@@ -90,6 +91,11 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("GET /api/admin/stats", WrapGlobalAdmin(adminh.GetAdminStats, svc, hcfg, limiters))
 	mux.Handle("GET /api/admin/users", WrapGlobalAdmin(adminh.ListAllUsers, svc, hcfg, limiters))
 	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(adminh.ListAllOrgs, svc, hcfg, limiters))
+
+	// Server config endpoints (requires IsGlobalAdmin)
+	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, DataDir: cfg.DataDir}
+	mux.Handle("GET /api/server/config", WrapGlobalAdmin(serverh.GetConfig, svc, hcfg, limiters))
+	mux.Handle("POST /api/server/config", WrapGlobalAdmin(serverh.UpdateConfig, svc, hcfg, limiters))
 
 	// OAuth handler setup (needed before auth routes)
 	oh := handlers.NewOAuthHandler(svc, hcfg)

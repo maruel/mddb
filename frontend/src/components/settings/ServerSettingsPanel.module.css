@@ -1,0 +1,144 @@
+/* Server settings panel styles. */
+
+.panel {
+  /* Container - max-width handled by parent */
+}
+
+.panel h2 {
+  margin: 0 0 var(--s-5) 0;
+  font-size: 1.5rem;
+}
+
+.tabs {
+  display: flex;
+  gap: var(--s-3);
+  margin-bottom: var(--s-5);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.tabs button {
+  background: none;
+  border: none;
+  padding: var(--s-3) var(--s-4);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--c-text-light);
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+}
+
+.tabs button:hover {
+  color: var(--c-text);
+}
+
+.tabs button.activeTab {
+  color: var(--c-primary);
+  border-bottom-color: var(--c-primary);
+}
+
+.section {
+  margin-bottom: var(--s-5);
+}
+
+.error {
+  padding: var(--s-3);
+  background: #fef2f2;
+  color: var(--c-danger);
+  border-radius: var(--radius);
+  margin-bottom: var(--s-4);
+}
+
+.success {
+  padding: var(--s-3);
+  background: #f0fdf4;
+  color: var(--c-success);
+  border-radius: var(--radius);
+  margin-bottom: var(--s-4);
+}
+
+.statusBadge {
+  margin-bottom: var(--s-4);
+}
+
+.statusBadge .enabled {
+  display: inline-block;
+  padding: var(--s-2) var(--s-3);
+  background: #dcfce7;
+  color: #166534;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.statusBadge .disabled {
+  display: inline-block;
+  padding: var(--s-2) var(--s-3);
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.settingsForm {
+  background: var(--c-bg);
+  padding: var(--s-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.formItem {
+  margin-bottom: var(--s-4);
+}
+
+.formGrid .formItem {
+  margin-bottom: 0;
+}
+
+.formItem label {
+  display: block;
+  margin-bottom: var(--s-2);
+  font-weight: 500;
+}
+
+.formItem input[type='text'],
+.formItem input[type='email'],
+.formItem input[type='password'],
+.formItem input[type='number'] {
+  width: 100%;
+  padding: var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.saveButton {
+  padding: var(--s-3) var(--s-5);
+  background: var(--c-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.saveButton:hover {
+  background: var(--c-primary-hover);
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--c-text-light);
+  margin-top: var(--s-1);
+}

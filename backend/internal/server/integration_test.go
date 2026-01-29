@@ -96,18 +96,20 @@ func setupTestEnv(t *testing.T) *testEnv {
 		EmailVerif:    nil, // disabled
 		Email:         nil, // disabled
 	}
+	serverCfg := &storage.ServerConfig{
+		JWTSecret: testJWTSecret,
+		Quotas:    storage.DefaultServerQuotas(),
+	}
 	cfg := &Config{
-		ServerConfig: storage.ServerConfig{
-			JWTSecret: testJWTSecret,
-			Quotas:    storage.DefaultServerQuotas(),
-		},
-		BaseURL:    "http://localhost:8080",
-		Version:    "test",
-		GoVersion:  "go1.24.0",
-		Revision:   "abc1234",
-		Dirty:      false,
-		OAuth:      OAuthConfig{}, // all disabled
-		RateLimits: *ratelimit.DefaultConfig(),
+		ServerConfig: serverCfg,
+		DataDir:      t.TempDir(),
+		BaseURL:      "http://localhost:8080",
+		Version:      "test",
+		GoVersion:    "go1.24.0",
+		Revision:     "abc1234",
+		Dirty:        false,
+		OAuth:        OAuthConfig{}, // all disabled
+		RateLimits:   *ratelimit.DefaultConfig(),
 	}
 	router := NewRouter(svc, cfg)
 

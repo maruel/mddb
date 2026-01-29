@@ -1036,6 +1036,49 @@ func (r *AdminStatsRequest) Validate() error {
 	return nil
 }
 
+// --- Server Config ---
+
+// ServerConfigRequest is a request to get server configuration.
+type ServerConfigRequest struct{}
+
+// Validate is a no-op for ServerConfigRequest.
+func (r *ServerConfigRequest) Validate() error {
+	return nil
+}
+
+// SMTPConfigUpdate contains SMTP configuration fields for updates.
+type SMTPConfigUpdate struct {
+	Host     string `json:"host"`
+	Port     int32  `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"` // Empty preserves existing
+	From     string `json:"from"`
+}
+
+// QuotasConfigUpdate contains quota configuration fields for updates.
+type QuotasConfigUpdate struct {
+	MaxRequestBodyBytes   int64 `json:"max_request_body_bytes"`
+	MaxSessionsPerUser    int   `json:"max_sessions_per_user"`
+	MaxTablesPerWorkspace int   `json:"max_tables_per_workspace"`
+	MaxColumnsPerTable    int   `json:"max_columns_per_table"`
+	MaxRowsPerTable       int   `json:"max_rows_per_table"`
+	MaxOrganizations      int   `json:"max_organizations"`
+	MaxWorkspaces         int   `json:"max_workspaces"`
+	MaxUsers              int   `json:"max_users"`
+	MaxTotalStorageBytes  int64 `json:"max_total_storage_bytes"`
+}
+
+// UpdateServerConfigRequest is a request to update server configuration.
+type UpdateServerConfigRequest struct {
+	SMTP   *SMTPConfigUpdate   `json:"smtp,omitempty"`
+	Quotas *QuotasConfigUpdate `json:"quotas,omitempty"`
+}
+
+// Validate validates the update server config request fields.
+func (r *UpdateServerConfigRequest) Validate() error {
+	return nil
+}
+
 // AdminUsersRequest is a request to list all users (admin only).
 type AdminUsersRequest struct{}
 

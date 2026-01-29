@@ -113,25 +113,53 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
       });
     }
 
+    // Server settings (only for global admins)
+    if (u.is_global_admin) {
+      items.push({
+        id: 'server',
+        label: t('server.serverSettings'),
+        url: settingsUrl('server'),
+      });
+    }
+
     return items;
   };
 
-  const isActive = (url: string): boolean => {
+  // Note: route is passed as parameter (not accessed from closure) so SolidJS
+  // tracks the dependency in the component that calls this function.
+  const isActive = (url: string, route: UnifiedSettingsMatch): boolean => {
     if (!url) return false;
-    const currentPath = window.location.pathname;
-    const currentHash = window.location.hash;
-    const [urlPath, urlHash] = url.split('#');
 
-    // Check path match
-    if (urlPath !== currentPath) return false;
+    // Match based on route type and URL
+    if (url === '/settings/user' && route.type === 'profile') return true;
+    if (url === '/settings/server' && route.type === 'server') return true;
 
-    // If URL has hash, check hash match
-    if (urlHash) {
-      return currentHash === '#' + urlHash;
+    // For workspace/org URLs, check if the ID matches
+    if (route.type === 'workspace' && route.id) {
+      const wsMatch = url.match(/^\/settings\/workspace\/([^+/]+)/);
+      if (wsMatch && wsMatch[1] === route.id) {
+        // Check section/hash match
+        const [, urlHash] = url.split('#');
+        if (urlHash) {
+          return route.section === urlHash;
+        }
+        return !route.section; // Active if no hash in URL and no section in route
+      }
     }
 
-    // If no hash in URL, match if no hash in current location or hash matches any section
-    return true;
+    if (route.type === 'org' && route.id) {
+      const orgMatch = url.match(/^\/settings\/org\/([^+/]+)/);
+      if (orgMatch && orgMatch[1] === route.id) {
+        // Check section/hash match
+        const [, urlHash] = url.split('#');
+        if (urlHash) {
+          return route.section === urlHash;
+        }
+        return !route.section;
+      }
+    }
+
+    return false;
   };
 
   return (
