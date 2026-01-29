@@ -279,4 +279,44 @@ export interface Dictionary {
     installButton: string;
     dismissButton: string;
   };
+
+  notionImport: {
+    title: string;
+    description: string;
+    notionToken: string;
+    notionTokenPlaceholder: string;
+    setupTitle: string;
+    step1Header: string;
+    step1a: string;
+    step1b: string;
+    step1c: string;
+    step1d: string;
+    step2Header: string;
+    step2a: string;
+    step2b: string;
+    step3Header: string;
+    step3a: string;
+    step3b: string;
+    createIntegration: string;
+    startImport: string;
+    importing: string;
+    cancel: string;
+    // Status
+    statusRunning: string;
+    statusCompleted: string;
+    statusFailed: string;
+    statusCancelled: string;
+    // Progress banner
+    importInProgress: string;
+    importCompleted: string;
+    importFailed: string;
+    importCancelled: string;
+    // Stats
+    pagesImported: string;
+    databasesImported: string;
+    recordsImported: string;
+    assetsImported: string;
+    errorsEncountered: string;
+    dismiss: string;
+  };
 }

@@ -526,6 +526,22 @@ export interface AdminUsersRequest {
  */
 export interface AdminOrgsRequest {
 }
+/**
+ * NotionImportRequest is a request to start a Notion import into a new workspace.
+ */
+export interface NotionImportRequest {
+  notion_token: string;
+}
+/**
+ * NotionImportStatusRequest is a request to get the status of a Notion import.
+ */
+export interface NotionImportStatusRequest {
+}
+/**
+ * NotionImportCancelRequest is a request to cancel a running Notion import.
+ */
+export interface NotionImportCancelRequest {
+}
 
 //////////
 // source: response.go
@@ -1003,6 +1019,33 @@ export interface AdminWorkspacesResponse {
 export interface ListWorkspacesResponse {
   workspaces: WorkspaceResponse[];
 }
+/**
+ * NotionImportResponse is a response from starting a Notion import.
+ */
+export interface NotionImportResponse {
+  workspace_id: string;
+  workspace_name: string;
+  status: string;
+}
+/**
+ * NotionImportStatusResponse is a response containing import status.
+ */
+export interface NotionImportStatusResponse {
+  status: string;
+  progress: number /* int */;
+  total: number /* int */;
+  message?: string;
+  pages?: number /* int */;
+  databases?: number /* int */;
+  records?: number /* int */;
+  assets?: number /* int */;
+  errors?: number /* int */;
+  duration_ms?: number /* int64 */;
+}
+/**
+ * NotionImportCancelResponse is a response from cancelling a Notion import.
+ */
+export type NotionImportCancelResponse = OkResponse;
 
 //////////
 // source: types.go

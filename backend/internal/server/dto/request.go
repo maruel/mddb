@@ -1051,3 +1051,53 @@ type AdminOrgsRequest struct{}
 func (r *AdminOrgsRequest) Validate() error {
 	return nil
 }
+
+// --- Notion Import ---
+
+// NotionImportRequest is a request to start a Notion import into a new workspace.
+type NotionImportRequest struct {
+	OrgID       jsonldb.ID `path:"orgID" tstype:"-"`
+	NotionToken string     `json:"notion_token"`
+}
+
+// Validate validates the notion import request fields.
+func (r *NotionImportRequest) Validate() error {
+	if r.OrgID.IsZero() {
+		return MissingField("orgID")
+	}
+	// workspace_name is optional - will be derived from Notion API if empty
+	if r.NotionToken == "" {
+		return MissingField("notion_token")
+	}
+	return nil
+}
+
+// NotionImportStatusRequest is a request to get the status of a Notion import.
+type NotionImportStatusRequest struct {
+	OrgID      jsonldb.ID `path:"orgID" tstype:"-"`
+	ImportWsID jsonldb.ID `path:"importWsID" json:"-"`
+}
+
+// Validate validates the notion import status request fields.
+func (r *NotionImportStatusRequest) Validate() error {
+	if r.OrgID.IsZero() {
+		return MissingField("orgID")
+	}
+	if r.ImportWsID.IsZero() {
+		return MissingField("importWsID")
+	}
+	return nil
+}
+
+// NotionImportCancelRequest is a request to cancel a running Notion import.
+type NotionImportCancelRequest struct {
+	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+}
+
+// Validate validates the notion import cancel request fields.
+func (r *NotionImportCancelRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	return nil
+}

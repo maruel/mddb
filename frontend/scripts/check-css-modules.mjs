@@ -23,13 +23,24 @@ function extractCssClasses(cssContent) {
   return classes;
 }
 
-/** Check if a class is referenced in TSX content */
-function isClassUsed(className, tsxContent) {
-  // Match styles.className or styles['className'] or ${styles.className}
+/** Extract the import name used for a CSS module in a TSX file */
+function extractImportName(tsxContent, cssFileName) {
+  // Match: import styles from './Foo.module.css' or import myStyles from './Foo.module.css'
+  const importRegex = new RegExp(
+    `import\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s+from\\s+['"][^'"]*${cssFileName.replace('.', '\\.')}['"]`,
+    'g'
+  );
+  const match = importRegex.exec(tsxContent);
+  return match ? match[1] : 'styles';
+}
+
+/** Check if a class is referenced in TSX content with given import name */
+function isClassUsed(className, tsxContent, importName) {
+  // Match importName.className or importName['className'] or ${importName.className}
   const patterns = [
-    new RegExp(`styles\\.${className}(?![a-zA-Z0-9_-])`, 'g'),
-    new RegExp(`styles\\['${className}'\\]`, 'g'),
-    new RegExp(`styles\\["${className}"\\]`, 'g'),
+    new RegExp(`${importName}\\.${className}(?![a-zA-Z0-9_-])`, 'g'),
+    new RegExp(`${importName}\\['${className}'\\]`, 'g'),
+    new RegExp(`${importName}\\["${className}"\\]`, 'g'),
   ];
   return patterns.some((pattern) => pattern.test(tsxContent));
 }
@@ -78,6 +89,7 @@ function main() {
 
   for (const cssModule of cssModules) {
     const cssContent = readFileSync(cssModule, 'utf-8');
+    const cssFileName = basename(cssModule);
     const classes = extractCssClasses(cssContent);
     const consumers = findTsxConsumers(cssModule, tsxFiles);
 
@@ -91,23 +103,24 @@ function main() {
       continue;
     }
 
-    // Combine content from all consumers
-    const combinedTsxContent = consumers
-      .map((f) => readFileSync(f, 'utf-8'))
-      .join('\n');
+    // Check each consumer with its specific import name
+    const unusedClasses = new Set(classes);
+    for (const consumerPath of consumers) {
+      const tsxContent = readFileSync(consumerPath, 'utf-8');
+      const importName = extractImportName(tsxContent, cssFileName);
 
-    const unusedClasses = [];
-    for (const className of classes) {
-      if (!isClassUsed(className, combinedTsxContent)) {
-        unusedClasses.push(className);
+      for (const className of unusedClasses) {
+        if (isClassUsed(className, tsxContent, importName)) {
+          unusedClasses.delete(className);
+        }
       }
     }
 
-    if (unusedClasses.length > 0) {
+    if (unusedClasses.size > 0) {
       results.push({
         file: relative(srcDir, cssModule),
         issue: 'Unused classes',
-        classes: unusedClasses,
+        classes: Array.from(unusedClasses),
       });
       hasUnused = true;
     }

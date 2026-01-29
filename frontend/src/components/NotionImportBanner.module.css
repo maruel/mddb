@@ -1,0 +1,103 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-primary-bg, #eef6ff);
+  border-bottom: 1px solid var(--c-primary);
+  font-size: 0.85rem;
+}
+
+.banner.success {
+  background: #f0fdf4;
+  border-color: #22c55e;
+}
+
+.banner.error {
+  background: #fef2f2;
+  border-color: var(--c-danger);
+}
+
+.banner.cancelled {
+  background: #fefce8;
+  border-color: #eab308;
+}
+
+.icon {
+  font-size: 1rem;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.message {
+  font-weight: 500;
+}
+
+.progress {
+  color: var(--c-text-light);
+  font-size: 0.8rem;
+}
+
+.stats {
+  display: flex;
+  gap: var(--s-3);
+  font-size: 0.8rem;
+  color: var(--c-text-light);
+}
+
+.stat {
+  display: flex;
+  gap: 4px;
+}
+
+.statValue {
+  font-weight: 500;
+  color: var(--c-text);
+}
+
+.actions {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.cancelButton {
+  padding: var(--s-1) var(--s-3);
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--c-text-light);
+}
+
+.cancelButton:hover {
+  background: var(--c-bg-alt);
+}
+
+.dismissButton {
+  padding: var(--s-1) var(--s-3);
+  background: none;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--c-text-light);
+}
+
+.dismissButton:hover {
+  color: var(--c-text);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

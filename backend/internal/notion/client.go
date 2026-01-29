@@ -96,6 +96,54 @@ func (c *Client) do(ctx context.Context, method, path string, body any) ([]byte,
 	return respBody, nil
 }
 
+// BotUser represents the bot user response from /users/me.
+type BotUser struct {
+	Object    string `json:"object"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	AvatarURL string `json:"avatar_url"`
+	Type      string `json:"type"`
+	Bot       *Bot   `json:"bot"`
+}
+
+// Bot contains bot-specific information.
+type Bot struct {
+	Owner         BotOwner `json:"owner"`
+	WorkspaceName string   `json:"workspace_name"`
+}
+
+// BotOwner represents the owner of a bot.
+type BotOwner struct {
+	Type      string `json:"type"` // "workspace" or "user"
+	Workspace bool   `json:"workspace"`
+}
+
+// GetMe retrieves information about the bot user, including workspace name.
+func (c *Client) GetMe(ctx context.Context) (*BotUser, error) {
+	data, err := c.do(ctx, http.MethodGet, "/users/me", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var user BotUser
+	if err := json.Unmarshal(data, &user); err != nil {
+		return nil, fmt.Errorf("failed to parse user response: %w", err)
+	}
+	return &user, nil
+}
+
+// GetWorkspaceName retrieves the workspace name from the Notion API.
+func (c *Client) GetWorkspaceName(ctx context.Context) (string, error) {
+	user, err := c.GetMe(ctx)
+	if err != nil {
+		return "", err
+	}
+	if user.Bot != nil && user.Bot.WorkspaceName != "" {
+		return user.Bot.WorkspaceName, nil
+	}
+	return "", nil
+}
+
 // SearchFilter defines filters for the search endpoint.
 type SearchFilter struct {
 	Value    string `json:"value"`    // "page" or "database"

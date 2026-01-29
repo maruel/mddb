@@ -210,6 +210,11 @@ func (svc *FileStoreService) GetServerUsage() (int64, error) {
 	return totalUsage, nil
 }
 
+// RootDir returns the root directory for all workspace storage.
+func (svc *FileStoreService) RootDir() string {
+	return svc.rootDir
+}
+
 // CheckServerStorageQuota returns an error if adding the given bytes would exceed the server's total storage quota.
 // maxBytes is the server-wide storage limit. Use 0 to disable the check.
 func (svc *FileStoreService) CheckServerStorageQuota(additionalBytes, maxBytes int64) error {

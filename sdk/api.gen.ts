@@ -43,6 +43,10 @@ import type {
   LoginRequest,
   LogoutResponse,
   NodeResponse,
+  NotionImportCancelResponse,
+  NotionImportRequest,
+  NotionImportResponse,
+  NotionImportStatusResponse,
   OkResponse,
   OrgInvitationResponse,
   OrganizationResponse,
@@ -157,6 +161,10 @@ export function createAPIClient(fetchFn: FetchFn) {
           createOrgInvitation: (options: CreateOrgInvitationRequest) => post<OrgInvitationResponse>(fetchFn, `/api/organizations/${orgID}/invitations`, options),
           listOrgInvitations: () => get<ListOrgInvitationsResponse>(fetchFn, `/api/organizations/${orgID}/invitations`),
         },
+        notion: {
+          getStatus: (importWsID: string) => get<NotionImportStatusResponse>(fetchFn, `/api/organizations/${orgID}/notion/import/${importWsID}/status`),
+          startImport: (options: NotionImportRequest) => post<NotionImportResponse>(fetchFn, `/api/organizations/${orgID}/notion/import`, options),
+        },
         organizations: {
           getOrganization: () => get<OrganizationResponse>(fetchFn, `/api/organizations/${orgID}`),
           updateOrganization: (options: UpdateOrganizationRequest) => post<OrganizationResponse>(fetchFn, `/api/organizations/${orgID}`, options),
@@ -223,6 +231,9 @@ export function createAPIClient(fetchFn: FetchFn) {
           deleteNode: (id: string) => post<DeleteNodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/delete`),
           getNode: (id: string) => get<NodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}`),
           listNodeChildren: (id: string) => get<ListNodeChildrenResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/children`),
+        },
+        notion: {
+          cancelImport: () => post<NotionImportCancelResponse>(fetchFn, `/api/workspaces/${wsID}/notion/import/cancel`),
         },
         settings: {
           git: {

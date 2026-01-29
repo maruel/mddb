@@ -147,6 +147,11 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("POST /api/organizations/{orgID}/invitations", WrapOrgAuth(ih.CreateOrgInvitation, svc, hcfg, identity.OrgRoleAdmin, limiters))
 	mux.Handle("POST /api/organizations/{orgID}/workspaces", WrapOrgAuth(orgh.CreateWorkspace, svc, hcfg, identity.OrgRoleAdmin, limiters))
 
+	// Notion import endpoints
+	nih := handlers.NewNotionImportHandler(svc, hcfg)
+	mux.Handle("POST /api/organizations/{orgID}/notion/import", WrapOrgAuth(nih.StartImport, svc, hcfg, identity.OrgRoleAdmin, limiters))
+	mux.Handle("GET /api/organizations/{orgID}/notion/import/{importWsID}/status", WrapOrgAuth(nih.GetStatus, svc, hcfg, identity.OrgRoleMember, limiters))
+
 	// Workspace endpoints - /api/workspaces/*
 	// Details and settings
 	mux.Handle("GET /api/workspaces/{wsID}", WrapWSAuth(orgh.GetWorkspace, svc, hcfg, identity.WSRoleViewer, limiters))
@@ -156,6 +161,8 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("POST /api/workspaces/{wsID}/settings/git", WrapWSAuth(grh.UpdateGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
 	mux.Handle("POST /api/workspaces/{wsID}/settings/git/push", WrapWSAuth(grh.PushGit, svc, hcfg, identity.WSRoleAdmin, limiters))
 	mux.Handle("POST /api/workspaces/{wsID}/settings/git/delete", WrapWSAuth(grh.DeleteGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
+	// Notion import cancel
+	mux.Handle("POST /api/workspaces/{wsID}/notion/import/cancel", WrapWSAuth(nih.CancelImport, svc, hcfg, identity.WSRoleAdmin, limiters))
 	// Users and invitations
 	mux.Handle("POST /api/workspaces/{wsID}/users/role", WrapWSAuth(uh.UpdateWSMemberRole, svc, hcfg, identity.WSRoleAdmin, limiters))
 	mux.Handle("GET /api/workspaces/{wsID}/invitations", WrapWSAuth(ih.ListWSInvitations, svc, hcfg, identity.WSRoleAdmin, limiters))

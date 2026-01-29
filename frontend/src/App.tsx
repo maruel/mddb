@@ -16,6 +16,8 @@ import Terms from './components/Terms';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import CreateOrgModal from './components/CreateOrgModal';
 import CreateWorkspaceModal from './components/CreateWorkspaceModal';
+import NotionImportModal, { type NotionImportData } from './components/NotionImportModal';
+import NotionImportBanner from './components/NotionImportBanner';
 import UserMenu from './components/UserMenu';
 import WorkspaceMenu from './components/WorkspaceMenu';
 import AppErrorBoundary from './components/ErrorBoundary';
@@ -40,13 +42,13 @@ import {
   isStaticRoute,
 } from './utils/urls';
 import { useI18n, type Locale } from './i18n';
-import type { NodeResponse, OrgMembershipResponse } from '@sdk/types.gen';
+import type { NodeResponse, OrgMembershipResponse, NotionImportStatusResponse } from '@sdk/types.gen';
 import styles from './App.module.css';
 
 // Inner app component that uses contexts
 function AppContent() {
   const { t, locale, setLocale } = useI18n();
-  const { user, login, wsApi } = useAuth();
+  const { user, login, wsApi, orgApi } = useAuth();
   const {
     nodes,
     selectedNodeId,
@@ -95,6 +97,9 @@ function AppContent() {
   const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
   const [showCreateOrg, setShowCreateOrg] = createSignal(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
+  const [showNotionImport, setShowNotionImport] = createSignal(false);
+  const [notionImportStatus, setNotionImportStatus] = createSignal<NotionImportStatusResponse | null>(null);
+  const [notionImportWsId, setNotionImportWsId] = createSignal<string | null>(null);
   const [nodeCreationParentId, setNodeCreationParentId] = createSignal<string | null>(null);
 
   // Sync locale with user settings
@@ -218,6 +223,72 @@ function AppContent() {
     onCleanup(() => window.removeEventListener('popstate', handlePopState));
   });
 
+  // Notion import polling
+  let importPollInterval: number | undefined;
+
+  const startNotionImportPolling = (wsId: string) => {
+    setNotionImportWsId(wsId);
+    importPollInterval = window.setInterval(async () => {
+      const org = orgApi();
+      if (!org) return;
+      try {
+        const status = await org.notion.getStatus(wsId);
+        setNotionImportStatus(status);
+        if (['completed', 'failed', 'cancelled'].includes(status.status)) {
+          window.clearInterval(importPollInterval);
+          importPollInterval = undefined;
+          // Reload nodes if import completed
+          if (status.status === 'completed') {
+            loadNodes(true);
+          }
+        }
+      } catch {
+        window.clearInterval(importPollInterval);
+        importPollInterval = undefined;
+      }
+    }, 2000);
+  };
+
+  const handleNotionImport = async (data: NotionImportData) => {
+    const org = orgApi();
+    if (!org) return;
+    const result = await org.notion.startImport({
+      notion_token: data.notionToken,
+    });
+    // Switch to the new workspace
+    await switchWorkspace(result.workspace_id);
+    // Start polling for import status
+    startNotionImportPolling(result.workspace_id);
+    setNotionImportStatus({ status: 'running', progress: 0, total: 0 });
+  };
+
+  const handleCancelNotionImport = async () => {
+    const ws = wsApi();
+    const wsId = notionImportWsId();
+    if (!ws || !wsId) return;
+    try {
+      await ws.notion.cancelImport();
+      setNotionImportStatus((prev) => (prev ? { ...prev, status: 'cancelled' } : null));
+    } catch {
+      // Ignore
+    }
+  };
+
+  const dismissNotionImportBanner = () => {
+    if (importPollInterval) {
+      window.clearInterval(importPollInterval);
+      importPollInterval = undefined;
+    }
+    setNotionImportStatus(null);
+    setNotionImportWsId(null);
+  };
+
+  onCleanup(() => {
+    if (importPollInterval) {
+      window.clearInterval(importPollInterval);
+    }
+  });
+
   // Handle initial route when user loads
   createEffect(() => {
     if (user()) {
@@ -294,6 +365,15 @@ function AppContent() {
         <Show when={!isTermsPage()} fallback={<Terms />}>
           <Show when={user()} fallback={<Auth onLogin={login} />}>
             <div class={styles.app}>
+              <Show when={notionImportStatus()} keyed>
+                {(status) => (
+                  <NotionImportBanner
+                    status={status}
+                    onCancel={handleCancelNotionImport}
+                    onDismiss={dismissNotionImportBanner}
+                  />
+                )}
+              </Show>
               <header class={styles.header}>
                 <div class={styles.headerLeft}>
                   <button
@@ -315,6 +395,7 @@ function AppContent() {
                       }
                     }}
                     onCreateWorkspace={() => setShowCreateWorkspace(true)}
+                    onImportFromNotion={() => setShowNotionImport(true)}
                   />
                   <Show when={selectedNodeId()}>
                     <nav class={styles.breadcrumbs}>
@@ -583,6 +664,9 @@ function AppContent() {
           onCreate={createWorkspace}
           isFirstWorkspace={true}
         />
+      </Show>
+      <Show when={showNotionImport()}>
+        <NotionImportModal onClose={() => setShowNotionImport(false)} onImport={handleNotionImport} />
       </Show>
     </>
   );

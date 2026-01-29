@@ -453,3 +453,29 @@ type AdminWorkspacesResponse struct {
 type ListWorkspacesResponse struct {
 	Workspaces []WorkspaceResponse `json:"workspaces"`
 }
+
+// --- Notion Import Responses ---
+
+// NotionImportResponse is a response from starting a Notion import.
+type NotionImportResponse struct {
+	WorkspaceID   jsonldb.ID `json:"workspace_id" jsonschema:"description=ID of the created workspace"`
+	WorkspaceName string     `json:"workspace_name" jsonschema:"description=Name of the created workspace"`
+	Status        string     `json:"status" jsonschema:"description=Import status (running)"`
+}
+
+// NotionImportStatusResponse is a response containing import status.
+type NotionImportStatusResponse struct {
+	Status     string `json:"status" jsonschema:"description=Import status: idle, running, completed, failed, cancelled"`
+	Progress   int    `json:"progress" jsonschema:"description=Number of items processed so far"`
+	Total      int    `json:"total" jsonschema:"description=Total number of items to process"`
+	Message    string `json:"message,omitempty" jsonschema:"description=Current progress message or error"`
+	Pages      int    `json:"pages,omitempty" jsonschema:"description=Number of pages imported"`
+	Databases  int    `json:"databases,omitempty" jsonschema:"description=Number of databases imported"`
+	Records    int    `json:"records,omitempty" jsonschema:"description=Number of records imported"`
+	Assets     int    `json:"assets,omitempty" jsonschema:"description=Number of assets imported"`
+	Errors     int    `json:"errors,omitempty" jsonschema:"description=Number of errors encountered"`
+	DurationMs int64  `json:"duration_ms,omitempty" jsonschema:"description=Import duration in milliseconds"`
+}
+
+// NotionImportCancelResponse is a response from cancelling a Notion import.
+type NotionImportCancelResponse = OkResponse

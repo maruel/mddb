@@ -11,6 +11,7 @@ import styles from './WorkspaceMenu.module.css';
 interface WorkspaceMenuProps {
   onOpenSettings: () => void;
   onCreateWorkspace: () => void;
+  onImportFromNotion: () => void;
 }
 
 interface OrgWithWorkspaces {
@@ -87,6 +88,11 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
     props.onCreateWorkspace();
   };
 
+  const handleImportFromNotion = () => {
+    setIsOpen(false);
+    props.onImportFromNotion();
+  };
+
   // Check if we have multiple orgs (to decide whether to show org headers)
   const hasMultipleOrgs = createMemo(() => groupedWorkspaces().length > 1);
 
@@ -147,6 +153,12 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
               +
             </span>
             {t('createWorkspace.title')}
+          </button>
+          <button class={styles.menuItem} onClick={handleImportFromNotion} role="menuitem">
+            <span class={styles.icon} aria-hidden="true">
+              &#x2B07;
+            </span>
+            {t('notionImport.title')}
           </button>
         </div>
       </Show>
