@@ -1,7 +1,7 @@
 // Recursive component for rendering navigation tree nodes in the sidebar.
 // Supports lazy loading of children with pre-fetching one level ahead.
 
-import { createSignal, createEffect, For, Show, onMount } from 'solid-js';
+import { createSignal, createEffect, For, Show, onMount, on } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { useI18n } from '../i18n';
 import type { NodeResponse } from '@sdk/types.gen';
@@ -10,6 +10,7 @@ import styles from './SidebarNode.module.css';
 interface SidebarNodeResponseProps {
   node: NodeResponse;
   selectedId: string | null;
+  ancestorIds: string[];
   onSelect: (node: NodeResponse) => void;
   onCreateChildPage: (parentId: string) => void;
   onCreateChildTable: (parentId: string) => void;
@@ -23,8 +24,9 @@ interface SidebarNodeResponseProps {
 
 export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
   const { t } = useI18n();
-  // Start collapsed by default, except root level (depth 0)
-  const [isExpanded, setIsExpanded] = createSignal(props.depth === 0);
+  // Start expanded if depth 0 OR if already an ancestor at mount time
+  const initialExpanded = props.depth === 0 || props.ancestorIds.includes(props.node.id);
+  const [isExpanded, setIsExpanded] = createSignal(initialExpanded);
   const [showContextMenu, setShowContextMenu] = createSignal(false);
   const [contextMenuPos, setContextMenuPos] = createSignal({ x: 0, y: 0 });
   const [loadedChildren, setLoadedChildren] = createSignal<NodeResponse[] | null>(null);
@@ -76,6 +78,23 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
       setIsExpanded(true);
     }
   });
+
+  // Auto-expand for direct URL navigation when ancestorIds becomes available
+  // Track if we've already auto-expanded for this node
+  let hasAutoExpanded = false;
+  createEffect(
+    on(
+      () => props.ancestorIds.length,
+      (length, prevLength) => {
+        // Only expand on first transition from empty to non-empty
+        const wasEmpty = prevLength === undefined || prevLength === 0;
+        if (wasEmpty && length > 0 && !hasAutoExpanded && props.ancestorIds.includes(props.node.id)) {
+          hasAutoExpanded = true;
+          setIsExpanded(true);
+        }
+      }
+    )
+  );
 
   // Fetch children for this node
   const fetchChildren = async () => {
@@ -229,6 +248,7 @@ export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
               <SidebarNodeResponse
                 node={child}
                 selectedId={props.selectedId}
+                ancestorIds={props.ancestorIds}
                 onSelect={props.onSelect}
                 onCreateChildPage={props.onCreateChildPage}
                 onCreateChildTable={props.onCreateChildTable}

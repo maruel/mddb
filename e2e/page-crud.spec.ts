@@ -253,6 +253,105 @@ test.describe('Page Navigation', () => {
     await expect(titleInput).toHaveValue('Direct URL Page');
   });
 
+  test.screenshot('direct URL navigation to grandchild expands sidebar ancestors', async ({ page, request, takeScreenshot }) => {
+    const { token } = await registerUser(request, 'direct-grandchild');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create parent -> child -> grandchild hierarchy
+    const parentResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Parent', content: 'Parent content' },
+    });
+    const parentData = await parentResponse.json();
+
+    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${parentData.id}/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Child', content: 'Child content' },
+    });
+    const childData = await childResponse.json();
+
+    const grandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childData.id}/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Grandchild', content: 'Grandchild content' },
+    });
+    const grandchildData = await grandchildResponse.json();
+
+    // Navigate directly to grandchild URL (fresh page load)
+    await page.goto(`/w/${wsID}/${grandchildData.id}?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Grandchild content should be visible
+    await expect(page.getByText('Grandchild content')).toBeVisible({ timeout: 5000 });
+
+    await takeScreenshot('grandchild-direct-nav');
+
+    // Sidebar should show expanded tree with grandchild visible and highlighted
+    const grandchildNode = page.locator(`[data-testid="sidebar-node-${grandchildData.id}"]`);
+    await expect(grandchildNode).toBeVisible({ timeout: 5000 });
+
+    // Grandchild should be highlighted (active)
+    const grandchildPageItem = grandchildNode.locator('> [class*="pageItem"]');
+    await expect(grandchildPageItem).toHaveClass(/active/);
+
+    // Parent and child should be visible (expanded)
+    await expect(page.locator(`[data-testid="sidebar-node-${parentData.id}"]`)).toBeVisible();
+    await expect(page.locator(`[data-testid="sidebar-node-${childData.id}"]`)).toBeVisible();
+  });
+
+  test('direct URL navigation to great-grandchild expands all ancestors', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'direct-greatgrand');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create 4-level hierarchy: parent -> child -> grandchild -> great-grandchild
+    const parentResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Level1', content: '' },
+    });
+    const parentData = await parentResponse.json();
+
+    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${parentData.id}/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Level2', content: '' },
+    });
+    const childData = await childResponse.json();
+
+    const grandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childData.id}/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Level3', content: '' },
+    });
+    const grandchildData = await grandchildResponse.json();
+
+    const greatGrandchildResponse = await request.post(
+      `/api/workspaces/${wsID}/nodes/${grandchildData.id}/page/create`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { title: 'Level4', content: 'Deep content' },
+      }
+    );
+    const greatGrandchildData = await greatGrandchildResponse.json();
+
+    // Navigate directly to great-grandchild URL
+    await page.goto(`/w/${wsID}/${greatGrandchildData.id}?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Content should be visible
+    await expect(page.getByText('Deep content')).toBeVisible({ timeout: 5000 });
+
+    // All ancestors should be expanded and great-grandchild should be visible
+    const greatGrandchildNode = page.locator(`[data-testid="sidebar-node-${greatGrandchildData.id}"]`);
+    await expect(greatGrandchildNode).toBeVisible({ timeout: 5000 });
+
+    // Great-grandchild should be highlighted
+    const pageItem = greatGrandchildNode.locator('> [class*="pageItem"]');
+    await expect(pageItem).toHaveClass(/active/);
+  });
+
   test('breadcrumb navigation works for nested pages', async ({ page, request }) => {
     const { token } = await registerUser(request, 'breadcrumb');
     await page.goto(`/?token=${token}`);

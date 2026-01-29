@@ -11,6 +11,7 @@ interface SidebarProps {
   loading: boolean;
   nodes: NodeResponse[];
   selectedNodeId: string | null;
+  ancestorIds: string[];
   onCreatePage: () => void;
   onCreateTable: () => void;
   onCreateChildPage: (parentId: string) => void;
@@ -56,6 +57,7 @@ export default function Sidebar(props: SidebarProps) {
             <SidebarNode
               node={node}
               selectedId={props.selectedNodeId}
+              ancestorIds={props.ancestorIds}
               onSelect={props.onSelectNode}
               onCreateChildPage={props.onCreateChildPage}
               onCreateChildTable={props.onCreateChildTable}

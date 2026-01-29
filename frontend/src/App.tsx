@@ -518,6 +518,7 @@ function AppContent() {
                     loading={loading()}
                     nodes={nodes}
                     selectedNodeId={selectedNodeId()}
+                    ancestorIds={breadcrumbPath().map((n) => n.id)}
                     onCreatePage={() => {
                       setNodeCreationParentId(null);
                       createNode('document');
