@@ -21,7 +21,7 @@ test.describe('User Profile Settings', () => {
     await openUserMenuAndClick(page, 'Profile');
 
     // Should navigate to profile page
-    await expect(page).toHaveURL('/profile', { timeout: 5000 });
+    await expect(page).toHaveURL('/settings/user', { timeout: 5000 });
 
     // User info should be displayed
     await expect(page.getByText(email)).toBeVisible({ timeout: 5000 });
@@ -36,7 +36,7 @@ test.describe('User Profile Settings', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     await openUserMenuAndClick(page, 'Profile');
-    await expect(page).toHaveURL('/profile', { timeout: 5000 });
+    await expect(page).toHaveURL('/settings/user', { timeout: 5000 });
 
     // Find language selector
     const languageSelect = page.locator('select').filter({ has: page.locator('option[value="en"]') });
@@ -59,7 +59,7 @@ test.describe('User Profile Settings', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     await openUserMenuAndClick(page, 'Profile');
-    await expect(page).toHaveURL('/profile', { timeout: 5000 });
+    await expect(page).toHaveURL('/settings/user', { timeout: 5000 });
 
     // Find theme selector
     const themeSelect = page.locator('select').filter({ has: page.locator('option[value="dark"]') });
@@ -81,7 +81,7 @@ test.describe('User Profile Settings', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     await openUserMenuAndClick(page, 'Profile');
-    await expect(page).toHaveURL('/profile', { timeout: 5000 });
+    await expect(page).toHaveURL('/settings/user', { timeout: 5000 });
 
     // Click back button
     const backButton = page.locator('button', { hasText: /Back|←/ });
@@ -89,7 +89,7 @@ test.describe('User Profile Settings', () => {
 
     // Should return to workspace view
     await expect(page.locator('aside')).toBeVisible({ timeout: 5000 });
-    await expect(page).not.toHaveURL('/profile');
+    await expect(page).not.toHaveURL('/settings/user');
   });
 });
 
@@ -109,7 +109,7 @@ test.describe('Workspace Settings', () => {
     await settingsOption.click();
 
     // Should be on settings page (URL contains workspace ID)
-    await expect(page).toHaveURL(/\/w\/[^/]+\/settings/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/settings\/workspace\//, { timeout: 5000 });
 
     // Settings tabs should be visible (use exact: true to avoid matching workspace button in header)
     await expect(page.getByRole('button', { name: 'Members', exact: true })).toBeVisible({ timeout: 5000 });
@@ -127,7 +127,7 @@ test.describe('Workspace Settings', () => {
     const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
     await expect(settingsOption).toBeVisible({ timeout: 3000 });
     await settingsOption.click();
-    await expect(page).toHaveURL(/\/w\/[^/]+\/settings/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/settings\/workspace\//, { timeout: 5000 });
 
     // Click Members tab (use exact match to avoid conflicts)
     const membersTab = page.getByRole('button', { name: 'Members', exact: true });
@@ -161,7 +161,7 @@ test.describe('Workspace Settings', () => {
     const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
     await expect(settingsOption).toBeVisible({ timeout: 3000 });
     await settingsOption.click();
-    await expect(page).toHaveURL(/\/w\/[^/]+\/settings/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/settings\/workspace\//, { timeout: 5000 });
 
     // Members tab should be active by default - click to be sure
     const membersTab = page.getByRole('button', { name: 'Members', exact: true });
@@ -183,7 +183,7 @@ test.describe('Workspace Settings', () => {
     const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
     await expect(settingsOption).toBeVisible({ timeout: 3000 });
     await settingsOption.click();
-    await expect(page).toHaveURL(/\/w\/[^/]+\/settings/, { timeout: 5000 });
+    await expect(page).toHaveURL(/\/settings\/workspace\//, { timeout: 5000 });
 
     // Click Workspace tab (use exact match to avoid matching workspace button in header)
     const workspaceTab = page.getByRole('button', { name: 'Workspace', exact: true });
