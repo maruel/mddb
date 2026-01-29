@@ -1,3 +1,3 @@
 # Generated files - keep ours on merge conflicts (regenerate after merge)
-backend/frontend/dist/** merge=ours
-sdk/*.gen.ts merge=ours
+backend/frontend/dist/** merge=ours binary
+sdk/*.gen.ts merge=ours binary
