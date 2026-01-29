@@ -476,6 +476,12 @@ func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID jsonldb
 				}
 			}
 		}
+		if views, ok := metadata["views"]; ok {
+			// Views are complex structures, marshal/unmarshal to avoid manual map walking
+			if viewsData, err := json.Marshal(views); err == nil {
+				_ = json.Unmarshal(viewsData, &node.Views)
+			}
+		}
 	}
 
 	return node, nil
@@ -562,6 +568,12 @@ func (ws *WorkspaceFileStore) ReadTable(id jsonldb.ID) (*Node, error) {
 		}
 	}
 
+	if views, ok := metadata["views"]; ok {
+		if viewsData, err := json.Marshal(views); err == nil {
+			_ = json.Unmarshal(viewsData, &node.Views)
+		}
+	}
+
 	return node, nil
 }
 
@@ -587,6 +599,7 @@ func (ws *WorkspaceFileStore) writeTable(node *Node, isNew bool) error {
 		"version":    "1.0",
 		"modified":   storage.Now(),
 		"properties": node.Properties,
+		"views":      node.Views,
 	}
 
 	if isNew {

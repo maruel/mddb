@@ -238,10 +238,36 @@ export interface UpdateTableRequest {
 export interface DeleteTableRequest {
 }
 /**
+ * CreateViewRequest is a request to create a new view for a table.
+ */
+export interface CreateViewRequest {
+  name: string;
+  type: ViewType;
+}
+/**
+ * UpdateViewRequest is a request to update an existing view.
+ */
+export interface UpdateViewRequest {
+  name?: string;
+  type?: ViewType;
+  columns?: ViewColumn[];
+  filters?: Filter[];
+  sorts?: Sort[];
+  groups?: Group[];
+}
+/**
+ * DeleteViewRequest is a request to delete a view.
+ */
+export interface DeleteViewRequest {
+}
+/**
  * ListRecordsRequest is a request to list records in a table.
  * Now used for /nodes/{id}/table/records endpoint.
  */
 export interface ListRecordsRequest {
+  ViewID: string; // Optional: apply saved view configuration
+  Filters: string; // Optional: JSON-encoded ad-hoc filters
+  Sorts: string; // Optional: JSON-encoded ad-hoc sorts
   Offset: number /* int */;
   Limit: number /* int */;
 }
@@ -717,6 +743,22 @@ export interface UpdateTableResponse {
  */
 export type DeleteTableResponse = OkResponse;
 /**
+ * CreateViewResponse is a response from creating a view.
+ */
+export interface CreateViewResponse {
+  id: string;
+}
+/**
+ * UpdateViewResponse is a response from updating a view.
+ */
+export interface UpdateViewResponse {
+  id: string;
+}
+/**
+ * DeleteViewResponse is a response from deleting a view.
+ */
+export type DeleteViewResponse = OkResponse;
+/**
  * ListRecordsResponse is a response containing a list of records.
  */
 export interface ListRecordsResponse {
@@ -978,6 +1020,7 @@ export interface NodeResponse {
   title: string;
   content?: string;
   properties?: Property[];
+  views?: View[];
   created: Time;
   modified: Time;
   tags?: string[];
@@ -1022,6 +1065,7 @@ export interface GetTableSchemaResponse {
   id: string;
   title: string;
   properties: Property[];
+  views?: View[];
   created: Time;
   modified: Time;
 }
@@ -1363,4 +1407,137 @@ export interface SearchResult {
   score: number /* float64 */;
   matches: { [key: string]: string};
   modified: Time;
+}
+/**
+ * View represents a saved table view configuration.
+ */
+export interface View {
+  id: string;
+  name: string;
+  type: ViewType;
+  default?: boolean;
+  columns?: ViewColumn[];
+  filters?: Filter[];
+  sorts?: Sort[];
+  groups?: Group[];
+}
+/**
+ * ViewType defines the layout type for a view.
+ */
+/**
+ * ViewTypeTable displays records in a spreadsheet-like table.
+ */
+export const ViewTypeTable = "table";
+/**
+ * ViewTypeBoard displays records in a kanban board grouped by a property.
+ */
+export const ViewTypeBoard = "board";
+/**
+ * ViewTypeGallery displays records as cards in a grid.
+ */
+export const ViewTypeGallery = "gallery";
+/**
+ * ViewTypeList displays records in a simple list.
+ */
+export const ViewTypeList = "list";
+/**
+ * ViewTypeCalendar displays records on a calendar by date property.
+ */
+export const ViewTypeCalendar = "calendar";
+export type ViewType = typeof ViewTypeTable | typeof ViewTypeBoard | typeof ViewTypeGallery | typeof ViewTypeList | typeof ViewTypeCalendar;
+/**
+ * ViewColumn defines the visibility and width of a property column.
+ */
+export interface ViewColumn {
+  property: string;
+  width?: number /* int */;
+  visible: boolean;
+}
+/**
+ * Filter defines a condition for filtering records.
+ */
+export interface Filter {
+  property?: string;
+  operator?: FilterOp;
+  value?: any;
+  and?: Filter[];
+  or?: Filter[];
+}
+/**
+ * FilterOp defines the comparison operator for a filter.
+ */
+/**
+ * FilterOpEquals matches if value equals the filter value.
+ */
+export const FilterOpEquals = "equals";
+/**
+ * FilterOpNotEquals matches if value does not equal the filter value.
+ */
+export const FilterOpNotEquals = "not_equals";
+/**
+ * FilterOpContains matches if value contains the filter value (text).
+ */
+export const FilterOpContains = "contains";
+/**
+ * FilterOpNotContains matches if value does not contain the filter value.
+ */
+export const FilterOpNotContains = "not_contains";
+/**
+ * FilterOpStartsWith matches if value starts with the filter value.
+ */
+export const FilterOpStartsWith = "starts_with";
+/**
+ * FilterOpEndsWith matches if value ends with the filter value.
+ */
+export const FilterOpEndsWith = "ends_with";
+/**
+ * FilterOpGreaterThan matches if value is greater than the filter value.
+ */
+export const FilterOpGreaterThan = "gt";
+/**
+ * FilterOpLessThan matches if value is less than the filter value.
+ */
+export const FilterOpLessThan = "lt";
+/**
+ * FilterOpGreaterEqual matches if value is greater than or equal to the filter value.
+ */
+export const FilterOpGreaterEqual = "gte";
+/**
+ * FilterOpLessEqual matches if value is less than or equal to the filter value.
+ */
+export const FilterOpLessEqual = "lte";
+/**
+ * FilterOpIsEmpty matches if value is empty/null.
+ */
+export const FilterOpIsEmpty = "is_empty";
+/**
+ * FilterOpIsNotEmpty matches if value is not empty/null.
+ */
+export const FilterOpIsNotEmpty = "is_not_empty";
+export type FilterOp = typeof FilterOpEquals | typeof FilterOpNotEquals | typeof FilterOpContains | typeof FilterOpNotContains | typeof FilterOpStartsWith | typeof FilterOpEndsWith | typeof FilterOpGreaterThan | typeof FilterOpLessThan | typeof FilterOpGreaterEqual | typeof FilterOpLessEqual | typeof FilterOpIsEmpty | typeof FilterOpIsNotEmpty;
+/**
+ * Sort defines the sort order for a property.
+ */
+export interface Sort {
+  property: string;
+  direction: SortDir;
+}
+/**
+ * SortDir defines the sort direction.
+ */
+export type SortDir = string;
+/**
+ * SortAsc sorts in ascending order (A-Z, 0-9, oldest-newest).
+ */
+export const SortAsc: SortDir = "asc";
+/**
+ * SortDesc sorts in descending order (Z-A, 9-0, newest-oldest).
+ */
+export const SortDesc: SortDir = "desc";
+/**
+ * Group defines how to group records by a property.
+ */
+export interface Group {
+  property: string;
+  hidden?: any[];
 }

@@ -197,6 +197,13 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(nh.GetTable, svc, hcfg, identity.WSRoleViewer, limiters))
 	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(nh.UpdateTable, svc, hcfg, identity.WSRoleEditor, limiters))
 	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/table/delete", WrapWSAuth(nh.DeleteTable, svc, hcfg, identity.WSRoleEditor, limiters))
+
+	// Views (under nodes/table)
+	vh := &handlers.ViewHandler{Svc: svc, Cfg: hcfg}
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/views/create", WrapWSAuth(vh.CreateView, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/views/{viewID}", WrapWSAuth(vh.UpdateView, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete", WrapWSAuth(vh.DeleteView, svc, hcfg, identity.WSRoleEditor, limiters))
+
 	// Records (under nodes/table)
 	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/table/records", WrapWSAuth(nh.ListRecords, svc, hcfg, identity.WSRoleViewer, limiters))
 	mux.Handle("GET /api/workspaces/{wsID}/nodes/{id}/table/records/{rid}", WrapWSAuth(nh.GetRecord, svc, hcfg, identity.WSRoleViewer, limiters))

@@ -16,6 +16,8 @@ import type {
   CreateRecordResponse,
   CreateTableRequest,
   CreateTableUnderParentResponse,
+  CreateViewRequest,
+  CreateViewResponse,
   CreateWSInvitationRequest,
   CreateWorkspaceRequest,
   DeleteNodeAssetResponse,
@@ -23,6 +25,7 @@ import type {
   DeletePageResponse,
   DeleteRecordResponse,
   DeleteTableResponse,
+  DeleteViewResponse,
   ErrorResponse,
   GetNodeTitlesRequest,
   GetNodeTitlesResponse,
@@ -76,6 +79,8 @@ import type {
   UpdateTableRequest,
   UpdateTableResponse,
   UpdateUserSettingsRequest,
+  UpdateViewRequest,
+  UpdateViewResponse,
   UpdateWSMemberRoleRequest,
   UpdateWSMembershipSettingsRequest,
   UpdateWorkspaceRequest,
@@ -225,6 +230,9 @@ export function createAPIClient(fetchFn: FetchFn) {
               getRecord: (id: string, rid: string) => get<GetRecordResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table/records/${rid}`),
               async listRecords(id: string, options: ListRecordsRequest): Promise<ListRecordsResponse> {
                 const params = new URLSearchParams();
+                if (options.ViewID) params.set('view_id', options.ViewID);
+                if (options.Filters) params.set('filters', options.Filters);
+                if (options.Sorts) params.set('sorts', options.Sorts);
                 if (options.Offset) params.set('offset', String(options.Offset));
                 if (options.Limit) params.set('limit', String(options.Limit));
                 const url = `/api/workspaces/${wsID}/nodes/${id}/table/records` + (params.toString() ? `?${params}` : '');
@@ -236,6 +244,11 @@ export function createAPIClient(fetchFn: FetchFn) {
             deleteTable: (id: string) => post<DeleteTableResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table/delete`),
             getTable: (id: string) => get<GetTableSchemaResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table`),
             updateTable: (id: string, options: UpdateTableRequest) => post<UpdateTableResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table`, options),
+          },
+          views: {
+            createView: (id: string, options: CreateViewRequest) => post<CreateViewResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/views/create`, options),
+            deleteView: (id: string, viewID: string) => post<DeleteViewResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/views/${viewID}/delete`),
+            updateView: (id: string, viewID: string, options: UpdateViewRequest) => post<UpdateViewResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/views/${viewID}`, options),
           },
           deleteNode: (id: string) => post<DeleteNodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/delete`),
           getNode: (id: string) => get<NodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}`),

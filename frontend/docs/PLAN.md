@@ -77,6 +77,9 @@ Components receive 10+ props with 6+ callbacks. Use context instead:
 - [ ] Offline Mode: Client-side storage and data reconciliation
 
 ### Phase 3: Table Views System
+See [PLAN_VIEWS.md](PLAN_VIEWS.md) for detailed implementation plan.
+
+- [x] Backend Support: API endpoints, storage, and server-side query logic
 - [ ] View Management UI: Tabs and dropdowns for switching/creating views
 - [ ] Filter Builder: Visual interface for complex AND/OR queries
 - [ ] Sort/Column UI: Drag-and-drop interfaces

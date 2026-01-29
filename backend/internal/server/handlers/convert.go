@@ -128,6 +128,7 @@ func nodeToResponse(n *content.Node) *dto.NodeResponse {
 		Title:       n.Title,
 		Content:     n.Content,
 		Properties:  propertiesToDTO(n.Properties),
+		Views:       viewsToDTO(n.Views),
 		Created:     n.Created,
 		Modified:    n.Modified,
 		Tags:        n.Tags,

@@ -101,6 +101,9 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | GET | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | ws:Viewer |
 | POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | ws:Editor |
 | POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` | ws:Editor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/views/create` | ws:Editor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/views/{viewID}` | ws:Editor |
+| POST | `/api/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete` | ws:Editor |
 
 ## Search
 

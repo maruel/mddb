@@ -112,6 +112,19 @@ type UpdateTableResponse struct {
 // DeleteTableResponse is a response from deleting a table.
 type DeleteTableResponse = OkResponse
 
+// CreateViewResponse is a response from creating a view.
+type CreateViewResponse struct {
+	ID jsonldb.ID `json:"id" jsonschema:"description=New view identifier"`
+}
+
+// UpdateViewResponse is a response from updating a view.
+type UpdateViewResponse struct {
+	ID jsonldb.ID `json:"id" jsonschema:"description=View identifier"`
+}
+
+// DeleteViewResponse is a response from deleting a view.
+type DeleteViewResponse = OkResponse
+
 // ListRecordsResponse is a response containing a list of records.
 type ListRecordsResponse struct {
 	Records []DataRecordResponse `json:"records"`
@@ -365,6 +378,7 @@ type NodeResponse struct {
 	Title       string            `json:"title" jsonschema:"description=Node title"`
 	Content     string            `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
 	Properties  []Property        `json:"properties,omitempty" jsonschema:"description=Schema (Table part)"`
+	Views       []View            `json:"views,omitempty" jsonschema:"description=Saved view configurations (Table part)"`
 	Created     Time              `json:"created" jsonschema:"description=Node creation Unix timestamp"`
 	Modified    Time              `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 	Tags        []string          `json:"tags,omitempty" jsonschema:"description=Node tags"`
@@ -404,6 +418,7 @@ type GetTableSchemaResponse struct {
 	ID         jsonldb.ID `json:"id" jsonschema:"description=Node identifier"`
 	Title      string     `json:"title" jsonschema:"description=Table title"`
 	Properties []Property `json:"properties" jsonschema:"description=Table schema"`
+	Views      []View     `json:"views,omitempty" jsonschema:"description=Saved view configurations"`
 	Created    Time       `json:"created" jsonschema:"description=Table creation Unix timestamp"`
 	Modified   Time       `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 }

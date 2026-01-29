@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"slices"
 
@@ -381,10 +382,98 @@ func (h *NodeHandler) ListRecords(ctx context.Context, wsID jsonldb.ID, _ *ident
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	records, err := ws.ReadRecordsPage(req.ID, req.Offset, req.Limit)
-	if err != nil {
-		return nil, dto.InternalWithError("Failed to list records", err)
+
+	// Fast path: No view, no filters, no sorts -> use optimized paging
+	if req.ViewID.IsZero() && req.Filters == "" && req.Sorts == "" {
+		records, err := ws.ReadRecordsPage(req.ID, req.Offset, req.Limit)
+		if err != nil {
+			return nil, dto.InternalWithError("Failed to list records", err)
+		}
+		recordList := make([]dto.DataRecordResponse, len(records))
+		for i, record := range records {
+			recordList[i] = *dataRecordToResponse(record)
+		}
+		return &dto.ListRecordsResponse{Records: recordList}, nil
 	}
+
+	// Slow path: Load all records, filter, sort, then page
+	node, err := ws.ReadTable(req.ID)
+	if err != nil {
+		return nil, dto.NotFound("table")
+	}
+
+	var filters []content.Filter
+	var sorts []content.Sort
+
+	// Apply View configuration
+	if !req.ViewID.IsZero() {
+		found := false
+		for i := range node.Views {
+			if node.Views[i].ID == req.ViewID {
+				filters = node.Views[i].Filters
+				sorts = node.Views[i].Sorts
+				found = true
+				break
+			}
+		}
+		if !found {
+			return nil, dto.NotFound("view")
+		}
+	}
+
+	// Apply ad-hoc overrides (DTO types -> Content types)
+	if req.Filters != "" {
+		var dtoFilters []dto.Filter
+		if err := json.Unmarshal([]byte(req.Filters), &dtoFilters); err != nil {
+			return nil, dto.InvalidField("filters", "invalid JSON: "+err.Error())
+		}
+		if err := validateFiltersWithSchema(dtoFilters, node.Properties); err != nil {
+			return nil, err
+		}
+		filters = filtersToEntity(dtoFilters)
+	}
+	if req.Sorts != "" {
+		var dtoSorts []dto.Sort
+		if err := json.Unmarshal([]byte(req.Sorts), &dtoSorts); err != nil {
+			return nil, dto.InvalidField("sorts", "invalid JSON: "+err.Error())
+		}
+		if err := validateSortsWithSchema(dtoSorts, node.Properties); err != nil {
+			return nil, err
+		}
+		sorts = sortsToEntity(dtoSorts)
+	}
+
+	// Load all records
+	it, err := ws.IterRecords(req.ID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to read records", err)
+	}
+	var records []*content.DataRecord
+	for r := range it {
+		records = append(records, r)
+	}
+
+	// Filter
+	if len(filters) > 0 {
+		records = content.FilterRecords(records, filters)
+	}
+
+	// Sort
+	if len(sorts) > 0 {
+		content.SortRecords(records, sorts)
+	}
+
+	// Page
+	start := req.Offset
+	if start > len(records) {
+		start = len(records)
+	}
+	end := start + req.Limit
+	if end > len(records) {
+		end = len(records)
+	}
+	records = records[start:end]
+
 	recordList := make([]dto.DataRecordResponse, len(records))
 	for i, record := range records {
 		recordList[i] = *dataRecordToResponse(record)

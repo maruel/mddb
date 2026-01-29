@@ -4,6 +4,7 @@ package dto
 
 import (
 	"net/mail"
+	"strconv"
 	"unicode"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -16,6 +17,76 @@ func validateEmail(email string) error {
 	}
 	if _, err := mail.ParseAddress(email); err != nil {
 		return InvalidField("email", "invalid email format")
+	}
+	return nil
+}
+
+// validateFilters validates a slice of filters recursively.
+func validateFilters(filters []Filter) error {
+	seen := make(map[string]struct{})
+	for i, f := range filters {
+		if err := validateFilter(&f, i); err != nil {
+			return err
+		}
+		// Check for duplicate properties at the same level
+		if f.Property != "" {
+			if _, ok := seen[f.Property]; ok {
+				return InvalidField("filters", "duplicate property: "+f.Property)
+			}
+			seen[f.Property] = struct{}{}
+		}
+	}
+	return nil
+}
+
+// validateFilter validates a single filter and its nested filters.
+func validateFilter(f *Filter, index int) error {
+	// A filter must have either a property+operator or nested And/Or conditions
+	hasLeaf := f.Property != "" || f.Operator != ""
+	hasNested := len(f.And) > 0 || len(f.Or) > 0
+
+	if hasLeaf {
+		if f.Property == "" {
+			return InvalidField("filters", "filter at index "+strconv.Itoa(index)+" has operator but no property")
+		}
+		if f.Operator == "" {
+			return InvalidField("filters", "filter at index "+strconv.Itoa(index)+" has property but no operator")
+		}
+		if err := f.Operator.Validate(); err != nil {
+			return InvalidField("filters["+strconv.Itoa(index)+"].operator", err.Error())
+		}
+	}
+
+	// Validate nested filters
+	if err := validateFilters(f.And); err != nil {
+		return err
+	}
+	if err := validateFilters(f.Or); err != nil {
+		return err
+	}
+
+	// Must have at least one condition
+	if !hasLeaf && !hasNested {
+		return InvalidField("filters", "filter at index "+strconv.Itoa(index)+" has no condition")
+	}
+
+	return nil
+}
+
+// validateSorts validates a slice of sorts.
+func validateSorts(sorts []Sort) error {
+	seen := make(map[string]struct{})
+	for i, s := range sorts {
+		if s.Property == "" {
+			return InvalidField("sorts", "sort at index "+strconv.Itoa(i)+" missing property")
+		}
+		if s.Direction != SortAsc && s.Direction != SortDesc {
+			return InvalidField("sorts", "sort at index "+strconv.Itoa(i)+" has invalid direction: "+string(s.Direction))
+		}
+		if _, ok := seen[s.Property]; ok {
+			return InvalidField("sorts", "duplicate property: "+s.Property)
+		}
+		seen[s.Property] = struct{}{}
 	}
 	return nil
 }
@@ -301,13 +372,103 @@ func (r *DeleteTableRequest) Validate() error {
 	return nil
 }
 
+// CreateViewRequest is a request to create a new view for a table.
+type CreateViewRequest struct {
+	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
+	NodeID jsonldb.ID `path:"id" tstype:"-"`
+	Name   string     `json:"name"`
+	Type   ViewType   `json:"type"`
+}
+
+// Validate validates the create view request fields.
+func (r *CreateViewRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	if r.NodeID.IsZero() {
+		return MissingField("id")
+	}
+	if r.Name == "" {
+		return MissingField("name")
+	}
+	if r.Type == "" {
+		return MissingField("type")
+	}
+	if err := r.Type.Validate(); err != nil {
+		return InvalidField("type", err.Error())
+	}
+	return nil
+}
+
+// UpdateViewRequest is a request to update an existing view.
+type UpdateViewRequest struct {
+	WsID    jsonldb.ID   `path:"wsID" tstype:"-"`
+	NodeID  jsonldb.ID   `path:"id" tstype:"-"`
+	ViewID  jsonldb.ID   `path:"viewID" tstype:"-"`
+	Name    string       `json:"name,omitempty"`
+	Type    ViewType     `json:"type,omitempty"`
+	Columns []ViewColumn `json:"columns,omitempty"`
+	Filters []Filter     `json:"filters,omitempty"`
+	Sorts   []Sort       `json:"sorts,omitempty"`
+	Groups  []Group      `json:"groups,omitempty"`
+}
+
+// Validate validates the update view request fields.
+func (r *UpdateViewRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	if r.NodeID.IsZero() {
+		return MissingField("id")
+	}
+	if r.ViewID.IsZero() {
+		return MissingField("viewID")
+	}
+	if r.Type != "" {
+		if err := r.Type.Validate(); err != nil {
+			return InvalidField("type", err.Error())
+		}
+	}
+	if err := validateFilters(r.Filters); err != nil {
+		return err
+	}
+	if err := validateSorts(r.Sorts); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteViewRequest is a request to delete a view.
+type DeleteViewRequest struct {
+	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
+	NodeID jsonldb.ID `path:"id" tstype:"-"`
+	ViewID jsonldb.ID `path:"viewID" tstype:"-"`
+}
+
+// Validate validates the delete view request fields.
+func (r *DeleteViewRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	if r.NodeID.IsZero() {
+		return MissingField("id")
+	}
+	if r.ViewID.IsZero() {
+		return MissingField("viewID")
+	}
+	return nil
+}
+
 // ListRecordsRequest is a request to list records in a table.
 // Now used for /nodes/{id}/table/records endpoint.
 type ListRecordsRequest struct {
-	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	ID     jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
-	Offset int        `query:"offset"`
-	Limit  int        `query:"limit"`
+	WsID    jsonldb.ID `path:"wsID" tstype:"-"`
+	ID      jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	ViewID  jsonldb.ID `query:"view_id"`      // Optional: apply saved view configuration
+	Filters string     `query:"filters"`      // Optional: JSON-encoded ad-hoc filters
+	Sorts   string     `query:"sorts"`        // Optional: JSON-encoded ad-hoc sorts
+	Offset  int        `query:"offset"`
+	Limit   int        `query:"limit"`
 }
 
 // Validate validates the list records request fields.
