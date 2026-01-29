@@ -1,3 +1,4 @@
 # Generated files - keep ours on merge conflicts (regenerate after merge)
-backend/frontend/dist/** merge=ours binary
-sdk/*.gen.ts merge=ours binary
+# Note: Can't use `binary` macro as it expands to `-diff -merge -text`, overriding merge=ours
+backend/frontend/dist/** -diff -text merge=ours
+sdk/*.gen.ts -diff -text merge=ours
