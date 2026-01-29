@@ -323,7 +323,7 @@ function taskListPlugin() {
 }
 
 // Create editor state with all plugins
-export function createEditorState(doc: ProseMirrorNode) {
+export function createEditorState(doc: ProseMirrorNode, extraPlugins?: Plugin[]) {
   return EditorState.create({
     doc,
     plugins: [
@@ -334,6 +334,7 @@ export function createEditorState(doc: ProseMirrorNode) {
       dropCursor({ color: 'var(--c-primary)', width: 2 }),
       gapCursor(),
       taskListPlugin(),
+      ...(extraPlugins || []),
     ],
   });
 }

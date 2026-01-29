@@ -317,4 +317,17 @@ export const dict: Dictionary = {
     errorsEncountered: 'Fehler',
     dismiss: 'Schließen',
   },
+  slashMenu: {
+    noResults: 'Keine Ergebnisse',
+    paragraph: 'Absatz',
+    heading1: 'Überschrift 1',
+    heading2: 'Überschrift 2',
+    heading3: 'Überschrift 3',
+    bulletList: 'Aufzählung',
+    orderedList: 'Nummerierte Liste',
+    taskList: 'Aufgabenliste',
+    blockquote: 'Zitat',
+    codeBlock: 'Codeblock',
+    divider: 'Trennlinie',
+  },
 };

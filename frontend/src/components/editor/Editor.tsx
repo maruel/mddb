@@ -6,6 +6,8 @@ import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import { useI18n } from '../../i18n';
 import { rewriteAssetUrls, reverseRewriteAssetUrls } from './markdown-utils';
 import { nodes, marks, markdownParser, markdownSerializer, createEditorState } from './prosemirror-config';
+import { createSlashCommandPlugin, type SlashMenuState } from './slashCommandPlugin';
+import SlashCommandMenu from './SlashCommandMenu';
 import EditorToolbar, { type FormatState } from './EditorToolbar';
 import styles from './Editor.module.css';
 
@@ -23,7 +25,16 @@ export default function Editor(props: EditorProps) {
   const [editorMode, setEditorMode] = createSignal<'wysiwyg' | 'markdown'>('wysiwyg');
   const [markdownContent, setMarkdownContent] = createSignal(props.content);
   const [view, setView] = createSignal<EditorView | undefined>();
+  const [slashMenuState, setSlashMenuState] = createSignal<SlashMenuState>({
+    active: false,
+    query: '',
+    triggerPos: 0,
+    position: { top: 0, left: 0 },
+  });
   let editorRef: HTMLDivElement | undefined;
+
+  // Create slash command plugin with callback
+  const slashPlugin = createSlashCommandPlugin(setSlashMenuState);
 
   // Track what we've emitted to distinguish our own changes from external updates
   let lastLoadedPageId: string | undefined = props.pageId;
@@ -101,7 +112,7 @@ export default function Editor(props: EditorProps) {
 
     const doc = parseMarkdown(props.content);
     if (!doc) return;
-    const state = createEditorState(doc);
+    const state = createEditorState(doc, [slashPlugin]);
 
     const editorView = new EditorView(editorRef, {
       state,
@@ -153,7 +164,7 @@ export default function Editor(props: EditorProps) {
           if (editorView) {
             const doc = parseMarkdown(content);
             if (doc) {
-              const state = createEditorState(doc);
+              const state = createEditorState(doc, [slashPlugin]);
               editorView.updateState(state);
             }
           }
@@ -174,7 +185,7 @@ export default function Editor(props: EditorProps) {
     if (editorView) {
       const doc = parseMarkdown(markdownContent());
       if (doc) {
-        const state = createEditorState(doc);
+        const state = createEditorState(doc, [slashPlugin]);
         editorView.updateState(state);
         updateActiveStates(editorView);
       }
@@ -219,6 +230,11 @@ export default function Editor(props: EditorProps) {
         readOnly={props.readOnly}
         data-testid="markdown-editor"
       />
+
+      {(() => {
+        const v = view();
+        return v ? <SlashCommandMenu view={v} state={slashMenuState()} /> : null;
+      })()}
     </div>
   );
 }

@@ -319,4 +319,17 @@ export interface Dictionary {
     errorsEncountered: string;
     dismiss: string;
   };
+  slashMenu: {
+    noResults: string;
+    paragraph: string;
+    heading1: string;
+    heading2: string;
+    heading3: string;
+    bulletList: string;
+    orderedList: string;
+    taskList: string;
+    blockquote: string;
+    codeBlock: string;
+    divider: string;
+  };
 }

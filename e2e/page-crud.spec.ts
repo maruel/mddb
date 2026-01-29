@@ -555,6 +555,226 @@ function hello() {
     expect(bottomGap).toBeLessThan(20);
   });
 
+  test.screenshot('slash command menu appears and applies block types', async ({ page, request, takeScreenshot }) => {
+    const { token } = await registerUser(request, 'slash-cmd');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create an empty page
+    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Slash Command Test', content: '' },
+    });
+    if (!createResponse.ok()) {
+      const body = await createResponse.text();
+      throw new Error(`Failed to create page: ${createResponse.status()} - ${body}`);
+    }
+    const pageData = await createResponse.json();
+
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to the page
+    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+
+    // Wait for WYSIWYG editor to load
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // Click in the editor to focus it
+    await editor.click();
+
+    // Type "/" to trigger slash menu
+    await page.keyboard.type('/');
+
+    // Slash menu should appear
+    const slashMenu = page.locator('[data-testid="slash-command-menu"]');
+    await expect(slashMenu).toBeVisible({ timeout: 3000 });
+    await takeScreenshot('slash-menu-visible');
+
+    // Menu should show command options
+    const menuItems = slashMenu.locator('[class*="slashMenuItem"]');
+    await expect(menuItems).toHaveCount(10, { timeout: 3000 });
+
+    // First item should be selected by default
+    await expect(menuItems.first()).toHaveClass(/selected/);
+
+    // Arrow down should move selection to second item
+    await page.keyboard.press('ArrowDown');
+    await expect(menuItems.nth(0)).not.toHaveClass(/selected/);
+    await expect(menuItems.nth(1)).toHaveClass(/selected/);
+
+    // Arrow down again to third item
+    await page.keyboard.press('ArrowDown');
+    await expect(menuItems.nth(2)).toHaveClass(/selected/);
+
+    // Arrow up should go back to second item
+    await page.keyboard.press('ArrowUp');
+    await expect(menuItems.nth(1)).toHaveClass(/selected/);
+
+    // Type to filter commands (this will reset selection)
+    await page.keyboard.type('head');
+    await takeScreenshot('slash-menu-filtered');
+
+    // Should show only heading commands (heading1, heading2, heading3)
+    await expect(slashMenu.locator('[class*="slashMenuItem"]')).toHaveCount(3, { timeout: 3000 });
+
+    // Press Enter to select first option (Heading 1)
+    await page.keyboard.press('Enter');
+
+    // Menu should close
+    await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
+
+    // Editor should now have an h1 element
+    await expect(editor.locator('h1')).toBeVisible({ timeout: 3000 });
+    await takeScreenshot('heading1-applied');
+
+    // Type some content in the heading
+    await page.keyboard.type('My Heading');
+    await expect(editor.locator('h1')).toContainText('My Heading');
+
+    // Press Enter to create new paragraph, then type "/" again
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('/');
+    await expect(slashMenu).toBeVisible({ timeout: 3000 });
+
+    // Use arrow keys to navigate and select "Bullet List"
+    await page.keyboard.type('bullet');
+    await expect(slashMenu.locator('[class*="slashMenuItem"]')).toHaveCount(1, { timeout: 3000 });
+    await page.keyboard.press('Enter');
+
+    // Menu should close
+    await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
+
+    // Editor should have a bullet list
+    await expect(editor.locator('ul')).toBeVisible({ timeout: 3000 });
+    await takeScreenshot('bullet-list-applied');
+
+    // Test Escape to close menu without selecting
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('/');
+    await expect(slashMenu).toBeVisible({ timeout: 3000 });
+    await page.keyboard.press('Escape');
+    await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
+    await takeScreenshot('slash-menu-escaped');
+
+    // Test clicking outside to close menu
+    await page.keyboard.type('/');
+    await expect(slashMenu).toBeVisible({ timeout: 3000 });
+    // Click on the title input to close menu
+    await page.locator('input[placeholder*="Title"]').click();
+    await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
+
+    // Verify slash command does NOT trigger mid-word
+    await editor.click();
+    await page.keyboard.press('End'); // Go to end of current line
+    await page.keyboard.press('Enter'); // Start a fresh line
+    await page.keyboard.type('test/noslash');
+    await expect(slashMenu).not.toBeVisible({ timeout: 1000 });
+  });
+
+  test.screenshot('slash menu stays visible when cursor is near bottom of viewport', async ({
+    page,
+    request,
+    takeScreenshot,
+  }) => {
+    const { token } = await registerUser(request, 'slash-bottom');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create a page with lots of content to push cursor near bottom
+    const manyLines = Array(30).fill('This is a line of text to fill the page.').join('\n\n');
+    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Bottom Slash Test', content: manyLines },
+    });
+    if (!createResponse.ok()) {
+      const body = await createResponse.text();
+      throw new Error(`Failed to create page: ${createResponse.status()} - ${body}`);
+    }
+    const pageData = await createResponse.json();
+
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to the page
+    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+
+    // Wait for WYSIWYG editor to load
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // Click at the end of the very last paragraph using evaluate
+    // This ensures we get the actual DOM element at click time
+    await editor.evaluate((el) => {
+      const paragraphs = el.querySelectorAll('p');
+      if (paragraphs.length > 0) {
+        const lastP = paragraphs[paragraphs.length - 1];
+        // Scroll the last paragraph into view
+        lastP.scrollIntoView({ block: 'center' });
+        // Create a range at the end of the last paragraph
+        const range = document.createRange();
+        range.selectNodeContents(lastP);
+        range.collapse(false); // Collapse to end
+        // Set the selection
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        // Focus the editor
+        (el as HTMLElement).focus();
+      }
+    });
+
+    // Press Enter to create a new line at the bottom (so "/" is at line start)
+    await page.keyboard.press('Enter');
+
+    await takeScreenshot('cursor-at-bottom');
+
+    // Type "/" to trigger slash menu
+    await page.keyboard.type('/');
+
+    // Slash menu should appear
+    const slashMenu = page.locator('[data-testid="slash-command-menu"]');
+    await expect(slashMenu).toBeVisible({ timeout: 3000 });
+    await takeScreenshot('slash-menu-at-bottom');
+
+    // Get viewport height
+    const viewportSize = page.viewportSize();
+    const viewportHeight = viewportSize?.height ?? 720;
+
+    // Check that the menu is fully visible within the viewport
+    const menuBox = await slashMenu.boundingBox();
+    expect(menuBox).toBeTruthy();
+
+    // The menu should not extend beyond the viewport bottom
+    const menuBottom = menuBox!.y + menuBox!.height;
+    expect(menuBottom).toBeLessThanOrEqual(viewportHeight);
+
+    // Navigate down through all items and verify each selected item is visible
+    const menuItems = slashMenu.locator('[class*="slashMenuItem"]');
+    const itemCount = await menuItems.count();
+
+    for (let i = 1; i < itemCount; i++) {
+      await page.keyboard.press('ArrowDown');
+
+      // The selected item should be visible within the menu's scroll area
+      const selectedItem = menuItems.nth(i);
+      await expect(selectedItem).toHaveClass(/selected/);
+
+      // Verify the selected item is within the viewport
+      const itemBox = await selectedItem.boundingBox();
+      expect(itemBox).toBeTruthy();
+      expect(itemBox!.y).toBeGreaterThanOrEqual(0);
+      expect(itemBox!.y + itemBox!.height).toBeLessThanOrEqual(viewportHeight);
+    }
+
+    await takeScreenshot('slash-menu-scrolled-to-last');
+  });
+
   test.screenshot('version history loads and displays commits', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'version-history');
     await page.goto(`/?token=${token}`);
