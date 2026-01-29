@@ -550,7 +550,17 @@ export interface QuotasConfigUpdate {
   max_workspaces: number /* int */;
   max_users: number /* int */;
   max_total_storage_bytes: number /* int64 */;
+  max_asset_size_bytes: number /* int64 */;
   max_egress_bandwidth_bps: number /* int64 */;
+}
+/**
+ * RateLimitsConfigUpdate contains rate limit configuration fields for updates.
+ */
+export interface RateLimitsConfigUpdate {
+  auth_rate_per_min: number /* int */;
+  write_rate_per_min: number /* int */;
+  read_auth_rate_per_min: number /* int */;
+  read_unauth_rate_per_min: number /* int */;
 }
 /**
  * UpdateServerConfigRequest is a request to update server configuration.
@@ -558,6 +568,7 @@ export interface QuotasConfigUpdate {
 export interface UpdateServerConfigRequest {
   smtp?: SMTPConfigUpdate;
   quotas?: QuotasConfigUpdate;
+  rate_limits?: RateLimitsConfigUpdate;
 }
 /**
  * AdminUsersRequest is a request to list all users (admin only).
@@ -1127,7 +1138,17 @@ export interface QuotasConfigResponse {
   max_workspaces: number /* int */;
   max_users: number /* int */;
   max_total_storage_bytes: number /* int64 */;
+  max_asset_size_bytes: number /* int64 */;
   max_egress_bandwidth_bps: number /* int64 */;
+}
+/**
+ * RateLimitsConfigResponse contains rate limit configuration for the response.
+ */
+export interface RateLimitsConfigResponse {
+  auth_rate_per_min: number /* int */;
+  write_rate_per_min: number /* int */;
+  read_auth_rate_per_min: number /* int */;
+  read_unauth_rate_per_min: number /* int */;
 }
 /**
  * ServerConfigResponse is a response containing server configuration.
@@ -1135,6 +1156,7 @@ export interface QuotasConfigResponse {
 export interface ServerConfigResponse {
   smtp: SMTPConfigResponse;
   quotas: QuotasConfigResponse;
+  rate_limits: RateLimitsConfigResponse;
 }
 /**
  * UpdateServerConfigResponse is a response from updating server configuration.

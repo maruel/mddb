@@ -1083,13 +1083,23 @@ type QuotasConfigUpdate struct {
 	MaxWorkspaces         int   `json:"max_workspaces"`
 	MaxUsers              int   `json:"max_users"`
 	MaxTotalStorageBytes  int64 `json:"max_total_storage_bytes"`
+	MaxAssetSizeBytes     int64 `json:"max_asset_size_bytes"`
 	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps"`
+}
+
+// RateLimitsConfigUpdate contains rate limit configuration fields for updates.
+type RateLimitsConfigUpdate struct {
+	AuthRatePerMin       int `json:"auth_rate_per_min"`
+	WriteRatePerMin      int `json:"write_rate_per_min"`
+	ReadAuthRatePerMin   int `json:"read_auth_rate_per_min"`
+	ReadUnauthRatePerMin int `json:"read_unauth_rate_per_min"`
 }
 
 // UpdateServerConfigRequest is a request to update server configuration.
 type UpdateServerConfigRequest struct {
-	SMTP   *SMTPConfigUpdate   `json:"smtp,omitempty"`
-	Quotas *QuotasConfigUpdate `json:"quotas,omitempty"`
+	SMTP       *SMTPConfigUpdate       `json:"smtp,omitempty"`
+	Quotas     *QuotasConfigUpdate     `json:"quotas,omitempty"`
+	RateLimits *RateLimitsConfigUpdate `json:"rate_limits,omitempty"`
 }
 
 // Validate validates the update server config request fields.

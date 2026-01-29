@@ -30,7 +30,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
-	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -351,7 +350,6 @@ func mainImpl() error {
 			GitHubClientID:     *githubClientID,
 			GitHubClientSecret: *githubClientSecret,
 		},
-		RateLimits: *ratelimit.DefaultConfig(),
 	}
 
 	addr := ":" + *port

@@ -25,6 +25,55 @@ type ServerConfig struct {
 
 	// Quotas defines server-wide resource limits.
 	Quotas ServerQuotas `json:"quotas"`
+
+	// RateLimits defines rate limiting configuration.
+	RateLimits RateLimits `json:"rate_limits"`
+}
+
+// RateLimits defines rate limiting configuration (requests per minute).
+type RateLimits struct {
+	// AuthRatePerMin limits authentication attempts (login, register, OAuth).
+	// 0 means unlimited.
+	AuthRatePerMin int `json:"auth_rate_per_min"`
+
+	// WriteRatePerMin limits write operations (POST/DELETE).
+	// 0 means unlimited.
+	WriteRatePerMin int `json:"write_rate_per_min"`
+
+	// ReadAuthRatePerMin limits authenticated read operations.
+	// 0 means unlimited.
+	ReadAuthRatePerMin int `json:"read_auth_rate_per_min"`
+
+	// ReadUnauthRatePerMin limits unauthenticated read operations.
+	// 0 means unlimited.
+	ReadUnauthRatePerMin int `json:"read_unauth_rate_per_min"`
+}
+
+// Validate checks that rate limit values are non-negative.
+func (r *RateLimits) Validate() error {
+	if r.AuthRatePerMin < 0 {
+		return errors.New("auth_rate_per_min must be non-negative")
+	}
+	if r.WriteRatePerMin < 0 {
+		return errors.New("write_rate_per_min must be non-negative")
+	}
+	if r.ReadAuthRatePerMin < 0 {
+		return errors.New("read_auth_rate_per_min must be non-negative")
+	}
+	if r.ReadUnauthRatePerMin < 0 {
+		return errors.New("read_unauth_rate_per_min must be non-negative")
+	}
+	return nil
+}
+
+// DefaultRateLimits returns the default rate limits.
+func DefaultRateLimits() RateLimits {
+	return RateLimits{
+		AuthRatePerMin:       5,     // 5 req/min for auth
+		WriteRatePerMin:      60,    // 60 req/min for writes
+		ReadAuthRatePerMin:   30000, // 30k req/min for authenticated reads
+		ReadUnauthRatePerMin: 6000,  // 6k req/min for unauthenticated reads
+	}
 }
 
 // ServerQuotas defines server-wide resource limits.
@@ -138,6 +187,9 @@ func (c *ServerConfig) Validate() error {
 	if err := c.Quotas.Validate(); err != nil {
 		return fmt.Errorf("quotas: %w", err)
 	}
+	if err := c.RateLimits.Validate(); err != nil {
+		return fmt.Errorf("rate_limits: %w", err)
+	}
 	return nil
 }
 
@@ -147,7 +199,7 @@ func (c *ServerConfig) Validate() error {
 func LoadServerConfig(dataDir string) (*ServerConfig, error) {
 	path := filepath.Join(dataDir, "server_config.json")
 
-	cfg := ServerConfig{Quotas: DefaultServerQuotas()}
+	cfg := ServerConfig{Quotas: DefaultServerQuotas(), RateLimits: DefaultRateLimits()}
 
 	data, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from dataDir, not user input
 	if err != nil {

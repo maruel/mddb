@@ -35,6 +35,20 @@ type Config struct {
 	ReadUnauth TierConfig // unauthenticated read
 }
 
+// ConfigFromStorage creates a rate limit Config from storage.RateLimits values.
+func ConfigFromStorage(authRate, writeRate, readAuthRate, readUnauthRate int) *Config {
+	m := 1 // multiplier
+	if os.Getenv("TEST_FAST_RATE_LIMIT") == "1" {
+		m = 10000
+	}
+	return &Config{
+		Auth:       TierConfig{Name: "auth", Rate: authRate * m, Window: time.Minute, Burst: max(authRate*m, 1), Scope: ScopeIP},
+		Write:      TierConfig{Name: "write", Rate: writeRate * m, Window: time.Minute, Burst: max(writeRate*m/6, 1), Scope: ScopeUser},
+		ReadAuth:   TierConfig{Name: "read", Rate: readAuthRate * m, Window: time.Minute, Burst: max(readAuthRate*m/6, 1), Scope: ScopeUser},
+		ReadUnauth: TierConfig{Name: "read", Rate: readUnauthRate * m, Window: time.Minute, Burst: max(readUnauthRate*m/6, 1), Scope: ScopeIP},
+	}
+}
+
 // DefaultConfig returns default rate limit settings per the design doc:
 //   - Auth: 5 req/min, IP scope
 //   - Write: 60 req/min, User scope
@@ -85,6 +99,31 @@ func (l *Limiters) Close() {
 	l.Write.Limiter.Close()
 	l.ReadAuth.Limiter.Close()
 	l.ReadUnauth.Limiter.Close()
+}
+
+// Update changes the rate limits at runtime. 0 means unlimited.
+func (l *Limiters) Update(authRate, writeRate, readAuthRate, readUnauthRate int) {
+	window := time.Minute
+
+	// Update Auth tier
+	l.Auth.Rate = authRate
+	l.Auth.Burst = max(authRate, 1)
+	l.Auth.Limiter.Update(authRate, window, l.Auth.Burst)
+
+	// Update Write tier
+	l.Write.Rate = writeRate
+	l.Write.Burst = max(writeRate/6, 1) // burst = rate/6 like default
+	l.Write.Limiter.Update(writeRate, window, l.Write.Burst)
+
+	// Update ReadAuth tier
+	l.ReadAuth.Rate = readAuthRate
+	l.ReadAuth.Burst = max(readAuthRate/6, 1)
+	l.ReadAuth.Limiter.Update(readAuthRate, window, l.ReadAuth.Burst)
+
+	// Update ReadUnauth tier
+	l.ReadUnauth.Rate = readUnauthRate
+	l.ReadUnauth.Burst = max(readUnauthRate/6, 1)
+	l.ReadUnauth.Limiter.Update(readUnauthRate, window, l.ReadUnauth.Burst)
 }
 
 // MatchUnauth returns the tier for unauthenticated requests.

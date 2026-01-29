@@ -16,7 +16,8 @@ import (
 type ServerHandler struct {
 	Cfg              *storage.ServerConfig
 	DataDir          string
-	BandwidthLimiter BandwidthUpdater // for hot-reload of bandwidth limit
+	BandwidthLimiter BandwidthUpdater  // for hot-reload of bandwidth limit
+	RateLimiters     RateLimitsUpdater // for hot-reload of rate limits
 }
 
 // GetConfig returns the current server configuration with masked password.
@@ -39,7 +40,14 @@ func (h *ServerHandler) GetConfig(ctx context.Context, _ *identity.User, _ *dto.
 			MaxWorkspaces:         h.Cfg.Quotas.MaxWorkspaces,
 			MaxUsers:              h.Cfg.Quotas.MaxUsers,
 			MaxTotalStorageBytes:  h.Cfg.Quotas.MaxTotalStorageBytes,
+			MaxAssetSizeBytes:     h.Cfg.Quotas.MaxAssetSizeBytes,
 			MaxEgressBandwidthBps: h.Cfg.Quotas.MaxEgressBandwidthBps,
+		},
+		RateLimits: dto.RateLimitsConfigResponse{
+			AuthRatePerMin:       h.Cfg.RateLimits.AuthRatePerMin,
+			WriteRatePerMin:      h.Cfg.RateLimits.WriteRatePerMin,
+			ReadAuthRatePerMin:   h.Cfg.RateLimits.ReadAuthRatePerMin,
+			ReadUnauthRatePerMin: h.Cfg.RateLimits.ReadUnauthRatePerMin,
 		},
 	}, nil
 }
@@ -78,6 +86,7 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 			MaxWorkspaces:         req.Quotas.MaxWorkspaces,
 			MaxUsers:              req.Quotas.MaxUsers,
 			MaxTotalStorageBytes:  req.Quotas.MaxTotalStorageBytes,
+			MaxAssetSizeBytes:     req.Quotas.MaxAssetSizeBytes,
 			MaxEgressBandwidthBps: req.Quotas.MaxEgressBandwidthBps,
 		}
 		// Validate the new quotas
@@ -85,6 +94,21 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 			return nil, dto.InvalidField("quotas", err.Error())
 		}
 		h.Cfg.Quotas = newQuotas
+	}
+
+	// Update rate limits if provided
+	if req.RateLimits != nil {
+		newRateLimits := storage.RateLimits{
+			AuthRatePerMin:       req.RateLimits.AuthRatePerMin,
+			WriteRatePerMin:      req.RateLimits.WriteRatePerMin,
+			ReadAuthRatePerMin:   req.RateLimits.ReadAuthRatePerMin,
+			ReadUnauthRatePerMin: req.RateLimits.ReadUnauthRatePerMin,
+		}
+		// Validate the new rate limits
+		if err := newRateLimits.Validate(); err != nil {
+			return nil, dto.InvalidField("rate_limits", err.Error())
+		}
+		h.Cfg.RateLimits = newRateLimits
 	}
 
 	// Save to disk
@@ -95,6 +119,16 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 	// Hot-reload bandwidth limiter if quotas were updated
 	if req.Quotas != nil && h.BandwidthLimiter != nil {
 		h.BandwidthLimiter.Update(h.Cfg.Quotas.MaxEgressBandwidthBps)
+	}
+
+	// Hot-reload rate limiters if rate limits were updated
+	if req.RateLimits != nil && h.RateLimiters != nil {
+		h.RateLimiters.Update(
+			h.Cfg.RateLimits.AuthRatePerMin,
+			h.Cfg.RateLimits.WriteRatePerMin,
+			h.Cfg.RateLimits.ReadAuthRatePerMin,
+			h.Cfg.RateLimits.ReadUnauthRatePerMin,
+		)
 	}
 
 	return &dto.UpdateServerConfigResponse{Ok: true}, nil

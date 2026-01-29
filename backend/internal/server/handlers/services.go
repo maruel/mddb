@@ -41,6 +41,11 @@ type BandwidthUpdater interface {
 	Update(maxBytesPerSecond int64)
 }
 
+// RateLimitsUpdater allows updating rate limits at runtime.
+type RateLimitsUpdater interface {
+	Update(authRate, writeRate, readAuthRate, readUnauthRate int)
+}
+
 // Config holds configuration values needed by handlers.
 type Config struct {
 	storage.ServerConfig

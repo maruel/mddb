@@ -515,13 +515,23 @@ type QuotasConfigResponse struct {
 	MaxWorkspaces         int   `json:"max_workspaces" jsonschema:"description=Maximum total workspaces"`
 	MaxUsers              int   `json:"max_users" jsonschema:"description=Maximum total users"`
 	MaxTotalStorageBytes  int64 `json:"max_total_storage_bytes" jsonschema:"description=Maximum total storage in bytes"`
-	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps" jsonschema:"description=Maximum egress bandwidth in bytes per second"`
+	MaxAssetSizeBytes     int64 `json:"max_asset_size_bytes" jsonschema:"description=Maximum single asset file size in bytes"`
+	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps" jsonschema:"description=Maximum egress bandwidth in bytes per second (0=unlimited)"`
+}
+
+// RateLimitsConfigResponse contains rate limit configuration for the response.
+type RateLimitsConfigResponse struct {
+	AuthRatePerMin       int `json:"auth_rate_per_min" jsonschema:"description=Auth requests per minute (0=unlimited)"`
+	WriteRatePerMin      int `json:"write_rate_per_min" jsonschema:"description=Write requests per minute (0=unlimited)"`
+	ReadAuthRatePerMin   int `json:"read_auth_rate_per_min" jsonschema:"description=Authenticated read requests per minute (0=unlimited)"`
+	ReadUnauthRatePerMin int `json:"read_unauth_rate_per_min" jsonschema:"description=Unauthenticated read requests per minute (0=unlimited)"`
 }
 
 // ServerConfigResponse is a response containing server configuration.
 type ServerConfigResponse struct {
-	SMTP   SMTPConfigResponse   `json:"smtp" jsonschema:"description=SMTP configuration (password masked)"`
-	Quotas QuotasConfigResponse `json:"quotas" jsonschema:"description=Server quotas"`
+	SMTP       SMTPConfigResponse       `json:"smtp" jsonschema:"description=SMTP configuration (password masked)"`
+	Quotas     QuotasConfigResponse     `json:"quotas" jsonschema:"description=Server quotas"`
+	RateLimits RateLimitsConfigResponse `json:"rate_limits" jsonschema:"description=Rate limiting configuration"`
 }
 
 // UpdateServerConfigResponse is a response from updating server configuration.

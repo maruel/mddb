@@ -29,14 +29,13 @@ import (
 // Config holds configuration for the router.
 type Config struct {
 	*storage.ServerConfig
-	DataDir    string
-	BaseURL    string
-	Version    string
-	GoVersion  string
-	Revision   string
-	Dirty      bool
-	OAuth      OAuthConfig
-	RateLimits ratelimit.Config
+	DataDir   string
+	BaseURL   string
+	Version   string
+	GoVersion string
+	Revision  string
+	Dirty     bool
+	OAuth     OAuthConfig
 }
 
 // OAuthConfig holds OAuth provider credentials.
@@ -55,8 +54,14 @@ type OAuthConfig struct {
 func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux := &http.ServeMux{}
 
-	// Create rate limiters
-	limiters := ratelimit.NewLimiters(&cfg.RateLimits)
+	// Create rate limiters from storage config
+	rlCfg := ratelimit.ConfigFromStorage(
+		cfg.RateLimits.AuthRatePerMin,
+		cfg.RateLimits.WriteRatePerMin,
+		cfg.RateLimits.ReadAuthRatePerMin,
+		cfg.RateLimits.ReadUnauthRatePerMin,
+	)
+	limiters := ratelimit.NewLimiters(rlCfg)
 
 	// Create bandwidth limiter
 	bandwidthLim := bandwidth.NewLimiter(cfg.Quotas.MaxEgressBandwidthBps)
@@ -97,7 +102,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("GET /api/admin/organizations", WrapGlobalAdmin(adminh.ListAllOrgs, svc, hcfg, limiters))
 
 	// Server config endpoints (requires IsGlobalAdmin)
-	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, DataDir: cfg.DataDir, BandwidthLimiter: bandwidthLim}
+	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, DataDir: cfg.DataDir, BandwidthLimiter: bandwidthLim, RateLimiters: limiters}
 	mux.Handle("GET /api/server/config", WrapGlobalAdmin(serverh.GetConfig, svc, hcfg, limiters))
 	mux.Handle("POST /api/server/config", WrapGlobalAdmin(serverh.UpdateConfig, svc, hcfg, limiters))
 

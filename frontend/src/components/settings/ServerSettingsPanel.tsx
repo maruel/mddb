@@ -32,7 +32,14 @@ export default function ServerSettingsPanel() {
   const [maxWorkspaces, setMaxWorkspaces] = createSignal(0);
   const [maxUsers, setMaxUsers] = createSignal(0);
   const [maxTotalStorageBytes, setMaxTotalStorageBytes] = createSignal(0);
+  const [maxAssetSizeBytes, setMaxAssetSizeBytes] = createSignal(0);
   const [maxEgressBandwidthBps, setMaxEgressBandwidthBps] = createSignal(0);
+
+  // Rate limit fields
+  const [authRatePerMin, setAuthRatePerMin] = createSignal(0);
+  const [writeRatePerMin, setWriteRatePerMin] = createSignal(0);
+  const [readAuthRatePerMin, setReadAuthRatePerMin] = createSignal(0);
+  const [readUnauthRatePerMin, setReadUnauthRatePerMin] = createSignal(0);
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -62,7 +69,14 @@ export default function ServerSettingsPanel() {
       setMaxWorkspaces(data.quotas.max_workspaces);
       setMaxUsers(data.quotas.max_users);
       setMaxTotalStorageBytes(data.quotas.max_total_storage_bytes);
+      setMaxAssetSizeBytes(data.quotas.max_asset_size_bytes);
       setMaxEgressBandwidthBps(data.quotas.max_egress_bandwidth_bps);
+
+      // Populate rate limit fields
+      setAuthRatePerMin(data.rate_limits.auth_rate_per_min);
+      setWriteRatePerMin(data.rate_limits.write_rate_per_min);
+      setReadAuthRatePerMin(data.rate_limits.read_auth_rate_per_min);
+      setReadUnauthRatePerMin(data.rate_limits.read_unauth_rate_per_min);
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
@@ -119,7 +133,14 @@ export default function ServerSettingsPanel() {
           max_workspaces: maxWorkspaces(),
           max_users: maxUsers(),
           max_total_storage_bytes: maxTotalStorageBytes(),
+          max_asset_size_bytes: maxAssetSizeBytes(),
           max_egress_bandwidth_bps: maxEgressBandwidthBps(),
+        },
+        rate_limits: {
+          auth_rate_per_min: authRatePerMin(),
+          write_rate_per_min: writeRatePerMin(),
+          read_auth_rate_per_min: readAuthRatePerMin(),
+          read_unauth_rate_per_min: readUnauthRatePerMin(),
         },
       });
 
@@ -314,11 +335,65 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
+                <label>{t('server.maxAssetSizeBytes')}</label>
+                <input
+                  type="number"
+                  value={maxAssetSizeBytes()}
+                  onInput={(e) => setMaxAssetSizeBytes(parseInt(e.target.value) || 0)}
+                  min="1"
+                />
+              </div>
+
+              <div class={styles.formItem}>
                 <label>{t('server.maxEgressBandwidthBps')}</label>
                 <input
                   type="number"
                   value={maxEgressBandwidthBps()}
                   onInput={(e) => setMaxEgressBandwidthBps(parseInt(e.target.value) || 0)}
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <h3>{t('server.rateLimits')}</h3>
+            <p class={styles.hint}>{t('server.rateLimitsHint')}</p>
+            <div class={styles.formGrid}>
+              <div class={styles.formItem}>
+                <label>{t('server.authRatePerMin')}</label>
+                <input
+                  type="number"
+                  value={authRatePerMin()}
+                  onInput={(e) => setAuthRatePerMin(parseInt(e.target.value) || 0)}
+                  min="0"
+                />
+              </div>
+
+              <div class={styles.formItem}>
+                <label>{t('server.writeRatePerMin')}</label>
+                <input
+                  type="number"
+                  value={writeRatePerMin()}
+                  onInput={(e) => setWriteRatePerMin(parseInt(e.target.value) || 0)}
+                  min="0"
+                />
+              </div>
+
+              <div class={styles.formItem}>
+                <label>{t('server.readAuthRatePerMin')}</label>
+                <input
+                  type="number"
+                  value={readAuthRatePerMin()}
+                  onInput={(e) => setReadAuthRatePerMin(parseInt(e.target.value) || 0)}
+                  min="0"
+                />
+              </div>
+
+              <div class={styles.formItem}>
+                <label>{t('server.readUnauthRatePerMin')}</label>
+                <input
+                  type="number"
+                  value={readUnauthRatePerMin()}
+                  onInput={(e) => setReadUnauthRatePerMin(parseInt(e.target.value) || 0)}
                   min="0"
                 />
               </div>

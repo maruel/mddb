@@ -56,6 +56,11 @@ func NewLimiter(requests int, window time.Duration, burst int) *Limiter {
 // Allow checks if a request with the given key is allowed.
 func (l *Limiter) Allow(key string) Result {
 	l.mu.Lock()
+	// 0 rate means unlimited
+	if l.rate <= 0 {
+		l.mu.Unlock()
+		return Result{Allowed: true, Limit: 0, Remaining: 0}
+	}
 	b, exists := l.buckets[key]
 	if !exists {
 		b = &bucket{
@@ -138,4 +143,25 @@ func (l *Limiter) cleanup() {
 // Close stops the cleanup goroutine.
 func (l *Limiter) Close() {
 	close(l.stop)
+}
+
+// Update changes the rate limit parameters. 0 rate means unlimited.
+func (l *Limiter) Update(requests int, window time.Duration, burst int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if requests <= 0 {
+		l.rate = 0
+		l.burst = 0
+	} else {
+		l.rate = rate.Limit(float64(requests) / window.Seconds())
+		l.burst = burst
+	}
+	l.window = window
+
+	// Update existing buckets with new limits
+	for _, b := range l.buckets {
+		b.limiter.SetLimit(l.rate)
+		b.limiter.SetBurst(l.burst)
+	}
 }
