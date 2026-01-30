@@ -68,6 +68,7 @@ export default function SettingsNavItem(props: SettingsNavItemProps) {
     let classes = styles.navItem;
     if (props.isActive(props.item.url, props.currentRoute)) classes += ' ' + styles.active;
     if (props.depth === 0 && hasChildren()) classes += ' ' + styles.section;
+    if (props.item.separator) classes += ' ' + styles.separator;
     return classes;
   };
 

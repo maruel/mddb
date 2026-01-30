@@ -19,6 +19,7 @@ export interface NavItem {
   label: string;
   url: string;
   children?: NavItem[];
+  separator?: boolean;
 }
 
 export default function SettingsSidebar(props: SettingsSidebarProps) {
@@ -121,6 +122,19 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
         url: settingsUrl('server'),
       });
     }
+
+    // Privacy and Terms links
+    items.push({
+      id: 'privacy',
+      label: t('app.privacyPolicy'),
+      url: '/privacy',
+      separator: true,
+    });
+    items.push({
+      id: 'terms',
+      label: t('app.terms'),
+      url: '/terms',
+    });
 
     return items;
   };

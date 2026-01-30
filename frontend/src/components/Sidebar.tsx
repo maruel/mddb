@@ -26,13 +26,6 @@ interface SidebarProps {
 export default function Sidebar(props: SidebarProps) {
   const { t } = useI18n();
 
-  const navigateTo = (e: MouseEvent, path: string) => {
-    e.preventDefault();
-    window.history.pushState(null, '', path);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-    props.onCloseMobileSidebar();
-  };
-
   return (
     <aside class={`${styles.sidebar} ${props.isOpen ? styles.mobileOpen : ''}`}>
       <div class={styles.sidebarHeader}>
@@ -69,16 +62,6 @@ export default function Sidebar(props: SidebarProps) {
           )}
         </For>
       </ul>
-
-      <div class={styles.sidebarFooter}>
-        <a href="/privacy" onClick={(e) => navigateTo(e, '/privacy')}>
-          {t('app.privacyPolicy')}
-        </a>
-        <span class={styles.footerSeparator}>|</span>
-        <a href="/terms" onClick={(e) => navigateTo(e, '/terms')}>
-          {t('app.terms')}
-        </a>
-      </div>
     </aside>
   );
 }

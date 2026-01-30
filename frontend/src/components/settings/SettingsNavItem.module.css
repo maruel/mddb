@@ -53,6 +53,12 @@
   color: var(--c-text);
 }
 
+.navItem.separator {
+  border-top: 1px solid var(--c-border);
+  margin-top: var(--s-3);
+  padding-top: var(--s-3);
+}
+
 .expandIcon {
   display: inline-flex;
   align-items: center;

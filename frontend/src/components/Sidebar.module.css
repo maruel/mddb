@@ -52,27 +52,6 @@
   flex: 1;
 }
 
-.sidebarFooter {
-  padding: var(--s-3);
-  border-top: 1px solid var(--c-border);
-  text-align: center;
-}
-
-.sidebarFooter a {
-  color: var(--c-text-light);
-  font-size: 0.75rem;
-  text-decoration: none;
-}
-
-.sidebarFooter a:hover {
-  color: var(--c-primary);
-}
-
-.footerSeparator {
-  margin: 0 var(--s-2);
-  color: var(--c-text-light);
-}
-
 .sidebarActions {
   display: flex;
   gap: var(--s-1);
