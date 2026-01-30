@@ -33,6 +33,7 @@ export const dict: Dictionary = {
     myOrg: 'Mi espacio',
     createSubPage: 'Nueva subpágina',
     createSubTable: 'Nueva subtabla',
+    collapseSidebar: 'Contraer barra lateral',
   },
 
   userMenu: {

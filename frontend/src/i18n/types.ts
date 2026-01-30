@@ -35,6 +35,7 @@ export interface Dictionary {
     myOrg: string;
     createSubPage: string;
     createSubTable: string;
+    collapseSidebar: string;
   };
 
   userMenu: {

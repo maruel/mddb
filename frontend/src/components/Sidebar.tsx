@@ -27,19 +27,14 @@ export default function Sidebar(props: SidebarProps) {
   const { t } = useI18n();
 
   return (
-    <aside class={`${styles.sidebar} ${props.isOpen ? styles.mobileOpen : ''}`}>
-      <div class={styles.sidebarHeader}>
-        <h2>{t('app.workspace')}</h2>
-        <div class={styles.sidebarActions}>
-          <button onClick={() => props.onCreatePage()} title={t('app.newPage') || 'New Page'}>
-            +P
-          </button>
-          <button onClick={() => props.onCreateTable()} title={t('app.newTable') || 'New Table'}>
-            +D
-          </button>
-        </div>
-      </div>
-
+    <aside class={`${styles.sidebar} ${props.isOpen ? styles.open : ''}`}>
+      <button
+        class={styles.collapseButton}
+        onClick={() => props.onCloseMobileSidebar()}
+        title={t('app.collapseSidebar') || 'Collapse sidebar'}
+      >
+        «
+      </button>
       <Show when={props.loading && props.nodes.length === 0}>
         <p class={styles.loading}>{t('common.loading')}</p>
       </Show>

@@ -4,39 +4,37 @@
   border-right: 1px solid var(--c-border);
   display: flex;
   flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 200;
+  transform: translateX(-100%);
+  transition: transform 0.15s ease;
 }
 
-.sidebarHeader {
-  padding: var(--s-3);
-  border-bottom: 1px solid var(--c-border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--s-2);
+.sidebar.open {
+  transform: translateX(0);
 }
 
-.sidebarHeader h2 {
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.sidebarHeader button {
-  padding: var(--s-2) var(--s-3);
-  background: var(--c-primary);
-  color: white;
+.collapseButton {
+  position: absolute;
+  top: var(--s-2);
+  right: var(--s-2);
+  background: transparent;
   border: none;
-  border-radius: var(--radius);
+  color: var(--c-text-light);
+  font-size: 1rem;
   cursor: pointer;
-  font-size: 0.85rem;
+  padding: var(--s-1);
+  border-radius: var(--radius);
+  line-height: 1;
+  z-index: 1;
 }
 
-.sidebarHeader button:hover:not(:disabled) {
-  background: var(--c-primary-hover);
-}
-
-.sidebarHeader button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.collapseButton:hover {
+  background: var(--c-bg-alt);
+  color: var(--c-text);
 }
 
 .loading {
@@ -50,55 +48,24 @@
   overflow-y: auto;
   overflow-x: hidden;
   flex: 1;
-}
-
-.sidebarActions {
-  display: flex;
-  gap: var(--s-1);
-}
-
-.sidebarActions button {
-  padding: var(--s-1) var(--s-2);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 0.75rem;
-  color: var(--c-text-light);
-  transition: all var(--transition);
-}
-
-.sidebarActions button:hover {
-  background: var(--c-bg-alt);
-  border-color: var(--c-border);
-  color: var(--c-text);
+  padding-top: var(--s-1);
 }
 
 @media (max-width: 768px) {
   .sidebar {
-    position: absolute;
+    top: 0;
     left: 0;
-    top: 56px;
-    height: calc(100vh - 56px);
-    z-index: 100;
-    transform: translateX(-100%);
-    /* Delay visibility:hidden until after close animation completes */
+    margin: 0;
     transition:
-      transform var(--transition),
+      transform 0.15s ease,
       visibility 0s 0.15s;
     visibility: hidden;
-    /* Ensure sidebar content doesn't overflow and intercept clicks outside */
-    overflow: hidden;
   }
 
-  .sidebar.mobileOpen {
-    transform: translateX(0);
-    /* Instantly visible when opening, animate transform */
+  .sidebar.open {
     transition:
-      transform var(--transition),
+      transform 0.15s ease,
       visibility 0s 0s;
     visibility: visible;
-    /* Allow internal scrolling when open */
-    overflow: visible;
   }
 }

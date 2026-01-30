@@ -105,8 +105,8 @@ function AppContent() {
   const [isTermsPage, setIsTermsPage] = createSignal(false);
   const [settingsRoute, setSettingsRoute] = createSignal<UnifiedSettingsMatch | null>(null);
 
-  // UI state
-  const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
+  // UI state - sidebar open by default on desktop, closed on mobile
+  const [showMobileSidebar, setShowMobileSidebar] = createSignal(window.innerWidth > 768);
   const [showCreateOrg, setShowCreateOrg] = createSignal(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
   const [showNotionImport, setShowNotionImport] = createSignal(false);
@@ -469,7 +469,7 @@ function AppContent() {
       <Show when={!isPrivacyPage()} fallback={<Privacy />}>
         <Show when={!isTermsPage()} fallback={<Terms />}>
           <Show when={user()} fallback={<Auth onLogin={login} />}>
-            <div class={styles.app}>
+            <div class={`${styles.app} ${showMobileSidebar() ? styles.sidebarOpen : ''}`}>
               <Show when={notionImportStatus()} keyed>
                 {(status) => (
                   <NotionImportBanner

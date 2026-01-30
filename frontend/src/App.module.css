@@ -14,6 +14,16 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  margin-left: 0;
+  transition: margin-left 0.15s ease;
+}
+
+.app.sidebarOpen {
+  margin-left: 260px;
+}
+
+.app.sidebarOpen .hamburger {
+  display: none;
 }
 
 .header {
@@ -226,9 +236,9 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Mobile Sidebar */
+/* Sidebar toggle */
 .hamburger {
-  display: none;
+  display: block;
   background: transparent;
   border: none;
   color: white;
@@ -243,7 +253,13 @@ body {
 }
 
 @media (max-width: 768px) {
-  .hamburger {
+  /* On mobile, sidebar overlays instead of pushing content */
+  .app.sidebarOpen {
+    margin-left: 0;
+  }
+
+  /* Always show hamburger on mobile (sidebar overlays) */
+  .app.sidebarOpen .hamburger {
     display: block;
   }
 
@@ -253,13 +269,13 @@ body {
 
   .mobileBackdrop {
     display: block;
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    z-index: 99;
+    z-index: 150;
     backdrop-filter: blur(2px);
     cursor: pointer;
   }

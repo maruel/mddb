@@ -33,6 +33,7 @@ export const dict: Dictionary = {
     myOrg: 'Mein Arbeitsbereich',
     createSubPage: 'Neue Unterseite',
     createSubTable: 'Neue Untertabelle',
+    collapseSidebar: 'Seitenleiste einklappen',
   },
 
   userMenu: {
