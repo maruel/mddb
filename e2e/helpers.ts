@@ -1,6 +1,7 @@
 // Shared e2e test helpers for registration, workspace management, and screenshots.
 
-import { test as base, expect, Page, APIRequestContext } from '@playwright/test';
+import { test as base, expect, type Page, type APIRequestContext, type TestInfo } from '@playwright/test';
+import type { TestType, PlaywrightTestArgs, PlaywrightTestOptions, PlaywrightWorkerArgs, PlaywrightWorkerOptions } from '@playwright/test';
 
 // Helper to register a user and get token (with retry for rate limiting)
 export async function registerUser(request: APIRequestContext, prefix: string) {
@@ -42,7 +43,11 @@ export async function getWorkspaceId(page: Page): Promise<string> {
   const url = page.url();
   const wsMatch = url.match(/\/w\/([^+/]+)/);
   expect(wsMatch).toBeTruthy();
-  return wsMatch![1];
+  const workspaceId = wsMatch?.[1];
+  if (!workspaceId) {
+    throw new Error('Failed to extract workspace ID from URL');
+  }
+  return workspaceId;
 }
 
 // Convert text to a filesystem-safe slug
@@ -57,9 +62,30 @@ function slugify(text: string): string {
 // Screenshot helper type
 type ScreenshotFn = (name: string, options?: { fullPage?: boolean }) => Promise<void>;
 
+// Custom fixtures for extended test
+type CustomFixtures = { takeScreenshot: ScreenshotFn };
+
+// All fixtures combined
+type AllFixtures = PlaywrightTestArgs & PlaywrightTestOptions & CustomFixtures;
+type AllWorkerFixtures = PlaywrightWorkerArgs & PlaywrightWorkerOptions;
+
+// Test callback type for screenshot tests
+type ScreenshotTestFn = (
+  args: AllFixtures & AllWorkerFixtures,
+  testInfo: TestInfo
+) => void | Promise<void>;
+
+// Base extended test type
+type ExtendedTestType = TestType<AllFixtures, AllWorkerFixtures>;
+
+// Extended test type with screenshot helper method
+interface TestWithScreenshot extends ExtendedTestType {
+  screenshot: (title: string, fn: ScreenshotTestFn) => void;
+}
+
 // Extended test with takeScreenshot fixture
-export const test = base.extend<{ takeScreenshot: ScreenshotFn }>({
-  takeScreenshot: [async ({ page }, use, testInfo) => {
+const baseTest = base.extend<CustomFixtures>({
+  takeScreenshot: [async ({ page }, use, testInfo: TestInfo) => {
     let hasScreenshot = false;
     let screenshotIndex = 0;
 
@@ -98,9 +124,11 @@ export const test = base.extend<{ takeScreenshot: ScreenshotFn }>({
 
 // Helper to create a test with @screenshot tag visible in test list
 // Usage: test.screenshot('test name', async ({ page, takeScreenshot }) => { ... })
-test.screenshot = (title: string, fn: Parameters<typeof test>[1]) => {
-  return test(title, { tag: '@screenshot' }, fn);
+(baseTest as TestWithScreenshot).screenshot = (title: string, fn: ScreenshotTestFn) => {
+  return baseTest(title, { tag: '@screenshot' }, fn);
 };
+
+export const test: TestWithScreenshot = baseTest as TestWithScreenshot;
 
 // Helper to switch editor to markdown mode and get the textarea
 export async function switchToMarkdownMode(page: Page) {

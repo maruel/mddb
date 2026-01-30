@@ -50,7 +50,7 @@ test.describe('OAuth Login', () => {
     expect(response.status()).toBe(307);
   });
 
-  test('OAuth callback with token sets auth and redirects', async ({ page, context }) => {
+  test('OAuth callback with token sets auth and redirects', async ({ page, context: _context }) => {
     // This test simulates what happens after Google redirects back with a token
     // We need a valid JWT for this to work, so we'll check the flow mechanics
 

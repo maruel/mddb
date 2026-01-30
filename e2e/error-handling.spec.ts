@@ -1,4 +1,4 @@
-import { test, expect, registerUser, getWorkspaceId, fillEditorContent, switchToMarkdownMode } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, fillEditorContent } from './helpers';
 
 test.describe('Error Handling - Invalid Routes', () => {
   test('navigating to non-existent page shows appropriate error or handles gracefully', async ({ page, request }) => {

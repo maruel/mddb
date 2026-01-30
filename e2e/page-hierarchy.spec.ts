@@ -1,4 +1,4 @@
-import { test, expect, registerUser, getWorkspaceId } from './helpers';
+import { test, expect, registerUser } from './helpers';
 
 test.describe('Page Hierarchy', () => {
   test.screenshot('create and navigate page hierarchy', async ({ page, request, takeScreenshot }) => {

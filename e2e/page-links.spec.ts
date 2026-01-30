@@ -1,6 +1,6 @@
 // E2E tests for page links with dynamic title resolution.
 
-import { test, expect, registerUser, getWorkspaceId, switchToMarkdownMode } from './helpers';
+import { test, expect, registerUser, getWorkspaceId } from './helpers';
 
 test.describe('Page Links with Dynamic Titles', () => {
   test.screenshot('link displays current title of linked page', async ({ page, request, takeScreenshot }) => {

@@ -10,9 +10,9 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "coverage": "vitest run --coverage",
-    "typecheck": "tsc --noEmit",
-    "lint": "tsc --noEmit && eslint frontend/src && prettier --check frontend/src && node frontend/scripts/check-css-modules.mjs",
-    "lint:fix": "eslint frontend/src --fix && prettier --write frontend/src",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json",
+    "lint": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json && eslint frontend/src sdk e2e playwright.config.ts && prettier --check frontend/src && node frontend/scripts/check-css-modules.mjs",
+    "lint:fix": "eslint frontend/src sdk e2e playwright.config.ts --fix && prettier --write frontend/src",
     "format": "prettier --write frontend/src"
   },
   "dependencies": {
@@ -38,6 +38,7 @@
     "@playwright/test": "^1.58.0",
     "@solidjs/testing-library": "^0.8.10",
     "@types/markdown-it": "^14.1.2",
+    "@types/node": "^25.1.0",
     "@vitest/coverage-v8": "^4.0.18",
     "eslint": "^9.39.2",
     "eslint-plugin-solid": "^0.14.5",

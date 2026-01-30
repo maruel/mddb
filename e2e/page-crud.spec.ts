@@ -1,4 +1,4 @@
-import { test, expect, registerUser, getWorkspaceId, switchToMarkdownMode, fillEditorContent } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, fillEditorContent } from './helpers';
 
 test.describe('Page CRUD Operations', () => {
   test('delete a page - page removed from sidebar and content area cleared', async ({ page, request }) => {
@@ -840,8 +840,8 @@ function hello() {
     // This ensures we get the actual DOM element at click time
     await editor.evaluate((el) => {
       const paragraphs = el.querySelectorAll('p');
-      if (paragraphs.length > 0) {
-        const lastP = paragraphs[paragraphs.length - 1];
+      const lastP = paragraphs[paragraphs.length - 1];
+      if (lastP) {
         // Scroll the last paragraph into view
         lastP.scrollIntoView({ block: 'center' });
         // Create a range at the end of the last paragraph

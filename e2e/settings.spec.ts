@@ -1,7 +1,8 @@
+import type { Page } from '@playwright/test';
 import { test, expect, registerUser } from './helpers';
 
 // Helper to open user menu and click an option
-async function openUserMenuAndClick(page: any, optionText: string) {
+async function openUserMenuAndClick(page: Page, optionText: string) {
   // Click on user menu avatar button (shows initials like "PT")
   const avatarButton = page.locator('[class*="avatarButton"]').first();
   await avatarButton.click();

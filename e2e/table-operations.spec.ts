@@ -113,7 +113,6 @@ test.describe('Table Creation and Basic Operations', () => {
 
     // Wait for save to complete by polling API
     let recordsData: { records?: Array<{ data: { Name: string } }> } = {};
-    let editedRecord: { data: { Name: string } } | undefined;
 
     await expect(async () => {
       const recordsResponse = await request.get(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records`, {
@@ -124,7 +123,7 @@ test.describe('Table Creation and Basic Operations', () => {
       expect(recordsData.records).toBeDefined();
     }).toPass({ timeout: 3000 });
 
-    editedRecord = recordsData.records?.find((r: { data: { Name: string } }) => r.data.Name === 'Edited Item 1');
+    const editedRecord = recordsData.records?.find((r: { data: { Name: string } }) => r.data.Name === 'Edited Item 1');
 
     // If API shows the edit was saved, verify UI. If not, this is a backend bug.
     if (editedRecord) {
