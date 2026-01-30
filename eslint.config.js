@@ -19,6 +19,8 @@ const sharedRules = {
     'error',
     { prefer: 'type-imports' },
   ],
+  'no-shadow': 'off',
+  '@typescript-eslint/no-shadow': ['error', { hoist: 'all' }],
   'no-console': [
     'error',
     {

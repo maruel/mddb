@@ -153,12 +153,11 @@ describe('TableTable', () => {
       <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onDeleteRecord={mockDelete} />
     ));
 
+    let deleteButtons: HTMLElement[] = [];
     await waitFor(() => {
-      const deleteButtons = screen.getAllByTitle(/delete/i);
+      deleteButtons = screen.getAllByTitle(/delete/i);
       expect(deleteButtons.length).toBeGreaterThan(0);
     });
-
-    const deleteButtons = screen.getAllByTitle(/delete/i);
     const firstButton = deleteButtons[0];
     if (firstButton) fireEvent.click(firstButton);
 
@@ -359,8 +358,7 @@ describe('TableTable', () => {
     fireEvent.click(aliceCell);
 
     await waitFor(() => {
-      const input = document.querySelector('input[type="text"]');
-      expect(input).toBeTruthy();
+      expect(document.querySelector('input[type="text"]')).toBeTruthy();
     });
 
     // Change the value
@@ -396,8 +394,7 @@ describe('TableTable', () => {
     fireEvent.click(aliceCell);
 
     await waitFor(() => {
-      const input = document.querySelector('input[type="text"]');
-      expect(input).toBeTruthy();
+      expect(document.querySelector('input[type="text"]')).toBeTruthy();
     });
 
     // Change the value but don't save

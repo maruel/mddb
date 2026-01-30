@@ -86,8 +86,8 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   const updateNodeTitle = (nodeId: string, newTitle: string) => {
     setNodesStore(
       produce((list) => {
-        const update = (nodes: NodeResponse[]): boolean => {
-          for (const node of nodes) {
+        const update = (nodeList: NodeResponse[]): boolean => {
+          for (const node of nodeList) {
             if (node.id === nodeId) {
               node.title = newTitle;
               return true;
@@ -108,13 +108,13 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   const removeNode = (nodeId: string) => {
     setNodesStore(
       produce((list) => {
-        const removeFromList = (nodes: NodeResponse[]): boolean => {
-          const index = nodes.findIndex((n) => n.id === nodeId);
+        const removeFromList = (nodeList: NodeResponse[]): boolean => {
+          const index = nodeList.findIndex((n) => n.id === nodeId);
           if (index !== -1) {
-            nodes.splice(index, 1);
+            nodeList.splice(index, 1);
             return true;
           }
-          for (const node of nodes) {
+          for (const node of nodeList) {
             if (node.children && removeFromList(node.children)) {
               // Update has_children if parent now has no children
               if (node.children.length === 0) {
@@ -344,8 +344,8 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
       setNodesStore(
         produce((list) => {
-          const updateChildren = (nodes: NodeResponse[]): boolean => {
-            for (const node of nodes) {
+          const updateChildren = (nodeList: NodeResponse[]): boolean => {
+            for (const node of nodeList) {
               if (node.id === nodeId) {
                 node.children = children;
                 node.has_children = children.length > 0;

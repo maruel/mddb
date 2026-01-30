@@ -57,14 +57,14 @@ export async function registerUser(request: APIRequestContext, prefix: string) {
 
     // Retry on rate limiting (429)
     if (registerResponse.status() === 429 && attempt < maxRetries) {
-      const body = await registerResponse.json().catch(() => ({}));
-      const retryAfter = body?.details?.retry_after_seconds || 1;
+      const retryBody = await registerResponse.json().catch(() => ({}));
+      const retryAfter = retryBody?.details?.retry_after_seconds || 1;
       await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000 + 100));
       continue;
     }
 
-    const body = await registerResponse.text();
-    throw new Error(`Registration failed for ${email}: ${registerResponse.status()} - ${body}`);
+    const errorBody = await registerResponse.text();
+    throw new Error(`Registration failed for ${email}: ${registerResponse.status()} - ${errorBody}`);
   }
 
   throw new Error(`Registration failed for ${email} after ${maxRetries} retries`);

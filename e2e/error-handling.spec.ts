@@ -128,8 +128,8 @@ test.describe('Error Handling - Concurrent Edits', () => {
 
     // Poll API until one of the contents is saved (last writer wins)
     await expect(async () => {
-      const client = createClient(request, token);
-      const savedData = await client.ws(wsID).nodes.page.getPage(pageData.id);
+      const pollClient = createClient(request, token);
+      const savedData = await pollClient.ws(wsID).nodes.page.getPage(pageData.id);
       const savedContent = savedData.content.trim();
       expect(savedContent === 'Content from tab 1' || savedContent === 'Content from tab 2').toBe(true);
     }).toPass({ timeout: 8000 });
@@ -215,8 +215,8 @@ test.describe('Edge Cases', () => {
     // Wait for autosave to attempt (debounce is 2s)
     // Then verify page handles gracefully - either truncate, show error, or save
     await expect(async () => {
-      const client = createClient(request, token);
-      const savedData = await client.ws(wsID).nodes.page.getPage(pageData.id);
+      const pollClient = createClient(request, token);
+      const savedData = await pollClient.ws(wsID).nodes.page.getPage(pageData.id);
       // Title should be saved (possibly truncated or unchanged if validation rejects)
       expect(savedData.title.length).toBeGreaterThan(0);
     }).toPass({ timeout: 5000 });
