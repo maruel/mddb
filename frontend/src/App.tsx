@@ -46,7 +46,7 @@ import {
 } from './utils/urls';
 const Settings = lazy(() => import('./components/settings').then((m) => ({ default: m.Settings })));
 import { useI18n, type Locale } from './i18n';
-import type { NodeResponse, OrgMembershipResponse, NotionImportStatusResponse } from '@sdk/types.gen';
+import type { NodeResponse, OrgMembershipResponse, NotionImportStatusResponse, Property } from '@sdk/types.gen';
 import styles from './App.module.css';
 
 // Inner app component that uses contexts
@@ -338,7 +338,11 @@ function AppContent() {
       const parent = parentId || nodeCreationParentId() || '0';
       let newNodeId: string | number;
       if (type === 'table') {
-        const result = await ws.nodes.table.createTable(parent, { title: title(), properties: [] });
+        // Create table with default "Name" column like Notion
+        const result = await ws.nodes.table.createTable(parent, {
+          title: title(),
+          properties: [{ name: 'Name', type: 'text', required: false }],
+        });
         newNodeId = result.id;
       } else {
         const result = await ws.nodes.page.createPage(parent, { title: title() });
@@ -429,6 +433,32 @@ function AppContent() {
       }
     } catch (err) {
       setError(`${t('errors.failedToDelete')}: ${err}`);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAddColumn(column: Property) {
+    const nodeId = selectedNodeId();
+    const nodeData = selectedNodeData();
+    const ws = wsApi();
+    if (!nodeId || !nodeData || !ws) return;
+
+    try {
+      setLoading(true);
+      const currentProperties: Property[] = nodeData.properties || [];
+      const updatedProperties: Property[] = [...currentProperties, column];
+
+      await ws.nodes.table.updateTable(nodeId, {
+        title: nodeData.title,
+        properties: updatedProperties,
+      });
+
+      // Reload node to get updated schema
+      await loadNode(nodeId, false);
+      setError(null);
+    } catch (err) {
+      setError(`${t('errors.failedToSave')}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -701,6 +731,7 @@ function AppContent() {
                                   onAddRecord={addRecord}
                                   onUpdateRecord={updateRecord}
                                   onDeleteRecord={deleteRecord}
+                                  onAddColumn={handleAddColumn}
                                   onLoadMore={loadMoreRecords}
                                   hasMore={hasMore()}
                                 />

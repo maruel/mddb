@@ -235,6 +235,7 @@ export interface Dictionary {
     gallery: string;
     board: string;
     noRecords: string;
+    noColumns: string;
     loadMore: string;
     deleteRecord: string;
     confirmDeleteRecord: string;
@@ -246,6 +247,18 @@ export interface Dictionary {
     newView: string;
     defaultView: string;
     all: string;
+    addColumn: string;
+    addRecord: string;
+    addColumnFirst: string;
+    columnName: string;
+    columnType: string;
+    typeText: string;
+    typeNumber: string;
+    typeCheckbox: string;
+    typeDate: string;
+    typeSelect: string;
+    typeUrl: string;
+    typeEmail: string;
   };
 
   errors: {

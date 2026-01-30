@@ -4,6 +4,7 @@ import { createSignal, For, Show } from 'solid-js';
 import {
   type DataRecordResponse,
   type Property,
+  type PropertyType,
   PropertyTypeCheckbox,
   PropertyTypeSelect,
   PropertyTypeNumber,
@@ -12,6 +13,17 @@ import {
 import styles from './TableTable.module.css';
 import { useI18n } from '../i18n';
 
+// Column types available for adding
+const COLUMN_TYPES: { type: PropertyType; labelKey: string }[] = [
+  { type: 'text', labelKey: 'table.typeText' },
+  { type: 'number', labelKey: 'table.typeNumber' },
+  { type: 'checkbox', labelKey: 'table.typeCheckbox' },
+  { type: 'date', labelKey: 'table.typeDate' },
+  { type: 'select', labelKey: 'table.typeSelect' },
+  { type: 'url', labelKey: 'table.typeUrl' },
+  { type: 'email', labelKey: 'table.typeEmail' },
+];
+
 interface TableTableProps {
   tableId: string;
   columns: Property[];
@@ -19,6 +31,7 @@ interface TableTableProps {
   onAddRecord?: (data: Record<string, unknown>) => void;
   onUpdateRecord?: (recordId: string, data: Record<string, unknown>) => void;
   onDeleteRecord?: (recordId: string) => void;
+  onAddColumn?: (column: Property) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
 }
@@ -31,6 +44,27 @@ export default function TableTable(props: TableTableProps) {
   } | null>(null);
   const [editValue, setEditValue] = createSignal('');
   const [newRowData, setNewRowData] = createSignal<Record<string, unknown>>({});
+
+  // Column adding state
+  const [showAddColumn, setShowAddColumn] = createSignal(false);
+  const [newColumnName, setNewColumnName] = createSignal('');
+  const [newColumnType, setNewColumnType] = createSignal<PropertyType>('text');
+
+  const handleAddColumn = () => {
+    const name = newColumnName().trim();
+    if (!name || !props.onAddColumn) return;
+
+    const newColumn: Property = {
+      name,
+      type: newColumnType(),
+      required: false,
+    };
+
+    props.onAddColumn(newColumn);
+    setNewColumnName('');
+    setNewColumnType('text');
+    setShowAddColumn(false);
+  };
 
   const getCellValue = (record: DataRecordResponse, columnName: string) => {
     const column = props.columns.find((c) => c.name === columnName);
@@ -75,10 +109,14 @@ export default function TableTable(props: TableTableProps) {
   };
 
   const handleAddRecord = () => {
-    if (props.onAddRecord && Object.keys(newRowData()).length > 0) {
+    if (props.onAddRecord) {
       props.onAddRecord(newRowData());
       setNewRowData({});
     }
+  };
+
+  const handleNewRowChange = (columnName: string, value: string) => {
+    setNewRowData((prev) => ({ ...prev, [columnName]: value }));
   };
 
   const renderCellContent = (record: DataRecordResponse, column: Property) => {
@@ -191,6 +229,80 @@ export default function TableTable(props: TableTableProps) {
     }
   };
 
+  // Input renderer for the new row that updates newRowData
+  const renderNewRowInput = (column: Property, initialValue: string) => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleAddRecord();
+      }
+    };
+
+    switch (column.type) {
+      case PropertyTypeCheckbox:
+        return (
+          <input
+            type="checkbox"
+            checked={initialValue === 'true'}
+            onChange={(e) => handleNewRowChange(column.name, String(e.target.checked))}
+            class={styles.input}
+          />
+        );
+      case PropertyTypeSelect:
+        if (column.options && column.options.length > 0) {
+          return (
+            <select
+              value={initialValue}
+              onChange={(e) => handleNewRowChange(column.name, e.target.value)}
+              class={styles.input}
+            >
+              <option value="">--</option>
+              <For each={column.options}>{(option) => <option value={option.id}>{option.name}</option>}</For>
+            </select>
+          );
+        }
+        return (
+          <input
+            type="text"
+            value={initialValue}
+            onInput={(e) => handleNewRowChange(column.name, e.target.value)}
+            onKeyDown={onKeyDown}
+            class={styles.input}
+          />
+        );
+      case PropertyTypeNumber:
+        return (
+          <input
+            type="number"
+            value={initialValue}
+            onInput={(e) => handleNewRowChange(column.name, e.target.value)}
+            onKeyDown={onKeyDown}
+            class={styles.input}
+          />
+        );
+      case PropertyTypeDate:
+        return (
+          <input
+            type="date"
+            value={initialValue}
+            onInput={(e) => handleNewRowChange(column.name, e.target.value)}
+            onKeyDown={onKeyDown}
+            class={styles.input}
+          />
+        );
+      default:
+        return (
+          <input
+            type="text"
+            value={initialValue}
+            onInput={(e) => handleNewRowChange(column.name, e.target.value)}
+            onKeyDown={onKeyDown}
+            class={styles.input}
+          />
+        );
+    }
+  };
+
   return (
     <div class={styles.container}>
       <div class={styles.tableWrapper}>
@@ -208,6 +320,47 @@ export default function TableTable(props: TableTableProps) {
                   </th>
                 )}
               </For>
+              <Show when={props.onAddColumn}>
+                <th class={styles.addColumnCell}>
+                  <div class={styles.addColumnWrapper}>
+                    <button
+                      class={styles.addColumnBtn}
+                      onClick={() => setShowAddColumn(!showAddColumn())}
+                      title={t('table.addColumn') || 'Add Column'}
+                    >
+                      +
+                    </button>
+                    <Show when={showAddColumn()}>
+                      <div class={styles.addColumnDropdown}>
+                        <input
+                          type="text"
+                          placeholder={t('table.columnName') || 'Column Name'}
+                          value={newColumnName()}
+                          onInput={(e) => setNewColumnName(e.target.value)}
+                          class={styles.columnNameInput}
+                        />
+                        <select
+                          value={newColumnType()}
+                          onChange={(e) => setNewColumnType(e.target.value as PropertyType)}
+                          class={styles.columnTypeSelect}
+                        >
+                          <For each={COLUMN_TYPES}>
+                            {(ct) => <option value={ct.type}>{t(ct.labelKey) || ct.type}</option>}
+                          </For>
+                        </select>
+                        <div class={styles.addColumnActions}>
+                          <button class={styles.addColumnConfirm} onClick={handleAddColumn}>
+                            {t('common.confirm') || 'Add'}
+                          </button>
+                          <button class={styles.addColumnCancel} onClick={() => setShowAddColumn(false)}>
+                            {t('common.cancel') || 'Cancel'}
+                          </button>
+                        </div>
+                      </div>
+                    </Show>
+                  </div>
+                </th>
+              </Show>
             </tr>
           </thead>
           <tbody>
@@ -262,13 +415,23 @@ export default function TableTable(props: TableTableProps) {
             <Show when={props.onAddRecord}>
               <tr class={styles.newRow}>
                 <td class={styles.actionsCell}>
-                  <button class={styles.addBtn} onClick={handleAddRecord}>
+                  <button
+                    class={styles.addBtn}
+                    onClick={handleAddRecord}
+                    disabled={props.columns.length === 0}
+                    title={props.columns.length === 0 ? t('table.addColumnFirst') : t('table.addRecord')}
+                  >
                     +
                   </button>
                 </td>
+                <Show when={props.columns.length === 0}>
+                  <td class={styles.cell} style={{ color: 'var(--c-text-light)', 'font-style': 'italic' }}>
+                    {t('table.noColumns')}
+                  </td>
+                </Show>
                 <For each={props.columns}>
                   {(column) => (
-                    <td class={styles.cell}>{renderCellInput(column, String(newRowData()[column.name] ?? ''))}</td>
+                    <td class={styles.cell}>{renderNewRowInput(column, String(newRowData()[column.name] ?? ''))}</td>
                   )}
                 </For>
               </tr>
@@ -277,7 +440,11 @@ export default function TableTable(props: TableTableProps) {
         </table>
       </div>
 
-      <Show when={props.records.length === 0}>
+      <Show when={props.columns.length === 0}>
+        <div class={styles.empty}>{t('table.noColumns')}</div>
+      </Show>
+
+      <Show when={props.columns.length > 0 && props.records.length === 0}>
         <div class={styles.empty}>{t('table.noRecords')}</div>
       </Show>
 

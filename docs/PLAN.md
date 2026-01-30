@@ -48,11 +48,17 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 - **Global Presence**: Full localization and offline PWA capabilities.
 
 ### Future Evolution
-- **Advanced Table Views**: A sophisticated view system with persistent filters and sorts.
+- **Advanced Table Views**: Filter/sort dropdowns, column visibility toggles, view rename/duplicate.
 - **High-Performance UX**: Virtualization, command palettes, and relationship graphs.
 - **Notion-like Editing**: A block-based **WYSIWYG editor** for a seamless, intuitive experience.
 - **Data Integrity**: Migration to SQLite for metadata while preserving the self-describing on-disk format.
 - **Large File Uploads**: Streaming uploads for video/large assets (avoid memory buffering), chunked/resumable uploads (tus protocol), progress tracking.
+
+### Completed Table Features
+- **View Tabs**: Horizontal tabs for switching between saved views (table, list, gallery, board types).
+- **Default View**: Virtual "All" view auto-created when table has no saved views.
+- **Column Management**: Add columns via "+" button in table header with type selection.
+- **Default Name Column**: New tables start with a "Name" text column like Notion.
 
 ## Requirements
 See [REQUIREMENTS.md](REQUIREMENTS.md) for complete system requirements.

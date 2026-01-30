@@ -183,6 +183,8 @@ IDs are k-sortable 64-bit unique identifiers encoded as Base32 Extended Hex stri
 3. **Filename-based Asset IDs**: Assets use original filename as ID (not generated numeric ID)
 4. **Hierarchical Structure**: Nodes support parent-child relationships via directory nesting
 5. **Type Coercion**: Record field values are coerced to match Property schema types on write
+6. **Default Name Column**: New tables are created with a "Name" text column by default (like Notion)
+7. **Virtual Default View**: Tables without saved views display a virtual "All" view of type "table"
 
 ## Multi-user Architecture
 

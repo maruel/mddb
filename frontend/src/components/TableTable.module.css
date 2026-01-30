@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 150px;
   background: var(--c-bg-alt);
   padding: var(--s-3);
   border-radius: var(--radius);
@@ -13,6 +14,7 @@
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
   background: var(--c-bg);
+  min-height: 120px;
 }
 
 .table {
@@ -148,8 +150,14 @@
   font-weight: 600;
 }
 
-.addBtn:hover {
+.addBtn:hover:not(:disabled) {
   opacity: 0.9;
+}
+
+.addBtn:disabled {
+  background: var(--c-border);
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .newRow {
@@ -189,4 +197,101 @@
 
 .loadMore button:hover {
   background: var(--c-bg-alt);
+}
+
+/* Add column UI */
+.addColumnCell {
+  padding: var(--s-2);
+  text-align: center;
+  background: var(--c-bg-alt);
+  min-width: 40px;
+}
+
+.addColumnWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.addColumnBtn {
+  padding: var(--s-2) var(--s-3);
+  border: 2px dashed var(--c-primary);
+  background: var(--c-bg);
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius);
+  color: var(--c-primary);
+  transition: all var(--transition);
+}
+
+.addColumnBtn:hover {
+  border-style: solid;
+  background: var(--c-primary);
+  color: white;
+}
+
+.addColumnDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--s-1);
+  padding: var(--s-3);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.columnNameInput,
+.columnTypeSelect {
+  width: 100%;
+  padding: var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+}
+
+.columnNameInput:focus,
+.columnTypeSelect:focus {
+  outline: none;
+  border-color: var(--c-primary);
+}
+
+.addColumnActions {
+  display: flex;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+}
+
+.addColumnConfirm,
+.addColumnCancel {
+  flex: 1;
+  padding: var(--s-2);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.addColumnConfirm {
+  background: var(--c-primary);
+  color: white;
+}
+
+.addColumnConfirm:hover {
+  opacity: 0.9;
+}
+
+.addColumnCancel {
+  background: var(--c-bg-alt);
+  color: var(--c-text);
+}
+
+.addColumnCancel:hover {
+  background: var(--c-border);
 }
