@@ -137,38 +137,6 @@ md.inline.ruler.before('html_inline', 'underline', (state, silent) => {
   return true;
 });
 
-// Add inline rule to parse ~~text~~ as strikethrough
-md.inline.ruler.before('emphasis', 'strikethrough', (state, silent) => {
-  const start = state.pos;
-  const max = state.posMax;
-  const src = state.src;
-
-  // Check for opening ~~
-  if (src.slice(start, start + 2) !== '~~') return false;
-
-  // Find closing ~~
-  const closePos = src.indexOf('~~', start + 2);
-  if (closePos === -1 || closePos >= max) return false;
-
-  // Ensure there's content between the markers
-  if (closePos === start + 2) return false;
-
-  if (!silent) {
-    const openToken = state.push('strikethrough_open', 's', 1);
-    openToken.markup = '~~';
-
-    const content = src.slice(start + 2, closePos);
-    const textToken = state.push('text', '', 0);
-    textToken.content = content;
-
-    const closeToken = state.push('strikethrough_close', 's', -1);
-    closeToken.markup = '~~';
-  }
-
-  state.pos = closePos + 2;
-  return true;
-});
-
 // Add core rule to detect checkbox syntax in list items
 md.core.ruler.after('inline', 'task_list', (state) => {
   const tokens = state.tokens;
@@ -227,7 +195,7 @@ export const markdownParser = new MarkdownParser(schema, md, {
   em: { mark: 'em' },
   strong: { mark: 'strong' },
   underline: { mark: 'underline' },
-  strikethrough: { mark: 'strikethrough' },
+  s: { mark: 'strikethrough' },
   link: {
     mark: 'link',
     getAttrs: (tok: Token) => ({
