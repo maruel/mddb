@@ -719,10 +719,7 @@ function AppContent() {
 
                           <Show when={selectedNodeData()?.has_table}>
                             <div class={styles.tableView}>
-                              <div class={styles.tableHeader}>
-                                <h3>{t('table.records')}</h3>
-                                <ViewTabs />
-                              </div>
+                              <ViewTabs />
                               <Show when={viewType() === 'table'}>
                                 <TableTable
                                   tableId={selectedNodeId() || ''}

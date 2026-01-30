@@ -1,177 +1,159 @@
+/* Notion-like seamless table styling */
+
 .container {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 150px;
-  background: var(--c-bg-alt);
-  padding: var(--s-3);
-  border-radius: var(--radius);
+  background: var(--c-bg);
 }
 
 .tableWrapper {
   flex: 1;
   overflow: auto;
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  background: var(--c-bg);
   min-height: 120px;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
 .headerRow {
-  background: var(--c-bg-alt);
-  border-bottom: 2px solid var(--c-border);
+  border-bottom: 1px solid var(--c-border);
   position: sticky;
   top: 0;
   z-index: 10;
+  background: var(--c-bg);
 }
 
 .headerCell {
-  padding: var(--s-3);
+  padding: var(--s-2) var(--s-3);
   text-align: left;
-  font-weight: 600;
+  font-weight: 500;
   white-space: nowrap;
-  border-right: 1px solid var(--c-border);
-}
-
-.headerCell:last-child {
-  border-right: none;
+  color: var(--c-text-light);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  user-select: none;
 }
 
 .row {
   border-bottom: 1px solid var(--c-border);
-  transition: background var(--transition);
 }
 
 .row:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-bg-hover, rgba(0, 0, 0, 0.02));
+}
+
+.row:hover .actionsCell .deleteBtn {
+  opacity: 1;
+}
+
+/* Actions column - narrow, shows delete on hover */
+.actionsHeader {
+  width: 32px;
+  min-width: 32px;
+  padding: var(--s-2);
+}
+
+.actionsCell {
+  width: 32px;
+  min-width: 32px;
+  padding: var(--s-2);
+  text-align: center;
 }
 
 .cell {
-  padding: var(--s-3);
-  border-right: 1px solid var(--c-border);
-  cursor: pointer;
+  padding: var(--s-2) var(--s-3);
+  cursor: text;
   max-width: 300px;
-  word-wrap: break-word;
-}
-
-.cell:last-child {
-  border-right: none;
+  position: relative;
+  vertical-align: top;
 }
 
 .cell.editing {
-  background: #eff6ff;
-  padding: var(--s-2);
+  padding: 0;
+  background: transparent;
 }
 
 .cellContent {
-  min-height: 20px;
+  min-height: 1.5em;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 
-.editContainer {
-  display: flex;
-  gap: var(--s-2);
-  align-items: center;
+.cellContent:empty::after {
+  content: '\00a0';
 }
 
+/* Inline input - no save/cancel buttons */
 .input {
-  flex: 1;
-  padding: var(--s-2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  font-size: 0.85rem;
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: none;
+  border-radius: 0;
+  font-size: inherit;
+  font-family: inherit;
+  background: var(--c-primary-light, #e8f0fe);
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--c-primary);
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--c-primary);
-}
-
-.editActions {
-  display: flex;
-  gap: var(--s-1);
-}
-
-.saveBtn,
-.cancelBtn {
-  padding: var(--s-1) var(--s-2);
-  border: none;
-  border-radius: var(--radius);
-  font-size: 0.75rem;
-  cursor: pointer;
-  background: var(--c-bg-alt);
-}
-
-.saveBtn:hover {
-  background: var(--c-success);
-  color: white;
-}
-
-.cancelBtn:hover {
-  background: var(--c-danger);
-  color: white;
-}
-
-.actionsCell {
-  padding: var(--s-2) var(--s-3);
-  text-align: center;
-  border-right: 1px solid var(--c-border);
-  background: var(--c-bg-alt);
-  min-width: 50px;
 }
 
 .deleteBtn {
-  padding: var(--s-1) var(--s-2);
+  width: 20px;
+  height: 20px;
+  padding: 0;
   border: none;
-  background: var(--c-danger);
-  color: white;
+  background: transparent;
+  color: var(--c-text-light);
   border-radius: var(--radius);
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
+  opacity: 0;
+  transition: opacity 0.15s;
 }
 
 .deleteBtn:hover {
-  opacity: 0.9;
-}
-
-.addBtn {
-  padding: var(--s-2) var(--s-3);
-  border: none;
-  background: var(--c-success);
+  background: var(--c-danger);
   color: white;
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.addBtn:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.addBtn:disabled {
-  background: var(--c-border);
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.newRow {
-  background: #eff6ff;
-  border-bottom: 2px solid var(--c-primary);
-}
-
-.newRow .cell {
-  padding: var(--s-2);
+  opacity: 1;
 }
 
 .required {
   color: var(--c-danger);
   margin-left: var(--s-1);
+  font-size: 0.7rem;
+}
+
+/* New row - subtle bottom row */
+.newRow {
+  border-bottom: none;
+}
+
+.newRow:hover {
+  background: transparent;
+}
+
+.newRow .cell {
+  color: var(--c-text-light);
+}
+
+.newRowPlaceholder {
+  padding: var(--s-2) var(--s-3);
+  color: var(--c-text-light);
+  cursor: pointer;
+  user-select: none;
+}
+
+.newRowPlaceholder:hover {
+  background: var(--c-bg-hover, rgba(0, 0, 0, 0.02));
 }
 
 .empty {
@@ -193,18 +175,17 @@
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
   cursor: pointer;
+  font-size: 0.8rem;
 }
 
 .loadMore button:hover {
   background: var(--c-bg-alt);
 }
 
-/* Add column UI */
+/* Add column UI - minimal like Notion */
 .addColumnCell {
-  padding: var(--s-2);
-  text-align: center;
-  background: var(--c-bg-alt);
-  min-width: 40px;
+  padding: var(--s-2) var(--s-3);
+  min-width: 36px;
 }
 
 .addColumnWrapper {
@@ -213,21 +194,24 @@
 }
 
 .addColumnBtn {
-  padding: var(--s-2) var(--s-3);
-  border: 2px dashed var(--c-primary);
-  background: var(--c-bg);
-  font-size: 1.2rem;
-  font-weight: 600;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
   cursor: pointer;
   border-radius: var(--radius);
-  color: var(--c-primary);
-  transition: all var(--transition);
+  color: var(--c-text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
 }
 
 .addColumnBtn:hover {
-  border-style: solid;
-  background: var(--c-primary);
-  color: white;
+  background: var(--c-bg-alt);
+  color: var(--c-text);
 }
 
 .addColumnDropdown {
@@ -239,8 +223,8 @@
   background: var(--c-bg);
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 220px;
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -254,12 +238,14 @@
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
   font-size: 0.85rem;
+  background: var(--c-bg);
 }
 
 .columnNameInput:focus,
 .columnTypeSelect:focus {
   outline: none;
   border-color: var(--c-primary);
+  box-shadow: 0 0 0 2px var(--c-primary-light, rgba(59, 130, 246, 0.2));
 }
 
 .addColumnActions {
@@ -274,8 +260,9 @@
   padding: var(--s-2);
   border: none;
   border-radius: var(--radius);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
+  font-weight: 500;
 }
 
 .addColumnConfirm {

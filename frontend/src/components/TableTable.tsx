@@ -1,4 +1,4 @@
-// Spreadsheet-like table view for editing records inline.
+// Notion-like table view with inline editing.
 
 import { createSignal, For, Show } from 'solid-js';
 import {
@@ -43,7 +43,7 @@ export default function TableTable(props: TableTableProps) {
     columnId: string;
   } | null>(null);
   const [editValue, setEditValue] = createSignal('');
-  const [newRowData, setNewRowData] = createSignal<Record<string, unknown>>({});
+  const [editCancelled, setEditCancelled] = createSignal(false);
 
   // Column adding state
   const [showAddColumn, setShowAddColumn] = createSignal(false);
@@ -80,26 +80,48 @@ export default function TableTable(props: TableTableProps) {
     setEditValue(String(value));
   };
 
-  const handleCellChange = (value: string) => {
-    setEditValue(value);
+  // Save on blur or Enter, cancel on Escape
+  const handleCellBlur = (recordId: string, columnName: string) => {
+    // Don't save if we just cancelled via Escape
+    if (editCancelled()) {
+      setEditCancelled(false);
+      return;
+    }
+    handleCellSave(recordId, columnName);
   };
 
   const handleKeyDown = (e: KeyboardEvent, recordId: string, columnName: string) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleCellSave(recordId, columnName);
     } else if (e.key === 'Escape') {
       e.preventDefault();
+      setEditCancelled(true);
       setEditingCell(null);
+    } else if (e.key === 'Tab') {
+      // Save current and move to next/prev cell
+      handleCellSave(recordId, columnName);
+      // Browser will handle focus movement
     }
   };
 
   const handleCellSave = (recordId: string, columnName: string) => {
+    // Check if edit was cancelled or we're no longer in edit mode
+    if (editCancelled() || !editingCell()) {
+      return;
+    }
+
     const column = props.columns.find((c) => c.name === columnName);
-    if (!column || !props.onUpdateRecord) return;
+    if (!column || !props.onUpdateRecord) {
+      setEditingCell(null);
+      return;
+    }
 
     const record = props.records.find((r) => r.id === recordId);
-    if (!record) return;
+    if (!record) {
+      setEditingCell(null);
+      return;
+    }
 
     const updatedData = { ...record.data };
     updatedData[column.name] = editValue();
@@ -108,15 +130,11 @@ export default function TableTable(props: TableTableProps) {
     setEditingCell(null);
   };
 
-  const handleAddRecord = () => {
-    if (props.onAddRecord) {
-      props.onAddRecord(newRowData());
-      setNewRowData({});
+  // Add a new empty row
+  const handleAddRow = () => {
+    if (props.onAddRecord && props.columns.length > 0) {
+      props.onAddRecord({});
     }
-  };
-
-  const handleNewRowChange = (columnName: string, value: string) => {
-    setNewRowData((prev) => ({ ...prev, [columnName]: value }));
   };
 
   const renderCellContent = (record: DataRecordResponse, column: Property) => {
@@ -137,23 +155,40 @@ export default function TableTable(props: TableTableProps) {
     }
   };
 
-  const renderCellInput = (
-    column: Property,
-    initialValue: string,
-    autoFocus = false,
-    recordId?: string,
-    columnName?: string
-  ) => {
-    // Helper to auto-focus input element
+  // Render input for editing cells - saves on blur
+  // Use ref to track input and read value on save (avoids re-render on every keystroke)
+  let inputRef: HTMLInputElement | HTMLSelectElement | undefined;
+
+  const renderCellInput = (column: Property, initialValue: string, recordId: string, columnName: string) => {
     const focusRef = (el: HTMLInputElement | HTMLSelectElement) => {
-      if (autoFocus) {
-        // Use setTimeout to ensure DOM is ready
-        setTimeout(() => el.focus(), 0);
-      }
+      inputRef = el;
+      setTimeout(() => {
+        el.focus();
+        if (el instanceof HTMLInputElement && el.type === 'text') el.select();
+      }, 0);
     };
 
-    // Keyboard handler for Enter (save) and Escape (cancel)
-    const onKeyDown = recordId && columnName ? (e: KeyboardEvent) => handleKeyDown(e, recordId, columnName) : undefined;
+    const onKeyDown = (e: KeyboardEvent) => handleKeyDown(e, recordId, columnName);
+
+    // Read current value from input ref for saving
+    const getCurrentValue = () => {
+      if (!inputRef) return initialValue;
+      if (inputRef instanceof HTMLInputElement && inputRef.type === 'checkbox') {
+        return String(inputRef.checked);
+      }
+      return inputRef.value;
+    };
+
+    // Update editValue from input ref before save
+    const syncAndSave = () => {
+      setEditValue(getCurrentValue());
+      handleCellSave(recordId, columnName);
+    };
+
+    const syncAndBlur = () => {
+      setEditValue(getCurrentValue());
+      handleCellBlur(recordId, columnName);
+    };
 
     switch (column.type) {
       case PropertyTypeCheckbox:
@@ -162,19 +197,19 @@ export default function TableTable(props: TableTableProps) {
             ref={focusRef}
             type="checkbox"
             checked={initialValue === 'true'}
-            onChange={(e) => handleCellChange(String(e.target.checked))}
+            onChange={syncAndSave}
             onKeyDown={onKeyDown}
             class={styles.input}
           />
         );
       case PropertyTypeSelect:
-        // Use dropdown if options are defined, otherwise text input
         if (column.options && column.options.length > 0) {
           return (
             <select
               ref={focusRef}
               value={initialValue}
-              onChange={(e) => handleCellChange(e.target.value)}
+              onChange={syncAndSave}
+              onBlur={syncAndBlur}
               onKeyDown={onKeyDown}
               class={styles.input}
             >
@@ -188,7 +223,7 @@ export default function TableTable(props: TableTableProps) {
             ref={focusRef}
             type="text"
             value={initialValue}
-            onInput={(e) => handleCellChange(e.target.value)}
+            onBlur={syncAndBlur}
             onKeyDown={onKeyDown}
             class={styles.input}
           />
@@ -199,7 +234,7 @@ export default function TableTable(props: TableTableProps) {
             ref={focusRef}
             type="number"
             value={initialValue}
-            onInput={(e) => handleCellChange(e.target.value)}
+            onBlur={syncAndBlur}
             onKeyDown={onKeyDown}
             class={styles.input}
           />
@@ -210,7 +245,7 @@ export default function TableTable(props: TableTableProps) {
             ref={focusRef}
             type="date"
             value={initialValue}
-            onInput={(e) => handleCellChange(e.target.value)}
+            onBlur={syncAndBlur}
             onKeyDown={onKeyDown}
             class={styles.input}
           />
@@ -221,81 +256,7 @@ export default function TableTable(props: TableTableProps) {
             ref={focusRef}
             type="text"
             value={initialValue}
-            onInput={(e) => handleCellChange(e.target.value)}
-            onKeyDown={onKeyDown}
-            class={styles.input}
-          />
-        );
-    }
-  };
-
-  // Input renderer for the new row that updates newRowData
-  const renderNewRowInput = (column: Property, initialValue: string) => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleAddRecord();
-      }
-    };
-
-    switch (column.type) {
-      case PropertyTypeCheckbox:
-        return (
-          <input
-            type="checkbox"
-            checked={initialValue === 'true'}
-            onChange={(e) => handleNewRowChange(column.name, String(e.target.checked))}
-            class={styles.input}
-          />
-        );
-      case PropertyTypeSelect:
-        if (column.options && column.options.length > 0) {
-          return (
-            <select
-              value={initialValue}
-              onChange={(e) => handleNewRowChange(column.name, e.target.value)}
-              class={styles.input}
-            >
-              <option value="">--</option>
-              <For each={column.options}>{(option) => <option value={option.id}>{option.name}</option>}</For>
-            </select>
-          );
-        }
-        return (
-          <input
-            type="text"
-            value={initialValue}
-            onInput={(e) => handleNewRowChange(column.name, e.target.value)}
-            onKeyDown={onKeyDown}
-            class={styles.input}
-          />
-        );
-      case PropertyTypeNumber:
-        return (
-          <input
-            type="number"
-            value={initialValue}
-            onInput={(e) => handleNewRowChange(column.name, e.target.value)}
-            onKeyDown={onKeyDown}
-            class={styles.input}
-          />
-        );
-      case PropertyTypeDate:
-        return (
-          <input
-            type="date"
-            value={initialValue}
-            onInput={(e) => handleNewRowChange(column.name, e.target.value)}
-            onKeyDown={onKeyDown}
-            class={styles.input}
-          />
-        );
-      default:
-        return (
-          <input
-            type="text"
-            value={initialValue}
-            onInput={(e) => handleNewRowChange(column.name, e.target.value)}
+            onBlur={syncAndBlur}
             onKeyDown={onKeyDown}
             class={styles.input}
           />
@@ -309,7 +270,9 @@ export default function TableTable(props: TableTableProps) {
         <table class={styles.table}>
           <thead>
             <tr class={styles.headerRow}>
-              <th class={styles.headerCell}>{t('common.actions')}</th>
+              <Show when={props.onDeleteRecord}>
+                <th class={styles.actionsHeader} />
+              </Show>
               <For each={props.columns}>
                 {(column) => (
                   <th class={styles.headerCell}>
@@ -338,6 +301,7 @@ export default function TableTable(props: TableTableProps) {
                           value={newColumnName()}
                           onInput={(e) => setNewColumnName(e.target.value)}
                           class={styles.columnNameInput}
+                          autofocus
                         />
                         <select
                           value={newColumnType()}
@@ -367,17 +331,17 @@ export default function TableTable(props: TableTableProps) {
             <For each={props.records}>
               {(record) => (
                 <tr class={styles.row}>
-                  <td class={styles.actionsCell}>
-                    <Show when={props.onDeleteRecord}>
+                  <Show when={props.onDeleteRecord}>
+                    <td class={styles.actionsCell}>
                       <button
                         class={styles.deleteBtn}
                         onClick={() => props.onDeleteRecord?.(record.id)}
-                        title={t('table.deleteRecord') || 'Delete record'}
+                        title={t('table.deleteRecord') || 'Delete'}
                       >
                         ✕
                       </button>
-                    </Show>
-                  </td>
+                    </td>
+                  </Show>
                   <For each={props.columns}>
                     {(column) => {
                       const isEditing = () =>
@@ -385,25 +349,14 @@ export default function TableTable(props: TableTableProps) {
 
                       return (
                         <td
-                          class={styles.cell}
-                          classList={{ [`${styles.editing}`]: isEditing() }}
-                          onClick={() => handleCellClick(record.id, column.name)}
+                          class={`${styles.cell}${isEditing() ? ` ${styles.editing}` : ''}`}
+                          onClick={() => !isEditing() && handleCellClick(record.id, column.name)}
                         >
                           <Show
                             when={isEditing()}
                             fallback={<div class={styles.cellContent}>{renderCellContent(record, column)}</div>}
                           >
-                            <div class={styles.editContainer}>
-                              {renderCellInput(column, editValue(), true, record.id, column.name)}
-                              <div class={styles.editActions}>
-                                <button class={styles.saveBtn} onClick={() => handleCellSave(record.id, column.name)}>
-                                  ✓
-                                </button>
-                                <button class={styles.cancelBtn} onClick={() => setEditingCell(null)}>
-                                  ✕
-                                </button>
-                              </div>
-                            </div>
+                            {renderCellInput(column, editValue(), record.id, column.name)}
                           </Show>
                         </td>
                       );
@@ -412,28 +365,16 @@ export default function TableTable(props: TableTableProps) {
                 </tr>
               )}
             </For>
-            <Show when={props.onAddRecord}>
+            {/* Add new row - click to add */}
+            <Show when={props.onAddRecord && props.columns.length > 0}>
               <tr class={styles.newRow}>
-                <td class={styles.actionsCell}>
-                  <button
-                    class={styles.addBtn}
-                    onClick={handleAddRecord}
-                    disabled={props.columns.length === 0}
-                    title={props.columns.length === 0 ? t('table.addColumnFirst') : t('table.addRecord')}
-                  >
-                    +
-                  </button>
+                <td
+                  class={styles.newRowPlaceholder}
+                  colSpan={props.columns.length + (props.onDeleteRecord ? 1 : 0) + (props.onAddColumn ? 1 : 0)}
+                  onClick={handleAddRow}
+                >
+                  + {t('table.addRecord') || 'New'}
                 </td>
-                <Show when={props.columns.length === 0}>
-                  <td class={styles.cell} style={{ color: 'var(--c-text-light)', 'font-style': 'italic' }}>
-                    {t('table.noColumns')}
-                  </td>
-                </Show>
-                <For each={props.columns}>
-                  {(column) => (
-                    <td class={styles.cell}>{renderNewRowInput(column, String(newRowData()[column.name] ?? ''))}</td>
-                  )}
-                </For>
               </tr>
             </Show>
           </tbody>
@@ -441,11 +382,12 @@ export default function TableTable(props: TableTableProps) {
       </div>
 
       <Show when={props.columns.length === 0}>
-        <div class={styles.empty}>{t('table.noColumns')}</div>
-      </Show>
-
-      <Show when={props.columns.length > 0 && props.records.length === 0}>
-        <div class={styles.empty}>{t('table.noRecords')}</div>
+        <div class={styles.empty}>
+          {t('table.noColumns')}
+          <Show when={props.onAddColumn}>
+            <span> {t('table.addColumnFirst') || 'Click + to add a column.'}</span>
+          </Show>
+        </div>
       </Show>
 
       <Show when={props.hasMore}>

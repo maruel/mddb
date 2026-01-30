@@ -15,20 +15,26 @@ vi.mock('./TableTable.module.css', () => ({
     headerCell: 'headerCell',
     required: 'required',
     row: 'row',
+    actionsHeader: 'actionsHeader',
     actionsCell: 'actionsCell',
     deleteBtn: 'deleteBtn',
     cell: 'cell',
     editing: 'editing',
     cellContent: 'cellContent',
-    editContainer: 'editContainer',
     input: 'input',
-    editActions: 'editActions',
-    saveBtn: 'saveBtn',
-    cancelBtn: 'cancelBtn',
     newRow: 'newRow',
-    addBtn: 'addBtn',
+    newRowPlaceholder: 'newRowPlaceholder',
     empty: 'empty',
     loadMore: 'loadMore',
+    addColumnCell: 'addColumnCell',
+    addColumnWrapper: 'addColumnWrapper',
+    addColumnBtn: 'addColumnBtn',
+    addColumnDropdown: 'addColumnDropdown',
+    columnNameInput: 'columnNameInput',
+    columnTypeSelect: 'columnTypeSelect',
+    addColumnActions: 'addColumnActions',
+    addColumnConfirm: 'addColumnConfirm',
+    addColumnCancel: 'addColumnCancel',
   },
 }));
 
@@ -178,7 +184,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('shows save and cancel buttons when editing', async () => {
+  it('shows inline input when editing (Notion-style, no save/cancel buttons)', async () => {
     renderWithI18n(() => (
       <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
@@ -191,19 +197,23 @@ describe('TableTable', () => {
     fireEvent.click(aliceCell);
 
     await waitFor(() => {
-      // When editing, save button (✓) appears in edit actions
-      // There may be multiple ✓ symbols (checkbox values), so check for buttons
-      const buttons = document.querySelectorAll('button');
-      const saveButton = Array.from(buttons).find((b) => b.textContent?.includes('✓'));
-      expect(saveButton).toBeTruthy();
+      // When editing, an input appears directly without save/cancel buttons
+      const input = document.querySelector('input[type="text"]');
+      expect(input).toBeTruthy();
+      // No separate save/cancel buttons in Notion-style UI
+      const cancelButton = document.querySelector('.cancelBtn');
+      expect(cancelButton).toBeFalsy();
     });
   });
 
-  it('shows empty state when no records', async () => {
-    renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={[]} />);
+  it('shows add row option when no records (Notion-style)', async () => {
+    // In Notion-style, empty tables just show headers and "+ New" row
+    renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={[]} onAddRecord={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText(/no records/i)).toBeTruthy();
+      // Should show the header and the add row option
+      expect(screen.getByText('Name')).toBeTruthy();
+      expect(screen.getByText(/\+ add record/i)).toBeTruthy();
     });
   });
 
@@ -232,7 +242,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('shows new row input when onAddRecord is provided', async () => {
+  it('shows clickable new row when onAddRecord is provided', async () => {
     const mockAddRecord = vi.fn();
 
     renderWithI18n(() => (
@@ -240,8 +250,9 @@ describe('TableTable', () => {
     ));
 
     await waitFor(() => {
-      // Should have an add button (+)
-      expect(screen.getByText('+')).toBeTruthy();
+      // Should have a clickable "+ New" row (Notion-style)
+      const newRowText = screen.getByText(/\+ add record/i);
+      expect(newRowText).toBeTruthy();
     });
   });
 
@@ -300,9 +311,9 @@ describe('TableTable', () => {
     const rows = table?.querySelectorAll('tbody tr');
     if (rows && rows[0]) {
       const cells = rows[0].querySelectorAll('td');
-      // Birthday is the 5th column (after Actions, Name, Age, Active)
-      if (cells[4]) {
-        fireEvent.click(cells[4]);
+      // Birthday is the 4th column (Name, Age, Active, Birthday) - 0-indexed as 3
+      if (cells[3]) {
+        fireEvent.click(cells[3]);
       }
     }
 
@@ -332,7 +343,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('handles cell save correctly', async () => {
+  it('handles cell save on blur (Notion-style)', async () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
@@ -356,11 +367,8 @@ describe('TableTable', () => {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
     fireEvent.input(input, { target: { value: 'Alice Updated' } });
 
-    // Click save
-    const saveButton = screen.getAllByText('✓').find((el) => el.tagName.toLowerCase() === 'button');
-    if (saveButton) {
-      fireEvent.click(saveButton);
-    }
+    // Blur to save (Notion-style auto-save)
+    fireEvent.blur(input);
 
     await waitFor(() => {
       expect(mockUpdateRecord).toHaveBeenCalledWith(
@@ -372,7 +380,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('handles cell cancel correctly', async () => {
+  it('handles cell cancel with Escape key (Notion-style)', async () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
@@ -392,17 +400,20 @@ describe('TableTable', () => {
       expect(input).toBeTruthy();
     });
 
-    // Find the cancel button (✕) within the edit container
-    // The cancelBtn class is assigned to the cancel button in the editActions
-    const cancelButton = document.querySelector('.cancelBtn');
-    expect(cancelButton).toBeTruthy();
+    // Change the value but don't save
+    const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+    fireEvent.input(input, { target: { value: 'Alice Updated' } });
 
-    if (cancelButton) {
-      fireEvent.click(cancelButton);
-    }
+    // Press Escape to cancel (Notion-style)
+    // In real browser, blur fires after component re-renders removing input
+    // In tests, we just verify Escape doesn't immediately save
+    fireEvent.keyDown(input, { key: 'Escape' });
 
-    // After clicking cancel, verify update was not called
-    // The mockUpdateRecord should not be called since we cancelled
-    expect(mockUpdateRecord).not.toHaveBeenCalled();
+    // Wait for SolidJS to process the signal update
+    await waitFor(() => {
+      // After Escape, the editing should be cancelled
+      // Check that update was NOT called (no immediate save on Escape)
+      expect(mockUpdateRecord).not.toHaveBeenCalled();
+    });
   });
 });
