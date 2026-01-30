@@ -1,4 +1,4 @@
-import { test, expect, registerUser, getWorkspaceId, fillEditorContent } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from './helpers';
 
 // Use mobile viewport for all tests in this file
 test.use({
@@ -78,11 +78,11 @@ test.describe('Mobile UI - Sidebar Toggle', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Mobile Test Page', content: 'Mobile content' },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Mobile Test Page',
+      content: 'Mobile content',
     });
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('header')).toBeVisible({ timeout: 10000 });
@@ -116,11 +116,11 @@ test.describe('Mobile UI - Layout', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Mobile Layout Test', content: 'Testing mobile layout' },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Mobile Layout Test',
+      content: 'Testing mobile layout',
     });
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('header')).toBeVisible({ timeout: 10000 });
@@ -149,11 +149,11 @@ test.describe('Mobile UI - Layout', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Mobile Editor Test', content: 'Original content' },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Mobile Editor Test',
+      content: 'Original content',
     });
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('header')).toBeVisible({ timeout: 10000 });

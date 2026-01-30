@@ -1,23 +1,19 @@
-import { test, expect, registerUser, getWorkspaceId, fillEditorContent } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from './helpers';
 
 test.describe('Page CRUD Operations', () => {
   test('delete a page - page removed from sidebar and content area cleared', async ({ page, request }) => {
     const { token } = await registerUser(request, 'delete-page');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page to delete
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Page To Delete',
-        content: 'This page will be deleted',
-      },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Page To Delete',
+      content: 'This page will be deleted',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
     const pageID = pageData.id;
 
     // Reload to see the page
@@ -59,30 +55,28 @@ test.describe('Page CRUD Operations', () => {
     }).toPass({ timeout: 5000 });
 
     // Verify via API that the page no longer exists
-    const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageID}/page`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    expect(getResponse.ok()).toBe(false);
-    expect(getResponse.status()).toBe(404);
+    try {
+      await client.ws(wsID).nodes.page.getPage(pageID);
+      throw new Error('Should have thrown 404');
+    } catch (e) {
+      const error = e as { status: number };
+      expect(error.status).toBe(404);
+    }
   });
 
   test('page title updates in sidebar as user types (real-time sync)', async ({ page, request }) => {
     const { token } = await registerUser(request, 'sidebar-sync');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Original Title',
-        content: 'Content here',
-      },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Original Title',
+      content: 'Content here',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
     const pageID = pageData.id;
 
     await page.reload();
@@ -109,21 +103,17 @@ test.describe('Page CRUD Operations', () => {
 
   test('unsaved indicator appears when editing and disappears after save', async ({ page, request }) => {
     const { token } = await registerUser(request, 'unsaved-ind');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Test Page',
-        content: 'Initial content',
-      },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Test Page',
+      content: 'Initial content',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
     const pageID = pageData.id;
 
     await page.reload();
@@ -148,10 +138,7 @@ test.describe('Page CRUD Operations', () => {
     await expect(unsavedIndicator).not.toBeVisible({ timeout: 10000 });
 
     // Verify content was saved via API
-    const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageID}/page`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const savedData = await getResponse.json();
+    const savedData = await client.ws(wsID).nodes.page.getPage(pageID);
     expect(savedData.content).toBe('Modified content');
   });
 });
@@ -159,23 +146,22 @@ test.describe('Page CRUD Operations', () => {
 test.describe('Page Navigation', () => {
   test.screenshot('browser back button navigates between pages', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'browser-nav');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create two pages
-    const page1Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Nav Page 1', content: 'Content of page 1' },
+    const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Nav Page 1',
+      content: 'Content of page 1',
     });
-    const page1Data = await page1Response.json();
 
-    const page2Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Nav Page 2', content: 'Content of page 2' },
+    const page2Data = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Nav Page 2',
+      content: 'Content of page 2',
     });
-    const page2Data = await page2Response.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -204,17 +190,17 @@ test.describe('Page Navigation', () => {
 
   test('URL updates with page slug when navigating', async ({ page, request }) => {
     const { token } = await registerUser(request, 'url-slug');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a specific title
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'My Awesome Page', content: 'Content here' },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'My Awesome Page',
+      content: 'Content here',
     });
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -229,17 +215,17 @@ test.describe('Page Navigation', () => {
 
   test('direct URL navigation loads correct page', async ({ page, request }) => {
     const { token } = await registerUser(request, 'direct-url');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Direct URL Page', content: 'Loaded via direct URL' },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Direct URL Page',
+      content: 'Loaded via direct URL',
     });
-    const pageData = await createResponse.json();
 
     // Navigate directly to the page URL
     await page.goto(`/w/${wsID}/${pageData.id}?token=${token}`);
@@ -255,29 +241,27 @@ test.describe('Page Navigation', () => {
 
   test.screenshot('direct URL navigation to grandchild expands sidebar ancestors', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'direct-grandchild');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create parent -> child -> grandchild hierarchy
-    const parentResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Parent', content: 'Parent content' },
+    const parentData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Parent',
+      content: 'Parent content',
     });
-    const parentData = await parentResponse.json();
 
-    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${parentData.id}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Child', content: 'Child content' },
+    const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
+      title: 'Child',
+      content: 'Child content',
     });
-    const childData = await childResponse.json();
 
-    const grandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childData.id}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Grandchild', content: 'Grandchild content' },
+    const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
+      title: 'Grandchild',
+      content: 'Grandchild content',
     });
-    const grandchildData = await grandchildResponse.json();
 
     // Navigate directly to grandchild URL (fresh page load)
     await page.goto(`/w/${wsID}/${grandchildData.id}?token=${token}`);
@@ -303,38 +287,32 @@ test.describe('Page Navigation', () => {
 
   test('direct URL navigation to great-grandchild expands all ancestors', async ({ page, request }) => {
     const { token } = await registerUser(request, 'direct-greatgrand');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create 4-level hierarchy: parent -> child -> grandchild -> great-grandchild
-    const parentResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Level1', content: '' },
+    const parentData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Level1',
+      content: '',
     });
-    const parentData = await parentResponse.json();
 
-    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${parentData.id}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Level2', content: '' },
+    const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
+      title: 'Level2',
+      content: '',
     });
-    const childData = await childResponse.json();
 
-    const grandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childData.id}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Level3', content: '' },
+    const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
+      title: 'Level3',
+      content: '',
     });
-    const grandchildData = await grandchildResponse.json();
 
-    const greatGrandchildResponse = await request.post(
-      `/api/workspaces/${wsID}/nodes/${grandchildData.id}/page/create`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { title: 'Level4', content: 'Deep content' },
-      }
-    );
-    const greatGrandchildData = await greatGrandchildResponse.json();
+    const greatGrandchildData = await client.ws(wsID).nodes.page.createPage(grandchildData.id, {
+      title: 'Level4',
+      content: 'Deep content',
+    });
 
     // Navigate directly to great-grandchild URL
     await page.goto(`/w/${wsID}/${greatGrandchildData.id}?token=${token}`);
@@ -354,31 +332,29 @@ test.describe('Page Navigation', () => {
 
   test('breadcrumb navigation works for nested pages', async ({ page, request }) => {
     const { token } = await registerUser(request, 'breadcrumb');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create parent page
-    const parentResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Alpha', content: 'Parent content' },
+    const parentData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Alpha',
+      content: 'Parent content',
     });
-    const parentData = await parentResponse.json();
 
     // Create child page
-    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${parentData.id}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Beta', content: 'Child content' },
+    const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
+      title: 'Beta',
+      content: 'Child content',
     });
-    const childData = await childResponse.json();
 
     // Create grandchild page
-    const grandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childData.id}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Gamma', content: 'Grandchild content' },
+    const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
+      title: 'Gamma',
+      content: 'Grandchild content',
     });
-    const grandchildData = await grandchildResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -416,20 +392,17 @@ test.describe('Page Navigation', () => {
 test.describe('Editor Features', () => {
   test.screenshot('WYSIWYG editor renders markdown correctly', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'wysiwyg-editor');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with markdown content
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Markdown Test',
-        content: '# Heading 1\n\n**Bold text**\n\n- List item 1\n- List item 2\n\n`code inline`',
-      },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Markdown Test',
+      content: '# Heading 1\n\n**Bold text**\n\n- List item 1\n- List item 2\n\n`code inline`',
     });
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -453,18 +426,17 @@ test.describe('Editor Features', () => {
     'WYSIWYG to markdown round-trip preserves all formatting',
     async ({ page, request, takeScreenshot }) => {
       const { token } = await registerUser(request, 'round-trip');
+      const client = createClient(request, token);
       await page.goto(`/?token=${token}`);
       await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
       const wsID = await getWorkspaceId(page);
 
       // Create an empty page via API
-      const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { title: 'Round Trip Test', content: '' },
+      const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+        title: 'Round Trip Test',
+        content: '',
       });
-      expect(createResponse.ok()).toBe(true);
-      const pageData = await createResponse.json();
 
       // Reload and verify in UI
       await page.reload();
@@ -606,6 +578,7 @@ function hello() {
 
   test('markdown editor fills available vertical space', async ({ page, request }) => {
     const { token } = await registerUser(request, 'editor-height');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
@@ -613,12 +586,10 @@ function hello() {
 
     // Create a page with 10 lines of content
     const multiLineContent = Array.from({ length: 10 }, (_, i) => `Line ${i + 1} of content`).join('\n');
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Height Test', content: multiLineContent },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Height Test',
+      content: multiLineContent,
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -656,21 +627,17 @@ function hello() {
 
   test.screenshot('slash command menu appears and applies block types', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'slash-cmd');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create an empty page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Slash Command Test', content: '' },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Slash Command Test',
+      content: '',
     });
-    if (!createResponse.ok()) {
-      const body = await createResponse.text();
-      throw new Error(`Failed to create page: ${createResponse.status()} - ${body}`);
-    }
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -809,6 +776,7 @@ function hello() {
     takeScreenshot,
   }) => {
     const { token } = await registerUser(request, 'slash-bottom');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
@@ -816,15 +784,10 @@ function hello() {
 
     // Create a page with lots of content to push cursor near bottom
     const manyLines = Array(30).fill('This is a line of text to fill the page.').join('\n\n');
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Bottom Slash Test', content: manyLines },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Bottom Slash Test',
+      content: manyLines,
     });
-    if (!createResponse.ok()) {
-      const body = await createResponse.text();
-      throw new Error(`Failed to create page: ${createResponse.status()} - ${body}`);
-    }
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -909,18 +872,17 @@ function hello() {
     takeScreenshot,
   }) => {
     const { token } = await registerUser(request, 'slash-subpage');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page at root level
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Test Page', content: '' },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Test Page',
+      content: '',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
     const pageId = pageData.id;
 
     await page.reload();
@@ -1009,25 +971,24 @@ function hello() {
 
   test.screenshot('version history loads and displays commits', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'version-history');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'History Test', content: 'Initial content' },
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'History Test',
+      content: 'Initial content',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
     expect(pageData.id).toBeTruthy();
 
     // Update the page a few times to create history
     for (let i = 1; i <= 3; i++) {
-      await request.post(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
-        headers: { Authorization: `Bearer ${token}` },
-        data: { title: 'History Test', content: `Content version ${i}` },
+      await client.ws(wsID).nodes.page.updatePage(pageData.id, {
+        title: 'History Test',
+        content: `Content version ${i}`,
       });
     }
 

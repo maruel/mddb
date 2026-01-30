@@ -1,6 +1,6 @@
 // E2E tests for editor toolbar formatting buttons.
 
-import { test, expect, registerUser, getWorkspaceId, switchToMarkdownMode } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, switchToMarkdownMode, createClient } from './helpers';
 
 test.describe('Editor Toolbar Formatting', () => {
   test('selecting multiple lines and clicking Checkbox converts all lines to task list', async ({ page, request }) => {
@@ -11,15 +11,11 @@ test.describe('Editor Toolbar Formatting', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple lines
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Multi-line Checkbox Test',
-        content: 'Line one\n\nLine two\n\nLine three',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Multi-line Checkbox Test',
+      content: 'Line one\n\nLine two\n\nLine three',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -60,15 +56,11 @@ test.describe('Editor Toolbar Formatting', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a numbered list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Toggle Numbered List Test',
-        content: '1. First item\n2. Second item\n3. Third item',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Toggle Numbered List Test',
+      content: '1. First item\n2. Second item\n3. Third item',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -112,15 +104,11 @@ test.describe('Editor Toolbar Formatting', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a bullet list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Toggle Bullet List Test',
-        content: '- First item\n- Second item\n- Third item',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Toggle Bullet List Test',
+      content: '- First item\n- Second item\n- Third item',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -167,15 +155,11 @@ test.describe('Editor Toolbar Formatting', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a task list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Toggle Task List Test',
-        content: '- [ ] First task\n- [x] Second task\n- [ ] Third task',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Toggle Task List Test',
+      content: '- [ ] First task\n- [x] Second task\n- [ ] Third task',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -222,15 +206,11 @@ test.describe('Editor Toolbar Formatting', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple paragraphs
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Multi-line Numbered List Test',
-        content: 'Line one\n\nLine two\n\nLine three',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Multi-line Numbered List Test',
+      content: 'Line one\n\nLine two\n\nLine three',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -272,15 +252,11 @@ test.describe('Editor Toolbar Formatting', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple paragraphs
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Multi-line Bullet List Test',
-        content: 'Line one\n\nLine two\n\nLine three',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Multi-line Bullet List Test',
+      content: 'Line one\n\nLine two\n\nLine three',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -321,15 +297,11 @@ test.describe('Editor Toolbar Formatting', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with plain text
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Create Task List Test',
-        content: 'Some regular text',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Create Task List Test',
+      content: 'Some regular text',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -368,15 +340,11 @@ test.describe('Editor Toolbar Formatting', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a bullet list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Bullet to Task Test',
-        content: '- First item\n- Second item',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Bullet to Task Test',
+      content: '- First item\n- Second item',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -410,15 +378,11 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a task list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Multi Task Toggle Off Test',
-        content: '- [ ] Task one\n- [x] Task two\n- [ ] Task three',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Multi Task Toggle Off Test',
+      content: '- [ ] Task one\n- [x] Task two\n- [ ] Task three',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -451,15 +415,11 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a numbered list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Numbered to Task Test',
-        content: '1. First item\n2. Second item\n3. Third item',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Numbered to Task Test',
+      content: '1. First item\n2. Second item\n3. Third item',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -490,15 +450,11 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a bullet list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Bullet to Numbered Test',
-        content: '- First item\n- Second item\n- Third item',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Bullet to Numbered Test',
+      content: '- First item\n- Second item\n- Third item',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -528,15 +484,11 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a numbered list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Numbered to Bullet Test',
-        content: '1. First item\n2. Second item\n3. Third item',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Numbered to Bullet Test',
+      content: '1. First item\n2. Second item\n3. Third item',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -567,15 +519,11 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a task list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Task to Numbered Test',
-        content: '- [ ] Task one\n- [x] Task two\n- [ ] Task three',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Task to Numbered Test',
+      content: '- [ ] Task one\n- [x] Task two\n- [ ] Task three',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -607,15 +555,11 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with 4 lines of plain text
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Selection Transitions Test',
-        content: 'Line one\n\nLine two\n\nLine three\n\nLine four',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Selection Transitions Test',
+      content: 'Line one\n\nLine two\n\nLine three\n\nLine four',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -740,15 +684,11 @@ test.describe('Editor Toolbar Inline Formatting', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with plain text
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Underline Test',
-        content: 'Some text to underline',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Underline Test',
+      content: 'Some text to underline',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -795,15 +735,11 @@ test.describe('Editor Toolbar Button States', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a task list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Task List Highlight Test',
-        content: '- [ ] Task one\n- [x] Task two\n- [ ] Task three',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Task List Highlight Test',
+      content: '- [ ] Task one\n- [x] Task two\n- [ ] Task three',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -839,15 +775,11 @@ test.describe('Editor Toolbar Button States', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a bullet list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Bullet List Highlight Test',
-        content: '- Item one\n- Item two\n- Item three',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Bullet List Highlight Test',
+      content: '- Item one\n- Item two\n- Item three',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -883,15 +815,11 @@ test.describe('Editor Toolbar Button States', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a numbered list
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Numbered List Highlight Test',
-        content: '1. Item one\n2. Item two\n3. Item three',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Numbered List Highlight Test',
+      content: '1. Item one\n2. Item two\n3. Item three',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });

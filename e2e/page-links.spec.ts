@@ -1,42 +1,35 @@
 // E2E tests for page links with dynamic title resolution.
 
-import { test, expect, registerUser, getWorkspaceId } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
 
 test.describe('Page Links with Dynamic Titles', () => {
   test.screenshot('link displays current title of linked page', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'page-links');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create parent page
-    const parentResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Parent Page', content: '' },
+    const parentData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Parent Page',
+      content: '',
     });
-    if (!parentResponse.ok()) {
-      const errorBody = await parentResponse.text();
-      throw new Error(`Failed to create parent page: ${parentResponse.status()} - ${errorBody}`);
-    }
-    const parentData = await parentResponse.json();
 
     // Create child page with initial title
-    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${parentData.id}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Original Child Title', content: 'Child content' },
+    const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
+      title: 'Original Child Title',
+      content: 'Child content',
     });
-    expect(childResponse.ok()).toBe(true);
-    const childData = await childResponse.json();
 
     // Update parent page with a link to child using the correct format
     // Format: [DisplayText](/w/{wsId}+{slug}/{nodeId}+{slug})
     const linkContent = `Check out [Original Child Title](/w/${wsID}+workspace/${childData.id}+original-child-title)`;
-    const updateResponse = await request.post(`/api/workspaces/${wsID}/nodes/${parentData.id}/page`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Parent Page', content: linkContent },
+    await client.ws(wsID).nodes.page.updatePage(parentData.id, {
+      title: 'Parent Page',
+      content: linkContent,
     });
-    expect(updateResponse.ok()).toBe(true);
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -62,11 +55,10 @@ test.describe('Page Links with Dynamic Titles', () => {
     await expect(link).toContainText('Original Child Title');
 
     // Now rename the child page
-    const renameResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childData.id}/page`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Updated Child Title', content: 'Child content' },
+    await client.ws(wsID).nodes.page.updatePage(childData.id, {
+      title: 'Updated Child Title',
+      content: 'Child content',
     });
-    expect(renameResponse.ok()).toBe(true);
 
     // Reload parent page
     await page.reload();
@@ -85,6 +77,7 @@ test.describe('Page Links with Dynamic Titles', () => {
 
   test('verify GetNodeTitles API returns titles correctly', async ({ page, request }) => {
     const { token } = await registerUser(request, 'titles-api');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
@@ -93,42 +86,35 @@ test.describe('Page Links with Dynamic Titles', () => {
     const url = page.url();
     const wsMatch = url.match(/\/w\/([^+/]+)/);
     expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1];
+    const wsID = wsMatch![1] as string;
 
     // Create two pages
-    const page1Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Page One', content: '' },
+    const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Page One',
+      content: '',
     });
-    expect(page1Response.ok()).toBe(true);
-    const page1Data = await page1Response.json();
+    const page1ID = page1Data.id as string;
 
-    const page2Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Page Two', content: '' },
+    const page2Data = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Page Two',
+      content: '',
     });
-    expect(page2Response.ok()).toBe(true);
-    const page2Data = await page2Response.json();
+    const page2ID = page2Data.id as string;
 
     // Call GetNodeTitles API
-    const titlesResponse = await request.get(
-      `/api/workspaces/${wsID}/nodes/titles?ids=${page1Data.id},${page2Data.id}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    if (!titlesResponse.ok()) {
-      const errorBody = await titlesResponse.text();
-      throw new Error(`GetNodeTitles failed: ${titlesResponse.status()} - ${errorBody}`);
-    }
-    const titlesData = await titlesResponse.json();
+    const titlesData = await client.ws(wsID).nodes.getNodeTitles({
+      IDs: `${page1ID},${page2ID}`,
+    });
 
     // Verify titles are returned
     expect(titlesData.titles).toBeDefined();
-    expect(titlesData.titles[page1Data.id]).toBe('Page One');
-    expect(titlesData.titles[page2Data.id]).toBe('Page Two');
+    expect(titlesData.titles[page1ID]).toBe('Page One');
+    expect(titlesData.titles[page2ID]).toBe('Page Two');
   });
 
   test('backlinks are returned when getting a page', async ({ page, request }) => {
     const { token } = await registerUser(request, 'backlinks');
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
@@ -137,41 +123,32 @@ test.describe('Page Links with Dynamic Titles', () => {
     const url = page.url();
     const wsMatch = url.match(/\/w\/([^+/]+)/);
     expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1];
+    const wsID = wsMatch![1] as string;
 
     // Create source and target pages
-    const targetResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Target Page', content: '' },
+    const targetData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Target Page',
+      content: '',
     });
-    if (!targetResponse.ok()) {
-      const errorBody = await targetResponse.text();
-      throw new Error(`Target page creation failed: ${targetResponse.status()} - ${errorBody}`);
-    }
-    const targetData = await targetResponse.json();
+    const targetID = targetData.id as string;
 
     // Create source page with a link to target
-    const linkContent = `Link to [Target Page](/w/${wsID}/${targetData.id})`;
-    const sourceResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Source Page', content: linkContent },
+    const linkContent = `Link to [Target Page](/w/${wsID}/${targetID})`;
+    const sourceData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Source Page',
+      content: linkContent,
     });
-    expect(sourceResponse.ok()).toBe(true);
-    const sourceData = await sourceResponse.json();
+    const sourceID = sourceData.id as string;
 
     // Get target page - should have backlink from source
-    const getTargetResponse = await request.get(
-      `/api/workspaces/${wsID}/nodes/${targetData.id}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    expect(getTargetResponse.ok()).toBe(true);
-    const getTargetData = await getTargetResponse.json();
+    const getTargetData = await client.ws(wsID).nodes.getNode(targetID);
 
-    // Verify backlinks
+    // Verify backlinks exist and have correct data
     expect(getTargetData.backlinks).toBeDefined();
-    expect(getTargetData.backlinks.length).toBe(1);
-    expect(getTargetData.backlinks[0].node_id).toBe(sourceData.id);
-    expect(getTargetData.backlinks[0].title).toBe('Source Page');
+    expect(getTargetData.backlinks).toHaveLength(1);
+    const firstLink = getTargetData.backlinks?.[0];
+    expect(firstLink?.node_id).toBe(sourceID);
+    expect(firstLink?.title).toBe('Source Page');
   });
 
   test('/page slash command creates link that shows in parent', async ({ page, request }) => {

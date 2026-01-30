@@ -1,4 +1,5 @@
-import { test, expect, registerUser, getWorkspaceId } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
+import type { DataRecordResponse } from '../sdk/types.gen';
 
 test.describe('Table Creation and Basic Operations', () => {
   test.screenshot('create a table with properties and view it', async ({ page, request, takeScreenshot }) => {
@@ -9,20 +10,16 @@ test.describe('Table Creation and Basic Operations', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a table with properties via API
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/table/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Test Table',
-        properties: [
-          { name: 'Name', type: 'text', required: true },
-          { name: 'Status', type: 'select', options: [{ id: 'todo', name: 'To Do' }, { id: 'done', name: 'Done' }] },
-          { name: 'Priority', type: 'number' },
-          { name: 'Due Date', type: 'date' },
-        ],
-      },
+    const client = createClient(request, token);
+    const tableData = await client.ws(wsID).nodes.table.createTable('0', {
+      title: 'Test Table',
+      properties: [
+        { name: 'Name', type: 'text', required: true },
+        { name: 'Status', type: 'select', options: [{ id: 'todo', name: 'To Do' }, { id: 'done', name: 'Done' }] },
+        { name: 'Priority', type: 'number' },
+        { name: 'Due Date', type: 'date' },
+      ],
     });
-    expect(createResponse.ok()).toBe(true);
-    const tableData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -53,28 +50,23 @@ test.describe('Table Creation and Basic Operations', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
+    const client = createClient(request, token);
 
     // Create a table
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/table/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Records Test Table',
-        properties: [
-          { name: 'Name', type: 'text', required: true },
-          { name: 'Value', type: 'number' },
-        ],
-      },
+    const tableData = await client.ws(wsID).nodes.table.createTable('0', {
+      title: 'Records Test Table',
+      properties: [
+        { name: 'Name', type: 'text', required: true },
+        { name: 'Value', type: 'number' },
+      ],
     });
-    const tableData = await createResponse.json();
 
     // Add some records via API
-    await request.post(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { data: { Name: 'Item 1', Value: 100 } },
+    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
+      data: { Name: 'Item 1', Value: 100 },
     });
-    await request.post(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { data: { Name: 'Item 2', Value: 200 } },
+    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
+      data: { Name: 'Item 2', Value: 200 },
     });
 
     // Reload to see records (BUG: records created via API don't auto-refresh in UI)
@@ -112,18 +104,22 @@ test.describe('Table Creation and Basic Operations', () => {
     await saveButton.click();
 
     // Wait for save to complete by polling API
-    let recordsData: { records?: Array<{ data: { Name: string } }> } = {};
+    const listParams = {
+      ViewID: '',
+      Filters: '',
+      Sorts: '',
+      Offset: 0,
+      Limit: 100,
+    };
+    let recordsData = await client.ws(wsID).nodes.table.records.listRecords(tableData.id, listParams);
 
     await expect(async () => {
-      const recordsResponse = await request.get(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      recordsData = await recordsResponse.json();
+      recordsData = await client.ws(wsID).nodes.table.records.listRecords(tableData.id, listParams);
       // Check that we got a response with records
-      expect(recordsData.records).toBeDefined();
+      expect(recordsData.records.length).toBeGreaterThanOrEqual(2);
     }).toPass({ timeout: 3000 });
 
-    const editedRecord = recordsData.records?.find((r: { data: { Name: string } }) => r.data.Name === 'Edited Item 1');
+    const editedRecord = recordsData.records.find((r: DataRecordResponse) => (r.data.Name as string) === 'Edited Item 1');
 
     // If API shows the edit was saved, verify UI. If not, this is a backend bug.
     if (editedRecord) {
@@ -135,7 +131,7 @@ test.describe('Table Creation and Basic Operations', () => {
       await expect(page.locator('td').getByText('Edited Item 1')).toBeVisible({ timeout: 5000 });
     } else {
       // Check if original value still exists - this would be a bug
-      const originalRecord = recordsData.records?.find((r: { data: { Name: string } }) => r.data.Name === 'Item 1');
+      const originalRecord = recordsData.records.find((r: DataRecordResponse) => (r.data.Name as string) === 'Item 1');
       // If the record still has original name, the save failed
       expect(originalRecord).toBeFalsy();
     }
@@ -148,21 +144,17 @@ test.describe('Table Creation and Basic Operations', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
+    const client = createClient(request, token);
 
     // Create a table
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/table/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Delete Record Table',
-        properties: [{ name: 'Name', type: 'text' }],
-      },
+    const tableData = await client.ws(wsID).nodes.table.createTable('0', {
+      title: 'Delete Record Table',
+      properties: [{ name: 'Name', type: 'text' }],
     });
-    const tableData = await createResponse.json();
 
     // Add a record
-    await request.post(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { data: { Name: 'Record To Delete' } },
+    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
+      data: { Name: 'Record To Delete' },
     });
 
     // Reload to see records (BUG: records created via API don't auto-refresh in UI)
@@ -199,32 +191,27 @@ test.describe('Table View Modes', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
+    const client = createClient(request, token);
 
     // Create a table with records
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/table/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'View Modes Table',
-        properties: [
-          { name: 'Name', type: 'text' },
-          { name: 'Status', type: 'select', options: [
-            { id: 'todo', name: 'To Do' },
-            { id: 'progress', name: 'In Progress' },
-            { id: 'done', name: 'Done' }
-          ]},
-        ],
-      },
+    const tableData = await client.ws(wsID).nodes.table.createTable('0', {
+      title: 'View Modes Table',
+      properties: [
+        { name: 'Name', type: 'text' },
+        { name: 'Status', type: 'select', options: [
+          { id: 'todo', name: 'To Do' },
+          { id: 'progress', name: 'In Progress' },
+          { id: 'done', name: 'Done' }
+        ]},
+      ],
     });
-    const tableData = await createResponse.json();
 
     // Add records
-    await request.post(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { data: { Name: 'Task 1', Status: 'todo' } },
+    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
+      data: { Name: 'Task 1', Status: 'todo' },
     });
-    await request.post(`/api/workspaces/${wsID}/nodes/${tableData.id}/table/records/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { data: { Name: 'Task 2', Status: 'progress' } },
+    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
+      data: { Name: 'Task 2', Status: 'progress' },
     });
 
     // Reload to see records
@@ -275,16 +262,13 @@ test.describe('Table and Page Hybrid', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
+    const client = createClient(request, token);
 
     // Create a table
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/table/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Table Only Node',
-        properties: [{ name: 'Item', type: 'text' }],
-      },
+    const tableData = await client.ws(wsID).nodes.table.createTable('0', {
+      title: 'Table Only Node',
+      properties: [{ name: 'Item', type: 'text' }],
     });
-    const tableData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });

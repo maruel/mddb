@@ -1,6 +1,6 @@
 // E2E tests for floating toolbar visibility lifecycle.
 
-import { test, expect, registerUser, getWorkspaceId } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
 
 test.describe('Floating Toolbar Visibility', () => {
   test('toolbar lifecycle: hidden -> visible on selection -> hidden on blur', async ({ page, request }) => {
@@ -11,15 +11,11 @@ test.describe('Floating Toolbar Visibility', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with simple content
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Toolbar Visibility Test',
-        content: 'Hello world',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Toolbar Visibility Test',
+      content: 'Hello world',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -64,15 +60,11 @@ test.describe('Floating Toolbar Visibility', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple words
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Double Click Test',
-        content: 'Hello world testing',
-      },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Double Click Test',
+      content: 'Hello world testing',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });

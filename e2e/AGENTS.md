@@ -23,13 +23,40 @@ npx playwright test --ui
 Import from `./helpers`:
 
 ```typescript
-import { test, expect, registerUser, getWorkspaceId } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
 ```
 
 - **`registerUser(request, prefix)`** - Creates a new user with unique email, returns `{ email, token }`
 - **`getWorkspaceId(page)`** - Extracts workspace ID from current URL
+- **`createClient(request, token)`** - Creates a typed SDK client with proper authorization headers
 - **`test.screenshot(title, fn)`** - Creates a test tagged with `@screenshot`
 - **`takeScreenshot(name)`** - Fixture for capturing screenshots in tests
+
+### Use the SDK Client for API Calls
+
+Always use the typed SDK client (`createClient`) instead of raw HTTP requests. This provides:
+- Type safety and IDE autocompletion
+- Automatic authorization headers
+- Proper error handling
+- Validation of request/response structures
+
+```typescript
+// GOOD - use the SDK client
+const client = createClient(request, token);
+const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+  title: 'Test Page',
+  content: 'Test content',
+});
+
+// BAD - raw HTTP requests lack type safety
+const response = await request.post(`/api/workspaces/${wsId}/nodes/0/page/create`, {
+  headers: { Authorization: `Bearer ${token}` },
+  data: { title: 'Test Page', content: 'Test content' },
+});
+const pageData = await response.json();
+```
+
+The SDK client is generated from Go structs (`sdk/api.gen.ts` and `sdk/types.gen.ts`) and ensures all tests use the same API contracts as the backend.
 
 ## Best Practices
 

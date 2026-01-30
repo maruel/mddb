@@ -1,4 +1,4 @@
-import { test, expect, registerUser, getWorkspaceId, fillEditorContent } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from './helpers';
 
 test.describe('Error Handling - Invalid Routes', () => {
   test('navigating to non-existent page shows appropriate error or handles gracefully', async ({ page, request }) => {
@@ -68,11 +68,11 @@ test.describe('Error Handling - API Failures', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Network Error Test', content: 'Initial' },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Network Error Test',
+      content: 'Initial',
     });
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -103,11 +103,11 @@ test.describe('Error Handling - Concurrent Edits', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Concurrent Edit Test', content: 'Original content' },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Concurrent Edit Test',
+      content: 'Original content',
     });
-    const pageData = await createResponse.json();
 
     // Open same page in second tab
     const page2 = await context.newPage();
@@ -128,10 +128,8 @@ test.describe('Error Handling - Concurrent Edits', () => {
 
     // Poll API until one of the contents is saved (last writer wins)
     await expect(async () => {
-      const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const savedData = await getResponse.json();
+      const client = createClient(request, token);
+      const savedData = await client.ws(wsID).nodes.page.getPage(pageData.id);
       const savedContent = savedData.content.trim();
       expect(savedContent === 'Content from tab 1' || savedContent === 'Content from tab 2').toBe(true);
     }).toPass({ timeout: 8000 });
@@ -149,11 +147,11 @@ test.describe('Edge Cases', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Title to Clear', content: 'Content' },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Title to Clear',
+      content: 'Content',
     });
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -192,11 +190,11 @@ test.describe('Edge Cases', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Short Title', content: 'Content' },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Short Title',
+      content: 'Content',
     });
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -217,10 +215,8 @@ test.describe('Edge Cases', () => {
     // Wait for autosave to attempt (debounce is 2s)
     // Then verify page handles gracefully - either truncate, show error, or save
     await expect(async () => {
-      const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const savedData = await getResponse.json();
+      const client = createClient(request, token);
+      const savedData = await client.ws(wsID).nodes.page.getPage(pageData.id);
       // Title should be saved (possibly truncated or unchanged if validation rejects)
       expect(savedData.title.length).toBeGreaterThan(0);
     }).toPass({ timeout: 5000 });
@@ -235,12 +231,11 @@ test.describe('Edge Cases', () => {
 
     // Create a page with special characters
     const specialTitle = 'Test <script>alert(1)</script> & "quotes" \'apostrophe\' 中文 émojis 🎉';
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: specialTitle, content: 'Content with <html> & special "chars"' },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: specialTitle,
+      content: 'Content with <html> & special "chars"',
     });
-    expect(createResponse.ok()).toBe(true);
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -252,10 +247,7 @@ test.describe('Edge Cases', () => {
     await expect(titleInput).toBeVisible({ timeout: 5000 });
 
     // Content should be preserved
-    const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const savedData = await getResponse.json();
+    const savedData = await client.ws(wsID).nodes.page.getPage(pageData.id);
     expect(savedData.title).toContain('Test');
     // Script tags should be stored as-is (not executed) or sanitized
   });
@@ -278,11 +270,11 @@ function hello() {
 Inline \`code\` here.
 `;
 
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Code Blocks Test', content: markdownContent },
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Code Blocks Test',
+      content: markdownContent,
     });
-    const pageData = await createResponse.json();
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });

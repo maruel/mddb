@@ -1,4 +1,4 @@
-import { test, expect, registerUser, getWorkspaceId } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
 
 test.describe('First Login Flow', () => {
   test('new user gets auto-created org, workspace, and welcome page', async ({ page, request }) => {
@@ -93,11 +93,11 @@ test.describe('Workspace Switching', () => {
     const wsID1 = await getWorkspaceId(page);
 
     // Create a page in first workspace
-    const page1Response = await request.post(`/api/workspaces/${wsID1}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'WS1 Page', content: 'Content in workspace 1' },
+    const client = createClient(request, token);
+    const page1Data = await client.ws(wsID1).nodes.page.createPage('0', {
+      title: 'WS1 Page',
+      content: 'Content in workspace 1',
     });
-    const page1Data = await page1Response.json();
 
     // Navigate to the page
     await page.reload();
@@ -207,14 +207,31 @@ test.describe('User Menu', () => {
 });
 
 test.describe('Footer Links', () => {
-  test('privacy and terms links in sidebar footer', async ({ page, request }) => {
+  test('privacy and terms links in settings sidebar', async ({ page, request }) => {
     const { token } = await registerUser(request, 'footer-links');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    // Find footer links in sidebar - use specific link selectors
-    const privacyLink = page.locator('aside a[href="/privacy"]');
-    const termsLink = page.locator('aside a[href="/terms"]');
+    // Open user menu and navigate to settings
+    const userMenu = page.locator('[class*="avatarButton"]');
+    await expect(userMenu).toBeVisible({ timeout: 5000 });
+    await userMenu.click();
+
+    // Click on Profile option to go to settings
+    const profileLink = page.locator('button', { hasText: 'Profile' });
+    await expect(profileLink).toBeVisible({ timeout: 3000 });
+    await profileLink.click();
+
+    // Wait for navigation to settings page
+    await expect(page).toHaveURL(/\/settings/, { timeout: 10000 });
+
+    // Settings sidebar should be visible with privacy/terms links at the bottom
+    const settingsSidebar = page.locator('aside');
+    await expect(settingsSidebar).toBeVisible({ timeout: 5000 });
+
+    // Find footer links in settings sidebar - use specific link selectors
+    const privacyLink = page.locator('a[href="/privacy"]');
+    const termsLink = page.locator('a[href="/terms"]');
 
     await expect(privacyLink).toBeVisible({ timeout: 5000 });
     await expect(termsLink).toBeVisible();
@@ -225,12 +242,14 @@ test.describe('Footer Links', () => {
       privacyLink.click(),
     ]);
 
-    // Navigate fresh instead of using goBack (more reliable in SPAs)
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    // Navigate back to settings
+    await page.goto(`/settings/user?token=${token}`);
+    await expect(page).toHaveURL(/\/settings/, { timeout: 10000 });
+
+    // Click terms link
     await Promise.all([
       page.waitForURL('/terms', { timeout: 10000 }),
-      termsLink.click(),
+      page.locator('a[href="/terms"]').click(),
     ]);
   });
 });

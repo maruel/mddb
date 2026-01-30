@@ -1,9 +1,10 @@
-import { test, expect, registerUser } from './helpers';
+import { test, expect, registerUser, createClient } from './helpers';
 
 test.describe('Page Hierarchy', () => {
   test.screenshot('create and navigate page hierarchy', async ({ page, request, takeScreenshot }) => {
     // 1. Register a new user (with retry logic for rate limiting)
     const { token } = await registerUser(request, 'hierarchy');
+    const client = createClient(request, token);
 
     // 2. Login via token in URL (simulating OAuth callback flow)
     await page.goto(`/?token=${token}`);
@@ -19,26 +20,21 @@ test.describe('Page Hierarchy', () => {
     // Get the welcome page info
     const welcomeNodeId = await welcomePageLink.getAttribute('data-testid');
     expect(welcomeNodeId).toBeTruthy();
-    const topLevelPageId = welcomeNodeId!.replace('sidebar-node-', '');
+    const topLevelPageId = welcomeNodeId!.replace('sidebar-node-', '') as string;
 
     // 4. Get the workspace ID from the URL
     await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
     const url = page.url();
     const wsMatch = url.match(/\/w\/([^+/]+)/);
     expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1];
+    const wsID = wsMatch![1] as string;
 
     // 5. Create a child page via API
-    const createChildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${topLevelPageId}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Child Page',
-        content: 'This is a child page content',
-      },
+    const childData = await client.ws(wsID).nodes.page.createPage(topLevelPageId, {
+      title: 'Child Page',
+      content: 'This is a child page content',
     });
-    expect(createChildResponse.ok()).toBe(true);
-    const childData = await createChildResponse.json();
-    const childID = childData.id;
+    const childID = childData.id as string;
 
     // 6. Refresh to see the child page
     await page.reload();
@@ -63,14 +59,11 @@ test.describe('Page Hierarchy', () => {
     expect(page.url()).toContain('/w/');
 
     // 11. Create a grandchild via API
-    const createGrandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childID}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Grandchild Page',
-        content: 'This is a grandchild page',
-      },
+    const grandchildData = await client.ws(wsID).nodes.page.createPage(childID, {
+      title: 'Grandchild Page',
+      content: 'This is a grandchild page',
     });
-    expect(createGrandchildResponse.ok()).toBe(true);
+    const grandchildID = grandchildData.id as string;
 
     // 12. Reload and verify the hierarchy
     await page.reload();
@@ -100,8 +93,6 @@ test.describe('Page Hierarchy', () => {
     }
 
     // Wait for grandchild to appear in sidebar
-    const grandchildData = await createGrandchildResponse.json();
-    const grandchildID = grandchildData.id;
     const grandchildNode = page.locator(`[data-testid="sidebar-node-${grandchildID}"]`);
     // Give more time for the async fetch to complete
     await expect(grandchildNode).toBeVisible({ timeout: 10000 });
@@ -118,6 +109,7 @@ test.describe('Page Hierarchy', () => {
   test('delete grandchild page refreshes sidebar correctly', async ({ page, request }) => {
     // This test verifies the fix for sidebar not refreshing when deleting nested pages
     const { token } = await registerUser(request, 'delete-gc');
+    const client = createClient(request, token);
 
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
@@ -127,31 +119,27 @@ test.describe('Page Hierarchy', () => {
     const url = page.url();
     const wsMatch = url.match(/\/w\/([^+/]+)/);
     expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1];
+    const wsID = wsMatch![1] as string;
 
     // Get the welcome page ID
     const welcomePageLink = page.locator('[data-testid^="sidebar-node-"]').first();
     await expect(welcomePageLink).toBeVisible({ timeout: 10000 });
     const welcomeNodeId = await welcomePageLink.getAttribute('data-testid');
-    const rootPageId = welcomeNodeId!.replace('sidebar-node-', '');
+    const rootPageId = welcomeNodeId!.replace('sidebar-node-', '') as string;
 
     // Create a child page
-    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${rootPageId}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Child Page', content: 'Child content' },
+    const childData = await client.ws(wsID).nodes.page.createPage(rootPageId, {
+      title: 'Child Page',
+      content: 'Child content',
     });
-    expect(childResponse.ok()).toBe(true);
-    const childData = await childResponse.json();
-    const childID = childData.id;
+    const childID = childData.id as string;
 
     // Create a grandchild page
-    const grandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childID}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Grandchild Page', content: 'Grandchild content' },
+    const grandchildData = await client.ws(wsID).nodes.page.createPage(childID, {
+      title: 'Grandchild Page',
+      content: 'Grandchild content',
     });
-    expect(grandchildResponse.ok()).toBe(true);
-    const grandchildData = await grandchildResponse.json();
-    const grandchildID = grandchildData.id;
+    const grandchildID = grandchildData.id as string;
 
     // Reload to see the hierarchy
     await page.reload();
@@ -200,36 +188,33 @@ test.describe('Page Hierarchy', () => {
   test('delete child page with grandchildren refreshes sidebar correctly', async ({ page, request }) => {
     // Test deleting a child page that has its own children
     const { token } = await registerUser(request, 'delete-child');
+    const client = createClient(request, token);
 
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
     // Get workspace ID
     await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const wsID = page.url().match(/\/w\/([^+/]+)/)![1];
+    const wsID = page.url().match(/\/w\/([^+/]+)/)![1] as string;
 
     // Get root page
     const welcomePageLink = page.locator('[data-testid^="sidebar-node-"]').first();
     await expect(welcomePageLink).toBeVisible({ timeout: 10000 });
-    const rootPageId = (await welcomePageLink.getAttribute('data-testid'))!.replace('sidebar-node-', '');
+    const rootPageId = (await welcomePageLink.getAttribute('data-testid'))!.replace('sidebar-node-', '') as string;
 
     // Create child page
-    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${rootPageId}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Child With Grandchildren', content: 'Child content' },
+    const childData = await client.ws(wsID).nodes.page.createPage(rootPageId, {
+      title: 'Child With Grandchildren',
+      content: 'Child content',
     });
-    expect(childResponse.ok()).toBe(true);
-    const childData = await childResponse.json();
-    const childID = childData.id;
+    const childID = childData.id as string;
 
     // Create grandchild
-    const grandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childID}/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Nested Grandchild', content: 'Grandchild content' },
+    const grandchildData = await client.ws(wsID).nodes.page.createPage(childID, {
+      title: 'Nested Grandchild',
+      content: 'Grandchild content',
     });
-    expect(grandchildResponse.ok()).toBe(true);
-    const grandchildData = await grandchildResponse.json();
-    const grandchildID = grandchildData.id;
+    const grandchildID = grandchildData.id as string;
 
     // Reload and expand hierarchy
     await page.reload();
@@ -273,28 +258,27 @@ test.describe('Page Hierarchy', () => {
 
   test('delete page navigates to sibling when no parent', async ({ page, request }) => {
     const { token } = await registerUser(request, 'delete-sib');
+    const client = createClient(request, token);
 
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
     // Get workspace ID
     await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const wsID = page.url().match(/\/w\/([^+/]+)/)![1];
+    const wsID = page.url().match(/\/w\/([^+/]+)/)![1] as string;
 
     // Create two sibling pages at root level
-    const page1Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Page One', content: 'Content one' },
+    const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Page One',
+      content: 'Content one',
     });
-    expect(page1Response.ok()).toBe(true);
-    const page1ID = (await page1Response.json()).id;
+    const page1ID = page1Data.id as string;
 
-    const page2Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Page Two', content: 'Content two' },
+    const page2Data = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Page Two',
+      content: 'Content two',
     });
-    expect(page2Response.ok()).toBe(true);
-    const page2ID = (await page2Response.json()).id;
+    const page2ID = page2Data.id as string;
 
     // Reload and navigate to Page Two (second sibling)
     await page.reload();
@@ -323,6 +307,7 @@ test.describe('Page Hierarchy', () => {
   test('navigate between sibling pages', async ({ page, request }) => {
     // Register and login (with retry logic for rate limiting)
     const { token } = await registerUser(request, 'sibling');
+    const client = createClient(request, token);
 
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -332,30 +317,20 @@ test.describe('Page Hierarchy', () => {
     const url = page.url();
     const wsMatch = url.match(/\/w\/([^+/]+)/);
     expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1];
+    const wsID = wsMatch![1] as string;
 
     // Create two sibling pages via API
-    const page1Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'First Page',
-        content: 'Content of first page',
-      },
+    const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'First Page',
+      content: 'Content of first page',
     });
-    expect(page1Response.ok()).toBe(true);
-    const page1Data = await page1Response.json();
-    const page1ID = page1Data.id;
+    const page1ID = page1Data.id as string;
 
-    const page2Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: {
-        title: 'Second Page',
-        content: 'Content of second page',
-      },
+    const page2Data = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Second Page',
+      content: 'Content of second page',
     });
-    expect(page2Response.ok()).toBe(true);
-    const page2Data = await page2Response.json();
-    const page2ID = page2Data.id;
+    const page2ID = page2Data.id as string;
 
     // Reload to see both pages
     await page.reload();

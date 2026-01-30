@@ -2,6 +2,39 @@
 
 import { test as base, expect, type Page, type APIRequestContext, type TestInfo } from '@playwright/test';
 import type { TestType, PlaywrightTestArgs, PlaywrightTestOptions, PlaywrightWorkerArgs, PlaywrightWorkerOptions } from '@playwright/test';
+import { createAPIClient, type APIClient } from '../sdk/api.gen';
+
+// Helper to create a typed API client from Playwright's request context
+export function createClient(request: APIRequestContext, token?: string): APIClient {
+  const fetchFn = async (url: string, init?: RequestInit) => {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (init?.headers) {
+      Object.assign(headers, init.headers);
+    }
+
+    // Playwright's fetch expects 'data' for the body, not 'body'
+    // The SDK serializes the body to a string in init.body
+    const response = await request.fetch(url, {
+      method: init?.method || 'GET',
+      data: init?.body,
+      headers,
+    });
+
+    // Adapt Playwright APIResponse to standard Response-like object expected by SDK
+    // SDK uses .ok (property) and .status (property), but Playwright has .ok() and .status() methods
+    return {
+      ok: response.ok(),
+      status: response.status(),
+      json: async () => response.json(),
+      text: async () => response.text(),
+    } as unknown as Response;
+  };
+
+  return createAPIClient(fetchFn);
+}
 
 // Helper to register a user and get token (with retry for rate limiting)
 export async function registerUser(request: APIRequestContext, prefix: string) {
