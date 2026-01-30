@@ -266,6 +266,18 @@
   text-decoration: underline;
 }
 
+/* Invalid (broken) internal links - needs higher specificity to override link color */
+.prosemirrorEditor :global(.ProseMirror a .invalid-link),
+.prosemirrorEditor :global(.ProseMirror a.invalid-link) {
+  color: var(--c-error);
+  text-decoration: line-through;
+}
+
+.prosemirrorEditor :global(.ProseMirror a .invalid-link:hover),
+.prosemirrorEditor :global(.ProseMirror a.invalid-link:hover) {
+  color: var(--c-error);
+}
+
 /* Images */
 .prosemirrorEditor :global(.ProseMirror img) {
   max-width: 100%;

@@ -713,6 +713,10 @@ function AppContent() {
                                   if (nodeId) loadNode(nodeId, false);
                                 }}
                                 onError={setError}
+                                onNavigateToNode={(nodeId) => {
+                                  flushAutoSave();
+                                  loadNode(nodeId);
+                                }}
                               />
                             </Suspense>
                           </Show>

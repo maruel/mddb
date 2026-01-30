@@ -213,4 +213,140 @@ test.describe('Page Links with Dynamic Titles', () => {
     const linkText = await link.textContent();
     expect(linkText === 'Untitled' || linkText === 'My Subpage').toBe(true);
   });
+
+  test.screenshot('invalid link is highlighted in red after target page is deleted', async ({
+    page,
+    request,
+    takeScreenshot,
+  }) => {
+    const { token } = await registerUser(request, 'invalid-link');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create parent page
+    const parentResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Page with Link', content: '' },
+    });
+    expect(parentResponse.ok()).toBe(true);
+    const parentData = await parentResponse.json();
+
+    // Create target page
+    const targetResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Target Page', content: '' },
+    });
+    expect(targetResponse.ok()).toBe(true);
+    const targetData = await targetResponse.json();
+
+    // Update parent page with a link to target
+    const linkContent = `Link to [Target Page](/w/${wsID}+workspace/${targetData.id}+target-page)`;
+    const updateResponse = await request.post(`/api/workspaces/${wsID}/nodes/${parentData.id}/page`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Page with Link', content: linkContent },
+    });
+    expect(updateResponse.ok()).toBe(true);
+
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to parent page
+    const parentNode = page.locator(`[data-testid="sidebar-node-${parentData.id}"]`);
+    const parentPageItem = parentNode.locator('> [class*="pageItem"]');
+    await parentPageItem.click();
+
+    // Wait for editor to load
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // The link should be visible and NOT have the invalid-link class
+    const link = editor.locator('a');
+    await expect(link).toBeVisible({ timeout: 5000 });
+    await expect(link).toContainText('Target Page');
+
+    // Verify link does NOT have invalid-link class (target exists)
+    const invalidLink = editor.locator('.invalid-link');
+    await expect(invalidLink).not.toBeVisible();
+
+    await takeScreenshot('link-to-existing-page');
+
+    // Now delete the target page
+    const deleteResponse = await request.post(`/api/workspaces/${wsID}/nodes/${targetData.id}/delete`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(deleteResponse.ok()).toBe(true);
+
+    // Reload to get updated linkedNodeTitles
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate back to parent page
+    await parentPageItem.click();
+    await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // The link should now have the invalid-link class (styled red)
+    await expect(invalidLink).toBeVisible({ timeout: 5000 });
+
+    await takeScreenshot('link-to-deleted-page-red');
+  });
+
+  test('clicking internal link navigates to target page', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'click-link');
+    const client = createClient(request, token);
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create source page
+    const sourceData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Source Page',
+      content: '',
+    });
+
+    // Create target page with distinctive content
+    const targetData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Target Page',
+      content: 'This is the target page content.',
+    });
+
+    // Update source page with a link to target
+    const linkContent = `Click here: [Go to Target](/w/${wsID}+workspace/${targetData.id}+target-page)`;
+    await client.ws(wsID).nodes.page.updatePage(sourceData.id, {
+      title: 'Source Page',
+      content: linkContent,
+    });
+
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to source page
+    const sourceNode = page.locator(`[data-testid="sidebar-node-${sourceData.id}"]`);
+    const sourcePageItem = sourceNode.locator('> [class*="pageItem"]');
+    await sourcePageItem.click();
+
+    // Wait for editor to load
+    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    await expect(editor).toBeVisible({ timeout: 5000 });
+
+    // Verify we're on source page
+    const titleInput = page.locator('input[placeholder*="Title"]');
+    await expect(titleInput).toHaveValue('Source Page', { timeout: 5000 });
+
+    // Click the link
+    const link = editor.locator('a');
+    await expect(link).toBeVisible({ timeout: 5000 });
+    await link.click();
+
+    // Wait for navigation to target page
+    await expect(titleInput).toHaveValue('Target Page', { timeout: 5000 });
+
+    // Verify target page content is visible
+    await expect(editor).toContainText('This is the target page content.', { timeout: 5000 });
+
+    // Verify URL contains target node ID
+    await expect(page).toHaveURL(new RegExp(`/${targetData.id}\\+`), { timeout: 5000 });
+  });
 });

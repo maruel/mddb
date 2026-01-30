@@ -13,6 +13,7 @@ import {
 import { schema, nodes, marks, markdownParser, markdownSerializer, createEditorState } from './prosemirror-config';
 import { createSlashCommandPlugin, type SlashMenuState } from './slashCommandPlugin';
 import { createDropUploadPlugin } from './dropUploadPlugin';
+import { createInvalidLinkPlugin, updateInvalidLinkState, INTERNAL_LINK_URL_PATTERN } from './invalidLinkPlugin';
 import { useAssetUpload, isImageMimeType } from './useAssetUpload';
 import SlashCommandMenu from './SlashCommandMenu';
 import EditorToolbar, { type FormatState } from './EditorToolbar';
@@ -31,6 +32,7 @@ interface EditorProps {
   getToken?: () => string | null;
   onAssetUploaded?: () => void;
   onError?: (error: string) => void;
+  onNavigateToNode?: (nodeId: string) => void;
 }
 
 export default function Editor(props: EditorProps) {
@@ -49,6 +51,9 @@ export default function Editor(props: EditorProps) {
 
   // Create slash command plugin with callback
   const slashPlugin = createSlashCommandPlugin(setSlashMenuState);
+
+  // Create invalid link decoration plugin
+  const invalidLinkPlugin = createInvalidLinkPlugin();
 
   // Handle file drop uploads
   const handleFileDrop = async (files: File[], pos: number) => {
@@ -236,7 +241,7 @@ export default function Editor(props: EditorProps) {
 
     const doc = parseMarkdown(props.content);
     if (!doc) return;
-    const state = createEditorState(doc, [slashPlugin, dropPlugin]);
+    const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
 
     const editorView = new EditorView(editorRef, {
       state,
@@ -254,6 +259,34 @@ export default function Editor(props: EditorProps) {
 
         updateActiveStates(editorView);
       },
+      handleDOMEvents: {
+        click: (_view, event) => {
+          // Handle clicks on links
+          const target = event.target as HTMLElement;
+          const anchor = target.closest('a');
+          if (!anchor) return false;
+
+          const href = anchor.getAttribute('href');
+          if (!href) return false;
+
+          // Check if it's an internal page link
+          const match = href.match(INTERNAL_LINK_URL_PATTERN);
+          if (match && match[2] && props.onNavigateToNode) {
+            event.preventDefault();
+            props.onNavigateToNode(match[2]);
+            return true;
+          }
+
+          // External links (http/https) open in new window
+          if (href.startsWith('http://') || href.startsWith('https://')) {
+            event.preventDefault();
+            window.open(href, '_blank', 'noopener,noreferrer');
+            return true;
+          }
+
+          return false;
+        },
+      },
     });
 
     // Store view reference on DOM element for checkbox plugin access
@@ -264,6 +297,9 @@ export default function Editor(props: EditorProps) {
 
     setView(editorView);
     updateActiveStates(editorView);
+
+    // Initialize invalid link decorations with current titles (even if empty, to detect invalid links)
+    updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
   });
 
   onCleanup(() => {
@@ -294,8 +330,10 @@ export default function Editor(props: EditorProps) {
           if (editorView) {
             const doc = parseMarkdown(content);
             if (doc) {
-              const state = createEditorState(doc, [slashPlugin, dropPlugin]);
+              const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
               editorView.updateState(state);
+              // Update invalid link decorations with current titles
+              updateInvalidLinkState(editorView, linkedNodeTitles || {}, props.wsId);
             }
           }
         }
@@ -315,9 +353,11 @@ export default function Editor(props: EditorProps) {
     if (editorView) {
       const doc = parseMarkdown(markdownContent());
       if (doc) {
-        const state = createEditorState(doc, [slashPlugin, dropPlugin]);
+        const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
         editorView.updateState(state);
         updateActiveStates(editorView);
+        // Update invalid link decorations with current titles
+        updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
       }
     }
     setEditorMode('wysiwyg');
