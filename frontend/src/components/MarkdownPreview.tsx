@@ -90,5 +90,6 @@ export default function MarkdownPreview(props: MarkdownPreviewProps) {
     return DOMPurify.sanitize(rawHtml);
   };
 
+  // eslint-disable-next-line solid/no-innerhtml -- sanitized via DOMPurify
   return <div class={styles.preview} innerHTML={html()} role="region" aria-label="Markdown preview" />;
 }
