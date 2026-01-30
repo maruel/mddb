@@ -231,16 +231,21 @@ export interface Dictionary {
     records: string;
     table: string;
     grid: string;
+    list: string;
     gallery: string;
     board: string;
     noRecords: string;
     loadMore: string;
     deleteRecord: string;
     confirmDeleteRecord: string;
+    confirmDeleteView: string;
     untitled: string;
     noImage: string;
     noGroup: string;
     addSelectColumn: string;
+    newView: string;
+    defaultView: string;
+    all: string;
   };
 
   errors: {

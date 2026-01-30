@@ -1,0 +1,152 @@
+/* Styles for ViewTabs component - horizontal tabs for saved table views. */
+
+.container {
+  position: relative;
+}
+
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--c-bg-alt);
+  padding: 2px;
+  border-radius: var(--radius);
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: var(--s-1) var(--s-3);
+  border: none;
+  background: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--c-text);
+  white-space: nowrap;
+  transition: background var(--transition);
+}
+
+.tab:hover {
+  background: var(--c-bg);
+}
+
+.tab.active {
+  background: var(--c-bg);
+  box-shadow: var(--shadow);
+  font-weight: 500;
+}
+
+.icon {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.defaultBadge {
+  font-size: 0.65rem;
+  background: var(--c-primary);
+  color: white;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: var(--s-1);
+}
+
+.addWrapper {
+  position: relative;
+}
+
+.addButton {
+  padding: var(--s-1) var(--s-2);
+  border: none;
+  background: none;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--c-text-light);
+  transition: all var(--transition);
+}
+
+.addButton:hover {
+  background: var(--c-bg);
+  color: var(--c-primary);
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--s-1);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 140px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdown button {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: none;
+  background: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  color: var(--c-text);
+}
+
+.dropdown button:hover {
+  background: var(--c-bg-alt);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+}
+
+.contextMenu {
+  position: fixed;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 100px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.contextMenu button {
+  display: block;
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: none;
+  background: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  color: var(--c-text);
+}
+
+.contextMenu button:hover {
+  background: var(--c-bg-alt);
+}
+
+.deleteAction {
+  color: var(--c-danger) !important;
+}
+
+.deleteAction:hover {
+  background: #fef2f2 !important;
+}

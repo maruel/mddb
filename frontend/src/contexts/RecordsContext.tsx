@@ -56,24 +56,39 @@ export const RecordsProvider: ParentComponent = (props) => {
   const [activeFilters, setActiveFilters] = createSignal<Filter[]>([]);
   const [activeSorts, setActiveSorts] = createSignal<Sort[]>([]);
 
+  // Virtual default view used when no views exist
+  const DEFAULT_VIEW_ID = '__default__';
+
   // Load records when selected node changes and has table content
   createEffect(() => {
     const node = selectedNodeData();
     if (node?.has_table) {
       batch(() => {
-        setViews(node.views || []);
-        // Reset view state when node changes
-        // Note: we might want to remember the last used view for this node in the future
-        if (node.views && node.views.length > 0) {
+        const nodeViews = node.views || [];
+
+        if (nodeViews.length > 0) {
+          setViews(nodeViews);
           // Default to first view or the one marked default
-          const defaultView = node.views.find((v) => v.default) || node.views[0];
+          const defaultView = nodeViews.find((v) => v.default) || nodeViews[0];
           if (defaultView) {
             setActiveViewIdSignal(defaultView.id);
             setActiveFilters(defaultView.filters || []);
             setActiveSorts(defaultView.sorts || []);
           }
         } else {
-          setActiveViewIdSignal(undefined);
+          // Create a virtual default view when no views exist
+          const virtualDefault: View = {
+            id: DEFAULT_VIEW_ID,
+            name: t('table.all') || 'All',
+            type: 'table',
+            default: true,
+            filters: [],
+            sorts: [],
+            columns: [],
+            groups: [],
+          };
+          setViews([virtualDefault]);
+          setActiveViewIdSignal(DEFAULT_VIEW_ID);
           setActiveFilters([]);
           setActiveSorts([]);
         }
@@ -136,10 +151,14 @@ export const RecordsProvider: ParentComponent = (props) => {
       const filters = activeFilters().length > 0 ? JSON.stringify(activeFilters()) : undefined;
       const sorts = activeSorts().length > 0 ? JSON.stringify(activeSorts()) : undefined;
 
+      // Don't send virtual default view ID to server
+      const viewId = activeViewId();
+      const serverViewId = viewId === DEFAULT_VIEW_ID ? '' : viewId || '';
+
       const data = await ws.nodes.table.records.listRecords(nodeId, {
         Offset: 0,
         Limit: PAGE_SIZE,
-        ViewID: activeViewId() || '',
+        ViewID: serverViewId,
         Filters: filters || '',
         Sorts: sorts || '',
       });
@@ -166,10 +185,14 @@ export const RecordsProvider: ParentComponent = (props) => {
       const filters = activeFilters().length > 0 ? JSON.stringify(activeFilters()) : undefined;
       const sorts = activeSorts().length > 0 ? JSON.stringify(activeSorts()) : undefined;
 
+      // Don't send virtual default view ID to server
+      const viewId = activeViewId();
+      const serverViewId = viewId === DEFAULT_VIEW_ID ? '' : viewId || '';
+
       const data = await ws.nodes.table.records.listRecords(nodeId, {
         Offset: offset,
         Limit: PAGE_SIZE,
-        ViewID: activeViewId() || '',
+        ViewID: serverViewId,
         Filters: filters || '',
         Sorts: sorts || '',
       });

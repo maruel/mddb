@@ -877,7 +877,7 @@ describe('App', () => {
       });
     });
 
-    it('switches between table views', async () => {
+    it('displays table with default view and view tabs', async () => {
       renderWithI18n(() => <App />);
 
       // Wait for nodes to be displayed in sidebar
@@ -891,35 +891,17 @@ describe('App', () => {
       // Click on the table node
       fireEvent.click(screen.getByTestId('sidebar-node-table-node'));
 
-      // Wait for table to load and view toggle buttons to appear
+      // Wait for table to load with default "All" view showing TableTable
       await waitFor(
         () => {
           expect(screen.getByTestId('table-table')).toBeTruthy();
-          expect(screen.getByText('Grid')).toBeTruthy();
+          // The "All" view tab should be visible and active
+          expect(screen.getByTitle('All')).toBeTruthy();
+          // New View button should be available
+          expect(screen.getByTitle('New View')).toBeTruthy();
         },
         { timeout: 3000 }
       );
-
-      // Switch to grid view
-      fireEvent.click(screen.getByText('Grid'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('table-grid')).toBeTruthy();
-      });
-
-      // Switch to gallery view
-      fireEvent.click(screen.getByText('Gallery'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('table-gallery')).toBeTruthy();
-      });
-
-      // Switch to board view
-      fireEvent.click(screen.getByText('Board'));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('table-board')).toBeTruthy();
-      });
     });
   });
 

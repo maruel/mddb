@@ -1,12 +1,13 @@
 // Main application component managing routing and layout.
 
-import { createSignal, createEffect, For, Show, onMount, onCleanup, batch, lazy, Suspense } from 'solid-js';
+import { createSignal, createEffect, For, Show, onMount, onCleanup, batch, lazy, Suspense, createMemo } from 'solid-js';
 import Sidebar from './components/Sidebar';
 const Editor = lazy(() => import('./components/editor/Editor'));
 import TableTable from './components/TableTable';
 import TableGrid from './components/TableGrid';
 import TableGallery from './components/TableGallery';
 import TableBoard from './components/TableBoard';
+import ViewTabs from './components/table/ViewTabs';
 import WorkspaceSettings from './components/WorkspaceSettings';
 import OrganizationSettings from './components/OrganizationSettings';
 import UserProfile from './components/UserProfile';
@@ -87,7 +88,12 @@ function AppContent() {
     linkedNodeTitles,
   } = useEditor();
 
-  const { records, hasMore, loadMoreRecords, addRecord, updateRecord, deleteRecord } = useRecords();
+  const { records, hasMore, loadMoreRecords, addRecord, updateRecord, deleteRecord, views, activeViewId } =
+    useRecords();
+
+  // Derive view type from active view in RecordsContext
+  const activeView = createMemo(() => views().find((v) => v.id === activeViewId()));
+  const viewType = createMemo(() => activeView()?.type || 'table');
 
   // Page routing state
   const [isSettingsPage, setIsSettingsPage] = createSignal(false);
@@ -99,7 +105,6 @@ function AppContent() {
   const [settingsRoute, setSettingsRoute] = createSignal<UnifiedSettingsMatch | null>(null);
 
   // UI state
-  const [viewMode, setViewMode] = createSignal<'table' | 'grid' | 'gallery' | 'board'>('table');
   const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
   const [showCreateOrg, setShowCreateOrg] = createSignal(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
@@ -637,34 +642,9 @@ function AppContent() {
                             <div class={styles.tableView}>
                               <div class={styles.tableHeader}>
                                 <h3>{t('table.records')}</h3>
-                                <div class={styles.viewToggle}>
-                                  <button
-                                    classList={{ [`${styles.active}`]: viewMode() === 'table' }}
-                                    onClick={() => setViewMode('table')}
-                                  >
-                                    {t('table.table')}
-                                  </button>
-                                  <button
-                                    classList={{ [`${styles.active}`]: viewMode() === 'grid' }}
-                                    onClick={() => setViewMode('grid')}
-                                  >
-                                    {t('table.grid')}
-                                  </button>
-                                  <button
-                                    classList={{ [`${styles.active}`]: viewMode() === 'gallery' }}
-                                    onClick={() => setViewMode('gallery')}
-                                  >
-                                    {t('table.gallery')}
-                                  </button>
-                                  <button
-                                    classList={{ [`${styles.active}`]: viewMode() === 'board' }}
-                                    onClick={() => setViewMode('board')}
-                                  >
-                                    {t('table.board')}
-                                  </button>
-                                </div>
+                                <ViewTabs />
                               </div>
-                              <Show when={viewMode() === 'table'}>
+                              <Show when={viewType() === 'table'}>
                                 <TableTable
                                   tableId={selectedNodeId() || ''}
                                   columns={selectedNodeData()?.properties || []}
@@ -676,7 +656,7 @@ function AppContent() {
                                   hasMore={hasMore()}
                                 />
                               </Show>
-                              <Show when={viewMode() === 'grid'}>
+                              <Show when={viewType() === 'list'}>
                                 <TableGrid
                                   records={records()}
                                   columns={selectedNodeData()?.properties || []}
@@ -684,7 +664,7 @@ function AppContent() {
                                   onDeleteRecord={deleteRecord}
                                 />
                               </Show>
-                              <Show when={viewMode() === 'gallery'}>
+                              <Show when={viewType() === 'gallery'}>
                                 <TableGallery
                                   records={records()}
                                   columns={selectedNodeData()?.properties || []}
@@ -692,7 +672,7 @@ function AppContent() {
                                   onDeleteRecord={deleteRecord}
                                 />
                               </Show>
-                              <Show when={viewMode() === 'board'}>
+                              <Show when={viewType() === 'board'}>
                                 <TableBoard
                                   records={records()}
                                   columns={selectedNodeData()?.properties || []}

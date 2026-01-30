@@ -146,27 +146,6 @@ body {
   margin-bottom: var(--s-3);
 }
 
-.viewToggle {
-  display: flex;
-  background: var(--c-bg-alt);
-  padding: 2px;
-  border-radius: var(--radius);
-}
-
-.viewToggle button {
-  padding: var(--s-1) var(--s-3);
-  border: none;
-  background: none;
-  font-size: 0.8rem;
-  cursor: pointer;
-  border-radius: 4px;
-}
-
-.viewToggle button.active {
-  background: var(--c-bg);
-  box-shadow: var(--shadow);
-}
-
 .breadcrumbs {
   display: flex;
   align-items: center;
