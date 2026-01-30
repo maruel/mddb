@@ -229,6 +229,28 @@ await expandIcon.click();
 
 This catches UI regressions where elements become too small to reliably click.
 
+### Hold Shift for Multi-Element Keyboard Selection
+
+When selecting across multiple elements (e.g., paragraphs) using keyboard, use `keyboard.down('Shift')` to hold Shift continuously rather than `keyboard.press('Shift+Key')` for each key. The latter releases and re-presses Shift between keys, causing timing inconsistencies on CI:
+
+```typescript
+// BAD - Shift is released and re-pressed for each key, unreliable on CI
+await element.click();
+await page.keyboard.press('Home');
+await page.keyboard.press('Shift+End');
+await page.keyboard.press('Shift+ArrowDown');
+await page.keyboard.press('Shift+End');
+
+// GOOD - hold Shift continuously for reliable selection
+await element.click();
+await page.keyboard.press('Home');
+await page.keyboard.down('Shift');
+await page.keyboard.press('End');
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('End');
+await page.keyboard.up('Shift');
+```
+
 ### Use Promise.all for Click + Navigation
 
 When clicking a link that navigates, use `Promise.all` to avoid race conditions:

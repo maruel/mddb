@@ -577,12 +577,15 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const paragraphs = editor.locator('p');
     await expect(paragraphs).toHaveCount(4, { timeout: 3000 });
 
-    // Select lines 2 and 3 using keyboard: click in line 2, go to start, select to end of line 3
+    // Select lines 2 and 3 using keyboard: hold Shift while extending selection
     await paragraphs.nth(1).click();
-    await page.keyboard.press('Home'); // Go to start of line 2
-    await page.keyboard.press('Shift+End'); // Select to end of line 2
-    await page.keyboard.press('Shift+ArrowDown'); // Extend to start of line 3
-    await page.keyboard.press('Shift+End'); // Select to end of line 3
+    await page.keyboard.press('Home');
+    // Hold Shift and use multiple key presses to reliably extend across paragraphs
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('End');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('End');
+    await page.keyboard.up('Shift');
 
     // Wait for floating toolbar to appear (needed on slower CI machines)
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
