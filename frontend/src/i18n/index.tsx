@@ -29,7 +29,16 @@ export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props)
   const [locale, setLocale] = createSignal<Locale>(props.initialLocale || 'en');
   const [dict] = createResource(locale, fetchDictionary);
 
-  const t = i18n.translator(dict, i18n.resolveTemplate);
+  const rawTranslator = i18n.translator(dict, i18n.resolveTemplate);
+
+  // Wrap translator to ensure dict() is accessed on each call for proper reactivity.
+  // This ensures Solid tracks dependencies correctly when locale changes.
+  const t: typeof rawTranslator = (key, ...args) => {
+    // Force dict access for reactivity tracking - this makes components
+    // that call t() re-render when the dictionary changes
+    dict();
+    return rawTranslator(key, ...args);
+  };
 
   // Expose whether translations are loaded
   const ready = () => dict.state === 'ready';

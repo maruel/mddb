@@ -70,6 +70,7 @@ export default function UserMenu(props: UserMenuProps) {
         aria-label={t('userMenu.profile') || 'User menu'}
         aria-expanded={isOpen()}
         aria-haspopup="menu"
+        data-testid="user-menu-button"
       >
         <Show when={getAvatarUrl()} fallback={<span class={styles.initials}>{getInitials()}</span>}>
           {(url) => (

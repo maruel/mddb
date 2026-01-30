@@ -6,7 +6,7 @@ import { OrgRoleAdmin, OrgRoleOwner } from '@sdk/types.gen';
 import { useAuth } from '../contexts';
 import { slugify } from '../utils/urls';
 import styles from './UserProfile.module.css';
-import { useI18n } from '../i18n';
+import { useI18n, type Locale } from '../i18n';
 
 interface UserProfileProps {
   onBack: () => void;
@@ -14,7 +14,7 @@ interface UserProfileProps {
 }
 
 export default function UserProfile(props: UserProfileProps) {
-  const { t } = useI18n();
+  const { t, setLocale } = useI18n();
   const { user, api, wsApi } = useAuth();
 
   // Personal Settings states
@@ -104,6 +104,11 @@ export default function UserProfile(props: UserProfileProps) {
       }
 
       await Promise.all(promises);
+
+      // Update locale immediately so UI refreshes
+      const lang = language() as Locale;
+      setLocale(lang);
+      localStorage.setItem('mddb_locale', lang);
 
       setSuccess(t('success.personalSettingsSaved') || 'Personal settings saved successfully');
     } catch (err) {

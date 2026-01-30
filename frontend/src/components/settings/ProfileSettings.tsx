@@ -4,12 +4,12 @@ import { createSignal, createEffect, Show, For } from 'solid-js';
 import type { UserSettings, WorkspaceMembershipSettings, OrgMembershipResponse } from '@sdk/types.gen';
 import { OrgRoleAdmin, OrgRoleOwner } from '@sdk/types.gen';
 import { useAuth } from '../../contexts';
-import { useI18n } from '../../i18n';
+import { useI18n, type Locale } from '../../i18n';
 import { settingsUrl } from '../../utils/urls';
 import styles from './ProfileSettings.module.css';
 
 export default function ProfileSettings() {
-  const { t } = useI18n();
+  const { t, setLocale } = useI18n();
   const { user, api, wsApi } = useAuth();
 
   const [theme, setTheme] = createSignal('light');
@@ -98,6 +98,11 @@ export default function ProfileSettings() {
       }
 
       await Promise.all(promises);
+
+      // Update locale immediately so UI refreshes
+      const lang = language() as Locale;
+      setLocale(lang);
+      localStorage.setItem('mddb_locale', lang);
 
       setSuccess(t('success.personalSettingsSaved') || 'Personal settings saved successfully');
     } catch (err) {

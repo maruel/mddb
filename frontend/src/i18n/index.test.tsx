@@ -81,6 +81,30 @@ describe('I18nProvider', () => {
     });
     unmount();
   });
+
+  it('updates translations when locale changes', async () => {
+    const { unmount } = render(() => (
+      <I18nProvider>
+        <TestConsumer />
+      </I18nProvider>
+    ));
+
+    // Wait for initial English dictionary to load
+    await waitFor(() => {
+      expect(screen.getByTestId('translated').textContent).toBe('Loading...');
+    });
+
+    // Click button to change to French
+    const button = screen.getByTestId('change-locale');
+    button.click();
+
+    // Wait for French dictionary to load and translation to update
+    await waitFor(() => {
+      // French translation for 'common.loading' is 'Chargement...'
+      expect(screen.getByTestId('translated').textContent).toBe('Chargement...');
+    });
+    unmount();
+  });
 });
 
 describe('useI18n', () => {
