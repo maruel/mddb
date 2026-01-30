@@ -70,6 +70,7 @@ function AppContent() {
     loadNodes,
     loadNode,
     fetchNodeChildren,
+    removeNode,
   } = useWorkspace();
 
   const {
@@ -360,24 +361,72 @@ function AppContent() {
     setShowMobileSidebar(false);
   };
 
+  // Find a node's parent and siblings in the tree
+  function findNodeContext(
+    nodeId: string,
+    nodeList: NodeResponse[] = nodes,
+    parent: NodeResponse | null = null
+  ): { parent: NodeResponse | null; siblings: NodeResponse[]; index: number } | null {
+    const index = nodeList.findIndex((n) => n.id === nodeId);
+    if (index !== -1) {
+      return { parent, siblings: nodeList, index };
+    }
+    for (const node of nodeList) {
+      if (node.children) {
+        const result = findNodeContext(nodeId, node.children, node);
+        if (result) return result;
+      }
+    }
+    return null;
+  }
+
   async function handleDeleteNode(nodeId: string) {
     const ws = wsApi();
     if (!ws) return;
     if (!confirm(t('table.confirmDeleteRecord') || 'Delete this item?')) return;
 
+    // Find navigation target BEFORE deleting (if this is the selected node)
+    let nextNodeId: string | null = null;
+    if (nodeId === selectedNodeId()) {
+      const ctx = findNodeContext(nodeId);
+      if (ctx) {
+        const { parent, siblings, index } = ctx;
+        if (parent && parent.id !== '0') {
+          // Navigate to parent
+          nextNodeId = parent.id;
+        } else {
+          // At root level or parent is root - find sibling
+          if (index > 0) {
+            // Previous sibling
+            nextNodeId = siblings[index - 1]?.id ?? null;
+          } else if (siblings.length > 1) {
+            // Next sibling (index 0, so next is at index 1)
+            nextNodeId = siblings[1]?.id ?? null;
+          }
+          // If no siblings, nextNodeId stays null - will trigger welcome page
+        }
+      }
+    }
+
     try {
       setLoading(true);
       await ws.nodes.deleteNode(nodeId);
+      // Remove from store immediately (no need to reload everything)
+      removeNode(nodeId);
+
       if (nodeId === selectedNodeId()) {
-        setSelectedNodeId(null);
-        setSelectedNodeData(null);
-        const wsId = user()?.workspace_id;
-        const wsName = user()?.workspace_name;
-        if (wsId) {
-          window.history.pushState(null, '', workspaceUrl(wsId, wsName));
+        if (nextNodeId) {
+          // Navigate to the next logical node
+          loadNode(nextNodeId);
+        } else {
+          // No nodes left - clear selection and reload to trigger welcome page creation
+          batch(() => {
+            setSelectedNodeId(null);
+            setSelectedNodeData(null);
+          });
+          await loadNodes(true);
         }
       }
-      await loadNodes(true);
     } catch (err) {
       setError(`${t('errors.failedToDelete')}: ${err}`);
     } finally {

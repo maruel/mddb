@@ -18,22 +18,40 @@ function createNode(partial: Partial<NodeResponse> & { id: string; title: string
 }
 
 /**
- * These tests document the data flow issues with sidebar child node updates.
+ * These tests document the sidebar data flow.
  *
- * PROBLEM SUMMARY:
- * When creating a subpage, `fetchNodeChildren(parentId)` updates the store's
- * `node.children` array, but SidebarNode doesn't read from `props.node.children`.
- * Instead, it uses:
- * 1. `props.prefetchedChildren` - cache passed from parent component
- * 2. `loadedChildren()` - local signal state set on first fetch
- *
- * This means store updates to `node.children` are NOT reflected in the UI.
+ * SidebarNode reads children directly from props.node.children (from the store).
+ * When a page is deleted, removeNode() updates the store and the UI updates
+ * automatically via SolidJS reactivity.
  */
 
-describe('SidebarNode data flow analysis', () => {
-  describe('fetchNodeChildren store update', () => {
+describe('SidebarNode data flow', () => {
+  describe('store-based children', () => {
+    it('children come from node.children in the store', () => {
+      const [nodes] = createStore<NodeResponse[]>([
+        createNode({
+          id: 'parent1',
+          title: 'Parent Page',
+          parent_id: '0',
+          has_children: true,
+          children: [
+            createNode({
+              id: 'child1',
+              title: 'Child Page',
+              parent_id: 'parent1',
+            }),
+          ],
+        }),
+      ]);
+
+      // Children are directly available from the store
+      // eslint-disable-next-line solid/reactivity -- test assertion: reading store values synchronously
+      expect(nodes[0]?.children).toHaveLength(1);
+      // eslint-disable-next-line solid/reactivity
+      expect(nodes[0]?.children?.[0]?.id).toBe('child1');
+    });
+
     it('fetchNodeChildren updates node.children in the store', () => {
-      // Simulate the nodes store
       const [nodes, setNodes] = createStore<NodeResponse[]>([
         createNode({
           id: 'parent1',
@@ -43,164 +61,156 @@ describe('SidebarNode data flow analysis', () => {
         }),
       ]);
 
-      // Simulate fetchNodeChildren behavior (from WorkspaceContext.tsx:318-335)
+      // Initially no children loaded
+      // eslint-disable-next-line solid/reactivity
+      expect(nodes[0]?.children).toBeUndefined();
+
+      // Simulate fetchNodeChildren updating the store
       const newChildren: NodeResponse[] = [
         createNode({
           id: 'child1',
           title: 'Child Page',
           parent_id: 'parent1',
-          has_children: false,
         }),
       ];
 
-      // This is what fetchNodeChildren does
       setNodes(
         produce((list) => {
-          const updateChildren = (nodeList: NodeResponse[]): boolean => {
-            for (const node of nodeList) {
-              if (node.id === 'parent1') {
-                node.children = newChildren;
-                return true;
-              }
-              if (node.children && updateChildren(node.children)) {
-                return true;
-              }
-            }
-            return false;
-          };
-          updateChildren(list);
+          const node = list[0];
+          if (node) {
+            node.children = newChildren;
+            node.has_children = true;
+          }
         })
       );
 
-      // Verify store was updated
-      // eslint-disable-next-line solid/reactivity -- test assertion: intentionally reading store values synchronously
-      expect(nodes[0]?.children).toBeDefined();
+      // Children are now in the store
       // eslint-disable-next-line solid/reactivity
       expect(nodes[0]?.children).toHaveLength(1);
       // eslint-disable-next-line solid/reactivity
       expect(nodes[0]?.children?.[0]?.id).toBe('child1');
     });
-
-    it('documents that SidebarNode does NOT read props.node.children', () => {
-      /**
-       * BUG: SidebarNode.tsx children() function (lines 35-45) reads from:
-       * 1. props.prefetchedChildren?.[props.node.id] - parent's prefetch cache
-       * 2. loadedChildren() - local signal
-       *
-       * It does NOT read from props.node.children!
-       *
-       * So when fetchNodeChildren updates node.children in the store,
-       * SidebarNode doesn't see the update.
-       */
-
-      // SidebarNode's children() function implementation:
-      const mockPrefetchedChildren: Record<string, NodeResponse[]> = {};
-      let localLoadedChildren: NodeResponse[] | null = null; // Already loaded (empty)
-
-      const children = () => {
-        // Check prefetched cache from parent first
-        const prefetched = mockPrefetchedChildren['parent1'];
-        if (prefetched) return prefetched;
-
-        // Use locally loaded children if available
-        if (localLoadedChildren !== null) return localLoadedChildren;
-
-        return [];
-      };
-
-      // Scenario: children were already loaded as empty array
-      localLoadedChildren = [];
-
-      // Now fetchNodeChildren updates the store, but...
-      const storeNodeChildren = [{ id: 'newChild', title: 'New Child' }];
-
-      // SidebarNode still returns empty because it uses local state
-      expect(children()).toEqual([]);
-
-      // The store has the new child, but SidebarNode doesn't see it
-      expect(storeNodeChildren).toHaveLength(1);
-      expect(children()).not.toEqual(storeNodeChildren); // BUG!
-    });
-
-    it('documents that loadedChildren is set once and never refreshed', () => {
-      /**
-       * BUG: SidebarNode.tsx fetchChildren (line 63) has this guard:
-       * `if (!props.onFetchChildren || loadedChildren() !== null || isLoadingChildren()) return;`
-       *
-       * Once loadedChildren is set (even to []), it won't fetch again.
-       * There's no mechanism to invalidate or refresh the local cache.
-       */
-
-      let loadedChildren: NodeResponse[] | null = null;
-      let fetchCount = 0;
-
-      const fetchChildren = async () => {
-        // Guard from SidebarNode.tsx:63
-        if (loadedChildren !== null) return; // Won't fetch if already loaded!
-
-        fetchCount++;
-        loadedChildren = []; // Set to empty on first fetch
-      };
-
-      // First fetch works
-      fetchChildren();
-      expect(fetchCount).toBe(1);
-      expect(loadedChildren).toEqual([]);
-
-      // Second fetch is blocked because loadedChildren !== null
-      fetchChildren();
-      expect(fetchCount).toBe(1); // Still 1, didn't fetch again!
-
-      // Even if we know there are new children, we can't refresh
-      // This is the bug - there's no way to invalidate the cache
-    });
   });
 
-  describe('expected fix behavior', () => {
-    it('SidebarNode should read from props.node.children when available', () => {
-      /**
-       * FIX: The children() function should also check props.node.children
-       * This way, store updates will be reflected in the UI.
-       */
+  describe('removeNode function', () => {
+    it('removes a root-level node from the store', () => {
+      const [nodes, setNodes] = createStore<NodeResponse[]>([
+        createNode({ id: 'page1', title: 'Page 1', parent_id: '0' }),
+        createNode({ id: 'page2', title: 'Page 2', parent_id: '0' }),
+      ]);
 
-      const mockNode: NodeResponse = createNode({
-        id: 'parent1',
-        title: 'Parent',
-        parent_id: '0',
-        has_children: true,
-        children: [
-          createNode({
-            id: 'child1',
-            title: 'Child from store',
-            parent_id: 'parent1',
-            has_children: false,
-          }),
-        ],
-      });
+      expect(nodes).toHaveLength(2);
 
-      const mockPrefetchedChildren: Record<string, NodeResponse[]> = {};
-      const localLoadedChildren: NodeResponse[] | null = null;
+      // Simulate removeNode
+      setNodes(
+        produce((list) => {
+          const index = list.findIndex((n) => n.id === 'page1');
+          if (index !== -1) list.splice(index, 1);
+        })
+      );
 
-      // FIXED children() function - also checks props.node.children
-      const childrenFixed = () => {
-        // Check prefetched cache from parent first
-        const prefetched = mockPrefetchedChildren[mockNode.id];
-        if (prefetched) return prefetched;
+      expect(nodes).toHaveLength(1);
+      // eslint-disable-next-line solid/reactivity
+      expect(nodes[0]?.id).toBe('page2');
+    });
 
-        // Check store's node.children (NEW!)
-        if (mockNode.children && mockNode.children.length > 0) {
-          return mockNode.children;
-        }
+    it('removes a child node from its parent', () => {
+      const [nodes, setNodes] = createStore<NodeResponse[]>([
+        createNode({
+          id: 'parent1',
+          title: 'Parent',
+          parent_id: '0',
+          has_children: true,
+          children: [
+            createNode({ id: 'child1', title: 'Child 1', parent_id: 'parent1' }),
+            createNode({ id: 'child2', title: 'Child 2', parent_id: 'parent1' }),
+          ],
+        }),
+      ]);
 
-        // Use locally loaded children if available
-        if (localLoadedChildren !== null) return localLoadedChildren;
+      // eslint-disable-next-line solid/reactivity
+      expect(nodes[0]?.children).toHaveLength(2);
 
-        return [];
-      };
+      // Simulate removeNode for child1
+      setNodes(
+        produce((list) => {
+          const removeFromList = (nodeList: NodeResponse[]): boolean => {
+            const index = nodeList.findIndex((n) => n.id === 'child1');
+            if (index !== -1) {
+              nodeList.splice(index, 1);
+              return true;
+            }
+            for (const node of nodeList) {
+              if (node.children && removeFromList(node.children)) {
+                if (node.children.length === 0) {
+                  node.has_children = false;
+                }
+                return true;
+              }
+            }
+            return false;
+          };
+          removeFromList(list);
+        })
+      );
 
-      // Now the children from the store are visible
-      expect(childrenFixed()).toHaveLength(1);
-      expect(childrenFixed()[0]?.id).toBe('child1');
+      // eslint-disable-next-line solid/reactivity
+      expect(nodes[0]?.children).toHaveLength(1);
+      // eslint-disable-next-line solid/reactivity
+      expect(nodes[0]?.children?.[0]?.id).toBe('child2');
+    });
+
+    it('removes a grandchild node and updates has_children', () => {
+      const [nodes, setNodes] = createStore<NodeResponse[]>([
+        createNode({
+          id: 'root',
+          title: 'Root',
+          parent_id: '0',
+          has_children: true,
+          children: [
+            createNode({
+              id: 'child',
+              title: 'Child',
+              parent_id: 'root',
+              has_children: true,
+              children: [createNode({ id: 'grandchild', title: 'Grandchild', parent_id: 'child' })],
+            }),
+          ],
+        }),
+      ]);
+
+      // eslint-disable-next-line solid/reactivity
+      const child = nodes[0]?.children?.[0];
+      expect(child?.children).toHaveLength(1);
+      expect(child?.has_children).toBe(true);
+
+      // Simulate removeNode for grandchild
+      setNodes(
+        produce((list) => {
+          const removeFromList = (nodeList: NodeResponse[]): boolean => {
+            const index = nodeList.findIndex((n) => n.id === 'grandchild');
+            if (index !== -1) {
+              nodeList.splice(index, 1);
+              return true;
+            }
+            for (const node of nodeList) {
+              if (node.children && removeFromList(node.children)) {
+                if (node.children.length === 0) {
+                  node.has_children = false;
+                }
+                return true;
+              }
+            }
+            return false;
+          };
+          removeFromList(list);
+        })
+      );
+
+      // eslint-disable-next-line solid/reactivity
+      const childAfter = nodes[0]?.children?.[0];
+      expect(childAfter?.children).toHaveLength(0);
+      expect(childAfter?.has_children).toBe(false);
     });
   });
 });

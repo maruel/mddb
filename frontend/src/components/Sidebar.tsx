@@ -18,7 +18,7 @@ interface SidebarProps {
   onCreateChildTable: (parentId: string) => void;
   onSelectNode: (node: NodeResponse) => void;
   onCloseMobileSidebar: () => void;
-  onFetchChildren?: (nodeId: string) => Promise<NodeResponse[]>;
+  onFetchChildren?: (nodeId: string) => Promise<void>;
   onDeleteNode?: (nodeId: string) => void;
   onShowHistory?: (nodeId: string) => void;
 }

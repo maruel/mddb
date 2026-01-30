@@ -46,7 +46,8 @@ interface WorkspaceContextValue {
   createWorkspace: (data: { name: string }) => Promise<void>;
   loadNodes: (force?: boolean) => Promise<void>;
   loadNode: (id: string, pushState?: boolean) => Promise<NodeResponse | undefined>;
-  fetchNodeChildren: (nodeId: string) => Promise<NodeResponse[]>;
+  fetchNodeChildren: (nodeId: string) => Promise<void>;
+  removeNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, newTitle: string) => void;
 }
 
@@ -101,6 +102,32 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       })
     );
     setBreadcrumbPath((path) => path.map((node) => (node.id === nodeId ? { ...node, title: newTitle } : node)));
+  };
+
+  // Remove a node from the store (used after deletion)
+  const removeNode = (nodeId: string) => {
+    setNodesStore(
+      produce((list) => {
+        const removeFromList = (nodes: NodeResponse[]): boolean => {
+          const index = nodes.findIndex((n) => n.id === nodeId);
+          if (index !== -1) {
+            nodes.splice(index, 1);
+            return true;
+          }
+          for (const node of nodes) {
+            if (node.children && removeFromList(node.children)) {
+              // Update has_children if parent now has no children
+              if (node.children.length === 0) {
+                node.has_children = false;
+              }
+              return true;
+            }
+          }
+          return false;
+        };
+        removeFromList(list);
+      })
+    );
   };
 
   // Get user's first name for default naming
@@ -307,38 +334,34 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   }
 
-  async function fetchNodeChildren(nodeId: string): Promise<NodeResponse[]> {
+  async function fetchNodeChildren(nodeId: string): Promise<void> {
     const ws = wsApi();
-    if (!ws) return [];
+    if (!ws) return;
 
     try {
       const data = await ws.nodes.listNodeChildren(nodeId);
       const children = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
 
-      if (children.length > 0) {
-        setNodesStore(
-          produce((list) => {
-            const updateChildren = (nodes: NodeResponse[]): boolean => {
-              for (const node of nodes) {
-                if (node.id === nodeId) {
-                  node.children = children;
-                  return true;
-                }
-                if (node.children && updateChildren(node.children)) {
-                  return true;
-                }
+      setNodesStore(
+        produce((list) => {
+          const updateChildren = (nodes: NodeResponse[]): boolean => {
+            for (const node of nodes) {
+              if (node.id === nodeId) {
+                node.children = children;
+                node.has_children = children.length > 0;
+                return true;
               }
-              return false;
-            };
-            updateChildren(list);
-          })
-        );
-      }
-
-      return children;
+              if (node.children && updateChildren(node.children)) {
+                return true;
+              }
+            }
+            return false;
+          };
+          updateChildren(list);
+        })
+      );
     } catch (err) {
       console.error('Failed to fetch children:', err);
-      return [];
     }
   }
 
@@ -413,6 +436,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     loadNodes,
     loadNode,
     fetchNodeChildren,
+    removeNode,
     updateNodeTitle,
   };
 

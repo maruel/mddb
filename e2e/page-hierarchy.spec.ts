@@ -115,6 +115,211 @@ test.describe('Page Hierarchy', () => {
     await takeScreenshot('grandchild-page');
   });
 
+  test('delete grandchild page refreshes sidebar correctly', async ({ page, request }) => {
+    // This test verifies the fix for sidebar not refreshing when deleting nested pages
+    const { token } = await registerUser(request, 'delete-gc');
+
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    // Get workspace ID from URL
+    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
+    const url = page.url();
+    const wsMatch = url.match(/\/w\/([^+/]+)/);
+    expect(wsMatch).toBeTruthy();
+    const wsID = wsMatch![1];
+
+    // Get the welcome page ID
+    const welcomePageLink = page.locator('[data-testid^="sidebar-node-"]').first();
+    await expect(welcomePageLink).toBeVisible({ timeout: 10000 });
+    const welcomeNodeId = await welcomePageLink.getAttribute('data-testid');
+    const rootPageId = welcomeNodeId!.replace('sidebar-node-', '');
+
+    // Create a child page
+    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${rootPageId}/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Child Page', content: 'Child content' },
+    });
+    expect(childResponse.ok()).toBe(true);
+    const childData = await childResponse.json();
+    const childID = childData.id;
+
+    // Create a grandchild page
+    const grandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childID}/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Grandchild Page', content: 'Grandchild content' },
+    });
+    expect(grandchildResponse.ok()).toBe(true);
+    const grandchildData = await grandchildResponse.json();
+    const grandchildID = grandchildData.id;
+
+    // Reload to see the hierarchy
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to root page and expand to see the child
+    const rootNode = page.locator(`[data-testid="sidebar-node-${rootPageId}"] > div`).first();
+    await rootNode.click();
+    const childNode = page.locator(`[data-testid="sidebar-node-${childID}"]`);
+    await expect(childNode).toBeVisible({ timeout: 5000 });
+
+    // Expand child to see grandchild
+    const childExpandIcon = page.locator(`[data-testid="expand-icon-${childID}"]`);
+    await expect(childExpandIcon).toBeVisible({ timeout: 5000 });
+    const transform = await childExpandIcon.evaluate((el) => getComputedStyle(el).transform);
+    const isAlreadyExpanded = transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)';
+    if (!isAlreadyExpanded) {
+      await childExpandIcon.click();
+    }
+
+    // Verify grandchild is visible
+    const grandchildNode = page.locator(`[data-testid="sidebar-node-${grandchildID}"]`);
+    await expect(grandchildNode).toBeVisible({ timeout: 10000 });
+
+    // Navigate to grandchild first
+    await grandchildNode.click();
+    await expect(page.getByText('Grandchild content')).toBeVisible({ timeout: 5000 });
+
+    // Delete the grandchild using the delete button (use > div > button to avoid matching nested nodes)
+    const grandchildPageItem = grandchildNode.locator('> div').first();
+    await grandchildPageItem.hover();
+    const deleteButton = grandchildPageItem.locator('button').filter({ hasText: '🗑' });
+    page.once('dialog', (dialog) => dialog.accept());
+    await deleteButton.click();
+
+    // Verify the grandchild is removed from the sidebar
+    await expect(grandchildNode).not.toBeVisible({ timeout: 10000 });
+
+    // Verify navigation went to parent (child page)
+    await expect(page.getByText('Child content')).toBeVisible({ timeout: 5000 });
+
+    // Also verify the child still exists in sidebar
+    await expect(childNode).toBeVisible({ timeout: 5000 });
+  });
+
+  test('delete child page with grandchildren refreshes sidebar correctly', async ({ page, request }) => {
+    // Test deleting a child page that has its own children
+    const { token } = await registerUser(request, 'delete-child');
+
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    // Get workspace ID
+    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
+    const wsID = page.url().match(/\/w\/([^+/]+)/)![1];
+
+    // Get root page
+    const welcomePageLink = page.locator('[data-testid^="sidebar-node-"]').first();
+    await expect(welcomePageLink).toBeVisible({ timeout: 10000 });
+    const rootPageId = (await welcomePageLink.getAttribute('data-testid'))!.replace('sidebar-node-', '');
+
+    // Create child page
+    const childResponse = await request.post(`/api/workspaces/${wsID}/nodes/${rootPageId}/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Child With Grandchildren', content: 'Child content' },
+    });
+    expect(childResponse.ok()).toBe(true);
+    const childData = await childResponse.json();
+    const childID = childData.id;
+
+    // Create grandchild
+    const grandchildResponse = await request.post(`/api/workspaces/${wsID}/nodes/${childID}/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Nested Grandchild', content: 'Grandchild content' },
+    });
+    expect(grandchildResponse.ok()).toBe(true);
+    const grandchildData = await grandchildResponse.json();
+    const grandchildID = grandchildData.id;
+
+    // Reload and expand hierarchy
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const rootNode = page.locator(`[data-testid="sidebar-node-${rootPageId}"] > div`).first();
+    await rootNode.click();
+    const childNode = page.locator(`[data-testid="sidebar-node-${childID}"]`);
+    await expect(childNode).toBeVisible({ timeout: 5000 });
+
+    // Expand child to see grandchild
+    const childExpandIcon = page.locator(`[data-testid="expand-icon-${childID}"]`);
+    await expect(childExpandIcon).toBeVisible({ timeout: 5000 });
+    const transform = await childExpandIcon.evaluate((el) => getComputedStyle(el).transform);
+    if (transform === 'none' || transform === 'matrix(1, 0, 0, 1, 0, 0)') {
+      await childExpandIcon.click();
+    }
+
+    const grandchildNode = page.locator(`[data-testid="sidebar-node-${grandchildID}"]`);
+    await expect(grandchildNode).toBeVisible({ timeout: 10000 });
+
+    // Navigate to child page first (click on page item div, not the li wrapper)
+    const childPageItem = childNode.locator('> div').first();
+    await childPageItem.click();
+    await expect(page.getByText('Child content')).toBeVisible({ timeout: 5000 });
+
+    // Delete the child page (which should also remove grandchild from view)
+    await childPageItem.hover();
+    const deleteButton = childPageItem.locator('button').filter({ hasText: '🗑' });
+    page.once('dialog', (dialog) => dialog.accept());
+    await deleteButton.click();
+
+    // Both child and grandchild should be removed from sidebar
+    await expect(childNode).not.toBeVisible({ timeout: 10000 });
+    await expect(grandchildNode).not.toBeVisible({ timeout: 5000 });
+
+    // Navigation should go to parent (root page) since child has no siblings
+    // Wait for the URL to change to indicate navigation completed (URL format: /w/{wsId}/{nodeId}+{title})
+    await expect(page).toHaveURL(new RegExp(`/${rootPageId}\\+`), { timeout: 5000 });
+  });
+
+  test('delete page navigates to sibling when no parent', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'delete-sib');
+
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    // Get workspace ID
+    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
+    const wsID = page.url().match(/\/w\/([^+/]+)/)![1];
+
+    // Create two sibling pages at root level
+    const page1Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Page One', content: 'Content one' },
+    });
+    expect(page1Response.ok()).toBe(true);
+    const page1ID = (await page1Response.json()).id;
+
+    const page2Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+      headers: { Authorization: `Bearer ${token}` },
+      data: { title: 'Page Two', content: 'Content two' },
+    });
+    expect(page2Response.ok()).toBe(true);
+    const page2ID = (await page2Response.json()).id;
+
+    // Reload and navigate to Page Two (second sibling)
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    const page2Node = page.locator(`[data-testid="sidebar-node-${page2ID}"]`);
+    await page2Node.click();
+    await expect(page.getByText('Content two')).toBeVisible({ timeout: 5000 });
+
+    // Delete Page Two - should navigate to Page One (previous sibling)
+    const page2Item = page2Node.locator('> div').first();
+    await page2Item.hover();
+    const deleteButton = page2Item.locator('button').filter({ hasText: '🗑' });
+    page.once('dialog', (dialog) => dialog.accept());
+    await deleteButton.click();
+
+    // Page Two should be removed
+    await expect(page2Node).not.toBeVisible({ timeout: 10000 });
+
+    // Should navigate to Page One (previous sibling)
+    await expect(page.getByText('Content one')).toBeVisible({ timeout: 5000 });
+    const page1NodeItem = page.locator(`[data-testid="sidebar-node-${page1ID}"] > div`).first();
+    await expect(page1NodeItem).toHaveClass(/active/, { timeout: 5000 });
+  });
+
   test('navigate between sibling pages', async ({ page, request }) => {
     // Register and login (with retry logic for rate limiting)
     const { token } = await registerUser(request, 'sibling');
