@@ -1,14 +1,4 @@
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: var(--font);
-  color: var(--c-text);
-  background: var(--c-bg-alt);
-}
+/* Styles for WorkspaceSection layout and components. */
 
 .app {
   height: 100vh;
@@ -34,6 +24,8 @@ body {
   justify-content: space-between;
   align-items: center;
   min-height: 36px;
+  position: relative;
+  z-index: 201; /* Above sidebar (z-index 200) so hamburger remains clickable */
 }
 
 .headerLeft {
@@ -81,8 +73,7 @@ body {
   overflow: hidden;
 }
 
-.editorLoading,
-.settingsLoading {
+.editorLoading {
   padding: var(--s-2);
   color: var(--c-text-muted);
 }

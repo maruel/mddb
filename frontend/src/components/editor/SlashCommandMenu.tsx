@@ -1,6 +1,7 @@
 // Slash command menu overlay component for selecting block types.
 
 import { createSignal, createEffect, For, Show, onMount, onCleanup } from 'solid-js';
+import { useNavigate } from '@solidjs/router';
 import type { EditorView } from 'prosemirror-view';
 import { schema, marks } from './prosemirror-config';
 import { useI18n } from '../../i18n';
@@ -21,6 +22,7 @@ interface SlashCommandMenuProps {
 
 export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const { user, wsApi } = useAuth();
   const { loadNode, fetchNodeChildren } = useWorkspace();
   const { flushAutoSave } = useEditor();
@@ -205,8 +207,9 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         // (loadNodes only refreshes root nodes, fetchNodeChildren refreshes the parent's children)
         await fetchNodeChildren(parentId);
 
-        // Navigate to the new page
+        // Load the new page data and navigate to it
         await loadNode(newPage.id);
+        navigate(url);
       } catch (err) {
         console.error('Failed to create subpage:', err);
       }

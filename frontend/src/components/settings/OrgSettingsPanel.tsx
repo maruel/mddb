@@ -1,6 +1,7 @@
 // Organization settings panel for managing organization members and preferences.
 
 import { createSignal, createEffect, createMemo, Show } from 'solid-js';
+import { useNavigate, useLocation } from '@solidjs/router';
 import { useAuth } from '../../contexts';
 import { useI18n } from '../../i18n';
 import type { UserResponse, OrgInvitationResponse, OrganizationRole } from '@sdk/types.gen';
@@ -18,6 +19,8 @@ type Tab = 'members' | 'settings';
 
 export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, api } = useAuth();
 
   // Determine initial tab from section prop
@@ -62,8 +65,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     const newHash = tab === 'members' ? '' : `#${tab}`;
-    const basePath = window.location.pathname;
-    window.history.replaceState(null, '', basePath + newHash);
+    navigate(location.pathname + newHash, { replace: true });
   };
 
   const loadData = async () => {

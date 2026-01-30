@@ -346,7 +346,7 @@ test.describe('Page Links with Dynamic Titles', () => {
     // Verify target page content is visible
     await expect(editor).toContainText('This is the target page content.', { timeout: 5000 });
 
-    // Verify URL contains target node ID
-    await expect(page).toHaveURL(new RegExp(`/${targetData.id}\\+`), { timeout: 5000 });
+    // Verify URL contains target node ID (with or without slug)
+    await expect(page).toHaveURL(new RegExp(`/${targetData.id}`), { timeout: 5000 });
   });
 });

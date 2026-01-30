@@ -202,16 +202,7 @@ export default function Auth(props: AuthProps) {
         </p>
 
         <div class={styles.authFooter}>
-          <a
-            href="/privacy"
-            onClick={(e) => {
-              e.preventDefault();
-              window.history.pushState(null, '', '/privacy');
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }}
-          >
-            {t('app.privacyPolicy')}
-          </a>
+          <a href="/privacy">{t('app.privacyPolicy')}</a>
         </div>
       </form>
     </div>

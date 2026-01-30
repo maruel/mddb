@@ -1,6 +1,7 @@
 // Settings sidebar navigation with expandable workspace and organization items.
 
 import { For } from 'solid-js';
+import { useLocation, useNavigate } from '@solidjs/router';
 import { useAuth } from '../../contexts';
 import { useI18n } from '../../i18n';
 import { settingsUrl, type UnifiedSettingsMatch } from '../../utils/urls';
@@ -10,8 +11,9 @@ import styles from './SettingsSidebar.module.css';
 
 interface SettingsSidebarProps {
   isOpen: boolean;
-  currentRoute: UnifiedSettingsMatch;
-  onNavigate: (url: string) => void;
+  // Optional props for backward compatibility - if not provided, uses router
+  currentRoute?: UnifiedSettingsMatch;
+  onNavigate?: (url: string) => void;
 }
 
 export interface NavItem {
@@ -25,6 +27,43 @@ export interface NavItem {
 export default function SettingsSidebar(props: SettingsSidebarProps) {
   const { t } = useI18n();
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Derive route from location if not provided via props
+  const derivedRoute = (): UnifiedSettingsMatch => {
+    const path = location.pathname;
+    const hash = location.hash?.slice(1) || undefined;
+
+    if (path === '/settings/user' || path === '/settings/user/') {
+      return { type: 'profile' };
+    }
+    if (path === '/settings/server' || path === '/settings/server/') {
+      return { type: 'server' };
+    }
+
+    const wsMatch = path.match(/^\/settings\/workspace\/([^+/]+)/);
+    if (wsMatch) {
+      return { type: 'workspace', id: wsMatch[1], section: hash };
+    }
+
+    const orgMatch = path.match(/^\/settings\/org\/([^+/]+)/);
+    if (orgMatch) {
+      return { type: 'org', id: orgMatch[1], section: hash };
+    }
+
+    return { type: 'profile' };
+  };
+
+  // Use provided props or fall back to router-based values
+  const currentRoute = () => props.currentRoute ?? derivedRoute();
+  const handleNavigate = (url: string) => {
+    if (props.onNavigate) {
+      props.onNavigate(url);
+    } else {
+      navigate(url);
+    }
+  };
 
   // Build navigation tree
   const navItems = (): NavItem[] => {
@@ -185,8 +224,8 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
               item={item}
               depth={0}
               isActive={isActive}
-              onNavigate={props.onNavigate}
-              currentRoute={props.currentRoute}
+              onNavigate={handleNavigate}
+              currentRoute={currentRoute()}
             />
           )}
         </For>

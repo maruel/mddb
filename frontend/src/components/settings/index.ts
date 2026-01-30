@@ -1,6 +1,5 @@
 // Settings components barrel export.
 
-export { default as Settings } from './Settings';
 export { default as SettingsSidebar } from './SettingsSidebar';
 export { default as SettingsNavItem } from './SettingsNavItem';
 export { default as ProfileSettings } from './ProfileSettings';

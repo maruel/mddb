@@ -1,6 +1,7 @@
 // User profile settings panel for managing personal preferences.
 
 import { createSignal, createEffect, Show, For } from 'solid-js';
+import { useNavigate } from '@solidjs/router';
 import type { UserSettings, WorkspaceMembershipSettings, OrgMembershipResponse } from '@sdk/types.gen';
 import { OrgRoleAdmin, OrgRoleOwner } from '@sdk/types.gen';
 import { useAuth } from '../../contexts';
@@ -10,6 +11,7 @@ import styles from './ProfileSettings.module.css';
 
 export default function ProfileSettings() {
   const { t, setLocale } = useI18n();
+  const navigate = useNavigate();
   const { user, api, wsApi } = useAuth();
 
   const [theme, setTheme] = createSignal('light');
@@ -113,8 +115,7 @@ export default function ProfileSettings() {
   };
 
   const navigateToOrgSettings = (org: OrgMembershipResponse) => {
-    window.history.pushState(null, '', settingsUrl('org', org.organization_id, org.organization_name));
-    window.dispatchEvent(new PopStateEvent('popstate'));
+    navigate(settingsUrl('org', org.organization_id, org.organization_name));
   };
 
   return (

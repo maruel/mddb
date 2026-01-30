@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@solid-primitives/i18n": "^2.2.1",
+    "@solidjs/router": "^0.15.4",
     "dompurify": "^3.3.1",
     "markdown-it": "^14.1.0",
     "prosemirror-commands": "^1.7.1",

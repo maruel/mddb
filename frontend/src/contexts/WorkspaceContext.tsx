@@ -12,7 +12,6 @@ import {
 import { createStore, produce, reconcile } from 'solid-js/store';
 import { useAuth } from './AuthContext';
 import { useI18n } from '../i18n';
-import { workspaceUrl, nodeUrl } from '../utils/urls';
 import { OrgRoleAdmin, OrgRoleOwner, WSRoleAdmin, WSRoleEditor, type NodeResponse } from '@sdk/types.gen';
 
 interface WorkspaceContextValue {
@@ -41,11 +40,11 @@ interface WorkspaceContextValue {
   setFirstLoginCheckDone: (done: boolean) => void;
 
   // Operations
-  switchWorkspace: (wsId: string, redirect?: boolean) => Promise<void>;
+  switchWorkspace: (wsId: string) => Promise<void>;
   createOrganization: (data: { name: string }) => Promise<void>;
   createWorkspace: (data: { name: string }) => Promise<void>;
   loadNodes: (force?: boolean) => Promise<void>;
-  loadNode: (id: string, pushState?: boolean) => Promise<NodeResponse | undefined>;
+  loadNode: (id: string) => Promise<NodeResponse | undefined>;
   fetchNodeChildren: (nodeId: string) => Promise<void>;
   removeNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, newTitle: string) => void;
@@ -207,7 +206,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   }
 
-  async function switchWorkspace(wsId: string, redirect = true) {
+  async function switchWorkspace(wsId: string) {
     try {
       setLoading(true);
       const data = await api().auth.switchWorkspace({ ws_id: wsId });
@@ -222,15 +221,6 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       });
       loadedNodeId = null;
       loadedForWorkspace = null;
-      if (redirect) {
-        const newWsId = data.user.workspace_id;
-        const wsName = data.user.workspace_name;
-        if (newWsId) {
-          window.history.pushState(null, '', workspaceUrl(newWsId, wsName));
-        } else {
-          window.history.pushState(null, '', '/');
-        }
-      }
       await loadNodes();
     } catch (err) {
       setError(`${t('errors.failedToSwitch')}: ${err}`);
@@ -262,13 +252,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setNodesStore(reconcile(loadedNodes));
       loadedForWorkspace = wsId || null;
       setError(null);
-
-      // Auto-select first node if at workspace root
-      const path = window.location.pathname;
-      const matchWsRoot = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/?$/);
-      if (matchWsRoot && !selectedNodeId() && loadedNodes.length > 0 && loadedNodes[0]) {
-        loadNode(loadedNodes[0].id, false);
-      }
+      // Navigation to first node is handled by WorkspaceRoot component
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
@@ -277,7 +261,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   }
 
-  async function loadNode(id: string, pushState = true): Promise<NodeResponse | undefined> {
+  async function loadNode(id: string): Promise<NodeResponse | undefined> {
     const ws = wsApi();
     if (!ws) return undefined;
     if (loadingNodeId === id || loadedNodeId === id) return undefined;
@@ -293,22 +277,6 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       });
       loadedNodeId = nodeData.id;
       setError(null);
-
-      // Update URL
-      const wsId = user()?.workspace_id;
-      const wsName = user()?.workspace_name;
-      if (wsId) {
-        const url = nodeUrl(wsId, wsName, nodeData.id, nodeData.title);
-        if (pushState) {
-          if (window.location.pathname !== url) {
-            window.history.pushState(null, '', url);
-          }
-        } else {
-          if (window.location.pathname !== url) {
-            window.history.replaceState(null, '', url);
-          }
-        }
-      }
 
       // Build breadcrumb path
       const path: NodeResponse[] = [nodeData];
@@ -366,6 +334,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   }
 
   // First-time login check (wait for translations to be ready)
+  // Navigation to workspace is handled by App.tsx RootRedirect component
   createEffect(() => {
     const u = user();
     if (!u || !i18nReady() || firstLoginCheckDone() || firstLoginInProgress()) return;
@@ -390,14 +359,9 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
 
     const wsId = u.workspace_id;
-    const wsName = u.workspace_name;
     if (!wsId) return;
 
     setFirstLoginCheckDone(true);
-
-    if (window.location.pathname === '/') {
-      window.history.replaceState(null, '', workspaceUrl(wsId, wsName));
-    }
   });
 
   // Load nodes when user changes

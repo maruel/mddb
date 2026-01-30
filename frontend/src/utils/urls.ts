@@ -1,6 +1,15 @@
 // URL construction utilities for consistent routing.
 
 /**
+ * Strips the slug suffix from an ID parameter (e.g., "abc123+my-page" -> "abc123").
+ * Use this when extracting IDs from route params that may include slugs.
+ */
+export function stripSlug(idWithSlug: string): string {
+  const plusIndex = idWithSlug.indexOf('+');
+  return plusIndex >= 0 ? idWithSlug.substring(0, plusIndex) : idWithSlug;
+}
+
+/**
  * Converts text to a URL-friendly slug.
  */
 export function slugify(text: string): string {

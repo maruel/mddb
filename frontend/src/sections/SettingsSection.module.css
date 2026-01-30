@@ -1,4 +1,4 @@
-/* Unified settings page layout styles. */
+/* Settings section layout styles. */
 
 .settingsPage {
   display: flex;
@@ -76,13 +76,6 @@
 .content > div {
   max-width: 800px;
   margin: 0 auto;
-}
-
-.error {
-  padding: var(--s-3);
-  background: #fef2f2;
-  color: var(--c-danger);
-  border-radius: var(--radius);
 }
 
 .mobileBackdrop {

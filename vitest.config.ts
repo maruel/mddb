@@ -20,5 +20,10 @@ export default defineConfig({
       reporter: ["text", "lcov"],
       reportsDirectory: "../coverage",
     },
+    server: {
+      deps: {
+        inline: [/@solidjs\/router/],
+      },
+    },
   },
 });

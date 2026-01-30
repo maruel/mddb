@@ -1,6 +1,7 @@
 // Dropdown menu for user profile and logout.
 
 import { createSignal, Show } from 'solid-js';
+import { useNavigate } from '@solidjs/router';
 import { useI18n } from '../i18n';
 import { useAuth } from '../contexts';
 import { useClickOutside } from '../composables/useClickOutside';
@@ -11,6 +12,7 @@ interface UserMenuProps {
 }
 
 export default function UserMenu(props: UserMenuProps) {
+  const navigate = useNavigate();
   const { t } = useI18n();
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = createSignal(false);
@@ -51,9 +53,10 @@ export default function UserMenu(props: UserMenuProps) {
     () => setIsOpen(false)
   );
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsOpen(false);
-    logout();
+    await logout();
+    navigate('/');
   };
 
   const handleProfile = () => {

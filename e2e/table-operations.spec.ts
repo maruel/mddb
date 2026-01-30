@@ -230,8 +230,8 @@ test.describe('Table View Modes', () => {
     await expect(page.locator('[data-testid="view-type-board"]')).toBeVisible();
     await takeScreenshot('view-dropdown');
 
-    // Close dropdown by clicking outside
-    await page.locator('body').click({ position: { x: 10, y: 10 } });
+    // Close dropdown by clicking outside (click in main content area, beyond sidebar at x=260)
+    await page.locator('body').click({ position: { x: 400, y: 400 } });
     await expect(viewMenu).not.toBeVisible({ timeout: 3000 });
   });
 });

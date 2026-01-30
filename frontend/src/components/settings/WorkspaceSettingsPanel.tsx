@@ -1,6 +1,7 @@
 // Workspace settings panel for managing workspace members, settings, and git sync.
 
 import { createSignal, createEffect, Show } from 'solid-js';
+import { useNavigate, useLocation } from '@solidjs/router';
 import { useAuth } from '../../contexts';
 import { useI18n } from '../../i18n';
 import {
@@ -24,6 +25,8 @@ type Tab = 'members' | 'settings' | 'sync';
 
 export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProps) {
   const { t } = useI18n();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { user, orgApi, wsApi } = useAuth();
 
   // Determine initial tab from section prop
@@ -62,8 +65,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     const newHash = tab === 'members' ? '' : `#${tab}`;
-    const basePath = window.location.pathname;
-    window.history.replaceState(null, '', basePath + newHash);
+    navigate(location.pathname + newHash, { replace: true });
   };
 
   const loadData = async () => {
