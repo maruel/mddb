@@ -41,14 +41,12 @@ function isInvalidInternalLink(href: string, linkedNodeTitles: NodeTitleMap, wsI
   const linkWsId = match[1];
   const nodeId = match[2];
 
-  // Debug logging
-  console.log('[invalidLink] Checking link:', { href, linkWsId, nodeId, wsId, linkedNodeTitles, isInTitles: nodeId in linkedNodeTitles });
-
   // Only check links within the current workspace
   if (linkWsId !== wsId) return false;
 
   // Link is invalid if the node ID is not in the titles map
   if (!nodeId) return false;
+
   return !(nodeId in linkedNodeTitles);
 }
 
