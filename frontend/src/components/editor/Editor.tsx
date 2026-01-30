@@ -123,6 +123,7 @@ export default function Editor(props: EditorProps) {
     isBold: false,
     isItalic: false,
     isUnderline: false,
+    isStrikethrough: false,
     isCode: false,
     headingLevel: null,
     isBulletList: false,
@@ -189,6 +190,8 @@ export default function Editor(props: EditorProps) {
     const isItalic = marks.em.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.em);
     const isUnderline =
       marks.underline.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.underline);
+    const isStrikethrough =
+      marks.strikethrough.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.strikethrough);
     const isCode = marks.code.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.code);
 
     // Check block types
@@ -226,6 +229,7 @@ export default function Editor(props: EditorProps) {
       isBold,
       isItalic,
       isUnderline,
+      isStrikethrough,
       isCode,
       headingLevel,
       isBulletList,

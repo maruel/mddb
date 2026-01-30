@@ -54,12 +54,19 @@ export const schema = new Schema({
       },
     ],
   }),
-  marks: baseSchema.spec.marks.addToEnd('underline', {
-    parseDOM: [{ tag: 'u' }, { style: 'text-decoration=underline' }],
-    toDOM(): DOMOutputSpec {
-      return ['u', 0];
-    },
-  }),
+  marks: baseSchema.spec.marks
+    .addToEnd('underline', {
+      parseDOM: [{ tag: 'u' }, { style: 'text-decoration=underline' }],
+      toDOM(): DOMOutputSpec {
+        return ['u', 0];
+      },
+    })
+    .addToEnd('strikethrough', {
+      parseDOM: [{ tag: 's' }, { tag: 'del' }, { style: 'text-decoration=line-through' }],
+      toDOM(): DOMOutputSpec {
+        return ['s', 0];
+      },
+    }),
 });
 
 // Helper to get node type with runtime check
@@ -94,6 +101,7 @@ export const marks = {
   code: getMarkType('code'),
   link: getMarkType('link'),
   underline: getMarkType('underline'),
+  strikethrough: getMarkType('strikethrough'),
 };
 
 // Create markdown-it instance with task list detection
@@ -126,6 +134,38 @@ md.inline.ruler.before('html_inline', 'underline', (state, silent) => {
   }
 
   state.pos = closePos + closeTag.length;
+  return true;
+});
+
+// Add inline rule to parse ~~text~~ as strikethrough
+md.inline.ruler.before('emphasis', 'strikethrough', (state, silent) => {
+  const start = state.pos;
+  const max = state.posMax;
+  const src = state.src;
+
+  // Check for opening ~~
+  if (src.slice(start, start + 2) !== '~~') return false;
+
+  // Find closing ~~
+  const closePos = src.indexOf('~~', start + 2);
+  if (closePos === -1 || closePos >= max) return false;
+
+  // Ensure there's content between the markers
+  if (closePos === start + 2) return false;
+
+  if (!silent) {
+    const openToken = state.push('strikethrough_open', 's', 1);
+    openToken.markup = '~~';
+
+    const content = src.slice(start + 2, closePos);
+    const textToken = state.push('text', '', 0);
+    textToken.content = content;
+
+    const closeToken = state.push('strikethrough_close', 's', -1);
+    closeToken.markup = '~~';
+  }
+
+  state.pos = closePos + 2;
   return true;
 });
 
@@ -187,6 +227,7 @@ export const markdownParser = new MarkdownParser(schema, md, {
   em: { mark: 'em' },
   strong: { mark: 'strong' },
   underline: { mark: 'underline' },
+  strikethrough: { mark: 'strikethrough' },
   link: {
     mark: 'link',
     getAttrs: (tok: Token) => ({
@@ -223,6 +264,7 @@ export const markdownSerializer = new MarkdownSerializer(
   {
     ...defaultMarkdownSerializer.marks,
     underline: { open: '<u>', close: '</u>', mixable: true, expelEnclosingWhitespace: true },
+    strikethrough: { open: '~~', close: '~~', mixable: true, expelEnclosingWhitespace: true },
   }
 );
 
@@ -298,6 +340,7 @@ function buildKeymap() {
   keys['Mod-b'] = toggleMark(marks.strong);
   keys['Mod-i'] = toggleMark(marks.em);
   keys['Mod-u'] = toggleMark(marks.underline);
+  keys['Mod-Shift-x'] = toggleMark(marks.strikethrough);
   keys['Mod-`'] = toggleMark(marks.code);
 
   // List operations - custom splitListItem that preserves task list state

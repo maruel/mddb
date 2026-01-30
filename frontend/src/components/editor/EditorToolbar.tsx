@@ -13,6 +13,7 @@ export interface FormatState {
   isBold: boolean;
   isItalic: boolean;
   isUnderline: boolean;
+  isStrikethrough: boolean;
   isCode: boolean;
   headingLevel: number | null;
   isBulletList: boolean;
@@ -80,6 +81,12 @@ export default function EditorToolbar(props: EditorToolbarProps) {
   const toggleUnderline = () => {
     if (!props.view) return;
     toggleMark(marks.underline)(props.view.state, props.view.dispatch);
+    props.view.focus();
+  };
+
+  const toggleStrikethrough = () => {
+    if (!props.view) return;
+    toggleMark(marks.strikethrough)(props.view.state, props.view.dispatch);
     props.view.focus();
   };
 
@@ -482,6 +489,13 @@ export default function EditorToolbar(props: EditorToolbarProps) {
             title="Underline (Ctrl+U)"
           >
             <u>U</u>
+          </button>
+          <button
+            class={formatButtonClass(props.formatState.isStrikethrough)}
+            onClick={toggleStrikethrough}
+            title="Strikethrough (Ctrl+Shift+X)"
+          >
+            <s>S</s>
           </button>
           <button class={formatButtonClass(props.formatState.isCode)} onClick={toggleCode} title="Code (Ctrl+`)">
             {'</>'}
