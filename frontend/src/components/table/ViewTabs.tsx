@@ -85,25 +85,26 @@ export default function ViewTabs() {
             class={styles.addButton}
             onClick={() => setShowNewViewMenu(!showNewViewMenu())}
             title={t('table.newView') || 'New View'}
+            data-testid="add-view-button"
           >
             +
           </button>
 
           <Show when={showNewViewMenu()}>
-            <div class={styles.dropdown}>
-              <button onClick={() => handleNewView('table')}>
+            <div class={styles.dropdown} data-testid="view-type-menu">
+              <button onClick={() => handleNewView('table')} data-testid="view-type-table">
                 <span class={styles.icon}>{VIEW_ICONS.table}</span>
                 {t('table.table')}
               </button>
-              <button onClick={() => handleNewView('list')}>
+              <button onClick={() => handleNewView('list')} data-testid="view-type-list">
                 <span class={styles.icon}>{VIEW_ICONS.list}</span>
                 {t('table.list')}
               </button>
-              <button onClick={() => handleNewView('gallery')}>
+              <button onClick={() => handleNewView('gallery')} data-testid="view-type-gallery">
                 <span class={styles.icon}>{VIEW_ICONS.gallery}</span>
                 {t('table.gallery')}
               </button>
-              <button onClick={() => handleNewView('board')}>
+              <button onClick={() => handleNewView('board')} data-testid="view-type-board">
                 <span class={styles.icon}>{VIEW_ICONS.board}</span>
                 {t('table.board')}
               </button>

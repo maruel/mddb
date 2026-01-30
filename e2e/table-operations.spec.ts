@@ -193,7 +193,7 @@ test.describe('Table Creation and Basic Operations', () => {
 });
 
 test.describe('Table View Modes', () => {
-  test.screenshot('switch between table, grid, gallery, and board views', async ({ page, request, takeScreenshot }) => {
+  test.screenshot('table has view tabs and add view dropdown', async ({ page, request, takeScreenshot }) => {
     const { token } = await registerUser(request, 'view-modes');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
@@ -239,43 +239,30 @@ test.describe('Table View Modes', () => {
     // Wait for records to load - they should appear in the table
     await expect(page.locator('td').getByText('Task 1')).toBeVisible({ timeout: 5000 });
 
-    // Check that view toggle buttons exist
-    const tableButton = page.locator('button', { hasText: 'Table' });
-    const gridButton = page.locator('button', { hasText: 'Grid' });
-    const galleryButton = page.locator('button', { hasText: 'Gallery' });
-    const boardButton = page.locator('button', { hasText: 'Board' });
-
-    await expect(tableButton).toBeVisible();
-    await expect(gridButton).toBeVisible();
-    await expect(galleryButton).toBeVisible();
-    await expect(boardButton).toBeVisible();
-
-    // Table view should be active by default
-    await expect(tableButton).toHaveClass(/active/i);
+    // Check that default view tab exists (All view)
+    const defaultViewTab = page.locator('button').filter({ hasText: 'All' });
+    await expect(defaultViewTab).toBeVisible();
+    await expect(defaultViewTab).toHaveClass(/active/i);
     await takeScreenshot('view-table');
 
-    // Switch to Grid view
-    await gridButton.click();
-    await expect(gridButton).toHaveClass(/active/i);
-    // Grid view renders cards
-    await expect(page.locator('[class*="grid"], [class*="Grid"]')).toBeVisible({ timeout: 3000 });
-    await takeScreenshot('view-grid');
+    // Check that add view button exists
+    const addViewButton = page.locator('[data-testid="add-view-button"]');
+    await expect(addViewButton).toBeVisible();
 
-    // Switch to Gallery view
-    await galleryButton.click();
-    await expect(galleryButton).toHaveClass(/active/i);
-    await expect(page.locator('[class*="gallery"], [class*="Gallery"]')).toBeVisible({ timeout: 3000 });
-    await takeScreenshot('view-gallery');
+    // Open the add view dropdown
+    await addViewButton.click();
+    const viewMenu = page.locator('[data-testid="view-type-menu"]');
+    await expect(viewMenu).toBeVisible({ timeout: 3000 });
 
-    // Switch to Board view
-    await boardButton.click();
-    await expect(boardButton).toHaveClass(/active/i);
-    await expect(page.locator('[class*="board"], [class*="Board"]')).toBeVisible({ timeout: 3000 });
-    await takeScreenshot('view-board');
+    // Verify dropdown options exist
+    await expect(page.locator('[data-testid="view-type-table"]')).toBeVisible();
+    await expect(page.locator('[data-testid="view-type-gallery"]')).toBeVisible();
+    await expect(page.locator('[data-testid="view-type-board"]')).toBeVisible();
+    await takeScreenshot('view-dropdown');
 
-    // Switch back to Table view
-    await tableButton.click();
-    await expect(tableButton).toHaveClass(/active/i);
+    // Close dropdown by clicking outside
+    await page.locator('body').click({ position: { x: 10, y: 10 } });
+    await expect(viewMenu).not.toBeVisible({ timeout: 3000 });
   });
 });
 
@@ -312,9 +299,9 @@ test.describe('Table and Page Hybrid', () => {
     const tableElement = page.locator('table');
     await expect(tableElement).toBeVisible({ timeout: 5000 });
 
-    // Should have view mode toggle buttons
-    await expect(page.locator('button', { hasText: 'Table' })).toBeVisible();
-    await expect(page.locator('button', { hasText: 'Grid' })).toBeVisible();
+    // Should have view tabs with default view and add button
+    await expect(page.locator('button').filter({ hasText: 'All' })).toBeVisible();
+    await expect(page.getByTitle('New View')).toBeVisible();
 
     // Markdown textarea should NOT be visible (table-only node)
     const contentArea = page.locator('textarea[placeholder*="markdown"]');

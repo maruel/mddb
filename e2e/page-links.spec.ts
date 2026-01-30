@@ -15,7 +15,10 @@ test.describe('Page Links with Dynamic Titles', () => {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: 'Parent Page', content: '' },
     });
-    expect(parentResponse.ok()).toBe(true);
+    if (!parentResponse.ok()) {
+      const errorBody = await parentResponse.text();
+      throw new Error(`Failed to create parent page: ${parentResponse.status()} - ${errorBody}`);
+    }
     const parentData = await parentResponse.json();
 
     // Create child page with initial title
