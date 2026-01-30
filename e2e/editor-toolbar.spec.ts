@@ -577,15 +577,9 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const paragraphs = editor.locator('p');
     await expect(paragraphs).toHaveCount(4, { timeout: 3000 });
 
-    // Select lines 2 and 3 using keyboard: hold Shift while extending selection
-    await paragraphs.nth(1).click();
-    await page.keyboard.press('Home');
-    // Hold Shift and use multiple key presses to reliably extend across paragraphs
-    await page.keyboard.down('Shift');
-    await page.keyboard.press('End');
-    await page.keyboard.press('ArrowDown');
-    await page.keyboard.press('End');
-    await page.keyboard.up('Shift');
+    // Select lines 2 and 3 using triple-click + shift-click (more reliable than keyboard)
+    await paragraphs.nth(1).click({ clickCount: 3 }); // Triple-click selects entire paragraph
+    await paragraphs.nth(2).click({ modifiers: ['Shift'] }); // Shift-click extends to include paragraph 3
 
     // Wait for floating toolbar to appear (needed on slower CI machines)
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
