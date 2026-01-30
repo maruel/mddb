@@ -69,7 +69,7 @@ export default function CreateOrgModal(props: CreateOrgModalProps) {
 
           <div class={styles.actions}>
             <Show when={!props.isFirstOrg}>
-              <button type="button" class={styles.secondaryButton} onClick={props.onClose}>
+              <button type="button" class={styles.secondaryButton} onClick={() => props.onClose()}>
                 {t('common.cancel')}
               </button>
             </Show>

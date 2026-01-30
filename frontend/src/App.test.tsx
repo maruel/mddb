@@ -86,7 +86,7 @@ vi.mock('./components/TableBoard', () => ({
 vi.mock('./components/WorkspaceSettings', () => ({
   default: (props: { onBack: () => void }) => (
     <div data-testid="workspace-settings-old">
-      <button onClick={props.onBack}>Back</button>
+      <button onClick={() => props.onBack()}>Back</button>
     </div>
   ),
 }));
@@ -95,7 +95,7 @@ vi.mock('./components/settings', () => ({
   Settings: (props: { route: { type: string; id?: string }; onClose: () => void }) => (
     <div data-testid="workspace-settings">
       <span data-testid="settings-route-type">{props.route.type}</span>
-      <button onClick={props.onClose}>Back</button>
+      <button onClick={() => props.onClose()}>Back</button>
     </div>
   ),
 }));
@@ -103,7 +103,7 @@ vi.mock('./components/settings', () => ({
 vi.mock('./components/Onboarding', () => ({
   default: (props: { onComplete: () => void }) => (
     <div data-testid="onboarding">
-      <button onClick={props.onComplete}>Complete Onboarding</button>
+      <button onClick={() => props.onComplete()}>Complete Onboarding</button>
     </div>
   ),
 }));
@@ -171,7 +171,7 @@ vi.mock('./components/PWAInstallBanner', () => ({
 vi.mock('./components/CreateOrgModal', () => ({
   default: (props: { isFirstOrg?: boolean; onClose: () => void; onCreate: (data: unknown) => void }) => (
     <div data-testid={props.isFirstOrg ? 'create-org-modal-first' : 'create-org-modal'}>
-      <button onClick={props.onClose}>Close</button>
+      <button onClick={() => props.onClose()}>Close</button>
       <button onClick={() => props.onCreate({ name: 'New Org', welcomePageTitle: 'Welcome', welcomePageContent: '' })}>
         Create
       </button>
@@ -182,7 +182,7 @@ vi.mock('./components/CreateOrgModal', () => ({
 vi.mock('./components/CreateWorkspaceModal', () => ({
   default: (props: { isFirstWorkspace?: boolean; onClose: () => void; onCreate: (data: unknown) => void }) => (
     <div data-testid={props.isFirstWorkspace ? 'create-workspace-modal-first' : 'create-workspace-modal'}>
-      <button onClick={props.onClose}>Close</button>
+      <button onClick={() => props.onClose()}>Close</button>
       <button onClick={() => props.onCreate({ name: 'New Workspace' })}>Create</button>
     </div>
   ),
@@ -192,7 +192,7 @@ vi.mock('./components/UserMenu', () => ({
   default: (props: { onProfile: () => void }) => (
     <div data-testid="user-menu">
       <span data-testid="user-info">User Menu</span>
-      <button data-testid="profile-button" onClick={props.onProfile}>
+      <button data-testid="profile-button" onClick={() => props.onProfile()}>
         Profile
       </button>
       <button
@@ -214,13 +214,13 @@ vi.mock('./components/WorkspaceMenu', () => ({
   default: (props: { onOpenSettings: () => void; onCreateWorkspace: () => void }) => {
     return (
       <div data-testid="workspace-menu">
-        <button data-testid="workspace-menu-button" title="Workspace" onClick={props.onOpenSettings}>
+        <button data-testid="workspace-menu-button" title="Workspace" onClick={() => props.onOpenSettings()}>
           Workspace
         </button>
-        <button data-testid="workspace-settings-button" onClick={props.onOpenSettings}>
+        <button data-testid="workspace-settings-button" onClick={() => props.onOpenSettings()}>
           Workspace Settings
         </button>
-        <button data-testid="create-workspace-button" onClick={props.onCreateWorkspace}>
+        <button data-testid="create-workspace-button" onClick={() => props.onCreateWorkspace()}>
           Create Workspace
         </button>
       </div>

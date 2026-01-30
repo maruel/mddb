@@ -48,7 +48,13 @@ export default tseslint.config(
         project: './tsconfig.json',
       },
     },
-    rules: sharedRules,
+    rules: {
+      ...sharedRules,
+      // Upgrade solid warnings to errors
+      'solid/reactivity': 'error',
+      'solid/components-return-once': 'error',
+      'solid/event-handlers': 'error',
+    },
   },
   // E2E tests (Playwright)
   {

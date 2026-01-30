@@ -17,7 +17,7 @@ function ErrorFallback(props: ErrorFallbackProps) {
         <summary>Technical details</summary>
         <pre>{props.error.stack}</pre>
       </details>
-      <button class={styles.retryButton} onClick={props.reset}>
+      <button class={styles.retryButton} onClick={() => props.reset()}>
         Try again
       </button>
     </div>

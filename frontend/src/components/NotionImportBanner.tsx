@@ -110,12 +110,12 @@ export default function NotionImportBanner(props: NotionImportBannerProps) {
 
       <div class={styles.actions}>
         <Show when={s().status === 'running'}>
-          <button class={styles.cancelButton} onClick={props.onCancel}>
+          <button class={styles.cancelButton} onClick={() => props.onCancel()}>
             {t('notionImport.cancel')}
           </button>
         </Show>
         <Show when={isTerminal()}>
-          <button class={styles.dismissButton} onClick={props.onDismiss}>
+          <button class={styles.dismissButton} onClick={() => props.onDismiss()}>
             {t('notionImport.dismiss')}
           </button>
         </Show>

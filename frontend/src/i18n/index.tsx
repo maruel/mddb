@@ -1,14 +1,6 @@
 // Internationalization provider and context hooks.
 
-import {
-  createContext,
-  useContext,
-  createSignal,
-  createResource,
-  createMemo,
-  type ParentComponent,
-  type Accessor,
-} from 'solid-js';
+import { createContext, useContext, createSignal, createResource, type ParentComponent, type Accessor } from 'solid-js';
 import * as i18n from '@solid-primitives/i18n';
 import type { Dictionary, Locale } from './types';
 import type { ErrorCode } from '@sdk/types.gen';
@@ -53,15 +45,15 @@ export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props)
     return (t('errors.unknown') as string) || 'An error occurred';
   };
 
-  const value = createMemo(() => ({
+  const value: I18nContextValue = {
     locale,
     setLocale,
     t,
     translateError,
     ready,
-  }));
+  };
 
-  return <I18nContext.Provider value={value()}>{props.children}</I18nContext.Provider>;
+  return <I18nContext.Provider value={value}>{props.children}</I18nContext.Provider>;
 };
 
 export function useI18n(): I18nContextValue {

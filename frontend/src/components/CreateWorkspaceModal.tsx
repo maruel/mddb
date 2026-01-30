@@ -71,7 +71,7 @@ export default function CreateWorkspaceModal(props: CreateWorkspaceModalProps) {
 
           <div class={styles.actions}>
             <Show when={!props.isFirstWorkspace}>
-              <button type="button" class={styles.secondaryButton} onClick={props.onClose}>
+              <button type="button" class={styles.secondaryButton} onClick={() => props.onClose()}>
                 {t('common.cancel')}
               </button>
             </Show>

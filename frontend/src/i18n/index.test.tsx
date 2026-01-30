@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@solidjs/testing-library';
+import { onMount } from 'solid-js';
 import { I18nProvider, useI18n } from './index';
 
 // Helper component that uses the i18n hook
-function TestConsumer(props: { onMount?: (ctx: ReturnType<typeof useI18n>) => void }) {
+function TestConsumer(props: { onReady?: (ctx: ReturnType<typeof useI18n>) => void }) {
   const ctx = useI18n();
-  props.onMount?.(ctx);
+  onMount(() => props.onReady?.(ctx));
   return (
     <div>
       <span data-testid="locale">{ctx.locale()}</span>
@@ -114,7 +115,7 @@ describe('translateError', () => {
     const { unmount } = render(() => (
       <I18nProvider>
         <TestConsumer
-          onMount={(ctx) => {
+          onReady={(ctx) => {
             translateError = ctx.translateError;
           }}
         />
@@ -139,7 +140,7 @@ describe('translateError', () => {
     const { unmount } = render(() => (
       <I18nProvider>
         <TestConsumer
-          onMount={(ctx) => {
+          onReady={(ctx) => {
             translateError = ctx.translateError;
           }}
         />

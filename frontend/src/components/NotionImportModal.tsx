@@ -116,7 +116,7 @@ export default function NotionImportModal(props: NotionImportModalProps) {
           </div>
 
           <div class={styles.actions}>
-            <button type="button" class={styles.secondaryButton} onClick={props.onClose}>
+            <button type="button" class={styles.secondaryButton} onClick={() => props.onClose()}>
               {t('common.cancel')}
             </button>
             <button type="submit" class={styles.primaryButton} disabled={!notionToken().trim() || loading()}>

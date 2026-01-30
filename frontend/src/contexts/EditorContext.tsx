@@ -78,6 +78,7 @@ export const EditorProvider: ParentComponent = (props) => {
   const [history, setHistory] = createSignal<Commit[]>([]);
 
   // Debounced auto-save
+  // eslint-disable-next-line solid/reactivity -- intentionally reads current signal values when debounced function executes
   const debouncedAutoSave = debounce(async () => {
     const nodeId = selectedNodeId();
     const ws = wsApi();

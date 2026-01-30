@@ -38,10 +38,10 @@ export default function Sidebar(props: SidebarProps) {
       <div class={styles.sidebarHeader}>
         <h2>{t('app.workspace')}</h2>
         <div class={styles.sidebarActions}>
-          <button onClick={props.onCreatePage} title={t('app.newPage') || 'New Page'}>
+          <button onClick={() => props.onCreatePage()} title={t('app.newPage') || 'New Page'}>
             +P
           </button>
-          <button onClick={props.onCreateTable} title={t('app.newTable') || 'New Table'}>
+          <button onClick={() => props.onCreateTable()} title={t('app.newTable') || 'New Table'}>
             +D
           </button>
         </div>

@@ -1,6 +1,6 @@
 // WYSIWYG markdown editor component using ProseMirror with prosemirror-markdown.
 
-import { createSignal, onMount, onCleanup, createEffect, on, createMemo } from 'solid-js';
+import { createSignal, onMount, onCleanup, createEffect, on, createMemo, Show, untrack } from 'solid-js';
 import { EditorView } from 'prosemirror-view';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import { useI18n } from '../../i18n';
@@ -36,7 +36,8 @@ interface EditorProps {
 export default function Editor(props: EditorProps) {
   const { t } = useI18n();
   const [editorMode, setEditorMode] = createSignal<'wysiwyg' | 'markdown'>('wysiwyg');
-  const [markdownContent, setMarkdownContent] = createSignal(props.content);
+  // Use untrack for initial value - we don't want to re-create the signal when props.content changes
+  const [markdownContent, setMarkdownContent] = createSignal(untrack(() => props.content));
   const [view, setView] = createSignal<EditorView | undefined>();
   const [slashMenuState, setSlashMenuState] = createSignal<SlashMenuState>({
     active: false,
@@ -107,9 +108,10 @@ export default function Editor(props: EditorProps) {
   const dropPlugin = createDropUploadPlugin({ onFileDrop: handleFileDrop });
 
   // Track what we've emitted to distinguish our own changes from external updates
-  let lastLoadedNodeId: string | undefined = props.nodeId;
-  let lastEmittedContent: string = props.content;
-  let lastLinkedNodeTitles: NodeTitleMap | undefined = props.linkedNodeTitles;
+  // Use untrack for initial values - these are bookkeeping variables, not reactive bindings
+  let lastLoadedNodeId: string | undefined = untrack(() => props.nodeId);
+  let lastEmittedContent: string = untrack(() => props.content);
+  let lastLinkedNodeTitles: NodeTitleMap | undefined = untrack(() => props.linkedNodeTitles);
 
   // Track active formatting states for toolbar buttons
   const [formatState, setFormatState] = createSignal<FormatState>({
@@ -397,10 +399,7 @@ export default function Editor(props: EditorProps) {
         </button>
       </div>
 
-      {(() => {
-        const v = view();
-        return v ? <SlashCommandMenu view={v} state={slashMenuState()} nodeId={props.nodeId} /> : null;
-      })()}
+      <Show when={view()}>{(v) => <SlashCommandMenu view={v()} state={slashMenuState()} nodeId={props.nodeId} />}</Show>
     </div>
   );
 }

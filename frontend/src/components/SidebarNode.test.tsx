@@ -73,8 +73,11 @@ describe('SidebarNode data flow analysis', () => {
       );
 
       // Verify store was updated
+      // eslint-disable-next-line solid/reactivity -- test assertion: intentionally reading store values synchronously
       expect(nodes[0]?.children).toBeDefined();
+      // eslint-disable-next-line solid/reactivity
       expect(nodes[0]?.children).toHaveLength(1);
+      // eslint-disable-next-line solid/reactivity
       expect(nodes[0]?.children?.[0]?.id).toBe('child1');
     });
 

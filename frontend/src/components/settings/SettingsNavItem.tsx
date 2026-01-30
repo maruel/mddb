@@ -1,6 +1,6 @@
 // Expandable navigation item for settings sidebar.
 
-import { createSignal, For, Show, createEffect } from 'solid-js';
+import { createSignal, For, Show, createEffect, untrack } from 'solid-js';
 import type { UnifiedSettingsMatch } from '../../utils/urls';
 import type { NavItem } from './SettingsSidebar';
 import styles from './SettingsNavItem.module.css';
@@ -30,7 +30,8 @@ export default function SettingsNavItem(props: SettingsNavItemProps) {
     return checkActive(props.item.children || []);
   };
 
-  const [isExpanded, setIsExpanded] = createSignal(props.depth === 0 || shouldAutoExpand());
+  // Use untrack for initial value - we handle reactive updates in createEffect below
+  const [isExpanded, setIsExpanded] = createSignal(untrack(() => props.depth === 0 || shouldAutoExpand()));
 
   // Update expansion when route changes
   createEffect(() => {

@@ -1,7 +1,7 @@
 // Recursive component for rendering navigation tree nodes in the sidebar.
 // Supports lazy loading of children with pre-fetching one level ahead.
 
-import { createSignal, createEffect, For, Show, onMount, on } from 'solid-js';
+import { createSignal, createEffect, For, Show, onMount, on, untrack } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { useI18n } from '../i18n';
 import type { NodeResponse } from '@sdk/types.gen';
@@ -25,7 +25,8 @@ interface SidebarNodeResponseProps {
 export default function SidebarNodeResponse(props: SidebarNodeResponseProps) {
   const { t } = useI18n();
   // Start expanded if depth 0 OR if already an ancestor at mount time
-  const initialExpanded = props.depth === 0 || props.ancestorIds.includes(props.node.id);
+  // Use untrack since we only want the initial value, not reactive updates
+  const initialExpanded = untrack(() => props.depth === 0 || props.ancestorIds.includes(props.node.id));
   const [isExpanded, setIsExpanded] = createSignal(initialExpanded);
   const [showContextMenu, setShowContextMenu] = createSignal(false);
   const [contextMenuPos, setContextMenuPos] = createSignal({ x: 0, y: 0 });
