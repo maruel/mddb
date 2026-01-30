@@ -133,7 +133,11 @@ export default function Editor(props: EditorProps) {
     isCodeBlock: false,
   });
 
-  const [toolbarPosition, setToolbarPosition] = createSignal<{ top: number; left: number } | null>(null);
+  const [toolbarPosition, setToolbarPosition] = createSignal<{
+    top: number;
+    bottom: number;
+    left: number;
+  } | null>(null);
 
   // Parse markdown to ProseMirror document, handling asset URLs and link titles
   const parseMarkdown = (md: string): ProseMirrorNode | null => {
@@ -175,8 +179,10 @@ export default function Editor(props: EditorProps) {
           left = start.left + 40;
         }
 
+        // Pass both positions - toolbar will check visibility and choose
         setToolbarPosition({
           top: start.top,
+          bottom: end.bottom,
           left,
         });
       } catch {
@@ -304,10 +310,18 @@ export default function Editor(props: EditorProps) {
 
     // Initialize invalid link decorations with current titles (even if empty, to detect invalid links)
     updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
-  });
 
-  onCleanup(() => {
-    view()?.destroy();
+    // Update toolbar position on scroll so it follows the selection
+    const handleScroll = () => updateActiveStates(editorView);
+    const scrollContainer = editorRef.closest('[class*="prosemirrorEditor"]') || editorRef;
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    onCleanup(() => {
+      editorView.destroy();
+      scrollContainer.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    });
   });
 
   // Sync when node changes, content changes externally, or linked node titles are fetched

@@ -1,6 +1,6 @@
 // Floating editor toolbar with formatting buttons (appears on text selection).
 
-import { Show } from 'solid-js';
+import { Show, createSignal, createEffect, on } from 'solid-js';
 import type { EditorView } from 'prosemirror-view';
 import type { Node as PMNode } from 'prosemirror-model';
 import { Selection, TextSelection, AllSelection } from 'prosemirror-state';
@@ -26,10 +26,33 @@ export interface FormatState {
 interface EditorToolbarProps {
   formatState: FormatState;
   view: EditorView | undefined;
-  position?: { top: number; left: number } | null;
+  position?: { top: number; bottom: number; left: number } | null;
 }
 
 export default function EditorToolbar(props: EditorToolbarProps) {
+  let toolbarRef: HTMLDivElement | undefined;
+  const [above, setAbove] = createSignal(false);
+
+  // Check if toolbar fits below selection, flip above if not
+  createEffect(
+    on(
+      () => props.position,
+      () => {
+        if (!props.position || !toolbarRef) {
+          setAbove(false);
+          return;
+        }
+        // Use requestAnimationFrame to measure after render
+        requestAnimationFrame(() => {
+          if (!toolbarRef || !props.position) return;
+          const rect = toolbarRef.getBoundingClientRect();
+          const wouldOverflow = props.position.bottom + rect.height + 8 > window.innerHeight;
+          setAbove(wouldOverflow);
+        });
+      }
+    )
+  );
+
   const formatButtonClass = (isActive: boolean) =>
     isActive ? `${styles.formatButton} ${styles.isActive}` : styles.formatButton;
 
@@ -469,14 +492,15 @@ export default function EditorToolbar(props: EditorToolbarProps) {
   return (
     <Show when={props.position}>
       <div
-        class={styles.floatingToolbar}
+        ref={toolbarRef}
+        class={`${styles.floatingToolbar} ${above() ? styles.above : ''}`}
         data-testid="floating-toolbar"
         style={{
-          top: `${props.position?.top ?? 0}px`,
+          top: `${above() ? props.position?.top : props.position?.bottom}px`,
           left: `${props.position?.left ?? 0}px`,
         }}
       >
-        <div class={styles.formattingButtons}>
+        <div class={styles.toolbarRow}>
           <button class={formatButtonClass(props.formatState.isBold)} onClick={toggleBold} title="Bold (Ctrl+B)">
             B
           </button>
@@ -500,7 +524,8 @@ export default function EditorToolbar(props: EditorToolbarProps) {
           <button class={formatButtonClass(props.formatState.isCode)} onClick={toggleCode} title="Code (Ctrl+`)">
             {'</>'}
           </button>
-          <span class={styles.separator} />
+        </div>
+        <div class={styles.toolbarRow}>
           <button
             class={formatButtonClass(props.formatState.headingLevel === 1)}
             onClick={() => setHeading(1)}
