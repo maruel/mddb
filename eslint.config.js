@@ -50,10 +50,15 @@ export default tseslint.config(
     },
     rules: {
       ...sharedRules,
-      // Upgrade solid warnings to errors
+      // Upgrade all solid warnings to errors
       'solid/reactivity': 'error',
       'solid/components-return-once': 'error',
       'solid/event-handlers': 'error',
+      'solid/imports': 'error',
+      'solid/style-prop': 'error',
+      'solid/no-react-deps': 'error',
+      'solid/no-react-specific-props': 'error',
+      'solid/self-closing-comp': 'error',
     },
   },
   // E2E tests (Playwright)
