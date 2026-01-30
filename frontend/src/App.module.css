@@ -252,6 +252,10 @@ body {
   display: none;
 }
 
+.mobileBackdropVisible {
+  /* Only used in media query below */
+}
+
 @media (max-width: 768px) {
   /* On mobile, sidebar overlays instead of pushing content */
   .app.sidebarOpen {
@@ -278,6 +282,14 @@ body {
     z-index: 150;
     backdrop-filter: blur(2px);
     cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .mobileBackdropVisible {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .main {

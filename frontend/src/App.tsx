@@ -595,9 +595,10 @@ function AppContent() {
 
               <Show when={!isProfilePage() && !isSettingsPage() && !isOrgSettingsPage() && !settingsRoute()}>
                 <div class={styles.container}>
-                  <Show when={showMobileSidebar()}>
-                    <div class={styles.mobileBackdrop} onClick={() => setShowMobileSidebar(false)} />
-                  </Show>
+                  <div
+                    class={`${styles.mobileBackdrop} ${showMobileSidebar() ? styles.mobileBackdropVisible : ''}`}
+                    onClick={() => setShowMobileSidebar(false)}
+                  />
                   <Sidebar
                     isOpen={showMobileSidebar()}
                     loading={loading()}
