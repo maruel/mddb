@@ -506,6 +506,10 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 
 	// Coerce data types based on property schema
 	coercedData := content.CoerceRecordData(req.Data, node.Properties)
+	// Ensure Data is never nil - JSON marshaling treats nil and {} differently
+	if coercedData == nil {
+		coercedData = make(map[string]any)
+	}
 
 	id := jsonldb.NewID()
 	now := storage.Now()
@@ -553,6 +557,10 @@ func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 
 	// Coerce data types based on property schema
 	coercedData := content.CoerceRecordData(req.Data, node.Properties)
+	// Ensure Data is never nil - JSON marshaling treats nil and {} differently
+	if coercedData == nil {
+		coercedData = make(map[string]any)
+	}
 
 	record := &content.DataRecord{
 		ID:       req.RID,
@@ -563,7 +571,7 @@ func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 
 	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := ws.UpdateRecord(ctx, req.ID, record, author); err != nil {
-		return nil, dto.NotFound("record")
+		return nil, dto.InternalWithError("Failed to update record", err)
 	}
 	return &dto.UpdateRecordResponse{ID: req.RID}, nil
 }

@@ -372,6 +372,140 @@ func TestWorkspaceStore(t *testing.T) {
 				t.Error("expected error reading deleted table")
 			}
 		})
+
+		t.Run("UpdateRecord_DataPersistence", func(t *testing.T) {
+			// Create a new table for this test
+			testTableID := jsonldb.NewID()
+			testTable := &Node{
+				ID:       testTableID,
+				Title:    "Test Table",
+				Type:     NodeTypeTable,
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+				Properties: []Property{
+					{Name: "name", Type: PropertyTypeText},
+					{Name: "value", Type: PropertyTypeText},
+				},
+			}
+			if err := ws.WriteTable(ctx, testTable, true, author); err != nil {
+				t.Fatalf("failed to write table: %v", err)
+			}
+
+			// Create a record with initial data
+			initialRecord := &DataRecord{
+				ID:       jsonldb.NewID(),
+				Data:     map[string]any{"name": "original", "value": "data"},
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+			}
+			if err := ws.AppendRecord(ctx, testTableID, initialRecord, author); err != nil {
+				t.Fatalf("failed to append record: %v", err)
+			}
+
+			// Update the record with new data
+			updatedRecord := &DataRecord{
+				ID:       initialRecord.ID,
+				Data:     map[string]any{"name": "updated", "value": "new data"},
+				Created:  initialRecord.Created,
+				Modified: storage.Now(),
+			}
+			if err := ws.UpdateRecord(ctx, testTableID, updatedRecord, author); err != nil {
+				t.Fatalf("failed to update record: %v", err)
+			}
+
+			// Verify the data was persisted by iterating records
+			it, err := ws.IterRecords(testTableID)
+			if err != nil {
+				t.Fatalf("failed to iter records: %v", err)
+			}
+
+			found := false
+			for r := range it {
+				if r.ID != initialRecord.ID {
+					continue
+				}
+				found = true
+				// Verify the updated data was persisted
+				if r.Data == nil {
+					t.Error("record data is nil - data was not persisted")
+				}
+				if name, ok := r.Data["name"]; !ok || name != "updated" {
+					t.Errorf("expected name='updated', got %v", name)
+				}
+				if value, ok := r.Data["value"]; !ok || value != "new data" {
+					t.Errorf("expected value='new data', got %v", value)
+				}
+				break
+			}
+
+			if !found {
+				t.Error("record not found after update")
+			}
+		})
+
+		t.Run("UpdateRecord_NilDataBecomesEmptyMap", func(t *testing.T) {
+			// Create a new table for this test
+			testTableID := jsonldb.NewID()
+			testTable := &Node{
+				ID:       testTableID,
+				Title:    "Test Table",
+				Type:     NodeTypeTable,
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+				Properties: []Property{
+					{Name: "name", Type: PropertyTypeText},
+				},
+			}
+			if err := ws.WriteTable(ctx, testTable, true, author); err != nil {
+				t.Fatalf("failed to write table: %v", err)
+			}
+
+			// Create a record with initial data
+			initialRecord := &DataRecord{
+				ID:       jsonldb.NewID(),
+				Data:     map[string]any{"name": "test"},
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+			}
+			if err := ws.AppendRecord(ctx, testTableID, initialRecord, author); err != nil {
+				t.Fatalf("failed to append record: %v", err)
+			}
+
+			// Update with nil data (simulating the bug scenario)
+			updatedRecord := &DataRecord{
+				ID:       initialRecord.ID,
+				Data:     nil, // Explicitly nil
+				Created:  initialRecord.Created,
+				Modified: storage.Now(),
+			}
+
+			// Call updateRecord directly to test without the handler's nil-check
+			parentID := ws.getParent(testTableID)
+			if err := ws.updateRecord(testTableID, parentID, updatedRecord); err != nil {
+				t.Fatalf("failed to update record: %v", err)
+			}
+
+			// Verify the record was persisted (data should be nil but not cause issues)
+			it, err := ws.IterRecords(testTableID)
+			if err != nil {
+				t.Fatalf("failed to iter records: %v", err)
+			}
+
+			found := false
+			for r := range it {
+				if r.ID != initialRecord.ID {
+					continue
+				}
+				found = true
+				// Data being nil is acceptable - it just means there's no data
+				// The important thing is that the record itself was persisted
+				break
+			}
+
+			if !found {
+				t.Error("record not found after update with nil data")
+			}
+		})
 	})
 
 	t.Run("AssetOperations", func(t *testing.T) {

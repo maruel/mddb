@@ -168,8 +168,6 @@ export default function TableTable(props: TableTableProps) {
       }, 0);
     };
 
-    const onKeyDown = (e: KeyboardEvent) => handleKeyDown(e, recordId, columnName);
-
     // Read current value from input ref for saving
     const getCurrentValue = () => {
       if (!inputRef) return initialValue;
@@ -177,6 +175,14 @@ export default function TableTable(props: TableTableProps) {
         return String(inputRef.checked);
       }
       return inputRef.value;
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Sync current value from input before handling key press
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        setEditValue(getCurrentValue());
+      }
+      handleKeyDown(e, recordId, columnName);
     };
 
     // Update editValue from input ref before save

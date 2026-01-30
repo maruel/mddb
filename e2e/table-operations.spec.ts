@@ -1,5 +1,5 @@
 import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
-import type { DataRecordResponse } from '../sdk/types.gen';
+import type { DataRecordResponse, ListRecordsResponse } from '../sdk/types.gen';
 
 test.describe('Table Creation and Basic Operations', () => {
   test.screenshot('create a table with properties and view it', async ({ page, request, takeScreenshot }) => {
@@ -74,9 +74,10 @@ test.describe('Table Creation and Basic Operations', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // Navigate to table
-    await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
+    const tableNodeButton = page.locator(`[data-testid="sidebar-node-${tableData.id}"]`);
+    await tableNodeButton.click();
 
-    // Wait for table to load
+    // Wait for table to load - if this times out, the node isn't loading as a table
     await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
 
     // Records should be visible
@@ -86,24 +87,23 @@ test.describe('Table Creation and Basic Operations', () => {
     await expect(page.getByText('200')).toBeVisible();
 
     // Click on a table cell to edit it - find the cell that contains exactly "Item 1"
-    // Using getByText with exact match for the cell content
     const item1Text = page.locator('td').getByText('Item 1', { exact: true });
     await item1Text.click();
 
-    // Wait for edit mode - the row with Item 1 should now have an input
-    // Use getByRole to find the row containing the edit UI (shows ✕ Item 1 ✓ ✕)
-    const editRow = page.getByRole('row', { name: /Item 1/ });
-    const editInput = editRow.getByRole('textbox');
+    // Wait for edit mode - input should appear with focus inside the table cell
+    const editInput = page.locator('table td input[type="text"]').first();
     await expect(editInput).toBeVisible({ timeout: 5000 });
 
     // Change the value
     await editInput.fill('Edited Item 1');
 
-    // Save the edit using the save button (checkmark) within the same row
-    const saveButton = editRow.locator('button').filter({ hasText: '✓' });
-    await saveButton.click();
+    // Save the edit by pressing Enter
+    await editInput.press('Enter');
 
-    // Wait for save to complete by polling API
+    // Wait for the API call to complete
+    await page.waitForTimeout(1000);
+
+    // Verify the edit was saved via API
     const listParams = {
       ViewID: '',
       Filters: '',
@@ -111,30 +111,13 @@ test.describe('Table Creation and Basic Operations', () => {
       Offset: 0,
       Limit: 100,
     };
-    let recordsData = await client.ws(wsID).nodes.table.records.listRecords(tableData.id, listParams);
 
+    let recordsData: ListRecordsResponse;
     await expect(async () => {
       recordsData = await client.ws(wsID).nodes.table.records.listRecords(tableData.id, listParams);
-      // Check that we got a response with records
-      expect(recordsData.records.length).toBeGreaterThanOrEqual(2);
-    }).toPass({ timeout: 3000 });
-
-    const editedRecord = recordsData.records.find((r: DataRecordResponse) => (r.data.Name as string) === 'Edited Item 1');
-
-    // If API shows the edit was saved, verify UI. If not, this is a backend bug.
-    if (editedRecord) {
-      // Reload to get fresh UI state
-      await page.reload();
-      await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-      await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
-      await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
-      await expect(page.locator('td').getByText('Edited Item 1')).toBeVisible({ timeout: 5000 });
-    } else {
-      // Check if original value still exists - this would be a bug
-      const originalRecord = recordsData.records.find((r: DataRecordResponse) => (r.data.Name as string) === 'Item 1');
-      // If the record still has original name, the save failed
-      expect(originalRecord).toBeFalsy();
-    }
+      const editedRecord = recordsData.records.find((r: DataRecordResponse) => (r.data.Name as string) === 'Edited Item 1');
+      expect(editedRecord).toBeTruthy();
+    }).toPass({ timeout: 5000 });
   });
 
   // Testing record deletion
