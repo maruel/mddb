@@ -47,7 +47,7 @@ export default function Editor(props: EditorProps) {
     triggerPos: 0,
     position: { top: 0, left: 0 },
   });
-  let editorRef: HTMLDivElement | undefined;
+  const [editorRef, setEditorRef] = createSignal<HTMLDivElement>();
 
   // Create slash command plugin with callback
   const slashPlugin = createSlashCommandPlugin(setSlashMenuState);
@@ -247,13 +247,14 @@ export default function Editor(props: EditorProps) {
   };
 
   onMount(() => {
-    if (!editorRef) return;
+    const editorEl = editorRef();
+    if (!editorEl) return;
 
     const doc = parseMarkdown(props.content);
     if (!doc) return;
     const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
 
-    const editorView = new EditorView(editorRef, {
+    const editorView = new EditorView(editorEl, {
       state,
       editable: () => !props.readOnly,
       dispatchTransaction(tr) {
@@ -300,7 +301,7 @@ export default function Editor(props: EditorProps) {
     });
 
     // Store view reference on DOM element for checkbox plugin access
-    const pmEl = editorRef.querySelector('.ProseMirror') as HTMLElement & { pmView?: EditorView };
+    const pmEl = editorEl.querySelector('.ProseMirror') as HTMLElement & { pmView?: EditorView };
     if (pmEl) {
       pmEl.pmView = editorView;
     }
@@ -313,7 +314,7 @@ export default function Editor(props: EditorProps) {
 
     // Update toolbar position on scroll so it follows the selection
     const handleScroll = () => updateActiveStates(editorView);
-    const scrollContainer = editorRef.closest('[class*="prosemirrorEditor"]') || editorRef;
+    const scrollContainer = editorEl.closest('[class*="prosemirrorEditor"]') || editorEl;
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('scroll', handleScroll, { passive: true });
 
@@ -424,9 +425,14 @@ export default function Editor(props: EditorProps) {
 
   return (
     <div class={styles.editorContainer}>
-      <EditorToolbar formatState={formatState()} view={view()} position={toolbarPosition()} />
+      <EditorToolbar
+        formatState={formatState()}
+        view={view()}
+        position={toolbarPosition()}
+        editorElement={editorRef()}
+      />
 
-      <div ref={editorRef} class={wysiwygClass()} data-testid="wysiwyg-editor" />
+      <div ref={setEditorRef} class={wysiwygClass()} data-testid="wysiwyg-editor" />
 
       <textarea
         class={markdownClass()}

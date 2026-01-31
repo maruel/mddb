@@ -99,4 +99,54 @@ test.describe('Floating Toolbar Visibility', () => {
     const selection = await page.evaluate(() => window.getSelection()?.toString());
     expect(selection?.length).toBeGreaterThan(0);
   });
+
+  test('toolbar stays within editor bounds when sidebar is open', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'float-toolbar-bounds');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    const wsID = await getWorkspaceId(page);
+
+    // Create a page with content
+    const client = createClient(request, token);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Toolbar Bounds Test',
+      content: 'Test content for toolbar positioning',
+    });
+
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+
+    // Navigate to the page
+    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+
+    const editor = page.locator('[data-testid="wysiwyg-editor"]');
+    const prosemirror = editor.locator('.ProseMirror');
+    await expect(prosemirror).toBeVisible({ timeout: 5000 });
+
+    // Wait for content to load
+    await expect(prosemirror.locator('p')).toContainText('Test content', { timeout: 5000 });
+
+    // Ensure sidebar is open
+    const sidebar = page.locator('aside');
+    await expect(sidebar).toBeVisible();
+
+    // Select text to show toolbar
+    await prosemirror.locator('p').first().selectText();
+
+    const toolbar = page.locator('[data-testid="floating-toolbar"]');
+    await expect(toolbar).toBeVisible({ timeout: 3000 });
+
+    // Wait for toolbar position to stabilize (clamping happens in requestAnimationFrame)
+    const editorBox = await editor.boundingBox();
+    expect(editorBox).toBeTruthy();
+
+    await expect(async () => {
+      const toolbarBox = await toolbar.boundingBox();
+      expect(toolbarBox).toBeTruthy();
+      // Toolbar should be fully within editor horizontal bounds
+      expect(toolbarBox!.x).toBeGreaterThanOrEqual(editorBox!.x);
+      expect(toolbarBox!.x + toolbarBox!.width).toBeLessThanOrEqual(editorBox!.x + editorBox!.width);
+    }).toPass({ timeout: 3000 });
+  });
 });

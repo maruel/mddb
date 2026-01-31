@@ -27,27 +27,53 @@ interface EditorToolbarProps {
   formatState: FormatState;
   view: EditorView | undefined;
   position?: { top: number; bottom: number; left: number } | null;
+  editorElement?: HTMLDivElement;
 }
 
 export default function EditorToolbar(props: EditorToolbarProps) {
   let toolbarRef: HTMLDivElement | undefined;
   const [above, setAbove] = createSignal(false);
+  const [clampedLeft, setClampedLeft] = createSignal<number | null>(null);
 
-  // Check if toolbar fits below selection, flip above if not
+  // Check if toolbar fits below selection (flip above if not) and clamp horizontally
   createEffect(
     on(
       () => props.position,
       () => {
         if (!props.position || !toolbarRef) {
           setAbove(false);
+          setClampedLeft(null);
           return;
         }
         // Use requestAnimationFrame to measure after render
         requestAnimationFrame(() => {
           if (!toolbarRef || !props.position) return;
           const rect = toolbarRef.getBoundingClientRect();
+
+          // Vertical: flip above if would overflow bottom
           const wouldOverflow = props.position.bottom + rect.height + 8 > window.innerHeight;
           setAbove(wouldOverflow);
+
+          // Horizontal: clamp so toolbar stays within viewport
+          // The toolbar is centered (translateX(-50%)), so we need halfWidth for bounds
+          const halfWidth = rect.width / 2;
+
+          // Use the editor element bounds (accounts for sidebar)
+          const editorRect = props.editorElement?.getBoundingClientRect();
+          const editorLeft = editorRect?.left ?? 0;
+          const editorRight = editorRect?.right ?? window.innerWidth;
+
+          const minLeft = editorLeft + halfWidth;
+          const maxLeft = editorRight - halfWidth;
+          const left = props.position.left;
+
+          if (left < minLeft) {
+            setClampedLeft(minLeft);
+          } else if (left > maxLeft) {
+            setClampedLeft(maxLeft);
+          } else {
+            setClampedLeft(null); // No clamping needed
+          }
         });
       }
     )
@@ -497,7 +523,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
         data-testid="floating-toolbar"
         style={{
           top: `${above() ? props.position?.top : props.position?.bottom}px`,
-          left: `${props.position?.left ?? 0}px`,
+          left: `${clampedLeft() ?? props.position?.left ?? 0}px`,
         }}
       >
         <div class={styles.toolbarRow}>
