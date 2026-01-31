@@ -1,10 +1,10 @@
 // Slash command registry defining available block types for the editor menu.
 
 import type { EditorView } from 'prosemirror-view';
-import { setBlockType } from 'prosemirror-commands';
-import { wrapIn, lift } from 'prosemirror-commands';
 import { Selection } from 'prosemirror-state';
-import { schema, nodes } from './prosemirror-config';
+import { nodes } from './prosemirror-config';
+import type { BlockAttrs } from './schema';
+import { convertBlock } from './blockCommands';
 
 import SubjectIcon from '@material-symbols/svg-400/outlined/subject.svg?solid';
 import TitleIcon from '@material-symbols/svg-400/outlined/title.svg?solid';
@@ -27,47 +27,31 @@ export interface SlashCommand {
 
 // Helper to delete the "/" trigger text and execute a command
 function deleteSlashAndExecute(view: EditorView, from: number, to: number, action: (view: EditorView) => void) {
+  // Delete the slash command text first
   const tr = view.state.tr.delete(from, to);
   view.dispatch(tr);
+
+  // Then execute the action (conversion usually)
   action(view);
 }
 
-// Helper to wrap current block in a list
-function wrapInList(
+// Helper to convert current block (where cursor is) to another type
+function convertCurrentBlock(
   view: EditorView,
-  listType: typeof nodes.bullet_list | typeof nodes.ordered_list,
-  listItemAttrs?: { checked: boolean | null }
+  type: 'paragraph' | 'heading' | 'bullet' | 'number' | 'task' | 'quote' | 'code' | 'divider',
+  attrs: Partial<BlockAttrs> = {}
 ) {
-  const { state } = view;
+  const { state, dispatch } = view;
   const { $from } = state.selection;
 
-  // Check if already in a list
+  // Find the block ancestor
   for (let d = $from.depth; d > 0; d--) {
     const node = $from.node(d);
-    if (node.type === nodes.bullet_list || node.type === nodes.ordered_list) {
-      // Already in a list, lift out first
-      lift(state, view.dispatch);
+    if (node.isBlock) {
+      convertBlock($from.before(d), type, attrs)(state, dispatch);
       return;
     }
   }
-
-  // Get the position before replacement
-  const replaceFrom = $from.before($from.depth);
-
-  // Create list item with empty paragraph (since "/" was already deleted)
-  const newParagraph = nodes.paragraph.create();
-  const newListItem = nodes.list_item.create(listItemAttrs || null, newParagraph);
-  const newList = listType.create(null, newListItem);
-
-  // Replace current block with list and set cursor inside the list item
-  const tr = view.state.tr.replaceWith(replaceFrom, $from.after($from.depth), newList);
-
-  // Position cursor inside the paragraph within the list item
-  // Structure is: list > list_item > paragraph, so we need to go 3 levels deep
-  const cursorPos = replaceFrom + 3; // list(+1) + list_item(+1) + paragraph(+1)
-  tr.setSelection(Selection.near(tr.doc.resolve(cursorPos)));
-
-  view.dispatch(tr);
 }
 
 export const slashCommands: SlashCommand[] = [
@@ -78,7 +62,7 @@ export const slashCommands: SlashCommand[] = [
     icon: SubjectIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        setBlockType(nodes.paragraph)(v.state, v.dispatch);
+        convertCurrentBlock(v, 'paragraph');
       });
     },
   },
@@ -89,7 +73,7 @@ export const slashCommands: SlashCommand[] = [
     icon: TitleIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        setBlockType(nodes.heading, { level: 1 })(v.state, v.dispatch);
+        convertCurrentBlock(v, 'heading', { level: 1 });
       });
     },
   },
@@ -100,7 +84,7 @@ export const slashCommands: SlashCommand[] = [
     icon: TitleIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        setBlockType(nodes.heading, { level: 2 })(v.state, v.dispatch);
+        convertCurrentBlock(v, 'heading', { level: 2 });
       });
     },
   },
@@ -111,7 +95,7 @@ export const slashCommands: SlashCommand[] = [
     icon: TitleIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        setBlockType(nodes.heading, { level: 3 })(v.state, v.dispatch);
+        convertCurrentBlock(v, 'heading', { level: 3 });
       });
     },
   },
@@ -122,7 +106,7 @@ export const slashCommands: SlashCommand[] = [
     icon: FormatListBulletedIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        wrapInList(v, nodes.bullet_list);
+        convertCurrentBlock(v, 'bullet');
       });
     },
   },
@@ -133,7 +117,7 @@ export const slashCommands: SlashCommand[] = [
     icon: FormatListNumberedIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        wrapInList(v, nodes.ordered_list);
+        convertCurrentBlock(v, 'number');
       });
     },
   },
@@ -144,7 +128,7 @@ export const slashCommands: SlashCommand[] = [
     icon: ChecklistIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        wrapInList(v, nodes.bullet_list, { checked: false });
+        convertCurrentBlock(v, 'task', { checked: false });
       });
     },
   },
@@ -155,7 +139,7 @@ export const slashCommands: SlashCommand[] = [
     icon: FormatQuoteIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        wrapIn(nodes.blockquote)(v.state, v.dispatch);
+        convertCurrentBlock(v, 'quote');
       });
     },
   },
@@ -166,7 +150,7 @@ export const slashCommands: SlashCommand[] = [
     icon: CodeIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        setBlockType(nodes.code_block)(v.state, v.dispatch);
+        convertCurrentBlock(v, 'code');
       });
     },
   },
@@ -175,22 +159,21 @@ export const slashCommands: SlashCommand[] = [
     labelKey: 'divider',
     keywords: ['divider', 'hr', 'horizontal', 'rule', 'line'],
     icon: HorizontalRuleIcon,
-    execute: (view, from, to) => {
-      const hrType = schema.nodes.horizontal_rule;
-      if (!hrType) return;
+    execute: (view) => {
+      convertCurrentBlock(view, 'divider');
 
-      // Delete the slash text
-      let tr = view.state.tr.delete(from, to);
-      view.dispatch(tr);
+      // Insert paragraph after
+      const { state } = view;
+      const { $from } = state.selection;
+      const blockPos = $from.before(1);
+      const blockNode = state.doc.nodeAt(blockPos);
 
-      // Insert horizontal rule after current block
-      const insertPos = view.state.selection.$from.after(view.state.selection.$from.depth);
-      const hr = hrType.create();
-      const paragraph = nodes.paragraph.create();
-
-      tr = view.state.tr.insert(insertPos, [hr, paragraph]);
-      tr.setSelection(Selection.near(tr.doc.resolve(insertPos + 2)));
-      view.dispatch(tr);
+      if (blockNode) {
+        const newPos = blockPos + blockNode.nodeSize;
+        const tr2 = state.tr.insert(newPos, nodes.block.create({ type: 'paragraph', indent: blockNode.attrs.indent }));
+        tr2.setSelection(Selection.near(tr2.doc.resolve(newPos + 1)));
+        view.dispatch(tr2);
+      }
     },
   },
   {

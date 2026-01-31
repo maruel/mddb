@@ -1,6 +1,3 @@
-// ProseMirror commands for block operations.
-// Used by context menu and keyboard shortcuts.
-
 import { type Command } from 'prosemirror-state';
 import { type BlockType } from './schema';
 
@@ -139,6 +136,54 @@ export function convertBlock(
       }
 
       dispatch(state.tr.setNodeMarkup(pos, undefined, newAttrs));
+    }
+    return true;
+  };
+}
+
+/**
+ * Convert multiple blocks to a different type.
+ */
+export function convertBlocks(
+  positions: number[],
+  toType: BlockType,
+  attrs?: { level?: number; checked?: boolean; language?: string }
+): Command {
+  return (state, dispatch) => {
+    if (positions.length === 0) return false;
+
+    let tr = state.tr;
+    let modified = false;
+
+    for (const pos of positions) {
+      const node = tr.doc.nodeAt(pos);
+      if (!node) continue;
+
+      const newAttrs = {
+        ...node.attrs,
+        type: toType,
+        ...attrs,
+      };
+
+      // Clear type-specific attrs when converting
+      if (toType !== 'heading') {
+        newAttrs.level = undefined;
+      }
+      if (toType !== 'task') {
+        newAttrs.checked = undefined;
+      }
+      if (toType !== 'code') {
+        newAttrs.language = undefined;
+      }
+
+      tr = tr.setNodeMarkup(pos, undefined, newAttrs);
+      modified = true;
+    }
+
+    if (!modified) return false;
+
+    if (dispatch) {
+      dispatch(tr);
     }
     return true;
   };

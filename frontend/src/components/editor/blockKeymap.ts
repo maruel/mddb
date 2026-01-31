@@ -2,8 +2,8 @@
 // Handles Tab/Shift-Tab for indentation, Enter for block splitting, Backspace for merging.
 
 import { keymap } from 'prosemirror-keymap';
-import { TextSelection, type Command, type EditorState } from 'prosemirror-state';
-import { schema, type BlockType } from './schema';
+import { type Command, type EditorState } from 'prosemirror-state';
+import { type BlockType } from './schema';
 
 /**
  * Check if a block type is list-like (supports indentation).
@@ -94,35 +94,20 @@ const enterCommand: Command = (state, dispatch) => {
 
   // Split at cursor position
   if (dispatch) {
-    const tr = state.tr;
-    const splitOffset = $from.parentOffset;
-    const blockEndPos = pos + node.nodeSize;
+    const splitPos = $from.pos;
+    const newAttrs = { ...node.attrs };
 
-    // Get content after cursor
-    const afterSlice = node.content.cut(splitOffset);
+    // Reset checked state for new task items
+    if (type === 'task') {
+      newAttrs.checked = false;
+    }
 
-    // Create new block with same type and indent
-    const blockType = schema.nodes['block'];
-    if (!blockType) return false;
+    // We split block (depth 1)
+    // Pass typesAfter to ensure the new block has correct attributes
+    dispatch(state.tr.split(splitPos, 1, [{ type: node.type, attrs: newAttrs }]));
 
-    const newBlock = blockType.create(
-      {
-        type,
-        indent,
-        checked: type === 'task' ? false : null,
-      },
-      afterSlice
-    );
-
-    // Delete content after cursor in current block, then insert new block
-    tr.delete($from.pos, blockEndPos - 1); // -1 to not delete closing tag
-    tr.insert(pos + 1 + splitOffset, newBlock);
-
-    // Move cursor to start of new block
-    const newPos = pos + 2 + splitOffset;
-    tr.setSelection(TextSelection.create(tr.doc, newPos));
-
-    dispatch(tr);
+    // Scroll to view selection
+    // dispatch(state.tr.scrollIntoView()); // usually handled by view
   }
   return true;
 };

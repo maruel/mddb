@@ -416,8 +416,8 @@ test.describe('Editor Features', () => {
     // Check for rendered markdown elements in WYSIWYG editor
     await expect(editor.locator('h1')).toContainText('Heading 1');
     await expect(editor.locator('strong')).toContainText('Bold text');
-    await expect(editor.locator('li').first()).toContainText('List item 1');
-    await expect(editor.locator('code')).toContainText('code inline');
+    await expect(editor.locator('.block-row[data-type="bullet"]').first()).toContainText('List item 1');
+    await expect(editor.locator('.block-row[data-type="code"]').first()).toContainText('code inline');
 
     await takeScreenshot('wysiwyg-editor');
   });
@@ -510,13 +510,13 @@ function hello() {
       await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
       await expect(editor.locator('em')).toContainText('italic text', { timeout: 3000 });
       await expect(editor.locator('p code')).toContainText('code', { timeout: 3000 });
-      await expect(editor.locator('ul li').first()).toContainText('First bullet', { timeout: 3000 });
-      await expect(editor.locator('ul li').nth(1)).toContainText('Second bullet', { timeout: 3000 });
-      await expect(editor.locator('ol li').first()).toContainText('First item', { timeout: 3000 });
-      await expect(editor.locator('ol li').nth(1)).toContainText('Second item', { timeout: 3000 });
+      await expect(editor.locator('.block-row[data-type="bullet"]').first()).toContainText('First bullet', { timeout: 3000 });
+      await expect(editor.locator('.block-row[data-type="bullet"]').nth(1)).toContainText('Second bullet', { timeout: 3000 });
+      await expect(editor.locator('.block-row[data-type="number"]').first()).toContainText('First item', { timeout: 3000 });
+      await expect(editor.locator('.block-row[data-type="number"]').nth(1)).toContainText('Second item', { timeout: 3000 });
 
       // Verify task list items (checkboxes)
-      const taskItems = editor.locator('li.task-list-item');
+      const taskItems = editor.locator('.block-row[data-type="task"]');
       await expect(taskItems).toHaveCount(3, { timeout: 3000 });
       await expect(taskItems.first()).toContainText('Unchecked task', { timeout: 3000 });
       await expect(taskItems.nth(1)).toContainText('Checked task', { timeout: 3000 });
@@ -568,7 +568,7 @@ function hello() {
       await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
       await expect(editor.locator('pre code')).toContainText('const x = 42;', { timeout: 3000 });
       // Task list items should still be present with correct states
-      const finalTaskItems = editor.locator('li.task-list-item');
+      const finalTaskItems = editor.locator('.block-row[data-type="task"]');
       await expect(finalTaskItems).toHaveCount(3, { timeout: 3000 });
       await expect(finalTaskItems.nth(1)).toHaveAttribute('data-checked', 'true');
 
@@ -715,7 +715,7 @@ function hello() {
     await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
 
     // Editor should have a bullet list
-    await expect(editor.locator('ul')).toBeVisible({ timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="bullet"]')).toBeVisible({ timeout: 3000 });
     await takeScreenshot('bullet-list-applied');
 
     // Test Escape to close menu without selecting

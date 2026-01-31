@@ -2,11 +2,11 @@
 
 import { Show, createSignal, createEffect, on } from 'solid-js';
 import type { EditorView } from 'prosemirror-view';
-import type { Node as PMNode } from 'prosemirror-model';
-import { Selection, TextSelection, AllSelection } from 'prosemirror-state';
-import { toggleMark, setBlockType, wrapIn, lift } from 'prosemirror-commands';
-import { wrapInList } from 'prosemirror-schema-list';
-import { nodes, marks } from './prosemirror-config';
+import { toggleMark } from 'prosemirror-commands';
+import { marks } from './prosemirror-config';
+import { convertBlocks } from './blockCommands';
+import { getSelectedBlockPositions } from './blockDragPlugin';
+import type { BlockType, BlockAttrs } from './schema';
 import styles from './Editor.module.css';
 
 import FormatBoldIcon from '@material-symbols/svg-400/outlined/format_bold.svg?solid';
@@ -93,39 +93,6 @@ export default function EditorToolbar(props: EditorToolbarProps) {
   const formatButtonClass = (isActive: boolean) =>
     isActive ? `${styles.formatButton} ${styles.isActive}` : styles.formatButton;
 
-  // Get current list state from editor (not stale props) for use in click handlers
-  const getCurrentListState = () => {
-    if (!props.view) return { isBulletList: false, isOrderedList: false, isTaskList: false };
-    const { state } = props.view;
-    const { from, to, $from } = state.selection;
-
-    let isBulletList = false;
-    let isOrderedList = false;
-    let isTaskList = false;
-
-    // Check ancestors
-    for (let d = $from.depth; d > 0; d--) {
-      const n = $from.node(d);
-      if (n.type === nodes.bullet_list) isBulletList = true;
-      if (n.type === nodes.ordered_list) isOrderedList = true;
-      if (n.type === nodes.list_item && n.attrs.checked !== null) isTaskList = true;
-    }
-
-    // Also check nodes in selection range (for Ctrl+A selection)
-    if (!isBulletList && !isOrderedList && !isTaskList) {
-      state.doc.nodesBetween(from, to, (n) => {
-        if (n.type === nodes.bullet_list) isBulletList = true;
-        if (n.type === nodes.ordered_list) isOrderedList = true;
-        if (n.type === nodes.list_item && n.attrs.checked !== null) isTaskList = true;
-      });
-    }
-
-    // Task lists are bullet lists with checked attrs - mutually exclusive
-    if (isTaskList) isBulletList = false;
-
-    return { isBulletList, isOrderedList, isTaskList };
-  };
-
   const toggleBold = () => {
     if (!props.view) return;
     toggleMark(marks.strong)(props.view.state, props.view.dispatch);
@@ -156,374 +123,75 @@ export default function EditorToolbar(props: EditorToolbarProps) {
     props.view.focus();
   };
 
-  const setHeading = (level: number) => {
+  // Helper to apply block type conversion to all selected blocks
+  const setBlockType = (type: BlockType, attrs: Partial<BlockAttrs> = {}) => {
     if (!props.view) return;
     const { state, dispatch } = props.view;
-    if (props.formatState.headingLevel === level) {
-      setBlockType(nodes.paragraph)(state, dispatch);
-    } else {
-      setBlockType(nodes.heading, { level })(state, dispatch);
-    }
-    props.view.focus();
-  };
+    const positions = getSelectedBlockPositions(state);
 
-  // Helper to unwrap a list by replacing it with its items' content
-  const unwrapList = () => {
-    if (!props.view) return;
-    const { state, dispatch } = props.view;
-    const { from, to, $from } = state.selection;
-
-    // Find the list node wrapping the selection (check ancestors first)
-    let listNode: PMNode | null = null;
-    let listStart = 0;
-
-    for (let d = $from.depth; d > 0; d--) {
-      const node = $from.node(d);
-      if (node.type === nodes.bullet_list || node.type === nodes.ordered_list) {
-        listNode = node;
-        listStart = $from.before(d);
-        break;
-      }
-    }
-
-    // If not found in ancestors, search in selection range (for Ctrl+A)
-    if (!listNode) {
-      state.doc.nodesBetween(from, to, (node, pos) => {
-        if (!listNode && (node.type === nodes.bullet_list || node.type === nodes.ordered_list)) {
-          listNode = node;
-          listStart = pos;
-        }
-      });
-    }
-
-    if (listNode) {
-      const listEnd = listStart + listNode.nodeSize;
-
-      // Check if the original selection was "select all" (AllSelection or spans whole doc)
-      const wasSelectAll = state.selection instanceof AllSelection || (from <= 1 && to >= state.doc.content.size - 1);
-
-      // Check if selection is within the list (for selecting all list content after unwrap)
-      const selectionWithinList = from >= listStart && to <= listEnd;
-
-      // Collect all content from list items (each list_item contains paragraph(s))
-      const fragments: PMNode[] = [];
-      listNode.forEach((listItem) => {
-        listItem.forEach((child) => {
-          fragments.push(child);
-        });
-      });
-
-      // Calculate the total size of inserted content
-      let insertedSize = 0;
-      for (const frag of fragments) {
-        insertedSize += frag.nodeSize;
-      }
-
-      // Replace the list with the collected fragments
-      const tr = state.tr.replaceWith(listStart, listEnd, fragments);
-
-      // Restore selection
-      if (wasSelectAll) {
-        // Original was select-all, so select all in new doc
-        tr.setSelection(new AllSelection(tr.doc));
-      } else if (from !== to && selectionWithinList) {
-        // Selection was within the list - select all the newly inserted content
-        try {
-          const newFrom = listStart + 1; // Start inside first paragraph
-          const newTo = listStart + insertedSize - 1; // End inside last paragraph
-          tr.setSelection(TextSelection.create(tr.doc, newFrom, newTo));
-        } catch {
-          // Fallback to cursor at start
-          tr.setSelection(Selection.near(tr.doc.resolve(listStart)));
-        }
-      } else if (from !== to) {
-        // Selection spans outside the list - use mapping
-        try {
-          const newFrom = tr.mapping.map(from);
-          const newTo = tr.mapping.map(to);
-          tr.setSelection(TextSelection.create(tr.doc, newFrom, newTo));
-        } catch {
-          tr.setSelection(Selection.near(tr.doc.resolve(listStart)));
-        }
-      }
-      // If from === to (cursor, no selection), let ProseMirror handle it naturally
-
-      dispatch(tr);
-    }
-  };
-
-  // Helper to change list type (bullet <-> ordered) by replacing the wrapper node
-  const changeListType = (newListType: typeof nodes.bullet_list | typeof nodes.ordered_list) => {
-    if (!props.view) return;
-    const { state, dispatch } = props.view;
-    const { from, to, $from } = state.selection;
-
-    // Find the list node wrapping the selection (check ancestors first)
-    let listNode: PMNode | null = null;
-    let listStart = 0;
-
-    for (let d = $from.depth; d > 0; d--) {
-      const node = $from.node(d);
-      if (node.type === nodes.bullet_list || node.type === nodes.ordered_list) {
-        listNode = node;
-        listStart = $from.before(d);
-        break;
-      }
-    }
-
-    // If not found in ancestors, search in selection range (for AllSelection)
-    if (!listNode) {
-      state.doc.nodesBetween(from, to, (node, pos) => {
-        if (!listNode && (node.type === nodes.bullet_list || node.type === nodes.ordered_list)) {
-          listNode = node;
-          listStart = pos;
-        }
-      });
-    }
-
-    if (listNode) {
-      // Check if original selection was "select all"
-      const wasSelectAll = state.selection instanceof AllSelection || (from <= 1 && to >= state.doc.content.size - 1);
-
-      // Change the list type while preserving content
-      const tr = state.tr.setNodeMarkup(listStart, newListType);
-
-      // Also clear checked attribute from all list items if converting to ordered list
-      if (newListType === nodes.ordered_list) {
-        tr.doc.nodesBetween(listStart, listStart + listNode.nodeSize, (n, pos) => {
-          if (n.type === nodes.list_item && n.attrs.checked !== null) {
-            tr.setNodeMarkup(pos, undefined, { checked: null });
-          }
-        });
-      }
-
-      // Restore selection
-      if (wasSelectAll) {
-        tr.setSelection(new AllSelection(tr.doc));
-      } else if (from !== to) {
-        try {
-          const newFrom = tr.mapping.map(from);
-          const newTo = tr.mapping.map(to);
-          tr.setSelection(TextSelection.create(tr.doc, newFrom, newTo));
-        } catch {
-          // Fallback - selection structure changed
-        }
-      }
-
-      dispatch(tr);
-    }
-  };
-
-  // Helper to wrap in list while preserving selection
-  const wrapInListPreserveSelection = (listType: typeof nodes.bullet_list | typeof nodes.ordered_list) => {
-    if (!props.view) return;
-    const { state, dispatch } = props.view;
-    const { from, to } = state.selection;
-
-    // Check if original selection was "select all"
-    const wasSelectAll = state.selection instanceof AllSelection || (from <= 1 && to >= state.doc.content.size - 1);
-
-    wrapInList(listType)(state, (tr) => {
-      // Restore selection after wrapping
-      if (wasSelectAll) {
-        tr.setSelection(new AllSelection(tr.doc));
-      } else if (from !== to) {
-        try {
-          const newFrom = tr.mapping.map(from);
-          const newTo = tr.mapping.map(to);
-          tr.setSelection(TextSelection.create(tr.doc, newFrom, newTo));
-        } catch {
-          // Fallback - selection structure changed
-        }
-      }
-      dispatch(tr);
-    });
-  };
-
-  const toggleBulletList = () => {
-    if (!props.view) return;
-    const { state, dispatch } = props.view;
-    const { from, to } = state.selection;
-    const listState = getCurrentListState();
-
-    if (listState.isBulletList) {
-      // Already bullet list - toggle off
-      unwrapList();
-    } else if (listState.isOrderedList) {
-      // Convert ordered to bullet
-      changeListType(nodes.bullet_list);
-    } else if (listState.isTaskList) {
-      // Task list is already a bullet list, just remove checked attrs
+    // If no blocks selected (e.g. empty selection), use current block
+    if (positions.length === 0) {
       const { $from } = state.selection;
-      const wasSelectAll = state.selection instanceof AllSelection || (from <= 1 && to >= state.doc.content.size - 1);
-
+      // Start depth 1 because depth 0 is doc
       for (let d = $from.depth; d > 0; d--) {
-        const node = $from.node(d);
-        if (node.type === nodes.bullet_list) {
-          const listStart = $from.before(d);
-          let tr = state.tr;
-          state.doc.nodesBetween(listStart, listStart + node.nodeSize, (n, pos) => {
-            if (n.type === nodes.list_item && n.attrs.checked !== null) {
-              tr = tr.setNodeMarkup(pos, undefined, { checked: null });
-            }
-          });
-          if (tr.docChanged) {
-            // Restore selection
-            if (wasSelectAll) {
-              tr.setSelection(new AllSelection(tr.doc));
-            } else if (from !== to) {
-              try {
-                const newFrom = tr.mapping.map(from);
-                const newTo = tr.mapping.map(to);
-                tr.setSelection(TextSelection.create(tr.doc, newFrom, newTo));
-              } catch {
-                // Fallback - selection structure changed
-              }
-            }
-            dispatch(tr);
-          }
+        if ($from.node(d).isBlock) {
+          convertBlocks([$from.before(d)], type, attrs)(state, dispatch);
           break;
         }
       }
     } else {
-      // Not in any list - wrap in bullet list
-      wrapInListPreserveSelection(nodes.bullet_list);
+      convertBlocks(positions, type, attrs)(state, dispatch);
     }
+
     props.view.focus();
+  };
+
+  const setHeading = (level: number) => {
+    if (props.formatState.headingLevel === level) {
+      setBlockType('paragraph');
+    } else {
+      setBlockType('heading', { level });
+    }
+  };
+
+  const toggleBulletList = () => {
+    if (props.formatState.isBulletList) {
+      setBlockType('paragraph');
+    } else {
+      setBlockType('bullet');
+    }
   };
 
   const toggleOrderedList = () => {
-    if (!props.view) return;
-    const listState = getCurrentListState();
-
-    if (listState.isOrderedList) {
-      // Already ordered list - toggle off
-      unwrapList();
-    } else if (listState.isBulletList || listState.isTaskList) {
-      // Convert bullet/task to ordered
-      changeListType(nodes.ordered_list);
+    if (props.formatState.isOrderedList) {
+      setBlockType('paragraph');
     } else {
-      // Not in any list - wrap in ordered list
-      wrapInListPreserveSelection(nodes.ordered_list);
+      setBlockType('number');
     }
-    props.view.focus();
   };
 
   const toggleTaskList = () => {
-    if (!props.view) return;
-    const { state, dispatch } = props.view;
-    const { from, to, $from } = state.selection;
-
-    // Helper to find list containing position or first list in selection
-    const findList = (
-      listType: typeof nodes.bullet_list | typeof nodes.ordered_list
-    ): { start: number; node: PMNode } | null => {
-      // First try to find list as ancestor of selection start
-      for (let d = $from.depth; d > 0; d--) {
-        const node = $from.node(d);
-        if (node.type === listType) {
-          return { start: $from.before(d), node };
-        }
-      }
-      // If not found, search in selection range
-      let result: { start: number; node: PMNode } | null = null;
-      state.doc.nodesBetween(from, to, (node, pos) => {
-        if (!result && node.type === listType) {
-          result = { start: pos, node };
-        }
-      });
-      return result;
-    };
-
-    // Check if original selection was "select all"
-    const wasSelectAll = state.selection instanceof AllSelection || (from <= 1 && to >= state.doc.content.size - 1);
-
-    // Helper to restore selection on a transaction
-    const restoreSelection = (tr: typeof state.tr) => {
-      if (wasSelectAll) {
-        tr.setSelection(new AllSelection(tr.doc));
-      } else if (from !== to) {
-        try {
-          const newFrom = tr.mapping.map(from);
-          const newTo = tr.mapping.map(to);
-          tr.setSelection(TextSelection.create(tr.doc, newFrom, newTo));
-        } catch {
-          // Fallback - selection structure changed
-        }
-      }
-    };
-
-    const listState = getCurrentListState();
-
-    if (listState.isTaskList) {
-      // Toggle off: unwrap task list to paragraphs (consistent with bullet/numbered toggle)
-      unwrapList();
-    } else if (listState.isBulletList) {
-      // Convert bullet list items to task list items
-      const found = findList(nodes.bullet_list);
-      if (found) {
-        let tr = state.tr;
-        state.doc.nodesBetween(found.start, found.start + found.node.nodeSize, (n, pos) => {
-          if (n.type === nodes.list_item && n.attrs.checked === null) {
-            tr = tr.setNodeMarkup(pos, undefined, { checked: false });
-          }
-        });
-        if (tr.docChanged) {
-          restoreSelection(tr);
-          dispatch(tr);
-        }
-      }
-    } else if (listState.isOrderedList) {
-      // Convert ordered list to task list (change type + add checked)
-      const found = findList(nodes.ordered_list);
-      if (found) {
-        let tr = state.tr.setNodeMarkup(found.start, nodes.bullet_list);
-        // Need to re-resolve after changing list type
-        tr.doc.nodesBetween(found.start, found.start + found.node.nodeSize, (n, pos) => {
-          if (n.type === nodes.list_item) {
-            tr = tr.setNodeMarkup(pos, undefined, { checked: false });
-          }
-        });
-        restoreSelection(tr);
-        dispatch(tr);
-      }
+    if (props.formatState.isTaskList) {
+      setBlockType('paragraph');
     } else {
-      // Not in any list - create new task list
-      wrapInList(nodes.bullet_list)(state, (tr) => {
-        // After wrapping, mark all new list items as task items
-        let newTr = tr;
-        tr.doc.descendants((node, pos) => {
-          if (node.type === nodes.list_item && node.attrs.checked === null) {
-            newTr = newTr.setNodeMarkup(pos, undefined, { checked: false });
-          }
-        });
-        restoreSelection(newTr);
-        dispatch(newTr);
-      });
+      setBlockType('task', { checked: false });
     }
-    props.view.focus();
   };
 
   const toggleBlockquote = () => {
-    if (!props.view) return;
-    const { state, dispatch } = props.view;
     if (props.formatState.isBlockquote) {
-      lift(state, dispatch);
+      setBlockType('paragraph');
     } else {
-      wrapIn(nodes.blockquote)(state, dispatch);
+      setBlockType('quote');
     }
-    props.view.focus();
   };
 
   const toggleCodeBlock = () => {
-    if (!props.view) return;
-    const { state, dispatch } = props.view;
     if (props.formatState.isCodeBlock) {
-      setBlockType(nodes.paragraph)(state, dispatch);
+      setBlockType('paragraph');
     } else {
-      setBlockType(nodes.code_block)(state, dispatch);
+      setBlockType('code');
     }
-    props.view.focus();
   };
 
   return (

@@ -1,4 +1,4 @@
-// WYSIWYG markdown editor component using ProseMirror with prosemirror-markdown.
+// WYSIWYG markdown editor component using ProseMirror with flat block architecture.
 
 import { createSignal, onMount, onCleanup, createEffect, on, createMemo, Show, untrack } from 'solid-js';
 import { EditorView } from 'prosemirror-view';
@@ -10,11 +10,15 @@ import {
   rewriteInternalLinkTitles,
   type NodeTitleMap,
 } from './markdown-utils';
-import { schema, nodes, marks, markdownParser, markdownSerializer, createEditorState } from './prosemirror-config';
+import { nodes, marks, createEditorState, schema } from './prosemirror-config';
+import { parseMarkdown } from './markdown-parser';
+import { serializeToMarkdown } from './markdown-serializer';
+import { createBlockNodeView } from './BlockNodeView';
 import { createSlashCommandPlugin, type SlashMenuState } from './slashCommandPlugin';
 import { createDropUploadPlugin } from './dropUploadPlugin';
 import { createInvalidLinkPlugin, updateInvalidLinkState, INTERNAL_LINK_URL_PATTERN } from './invalidLinkPlugin';
 import { useAssetUpload, isImageMimeType } from './useAssetUpload';
+import { BlockContextMenu } from './BlockContextMenu';
 import SlashCommandMenu from './SlashCommandMenu';
 import EditorToolbar, { type FormatState } from './EditorToolbar';
 import type { AssetUrlMap } from '../../contexts/EditorContext';
@@ -38,7 +42,6 @@ interface EditorProps {
 export default function Editor(props: EditorProps) {
   const { t } = useI18n();
   const [editorMode, setEditorMode] = createSignal<'wysiwyg' | 'markdown'>('wysiwyg');
-  // Use untrack for initial value - we don't want to re-create the signal when props.content changes
   const [markdownContent, setMarkdownContent] = createSignal(untrack(() => props.content));
   const [view, setView] = createSignal<EditorView | undefined>();
   const [slashMenuState, setSlashMenuState] = createSignal<SlashMenuState>({
@@ -73,52 +76,60 @@ export default function Editor(props: EditorProps) {
         let tr = editorView.state.tr;
 
         if (isImage) {
-          // Insert image node with signed URL for immediate display.
-          // reverseRewriteAssetUrls will extract the filename when saving.
+          // Flattened block schemas handle images inside blocks or as separate blocks
+          // For now, simpler to insert as a paragraph block with an image mark or inline image?
+          // Schema does not seem to have 'image' node type in 'nodes' export from schema.ts?
+          // Let's check schema.ts... Phase 1 spec didn't mention 'image' block, only 'inline*' content.
+          // Standard ProseMirror uses inline image nodes.
+          // Wait, schema.ts removed 'image' node from baseSchema?
+          // Actually schema.ts removed bullet_list etc but added block. baseSchema has image.
+          // let's assume image node exists in baseSchema marks or nodes.
+          // schema.ts extends baseSchema.spec.nodes.remove(...).addToEnd(...)
+          // baseSchema has 'image' node.
+
+          // However, we can only insert 'block' or 'divider' at top level.
+          // To insert an image, we should insert a paragraph block containing the image node.
+
           const imageType = schema.nodes.image;
+          // Check if image node exists in our schema
           if (imageType) {
             const imageNode = imageType.create({
               src: result.url,
               alt: result.name,
               title: null,
             });
-            tr = tr.insert(pos, imageNode);
+
+            // Create a new paragraph block containing the image
+            const block = nodes.block.create({ type: 'paragraph', indent: 0 }, imageNode);
+            tr = tr.insert(pos, block);
           }
         } else {
-          // Insert link with signed URL for immediate display.
-          // reverseRewriteAssetUrls will extract the filename when saving.
-          const linkType = schema.marks.link;
+          // Insert link
+          const linkType = marks.link;
           if (linkType) {
             const linkMark = linkType.create({ href: result.url, title: null });
             const textNode = schema.text(result.name, [linkMark]);
-            tr = tr.insert(pos, textNode);
+            // Create a new paragraph block containing the link
+            const block = nodes.block.create({ type: 'paragraph', indent: 0 }, textNode);
+            tr = tr.insert(pos, block);
           }
         }
 
         editorView.dispatch(tr);
-
-        // Notify parent to reload node (updates asset URLs)
         props.onAssetUploaded?.();
       } else {
-        // Report error to parent
         const errMsg = error();
-        if (errMsg) {
-          props.onError?.(errMsg);
-        }
+        if (errMsg) props.onError?.(errMsg);
       }
     }
   };
 
-  // Create drop upload plugin
   const dropPlugin = createDropUploadPlugin({ onFileDrop: handleFileDrop });
 
-  // Track what we've emitted to distinguish our own changes from external updates
-  // Use untrack for initial values - these are bookkeeping variables, not reactive bindings
   let lastLoadedNodeId: string | undefined = untrack(() => props.nodeId);
   let lastEmittedContent: string = untrack(() => props.content);
   let lastLinkedNodeTitles: NodeTitleMap | undefined = untrack(() => props.linkedNodeTitles);
 
-  // Track active formatting states for toolbar buttons
   const [formatState, setFormatState] = createSignal<FormatState>({
     isBold: false,
     isItalic: false,
@@ -139,47 +150,37 @@ export default function Editor(props: EditorProps) {
     left: number;
   } | null>(null);
 
-  // Parse markdown to ProseMirror document, handling asset URLs and link titles
-  const parseMarkdown = (md: string): ProseMirrorNode | null => {
+  const localParseMarkdown = (md: string): ProseMirrorNode | null => {
     let processed = rewriteAssetUrls(md, props.assetUrls || {});
-    // Rewrite internal link titles to current titles if wsId is available
     if (props.wsId && props.linkedNodeTitles && Object.keys(props.linkedNodeTitles).length > 0) {
       processed = rewriteInternalLinkTitles(processed, props.linkedNodeTitles, props.wsId);
     }
-    return markdownParser.parse(processed);
+    return parseMarkdown(processed);
   };
 
-  // Serialize ProseMirror document to markdown, handling asset URLs
-  const serializeMarkdown = (doc: ProseMirrorNode): string => {
-    const md = markdownSerializer.serialize(doc);
+  const localSerializeMarkdown = (doc: ProseMirrorNode): string => {
+    const md = serializeToMarkdown(doc);
     return reverseRewriteAssetUrls(md, props.assetUrls || {});
   };
 
-  // Update active state signals based on current selection
   const updateActiveStates = (editorView: EditorView) => {
     const { state } = editorView;
     const { from, $from, to, empty } = state.selection;
 
-    // Update toolbar position
+    // Toolbar position
     if (empty || editorMode() === 'markdown') {
       setToolbarPosition(null);
     } else {
       try {
         const start = editorView.coordsAtPos(from);
         const end = editorView.coordsAtPos(to);
-
-        // Calculate horizontal center
-        // If on same line (approx), center between start and end
         const isSameLine = Math.abs(start.top - end.top) < 20;
         let left = start.left;
         if (isSameLine) {
           left = (start.left + end.right) / 2;
         } else {
-          // Multi-line: position near the start
           left = start.left + 40;
         }
-
-        // Pass both positions - toolbar will check visibility and choose
         setToolbarPosition({
           top: start.top,
           bottom: end.bottom,
@@ -190,7 +191,7 @@ export default function Editor(props: EditorProps) {
       }
     }
 
-    // Check marks
+    // Marks
     const currentMarks = empty ? state.storedMarks || $from.marks() : [];
     const isBold = marks.strong.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.strong);
     const isItalic = marks.em.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.em);
@@ -200,35 +201,36 @@ export default function Editor(props: EditorProps) {
       marks.strikethrough.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.strikethrough);
     const isCode = marks.code.isInSet(currentMarks) !== undefined || state.doc.rangeHasMark(from, to, marks.code);
 
-    // Check block types
-    const node = $from.node($from.depth);
-    const headingLevel = node.type === nodes.heading ? (node.attrs.level as number) : null;
-    const isCodeBlock = node.type === nodes.code_block;
+    // Block attributes
+    // Find the block node at the cursor/selection
+    let blockNode: ProseMirrorNode | null = null;
 
-    // Check list types by walking up ancestors
+    // In flat architecture, blocks are always direct children of doc (depth 1)
+    if ($from.depth >= 1) {
+      blockNode = $from.node(1);
+    }
+
+    // If not found (e.g. at start of doc), try nodeAt
+    if (!blockNode && from === 0) {
+      blockNode = state.doc.nodeAt(0);
+    }
+
     let isBulletList = false;
     let isOrderedList = false;
     let isTaskList = false;
     let isBlockquote = false;
-    for (let d = $from.depth; d > 0; d--) {
-      const n = $from.node(d);
-      if (n.type === nodes.bullet_list) isBulletList = true;
-      if (n.type === nodes.ordered_list) isOrderedList = true;
-      if (n.type === nodes.list_item && n.attrs.checked !== null) isTaskList = true;
-      if (n.type === nodes.blockquote) isBlockquote = true;
-    }
-    // Also check nodes in selection range (for Ctrl+A selection where $from is at doc root)
-    if (!isBulletList && !isOrderedList && !isTaskList) {
-      state.doc.nodesBetween(from, to, (n) => {
-        if (n.type === nodes.bullet_list) isBulletList = true;
-        if (n.type === nodes.ordered_list) isOrderedList = true;
-        if (n.type === nodes.list_item && n.attrs.checked !== null) isTaskList = true;
-        if (n.type === nodes.blockquote) isBlockquote = true;
-      });
-    }
-    // Task lists are implemented as bullet lists with checked attrs, so they're mutually exclusive
-    if (isTaskList) {
-      isBulletList = false;
+    let isCodeBlock = false;
+    let headingLevel: number | null = null;
+
+    // If we have a single block context, use it
+    if (blockNode && blockNode.type.name === 'block') {
+      const type = blockNode.attrs.type;
+      if (type === 'bullet') isBulletList = true;
+      if (type === 'number') isOrderedList = true;
+      if (type === 'task') isTaskList = true;
+      if (type === 'quote') isBlockquote = true;
+      if (type === 'code') isCodeBlock = true;
+      if (type === 'heading') headingLevel = blockNode.attrs.level;
     }
 
     setFormatState({
@@ -250,19 +252,22 @@ export default function Editor(props: EditorProps) {
     const editorEl = editorRef();
     if (!editorEl) return;
 
-    const doc = parseMarkdown(props.content);
+    const doc = localParseMarkdown(props.content);
     if (!doc) return;
     const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
 
     const editorView = new EditorView(editorEl, {
       state,
       editable: () => !props.readOnly,
+      nodeViews: {
+        block: createBlockNodeView,
+      },
       dispatchTransaction(tr) {
         const newState = editorView.state.apply(tr);
         editorView.updateState(newState);
 
         if (tr.docChanged) {
-          const md = serializeMarkdown(newState.doc);
+          const md = localSerializeMarkdown(newState.doc);
           setMarkdownContent(md);
           lastEmittedContent = md;
           props.onChange(md);
@@ -272,7 +277,6 @@ export default function Editor(props: EditorProps) {
       },
       handleDOMEvents: {
         click: (_view, event) => {
-          // Handle clicks on links
           const target = event.target as HTMLElement;
           const anchor = target.closest('a');
           if (!anchor) return false;
@@ -280,7 +284,6 @@ export default function Editor(props: EditorProps) {
           const href = anchor.getAttribute('href');
           if (!href) return false;
 
-          // Check if it's an internal page link
           const match = href.match(INTERNAL_LINK_URL_PATTERN);
           if (match && match[2] && props.onNavigateToNode) {
             event.preventDefault();
@@ -288,7 +291,6 @@ export default function Editor(props: EditorProps) {
             return true;
           }
 
-          // External links (http/https) open in new window
           if (href.startsWith('http://') || href.startsWith('https://')) {
             event.preventDefault();
             window.open(href, '_blank', 'noopener,noreferrer');
@@ -300,19 +302,13 @@ export default function Editor(props: EditorProps) {
       },
     });
 
-    // Store view reference on DOM element for checkbox plugin access
     const pmEl = editorEl.querySelector('.ProseMirror') as HTMLElement & { pmView?: EditorView };
-    if (pmEl) {
-      pmEl.pmView = editorView;
-    }
+    if (pmEl) pmEl.pmView = editorView;
 
     setView(editorView);
     updateActiveStates(editorView);
-
-    // Initialize invalid link decorations with current titles (even if empty, to detect invalid links)
     updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
 
-    // Update toolbar position on scroll so it follows the selection
     const handleScroll = () => updateActiveStates(editorView);
     const scrollContainer = editorEl.closest('[class*="prosemirrorEditor"]') || editorEl;
     scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
@@ -325,7 +321,6 @@ export default function Editor(props: EditorProps) {
     });
   });
 
-  // Sync when node changes, content changes externally, or linked node titles are fetched
   createEffect(
     on(
       () => [props.nodeId, props.content, props.linkedNodeTitles] as const,
@@ -339,7 +334,6 @@ export default function Editor(props: EditorProps) {
           lastEmittedContent = content;
           lastLinkedNodeTitles = linkedNodeTitles;
 
-          // Only reset markdown content and mode when node or content changes, not just titles
           if (nodeChanged || contentChangedExternally) {
             setMarkdownContent(content);
             setEditorMode('wysiwyg');
@@ -347,11 +341,10 @@ export default function Editor(props: EditorProps) {
 
           const editorView = view();
           if (editorView) {
-            const doc = parseMarkdown(content);
+            const doc = localParseMarkdown(content);
             if (doc) {
               const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
               editorView.updateState(state);
-              // Update invalid link decorations with current titles
               updateInvalidLinkState(editorView, linkedNodeTitles || {}, props.wsId);
             }
           }
@@ -370,12 +363,11 @@ export default function Editor(props: EditorProps) {
   const switchToWysiwyg = () => {
     const editorView = view();
     if (editorView) {
-      const doc = parseMarkdown(markdownContent());
+      const doc = localParseMarkdown(markdownContent());
       if (doc) {
         const state = createEditorState(doc, [slashPlugin, dropPlugin, invalidLinkPlugin]);
         editorView.updateState(state);
         updateActiveStates(editorView);
-        // Update invalid link decorations with current titles
         updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
       }
     }
@@ -385,7 +377,7 @@ export default function Editor(props: EditorProps) {
   const switchToMarkdown = () => {
     const editorView = view();
     if (editorView) {
-      const md = serializeMarkdown(editorView.state.doc);
+      const md = localSerializeMarkdown(editorView.state.doc);
       setMarkdownContent(md);
     }
     setEditorMode('markdown');
@@ -399,7 +391,6 @@ export default function Editor(props: EditorProps) {
     }
   };
 
-  // Keyboard shortcut: Ctrl+Shift+M to toggle mode
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'm') {
       e.preventDefault();
@@ -410,7 +401,6 @@ export default function Editor(props: EditorProps) {
   onMount(() => {
     document.addEventListener('keydown', handleKeyDown);
   });
-
   onCleanup(() => {
     document.removeEventListener('keydown', handleKeyDown);
   });
@@ -432,6 +422,9 @@ export default function Editor(props: EditorProps) {
         editorElement={editorRef()}
       />
 
+      {/* Editor context menu */}
+      <BlockContextMenu view={view()} />
+
       <div ref={setEditorRef} class={wysiwygClass()} data-testid="wysiwyg-editor" />
 
       <textarea
@@ -443,7 +436,6 @@ export default function Editor(props: EditorProps) {
         data-testid="markdown-editor"
       />
 
-      {/* Mode toggle at bottom-right */}
       <div class={styles.modeIndicator}>
         <button
           class={editorMode() === 'wysiwyg' ? styles.modeIndicatorActive : undefined}

@@ -36,7 +36,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await checkboxButton.click();
 
     // All three lines should be task list items
-    const taskItems = editor.locator('li.task-list-item');
+    const taskItems = editor.locator('.block-row[data-type="task"]');
     await expect(taskItems).toHaveCount(3, { timeout: 5000 });
 
     // Verify via markdown mode
@@ -73,10 +73,10 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Verify the ordered list is rendered
-    await expect(editor.locator('ol')).toBeVisible({ timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="number"]').first()).toBeVisible({ timeout: 3000 });
 
     // Click inside the first list item
-    await editor.locator('ol li p').first().dblclick();
+    await editor.locator('.block-row[data-type="number"] .block-content').first().dblclick();
 
     // The numbered list button should be active (indicating we're inside an ordered list)
     const numberedListButton = page.locator('button[title="Numbered List"]');
@@ -86,7 +86,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await numberedListButton.click();
 
     // The ordered list should be removed - items should become paragraphs
-    await expect(editor.locator('ol')).not.toBeVisible({ timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="number"]')).toHaveCount(0, { timeout: 3000 });
 
     // Verify via markdown mode
     const markdownEditor = await switchToMarkdownMode(page);
@@ -121,10 +121,10 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Verify the bullet list is rendered
-    await expect(editor.locator('ul')).toBeVisible({ timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="bullet"]').first()).toBeVisible({ timeout: 3000 });
 
     // Click inside the first list item
-    await editor.locator('ul li p').first().dblclick();
+    await editor.locator('.block-row[data-type="bullet"] .block-content').first().dblclick();
 
     // The bullet list button should be active
     const bulletListButton = page.locator('button[title="Bullet List"]');
@@ -134,7 +134,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await bulletListButton.click();
 
     // The bullet list should be removed
-    await expect(editor.locator('ul:not(.task-list)')).not.toBeVisible({ timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="bullet"]')).toHaveCount(0, { timeout: 3000 });
 
     // Verify via markdown mode
     const markdownEditor = await switchToMarkdownMode(page);
@@ -172,10 +172,10 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Verify task list items are rendered
-    await expect(editor.locator('li.task-list-item')).toHaveCount(3, { timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="task"]')).toHaveCount(3, { timeout: 3000 });
 
     // Click inside the first task list item and select text
-    await editor.locator('li.task-list-item p').first().selectText();
+    await editor.locator('.block-row[data-type="task"] .block-content').first().selectText();
 
     // The checkbox button should be active
     const checkboxButton = page.locator('button[title="Task List"]');
@@ -185,10 +185,12 @@ test.describe('Editor Toolbar Formatting', () => {
     await checkboxButton.click();
 
     // The list should be completely removed (unwrapped to paragraphs)
-    await expect(editor.locator('ul')).not.toBeVisible({ timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="task"]')).toHaveCount(0, { timeout: 3000 });
 
-    // Content should now be paragraphs
-    await expect(editor.locator('p')).toHaveCount(3, { timeout: 3000 });
+    // Content should now be paragraphs. Note: paragraphs are not blocks with handle if not explicit block-level?
+    // Wait, in flat block editor, EVERYTHING is a block-row.
+    // So paragraphs are .block-row[data-type="paragraph"]
+    await expect(editor.locator('.block-row[data-type="paragraph"]')).toHaveCount(3, { timeout: 3000 });
 
     // Verify via markdown mode
     const markdownEditor = await switchToMarkdownMode(page);
@@ -231,7 +233,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await numberedListButton.click();
 
     // All three lines should be in an ordered list
-    const orderedListItems = editor.locator('ol li');
+    const orderedListItems = editor.locator('.block-row[data-type="number"]');
     await expect(orderedListItems).toHaveCount(3, { timeout: 5000 });
 
     // Verify via markdown mode
@@ -277,7 +279,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await bulletListButton.click();
 
     // All three lines should be in a bullet list
-    const bulletListItems = editor.locator('ul li');
+    const bulletListItems = editor.locator('.block-row[data-type="bullet"]');
     await expect(bulletListItems).toHaveCount(3, { timeout: 5000 });
 
     // Verify via markdown mode
@@ -317,7 +319,7 @@ test.describe('Editor Toolbar Formatting', () => {
     // Double-click to select text and trigger the floating toolbar
     // Note: Use mouse.dblclick with coordinates near text start because
     // locator.dblclick() clicks center which may miss the text
-    const paragraph = editor.locator('p').first();
+    const paragraph = editor.locator('.block-row[data-type="paragraph"] .block-content').first();
     const box = await paragraph.boundingBox();
     expect(box).toBeTruthy();
     await page.mouse.dblclick(box!.x + 30, box!.y + box!.height / 2);
@@ -328,7 +330,7 @@ test.describe('Editor Toolbar Formatting', () => {
     await checkboxButton.click();
 
     // Should create a task list item
-    const taskItems = editor.locator('li.task-list-item');
+    const taskItems = editor.locator('.block-row[data-type="task"]');
     await expect(taskItems).toHaveCount(1, { timeout: 3000 });
   });
 
@@ -357,15 +359,15 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Click inside the first bullet item
-    await editor.locator('ul li p').first().dblclick();
+    await editor.locator('.block-row[data-type="bullet"] .block-content').first().dblclick();
 
     // Click the checkbox button
     const checkboxButton = page.locator('button[title="Task List"]');
     await checkboxButton.click();
 
     // First item should become a task list item
-    const firstLi = editor.locator('ul li').first();
-    await expect(firstLi).toHaveClass(/task-list-item/, { timeout: 3000 });
+    const firstLi = editor.locator('.block-row').first();
+    await expect(firstLi).toHaveAttribute('data-type', 'task', { timeout: 3000 });
   });
 });
 
@@ -438,7 +440,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await checkboxButton.click();
 
     // All three items should be task list items
-    const taskItems = editor.locator('li.task-list-item');
+    const taskItems = editor.locator('.block-row[data-type="task"]');
     await expect(taskItems).toHaveCount(3, { timeout: 3000 });
   });
 
@@ -464,16 +466,17 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Click inside the bullet list
-    await editor.locator('ul li p').first().dblclick();
+    // Click first item and shift-click last item to select all
+    const items = editor.locator('.block-row[data-type="bullet"] .block-content');
+    await items.first().click();
+    await items.last().click({ modifiers: ['Shift'] });
 
     // Click numbered list button
     const numberedListButton = page.locator('button[title="Numbered List"]');
     await numberedListButton.click();
 
     // Should be a numbered list now
-    await expect(editor.locator('ol')).toBeVisible({ timeout: 3000 });
-    await expect(editor.locator('ol li')).toHaveCount(3);
+    await expect(editor.locator('.block-row[data-type="number"]')).toHaveCount(3);
   });
 
   test('converting numbered list to bullet list works', async ({ page, request }) => {
@@ -499,16 +502,17 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Click inside the numbered list
-    await editor.locator('ol li p').first().dblclick();
+    // Click first item and shift-click last item to select all
+    const items = editor.locator('.block-row[data-type="number"] .block-content');
+    await items.first().click();
+    await items.last().click({ modifiers: ['Shift'] });
 
     // Click bullet list button
     const bulletListButton = page.locator('button[title="Bullet List"]');
     await bulletListButton.click();
 
     // Should be a bullet list now
-    await expect(editor.locator('ul')).toBeVisible({ timeout: 3000 });
-    await expect(editor.locator('ul li')).toHaveCount(3);
+    await expect(editor.locator('.block-row[data-type="bullet"]')).toHaveCount(3);
   });
 
   test('converting task list to numbered list works', async ({ page, request }) => {
@@ -534,17 +538,18 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Click inside the task list and select text
-    await editor.locator('li.task-list-item p').first().selectText();
+    // Click first item and shift-click last item to select all
+    const items = editor.locator('.block-row[data-type="task"] .block-content');
+    await items.first().click();
+    await items.last().click({ modifiers: ['Shift'] });
 
     // Click numbered list button
     const numberedListButton = page.locator('button[title="Numbered List"]');
     await numberedListButton.click();
 
     // Should be a numbered list now with no task items
-    await expect(editor.locator('ol')).toBeVisible({ timeout: 3000 });
-    await expect(editor.locator('ol li')).toHaveCount(3);
-    await expect(editor.locator('li.task-list-item')).toHaveCount(0);
+    await expect(editor.locator('.block-row[data-type="number"]')).toHaveCount(3, { timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="task"]')).toHaveCount(0);
   });
 
   test('selection is preserved through all list type transitions', async ({ page, request }) => {
@@ -574,12 +579,14 @@ test.describe('Editor Toolbar Edge Cases', () => {
     const checkboxButton = page.locator('button[title="Task List"]');
 
     // Verify we have 4 paragraphs
-    const paragraphs = editor.locator('p');
+    const paragraphs = editor.locator('.block-row[data-type="paragraph"]');
     await expect(paragraphs).toHaveCount(4, { timeout: 3000 });
 
-    // Select lines 2 and 3 using triple-click + shift-click (more reliable than keyboard)
-    await paragraphs.nth(1).click({ clickCount: 3 }); // Triple-click selects entire paragraph
-    await paragraphs.nth(2).click({ modifiers: ['Shift'] }); // Shift-click extends to include paragraph 3
+    // Select lines 2 and 3
+    const p2 = paragraphs.nth(1).locator('.block-content');
+    const p3 = paragraphs.nth(2).locator('.block-content');
+    await p2.click();
+    await p3.click({ modifiers: ['Shift'] });
 
     // Wait for floating toolbar to appear (needed on slower CI machines)
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
@@ -587,9 +594,9 @@ test.describe('Editor Toolbar Edge Cases', () => {
 
     // Step 1: Click bullet list - should convert lines 2-3 to bullet list
     await bulletButton.click();
-    await expect(editor.locator('ul > li')).toHaveCount(2, { timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="bullet"]')).toHaveCount(2, { timeout: 3000 });
     // Lines 1 and 4 remain as direct paragraph children (not in lists)
-    await expect(editor.locator('> p')).toHaveCount(2);
+    await expect(editor.locator('.block-row[data-type="paragraph"]')).toHaveCount(2);
 
     // Verify markdown after bullet list
     let markdownEditor = await switchToMarkdownMode(page);
@@ -606,14 +613,14 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await expect(editor).toBeVisible({ timeout: 3000 });
 
     // Re-select the list items (click first list item, shift-click second)
-    const listItems = editor.locator('ul > li');
+    const listItems = editor.locator('.block-row[data-type="bullet"]');
     await listItems.first().click({ position: { x: 0, y: 5 } });
     await listItems.last().click({ position: { x: 100, y: 5 }, modifiers: ['Shift'] });
 
     // Step 2: Click numbered list - should convert to numbered list
     await numberedButton.click();
-    await expect(editor.locator('ol > li')).toHaveCount(2, { timeout: 3000 });
-    await expect(editor.locator('ul')).not.toBeVisible();
+    await expect(editor.locator('.block-row[data-type="number"]')).toHaveCount(2, { timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="bullet"]')).toHaveCount(0);
 
     // Verify markdown after numbered list
     markdownEditor = await switchToMarkdownMode(page);
@@ -628,13 +635,13 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await expect(editor).toBeVisible({ timeout: 3000 });
 
     // Re-select the list items
-    const orderedItems = editor.locator('ol > li');
+    const orderedItems = editor.locator('.block-row[data-type="number"]');
     await orderedItems.first().click({ position: { x: 0, y: 5 } });
     await orderedItems.last().click({ position: { x: 100, y: 5 }, modifiers: ['Shift'] });
 
     // Step 3: Click checkbox - should convert to task list
     await checkboxButton.click();
-    await expect(editor.locator('li.task-list-item')).toHaveCount(2, { timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="task"]')).toHaveCount(2, { timeout: 3000 });
 
     // Verify markdown after task list
     markdownEditor = await switchToMarkdownMode(page);
@@ -649,21 +656,21 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await expect(editor).toBeVisible({ timeout: 3000 });
 
     // Re-select the task list items
-    const taskItems = editor.locator('li.task-list-item');
+    const taskItems = editor.locator('.block-row[data-type="task"]');
     await taskItems.first().click({ position: { x: 0, y: 5 } });
     await taskItems.last().click({ position: { x: 100, y: 5 }, modifiers: ['Shift'] });
 
     // Step 4: Click checkbox again - should toggle off to paragraphs
     await checkboxButton.click();
-    await expect(editor.locator('ul')).not.toBeVisible({ timeout: 3000 });
-    await expect(editor.locator('ol')).not.toBeVisible();
-    await expect(editor.locator('p')).toHaveCount(4, { timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="bullet"]')).toHaveCount(0, { timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="number"]')).toHaveCount(0);
+    await expect(editor.locator('.block-row[data-type="paragraph"]')).toHaveCount(4, { timeout: 3000 });
 
     // Verify selection is preserved: typing should replace the selected text (lines 2-3)
     await page.keyboard.type('Replaced');
 
     // Should have 3 paragraphs: Line one, Replaced, Line four
-    await expect(editor.locator('p')).toHaveCount(3, { timeout: 3000 });
+    await expect(editor.locator('.block-row[data-type="paragraph"]')).toHaveCount(3, { timeout: 3000 });
 
     // Verify markdown - lines 2-3 should be replaced with "Replaced"
     markdownEditor = await switchToMarkdownMode(page);
@@ -698,9 +705,9 @@ test.describe('Editor Toolbar Inline Formatting', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
     await expect(editor.locator('p')).toContainText('Some text', { timeout: 5000 });
 
-    // Triple-click to select the entire paragraph
-    const paragraph = editor.locator('p').first();
-    await paragraph.click({ clickCount: 3 });
+    // Select text using mouse drag
+    const paragraph = editor.locator('.block-row[data-type="paragraph"] .block-content').first();
+    await paragraph.selectText();
 
     // Wait for the floating toolbar to appear
     const underlineButton = page.locator('button[title="Underline (Ctrl+U)"]');
@@ -749,7 +756,7 @@ test.describe('Editor Toolbar Button States', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Click inside the first task list item and select text
-    await editor.locator('li.task-list-item p').first().selectText();
+    await editor.locator('.block-row[data-type="task"] .block-content').first().selectText();
 
     // The checkbox button should be active
     const checkboxButton = page.locator('button[title="Task List"]');
@@ -789,7 +796,7 @@ test.describe('Editor Toolbar Button States', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Click inside the first bullet list item and select text
-    await editor.locator('ul li p').first().selectText();
+    await editor.locator('.block-row[data-type="bullet"] .block-content').first().selectText();
 
     // The bullet list button should be active
     const bulletListButton = page.locator('button[title="Bullet List"]');
@@ -829,7 +836,7 @@ test.describe('Editor Toolbar Button States', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Click inside the first numbered list item and select text
-    await editor.locator('ol li p').first().selectText();
+    await editor.locator('.block-row[data-type="number"] .block-content').first().selectText();
 
     // The numbered list button should be active
     const numberedListButton = page.locator('button[title="Numbered List"]');

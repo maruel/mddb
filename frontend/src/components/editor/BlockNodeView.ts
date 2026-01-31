@@ -60,14 +60,15 @@ export class BlockNodeView implements NodeView {
     this.mountHandle();
 
     // Create content container
-    this.contentDOM = this.createContentElement();
-    this.dom.appendChild(this.contentDOM);
+    const { contentDOM, wrapperDOM } = this.createContentElement();
+    this.contentDOM = contentDOM;
+    this.dom.appendChild(wrapperDOM || contentDOM);
   }
 
   /**
    * Create the content DOM element based on block type.
    */
-  private createContentElement(): HTMLElement {
+  private createContentElement(): { contentDOM: HTMLElement; wrapperDOM?: HTMLElement } {
     const { type, level, checked, language } = this.node.attrs;
     let element: HTMLElement;
 
@@ -78,14 +79,15 @@ export class BlockNodeView implements NodeView {
         break;
       }
       case 'code': {
-        element = document.createElement('pre');
+        const pre = document.createElement('pre');
         const code = document.createElement('code');
-        element.appendChild(code);
+        pre.appendChild(code);
         if (language) {
-          element.dataset.language = language;
+          pre.dataset.language = language;
         }
-        // Return the code element as contentDOM
-        return code;
+        // Specific case: pre is wrapper, code is content
+        pre.className = 'block-content';
+        return { contentDOM: code, wrapperDOM: pre };
       }
       case 'quote': {
         element = document.createElement('blockquote');
@@ -115,7 +117,7 @@ export class BlockNodeView implements NodeView {
     }
 
     element.className = `${element.className || ''} block-content`.trim();
-    return element;
+    return { contentDOM: element };
   }
 
   /**

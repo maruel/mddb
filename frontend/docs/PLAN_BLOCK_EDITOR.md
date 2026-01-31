@@ -1413,6 +1413,10 @@ Existing documents use nested list structure. Need transparent migration.
 Since markdown is the storage format and serialization produces valid markdown, no data migration is needed. The new parser/serializer handles the transformation.
 
 **Tasks:**
+- [x] Integrate `RowHandle.tsx` into `BlockNodeView`
+- [x] Configure `prosemirror-config.ts` to use new schema
+- [x] Setup `nodeViews` in `Editor.tsx`
+- [x] Ensure Markdown parser/serializer handles flat blocks correctly
 - [ ] Verify round-trip compatibility (old MD → new schema → MD → old schema → same)
 - [ ] Test with existing documents
 - [ ] Handle edge cases (deeply nested lists, mixed content)
@@ -1446,6 +1450,7 @@ const useBlockEditor = () => {
 - `src/components/editor/markdown-serializer.test.ts`
 - `src/components/editor/blockCommands.test.ts`
 - `src/components/editor/blockKeymap.test.ts`
+- `src/components/editor/blockInputRules.test.ts`
 
 **Test cases:**
 - Schema: Block creation with all attribute combinations
@@ -1457,11 +1462,17 @@ const useBlockEditor = () => {
 
 **Tasks:**
 - [ ] Unit tests for schema
-- [ ] Unit tests for markdown parser
-- [ ] Unit tests for markdown serializer
-- [ ] Round-trip tests
-- [ ] Command tests
-- [ ] Keymap tests
+- [x] Test `markdown-parser.ts` (Flattening logic)
+- [x] Test `markdown-serializer.ts` (Nesting logic)
+- [x] Test `blockCommands.ts` (Indentation, conversion)
+- [x] Test `slashCommands.test.ts` (Verification of slash command logic)
+- [ ] Test `blockKeymap.ts` (Splitting, merging)
+- [ ] Test `blockInputRules.ts` (Auto-formatting)
+- [x] Replace `baseSchema` imports with new `schema`
+- [x] Update `Editor.tsx` to use new parser/serializer
+- [x] Verify Slash Menu commands with new block types
+- [x] Verify Floating Toolbar with new block types
+- [x] Fix all linting errors related to migration
 
 ### 9.2 E2E Tests
 

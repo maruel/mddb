@@ -4,7 +4,7 @@
 import MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import { MarkdownParser } from 'prosemirror-markdown';
-import { schema as nestedSchema } from './prosemirror-config';
+import { nestedSchema } from './nested-schema';
 import { schema, nodes, type BlockAttrs } from './schema';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 
