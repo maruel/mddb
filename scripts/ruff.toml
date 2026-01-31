@@ -1,0 +1,15 @@
+# Ruff configuration for scripts directory
+
+target-version = "py313"
+line-length = 120
+
+[lint]
+# Enable Pyflakes (F), pycodestyle (E, W), isort (I), and flake8-bugbear (B)
+select = ["E", "F", "W", "I", "B"]
+ignore = []
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

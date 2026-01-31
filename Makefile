@@ -62,6 +62,7 @@ test: $(FRONTEND_STAMP)
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test
 
 e2e: build
+	@python3 scripts/clean_data_e2e.py
 	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=1 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test:e2e; \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
@@ -73,6 +74,7 @@ e2e: build
 	@node e2e/inject-tag-colors.cjs
 
 e2e-slow: build
+	@python3 scripts/clean_data_e2e.py
 	@echo "Running e2e tests with normal rate limits (single worker)..."
 	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=0 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec playwright test --workers=1; \
 	e2e_exit=$$?; \
@@ -101,12 +103,7 @@ lint-python:
 	@ruff check scripts/
 
 lint-binaries:
-	@binaries=$$(git ls-files -z | xargs -0 -r file --mime-type | grep -E 'application/(x-executable|x-mach-binary|x-dosexec|x-pie-executable|x-sharedlib)' | cut -d: -f1); \
-	if [ -n "$$binaries" ]; then \
-		echo "Error: Binary executables found in repository:"; \
-		echo "$$binaries"; \
-		exit 1; \
-	fi
+	@python3 scripts/lint_binaries.py
 
 lint-fix: $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run ./... --fix || true

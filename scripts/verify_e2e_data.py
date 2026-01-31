@@ -53,11 +53,11 @@ def main() -> int:
 
     # Check rename-on-navigation test worked
     renamed = [p for p in pages if p[1] == "RENAMED PAGE TITLE"]
-    old_title = [p for p in pages if p[1] == "Page To Rename"]
     if not renamed:
         errors.append("No 'RENAMED PAGE TITLE' pages - flush on navigation broken")
+    old_title = [p for p in pages if p[1] == "Page To Rename"]
     if old_title:
-        errors.append(f"Found {len(old_title)} 'Page To Rename' pages - rename was lost")
+        errors.append(f"Found {len(old_title)} 'Page To Rename' pages - lost")
 
     # Check rapid rename test
     final_rename = [p for p in pages if p[1] == "FINAL RENAME"]

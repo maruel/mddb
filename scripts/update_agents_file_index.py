@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Script to update AGENTS.md with a file index based on first-line comments.
+"""Update AGENTS.md with a file index based on first-line comments."""
 
 import os
 import re
@@ -194,12 +194,13 @@ def main():
     all_files = get_git_files()
     if not all_files:
         print("No files found in git repository.")
-        return
+        return 1
     for config in CONFIGS:
         # print(f"Processing {config['target_file']}...")
         content = generate_index_for_config(config, all_files)
         update_markdown_file(config["target_file"], content)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
