@@ -85,8 +85,9 @@ test.describe('Page Hierarchy', () => {
     expect(box!.width).toBeGreaterThanOrEqual(16);
     expect(box!.height).toBeGreaterThanOrEqual(16);
 
-    // Check if Child Page is already expanded (transform indicates rotation)
-    const transform = await expandIcon.evaluate((el) => getComputedStyle(el).transform);
+    // Check if Child Page is already expanded (transform indicates rotation on the inner expandIcon)
+    const expandIconInner = expandIcon.locator('[class*="expandIcon"]');
+    const transform = await expandIconInner.evaluate((el) => getComputedStyle(el).transform);
     const isAlreadyExpanded = transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)';
     if (!isAlreadyExpanded) {
       await expandIcon.click();
