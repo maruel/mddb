@@ -94,9 +94,11 @@ For public access via Tailscale Funnel (exposes to the internet!):
 tailscale funnel --bg 8080
 ```
 
-> **Note**: Tailscale serve/funnel provides HTTPS automatically. mddb's authentication still applies—users must log in with their credentials.
+**HTTPS**: Tailscale serve/funnel provides HTTPS automatically via Let's Encrypt TLS certificates.
 
 ### Reverse Proxy with Caddy
 
 A sample Caddyfile is provided in [contrib/mddb.caddyfile](contrib/mddb.caddyfile) for running mddb behind
-[Caddy](https://caddyserver.com/). Caddy automatically handles TLS certificates via Let's Encrypt.
+[Caddy](https://caddyserver.com/).
+
+**HTTPS**: Caddy provides HTTPS automatically via Let's Encrypt TLS certificates.
