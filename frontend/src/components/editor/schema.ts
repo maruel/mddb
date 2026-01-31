@@ -2,11 +2,7 @@
 // Every visible line is a top-level block node with attributes for type, indentation, and styling.
 
 import { Schema, type NodeSpec, type DOMOutputSpec } from 'prosemirror-model';
-import {
-  schema as baseSchema,
-  MarkdownSerializer,
-  MarkdownParser,
-} from 'prosemirror-markdown';
+import { schema as baseSchema } from 'prosemirror-markdown';
 
 // Block types: correspond to different content kinds
 export type BlockType = 'paragraph' | 'heading' | 'bullet' | 'number' | 'task' | 'quote' | 'code' | 'divider';

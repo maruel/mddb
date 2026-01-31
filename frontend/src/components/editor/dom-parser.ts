@@ -79,11 +79,7 @@ function annotateListItems(node: Node, indentLevel: number = 0): void {
  * - Detects task list items and sets data-checked attribute
  * - Recursively processes nested lists
  */
-function annotateListItem(
-  li: Element,
-  listType: 'bullet' | 'number',
-  indentLevel: number
-): void {
+function annotateListItem(li: Element, listType: 'bullet' | 'number', indentLevel: number): void {
   li.setAttribute('data-type', listType);
   li.setAttribute('data-indent', String(indentLevel));
 
@@ -96,7 +92,10 @@ function annotateListItem(
     if (match) {
       // This is a task list item
       li.classList.add('task-list-item');
-      li.setAttribute('data-checked', match[1].toLowerCase() === 'x' ? 'true' : 'false');
+      const checkedChar = match[1];
+      if (checkedChar) {
+        li.setAttribute('data-checked', checkedChar.toLowerCase() === 'x' ? 'true' : 'false');
+      }
     }
   }
 
