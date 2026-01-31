@@ -66,7 +66,7 @@ e2e: build
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
 	if [ $$e2e_exit -ne 0 ]; then \
-	  echo ""; echo "=== Server Log ==="; cat ./data-e2e/server.log 2>/dev/null || true; \
+	  echo ""; echo "Server Log: ./data-e2e/server.log"; \
 	  exit $$e2e_exit; \
 	fi
 	@./scripts/verify_e2e_data.py
