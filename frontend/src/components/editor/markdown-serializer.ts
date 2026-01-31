@@ -25,6 +25,7 @@ export function serializeToMarkdown(doc: ProseMirrorNode): string {
     // Close list contexts that no longer apply
     while (listContext.length > 0) {
       const ctx = listContext[listContext.length - 1];
+      if (ctx === undefined) break;
       // Close if: indent has decreased, or type has changed at same indent
       if (ctx.indent > indent || (ctx.indent === indent && ctx.type !== type && isListType(type))) {
         listContext.pop();

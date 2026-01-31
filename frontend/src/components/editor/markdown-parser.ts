@@ -5,11 +5,11 @@ import MarkdownIt from 'markdown-it';
 import type Token from 'markdown-it/lib/token.mjs';
 import { MarkdownParser } from 'prosemirror-markdown';
 import { schema as nestedSchema } from './prosemirror-config';
-import { schema, type BlockAttrs } from './schema';
+import { schema, nodes, type BlockAttrs } from './schema';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 
 // Create markdown-it instance with task list and underline support
-function createMarkdownIt(): MarkdownIt.MarkdownIt {
+function createMarkdownIt(): MarkdownIt {
   const md = new MarkdownIt();
 
   // Parse task list checkboxes: [ ] and [x] at start of content
@@ -114,7 +114,7 @@ export function parseMarkdown(markdown: string): ProseMirrorNode {
   const flatBlocks: ProseMirrorNode[] = [];
   flattenDocument(nestedDoc, flatBlocks, 0);
 
-  return schema.nodes.doc.create(null, flatBlocks);
+  return nodes.doc.create(null, flatBlocks);
 }
 
 /**
@@ -129,29 +129,26 @@ function flattenDocument(node: ProseMirrorNode, blocks: ProseMirrorNode[], baseI
       // Should not happen at top level, but handle it
       flattenListItem(child, blocks, baseIndent, 'bullet');
     } else if (child.type.name === 'heading') {
-      const blockNode = schema.nodes.block.create(
-        { type: 'heading', level: child.attrs.level, indent: 0 },
-        child.content
-      );
+      const blockNode = nodes.block.create({ type: 'heading', level: child.attrs.level, indent: 0 }, child.content);
       blocks.push(blockNode);
     } else if (child.type.name === 'paragraph') {
-      const blockNode = schema.nodes.block.create({ type: 'paragraph', indent: 0 }, child.content);
+      const blockNode = nodes.block.create({ type: 'paragraph', indent: 0 }, child.content);
       blocks.push(blockNode);
     } else if (child.type.name === 'blockquote') {
       // Extract text from blockquote
       const text = child.textContent;
-      const blockNode = schema.nodes.block.create({ type: 'quote', indent: 0 }, schema.text(text));
+      const blockNode = nodes.block.create({ type: 'quote', indent: 0 }, schema.text(text));
       blocks.push(blockNode);
     } else if (child.type.name === 'code_block') {
       const content = child.textContent;
       const language = child.attrs.params || '';
-      const blockNode = schema.nodes.block.create(
+      const blockNode = nodes.block.create(
         { type: 'code', language: language || undefined, indent: 0 },
         schema.text(content)
       );
       blocks.push(blockNode);
     } else if (child.type.name === 'horizontal_rule') {
-      const blockNode = schema.nodes.divider.create({ type: 'divider', indent: 0 });
+      const blockNode = nodes.divider.create({ type: 'divider', indent: 0 });
       blocks.push(blockNode);
     }
   });
@@ -200,8 +197,8 @@ function flattenListItem(
     ...(isTask && { checked: itemNode.attrs.checked }),
   };
 
-  const blockContent = itemContent ? itemContent.content : schema.text('');
-  const blockNode = schema.nodes.block.create(blockAttrs, blockContent);
+  const blockContent = itemContent ? (itemContent as ProseMirrorNode).content : schema.text('');
+  const blockNode = nodes.block.create(blockAttrs, blockContent);
   blocks.push(blockNode);
 
   // Flatten nested lists

@@ -72,10 +72,10 @@ describe('markdown-parser', () => {
       const doc = parseMarkdown(markdown);
 
       const blocks = Array.from(doc.content.content);
-      expect(blocks[0].attrs.indent).toBe(0); // Item 1
-      expect(blocks[1].attrs.indent).toBe(1); // Nested 1
-      expect(blocks[2].attrs.indent).toBe(1); // Nested 2
-      expect(blocks[3].attrs.indent).toBe(0); // Item 2
+      expect(blocks[0]!.attrs.indent).toBe(0); // Item 1
+      expect(blocks[1]!.attrs.indent).toBe(1); // Nested 1
+      expect(blocks[2]!.attrs.indent).toBe(1); // Nested 2
+      expect(blocks[3]!.attrs.indent).toBe(0); // Item 2
     });
 
     it('parses deeply nested lists (3+ levels)', () => {
@@ -83,11 +83,11 @@ describe('markdown-parser', () => {
       const doc = parseMarkdown(markdown);
 
       const blocks = Array.from(doc.content.content);
-      expect(blocks[0].attrs.indent).toBe(0);
-      expect(blocks[1].attrs.indent).toBe(1);
-      expect(blocks[2].attrs.indent).toBe(2);
-      expect(blocks[3].attrs.indent).toBe(2);
-      expect(blocks[4].attrs.indent).toBe(1);
+      expect(blocks[0]!.attrs.indent).toBe(0);
+      expect(blocks[1]!.attrs.indent).toBe(1);
+      expect(blocks[2]!.attrs.indent).toBe(2);
+      expect(blocks[3]!.attrs.indent).toBe(2);
+      expect(blocks[4]!.attrs.indent).toBe(1);
     });
 
     it('parses task list items with unchecked', () => {
@@ -165,10 +165,10 @@ describe('markdown-parser', () => {
       const doc = parseMarkdown(markdown);
 
       const blocks = Array.from(doc.content.content);
-      expect(blocks[0].attrs.type).toBe('heading');
-      expect(blocks[1].attrs.type).toBe('paragraph');
-      expect(blocks[2].attrs.type).toBe('bullet');
-      expect(blocks[3].attrs.type).toBe('quote');
+      expect(blocks[0]!.attrs.type).toBe('heading');
+      expect(blocks[1]!.attrs.type).toBe('paragraph');
+      expect(blocks[2]!.attrs.type).toBe('bullet');
+      expect(blocks[3]!.attrs.type).toBe('quote');
     });
 
     it('handles mixed ordered and bullet lists at different indents', () => {
@@ -176,14 +176,14 @@ describe('markdown-parser', () => {
       const doc = parseMarkdown(markdown);
 
       const blocks = Array.from(doc.content.content);
-      expect(blocks[0].attrs.type).toBe('bullet');
-      expect(blocks[0].attrs.indent).toBe(0);
-      expect(blocks[1].attrs.type).toBe('number');
-      expect(blocks[1].attrs.indent).toBe(1);
-      expect(blocks[2].attrs.type).toBe('number');
-      expect(blocks[2].attrs.indent).toBe(1);
-      expect(blocks[3].attrs.type).toBe('bullet');
-      expect(blocks[3].attrs.indent).toBe(0);
+      expect(blocks[0]!.attrs.type).toBe('bullet');
+      expect(blocks[0]!.attrs.indent).toBe(0);
+      expect(blocks[1]!.attrs.type).toBe('number');
+      expect(blocks[1]!.attrs.indent).toBe(1);
+      expect(blocks[2]!.attrs.type).toBe('number');
+      expect(blocks[2]!.attrs.indent).toBe(1);
+      expect(blocks[3]!.attrs.type).toBe('bullet');
+      expect(blocks[3]!.attrs.indent).toBe(0);
     });
 
     it('roundtrips simple content through markdown', () => {
@@ -239,14 +239,14 @@ describe('markdown-parser', () => {
       const doc = parseMarkdown(markdown);
 
       const blocks = Array.from(doc.content.content);
-      expect(blocks[0].attrs.type).toBe('task');
-      expect(blocks[0].attrs.indent).toBe(0);
-      expect(blocks[1].attrs.type).toBe('task');
-      expect(blocks[1].attrs.indent).toBe(1);
-      expect(blocks[2].attrs.type).toBe('task');
-      expect(blocks[2].attrs.indent).toBe(1);
-      expect(blocks[3].attrs.type).toBe('task');
-      expect(blocks[3].attrs.indent).toBe(0);
+      expect(blocks[0]!.attrs.type).toBe('task');
+      expect(blocks[0]!.attrs.indent).toBe(0);
+      expect(blocks[1]!.attrs.type).toBe('task');
+      expect(blocks[1]!.attrs.indent).toBe(1);
+      expect(blocks[2]!.attrs.type).toBe('task');
+      expect(blocks[2]!.attrs.indent).toBe(1);
+      expect(blocks[3]!.attrs.type).toBe('task');
+      expect(blocks[3]!.attrs.indent).toBe(0);
     });
   });
 });

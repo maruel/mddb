@@ -72,6 +72,13 @@ export default tseslint.config(
       'solid/style-prop': 'error',
     },
   },
+  // Unit tests (allow non-null assertions like e2e tests)
+  {
+    files: ['frontend/**/*.test.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
   // E2E tests (Playwright)
   {
     files: ['e2e/**/*.ts', 'playwright.config.ts'],
