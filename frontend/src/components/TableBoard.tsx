@@ -3,6 +3,7 @@
 import { For, Show, createMemo } from 'solid-js';
 import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '@sdk/types.gen';
 import { updateRecordField, handleEnterBlur, getRecordTitle, getFieldValue } from './table/tableUtils';
+import { TableRow } from './table/TableRow';
 import { useI18n } from '../i18n';
 import styles from './TableBoard.module.css';
 
@@ -11,6 +12,8 @@ interface TableBoardProps {
   columns: Property[];
   onUpdateRecord?: (id: string, data: Record<string, unknown>) => void;
   onDeleteRecord: (id: string) => void;
+  onDuplicateRecord?: (id: string) => void;
+  onOpenRecord?: (id: string) => void;
 }
 
 export default function TableBoard(props: TableBoardProps) {
@@ -67,7 +70,13 @@ export default function TableBoard(props: TableBoardProps) {
                 <div class={styles.cards}>
                   <For each={group.records}>
                     {(record) => (
-                      <div class={styles.card}>
+                      <TableRow
+                        recordId={record.id}
+                        onDelete={props.onDeleteRecord}
+                        onDuplicate={props.onDuplicateRecord}
+                        onOpen={props.onOpenRecord}
+                        class={styles.card}
+                      >
                         <div class={styles.cardHeader}>
                           <strong>
                             <input
@@ -82,9 +91,6 @@ export default function TableBoard(props: TableBoardProps) {
                               class={styles.titleInput}
                             />
                           </strong>
-                          <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>
-                            ✕
-                          </button>
                         </div>
                         <div class={styles.cardBody}>
                           <For each={props.columns.slice(1, 4).filter((c) => c.name !== groupColumn()?.name)}>
@@ -104,7 +110,7 @@ export default function TableBoard(props: TableBoardProps) {
                             )}
                           </For>
                         </div>
-                      </div>
+                      </TableRow>
                     )}
                   </For>
                 </div>

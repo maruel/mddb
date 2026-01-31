@@ -3,6 +3,7 @@
 import { For, Show } from 'solid-js';
 import type { DataRecordResponse, Property } from '@sdk/types.gen';
 import { updateRecordField, handleEnterBlur, getRecordTitle, getFieldValue } from './table/tableUtils';
+import { TableRow } from './table/TableRow';
 import { useI18n } from '../i18n';
 import styles from './TableGallery.module.css';
 
@@ -11,6 +12,8 @@ interface TableGalleryProps {
   columns: Property[];
   onUpdateRecord?: (id: string, data: Record<string, unknown>) => void;
   onDeleteRecord: (id: string) => void;
+  onDuplicateRecord?: (id: string) => void;
+  onOpenRecord?: (id: string) => void;
 }
 
 export default function TableGallery(props: TableGalleryProps) {
@@ -31,7 +34,13 @@ export default function TableGallery(props: TableGalleryProps) {
         {(record) => {
           const imgCol = imageColumn();
           return (
-            <div class={styles.card}>
+            <TableRow
+              recordId={record.id}
+              onDelete={props.onDeleteRecord}
+              onDuplicate={props.onDuplicateRecord}
+              onOpen={props.onOpenRecord}
+              class={styles.card}
+            >
               <Show when={imgCol}>
                 {(col) => (
                   <div class={styles.imageContainer}>
@@ -63,9 +72,6 @@ export default function TableGallery(props: TableGalleryProps) {
                       class={styles.titleInput}
                     />
                   </strong>
-                  <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>
-                    ✕
-                  </button>
                 </div>
                 <div class={styles.cardBody}>
                   <For each={props.columns.slice(1, 3)}>
@@ -84,7 +90,7 @@ export default function TableGallery(props: TableGalleryProps) {
                   </For>
                 </div>
               </div>
-            </div>
+            </TableRow>
           );
         }}
       </For>

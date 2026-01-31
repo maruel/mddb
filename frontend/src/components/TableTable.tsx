@@ -11,6 +11,8 @@ import {
   PropertyTypeDate,
 } from '@sdk/types.gen';
 import styles from './TableTable.module.css';
+import { RowHandle, RowContextMenu, type ContextMenuAction } from './shared';
+import { TABLE_RECORD_MIME } from './table/TableRow';
 import { useI18n } from '../i18n';
 
 // Column types available for adding
@@ -31,6 +33,8 @@ interface TableTableProps {
   onAddRecord?: (data: Record<string, unknown>) => void;
   onUpdateRecord?: (recordId: string, data: Record<string, unknown>) => void;
   onDeleteRecord?: (recordId: string) => void;
+  onDuplicateRecord?: (recordId: string) => void;
+  onOpenRecord?: (recordId: string) => void;
   onAddColumn?: (column: Property) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
@@ -44,6 +48,13 @@ export default function TableTable(props: TableTableProps) {
   } | null>(null);
   const [editValue, setEditValue] = createSignal('');
   const [editCancelled, setEditCancelled] = createSignal(false);
+
+  // Row context menu state
+  const [menuState, setMenuState] = createSignal<{
+    recordId: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Column adding state
   const [showAddColumn, setShowAddColumn] = createSignal(false);
@@ -135,6 +146,74 @@ export default function TableTable(props: TableTableProps) {
     if (props.onAddRecord && props.columns.length > 0) {
       props.onAddRecord({});
     }
+  };
+
+  // Row handle handlers
+  const handleRowDragStart = (e: DragEvent, recordId: string) => {
+    e.dataTransfer?.setData(TABLE_RECORD_MIME, recordId);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleRowDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handleRowContextMenu = (e: MouseEvent, recordId: string) => {
+    setMenuState({ recordId, x: e.clientX, y: e.clientY });
+  };
+
+  const getRowActions = (): ContextMenuAction[] => {
+    const actions: ContextMenuAction[] = [];
+
+    if (props.onOpenRecord) {
+      actions.push({
+        id: 'open',
+        label: t('table.openRecord') || 'Open',
+      });
+    }
+
+    if (props.onDuplicateRecord) {
+      actions.push({
+        id: 'duplicate',
+        label: t('table.duplicateRecord') || 'Duplicate',
+        shortcut: '⌘D',
+      });
+    }
+
+    if (props.onDeleteRecord) {
+      actions.push({
+        id: 'delete',
+        label: t('table.deleteRecord') || 'Delete',
+        shortcut: '⌫',
+        danger: true,
+        separator: actions.length > 0,
+      });
+    }
+
+    return actions;
+  };
+
+  const handleRowAction = (actionId: string) => {
+    const state = menuState();
+    if (!state) return;
+
+    switch (actionId) {
+      case 'open':
+        props.onOpenRecord?.(state.recordId);
+        break;
+      case 'duplicate':
+        props.onDuplicateRecord?.(state.recordId);
+        break;
+      case 'delete':
+        props.onDeleteRecord?.(state.recordId);
+        break;
+    }
+    setMenuState(null);
   };
 
   const renderCellContent = (record: DataRecordResponse, column: Property) => {
@@ -276,6 +355,8 @@ export default function TableTable(props: TableTableProps) {
         <table class={styles.table}>
           <thead>
             <tr class={styles.headerRow}>
+              {/* Handle column header */}
+              <th class={styles.handleHeader} />
               <Show when={props.onDeleteRecord}>
                 <th class={styles.actionsHeader} />
               </Show>
@@ -336,7 +417,15 @@ export default function TableTable(props: TableTableProps) {
           <tbody>
             <For each={props.records}>
               {(record) => (
-                <tr class={styles.row}>
+                <tr class={styles.row} onDragOver={handleRowDragOver}>
+                  {/* Handle cell */}
+                  <td class={styles.handleCell}>
+                    <RowHandle
+                      rowId={record.id}
+                      onDragStart={handleRowDragStart}
+                      onContextMenu={handleRowContextMenu}
+                    />
+                  </td>
                   <Show when={props.onDeleteRecord}>
                     <td class={styles.actionsCell}>
                       <button
@@ -376,7 +465,7 @@ export default function TableTable(props: TableTableProps) {
               <tr class={styles.newRow}>
                 <td
                   class={styles.newRowPlaceholder}
-                  colSpan={props.columns.length + (props.onDeleteRecord ? 1 : 0) + (props.onAddColumn ? 1 : 0)}
+                  colSpan={props.columns.length + 1 + (props.onDeleteRecord ? 1 : 0) + (props.onAddColumn ? 1 : 0)}
                   onClick={handleAddRow}
                 >
                   + {t('table.addRecord') || 'New'}
@@ -400,6 +489,18 @@ export default function TableTable(props: TableTableProps) {
         <div class={styles.loadMore}>
           <button onClick={() => props.onLoadMore?.()}>{t('table.loadMore')}</button>
         </div>
+      </Show>
+
+      {/* Row context menu */}
+      <Show when={menuState()}>
+        {(state) => (
+          <RowContextMenu
+            position={{ x: state().x, y: state().y }}
+            actions={getRowActions()}
+            onAction={handleRowAction}
+            onClose={() => setMenuState(null)}
+          />
+        )}
       </Show>
     </div>
   );

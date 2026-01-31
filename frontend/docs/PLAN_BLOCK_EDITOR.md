@@ -538,11 +538,21 @@ const editorBlockActions: ContextMenuAction[] = [
 - [x] Wire up context-menu to editor state
 - [x] Implement editor-specific context menu actions (`BlockContextMenu.tsx`)
 
-### 3.5 Table Integration
+### 3.5 Table Integration (Completed)
 
 **File:** `src/components/table/TableRow.tsx` (new file or modify existing)
 
 Integrates shared components with table view rows.
+
+[x] Create `TableRow.tsx` wrapper
+[x] Update `TableTable - Integrated via `RowHandle` and `RowContextMenu` directly
+[x] Update `TableGrid` - Integrated via `TableRow`
+[x] Update `TableGallery` - Integrated via `TableRow`
+[x] Update `TableBoard` - Integrated via `TableRow`
+
+```tsx
+// ... (code snippet kept as reference)
+```
 
 ```tsx
 import { RowHandle } from '../shared/RowHandle';

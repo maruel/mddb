@@ -3,6 +3,7 @@
 import { For } from 'solid-js';
 import type { DataRecordResponse, Property } from '@sdk/types.gen';
 import { updateRecordField, handleEnterBlur, getRecordTitle, getFieldValue } from './table/tableUtils';
+import { TableRow } from './table/TableRow';
 import { useI18n } from '../i18n';
 import styles from './TableGrid.module.css';
 
@@ -11,6 +12,8 @@ interface TableGridProps {
   columns: Property[];
   onUpdateRecord?: (id: string, data: Record<string, unknown>) => void;
   onDeleteRecord: (id: string) => void;
+  onDuplicateRecord?: (id: string) => void;
+  onOpenRecord?: (id: string) => void;
 }
 
 export default function TableGrid(props: TableGridProps) {
@@ -20,7 +23,13 @@ export default function TableGrid(props: TableGridProps) {
     <div class={styles.grid}>
       <For each={props.records}>
         {(record) => (
-          <div class={styles.card}>
+          <TableRow
+            recordId={record.id}
+            onDelete={props.onDeleteRecord}
+            onDuplicate={props.onDuplicateRecord}
+            onOpen={props.onOpenRecord}
+            class={styles.card}
+          >
             <div class={styles.cardHeader}>
               <strong>
                 <input
@@ -35,9 +44,6 @@ export default function TableGrid(props: TableGridProps) {
                   class={styles.titleInput}
                 />
               </strong>
-              <button class={styles.deleteBtn} onClick={() => props.onDeleteRecord(record.id)}>
-                ✕
-              </button>
             </div>
             <div class={styles.cardBody}>
               <For each={props.columns.slice(1, 4)}>
@@ -55,7 +61,7 @@ export default function TableGrid(props: TableGridProps) {
                 )}
               </For>
             </div>
-          </div>
+          </TableRow>
         )}
       </For>
     </div>

@@ -183,18 +183,28 @@ describe('TableGallery', () => {
     });
   });
 
-  it('renders delete button for each card', async () => {
+  it('shows delete option in context menu', async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      const deleteButtons = screen.getAllByText('✕');
-      expect(deleteButtons.length).toBe(2);
+      const cards = document.querySelectorAll('.card');
+      expect(cards.length).toBe(2);
+    });
+
+    // Trigger context menu on a handle
+    const handles = document.querySelectorAll('[aria-label="Drag handle"]');
+    if (handles[0]) {
+      fireEvent.contextMenu(handles[0]);
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText(/delete/i)).toBeTruthy();
     });
   });
 
-  it('calls onDeleteRecord when delete button is clicked', async () => {
+  it('calls onDeleteRecord when delete option is clicked', async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
@@ -203,9 +213,16 @@ describe('TableGallery', () => {
       expect(screen.getByDisplayValue('Product A')).toBeTruthy();
     });
 
-    const deleteButtons = screen.getAllByText('✕');
-    const firstButton = deleteButtons[0];
-    if (firstButton) fireEvent.click(firstButton);
+    // Trigger context menu
+    const handles = document.querySelectorAll('[aria-label="Drag handle"]');
+    if (handles[0]) {
+      fireEvent.contextMenu(handles[0]);
+    }
+
+    await waitFor(() => {
+      const deleteOption = screen.getByText(/delete/i);
+      fireEvent.click(deleteOption);
+    });
 
     expect(mockDeleteRecord).toHaveBeenCalledWith('rec-1');
   });

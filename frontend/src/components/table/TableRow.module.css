@@ -1,0 +1,74 @@
+/* Table row with drag handle styles */
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+/* Handle wrapper positioned to the left */
+.handleWrapper {
+  position: absolute;
+  left: -28px;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* Show handle on hover */
+.row:hover .handleWrapper,
+.row:focus-within .handleWrapper {
+  opacity: 1;
+}
+
+/* Dragging state */
+.row.dragging {
+  opacity: 0.5;
+}
+
+/* Drop indicator line */
+.dropIndicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--c-primary);
+  pointer-events: none;
+  z-index: 100;
+  border-radius: 1px;
+}
+
+.dropIndicator::before,
+.dropIndicator::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  background: var(--c-primary);
+  border-radius: 50%;
+}
+
+.dropIndicator::before {
+  left: -4px;
+}
+
+.dropIndicator::after {
+  right: -4px;
+}
+
+/* For table rows (tr elements) */
+tr.row {
+  display: table-row;
+}
+
+tr.row .handleWrapper {
+  position: absolute;
+  left: -28px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: auto;
+}

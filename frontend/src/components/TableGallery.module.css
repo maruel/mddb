@@ -51,19 +51,6 @@
   margin-bottom: var(--s-2);
 }
 
-.deleteBtn {
-  background: none;
-  border: none;
-  color: var(--c-border);
-  cursor: pointer;
-  padding: 2px 5px;
-  font-size: 1rem;
-}
-
-.deleteBtn:hover {
-  color: var(--c-danger);
-}
-
 .cardBody {
   font-size: 0.85rem;
 }

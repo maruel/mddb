@@ -136,25 +136,48 @@ describe('TableGrid', () => {
     });
   });
 
-  it('renders delete button for each card', async () => {
+  it('shows delete option in context menu', async () => {
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
-      const deleteButtons = screen.getAllByText('✕');
-      expect(deleteButtons.length).toBe(2);
+      // Find row handle by its aria-label (RowHandle component has drag handle icon)
+      // Since RowHandle is SVG, we might look for parent div with specific class or testid if available.
+      // Or simply trigger contextmenu on the card itself since TableRow handles it in handleWrapper
+      const cards = document.querySelectorAll('.card');
+      expect(cards.length).toBe(2);
+    });
+
+    // Trigger context menu on a handle
+    const handles = document.querySelectorAll('[aria-label="Drag handle"]');
+    if (handles[0]) {
+      fireEvent.contextMenu(handles[0]);
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText(/delete/i)).toBeTruthy();
     });
   });
 
-  it('calls onDeleteRecord when delete button is clicked', async () => {
+  it('calls onDeleteRecord when delete option is clicked', async () => {
+    // Override window.confirm since it might be used by delete action in some contexts (though not here currently)
+    // Here delete is not dangerous in context menu actions def, wait it is danger: true.
+
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('Product A')).toBeTruthy();
     });
 
-    const deleteButtons = screen.getAllByText('✕');
-    const firstButton = deleteButtons[0];
-    if (firstButton) fireEvent.click(firstButton);
+    // Trigger context menu
+    const handles = document.querySelectorAll('[aria-label="Drag handle"]');
+    if (handles[0]) {
+      fireEvent.contextMenu(handles[0]);
+    }
+
+    await waitFor(() => {
+      const deleteOption = screen.getByText(/delete/i);
+      fireEvent.click(deleteOption);
+    });
 
     expect(mockDeleteRecord).toHaveBeenCalledWith('rec-1');
   });

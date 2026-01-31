@@ -15,6 +15,8 @@ vi.mock('./TableTable.module.css', () => ({
     headerCell: 'headerCell',
     required: 'required',
     row: 'row',
+    handleHeader: 'handleHeader',
+    handleCell: 'handleCell',
     actionsHeader: 'actionsHeader',
     actionsCell: 'actionsCell',
     deleteBtn: 'deleteBtn',
@@ -310,9 +312,10 @@ describe('TableTable', () => {
     const rows = table?.querySelectorAll('tbody tr');
     if (rows && rows[0]) {
       const cells = rows[0].querySelectorAll('td');
-      // Birthday is the 4th column (Name, Age, Active, Birthday) - 0-indexed as 3
-      if (cells[3]) {
-        fireEvent.click(cells[3]);
+      // Birthday is the 4th column (Name, Age, Active, Birthday)
+      // Column 0 is handle, so Birthday is at index 4
+      if (cells[4]) {
+        fireEvent.click(cells[4]);
       }
     }
 
