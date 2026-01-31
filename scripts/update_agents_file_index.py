@@ -55,9 +55,7 @@ CONFIGS = [
 def get_git_files():
     try:
         # Use -z to handle spaces in filenames correctly, though rare
-        result = subprocess.run(
-            ["git", "ls-files", "-z"], capture_output=True, text=True, check=True
-        )
+        result = subprocess.run(["git", "ls-files", "-z"], capture_output=True, text=True, check=True)
         # Split by null terminator and filter empty strings
         return [f for f in result.stdout.split("\0") if f]
     except subprocess.CalledProcessError as e:
@@ -174,9 +172,7 @@ def update_markdown_file(target_file, content):
 
     if SECTION_START in original and SECTION_END in original:
         # Replace existing
-        pattern = re.compile(
-            f"{re.escape(SECTION_START)}.*?{re.escape(SECTION_END)}", re.DOTALL
-        )
+        pattern = re.compile(f"{re.escape(SECTION_START)}.*?{re.escape(SECTION_END)}", re.DOTALL)
         updated = pattern.sub(new_section, original)
     else:
         # Append

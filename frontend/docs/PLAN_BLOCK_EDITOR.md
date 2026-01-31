@@ -617,10 +617,10 @@ export function TableRow(props: TableRowProps) {
 ```
 
 **Tasks:**
-- [ ] Create `TableRow.tsx` wrapper using shared `RowHandle`
-- [ ] Define table-specific context menu actions
-- [ ] Implement record drag-drop reordering
-- [ ] Apply to TableTable, TableGrid, TableGallery, TableBoard views
+- [x] Create `TableRow.tsx` wrapper using shared `RowHandle`
+- [x] Define table-specific context menu actions
+- [x] Implement record drag-drop reordering
+- [x] Apply to TableTable, TableGrid, TableGallery, TableBoard views
 
 ### 3.6 Layout Adjustments
 
@@ -646,9 +646,9 @@ Add left margin to containers that use row handles.
 ```
 
 **Tasks:**
-- [ ] Add left padding to editor container
+- [x] Add left padding to editor container
 - [ ] Add left padding to table view containers
-- [ ] Add print media query to hide handles
+- [x] Add print media query to hide handles
 - [ ] Test with various viewport widths
 
 ### 3.7 Component Summary
@@ -768,12 +768,12 @@ const getEditorBlockActions = (selectedCount: number): ContextMenuAction[] => [
 ```
 
 **Tasks:**
-- [ ] Implement `getSelectedBlockPositions()` helper
-- [ ] Update `BlockNodeView.update()` to show/hide handles based on selection
-- [ ] Add `.in-selection` CSS class for visual feedback
-- [ ] Update drag handler to serialize multiple block positions
-- [ ] Update drop handler to move multiple blocks
-- [ ] Update context menu to show count and apply actions to all
+- [x] Implement `getSelectedBlockPositions()` helper
+- [x] Update `BlockNodeView.update()` to show/hide handles based on selection (handled via CSS + blockSelectionPlugin)
+- [x] Add `.in-selection` CSS class for visual feedback (CSS done, plugin created)
+- [x] Update drag handler to serialize multiple block positions
+- [x] Update drop handler to move multiple blocks
+- [x] Update context menu to show count and apply actions to all
 - [ ] Add i18n keys for plural forms (`deleteBlocks`, `duplicateBlocks`)
 
 ---
@@ -1344,7 +1344,7 @@ Update CSS to render list markers, indentation, and block-specific styles.
 **Tasks:**
 - [x] Add indentation CSS
 - [x] Add bullet marker styling
-- [x] Add numbered list marker styling (with counter plugin)
+- [x] Add numbered list marker styling (via CSS for now)
 - [x] Add task checkbox styling
 - [x] Add quote styling (left border)
 - [ ] Test all block types at various indent levels
