@@ -1,0 +1,27 @@
+.handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  cursor: grab;
+  border-radius: 4px;
+  transition: background var(--transition);
+  color: var(--c-text-light);
+  user-select: none;
+}
+
+.handle:hover {
+  background-color: var(--c-bg-alt);
+  color: var(--c-text);
+}
+
+.handle:active {
+  cursor: grabbing;
+}
+
+.icon {
+  width: 12px;
+  height: 16px;
+  display: block;
+}
