@@ -3,7 +3,6 @@
 import { createSignal, Show, For, onCleanup, type ParentComponent } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import Sidebar from '../components/Sidebar';
-import WorkspaceMenu from '../components/WorkspaceMenu';
 import UserMenu from '../components/UserMenu';
 import NotionImportBanner from '../components/NotionImportBanner';
 import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
@@ -254,21 +253,6 @@ const WorkspaceLayout: ParentComponent = (props) => {
           >
             ☰
           </button>
-          <WorkspaceMenu
-            onOpenSettings={() => {
-              const wsId = user()?.workspace_id;
-              const wsName = user()?.workspace_name;
-              if (wsId) {
-                setShowMobileSidebar(false);
-                navigate(settingsUrl('workspace', wsId, wsName));
-              }
-            }}
-            onSwitchWorkspace={() => {
-              // Handled by WorkspaceMenu internally
-            }}
-            onCreateWorkspace={() => setShowCreateWorkspace(true)}
-            onImportFromNotion={() => setShowNotionImport(true)}
-          />
           <Show when={selectedNodeId()}>
             <nav class={styles.breadcrumbs}>
               <For each={breadcrumbPath()}>
@@ -342,6 +326,16 @@ const WorkspaceLayout: ParentComponent = (props) => {
               loadHistory(nodeId);
             }
           }}
+          onOpenSettings={() => {
+            const wsId = user()?.workspace_id;
+            const wsName = user()?.workspace_name;
+            if (wsId) {
+              setShowMobileSidebar(false);
+              navigate(settingsUrl('workspace', wsId, wsName));
+            }
+          }}
+          onCreateWorkspace={() => setShowCreateWorkspace(true)}
+          onImportFromNotion={() => setShowNotionImport(true)}
         />
 
         <main class={styles.main}>

@@ -214,23 +214,7 @@ vi.mock('./components/UserMenu', () => ({
   ),
 }));
 
-vi.mock('./components/WorkspaceMenu', () => ({
-  default: (props: { onOpenSettings: () => void; onCreateWorkspace: () => void }) => {
-    return (
-      <div data-testid="workspace-menu">
-        <button data-testid="workspace-menu-button" title="Workspace" onClick={() => props.onOpenSettings()}>
-          Workspace
-        </button>
-        <button data-testid="workspace-settings-button" onClick={() => props.onOpenSettings()}>
-          Workspace Settings
-        </button>
-        <button data-testid="create-workspace-button" onClick={() => props.onCreateWorkspace()}>
-          Create Workspace
-        </button>
-      </div>
-    );
-  },
-}));
+// WorkspaceMenu is no longer used (functionality moved to Sidebar)
 
 // Mock fetch
 const mockFetch = vi.fn();
@@ -754,12 +738,13 @@ describe('App', () => {
 
       renderWithI18n(() => <App />);
 
+      // Workspace actions are now in sidebar, check for create workspace button
       await waitFor(() => {
-        expect(screen.getByTestId('workspace-menu')).toBeTruthy();
+        expect(screen.getByTestId('create-workspace-button')).toBeTruthy();
       });
     });
 
-    it('opens create workspace modal from workspace menu', async () => {
+    it('opens create workspace modal from sidebar', async () => {
       localStorageMock.setItem('mddb_token', 'test-token');
 
       mockFetch.mockImplementation((url: string) => {

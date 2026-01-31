@@ -21,11 +21,12 @@
   background: transparent;
   border: none;
   color: var(--c-text-light);
-  font-size: 1rem;
+  font-size: 0.9rem;
   cursor: pointer;
   padding: var(--s-1);
   border-radius: var(--radius);
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .collapseButton:hover {
@@ -33,42 +34,49 @@
   color: var(--c-text);
 }
 
-.sidebarHeader {
+/* Workspace header */
+.workspaceHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--s-2) var(--s-3);
-  border-bottom: 1px solid var(--c-border);
-}
-
-.sidebarHeader h2 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--c-text);
-}
-
-.sidebarActions {
-  display: flex;
   gap: var(--s-1);
   padding: var(--s-2) var(--s-3);
   border-bottom: 1px solid var(--c-border);
+  min-height: 40px;
 }
 
-.actionButton {
-  flex: 1;
-  padding: var(--s-1) var(--s-2);
-  background: var(--c-bg-alt);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+.workspaceName {
+  font-weight: 600;
+  font-size: 0.9rem;
   color: var(--c-text);
-  font-size: 0.75rem;
-  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
-.actionButton:hover {
-  background: var(--c-border);
+.settingsButton {
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: var(--c-text-light);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: var(--s-1);
+  border-radius: var(--radius);
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.workspaceHeader:hover .settingsButton {
+  opacity: 1;
+}
+
+.settingsButton:hover {
+  background: var(--c-bg-alt);
+  color: var(--c-text);
 }
 
 .loading {
@@ -83,6 +91,107 @@
   overflow-x: hidden;
   flex: 1;
   padding-top: var(--s-1);
+}
+
+/* Other workspaces section */
+.otherWorkspaces {
+  border-top: 1px solid var(--c-border);
+  padding: var(--s-2) 0;
+}
+
+.otherWorkspacesToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  background: transparent;
+  border: none;
+  color: var(--c-text-light);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.otherWorkspacesToggle:hover {
+  color: var(--c-text);
+}
+
+.toggleChevron {
+  font-size: 0.6rem;
+  transition: transform 0.15s ease;
+}
+
+.toggleChevron.expanded {
+  transform: rotate(90deg);
+}
+
+.otherWorkspacesList {
+  padding: var(--s-1) 0;
+}
+
+.orgLabel {
+  padding: var(--s-1) var(--s-3);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--c-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.otherWorkspaceItem {
+  display: block;
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  padding-left: var(--s-4);
+  background: transparent;
+  border: none;
+  color: var(--c-text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.otherWorkspaceItem:hover {
+  background: var(--c-bg-alt);
+}
+
+/* Sidebar actions */
+.sidebarActions {
+  padding: var(--s-1) 0;
+  border-top: 1px solid var(--c-border);
+  margin-top: var(--s-1);
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  background: transparent;
+  border: none;
+  color: var(--c-text-light);
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.actionButton:hover {
+  background: var(--c-bg-alt);
+  color: var(--c-text);
+}
+
+.actionIcon {
+  font-size: 0.9rem;
+  width: 1.2em;
+  text-align: center;
 }
 
 @media (max-width: 768px) {

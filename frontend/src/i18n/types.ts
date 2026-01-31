@@ -36,6 +36,8 @@ export interface Dictionary {
     createSubPage: string;
     createSubTable: string;
     collapseSidebar: string;
+    otherWorkspaces: string;
+    switchWorkspace: string;
   };
 
   userMenu: {

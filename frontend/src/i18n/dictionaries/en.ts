@@ -34,6 +34,8 @@ export const dict: Dictionary = {
     createSubPage: 'New Sub-page',
     createSubTable: 'New Sub-table',
     collapseSidebar: 'Collapse sidebar',
+    otherWorkspaces: 'Other workspaces',
+    switchWorkspace: 'Switch workspace',
   },
 
   userMenu: {
