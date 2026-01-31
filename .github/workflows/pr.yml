@@ -1,18 +1,13 @@
-name: CI
+name: PR
 on:
-  push:
-    branches: [main]
+  pull_request:
+    branches-ignore: [gh-pages]
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 jobs:
-  ci:
+  test:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -68,23 +63,6 @@ jobs:
                 echo ":white_check_mark: **All $TOTAL tests passed**"
               fi
               echo ""
-              PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
-              SHORT_SHA="${{ github.sha }}"
-              SHORT_SHA="${SHORT_SHA:0:7}"
-              echo ":page_facing_up: [View Playwright Report](${PAGES_URL}/reports/${SHORT_SHA}/)"
+              echo ":page_facing_up: Playwright report is available as a workflow artifact."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Deploy Playwright Report to gh-pages
-        if: always()
-        env:
-          GIT_REMOTE_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
-        run: ./.github/deploy-playwright-report.sh
-      - name: Upload Pages artifact
-        if: always()
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ${{ env.DEPLOY_DIR }}
-      - name: Deploy to GitHub Pages
-        id: deploy
-        if: always()
-        uses: actions/deploy-pages@v4
