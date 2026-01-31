@@ -131,7 +131,9 @@ export default function NodeView() {
                         <span class={styles.historyDate}>{new Date(commit.timestamp).toLocaleString()}</span>
                         <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
                       </div>
-                      <div class={styles.historyMessage}>{commit.author}</div>
+                      <div class={styles.historyMessage}>
+                        {commit.author_name} &lt;{commit.author_email}&gt;
+                      </div>
                     </li>
                   )}
                 </For>

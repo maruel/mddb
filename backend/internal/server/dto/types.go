@@ -175,10 +175,11 @@ type WorkspaceSettings struct {
 
 // Commit represents a commit in git history.
 type Commit struct {
-	Hash      string `json:"hash"`
-	Message   string `json:"message"`
-	Author    string `json:"author"`
-	Timestamp Time   `json:"timestamp"`
+	Hash        string `json:"hash"`
+	Message     string `json:"message"`
+	AuthorName  string `json:"author_name"`
+	AuthorEmail string `json:"author_email"`
+	Timestamp   Time   `json:"timestamp"`
 }
 
 // SearchResult represents a single search result.
