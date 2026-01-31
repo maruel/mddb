@@ -13,6 +13,13 @@ runs:
     - uses: actions/setup-python@v6
       with:
         python-version: '3.x'
+    - name: Create python3 alias on Windows
+      run: |
+        $pythonPath = (Get-Command python).Source
+        $pythonDir = Split-Path $pythonPath
+        New-Item -ItemType HardLink -Path "$pythonDir\python3.exe" -Value $pythonPath
+      if: runner.os == 'Windows'
+      shell: pwsh
     - uses: pnpm/action-setup@v4
       with:
         version: 10
