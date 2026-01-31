@@ -55,7 +55,7 @@ $(ENV_FILE): | .env.example
 	@echo "Created $@ from .env.example"
 
 dev: build $(ENV_FILE)
-	@go run ./backend/cmd/mddb -http $(HTTP) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
+	@$(shell go list -f '{{.Target}}' ./backend/cmd/mddb) -http $(HTTP) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
 
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...
