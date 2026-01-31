@@ -403,7 +403,7 @@ func matchEndpoints(routes []Route, dtoTypes map[string]*DTOType, handlerSigs ma
 	var errs []string
 
 	for _, r := range routes {
-		if !strings.HasPrefix(r.Path, "/api/") {
+		if !strings.HasPrefix(r.Path, "/api/v1/") {
 			continue
 		}
 
@@ -559,7 +559,7 @@ func flattenNamespaces(node *NamespaceNode) {
 // parseNamespacePath extracts namespace parts and path arguments from a URL path.
 func parseNamespacePath(path string, pathFields []FieldInfo, scope ScopeType) ([]string, []PathArg) {
 	// Remove /api/ prefix
-	path = strings.TrimPrefix(path, "/api/")
+	path = strings.TrimPrefix(path, "/api/v1/")
 
 	// Remove org/ws prefix for scoped paths
 	switch scope {

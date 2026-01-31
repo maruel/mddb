@@ -204,10 +204,10 @@ Supports Google and Microsoft OIDC flows.
 
 | Provider | Endpoint | Scopes |
 |----------|----------|--------|
-| Google | `/api/auth/oauth/google` | profile, email |
-| Microsoft | `/api/auth/oauth/microsoft` | Azure AD common |
+| Google | `/api/v1/auth/oauth/google` | profile, email |
+| Microsoft | `/api/v1/auth/oauth/microsoft` | Azure AD common |
 
-- **Callback handling**: `/api/auth/oauth/{provider}/callback`
+- **Callback handling**: `/api/v1/auth/oauth/{provider}/callback`
 - **Account linking**: Auto-links OAuth identity to existing user by email
 - **CSRF protection**: State token validation
 - **Implementation**: `backend/internal/server/handlers/oauth.go`

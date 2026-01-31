@@ -1,8 +1,8 @@
 import { test, expect, registerUser } from './helpers';
 
 test.describe('API routing', () => {
-  test('unknown /api/ routes return 404, not SPA', async ({ request }) => {
-    const response = await request.get('/api/nonexistent/route');
+  test('unknown /api/v1/ routes return 404, not SPA', async ({ request }) => {
+    const response = await request.get('/api/v1/nonexistent/route');
     expect(response.status()).toBe(404);
 
     // Should be plain text error, not HTML
@@ -22,11 +22,11 @@ test.describe('OAuth Login', () => {
     // In test mode (TEST_OAUTH=1), OAuth buttons should be visible
     const googleButton = page.getByRole('link', { name: /google/i });
     await expect(googleButton).toBeVisible();
-    await expect(googleButton).toHaveAttribute('href', '/api/auth/oauth/google');
+    await expect(googleButton).toHaveAttribute('href', '/api/v1/auth/oauth/google');
   });
 
   test('providers endpoint returns configured providers', async ({ request }) => {
-    const response = await request.get('/api/auth/providers');
+    const response = await request.get('/api/v1/auth/providers');
     expect(response.ok()).toBe(true);
 
     const { providers } = await response.json();
@@ -42,7 +42,7 @@ test.describe('OAuth Login', () => {
     await expect(googleButton).toBeVisible({ timeout: 5000 });
 
     // Verify the button has the correct href
-    await expect(googleButton).toHaveAttribute('href', '/api/auth/oauth/google');
+    await expect(googleButton).toHaveAttribute('href', '/api/v1/auth/oauth/google');
 
     // Verify the OAuth endpoint is accessible and responds
     // (The actual redirect to Google is tested implicitly - if the endpoint fails, we'd get an error page)
@@ -56,7 +56,7 @@ test.describe('OAuth Login', () => {
     // First, go to the callback URL with a fake token
     await page.goto('/?token=fake.jwt.token');
 
-    // The frontend should try to use this token and call /api/auth/me
+    // The frontend should try to use this token and call /api/v1/auth/me
     // Since it's a fake token, it will fail with 401
     // Check that we end up back at the login page
     await expect(page.getByRole('heading', { name: /login|sign in/i })).toBeVisible();

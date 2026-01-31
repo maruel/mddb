@@ -186,13 +186,13 @@ func groupRoutes(routes []route) []routeGroup {
 
 func categorize(path string) string {
 	switch {
-	case path == "/api/health":
+	case path == "/api/v1/health":
 		return "Health"
 	case path == "/":
 		return "Frontend"
-	case strings.HasPrefix(path, "/api/admin"):
+	case strings.HasPrefix(path, "/api/v1/admin"):
 		return "Admin"
-	case strings.HasPrefix(path, "/api/auth"):
+	case strings.HasPrefix(path, "/api/v1/auth"):
 		return "Auth"
 	case strings.Contains(path, "/settings/") || strings.Contains(path, "/onboarding"):
 		return "Settings"

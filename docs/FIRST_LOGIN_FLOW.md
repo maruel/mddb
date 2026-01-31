@@ -7,7 +7,7 @@ When a user logs in for the first time, the frontend automatically checks for an
 
 ### Frontend Flow
 Implemented in `frontend/src/App.tsx`:
-1. **Load User Data**: Fetch profile via `GET /api/auth/me`.
+1. **Load User Data**: Fetch profile via `GET /api/v1/auth/me`.
 2. **Organization Check**: If `user.organizations` is empty → Auto-create organization with default name.
 3. **Workspace Check**: If first org has no workspaces → Auto-create workspace with default name.
 
@@ -23,9 +23,9 @@ For more frontend details, see [Frontend Implementation](../frontend/docs/FIRST_
 
 ### Backend Behavior
 The backend supports this flow via:
-- `POST /api/organizations` - Create organization
-- `POST /api/organizations/{orgID}/workspaces` - Create workspace
-- `POST /api/workspaces/{wsID}` - Rename workspace
+- `POST /api/v1/organizations` - Create organization
+- `POST /api/v1/organizations/{orgID}/workspaces` - Create workspace
+- `POST /api/v1/workspaces/{wsID}` - Rename workspace
 
 When a workspace is created (either during onboarding or manually):
 - **Permissions**: The creating user is automatically assigned the `admin` role for that workspace.

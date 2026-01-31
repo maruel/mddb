@@ -70,7 +70,7 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch(`/api/workspaces/${options.wsId}/nodes/${options.nodeId}/assets`, {
+      const response = await fetch(`/api/v1/workspaces/${options.wsId}/nodes/${options.nodeId}/assets`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

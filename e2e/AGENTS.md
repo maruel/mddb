@@ -49,7 +49,7 @@ const pageData = await client.ws(wsID).nodes.page.createPage('0', {
 });
 
 // BAD - raw HTTP requests lack type safety
-const response = await request.post(`/api/workspaces/${wsId}/nodes/0/page/create`, {
+const response = await request.post(`/api/v1/workspaces/${wsId}/nodes/0/page/create`, {
   headers: { Authorization: `Bearer ${token}` },
   data: { title: 'Test Page', content: 'Test content' },
 });
@@ -91,7 +91,7 @@ await editor.blur();
 
 // Wait for save to complete
 await expect(async () => {
-  const response = await request.get(`/api/workspaces/${wsId}/nodes/${nodeId}/page`);
+  const response = await request.get(`/api/v1/workspaces/${wsId}/nodes/${nodeId}/page`);
   const data = await response.json();
   expect(data.content).toContain('New content');
 }).toPass({ timeout: 5000 });
@@ -121,7 +121,7 @@ Check actual API responses - field names may differ from expectations:
 
 ```typescript
 // Check the actual response structure
-const response = await request.get(`/api/workspaces/${wsId}/nodes/${nodeId}/table/records`);
+const response = await request.get(`/api/v1/workspaces/${wsId}/nodes/${nodeId}/table/records`);
 const data = await response.json();
 // Use data.records, not data.items
 expect(data.records.length).toBe(1);
@@ -140,7 +140,7 @@ test('my test', async ({ page, request }) => {
 });
 
 // BAD - direct API call without retry logic
-const response = await request.post('/api/auth/register', { ... });
+const response = await request.post('/api/v1/auth/register', { ... });
 ```
 
 ### Avoid `page.goBack()` in SPAs
@@ -317,7 +317,7 @@ await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
 ```typescript
 // Create via API
-const response = await request.post(`/api/workspaces/${wsId}/nodes/0/page/create`, {
+const response = await request.post(`/api/v1/workspaces/${wsId}/nodes/0/page/create`, {
   headers: { Authorization: `Bearer ${token}` },
   data: { title: 'Test Page', content: 'Test content' },
 });

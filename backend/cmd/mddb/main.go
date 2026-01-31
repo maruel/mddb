@@ -516,7 +516,7 @@ func runOnboarding(dataDir string) error {
 	// Google OAuth
 	fmt.Println("\n--- Google OAuth Setup ---")
 	fmt.Println("To use Google login, create a project at https://console.cloud.google.com/apis/credentials")
-	fmt.Printf("Configure an OAuth 2.0 Client ID with redirect URI: %s/api/auth/oauth/google/callback\n", displayBaseURL)
+	fmt.Printf("Configure an OAuth 2.0 Client ID with redirect URI: %s/api/v1/auth/oauth/google/callback\n", displayBaseURL)
 	fmt.Print("Google Client ID (optional): ")
 	val, err = reader.ReadString('\n')
 	if err != nil {
@@ -535,7 +535,7 @@ func runOnboarding(dataDir string) error {
 	// Microsoft OAuth
 	fmt.Println("\n--- Microsoft OAuth Setup ---")
 	fmt.Println("To use Microsoft login, register an app at https://portal.azure.com/")
-	fmt.Printf("Configure a redirect URI: %s/api/auth/oauth/microsoft/callback\n", displayBaseURL)
+	fmt.Printf("Configure a redirect URI: %s/api/v1/auth/oauth/microsoft/callback\n", displayBaseURL)
 	fmt.Print("Microsoft Client ID (optional): ")
 	val, err = reader.ReadString('\n')
 	if err != nil {
@@ -554,7 +554,7 @@ func runOnboarding(dataDir string) error {
 	// GitHub OAuth
 	fmt.Println("\n--- GitHub OAuth Setup ---")
 	fmt.Println("To use GitHub login, create an OAuth App at https://github.com/settings/developers")
-	fmt.Printf("Configure a redirect URI: %s/api/auth/oauth/github/callback\n", displayBaseURL)
+	fmt.Printf("Configure a redirect URI: %s/api/v1/auth/oauth/github/callback\n", displayBaseURL)
 	fmt.Print("GitHub Client ID (optional): ")
 	val, err = reader.ReadString('\n')
 	if err != nil {

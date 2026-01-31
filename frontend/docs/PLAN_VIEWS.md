@@ -23,9 +23,9 @@ Expose internal storage types to the API by copying/aliasing them in DTOs.
 
 ### 3. API Endpoints (`backend/internal/server/handlers/views.go`)
 Create a new handler file for view-specific operations.
-- `POST /api/nodes/{id}/views`: Create a new view.
-- `PUT /api/nodes/{id}/views/{viewID}`: Update an existing view.
-- `DELETE /api/nodes/{id}/views/{viewID}`: Delete a view.
+- `POST /api/v1/nodes/{id}/views`: Create a new view.
+- `PUT /api/v1/nodes/{id}/views/{viewID}`: Update an existing view.
+- `DELETE /api/v1/nodes/{id}/views/{viewID}`: Delete a view.
 
 ### 4. Record Querying (`backend/internal/server/handlers/nodes.go`)
 Update `ListRecords` to support server-side filtering and sorting.

@@ -42,7 +42,7 @@ export async function registerUser(request: APIRequestContext, prefix: string) {
   const maxRetries = 3;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const registerResponse = await request.post('/api/auth/register', {
+    const registerResponse = await request.post('/api/v1/auth/register', {
       data: {
         email,
         password: 'testpassword123',

@@ -59,12 +59,12 @@ func TestLimiters_MatchUnauth(t *testing.T) {
 		path     string
 		wantTier string
 	}{
-		{"GET", "/api/health", ""},                         // No rate limit for health check
-		{"POST", "/api/auth/login", "auth"},                // Auth tier
-		{"POST", "/api/auth/register", "auth"},             // Auth tier
-		{"GET", "/api/auth/oauth/google/callback", "auth"}, // Auth tier (OAuth callback)
-		{"GET", "/api/something", "read"},                  // Unauth read tier
-		{"GET", "/api/pages/123", "read"},                  // Unauth read tier
+		{"GET", "/api/v1/health", ""},                         // No rate limit for health check
+		{"POST", "/api/v1/auth/login", "auth"},                // Auth tier
+		{"POST", "/api/v1/auth/register", "auth"},             // Auth tier
+		{"GET", "/api/v1/auth/oauth/google/callback", "auth"}, // Auth tier (OAuth callback)
+		{"GET", "/api/v1/something", "read"},                  // Unauth read tier
+		{"GET", "/api/v1/pages/123", "read"},                  // Unauth read tier
 	}
 
 	for _, tt := range tests {
@@ -94,13 +94,13 @@ func TestLimiters_MatchAuth(t *testing.T) {
 		path     string
 		wantTier string
 	}{
-		{"GET", "/api/health", ""},            // No rate limit for health check
-		{"GET", "/api/pages", "read"},         // Read tier
-		{"GET", "/api/users", "read"},         // Read tier
-		{"POST", "/api/pages", "write"},       // Write tier
-		{"POST", "/api/tables", "write"},      // Write tier
-		{"DELETE", "/api/pages/123", "write"}, // Write tier (DELETE)
-		{"POST", "/api/search", "read"},       // Search is a read operation
+		{"GET", "/api/v1/health", ""},            // No rate limit for health check
+		{"GET", "/api/v1/pages", "read"},         // Read tier
+		{"GET", "/api/v1/users", "read"},         // Read tier
+		{"POST", "/api/v1/pages", "write"},       // Write tier
+		{"POST", "/api/v1/tables", "write"},      // Write tier
+		{"DELETE", "/api/v1/pages/123", "write"}, // Write tier (DELETE)
+		{"POST", "/api/v1/search", "read"},       // Search is a read operation
 	}
 
 	for _, tt := range tests {
@@ -127,14 +127,14 @@ func TestIsAuthEndpoint(t *testing.T) {
 		path   string
 		want   bool
 	}{
-		{"POST", "/api/auth/login", true},
-		{"POST", "/api/auth/register", true},
-		{"GET", "/api/auth/oauth/google/callback", true},
-		{"GET", "/api/auth/oauth/microsoft/callback", true},
-		{"GET", "/api/auth/oauth/github/callback", true},
-		{"GET", "/api/auth/me", false},
-		{"POST", "/api/pages", false},
-		{"GET", "/api/pages", false},
+		{"POST", "/api/v1/auth/login", true},
+		{"POST", "/api/v1/auth/register", true},
+		{"GET", "/api/v1/auth/oauth/google/callback", true},
+		{"GET", "/api/v1/auth/oauth/microsoft/callback", true},
+		{"GET", "/api/v1/auth/oauth/github/callback", true},
+		{"GET", "/api/v1/auth/me", false},
+		{"POST", "/api/v1/pages", false},
+		{"GET", "/api/v1/pages", false},
 	}
 
 	for _, tt := range tests {

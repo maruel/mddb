@@ -130,7 +130,7 @@ func (l *Limiters) Update(authRate, writeRate, readAuthRate, readUnauthRate int)
 // Returns nil for paths that should not be rate limited.
 func (l *Limiters) MatchUnauth(method, path string) *Tier {
 	// Skip health check
-	if path == "/api/health" {
+	if path == "/api/v1/health" {
 		return nil
 	}
 
@@ -151,7 +151,7 @@ func (l *Limiters) MatchUnauth(method, path string) *Tier {
 // Returns nil for paths that should not be rate limited.
 func (l *Limiters) MatchAuth(method, path string) *Tier {
 	// Skip health check
-	if path == "/api/health" {
+	if path == "/api/v1/health" {
 		return nil
 	}
 
@@ -184,15 +184,15 @@ func isAuthEndpoint(method, path string) bool {
 		return false
 	}
 
-	// POST /api/auth/login or /api/auth/register
+	// POST /api/v1/auth/login or /api/v1/auth/register
 	if method == "POST" {
-		if path == "/api/auth/login" || path == "/api/auth/register" {
+		if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" {
 			return true
 		}
 	}
 
-	// GET /api/auth/oauth/*/callback
-	if method == "GET" && strings.HasPrefix(path, "/api/auth/oauth/") && strings.HasSuffix(path, "/callback") {
+	// GET /api/v1/auth/oauth/*/callback
+	if method == "GET" && strings.HasPrefix(path, "/api/v1/auth/oauth/") && strings.HasSuffix(path, "/callback") {
 		return true
 	}
 

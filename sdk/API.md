@@ -14,103 +14,103 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 
 | Method | Path | Auth |
 |--------|------|------|
-| * | `/api/health` | public |
+| * | `/api/v1/health` | public |
 
 ## Admin
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/admin/organizations` | globalAdmin |
-| GET | `/api/admin/stats` | globalAdmin |
-| GET | `/api/admin/users` | globalAdmin |
+| GET | `/api/v1/admin/organizations` | globalAdmin |
+| GET | `/api/v1/admin/stats` | globalAdmin |
+| GET | `/api/v1/admin/users` | globalAdmin |
 
 ## Auth
 
 | Method | Path | Auth |
 |--------|------|------|
-| POST | `/api/auth/email` | authenticated |
-| POST | `/api/auth/email/send-verification` | authenticated |
-| GET | `/api/auth/email/verify` | public |
-| POST | `/api/auth/invitations/org/accept` | public |
-| POST | `/api/auth/invitations/ws/accept` | public |
-| POST | `/api/auth/login` | public |
-| POST | `/api/auth/logout` | authenticated |
-| GET | `/api/auth/me` | authenticated |
-| POST | `/api/auth/oauth/link` | authenticated |
-| POST | `/api/auth/oauth/unlink` | authenticated |
-| GET | `/api/auth/oauth/{provider}` | public |
-| GET | `/api/auth/oauth/{provider}/callback` | public |
-| POST | `/api/auth/password` | authenticated |
-| GET | `/api/auth/providers` | public |
-| POST | `/api/auth/register` | public |
-| GET | `/api/auth/sessions` | authenticated |
-| POST | `/api/auth/sessions/revoke` | authenticated |
-| POST | `/api/auth/sessions/revoke-all` | authenticated |
-| POST | `/api/auth/settings` | authenticated |
-| POST | `/api/auth/switch-workspace` | authenticated |
+| POST | `/api/v1/auth/email` | authenticated |
+| POST | `/api/v1/auth/email/send-verification` | authenticated |
+| GET | `/api/v1/auth/email/verify` | public |
+| POST | `/api/v1/auth/invitations/org/accept` | public |
+| POST | `/api/v1/auth/invitations/ws/accept` | public |
+| POST | `/api/v1/auth/login` | public |
+| POST | `/api/v1/auth/logout` | authenticated |
+| GET | `/api/v1/auth/me` | authenticated |
+| POST | `/api/v1/auth/oauth/link` | authenticated |
+| POST | `/api/v1/auth/oauth/unlink` | authenticated |
+| GET | `/api/v1/auth/oauth/{provider}` | public |
+| GET | `/api/v1/auth/oauth/{provider}/callback` | public |
+| POST | `/api/v1/auth/password` | authenticated |
+| GET | `/api/v1/auth/providers` | public |
+| POST | `/api/v1/auth/register` | public |
+| GET | `/api/v1/auth/sessions` | authenticated |
+| POST | `/api/v1/auth/sessions/revoke` | authenticated |
+| POST | `/api/v1/auth/sessions/revoke-all` | authenticated |
+| POST | `/api/v1/auth/settings` | authenticated |
+| POST | `/api/v1/auth/switch-workspace` | authenticated |
 
 ## Settings
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/workspaces/{wsID}/settings/git` | ws:Admin |
-| POST | `/api/workspaces/{wsID}/settings/git` | ws:Admin |
-| POST | `/api/workspaces/{wsID}/settings/git/delete` | ws:Admin |
-| POST | `/api/workspaces/{wsID}/settings/git/push` | ws:Admin |
-| POST | `/api/workspaces/{wsID}/settings/membership` | ws:Viewer |
+| GET | `/api/v1/workspaces/{wsID}/settings/git` | ws:Admin |
+| POST | `/api/v1/workspaces/{wsID}/settings/git` | ws:Admin |
+| POST | `/api/v1/workspaces/{wsID}/settings/git/delete` | ws:Admin |
+| POST | `/api/v1/workspaces/{wsID}/settings/git/push` | ws:Admin |
+| POST | `/api/v1/workspaces/{wsID}/settings/membership` | ws:Viewer |
 
 ## Users
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/organizations/{orgID}/users` | org:Admin |
-| POST | `/api/organizations/{orgID}/users/role` | org:Admin |
-| POST | `/api/workspaces/{wsID}/users/role` | ws:Admin |
+| GET | `/api/v1/organizations/{orgID}/users` | org:Admin |
+| POST | `/api/v1/organizations/{orgID}/users/role` | org:Admin |
+| POST | `/api/v1/workspaces/{wsID}/users/role` | ws:Admin |
 
 ## Invitations
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/organizations/{orgID}/invitations` | org:Admin |
-| POST | `/api/organizations/{orgID}/invitations` | org:Admin |
-| GET | `/api/workspaces/{wsID}/invitations` | ws:Admin |
-| POST | `/api/workspaces/{wsID}/invitations` | ws:Admin |
+| GET | `/api/v1/organizations/{orgID}/invitations` | org:Admin |
+| POST | `/api/v1/organizations/{orgID}/invitations` | org:Admin |
+| GET | `/api/v1/workspaces/{wsID}/invitations` | ws:Admin |
+| POST | `/api/v1/workspaces/{wsID}/invitations` | ws:Admin |
 
 ## Nodes
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/workspaces/{wsID}/nodes/titles` | ws:Viewer |
-| GET | `/api/workspaces/{wsID}/nodes/{id}` | ws:Viewer |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/assets` | ws:Viewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/assets` | ws:Editor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/assets/{name}/delete` | ws:Editor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/children` | ws:Viewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/delete` | ws:Editor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/history` | ws:Viewer |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/history/{hash}` | ws:Viewer |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/page` | ws:Viewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/page` | ws:Editor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/page/create` | ws:Editor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/page/delete` | ws:Editor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/table` | ws:Viewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table` | ws:Editor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/create` | ws:Editor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/delete` | ws:Editor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/table/records` | ws:Viewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/create` | ws:Editor |
-| GET | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | ws:Viewer |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | ws:Editor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` | ws:Editor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/views/create` | ws:Editor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/views/{viewID}` | ws:Editor |
-| POST | `/api/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete` | ws:Editor |
+| GET | `/api/v1/workspaces/{wsID}/nodes/titles` | ws:Viewer |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}` | ws:Viewer |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/assets` | ws:Viewer |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/assets` | ws:Editor |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/assets/{name}/delete` | ws:Editor |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/children` | ws:Viewer |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/delete` | ws:Editor |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history` | ws:Viewer |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history/{hash}` | ws:Viewer |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/page` | ws:Viewer |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page` | ws:Editor |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page/create` | ws:Editor |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page/delete` | ws:Editor |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table` | ws:Viewer |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table` | ws:Editor |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/create` | ws:Editor |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/delete` | ws:Editor |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records` | ws:Viewer |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/create` | ws:Editor |
+| GET | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | ws:Viewer |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}` | ws:Editor |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/table/records/{rid}/delete` | ws:Editor |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/create` | ws:Editor |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}` | ws:Editor |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/views/{viewID}/delete` | ws:Editor |
 
 ## Search
 
 | Method | Path | Auth |
 |--------|------|------|
-| POST | `/api/workspaces/{wsID}/search` | ws:Viewer |
+| POST | `/api/v1/workspaces/{wsID}/search` | ws:Viewer |
 
 ## Assets
 
@@ -123,16 +123,16 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | Method | Path | Auth |
 |--------|------|------|
 | * | `/api/` | public |
-| POST | `/api/organizations` | authenticated |
-| GET | `/api/organizations/{orgID}` | org:Member |
-| POST | `/api/organizations/{orgID}` | org:Admin |
-| POST | `/api/organizations/{orgID}/notion/import` | org:Admin |
-| GET | `/api/organizations/{orgID}/notion/import/{importWsID}/status` | org:Member |
-| POST | `/api/organizations/{orgID}/settings` | org:Admin |
-| POST | `/api/organizations/{orgID}/workspaces` | org:Admin |
-| GET | `/api/server/config` | globalAdmin |
-| POST | `/api/server/config` | globalAdmin |
-| GET | `/api/workspaces/{wsID}` | ws:Viewer |
-| POST | `/api/workspaces/{wsID}` | ws:Admin |
-| POST | `/api/workspaces/{wsID}/notion/import/cancel` | ws:Admin |
+| POST | `/api/v1/organizations` | authenticated |
+| GET | `/api/v1/organizations/{orgID}` | org:Member |
+| POST | `/api/v1/organizations/{orgID}` | org:Admin |
+| POST | `/api/v1/organizations/{orgID}/notion/import` | org:Admin |
+| GET | `/api/v1/organizations/{orgID}/notion/import/{importWsID}/status` | org:Member |
+| POST | `/api/v1/organizations/{orgID}/settings` | org:Admin |
+| POST | `/api/v1/organizations/{orgID}/workspaces` | org:Admin |
+| GET | `/api/v1/server/config` | globalAdmin |
+| POST | `/api/v1/server/config` | globalAdmin |
+| GET | `/api/v1/workspaces/{wsID}` | ws:Viewer |
+| POST | `/api/v1/workspaces/{wsID}` | ws:Admin |
+| POST | `/api/v1/workspaces/{wsID}/notion/import/cancel` | ws:Admin |
 

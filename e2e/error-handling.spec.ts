@@ -81,7 +81,7 @@ test.describe('Error Handling - API Failures', () => {
     await expect(page.locator('input[placeholder*="Title"]')).toHaveValue('Network Error Test', { timeout: 5000 });
 
     // Block API requests to simulate network failure
-    await page.route('**/api/workspaces/**/page', (route) => {
+    await page.route('**/api/v1/workspaces/**/page', (route) => {
       route.abort('failed');
     });
 

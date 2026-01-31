@@ -365,7 +365,7 @@ describe('App', () => {
       localStorageMock.setItem('mddb_token', 'existing-token');
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/auth/me') {
+        if (url === '/api/v1/auth/me') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -408,7 +408,7 @@ describe('App', () => {
       localStorageMock.setItem('mddb_token', 'existing-token');
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/auth/me') {
+        if (url === '/api/v1/auth/me') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -503,7 +503,7 @@ describe('App', () => {
     beforeEach(() => {
       localStorageMock.setItem('mddb_token', 'test-token');
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/auth/me') {
+        if (url === '/api/v1/auth/me') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -572,7 +572,7 @@ describe('App', () => {
     beforeEach(() => {
       localStorageMock.setItem('mddb_token', 'test-token');
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/auth/me') {
+        if (url === '/api/v1/auth/me') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -640,7 +640,7 @@ describe('App', () => {
 
       let getMeCallCount = 0;
       mockFetch.mockImplementation((url: string, options?: RequestInit) => {
-        if (url === '/api/auth/me') {
+        if (url === '/api/v1/auth/me') {
           getMeCallCount++;
           // First call returns no memberships, subsequent calls return the new org
           if (getMeCallCount === 1) {
@@ -654,7 +654,7 @@ describe('App', () => {
             json: () => Promise.resolve(userAfterOrgCreation),
           });
         }
-        if (url === '/api/organizations' && options?.method === 'POST') {
+        if (url === '/api/v1/organizations' && options?.method === 'POST') {
           // Mock org creation (named after user's first name)
           return Promise.resolve({
             ok: true,
@@ -679,7 +679,7 @@ describe('App', () => {
         () => {
           const createOrgCalls = mockFetch.mock.calls.filter(
             (call: unknown[]) =>
-              call[0] === '/api/organizations' && (call[1] as RequestInit | undefined)?.method === 'POST'
+              call[0] === '/api/v1/organizations' && (call[1] as RequestInit | undefined)?.method === 'POST'
           );
           expect(createOrgCalls.length).toBeGreaterThan(0);
         },
@@ -713,7 +713,7 @@ describe('App', () => {
       };
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/auth/me') {
+        if (url === '/api/v1/auth/me') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(userWithMultipleOrgs),
@@ -748,7 +748,7 @@ describe('App', () => {
       localStorageMock.setItem('mddb_token', 'test-token');
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/auth/me') {
+        if (url === '/api/v1/auth/me') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -792,7 +792,7 @@ describe('App', () => {
       localStorageMock.setItem('mddb_token', 'test-token');
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/auth/me') {
+        if (url === '/api/v1/auth/me') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -842,14 +842,14 @@ describe('App', () => {
     // Skip: loadNodes now catches errors silently to handle empty workspace gracefully
     it.skip('displays error message from failed API calls', async () => {
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/auth/me') {
+        if (url === '/api/v1/auth/me') {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
           });
         }
         // Fail the root node request
-        if (url === '/api/workspaces/ws-1/nodes/0') {
+        if (url === '/api/v1/workspaces/ws-1/nodes/0') {
           return Promise.resolve({
             ok: false,
             status: 500,

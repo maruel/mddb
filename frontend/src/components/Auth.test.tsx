@@ -51,7 +51,7 @@ describe('Auth', () => {
     historyPushStateSpy.mockClear();
     // Default mock for providers endpoint (called on component mount)
     mockFetch.mockImplementation((url: string) => {
-      if (url === '/api/auth/providers') {
+      if (url === '/api/v1/auth/providers') {
         return Promise.resolve(mockProvidersResponse);
       }
       return Promise.reject(new Error(`Unexpected fetch to ${url}`));
@@ -113,10 +113,10 @@ describe('Auth', () => {
     };
 
     mockFetch.mockImplementation((url: string) => {
-      if (url === '/api/auth/providers') {
+      if (url === '/api/v1/auth/providers') {
         return Promise.resolve(mockProvidersResponse);
       }
-      if (url === '/api/auth/login') {
+      if (url === '/api/v1/auth/login') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockResponse),
@@ -144,7 +144,7 @@ describe('Auth', () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/auth/login', {
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: 'test@example.com', password: 'password123' }),
@@ -165,10 +165,10 @@ describe('Auth', () => {
     };
 
     mockFetch.mockImplementation((url: string) => {
-      if (url === '/api/auth/providers') {
+      if (url === '/api/v1/auth/providers') {
         return Promise.resolve(mockProvidersResponse);
       }
-      if (url === '/api/auth/login') {
+      if (url === '/api/v1/auth/login') {
         return Promise.resolve({
           ok: false,
           json: () => Promise.resolve(errorResponse),
@@ -202,7 +202,7 @@ describe('Auth', () => {
 
   it('handles network error', async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (url === '/api/auth/providers') {
+      if (url === '/api/v1/auth/providers') {
         return Promise.resolve(mockProvidersResponse);
       }
       return Promise.reject(new Error('Network error'));
@@ -247,10 +247,10 @@ describe('Auth', () => {
     };
 
     mockFetch.mockImplementation((url: string) => {
-      if (url === '/api/auth/providers') {
+      if (url === '/api/v1/auth/providers') {
         return Promise.resolve(mockProvidersResponse);
       }
-      if (url === '/api/auth/register') {
+      if (url === '/api/v1/auth/register') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve(mockResponse),
@@ -297,7 +297,7 @@ describe('Auth', () => {
     }
 
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/auth/register', {
+      expect(mockFetch).toHaveBeenCalledWith('/api/v1/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -319,10 +319,10 @@ describe('Auth', () => {
 
     // Check OAuth links
     const googleLink = screen.getByText(/google/i);
-    expect(googleLink.getAttribute('href')).toBe('/api/auth/oauth/google');
+    expect(googleLink.getAttribute('href')).toBe('/api/v1/auth/oauth/google');
 
     const microsoftLink = screen.getByText(/microsoft/i);
-    expect(microsoftLink.getAttribute('href')).toBe('/api/auth/oauth/microsoft');
+    expect(microsoftLink.getAttribute('href')).toBe('/api/v1/auth/oauth/microsoft');
   });
 
   it('shows privacy policy link', async () => {
@@ -341,7 +341,7 @@ describe('Auth', () => {
   it('disables submit button while loading', async () => {
     // Make login fetch hang
     mockFetch.mockImplementation((url: string) => {
-      if (url === '/api/auth/providers') {
+      if (url === '/api/v1/auth/providers') {
         return Promise.resolve(mockProvidersResponse);
       }
       // Make login request hang
@@ -371,10 +371,10 @@ describe('Auth', () => {
 
   it('handles response without token or user', async () => {
     mockFetch.mockImplementation((url: string) => {
-      if (url === '/api/auth/providers') {
+      if (url === '/api/v1/auth/providers') {
         return Promise.resolve(mockProvidersResponse);
       }
-      if (url === '/api/auth/login') {
+      if (url === '/api/v1/auth/login') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({}), // Empty response

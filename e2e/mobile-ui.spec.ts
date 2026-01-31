@@ -178,7 +178,7 @@ test.describe('Mobile UI - Layout', () => {
 
     // Poll API until both title and content are saved
     await expect(async () => {
-      const getResponse = await request.get(`/api/workspaces/${wsID}/nodes/${pageData.id}/page`, {
+      const getResponse = await request.get(`/api/v1/workspaces/${wsID}/nodes/${pageData.id}/page`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const savedData = await getResponse.json();
@@ -200,13 +200,13 @@ test.describe('Mobile UI - Touch Interactions', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create multiple pages
-    const page1Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+    const page1Response = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: 'Tap Page 1', content: 'Tap content 1' },
     });
     const page1Data = await page1Response.json();
 
-    const page2Response = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+    const page2Response = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: 'Tap Page 2', content: 'Tap content 2' },
     });

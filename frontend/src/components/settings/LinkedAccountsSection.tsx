@@ -75,7 +75,7 @@ export default function LinkedAccountsSection(props: Props) {
   const handleLink = async (providerId: OAuthProvider) => {
     setLoading(providerId);
     try {
-      const resp = (await authFetch('/api/auth/oauth/link', { provider: providerId })) as LinkOAuthAccountResponse;
+      const resp = (await authFetch('/api/v1/auth/oauth/link', { provider: providerId })) as LinkOAuthAccountResponse;
       // Redirect to OAuth provider
       window.location.href = resp.redirect_url;
     } catch (err) {
@@ -93,7 +93,7 @@ export default function LinkedAccountsSection(props: Props) {
 
     setLoading(providerId);
     try {
-      await authFetch('/api/auth/oauth/unlink', { provider: providerId });
+      await authFetch('/api/v1/auth/oauth/unlink', { provider: providerId });
       props.onSuccess(t('settings.accountUnlinked'));
       // Refresh user data
       window.location.reload();

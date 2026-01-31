@@ -159,7 +159,7 @@ test.describe('Page Links with Dynamic Titles', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a parent page
-    const createResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+    const createResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: 'Parent With Subpage', content: '' },
     });
@@ -226,7 +226,7 @@ test.describe('Page Links with Dynamic Titles', () => {
     const wsID = await getWorkspaceId(page);
 
     // Create parent page
-    const parentResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+    const parentResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: 'Page with Link', content: '' },
     });
@@ -234,7 +234,7 @@ test.describe('Page Links with Dynamic Titles', () => {
     const parentData = await parentResponse.json();
 
     // Create target page
-    const targetResponse = await request.post(`/api/workspaces/${wsID}/nodes/0/page/create`, {
+    const targetResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: 'Target Page', content: '' },
     });
@@ -243,7 +243,7 @@ test.describe('Page Links with Dynamic Titles', () => {
 
     // Update parent page with a link to target
     const linkContent = `Link to [Target Page](/w/${wsID}+workspace/${targetData.id}+target-page)`;
-    const updateResponse = await request.post(`/api/workspaces/${wsID}/nodes/${parentData.id}/page`, {
+    const updateResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/${parentData.id}/page`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: 'Page with Link', content: linkContent },
     });
@@ -273,7 +273,7 @@ test.describe('Page Links with Dynamic Titles', () => {
     await takeScreenshot('link-to-existing-page');
 
     // Now delete the target page
-    const deleteResponse = await request.post(`/api/workspaces/${wsID}/nodes/${targetData.id}/delete`, {
+    const deleteResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/${targetData.id}/delete`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(deleteResponse.ok()).toBe(true);

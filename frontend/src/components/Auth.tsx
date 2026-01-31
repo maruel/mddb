@@ -145,7 +145,7 @@ export default function Auth(props: AuthProps) {
                 const isKnown = provider in providerConfig;
                 const Icon = providerIcons[provider];
                 return (
-                  <a href={`/api/auth/oauth/${provider}`} class={config.style}>
+                  <a href={`/api/v1/auth/oauth/${provider}`} class={config.style}>
                     {Icon && <Icon />}
                     {isKnown ? t(config.label) : config.label}
                   </a>

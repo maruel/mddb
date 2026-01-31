@@ -133,67 +133,67 @@ export function createAPIClient(fetchFn: FetchFn) {
   return {
     admin: {
       organizations: {
-        listAllOrgs: () => get<AdminOrgsResponse>(fetchFn, `/api/admin/organizations`),
+        listAllOrgs: () => get<AdminOrgsResponse>(fetchFn, `/api/v1/admin/organizations`),
       },
-      getAdminStats: () => get<AdminStatsResponse>(fetchFn, `/api/admin/stats`),
-      listAllUsers: () => get<AdminUsersResponse>(fetchFn, `/api/admin/users`),
+      getAdminStats: () => get<AdminStatsResponse>(fetchFn, `/api/v1/admin/stats`),
+      listAllUsers: () => get<AdminUsersResponse>(fetchFn, `/api/v1/admin/users`),
     },
     auth: {
       email: {
-        changeEmail: (options: ChangeEmailRequest) => post<ChangeEmailResponse>(fetchFn, `/api/auth/email`, options),
-        sendVerificationEmail: () => post<SendVerificationEmailResponse>(fetchFn, `/api/auth/email/send-verification`),
+        changeEmail: (options: ChangeEmailRequest) => post<ChangeEmailResponse>(fetchFn, `/api/v1/auth/email`, options),
+        sendVerificationEmail: () => post<SendVerificationEmailResponse>(fetchFn, `/api/v1/auth/email/send-verification`),
       },
       invitations: {
-        acceptOrgInvitation: (options: AcceptInvitationRequest) => post<AuthResponse>(fetchFn, `/api/auth/invitations/org/accept`, options),
-        acceptWSInvitation: (options: AcceptInvitationRequest) => post<AuthResponse>(fetchFn, `/api/auth/invitations/ws/accept`, options),
+        acceptOrgInvitation: (options: AcceptInvitationRequest) => post<AuthResponse>(fetchFn, `/api/v1/auth/invitations/org/accept`, options),
+        acceptWSInvitation: (options: AcceptInvitationRequest) => post<AuthResponse>(fetchFn, `/api/v1/auth/invitations/ws/accept`, options),
       },
       sessions: {
-        listSessions: () => get<ListSessionsResponse>(fetchFn, `/api/auth/sessions`),
-        revokeAllSessions: () => post<RevokeAllSessionsResponse>(fetchFn, `/api/auth/sessions/revoke-all`),
-        revokeSession: (options: RevokeSessionRequest) => post<RevokeSessionResponse>(fetchFn, `/api/auth/sessions/revoke`, options),
+        listSessions: () => get<ListSessionsResponse>(fetchFn, `/api/v1/auth/sessions`),
+        revokeAllSessions: () => post<RevokeAllSessionsResponse>(fetchFn, `/api/v1/auth/sessions/revoke-all`),
+        revokeSession: (options: RevokeSessionRequest) => post<RevokeSessionResponse>(fetchFn, `/api/v1/auth/sessions/revoke`, options),
       },
-      getMe: () => get<UserResponse>(fetchFn, `/api/auth/me`),
-      listProviders: () => get<ProvidersResponse>(fetchFn, `/api/auth/providers`),
-      login: (options: LoginRequest) => post<AuthResponse>(fetchFn, `/api/auth/login`, options),
-      logout: () => post<LogoutResponse>(fetchFn, `/api/auth/logout`),
-      register: (options: RegisterRequest) => post<AuthResponse>(fetchFn, `/api/auth/register`, options),
-      setPassword: (options: SetPasswordRequest) => post<OkResponse>(fetchFn, `/api/auth/password`, options),
-      switchWorkspace: (options: SwitchWorkspaceRequest) => post<SwitchWorkspaceResponse>(fetchFn, `/api/auth/switch-workspace`, options),
-      updateUserSettings: (options: UpdateUserSettingsRequest) => post<UserResponse>(fetchFn, `/api/auth/settings`, options),
+      getMe: () => get<UserResponse>(fetchFn, `/api/v1/auth/me`),
+      listProviders: () => get<ProvidersResponse>(fetchFn, `/api/v1/auth/providers`),
+      login: (options: LoginRequest) => post<AuthResponse>(fetchFn, `/api/v1/auth/login`, options),
+      logout: () => post<LogoutResponse>(fetchFn, `/api/v1/auth/logout`),
+      register: (options: RegisterRequest) => post<AuthResponse>(fetchFn, `/api/v1/auth/register`, options),
+      setPassword: (options: SetPasswordRequest) => post<OkResponse>(fetchFn, `/api/v1/auth/password`, options),
+      switchWorkspace: (options: SwitchWorkspaceRequest) => post<SwitchWorkspaceResponse>(fetchFn, `/api/v1/auth/switch-workspace`, options),
+      updateUserSettings: (options: UpdateUserSettingsRequest) => post<UserResponse>(fetchFn, `/api/v1/auth/settings`, options),
     },
     organizations: {
-      createOrganization: (options: CreateOrganizationRequest) => post<OrganizationResponse>(fetchFn, `/api/organizations`, options),
+      createOrganization: (options: CreateOrganizationRequest) => post<OrganizationResponse>(fetchFn, `/api/v1/organizations`, options),
     },
     server: {
-      getConfig: () => get<ServerConfigResponse>(fetchFn, `/api/server/config`),
-      updateConfig: (options: UpdateServerConfigRequest) => post<UpdateServerConfigResponse>(fetchFn, `/api/server/config`, options),
+      getConfig: () => get<ServerConfigResponse>(fetchFn, `/api/v1/server/config`),
+      updateConfig: (options: UpdateServerConfigRequest) => post<UpdateServerConfigResponse>(fetchFn, `/api/v1/server/config`, options),
     },
-    getHealth: () => get<HealthResponse>(fetchFn, `/api/health`),
+    getHealth: () => get<HealthResponse>(fetchFn, `/api/v1/health`),
 
     /** Returns an org-scoped API client */
     org(orgID: string) {
       return {
         invitations: {
-          createOrgInvitation: (options: CreateOrgInvitationRequest) => post<OrgInvitationResponse>(fetchFn, `/api/organizations/${orgID}/invitations`, options),
-          listOrgInvitations: () => get<ListOrgInvitationsResponse>(fetchFn, `/api/organizations/${orgID}/invitations`),
+          createOrgInvitation: (options: CreateOrgInvitationRequest) => post<OrgInvitationResponse>(fetchFn, `/api/v1/organizations/${orgID}/invitations`, options),
+          listOrgInvitations: () => get<ListOrgInvitationsResponse>(fetchFn, `/api/v1/organizations/${orgID}/invitations`),
         },
         notion: {
-          getStatus: (importWsID: string) => get<NotionImportStatusResponse>(fetchFn, `/api/organizations/${orgID}/notion/import/${importWsID}/status`),
-          startImport: (options: NotionImportRequest) => post<NotionImportResponse>(fetchFn, `/api/organizations/${orgID}/notion/import`, options),
+          getStatus: (importWsID: string) => get<NotionImportStatusResponse>(fetchFn, `/api/v1/organizations/${orgID}/notion/import/${importWsID}/status`),
+          startImport: (options: NotionImportRequest) => post<NotionImportResponse>(fetchFn, `/api/v1/organizations/${orgID}/notion/import`, options),
         },
         organizations: {
-          getOrganization: () => get<OrganizationResponse>(fetchFn, `/api/organizations/${orgID}`),
-          updateOrganization: (options: UpdateOrganizationRequest) => post<OrganizationResponse>(fetchFn, `/api/organizations/${orgID}`, options),
+          getOrganization: () => get<OrganizationResponse>(fetchFn, `/api/v1/organizations/${orgID}`),
+          updateOrganization: (options: UpdateOrganizationRequest) => post<OrganizationResponse>(fetchFn, `/api/v1/organizations/${orgID}`, options),
         },
         settings: {
-          updateOrgPreferences: (options: UpdateOrgPreferencesRequest) => post<OrganizationResponse>(fetchFn, `/api/organizations/${orgID}/settings`, options),
+          updateOrgPreferences: (options: UpdateOrgPreferencesRequest) => post<OrganizationResponse>(fetchFn, `/api/v1/organizations/${orgID}/settings`, options),
         },
         users: {
-          listUsers: () => get<ListUsersResponse>(fetchFn, `/api/organizations/${orgID}/users`),
-          updateOrgMemberRole: (options: UpdateOrgMemberRoleRequest) => post<UserResponse>(fetchFn, `/api/organizations/${orgID}/users/role`, options),
+          listUsers: () => get<ListUsersResponse>(fetchFn, `/api/v1/organizations/${orgID}/users`),
+          updateOrgMemberRole: (options: UpdateOrgMemberRoleRequest) => post<UserResponse>(fetchFn, `/api/v1/organizations/${orgID}/users/role`, options),
         },
         workspaces: {
-          createWorkspace: (options: CreateWorkspaceRequest) => post<WorkspaceResponse>(fetchFn, `/api/organizations/${orgID}/workspaces`, options),
+          createWorkspace: (options: CreateWorkspaceRequest) => post<WorkspaceResponse>(fetchFn, `/api/v1/organizations/${orgID}/workspaces`, options),
         },
       };
     },
@@ -202,34 +202,34 @@ export function createAPIClient(fetchFn: FetchFn) {
     ws(wsID: string) {
       return {
         invitations: {
-          createWSInvitation: (options: CreateWSInvitationRequest) => post<WSInvitationResponse>(fetchFn, `/api/workspaces/${wsID}/invitations`, options),
-          listWSInvitations: () => get<ListWSInvitationsResponse>(fetchFn, `/api/workspaces/${wsID}/invitations`),
+          createWSInvitation: (options: CreateWSInvitationRequest) => post<WSInvitationResponse>(fetchFn, `/api/v1/workspaces/${wsID}/invitations`, options),
+          listWSInvitations: () => get<ListWSInvitationsResponse>(fetchFn, `/api/v1/workspaces/${wsID}/invitations`),
         },
         nodes: {
           assets: {
-            deleteNodeAsset: (id: string, name: string) => post<DeleteNodeAssetResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/assets/${name}/delete`),
-            listNodeAssets: (id: string) => get<ListNodeAssetsResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/assets`),
+            deleteNodeAsset: (id: string, name: string) => post<DeleteNodeAssetResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/assets/${name}/delete`),
+            listNodeAssets: (id: string) => get<ListNodeAssetsResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/assets`),
           },
           history: {
-            getNodeVersion: (id: string, hash: string) => get<GetNodeVersionResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/history/${hash}`),
+            getNodeVersion: (id: string, hash: string) => get<GetNodeVersionResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/history/${hash}`),
             async listNodeVersions(id: string, options: ListNodeVersionsRequest): Promise<ListNodeVersionsResponse> {
               const params = new URLSearchParams();
               if (options.Limit) params.set('limit', String(options.Limit));
-              const url = `/api/workspaces/${wsID}/nodes/${id}/history` + (params.toString() ? `?${params}` : '');
+              const url = `/api/v1/workspaces/${wsID}/nodes/${id}/history` + (params.toString() ? `?${params}` : '');
               return get<ListNodeVersionsResponse>(fetchFn, url);
             },
           },
           page: {
-            createPage: (id: string, options: CreatePageRequest) => post<CreatePageResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/page/create`, options),
-            deletePage: (id: string) => post<DeletePageResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/page/delete`),
-            getPage: (id: string) => get<GetPageResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/page`),
-            updatePage: (id: string, options: UpdatePageRequest) => post<UpdatePageResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/page`, options),
+            createPage: (id: string, options: CreatePageRequest) => post<CreatePageResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/page/create`, options),
+            deletePage: (id: string) => post<DeletePageResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/page/delete`),
+            getPage: (id: string) => get<GetPageResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/page`),
+            updatePage: (id: string, options: UpdatePageRequest) => post<UpdatePageResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/page`, options),
           },
           table: {
             records: {
-              createRecord: (id: string, options: CreateRecordRequest) => post<CreateRecordResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table/records/create`, options),
-              deleteRecord: (id: string, rid: string) => post<DeleteRecordResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table/records/${rid}/delete`),
-              getRecord: (id: string, rid: string) => get<GetRecordResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table/records/${rid}`),
+              createRecord: (id: string, options: CreateRecordRequest) => post<CreateRecordResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/table/records/create`, options),
+              deleteRecord: (id: string, rid: string) => post<DeleteRecordResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/table/records/${rid}/delete`),
+              getRecord: (id: string, rid: string) => get<GetRecordResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/table/records/${rid}`),
               async listRecords(id: string, options: ListRecordsRequest): Promise<ListRecordsResponse> {
                 const params = new URLSearchParams();
                 if (options.ViewID) params.set('view_id', options.ViewID);
@@ -237,51 +237,51 @@ export function createAPIClient(fetchFn: FetchFn) {
                 if (options.Sorts) params.set('sorts', options.Sorts);
                 if (options.Offset) params.set('offset', String(options.Offset));
                 if (options.Limit) params.set('limit', String(options.Limit));
-                const url = `/api/workspaces/${wsID}/nodes/${id}/table/records` + (params.toString() ? `?${params}` : '');
+                const url = `/api/v1/workspaces/${wsID}/nodes/${id}/table/records` + (params.toString() ? `?${params}` : '');
                 return get<ListRecordsResponse>(fetchFn, url);
               },
-              updateRecord: (id: string, rid: string, options: UpdateRecordRequest) => post<UpdateRecordResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table/records/${rid}`, options),
+              updateRecord: (id: string, rid: string, options: UpdateRecordRequest) => post<UpdateRecordResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/table/records/${rid}`, options),
             },
-            createTable: (id: string, options: CreateTableRequest) => post<CreateTableUnderParentResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table/create`, options),
-            deleteTable: (id: string) => post<DeleteTableResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table/delete`),
-            getTable: (id: string) => get<GetTableSchemaResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table`),
-            updateTable: (id: string, options: UpdateTableRequest) => post<UpdateTableResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/table`, options),
+            createTable: (id: string, options: CreateTableRequest) => post<CreateTableUnderParentResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/table/create`, options),
+            deleteTable: (id: string) => post<DeleteTableResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/table/delete`),
+            getTable: (id: string) => get<GetTableSchemaResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/table`),
+            updateTable: (id: string, options: UpdateTableRequest) => post<UpdateTableResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/table`, options),
           },
           views: {
-            createView: (id: string, options: CreateViewRequest) => post<CreateViewResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/views/create`, options),
-            deleteView: (id: string, viewID: string) => post<DeleteViewResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/views/${viewID}/delete`),
-            updateView: (id: string, viewID: string, options: UpdateViewRequest) => post<UpdateViewResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/views/${viewID}`, options),
+            createView: (id: string, options: CreateViewRequest) => post<CreateViewResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/views/create`, options),
+            deleteView: (id: string, viewID: string) => post<DeleteViewResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/views/${viewID}/delete`),
+            updateView: (id: string, viewID: string, options: UpdateViewRequest) => post<UpdateViewResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/views/${viewID}`, options),
           },
-          deleteNode: (id: string) => post<DeleteNodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/delete`),
-          getNode: (id: string) => get<NodeResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}`),
+          deleteNode: (id: string) => post<DeleteNodeResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/delete`),
+          getNode: (id: string) => get<NodeResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}`),
           async getNodeTitles(options: GetNodeTitlesRequest): Promise<GetNodeTitlesResponse> {
             const params = new URLSearchParams();
             if (options.IDs) params.set('ids', options.IDs);
-            const url = `/api/workspaces/${wsID}/nodes/titles` + (params.toString() ? `?${params}` : '');
+            const url = `/api/v1/workspaces/${wsID}/nodes/titles` + (params.toString() ? `?${params}` : '');
             return get<GetNodeTitlesResponse>(fetchFn, url);
           },
-          listNodeChildren: (id: string) => get<ListNodeChildrenResponse>(fetchFn, `/api/workspaces/${wsID}/nodes/${id}/children`),
+          listNodeChildren: (id: string) => get<ListNodeChildrenResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/children`),
         },
         notion: {
-          cancelImport: () => post<NotionImportCancelResponse>(fetchFn, `/api/workspaces/${wsID}/notion/import/cancel`),
+          cancelImport: () => post<NotionImportCancelResponse>(fetchFn, `/api/v1/workspaces/${wsID}/notion/import/cancel`),
         },
         settings: {
           git: {
-            deleteGitRemote: () => post<OkResponse>(fetchFn, `/api/workspaces/${wsID}/settings/git/delete`),
-            getGitRemote: () => get<GitRemoteResponse>(fetchFn, `/api/workspaces/${wsID}/settings/git`),
-            pushGit: () => post<OkResponse>(fetchFn, `/api/workspaces/${wsID}/settings/git/push`),
-            updateGitRemote: (options: UpdateGitRemoteRequest) => post<GitRemoteResponse>(fetchFn, `/api/workspaces/${wsID}/settings/git`, options),
+            deleteGitRemote: () => post<OkResponse>(fetchFn, `/api/v1/workspaces/${wsID}/settings/git/delete`),
+            getGitRemote: () => get<GitRemoteResponse>(fetchFn, `/api/v1/workspaces/${wsID}/settings/git`),
+            pushGit: () => post<OkResponse>(fetchFn, `/api/v1/workspaces/${wsID}/settings/git/push`),
+            updateGitRemote: (options: UpdateGitRemoteRequest) => post<GitRemoteResponse>(fetchFn, `/api/v1/workspaces/${wsID}/settings/git`, options),
           },
-          updateWSMembershipSettings: (options: UpdateWSMembershipSettingsRequest) => post<WSMembershipResponse>(fetchFn, `/api/workspaces/${wsID}/settings/membership`, options),
+          updateWSMembershipSettings: (options: UpdateWSMembershipSettingsRequest) => post<WSMembershipResponse>(fetchFn, `/api/v1/workspaces/${wsID}/settings/membership`, options),
         },
         users: {
-          updateWSMemberRole: (options: UpdateWSMemberRoleRequest) => post<UserResponse>(fetchFn, `/api/workspaces/${wsID}/users/role`, options),
+          updateWSMemberRole: (options: UpdateWSMemberRoleRequest) => post<UserResponse>(fetchFn, `/api/v1/workspaces/${wsID}/users/role`, options),
         },
         workspaces: {
-          getWorkspace: () => get<WorkspaceResponse>(fetchFn, `/api/workspaces/${wsID}`),
-          updateWorkspace: (options: UpdateWorkspaceRequest) => post<WorkspaceResponse>(fetchFn, `/api/workspaces/${wsID}`, options),
+          getWorkspace: () => get<WorkspaceResponse>(fetchFn, `/api/v1/workspaces/${wsID}`),
+          updateWorkspace: (options: UpdateWorkspaceRequest) => post<WorkspaceResponse>(fetchFn, `/api/v1/workspaces/${wsID}`, options),
         },
-        search: (options: SearchRequest) => post<SearchResponse>(fetchFn, `/api/workspaces/${wsID}/search`, options),
+        search: (options: SearchRequest) => post<SearchResponse>(fetchFn, `/api/v1/workspaces/${wsID}/search`, options),
       };
     },
   };

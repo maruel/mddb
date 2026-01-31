@@ -369,7 +369,7 @@ func (h *AuthHandler) SendVerificationEmail(ctx context.Context, user *identity.
 	}
 
 	// Build verify URL
-	verifyURL := h.cfg.BaseURL + "/api/auth/email/verify?token=" + verification.Token
+	verifyURL := h.cfg.BaseURL + "/api/v1/auth/email/verify?token=" + verification.Token
 
 	// Send email using user's language preference
 	locale := email.ParseLocale(user.Settings.Language)
@@ -441,7 +441,7 @@ func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID jso
 		}
 
 		// Build verify URL
-		verifyURL := h.cfg.BaseURL + "/api/auth/email/verify?token=" + verification.Token
+		verifyURL := h.cfg.BaseURL + "/api/v1/auth/email/verify?token=" + verification.Token
 
 		// Send email
 		if err := h.svc.Email.SendVerification(ctx, toEmail, name, verifyURL, locale); err != nil {

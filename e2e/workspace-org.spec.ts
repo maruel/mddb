@@ -27,7 +27,7 @@ test.describe('First Login Flow', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
     // Get user info to check org name
-    const meResponse = await request.get('/api/auth/me', {
+    const meResponse = await request.get('/api/v1/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
     expect(meResponse.ok()).toBe(true);
@@ -50,14 +50,14 @@ test.describe('Workspace Switching', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
     // Get current user info
-    const meResponse = await request.get('/api/auth/me', {
+    const meResponse = await request.get('/api/v1/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
     const userData = await meResponse.json();
     const orgId = userData.organization_id;
 
     // Create a second workspace via API
-    const wsCreateResponse = await request.post(`/api/organizations/${orgId}/workspaces`, {
+    const wsCreateResponse = await request.post(`/api/v1/organizations/${orgId}/workspaces`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { name: 'Second Workspace' },
     });
@@ -106,20 +106,20 @@ test.describe('Workspace Switching', () => {
     await expect(page.getByText('Content in workspace 1')).toBeVisible({ timeout: 5000 });
 
     // Get org and create second workspace
-    const meResponse = await request.get('/api/auth/me', {
+    const meResponse = await request.get('/api/v1/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
     const userData = await meResponse.json();
     const orgId = userData.organization_id;
 
-    const ws2Response = await request.post(`/api/organizations/${orgId}/workspaces`, {
+    const ws2Response = await request.post(`/api/v1/organizations/${orgId}/workspaces`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { name: 'Workspace Two' },
     });
     const ws2Data = await ws2Response.json();
 
     // Switch to second workspace via API (this persists the preference)
-    const switchResponse = await request.post('/api/auth/switch-workspace', {
+    const switchResponse = await request.post('/api/v1/auth/switch-workspace', {
       headers: { Authorization: `Bearer ${token}` },
       data: { ws_id: ws2Data.id },
     });
@@ -166,7 +166,7 @@ test.describe('Organization Features', () => {
     }
 
     // Verify org exists via API
-    const meResponse = await request.get('/api/auth/me', {
+    const meResponse = await request.get('/api/v1/auth/me', {
       headers: { Authorization: `Bearer ${token}` },
     });
     const userData = await meResponse.json();
@@ -341,7 +341,7 @@ test.describe('Sidebar Workspace Display', () => {
 
     // Create a page with a very long title
     const longTitle = 'This Is A Very Long Page Title That Should Test Overflow Behavior';
-    const resp = await request.post(`/api/workspaces/${wsId}/nodes/0/page/create`, {
+    const resp = await request.post(`/api/v1/workspaces/${wsId}/nodes/0/page/create`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: longTitle },
     });
