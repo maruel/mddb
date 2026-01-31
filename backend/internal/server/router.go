@@ -150,6 +150,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("POST /api/auth/settings", WrapAuth(uh.UpdateUserSettings, svc, hcfg, limiters))
 	mux.Handle("POST /api/auth/oauth/link", WrapAuth(oh.LinkOAuth, svc, hcfg, limiters))
 	mux.Handle("POST /api/auth/oauth/unlink", WrapAuth(oh.UnlinkOAuth, svc, hcfg, limiters))
+	mux.Handle("POST /api/auth/password", WrapAuth(authh.SetPassword, svc, hcfg, limiters))
 
 	// Organization endpoints - /api/organizations/*
 	mux.Handle("POST /api/organizations", WrapAuth(authh.CreateOrganization, svc, hcfg, limiters))

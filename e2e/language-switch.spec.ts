@@ -34,8 +34,8 @@ test.describe('Language Settings', () => {
     await expect(languageSelect).toBeVisible({ timeout: 5000 });
     await languageSelect.selectOption('fr');
 
-    // Click Save button
-    const saveButton = page.locator('button[type="submit"]');
+    // Click Save button (use specific text to avoid matching password form button)
+    const saveButton = page.getByRole('button', { name: 'Save Changes' });
     await saveButton.click();
 
     // Wait for success message
@@ -81,8 +81,8 @@ test.describe('Language Settings', () => {
     // Change to French
     await languageSelect.selectOption('fr');
 
-    // Click Save button
-    const saveButton = page.locator('button[type="submit"]');
+    // Click Save button (use specific text to avoid matching password form button)
+    const saveButton = page.getByRole('button', { name: 'Save Changes' });
     await saveButton.click();
 
     // Wait for success message to appear
@@ -125,7 +125,7 @@ test.describe('Language Settings', () => {
     await expect(languageSelect).toBeVisible({ timeout: 5000 });
     await languageSelect.selectOption('fr');
 
-    const saveButton = page.locator('button[type="submit"]');
+    const saveButton = page.getByRole('button', { name: 'Save Changes' });
     await saveButton.click();
 
     // Wait for save to complete
@@ -168,15 +168,15 @@ test.describe('Language Settings', () => {
     await expect(languageSelect).toBeVisible({ timeout: 5000 });
     await languageSelect.selectOption('fr');
 
-    let saveButton = page.locator('button[type="submit"]');
+    let saveButton = page.getByRole('button', { name: 'Save Changes' });
     await saveButton.click();
     await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
 
-    // Now change back to English
+    // Now change back to English (UI is now in French, so button text is French)
     languageSelect = page.locator('select').filter({ has: page.locator('option[value="en"]') });
     await languageSelect.selectOption('en');
 
-    saveButton = page.locator('button[type="submit"]');
+    saveButton = page.getByRole('button', { name: 'Enregistrer les modifications' });
     await saveButton.click();
     await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
 

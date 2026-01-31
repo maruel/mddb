@@ -1100,6 +1100,17 @@ func (r *UnlinkOAuthAccountRequest) Validate() error {
 	return nil
 }
 
+// SetPasswordRequest is a request to set or change the user's password.
+type SetPasswordRequest struct {
+	CurrentPassword string `json:"current_password,omitempty"` // Required if user has a password
+	NewPassword     string `json:"new_password"`
+}
+
+// Validate validates the set password request fields.
+func (r *SetPasswordRequest) Validate() error {
+	return validatePassword(r.NewPassword)
+}
+
 // --- Health ---
 
 // HealthRequest is a request to check system health.

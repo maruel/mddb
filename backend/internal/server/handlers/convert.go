@@ -396,6 +396,7 @@ type wsMembershipWithName struct {
 // userWithMemberships wraps a user with their org and workspace memberships.
 type userWithMemberships struct {
 	User           *identity.User
+	HasPassword    bool
 	OrgMemberships []orgMembershipWithName
 	WSMemberships  []wsMembershipWithName
 	CurrentOrgID   jsonldb.ID
@@ -430,6 +431,7 @@ func wsMembershipWithNameToResponse(m *wsMembershipWithName) dto.WSMembershipRes
 
 func userWithMembershipsToResponse(uwm *userWithMemberships) *dto.UserResponse {
 	resp := userToResponse(uwm.User)
+	resp.HasPassword = uwm.HasPassword
 
 	// Add org memberships
 	orgMems := make([]dto.OrgMembershipResponse, len(uwm.OrgMemberships))
@@ -479,6 +481,9 @@ func getUserWithMemberships(
 		return nil, err
 	}
 
+	// Check if user has password set
+	hasPassword := userService.HasPassword(userID)
+
 	// Get org memberships
 	var orgMems []orgMembershipWithName
 	for m := range orgMemService.IterByUser(userID) {
@@ -502,6 +507,7 @@ func getUserWithMemberships(
 
 	return &userWithMemberships{
 		User:           user,
+		HasPassword:    hasPassword,
 		OrgMemberships: orgMems,
 		WSMemberships:  wsMems,
 	}, nil

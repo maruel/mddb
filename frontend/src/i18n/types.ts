@@ -177,6 +177,20 @@ export interface Dictionary {
     emailChangeHint: string;
     emailVerified: string;
     emailNotVerified: string;
+    // Password management
+    addPassword: string;
+    changePassword: string;
+    addPasswordHint: string;
+    changePasswordHint: string;
+    newPassword: string;
+    confirmPassword: string;
+    passwordMismatch: string;
+    passwordChanged: string;
+    passwordAdded: string;
+    // Linking feedback
+    accountLinked: string;
+    accountUnlinked: string;
+    linkingFailed: string;
     // Workspace tab
     workspaceSettings: string;
     adminOnlyWorkspace: string;

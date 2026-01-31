@@ -1,0 +1,112 @@
+/* Linked accounts section styles. */
+
+.section {
+  margin-bottom: var(--s-5);
+}
+
+.section h3 {
+  font-size: 1.1rem;
+  margin-bottom: var(--s-2);
+}
+
+.hint {
+  color: var(--c-text-light);
+  font-size: 0.9rem;
+  margin-bottom: var(--s-4);
+}
+
+.providerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.providerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.providerInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+
+.providerIcon {
+  font-size: 1.2rem;
+}
+
+.providerName {
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.linkedBadge {
+  font-size: 0.75rem;
+  padding: var(--s-1) var(--s-2);
+  background: var(--c-success);
+  color: white;
+  border-radius: var(--radius);
+}
+
+.notLinkedBadge {
+  font-size: 0.75rem;
+  padding: var(--s-1) var(--s-2);
+  background: var(--c-bg-alt);
+  color: var(--c-text-light);
+  border-radius: var(--radius);
+}
+
+.linkedEmail {
+  font-size: 0.85rem;
+  color: var(--c-text-light);
+}
+
+.providerActions {
+  flex-shrink: 0;
+}
+
+.linkButton {
+  padding: var(--s-2) var(--s-4);
+  background: var(--c-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.linkButton:hover:not(:disabled) {
+  background: var(--c-primary-hover);
+}
+
+.linkButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.unlinkButton {
+  padding: var(--s-2) var(--s-4);
+  background: transparent;
+  color: var(--c-danger);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.unlinkButton:hover:not(:disabled) {
+  background: var(--c-danger);
+  color: white;
+}
+
+.unlinkButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

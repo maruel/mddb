@@ -276,6 +276,7 @@ type UserResponse struct {
 	EmailVerified   bool            `json:"email_verified,omitempty" jsonschema:"description=Whether the email has been verified"`
 	Name            string          `json:"name" jsonschema:"description=User display name"`
 	IsGlobalAdmin   bool            `json:"is_global_admin,omitempty" jsonschema:"description=Whether user has server-wide administrative access"`
+	HasPassword     bool            `json:"has_password,omitempty" jsonschema:"description=Whether user has a password set"`
 	OAuthIdentities []OAuthIdentity `json:"oauth_identities,omitempty" jsonschema:"description=Linked OAuth provider accounts"`
 	Settings        UserSettings    `json:"settings" jsonschema:"description=Global user preferences"`
 	Created         Time            `json:"created" jsonschema:"description=Account creation Unix timestamp"`

@@ -40,6 +40,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | POST | `/api/auth/oauth/unlink` | authenticated |
 | GET | `/api/auth/oauth/{provider}` | public |
 | GET | `/api/auth/oauth/{provider}/callback` | public |
+| POST | `/api/auth/password` | authenticated |
 | GET | `/api/auth/providers` | public |
 | POST | `/api/auth/register` | public |
 | GET | `/api/auth/sessions` | authenticated |

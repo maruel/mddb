@@ -177,6 +177,20 @@ export const dict: Dictionary = {
     emailChangeHint: 'Después de cambiar tu correo, deberás verificarlo.',
     emailVerified: 'Verificado',
     emailNotVerified: 'No verificado',
+    // Password management
+    addPassword: 'Agregar contraseña',
+    changePassword: 'Cambiar contraseña',
+    addPasswordHint: 'Agrega una contraseña para habilitar el inicio de sesión con correo/contraseña.',
+    changePasswordHint: 'Cambia la contraseña de tu cuenta.',
+    newPassword: 'Nueva contraseña',
+    confirmPassword: 'Confirmar contraseña',
+    passwordMismatch: 'Las contraseñas no coinciden',
+    passwordChanged: 'Contraseña actualizada correctamente',
+    passwordAdded: 'Contraseña agregada correctamente',
+    // Linking feedback
+    accountLinked: 'Cuenta vinculada correctamente',
+    accountUnlinked: 'Cuenta desvinculada correctamente',
+    linkingFailed: 'Error al vincular la cuenta',
     // Workspace tab
     workspaceSettings: 'Configuración del espacio de trabajo',
     adminOnlyWorkspace: 'Solo los administradores pueden modificar la configuración del espacio.',

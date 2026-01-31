@@ -453,6 +453,18 @@ func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID jso
 	}()
 }
 
+// SetPassword sets or changes the user's password.
+func (h *AuthHandler) SetPassword(_ context.Context, user *identity.User, req *dto.SetPasswordRequest) (*dto.OkResponse, error) {
+	if err := h.svc.User.SetPassword(user.ID, req.CurrentPassword, req.NewPassword); err != nil {
+		// Check for invalid credentials error (wrong current password)
+		if err.Error() == "invalid credentials" {
+			return nil, dto.NewAPIError(401, dto.ErrorCodeUnauthorized, "Invalid current password")
+		}
+		return nil, dto.InternalWithError("Failed to set password", err)
+	}
+	return &dto.OkResponse{Ok: true}, nil
+}
+
 // VerifyEmailRedirect is an HTTP handler that verifies email and redirects to frontend.
 func (h *AuthHandler) VerifyEmailRedirect(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()

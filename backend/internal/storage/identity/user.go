@@ -239,6 +239,44 @@ func (s *UserService) VerifyPassword(id jsonldb.ID, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(stored.PasswordHash), []byte(password)) == nil
 }
 
+// SetPassword sets or updates the user's password.
+// If the user already has a password, currentPassword must match.
+// If the user is OAuth-only (no password), currentPassword is ignored.
+func (s *UserService) SetPassword(id jsonldb.ID, currentPassword, newPassword string) error {
+	if id.IsZero() {
+		return errUserIDEmpty
+	}
+	if newPassword == "" {
+		return errPasswordRequired
+	}
+
+	stored := s.table.Get(id)
+	if stored == nil {
+		return errUserNotFound
+	}
+
+	// If user already has a password, verify the current password
+	if stored.PasswordHash != "" {
+		if err := bcrypt.CompareHashAndPassword([]byte(stored.PasswordHash), []byte(currentPassword)); err != nil {
+			return errInvalidCreds
+		}
+	}
+
+	// Hash the new password
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Update password in storage
+	_, err = s.table.Modify(id, func(row *userStorage) error {
+		row.PasswordHash = string(hash)
+		row.Modified = storage.Now()
+		return nil
+	})
+	return err
+}
+
 //
 
 var (
@@ -247,6 +285,7 @@ var (
 	errUserExists       = errors.New("user already exists")
 	errInvalidCreds     = errors.New("invalid credentials")
 	errInvalidUserQuota = errors.New("invalid user quota")
+	errPasswordRequired = errors.New("new password is required")
 )
 
 // oauthKey is a composite key for OAuth identity lookups.

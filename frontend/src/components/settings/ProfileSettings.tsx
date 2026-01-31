@@ -1,12 +1,14 @@
 // User profile settings panel for managing personal preferences.
 
-import { createSignal, createEffect, Show, For } from 'solid-js';
+import { createSignal, createEffect, onMount, Show, For } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import type { UserSettings, WorkspaceMembershipSettings, OrgMembershipResponse } from '@sdk/types.gen';
 import { OrgRoleAdmin, OrgRoleOwner } from '@sdk/types.gen';
 import { useAuth } from '../../contexts';
 import { useI18n, type Locale } from '../../i18n';
 import { settingsUrl } from '../../utils/urls';
+import LinkedAccountsSection from './LinkedAccountsSection';
+import PasswordSection from './PasswordSection';
 import styles from './ProfileSettings.module.css';
 
 export default function ProfileSettings() {
@@ -21,6 +23,22 @@ export default function ProfileSettings() {
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [success, setSuccess] = createSignal<string | null>(null);
+
+  // Handle OAuth callback URL params on mount
+  onMount(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('oauth_linked') === 'true') {
+      setSuccess(t('settings.accountLinked'));
+      // Clean up URL params
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    const oauthError = params.get('oauth_error');
+    if (oauthError) {
+      setError(`${t('settings.linkingFailed')}: ${oauthError}`);
+      // Clean up URL params
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  });
 
   // Get avatar URL from OAuth identities
   const getAvatarUrl = () => {
@@ -225,6 +243,15 @@ export default function ProfileSettings() {
                 </button>
               </form>
             </section>
+
+            <LinkedAccountsSection
+              oauthIdentities={u().oauth_identities}
+              hasPassword={u().has_password ?? false}
+              onSuccess={setSuccess}
+              onError={setError}
+            />
+
+            <PasswordSection hasPassword={u().has_password ?? false} onSuccess={setSuccess} onError={setError} />
           </>
         )}
       </Show>

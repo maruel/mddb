@@ -490,6 +490,13 @@ export interface UnlinkOAuthAccountRequest {
   provider: OAuthProvider;
 }
 /**
+ * SetPasswordRequest is a request to set or change the user's password.
+ */
+export interface SetPasswordRequest {
+  current_password?: string; // Required if user has a password
+  new_password: string;
+}
+/**
  * HealthRequest is a request to check system health.
  */
 export interface HealthRequest {
@@ -908,6 +915,7 @@ export interface UserResponse {
   email_verified?: boolean;
   name: string;
   is_global_admin?: boolean;
+  has_password?: boolean;
   oauth_identities?: OAuthIdentity[];
   settings: UserSettings;
   created: Time;

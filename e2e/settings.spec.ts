@@ -46,8 +46,8 @@ test.describe('User Profile Settings', () => {
     // Change to French
     await languageSelect.selectOption('fr');
 
-    // Save changes
-    const saveButton = page.locator('button[type="submit"]');
+    // Save changes (use specific text to avoid matching password form button)
+    const saveButton = page.getByRole('button', { name: 'Save Changes' });
     await saveButton.click();
 
     // Should show success message (in French or English)
@@ -69,8 +69,8 @@ test.describe('User Profile Settings', () => {
     // Change to dark
     await themeSelect.selectOption('dark');
 
-    // Save
-    const saveButton = page.locator('button[type="submit"]');
+    // Save (use specific text to avoid matching password form button)
+    const saveButton = page.getByRole('button', { name: 'Save Changes' });
     await saveButton.click();
 
     await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
