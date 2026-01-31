@@ -8,17 +8,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - uses: actions/setup-go@v6
-      with:
-        go-version-file: go.mod
-    - uses: pnpm/action-setup@v4
-      with:
-        version: 10
-    - uses: actions/setup-node@v6
-      with:
-        node-version: "24"
-        cache: pnpm
-        cache-dependency-path: pnpm-lock.yaml
     - name: Lint (Go)
       if: runner.os == 'Linux'
       uses: golangci/golangci-lint-action@v9
@@ -30,6 +19,12 @@ runs:
       if: runner.os == 'Linux'
       run: make lint-binaries
       shell: bash
+    - run: make build
+      shell: bash
+    - name: Test
+      if: runner.os != 'Linux'
+      run: make test
+      shell: bash
     - name: Coverage
       if: runner.os == 'Linux'
       run: make coverage
@@ -40,8 +35,6 @@ runs:
       with:
         token: ${{ inputs.codecov-token }}
         files: coverage.out,coverage/lcov.info
-    - run: make build
-      shell: bash
     - run: make e2e
       shell: bash
     - uses: actions/upload-artifact@v4

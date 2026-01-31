@@ -1,0 +1,23 @@
+name: 'MDDB Setup Action'
+description: 'Shared setup steps for MDDB'
+runs:
+  using: "composite"
+  steps:
+    - name: Set Environment Variables
+      run: |
+        echo "CGO_ENABLED=0" >> "$GITHUB_ENV"
+      shell: bash
+    - uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.x'
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    - uses: actions/setup-node@v6
+      with:
+        node-version: "24"
+        cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml

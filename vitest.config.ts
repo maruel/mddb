@@ -13,6 +13,7 @@ export default defineConfig({
   plugins: [solid()],
   test: {
     environment: "jsdom",
+    setupFiles: ["src/test-setup.ts"],
     silent: "passed-only",
     reporters: ["dot"],
     coverage: {
