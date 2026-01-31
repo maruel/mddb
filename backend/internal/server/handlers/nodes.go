@@ -137,12 +137,11 @@ func (h *NodeHandler) GetNodeVersion(ctx context.Context, wsID jsonldb.ID, _ *id
 	if req.ID.IsZero() {
 		return nil, dto.NotFound("node") // No node with ID 0 exists
 	}
-	path := req.ID.String() + "/index.md"
-	contentBytes, err := ws.GetFileAtCommit(ctx, req.Hash, path)
+	pageContent, err := ws.GetPageContentAtCommit(ctx, req.Hash, req.ID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get node version", err)
 	}
-	return &dto.GetNodeVersionResponse{Content: string(contentBytes)}, nil
+	return &dto.GetNodeVersionResponse{Content: pageContent}, nil
 }
 
 // ListNodeAssets returns a list of assets associated with a node.

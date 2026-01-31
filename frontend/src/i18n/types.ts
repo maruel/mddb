@@ -77,9 +77,10 @@ export interface Dictionary {
     hideHistory: string;
     versionHistory: string;
     noHistory: string;
-    restoreConfirm: string;
     wysiwygMode: string;
     markdownMode: string;
+    versionPreview: string;
+    closePreview: string;
   };
 
   welcome: {

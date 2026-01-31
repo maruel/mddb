@@ -75,10 +75,10 @@ export const dict: Dictionary = {
     hideHistory: 'Ocultar historial',
     versionHistory: 'Historial de versiones',
     noHistory: 'No hay historial disponible',
-    restoreConfirm:
-      'Esto reemplazará el contenido actual con la versión seleccionada. Los cambios no guardados se perderán. ¿Continuar?',
     wysiwygMode: 'Visual',
     markdownMode: 'Markdown',
+    versionPreview: 'Vista previa de la versión',
+    closePreview: 'Cerrar vista previa',
   },
 
   welcome: {

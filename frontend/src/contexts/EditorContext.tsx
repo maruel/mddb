@@ -44,7 +44,6 @@ interface EditorContextValue {
   setShowHistory: (show: boolean) => void;
   history: Accessor<Commit[]>;
   loadHistory: (nodeId: string) => Promise<void>;
-  loadVersion: (nodeId: string, hash: string) => Promise<void>;
 
   // Actions
   triggerAutoSave: () => void;
@@ -204,24 +203,6 @@ export const EditorProvider: ParentComponent = (props) => {
     }
   }
 
-  async function loadVersion(nodeId: string, hash: string) {
-    if (!confirm(t('editor.restoreConfirm') || 'This will replace current editor content. Continue?')) return;
-    const ws = wsApi();
-    if (!ws) return;
-
-    try {
-      setLoading(true);
-      const data = await ws.nodes.history.getNodeVersion(nodeId, hash);
-      setContent(data.content || '');
-      setHasUnsavedChanges(true);
-      setShowHistory(false);
-    } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const value: EditorContextValue = {
     title,
     setTitle,
@@ -236,7 +217,6 @@ export const EditorProvider: ParentComponent = (props) => {
     setShowHistory,
     history,
     loadHistory,
-    loadVersion,
     triggerAutoSave: debouncedAutoSave,
     flushAutoSave: debouncedAutoSave.flush,
     resetEditor,

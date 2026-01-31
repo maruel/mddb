@@ -214,7 +214,7 @@ func (ws *WorkspaceFileStore) ReadPage(id jsonldb.ID) (*Node, error) {
 		return nil, fmt.Errorf("failed to read page: %w", err)
 	}
 
-	p := parseMarkdownFile(data)
+	p := ParseMarkdown(data)
 	return &Node{
 		ID:       id,
 		ParentID: parentID,
@@ -309,7 +309,7 @@ func (ws *WorkspaceFileStore) updatePage(id jsonldb.ID, title, content string) (
 		return nil, fmt.Errorf("failed to read page: %w", err)
 	}
 
-	p := parseMarkdownFile(data)
+	p := ParseMarkdown(data)
 	p.title = title
 	p.content = content
 	p.modified = storage.Now()
@@ -451,7 +451,7 @@ func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID jsonldb
 	}
 
 	if hasIndex {
-		p := parseMarkdownFile(indexData)
+		p := ParseMarkdown(indexData)
 		node.Title = p.title
 		node.Content = p.content
 		node.Created = p.created
@@ -1048,9 +1048,17 @@ func (ws *WorkspaceFileStore) GetHistory(ctx context.Context, id jsonldb.ID, n i
 	return ws.repo.GetHistory(ctx, path, n)
 }
 
-// GetFileAtCommit returns the content of a file at a specific commit.
-func (ws *WorkspaceFileStore) GetFileAtCommit(ctx context.Context, hash, path string) ([]byte, error) {
-	return ws.repo.GetFileAtCommit(ctx, hash, path)
+// GetPageContentAtCommit returns the content of a node's index.md file at a specific commit,
+// with front matter stripped. This correctly handles nested nodes by resolving the git path.
+func (ws *WorkspaceFileStore) GetPageContentAtCommit(ctx context.Context, hash string, id jsonldb.ID) (string, error) {
+	parentID := ws.getParent(id)
+	path := ws.gitPath(parentID, id, "index.md")
+	data, err := ws.repo.GetFileAtCommit(ctx, hash, path)
+	if err != nil {
+		return "", err
+	}
+	p := ParseMarkdown(data)
+	return p.content, nil
 }
 
 // CreateNode creates a new node (can be document, table, or hybrid) and commits to git.
@@ -1450,7 +1458,8 @@ func (ws *WorkspaceFileStore) ListChildren(parentID jsonldb.ID) ([]*Node, error)
 
 // Helper functions
 
-func parseMarkdownFile(data []byte) *page {
+// ParseMarkdown parses a markdown file with optional YAML front matter.
+func ParseMarkdown(data []byte) *page {
 	content := string(data)
 	var title string
 	var created, modified storage.Time
