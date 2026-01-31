@@ -1,0 +1,6 @@
+Created data/.env from .env.example
+20:47:10.797 INF No OAuth providers configured
+20:47:10.798 INF Starting server addr=localhost:8080 baseURL=http://localhost:8080 version=v0.0.0-20260131184651-1f5619e02236+dirty
+20:47:45.319 INF Executable modified, initiating shutdown
+20:47:45.319 INF Shutting down server
+20:47:45.319 INF Server stopped
