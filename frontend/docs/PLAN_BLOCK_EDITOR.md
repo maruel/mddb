@@ -81,75 +81,51 @@ const blockSpec: NodeSpec = {
 
 Map HTML elements to block attributes for clipboard paste and initial load.
 
-```typescript
-parseDOM: [
-  // Headings
-  { tag: 'h1', attrs: { type: 'heading', level: 1 } },
-  { tag: 'h2', attrs: { type: 'heading', level: 2 } },
-  // ... h3-h6
+**File:** `src/components/editor/dom-parser.ts` (new file)
 
-  // Lists - parse <li> directly, ignore <ul>/<ol> wrappers
-  {
-    tag: 'li.task-list-item',
-    getAttrs(dom: HTMLElement) {
-      return {
-        type: 'task',
-        checked: dom.dataset.checked === 'true',
-        indent: parseInt(dom.dataset.indent || '0', 10),
-      };
-    },
-  },
-  { tag: 'li', attrs: { type: 'bullet' } },  // Default, context determines bullet/number
+Implements preprocessing for pasted HTML:
+- `transformPastedHTML(html)`: Walks DOM and annotates `<li>` elements with `data-type` (bullet/number) and `data-indent`
+- `annotateListItems(node, indentLevel)`: Recursive function that handles nested lists and task detection
+- `annotateListItem(li, listType, indentLevel)`: Annotates a single `<li>` with attributes and task class
+- `extractCodeLanguage(preElement)`: Extracts code block language from class names or data attributes
 
-  // Others
-  { tag: 'blockquote > p', attrs: { type: 'quote' } },
-  { tag: 'pre', attrs: { type: 'code' } },
-  { tag: 'hr', attrs: { type: 'divider' } },
-  { tag: 'p', attrs: { type: 'paragraph' } },
-]
-```
+**File:** `src/components/editor/domParsePlugin.ts` (new file)
 
-**Challenge:** `<ul>` vs `<ol>` detection requires walking the DOM tree. Solution: Use a `transformPastedHTML` hook to annotate `<li>` elements with their parent list type before parsing.
+Integrates preprocessing with editor:
+- `domParsePlugin()`: Returns Plugin instance for future integration
+- `setupPasteHandler()`: Attaches paste event handler to container
+- `createHTMLTransformer()`: Returns function for ClipboardParser configuration
+
+**Schema enhancement:** Updated code block parseDOM to extract language from `language-*`, `lang-*`, and `hljs-*` class patterns.
+
+**Challenge solved:** `<ul>` vs `<ol>` detection requires walking the DOM tree. Solution: Preprocess pasted HTML with `transformPastedHTML()` to annotate `<li>` elements with parent list type before schema parsing.
 
 **Tasks:**
-- [ ] Implement `parseDOM` rules for all block types
-- [ ] Add `transformPastedHTML` to detect `<ul>` vs `<ol>` and annotate `<li>` elements
-- [ ] Handle nested list indentation (count parent `<li>` depth)
-- [ ] Unit tests for HTML → block conversion
+- [x] Create `src/components/editor/dom-parser.ts` with preprocessing utilities
+- [x] Create `src/components/editor/domParsePlugin.ts` with plugin integration
+- [x] Implement `parseDOM` rules for all block types (already in schema.ts)
+- [x] Add `transformPastedHTML` to detect `<ul>` vs `<ol>` and annotate `<li>` elements
+- [x] Handle nested list indentation (count parent `<li>` depth)
+- [x] Unit tests for HTML → block conversion (20 tests, all passing)
 
 ### 1.3 DOM Serialization (ProseMirror → HTML)
 
-Render blocks with appropriate HTML and data attributes.
+Already implemented in `schema.ts` during Phase 1.1. The `blockSpec.toDOM()` method renders blocks with appropriate HTML and data attributes:
 
-```typescript
-toDOM(node): DOMOutputSpec {
-  const { type, level, indent, checked, language } = node.attrs;
-  const baseAttrs = { 'data-type': type, 'data-indent': String(indent) };
+- Headings → `<h1>` through `<h6>` with `data-type` and `data-indent`
+- Bullet/Number lists → `<div class="block-bullet">` or `<div class="block-number">`
+- Task lists → `<div class="block-task" data-checked="true/false">`
+- Quotes → `<blockquote>` with data attributes
+- Code blocks → `<pre data-language="...">` with language metadata
+- Dividers → `<hr>` element
+- Paragraphs → `<p>` with data attributes
 
-  switch (type) {
-    case 'heading':
-      return [`h${level}`, baseAttrs, 0];
-    case 'bullet':
-    case 'number':
-      return ['div', { ...baseAttrs, class: `block-${type}` }, 0];
-    case 'task':
-      return ['div', { ...baseAttrs, class: 'block-task', 'data-checked': String(checked) }, 0];
-    case 'quote':
-      return ['blockquote', baseAttrs, 0];
-    case 'code':
-      return ['pre', { ...baseAttrs, 'data-language': language || '' }, ['code', 0]];
-    case 'divider':
-      return ['hr', baseAttrs];
-    default:
-      return ['p', baseAttrs, 0];
-  }
-}
-```
+All blocks carry `data-type` and `data-indent` attributes for drag-drop positioning and reconstruction.
 
 **Tasks:**
-- [ ] Implement `toDOM` for all block types
-- [ ] Add CSS classes for list-style rendering (bullets, numbers)
-- [ ] Ensure data attributes support drag-drop and handle positioning
+- [x] Implement `toDOM` for all block types (already in schema.ts)
+- [x] Add CSS classes for list-style rendering (bullets, numbers)
+- [x] Ensure data attributes support drag-drop and handle positioning
 
 ---
 

@@ -74,9 +74,31 @@ const blockSpec: NodeSpec = {
     {
       tag: 'pre',
       getAttrs(dom: HTMLElement) {
+        // Try to extract language from class names or data attribute
+        // Import extractCodeLanguage from dom-parser
+        let language: string | null = dom.dataset.language || null;
+
+        if (!language) {
+          const classes = Array.from(dom.classList);
+          for (const cls of classes) {
+            if (cls.startsWith('language-')) {
+              language = cls.slice(9);
+              break;
+            }
+            if (cls.startsWith('lang-')) {
+              language = cls.slice(5);
+              break;
+            }
+            if (cls.startsWith('hljs-')) {
+              language = cls.slice(5);
+              break;
+            }
+          }
+        }
+
         return {
           type: 'code',
-          language: dom.dataset.language || null,
+          language,
         };
       },
     },
