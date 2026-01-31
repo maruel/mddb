@@ -16,7 +16,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'], channel: 'chrome' },
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
   // Start the server before running tests with isolated test data directory
