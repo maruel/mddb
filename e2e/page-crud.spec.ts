@@ -999,8 +999,8 @@ function hello() {
     const sidebarNode = page.locator(`[data-testid="sidebar-node-${pageData.id}"]`);
     await sidebarNode.click({ button: 'right' });
 
-    // Click History option in context menu (has clock emoji prefix)
-    const historyButton = page.locator('button', { hasText: /🕐.*History/ });
+    // Click History option in context menu
+    const historyButton = page.locator('[data-testid="show-history-button"]');
     await expect(historyButton).toBeVisible({ timeout: 3000 });
     await historyButton.click();
 

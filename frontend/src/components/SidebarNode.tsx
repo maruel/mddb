@@ -124,6 +124,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
         <span class={styles.pageTitleText}>{props.node.title}</span>
         <button
           class={styles.hoverDeleteButton}
+          data-testid="delete-node-button"
           onClick={(e) => {
             e.stopPropagation();
             props.onDeleteNode?.(props.node.id);
@@ -143,6 +144,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
         >
           <button
             class={styles.contextMenuItem}
+            data-testid="create-subpage-button"
             onClick={() => {
               props.onCreateChildPage(props.node.id);
               setShowContextMenu(false);
@@ -152,6 +154,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
           </button>
           <button
             class={styles.contextMenuItem}
+            data-testid="create-subtable-button"
             onClick={() => {
               props.onCreateChildTable(props.node.id);
               setShowContextMenu(false);
@@ -162,6 +165,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
           <div class={styles.contextMenuDivider} />
           <button
             class={styles.contextMenuItem}
+            data-testid="show-history-button"
             onClick={() => {
               props.onShowHistory?.(props.node.id);
               setShowContextMenu(false);

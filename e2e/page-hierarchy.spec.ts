@@ -172,7 +172,7 @@ test.describe('Page Hierarchy', () => {
     // Delete the grandchild using the delete button (use > div > button to avoid matching nested nodes)
     const grandchildPageItem = grandchildNode.locator('> div').first();
     await grandchildPageItem.hover();
-    const deleteButton = grandchildPageItem.locator('button').filter({ hasText: '🗑' });
+    const deleteButton = grandchildPageItem.locator('[data-testid="delete-node-button"]');
     page.once('dialog', (dialog) => dialog.accept());
     await deleteButton.click();
 
@@ -244,7 +244,7 @@ test.describe('Page Hierarchy', () => {
 
     // Delete the child page (which should also remove grandchild from view)
     await childPageItem.hover();
-    const deleteButton = childPageItem.locator('button').filter({ hasText: '🗑' });
+    const deleteButton = childPageItem.locator('[data-testid="delete-node-button"]');
     page.once('dialog', (dialog) => dialog.accept());
     await deleteButton.click();
 
@@ -292,7 +292,7 @@ test.describe('Page Hierarchy', () => {
     // Delete Page Two - should navigate to Page One (previous sibling)
     const page2Item = page2Node.locator('> div').first();
     await page2Item.hover();
-    const deleteButton = page2Item.locator('button').filter({ hasText: '🗑' });
+    const deleteButton = page2Item.locator('[data-testid="delete-node-button"]');
     page.once('dialog', (dialog) => dialog.accept());
     await deleteButton.click();
 

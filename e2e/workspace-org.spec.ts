@@ -17,7 +17,7 @@ test.describe('First Login Flow', () => {
 
     // The page title should be visible (Welcome page or similar)
     // Note: title depends on localization
-    const welcomeText = firstNode.locator('.title, span').first();
+    const welcomeText = firstNode.locator('[class*="pageTitleText"]').first();
     await expect(welcomeText).not.toBeEmpty();
   });
 
