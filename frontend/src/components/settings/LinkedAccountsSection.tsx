@@ -120,7 +120,9 @@ export default function LinkedAccountsSection(props: Props) {
               <Show when={isAvailable()}>
                 <div class={styles.providerRow}>
                   <div class={styles.providerInfo}>
-                    <span class={styles.providerIcon}><provider.icon /></span>
+                    <span class={styles.providerIcon}>
+                      <provider.icon />
+                    </span>
                     <span class={styles.providerName}>{provider.name}</span>
                     <Show when={linked()} keyed>
                       {(identity) => (

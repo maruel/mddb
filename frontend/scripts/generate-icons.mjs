@@ -20,17 +20,11 @@ async function generateIcons() {
   }
 
   // Generate apple-touch-icon (180x180)
-  await sharp(svgBuffer)
-    .resize(180, 180)
-    .png()
-    .toFile(join(publicDir, 'apple-touch-icon.png'));
+  await sharp(svgBuffer).resize(180, 180).png().toFile(join(publicDir, 'apple-touch-icon.png'));
   console.log('Generated apple-touch-icon.png');
 
   // Generate favicon.ico (32x32)
-  await sharp(svgBuffer)
-    .resize(32, 32)
-    .png()
-    .toFile(join(publicDir, 'favicon.png'));
+  await sharp(svgBuffer).resize(32, 32).png().toFile(join(publicDir, 'favicon.png'));
   console.log('Generated favicon.png');
 }
 

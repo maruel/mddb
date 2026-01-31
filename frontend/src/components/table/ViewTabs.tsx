@@ -80,7 +80,9 @@ export default function ViewTabs() {
                 onContextMenu={(e) => handleContextMenu(e, view)}
                 title={view.name}
               >
-                <span class={styles.icon}><Icon /></span>
+                <span class={styles.icon}>
+                  <Icon />
+                </span>
                 <span class={styles.name}>{view.name}</span>
                 <Show when={view.default}>
                   <span class={styles.defaultBadge}>{t('table.defaultView') || 'Default'}</span>
@@ -103,19 +105,27 @@ export default function ViewTabs() {
           <Show when={showNewViewMenu()}>
             <div class={styles.dropdown} data-testid="view-type-menu">
               <button onClick={() => handleNewView('table')} data-testid="view-type-table">
-                <span class={styles.icon}><TableRowsIcon /></span>
+                <span class={styles.icon}>
+                  <TableRowsIcon />
+                </span>
                 {t('table.table')}
               </button>
               <button onClick={() => handleNewView('list')} data-testid="view-type-list">
-                <span class={styles.icon}><ViewStreamIcon /></span>
+                <span class={styles.icon}>
+                  <ViewStreamIcon />
+                </span>
                 {t('table.list')}
               </button>
               <button onClick={() => handleNewView('gallery')} data-testid="view-type-gallery">
-                <span class={styles.icon}><GridViewIcon /></span>
+                <span class={styles.icon}>
+                  <GridViewIcon />
+                </span>
                 {t('table.gallery')}
               </button>
               <button onClick={() => handleNewView('board')} data-testid="view-type-board">
-                <span class={styles.icon}><GridGoldenratioIcon /></span>
+                <span class={styles.icon}>
+                  <GridGoldenratioIcon />
+                </span>
                 {t('table.board')}
               </button>
             </div>
