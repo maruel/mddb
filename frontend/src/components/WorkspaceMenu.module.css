@@ -29,8 +29,13 @@
 }
 
 .chevron {
-  font-size: 0.6rem;
   opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+}
+
+.chevron svg {
+  font-size: 1rem;
 }
 
 .dropdown {
@@ -93,7 +98,12 @@
 
 .checkmark {
   color: var(--c-primary);
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+}
+
+.checkmark svg {
+  font-size: 1rem;
 }
 
 .divider {
@@ -122,10 +132,20 @@
 
 .icon {
   opacity: 0.7;
+  display: inline-flex;
+  align-items: center;
+}
+
+.icon svg {
+  font-size: 1.1rem;
 }
 
 .plusIcon {
   color: var(--c-primary);
-  font-weight: 600;
-  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.plusIcon svg {
+  font-size: 1.1rem;
 }

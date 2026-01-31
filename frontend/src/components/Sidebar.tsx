@@ -9,6 +9,12 @@ import type { NodeResponse, WSMembershipResponse } from '@sdk/types.gen';
 import { WSRoleAdmin } from '@sdk/types.gen';
 import styles from './Sidebar.module.css';
 
+import SettingsIcon from '@material-symbols/svg-400/outlined/settings.svg?solid';
+import LeftPanelCloseIcon from '@material-symbols/svg-400/outlined/left_panel_close.svg?solid';
+import ChevronRightIcon from '@material-symbols/svg-400/outlined/chevron_right.svg?solid';
+import AddIcon from '@material-symbols/svg-400/outlined/add.svg?solid';
+import DownloadIcon from '@material-symbols/svg-400/outlined/download.svg?solid';
+
 interface OrgWithWorkspaces {
   orgId: string;
   orgName: string;
@@ -169,14 +175,14 @@ export default function Sidebar(props: SidebarProps) {
           title={t('app.settings') || 'Settings'}
           data-testid="workspace-settings-button"
         >
-          ⚙
+          <SettingsIcon />
         </button>
         <button
           class={styles.collapseButton}
           onClick={() => props.onCloseMobileSidebar()}
           title={t('app.collapseSidebar') || 'Collapse sidebar'}
         >
-          «
+          <LeftPanelCloseIcon />
         </button>
       </div>
 
@@ -208,7 +214,9 @@ export default function Sidebar(props: SidebarProps) {
       <div class={styles.otherWorkspaces}>
         <Show when={otherWorkspaces().length > 0}>
           <button class={styles.otherWorkspacesToggle} onClick={() => setShowOtherWorkspaces(!showOtherWorkspaces())}>
-            <span class={`${styles.toggleChevron} ${showOtherWorkspaces() ? styles.expanded : ''}`}>▶</span>
+            <span class={`${styles.toggleChevron} ${showOtherWorkspaces() ? styles.expanded : ''}`}>
+              <ChevronRightIcon />
+            </span>
             {t('app.otherWorkspaces') || 'Other workspaces'}
           </button>
 
@@ -244,7 +252,9 @@ export default function Sidebar(props: SidebarProps) {
             onClick={() => props.onCreateWorkspace()}
             data-testid="create-workspace-button"
           >
-            <span class={styles.actionIcon}>+</span>
+            <span class={styles.actionIcon}>
+              <AddIcon />
+            </span>
             {t('createWorkspace.title') || 'Create workspace'}
           </button>
           <button
@@ -252,7 +262,9 @@ export default function Sidebar(props: SidebarProps) {
             onClick={() => props.onImportFromNotion()}
             data-testid="import-notion-button"
           >
-            <span class={styles.actionIcon}>↓</span>
+            <span class={styles.actionIcon}>
+              <DownloadIcon />
+            </span>
             {t('notionImport.title') || 'Import from Notion'}
           </button>
         </div>

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import solid from 'vite-plugin-solid';
+import solidSVG from 'vite-solid-svg';
 import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { resolve } from 'path';
@@ -14,6 +15,7 @@ export default defineConfig({
   },
   plugins: [
     solid(),
+    solidSVG(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icon.svg'],

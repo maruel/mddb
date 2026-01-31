@@ -51,10 +51,12 @@
   background: none;
   border-radius: var(--radius);
   cursor: pointer;
-  font-size: 0.65rem;
-  font-weight: 600;
   color: var(--c-text-light);
   transition: all var(--transition);
+}
+
+.formatButton svg {
+  font-size: 1.1rem;
 }
 
 .formatButton:hover {
@@ -429,12 +431,14 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  font-size: 0.85rem;
-  font-weight: 600;
   color: var(--c-text-light);
   background: var(--c-bg-alt);
   border-radius: 4px;
   flex-shrink: 0;
+}
+
+.slashMenuIcon svg {
+  font-size: 1rem;
 }
 
 .slashMenuLabel {

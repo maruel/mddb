@@ -19,8 +19,7 @@ pnpm build
 
 Builds optimized frontend to `../backend/frontend/dist/` which is embedded in the Go binary via `go:embed`.
 
-## Files
+## Icons
 
-- `src/` - TypeScript/SolidJS source code
-- `vite.config.ts` - Vite build configuration (deterministic builds)
-- `tsconfig.json` - TypeScript configuration
+We use Material Design icon and symbols from https://fonts.google.com/icons
+

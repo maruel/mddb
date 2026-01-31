@@ -9,6 +9,17 @@ import { wrapInList } from 'prosemirror-schema-list';
 import { nodes, marks } from './prosemirror-config';
 import styles from './Editor.module.css';
 
+import FormatBoldIcon from '@material-symbols/svg-400/outlined/format_bold.svg?solid';
+import FormatItalicIcon from '@material-symbols/svg-400/outlined/format_italic.svg?solid';
+import FormatUnderlinedIcon from '@material-symbols/svg-400/outlined/format_underlined.svg?solid';
+import FormatStrikethroughIcon from '@material-symbols/svg-400/outlined/format_strikethrough.svg?solid';
+import CodeIcon from '@material-symbols/svg-400/outlined/code.svg?solid';
+import FormatListBulletedIcon from '@material-symbols/svg-400/outlined/format_list_bulleted.svg?solid';
+import FormatListNumberedIcon from '@material-symbols/svg-400/outlined/format_list_numbered.svg?solid';
+import ChecklistIcon from '@material-symbols/svg-400/outlined/checklist.svg?solid';
+import FormatQuoteIcon from '@material-symbols/svg-400/outlined/format_quote.svg?solid';
+import TerminalIcon from '@material-symbols/svg-400/outlined/terminal.svg?solid';
+
 export interface FormatState {
   isBold: boolean;
   isItalic: boolean;
@@ -528,27 +539,27 @@ export default function EditorToolbar(props: EditorToolbarProps) {
       >
         <div class={styles.toolbarRow}>
           <button class={formatButtonClass(props.formatState.isBold)} onClick={toggleBold} title="Bold (Ctrl+B)">
-            B
+            <FormatBoldIcon />
           </button>
           <button class={formatButtonClass(props.formatState.isItalic)} onClick={toggleItalic} title="Italic (Ctrl+I)">
-            I
+            <FormatItalicIcon />
           </button>
           <button
             class={formatButtonClass(props.formatState.isUnderline)}
             onClick={toggleUnderline}
             title="Underline (Ctrl+U)"
           >
-            <u>U</u>
+            <FormatUnderlinedIcon />
           </button>
           <button
             class={formatButtonClass(props.formatState.isStrikethrough)}
             onClick={toggleStrikethrough}
             title="Strikethrough (Ctrl+Shift+X)"
           >
-            <s>S</s>
+            <FormatStrikethroughIcon />
           </button>
           <button class={formatButtonClass(props.formatState.isCode)} onClick={toggleCode} title="Code (Ctrl+`)">
-            {'</>'}
+            <CodeIcon />
           </button>
         </div>
         <div class={styles.toolbarRow}>
@@ -579,23 +590,23 @@ export default function EditorToolbar(props: EditorToolbarProps) {
             onClick={toggleBulletList}
             title="Bullet List"
           >
-            •
+            <FormatListBulletedIcon />
           </button>
           <button
             class={formatButtonClass(props.formatState.isOrderedList)}
             onClick={toggleOrderedList}
             title="Numbered List"
           >
-            1.
+            <FormatListNumberedIcon />
           </button>
           <button class={formatButtonClass(props.formatState.isTaskList)} onClick={toggleTaskList} title="Task List">
-            ☐
+            <ChecklistIcon />
           </button>
           <button class={formatButtonClass(props.formatState.isBlockquote)} onClick={toggleBlockquote} title="Quote">
-            "
+            <FormatQuoteIcon />
           </button>
           <button class={formatButtonClass(props.formatState.isCodeBlock)} onClick={toggleCodeBlock} title="Code Block">
-            {'</>'}
+            <TerminalIcon />
           </button>
         </div>
       </div>

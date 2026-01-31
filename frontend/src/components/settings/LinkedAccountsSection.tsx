@@ -7,6 +7,8 @@ import { useAuth } from '../../contexts';
 import { useI18n } from '../../i18n';
 import styles from './LinkedAccountsSection.module.css';
 
+import PublicIcon from '@material-symbols/svg-400/outlined/public.svg?solid';
+
 interface Props {
   oauthIdentities: OAuthIdentity[] | undefined;
   hasPassword: boolean;
@@ -17,13 +19,13 @@ interface Props {
 interface ProviderInfo {
   id: OAuthProvider;
   name: string;
-  icon: string;
+  icon: SolidSVG;
 }
 
 const PROVIDERS: ProviderInfo[] = [
-  { id: OAuthProviderGoogle, name: 'Google', icon: '🔵' },
-  { id: OAuthProviderMicrosoft, name: 'Microsoft', icon: '🟦' },
-  { id: OAuthProviderGitHub, name: 'GitHub', icon: '⚫' },
+  { id: OAuthProviderGoogle, name: 'Google', icon: PublicIcon },
+  { id: OAuthProviderMicrosoft, name: 'Microsoft', icon: PublicIcon },
+  { id: OAuthProviderGitHub, name: 'GitHub', icon: PublicIcon },
 ];
 
 export default function LinkedAccountsSection(props: Props) {
@@ -118,7 +120,7 @@ export default function LinkedAccountsSection(props: Props) {
               <Show when={isAvailable()}>
                 <div class={styles.providerRow}>
                   <div class={styles.providerInfo}>
-                    <span class={styles.providerIcon}>{provider.icon}</span>
+                    <span class={styles.providerIcon}><provider.icon /></span>
                     <span class={styles.providerName}>{provider.name}</span>
                     <Show when={linked()} keyed>
                       {(identity) => (

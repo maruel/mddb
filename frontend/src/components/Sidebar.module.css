@@ -21,12 +21,17 @@
   background: transparent;
   border: none;
   color: var(--c-text-light);
-  font-size: 0.9rem;
   cursor: pointer;
   padding: var(--s-1);
   border-radius: var(--radius);
-  line-height: 1;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapseButton svg {
+  font-size: 1.2rem;
 }
 
 .collapseButton:hover {
@@ -89,7 +94,6 @@
   background: transparent;
   border: none;
   color: var(--c-text-light);
-  font-size: 0.9rem;
   cursor: pointer;
   padding: var(--s-1);
   border-radius: var(--radius);
@@ -97,6 +101,13 @@
     opacity 0.15s ease,
     background 0.15s ease;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settingsButton svg {
+  font-size: 1.1rem;
 }
 
 .workspaceHeader:hover .settingsButton {
@@ -147,8 +158,14 @@
 }
 
 .toggleChevron {
-  font-size: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: transform 0.15s ease;
+}
+
+.toggleChevron svg {
+  font-size: 0.9rem;
 }
 
 .toggleChevron.expanded {
@@ -218,9 +235,14 @@
 }
 
 .actionIcon {
-  font-size: 0.9rem;
   width: 1.2em;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionIcon svg {
+  font-size: 1.1rem;
 }
 
 @media (max-width: 768px) {

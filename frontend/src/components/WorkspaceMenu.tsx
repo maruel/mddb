@@ -10,6 +10,13 @@ import { workspaceUrl } from '../utils/urls';
 import type { WSMembershipResponse } from '@sdk/types.gen';
 import styles from './WorkspaceMenu.module.css';
 
+import ExpandLessIcon from '@material-symbols/svg-400/outlined/expand_less.svg?solid';
+import ExpandMoreIcon from '@material-symbols/svg-400/outlined/expand_more.svg?solid';
+import CheckIcon from '@material-symbols/svg-400/outlined/check.svg?solid';
+import SettingsIcon from '@material-symbols/svg-400/outlined/settings.svg?solid';
+import AddIcon from '@material-symbols/svg-400/outlined/add.svg?solid';
+import DownloadIcon from '@material-symbols/svg-400/outlined/download.svg?solid';
+
 interface WorkspaceMenuProps {
   onOpenSettings: () => void;
   onCreateWorkspace: () => void;
@@ -120,7 +127,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
       >
         <span class={styles.wsName}>{currentWsName()}</span>
         <span class={styles.chevron} aria-hidden="true">
-          {isOpen() ? '▲' : '▼'}
+          {isOpen() ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         </span>
       </button>
 
@@ -143,7 +150,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
                         <span class={styles.wsItemName}>{ws.workspace_name || ws.workspace_id}</span>
                         <Show when={ws.workspace_id === currentWsId()}>
                           <span class={styles.checkmark} aria-hidden="true">
-                            ✓
+                            <CheckIcon />
                           </span>
                         </Show>
                       </button>
@@ -156,19 +163,19 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
           <div class={styles.divider} />
           <button class={styles.menuItem} onClick={handleOpenSettings} role="menuitem">
             <span class={styles.icon} aria-hidden="true">
-              ⚙
+              <SettingsIcon />
             </span>
             {t('app.settings')}
           </button>
           <button class={styles.menuItem} onClick={handleCreateWorkspace} role="menuitem">
             <span class={styles.plusIcon} aria-hidden="true">
-              +
+              <AddIcon />
             </span>
             {t('createWorkspace.title')}
           </button>
           <button class={styles.menuItem} onClick={handleImportFromNotion} role="menuitem">
             <span class={styles.icon} aria-hidden="true">
-              &#x2B07;
+              <DownloadIcon />
             </span>
             {t('notionImport.title')}
           </button>

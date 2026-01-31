@@ -266,7 +266,9 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
                 onClick={() => handleItemClick(command)}
                 onMouseEnter={() => handleItemMouseEnter(index())}
               >
-                <span class={styles.slashMenuIcon}>{command.icon}</span>
+                <span class={styles.slashMenuIcon}>
+                  <command.icon />
+                </span>
                 <span class={styles.slashMenuLabel}>{t(`slashMenu.${command.labelKey}`)}</span>
               </div>
             )}

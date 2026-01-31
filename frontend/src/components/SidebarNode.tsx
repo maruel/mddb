@@ -6,6 +6,12 @@ import { useClickOutside } from '../composables/useClickOutside';
 import type { NodeResponse } from '@sdk/types.gen';
 import styles from './SidebarNode.module.css';
 
+import DescriptionIcon from '@material-symbols/svg-400/outlined/description.svg?solid';
+import TableChartIcon from '@material-symbols/svg-400/outlined/table_chart.svg?solid';
+import ChevronRightIcon from '@material-symbols/svg-400/outlined/chevron_right.svg?solid';
+import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
+import HistoryIcon from '@material-symbols/svg-400/outlined/history.svg?solid';
+
 interface SidebarNodeProps {
   node: NodeResponse;
   selectedId: string | null;
@@ -102,7 +108,9 @@ export default function SidebarNode(props: SidebarNodeProps) {
           onClick={(e) => mightHaveChildren() && toggleExpand(e)}
           data-testid={`expand-icon-${props.node.id}`}
         >
-          <span class={styles.nodeIcon}>{props.node.has_table && !props.node.has_page ? '📊' : '📄'}</span>
+          <span class={styles.nodeIcon}>
+            {props.node.has_table && !props.node.has_page ? <TableChartIcon /> : <DescriptionIcon />}
+          </span>
           <span
             class={styles.expandIcon}
             classList={{
@@ -110,7 +118,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
               [`${styles.loading}`]: isLoadingChildren(),
             }}
           >
-            {isLoadingChildren() ? '○' : '▶'}
+            {isLoadingChildren() ? '○' : <ChevronRightIcon />}
           </span>
         </span>
         <span class={styles.pageTitleText}>{props.node.title}</span>
@@ -122,7 +130,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
           }}
           title={t('common.delete') || 'Delete'}
         >
-          🗑
+          <DeleteIcon />
         </button>
       </div>
 
@@ -140,7 +148,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
               setShowContextMenu(false);
             }}
           >
-            📄 {t('app.createSubPage')}
+            <DescriptionIcon /> {t('app.createSubPage')}
           </button>
           <button
             class={styles.contextMenuItem}
@@ -149,7 +157,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
               setShowContextMenu(false);
             }}
           >
-            📊 {t('app.createSubTable')}
+            <TableChartIcon /> {t('app.createSubTable')}
           </button>
           <div class={styles.contextMenuDivider} />
           <button
@@ -159,7 +167,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
               setShowContextMenu(false);
             }}
           >
-            🕐 {t('editor.history')}
+            <HistoryIcon /> {t('editor.history')}
           </button>
         </div>
       </Show>

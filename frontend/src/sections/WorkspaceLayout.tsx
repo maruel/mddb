@@ -13,6 +13,8 @@ import { settingsUrl, nodeUrl, workspaceUrl } from '../utils/urls';
 import type { NodeResponse, NotionImportStatusResponse } from '@sdk/types.gen';
 import styles from './WorkspaceSection.module.css';
 
+import MenuIcon from '@material-symbols/svg-400/outlined/menu.svg?solid';
+
 const WorkspaceLayout: ParentComponent = (props) => {
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -251,7 +253,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
             onClick={() => setShowMobileSidebar(!showMobileSidebar())}
             aria-label="Toggle menu"
           >
-            ☰
+            <MenuIcon />
           </button>
           <Show when={selectedNodeId()}>
             <nav class={styles.breadcrumbs}>

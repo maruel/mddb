@@ -157,6 +157,38 @@ make build            # Build Go binary
 - Test with longer languages (German) to catch overflow issues
 - Dismissable popups (modals, dropdowns, menus) must be dismissable with the Escape key
 
+## Icons
+
+mddb uses Material Symbols via the `@material-symbols/svg-400` package. Icons are imported as Solid components using `vite-solid-svg`.
+
+### Finding Icons
+
+To find a suitable icon:
+
+1.  **Search locally**: Search the package contents directly using `grep`:
+    ```bash
+    ls node_modules/@material-symbols/svg-400/outlined | grep "keyword"
+    ```
+2.  **Verify existing usage**: Check how similar icons are used in the codebase to maintain consistency:
+    ```bash
+    grep -r "Icon from '@material-symbols" frontend/src
+    ```
+3.  **Import and Use**: Always use the `?solid` suffix to import the SVG as a Solid component:
+    ```tsx
+    import HomeIcon from '@material-symbols/svg-400/outlined/home.svg?solid';
+
+    // Use as a component
+    <HomeIcon />
+    ```
+
+### Styling Icons
+
+Icons behave like text. They default to `1em` size and inherit `currentColor`.
+
+- **Global rules**: Defined in `src/variables.css`.
+- **Custom sizing**: Set `font-size` on the parent container or the `svg` element itself.
+- **Vertical alignment**: Use `display: inline-flex` and `align-items: center` on the parent for perfect centering.
+
 ## ProseMirror
 
 When inserting styled content programmatically, use marks rather than raw markdown text:

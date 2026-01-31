@@ -6,13 +6,20 @@ import { useI18n } from '../../i18n';
 import type { View, ViewType } from '@sdk/types.gen';
 import styles from './ViewTabs.module.css';
 
+import TableRowsIcon from '@material-symbols/svg-400/outlined/table_rows.svg?solid';
+import GridGoldenratioIcon from '@material-symbols/svg-400/outlined/grid_goldenratio.svg?solid';
+import GridViewIcon from '@material-symbols/svg-400/outlined/grid_view.svg?solid';
+import ViewStreamIcon from '@material-symbols/svg-400/outlined/view_stream.svg?solid';
+import CalendarMonthIcon from '@material-symbols/svg-400/outlined/calendar_month.svg?solid';
+import AddIcon from '@material-symbols/svg-400/outlined/add.svg?solid';
+
 // Icons for each view type
-const VIEW_ICONS: Record<ViewType, string> = {
-  table: '☰',
-  board: '☷',
-  gallery: '▦',
-  list: '☰',
-  calendar: '📅',
+const VIEW_ICONS: Record<ViewType, SolidSVG> = {
+  table: TableRowsIcon,
+  board: GridGoldenratioIcon,
+  gallery: GridViewIcon,
+  list: ViewStreamIcon,
+  calendar: CalendarMonthIcon,
 };
 
 export default function ViewTabs() {
@@ -63,21 +70,24 @@ export default function ViewTabs() {
     <div class={styles.container}>
       <div class={styles.tabs}>
         <For each={views()}>
-          {(view) => (
-            <button
-              class={styles.tab}
-              classList={{ [`${styles.active}`]: view.id === activeViewId() }}
-              onClick={() => handleTabClick(view.id)}
-              onContextMenu={(e) => handleContextMenu(e, view)}
-              title={view.name}
-            >
-              <span class={styles.icon}>{VIEW_ICONS[view.type] || '☰'}</span>
-              <span class={styles.name}>{view.name}</span>
-              <Show when={view.default}>
-                <span class={styles.defaultBadge}>{t('table.defaultView') || 'Default'}</span>
-              </Show>
-            </button>
-          )}
+          {(view) => {
+            const Icon = VIEW_ICONS[view.type] || TableRowsIcon;
+            return (
+              <button
+                class={styles.tab}
+                classList={{ [`${styles.active}`]: view.id === activeViewId() }}
+                onClick={() => handleTabClick(view.id)}
+                onContextMenu={(e) => handleContextMenu(e, view)}
+                title={view.name}
+              >
+                <span class={styles.icon}><Icon /></span>
+                <span class={styles.name}>{view.name}</span>
+                <Show when={view.default}>
+                  <span class={styles.defaultBadge}>{t('table.defaultView') || 'Default'}</span>
+                </Show>
+              </button>
+            );
+          }}
         </For>
 
         <div class={styles.addWrapper}>
@@ -87,25 +97,25 @@ export default function ViewTabs() {
             title={t('table.newView') || 'New View'}
             data-testid="add-view-button"
           >
-            +
+            <AddIcon />
           </button>
 
           <Show when={showNewViewMenu()}>
             <div class={styles.dropdown} data-testid="view-type-menu">
               <button onClick={() => handleNewView('table')} data-testid="view-type-table">
-                <span class={styles.icon}>{VIEW_ICONS.table}</span>
+                <span class={styles.icon}><TableRowsIcon /></span>
                 {t('table.table')}
               </button>
               <button onClick={() => handleNewView('list')} data-testid="view-type-list">
-                <span class={styles.icon}>{VIEW_ICONS.list}</span>
+                <span class={styles.icon}><ViewStreamIcon /></span>
                 {t('table.list')}
               </button>
               <button onClick={() => handleNewView('gallery')} data-testid="view-type-gallery">
-                <span class={styles.icon}>{VIEW_ICONS.gallery}</span>
+                <span class={styles.icon}><GridViewIcon /></span>
                 {t('table.gallery')}
               </button>
               <button onClick={() => handleNewView('board')} data-testid="view-type-board">
-                <span class={styles.icon}>{VIEW_ICONS.board}</span>
+                <span class={styles.icon}><GridGoldenratioIcon /></span>
                 {t('table.board')}
               </button>
             </div>

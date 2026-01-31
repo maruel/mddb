@@ -6,11 +6,21 @@ import { wrapIn, lift } from 'prosemirror-commands';
 import { Selection } from 'prosemirror-state';
 import { schema, nodes } from './prosemirror-config';
 
+import SubjectIcon from '@material-symbols/svg-400/outlined/subject.svg?solid';
+import TitleIcon from '@material-symbols/svg-400/outlined/title.svg?solid';
+import FormatListBulletedIcon from '@material-symbols/svg-400/outlined/format_list_bulleted.svg?solid';
+import FormatListNumberedIcon from '@material-symbols/svg-400/outlined/format_list_numbered.svg?solid';
+import ChecklistIcon from '@material-symbols/svg-400/outlined/checklist.svg?solid';
+import FormatQuoteIcon from '@material-symbols/svg-400/outlined/format_quote.svg?solid';
+import CodeIcon from '@material-symbols/svg-400/outlined/code.svg?solid';
+import HorizontalRuleIcon from '@material-symbols/svg-400/outlined/horizontal_rule.svg?solid';
+import DescriptionIcon from '@material-symbols/svg-400/outlined/description.svg?solid';
+
 export interface SlashCommand {
   id: string;
   labelKey: string; // i18n key under slashMenu.*
   keywords: string[];
-  icon: string;
+  icon: SolidSVG;
   execute: (view: EditorView, from: number, to: number) => void;
   asyncAction?: 'createSubpage'; // Async actions handled by SlashCommandMenu
 }
@@ -65,7 +75,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'paragraph',
     labelKey: 'paragraph',
     keywords: ['paragraph', 'text', 'plain'],
-    icon: 'T',
+    icon: SubjectIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
         setBlockType(nodes.paragraph)(v.state, v.dispatch);
@@ -76,7 +86,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'heading1',
     labelKey: 'heading1',
     keywords: ['heading', 'h1', 'title', 'header'],
-    icon: 'H1',
+    icon: TitleIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
         setBlockType(nodes.heading, { level: 1 })(v.state, v.dispatch);
@@ -87,7 +97,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'heading2',
     labelKey: 'heading2',
     keywords: ['heading', 'h2', 'subtitle', 'header'],
-    icon: 'H2',
+    icon: TitleIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
         setBlockType(nodes.heading, { level: 2 })(v.state, v.dispatch);
@@ -98,7 +108,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'heading3',
     labelKey: 'heading3',
     keywords: ['heading', 'h3', 'header'],
-    icon: 'H3',
+    icon: TitleIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
         setBlockType(nodes.heading, { level: 3 })(v.state, v.dispatch);
@@ -109,7 +119,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'bulletList',
     labelKey: 'bulletList',
     keywords: ['bullet', 'list', 'unordered', 'ul'],
-    icon: '•',
+    icon: FormatListBulletedIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
         wrapInList(v, nodes.bullet_list);
@@ -120,7 +130,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'orderedList',
     labelKey: 'orderedList',
     keywords: ['ordered', 'list', 'numbered', 'ol'],
-    icon: '1.',
+    icon: FormatListNumberedIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
         wrapInList(v, nodes.ordered_list);
@@ -131,7 +141,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'taskList',
     labelKey: 'taskList',
     keywords: ['task', 'checkbox', 'todo', 'checklist', 'check'],
-    icon: '☐',
+    icon: ChecklistIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
         wrapInList(v, nodes.bullet_list, { checked: false });
@@ -142,7 +152,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'blockquote',
     labelKey: 'blockquote',
     keywords: ['quote', 'blockquote', 'citation'],
-    icon: '"',
+    icon: FormatQuoteIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
         wrapIn(nodes.blockquote)(v.state, v.dispatch);
@@ -153,7 +163,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'codeBlock',
     labelKey: 'codeBlock',
     keywords: ['code', 'codeblock', 'pre', 'programming'],
-    icon: '</>',
+    icon: CodeIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
         setBlockType(nodes.code_block)(v.state, v.dispatch);
@@ -164,7 +174,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'divider',
     labelKey: 'divider',
     keywords: ['divider', 'hr', 'horizontal', 'rule', 'line'],
-    icon: '—',
+    icon: HorizontalRuleIcon,
     execute: (view, from, to) => {
       const hrType = schema.nodes.horizontal_rule;
       if (!hrType) return;
@@ -187,7 +197,7 @@ export const slashCommands: SlashCommand[] = [
     id: 'subpage',
     labelKey: 'subpage',
     keywords: ['subpage', 'page', 'child', 'nested', 'link'],
-    icon: '📄',
+    icon: DescriptionIcon,
     asyncAction: 'createSubpage',
     execute: () => {
       // Handled by SlashCommandMenu via asyncAction

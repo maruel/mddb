@@ -39,8 +39,14 @@
 }
 
 .icon {
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0.7;
+}
+
+.icon svg {
+  font-size: 1.1rem;
 }
 
 .name {
@@ -63,14 +69,20 @@
 }
 
 .addButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--s-1) var(--s-2);
   border: none;
   background: none;
-  font-size: 1rem;
   cursor: pointer;
   border-radius: 4px;
   color: var(--c-text-light);
   transition: all var(--transition);
+}
+
+.addButton svg {
+  font-size: 1.1rem;
 }
 
 .addButton:hover {

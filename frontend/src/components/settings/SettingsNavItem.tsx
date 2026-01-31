@@ -5,6 +5,8 @@ import type { UnifiedSettingsMatch } from '../../utils/urls';
 import type { NavItem } from './SettingsSidebar';
 import styles from './SettingsNavItem.module.css';
 
+import ChevronRightIcon from '@material-symbols/svg-400/outlined/chevron_right.svg?solid';
+
 interface SettingsNavItemProps {
   item: NavItem;
   depth: number;
@@ -88,7 +90,7 @@ export default function SettingsNavItem(props: SettingsNavItemProps) {
       >
         <Show when={hasChildren()} fallback={<span class={styles.expandSpacer} />}>
           <span class={expandIconClass()} onClick={toggleExpand}>
-            ▶
+            <ChevronRightIcon />
           </span>
         </Show>
         <span class={styles.label}>{props.item.label}</span>
