@@ -69,7 +69,7 @@ To describe later. Ask "how to run a service on windows"
 
 ## Serving over the web
 
-By default, mddb listens to localhost on port 8080.
+By default, mddb listens to localhost on port 8080. Use the `-http` flag to change this, e.g., `-http 0.0.0.0:8080` to listen on all interfaces.
 
 ## Serving over Tailscale
 

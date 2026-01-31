@@ -2,7 +2,7 @@
 
 # Variables
 DATA_DIR?=./data
-PORT?=8080
+HTTP?=:8080
 LOG_LEVEL?=info
 FRONTEND_STAMP=node_modules/.stamp
 ENV_FILE=$(DATA_DIR)/.env
@@ -25,7 +25,7 @@ help:
 	@echo "  make upgrade        - Upgrade Go and pnpm dependencies"
 	@echo ""
 	@echo "Environment variables:"
-	@echo "  PORT=8080           - Server port (default: 8080)"
+	@echo "  HTTP=:8080          - Server address (default: :8080)"
 	@echo "  LOG_LEVEL=info      - Log level (debug|info|warn|error)"
 	@echo ""
 	@echo "Note: 'make dev' auto-creates data/.env from .env.example if missing"
@@ -55,7 +55,7 @@ $(ENV_FILE): | .env.example
 	@echo "Created $@ from .env.example"
 
 dev: build $(ENV_FILE)
-	@mddb -port $(PORT) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
+	@mddb -http $(HTTP) -data-dir $(DATA_DIR) -log-level $(LOG_LEVEL)
 
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...

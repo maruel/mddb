@@ -47,7 +47,7 @@ func main() {
 
 func mainImpl() error {
 	version := flag.Bool("version", false, "Print version and exit")
-	port := flag.String("port", "8080", "Port to listen on")
+	httpAddr := flag.String("http", "localhost:8080", "Address to listen on (e.g., localhost:8080, :8080, 0.0.0.0:8080). Use 0.0.0.0:port to listen on all interfaces.")
 	dataDir := flag.String("data-dir", "./data", "Data directory")
 	logLevel := flag.String("log-level", "info", "Log level (debug, info, warn, error)")
 	baseURL := flag.String("base-url", "http://localhost", "Base URL for OAuth callbacks (e.g., https://example.com)")
@@ -147,9 +147,9 @@ func mainImpl() error {
 		set[f.Name] = true
 	})
 
-	if !set["port"] {
-		if v := env["PORT"]; v != "" {
-			*port = v
+	if !set["http"] {
+		if v := env["HTTP"]; v != "" {
+			*httpAddr = v
 		}
 	}
 	if !set["log-level"] {
@@ -223,10 +223,18 @@ func mainImpl() error {
 		return errors.New("github-client-id and github-client-secret must both be set or both be empty")
 	}
 
+	// Normalize addr: ":8080" becomes "localhost:8080"
+	addr := *httpAddr
+	if strings.HasPrefix(addr, ":") {
+		addr = "localhost" + addr
+	}
+
 	// Append port to base URL if localhost and no port specified
 	if u, err := url.Parse(*baseURL); err == nil && u.Port() == "" && u.Hostname() == "localhost" {
-		u.Host = net.JoinHostPort(u.Hostname(), *port)
-		*baseURL = u.String()
+		if _, p, err := net.SplitHostPort(addr); err == nil {
+			u.Host = net.JoinHostPort(u.Hostname(), p)
+			*baseURL = u.String()
+		}
 	}
 
 	switch *logLevel {
@@ -352,7 +360,6 @@ func mainImpl() error {
 		},
 	}
 
-	addr := ":" + *port
 	httpServer := &http.Server{
 		Addr:              addr,
 		Handler:           server.NewRouter(svc, cfg),

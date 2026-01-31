@@ -13,7 +13,7 @@ Wants=network-online.target
 Type=simple
 # Don't forget to run:
 #  tailscale serve -bg 8080
-ExecStart=%h/go/bin/mddb -port 8080 -data-dir %h/mddb/data -log-level info -base-url my-hostname.my-tailnet.ts.net
+ExecStart=%h/go/bin/mddb -http :8080 -data-dir %h/mddb/data -log-level info -base-url my-hostname.my-tailnet.ts.net
 WorkingDirectory=%h/mddb
 Restart=always
 RestartSec=5s
