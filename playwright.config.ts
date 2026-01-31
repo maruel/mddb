@@ -23,7 +23,7 @@ export default defineConfig({
   // Server logs are captured to data-e2e/server.log (copied to report by make e2e)
   // TEST_FAST_RATE_LIMIT defaults to 1 (fast mode) unless explicitly set to 0
   webServer: {
-    command: `export PATH=$PATH:$(go env GOPATH)/bin && python3 scripts/clean_data_e2e.py && TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=${process.env.TEST_FAST_RATE_LIMIT ?? '1'} DATA_DIR=./data-e2e make dev > ./data-e2e/server.log 2>&1`,
+    command: `python3 scripts/clean_data_e2e.py && TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=${process.env.TEST_FAST_RATE_LIMIT ?? '1'} DATA_DIR=./data-e2e make dev > ./data-e2e/server.log 2>&1`,
     url: 'http://localhost:8080/api/health',
     reuseExistingServer: false, // Always start fresh to ensure TEST_OAUTH is set
     timeout: 30000,
