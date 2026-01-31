@@ -477,3 +477,247 @@
     padding: var(--s-2);
   }
 }
+
+/* ============================================
+   Flat Block Model Styles
+   ============================================ */
+
+/* Block row container - wraps each block with handle */
+.prosemirrorEditor :global(.block-row) {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  margin: 2px 0;
+  padding-left: 28px;
+  /* Space for handle */
+  min-height: 1.5em;
+}
+
+/* Handle container positioning */
+.prosemirrorEditor :global(.block-handle-container) {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+/* Show handle on hover */
+.prosemirrorEditor :global(.block-row):hover :global(.block-handle-container),
+.prosemirrorEditor :global(.block-row):focus-within :global(.block-handle-container),
+.prosemirrorEditor :global(.block-row.dragging) :global(.block-handle-container) {
+  opacity: 1;
+}
+
+/* Block content container */
+.prosemirrorEditor :global(.block-content) {
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+}
+
+/* Selected block styling */
+.prosemirrorEditor :global(.block-row.selected) {
+  background: rgba(var(--c-primary-rgb, 99, 102, 241), 0.08);
+  border-radius: var(--radius);
+}
+
+/* Dragging state */
+.prosemirrorEditor :global(.block-row.dragging) {
+  opacity: 0.5;
+}
+
+/* Indentation levels via data attributes */
+.prosemirrorEditor :global([data-indent='1']) {
+  padding-left: calc(28px + 24px);
+}
+
+.prosemirrorEditor :global([data-indent='2']) {
+  padding-left: calc(28px + 48px);
+}
+
+.prosemirrorEditor :global([data-indent='3']) {
+  padding-left: calc(28px + 72px);
+}
+
+.prosemirrorEditor :global([data-indent='4']) {
+  padding-left: calc(28px + 96px);
+}
+
+.prosemirrorEditor :global([data-indent='5']) {
+  padding-left: calc(28px + 120px);
+}
+
+.prosemirrorEditor :global([data-indent='6']) {
+  padding-left: calc(28px + 144px);
+}
+
+.prosemirrorEditor :global([data-indent='7']) {
+  padding-left: calc(28px + 168px);
+}
+
+.prosemirrorEditor :global([data-indent='8']) {
+  padding-left: calc(28px + 192px);
+}
+
+/* Bullet list marker */
+.prosemirrorEditor :global(.block-bullet) {
+  position: relative;
+}
+
+.prosemirrorEditor :global(.block-bullet)::before {
+  content: '•';
+  position: absolute;
+  left: -16px;
+  color: var(--c-text-muted, var(--c-text-light));
+  font-weight: bold;
+}
+
+/* Numbered list marker */
+.prosemirrorEditor :global(.block-number) {
+  position: relative;
+  counter-increment: block-number;
+}
+
+.prosemirrorEditor :global(.block-number)::before {
+  content: attr(data-number) '.';
+  position: absolute;
+  left: -24px;
+  min-width: 20px;
+  text-align: right;
+  color: var(--c-text-muted, var(--c-text-light));
+}
+
+/* Task list checkbox */
+.prosemirrorEditor :global(.block-task) {
+  position: relative;
+  padding-left: 24px;
+}
+
+.prosemirrorEditor :global(.block-task)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.25em;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--c-border);
+  border-radius: 3px;
+  background: var(--c-bg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.prosemirrorEditor :global(.block-task:hover)::before {
+  border-color: var(--c-primary);
+}
+
+.prosemirrorEditor :global(.block-task[data-checked='true'])::before {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+}
+
+.prosemirrorEditor :global(.block-task[data-checked='true'])::after {
+  content: '✓';
+  position: absolute;
+  left: 2px;
+  top: 0.15em;
+  font-size: 12px;
+  color: white;
+  font-weight: bold;
+}
+
+.prosemirrorEditor :global(.block-task[data-checked='true']) {
+  color: var(--c-text-light);
+  text-decoration: line-through;
+}
+
+/* Quote block styling */
+.prosemirrorEditor :global(.block-row[data-type='quote']) :global(.block-content) {
+  padding-left: var(--s-3);
+  border-left: 3px solid var(--c-primary);
+  color: var(--c-text-light);
+  font-style: italic;
+}
+
+/* Code block styling */
+.prosemirrorEditor :global(.block-row[data-type='code']) :global(pre) {
+  background: var(--c-bg-alt);
+  padding: var(--s-3);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Divider block styling */
+.prosemirrorEditor :global(.block-row[data-type='divider']) {
+  padding: var(--s-2) 0;
+}
+
+.prosemirrorEditor :global(.block-row[data-type='divider']) :global(hr) {
+  border: none;
+  height: 1px;
+  background: var(--c-border);
+  margin: 0;
+}
+
+/* Drop indicator */
+.prosemirrorEditor :global(.drop-indicator) {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--c-primary);
+  pointer-events: none;
+  z-index: 100;
+  border-radius: 1px;
+}
+
+.prosemirrorEditor :global(.drop-indicator)::before,
+.prosemirrorEditor :global(.drop-indicator)::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  background: var(--c-primary);
+  border-radius: 50%;
+}
+
+.prosemirrorEditor :global(.drop-indicator)::before {
+  left: -4px;
+}
+
+.prosemirrorEditor :global(.drop-indicator)::after {
+  right: -4px;
+}
+
+/* Multi-block selection styling */
+.prosemirrorEditor :global(.block-row.in-selection) {
+  background: rgba(var(--c-primary-rgb, 99, 102, 241), 0.1);
+  border-radius: var(--radius);
+}
+
+/* Hide handles on non-first selected blocks */
+.prosemirrorEditor :global(.block-row.in-selection:not(:first-of-type)) :global(.block-handle-container) {
+  display: none;
+}
+
+/* Print/export: hide handles */
+@media print {
+  .prosemirrorEditor :global(.block-handle-container) {
+    display: none !important;
+  }
+
+  .prosemirrorEditor :global(.block-row) {
+    padding-left: 0 !important;
+  }
+}

@@ -1,0 +1,6 @@
+/* Block context menu container styles */
+
+.container {
+  /* Container is positioned relatively but menu uses Portal */
+  position: relative;
+}

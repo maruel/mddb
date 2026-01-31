@@ -532,11 +532,11 @@ const editorBlockActions: ContextMenuAction[] = [
 ```
 
 **Tasks:**
-- [ ] Create `BlockNodeView.ts` using shared `RowHandle`
-- [ ] Mount SolidJS component within vanilla JS NodeView
-- [ ] Wire up drag-start to ProseMirror plugin
-- [ ] Wire up context-menu to editor state
-- [ ] Implement editor-specific context menu actions
+- [x] Create `BlockNodeView.ts` using shared `RowHandle`
+- [x] Mount SolidJS component within vanilla JS NodeView
+- [x] Wire up drag-start to ProseMirror plugin
+- [x] Wire up context-menu to editor state
+- [x] Implement editor-specific context menu actions (`BlockContextMenu.tsx`)
 
 ### 3.5 Table Integration
 
@@ -891,9 +891,9 @@ onDrop(e: DragEvent, view: EditorView) {
 ```
 
 **Tasks:**
-- [ ] Style drop indicator line
+- [x] Style drop indicator line
 - [ ] Animate indicator appearance
-- [ ] Ensure indicator doesn't interfere with content
+- [x] Ensure indicator doesn't interfere with content
 
 ---
 
@@ -950,11 +950,11 @@ export function BlockContextMenu(props: BlockContextMenuProps) {
 ```
 
 **Tasks:**
-- [ ] Create `BlockContextMenu.tsx`
-- [ ] Create `BlockContextMenu.module.css`
+- [x] Create `BlockContextMenu.tsx`
+- [x] Create `BlockContextMenu.module.css`
 - [ ] Add i18n keys for all menu items
-- [ ] Implement click-outside to close
-- [ ] Implement Escape key to close
+- [x] Implement click-outside to close (inherited from RowContextMenu)
+- [x] Implement Escape key to close (inherited from RowContextMenu)
 
 ### 5.2 Menu Actions
 
@@ -1332,11 +1332,11 @@ Update CSS to render list markers, indentation, and block-specific styles.
 **Note:** Numbered list counters are complex with CSS alone when blocks can be reordered. Consider computing `data-number` attribute in a ProseMirror plugin that runs on every transaction.
 
 **Tasks:**
-- [ ] Add indentation CSS
-- [ ] Add bullet marker styling
-- [ ] Add numbered list marker styling (with counter plugin)
-- [ ] Add task checkbox styling
-- [ ] Add quote styling (left border)
+- [x] Add indentation CSS
+- [x] Add bullet marker styling
+- [x] Add numbered list marker styling (with counter plugin)
+- [x] Add task checkbox styling
+- [x] Add quote styling (left border)
 - [ ] Test all block types at various indent levels
 
 ### 7.2 Number Counter Plugin
