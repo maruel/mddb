@@ -31,11 +31,34 @@
   padding-left: calc(var(--s-2) - 3px);
 }
 
-.nodeIcon {
+.iconSlot {
+  position: relative;
   flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconSlot.hasChildren {
+  cursor: pointer;
+}
+
+.nodeIcon {
   font-size: 1rem;
-  width: 18px;
   text-align: center;
+  transition: opacity 0.15s ease;
+}
+
+.iconSlot.hasChildren:hover .nodeIcon,
+.pageItem:hover .iconSlot.hasChildren .nodeIcon {
+  opacity: 0;
+}
+
+.iconSlot.hasChildren:hover .expandIcon,
+.pageItem:hover .iconSlot.hasChildren .expandIcon {
+  opacity: 1;
 }
 
 .pageTitleText {
@@ -47,24 +70,23 @@
 }
 
 .expandIcon {
+  position: absolute;
+  inset: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-  margin-right: 4px;
   font-size: 11px;
   transition:
     transform 0.2s ease,
+    opacity 0.15s ease,
     color var(--transition),
     background var(--transition);
-  cursor: pointer;
   color: var(--c-text-light);
   border-radius: 4px;
+  opacity: 0;
 }
 
-.expandIcon:hover:not(.hidden):not(.loading) {
+.iconSlot.hasChildren:hover .expandIcon:not(.loading) {
   color: var(--c-text);
   background: var(--c-bg-alt);
 }
@@ -73,14 +95,15 @@
   transform: rotate(90deg);
 }
 
-.expandIcon.hidden {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .expandIcon.loading {
+  opacity: 1;
   animation: spin 0.8s linear infinite;
   color: var(--c-primary);
+}
+
+/* When loading, hide the page icon */
+.iconSlot:has(.expandIcon.loading) .nodeIcon {
+  opacity: 0;
 }
 
 @keyframes spin {

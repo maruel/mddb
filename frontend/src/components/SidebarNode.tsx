@@ -92,18 +92,22 @@ export default function SidebarNode(props: SidebarNodeProps) {
         onContextMenu={handleContextMenu}
       >
         <span
-          class={styles.expandIcon}
-          classList={{
-            [`${styles.expanded}`]: isExpanded(),
-            [`${styles.hidden}`]: !mightHaveChildren(),
-            [`${styles.loading}`]: isLoadingChildren(),
-          }}
-          onClick={toggleExpand}
+          class={styles.iconSlot}
+          classList={{ [`${styles.hasChildren}`]: mightHaveChildren() }}
+          onClick={(e) => mightHaveChildren() && toggleExpand(e)}
           data-testid={`expand-icon-${props.node.id}`}
         >
-          {isLoadingChildren() ? '○' : '▶'}
+          <span class={styles.nodeIcon}>{props.node.has_table && !props.node.has_page ? '📊' : '📄'}</span>
+          <span
+            class={styles.expandIcon}
+            classList={{
+              [`${styles.expanded}`]: isExpanded(),
+              [`${styles.loading}`]: isLoadingChildren(),
+            }}
+          >
+            {isLoadingChildren() ? '○' : '▶'}
+          </span>
         </span>
-        <span class={styles.nodeIcon}>{props.node.has_table && !props.node.has_page ? '📊' : '📄'}</span>
         <span class={styles.pageTitleText}>{props.node.title}</span>
         <button
           class={styles.hoverDeleteButton}
