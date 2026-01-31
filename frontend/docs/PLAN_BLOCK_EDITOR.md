@@ -71,11 +71,11 @@ const blockSpec: NodeSpec = {
 ```
 
 **Tasks:**
-- [ ] Create `src/components/editor/schema.ts`
-- [ ] Define `BlockAttrs` interface
-- [ ] Define `blockSpec` with all attributes
-- [ ] Define `dividerSpec` for horizontal rules (empty block variant)
-- [ ] Export new schema with marks from current config
+- [x] Create `src/components/editor/schema.ts`
+- [x] Define `BlockAttrs` interface
+- [x] Define `blockSpec` with all attributes
+- [x] Define `dividerSpec` for horizontal rules (empty block variant)
+- [x] Export new schema with marks from current config
 
 ### 1.2 DOM Parsing (HTML → ProseMirror)
 
