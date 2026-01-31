@@ -38,78 +38,7 @@ mddb lets you:
 
 ## Getting Started
 
-### Installation
-
-1. Download the latest release (or build from source)
-2. Run the application:
-   ```
-   ./mddb
-   ```
-3. Open http://localhost:8080 in your browser
-
-That's it! All your data is stored in a `data/` folder.
-
-## Configuration
-
-Run `./mddb -help` and go from there.
-
-### Running as a systemd Service
-
-A hardened systemd user service file is provided in `contrib/`:
-
-```bash
-# Install
-mkdir -p ~/.config/systemd/user
-cp contrib/mddb.service ~/.config/systemd/user/
-
-# Edit as needed. In particular, add the tailscale hostname and change the port if it conflicts on your system.
-nano ~/.config/systemd/user/mddb.service
-
-# Configure data directory (edit paths if needed)
-mkdir -p ~/mddb/data
-
-# Enable and start
-systemctl --user daemon-reload
-systemctl --user enable --now mddb
-
-# View logs
-journalctl --user -u mddb -f
-```
-
-### Running on macOS
-
-To describe later.
-
-### Running on Windows
-
-To describe later.
-
-### Serving over Tailscale
-
-You can expose mddb to your [Tailscale](https://tailscale.com/) network using `tailscale serve`. This provides secure access from any device on your tailnet without opening ports or configuring firewalls.
-
-```bash
-# Expose mddb on your tailnet at https://<hostname>.<tailnet>.ts.net
-tailscale serve --bg 8080
-```
-
-For public access via Tailscale Funnel (exposes to the internet!):
-
-```bash
-# Make mddb publicly accessible at https://<hostname>.<tailnet>.ts.net
-tailscale funnel --bg 8080
-```
-
-> **Note**: Tailscale serve/funnel provides HTTPS automatically. mddb's authentication still applies—users must log in with their credentials.
-
-**OAuth Configuration**: If using OAuth providers (Google, GitHub, etc.), you must add your Tailscale URL to the authorized redirect URIs in each provider's console:
-- `https://<hostname>.<tailnet>.ts.net/auth/google/callback`
-- `https://<hostname>.<tailnet>.ts.net/auth/github/callback`
-
-### Reverse Proxy with Caddy
-
-A sample Caddyfile is provided in `contrib/mddb.caddyfile` for running mddb behind [Caddy](https://caddyserver.com/). Caddy automatically handles TLS certificates via Let's Encrypt.
-
+See [SELF_HOSTING.md](SELF_HOSTING.md) to run it yourself for free and access it securely from Tailscale.
 
 ## File Structure
 
@@ -158,6 +87,20 @@ Clone the repository and run:
 make build-all
 ```
 
+## Comparison
+
+| Feature | Notion | Obsidian | HackMD / ([CodiMD](https://github.com/hackmdio/codimd)) |
+| - | - | - | - |
+| Organization | ✅ | ✅ | ✅ |
+| Workspace | ✅ | ✅ | ✅ |
+| Git native storage | ❌ | ❌ | ❌ |
+| Export to Git | ❌ | ✅ | ✅ |
+| Markdown | ✅ | ✅ | ✅ |
+| Self hosted | ❌ | ✅ | ✅ |
+| Backend open source | ❌ | ❌ | ✅ |
+| Web app first | ✅ | ❌ | ✅ |
+| Native table support | ✅ | ✅ | ❌ |
+
 ## License
 
-See [LICENSE](LICENSE) file
+See [LICENSE](LICENSE) file. May change in the future.
