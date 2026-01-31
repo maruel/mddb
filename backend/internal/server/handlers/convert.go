@@ -164,6 +164,7 @@ func commitToDTO(c *git.Commit) *dto.Commit {
 	return &dto.Commit{
 		Hash:      c.Hash,
 		Message:   c.Message,
+		Author:    c.Author,
 		Timestamp: storage.ToTime(c.CommitDate),
 	}
 }

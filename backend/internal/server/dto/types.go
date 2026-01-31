@@ -177,6 +177,7 @@ type WorkspaceSettings struct {
 type Commit struct {
 	Hash      string `json:"hash"`
 	Message   string `json:"message"`
+	Author    string `json:"author"`
 	Timestamp Time   `json:"timestamp"`
 }
 

@@ -1401,6 +1401,7 @@ export interface WorkspaceSettings {
 export interface Commit {
   hash: string;
   message: string;
+  author: string;
   timestamp: Time;
 }
 /**
