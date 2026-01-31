@@ -95,19 +95,17 @@ test.describe('User Profile Settings', () => {
 });
 
 test.describe('Workspace Settings', () => {
-  test('navigate to workspace settings via workspace menu', async ({ page, request }) => {
+  test('navigate to workspace settings via sidebar', async ({ page, request }) => {
     const { token } = await registerUser(request, 'ws-settings');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // Click on workspace menu button (shows workspace name with dropdown arrow)
-    const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
-    await wsMenuButton.click();
-
-    // Look for settings option with gear icon
-    const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
-    await expect(settingsOption).toBeVisible({ timeout: 3000 });
-    await settingsOption.click();
+    // Hover over workspace header to reveal settings button, then click
+    const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
+    await workspaceHeader.hover();
+    const settingsButton = page.locator('[data-testid="workspace-settings-button"]');
+    await expect(settingsButton).toBeVisible({ timeout: 3000 });
+    await settingsButton.click();
 
     // Should be on settings page (URL contains workspace ID)
     await expect(page).toHaveURL(/\/settings\/workspace\//, { timeout: 5000 });
@@ -122,12 +120,12 @@ test.describe('Workspace Settings', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // Navigate to settings via workspace menu
-    const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
-    await wsMenuButton.click();
-    const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
-    await expect(settingsOption).toBeVisible({ timeout: 3000 });
-    await settingsOption.click();
+    // Navigate to settings via sidebar settings button
+    const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
+    await workspaceHeader.hover();
+    const settingsButton = page.locator('[data-testid="workspace-settings-button"]');
+    await expect(settingsButton).toBeVisible({ timeout: 3000 });
+    await settingsButton.click();
     await expect(page).toHaveURL(/\/settings\/workspace\//, { timeout: 5000 });
 
     // Click Members tab (use exact match to avoid conflicts)
@@ -156,12 +154,12 @@ test.describe('Workspace Settings', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // Navigate to settings
-    const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
-    await wsMenuButton.click();
-    const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
-    await expect(settingsOption).toBeVisible({ timeout: 3000 });
-    await settingsOption.click();
+    // Navigate to settings via sidebar settings button
+    const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
+    await workspaceHeader.hover();
+    const settingsButton = page.locator('[data-testid="workspace-settings-button"]');
+    await expect(settingsButton).toBeVisible({ timeout: 3000 });
+    await settingsButton.click();
     await expect(page).toHaveURL(/\/settings\/workspace\//, { timeout: 5000 });
 
     // Members tab should be active by default - click to be sure
@@ -178,12 +176,12 @@ test.describe('Workspace Settings', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // Navigate to settings
-    const wsMenuButton = page.locator('button', { hasText: /Workspace.*▼|▲/ }).first();
-    await wsMenuButton.click();
-    const settingsOption = page.locator('button', { hasText: /Workspace Settings|⚙/ });
-    await expect(settingsOption).toBeVisible({ timeout: 3000 });
-    await settingsOption.click();
+    // Navigate to settings via sidebar settings button
+    const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
+    await workspaceHeader.hover();
+    const settingsButton = page.locator('[data-testid="workspace-settings-button"]');
+    await expect(settingsButton).toBeVisible({ timeout: 3000 });
+    await settingsButton.click();
     await expect(page).toHaveURL(/\/settings\/workspace\//, { timeout: 5000 });
 
     // Click Workspace tab (use exact match to avoid matching workspace button in header)

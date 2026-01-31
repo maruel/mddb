@@ -55,14 +55,10 @@ test.describe('Language Settings', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    // Verify we start in English - check sidebar header text "Workspace"
-    // (in French it's "Espace de travail")
-    const workspaceHeader = page.locator('aside h2');
-    await expect(workspaceHeader).toHaveText('Workspace', { timeout: 5000 });
-
-    // Verify sidebar button title is in English
-    const newPageButton = page.locator('aside button[title="New Page"]');
-    await expect(newPageButton).toBeVisible({ timeout: 5000 });
+    // Verify we start in English - check sidebar "Create Workspace" button text
+    // (in French it's "Créer un espace de travail")
+    const createWsButtonEn = page.locator('aside button', { hasText: 'Create Workspace' });
+    await expect(createWsButtonEn).toBeVisible({ timeout: 5000 });
 
     // Open user menu and go to profile/settings
     const userMenu = page.locator('[data-testid="user-menu-button"]');
@@ -101,12 +97,9 @@ test.describe('Language Settings', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // The key test: UI should show French without a page refresh
-    // "Workspace" in French is "Espace de travail"
-    await expect(workspaceHeader).toHaveText('Espace de travail', { timeout: 5000 });
-
-    // Also verify button titles are now in French
-    const newPageButtonFr = page.locator('aside button[title="Nouvelle page"]');
-    await expect(newPageButtonFr).toBeVisible({ timeout: 5000 });
+    // Create workspace button should now be in French
+    const createWsButtonFr = page.locator('aside button', { hasText: 'Créer un espace de travail' });
+    await expect(createWsButtonFr).toBeVisible({ timeout: 5000 });
   });
 
   test('language persists after page reload', async ({ page, request }) => {
@@ -114,9 +107,9 @@ test.describe('Language Settings', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    // Verify we start in English
-    const workspaceHeader = page.locator('aside h2');
-    await expect(workspaceHeader).toHaveText('Workspace', { timeout: 5000 });
+    // Verify we start in English - check Create Workspace button text
+    const createWsButtonEn = page.locator('aside button', { hasText: 'Create Workspace' });
+    await expect(createWsButtonEn).toBeVisible({ timeout: 5000 });
 
     // Open settings and change to French
     const userMenu = page.locator('[data-testid="user-menu-button"]');
@@ -151,16 +144,15 @@ test.describe('Language Settings', () => {
     // Wait for app to load
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    // UI should be in French after reload
-    await expect(workspaceHeader).toHaveText('Espace de travail', { timeout: 5000 });
+    // UI should be in French after reload - Create workspace button should be in French
+    const createWsButtonFr = page.locator('aside button', { hasText: 'Créer un espace de travail' });
+    await expect(createWsButtonFr).toBeVisible({ timeout: 5000 });
   });
 
   test('switching back to English works', async ({ page, request }) => {
     const { token } = await registerUser(request, 'lang-switch-back');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
-
-    const workspaceHeader = page.locator('aside h2');
 
     // First change to French
     const userMenu = page.locator('[data-testid="user-menu-button"]');
@@ -194,7 +186,8 @@ test.describe('Language Settings', () => {
 
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // Should be back to English
-    await expect(workspaceHeader).toHaveText('Workspace', { timeout: 5000 });
+    // Should be back to English - Create workspace button should be in English
+    const createWsButtonEn = page.locator('aside button', { hasText: 'Create Workspace' });
+    await expect(createWsButtonEn).toBeVisible({ timeout: 5000 });
   });
 });

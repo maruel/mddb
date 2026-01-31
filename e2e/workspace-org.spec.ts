@@ -254,9 +254,46 @@ test.describe('Footer Links', () => {
   });
 });
 
-test.describe('Header Display', () => {
-  test('header shows navigation and menus', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'header-nav');
+test.describe('Sidebar Workspace Display', () => {
+  test('sidebar shows workspace header and settings', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'sidebar-ws');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    // Sidebar should contain workspace header
+    const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
+    await expect(workspaceHeader).toBeVisible();
+
+    // Workspace name should be visible
+    const workspaceName = page.locator('aside [class*="workspaceName"]');
+    await expect(workspaceName).toBeVisible();
+
+    // Settings button should be visible on hover
+    await workspaceHeader.hover();
+    const settingsButton = page.locator('[data-testid="workspace-settings-button"]');
+    await expect(settingsButton).toBeVisible({ timeout: 3000 });
+  });
+
+  test('workspace settings button is clickable', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'ws-settings-click');
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+
+    // Hover over workspace header to reveal settings button
+    const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
+    await workspaceHeader.hover();
+    const settingsButton = page.locator('[data-testid="workspace-settings-button"]');
+    await expect(settingsButton).toBeVisible({ timeout: 3000 });
+
+    // Click settings button
+    await settingsButton.click();
+
+    // Should navigate to workspace settings
+    await expect(page).toHaveURL(/\/settings\/workspace\//, { timeout: 5000 });
+  });
+
+  test('header shows user menu', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'header-user');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
@@ -266,98 +303,36 @@ test.describe('Header Display', () => {
 
     // Header should contain user menu (avatar button)
     await expect(header.locator('[class*="avatarButton"]')).toBeVisible();
-
-    // Header should contain workspace menu
-    await expect(header.locator('button', { hasText: /Workspace/ })).toBeVisible();
   });
 
-  test('workspace menu is fully visible within header', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'ws-menu-visible');
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
-
-    const header = page.locator('header');
-    const wsMenuButton = header.locator('[class*="wsButton"]').first();
-    await expect(wsMenuButton).toBeVisible();
-
-    // Get bounding boxes
-    const headerBox = await header.boundingBox();
-    const menuBox = await wsMenuButton.boundingBox();
-    const viewport = page.viewportSize();
-
-    expect(headerBox).toBeTruthy();
-    expect(menuBox).toBeTruthy();
-    expect(viewport).toBeTruthy();
-
-    // Workspace menu should be fully within header bounds (not clipped)
-    expect(menuBox!.x).toBeGreaterThanOrEqual(headerBox!.x);
-    expect(menuBox!.y).toBeGreaterThanOrEqual(headerBox!.y);
-    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(headerBox!.x + headerBox!.width);
-    expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(headerBox!.y + headerBox!.height);
-
-    // Also verify not cut off by viewport
-    expect(menuBox!.x).toBeGreaterThanOrEqual(0);
-    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(viewport!.width);
-  });
-
-  test('workspace menu dropdown is fully visible when opened', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'ws-dropdown-visible');
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
-
-    // Open the workspace menu
-    const wsMenuButton = page.locator('[class*="wsButton"]').first();
-    await wsMenuButton.click();
-
-    // Wait for dropdown to appear
-    const dropdown = page.locator('[class*="dropdown"]').first();
-    await expect(dropdown).toBeVisible({ timeout: 3000 });
-
-    // Get bounding boxes
-    const buttonBox = await wsMenuButton.boundingBox();
-    const dropdownBox = await dropdown.boundingBox();
-    const viewport = page.viewportSize();
-
-    expect(buttonBox).toBeTruthy();
-    expect(dropdownBox).toBeTruthy();
-    expect(viewport).toBeTruthy();
-
-    // Dropdown should be left-aligned with the button (within 5px tolerance)
-    expect(Math.abs(dropdownBox!.x - buttonBox!.x)).toBeLessThanOrEqual(5);
-
-    // Dropdown should not extend past the left edge of the viewport
-    expect(dropdownBox!.x).toBeGreaterThanOrEqual(0);
-    // Dropdown should not extend past the right edge of the viewport
-    expect(dropdownBox!.x + dropdownBox!.width).toBeLessThanOrEqual(viewport!.width);
-  });
-
-  test('workspace menu is fully visible on mobile viewport', async ({ page, request }) => {
+  test('sidebar is accessible on mobile viewport', async ({ page, request }) => {
     // Set mobile viewport
     await page.setViewportSize({ width: 375, height: 667 });
 
-    const { token } = await registerUser(request, 'ws-menu-mobile');
+    const { token } = await registerUser(request, 'sidebar-mobile');
     await page.goto(`/?token=${token}`);
-    // On mobile, sidebar is hidden by default, wait for header instead
+    // On mobile, wait for header instead (sidebar starts hidden)
     const header = page.locator('header');
     await expect(header).toBeVisible({ timeout: 15000 });
 
-    const wsMenuButton = header.locator('[class*="wsButton"]').first();
-    await expect(wsMenuButton).toBeVisible();
+    // Header should have hamburger menu to open sidebar
+    const hamburgerButton = header.locator('button').first();
+    await expect(hamburgerButton).toBeVisible();
 
-    // Get bounding boxes
-    const menuBox = await wsMenuButton.boundingBox();
-    const viewport = page.viewportSize();
+    // Click hamburger to open sidebar
+    await hamburgerButton.click();
 
-    expect(menuBox).toBeTruthy();
-    expect(viewport).toBeTruthy();
+    // Sidebar should now be visible
+    const sidebar = page.locator('aside');
+    await expect(sidebar).toBeVisible({ timeout: 5000 });
 
-    // Workspace menu should not be cut off by viewport edges
-    expect(menuBox!.x).toBeGreaterThanOrEqual(0);
-    expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(viewport!.width);
+    // Workspace header should be visible in sidebar
+    const workspaceHeader = sidebar.locator('[class*="workspaceHeader"]');
+    await expect(workspaceHeader).toBeVisible();
   });
 
-  test('workspace menu visible with long breadcrumbs', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'ws-breadcrumb');
+  test('sidebar workspace header visible with long page title', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'ws-long-title');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
@@ -365,7 +340,7 @@ test.describe('Header Display', () => {
     const wsId = await getWorkspaceId(page);
 
     // Create a page with a very long title
-    const longTitle = 'This Is A Very Long Page Title That Should Test Breadcrumb Overflow Behavior';
+    const longTitle = 'This Is A Very Long Page Title That Should Test Overflow Behavior';
     const resp = await request.post(`/api/workspaces/${wsId}/nodes/0/page/create`, {
       headers: { Authorization: `Bearer ${token}` },
       data: { title: longTitle },
@@ -377,23 +352,20 @@ test.describe('Header Display', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
-    // Wait for breadcrumbs to appear
-    const breadcrumbs = page.locator('nav[class*="breadcrumb"]');
-    await expect(breadcrumbs).toBeVisible({ timeout: 5000 });
+    // Workspace header should still be visible at top of sidebar
+    const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
+    await expect(workspaceHeader).toBeVisible();
 
-    // Check workspace menu is still fully visible
-    const header = page.locator('header');
-    const wsMenuButton = header.locator('[class*="wsButton"]').first();
-    await expect(wsMenuButton).toBeVisible();
+    // Workspace name should not overflow
+    const workspaceName = page.locator('aside [class*="workspaceName"]');
+    const nameBox = await workspaceName.boundingBox();
+    const headerBox = await workspaceHeader.boundingBox();
 
-    const menuBox = await wsMenuButton.boundingBox();
-    const headerBox = await header.boundingBox();
-
-    expect(menuBox).toBeTruthy();
+    expect(nameBox).toBeTruthy();
     expect(headerBox).toBeTruthy();
 
-    // Workspace menu should not be pushed off-screen by long breadcrumbs
-    expect(menuBox!.x).toBeGreaterThanOrEqual(0);
-    expect(menuBox!.width).toBeGreaterThanOrEqual(50); // Should have reasonable width
+    // Workspace name should be within header bounds
+    expect(nameBox!.x).toBeGreaterThanOrEqual(headerBox!.x);
+    expect(nameBox!.x + nameBox!.width).toBeLessThanOrEqual(headerBox!.x + headerBox!.width);
   });
 });
