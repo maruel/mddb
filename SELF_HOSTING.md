@@ -31,6 +31,12 @@ GitHub OAuth requires an HTTPS URL, so you need to server over Tailscale or a re
 1. Go to OAuth Apps at https://github.com/settings/developers
 1. Set as the Authorization callback URL `https://<hostname>.<tailnet>.ts.net/auth/github/callback`
 
+### Outbound email via SMTP
+
+- I personally use Maileroo but you can use any SMTP provider that support TLS.
+- Once your mddb server is up and running, navigate to `https://<host>/settings/server` and enter the
+  information there. Email will immediately start working (or if there's a bug left, restart the server).
+
 ## Running
 
 ### Running as a systemd Service
