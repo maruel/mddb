@@ -2,6 +2,7 @@
 
 import { createSignal, createEffect, For, Show, on, untrack } from 'solid-js';
 import { useI18n } from '../i18n';
+import { useClickOutside } from '../composables/useClickOutside';
 import type { NodeResponse } from '@sdk/types.gen';
 import styles from './SidebarNode.module.css';
 
@@ -26,6 +27,12 @@ export default function SidebarNode(props: SidebarNodeProps) {
   const [showContextMenu, setShowContextMenu] = createSignal(false);
   const [contextMenuPos, setContextMenuPos] = createSignal({ x: 0, y: 0 });
   const [isLoadingChildren, setIsLoadingChildren] = createSignal(false);
+  let contextMenuRef: HTMLDivElement | undefined;
+
+  useClickOutside(
+    () => contextMenuRef,
+    () => setShowContextMenu(false)
+  );
 
   // Children come directly from the store via props.node.children
   const children = () => props.node.children ?? [];
@@ -80,10 +87,8 @@ export default function SidebarNode(props: SidebarNodeProps) {
     setShowContextMenu(true);
   };
 
-  const handleClickAway = () => setShowContextMenu(false);
-
   return (
-    <li class={styles.sidebarNodeWrapper} data-testid={`sidebar-node-${props.node.id}`} onClick={handleClickAway}>
+    <li class={styles.sidebarNodeWrapper} data-testid={`sidebar-node-${props.node.id}`}>
       <div
         class={styles.pageItem}
         classList={{ [`${styles.active}`]: props.selectedId === props.node.id }}
@@ -124,6 +129,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
       <Show when={showContextMenu()}>
         <div
           class={styles.contextMenu}
+          ref={contextMenuRef}
           style={{ left: `${contextMenuPos().x}px`, top: `${contextMenuPos().y}px` }}
           onClick={(e) => e.stopPropagation()}
         >
