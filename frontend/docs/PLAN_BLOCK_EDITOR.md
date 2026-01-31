@@ -135,133 +135,57 @@ All blocks carry `data-type` and `data-indent` attributes for drag-drop position
 
 Convert markdown to flat blocks, tracking indent from nested list structure.
 
-**File:** `src/components/editor/markdown-parser.ts` (new file)
+**File:** `src/components/editor/markdown-parser.ts` ✓ Created
 
-**Strategy:**
-1. Parse markdown with `markdown-it` (current approach)
-2. Walk token stream, tracking list nesting depth
-3. Emit flat block nodes with appropriate attributes
+**Strategy:** Parse markdown using the existing MarkdownParser (which correctly handles nested structures), then flatten the result to flat blocks by walking the tree and converting nested lists to blocks with indent attributes.
 
-```typescript
-function parseMarkdown(markdown: string): ProseMirrorNode {
-  const tokens = md.parse(markdown, {});
-  const blocks: BlockData[] = [];
-  let indentStack: number[] = [0];
-
-  for (const token of tokens) {
-    if (token.type === 'bullet_list_open' || token.type === 'ordered_list_open') {
-      indentStack.push(indentStack.length);
-    } else if (token.type === 'bullet_list_close' || token.type === 'ordered_list_close') {
-      indentStack.pop();
-    } else if (token.type === 'list_item_open') {
-      const indent = indentStack.length - 1;
-      const listType = /* determine from parent token */;
-      blocks.push({ type: listType, indent, content: /* inline content */ });
-    }
-    // ... handle other block types
-  }
-
-  return schema.node('doc', null, blocks.map(b => createBlockNode(b)));
-}
-```
+**Implementation:**
+- Uses `MarkdownParser` from `prosemirror-markdown` with the nested schema (`prosemirror-config.ts`)
+- Parses markdown with markdown-it (with task list and underline support)
+- Recursively flattens nested structure: `flattenDocument()` → `flattenList()` → `flattenListItem()`
+- Task lists detected via `checked` attribute on list items
+- Code block language extracted from `params` attribute
 
 **Tasks:**
-- [ ] Create `markdown-parser.ts`
-- [ ] Implement token walker with indent tracking
-- [ ] Handle task list checkbox detection (existing logic)
-- [ ] Handle code block language extraction
-- [ ] Unit tests for various markdown structures
+- [x] Create `markdown-parser.ts`
+- [x] Implement flattening logic for nested structures
+- [x] Handle task list checkbox detection
+- [x] Handle code block language extraction
+- [x] Unit tests for various markdown structures (23 tests, all passing)
 
 ### 2.2 Markdown Serializer (Blocks → MD)
 
 Reconstruct nested markdown from flat blocks by grouping consecutive list items.
 
-**File:** `src/components/editor/markdown-serializer.ts` (new file)
+**File:** `src/components/editor/markdown-serializer.ts` ✓ Created
 
 **Strategy:**
 1. Walk blocks sequentially
-2. Track "open" list contexts (type + indent level)
+2. Track "open" list contexts (type + indent level) to know when to close/open lists
 3. Emit list markers and indentation based on context changes
+4. Maintain separate number counter per indent level to support proper numbering in nested lists
 
-```typescript
-function serializeToMarkdown(doc: ProseMirrorNode): string {
-  const lines: string[] = [];
-  let listContext: { type: string; indent: number }[] = [];
-  let numberCounters: Map<number, number> = new Map();  // indent → counter
+**Implementation:**
+- `serializeToMarkdown()`: Main entry point, walks blocks and builds markdown lines
+- Maintains `listContext` stack to track which lists are currently open
+- Number counters keyed by indent to support per-level numbering
+- Handles all block types: heading, paragraph, bullet, number, task, quote, code, divider
+- Properly closes lists when indent decreases or type changes at same indent
+- `serializeInline()`: Converts block content with marks (bold, italic, code, links, strikethrough, underline) to markdown syntax
 
-  doc.forEach((block) => {
-    const { type, indent, checked, level, language } = block.attrs;
-    const content = serializeInline(block);
-
-    // Close list contexts that no longer apply
-    while (listContext.length > 0) {
-      const ctx = listContext[listContext.length - 1];
-      if (ctx.indent >= indent && (ctx.type !== type || indent < ctx.indent)) {
-        listContext.pop();
-      } else break;
-    }
-
-    // Build line with appropriate prefix
-    const indentStr = '  '.repeat(indent);
-    let prefix = '';
-
-    switch (type) {
-      case 'bullet':
-        prefix = '- ';
-        break;
-      case 'number':
-        const counter = (numberCounters.get(indent) || 0) + 1;
-        numberCounters.set(indent, counter);
-        prefix = `${counter}. `;
-        break;
-      case 'task':
-        prefix = checked ? '- [x] ' : '- [ ] ';
-        break;
-      case 'heading':
-        prefix = '#'.repeat(level) + ' ';
-        break;
-      case 'quote':
-        prefix = '> ';
-        break;
-      case 'code':
-        lines.push('```' + (language || ''));
-        lines.push(content);
-        lines.push('```');
-        return;
-      case 'divider':
-        lines.push('---');
-        return;
-    }
-
-    lines.push(indentStr + prefix + content);
-
-    // Update list context
-    if (['bullet', 'number', 'task'].includes(type)) {
-      if (listContext.length === 0 || listContext[listContext.length - 1].indent < indent) {
-        listContext.push({ type, indent });
-      }
-    } else {
-      // Non-list block resets counters at this indent
-      numberCounters.delete(indent);
-    }
-  });
-
-  return lines.join('\n');
-}
-```
-
-**Edge cases:**
+**Edge cases handled:**
 - Numbered list restart after paragraph interruption
-- Mixed list types at same indent (allowed in markdown)
+- Mixed list types at same indent
 - Code blocks preserve literal content (no prefix)
-- Empty blocks serialize as blank lines
+- Task lists with mixed checked/unchecked states
+- Nested lists with varying indentation
 
 **Tasks:**
-- [ ] Create `markdown-serializer.ts`
-- [ ] Implement list context tracking
-- [ ] Handle numbered list counter logic
-- [ ] Handle code block fencing
-- [ ] Round-trip tests (MD → blocks → MD)
+- [x] Create `markdown-serializer.ts`
+- [x] Implement list context tracking
+- [x] Handle numbered list counter logic per indent
+- [x] Handle code block fencing and language
+- [x] Round-trip tests (MD → blocks → MD, all passing)
 
 ---
 
