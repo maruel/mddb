@@ -1,0 +1,72 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - navigation [ref=e6]:
+      - generic [ref=e7] [cursor=pointer]: Markdown Test
+    - button "Profile" [ref=e10] [cursor=pointer]:
+      - generic [ref=e11]: WT
+  - generic [ref=e12]:
+    - complementary [ref=e13]:
+      - generic [ref=e14]:
+        - generic "Click to edit name" [ref=e15] [cursor=pointer]: wysiwyg-editor's Workspace
+        - button "Workspace Settings" [ref=e16] [cursor=pointer]:
+          - img [ref=e17]
+        - button "Collapse sidebar" [ref=e19] [cursor=pointer]:
+          - img [ref=e20]
+      - list [ref=e22]:
+        - listitem [ref=e23]:
+          - generic [ref=e24] [cursor=pointer]:
+            - generic [ref=e25]:
+              - img [ref=e27]
+              - img [ref=e30]
+            - generic [ref=e32]: Welcome
+            - button "Delete" [ref=e33]:
+              - img [ref=e34]
+        - listitem [ref=e36]:
+          - generic [ref=e37] [cursor=pointer]:
+            - generic [ref=e38]:
+              - img [ref=e40]
+              - img [ref=e43]
+            - generic [ref=e45]: Markdown Test
+            - button "Delete" [ref=e46]:
+              - img [ref=e47]
+      - generic [ref=e50]:
+        - button "Create Workspace" [ref=e51] [cursor=pointer]:
+          - img [ref=e53]
+          - text: Create Workspace
+        - button "Import from Notion" [ref=e55] [cursor=pointer]:
+          - img [ref=e57]
+          - text: Import from Notion
+    - main [ref=e59]:
+      - generic [ref=e60]:
+        - textbox "Title" [ref=e62]: Markdown Test
+        - generic [ref=e64]:
+          - generic [ref=e66]:
+            - generic [ref=e67]:
+              - generic "Drag handle" [ref=e69]:
+                - img [ref=e70]
+              - heading "Heading 1" [level=1] [ref=e77]
+            - generic [ref=e78]:
+              - generic "Drag handle" [ref=e80]:
+                - img [ref=e81]
+              - paragraph [ref=e88]:
+                - strong [ref=e89]: Bold text
+            - generic [ref=e90]:
+              - generic "Drag handle" [ref=e92]:
+                - img [ref=e93]
+              - generic [ref=e100]: • List item 1
+            - generic [ref=e101]:
+              - generic "Drag handle" [ref=e103]:
+                - img [ref=e104]
+              - generic [ref=e111]: • List item 2
+            - generic [ref=e112]:
+              - generic "Drag handle" [ref=e114]:
+                - img [ref=e115]
+              - paragraph [ref=e122]:
+                - code [ref=e123]: code inline
+          - generic [ref=e124]:
+            - button "Visual" [ref=e125] [cursor=pointer]
+            - button "MD" [ref=e126] [cursor=pointer]
+```
