@@ -1,27 +1,53 @@
 .handle {
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 24px;
+  opacity: 0;
+  cursor: grab;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  cursor: grab;
-  border-radius: 4px;
-  transition: background var(--transition);
+  border-radius: 3px;
   color: var(--c-text-light);
+  transition:
+    opacity 0.1s,
+    background 0.1s,
+    color 0.1s;
   user-select: none;
 }
 
 .handle:hover {
-  background-color: var(--c-bg-alt);
+  background: var(--c-bg-alt);
   color: var(--c-text);
 }
 
 .handle:active {
   cursor: grabbing;
+  background: var(--c-bg-hover);
 }
 
 .icon {
-  width: 12px;
+  width: 10px;
   height: 16px;
-  display: block;
+}
+
+/* Parent row controls visibility via this class */
+:global(.row-with-handle):hover .handle,
+:global(.row-with-handle):focus-within .handle {
+  opacity: 1;
+}
+
+/* Always show when dragging */
+:global(.row-with-handle.dragging) .handle {
+  opacity: 1;
+}
+
+/* For print/export, hide handles */
+@media print {
+  .handle {
+    display: none;
+  }
 }

@@ -307,11 +307,11 @@ export function RowHandle(props: RowHandleProps) {
 ```
 
 **Tasks:**
-- [ ] Create `src/components/shared/RowHandle.tsx`
-- [ ] Create `src/components/shared/RowHandle.module.css`
-- [ ] Use SVG icon instead of text character for crisp rendering
-- [ ] Add accessibility attributes (role, aria-label)
-- [ ] Export from `src/components/shared/index.ts`
+- [x] Create `src/components/shared/RowHandle.tsx`
+- [x] Create `src/components/shared/RowHandle.module.css`
+- [x] Use SVG icon instead of text character for crisp rendering
+- [x] Add accessibility attributes (role, aria-label)
+- [x] Export from `src/components/shared/index.ts`
 
 ### 3.2 Shared Context Menu Component
 
@@ -380,12 +380,12 @@ export function RowContextMenu(props: RowContextMenuProps) {
 ```
 
 **Tasks:**
-- [ ] Create `RowContextMenu.tsx` with action-based API
-- [ ] Create `RowContextMenu.module.css`
-- [ ] Implement click-outside to close
-- [ ] Implement Escape key to close
-- [ ] Implement keyboard navigation (↑/↓/Enter)
-- [ ] Viewport boundary detection for position adjustment
+- [x] Create `RowContextMenu.tsx` with action-based API
+- [x] Create `RowContextMenu.module.css`
+- [x] Implement click-outside to close
+- [x] Implement Escape key to close
+- [x] Implement keyboard navigation (↑/↓/Enter)
+- [x] Viewport boundary detection for position adjustment
 
 ### 3.3 Shared Drop Indicator Component
 
@@ -452,9 +452,9 @@ export function DropIndicator(props: DropIndicatorProps) {
 ```
 
 **Tasks:**
-- [ ] Create `DropIndicator.tsx`
-- [ ] Create `DropIndicator.module.css`
-- [ ] Support indent offset for nested blocks
+- [x] Create `DropIndicator.tsx`
+- [x] Create `DropIndicator.module.css`
+- [x] Support indent offset for nested blocks
 
 ### 3.4 Editor Integration (ProseMirror)
 
@@ -803,10 +803,10 @@ const blockDragPlugin = new Plugin<DragState>({
 ```
 
 **Tasks:**
-- [ ] Create `blockDragPlugin.ts`
-- [ ] Define drag state interface
-- [ ] Implement state transitions
-- [ ] Add drop indicator decoration
+- [x] Create `blockDragPlugin.ts`
+- [x] Define drag state interface
+- [x] Implement state transitions
+- [x] Add drop indicator decoration
 
 ### 4.2 Drag Event Handlers
 
@@ -868,11 +868,11 @@ onDrop(e: DragEvent, view: EditorView) {
 ```
 
 **Tasks:**
-- [ ] Implement `onDragStart` with data transfer
-- [ ] Implement `onDragOver` with position calculation
-- [ ] Implement `onDrop` with move transaction
-- [ ] Handle position adjustment when source is before target
-- [ ] Clear drag state on dragend/dragleave
+- [x] Implement `onDragStart` with data transfer
+- [x] Implement `onDragOver` with position calculation
+- [x] Implement `onDrop` with move transaction
+- [x] Handle position adjustment when source is before target
+- [x] Clear drag state on dragend/dragleave
 
 ### 4.3 Drop Indicator Styling
 
@@ -1032,11 +1032,11 @@ export function outdentBlock(pos: number): Command {
 ```
 
 **Tasks:**
-- [ ] Create `blockCommands.ts`
-- [ ] Implement `deleteBlock`
-- [ ] Implement `duplicateBlock`
-- [ ] Implement `convertBlock`
-- [ ] Implement `indentBlock` / `outdentBlock`
+- [x] Create `blockCommands.ts`
+- [x] Implement `deleteBlock`
+- [x] Implement `duplicateBlock`
+- [x] Implement `convertBlock`
+- [x] Implement `indentBlock` / `outdentBlock`
 - [ ] Unit tests for each command
 
 ---
@@ -1163,10 +1163,10 @@ export function buildBlockKeymap() {
 ```
 
 **Tasks:**
-- [ ] Create `blockKeymap.ts`
-- [ ] Implement Tab/Shift-Tab for indent
-- [ ] Implement Enter for block splitting
-- [ ] Implement Backspace for outdent/convert
+- [x] Create `blockKeymap.ts`
+- [x] Implement Tab/Shift-Tab for indent
+- [x] Implement Enter for block splitting
+- [x] Implement Backspace for outdent/convert
 - [ ] Test all keyboard interactions
 
 ### 6.2 Input Rules Update
@@ -1246,8 +1246,8 @@ export function buildBlockInputRules() {
 ```
 
 **Tasks:**
-- [ ] Create `blockInputRules.ts`
-- [ ] Implement all input rules for block type conversion
+- [x] Create `blockInputRules.ts`
+- [x] Implement all input rules for block type conversion
 - [ ] Test each input rule
 - [ ] Ensure rules don't conflict
 
