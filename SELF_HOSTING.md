@@ -22,14 +22,14 @@ Google OAuth works even if you only expose the server on localhost!
 1. Go to API and services at https://console.cloud.google.com/apis/dashboard
 1. Configure the OAuth interstitial branding at https://console.cloud.google.com/auth/branding
 1. Create a OAuth Google Client ID and Google Client Secret for a web application at https://console.cloud.google.com/auth/clients
-1. The callback URL (for tailscale) is `https://<hostname>.<tailnet>.ts.net/auth/google/callback`
+1. The callback URL (for tailscale) is `https://<hostname>.<tailnet>.ts.net/api/auth/google/callback`
 
 ### GitHub Oauth
 
 GitHub OAuth requires an HTTPS URL, so you need to server over Tailscale or a reverse proxy like Caddy.
 
 1. Go to OAuth Apps at https://github.com/settings/developers
-1. Set as the Authorization callback URL `https://<hostname>.<tailnet>.ts.net/auth/github/callback`
+1. Set as the Authorization callback URL `https://<hostname>.<tailnet>.ts.net/api/auth/github/callback`
 
 ### Outbound email via SMTP
 

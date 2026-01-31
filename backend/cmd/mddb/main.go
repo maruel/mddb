@@ -370,7 +370,7 @@ func mainImpl() error {
 	// Run server in goroutine
 	serverErr := make(chan error, 1)
 	go func() {
-		slog.InfoContext(ctx, "Starting server", "addr", addr)
+		slog.InfoContext(ctx, "Starting server", "addr", addr, "baseURL", *baseURL, "version", buildVersion)
 		serverErr <- httpServer.ListenAndServe()
 	}()
 
@@ -439,8 +439,7 @@ func loadDotEnv(dataDir string) (map[string]string, error) {
 		return nil, err
 	}
 
-	lines := strings.Split(string(envContent), "\n")
-	for _, line := range lines {
+	for line := range strings.SplitSeq(string(envContent), "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
