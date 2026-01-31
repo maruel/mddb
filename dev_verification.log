@@ -1,0 +1,4 @@
+21:49:46.938 INF No OAuth providers configured
+21:49:46.939 INF Starting server addr=localhost:8080 baseURL=http://localhost:8080 version=v0.0.0-20260131184651-1f5619e02236+dirty
+21:49:49.071 INF Shutting down server
+21:49:49.071 INF Server stopped
