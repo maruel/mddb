@@ -55,6 +55,35 @@
   min-width: 0;
 }
 
+.workspaceName.editable {
+  cursor: pointer;
+  border-radius: var(--radius);
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+
+.workspaceName.editable:hover {
+  background: var(--c-bg-alt);
+}
+
+.workspaceNameInput {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--c-text);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border-focus);
+  border-radius: var(--radius);
+  padding: 2px 4px;
+  margin: -3px -5px;
+  outline: none;
+}
+
+.workspaceNameInput:focus {
+  border-color: var(--c-primary);
+}
+
 .settingsButton {
   opacity: 0;
   background: transparent;

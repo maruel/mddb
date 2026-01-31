@@ -6,6 +6,7 @@ import { useI18n } from '../i18n';
 import { useAuth } from '../contexts';
 import { useWorkspace } from '../contexts';
 import type { NodeResponse, WSMembershipResponse } from '@sdk/types.gen';
+import { WSRoleAdmin } from '@sdk/types.gen';
 import styles from './Sidebar.module.css';
 
 interface OrgWithWorkspaces {
@@ -36,9 +37,12 @@ interface SidebarProps {
 
 export default function Sidebar(props: SidebarProps) {
   const { t } = useI18n();
-  const { user } = useAuth();
+  const { user, wsApi, refreshUser } = useAuth();
   const { switchWorkspace } = useWorkspace();
   const [showOtherWorkspaces, setShowOtherWorkspaces] = createSignal(false);
+  const [isEditingName, setIsEditingName] = createSignal(false);
+  const [editNameValue, setEditNameValue] = createSignal('');
+  const [isSaving, setIsSaving] = createSignal(false);
 
   const currentWsId = () => user()?.workspace_id || '';
   const currentWsName = () => {
@@ -46,6 +50,49 @@ export default function Sidebar(props: SidebarProps) {
     if (!u) return t('app.workspace');
     const current = u.workspaces?.find((ws) => ws.workspace_id === u.workspace_id);
     return current?.workspace_name || t('app.workspace');
+  };
+  const isAdmin = () => user()?.workspace_role === WSRoleAdmin;
+
+  const startEditingName = () => {
+    if (!isAdmin()) return;
+    setEditNameValue(currentWsName());
+    setIsEditingName(true);
+  };
+
+  const cancelEditingName = () => {
+    setIsEditingName(false);
+    setEditNameValue('');
+  };
+
+  const saveWorkspaceName = async () => {
+    const ws = wsApi();
+    const newName = editNameValue().trim();
+    if (!ws || !newName || newName === currentWsName()) {
+      cancelEditingName();
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await ws.workspaces.updateWorkspace({ name: newName });
+      await refreshUser();
+      setIsEditingName(false);
+    } catch (err) {
+      console.error('Failed to update workspace name:', err);
+      // Keep edit mode open on error so user can retry or cancel
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleNameKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveWorkspaceName();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEditingName();
+    }
   };
 
   // Group workspaces by organization
@@ -93,7 +140,29 @@ export default function Sidebar(props: SidebarProps) {
     <aside class={`${styles.sidebar} ${props.isOpen ? styles.open : ''}`}>
       {/* Current workspace header */}
       <div class={styles.workspaceHeader}>
-        <span class={styles.workspaceName}>{currentWsName()}</span>
+        <Show
+          when={isEditingName()}
+          fallback={
+            <span
+              class={`${styles.workspaceName} ${isAdmin() ? styles.editable : ''}`}
+              onClick={startEditingName}
+              title={isAdmin() ? t('settings.clickToEditName') || 'Click to edit name' : undefined}
+            >
+              {currentWsName()}
+            </span>
+          }
+        >
+          <input
+            ref={(el) => setTimeout(() => el.focus(), 0)}
+            type="text"
+            class={styles.workspaceNameInput}
+            value={editNameValue()}
+            onInput={(e) => setEditNameValue(e.target.value)}
+            onKeyDown={handleNameKeyDown}
+            onBlur={saveWorkspaceName}
+            disabled={isSaving()}
+          />
+        </Show>
         <button
           class={styles.settingsButton}
           onClick={() => props.onOpenSettings()}

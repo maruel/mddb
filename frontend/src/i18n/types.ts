@@ -197,6 +197,7 @@ export interface Dictionary {
     adminOnlyWorkspace: string;
     organizationName: string;
     workspaceName: string;
+    clickToEditName: string;
     allowPublicAccess: string;
     allowedDomains: string;
     allowedDomainsPlaceholder: string;

@@ -196,6 +196,7 @@ export const dict: Dictionary = {
     adminOnlyWorkspace: 'Only admins can modify workspace settings.',
     organizationName: 'Organization Name',
     workspaceName: 'Workspace Name',
+    clickToEditName: 'Click to edit name',
     allowPublicAccess: 'Allow public access (Read-only)',
     allowedDomains: 'Allowed Email Domains (comma separated)',
     allowedDomainsPlaceholder: 'example.com, company.org',
