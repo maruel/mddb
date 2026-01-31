@@ -1,6 +1,6 @@
 // Authentication component handling login and registration forms.
 
-import { createSignal, createResource, Show, For, type JSX } from 'solid-js';
+import { createSignal, createResource, createMemo, Show, For, type JSX } from 'solid-js';
 import { createAPIClient, APIError } from '@sdk/api.gen';
 import type { UserResponse, OAuthProvider } from '@sdk/types.gen';
 import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from '@sdk/types.gen';
@@ -86,6 +86,17 @@ const api = createAPIClient((url, init) => fetch(url, init));
 export default function Auth(props: AuthProps) {
   const { t } = useI18n();
   const [providers] = createResource(() => api.auth.listProviders().then((r) => r.providers));
+  const sortedProviders = createMemo(() => {
+    const list = providers() ?? [];
+    const order = [OAuthProviderGoogle, OAuthProviderGitHub, OAuthProviderMicrosoft];
+    return [...list].sort((a, b) => {
+      let ia = order.indexOf(a);
+      let ib = order.indexOf(b);
+      if (ia === -1) ia = order.length;
+      if (ib === -1) ib = order.length;
+      return ia - ib;
+    });
+  });
   const [isRegister, setIsRegister] = createSignal(false);
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
@@ -125,6 +136,27 @@ export default function Auth(props: AuthProps) {
         <h2>{isRegister() ? t('auth.createAccount') : t('auth.loginTitle')}</h2>
 
         {error() && <div class={styles.error}>{error()}</div>}
+
+        <Show when={sortedProviders().length > 0}>
+          <div class={styles.oauthButtons}>
+            <For each={sortedProviders()}>
+              {(provider) => {
+                const config = getProviderConfig(provider);
+                const isKnown = provider in providerConfig;
+                const Icon = providerIcons[provider];
+                return (
+                  <a href={`/api/auth/oauth/${provider}`} class={config.style}>
+                    {Icon && <Icon />}
+                    {isKnown ? t(config.label) : config.label}
+                  </a>
+                );
+              }}
+            </For>
+          </div>
+          <div class={styles.divider}>
+            <span>{t('auth.or')}</span>
+          </div>
+        </Show>
 
         <Show when={isRegister()}>
           <div class={styles.formGroup}>
@@ -171,31 +203,8 @@ export default function Auth(props: AuthProps) {
           {loading() ? t('auth.pleaseWait') : isRegister() ? t('auth.register') : t('auth.login')}
         </button>
 
-        <Show when={(providers() ?? []).length > 0}>
-          <div class={styles.oauthSection}>
-            <div class={styles.divider}>
-              <span>{t('auth.or')}</span>
-            </div>
-            <div class={styles.oauthButtons}>
-              <For each={providers()}>
-                {(provider) => {
-                  const config = getProviderConfig(provider);
-                  const isKnown = provider in providerConfig;
-                  const Icon = providerIcons[provider];
-                  return (
-                    <a href={`/api/auth/oauth/${provider}`} class={config.style}>
-                      {Icon && <Icon />}
-                      {isKnown ? t(config.label) : config.label}
-                    </a>
-                  );
-                }}
-              </For>
-            </div>
-          </div>
-        </Show>
-
         <p class={styles.toggle}>
-          {isRegister() ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}
+          {isRegister() ? t('auth.alreadyHaveAccount') : t('auth.dontHaveAccount')}{' '}
           <button type="button" onClick={() => setIsRegister(!isRegister())}>
             {isRegister() ? t('auth.login') : t('auth.register')}
           </button>

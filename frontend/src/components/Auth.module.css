@@ -101,13 +101,10 @@
   color: var(--c-primary);
 }
 
-.oauthSection {
-  margin-top: var(--s-4);
-}
-
 .divider {
   display: flex;
   align-items: center;
+  margin-top: var(--s-4);
   margin-bottom: var(--s-3);
   color: var(--c-text-light);
   font-size: 0.85rem;
