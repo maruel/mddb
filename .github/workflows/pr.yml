@@ -7,62 +7,13 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: ./.github/actions/test-action
         with:
-          go-version-file: go.mod
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
-      - uses: golangci/golangci-lint-action@v9
-      - run: make lint-frontend
-      - run: make lint-binaries
-      - run: make coverage
-      - uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.out,coverage/lcov.info
-      - run: make build
-      - run: make e2e
-      - uses: actions/upload-artifact@v4
-        id: playwright-report
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
-      - name: Playwright Report Summary
-        if: always()
-        run: |
-          if [ -f playwright-report/results.json ]; then
-            # Parse results from stats object
-            PASSED=$(jq '.stats.expected' playwright-report/results.json)
-            FAILED=$(jq '.stats.unexpected' playwright-report/results.json)
-            SKIPPED=$(jq '.stats.skipped' playwright-report/results.json)
-            FLAKY=$(jq '.stats.flaky' playwright-report/results.json)
-            TOTAL=$((PASSED + FAILED + SKIPPED + FLAKY))
-            {
-              echo "## Playwright Test Results"
-              echo ""
-              if [ "$FAILED" -gt 0 ]; then
-                echo "| Status | Count |"
-                echo "|--------|-------|"
-                echo "| :white_check_mark: Passed | $PASSED |"
-                echo "| :x: Failed | $FAILED |"
-                [ "$FLAKY" -gt 0 ] && echo "| :warning: Flaky | $FLAKY |"
-                [ "$SKIPPED" -gt 0 ] && echo "| :fast_forward: Skipped | $SKIPPED |"
-                echo ""
-              else
-                echo ":white_check_mark: **All $TOTAL tests passed**"
-              fi
-              echo ""
-              echo ":page_facing_up: Playwright report is available as a workflow artifact."
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
