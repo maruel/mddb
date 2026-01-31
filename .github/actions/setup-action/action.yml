@@ -13,13 +13,6 @@ runs:
     - uses: actions/setup-python@v6
       with:
         python-version: '3.x'
-    - name: Create python3 alias on Windows
-      run: |
-        $pythonPath = (Get-Command python).Source
-        $pythonDir = Split-Path $pythonPath
-        New-Item -ItemType HardLink -Path "$pythonDir\python3.exe" -Value $pythonPath
-      if: runner.os == 'Windows'
-      shell: pwsh
     - uses: pnpm/action-setup@v4
       with:
         version: 10
@@ -28,3 +21,16 @@ runs:
         node-version: "24"
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml
+    - name: Configure Python for Windows
+      run: |
+        $pythonPath = (Get-Command python).Source
+        $pythonDir = Split-Path $pythonPath
+        $python3Path = Join-Path $pythonDir "python3.exe"
+        if (!(Test-Path $python3Path)) {
+          New-Item -ItemType HardLink -Path $python3Path -Value $pythonPath
+          Write-Host "Created python3.exe hardlink"
+        }
+        & pnpm config set python "$pythonPath"
+        Write-Host "Configured pnpm python to $pythonPath"
+      if: runner.os == 'Windows'
+      shell: pwsh
