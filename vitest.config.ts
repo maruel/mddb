@@ -1,5 +1,6 @@
 import { defineConfig } from "vitest/config";
 import solid from "vite-plugin-solid";
+import solidSVG from "vite-solid-svg";
 import { resolve } from 'path';
 
 export default defineConfig({
@@ -10,7 +11,7 @@ export default defineConfig({
       '@sdk': resolve(__dirname, 'sdk'),
     },
   },
-  plugins: [solid()],
+  plugins: [solid(), solidSVG()],
   test: {
     environment: "jsdom",
     setupFiles: ["src/test-setup.ts"],
