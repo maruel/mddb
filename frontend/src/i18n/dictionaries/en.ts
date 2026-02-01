@@ -79,6 +79,21 @@ export const dict: Dictionary = {
     markdownMode: 'Markdown',
     versionPreview: 'Version Preview',
     closePreview: 'Close Preview',
+    // Block Context Menu
+    deleteBlock: 'Delete block',
+    deleteBlocks: 'Delete {{count}} blocks',
+    duplicateBlock: 'Duplicate block',
+    duplicateBlocks: 'Duplicate {{count}} blocks',
+    indent: 'Indent',
+    outdent: 'Outdent',
+    convertTo: 'Turn into',
+    paragraph: 'Paragraph',
+    heading: 'Heading',
+    bulletList: 'Bullet list',
+    numberedList: 'Numbered list',
+    taskList: 'Task list',
+    blockquote: 'Quote',
+    codeBlock: 'Code block',
   },
 
   welcome: {

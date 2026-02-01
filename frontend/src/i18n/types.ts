@@ -81,6 +81,20 @@ export interface Dictionary {
     markdownMode: string;
     versionPreview: string;
     closePreview: string;
+    deleteBlock: string;
+    deleteBlocks: string;
+    duplicateBlock: string;
+    duplicateBlocks: string;
+    indent: string;
+    outdent: string;
+    convertTo: string;
+    paragraph: string;
+    heading: string;
+    bulletList: string;
+    numberedList: string;
+    taskList: string;
+    blockquote: string;
+    codeBlock: string;
   };
 
   welcome: {

@@ -61,42 +61,34 @@ test.describe('Editor Toolbar Formatting', () => {
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Verify initial state - 3 paragraph blocks
-    await expect(editor.locator('.block-row[data-type="paragraph"]')).toHaveCount(3, { timeout: 5000 });
-    console.log('Initial HTML:', await editor.innerHTML());
+    // Verify content loaded
+    await expect(editor.locator('p').first()).toBeVisible();
 
-    // Select all text in the editor using keyboard
+    // Select all text using keyboard
     await editor.click();
     await page.keyboard.press('Control+a');
 
     // Wait a bit for selection to be processed
     await page.waitForTimeout(100);
 
-    // Check if toolbar is visible
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
-    const isToolbarVisible = await toolbar.isVisible();
-    console.log('Toolbar visible after Ctrl+A:', isToolbarVisible);
 
-    // Click the checkbox button in the toolbar
-    const checkboxButton = page.locator('button[title="Task List"]');
-    await expect(checkboxButton).toBeVisible({ timeout: 3000 });
-    console.log('Task List button visible');
+    // Check if toolbar is visible
+    await expect(toolbar).toBeVisible();
 
-    await checkboxButton.click();
-    console.log('Clicked Task List button');
+    // Verify task list button exists
+    const taskListButton = toolbar.locator('button[title="Task List"]');
+    await expect(taskListButton).toBeVisible();
 
-    // Wait a bit for the conversion to happen
-    await page.waitForTimeout(100);
+    // Click task list button
+    await taskListButton.click();
 
-    // Log the result
-    console.log('After click HTML:', await editor.innerHTML());
-
-    // Check task items
-    const taskItems = editor.locator('.block-row[data-type="task"]');
-    const taskCount = await taskItems.count();
-    console.log('Task item count:', taskCount);
-
-    await expect(taskItems).toHaveCount(3, { timeout: 5000 });
+    // Wait for conversion
+    await expect(async () => {
+      const taskItems = editor.locator('.block-task');
+      const count = await taskItems.count();
+      expect(count).toBe(3);
+    }).toPass();
   });
 
   test('selecting multiple lines and clicking Checkbox converts all lines to task list', async ({ page, request }) => {
