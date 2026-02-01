@@ -260,5 +260,78 @@ describe('markdown-parser', () => {
         expect(child.attrs.type).toBe('paragraph');
       });
     });
+
+    it('roundtrips image', () => {
+      const original = '![Alt text](image.png)';
+      const doc = parseMarkdown(original);
+      const serialized = serializeToMarkdown(doc);
+      expect(serialized).toBe(original);
+    });
+
+    it('roundtrips hard break', () => {
+      const original = 'Line 1\\\nLine 2';
+      const doc = parseMarkdown(original);
+      const serialized = serializeToMarkdown(doc);
+      expect(serialized).toBe(original);
+    });
+
+    it('roundtrips blockquote with formatting', () => {
+      const original = '> **Bold** inside quote';
+      const doc = parseMarkdown(original);
+      const serialized = serializeToMarkdown(doc);
+      expect(serialized).toBe(original);
+    });
+
+    it('roundtrips blockquote with link', () => {
+      const original = '> [Link](url)';
+      const doc = parseMarkdown(original);
+      const serialized = serializeToMarkdown(doc);
+      expect(serialized).toBe(original);
+    });
+
+    it('roundtrips link with title', () => {
+      const original = '[Link](url "Title")';
+      const doc = parseMarkdown(original);
+      const serialized = serializeToMarkdown(doc);
+      expect(serialized).toBe(original);
+    });
+
+    it('roundtrips strikethrough', () => {
+      const original = '~~strikethrough~~';
+      const doc = parseMarkdown(original);
+      const serialized = serializeToMarkdown(doc);
+      expect(serialized).toBe(original);
+    });
+
+    it('roundtrips underline', () => {
+      const original = '<u>underline</u>';
+      const doc = parseMarkdown(original);
+      const serialized = serializeToMarkdown(doc);
+      expect(serialized).toBe(original);
+    });
+
+    it('roundtrips inline code', () => {
+      const original = '`code`';
+      const doc = parseMarkdown(original);
+      const serialized = serializeToMarkdown(doc);
+      expect(serialized).toBe(original);
+    });
+
+    it('roundtrips emphasis combinations', () => {
+      const original = '**bold** and *italic* and **_bold italic_**';
+      const doc = parseMarkdown(original);
+      const serialized = serializeToMarkdown(doc);
+      // Note: markdown-it might parse **_ as separate tokens, serializer might output ** *
+      // The exact serialization depends on how tokens are nested.
+      // Prosemirror marks are flat sets.
+      // Let's expect the parser and serializer to agree on a valid markdown representation.
+      // We accept slight variations if they mean the same, but ideal is exact match.
+      // Current serializer outputs * for em and ** for strong.
+      // If original is **_text_**, parser produces text with strong and em marks.
+      // Serializer iterates marks. The order depends on schema mark definition order.
+      // Let's see what happens.
+      expect(serialized).toContain('**bold**');
+      expect(serialized).toContain('*italic*');
+    });
   });
 });

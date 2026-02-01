@@ -139,6 +139,15 @@ export function parseMarkdown(markdown: string): ProseMirrorNode {
       }),
     },
     code_inline: { mark: 'code' },
+    image: {
+      node: 'image',
+      getAttrs: (tok: Token) => ({
+        src: tok.attrGet('src'),
+        title: tok.attrGet('title') || null,
+        alt: tok.content || null,
+      }),
+    },
+    hardbreak: { node: 'hard_break' },
   });
 
   // Parse markdown using nested schema
@@ -171,10 +180,28 @@ function flattenDocument(node: ProseMirrorNode, blocks: ProseMirrorNode[], baseI
       const blockNode = nodes.block.create({ type: 'paragraph', indent: 0 }, content);
       blocks.push(blockNode);
     } else if (child.type.name === 'blockquote') {
-      // Extract text from blockquote
-      const text = child.textContent;
-      const blockNode = nodes.block.create({ type: 'quote', indent: 0 }, schema.text(text));
-      blocks.push(blockNode);
+      // Handle blockquote content (which might be paragraphs or other blocks in standard MD)
+      // For flat blocks, we assume blockquote is a single block type 'quote'
+      // If blockquote contains multiple paragraphs, we might need multiple quote blocks?
+      // For now, let's flatten formatting but keep it as one block if possible, or multiple.
+      // But 'quote' block acts like a paragraph with quote styling.
+
+      // If the blockquote contains paragraphs, we should extract their content.
+      // Simple approach: Iterate children of blockquote.
+      if (child.childCount > 0) {
+        child.forEach((inner) => {
+          if (inner.type.name === 'paragraph') {
+            const content = convertInlineContent(inner);
+            const blockNode = nodes.block.create({ type: 'quote', indent: 0 }, content);
+            blocks.push(blockNode);
+          }
+        });
+      } else {
+        // Fallback for empty or text-only (if schema allowed)
+        const content = convertInlineContent(child);
+        const blockNode = nodes.block.create({ type: 'quote', indent: 0 }, content);
+        blocks.push(blockNode);
+      }
     } else if (child.type.name === 'code_block') {
       const content = child.textContent;
       const language = child.attrs.params || '';

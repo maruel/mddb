@@ -1417,7 +1417,7 @@ Since markdown is the storage format and serialization produces valid markdown, 
 - [x] Configure `prosemirror-config.ts` to use new schema
 - [x] Setup `nodeViews` in `Editor.tsx`
 - [x] Ensure Markdown parser/serializer handles flat blocks correctly
-- [ ] Verify round-trip compatibility (old MD → new schema → MD → old schema → same)
+- [x] Verify round-trip compatibility (old MD → new schema → MD → old schema → same)
 - [ ] Test with existing documents
 - [ ] Handle edge cases (deeply nested lists, mixed content)
 
@@ -1461,7 +1461,7 @@ const useBlockEditor = () => {
 - Keymap: Tab, Shift-Tab, Enter, Backspace behaviors
 
 **Tasks:**
-- [ ] Unit tests for schema
+- [x] Unit tests for schema
 - [x] Test `markdown-parser.ts` (Flattening logic)
 - [x] Test `markdown-serializer.ts` (Nesting logic)
 - [x] Test `blockCommands.ts` (Indentation, conversion)

@@ -145,11 +145,17 @@ function serializeInline(block: ProseMirrorNode): string {
           text = `<u>${text}</u>`;
         } else if (mark.type.name === 'link') {
           const href = mark.attrs.href || '#';
-          text = `[${text}](${href})`;
+          const title = mark.attrs.title;
+          text = `[${text}](${href}${title ? ` "${title}"` : ''})`;
         }
       });
 
       result += text;
+    } else if (node.type.name === 'image') {
+      const { src, alt, title } = node.attrs;
+      result += `![${alt || ''}](${src || ''}${title ? ` "${title}"` : ''})`;
+    } else if (node.type.name === 'hard_break') {
+      result += '\\\n';
     }
   });
 
