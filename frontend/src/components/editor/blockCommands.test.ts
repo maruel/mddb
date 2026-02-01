@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { EditorState } from 'prosemirror-state';
+import type { Node } from 'prosemirror-model';
 import {
   deleteBlock,
   deleteBlocks,
@@ -19,11 +20,11 @@ describe('blockCommands', () => {
   /**
    * Helper to create a test document with blocks
    */
-  function createDoc(...blocks: Array<{ type: string; content?: string; attrs?: any }>) {
+  function createDoc(...blocks: Array<{ type: string; content?: string; attrs?: Record<string, unknown> }>) {
     const content = blocks.map((b) => {
       const attrs = b.attrs || {};
       const text = b.content ? [schema.text(b.content)] : [];
-      return schema.nodes.block.create(
+      return schema.nodes.block!.create(
         {
           type: b.type,
           indent: 0,
@@ -32,16 +33,16 @@ describe('blockCommands', () => {
         text
       );
     });
-    return schema.nodes.doc.create(undefined, content);
+    return schema.nodes.doc!.create(undefined, content);
   }
 
   /**
    * Helper to get position of nth block
    */
-  function getBlockPos(doc: any, blockIndex: number) {
+  function getBlockPos(doc: Node, blockIndex: number) {
     let pos = 0;
     let blockCount = 0;
-    doc.forEach((node: any) => {
+    doc.forEach((node: Node) => {
       if (blockCount === blockIndex) {
         return;
       }
@@ -76,7 +77,7 @@ describe('blockCommands', () => {
     it('returns false for invalid position', () => {
       const doc = createDoc({ type: 'paragraph', content: 'Only one' });
       const state = EditorState.create({ doc, schema });
-      
+
       let result: boolean;
       try {
         const command = deleteBlock(9999);
@@ -157,10 +158,7 @@ describe('blockCommands', () => {
 
   describe('duplicateBlock', () => {
     it('duplicates a single block', () => {
-      const doc = createDoc(
-        { type: 'paragraph', content: 'First' },
-        { type: 'paragraph', content: 'Second' }
-      );
+      const doc = createDoc({ type: 'paragraph', content: 'First' }, { type: 'paragraph', content: 'Second' });
       const state = EditorState.create({ doc, schema });
       const pos = getBlockPos(doc, 0);
 
