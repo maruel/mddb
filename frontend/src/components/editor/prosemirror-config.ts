@@ -17,6 +17,7 @@ import { buildBlockInputRules } from './blockInputRules';
 import { buildBlockKeymap } from './blockKeymap';
 import { blockDragPlugin } from './blockDragPlugin';
 import { blockSelectionPlugin } from './blockSelectionPlugin';
+import { numberCounterPlugin } from './numberCounterPlugin';
 
 // Re-export schema components for use in other files
 export { schema };
@@ -45,6 +46,7 @@ export function createEditorState(doc: ProseMirrorNode, extraPlugins?: Plugin[])
       // Drag and drop system
       blockDragPlugin,
       blockSelectionPlugin,
+      numberCounterPlugin,
 
       // UI polish
       dropCursor({ color: 'var(--c-primary)', width: 2 }),

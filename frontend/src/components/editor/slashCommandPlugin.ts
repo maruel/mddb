@@ -64,7 +64,12 @@ export function createSlashCommandPlugin(onStateChange: (state: SlashMenuState) 
         }
 
         // Get text from start of text block to cursor
+        // In flat block schema, blocks are top-level and content is directly inside
         const textBlockStart = $from.start($from.depth);
+
+        // Ensure we are inside a textblock (not identifying the doc or non-textblock)
+        if (!$from.parent.isTextblock) return pluginState;
+
         const textToCursor = newState.doc.textBetween(textBlockStart, $from.pos, '', '');
 
         // Match "/" at line start or after whitespace, followed by optional query

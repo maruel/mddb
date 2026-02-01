@@ -17,6 +17,7 @@ export function serializeToMarkdown(doc: ProseMirrorNode): string {
   const lines: string[] = [];
   const listContext: ListContext[] = [];
   const numberCounters = new Map<number, number>(); // indent → counter
+  let prevType: string | null = null;
 
   doc.forEach((block) => {
     const { type, indent, checked, level, language } = block.attrs as BlockAttrs;
@@ -32,6 +33,22 @@ export function serializeToMarkdown(doc: ProseMirrorNode): string {
       } else {
         break;
       }
+    }
+
+    // Add blank line before paragraphs that follow non-paragraphs (e.g., after list items)
+    // This ensures proper separation in markdown so they parse correctly
+    const prevWasList = prevType === 'bullet' || prevType === 'number' || prevType === 'task';
+    const currentIsParagraph = type === 'paragraph';
+    if (lines.length > 0 && prevWasList && currentIsParagraph) {
+      lines.push('');
+    }
+    // Also add blank line between paragraphs
+    if (lines.length > 0 && prevType === 'paragraph' && currentIsParagraph) {
+      lines.push('');
+    }
+    // Add blank line before list items that follow paragraphs
+    if (lines.length > 0 && prevType === 'paragraph' && isListType(type)) {
+      lines.push('');
     }
 
     // Build line with appropriate prefix
@@ -82,11 +99,13 @@ export function serializeToMarkdown(doc: ProseMirrorNode): string {
         lines.push('```' + (language || ''));
         lines.push(content);
         lines.push('```');
+        prevType = type;
         return;
       }
 
       case 'divider': {
         lines.push('---');
+        prevType = type;
         return;
       }
 
@@ -96,6 +115,7 @@ export function serializeToMarkdown(doc: ProseMirrorNode): string {
     }
 
     lines.push(indentStr + prefix + content);
+    prevType = type;
   });
 
   return lines.join('\n');
@@ -116,7 +136,7 @@ function serializeInline(block: ProseMirrorNode): string {
         if (mark.type.name === 'strong') {
           text = `**${text}**`;
         } else if (mark.type.name === 'em') {
-          text = `_${text}_`;
+          text = `*${text}*`;
         } else if (mark.type.name === 'code') {
           text = `\`${text}\``;
         } else if (mark.type.name === 'strikethrough') {

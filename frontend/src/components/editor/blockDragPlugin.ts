@@ -32,11 +32,44 @@ const initialState: DragState = {
  * Used for multi-block drag operations.
  */
 export function getSelectedBlockPositions(state: EditorState): number[] {
-  const { from, to } = state.selection;
   const positions: number[] = [];
+  // Use blockRange to identify the range of blocks
+  const $from = state.doc.resolve(state.selection.from);
+  const $to = state.doc.resolve(state.selection.to);
+  const range = $from.blockRange($to);
 
-  state.doc.nodesBetween(from, to, (node, pos) => {
-    if (node.isBlock && pos >= 0) {
+  if (range && range.parent.type.name === 'doc') {
+    // Iterate manually through the range indices to ensure we capture all top-level blocks
+    // `range.start` is the position of the start of the range (before first block)
+    let currentPos = range.start;
+    for (let i = range.startIndex; i < range.endIndex; i++) {
+      const child = range.parent.child(i);
+      if (child.type.name === 'block') {
+        positions.push(currentPos);
+      }
+      currentPos += child.nodeSize;
+    }
+    return positions;
+  }
+
+  // Handle single block selection specifically
+  // If the selection is inside a block, blockRange might return null (inline content range)
+  // or the parent might be the block itself (not doc)
+  // We want to return the position of the block itself.
+  if ($from.sameParent($to) && $from.parent.type.name === 'block') {
+    // The position of the block is before its content starts?
+    // nodeAt(pos) expects the pos BEFORE the node.
+    // $from.before(depth) returns the pos before the start of the node at depth.
+    // Since blocks are top-level in flat schema, depth is likely 1.
+    // But we use $from.depth to be safe if checking sameParent.
+    positions.push($from.before($from.depth));
+    return positions;
+  }
+
+  // Fallback to nodesBetween if blockRange doesn't give us doc-level blocks
+  state.doc.nodesBetween(state.selection.from, state.selection.to, (node, pos) => {
+    // Only include flat blocks, not the doc or inline content
+    if (node.type.name === 'block' && pos >= 0) {
       positions.push(pos);
     }
     return true; // Continue traversal

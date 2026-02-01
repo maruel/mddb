@@ -157,7 +157,8 @@ describe('markdown-serializer', () => {
       const doc = nodes.doc.create(null, blocks);
 
       const result = serializeToMarkdown(doc);
-      expect(result).toBe('# Title\nParagraph\n- List\n> Quote');
+      // Blank line is added before list item that follows a paragraph
+      expect(result).toBe('# Title\nParagraph\n\n- List\n> Quote');
     });
 
     it('handles nested ordered lists with counter per indent', () => {
@@ -183,7 +184,8 @@ describe('markdown-serializer', () => {
       const doc = nodes.doc.create(null, blocks);
 
       const result = serializeToMarkdown(doc);
-      expect(result).toBe('1. One\n2. Two\nParagraph\n1. Three');
+      // Blank lines are added around paragraphs that are between list items
+      expect(result).toBe('1. One\n2. Two\n\nParagraph\n\n1. Three');
     });
 
     it('handles mixed ordered and bullet at different indents', () => {

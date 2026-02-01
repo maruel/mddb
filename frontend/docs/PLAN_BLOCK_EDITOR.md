@@ -647,7 +647,7 @@ Add left margin to containers that use row handles.
 
 **Tasks:**
 - [x] Add left padding to editor container
-- [ ] Add left padding to table view containers
+- [x] Add left padding to table view containers
 - [x] Add print media query to hide handles
 - [ ] Test with various viewport widths
 
@@ -1393,9 +1393,9 @@ const numberCounterPlugin = new Plugin({
 **Alternative:** Use decorations to add `data-number` without modifying document.
 
 **Tasks:**
-- [ ] Implement number counter logic
-- [ ] Choose between attrs or decorations approach
-- [ ] Test number sequences after reordering
+- [x] Implement number counter logic
+- [x] Choose between attrs or decorations approach
+- [x] Test number sequences after reordering
 
 ---
 

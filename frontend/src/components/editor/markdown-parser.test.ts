@@ -248,5 +248,17 @@ describe('markdown-parser', () => {
       expect(blocks[3]!.attrs.type).toBe('task');
       expect(blocks[3]!.attrs.indent).toBe(0);
     });
+
+    it('parses multiple paragraphs with correct node types', () => {
+      const markdown = 'Line one\n\nLine two\n\nLine three';
+      const doc = parseMarkdown(markdown);
+      expect(doc.childCount).toBe(3);
+
+      doc.forEach((child) => {
+        // All children should be 'block' node type
+        expect(child.type.name).toBe('block');
+        expect(child.attrs.type).toBe('paragraph');
+      });
+    });
   });
 });

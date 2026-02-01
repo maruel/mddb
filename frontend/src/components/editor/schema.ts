@@ -13,6 +13,7 @@ export interface BlockAttrs {
   level?: number; // heading level (1-6)
   indent: number; // nesting depth (0+), enables drag-and-drop without changing type
   checked?: boolean; // task completion state (for type=task)
+  number?: number; // sequential number (for type=number)
   language?: string; // code block language (for type=code)
 }
 
@@ -23,6 +24,7 @@ const blockSpec: NodeSpec = {
     level: { default: null },
     indent: { default: 0 },
     checked: { default: null },
+    number: { default: null },
     language: { default: null },
   },
   content: 'inline*',

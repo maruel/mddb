@@ -70,6 +70,40 @@ function createMarkdownIt(): MarkdownIt {
 }
 
 /**
+ * Convert inline content from nested schema to flat schema.
+ * This is necessary because the nested schema creates text nodes with a different schema instance.
+ */
+function convertInlineContent(content: ProseMirrorNode | null): ProseMirrorNode[] {
+  if (!content) return [];
+
+  const result: ProseMirrorNode[] = [];
+  content.content.forEach((child) => {
+    if (child.isText) {
+      // Convert text node: create new text with same content and converted marks
+      const marks = child.marks
+        .map((m) => {
+          const markType = schema.marks[m.type.name];
+          return markType ? markType.create(m.attrs) : null;
+        })
+        .filter((m): m is NonNullable<typeof m> => m !== null);
+
+      result.push(schema.text(child.text || '', marks));
+    } else if (child.type.name === 'hard_break') {
+      // Convert hard_break
+      const hardBreakType = schema.nodes.hard_break;
+      if (hardBreakType) result.push(hardBreakType.create());
+    } else if (child.type.name === 'image') {
+      // Convert image
+      const imageType = schema.nodes.image;
+      if (imageType) result.push(imageType.create(child.attrs));
+    }
+    // Other inline types can be added here if needed
+  });
+
+  return result;
+}
+
+/**
  * Converts markdown text to a ProseMirror document with flat block structure.
  * Parses using nested schema first, then flattens the structure.
  */
@@ -129,10 +163,12 @@ function flattenDocument(node: ProseMirrorNode, blocks: ProseMirrorNode[], baseI
       // Should not happen at top level, but handle it
       flattenListItem(child, blocks, baseIndent, 'bullet');
     } else if (child.type.name === 'heading') {
-      const blockNode = nodes.block.create({ type: 'heading', level: child.attrs.level, indent: 0 }, child.content);
+      const content = convertInlineContent(child);
+      const blockNode = nodes.block.create({ type: 'heading', level: child.attrs.level, indent: 0 }, content);
       blocks.push(blockNode);
     } else if (child.type.name === 'paragraph') {
-      const blockNode = nodes.block.create({ type: 'paragraph', indent: 0 }, child.content);
+      const content = convertInlineContent(child);
+      const blockNode = nodes.block.create({ type: 'paragraph', indent: 0 }, content);
       blocks.push(blockNode);
     } else if (child.type.name === 'blockquote') {
       // Extract text from blockquote
@@ -163,9 +199,11 @@ function flattenList(
   baseIndent: number,
   listType: 'bullet_list' | 'ordered_list'
 ): void {
+  let counter = 1;
   listNode.forEach((item) => {
     if (item.type.name === 'list_item') {
-      flattenListItem(item, blocks, baseIndent, listType === 'ordered_list' ? 'number' : 'bullet');
+      const number = listType === 'ordered_list' ? counter++ : undefined;
+      flattenListItem(item, blocks, baseIndent, listType === 'ordered_list' ? 'number' : 'bullet', number);
     }
   });
 }
@@ -177,7 +215,8 @@ function flattenListItem(
   itemNode: ProseMirrorNode,
   blocks: ProseMirrorNode[],
   baseIndent: number,
-  itemType: 'bullet' | 'number' | 'task'
+  itemType: 'bullet' | 'number' | 'task',
+  number?: number
 ): void {
   let itemContent: ProseMirrorNode | null = null;
 
@@ -195,9 +234,10 @@ function flattenListItem(
     type: blockType,
     indent: baseIndent,
     ...(isTask && { checked: itemNode.attrs.checked }),
+    ...(blockType === 'number' && typeof number === 'number' && { number }),
   };
 
-  const blockContent = itemContent ? (itemContent as ProseMirrorNode).content : schema.text('');
+  const blockContent = itemContent ? convertInlineContent(itemContent as ProseMirrorNode) : [];
   const blockNode = nodes.block.create(blockAttrs, blockContent);
   blocks.push(blockNode);
 

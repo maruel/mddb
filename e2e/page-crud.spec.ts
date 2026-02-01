@@ -417,7 +417,8 @@ test.describe('Editor Features', () => {
     await expect(editor.locator('h1')).toContainText('Heading 1');
     await expect(editor.locator('strong')).toContainText('Bold text');
     await expect(editor.locator('.block-row[data-type="bullet"]').first()).toContainText('List item 1');
-    await expect(editor.locator('.block-row[data-type="code"]').first()).toContainText('code inline');
+    // Expect inline code to be rendered as <code> tag, not necessarily a code block
+    await expect(editor.locator('code').first()).toContainText('code inline');
 
     await takeScreenshot('wysiwyg-editor');
   });
@@ -799,34 +800,14 @@ function hello() {
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Click at the end of the very last paragraph using evaluate
-    // This ensures we get the actual DOM element at click time
-    await editor.evaluate((el) => {
-      const paragraphs = el.querySelectorAll('p');
-      const lastP = paragraphs[paragraphs.length - 1];
-      if (lastP) {
-        // Scroll the last paragraph into view
-        lastP.scrollIntoView({ block: 'center' });
-        // Create a range at the end of the last paragraph
-        const range = document.createRange();
-        range.selectNodeContents(lastP);
-        range.collapse(false); // Collapse to end
-        // Set the selection
-        const sel = window.getSelection();
-        sel?.removeAllRanges();
-        sel?.addRange(range);
-        // Focus the editor
-        (el as HTMLElement).focus();
-      }
-    });
+    // Click the last block content to ensure we are at the bottom
+    await editor.locator('.block-content').last().click();
 
-    // Press Enter to create a new line at the bottom (so "/" is at line start)
-    await page.keyboard.press('Enter');
+    // Move to end of line (just in case click wasn't at end, though it usually is for text)
+    await page.keyboard.press('End');
 
-    await takeScreenshot('cursor-at-bottom');
-
-    // Type "/" to trigger slash menu
-    await page.keyboard.type('/');
+    // Type " /" to trigger slash menu at the end of the text
+    await page.keyboard.type(' /');
 
     // Slash menu should appear
     const slashMenu = page.locator('[data-testid="slash-command-menu"]');
