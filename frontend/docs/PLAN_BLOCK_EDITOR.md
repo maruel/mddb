@@ -962,7 +962,7 @@ export function BlockContextMenu(props: BlockContextMenuProps) {
 **Tasks:**
 - [x] Create `BlockContextMenu.tsx`
 - [x] Create `BlockContextMenu.module.css`
-- [ ] Add i18n keys for all menu items
+- [x] Add i18n keys for all menu items (editor.deleteBlock, deleteBlocks, duplicateBlock, duplicateBlocks, indent, outdent, convertTo, paragraph, heading, bulletList, numberedList, taskList, blockquote, codeBlock)
 - [x] Implement click-outside to close (inherited from RowContextMenu)
 - [x] Implement Escape key to close (inherited from RowContextMenu)
 
@@ -1043,11 +1043,12 @@ export function outdentBlock(pos: number): Command {
 
 **Tasks:**
 - [x] Create `blockCommands.ts`
-- [x] Implement `deleteBlock`
-- [x] Implement `duplicateBlock`
-- [x] Implement `convertBlock`
-- [x] Implement `indentBlock` / `outdentBlock`
-- [ ] Unit tests for each command
+- [x] Implement `deleteBlock` and `deleteBlocks` (single and multi)
+- [x] Implement `duplicateBlock` and `duplicateBlocks` (single and multi)
+- [x] Implement `convertBlock` and `convertBlocks` (single and multi)
+- [x] Implement `indentBlock`, `indentBlocks`, `outdentBlock`, `outdentBlocks`
+- [x] Implement `toggleTaskBlock` for task completion
+- [x] Unit tests for each command (33 tests, all passing)
 
 ---
 
