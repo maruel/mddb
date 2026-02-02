@@ -97,8 +97,14 @@ code block
   // Take a screenshot showing the editor with a hovered block
   const firstBlock = blocks.first();
   await firstBlock.hover();
-  // Wait for the CSS transition to complete (0.15s transition in CSS)
-  await page.waitForTimeout(300);
+
+  // Wait for the CSS opacity transition to complete (opacity should reach 1)
+  const firstBlockHandle = firstBlock.locator('.block-handle-container');
+  await expect(async () => {
+    const opacity = await firstBlockHandle.evaluate((el) => window.getComputedStyle(el).opacity);
+    expect(Number(opacity)).toBeGreaterThan(0.9);
+  }).toPass({ timeout: 1000 });
+
   await page.screenshot({ path: '/tmp/block-handle-hover.png' });
   console.log('Screenshot saved: /tmp/block-handle-hover.png');
 });

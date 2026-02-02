@@ -68,13 +68,9 @@ test.describe('Editor Toolbar Formatting', () => {
     await editor.click();
     await page.keyboard.press('Control+a');
 
-    // Wait a bit for selection to be processed
-    await page.waitForTimeout(100);
-
+    // Wait for floating toolbar to appear (indicates selection was processed)
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
-
-    // Check if toolbar is visible
-    await expect(toolbar).toBeVisible();
+    await expect(toolbar).toBeVisible({ timeout: 3000 });
 
     // Verify task list button exists
     const taskListButton = toolbar.locator('button[title="Task List"]');

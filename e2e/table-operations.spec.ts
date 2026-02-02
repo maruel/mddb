@@ -100,10 +100,7 @@ test.describe('Table Creation and Basic Operations', () => {
     // Save the edit by pressing Enter
     await editInput.press('Enter');
 
-    // Wait for the API call to complete
-    await page.waitForTimeout(1000);
-
-    // Verify the edit was saved via API
+    // Verify the edit was saved via API (polls until record is found)
     const listParams = {
       ViewID: '',
       Filters: '',
@@ -181,11 +178,13 @@ test.describe('Table View Modes', () => {
       title: 'View Modes Table',
       properties: [
         { name: 'Name', type: 'text' },
-        { name: 'Status', type: 'select', options: [
-          { id: 'todo', name: 'To Do' },
-          { id: 'progress', name: 'In Progress' },
-          { id: 'done', name: 'Done' }
-        ]},
+        {
+          name: 'Status', type: 'select', options: [
+            { id: 'todo', name: 'To Do' },
+            { id: 'progress', name: 'In Progress' },
+            { id: 'done', name: 'Done' }
+          ]
+        },
       ],
     });
 
