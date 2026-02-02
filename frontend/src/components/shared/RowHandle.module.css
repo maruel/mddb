@@ -1,11 +1,8 @@
 .handle {
-  position: absolute;
-  left: -24px;
-  top: 50%;
-  transform: translateY(-50%);
+  /* Position is relative - parent container handles absolute positioning */
+  position: relative;
   width: 18px;
   height: 24px;
-  opacity: 1;
   cursor: grab;
   display: flex;
   align-items: center;
@@ -13,7 +10,6 @@
   border-radius: 3px;
   color: var(--c-text-light);
   transition:
-    opacity 0.1s,
     background 0.1s,
     color 0.1s;
   user-select: none;
@@ -34,16 +30,7 @@
   height: 16px;
 }
 
-/* Parent row controls visibility via this class */
-:global(.row-with-handle):hover .handle,
-:global(.row-with-handle):focus-within .handle {
-  opacity: 1;
-}
-
-/* Always show when dragging */
-:global(.row-with-handle.dragging) .handle {
-  opacity: 1;
-}
+/* Visibility is controlled by the parent container on hover/focus/drag */
 
 /* For print/export, hide handles */
 @media print {

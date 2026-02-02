@@ -97,6 +97,8 @@ code block
   // Take a screenshot showing the editor with a hovered block
   const firstBlock = blocks.first();
   await firstBlock.hover();
+  // Wait for the CSS transition to complete (0.15s transition in CSS)
+  await page.waitForTimeout(300);
   await page.screenshot({ path: '/tmp/block-handle-hover.png' });
   console.log('Screenshot saved: /tmp/block-handle-hover.png');
 });

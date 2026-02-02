@@ -4,10 +4,12 @@ Architectural redesign of the ProseMirror editor to use a flat block model (Noti
 
 > **Status: ⚠️ MVP FUNCTIONAL BUT BUGGY** (2026-02-01)
 > 
-> Core architecture implemented (flat block model, 308 unit tests passing). However, several UI and interaction bugs remain that prevent full usability.
+> Core architecture implemented (flat block model, 308 unit tests passing). However, some UI and interaction bugs remain.
 > 
-> **Critical Bugs:**
-> - Drag handle alignment broken (left-aligned instead of centered, 3-dot icon in wrong div)
+> **Fixed:**
+> - ✅ Drag handle visibility on hover (was invisible due to positioning bug)
+> 
+> **Remaining Bugs:**
 > - Drag-and-drop doesn't work (callbacks exist but don't fire correctly)
 > - Numbered/bullet list vertical alignment issues (task lists OK)
 > - Context menu broken (hover only works on first item, keyboard nav broken, undo stack corrupted after use)
@@ -83,13 +85,13 @@ The row handle must be reusable across two contexts:
 
 Both share identical appearance and behavior but differ in their data model and drag-drop mechanics.
 
-### 3.1 Shared Handle Component ⚠️ BUGGY
+### 3.1 Shared Handle Component ✓ COMPLETE
 
 **Files:** `src/components/shared/RowHandle.tsx`, `RowHandle.module.css`
 
 Context-agnostic handle component receiving callbacks for drag and context menu. Renders draggable icon with proper event handling and accessibility attributes.
 
-**Status:** Integrated but **alignment broken** — handle is left-aligned instead of centered, 3-dot icon in wrong div. See Known Issues #1.
+**Status:** Complete. Handle uses relative positioning inside parent container which controls visibility via opacity transitions on hover/focus/drag.
 
 ### 3.2 Shared Context Menu ✓ COMPLETE
 
@@ -304,16 +306,15 @@ See Known Issues #4.
 
 ## Known Issues (Bugs to Fix)
 
-### Issue 1: Drag Handle Alignment 🔴 HIGH
+### Issue 1: Drag Handle Alignment ✅ FIXED
 
-**Symptom:** Drag handle (3-dot icon) is aligned to the left instead of centered vertically with text. The icon appears to be in the wrong container div.
+**Symptom:** Drag handle (6-dot icon) was invisible on hover. The handle had `position: absolute; left: -24px` which positioned it outside its container.
 
-**Location:** `RowHandle.tsx`, `RowHandle.module.css`, `BlockNodeView.ts`
-
-**Suggested Fix:**
-- Verify handle DOM structure matches intended layout
-- Check flexbox alignment on `.block-handle-container`
-- Ensure handle icon is inside the correct wrapper
+**Fix Applied (2026-02-01):**
+- Changed handle from `position: absolute` to `position: relative`
+- Removed `left: -24px` and `top: 50%; transform: translateY(-50%)`
+- Handle now inherits layout from parent `.block-handle-container` which uses flexbox centering
+- Parent container controls visibility via `opacity` transition on hover/focus/drag
 
 ---
 
