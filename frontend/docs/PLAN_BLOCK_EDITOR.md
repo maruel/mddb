@@ -2,6 +2,21 @@
 
 Architectural redesign of the ProseMirror editor to use a flat block model (Notion-style), enabling uniform drag-and-drop for all content including individual list items.
 
+> **Status: ⚠️ MVP FUNCTIONAL BUT BUGGY** (2026-02-01)
+> 
+> Core architecture implemented (flat block model, 308 unit tests passing). However, several UI and interaction bugs remain that prevent full usability.
+> 
+> **Critical Bugs:**
+> - Drag handle alignment broken (left-aligned instead of centered, 3-dot icon in wrong div)
+> - Drag-and-drop doesn't work (callbacks exist but don't fire correctly)
+> - Numbered/bullet list vertical alignment issues (task lists OK)
+> - Context menu broken (hover only works on first item, keyboard nav broken, undo stack corrupted after use)
+> 
+> **Remaining Work:**
+> - Fix the above bugs
+> - E2E drag-reorder tests (blocked by Playwright DND API)
+> - Table row reorder persistence (pending backend API)
+
 ## Problem Statement
 
 The current ProseMirror schema uses nested containers:
@@ -68,13 +83,13 @@ The row handle must be reusable across two contexts:
 
 Both share identical appearance and behavior but differ in their data model and drag-drop mechanics.
 
-### 3.1 Shared Handle Component ✓ COMPLETE
+### 3.1 Shared Handle Component ⚠️ BUGGY
 
 **Files:** `src/components/shared/RowHandle.tsx`, `RowHandle.module.css`
 
 Context-agnostic handle component receiving callbacks for drag and context menu. Renders draggable icon with proper event handling and accessibility attributes.
 
-**Status:** Complete. Integrated into `BlockNodeView` and table row components.
+**Status:** Integrated but **alignment broken** — handle is left-aligned instead of centered, 3-dot icon in wrong div. See Known Issues #1.
 
 ### 3.2 Shared Context Menu ✓ COMPLETE
 
@@ -105,16 +120,22 @@ ProseMirror `NodeView` implementation for blocks. Wires `RowHandle` and `RowCont
 - [x] Multi-block selection support (getSelection spans multiple blocks)
 - [x] Show handle only for topmost block in selection
 
-### 3.5 Table Integration
+### 3.5 Table Integration ✓ COMPLETE
 
 **File:** `src/components/table/TableRow.tsx`
 
-Reuse `RowHandle` and `RowContextMenu` for table row drag-drop. Wire callbacks to table CRUD operations.
+Reusable `TableRow` wrapper component with integrated `RowHandle` and `RowContextMenu`. Used across TableTable, TableGrid, TableGallery, and TableBoard views for consistent drag-and-drop behavior.
 
-**Tasks:**
-- [ ] Connect handle to table row drag-drop (pending: table API decision)
-- [ ] Context menu actions: open record, duplicate, delete
-- [ ] Visual feedback during reordering
+**Implemented:**
+- [x] `RowHandle` integration with drag event handlers
+- [x] Context menu actions: open record, duplicate, delete
+- [x] `TABLE_RECORD_MIME` type for drag data
+- [x] Drop indicator and dragging visual states
+- [x] Props for all CRUD callbacks (`onOpen`, `onDuplicate`, `onDelete`)
+- [x] Drag lifecycle callbacks (`onDragStart`, `onDragOver`, `onDrop`)
+
+**Deferred:**
+- Row reordering persistence (pending: table sorting API decision)
 
 ### 3.6-3.8 Additional Phases
 
@@ -122,7 +143,7 @@ Complete but summarized: Multi-block selection visible indicators, visibility to
 
 ---
 
-## Phase 4: Block Drag-and-Drop ✓ COMPLETE
+## Phase 4: Block Drag-and-Drop ⚠️ BUGGY
 
 **Files:** `src/components/editor/blockDragPlugin.ts`, ProseMirror event handlers
 
@@ -140,11 +161,11 @@ Complete but summarized: Multi-block selection visible indicators, visibility to
 - Automatic position adjustment when source before target
 - Prevents drop on self
 
-**Status:** All tasks complete. Single and multi-block moves working.
+**Status:** Code complete but **drag doesn't work**. Callbacks exist but don't fire correctly. See Known Issues #1 and #2.
 
 ---
 
-## Phase 5: Context Menu ✓ COMPLETE
+## Phase 5: Context Menu ⚠️ BUGGY
 
 **Files:** `src/components/editor/BlockContextMenu.tsx`, `blockCommands.ts`
 
@@ -152,11 +173,16 @@ Complete but summarized: Multi-block selection visible indicators, visibility to
 
 **Commands:** Implemented ProseMirror commands: `deleteBlock`/`deleteBlocks`, `duplicateBlock`/`duplicateBlocks`, `convertBlock`/`convertBlocks`, `indentBlock`/`indentBlocks`, `outdentBlock`/`outdentBlocks`, `toggleTaskBlock`. Max indent 8 levels. Multi-block selection support.
 
-**Status:** All tasks complete. 33 unit tests passing for command logic.
+**Status:** Code complete but **context menu broken**:
+- Only first menu item highlights on hover
+- Keyboard navigation (up/down arrows) doesn't work
+- Clicking items works but corrupts undo stack
+
+See Known Issues #4.
 
 ---
 
-## Phase 6: Keyboard Commands ✓ MOSTLY COMPLETE
+## Phase 6: Keyboard Commands ✓ COMPLETE
 
 **Files:** `src/components/editor/blockKeymap.ts`, `blockInputRules.ts`
 
@@ -173,11 +199,11 @@ Complete but summarized: Multi-block selection visible indicators, visibility to
 - ``` ``` ``` (with language) → code block
 - `---` → divider
 
-**Status:** Core input/keyboard behaviors complete. Advanced selection and navigation refinements in progress.
+**Status:** All input rules and keymap commands complete. Unit tests in `blockKeymap.test.ts` and `blockInputRules.test.ts` passing.
 
 ---
 
-## Phase 7: Block Styling ✓ COMPLETE
+## Phase 7: Block Styling ⚠️ BUGGY
 
 **File:** `src/components/editor/Editor.module.css` (plus individual block styling)
 
@@ -185,7 +211,7 @@ Complete but summarized: Multi-block selection visible indicators, visibility to
 - Headings: HTML `<h1>`-`<h6>` with proper hierarchy
 - Bullets: Unicode bullet or custom CSS marker
 - Numbers: CSS counter per indent level
-- Tasks: Checkbox input with toggle handler
+- Tasks: Checkbox input with toggle handler ✓ (alignment OK)
 - Quotes: Left border with background tint
 - Code blocks: Pre-formatted font with language badge
 - Dividers: Horizontal rule
@@ -193,7 +219,7 @@ Complete but summarized: Multi-block selection visible indicators, visibility to
 
 **Indentation:** Applied via padding-left or margin-left, scales with indent level.
 
-**Status:** All block types styled and tested. Number counter plugin implemented via decorations.
+**Status:** Block types styled but **bullet and number lists have vertical alignment issues**. Task list checkboxes are correctly aligned. See Known Issues #3.
 
 ---
 
@@ -222,65 +248,164 @@ Complete but summarized: Multi-block selection visible indicators, visibility to
 
 ## Phase 9: Testing
 
-### 9.1 Unit Tests ✓ MOSTLY COMPLETE
+### 9.1 Unit Tests ✓ COMPLETE
 
-**Completed:**
-- Schema: Block creation and attribute handling
-- Markdown parser: 23 tests covering various structures
-- Markdown serializer: Round-trip MD → blocks → MD
-- Block commands: 33 tests (delete, duplicate, convert, indent/outdent)
-- Slash commands: Block type conversion
-- Floating toolbar: Block type changes
-- DOM parser: HTML to block conversion
+**Test Coverage (308 tests passing across 19 test files):**
 
-**Remaining:**
-- `blockKeymap.ts`: Enter/Backspace splitting and merging
-- `blockInputRules.ts`: Auto-format detection
-- Edge cases with deeply nested lists and mixed content
+| File | Tests | Coverage |
+|------|-------|----------|
+| `schema.test.ts` | Block creation and attribute handling | ✓ |
+| `markdown-parser.test.ts` | Nested MD → flat blocks (23 tests) | ✓ |
+| `markdown-serializer.test.ts` | Round-trip MD → blocks → MD | ✓ |
+| `markdown-utils.test.ts` | Helper functions | ✓ |
+| `blockCommands.test.ts` | Delete, duplicate, convert, indent/outdent (33 tests) | ✓ |
+| `slashCommands.test.ts` | Block type conversion via `/` menu | ✓ |
+| `dom-parser.test.ts` | HTML paste → block conversion (20 tests) | ✓ |
+| `blockKeymap.test.ts` | Tab, Enter, Backspace behavior | ✓ |
+| `blockInputRules.test.ts` | Auto-format detection (10 tests) | ✓ |
 
-### 9.2 E2E Tests
+**Edge cases covered:**
+- Deeply nested lists with mixed bullet/number types
+- Task list checkbox toggling
+- Code block language extraction
+- Heading level limits (1-6)
+- Indent level limits (0-8)
 
-**File:** `e2e/block-editor.spec.ts`
+### 9.2 E2E Tests ✓ PARTIALLY COMPLETE
 
-**Test Scenarios:**
-- [x] Create blocks via input rules (verified all block types render with correct data-type attributes)
-- [x] Drag handles are present on all blocks (verified handles exist, are draggable, and properly labeled)
-- [ ] Drag block to reorder (blocked by Playwright native drag-and-drop limitations; manual drag operations don't trigger browser DND API)
-- [ ] Drag list item within list
-- [ ] Drag list item to different location
-- [ ] Context menu actions
-- [ ] Keyboard navigation and editing
+**Location:** `/e2e/` (project root)
+
+**Block Editor Tests:**
+| File | Tests | Status |
+|------|-------|--------|
+| `block-editor.spec.ts` | Input rules, drag handle presence | ✓ |
+| `block-handle-visibility.spec.ts` | Handle opacity on hover, numbered list data-number, bullet alignment | ✓ |
+| `block-handle-diagnostic.spec.ts` | Diagnostic tests for handle visibility and text alignment | ✓ |
+
+**Implemented:**
+- [x] Create blocks via input rules (markdown → blocks parsing)
+- [x] Verify block types render with correct `data-type` attributes
+- [x] Drag handles present on all blocks with proper `draggable` attribute
+- [x] ARIA labels for accessibility
+- [x] Handle visibility on hover (opacity transition)
+- [x] Numbered list `data-number` attribute for CSS counters
+- [x] Bullet text alignment
+
+**Not Yet Implemented:**
+- [ ] Drag block to reorder (blocked by Playwright DND API limitations)
+- [ ] Context menu E2E actions
 - [ ] Undo/redo after drag operations
 
-**Status:** Two tests implemented:
-1. Input rules test verifies markdown → blocks parsing and DOM structure
-2. Drag handles test verifies infrastructure for drag-drop (handles exist, draggable, accessible)
-Remaining tests pending. Note: Full drag-reorder tests require manual browser DND event simulation or Chromium protocol extensions not available in standard Playwright.
+**Note:** Full drag-reorder tests require Chromium DevTools Protocol extensions not available in standard Playwright. Drag logic is verified via unit tests in `blockCommands.test.ts`.
+
+**⚠️ Current E2E tests do not fully verify functionality** — they check DOM structure but not actual interaction behavior.
+
+---
+
+## Known Issues (Bugs to Fix)
+
+### Issue 1: Drag Handle Alignment 🔴 HIGH
+
+**Symptom:** Drag handle (3-dot icon) is aligned to the left instead of centered vertically with text. The icon appears to be in the wrong container div.
+
+**Location:** `RowHandle.tsx`, `RowHandle.module.css`, `BlockNodeView.ts`
+
+**Suggested Fix:**
+- Verify handle DOM structure matches intended layout
+- Check flexbox alignment on `.block-handle-container`
+- Ensure handle icon is inside the correct wrapper
+
+---
+
+### Issue 2: Drag-and-Drop Non-Functional 🔴 HIGH
+
+**Symptom:** Dragging blocks doesn't work. Callbacks exist in `blockDragPlugin.ts` but don't fire correctly during drag operations.
+
+**Location:** `blockDragPlugin.ts`, `BlockNodeView.ts`
+
+**Possible Causes:**
+- `draggable` attribute not correctly wired
+- `onDragStart` not firing or not setting drag data
+- ProseMirror event handling interference
+- DOM structure preventing drag events from reaching handlers
+
+**Suggested Debug Steps:**
+1. Add console logs to `onDragStart`, `onDragOver`, `onDrop` handlers
+2. Verify `e.dataTransfer.setData()` is called
+3. Check if ProseMirror's default drag handling is interfering
+4. Test with native browser drag events outside ProseMirror
+
+---
+
+### Issue 3: List Item Vertical Alignment 🟡 MEDIUM
+
+**Symptom:** Numbered list numbers and bullet points are not vertically aligned with text content. Task list checkboxes are correctly aligned.
+
+**Location:** `Editor.module.css` (`.block-row[data-type="bullet"]`, `.block-row[data-type="number"]`)
+
+**Suggested Fix:**
+- Compare CSS for task vs bullet/number blocks
+- Check `::before` pseudo-element positioning
+- Verify `align-items` and `line-height` values
+- May need explicit vertical centering with flexbox
+
+---
+
+### Issue 4: Context Menu Broken 🔴 CRITICAL
+
+**Symptoms:**
+1. Only first menu item highlights on mouse hover
+2. Up/down arrow keyboard navigation has no effect
+3. Clicking menu item works but corrupts undo stack afterward
+
+**Location:** `BlockContextMenu.tsx`, `RowContextMenu.tsx`, `blockCommands.ts`
+
+**Suggested Debug Steps:**
+1. **Hover issue:** Check CSS `:hover` selectors and z-index stacking
+2. **Keyboard nav:** Verify `onKeyDown` handler is attached and `e.preventDefault()` called
+3. **Undo corruption:** Check that commands use proper ProseMirror transactions:
+   - Ensure `tr.setMeta('addToHistory', true)` or not calling with false
+   - Verify single transaction per action (not multiple dispatches)
+   - Check for state mutations outside transactions
+
+---
+
+### Issue 5: E2E Test Coverage Gap 🟡 MEDIUM
+
+**Symptom:** Current E2E tests verify DOM structure but don't catch interaction bugs (drag, context menu, keyboard nav).
+
+**Suggested Additions:**
+- Test context menu hover states
+- Test keyboard navigation in menus
+- Test undo/redo after operations
+- Mock or simulate drag events if possible
 
 ---
 
 ## Implementation Order
 
-### Track A: Shared Components (COMPLETE)
+### Track A: Shared Components ⚠️ BUGGY
 
-Phases 3.1-3.3 (RowHandle, RowContextMenu, DropIndicator) — context-agnostic and reusable.
+Phases 3.1-3.3 (RowHandle, RowContextMenu, DropIndicator) — code complete but handle alignment broken.
 
-### Track B: Editor Block Model (ACTIVE)
+### Track B: Editor Block Model ⚠️ PARTIALLY WORKING
 
 1. ✓ Phase 1: Schema
 2. ✓ Phase 2: Markdown parser/serializer
 3. ✓ Phase 6: Keyboard and input rules
-4. ✓ Phase 7: Styling
-5. ✓ Phase 9.1: Unit tests
-6. ✓ Phase 3.4: Editor integration
-7. ✓ Phase 4: Drag-drop
-8. ✓ Phase 5: Context menu
-9. ✓ Phase 8: Migration
-10. → Phase 9.2: E2E tests (PENDING)
+4. ⚠️ Phase 7: Styling (list alignment issues)
+5. ✓ Phase 9.1: Unit tests (308 passing)
+6. ⚠️ Phase 3.4: Editor integration (handle alignment broken)
+7. ⚠️ Phase 4: Drag-drop (non-functional)
+8. ⚠️ Phase 5: Context menu (broken hover/keyboard/undo)
+9. ✓ Phase 8: Migration (transparent on-load)
+10. ⚠️ Phase 9.2: E2E tests (don't verify interaction bugs)
 
-### Track C: Table Integration (DEFERRED)
+### Track C: Table Integration ⚠️ UI INCOMPLETE
 
-Phase 3.5 and table-specific features deferred pending API decisions for row reordering.
+Phase 3.5 — TableRow component code complete but inherits handle/drag bugs from shared components.
+
+**Deferred:** Row reordering persistence pending table sorting API decision.
 
 ---
 
