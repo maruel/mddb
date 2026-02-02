@@ -52,8 +52,11 @@ export class BlockNodeView implements NodeView {
     this.updateDOMAttributes();
 
     // Create and mount handle container
+    // Set contenteditable="false" to prevent the browser from treating drag
+    // gestures on the handle as content dragging within the editor
     this.handleContainer = document.createElement('div');
     this.handleContainer.className = 'block-handle-container';
+    this.handleContainer.contentEditable = 'false';
     this.dom.appendChild(this.handleContainer);
 
     // Mount SolidJS RowHandle component

@@ -120,6 +120,45 @@ export function findDropTarget(
     depth--;
   }
 
+  // If depth is 0, the coordinates are outside block content.
+  // This can happen when dropping at the very edge/bottom of the editor.
+  // In this case, find the nearest block by iterating through all blocks.
+  if (depth === 0) {
+    const doc = view.state.doc;
+    let nearestBlock: { pos: number; top: number; bottom: number } | null = null;
+    let smallestDistance = Infinity;
+
+    doc.forEach((node, pos) => {
+      if (node.type.name === 'block') {
+        const startCoords = view.coordsAtPos(pos);
+        const endCoords = view.coordsAtPos(pos + node.nodeSize);
+        const blockMidY = (startCoords.top + endCoords.bottom) / 2;
+        const distance = Math.abs(clientY - blockMidY);
+
+        if (distance < smallestDistance) {
+          smallestDistance = distance;
+          nearestBlock = { pos, top: startCoords.top, bottom: endCoords.bottom };
+        }
+      }
+    });
+
+    if (!nearestBlock) return null;
+
+    // Determine if we should drop above or below this block
+    const blockMidY = (nearestBlock.top + nearestBlock.bottom) / 2;
+    const dropAbove = clientY < blockMidY;
+
+    // For the nearest block, calculate start and end positions
+    const blockNode = doc.nodeAt(nearestBlock.pos);
+    if (!blockNode) return null;
+
+    return {
+      pos: dropAbove ? nearestBlock.pos : nearestBlock.pos + blockNode.nodeSize,
+      y: dropAbove ? nearestBlock.top : nearestBlock.bottom,
+      above: dropAbove,
+    };
+  }
+
   const blockStart = $pos.before(depth);
   const blockEnd = $pos.after(depth);
   const startCoords = view.coordsAtPos(blockStart);

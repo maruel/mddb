@@ -13,6 +13,8 @@
     background 0.1s,
     color 0.1s;
   user-select: none;
+  /* Ensure webkit browsers treat this as a draggable element, not text */
+  -webkit-user-drag: element;
 }
 
 .handle:hover {
