@@ -107,7 +107,7 @@ export class BlockNodeView implements NodeView {
       case 'number': {
         element = document.createElement('div');
         element.className = `block-${type}`;
-        if (this.node.attrs.number) {
+        if (this.node.attrs.number !== undefined && this.node.attrs.number !== null) {
           element.dataset.number = String(this.node.attrs.number);
         }
         break;
@@ -283,7 +283,9 @@ export class BlockNodeView implements NodeView {
     // Update number attribute
     if (node.attrs.type === 'number') {
       // For number type, contentDOM is the block-number div
-      this.contentDOM.dataset.number = String(node.attrs.number || '');
+      if (node.attrs.number !== undefined && node.attrs.number !== null) {
+        this.contentDOM.dataset.number = String(node.attrs.number);
+      }
     }
 
     return true;

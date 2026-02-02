@@ -5,7 +5,7 @@
   transform: translateY(-50%);
   width: 18px;
   height: 24px;
-  opacity: 0;
+  opacity: 1;
   cursor: grab;
   display: flex;
   align-items: center;

@@ -19,6 +19,7 @@ import { createDropUploadPlugin } from './dropUploadPlugin';
 import { createInvalidLinkPlugin, updateInvalidLinkState, INTERNAL_LINK_URL_PATTERN } from './invalidLinkPlugin';
 import { useAssetUpload, isImageMimeType } from './useAssetUpload';
 import { BlockContextMenu } from './BlockContextMenu';
+import { EditorDropIndicator } from './EditorDropIndicator';
 import SlashCommandMenu from './SlashCommandMenu';
 import EditorToolbar, { type FormatState } from './EditorToolbar';
 import type { AssetUrlMap } from '../../contexts/EditorContext';
@@ -424,6 +425,9 @@ export default function Editor(props: EditorProps) {
 
       {/* Editor context menu */}
       <BlockContextMenu view={view()} />
+
+      {/* Drop indicator during drag-and-drop */}
+      <EditorDropIndicator view={view()} />
 
       <div ref={setEditorRef} class={wysiwygClass()} data-testid="wysiwyg-editor" />
 

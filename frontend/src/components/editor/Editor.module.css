@@ -6,6 +6,7 @@
   flex: 1;
   overflow: hidden;
   background: var(--c-bg);
+  position: relative;
 }
 
 /* Floating Toolbar */

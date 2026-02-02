@@ -242,16 +242,20 @@ Complete but summarized: Multi-block selection visible indicators, visibility to
 
 **File:** `e2e/block-editor.spec.ts`
 
-**Test Scenarios (Pending):**
-- Create blocks via input rules
-- Drag block to reorder
-- Drag list item within list
-- Drag list item to different location
-- Context menu actions
-- Keyboard navigation and editing
-- Undo/redo after drag operations
+**Test Scenarios:**
+- [x] Create blocks via input rules (verified all block types render with correct data-type attributes)
+- [x] Drag handles are present on all blocks (verified handles exist, are draggable, and properly labeled)
+- [ ] Drag block to reorder (blocked by Playwright native drag-and-drop limitations; manual drag operations don't trigger browser DND API)
+- [ ] Drag list item within list
+- [ ] Drag list item to different location
+- [ ] Context menu actions
+- [ ] Keyboard navigation and editing
+- [ ] Undo/redo after drag operations
 
-**Status:** Framework ready, tests pending implementation.
+**Status:** Two tests implemented:
+1. Input rules test verifies markdown → blocks parsing and DOM structure
+2. Drag handles test verifies infrastructure for drag-drop (handles exist, draggable, accessible)
+Remaining tests pending. Note: Full drag-reorder tests require manual browser DND event simulation or Chromium protocol extensions not available in standard Playwright.
 
 ---
 
