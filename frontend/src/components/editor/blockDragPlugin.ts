@@ -130,32 +130,35 @@ export function findDropTarget(
 
     doc.forEach((node, pos) => {
       if (node.type.name === 'block') {
-        const startCoords = view.coordsAtPos(pos);
-        const endCoords = view.coordsAtPos(pos + node.nodeSize);
-        const blockMidY = (startCoords.top + endCoords.bottom) / 2;
-        const distance = Math.abs(clientY - blockMidY);
+        const nodeStartCoords = view.coordsAtPos(pos);
+        const nodeEndCoords = view.coordsAtPos(pos + node.nodeSize);
+        const nodeMidY = (nodeStartCoords.top + nodeEndCoords.bottom) / 2;
+        const distance = Math.abs(clientY - nodeMidY);
 
         if (distance < smallestDistance) {
           smallestDistance = distance;
-          nearestBlock = { pos, top: startCoords.top, bottom: endCoords.bottom };
+          nearestBlock = { pos, top: nodeStartCoords.top, bottom: nodeEndCoords.bottom };
         }
       }
     });
 
     if (!nearestBlock) return null;
 
+    // Type assertion needed: TS doesn't track assignments inside callbacks
+    const foundBlock = nearestBlock as { pos: number; top: number; bottom: number };
+
     // Determine if we should drop above or below this block
-    const blockMidY = (nearestBlock.top + nearestBlock.bottom) / 2;
-    const dropAbove = clientY < blockMidY;
+    const nearestMidY = (foundBlock.top + foundBlock.bottom) / 2;
+    const dropAboveNearest = clientY < nearestMidY;
 
     // For the nearest block, calculate start and end positions
-    const blockNode = doc.nodeAt(nearestBlock.pos);
+    const blockNode = doc.nodeAt(foundBlock.pos);
     if (!blockNode) return null;
 
     return {
-      pos: dropAbove ? nearestBlock.pos : nearestBlock.pos + blockNode.nodeSize,
-      y: dropAbove ? nearestBlock.top : nearestBlock.bottom,
-      above: dropAbove,
+      pos: dropAboveNearest ? foundBlock.pos : foundBlock.pos + blockNode.nodeSize,
+      y: dropAboveNearest ? foundBlock.top : foundBlock.bottom,
+      above: dropAboveNearest,
     };
   }
 

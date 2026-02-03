@@ -3,10 +3,11 @@
 // methods (dragTo, mouse.down/move/up) do not reliably trigger the browser's native
 // drag events needed for ProseMirror's drag-and-drop system.
 
+import type { Page } from '@playwright/test';
 import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
 
 // Helper to setup editor with test content
-async function setupEditorWithBlocks(page: ReturnType<typeof test['info']>['fixme'], request: Parameters<typeof registerUser>[0]) {
+async function setupEditorWithBlocks(page: Page, request: Parameters<typeof registerUser>[0]) {
   const { token } = await registerUser(request, 'block-dnd');
   await page.goto(`/?token=${token}`);
   await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
@@ -43,13 +44,13 @@ Third paragraph`;
  * the browser's native drag events for elements with draggable="true".
  */
 async function simulateBlockDrag(
-  page: ReturnType<typeof test['info']>['fixme'],
+  page: Page,
   sourceIndex: number,
   targetIndex: number,
   dropBelow: boolean = true
 ) {
   return await page.evaluate(
-    async ({ sourceIdx, targetIdx, below }) => {
+    async ({ sourceIdx, targetIdx, below }: { sourceIdx: number; targetIdx: number; below: boolean }) => {
       const editor = document.querySelector('[data-testid="wysiwyg-editor"] .ProseMirror') as HTMLElement;
       const blocks = editor.querySelectorAll('.block-row');
       const handles = editor.querySelectorAll('[data-testid="row-handle"]') as NodeListOf<HTMLElement>;
@@ -58,7 +59,8 @@ async function simulateBlockDrag(
         return { success: false, error: 'Invalid block indices' };
       }
 
-      const sourceHandle = handles[sourceIdx];
+      // Non-null assertion is safe: indices already validated above
+      const sourceHandle = handles[sourceIdx]!;
       const targetBlock = blocks[targetIdx] as HTMLElement;
 
       // Create DataTransfer
