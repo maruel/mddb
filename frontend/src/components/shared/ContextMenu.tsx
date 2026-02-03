@@ -1,6 +1,8 @@
+// Shared context menu component with keyboard navigation and viewport boundary detection.
+
 import { createEffect, createSignal, For, Show, type JSX, onCleanup } from 'solid-js';
 import { Portal } from 'solid-js/web';
-import styles from './RowContextMenu.module.css';
+import styles from './ContextMenu.module.css';
 
 export interface ContextMenuAction {
   id: string;
@@ -12,7 +14,7 @@ export interface ContextMenuAction {
   separator?: boolean; // Render separator before this item
 }
 
-export interface RowContextMenuProps {
+export interface ContextMenuProps {
   position: { x: number; y: number };
   actions: ContextMenuAction[];
   onAction: (actionId: string) => void;
@@ -20,10 +22,10 @@ export interface RowContextMenuProps {
 }
 
 /**
- * A shared context menu component for editor blocks and table rows.
+ * A shared context menu component for editor blocks, table rows, and sidebar nodes.
  * Supports keyboard navigation, click-outside to close, and viewport boundary detection.
  */
-export function RowContextMenu(props: RowContextMenuProps) {
+export function ContextMenu(props: ContextMenuProps) {
   let menuRef: HTMLDivElement | undefined;
   const [focusedIndex, setFocusedIndex] = createSignal(0);
   const [adjustedPosition, setAdjustedPosition] = createSignal({ x: 0, y: 0 });

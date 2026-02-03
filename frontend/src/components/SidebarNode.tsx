@@ -2,8 +2,8 @@
 
 import { createSignal, createEffect, For, Show, on, untrack } from 'solid-js';
 import { useI18n } from '../i18n';
-import { useClickOutside } from '../composables/useClickOutside';
 import type { NodeResponse } from '@sdk/types.gen';
+import { ContextMenu, type ContextMenuAction } from './shared';
 import styles from './SidebarNode.module.css';
 
 import DescriptionIcon from '@material-symbols/svg-400/outlined/description.svg?solid';
@@ -33,12 +33,6 @@ export default function SidebarNode(props: SidebarNodeProps) {
   const [showContextMenu, setShowContextMenu] = createSignal(false);
   const [contextMenuPos, setContextMenuPos] = createSignal({ x: 0, y: 0 });
   const [isLoadingChildren, setIsLoadingChildren] = createSignal(false);
-  let contextMenuRef: HTMLDivElement | undefined;
-
-  useClickOutside(
-    () => contextMenuRef,
-    () => setShowContextMenu(false)
-  );
 
   // Children come directly from the store via props.node.children
   const children = () => props.node.children ?? [];
@@ -137,44 +131,43 @@ export default function SidebarNode(props: SidebarNodeProps) {
       </div>
 
       <Show when={showContextMenu()}>
-        <div
-          class={styles.contextMenu}
-          ref={contextMenuRef}
-          style={{ left: `${contextMenuPos().x}px`, top: `${contextMenuPos().y}px` }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            class={styles.contextMenuItem}
-            data-testid="create-subpage-button"
-            onClick={() => {
-              props.onCreateChildPage(props.node.id);
-              setShowContextMenu(false);
-            }}
-          >
-            <DescriptionIcon /> {t('app.createSubPage')}
-          </button>
-          <button
-            class={styles.contextMenuItem}
-            data-testid="create-subtable-button"
-            onClick={() => {
-              props.onCreateChildTable(props.node.id);
-              setShowContextMenu(false);
-            }}
-          >
-            <TableChartIcon /> {t('app.createSubTable')}
-          </button>
-          <div class={styles.contextMenuDivider} />
-          <button
-            class={styles.contextMenuItem}
-            data-testid="show-history-button"
-            onClick={() => {
-              props.onShowHistory?.(props.node.id);
-              setShowContextMenu(false);
-            }}
-          >
-            <HistoryIcon /> {t('editor.history')}
-          </button>
-        </div>
+        <ContextMenu
+          position={contextMenuPos()}
+          actions={
+            [
+              {
+                id: 'create-subpage',
+                label: t('app.createSubPage') || 'Create sub-page',
+                icon: <DescriptionIcon />,
+              },
+              {
+                id: 'create-subtable',
+                label: t('app.createSubTable') || 'Create sub-table',
+                icon: <TableChartIcon />,
+              },
+              {
+                id: 'history',
+                label: t('editor.history') || 'History',
+                icon: <HistoryIcon />,
+                separator: true,
+              },
+            ] as ContextMenuAction[]
+          }
+          onAction={(actionId) => {
+            switch (actionId) {
+              case 'create-subpage':
+                props.onCreateChildPage(props.node.id);
+                break;
+              case 'create-subtable':
+                props.onCreateChildTable(props.node.id);
+                break;
+              case 'history':
+                props.onShowHistory?.(props.node.id);
+                break;
+            }
+          }}
+          onClose={() => setShowContextMenu(false)}
+        />
       </Show>
 
       <Show when={isExpanded() && children().length > 0}>

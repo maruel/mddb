@@ -3,7 +3,7 @@
 
 import { createSignal, Show, type ParentProps } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
-import { RowHandle, RowContextMenu, type ContextMenuAction } from '../shared';
+import { RowHandle, ContextMenu, type ContextMenuAction } from '../shared';
 import { useI18n } from '../../i18n';
 import styles from './TableRow.module.css';
 
@@ -137,7 +137,7 @@ export function TableRow(props: TableRowProps) {
 
       <Show when={menuState()}>
         {(state) => (
-          <RowContextMenu
+          <ContextMenu
             position={state()}
             actions={getActions()}
             onAction={handleAction}

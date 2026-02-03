@@ -3,7 +3,7 @@
 import { createSignal, For, Show } from 'solid-js';
 import { type DataRecordResponse, type Property } from '@sdk/types.gen';
 import styles from './TableTable.module.css';
-import { RowHandle, RowContextMenu, type ContextMenuAction } from './shared';
+import { RowHandle, ContextMenu, type ContextMenuAction } from './shared';
 import { TABLE_RECORD_MIME } from './table/TableRow';
 import { TableCell } from './table/TableCell';
 import { AddColumnDropdown } from './table/AddColumnDropdown';
@@ -233,7 +233,7 @@ export default function TableTable(props: TableTableProps) {
       {/* Row context menu */}
       <Show when={menuState()}>
         {(state) => (
-          <RowContextMenu
+          <ContextMenu
             position={{ x: state().x, y: state().y }}
             actions={getRowActions()}
             onAction={handleRowAction}

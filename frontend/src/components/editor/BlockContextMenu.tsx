@@ -1,9 +1,9 @@
 // Editor-specific block context menu component.
-// Wraps the shared RowContextMenu with editor-specific actions.
+// Wraps the shared ContextMenu with editor-specific actions.
 
 import { createSignal, onMount, onCleanup, Show } from 'solid-js';
 import type { EditorView } from 'prosemirror-view';
-import { RowContextMenu, type ContextMenuAction } from '../shared/RowContextMenu';
+import { ContextMenu, type ContextMenuAction } from '../shared/ContextMenu';
 import { useI18n } from '../../i18n';
 import { deleteBlock, duplicateBlock, convertBlock, indentBlock, outdentBlock } from './blockCommands';
 import type { BlockType } from './schema';
@@ -201,7 +201,7 @@ export function BlockContextMenu(props: BlockContextMenuProps) {
     <div class={`${styles.container} ${props.class || ''}`}>
       <Show when={menuState()}>
         {(state) => (
-          <RowContextMenu
+          <ContextMenu
             position={state().position}
             actions={getActions()}
             onAction={handleAction}

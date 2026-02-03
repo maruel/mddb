@@ -119,41 +119,6 @@
   }
 }
 
-.contextMenu {
-  position: fixed;
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  min-width: 160px;
-  overflow: hidden;
-  animation: slideIn 0.15s ease-out;
-}
-
-.contextMenuItem {
-  display: block;
-  width: 100%;
-  padding: var(--s-2) var(--s-3);
-  text-align: left;
-  background: none;
-  border: none;
-  color: var(--c-text);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background-color 0.1s;
-}
-
-.contextMenuItem:hover {
-  background-color: var(--c-bg-alt);
-}
-
-.contextMenuDivider {
-  height: 1px;
-  background: var(--c-border);
-  margin: var(--s-1) 0;
-}
-
 /* Hover delete button */
 .hoverDeleteButton {
   margin-left: auto;
