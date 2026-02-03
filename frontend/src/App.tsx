@@ -29,6 +29,21 @@ function RouteLoading() {
   return <div style={{ padding: '2rem', 'text-align': 'center' }}>Loading...</div>;
 }
 
+// 404 page for unmatched routes - shows explicit error instead of silent redirect
+function NotFound() {
+  const path = window.location.pathname;
+  console.error('404: Route not found:', path);
+  return (
+    <div style={{ padding: '2rem', 'text-align': 'center' }}>
+      <h1>Page Not Found</h1>
+      <p>
+        The path <code>{path}</code> doesn't exist.
+      </p>
+      <a href="/login">Go to login</a>
+    </div>
+  );
+}
+
 // Route guard that redirects unauthenticated users to /login
 const RequireAuth: ParentComponent = (props) => {
   const { user, ready } = useAuth();
@@ -156,8 +171,8 @@ function AppRoutes() {
       {/* Root redirect */}
       <Route path="/" component={RootRedirect} />
 
-      {/* Catch-all redirect to login */}
-      <Route path="*" component={() => <Navigate href="/login" />} />
+      {/* Catch-all 404 - shows explicit error instead of silent redirect */}
+      <Route path="*" component={NotFound} />
     </Router>
   );
 }
