@@ -19,6 +19,7 @@ body {
   --c-text-light: #6b7280;
   --c-bg: #fff;
   --c-bg-alt: #e5e7eb;
+  --c-bg-hover: rgba(0, 0, 0, 0.04);
   --c-border: #e5e7eb;
   --c-success: #16a34a;
   --c-danger: #dc2626;
