@@ -981,7 +981,7 @@ function hello() {
     await sidebarNode.click({ button: 'right' });
 
     // Click History option in context menu
-    const historyButton = page.locator('[data-testid="show-history-button"]');
+    const historyButton = page.locator('[data-testid="context-menu-history"]');
     await expect(historyButton).toBeVisible({ timeout: 3000 });
     await historyButton.click();
 

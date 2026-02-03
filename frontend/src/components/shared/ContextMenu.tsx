@@ -189,6 +189,7 @@ export function ContextMenu(props: ContextMenuProps) {
                 disabled={action.disabled}
                 tabIndex={-1}
                 aria-disabled={action.disabled}
+                data-testid={`context-menu-${action.id}`}
               >
                 <Show when={action.icon}>
                   <span class={styles.icon}>{action.icon}</span>
