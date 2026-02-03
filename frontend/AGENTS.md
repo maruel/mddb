@@ -10,28 +10,26 @@
 
 ### Navigation & Links
 
-Prefer `<a>` tags when the destination URL is known and deterministic:
+The router uses `explicitLinks` mode. This means `<a>` tags are **not** intercepted by the router.
 
-- **Use `<a href="..." onClick={...}>`** for navigation with known destinations. This shows the URL on hover and enables "Copy link" for power users.
-- Use `e.preventDefault()` in `onClick` when you need programmatic navigation (e.g., updating state before navigating).
-- **Use `<button>`** when the destination is dynamic/unknown (e.g., switching context requires an API call to determine the final URL).
+- **`<A href="...">`** (from `@solidjs/router`) - Client-side SPA navigation for internal routes
+- **`<a href="...">`** - Browser navigation for external links and API redirects
 
 ```tsx
-// Good: Deterministic URL - use <a> so users can see/copy the link
-<a
-  href={`/o/${orgId}+${orgSlug}/settings`}
-  onClick={(e) => {
-    e.preventDefault();
-    navigateToOrgSettings(orgId);
-  }}
->
-  Settings
-</a>
+import { A } from '@solidjs/router';
 
-// OK: Non-navigation action - use <button>
-<button onClick={() => doSomething()}>
-  Action
-</button>
+// Internal app navigation - use <A> for client-side routing
+<A href="/settings/user">Profile</A>
+<A href={`/w/${wsId}`}>Workspace</A>
+
+// External links - use <a> (opens in new tab)
+<a href="https://example.com" target="_blank" rel="noopener noreferrer">External</a>
+
+// For downloads
+<a href="/eventual/path/to/a/file.txt" target="_self">Download file.txt</a>
+
+// Dynamic navigation with state updates - use <a> with onClick
+<a href={url} onClick={(e) => { e.preventDefault(); doStuff(); navigate(url); }}>Link</a>
 ```
 
 ### Reactivity & Routing State

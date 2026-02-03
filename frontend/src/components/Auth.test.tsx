@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
 import type { JSX } from 'solid-js';
+import { Router, Route } from '@solidjs/router';
 import Auth from './Auth';
 import { I18nProvider } from '../i18n';
 import type { UserResponse, AuthResponse, ErrorResponse } from '@sdk/types.gen';
@@ -37,8 +38,12 @@ globalThis.fetch = mockFetch;
 // We spy on history methods but don't mock them since the router needs real navigation.
 const historyPushStateSpy = vi.spyOn(window.history, 'pushState');
 
-function renderWithI18n(component: () => JSX.Element) {
-  return render(() => <I18nProvider>{component()}</I18nProvider>);
+function renderWithProviders(component: () => JSX.Element) {
+  return render(() => (
+    <Router>
+      <Route path="*" component={() => <I18nProvider>{component()}</I18nProvider>} />
+    </Router>
+  ));
 }
 
 describe('Auth', () => {
@@ -64,7 +69,7 @@ describe('Auth', () => {
   });
 
   it('renders login form by default', async () => {
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/email/i)).toBeTruthy();
@@ -76,7 +81,7 @@ describe('Auth', () => {
   });
 
   it('switches to register form when clicking register link', async () => {
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByText(/register/i)).toBeTruthy();
@@ -125,7 +130,7 @@ describe('Auth', () => {
       return Promise.reject(new Error(`Unexpected fetch to ${url}`));
     });
 
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/email/i)).toBeTruthy();
@@ -177,7 +182,7 @@ describe('Auth', () => {
       return Promise.reject(new Error(`Unexpected fetch to ${url}`));
     });
 
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/email/i)).toBeTruthy();
@@ -208,7 +213,7 @@ describe('Auth', () => {
       return Promise.reject(new Error('Network error'));
     });
 
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/email/i)).toBeTruthy();
@@ -259,7 +264,7 @@ describe('Auth', () => {
       return Promise.reject(new Error(`Unexpected fetch to ${url}`));
     });
 
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByText(/register/i)).toBeTruthy();
@@ -310,7 +315,7 @@ describe('Auth', () => {
   });
 
   it('shows OAuth login buttons', async () => {
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByText(/google/i)).toBeTruthy();
@@ -326,7 +331,7 @@ describe('Auth', () => {
   });
 
   it('shows privacy policy link', async () => {
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByText(/privacy/i)).toBeTruthy();
@@ -348,7 +353,7 @@ describe('Auth', () => {
       return new Promise((resolve) => setTimeout(resolve, 10000));
     });
 
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/email/i)).toBeTruthy();
@@ -383,7 +388,7 @@ describe('Auth', () => {
       return Promise.reject(new Error(`Unexpected fetch to ${url}`));
     });
 
-    renderWithI18n(() => <Auth onLogin={mockOnLogin} />);
+    renderWithProviders(() => <Auth onLogin={mockOnLogin} />);
 
     await waitFor(() => {
       expect(screen.getByLabelText(/email/i)).toBeTruthy();

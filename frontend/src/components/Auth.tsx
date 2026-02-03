@@ -1,6 +1,7 @@
 // Authentication component handling login and registration forms.
 
 import { createSignal, createResource, createMemo, Show, For, type JSX } from 'solid-js';
+import { A } from '@solidjs/router';
 import { createAPIClient, APIError } from '@sdk/api.gen';
 import type { UserResponse, OAuthProvider } from '@sdk/types.gen';
 import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from '@sdk/types.gen';
@@ -211,7 +212,7 @@ export default function Auth(props: AuthProps) {
         </p>
 
         <div class={styles.authFooter}>
-          <a href="/privacy">{t('app.privacyPolicy')}</a>
+          <A href="/privacy">{t('app.privacyPolicy')}</A>
         </div>
       </form>
     </div>

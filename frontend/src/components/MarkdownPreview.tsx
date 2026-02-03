@@ -5,9 +5,13 @@ import DOMPurify from 'dompurify';
 import type { AssetUrlMap } from '../contexts/EditorContext';
 import styles from './MarkdownPreview.module.css';
 
+// Pattern to match internal workspace/node links: /w/{wsId}/... or /w/{wsId}+slug/...
+const INTERNAL_LINK_PATTERN = /^\/w\/[^/]+/;
+
 interface MarkdownPreviewProps {
   content: string;
   assetUrls?: AssetUrlMap;
+  onNavigate?: (href: string) => void;
 }
 
 const md = new MarkdownIt({
@@ -90,6 +94,31 @@ export default function MarkdownPreview(props: MarkdownPreviewProps) {
     return DOMPurify.sanitize(rawHtml);
   };
 
-  // eslint-disable-next-line solid/no-innerhtml -- sanitized via DOMPurify
-  return <div class={styles.preview} innerHTML={html()} role="region" aria-label="Markdown preview" />;
+  // Handle link clicks: internal links use client-side navigation, external links open in new tab
+  const handleClick = (e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const anchor = target.closest('a');
+    if (!anchor) return;
+
+    const href = anchor.getAttribute('href');
+    if (!href) return;
+
+    // Internal workspace links - use client-side navigation if handler provided
+    if (INTERNAL_LINK_PATTERN.test(href) && props.onNavigate) {
+      e.preventDefault();
+      props.onNavigate(href);
+      return;
+    }
+
+    // External links - open in new tab
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+      e.preventDefault();
+      window.open(href, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  return (
+    // eslint-disable-next-line solid/no-innerhtml -- sanitized via DOMPurify
+    <div class={styles.preview} innerHTML={html()} onClick={handleClick} role="region" aria-label="Markdown preview" />
+  );
 }

@@ -1,7 +1,7 @@
 // Main application component with router setup.
 
 import { lazy, Show, Switch, Match, Suspense, type ParentComponent } from 'solid-js';
-import { Router, Route, Navigate } from '@solidjs/router';
+import { Router, Route, Navigate, A } from '@solidjs/router';
 import { AuthProvider, useAuth } from './contexts';
 import AppErrorBoundary from './components/ErrorBoundary';
 import PWAInstallBanner from './components/PWAInstallBanner';
@@ -39,7 +39,7 @@ function NotFound() {
       <p>
         The path <code>{path}</code> doesn't exist.
       </p>
-      <a href="/login">Go to login</a>
+      <A href="/login">Go to login</A>
     </div>
   );
 }
@@ -121,7 +121,7 @@ const WorkspaceSectionWithAuth: ParentComponent = (props) => {
 // App routes wrapped in router
 function AppRoutes() {
   return (
-    <Router>
+    <Router explicitLinks>
       {/* Public routes */}
       <Route path="/login" component={AuthRoute} />
       <Route

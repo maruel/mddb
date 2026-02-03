@@ -271,7 +271,7 @@ export default function NodeView() {
                 </button>
               </div>
               <div class={styles.previewContent}>
-                <MarkdownPreview content={previewContent() || ''} assetUrls={assetUrls()} />
+                <MarkdownPreview content={previewContent() || ''} assetUrls={assetUrls()} onNavigate={navigate} />
               </div>
             </div>
           </Show>
