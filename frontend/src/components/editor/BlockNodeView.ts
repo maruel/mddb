@@ -1,5 +1,4 @@
 // ProseMirror NodeView implementation for flat blocks with integrated drag handles.
-// Mounts SolidJS RowHandle component within vanilla JS NodeView.
 
 import { render } from 'solid-js/web';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
@@ -11,13 +10,9 @@ import { setDragState, getSelectedBlockPositions, BLOCK_DRAG_MIME, BLOCKS_DRAG_M
  * Custom event detail for block context menu requests.
  */
 export interface BlockContextMenuDetail {
-  /** Block position in document */
   pos: number;
-  /** Mouse X coordinate */
   x: number;
-  /** Mouse Y coordinate */
   y: number;
-  /** Number of selected blocks (for multi-selection) */
   selectedCount: number;
 }
 
@@ -28,16 +23,11 @@ export const BLOCK_CONTEXT_MENU_EVENT = 'block-context-menu';
 
 /**
  * NodeView implementation for flat block nodes.
- * Renders a drag handle alongside block content.
  */
 export class BlockNodeView implements NodeView {
-  /** Outer DOM element containing handle and content */
   dom: HTMLElement;
-  /** Content DOM element where ProseMirror renders inline content */
   contentDOM: HTMLElement;
-  /** Cleanup function for SolidJS handle component */
   private handleDispose: (() => void) | null = null;
-  /** Container element for the handle */
   private handleContainer: HTMLElement;
 
   constructor(
@@ -45,31 +35,22 @@ export class BlockNodeView implements NodeView {
     private view: EditorView,
     private getPos: () => number | undefined
   ) {
-    // Create outer container
     this.dom = document.createElement('div');
     this.dom.className = 'block-row row-with-handle';
     this.updateDOMAttributes();
 
-    // Create and mount handle container
-    // Set contenteditable="false" to prevent the browser from treating drag
-    // gestures on the handle as content dragging within the editor
     this.handleContainer = document.createElement('div');
     this.handleContainer.className = 'block-handle-container';
     this.handleContainer.contentEditable = 'false';
     this.dom.appendChild(this.handleContainer);
 
-    // Mount SolidJS RowHandle component
     this.mountHandle();
 
-    // Create content container
     const { contentDOM, wrapperDOM } = this.createContentElement();
     this.contentDOM = contentDOM;
     this.dom.appendChild(wrapperDOM || contentDOM);
   }
 
-  /**
-   * Create the content DOM element based on block type.
-   */
   private createContentElement(): { contentDOM: HTMLElement; wrapperDOM?: HTMLElement } {
     const { type, level, checked, language } = this.node.attrs;
     let element: HTMLElement;
@@ -87,7 +68,6 @@ export class BlockNodeView implements NodeView {
         if (language) {
           pre.dataset.language = language;
         }
-        // Specific case: pre is wrapper, code is content
         pre.className = 'block-content';
         return { contentDOM: code, wrapperDOM: pre };
       }
@@ -115,7 +95,6 @@ export class BlockNodeView implements NodeView {
         break;
       }
       default: {
-        // paragraph
         element = document.createElement('p');
         break;
       }
@@ -125,9 +104,6 @@ export class BlockNodeView implements NodeView {
     return { contentDOM: element };
   }
 
-  /**
-   * Update DOM attributes based on node attributes.
-   */
   private updateDOMAttributes(): void {
     const { type, indent, level, checked, language } = this.node.attrs;
 
@@ -145,9 +121,6 @@ export class BlockNodeView implements NodeView {
     }
   }
 
-  /**
-   * Mount the SolidJS RowHandle component.
-   */
   private mountHandle(): void {
     const pos = this.getPos();
     const rowId = pos !== undefined ? String(pos) : '0';
@@ -164,69 +137,50 @@ export class BlockNodeView implements NodeView {
     );
   }
 
-  /**
-   * Handle drag start event from the handle.
-   */
   private handleDragStart(e: DragEvent, _rowId: string): void {
     const pos = this.getPos();
     if (pos === undefined) return;
 
-    // Check if this block is part of a multi-selection
     const selectedPositions = getSelectedBlockPositions(this.view.state);
     const isMultiSelection = selectedPositions.length > 1 && selectedPositions.includes(pos);
 
-    if (isMultiSelection) {
-      // Multi-block drag: serialize all selected positions
-      e.dataTransfer?.setData(BLOCKS_DRAG_MIME, JSON.stringify(selectedPositions));
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move';
-      }
-      this.view.dispatch(
-        setDragState(this.view.state.tr, {
-          sourcePos: pos,
-          selectedPositions,
-        })
-      );
-    } else {
-      // Single block drag
-      e.dataTransfer?.setData(BLOCK_DRAG_MIME, String(pos));
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = 'move';
-      }
-      this.view.dispatch(
-        setDragState(this.view.state.tr, {
-          sourcePos: pos,
-          selectedPositions: null,
-        })
-      );
-    }
-
-    // Set the entire block row as the drag image so users see the full block being dragged
+    // Set dataTransfer synchronously (required for drag)
     if (e.dataTransfer) {
+      if (isMultiSelection) {
+        e.dataTransfer.setData(BLOCKS_DRAG_MIME, JSON.stringify(selectedPositions));
+      } else {
+        e.dataTransfer.setData(BLOCK_DRAG_MIME, String(pos));
+      }
+      e.dataTransfer.effectAllowed = 'move';
+
+      // Set drag image
       const blockRect = this.dom.getBoundingClientRect();
-      // Position the drag image so it appears to "lift" from where the handle is
       const offsetX = e.clientX - blockRect.left;
       const offsetY = e.clientY - blockRect.top;
       e.dataTransfer.setDragImage(this.dom, offsetX, offsetY);
     }
 
-    // Add dragging class for visual feedback
     this.dom.classList.add('dragging');
+
+    // Defer state update to avoid interfering with native drag initialization
+    setTimeout(() => {
+      this.view.dispatch(
+        setDragState(this.view.state.tr, {
+          sourcePos: pos,
+          selectedPositions: isMultiSelection ? selectedPositions : null,
+        })
+      );
+    }, 0);
   }
 
-  /**
-   * Handle context menu request from the handle.
-   */
   private handleContextMenu(e: MouseEvent, _rowId: string): void {
     const pos = this.getPos();
     if (pos === undefined) return;
 
-    // Check multi-selection
     const selectedPositions = getSelectedBlockPositions(this.view.state);
     const selectedCount =
       selectedPositions.length > 1 && selectedPositions.includes(pos) ? selectedPositions.length : 1;
 
-    // Dispatch custom event for parent to handle
     const detail: BlockContextMenuDetail = {
       pos,
       x: e.clientX,
@@ -242,24 +196,15 @@ export class BlockNodeView implements NodeView {
     );
   }
 
-  /**
-   * Handle click on the handle (open context menu).
-   */
   private handleClick(e: MouseEvent, rowId: string): void {
-    // Left-click opens context menu, same as right-click
     this.handleContextMenu(e, rowId);
   }
 
-  /**
-   * Called when the node is updated. Returns false if NodeView should be rebuilt.
-   */
   update(node: ProseMirrorNode): boolean {
-    // Only handle same-type nodes
     if (node.type !== this.node.type) {
       return false;
     }
 
-    // Check if block type attribute changed (requires rebuild)
     if (node.attrs.type !== this.node.attrs.type) {
       return false;
     }
@@ -267,7 +212,6 @@ export class BlockNodeView implements NodeView {
     this.node = node;
     this.updateDOMAttributes();
 
-    // Update task checkbox state
     if (node.attrs.type === 'task') {
       const taskContent = this.dom.querySelector('.block-task');
       if (taskContent) {
@@ -275,9 +219,7 @@ export class BlockNodeView implements NodeView {
       }
     }
 
-    // Update number attribute
     if (node.attrs.type === 'number') {
-      // For number type, contentDOM is the block-number div
       if (node.attrs.number !== undefined && node.attrs.number !== null) {
         this.contentDOM.dataset.number = String(node.attrs.number);
       }
@@ -286,9 +228,6 @@ export class BlockNodeView implements NodeView {
     return true;
   }
 
-  /**
-   * Called when the selection changes. Update handle visibility for multi-selection.
-   */
   selectNode(): void {
     this.dom.classList.add('selected');
   }
@@ -297,25 +236,16 @@ export class BlockNodeView implements NodeView {
     this.dom.classList.remove('selected');
   }
 
-  /**
-   * Cleanup when the NodeView is destroyed.
-   */
   destroy(): void {
-    // Remove dragging class
     this.dom.classList.remove('dragging');
 
-    // Dispose SolidJS component
     if (this.handleDispose) {
       this.handleDispose();
       this.handleDispose = null;
     }
   }
 
-  /**
-   * Stop ProseMirror from handling some mutations.
-   */
   ignoreMutation(mutation: ViewMutationRecord): boolean {
-    // Ignore mutations to the handle container
     if (mutation.type !== 'selection' && this.handleContainer.contains(mutation.target as Node)) {
       return true;
     }
@@ -323,10 +253,6 @@ export class BlockNodeView implements NodeView {
   }
 }
 
-/**
- * Factory function to create BlockNodeView instances.
- * Use this with EditorView's nodeViews option.
- */
 export function createBlockNodeView(
   node: ProseMirrorNode,
   view: EditorView,

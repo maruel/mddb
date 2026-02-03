@@ -205,4 +205,112 @@ test.describe('Block drag and drop reordering', () => {
     expect(result.success).toBe(true);
     expect(result.newTexts).toEqual(['Second paragraph', 'First paragraph', 'Third paragraph']);
   });
+
+  test('drop indicator appears during drag', async ({ page, request }) => {
+    const { prosemirror } = await setupEditorWithBlocks(page, request);
+
+    // Wait for blocks to be ready
+    const blocks = prosemirror.locator('.block-row');
+    await expect(blocks).toHaveCount(3);
+
+    // Hover to make handles visible
+    await blocks.nth(0).hover();
+    const handle = blocks.nth(0).locator('[data-testid="row-handle"]');
+    await expect(handle).toBeVisible({ timeout: 3000 });
+
+    // Check for drop indicator during drag operation
+    const indicatorVisible = await page.evaluate(async () => {
+      const editor = document.querySelector('[data-testid="wysiwyg-editor"] .ProseMirror') as HTMLElement;
+      const handles = editor.querySelectorAll('[data-testid="row-handle"]') as NodeListOf<HTMLElement>;
+      const blockElements = editor.querySelectorAll('.block-row');
+
+      if (handles.length < 1 || blockElements.length < 3) {
+        return { success: false, error: 'Not enough blocks or handles' };
+      }
+
+      const sourceHandle = handles[0] as HTMLElement;
+      const targetBlock = blockElements[2] as HTMLElement;
+
+      // Create DataTransfer
+      const dataTransfer = new DataTransfer();
+      dataTransfer.effectAllowed = 'move';
+
+      // Get coordinates
+      const handleRect = sourceHandle.getBoundingClientRect();
+      const targetBlockRect = targetBlock.getBoundingClientRect();
+
+      // 1. Dispatch dragstart
+      const dragStartEvent = new DragEvent('dragstart', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+        clientX: handleRect.left + handleRect.width / 2,
+        clientY: handleRect.top + handleRect.height / 2,
+      });
+      sourceHandle.dispatchEvent(dragStartEvent);
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      // 2. Dispatch dragover to trigger indicator
+      const dropY = targetBlockRect.top + targetBlockRect.height * 0.75;
+      const dragOverEvent = new DragEvent('dragover', {
+        bubbles: true,
+        cancelable: true,
+        clientX: targetBlockRect.left + targetBlockRect.width / 2,
+        clientY: dropY,
+        dataTransfer,
+      });
+      editor.dispatchEvent(dragOverEvent);
+
+      // Wait for RAF to update the indicator
+      await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 50)));
+
+      // Check for indicator - it should be visible in the editor container's parent
+      // The EditorDropIndicator is a sibling of [data-testid="wysiwyg-editor"], not a child
+      const editorElement = document.querySelector('[data-testid="wysiwyg-editor"]');
+      const editorContainer = editorElement?.parentElement;
+
+      // Look for the indicator - it has role="presentation" and aria-hidden="true"
+      const indicator = editorContainer?.querySelector('[role="presentation"][aria-hidden="true"]');
+      const indicatorFound = indicator !== null;
+
+      // Also check that indicator has a reasonable top position
+      let indicatorTop = null;
+      if (indicator) {
+        const style = window.getComputedStyle(indicator);
+        indicatorTop = style.top;
+      }
+
+
+      // 3. Cleanup - dispatch dragend on the editor (where ProseMirror listens)
+      const dragEndEvent = new DragEvent('dragend', {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer,
+      });
+      editor.dispatchEvent(dragEndEvent);
+
+      // Wait longer for state to settle
+      await new Promise((r) => setTimeout(r, 100));
+
+      // Verify indicator is hidden after drag ends
+      const editorElement2 = document.querySelector('[data-testid="wysiwyg-editor"]');
+      const editorContainer2 = editorElement2?.parentElement;
+      const indicatorAfter = editorContainer2?.querySelector('[role="presentation"][aria-hidden="true"]');
+      const indicatorHiddenAfter = indicatorAfter === null;
+
+      return {
+        success: true,
+        indicatorFound,
+        indicatorTop,
+        indicatorHiddenAfter,
+      };
+    });
+
+    expect(indicatorVisible.success).toBe(true);
+    expect(indicatorVisible.indicatorFound).toBe(true);
+    // Indicator should have a valid top position (number > 0)
+    expect(indicatorVisible.indicatorTop).toMatch(/^\d+(\.\d+)?px$/);
+    expect(indicatorVisible.indicatorHiddenAfter).toBe(true);
+  });
 });

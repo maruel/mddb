@@ -1,75 +1,82 @@
 // Editor drop indicator component that renders during block drag-and-drop.
-// Listens to drag state and shows insertion point via the DropIndicator.
+// Shows a horizontal line at the insertion point between blocks.
 
-import { createSignal, onMount, onCleanup, createEffect } from 'solid-js';
+import { createSignal, createEffect, onCleanup, Show } from 'solid-js';
 import type { EditorView } from 'prosemirror-view';
-import { DropIndicator } from '../shared/DropIndicator';
 import { getDragState } from './blockDragPlugin';
+import styles from './EditorDropIndicator.module.css';
 
 export interface EditorDropIndicatorProps {
   view: EditorView | undefined;
 }
 
+/**
+ * Drop indicator that shows where a dragged block will be inserted.
+ * Wraps the EditorView's dispatch to track drag state changes.
+ */
 export function EditorDropIndicator(props: EditorDropIndicatorProps) {
-  const [dropY, setDropY] = createSignal<number | null>(null);
-  const [isVisible, setIsVisible] = createSignal(false);
+  const [indicatorY, setIndicatorY] = createSignal<number | null>(null);
+  let containerRef: HTMLDivElement | undefined;
 
-  onMount(() => {
-    const view = props.view;
-    if (!view) return;
+  // Track when we've wrapped dispatch to avoid wrapping multiple times
+  let wrappedView: EditorView | null = null;
+  let originalDispatch: EditorView['dispatch'] | null = null;
 
-    // Store the original dispatch to wrap it
-    const originalDispatchTransaction = view.dispatch.bind(view);
+  /**
+   * Update indicator position based on drag state.
+   */
+  const updateIndicator = (view: EditorView) => {
+    const dragState = getDragState(view.state);
+    const isCurrentlyDragging =
+      dragState.sourcePos !== null || (dragState.selectedPositions && dragState.selectedPositions.length > 0);
 
-    // Replace dispatch to update indicator state whenever the editor state changes
-    view.dispatch = function (tr) {
-      // Call the original dispatch
-      originalDispatchTransaction(tr);
+    if (isCurrentlyDragging && dragState.dropIndicatorY !== null && containerRef) {
+      // Convert viewport Y to container-relative Y
+      const containerRect = containerRef.getBoundingClientRect();
+      const relativeY = dragState.dropIndicatorY - containerRect.top;
+      setIndicatorY(relativeY);
+    } else {
+      setIndicatorY(null);
+    }
+  };
 
-      // Update our indicator based on new state
-      const dragState = getDragState(view.state);
-      if (dragState.sourcePos !== null || (dragState.selectedPositions && dragState.selectedPositions.length > 0)) {
-        // We're currently dragging
-        if (dragState.dropIndicatorY !== null) {
-          setDropY(dragState.dropIndicatorY);
-          setIsVisible(true);
-        } else {
-          setIsVisible(false);
-        }
-      } else {
-        // Not dragging
-        setIsVisible(false);
-      }
-    };
-
-    // Cleanup: restore original dispatch
-    onCleanup(() => {
-      view.dispatch = originalDispatchTransaction;
-    });
-  });
-
-  // Watch the view prop for changes
+  // Watch for view changes and wrap dispatch
   createEffect(() => {
     const view = props.view;
-    if (!view) {
-      setIsVisible(false);
+
+    // Unwrap previous view if different
+    if (wrappedView && wrappedView !== view && originalDispatch) {
+      wrappedView.dispatch = originalDispatch;
+      wrappedView = null;
+      originalDispatch = null;
+    }
+
+    if (!view || wrappedView === view) return;
+
+    // Store original dispatch
+    const boundDispatch = view.dispatch.bind(view);
+    originalDispatch = boundDispatch;
+    wrappedView = view;
+
+    // Wrap dispatch to intercept state changes
+    view.dispatch = function (tr) {
+      boundDispatch(tr);
+      updateIndicator(view);
+    };
+  });
+
+  onCleanup(() => {
+    // Restore original dispatch on cleanup
+    if (wrappedView && originalDispatch) {
+      wrappedView.dispatch = originalDispatch;
     }
   });
 
-  // Render inside an absolutely positioned container that overlays the editor
   return (
-    <div
-      style={{
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        right: '0',
-        bottom: '0',
-        'pointer-events': 'none',
-        'z-index': '50',
-      }}
-    >
-      <DropIndicator y={dropY() ?? 0} visible={isVisible()} />
+    <div ref={containerRef} class={styles.container}>
+      <Show when={indicatorY() !== null}>
+        <div class={styles.indicator} style={{ top: `${indicatorY()}px` }} role="presentation" aria-hidden="true" />
+      </Show>
     </div>
   );
 }

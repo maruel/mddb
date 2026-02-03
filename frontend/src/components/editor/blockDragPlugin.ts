@@ -286,6 +286,11 @@ export const blockDragPlugin = new Plugin<DragState>({
         const state = getDragState(view.state);
         const { sourcePos, dropTarget, selectedPositions } = state;
 
+        // Clean up dragging class from all blocks
+        view.dom.querySelectorAll('.block-row.dragging').forEach((el) => {
+          el.classList.remove('dragging');
+        });
+
         // Handle multi-block drop
         if (selectedPositions && selectedPositions.length > 0 && dropTarget !== null) {
           event.preventDefault();
@@ -304,6 +309,10 @@ export const blockDragPlugin = new Plugin<DragState>({
       },
 
       dragend(view) {
+        // Clean up dragging class from all blocks
+        view.dom.querySelectorAll('.block-row.dragging').forEach((el) => {
+          el.classList.remove('dragging');
+        });
         view.dispatch(clearDragState(view.state.tr));
         return false;
       },

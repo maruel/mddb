@@ -14,25 +14,20 @@ export interface RowHandleProps {
 }
 
 /**
- * A shared drag handle component used for editor blocks and table rows.
+ * A shared drag handle component used for table rows.
  * Inspired by Notion's 6-dot drag handle.
  */
 export function RowHandle(props: RowHandleProps) {
   const handleDragStart = (e: DragEvent) => {
-    // Prevent default browser drag behavior for the parent element if needed
-    // (Actual drag data setup is handled by the consumer)
-    e.stopPropagation();
     props.onDragStart(e, props.rowId);
   };
 
   const handleContextMenu = (e: MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     props.onContextMenu(e, props.rowId);
   };
 
   const handleClick = (e: MouseEvent) => {
-    e.stopPropagation();
     props.onClick?.(e, props.rowId);
   };
 

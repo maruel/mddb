@@ -1,14 +1,26 @@
-.indicator {
+/* Styles for EditorDropIndicator - visual feedback during block drag-and-drop */
+
+.container {
   position: absolute;
+  top: 0;
+  left: 0;
   right: 0;
-  height: 2px;
-  background: var(--c-primary);
+  bottom: 0;
   pointer-events: none;
-  z-index: 100;
-  border-radius: 1px;
-  animation: fadeIn 0.1s ease-out;
+  z-index: 50;
 }
 
+.indicator {
+  position: absolute;
+  left: 28px; /* Align with block content (past the handle area) */
+  right: 8px;
+  height: 2px;
+  background: var(--c-primary);
+  border-radius: 1px;
+  z-index: 100;
+}
+
+/* Circular end caps */
 .indicator::before,
 .indicator::after {
   content: '';
@@ -26,16 +38,4 @@
 
 .indicator::after {
   right: -4px;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scaleY(0.5);
-  }
-
-  to {
-    opacity: 1;
-    transform: scaleY(1);
-  }
 }
