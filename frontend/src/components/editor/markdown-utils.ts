@@ -1,9 +1,11 @@
 // Utility functions for asset URL handling in markdown content.
 
 import type { AssetUrlMap } from '../../contexts/EditorContext';
+import type { NodeTitleMap } from '../../utils/markdown-utils';
 
-/** Map of node ID to title for resolving internal page links */
-export type NodeTitleMap = Record<string, string>;
+// Re-export NodeTitleMap and extractLinkedNodeIds from utils for backward compatibility
+export type { NodeTitleMap } from '../../utils/markdown-utils';
+export { extractLinkedNodeIds } from '../../utils/markdown-utils';
 
 /**
  * Check if a source looks like a local filename (not a URL or absolute path).
@@ -119,39 +121,6 @@ export function reverseRewriteAssetUrls(markdown: string, assetUrls: AssetUrlMap
 }
 
 // --- Internal Page Link Utilities ---
-
-/**
- * Pattern to match internal page links: [text](/w/{wsId}+{slug}/{nodeId}+{slug})
- * Captures: group 1 = text, group 2 = wsId, group 3 = nodeId
- */
-const INTERNAL_LINK_PATTERN = /\[([^\]]*)\]\(\/w\/([^/+]+)(?:\+[^/]*)?\/([A-Za-z0-9]+)(?:\+[^)]*)?\)/g;
-
-/**
- * Extract all linked node IDs from internal page links in markdown content.
- * Only extracts links that belong to the current workspace.
- *
- * @param markdown The markdown content to parse
- * @param currentWsId The current workspace ID to filter links by
- * @returns Array of unique node IDs referenced in the content
- */
-export function extractLinkedNodeIds(markdown: string, currentWsId: string): string[] {
-  if (!markdown || !currentWsId) return [];
-
-  const seen = new Set<string>();
-  const pattern = new RegExp(INTERNAL_LINK_PATTERN.source, 'g');
-  let match;
-
-  while ((match = pattern.exec(markdown)) !== null) {
-    const wsId = match[2];
-    const nodeId = match[3];
-    // Only include links to the current workspace
-    if (wsId === currentWsId && nodeId && !seen.has(nodeId)) {
-      seen.add(nodeId);
-    }
-  }
-
-  return Array.from(seen);
-}
 
 /**
  * Rewrite internal page link display text to show current titles.

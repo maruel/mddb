@@ -1,0 +1,41 @@
+/* Table cell styles with inline editing */
+
+.cell {
+  padding: var(--s-2) var(--s-3);
+  cursor: text;
+  max-width: 300px;
+  position: relative;
+  vertical-align: top;
+}
+
+.cell.editing {
+  padding: 0;
+  background: transparent;
+}
+
+.cellContent {
+  min-height: 1.5em;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.cellContent:empty::after {
+  content: '\00a0';
+}
+
+/* Inline input - no save/cancel buttons */
+.input {
+  width: 100%;
+  padding: var(--s-2) var(--s-3);
+  border: none;
+  border-radius: 0;
+  font-size: inherit;
+  font-family: inherit;
+  background: var(--c-primary-light, #e8f0fe);
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--c-primary);
+}
+
+.input:focus {
+  outline: none;
+}

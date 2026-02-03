@@ -59,14 +59,15 @@ export default function SidebarNode(props: SidebarNodeProps) {
   });
 
   // Auto-expand for direct URL navigation when ancestorIds becomes available
-  let hasAutoExpanded = false;
+  // Track whether we've auto-expanded to prevent re-expanding after user collapses
+  const [hasAutoExpanded, setHasAutoExpanded] = createSignal(false);
   createEffect(
     on(
       () => props.ancestorIds.length,
       (length, prevLength) => {
         const wasEmpty = prevLength === undefined || prevLength === 0;
-        if (wasEmpty && length > 0 && !hasAutoExpanded && props.ancestorIds.includes(props.node.id)) {
-          hasAutoExpanded = true;
+        if (wasEmpty && length > 0 && !hasAutoExpanded() && props.ancestorIds.includes(props.node.id)) {
+          setHasAutoExpanded(true);
           setIsExpanded(true);
         }
       }

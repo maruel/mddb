@@ -569,12 +569,16 @@
 /* Bullet list marker */
 .prosemirrorEditor :global(.block-bullet) {
   position: relative;
+  padding-left: 24px;
 }
 
 .prosemirrorEditor :global(.block-bullet)::before {
   content: '•';
   position: absolute;
-  left: -16px;
+  left: 0;
+  top: 0;
+  width: 24px;
+  text-align: center;
   color: var(--c-text-muted, var(--c-text-light));
   font-weight: bold;
 }
@@ -582,15 +586,17 @@
 /* Numbered list marker */
 .prosemirrorEditor :global(.block-number) {
   position: relative;
+  padding-left: 24px;
   counter-increment: block-number;
 }
 
 .prosemirrorEditor :global(.block-number)::before {
   content: attr(data-number) '.';
   position: absolute;
-  left: -24px;
-  min-width: 20px;
-  text-align: right;
+  left: 0;
+  top: 0;
+  width: 24px;
+  text-align: center;
   color: var(--c-text-muted, var(--c-text-light));
 }
 

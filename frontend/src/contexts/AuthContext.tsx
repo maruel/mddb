@@ -6,6 +6,7 @@ import {
   createSignal,
   createMemo,
   createEffect,
+  on,
   onMount,
   type ParentComponent,
   type Accessor,
@@ -120,30 +121,29 @@ export const AuthProvider: ParentComponent = (props) => {
   });
 
   // Fetch user when token changes after mount (e.g., login)
-  let initialMount = true;
-  createEffect(() => {
-    const tok = token();
-    const u = user();
-    // Skip on initial mount (handled in onMount) and when already have user
-    if (initialMount) {
-      initialMount = false;
-      return;
-    }
-    if (tok && !u) {
-      (async () => {
-        try {
-          const data = await api().auth.getMe();
-          setUser(data);
-        } catch (err) {
-          console.error('Failed to load user', err);
-          if (err instanceof APIError && err.status === 401) {
-            localStorage.removeItem('mddb_token');
-            setToken(null);
-          }
+  // Using on() with defer: true to skip initial execution (handled in onMount)
+  createEffect(
+    on(
+      () => [token(), user()] as const,
+      ([tok, u]) => {
+        if (tok && !u) {
+          (async () => {
+            try {
+              const data = await api().auth.getMe();
+              setUser(data);
+            } catch (err) {
+              console.error('Failed to load user', err);
+              if (err instanceof APIError && err.status === 401) {
+                localStorage.removeItem('mddb_token');
+                setToken(null);
+              }
+            }
+          })();
         }
-      })();
-    }
-  });
+      },
+      { defer: true }
+    )
+  );
 
   const value: AuthContextValue = {
     user,

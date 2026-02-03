@@ -129,6 +129,7 @@ export function BlockContextMenu(props: BlockContextMenuProps) {
 
   /**
    * Handle action selection.
+   * Uses view.state and view.dispatch directly to avoid stale closures and binding issues.
    */
   const handleAction = (actionId: string) => {
     const view = props.view;
@@ -139,44 +140,43 @@ export function BlockContextMenu(props: BlockContextMenuProps) {
     }
 
     const { blockPos } = state;
-    const { state: editorState, dispatch } = view;
 
     switch (actionId) {
       case 'delete':
-        deleteBlock(blockPos)(editorState, dispatch);
+        deleteBlock(blockPos)(view.state, view.dispatch);
         break;
       case 'duplicate':
-        duplicateBlock(blockPos)(editorState, dispatch);
+        duplicateBlock(blockPos)(view.state, view.dispatch);
         break;
       case 'indent':
-        indentBlock(blockPos)(editorState, dispatch);
+        indentBlock(blockPos)(view.state, view.dispatch);
         break;
       case 'outdent':
-        outdentBlock(blockPos)(editorState, dispatch);
+        outdentBlock(blockPos)(view.state, view.dispatch);
         break;
       case 'convert-paragraph':
-        convertBlock(blockPos, 'paragraph')(editorState, dispatch);
+        convertBlock(blockPos, 'paragraph')(view.state, view.dispatch);
         break;
       case 'convert-heading1':
-        convertBlock(blockPos, 'heading', { level: 1 })(editorState, dispatch);
+        convertBlock(blockPos, 'heading', { level: 1 })(view.state, view.dispatch);
         break;
       case 'convert-heading2':
-        convertBlock(blockPos, 'heading', { level: 2 })(editorState, dispatch);
+        convertBlock(blockPos, 'heading', { level: 2 })(view.state, view.dispatch);
         break;
       case 'convert-bullet':
-        convertBlock(blockPos, 'bullet')(editorState, dispatch);
+        convertBlock(blockPos, 'bullet')(view.state, view.dispatch);
         break;
       case 'convert-number':
-        convertBlock(blockPos, 'number')(editorState, dispatch);
+        convertBlock(blockPos, 'number')(view.state, view.dispatch);
         break;
       case 'convert-task':
-        convertBlock(blockPos, 'task', { checked: false })(editorState, dispatch);
+        convertBlock(blockPos, 'task', { checked: false })(view.state, view.dispatch);
         break;
       case 'convert-quote':
-        convertBlock(blockPos, 'quote')(editorState, dispatch);
+        convertBlock(blockPos, 'quote')(view.state, view.dispatch);
         break;
       case 'convert-code':
-        convertBlock(blockPos, 'code')(editorState, dispatch);
+        convertBlock(blockPos, 'code')(view.state, view.dispatch);
         break;
       case 'convertTo':
         // This is just a label, do nothing

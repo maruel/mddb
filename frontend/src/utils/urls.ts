@@ -142,30 +142,3 @@ export function settingsUrl(type?: 'user' | 'workspace' | 'org' | 'server', id?:
   const slug = slugify(name || type);
   return `/settings/${type}/${id}+${slug}`;
 }
-
-/**
- * Parses unified settings URL. Returns null if no match.
- */
-export function parseUnifiedSettings(path: string): UnifiedSettingsMatch | null {
-  // Redirect bare /settings to /settings/user
-  if (path === '/settings' || path === '/settings/') {
-    return { type: 'redirect', id: '/settings/user' };
-  }
-  if (path === '/settings/user' || path === '/settings/user/') {
-    return { type: 'profile' };
-  }
-  if (path === '/settings/server' || path === '/settings/server/') {
-    return { type: 'server' };
-  }
-  const wsMatch = path.match(/^\/settings\/workspace\/([^+/]+)/);
-  if (wsMatch) {
-    const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
-    return { type: 'workspace', id: wsMatch[1], section: hash || undefined };
-  }
-  const orgMatch = path.match(/^\/settings\/org\/([^+/]+)/);
-  if (orgMatch) {
-    const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
-    return { type: 'org', id: orgMatch[1], section: hash || undefined };
-  }
-  return null;
-}

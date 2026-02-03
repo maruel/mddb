@@ -14,7 +14,7 @@ import { useWorkspace } from './WorkspaceContext';
 import { useI18n } from '../i18n';
 import { debounce } from '../utils/debounce';
 import { nodeUrl } from '../utils/urls';
-import { extractLinkedNodeIds } from '../components/editor/markdown-utils';
+import { extractLinkedNodeIds } from '../utils/markdown-utils';
 import type { Commit } from '@sdk/types.gen';
 
 /** Map of asset filename to signed URL */
@@ -58,7 +58,7 @@ const EditorContext = createContext<EditorContextValue>();
 export const EditorProvider: ParentComponent = (props) => {
   const { t } = useI18n();
   const { user, wsApi } = useAuth();
-  const { selectedNodeId, selectedNodeData, updateNodeTitle, setLoading, setError } = useWorkspace();
+  const { selectedNodeId, selectedNodeData, updateNodeTitle, setLoadError, setSaveError } = useWorkspace();
 
   // Editor state
   const [title, setTitle] = createSignal('');
@@ -106,7 +106,7 @@ export const EditorProvider: ParentComponent = (props) => {
         }
       }, 2000);
     } catch (err) {
-      setError(`${t('errors.autoSaveFailed')}: ${err}`);
+      setSaveError(`${t('errors.autoSaveFailed')}: ${err}`);
       setAutoSaveStatus('idle');
     }
   }, 2000);
@@ -183,6 +183,9 @@ export const EditorProvider: ParentComponent = (props) => {
     debouncedAutoSave();
   }
 
+  // Local loading state for history - can be exposed later for UI feedback
+  const [_loadingHistory, setLoadingHistory] = createSignal(false);
+
   async function loadHistory(nodeId: string) {
     if (showHistory()) {
       setShowHistory(false);
@@ -192,14 +195,14 @@ export const EditorProvider: ParentComponent = (props) => {
     if (!ws) return;
 
     try {
-      setLoading(true);
+      setLoadingHistory(true);
       const data = await ws.nodes.history.listNodeVersions(nodeId, { Limit: 100 });
       setHistory((data.history?.filter(Boolean) as Commit[]) || []);
       setShowHistory(true);
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
-      setLoading(false);
+      setLoadingHistory(false);
     }
   }
 

@@ -1,7 +1,7 @@
 // User profile settings panel for managing personal preferences.
 
 import { createSignal, createEffect, onMount, Show, For } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
+import { useNavigate, useLocation } from '@solidjs/router';
 import type { UserSettings, WorkspaceMembershipSettings, OrgMembershipResponse } from '@sdk/types.gen';
 import { OrgRoleAdmin, OrgRoleOwner } from '@sdk/types.gen';
 import { useAuth } from '../../contexts';
@@ -14,6 +14,7 @@ import styles from './ProfileSettings.module.css';
 export default function ProfileSettings() {
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, api, wsApi } = useAuth();
 
   const [theme, setTheme] = createSignal('light');
@@ -26,17 +27,17 @@ export default function ProfileSettings() {
 
   // Handle OAuth callback URL params on mount
   onMount(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     if (params.get('oauth_linked') === 'true') {
       setSuccess(t('settings.accountLinked'));
-      // Clean up URL params
-      window.history.replaceState({}, '', window.location.pathname);
+      // Clean up URL params - use replaceState to update URL without navigation
+      window.history.replaceState({}, '', location.pathname);
     }
     const oauthError = params.get('oauth_error');
     if (oauthError) {
       setError(`${t('settings.linkingFailed')}: ${oauthError}`);
-      // Clean up URL params
-      window.history.replaceState({}, '', window.location.pathname);
+      // Clean up URL params - use replaceState to update URL without navigation
+      window.history.replaceState({}, '', location.pathname);
     }
   });
 

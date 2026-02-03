@@ -5,6 +5,7 @@ import {
   useContext,
   createSignal,
   createEffect,
+  createMemo,
   batch,
   type ParentComponent,
   type Accessor,
@@ -29,11 +30,25 @@ interface WorkspaceContextValue {
   breadcrumbPath: Accessor<NodeResponse[]>;
   setBreadcrumbPath: (path: NodeResponse[] | ((prev: NodeResponse[]) => NodeResponse[])) => void;
 
-  // Loading/error state
+  // Operation-specific loading states
+  loadingNodes: Accessor<boolean>;
+  loadingNodeId: Accessor<string | null>; // ID of node being loaded
+  switchingWorkspace: Accessor<boolean>;
+  savingNodeId: Accessor<string | null>; // ID of node being saved (for column updates, etc.)
+  setSavingNodeId: (id: string | null) => void;
+  deletingNodeId: Accessor<string | null>; // ID of node being deleted
+  setDeletingNodeId: (id: string | null) => void;
+  creatingNode: Accessor<boolean>;
+  setCreatingNode: (creating: boolean) => void;
+
+  // Operation-specific error states
+  loadError: Accessor<string | null>;
+  setLoadError: (error: string | null) => void;
+  saveError: Accessor<string | null>;
+  setSaveError: (error: string | null) => void;
+
+  // Combined loading (any operation in progress) - for backward compatibility
   loading: Accessor<boolean>;
-  setLoading: (loading: boolean) => void;
-  error: Accessor<string | null>;
-  setError: (error: string | null) => void;
 
   // First login state
   firstLoginCheckDone: Accessor<boolean>;
@@ -48,6 +63,9 @@ interface WorkspaceContextValue {
   fetchNodeChildren: (nodeId: string) => Promise<void>;
   removeNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, newTitle: string) => void;
+
+  // Clear errors
+  clearErrors: () => void;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue>();
@@ -62,19 +80,42 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   const [selectedNodeData, setSelectedNodeData] = createSignal<NodeResponse | null>(null);
   const [breadcrumbPath, setBreadcrumbPath] = createSignal<NodeResponse[]>([]);
 
-  // Loading/error state
-  const [loading, setLoading] = createSignal(false);
-  const [error, setError] = createSignal<string | null>(null);
+  // Operation-specific loading states
+  const [loadingNodes, setLoadingNodes] = createSignal(false);
+  const [loadingNodeId, setLoadingNodeId] = createSignal<string | null>(null);
+  const [switchingWorkspace, setSwitchingWorkspace] = createSignal(false);
+  const [savingNodeId, setSavingNodeId] = createSignal<string | null>(null);
+  const [deletingNodeId, setDeletingNodeId] = createSignal<string | null>(null);
+  const [creatingNode, setCreatingNode] = createSignal(false);
+
+  // Operation-specific error states
+  const [loadError, setLoadError] = createSignal<string | null>(null);
+  const [saveError, setSaveError] = createSignal<string | null>(null);
+
+  // Combined loading (any operation in progress) - derived for backward compatibility
+  const loading = createMemo(
+    () =>
+      loadingNodes() ||
+      loadingNodeId() !== null ||
+      switchingWorkspace() ||
+      savingNodeId() !== null ||
+      deletingNodeId() !== null ||
+      creatingNode()
+  );
 
   // First login state
   const [firstLoginCheckDone, setFirstLoginCheckDone] = createSignal(false);
   const [firstLoginInProgress, setFirstLoginInProgress] = createSignal(false);
 
-  // Track loading state to prevent duplicate calls
-  let loadingNodes = false;
-  let loadedForWorkspace: string | null = null;
-  let loadingNodeId: string | null = null;
-  let loadedNodeId: string | null = null;
+  // Track loaded state to prevent duplicate calls
+  const [loadedForWorkspace, setLoadedForWorkspace] = createSignal<string | null>(null);
+  const [loadedNodeId, setLoadedNodeId] = createSignal<string | null>(null);
+
+  // Clear all errors
+  const clearErrors = () => {
+    setLoadError(null);
+    setSaveError(null);
+  };
 
   // Wrapper for setNodes using produce
   const setNodes = (fn: (nodes: NodeResponse[]) => void) => {
@@ -157,32 +198,32 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   // Auto-create organization for first-time users
   async function autoCreateOrganization() {
     try {
-      setLoading(true);
+      setCreatingNode(true);
       const firstName = getUserFirstName();
       const orgName = firstName
         ? t('onboarding.defaultOrgName', { name: firstName })
         : t('onboarding.defaultOrgNameFallback');
       await createOrganization({ name: orgName as string });
     } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
-      setLoading(false);
+      setCreatingNode(false);
     }
   }
 
   // Auto-create workspace for users with org but no workspace
   async function autoCreateWorkspace() {
     try {
-      setLoading(true);
+      setCreatingNode(true);
       const firstName = getUserFirstName();
       const wsName = firstName
         ? t('onboarding.defaultWorkspaceName', { name: firstName })
         : t('onboarding.defaultWorkspaceNameFallback');
       await createWorkspace({ name: wsName as string });
     } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
-      setLoading(false);
+      setCreatingNode(false);
     }
   }
 
@@ -201,14 +242,14 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       });
       return newPage?.id ? String(newPage.id) : null;
     } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
       return null;
     }
   }
 
   async function switchWorkspace(wsId: string) {
     try {
-      setLoading(true);
+      setSwitchingWorkspace(true);
       const data = await api().auth.switchWorkspace({ ws_id: wsId });
       if (!data.user) {
         throw new Error('No user data returned');
@@ -219,25 +260,24 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         setSelectedNodeData(null);
         setBreadcrumbPath([]);
       });
-      loadedNodeId = null;
-      loadedForWorkspace = null;
+      setLoadedNodeId(null);
+      setLoadedForWorkspace(null);
       await loadNodes();
     } catch (err) {
-      setError(`${t('errors.failedToSwitch')}: ${err}`);
+      setLoadError(`${t('errors.failedToSwitch')}: ${err}`);
     } finally {
-      setLoading(false);
+      setSwitchingWorkspace(false);
     }
   }
 
   async function loadNodes(force = false) {
     const ws = wsApi();
     const wsId = user()?.workspace_id;
-    if (!ws || loadingNodes) return;
-    if (!force && wsId && loadedForWorkspace === wsId && nodes.length > 0) return;
+    if (!ws || loadingNodes()) return;
+    if (!force && wsId && loadedForWorkspace() === wsId && nodes.length > 0) return;
 
     try {
-      loadingNodes = true;
-      setLoading(true);
+      setLoadingNodes(true);
       const resp = await ws.nodes.listNodeChildren('0');
       let loadedNodes = resp?.nodes || [];
 
@@ -250,33 +290,31 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       }
 
       setNodesStore(reconcile(loadedNodes));
-      loadedForWorkspace = wsId || null;
-      setError(null);
+      setLoadedForWorkspace(wsId || null);
+      setLoadError(null);
       // Navigation to first node is handled by WorkspaceRoot component
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
-      loadingNodes = false;
-      setLoading(false);
+      setLoadingNodes(false);
     }
   }
 
   async function loadNode(id: string): Promise<NodeResponse | undefined> {
     const ws = wsApi();
     if (!ws) return undefined;
-    if (loadingNodeId === id || loadedNodeId === id) return undefined;
+    if (loadingNodeId() === id || loadedNodeId() === id) return undefined;
 
     try {
-      loadingNodeId = id;
-      setLoading(true);
+      setLoadingNodeId(id);
       const nodeData = await ws.nodes.getNode(id);
 
       batch(() => {
         setSelectedNodeId(nodeData.id);
         setSelectedNodeData(nodeData);
       });
-      loadedNodeId = nodeData.id;
-      setError(null);
+      setLoadedNodeId(nodeData.id);
+      setLoadError(null);
 
       // Build breadcrumb path
       const path: NodeResponse[] = [nodeData];
@@ -294,11 +332,10 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
       return nodeData;
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
       return undefined;
     } finally {
-      loadingNodeId = null;
-      setLoading(false);
+      setLoadingNodeId(null);
     }
   }
 
@@ -374,8 +411,8 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   // Reset loadedNodeId when workspace changes
   createEffect(() => {
     const wsId = user()?.workspace_id;
-    if (wsId && loadedForWorkspace !== wsId) {
-      loadedNodeId = null;
+    if (wsId && loadedForWorkspace() !== wsId) {
+      setLoadedNodeId(null);
     }
   });
 
@@ -388,10 +425,20 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     setSelectedNodeData,
     breadcrumbPath,
     setBreadcrumbPath,
+    loadingNodes,
+    loadingNodeId,
+    switchingWorkspace,
+    savingNodeId,
+    setSavingNodeId,
+    deletingNodeId,
+    setDeletingNodeId,
+    creatingNode,
+    setCreatingNode,
+    loadError,
+    setLoadError,
+    saveError,
+    setSaveError,
     loading,
-    setLoading,
-    error,
-    setError,
     firstLoginCheckDone,
     setFirstLoginCheckDone,
     switchWorkspace,
@@ -402,6 +449,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     fetchNodeChildren,
     removeNode,
     updateNodeTitle,
+    clearErrors,
   };
 
   return <WorkspaceContext.Provider value={value}>{props.children}</WorkspaceContext.Provider>;

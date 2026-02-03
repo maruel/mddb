@@ -21,7 +21,7 @@ export default function NodeView() {
   const navigate = useNavigate();
   const params = useParams<{ wsId: string; nodeId: string }>();
   const { user, token, wsApi } = useAuth();
-  const { selectedNodeId, selectedNodeData, setLoading, setError, loadNode } = useWorkspace();
+  const { selectedNodeId, selectedNodeData, setSavingNodeId, setLoadError, setSaveError, loadNode } = useWorkspace();
   const {
     title,
     content,
@@ -70,6 +70,9 @@ export default function NodeView() {
     }
   });
 
+  // Local loading state for preview (operation-specific) - can be used for UI feedback
+  const [_loadingPreview, setLoadingPreview] = createSignal(false);
+
   // Handle adding a column to table
   async function handleAddColumn(column: Property) {
     const nodeId = selectedNodeId();
@@ -78,7 +81,7 @@ export default function NodeView() {
     if (!nodeId || !nodeData || !ws) return;
 
     try {
-      setLoading(true);
+      setSavingNodeId(nodeId);
       const currentProperties: Property[] = nodeData.properties || [];
       const updatedProperties: Property[] = [...currentProperties, column];
 
@@ -89,11 +92,11 @@ export default function NodeView() {
 
       // Reload node to get updated schema
       await loadNode(nodeId);
-      setError(null);
+      setSaveError(null);
     } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setSaveError(`${t('errors.failedToSave')}: ${err}`);
     } finally {
-      setLoading(false);
+      setSavingNodeId(null);
     }
   }
 
@@ -101,14 +104,14 @@ export default function NodeView() {
     const ws = wsApi();
     if (!ws) return;
     try {
-      setLoading(true);
+      setLoadingPreview(true);
       const data = await ws.nodes.history.getNodeVersion(nodeId, commit.hash);
       setPreviewContent(data.content || '');
       setPreviewCommit(commit);
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
-      setLoading(false);
+      setLoadingPreview(false);
     }
   }
 
@@ -197,7 +200,7 @@ export default function NodeView() {
                       const nodeId = selectedNodeId();
                       if (nodeId) loadNode(nodeId);
                     }}
-                    onError={setError}
+                    onError={setSaveError}
                     onNavigateToNode={handleNavigateToNode}
                   />
                 </Suspense>

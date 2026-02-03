@@ -152,14 +152,13 @@ export function RowContextMenu(props: RowContextMenuProps) {
     props.onClose();
   };
 
-  // Build class string for each button
-  const getItemClass = (action: ContextMenuAction, idx: number) => {
-    let cls = styles.item;
-    if (action.danger) cls += ` ${styles.danger}`;
-    if (action.disabled) cls += ` ${styles.disabled}`;
-    if (focusedIndex() === idx) cls += ` ${styles.focused}`;
-    return cls;
-  };
+  // Build classList object for each button (reactive in SolidJS)
+  const getItemClassList = (action: ContextMenuAction, idx: () => number): Record<string, boolean | undefined> => ({
+    [styles.item as string]: true,
+    [styles.danger as string]: action.danger,
+    [styles.disabled as string]: action.disabled,
+    [styles.focused as string]: focusedIndex() === idx(),
+  });
 
   return (
     <Portal>
@@ -181,7 +180,7 @@ export function RowContextMenu(props: RowContextMenuProps) {
                 <div class={styles.separator} role="separator" />
               </Show>
               <button
-                class={getItemClass(action, index())}
+                classList={getItemClassList(action, index)}
                 onClick={() => handleAction(action)}
                 onMouseEnter={() => setFocusedIndex(index())}
                 role="menuitem"

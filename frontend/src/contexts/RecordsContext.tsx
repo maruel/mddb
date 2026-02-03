@@ -5,16 +5,20 @@ import {
   useContext,
   createSignal,
   createEffect,
+  createMemo,
   type ParentComponent,
   type Accessor,
   batch,
+  onCleanup,
 } from 'solid-js';
 import { useAuth } from './AuthContext';
 import { useWorkspace } from './WorkspaceContext';
 import { useI18n } from '../i18n';
+import { debounce } from '../utils/debounce';
 import type { DataRecordResponse, View, Filter, Sort, ViewType } from '@sdk/types.gen';
 
 const PAGE_SIZE = 50;
+const FILTER_DEBOUNCE_MS = 300;
 
 interface RecordsContextValue {
   records: Accessor<DataRecordResponse[]>;
@@ -23,6 +27,21 @@ interface RecordsContextValue {
   activeViewId: Accessor<string | undefined>;
   activeFilters: Accessor<Filter[]>;
   activeSorts: Accessor<Sort[]>;
+
+  // Operation-specific loading states
+  loadingRecords: Accessor<boolean>;
+  savingRecordId: Accessor<string | null>; // ID of record being saved/created (null for create)
+  deletingRecordId: Accessor<string | null>; // ID of record being deleted
+  savingView: Accessor<boolean>;
+
+  // Operation-specific error states
+  loadError: Accessor<string | null>;
+  setLoadError: (error: string | null) => void;
+  saveError: Accessor<string | null>;
+  setSaveError: (error: string | null) => void;
+
+  // Combined loading (any operation in progress) - for backward compatibility
+  loading: Accessor<boolean>;
 
   loadRecords: (nodeId: string) => Promise<void>;
   loadMoreRecords: () => Promise<void>;
@@ -38,6 +57,9 @@ interface RecordsContextValue {
   createView: (name: string, type: ViewType) => Promise<void>;
   updateView: (viewId: string, updates: Partial<View>) => Promise<void>;
   deleteView: (viewId: string) => Promise<void>;
+
+  // Clear errors
+  clearErrors: () => void;
 }
 
 const RecordsContext = createContext<RecordsContextValue>();
@@ -45,10 +67,14 @@ const RecordsContext = createContext<RecordsContextValue>();
 export const RecordsProvider: ParentComponent = (props) => {
   const { t } = useI18n();
   const { wsApi } = useAuth();
-  const { selectedNodeId, selectedNodeData, loading, setLoading, setError } = useWorkspace();
+  const { selectedNodeId, selectedNodeData } = useWorkspace();
 
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
   const [hasMore, setHasMore] = createSignal(false);
+
+  // Full dataset cache for client-side filtering when all records are loaded
+  // allRecords stores the unfiltered dataset when hasMore is false
+  const [allRecords, setAllRecords] = createSignal<DataRecordResponse[] | null>(null);
 
   // View state
   const [views, setViews] = createSignal<View[]>([]);
@@ -56,8 +82,138 @@ export const RecordsProvider: ParentComponent = (props) => {
   const [activeFilters, setActiveFilters] = createSignal<Filter[]>([]);
   const [activeSorts, setActiveSorts] = createSignal<Sort[]>([]);
 
+  // Operation-specific loading states
+  const [loadingRecords, setLoadingRecords] = createSignal(false);
+  const [savingRecordId, setSavingRecordId] = createSignal<string | null>(null);
+  const [deletingRecordId, setDeletingRecordId] = createSignal<string | null>(null);
+  const [savingView, setSavingView] = createSignal(false);
+
+  // Operation-specific error states
+  const [loadError, setLoadError] = createSignal<string | null>(null);
+  const [saveError, setSaveError] = createSignal<string | null>(null);
+
+  // Combined loading (any operation in progress) - derived for backward compatibility
+  const loading = createMemo(
+    () => loadingRecords() || savingRecordId() !== null || deletingRecordId() !== null || savingView()
+  );
+
+  // Clear all errors
+  const clearErrors = () => {
+    setLoadError(null);
+    setSaveError(null);
+  };
+
   // Virtual default view used when no views exist
   const DEFAULT_VIEW_ID = '__default__';
+
+  // Client-side filter matching
+  function matchesFilter(record: DataRecordResponse, filter: Filter): boolean {
+    // Handle compound filters (and/or)
+    if (filter.and && filter.and.length > 0) {
+      return filter.and.every((f) => matchesFilter(record, f));
+    }
+    if (filter.or && filter.or.length > 0) {
+      return filter.or.some((f) => matchesFilter(record, f));
+    }
+
+    // Simple filter
+    if (!filter.property) return true;
+    const fieldValue = record.data?.[filter.property];
+    const filterValue = filter.value;
+
+    switch (filter.operator) {
+      case 'equals':
+        return fieldValue === filterValue;
+      case 'not_equals':
+        return fieldValue !== filterValue;
+      case 'contains':
+        return (
+          typeof fieldValue === 'string' &&
+          typeof filterValue === 'string' &&
+          fieldValue.toLowerCase().includes(filterValue.toLowerCase())
+        );
+      case 'not_contains':
+        return (
+          typeof fieldValue === 'string' &&
+          typeof filterValue === 'string' &&
+          !fieldValue.toLowerCase().includes(filterValue.toLowerCase())
+        );
+      case 'starts_with':
+        return (
+          typeof fieldValue === 'string' &&
+          typeof filterValue === 'string' &&
+          fieldValue.toLowerCase().startsWith(filterValue.toLowerCase())
+        );
+      case 'ends_with':
+        return (
+          typeof fieldValue === 'string' &&
+          typeof filterValue === 'string' &&
+          fieldValue.toLowerCase().endsWith(filterValue.toLowerCase())
+        );
+      case 'is_empty':
+        return fieldValue === null || fieldValue === undefined || fieldValue === '';
+      case 'is_not_empty':
+        return fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
+      case 'gt':
+        return typeof fieldValue === 'number' && typeof filterValue === 'number' && fieldValue > filterValue;
+      case 'gte':
+        return typeof fieldValue === 'number' && typeof filterValue === 'number' && fieldValue >= filterValue;
+      case 'lt':
+        return typeof fieldValue === 'number' && typeof filterValue === 'number' && fieldValue < filterValue;
+      case 'lte':
+        return typeof fieldValue === 'number' && typeof filterValue === 'number' && fieldValue <= filterValue;
+      default:
+        return true;
+    }
+  }
+
+  // Apply filters to records client-side
+  function applyFiltersClientSide(recs: DataRecordResponse[], filters: Filter[]): DataRecordResponse[] {
+    if (filters.length === 0) return recs;
+    return recs.filter((record) => filters.every((filter) => matchesFilter(record, filter)));
+  }
+
+  // Apply sorts to records client-side
+  function applySortsClientSide(recs: DataRecordResponse[], sorts: Sort[]): DataRecordResponse[] {
+    if (sorts.length === 0) return recs;
+
+    return [...recs].sort((a, b) => {
+      for (const sort of sorts) {
+        const aVal = a.data?.[sort.property];
+        const bVal = b.data?.[sort.property];
+
+        let cmp = 0;
+        if (aVal === bVal) {
+          cmp = 0;
+        } else if (aVal === null || aVal === undefined) {
+          cmp = 1; // nulls last
+        } else if (bVal === null || bVal === undefined) {
+          cmp = -1;
+        } else if (typeof aVal === 'string' && typeof bVal === 'string') {
+          cmp = aVal.localeCompare(bVal);
+        } else if (typeof aVal === 'number' && typeof bVal === 'number') {
+          cmp = aVal - bVal;
+        } else {
+          cmp = String(aVal).localeCompare(String(bVal));
+        }
+
+        if (cmp !== 0) {
+          return sort.direction === 'desc' ? -cmp : cmp;
+        }
+      }
+      return 0;
+    });
+  }
+
+  // Debounced server reload function
+  const debouncedServerReload = debounce((nodeId: string) => {
+    loadRecordsFromServer(nodeId);
+  }, FILTER_DEBOUNCE_MS);
+
+  // Cleanup debounced function on unmount
+  onCleanup(() => {
+    debouncedServerReload.cancel();
+  });
 
   // Load records when selected node changes and has table content
   createEffect(() => {
@@ -100,8 +256,10 @@ export const RecordsProvider: ParentComponent = (props) => {
   });
 
   function clearRecords() {
+    debouncedServerReload.cancel();
     setRecords([]);
     setHasMore(false);
+    setAllRecords(null);
     setViews([]);
     setActiveViewIdSignal(undefined);
     setActiveFilters([]);
@@ -123,30 +281,27 @@ export const RecordsProvider: ParentComponent = (props) => {
       }
     });
 
-    const nodeId = selectedNodeId();
-    if (nodeId) {
-      loadRecords(nodeId);
-    }
+    // Use optimized filtering (client-side if all records cached)
+    applyFiltersAndSorts();
   }
 
   function setFilters(filters: Filter[]) {
     setActiveFilters(filters);
-    const nodeId = selectedNodeId();
-    if (nodeId) loadRecords(nodeId);
+    applyFiltersAndSorts();
   }
 
   function setSorts(sorts: Sort[]) {
     setActiveSorts(sorts);
-    const nodeId = selectedNodeId();
-    if (nodeId) loadRecords(nodeId);
+    applyFiltersAndSorts();
   }
 
-  async function loadRecords(nodeId: string) {
+  // Internal function to load records from server (always reloads)
+  async function loadRecordsFromServer(nodeId: string) {
     const ws = wsApi();
     if (!ws) return;
 
     try {
-      setLoading(true);
+      setLoadingRecords(true);
 
       const filters = activeFilters().length > 0 ? JSON.stringify(activeFilters()) : undefined;
       const sorts = activeSorts().length > 0 ? JSON.stringify(activeSorts()) : undefined;
@@ -165,21 +320,55 @@ export const RecordsProvider: ParentComponent = (props) => {
 
       const loadedRecords = (data.records || []) as DataRecordResponse[];
       setRecords(loadedRecords);
-      setHasMore(loadedRecords.length === PAGE_SIZE);
+      const more = loadedRecords.length === PAGE_SIZE;
+      setHasMore(more);
+
+      // If we have all records and no filters/sorts, cache them for client-side filtering
+      if (!more && activeFilters().length === 0 && activeSorts().length === 0) {
+        setAllRecords(loadedRecords);
+      } else {
+        // Clear cache if filters/sorts are active or not all records loaded
+        setAllRecords(null);
+      }
+      setLoadError(null);
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
-      setLoading(false);
+      setLoadingRecords(false);
+    }
+  }
+
+  // Public function that may use client-side filtering when possible
+  async function loadRecords(nodeId: string) {
+    debouncedServerReload.cancel();
+    await loadRecordsFromServer(nodeId);
+  }
+
+  // Apply filters/sorts, using client-side when all data is cached
+  function applyFiltersAndSorts() {
+    const cached = allRecords();
+    if (cached !== null) {
+      // Client-side filtering: we have all records cached
+      const filtered = applyFiltersClientSide(cached, activeFilters());
+      const sorted = applySortsClientSide(filtered, activeSorts());
+      setRecords(sorted);
+      setHasMore(false);
+    } else {
+      // Need server reload (debounced)
+      const nodeId = selectedNodeId();
+      if (nodeId) {
+        debouncedServerReload(nodeId);
+      }
     }
   }
 
   async function loadMoreRecords() {
     const nodeId = selectedNodeId();
     const ws = wsApi();
-    if (!nodeId || loading() || !ws) return;
+    if (!nodeId || loadingRecords() || !ws) return;
 
     try {
-      setLoading(true);
+      setLoadingRecords(true);
       const offset = records().length;
 
       const filters = activeFilters().length > 0 ? JSON.stringify(activeFilters()) : undefined;
@@ -198,12 +387,20 @@ export const RecordsProvider: ParentComponent = (props) => {
       });
 
       const newRecords = (data.records || []) as DataRecordResponse[];
-      setRecords([...records(), ...newRecords]);
-      setHasMore(newRecords.length === PAGE_SIZE);
+      const allRecs = [...records(), ...newRecords];
+      setRecords(allRecs);
+      const more = newRecords.length === PAGE_SIZE;
+      setHasMore(more);
+
+      // Update cache if we now have all records and no filters/sorts active
+      if (!more && activeFilters().length === 0 && activeSorts().length === 0) {
+        setAllRecords(allRecs);
+      }
+      setLoadError(null);
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
-      setLoading(false);
+      setLoadingRecords(false);
     }
   }
 
@@ -213,14 +410,16 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!nodeId || !ws) return;
 
     try {
-      setLoading(true);
+      setSavingRecordId('__new__'); // Special marker for creating new record
+      // Invalidate cache since data is changing
+      setAllRecords(null);
       await ws.nodes.table.records.createRecord(nodeId, { data });
       await loadRecords(nodeId);
-      setError(null);
+      setSaveError(null);
     } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
-      setLoading(false);
+      setSavingRecordId(null);
     }
   }
 
@@ -230,14 +429,16 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!nodeId || !ws) return;
 
     try {
-      setLoading(true);
+      setSavingRecordId(recordId);
+      // Invalidate cache since data is changing
+      setAllRecords(null);
       await ws.nodes.table.records.updateRecord(nodeId, recordId, { data });
       await loadRecords(nodeId);
-      setError(null);
+      setSaveError(null);
     } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setSaveError(`${t('errors.failedToSave')}: ${err}`);
     } finally {
-      setLoading(false);
+      setSavingRecordId(null);
     }
   }
 
@@ -248,14 +449,16 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
 
     try {
-      setLoading(true);
+      setDeletingRecordId(recordId);
+      // Invalidate cache since data is changing
+      setAllRecords(null);
       await ws.nodes.table.records.deleteRecord(nodeId, recordId);
       await loadRecords(nodeId);
-      setError(null);
+      setSaveError(null);
     } catch (err) {
-      setError(`${t('errors.failedToDelete')}: ${err}`);
+      setSaveError(`${t('errors.failedToDelete')}: ${err}`);
     } finally {
-      setLoading(false);
+      setDeletingRecordId(null);
     }
   }
 
@@ -265,7 +468,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!nodeId || !ws) return;
 
     try {
-      setLoading(true);
+      setSavingView(true);
       const res = await ws.nodes.views.createView(nodeId, { name, type });
 
       // Ideally reload node to get updated views list, but we can also optimistically update
@@ -289,11 +492,12 @@ export const RecordsProvider: ParentComponent = (props) => {
         setActiveFilters([]);
         setActiveSorts([]);
       });
+      setSaveError(null);
       // No need to reload records as filters are empty
     } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
-      setLoading(false);
+      setSavingView(false);
     }
   }
 
@@ -303,7 +507,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!nodeId || !ws) return;
 
     try {
-      setLoading(true);
+      setSavingView(true);
       // We only send the fields that are updated.
       // The API expects UpdateViewRequest which matches Partial<View> structure mostly.
       // But we need to map View properties to UpdateViewRequest properties if they differ.
@@ -312,19 +516,20 @@ export const RecordsProvider: ParentComponent = (props) => {
 
       setViews(views().map((v) => (v.id === viewId ? { ...v, ...updates } : v)));
 
-      // If updating active view's filters/sorts, update local state
+      // If updating active view's filters/sorts, update local state and apply
       if (viewId === activeViewId()) {
         if (updates.filters) setActiveFilters(updates.filters);
         if (updates.sorts) setActiveSorts(updates.sorts);
-        // Reload records if filters/sorts changed
+        // Apply filters/sorts (use client-side if cached)
         if (updates.filters || updates.sorts) {
-          await loadRecords(nodeId);
+          applyFiltersAndSorts();
         }
       }
+      setSaveError(null);
     } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setSaveError(`${t('errors.failedToSave')}: ${err}`);
     } finally {
-      setLoading(false);
+      setSavingView(false);
     }
   }
 
@@ -336,7 +541,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!confirm(t('table.confirmDeleteView') || 'Delete this view?')) return;
 
     try {
-      setLoading(true);
+      setSavingView(true);
       await ws.nodes.views.deleteView(nodeId, viewId);
 
       const newViews = views().filter((v) => v.id !== viewId);
@@ -351,10 +556,11 @@ export const RecordsProvider: ParentComponent = (props) => {
           setActiveViewId(undefined);
         }
       }
+      setSaveError(null);
     } catch (err) {
-      setError(`${t('errors.failedToDelete')}: ${err}`);
+      setSaveError(`${t('errors.failedToDelete')}: ${err}`);
     } finally {
-      setLoading(false);
+      setSavingView(false);
     }
   }
 
@@ -365,6 +571,15 @@ export const RecordsProvider: ParentComponent = (props) => {
     activeViewId,
     activeFilters,
     activeSorts,
+    loadingRecords,
+    savingRecordId,
+    deletingRecordId,
+    savingView,
+    loadError,
+    setLoadError,
+    saveError,
+    setSaveError,
+    loading,
     loadRecords,
     loadMoreRecords,
     addRecord,
@@ -377,6 +592,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     createView,
     updateView,
     deleteView,
+    clearErrors,
   };
 
   return <RecordsContext.Provider value={value}>{props.children}</RecordsContext.Provider>;

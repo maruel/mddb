@@ -24,9 +24,11 @@ const WorkspaceLayout: ParentComponent = (props) => {
     selectedNodeId,
     breadcrumbPath,
     loading,
-    setLoading,
-    error,
-    setError,
+    setCreatingNode,
+    setDeletingNodeId,
+    loadError,
+    saveError,
+    setSaveError,
     switchWorkspace,
     createWorkspace,
     loadNodes,
@@ -116,13 +118,32 @@ const WorkspaceLayout: ParentComponent = (props) => {
     }
   });
 
+  // Find a node's parent and siblings in the tree
+  function findNodeContext(
+    nodeId: string,
+    nodeList: NodeResponse[] = nodes,
+    parent: NodeResponse | null = null
+  ): { parent: NodeResponse | null; siblings: NodeResponse[]; index: number } | null {
+    const index = nodeList.findIndex((n) => n.id === nodeId);
+    if (index !== -1) {
+      return { parent, siblings: nodeList, index };
+    }
+    for (const node of nodeList) {
+      if (node.children) {
+        const result = findNodeContext(nodeId, node.children, node);
+        if (result) return result;
+      }
+    }
+    return null;
+  }
+
   // Create node helper
   async function createNode(type: 'document' | 'table' = 'document', parentId?: string) {
     const ws = wsApi();
     if (!ws) return;
 
     try {
-      setLoading(true);
+      setCreatingNode(true);
       const parent = parentId || nodeCreationParentId() || '0';
       let newNodeId: string | number;
       const defaultTitle =
@@ -146,12 +167,12 @@ const WorkspaceLayout: ParentComponent = (props) => {
       if (wsId) {
         navigate(nodeUrl(wsId, wsName, String(newNodeId), defaultTitle));
       }
-      setError(null);
+      setSaveError(null);
       setNodeCreationParentId(null);
     } catch (err) {
-      setError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
-      setLoading(false);
+      setCreatingNode(false);
     }
   }
 
@@ -168,25 +189,6 @@ const WorkspaceLayout: ParentComponent = (props) => {
       setShowMobileSidebar(false);
     }
   };
-
-  // Find a node's parent and siblings in the tree
-  function findNodeContext(
-    nodeId: string,
-    nodeList: NodeResponse[] = nodes,
-    parent: NodeResponse | null = null
-  ): { parent: NodeResponse | null; siblings: NodeResponse[]; index: number } | null {
-    const index = nodeList.findIndex((n) => n.id === nodeId);
-    if (index !== -1) {
-      return { parent, siblings: nodeList, index };
-    }
-    for (const node of nodeList) {
-      if (node.children) {
-        const result = findNodeContext(nodeId, node.children, node);
-        if (result) return result;
-      }
-    }
-    return null;
-  }
 
   async function handleDeleteNode(nodeId: string) {
     const ws = wsApi();
@@ -212,7 +214,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     }
 
     try {
-      setLoading(true);
+      setDeletingNodeId(nodeId);
       await ws.nodes.deleteNode(nodeId);
       removeNode(nodeId);
 
@@ -228,10 +230,11 @@ const WorkspaceLayout: ParentComponent = (props) => {
           navigate(`/w/${wsId}+${wsName || 'workspace'}/`);
         }
       }
+      setSaveError(null);
     } catch (err) {
-      setError(`${t('errors.failedToDelete')}: ${err}`);
+      setSaveError(`${t('errors.failedToDelete')}: ${err}`);
     } finally {
-      setLoading(false);
+      setDeletingNodeId(null);
     }
   }
 
@@ -341,9 +344,9 @@ const WorkspaceLayout: ParentComponent = (props) => {
         />
 
         <main class={styles.main}>
-          <Show when={error()}>
+          <Show when={loadError() || saveError()}>
             <div class={styles.error} role="alert" aria-live="polite">
-              {error()}
+              {loadError() || saveError()}
             </div>
           </Show>
           {props.children}
