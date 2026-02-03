@@ -177,9 +177,7 @@ test.describe('Block context menu interactions', () => {
     // Open context menu on first block
     const contextMenu = await openContextMenu(page, 0);
 
-    // Navigate to "Duplicate" (second item, index 1)
-    await page.keyboard.press('ArrowDown');
-
+    // "Duplicate" is the first item, already focused
     // Press enter to execute duplicate action
     await page.keyboard.press('Enter');
 
@@ -285,14 +283,13 @@ test.describe('Block context menu interactions', () => {
 
     const contextMenu = await openContextMenu(page, 0);
 
-    // Single block menu should have conversion options
+    // Single block menu should have standard options
     await expect(contextMenu.locator('text=Delete')).toBeVisible();
     await expect(contextMenu.locator('text=Duplicate')).toBeVisible();
     await expect(contextMenu.locator('text=Indent')).toBeVisible();
     await expect(contextMenu.locator('text=Outdent')).toBeVisible();
-    await expect(contextMenu.locator('text=Turn into')).toBeVisible();
 
-    // Should have block type conversion options
+    // Should have block type conversion options (with icons)
     await expect(contextMenu.locator('text=Paragraph')).toBeVisible();
     await expect(contextMenu.locator('text=Bullet list')).toBeVisible();
     await expect(contextMenu.locator('text=Numbered list')).toBeVisible();
@@ -308,9 +305,7 @@ test.describe('Block context menu interactions', () => {
     // Open context menu on first block
     const contextMenu = await openContextMenu(page, 0);
 
-    // Navigate to "Duplicate" (second item, index 1)
-    await page.keyboard.press('ArrowDown');
-
+    // "Duplicate" is the first item, already focused
     // Press space to execute duplicate action
     await page.keyboard.press(' ');
 
