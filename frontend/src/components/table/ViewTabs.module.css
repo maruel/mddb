@@ -119,7 +119,7 @@
 }
 
 .dropdown button:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-bg-hover);
 }
 
 .overlay {
@@ -152,7 +152,7 @@
 }
 
 .contextMenu button:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-bg-hover);
 }
 
 .deleteAction {

@@ -83,7 +83,7 @@
 }
 
 .wsItem:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-bg-hover);
 }
 
 .wsItem.active {
@@ -127,7 +127,7 @@
 }
 
 .menuItem:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-bg-hover);
 }
 
 .icon {

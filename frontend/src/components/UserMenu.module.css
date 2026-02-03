@@ -93,5 +93,5 @@
 }
 
 .menuItem:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-bg-hover);
 }
