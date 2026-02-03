@@ -202,6 +202,15 @@ export class BlockNodeView implements NodeView {
       );
     }
 
+    // Set the entire block row as the drag image so users see the full block being dragged
+    if (e.dataTransfer) {
+      const blockRect = this.dom.getBoundingClientRect();
+      // Position the drag image so it appears to "lift" from where the handle is
+      const offsetX = e.clientX - blockRect.left;
+      const offsetY = e.clientY - blockRect.top;
+      e.dataTransfer.setDragImage(this.dom, offsetX, offsetY);
+    }
+
     // Add dragging class for visual feedback
     this.dom.classList.add('dragging');
   }
