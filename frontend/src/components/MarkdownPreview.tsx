@@ -5,8 +5,8 @@ import DOMPurify from 'dompurify';
 import type { AssetUrlMap } from '../contexts/EditorContext';
 import styles from './MarkdownPreview.module.css';
 
-// Pattern to match internal workspace/node links: /w/{wsId}/... or /w/{wsId}+slug/...
-const INTERNAL_LINK_PATTERN = /^\/w\/[^/]+/;
+// Internal links start with "/" but not "/api/" (which are backend endpoints)
+const isInternalLink = (href: string) => href.startsWith('/') && !href.startsWith('/api/');
 
 interface MarkdownPreviewProps {
   content: string;
@@ -103,8 +103,8 @@ export default function MarkdownPreview(props: MarkdownPreviewProps) {
     const href = anchor.getAttribute('href');
     if (!href) return;
 
-    // Internal workspace links - use client-side navigation if handler provided
-    if (INTERNAL_LINK_PATTERN.test(href) && props.onNavigate) {
+    // Internal links - use client-side navigation if handler provided
+    if (isInternalLink(href) && props.onNavigate) {
       e.preventDefault();
       props.onNavigate(href);
       return;
