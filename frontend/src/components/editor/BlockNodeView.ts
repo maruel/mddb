@@ -3,7 +3,6 @@
 
 import { render } from 'solid-js/web';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
-import { NodeSelection } from 'prosemirror-state';
 import type { EditorView, NodeView, ViewMutationRecord } from 'prosemirror-view';
 import { RowHandle } from '../shared/RowHandle';
 import { setDragState, getSelectedBlockPositions, BLOCK_DRAG_MIME, BLOCKS_DRAG_MIME } from './blockDragPlugin';
@@ -244,27 +243,11 @@ export class BlockNodeView implements NodeView {
   }
 
   /**
-   * Handle click on the handle (select the block).
+   * Handle click on the handle (open context menu).
    */
-  private handleClick(e: MouseEvent, _rowId: string): void {
-    const pos = this.getPos();
-    if (pos === undefined) return;
-
-    // Select the entire block when clicking the handle
-    // This enables multi-selection when holding shift
-    const { state, dispatch } = this.view;
-    const node = state.doc.nodeAt(pos);
-    if (!node) return;
-
-    // Create a node selection spanning the block
-    if (e.shiftKey) {
-      // Extend selection - handled by ProseMirror's default shift-click
-      return;
-    }
-
-    // Select this block
-    const selection = NodeSelection.create(state.doc, pos);
-    dispatch(state.tr.setSelection(selection));
+  private handleClick(e: MouseEvent, rowId: string): void {
+    // Left-click opens context menu, same as right-click
+    this.handleContextMenu(e, rowId);
   }
 
   /**
