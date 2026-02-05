@@ -4,7 +4,7 @@ import { render } from 'solid-js/web';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 import type { EditorView, NodeView, ViewMutationRecord } from 'prosemirror-view';
 import { RowHandle } from '../shared/RowHandle';
-import { setDragState, getSelectedBlockPositions, BLOCK_DRAG_MIME, BLOCKS_DRAG_MIME } from './blockDragPlugin';
+import { getSelectedBlockPositions, BLOCK_DRAG_MIME, BLOCKS_DRAG_MIME } from './blockDragPlugin';
 
 /**
  * Custom event detail for block context menu requests.
@@ -160,17 +160,10 @@ export class BlockNodeView implements NodeView {
       e.dataTransfer.setDragImage(this.dom, offsetX, offsetY);
     }
 
-    this.dom.classList.add('dragging');
-
-    // Defer state update to avoid interfering with native drag initialization
-    setTimeout(() => {
-      this.view.dispatch(
-        setDragState(this.view.state.tr, {
-          sourcePos: pos,
-          selectedPositions: isMultiSelection ? selectedPositions : null,
-        })
-      );
-    }, 0);
+    // NOTE: Don't modify DOM here (e.g., classList.add). Any DOM mutation during
+    // dragstart can trigger ProseMirror's MutationObserver flush, which re-renders
+    // NodeViews and detaches the handle before the event finishes bubbling.
+    // See docs/DRAG_DROP_DEBUG.md for details.
   }
 
   private handleContextMenu(e: MouseEvent, _rowId: string): void {
@@ -245,8 +238,26 @@ export class BlockNodeView implements NodeView {
     }
   }
 
+  stopEvent(event: Event): boolean {
+    // Prevent ProseMirror from processing mousedown/pointerdown on the drag handle.
+    // ProseMirror's mousedown handler calls forceDOMFlush → endComposition which can
+    // trigger view.updateState() and re-render NodeViews, detaching the handle DOM
+    // between mousedown and dragstart. This kills the native drag sequence because
+    // the browser aborts drag when the source element is detached.
+    // Drag events must pass through so our blockDragPlugin can handle them.
+    if (this.handleContainer.contains(event.target as Node)) {
+      const t = event.type;
+      return t === 'mousedown' || t === 'mouseup' || t === 'pointerdown' || t === 'pointerup';
+    }
+    return false;
+  }
+
   ignoreMutation(mutation: ViewMutationRecord): boolean {
     if (mutation.type !== 'selection' && this.handleContainer.contains(mutation.target as Node)) {
+      return true;
+    }
+    // Ignore class attribute changes on block-row (e.g., 'dragging', 'selected')
+    if (mutation.type === 'attributes' && mutation.target === this.dom) {
       return true;
     }
     return false;

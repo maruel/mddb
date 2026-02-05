@@ -27,10 +27,8 @@ export function EditorDropIndicator(props: EditorDropIndicatorProps) {
    */
   const updateIndicator = (view: EditorView) => {
     const dragState = getDragState(view.state);
-    const isCurrentlyDragging =
-      dragState.sourcePos !== null || (dragState.selectedPositions && dragState.selectedPositions.length > 0);
 
-    if (isCurrentlyDragging && dragState.dropIndicatorY !== null && containerRef) {
+    if (dragState.dropIndicatorY !== null && containerRef) {
       // Convert viewport Y to container-relative Y
       const containerRect = containerRef.getBoundingClientRect();
       const relativeY = dragState.dropIndicatorY - containerRect.top;

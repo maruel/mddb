@@ -4,16 +4,12 @@
 import { Plugin, PluginKey, type EditorState, type Transaction } from 'prosemirror-state';
 import { DecorationSet, type EditorView } from 'prosemirror-view';
 
-// Drag state interface
+// Drag state interface (only tracks drop target for visual indicator)
 export interface DragState {
-  /** Position of the block being dragged (null if not dragging) */
-  sourcePos: number | null;
   /** Position to drop (between blocks) */
   dropTarget: number | null;
   /** Y coordinate for visual indicator */
   dropIndicatorY: number | null;
-  /** Positions of multiple selected blocks being dragged */
-  selectedPositions: number[] | null;
 }
 
 // Plugin key for accessing drag state
@@ -21,10 +17,8 @@ export const blockDragPluginKey = new PluginKey<DragState>('blockDrag');
 
 // Initial state
 const initialState: DragState = {
-  sourcePos: null,
   dropTarget: null,
   dropIndicatorY: null,
-  selectedPositions: null,
 };
 
 /**
@@ -257,10 +251,22 @@ export const blockDragPlugin = new Plugin<DragState>({
   props: {
     // Handle drag events at the view level
     handleDOMEvents: {
+      dragstart(_view, event) {
+        // Check if this drag started from a block handle (has our MIME type)
+        const hasBlockData =
+          event.dataTransfer?.types.includes(BLOCK_DRAG_MIME) || event.dataTransfer?.types.includes(BLOCKS_DRAG_MIME);
+
+        // Return true to prevent ProseMirror's built-in dragstart handler
+        // which calls clearData() and would erase our MIME types
+        return hasBlockData;
+      },
+
       dragover(view, event) {
-        // Only handle if we're dragging a block
-        const state = getDragState(view.state);
-        if (state.sourcePos === null && state.selectedPositions === null) {
+        // Check if we're dragging a block (via dataTransfer MIME types)
+        const hasBlockData =
+          event.dataTransfer?.types.includes(BLOCK_DRAG_MIME) || event.dataTransfer?.types.includes(BLOCKS_DRAG_MIME);
+
+        if (!hasBlockData) {
           return false;
         }
 
@@ -284,26 +290,41 @@ export const blockDragPlugin = new Plugin<DragState>({
 
       drop(view, event) {
         const state = getDragState(view.state);
-        const { sourcePos, dropTarget, selectedPositions } = state;
+        const { dropTarget } = state;
 
         // Clean up dragging class from all blocks
         view.dom.querySelectorAll('.block-row.dragging').forEach((el) => {
           el.classList.remove('dragging');
         });
 
+        // Get source positions from dataTransfer (not plugin state)
+        const multiData = event.dataTransfer?.getData(BLOCKS_DRAG_MIME);
+        const singleData = event.dataTransfer?.getData(BLOCK_DRAG_MIME);
+
+        if (dropTarget === null) {
+          view.dispatch(clearDragState(view.state.tr));
+          return false;
+        }
+
         // Handle multi-block drop
-        if (selectedPositions && selectedPositions.length > 0 && dropTarget !== null) {
-          event.preventDefault();
-          return moveBlocks(view, selectedPositions, dropTarget);
+        if (multiData) {
+          const selectedPositions = JSON.parse(multiData) as number[];
+          if (selectedPositions.length > 0) {
+            event.preventDefault();
+            return moveBlocks(view, selectedPositions, dropTarget);
+          }
         }
 
         // Handle single block drop
-        if (sourcePos !== null && dropTarget !== null) {
-          event.preventDefault();
-          return moveBlocks(view, [sourcePos], dropTarget);
+        if (singleData) {
+          const sourcePos = parseInt(singleData, 10);
+          if (!isNaN(sourcePos)) {
+            event.preventDefault();
+            return moveBlocks(view, [sourcePos], dropTarget);
+          }
         }
 
-        // Clear state even if we didn't handle the drop
+        // Clear state if we didn't handle the drop
         view.dispatch(clearDragState(view.state.tr));
         return false;
       },
