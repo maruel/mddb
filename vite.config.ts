@@ -78,7 +78,7 @@ export default defineConfig({
     outDir: '../backend/frontend/dist',  // relative to frontend/
     emptyOutDir: true,
     minify: 'terser',
-    sourcemap: false,
+    sourcemap: true,
     rollupOptions: {
       output: {
         // Split chunks for better caching and lazy loading
