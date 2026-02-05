@@ -58,19 +58,25 @@ const RequireAuth: ParentComponent = (props) => {
   );
 };
 
-// Auth route that redirects authenticated users to workspace
+// Auth route that redirects authenticated users away from login
 function AuthRoute() {
   const { user, login, ready } = useAuth();
 
   // Wait for auth check to complete before making decisions
   return (
-    <Show when={ready()} fallback={<RouteLoading />}>
-      <Show when={!user() || !user()?.workspace_id} fallback={<Navigate href={`/w/${user()?.workspace_id}`} />}>
+    <Switch fallback={<RouteLoading />}>
+      <Match when={ready() && user()?.workspace_id}>
+        <Navigate href={`/w/${user()?.workspace_id}`} />
+      </Match>
+      <Match when={ready() && user() && !user()?.workspace_id}>
+        <Navigate href="/onboarding" />
+      </Match>
+      <Match when={ready() && !user()}>
         <Suspense fallback={<RouteLoading />}>
           <Auth onLogin={login} />
         </Suspense>
-      </Show>
-    </Show>
+      </Match>
+    </Switch>
   );
 }
 
