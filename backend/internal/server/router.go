@@ -46,6 +46,7 @@ type OAuthConfig struct {
 	MSClientSecret     string
 	GitHubClientID     string
 	GitHubClientSecret string
+	TestOAuth          bool // When true, OAuth login bypasses real providers and uses fake accounts.
 }
 
 // NewRouter creates and configures the HTTP router.
@@ -128,6 +129,13 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 		slog.Info("No OAuth providers configured")
 	}
 
+	// In test mode, use a fake handler that bypasses real OAuth providers.
+	loginRedirect := oh.LoginRedirect
+	if cfg.OAuth.TestOAuth {
+		toh := handlers.NewTestOAuthHandler(svc, hcfg, providers)
+		loginRedirect = toh.LoginRedirect
+	}
+
 	// Auth endpoints - /api/v1/auth/*
 	// Public
 	mux.Handle("POST /api/v1/auth/login", Wrap(authh.Login, hcfg, limiters))
@@ -136,7 +144,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("POST /api/v1/auth/invitations/ws/accept", Wrap(ih.AcceptWSInvitation, hcfg, limiters))
 	mux.HandleFunc("GET /api/v1/auth/email/verify", authh.VerifyEmailRedirect)
 	mux.Handle("GET /api/v1/auth/providers", Wrap(oh.ListProviders, hcfg, limiters))
-	mux.HandleFunc("GET /api/v1/auth/oauth/{provider}", oh.LoginRedirect)
+	mux.HandleFunc("GET /api/v1/auth/oauth/{provider}", loginRedirect)
 	mux.HandleFunc("GET /api/v1/auth/oauth/{provider}/callback", oh.Callback)
 	// Authenticated
 	mux.Handle("GET /api/v1/auth/me", WrapAuth(authh.GetMe, svc, hcfg, limiters))

@@ -44,6 +44,14 @@ func NewOAuthHandler(svc *Services, cfg *Config) *OAuthHandler {
 	}
 }
 
+// oauthUserInfo holds user info fetched from an OAuth provider.
+type oauthUserInfo struct {
+	ID        string
+	Email     string
+	Name      string
+	AvatarURL string
+}
+
 // AddProvider adds an OAuth2 provider configuration.
 func (h *OAuthHandler) AddProvider(name identity.OAuthProvider, clientID, clientSecret, redirectURL string) {
 	var endpoint oauth2.Endpoint
@@ -382,21 +390,33 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	finishOAuthLogin(h.svc, h.cfg, w, r, provider, oauthUserInfo{
+		ID:        userInfo.ID,
+		Email:     userInfo.Email,
+		Name:      userInfo.Name,
+		AvatarURL: userInfo.AvatarURL,
+	})
+}
+
+// finishOAuthLogin finds or creates a user from OAuth info, generates a JWT, and redirects.
+func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http.Request, provider identity.OAuthProvider, info oauthUserInfo) {
+	ctx := r.Context()
+
 	// Try to find user by OAuth ID
-	user, err := h.svc.User.GetByOAuth(provider, userInfo.ID)
+	user, err := svc.User.GetByOAuth(provider, info.ID)
 	if err != nil {
 		// Try to find user by email
-		user, err = h.svc.User.GetByEmail(userInfo.Email)
+		user, err = svc.User.GetByEmail(info.Email)
 		if err != nil {
 			// Create new user without organization (frontend will prompt for org creation)
 			// Password is not used for OAuth users
 			password, err := utils.GenerateToken(32)
 			if err != nil {
-				slog.ErrorContext(r.Context(), "Failed to generate password for OAuth user", "error", err)
+				slog.ErrorContext(ctx, "Failed to generate password for OAuth user", "err", err)
 				writeErrorResponse(w, dto.Internal("password_generation"))
 				return
 			}
-			user, err = h.svc.User.Create(userInfo.Email, password, userInfo.Name)
+			user, err = svc.User.Create(info.Email, password, info.Name)
 			if err != nil {
 				writeErrorResponse(w, dto.Internal("user_creation"))
 				return
@@ -404,13 +424,13 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Link OAuth identity and mark email as verified (OAuth emails are trusted)
-		if _, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
+		if _, err := svc.User.Modify(user.ID, func(u *identity.User) error {
 			u.EmailVerified = true
 			u.OAuthIdentities = append(u.OAuthIdentities, identity.OAuthIdentity{
 				Provider:   provider,
-				ProviderID: userInfo.ID,
-				Email:      userInfo.Email,
-				AvatarURL:  userInfo.AvatarURL,
+				ProviderID: info.ID,
+				Email:      info.Email,
+				AvatarURL:  info.AvatarURL,
 				LastLogin:  storage.Now(),
 			})
 			return nil
@@ -420,35 +440,32 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// Existing OAuth identity - update avatar URL and last login
-		if _, err := h.svc.User.Modify(user.ID, func(u *identity.User) error {
+		if _, err := svc.User.Modify(user.ID, func(u *identity.User) error {
 			for i := range u.OAuthIdentities {
-				if u.OAuthIdentities[i].Provider == provider && u.OAuthIdentities[i].ProviderID == userInfo.ID {
-					u.OAuthIdentities[i].AvatarURL = userInfo.AvatarURL
+				if u.OAuthIdentities[i].Provider == provider && u.OAuthIdentities[i].ProviderID == info.ID {
+					u.OAuthIdentities[i].AvatarURL = info.AvatarURL
 					u.OAuthIdentities[i].LastLogin = storage.Now()
 					break
 				}
 			}
 			return nil
 		}); err != nil {
-			slog.WarnContext(r.Context(), "OAuth: failed to update identity", "error", err)
+			slog.WarnContext(ctx, "OAuth: failed to update identity", "err", err)
 		}
 	}
 
 	// Generate JWT token with session tracking
 	clientIP := reqctx.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
-	jwtToken, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent)
+	jwtToken, err := cfg.GenerateTokenWithSession(svc.Session, user, clientIP, userAgent)
 	if err != nil {
-		slog.ErrorContext(r.Context(), "OAuth: failed to generate token", "error", err, "userID", user.ID)
+		slog.ErrorContext(ctx, "OAuth: failed to generate token", "err", err, "userID", user.ID)
 		writeErrorResponse(w, dto.Internal("token_generation"))
 		return
 	}
 
-	slog.InfoContext(r.Context(), "OAuth: login successful, redirecting with token", "userID", user.ID, "email", user.Email)
-
-	// Redirect back to frontend with token (URL-encode for safety)
-	frontendURL := "/" // Default redirect
-	http.Redirect(w, r, fmt.Sprintf("%s?token=%s", frontendURL, url.QueryEscape(jwtToken)), http.StatusFound)
+	slog.InfoContext(ctx, "OAuth: login successful, redirecting with token", "userID", user.ID, "email", user.Email)
+	http.Redirect(w, r, "/?token="+url.QueryEscape(jwtToken), http.StatusFound)
 }
 
 // fetchMicrosoftPhoto fetches the user's profile photo from Microsoft Graph API

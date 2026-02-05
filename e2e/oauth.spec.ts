@@ -43,10 +43,28 @@ test.describe('OAuth Login', () => {
 
     // Verify the button has the correct href
     await expect(googleButton).toHaveAttribute('href', '/api/v1/auth/oauth/google');
+  });
 
-    // Verify the OAuth endpoint is accessible and responds
-    // (The actual redirect to Google is tested implicitly - if the endpoint fails, we'd get an error page)
-    // Note: We don't click to follow the redirect because that would attempt to auth with Google
+  test('TEST_OAUTH: clicking Microsoft logs in with fake account', async ({ page }) => {
+    await page.goto('/');
+
+    const msButton = page.getByRole('link', { name: /microsoft/i });
+    await expect(msButton).toBeVisible({ timeout: 5000 });
+
+    // In TEST_OAUTH=1 mode, clicking the button should bypass real OAuth
+    // and log in with a fake account, landing on onboarding.
+    await msButton.click();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('TEST_OAUTH: clicking Google logs in with fake account', async ({ page }) => {
+    await page.goto('/');
+
+    const googleButton = page.getByRole('link', { name: /google/i });
+    await expect(googleButton).toBeVisible({ timeout: 5000 });
+
+    await googleButton.click();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
   });
 
   test('OAuth callback with token sets auth and redirects', async ({ page, context: _context }) => {

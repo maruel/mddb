@@ -357,6 +357,7 @@ func mainImpl() error {
 			MSClientSecret:     *msClientSecret,
 			GitHubClientID:     *githubClientID,
 			GitHubClientSecret: *githubClientSecret,
+			TestOAuth:          os.Getenv("TEST_OAUTH") == "1",
 		},
 	}
 
