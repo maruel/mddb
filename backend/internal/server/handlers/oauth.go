@@ -457,7 +457,8 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 	// Generate JWT token with session tracking
 	clientIP := reqctx.GetClientIP(r)
 	userAgent := r.Header.Get("User-Agent")
-	jwtToken, err := cfg.GenerateTokenWithSession(svc.Session, user, clientIP, userAgent)
+	countryCode := reqctx.CountryCode(r.Context())
+	jwtToken, err := cfg.GenerateTokenWithSession(svc.Session, user, clientIP, userAgent, countryCode)
 	if err != nil {
 		slog.ErrorContext(ctx, "OAuth: failed to generate token", "err", err, "userID", user.ID)
 		writeErrorResponse(w, dto.Internal("token_generation"))

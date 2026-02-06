@@ -20,6 +20,7 @@ import (
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
+	"github.com/maruel/mddb/backend/internal/server/ipgeo"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -36,6 +37,7 @@ type Config struct {
 	Revision  string
 	Dirty     bool
 	OAuth     OAuthConfig
+	IPGeo     *ipgeo.Checker
 }
 
 // OAuthConfig holds OAuth provider credentials.
@@ -242,6 +244,11 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	f := func(w http.ResponseWriter, r *http.Request) {
 		clientIP := reqctx.GetClientIP(r)
+		var cc string
+		if cfg.IPGeo != nil {
+			cc = cfg.IPGeo.CountryCode(clientIP)
+			r = r.WithContext(reqctx.WithCountryCode(r.Context(), cc))
+		}
 		start := time.Now()
 		rw := &responseWriter{
 			ResponseWriter:   w,
@@ -256,6 +263,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 			"d", roundDuration(time.Since(start)),
 			"s", rw.size,
 			"ip", clientIP,
+			"cc", cc,
 		)
 	}
 	return http.HandlerFunc(f)

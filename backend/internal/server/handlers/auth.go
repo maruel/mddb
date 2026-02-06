@@ -49,8 +49,9 @@ func (h *AuthHandler) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 	// Get request metadata from context
 	clientIP := reqctx.ClientIP(ctx)
 	userAgent := reqctx.UserAgent(ctx)
+	countryCode := reqctx.CountryCode(ctx)
 
-	token, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent)
+	token, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent, countryCode)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to generate token", err)
 	}
@@ -96,8 +97,9 @@ func (h *AuthHandler) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	// Get request metadata from context
 	clientIP := reqctx.ClientIP(ctx)
 	userAgent := reqctx.UserAgent(ctx)
+	countryCode := reqctx.CountryCode(ctx)
 
-	token, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent)
+	token, err := h.cfg.GenerateTokenWithSession(h.svc.Session, user, clientIP, userAgent, countryCode)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to generate token", err)
 	}
@@ -237,12 +239,13 @@ func (h *AuthHandler) ListSessions(ctx context.Context, user *identity.User, _ *
 	sessions := make([]dto.SessionResponse, 0, 8)
 	for session := range h.svc.Session.GetActiveByUserID(user.ID) {
 		sessions = append(sessions, dto.SessionResponse{
-			ID:         session.ID,
-			DeviceInfo: session.DeviceInfo,
-			IPAddress:  session.IPAddress,
-			Created:    session.Created,
-			LastUsed:   session.LastUsed,
-			IsCurrent:  session.ID == currentSessionID,
+			ID:          session.ID,
+			DeviceInfo:  session.DeviceInfo,
+			IPAddress:   session.IPAddress,
+			CountryCode: session.CountryCode,
+			Created:     session.Created,
+			LastUsed:    session.LastUsed,
+			IsCurrent:   session.ID == currentSessionID,
 		})
 	}
 

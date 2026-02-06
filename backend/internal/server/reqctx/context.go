@@ -51,6 +51,7 @@ type contextKey string
 const (
 	keyClientIP    contextKey = "clientIP"
 	keyUserAgent   contextKey = "userAgent"
+	keyCountryCode contextKey = "countryCode"
 	keySessionID   contextKey = "sessionID"
 	keyTokenString contextKey = "tokenString"
 	keyUser        contextKey = "user"
@@ -64,6 +65,19 @@ func WithClientIP(ctx context.Context, ip string) context.Context {
 // WithUserAgent adds the User-Agent to the context.
 func WithUserAgent(ctx context.Context, ua string) context.Context {
 	return context.WithValue(ctx, keyUserAgent, ua)
+}
+
+// WithCountryCode adds the country code to the context.
+func WithCountryCode(ctx context.Context, cc string) context.Context {
+	return context.WithValue(ctx, keyCountryCode, cc)
+}
+
+// CountryCode extracts the country code from the context.
+func CountryCode(ctx context.Context) string {
+	if v, ok := ctx.Value(keyCountryCode).(string); ok {
+		return v
+	}
+	return ""
 }
 
 // WithSessionID adds the session ID to the context.

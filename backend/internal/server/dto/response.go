@@ -31,12 +31,13 @@ type ProvidersResponse struct {
 
 // SessionResponse is the API representation of a session.
 type SessionResponse struct {
-	ID         jsonldb.ID `json:"id" jsonschema:"description=Unique session identifier"`
-	DeviceInfo string     `json:"device_info" jsonschema:"description=Browser/OS info"`
-	IPAddress  string     `json:"ip_address" jsonschema:"description=IP address"`
-	Created    Time       `json:"created" jsonschema:"description=Session creation Unix timestamp"`
-	LastUsed   Time       `json:"last_used" jsonschema:"description=Last activity Unix timestamp"`
-	IsCurrent  bool       `json:"is_current" jsonschema:"description=Whether this is the current session"`
+	ID          jsonldb.ID `json:"id" jsonschema:"description=Unique session identifier"`
+	DeviceInfo  string     `json:"device_info" jsonschema:"description=Browser/OS info"`
+	IPAddress   string     `json:"ip_address" jsonschema:"description=IP address"`
+	CountryCode string     `json:"country_code,omitempty" jsonschema:"description=ISO 3166-1 alpha-2 country code at login"`
+	Created     Time       `json:"created" jsonschema:"description=Session creation Unix timestamp"`
+	LastUsed    Time       `json:"last_used" jsonschema:"description=Last activity Unix timestamp"`
+	IsCurrent   bool       `json:"is_current" jsonschema:"description=Whether this is the current session"`
 }
 
 // ListSessionsResponse is a response containing user's sessions.

@@ -30,6 +30,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
+	"github.com/maruel/mddb/backend/internal/server/ipgeo"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -57,6 +58,7 @@ func mainImpl() error {
 	msClientSecret := flag.String("ms-client-secret", "", "Microsoft OAuth client secret")
 	githubClientID := flag.String("github-client-id", "", "GitHub OAuth client ID")
 	githubClientSecret := flag.String("github-client-secret", "", "GitHub OAuth client secret")
+	geoDB := flag.String("geo-db", "", "Path to MaxMind MMDB file for IP geolocation (optional)")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
 		return fmt.Errorf("unknown arguments: %v", flag.Args())
@@ -190,6 +192,11 @@ func mainImpl() error {
 	if !set["github-client-secret"] {
 		if v := env["GITHUB_CLIENT_SECRET"]; v != "" {
 			*githubClientSecret = v
+		}
+	}
+	if !set["geo-db"] {
+		if v := env["GEO_DB"]; v != "" {
+			*geoDB = v
 		}
 	}
 
@@ -341,6 +348,18 @@ func mainImpl() error {
 		EmailVerif:    emailVerificationService,
 		Email:         emailService,
 	}
+	// Open IP geolocation database if configured
+	var geoChecker *ipgeo.Checker
+	if *geoDB != "" {
+		var err error
+		geoChecker, err = ipgeo.Open(*geoDB)
+		if err != nil {
+			return fmt.Errorf("failed to open geo database: %w", err)
+		}
+		defer func() { _ = geoChecker.Close() }()
+		slog.InfoContext(ctx, "IP geolocation enabled", "db", *geoDB)
+	}
+
 	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()
 	cfg := &server.Config{
 		ServerConfig: serverCfg,
@@ -350,6 +369,7 @@ func mainImpl() error {
 		GoVersion:    buildGoVersion,
 		Revision:     buildRevision,
 		Dirty:        buildDirty,
+		IPGeo:        geoChecker,
 		OAuth: server.OAuthConfig{
 			GoogleClientID:     *googleClientID,
 			GoogleClientSecret: *googleClientSecret,

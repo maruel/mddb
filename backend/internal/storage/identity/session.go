@@ -13,15 +13,16 @@ import (
 
 // Session represents an active user session.
 type Session struct {
-	ID         jsonldb.ID   `json:"id" jsonschema:"description=Unique session identifier"`
-	UserID     jsonldb.ID   `json:"user_id" jsonschema:"description=User who owns this session"`
-	TokenHash  string       `json:"token_hash" jsonschema:"description=SHA-256 hash of the JWT token"`
-	DeviceInfo string       `json:"device_info" jsonschema:"description=Parsed User-Agent (browser/OS)"`
-	IPAddress  string       `json:"ip_address" jsonschema:"description=Client IP address at login"`
-	Created    storage.Time `json:"created" jsonschema:"description=Session creation timestamp"`
-	LastUsed   storage.Time `json:"last_used" jsonschema:"description=Last activity timestamp"`
-	ExpiresAt  storage.Time `json:"expires_at" jsonschema:"description=Session expiration timestamp"`
-	RevokedAt  storage.Time `json:"revoked_at,omitempty" jsonschema:"description=Revocation timestamp if revoked"`
+	ID          jsonldb.ID   `json:"id" jsonschema:"description=Unique session identifier"`
+	UserID      jsonldb.ID   `json:"user_id" jsonschema:"description=User who owns this session"`
+	TokenHash   string       `json:"token_hash" jsonschema:"description=SHA-256 hash of the JWT token"`
+	DeviceInfo  string       `json:"device_info" jsonschema:"description=Parsed User-Agent (browser/OS)"`
+	IPAddress   string       `json:"ip_address" jsonschema:"description=Client IP address at login"`
+	CountryCode string       `json:"country_code,omitempty" jsonschema:"description=ISO 3166-1 alpha-2 country code at login"`
+	Created     storage.Time `json:"created" jsonschema:"description=Session creation timestamp"`
+	LastUsed    storage.Time `json:"last_used" jsonschema:"description=Last activity timestamp"`
+	ExpiresAt   storage.Time `json:"expires_at" jsonschema:"description=Session expiration timestamp"`
+	RevokedAt   storage.Time `json:"revoked_at,omitempty" jsonschema:"description=Revocation timestamp if revoked"`
 }
 
 // Clone returns a deep copy of the session.
@@ -67,14 +68,14 @@ func NewSessionService(tablePath string) (*SessionService, error) {
 
 // Create creates a new session with an auto-generated ID.
 // maxSessions limits the number of active sessions per user. Use 0 to disable the limit.
-func (s *SessionService) Create(userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt storage.Time, maxSessions int) (*Session, error) {
-	return s.CreateWithID(jsonldb.NewID(), userID, tokenHash, deviceInfo, ipAddress, expiresAt, maxSessions)
+func (s *SessionService) Create(userID jsonldb.ID, tokenHash, deviceInfo, ipAddress, countryCode string, expiresAt storage.Time, maxSessions int) (*Session, error) {
+	return s.CreateWithID(jsonldb.NewID(), userID, tokenHash, deviceInfo, ipAddress, countryCode, expiresAt, maxSessions)
 }
 
 // CreateWithID creates a new session with a pre-specified ID.
 // This is useful when the session ID needs to be included in the JWT before creating the session.
 // maxSessions limits the number of active sessions per user. Use 0 to disable the limit.
-func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceInfo, ipAddress string, expiresAt storage.Time, maxSessions int) (*Session, error) {
+func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceInfo, ipAddress, countryCode string, expiresAt storage.Time, maxSessions int) (*Session, error) {
 	if id.IsZero() {
 		return nil, errSessionIDRequired
 	}
@@ -98,14 +99,15 @@ func (s *SessionService) CreateWithID(id, userID jsonldb.ID, tokenHash, deviceIn
 
 	now := storage.Now()
 	session := &Session{
-		ID:         id,
-		UserID:     userID,
-		TokenHash:  tokenHash,
-		DeviceInfo: deviceInfo,
-		IPAddress:  ipAddress,
-		Created:    now,
-		LastUsed:   now,
-		ExpiresAt:  expiresAt,
+		ID:          id,
+		UserID:      userID,
+		TokenHash:   tokenHash,
+		DeviceInfo:  deviceInfo,
+		IPAddress:   ipAddress,
+		CountryCode: countryCode,
+		Created:     now,
+		LastUsed:    now,
+		ExpiresAt:   expiresAt,
 	}
 
 	if err := s.table.Append(session); err != nil {

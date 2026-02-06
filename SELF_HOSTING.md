@@ -12,6 +12,14 @@ go install github.com/maruel/mddb/backend/cmd/mddb@latest
 
 Run `mddb -help` for a full list of configuration options.
 
+### GeoLite
+
+Get a .mmdb for free. You need to create af free account at https://www.maxmind.com/en/geolite2/signup
+
+Select "GeoLite Country"
+
+See the documentation at https://dev.maxmind.com/geoip/updating-databases
+
 ## Authentication
 
 ### Google OAuth

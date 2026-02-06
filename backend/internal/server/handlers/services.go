@@ -96,7 +96,7 @@ func (c *Config) GenerateToken(user *identity.User) (string, error) {
 }
 
 // GenerateTokenWithSession creates a session and generates a JWT token with session ID.
-func (c *Config) GenerateTokenWithSession(sessionSvc *identity.SessionService, user *identity.User, clientIP, userAgent string) (string, error) {
+func (c *Config) GenerateTokenWithSession(sessionSvc *identity.SessionService, user *identity.User, clientIP, userAgent, countryCode string) (string, error) {
 	expiresAt := time.Now().Add(tokenExpiration)
 
 	// Pre-generate session ID so we can include it in the JWT
@@ -123,7 +123,7 @@ func (c *Config) GenerateTokenWithSession(sessionSvc *identity.SessionService, u
 	if len(deviceInfo) > 200 {
 		deviceInfo = deviceInfo[:200]
 	}
-	if _, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, storage.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
+	if _, err := sessionSvc.CreateWithID(sessionID, user.ID, utils.HashToken(tokenString), deviceInfo, clientIP, countryCode, storage.ToTime(expiresAt), c.Quotas.MaxSessionsPerUser); err != nil {
 		if errors.Is(err, identity.ErrSessionQuotaExceeded) {
 			return "", dto.QuotaExceeded("sessions per user", c.Quotas.MaxSessionsPerUser)
 		}

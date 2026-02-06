@@ -9,6 +9,7 @@ require (
 	github.com/lmittmann/tint v1.1.2
 	github.com/mattn/go-colorable v0.1.14
 	github.com/mattn/go-isatty v0.0.20
+	github.com/oschwald/maxminddb-golang/v2 v2.1.1
 	golang.org/x/crypto v0.47.0
 	golang.org/x/time v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
