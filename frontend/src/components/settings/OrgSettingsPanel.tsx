@@ -38,10 +38,17 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const [originalOrgName, setOriginalOrgName] = createSignal('');
 
   // Organization quotas
-  const [maxWorkspaces, setMaxWorkspaces] = createSignal(0);
+  const [maxWorkspacesPerOrg, setMaxWorkspacesPerOrg] = createSignal(0);
   const [maxMembersPerOrg, setMaxMembersPerOrg] = createSignal(0);
   const [maxMembersPerWorkspace, setMaxMembersPerWorkspace] = createSignal(0);
   const [maxTotalStorageBytes, setMaxTotalStorageBytes] = createSignal(0);
+  // Organization resource quotas (0 = no limit at this layer)
+  const [maxPages, setMaxPages] = createSignal(0);
+  const [maxStorageBytes, setMaxStorageBytes] = createSignal(0);
+  const [maxRecordsPerTable, setMaxRecordsPerTable] = createSignal(0);
+  const [maxAssetSizeBytes, setMaxAssetSizeBytes] = createSignal(0);
+  const [maxTablesPerWorkspace, setMaxTablesPerWorkspace] = createSignal(0);
+  const [maxColumnsPerTable, setMaxColumnsPerTable] = createSignal(0);
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -89,10 +96,17 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
         setOrgName(orgData.name);
         setOriginalOrgName(orgData.name);
         // Load quotas
-        setMaxWorkspaces(orgData.quotas.max_workspaces);
+        setMaxWorkspacesPerOrg(orgData.quotas.max_workspaces_per_org);
         setMaxMembersPerOrg(orgData.quotas.max_members_per_org);
         setMaxMembersPerWorkspace(orgData.quotas.max_members_per_workspace);
         setMaxTotalStorageBytes(orgData.quotas.max_total_storage_bytes);
+        // Resource quotas
+        setMaxPages(orgData.quotas.max_pages);
+        setMaxStorageBytes(orgData.quotas.max_storage_bytes);
+        setMaxRecordsPerTable(orgData.quotas.max_records_per_table);
+        setMaxAssetSizeBytes(orgData.quotas.max_asset_size_bytes);
+        setMaxTablesPerWorkspace(orgData.quotas.max_tables_per_workspace);
+        setMaxColumnsPerTable(orgData.quotas.max_columns_per_table);
       }
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
@@ -160,10 +174,16 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       // Update quotas
       await org.settings.updateOrgPreferences({
         quotas: {
-          max_workspaces: maxWorkspaces(),
+          max_workspaces_per_org: maxWorkspacesPerOrg(),
           max_members_per_org: maxMembersPerOrg(),
           max_members_per_workspace: maxMembersPerWorkspace(),
           max_total_storage_bytes: maxTotalStorageBytes(),
+          max_pages: maxPages(),
+          max_storage_bytes: maxStorageBytes(),
+          max_records_per_table: maxRecordsPerTable(),
+          max_asset_size_bytes: maxAssetSizeBytes(),
+          max_tables_per_workspace: maxTablesPerWorkspace(),
+          max_columns_per_table: maxColumnsPerTable(),
         },
       });
 
@@ -247,11 +267,11 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
               <h4>{t('settings.organizationQuotas')}</h4>
               <div class={styles.formGrid}>
                 <div class={styles.formItem}>
-                  <label>{t('settings.maxWorkspaces')}</label>
+                  <label>{t('settings.maxWorkspacesPerOrg')}</label>
                   <input
                     type="number"
-                    value={maxWorkspaces()}
-                    onInput={(e) => setMaxWorkspaces(parseInt(e.target.value) || 1)}
+                    value={maxWorkspacesPerOrg()}
+                    onInput={(e) => setMaxWorkspacesPerOrg(parseInt(e.target.value) || 1)}
                     min="1"
                   />
                 </div>
@@ -280,6 +300,60 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
                     value={maxTotalStorageBytes()}
                     onInput={(e) => setMaxTotalStorageBytes(parseInt(e.target.value) || 1)}
                     min="1"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxPages')}</label>
+                  <input
+                    type="number"
+                    value={maxPages()}
+                    onInput={(e) => setMaxPages(parseInt(e.target.value) || 0)}
+                    min="0"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxStorageBytes')}</label>
+                  <input
+                    type="number"
+                    value={maxStorageBytes()}
+                    onInput={(e) => setMaxStorageBytes(parseInt(e.target.value) || 0)}
+                    min="0"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxRecordsPerTable')}</label>
+                  <input
+                    type="number"
+                    value={maxRecordsPerTable()}
+                    onInput={(e) => setMaxRecordsPerTable(parseInt(e.target.value) || 0)}
+                    min="0"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxAssetSizeBytes')}</label>
+                  <input
+                    type="number"
+                    value={maxAssetSizeBytes()}
+                    onInput={(e) => setMaxAssetSizeBytes(parseInt(e.target.value) || 0)}
+                    min="0"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxTablesPerWorkspace')}</label>
+                  <input
+                    type="number"
+                    value={maxTablesPerWorkspace()}
+                    onInput={(e) => setMaxTablesPerWorkspace(parseInt(e.target.value) || 0)}
+                    min="0"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxColumnsPerTable')}</label>
+                  <input
+                    type="number"
+                    value={maxColumnsPerTable()}
+                    onInput={(e) => setMaxColumnsPerTable(parseInt(e.target.value) || 0)}
+                    min="0"
                   />
                 </div>
               </div>

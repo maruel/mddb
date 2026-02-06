@@ -39,6 +39,7 @@ func (w *Workspace) GetID() jsonldb.ID {
 }
 
 // Validate checks that the Workspace is valid.
+// Quota fields of 0 mean "inherit from server/org layer".
 func (w *Workspace) Validate() error {
 	if w.ID.IsZero() {
 		return errIDRequired
@@ -49,7 +50,7 @@ func (w *Workspace) Validate() error {
 	if w.Name == "" {
 		return errNameRequired
 	}
-	if w.Quotas.MaxPages <= 0 || w.Quotas.MaxStorageBytes <= 0 || w.Quotas.MaxRecordsPerTable <= 0 || w.Quotas.MaxAssetSizeBytes <= 0 {
+	if err := w.Quotas.Validate(); err != nil {
 		return errInvalidWorkspaceQuota
 	}
 	return nil
@@ -62,13 +63,9 @@ type WorkspaceSettings struct {
 	GitAutoPush    bool     `json:"git_auto_push" jsonschema:"description=Automatically push changes to remote"`
 }
 
-// WorkspaceQuotas defines limits for a workspace.
-type WorkspaceQuotas struct {
-	MaxPages           int   `json:"max_pages" jsonschema:"description=Maximum number of pages allowed"`
-	MaxStorageBytes    int64 `json:"max_storage_bytes" jsonschema:"description=Maximum storage in bytes"`
-	MaxRecordsPerTable int   `json:"max_records_per_table" jsonschema:"description=Maximum records per table"`
-	MaxAssetSizeBytes  int64 `json:"max_asset_size_bytes" jsonschema:"description=Maximum size of a single asset in bytes"`
-}
+// WorkspaceQuotas is a type alias for storage.ResourceQuotas.
+// Zero values mean "inherit from server/org layer".
+type WorkspaceQuotas = storage.ResourceQuotas
 
 // DefaultWorkspaceQuotas returns the default quotas for a new workspace.
 func DefaultWorkspaceQuotas() WorkspaceQuotas {

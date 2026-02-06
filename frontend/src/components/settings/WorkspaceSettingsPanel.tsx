@@ -54,6 +54,8 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const [maxStorageBytes, setMaxStorageBytes] = createSignal(0);
   const [maxRecordsPerTable, setMaxRecordsPerTable] = createSignal(0);
   const [maxAssetSizeBytes, setMaxAssetSizeBytes] = createSignal(0);
+  const [maxTablesPerWorkspace, setMaxTablesPerWorkspace] = createSignal(0);
+  const [maxColumnsPerTable, setMaxColumnsPerTable] = createSignal(0);
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -95,6 +97,8 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
         setMaxStorageBytes(wsData.quotas.max_storage_bytes);
         setMaxRecordsPerTable(wsData.quotas.max_records_per_table);
         setMaxAssetSizeBytes(wsData.quotas.max_asset_size_bytes);
+        setMaxTablesPerWorkspace(wsData.quotas.max_tables_per_workspace);
+        setMaxColumnsPerTable(wsData.quotas.max_columns_per_table);
       }
 
       if (activeTab() === 'sync' && isAdmin() && ws) {
@@ -179,6 +183,8 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
           max_storage_bytes: maxStorageBytes(),
           max_records_per_table: maxRecordsPerTable(),
           max_asset_size_bytes: maxAssetSizeBytes(),
+          max_tables_per_workspace: maxTablesPerWorkspace(),
+          max_columns_per_table: maxColumnsPerTable(),
         },
       });
 
@@ -328,8 +334,8 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                   <input
                     type="number"
                     value={maxPages()}
-                    onInput={(e) => setMaxPages(parseInt(e.target.value) || 1)}
-                    min="1"
+                    onInput={(e) => setMaxPages(parseInt(e.target.value) || 0)}
+                    min="0"
                   />
                 </div>
                 <div class={styles.formItem}>
@@ -337,8 +343,8 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                   <input
                     type="number"
                     value={maxStorageBytes()}
-                    onInput={(e) => setMaxStorageBytes(parseInt(e.target.value) || 1)}
-                    min="1"
+                    onInput={(e) => setMaxStorageBytes(parseInt(e.target.value) || 0)}
+                    min="0"
                   />
                 </div>
                 <div class={styles.formItem}>
@@ -346,8 +352,8 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                   <input
                     type="number"
                     value={maxRecordsPerTable()}
-                    onInput={(e) => setMaxRecordsPerTable(parseInt(e.target.value) || 1)}
-                    min="1"
+                    onInput={(e) => setMaxRecordsPerTable(parseInt(e.target.value) || 0)}
+                    min="0"
                   />
                 </div>
                 <div class={styles.formItem}>
@@ -355,8 +361,26 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                   <input
                     type="number"
                     value={maxAssetSizeBytes()}
-                    onInput={(e) => setMaxAssetSizeBytes(parseInt(e.target.value) || 1)}
-                    min="1"
+                    onInput={(e) => setMaxAssetSizeBytes(parseInt(e.target.value) || 0)}
+                    min="0"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxTablesPerWorkspace')}</label>
+                  <input
+                    type="number"
+                    value={maxTablesPerWorkspace()}
+                    onInput={(e) => setMaxTablesPerWorkspace(parseInt(e.target.value) || 0)}
+                    min="0"
+                  />
+                </div>
+                <div class={styles.formItem}>
+                  <label>{t('settings.maxColumnsPerTable')}</label>
+                  <input
+                    type="number"
+                    value={maxColumnsPerTable()}
+                    onInput={(e) => setMaxColumnsPerTable(parseInt(e.target.value) || 0)}
+                    min="0"
                   />
                 </div>
               </div>

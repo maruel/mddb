@@ -575,17 +575,13 @@ export interface SMTPConfigUpdate {
 /**
  * QuotasConfigUpdate contains quota configuration fields for updates.
  */
-export interface QuotasConfigUpdate {
+export interface QuotasConfigUpdate extends ResourceQuotas {
   max_request_body_bytes: number /* int64 */;
   max_sessions_per_user: number /* int */;
-  max_tables_per_workspace: number /* int */;
-  max_columns_per_table: number /* int */;
-  max_rows_per_table: number /* int */;
   max_organizations: number /* int */;
   max_workspaces: number /* int */;
   max_users: number /* int */;
   max_total_storage_bytes: number /* int64 */;
-  max_asset_size_bytes: number /* int64 */;
   max_egress_bandwidth_bps: number /* int64 */;
 }
 /**
@@ -1182,17 +1178,13 @@ export interface SMTPConfigResponse {
 /**
  * QuotasConfigResponse contains quota configuration for the response.
  */
-export interface QuotasConfigResponse {
+export interface QuotasConfigResponse extends ResourceQuotas {
   max_request_body_bytes: number /* int64 */;
   max_sessions_per_user: number /* int */;
-  max_tables_per_workspace: number /* int */;
-  max_columns_per_table: number /* int */;
-  max_rows_per_table: number /* int */;
   max_organizations: number /* int */;
   max_workspaces: number /* int */;
   max_users: number /* int */;
   max_total_storage_bytes: number /* int64 */;
-  max_asset_size_bytes: number /* int64 */;
   max_egress_bandwidth_bps: number /* int64 */;
 }
 /**
@@ -1358,23 +1350,31 @@ export interface WorkspaceMembershipSettings {
   notifications: boolean;
 }
 /**
+ * ResourceQuotas defines per-workspace content limits shared by server, org, and workspace layers.
+ * A zero value means "no limit at this layer" (inherit from other layers).
+ */
+export interface ResourceQuotas {
+  max_pages: number /* int */;
+  max_storage_bytes: number /* int64 */;
+  max_records_per_table: number /* int */;
+  max_asset_size_bytes: number /* int64 */;
+  max_tables_per_workspace: number /* int */;
+  max_columns_per_table: number /* int */;
+}
+/**
  * OrganizationQuotas defines limits for an organization.
  */
-export interface OrganizationQuotas {
-  max_workspaces: number /* int */;
+export interface OrganizationQuotas extends ResourceQuotas {
+  max_workspaces_per_org: number /* int */;
   max_members_per_org: number /* int */;
   max_members_per_workspace: number /* int */;
   max_total_storage_bytes: number /* int64 */;
 }
 /**
- * WorkspaceQuotas defines limits for a workspace.
+ * WorkspaceQuotas is a type alias for ResourceQuotas.
+ * Zero values mean "inherit from server/org layer".
  */
-export interface WorkspaceQuotas {
-  max_pages: number /* int */;
-  max_storage_bytes: number /* int64 */;
-  max_records_per_table: number /* int */;
-  max_asset_size_bytes: number /* int64 */;
-}
+export type WorkspaceQuotas = ResourceQuotas;
 /**
  * UserQuota defines limits for a user.
  */

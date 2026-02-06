@@ -9,6 +9,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -16,12 +17,14 @@ import (
 type ServerHandler struct {
 	Cfg              *storage.ServerConfig
 	DataDir          string
-	BandwidthLimiter BandwidthUpdater  // for hot-reload of bandwidth limit
-	RateLimiters     RateLimitsUpdater // for hot-reload of rate limits
+	FileStore        *content.FileStoreService // for cache invalidation on quota changes
+	BandwidthLimiter BandwidthUpdater          // for hot-reload of bandwidth limit
+	RateLimiters     RateLimitsUpdater         // for hot-reload of rate limits
 }
 
 // GetConfig returns the current server configuration with masked password.
 func (h *ServerHandler) GetConfig(ctx context.Context, _ *identity.User, _ *dto.ServerConfigRequest) (*dto.ServerConfigResponse, error) {
+	rq := h.Cfg.Quotas.ResourceQuotas
 	return &dto.ServerConfigResponse{
 		SMTP: dto.SMTPConfigResponse{
 			Host:     h.Cfg.SMTP.Host,
@@ -31,16 +34,20 @@ func (h *ServerHandler) GetConfig(ctx context.Context, _ *identity.User, _ *dto.
 			// Password intentionally omitted (masked)
 		},
 		Quotas: dto.QuotasConfigResponse{
+			ResourceQuotas: dto.ResourceQuotas{
+				MaxPages:              rq.MaxPages,
+				MaxStorageBytes:       rq.MaxStorageBytes,
+				MaxRecordsPerTable:    rq.MaxRecordsPerTable,
+				MaxAssetSizeBytes:     rq.MaxAssetSizeBytes,
+				MaxTablesPerWorkspace: rq.MaxTablesPerWorkspace,
+				MaxColumnsPerTable:    rq.MaxColumnsPerTable,
+			},
 			MaxRequestBodyBytes:   h.Cfg.Quotas.MaxRequestBodyBytes,
 			MaxSessionsPerUser:    h.Cfg.Quotas.MaxSessionsPerUser,
-			MaxTablesPerWorkspace: h.Cfg.Quotas.MaxTablesPerWorkspace,
-			MaxColumnsPerTable:    h.Cfg.Quotas.MaxColumnsPerTable,
-			MaxRowsPerTable:       h.Cfg.Quotas.MaxRowsPerTable,
 			MaxOrganizations:      h.Cfg.Quotas.MaxOrganizations,
 			MaxWorkspaces:         h.Cfg.Quotas.MaxWorkspaces,
 			MaxUsers:              h.Cfg.Quotas.MaxUsers,
 			MaxTotalStorageBytes:  h.Cfg.Quotas.MaxTotalStorageBytes,
-			MaxAssetSizeBytes:     h.Cfg.Quotas.MaxAssetSizeBytes,
 			MaxEgressBandwidthBps: h.Cfg.Quotas.MaxEgressBandwidthBps,
 		},
 		RateLimits: dto.RateLimitsConfigResponse{
@@ -77,16 +84,20 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 	// Update quotas if provided
 	if req.Quotas != nil {
 		newQuotas := storage.ServerQuotas{
+			ResourceQuotas: storage.ResourceQuotas{
+				MaxPages:              req.Quotas.MaxPages,
+				MaxStorageBytes:       req.Quotas.MaxStorageBytes,
+				MaxRecordsPerTable:    req.Quotas.MaxRecordsPerTable,
+				MaxAssetSizeBytes:     req.Quotas.MaxAssetSizeBytes,
+				MaxTablesPerWorkspace: req.Quotas.MaxTablesPerWorkspace,
+				MaxColumnsPerTable:    req.Quotas.MaxColumnsPerTable,
+			},
 			MaxRequestBodyBytes:   req.Quotas.MaxRequestBodyBytes,
 			MaxSessionsPerUser:    req.Quotas.MaxSessionsPerUser,
-			MaxTablesPerWorkspace: req.Quotas.MaxTablesPerWorkspace,
-			MaxColumnsPerTable:    req.Quotas.MaxColumnsPerTable,
-			MaxRowsPerTable:       req.Quotas.MaxRowsPerTable,
 			MaxOrganizations:      req.Quotas.MaxOrganizations,
 			MaxWorkspaces:         req.Quotas.MaxWorkspaces,
 			MaxUsers:              req.Quotas.MaxUsers,
 			MaxTotalStorageBytes:  req.Quotas.MaxTotalStorageBytes,
-			MaxAssetSizeBytes:     req.Quotas.MaxAssetSizeBytes,
 			MaxEgressBandwidthBps: req.Quotas.MaxEgressBandwidthBps,
 		}
 		// Validate the new quotas
@@ -94,6 +105,11 @@ func (h *ServerHandler) UpdateConfig(ctx context.Context, _ *identity.User, req 
 			return nil, dto.InvalidField("quotas", err.Error())
 		}
 		h.Cfg.Quotas = newQuotas
+
+		// Invalidate all cached workspace stores so effective quotas are recomputed.
+		if h.FileStore != nil {
+			h.FileStore.InvalidateAllStores()
+		}
 	}
 
 	// Update rate limits if provided

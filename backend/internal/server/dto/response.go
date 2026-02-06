@@ -522,16 +522,14 @@ type SMTPConfigResponse struct {
 
 // QuotasConfigResponse contains quota configuration for the response.
 type QuotasConfigResponse struct {
+	ResourceQuotas `tstype:",extends"`
+
 	MaxRequestBodyBytes   int64 `json:"max_request_body_bytes" jsonschema:"description=Maximum HTTP request body size in bytes"`
 	MaxSessionsPerUser    int   `json:"max_sessions_per_user" jsonschema:"description=Maximum active sessions per user"`
-	MaxTablesPerWorkspace int   `json:"max_tables_per_workspace" jsonschema:"description=Maximum tables per workspace"`
-	MaxColumnsPerTable    int   `json:"max_columns_per_table" jsonschema:"description=Maximum columns per table"`
-	MaxRowsPerTable       int   `json:"max_rows_per_table" jsonschema:"description=Maximum rows per table"`
 	MaxOrganizations      int   `json:"max_organizations" jsonschema:"description=Maximum total organizations"`
 	MaxWorkspaces         int   `json:"max_workspaces" jsonschema:"description=Maximum total workspaces"`
 	MaxUsers              int   `json:"max_users" jsonschema:"description=Maximum total users"`
 	MaxTotalStorageBytes  int64 `json:"max_total_storage_bytes" jsonschema:"description=Maximum total storage in bytes"`
-	MaxAssetSizeBytes     int64 `json:"max_asset_size_bytes" jsonschema:"description=Maximum single asset file size in bytes"`
 	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps" jsonschema:"description=Maximum egress bandwidth in bytes per second (0=unlimited)"`
 }
 

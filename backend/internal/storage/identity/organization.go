@@ -5,6 +5,7 @@ package identity
 import (
 	"context"
 	"errors"
+	"fmt"
 	"iter"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -41,8 +42,20 @@ func (o *Organization) Validate() error {
 	if o.Name == "" {
 		return errNameRequired
 	}
-	if o.Quotas.MaxWorkspaces <= 0 || o.Quotas.MaxMembersPerOrg <= 0 || o.Quotas.MaxMembersPerWorkspace <= 0 || o.Quotas.MaxTotalStorageBytes <= 0 {
-		return errInvalidOrgQuota
+	if err := o.Quotas.Validate(); err != nil {
+		return fmt.Errorf("invalid organization quota: %w", err)
+	}
+	if o.Quotas.MaxWorkspacesPerOrg <= 0 {
+		return errors.New("invalid organization quota: max_workspaces_per_org must be positive")
+	}
+	if o.Quotas.MaxMembersPerOrg <= 0 {
+		return errors.New("invalid organization quota: max_members_per_org must be positive")
+	}
+	if o.Quotas.MaxMembersPerWorkspace <= 0 {
+		return errors.New("invalid organization quota: max_members_per_workspace must be positive")
+	}
+	if o.Quotas.MaxTotalStorageBytes <= 0 {
+		return errors.New("invalid organization quota: max_total_storage_bytes must be positive")
 	}
 	return nil
 }
@@ -54,17 +67,21 @@ type OrganizationSettings struct {
 }
 
 // OrganizationQuotas defines limits for an organization.
+// ResourceQuotas fields are content limits applied per-workspace (0 = no org-level restriction).
 type OrganizationQuotas struct {
-	MaxWorkspaces          int   `json:"max_workspaces" jsonschema:"description=Maximum number of workspaces in this org"`
+	storage.ResourceQuotas
+
+	MaxWorkspacesPerOrg    int   `json:"max_workspaces_per_org" jsonschema:"description=Maximum number of workspaces in this org"`
 	MaxMembersPerOrg       int   `json:"max_members_per_org" jsonschema:"description=Maximum members at org level"`
 	MaxMembersPerWorkspace int   `json:"max_members_per_workspace" jsonschema:"description=Maximum members per workspace"`
 	MaxTotalStorageBytes   int64 `json:"max_total_storage_bytes" jsonschema:"description=Total storage across all workspaces in bytes"`
 }
 
 // DefaultOrganizationQuotas returns the default quotas for a new organization.
+// ResourceQuotas fields default to zero (no org-level content restriction).
 func DefaultOrganizationQuotas() OrganizationQuotas {
 	return OrganizationQuotas{
-		MaxWorkspaces:          3,
+		MaxWorkspacesPerOrg:    3,
 		MaxMembersPerOrg:       10,
 		MaxMembersPerWorkspace: 10,
 		MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024, // 5 GiB
@@ -154,7 +171,6 @@ func (s *OrganizationService) Count() int {
 var (
 	errOrgNameRequired = errors.New("organization name is required")
 	errOrgNotFound     = errors.New("organization not found")
-	errInvalidOrgQuota = errors.New("invalid organization quota")
 )
 
 // GitRemote represents the single remote repository configuration for a workspace.

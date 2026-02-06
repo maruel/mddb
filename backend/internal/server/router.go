@@ -103,7 +103,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("GET /api/v1/admin/organizations", WrapGlobalAdmin(adminh.ListAllOrgs, svc, hcfg, limiters))
 
 	// Server config endpoints (requires IsGlobalAdmin)
-	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, DataDir: cfg.DataDir, BandwidthLimiter: bandwidthLim, RateLimiters: limiters}
+	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, DataDir: cfg.DataDir, FileStore: svc.FileStore, BandwidthLimiter: bandwidthLim, RateLimiters: limiters}
 	mux.Handle("GET /api/v1/server/config", WrapGlobalAdmin(serverh.GetConfig, svc, hcfg, limiters))
 	mux.Handle("POST /api/v1/server/config", WrapGlobalAdmin(serverh.UpdateConfig, svc, hcfg, limiters))
 

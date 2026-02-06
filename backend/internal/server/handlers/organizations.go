@@ -34,13 +34,21 @@ func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID js
 			org.Settings = organizationSettingsToEntity(*req.Settings)
 		}
 		if req.Quotas != nil {
-			org.Quotas = organizationQuotasToEntity(*req.Quotas)
+			org.Quotas = organizationQuotasToEntity(req.Quotas)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to update organization settings", err)
 	}
+
+	// Invalidate all workspace stores in this org so effective quotas are recomputed.
+	if req.Quotas != nil {
+		for ws := range h.Svc.Workspace.IterByOrg(orgID) {
+			h.Svc.FileStore.InvalidateWorkspaceStore(ws.ID)
+		}
+	}
+
 	memberCount := h.Svc.OrgMembership.CountOrgMemberships(orgID)
 	workspaceCount := h.Svc.Workspace.CountByOrg(orgID)
 	return organizationToResponse(org, memberCount, workspaceCount), nil
@@ -69,6 +77,15 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID jsonldb
 	// Check server-wide workspace quota
 	if h.Cfg.Quotas.MaxWorkspaces > 0 && h.Svc.Workspace.Count() >= h.Cfg.Quotas.MaxWorkspaces {
 		return nil, dto.QuotaExceeded("workspaces", h.Cfg.Quotas.MaxWorkspaces)
+	}
+
+	// Check org-level workspace quota
+	org, err := h.Svc.Organization.Get(orgID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get organization", err)
+	}
+	if org.Quotas.MaxWorkspacesPerOrg > 0 && h.Svc.Workspace.CountByOrg(orgID) >= org.Quotas.MaxWorkspacesPerOrg {
+		return nil, dto.QuotaExceeded("workspaces per org", org.Quotas.MaxWorkspacesPerOrg)
 	}
 
 	// Create workspace
@@ -115,6 +132,12 @@ func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID jsonldb.ID
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to update workspace", err)
 	}
+
+	// Invalidate cached workspace store so effective quotas are recomputed.
+	if req.Quotas != nil {
+		h.Svc.FileStore.InvalidateWorkspaceStore(wsID)
+	}
+
 	memberCount := h.Svc.WSMembership.CountWSMemberships(wsID)
 	return workspaceToResponse(ws, memberCount), nil
 }

@@ -15,7 +15,7 @@ func TestOrganization(t *testing.T) {
 				ID:   jsonldb.ID(1),
 				Name: "Test Org",
 				Quotas: OrganizationQuotas{
-					MaxWorkspaces:          3,
+					MaxWorkspacesPerOrg:    3,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
 					MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024,
@@ -31,7 +31,7 @@ func TestOrganization(t *testing.T) {
 				ID:   jsonldb.ID(0),
 				Name: "Test Org",
 				Quotas: OrganizationQuotas{
-					MaxWorkspaces:          3,
+					MaxWorkspacesPerOrg:    3,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
 					MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024,
@@ -47,7 +47,7 @@ func TestOrganization(t *testing.T) {
 				ID:   jsonldb.ID(1),
 				Name: "",
 				Quotas: OrganizationQuotas{
-					MaxWorkspaces:          3,
+					MaxWorkspacesPerOrg:    3,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
 					MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024,
@@ -62,7 +62,7 @@ func TestOrganization(t *testing.T) {
 				ID:   jsonldb.ID(1),
 				Name: "Test Org",
 				Quotas: OrganizationQuotas{
-					MaxWorkspaces:          0,
+					MaxWorkspacesPerOrg:    0,
 					MaxMembersPerOrg:       10,
 					MaxMembersPerWorkspace: 10,
 					MaxTotalStorageBytes:   5 * 1024 * 1024 * 1024,

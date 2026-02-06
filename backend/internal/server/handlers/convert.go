@@ -82,7 +82,7 @@ func organizationToResponse(o *identity.Organization, memberCount, workspaceCoun
 		ID:             o.ID,
 		Name:           o.Name,
 		BillingEmail:   o.BillingEmail,
-		Quotas:         organizationQuotasToDTO(o.Quotas),
+		Quotas:         organizationQuotasToDTO(&o.Quotas),
 		Settings:       organizationSettingsToDTO(o.Settings),
 		MemberCount:    memberCount,
 		WorkspaceCount: workspaceCount,
@@ -257,9 +257,21 @@ func wsMembershipSettingsToDTO(s identity.WorkspaceMembershipSettings) dto.Works
 	}
 }
 
-func organizationQuotasToDTO(q identity.OrganizationQuotas) dto.OrganizationQuotas {
+func resourceQuotasToDTO(q storage.ResourceQuotas) dto.ResourceQuotas {
+	return dto.ResourceQuotas{
+		MaxPages:              q.MaxPages,
+		MaxStorageBytes:       q.MaxStorageBytes,
+		MaxRecordsPerTable:    q.MaxRecordsPerTable,
+		MaxAssetSizeBytes:     q.MaxAssetSizeBytes,
+		MaxTablesPerWorkspace: q.MaxTablesPerWorkspace,
+		MaxColumnsPerTable:    q.MaxColumnsPerTable,
+	}
+}
+
+func organizationQuotasToDTO(q *identity.OrganizationQuotas) dto.OrganizationQuotas {
 	return dto.OrganizationQuotas{
-		MaxWorkspaces:          q.MaxWorkspaces,
+		ResourceQuotas:         resourceQuotasToDTO(q.ResourceQuotas),
+		MaxWorkspacesPerOrg:    q.MaxWorkspacesPerOrg,
 		MaxMembersPerOrg:       q.MaxMembersPerOrg,
 		MaxMembersPerWorkspace: q.MaxMembersPerWorkspace,
 		MaxTotalStorageBytes:   q.MaxTotalStorageBytes,
@@ -267,12 +279,7 @@ func organizationQuotasToDTO(q identity.OrganizationQuotas) dto.OrganizationQuot
 }
 
 func workspaceQuotasToDTO(q identity.WorkspaceQuotas) dto.WorkspaceQuotas {
-	return dto.WorkspaceQuotas{
-		MaxPages:           q.MaxPages,
-		MaxStorageBytes:    q.MaxStorageBytes,
-		MaxRecordsPerTable: q.MaxRecordsPerTable,
-		MaxAssetSizeBytes:  q.MaxAssetSizeBytes,
-	}
+	return resourceQuotasToDTO(q)
 }
 
 func organizationSettingsToDTO(s identity.OrganizationSettings) dto.OrganizationSettings {
@@ -353,9 +360,21 @@ func organizationSettingsToEntity(s dto.OrganizationSettings) identity.Organizat
 	}
 }
 
-func organizationQuotasToEntity(q dto.OrganizationQuotas) identity.OrganizationQuotas {
+func resourceQuotasToEntity(q dto.ResourceQuotas) storage.ResourceQuotas {
+	return storage.ResourceQuotas{
+		MaxPages:              q.MaxPages,
+		MaxStorageBytes:       q.MaxStorageBytes,
+		MaxRecordsPerTable:    q.MaxRecordsPerTable,
+		MaxAssetSizeBytes:     q.MaxAssetSizeBytes,
+		MaxTablesPerWorkspace: q.MaxTablesPerWorkspace,
+		MaxColumnsPerTable:    q.MaxColumnsPerTable,
+	}
+}
+
+func organizationQuotasToEntity(q *dto.OrganizationQuotas) identity.OrganizationQuotas {
 	return identity.OrganizationQuotas{
-		MaxWorkspaces:          q.MaxWorkspaces,
+		ResourceQuotas:         resourceQuotasToEntity(q.ResourceQuotas),
+		MaxWorkspacesPerOrg:    q.MaxWorkspacesPerOrg,
 		MaxMembersPerOrg:       q.MaxMembersPerOrg,
 		MaxMembersPerWorkspace: q.MaxMembersPerWorkspace,
 		MaxTotalStorageBytes:   q.MaxTotalStorageBytes,
@@ -363,12 +382,7 @@ func organizationQuotasToEntity(q dto.OrganizationQuotas) identity.OrganizationQ
 }
 
 func workspaceQuotasToEntity(q dto.WorkspaceQuotas) identity.WorkspaceQuotas {
-	return identity.WorkspaceQuotas{
-		MaxPages:           q.MaxPages,
-		MaxStorageBytes:    q.MaxStorageBytes,
-		MaxRecordsPerTable: q.MaxRecordsPerTable,
-		MaxAssetSizeBytes:  q.MaxAssetSizeBytes,
-	}
+	return resourceQuotasToEntity(q)
 }
 
 //nolint:unused // Reserved for future use

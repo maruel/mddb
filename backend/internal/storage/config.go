@@ -77,21 +77,16 @@ func DefaultRateLimits() RateLimits {
 }
 
 // ServerQuotas defines server-wide resource limits.
+// ResourceQuotas fields are shared with org and workspace layers;
+// the effective quota is min(server, org, workspace) per field.
 type ServerQuotas struct {
+	ResourceQuotas
+
 	// MaxRequestBodyBytes limits the size of any single HTTP request body.
 	MaxRequestBodyBytes int64 `json:"max_request_body_bytes"`
 
 	// MaxSessionsPerUser limits active sessions per user.
 	MaxSessionsPerUser int `json:"max_sessions_per_user"`
-
-	// MaxTablesPerWorkspace limits tables within a single workspace.
-	MaxTablesPerWorkspace int `json:"max_tables_per_workspace"`
-
-	// MaxColumnsPerTable limits properties/columns per table.
-	MaxColumnsPerTable int `json:"max_columns_per_table"`
-
-	// MaxRowsPerTable limits records/rows per table.
-	MaxRowsPerTable int `json:"max_rows_per_table"`
 
 	// MaxOrganizations limits total organizations on the server.
 	MaxOrganizations int `json:"max_organizations"`
@@ -105,30 +100,25 @@ type ServerQuotas struct {
 	// MaxTotalStorageBytes limits total storage across all workspaces.
 	MaxTotalStorageBytes int64 `json:"max_total_storage_bytes"`
 
-	// MaxAssetSizeBytes limits the size of a single uploaded asset file.
-	MaxAssetSizeBytes int64 `json:"max_asset_size_bytes"`
-
 	// MaxEgressBandwidthBps limits total egress bandwidth in bytes per second.
 	// 0 means unlimited.
 	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps"`
 }
 
 // Validate checks that all quota values are non-negative.
+// MaxAssetSizeBytes must be positive (it's the ultimate fallback).
 func (q *ServerQuotas) Validate() error {
+	if err := q.ResourceQuotas.Validate(); err != nil {
+		return err
+	}
+	if q.MaxAssetSizeBytes <= 0 {
+		return errors.New("max_asset_size_bytes must be positive")
+	}
 	if q.MaxRequestBodyBytes < 0 {
 		return errors.New("max_request_body_bytes must be non-negative")
 	}
 	if q.MaxSessionsPerUser < 0 {
 		return errors.New("max_sessions_per_user must be non-negative")
-	}
-	if q.MaxTablesPerWorkspace < 0 {
-		return errors.New("max_tables_per_workspace must be non-negative")
-	}
-	if q.MaxColumnsPerTable < 0 {
-		return errors.New("max_columns_per_table must be non-negative")
-	}
-	if q.MaxRowsPerTable < 0 {
-		return errors.New("max_rows_per_table must be non-negative")
 	}
 	if q.MaxOrganizations < 0 {
 		return errors.New("max_organizations must be non-negative")
@@ -141,9 +131,6 @@ func (q *ServerQuotas) Validate() error {
 	}
 	if q.MaxTotalStorageBytes < 0 {
 		return errors.New("max_total_storage_bytes must be non-negative")
-	}
-	if q.MaxAssetSizeBytes <= 0 {
-		return errors.New("max_asset_size_bytes must be positive")
 	}
 	if q.MaxEgressBandwidthBps < 0 {
 		return errors.New("max_egress_bandwidth_bps must be non-negative")
@@ -159,16 +146,13 @@ func DefaultServerQuotas() ServerQuotas {
 		maxUsers = 200
 	}
 	return ServerQuotas{
+		ResourceQuotas:        DefaultResourceQuotas(),
 		MaxRequestBodyBytes:   10 * 1024 * 1024, // 10 MiB
 		MaxSessionsPerUser:    10,               // 10 sessions
-		MaxTablesPerWorkspace: 100,              // 100 tables
-		MaxColumnsPerTable:    50,               // 50 columns
-		MaxRowsPerTable:       1000,             // 1000 rows
 		MaxOrganizations:      1000,             // 1000 organizations
 		MaxWorkspaces:         10000,            // 10000 workspaces
 		MaxUsers:              maxUsers,
 		MaxTotalStorageBytes:  100 * 1024 * 1024 * 1024, // 100 GiB
-		MaxAssetSizeBytes:     10 * 1024 * 1024,         // 10 MiB
 		MaxEgressBandwidthBps: 0,                        // unlimited
 	}
 }

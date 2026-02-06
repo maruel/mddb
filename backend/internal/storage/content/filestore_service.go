@@ -22,12 +22,13 @@ import (
 // Each workspace has its own WorkspaceFileStore instance.
 // Global operations (org quotas, workspace initialization) are handled here.
 type FileStoreService struct {
-	rootDir string
-	git     *git.Manager
-	wsSvc   *identity.WorkspaceService
-	orgSvc  *identity.OrganizationService
-	mu      sync.RWMutex
-	stores  map[jsonldb.ID]*WorkspaceFileStore // wsID -> WorkspaceFileStore
+	rootDir      string
+	git          *git.Manager
+	wsSvc        *identity.WorkspaceService
+	orgSvc       *identity.OrganizationService
+	serverQuotas *storage.ResourceQuotas
+	mu           sync.RWMutex
+	stores       map[jsonldb.ID]*WorkspaceFileStore // wsID -> WorkspaceFileStore
 }
 
 // page is an internal type for reading/writing page markdown files.
@@ -43,7 +44,8 @@ type page struct {
 // gitMgr is required - all operations are versioned.
 // wsSvc provides quota limits for workspaces.
 // orgSvc provides quota limits for organizations.
-func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.WorkspaceService, orgSvc *identity.OrganizationService) (*FileStoreService, error) {
+// serverQuotas provides server-level resource quotas for effective quota computation.
+func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.WorkspaceService, orgSvc *identity.OrganizationService, serverQuotas *storage.ResourceQuotas) (*FileStoreService, error) {
 	if gitMgr == nil {
 		return nil, errors.New("git manager is required")
 	}
@@ -53,16 +55,20 @@ func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.Wo
 	if orgSvc == nil {
 		return nil, errors.New("organization service is required")
 	}
+	if serverQuotas == nil {
+		return nil, errors.New("server quotas is required")
+	}
 	if err := os.MkdirAll(rootDir, 0o755); err != nil { //nolint:gosec // G301: 0o755 is intentional for user data directories
 		return nil, fmt.Errorf("failed to create root directory: %w", err)
 	}
 
 	return &FileStoreService{
-		rootDir: rootDir,
-		git:     gitMgr,
-		wsSvc:   wsSvc,
-		orgSvc:  orgSvc,
-		stores:  make(map[jsonldb.ID]*WorkspaceFileStore),
+		rootDir:      rootDir,
+		git:          gitMgr,
+		wsSvc:        wsSvc,
+		orgSvc:       orgSvc,
+		serverQuotas: serverQuotas,
+		stores:       make(map[jsonldb.ID]*WorkspaceFileStore),
 	}, nil
 }
 
@@ -96,15 +102,39 @@ func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID jsonldb
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
 
+	org, err := svc.orgSvc.Get(ws.OrganizationID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get organization: %w", err)
+	}
+
 	repo, err := svc.git.Repo(ctx, wsID.String())
 	if err != nil {
 		return nil, fmt.Errorf("failed to get git repo: %w", err)
 	}
 
+	// Compute effective quotas from server, org, and workspace layers.
+	effective := storage.EffectiveQuotas(*svc.serverQuotas, org.Quotas.ResourceQuotas, ws.Quotas)
+
 	wsDir := filepath.Join(svc.rootDir, wsID.String())
-	store := newWorkspaceFileStore(wsDir, repo, &ws.Quotas)
+	store := newWorkspaceFileStore(wsDir, repo, &effective)
 	svc.stores[wsID] = store
 	return store, nil
+}
+
+// InvalidateWorkspaceStore removes a cached workspace store so that
+// the next GetWorkspaceStore call recomputes effective quotas.
+func (svc *FileStoreService) InvalidateWorkspaceStore(wsID jsonldb.ID) {
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+	delete(svc.stores, wsID)
+}
+
+// InvalidateAllStores removes all cached workspace stores.
+// Use after server-level quota changes that affect all workspaces.
+func (svc *FileStoreService) InvalidateAllStores() {
+	svc.mu.Lock()
+	defer svc.mu.Unlock()
+	svc.stores = make(map[jsonldb.ID]*WorkspaceFileStore)
 }
 
 // InitWorkspace initializes storage for a new workspace.

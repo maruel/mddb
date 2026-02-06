@@ -81,12 +81,6 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Enforce maximum asset file size
-	if int64(len(data)) > h.Cfg.Quotas.MaxAssetSizeBytes {
-		writeErrorResponse(w, dto.PayloadTooLarge(h.Cfg.Quotas.MaxAssetSizeBytes))
-		return
-	}
-
 	// Get user from context (set by WrapAuthRaw middleware)
 	user := reqctx.User(r.Context())
 	if user == nil {
@@ -109,6 +103,13 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(r.Context(), wsID)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("workspace"))
+		return
+	}
+
+	// Enforce maximum asset file size using effective quotas
+	eq := ws.EffectiveQuotas()
+	if eq.MaxAssetSizeBytes > 0 && int64(len(data)) > eq.MaxAssetSizeBytes {
+		writeErrorResponse(w, dto.PayloadTooLarge(eq.MaxAssetSizeBytes))
 		return
 	}
 

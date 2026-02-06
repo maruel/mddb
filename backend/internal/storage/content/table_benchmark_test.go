@@ -34,7 +34,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 	_, err = orgService.Modify(org.ID, func(o *identity.Organization) error {
-		o.Quotas.MaxWorkspaces = 1_000
+		o.Quotas.MaxWorkspacesPerOrg = 1_000
 		o.Quotas.MaxMembersPerOrg = 10_000
 		o.Quotas.MaxMembersPerWorkspace = 10_000
 		o.Quotas.MaxTotalStorageBytes = 1_000_000_000_000_000_000 // 1EB
@@ -60,7 +60,8 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	fs, err := NewFileStoreService(tmpDir, gitMgr, wsService, orgService)
+	serverQuotas := storage.DefaultResourceQuotas()
+	fs, err := NewFileStoreService(tmpDir, gitMgr, wsService, orgService, &serverQuotas)
 	if err != nil {
 		b.Fatal(err)
 	}

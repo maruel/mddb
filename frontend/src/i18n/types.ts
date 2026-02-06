@@ -244,10 +244,12 @@ export interface Dictionary {
     organizationMembers: string;
     organizationPreferences: string;
     organizationQuotas: string;
-    maxWorkspaces: string;
+    maxWorkspacesPerOrg: string;
     maxMembersPerOrg: string;
     maxMembersPerWorkspace: string;
     maxTotalStorageBytes: string;
+    maxTablesPerWorkspace: string;
+    maxColumnsPerTable: string;
     // Workspace quotas
     workspaceQuotas: string;
     maxPages: string;
@@ -414,7 +416,9 @@ export interface Dictionary {
     maxSessionsPerUser: string;
     maxTablesPerWorkspace: string;
     maxColumnsPerTable: string;
-    maxRowsPerTable: string;
+    maxRecordsPerTable: string;
+    maxPages: string;
+    maxStorageBytes: string;
     maxOrganizations: string;
     maxWorkspaces: string;
     maxUsers: string;

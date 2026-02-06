@@ -27,7 +27,9 @@ export default function ServerSettingsPanel() {
   const [maxSessionsPerUser, setMaxSessionsPerUser] = createSignal(0);
   const [maxTablesPerWorkspace, setMaxTablesPerWorkspace] = createSignal(0);
   const [maxColumnsPerTable, setMaxColumnsPerTable] = createSignal(0);
-  const [maxRowsPerTable, setMaxRowsPerTable] = createSignal(0);
+  const [maxRecordsPerTable, setMaxRecordsPerTable] = createSignal(0);
+  const [maxPages, setMaxPages] = createSignal(0);
+  const [maxStorageBytes, setMaxStorageBytes] = createSignal(0);
   const [maxOrganizations, setMaxOrganizations] = createSignal(0);
   const [maxWorkspaces, setMaxWorkspaces] = createSignal(0);
   const [maxUsers, setMaxUsers] = createSignal(0);
@@ -64,7 +66,9 @@ export default function ServerSettingsPanel() {
       setMaxSessionsPerUser(data.quotas.max_sessions_per_user);
       setMaxTablesPerWorkspace(data.quotas.max_tables_per_workspace);
       setMaxColumnsPerTable(data.quotas.max_columns_per_table);
-      setMaxRowsPerTable(data.quotas.max_rows_per_table);
+      setMaxRecordsPerTable(data.quotas.max_records_per_table);
+      setMaxPages(data.quotas.max_pages);
+      setMaxStorageBytes(data.quotas.max_storage_bytes);
       setMaxOrganizations(data.quotas.max_organizations);
       setMaxWorkspaces(data.quotas.max_workspaces);
       setMaxUsers(data.quotas.max_users);
@@ -128,7 +132,9 @@ export default function ServerSettingsPanel() {
           max_sessions_per_user: maxSessionsPerUser(),
           max_tables_per_workspace: maxTablesPerWorkspace(),
           max_columns_per_table: maxColumnsPerTable(),
-          max_rows_per_table: maxRowsPerTable(),
+          max_records_per_table: maxRecordsPerTable(),
+          max_pages: maxPages(),
+          max_storage_bytes: maxStorageBytes(),
           max_organizations: maxOrganizations(),
           max_workspaces: maxWorkspaces(),
           max_users: maxUsers(),
@@ -285,11 +291,31 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.maxRowsPerTable')}</label>
+                <label>{t('server.maxRecordsPerTable')}</label>
                 <input
                   type="number"
-                  value={maxRowsPerTable()}
-                  onInput={(e) => setMaxRowsPerTable(parseInt(e.target.value) || 0)}
+                  value={maxRecordsPerTable()}
+                  onInput={(e) => setMaxRecordsPerTable(parseInt(e.target.value) || 0)}
+                  min="0"
+                />
+              </div>
+
+              <div class={styles.formItem}>
+                <label>{t('server.maxPages')}</label>
+                <input
+                  type="number"
+                  value={maxPages()}
+                  onInput={(e) => setMaxPages(parseInt(e.target.value) || 0)}
+                  min="0"
+                />
+              </div>
+
+              <div class={styles.formItem}>
+                <label>{t('server.maxStorageBytes')}</label>
+                <input
+                  type="number"
+                  value={maxStorageBytes()}
+                  onInput={(e) => setMaxStorageBytes(parseInt(e.target.value) || 0)}
                   min="0"
                 />
               </div>

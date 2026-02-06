@@ -850,8 +850,11 @@ func (r *UpdateOrgPreferencesRequest) Validate() error {
 		return MissingField("orgID")
 	}
 	if r.Quotas != nil {
-		if r.Quotas.MaxWorkspaces <= 0 {
-			return InvalidField("quotas.max_workspaces", "must be positive")
+		if err := r.Quotas.Validate("quotas"); err != nil {
+			return err
+		}
+		if r.Quotas.MaxWorkspacesPerOrg <= 0 {
+			return InvalidField("quotas.max_workspaces_per_org", "must be positive")
 		}
 		if r.Quotas.MaxMembersPerOrg <= 0 {
 			return InvalidField("quotas.max_members_per_org", "must be positive")
@@ -960,6 +963,7 @@ func (r *UpdateWorkspaceRequest) Validate() error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -1268,16 +1272,14 @@ type SMTPConfigUpdate struct {
 
 // QuotasConfigUpdate contains quota configuration fields for updates.
 type QuotasConfigUpdate struct {
+	ResourceQuotas `tstype:",extends"`
+
 	MaxRequestBodyBytes   int64 `json:"max_request_body_bytes"`
 	MaxSessionsPerUser    int   `json:"max_sessions_per_user"`
-	MaxTablesPerWorkspace int   `json:"max_tables_per_workspace"`
-	MaxColumnsPerTable    int   `json:"max_columns_per_table"`
-	MaxRowsPerTable       int   `json:"max_rows_per_table"`
 	MaxOrganizations      int   `json:"max_organizations"`
 	MaxWorkspaces         int   `json:"max_workspaces"`
 	MaxUsers              int   `json:"max_users"`
 	MaxTotalStorageBytes  int64 `json:"max_total_storage_bytes"`
-	MaxAssetSizeBytes     int64 `json:"max_asset_size_bytes"`
 	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps"`
 }
 

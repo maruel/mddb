@@ -22,7 +22,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
-	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // WorkspaceFileStore is a versioned file storage system for a single workspace.
@@ -34,20 +33,25 @@ import (
 type WorkspaceFileStore struct {
 	wsDir  string                    // Pre-computed: rootDir/wsID
 	repo   *git.Repo                 // Cached git repository
-	quotas *identity.WorkspaceQuotas // Workspace quotas
+	quotas *storage.ResourceQuotas   // Effective quotas (min of server/org/ws)
 	mu     sync.RWMutex              // Protects cache
 	cache  map[jsonldb.ID]jsonldb.ID // nodeID -> parentID
 }
 
 // newWorkspaceFileStore creates a new workspace store.
 // This is called internally by FileStoreService.GetWorkspaceStore.
-func newWorkspaceFileStore(wsDir string, repo *git.Repo, quotas *identity.WorkspaceQuotas) *WorkspaceFileStore {
+func newWorkspaceFileStore(wsDir string, repo *git.Repo, quotas *storage.ResourceQuotas) *WorkspaceFileStore {
 	return &WorkspaceFileStore{
 		wsDir:  wsDir,
 		repo:   repo,
 		quotas: quotas,
 		cache:  make(map[jsonldb.ID]jsonldb.ID),
 	}
+}
+
+// EffectiveQuotas returns the effective resource quotas for this workspace.
+func (ws *WorkspaceFileStore) EffectiveQuotas() storage.ResourceQuotas {
+	return *ws.quotas
 }
 
 // refreshCache rebuilds the parent map for the workspace.
@@ -122,7 +126,11 @@ func (ws *WorkspaceFileStore) deleteFromCache(id jsonldb.ID) {
 }
 
 // checkPageQuota returns an error if creating a new page would exceed quota.
+// Skips the check if MaxPages is 0 (unlimited).
 func (ws *WorkspaceFileStore) checkPageQuota() error {
+	if ws.quotas.MaxPages == 0 {
+		return nil
+	}
 	count, _, err := ws.GetWorkspaceUsage()
 	if err != nil {
 		return err
@@ -134,7 +142,11 @@ func (ws *WorkspaceFileStore) checkPageQuota() error {
 }
 
 // checkStorageQuota returns an error if adding the given bytes would exceed workspace storage quota.
+// Skips the check if MaxStorageBytes is 0 (unlimited).
 func (ws *WorkspaceFileStore) checkStorageQuota(additionalBytes int64) error {
+	if ws.quotas.MaxStorageBytes == 0 {
+		return nil
+	}
 	_, usage, err := ws.GetWorkspaceUsage()
 	if err != nil {
 		return err
@@ -712,7 +724,11 @@ func (ws *WorkspaceFileStore) iterTablesRecursive(dir string, parentID jsonldb.I
 
 // CheckTableQuota checks if the workspace has reached its table limit.
 // Returns ErrTableQuotaExceeded if the limit is reached.
-func (ws *WorkspaceFileStore) CheckTableQuota(maxTables int) error {
+// Skips the check if MaxTablesPerWorkspace is 0 (unlimited).
+func (ws *WorkspaceFileStore) CheckTableQuota() error {
+	if ws.quotas.MaxTablesPerWorkspace == 0 {
+		return nil
+	}
 	tables, err := ws.IterTables()
 	if err != nil {
 		return err
@@ -720,7 +736,7 @@ func (ws *WorkspaceFileStore) CheckTableQuota(maxTables int) error {
 	count := 0
 	for range tables {
 		count++
-		if count >= maxTables {
+		if count >= ws.quotas.MaxTablesPerWorkspace {
 			return ErrTableQuotaExceeded
 		}
 	}
@@ -751,7 +767,7 @@ func (ws *WorkspaceFileStore) appendRecord(tableID, tableParentID jsonldb.ID, re
 	}
 
 	if table != nil {
-		if table.Len() >= ws.quotas.MaxRecordsPerTable {
+		if ws.quotas.MaxRecordsPerTable > 0 && table.Len() >= ws.quotas.MaxRecordsPerTable {
 			return fmt.Errorf("record quota exceeded: max %d", ws.quotas.MaxRecordsPerTable)
 		}
 	} else {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -43,7 +44,8 @@ func setupTestServices(t *testing.T) (*Services, jsonldb.ID) {
 	gitMgr := git.NewManager(dir, "Test", "test@example.com")
 
 	// Create FileStoreService
-	fileStore, err := content.NewFileStoreService(dir, gitMgr, wsSvc, orgSvc)
+	serverQuotas := storage.DefaultResourceQuotas()
+	fileStore, err := content.NewFileStoreService(dir, gitMgr, wsSvc, orgSvc, &serverQuotas)
 	if err != nil {
 		t.Fatal(err)
 	}

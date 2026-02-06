@@ -47,7 +47,8 @@ func TestRegister(t *testing.T) {
 
 	gitMgr := git.NewManager(tempDir, "test", "test@test.com")
 
-	fileStore, err := content.NewFileStoreService(tempDir, gitMgr, wsService, orgService)
+	serverQuotas := storage.DefaultResourceQuotas()
+	fileStore, err := content.NewFileStoreService(tempDir, gitMgr, wsService, orgService, &serverQuotas)
 	if err != nil {
 		t.Fatalf("NewFileStore failed: %v", err)
 	}
