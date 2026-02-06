@@ -1,18 +1,20 @@
-// Server settings panel for global admins to configure SMTP and quotas.
+// Server settings panel for global admins: dashboard, SMTP configuration, and quotas/rate limits.
 
-import { createSignal, createEffect, Show } from 'solid-js';
+import { createSignal, createEffect, Show, lazy } from 'solid-js';
 import { useAuth } from '../../contexts';
 import { useI18n } from '../../i18n';
 import type { ServerConfigResponse } from '@sdk/types.gen';
 import styles from './ServerSettingsPanel.module.css';
 
-type Tab = 'smtp' | 'quotas';
+const AdminDashboard = lazy(() => import('./AdminDashboard'));
+
+type Tab = 'dashboard' | 'smtp' | 'quotas';
 
 export default function ServerSettingsPanel() {
   const { t } = useI18n();
   const { api } = useAuth();
 
-  const [activeTab, setActiveTab] = createSignal<Tab>('smtp');
+  const [activeTab, setActiveTab] = createSignal<Tab>('dashboard');
   const [config, setConfig] = createSignal<ServerConfigResponse | null>(null);
 
   // SMTP fields
@@ -163,6 +165,9 @@ export default function ServerSettingsPanel() {
       <h2>{t('server.serverSettings')}</h2>
 
       <div class={styles.tabs}>
+        <button class={activeTab() === 'dashboard' ? styles.activeTab : ''} onClick={() => setActiveTab('dashboard')}>
+          {t('server.dashboard')}
+        </button>
         <button class={activeTab() === 'smtp' ? styles.activeTab : ''} onClick={() => setActiveTab('smtp')}>
           {t('server.smtpConfiguration')}
         </button>
@@ -176,6 +181,10 @@ export default function ServerSettingsPanel() {
       </Show>
       <Show when={success()}>
         <div class={styles.success}>{success()}</div>
+      </Show>
+
+      <Show when={activeTab() === 'dashboard'}>
+        <AdminDashboard />
       </Show>
 
       <Show when={activeTab() === 'smtp'}>

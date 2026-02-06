@@ -521,6 +521,11 @@ func (ws *WorkspaceFileStore) GetWorkspaceUsage() (pageCount int, storageUsage i
 	return
 }
 
+// CommitCount returns the number of git commits in the workspace repository.
+func (ws *WorkspaceFileStore) CommitCount(ctx context.Context) (int, error) {
+	return ws.repo.CommitCount(ctx)
+}
+
 // TableExists checks if a table exists.
 func (ws *WorkspaceFileStore) TableExists(id jsonldb.ID) bool {
 	parentID := ws.getParent(id)

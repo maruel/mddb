@@ -1243,11 +1243,11 @@ func (r *UpdateUserSettingsRequest) Validate() error {
 
 // --- Admin ---
 
-// AdminStatsRequest is a request to get admin stats.
-type AdminStatsRequest struct{}
+// AdminServerDetailRequest is a request to get admin dashboard data.
+type AdminServerDetailRequest struct{}
 
-// Validate is a no-op for AdminStatsRequest.
-func (r *AdminStatsRequest) Validate() error {
+// Validate is a no-op for AdminServerDetailRequest.
+func (r *AdminServerDetailRequest) Validate() error {
 	return nil
 }
 

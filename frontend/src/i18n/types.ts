@@ -435,5 +435,27 @@ export interface Dictionary {
     configurationSaved: string;
     smtpEnabled: string;
     smtpDisabled: string;
+    // Dashboard tab
+    dashboard: string;
+    totalUsers: string;
+    totalOrganizations: string;
+    totalWorkspaces: string;
+    totalStorage: string;
+    activeSessions: string;
+    organizationName: string;
+    workspaceName: string;
+    members: string;
+    pages: string;
+    storage: string;
+    created: string;
+    gitCommits: string;
+    requestMetrics: string;
+    serverUptime: string;
+    authRequests: string;
+    writeRequests: string;
+    readAuthRequests: string;
+    readUnauthRequests: string;
+    reqPerMin: string;
+    refresh: string;
   };
 }

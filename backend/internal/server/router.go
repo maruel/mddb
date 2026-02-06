@@ -99,10 +99,10 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("/api/v1/health", Wrap(hh.GetHealth, hcfg, limiters))
 
 	// Admin endpoints (requires IsGlobalAdmin)
-	adminh := &handlers.AdminHandler{Svc: svc}
-	mux.Handle("GET /api/v1/admin/stats", WrapGlobalAdmin(adminh.GetAdminStats, svc, hcfg, limiters))
+	adminh := &handlers.AdminHandler{Svc: svc, RateLimitCounts: limiters.Counts, ServerStartTime: limiters.StartTime}
 	mux.Handle("GET /api/v1/admin/users", WrapGlobalAdmin(adminh.ListAllUsers, svc, hcfg, limiters))
 	mux.Handle("GET /api/v1/admin/organizations", WrapGlobalAdmin(adminh.ListAllOrgs, svc, hcfg, limiters))
+	mux.Handle("GET /api/v1/admin/server", WrapGlobalAdmin(adminh.GetServerDetail, svc, hcfg, limiters))
 
 	// Server config endpoints (requires IsGlobalAdmin)
 	serverh := &handlers.ServerHandler{Cfg: cfg.ServerConfig, DataDir: cfg.DataDir, FileStore: svc.FileStore, BandwidthLimiter: bandwidthLim, RateLimiters: limiters}

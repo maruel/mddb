@@ -5,6 +5,7 @@ package ratelimit
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -27,6 +28,7 @@ type Limiter struct {
 	burst   int
 	window  time.Duration
 	stop    chan struct{}
+	count   atomic.Int64
 }
 
 type bucket struct {
@@ -53,8 +55,14 @@ func NewLimiter(requests int, window time.Duration, burst int) *Limiter {
 	return l
 }
 
+// Count returns the total number of requests checked by this limiter.
+func (l *Limiter) Count() int64 {
+	return l.count.Load()
+}
+
 // Allow checks if a request with the given key is allowed.
 func (l *Limiter) Allow(key string) Result {
+	l.count.Add(1)
 	l.mu.Lock()
 	// 0 rate means unlimited
 	if l.rate <= 0 {

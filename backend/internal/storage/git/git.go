@@ -173,6 +173,21 @@ func (r *Repo) commit(ctx context.Context, author Author, message string, files 
 	return nil
 }
 
+// CommitCount returns the total number of commits in the repository.
+func (r *Repo) CommitCount(ctx context.Context) (int, error) {
+	out, err := r.gitOutput(ctx, "rev-list", "--count", "HEAD")
+	if err != nil {
+		return 0, nil //nolint:nilerr // no commits yet is not an error
+	}
+	n := 0
+	for _, b := range out {
+		if b >= '0' && b <= '9' {
+			n = n*10 + int(b-'0')
+		}
+	}
+	return n, nil
+}
+
 // GetHistory returns commit history for a specific path, limited to n commits.
 // n is capped at 1000. If n <= 0, defaults to 1000.
 func (r *Repo) GetHistory(ctx context.Context, path string, n int) ([]*Commit, error) {

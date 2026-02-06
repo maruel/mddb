@@ -1,0 +1,148 @@
+/* Admin dashboard styles. */
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+
+/* Summary cards row */
+.summaryCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--s-4);
+}
+
+.card {
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-4);
+  text-align: center;
+}
+
+.cardValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--c-primary);
+  line-height: 1.2;
+}
+
+.cardLabel {
+  font-size: 0.8rem;
+  color: var(--c-text-light);
+  margin-top: var(--s-1);
+}
+
+/* Refresh button */
+.refreshRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.refreshButton {
+  padding: var(--s-2) var(--s-4);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--c-text);
+  transition: all var(--transition);
+}
+
+.refreshButton:hover {
+  background: var(--c-bg-alt);
+}
+
+.refreshButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Org/Workspace table */
+.orgTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 0.875rem;
+}
+
+.orgTable th {
+  text-align: left;
+  padding: var(--s-3);
+  background: var(--c-bg-alt);
+  font-weight: 600;
+  color: var(--c-text-light);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.orgTable td {
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.orgTable tr:last-child td {
+  border-bottom: none;
+}
+
+.orgHeader td {
+  font-weight: 600;
+  background: var(--c-bg-alt);
+}
+
+.wsRow td:first-child {
+  padding-left: var(--s-6);
+}
+
+.numCell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Request metrics */
+.metricsSection h3 {
+  font-size: 1rem;
+  margin: 0 0 var(--s-3) 0;
+  color: var(--c-text-light);
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--s-4);
+}
+
+.metric {
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: var(--s-3);
+}
+
+.metricLabel {
+  font-size: 0.8rem;
+  color: var(--c-text-light);
+  margin-bottom: var(--s-1);
+}
+
+.metricValue {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.metricRate {
+  font-size: 0.75rem;
+  color: var(--c-text-light);
+  margin-top: var(--s-1);
+}
+
+.error {
+  padding: var(--s-3);
+  background: #fef2f2;
+  color: var(--c-danger);
+  border-radius: var(--radius);
+}

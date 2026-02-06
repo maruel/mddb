@@ -3,7 +3,7 @@
 import type {
   AcceptInvitationRequest,
   AdminOrgsResponse,
-  AdminStatsResponse,
+  AdminServerDetail,
   AdminUsersResponse,
   AuthResponse,
   ChangeEmailRequest,
@@ -135,7 +135,7 @@ export function createAPIClient(fetchFn: FetchFn) {
       organizations: {
         listAllOrgs: () => get<AdminOrgsResponse>(fetchFn, `/api/v1/admin/organizations`),
       },
-      getAdminStats: () => get<AdminStatsResponse>(fetchFn, `/api/v1/admin/stats`),
+      getServerDetail: () => get<AdminServerDetail>(fetchFn, `/api/v1/admin/server`),
       listAllUsers: () => get<AdminUsersResponse>(fetchFn, `/api/v1/admin/users`),
     },
     auth: {

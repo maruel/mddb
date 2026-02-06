@@ -150,6 +150,18 @@ func (s *SessionService) GetActiveByUserID(userID jsonldb.ID) iter.Seq[*Session]
 	}
 }
 
+// CountActive returns the number of active (non-revoked, non-expired) sessions.
+func (s *SessionService) CountActive() int {
+	now := storage.Now()
+	count := 0
+	for session := range s.table.Iter(0) {
+		if session.RevokedAt.IsZero() && session.ExpiresAt.After(now) {
+			count++
+		}
+	}
+	return count
+}
+
 // Revoke marks a session as revoked.
 func (s *SessionService) Revoke(id jsonldb.ID) error {
 	_, err := s.table.Modify(id, func(session *Session) error {

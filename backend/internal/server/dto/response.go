@@ -456,11 +456,47 @@ type DataRecordResponse struct {
 
 // --- Global Admin Responses ---
 
-// AdminStatsResponse contains server-wide statistics.
-type AdminStatsResponse struct {
-	UserCount      int `json:"user_count" jsonschema:"description=Total number of users"`
-	OrgCount       int `json:"org_count" jsonschema:"description=Total number of organizations"`
-	WorkspaceCount int `json:"workspace_count" jsonschema:"description=Total number of workspaces"`
+// AdminServerDetail contains server-wide dashboard data.
+type AdminServerDetail struct {
+	UserCount      int                 `json:"user_count" jsonschema:"description=Total number of users"`
+	OrgCount       int                 `json:"org_count" jsonschema:"description=Total number of organizations"`
+	WorkspaceCount int                 `json:"workspace_count" jsonschema:"description=Total number of workspaces"`
+	TotalStorage   int64               `json:"total_storage" jsonschema:"description=Total storage usage in bytes"`
+	ActiveSessions int                 `json:"active_sessions" jsonschema:"description=Number of active sessions"`
+	Organizations  []AdminOrgDetail    `json:"organizations" jsonschema:"description=Organizations with workspace details"`
+	RequestMetrics AdminRequestMetrics `json:"request_metrics" jsonschema:"description=Request throughput metrics"`
+}
+
+// AdminOrgDetail contains organization details for the admin dashboard.
+type AdminOrgDetail struct {
+	ID             jsonldb.ID             `json:"id" jsonschema:"description=Organization identifier"`
+	Name           string                 `json:"name" jsonschema:"description=Organization name"`
+	MemberCount    int                    `json:"member_count" jsonschema:"description=Number of members"`
+	WorkspaceCount int                    `json:"workspace_count" jsonschema:"description=Number of workspaces"`
+	Created        Time                   `json:"created" jsonschema:"description=Creation timestamp"`
+	Workspaces     []AdminWorkspaceDetail `json:"workspaces" jsonschema:"description=Workspace details"`
+}
+
+// AdminWorkspaceDetail contains workspace details for the admin dashboard.
+type AdminWorkspaceDetail struct {
+	ID           jsonldb.ID `json:"id" jsonschema:"description=Workspace identifier"`
+	OrgID        jsonldb.ID `json:"org_id" jsonschema:"description=Parent organization ID"`
+	Name         string     `json:"name" jsonschema:"description=Workspace name"`
+	MemberCount  int        `json:"member_count" jsonschema:"description=Number of members"`
+	PageCount    int        `json:"page_count" jsonschema:"description=Number of pages"`
+	StorageBytes int64      `json:"storage_bytes" jsonschema:"description=Storage usage in bytes"`
+	GitCommits   int        `json:"git_commits" jsonschema:"description=Number of git commits"`
+	Created      Time       `json:"created" jsonschema:"description=Creation timestamp"`
+}
+
+// AdminRequestMetrics contains request throughput metrics.
+type AdminRequestMetrics struct {
+	ServerStartTime float64 `json:"server_start_time" jsonschema:"description=Server start time as Unix timestamp"`
+	UptimeSeconds   float64 `json:"uptime_seconds" jsonschema:"description=Server uptime in seconds"`
+	AuthCount       int64   `json:"auth_count" jsonschema:"description=Total auth requests"`
+	WriteCount      int64   `json:"write_count" jsonschema:"description=Total write requests"`
+	ReadAuthCount   int64   `json:"read_auth_count" jsonschema:"description=Total authenticated read requests"`
+	ReadUnauthCount int64   `json:"read_unauth_count" jsonschema:"description=Total unauthenticated read requests"`
 }
 
 // AdminUsersResponse contains all users in the system.

@@ -81,6 +81,7 @@ type Limiters struct {
 	Write      Tier
 	ReadAuth   Tier
 	ReadUnauth Tier
+	startTime  time.Time
 }
 
 // NewLimiters creates limiters from config.
@@ -90,7 +91,18 @@ func NewLimiters(cfg *Config) *Limiters {
 		Write:      Tier{TierConfig: cfg.Write, Limiter: NewLimiter(cfg.Write.Rate, cfg.Write.Window, cfg.Write.Burst)},
 		ReadAuth:   Tier{TierConfig: cfg.ReadAuth, Limiter: NewLimiter(cfg.ReadAuth.Rate, cfg.ReadAuth.Window, cfg.ReadAuth.Burst)},
 		ReadUnauth: Tier{TierConfig: cfg.ReadUnauth, Limiter: NewLimiter(cfg.ReadUnauth.Rate, cfg.ReadUnauth.Window, cfg.ReadUnauth.Burst)},
+		startTime:  time.Now(),
 	}
+}
+
+// Counts returns the total request counts per tier.
+func (l *Limiters) Counts() (auth, write, readAuth, readUnauth int64) {
+	return l.Auth.Limiter.Count(), l.Write.Limiter.Count(), l.ReadAuth.Limiter.Count(), l.ReadUnauth.Limiter.Count()
+}
+
+// StartTime returns when the limiters were created (server start time).
+func (l *Limiters) StartTime() time.Time {
+	return l.startTime
 }
 
 // Close stops all limiter cleanup goroutines.

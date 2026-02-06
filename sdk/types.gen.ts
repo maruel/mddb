@@ -553,9 +553,9 @@ export interface UpdateUserSettingsRequest {
   settings: UserSettings;
 }
 /**
- * AdminStatsRequest is a request to get admin stats.
+ * AdminServerDetailRequest is a request to get admin dashboard data.
  */
-export interface AdminStatsRequest {
+export interface AdminServerDetailRequest {
 }
 /**
  * ServerConfigRequest is a request to get server configuration.
@@ -658,6 +658,7 @@ export interface SessionResponse {
   id: string;
   device_info: string;
   ip_address: string;
+  country_code?: string;
   created: Time;
   last_used: Time;
   is_current: boolean;
@@ -1108,12 +1109,51 @@ export interface DataRecordResponse {
   modified: Time;
 }
 /**
- * AdminStatsResponse contains server-wide statistics.
+ * AdminServerDetail contains server-wide dashboard data.
  */
-export interface AdminStatsResponse {
+export interface AdminServerDetail {
   user_count: number /* int */;
   org_count: number /* int */;
   workspace_count: number /* int */;
+  total_storage: number /* int64 */;
+  active_sessions: number /* int */;
+  organizations: AdminOrgDetail[];
+  request_metrics: AdminRequestMetrics;
+}
+/**
+ * AdminOrgDetail contains organization details for the admin dashboard.
+ */
+export interface AdminOrgDetail {
+  id: string;
+  name: string;
+  member_count: number /* int */;
+  workspace_count: number /* int */;
+  created: Time;
+  workspaces: AdminWorkspaceDetail[];
+}
+/**
+ * AdminWorkspaceDetail contains workspace details for the admin dashboard.
+ */
+export interface AdminWorkspaceDetail {
+  id: string;
+  org_id: string;
+  name: string;
+  member_count: number /* int */;
+  page_count: number /* int */;
+  storage_bytes: number /* int64 */;
+  git_commits: number /* int */;
+  created: Time;
+}
+/**
+ * AdminRequestMetrics contains request throughput metrics.
+ */
+export interface AdminRequestMetrics {
+  server_start_time: number /* float64 */;
+  uptime_seconds: number /* float64 */;
+  auth_count: number /* int64 */;
+  write_count: number /* int64 */;
+  read_auth_count: number /* int64 */;
+  read_unauth_count: number /* int64 */;
 }
 /**
  * AdminUsersResponse contains all users in the system.
