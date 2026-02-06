@@ -2,9 +2,7 @@
 
 import type {
   AcceptInvitationRequest,
-  AdminOrgsResponse,
   AdminServerDetail,
-  AdminUsersResponse,
   AuthResponse,
   ChangeEmailRequest,
   ChangeEmailResponse,
@@ -132,11 +130,7 @@ async function post<T>(fetchFn: FetchFn, url: string, body?: object): Promise<T>
 export function createAPIClient(fetchFn: FetchFn) {
   return {
     admin: {
-      organizations: {
-        listAllOrgs: () => get<AdminOrgsResponse>(fetchFn, `/api/v1/admin/organizations`),
-      },
       getServerDetail: () => get<AdminServerDetail>(fetchFn, `/api/v1/admin/server`),
-      listAllUsers: () => get<AdminUsersResponse>(fetchFn, `/api/v1/admin/users`),
     },
     auth: {
       email: {

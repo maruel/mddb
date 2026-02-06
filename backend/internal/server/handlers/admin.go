@@ -100,23 +100,3 @@ func (h *AdminHandler) GetServerDetail(ctx context.Context, _ *identity.User, _ 
 		RequestMetrics: metrics,
 	}, nil
 }
-
-// ListAllUsers returns all users in the system.
-func (h *AdminHandler) ListAllUsers(ctx context.Context, _ *identity.User, _ *dto.AdminUsersRequest) (*dto.AdminUsersResponse, error) {
-	users := make([]dto.UserResponse, 0) //nolint:prealloc // size unknown from iterator
-	for user := range h.Svc.User.Iter(0) {
-		users = append(users, *userToResponse(user))
-	}
-	return &dto.AdminUsersResponse{Users: users}, nil
-}
-
-// ListAllOrgs returns all organizations in the system.
-func (h *AdminHandler) ListAllOrgs(ctx context.Context, _ *identity.User, _ *dto.AdminOrgsRequest) (*dto.AdminOrgsResponse, error) {
-	orgs := make([]dto.OrganizationResponse, 0) //nolint:prealloc // size unknown from iterator
-	for org := range h.Svc.Organization.Iter(0) {
-		memberCount := h.Svc.OrgMembership.CountOrgMemberships(org.ID)
-		workspaceCount := h.Svc.Workspace.CountByOrg(org.ID)
-		orgs = append(orgs, *organizationToResponse(org, memberCount, workspaceCount))
-	}
-	return &dto.AdminOrgsResponse{Organizations: orgs}, nil
-}

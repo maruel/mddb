@@ -20,9 +20,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 
 | Method | Path | Auth |
 |--------|------|------|
-| GET | `/api/v1/admin/organizations` | globalAdmin |
 | GET | `/api/v1/admin/server` | globalAdmin |
-| GET | `/api/v1/admin/users` | globalAdmin |
 
 ## Auth
 

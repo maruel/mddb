@@ -1303,22 +1303,6 @@ func (r *UpdateServerConfigRequest) Validate() error {
 	return nil
 }
 
-// AdminUsersRequest is a request to list all users (admin only).
-type AdminUsersRequest struct{}
-
-// Validate is a no-op for AdminUsersRequest.
-func (r *AdminUsersRequest) Validate() error {
-	return nil
-}
-
-// AdminOrgsRequest is a request to list all organizations (admin only).
-type AdminOrgsRequest struct{}
-
-// Validate is a no-op for AdminOrgsRequest.
-func (r *AdminOrgsRequest) Validate() error {
-	return nil
-}
-
 // --- Notion Import ---
 
 // NotionImportRequest is a request to start a Notion import into a new workspace.

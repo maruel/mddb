@@ -100,8 +100,6 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Admin endpoints (requires IsGlobalAdmin)
 	adminh := &handlers.AdminHandler{Svc: svc, RateLimitCounts: limiters.Counts, ServerStartTime: limiters.StartTime}
-	mux.Handle("GET /api/v1/admin/users", WrapGlobalAdmin(adminh.ListAllUsers, svc, hcfg, limiters))
-	mux.Handle("GET /api/v1/admin/organizations", WrapGlobalAdmin(adminh.ListAllOrgs, svc, hcfg, limiters))
 	mux.Handle("GET /api/v1/admin/server", WrapGlobalAdmin(adminh.GetServerDetail, svc, hcfg, limiters))
 
 	// Server config endpoints (requires IsGlobalAdmin)

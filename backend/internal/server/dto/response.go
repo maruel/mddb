@@ -499,21 +499,6 @@ type AdminRequestMetrics struct {
 	ReadUnauthCount int64   `json:"read_unauth_count" jsonschema:"description=Total unauthenticated read requests"`
 }
 
-// AdminUsersResponse contains all users in the system.
-type AdminUsersResponse struct {
-	Users []UserResponse `json:"users" jsonschema:"description=All users in the system"`
-}
-
-// AdminOrgsResponse contains all organizations in the system.
-type AdminOrgsResponse struct {
-	Organizations []OrganizationResponse `json:"organizations" jsonschema:"description=All organizations in the system"`
-}
-
-// AdminWorkspacesResponse contains all workspaces in the system.
-type AdminWorkspacesResponse struct {
-	Workspaces []WorkspaceResponse `json:"workspaces" jsonschema:"description=All workspaces in the system"`
-}
-
 // --- List Workspaces Response ---
 
 // ListWorkspacesResponse is a response containing a list of workspaces.

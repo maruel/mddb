@@ -602,16 +602,6 @@ export interface UpdateServerConfigRequest {
   rate_limits?: RateLimitsConfigUpdate;
 }
 /**
- * AdminUsersRequest is a request to list all users (admin only).
- */
-export interface AdminUsersRequest {
-}
-/**
- * AdminOrgsRequest is a request to list all organizations (admin only).
- */
-export interface AdminOrgsRequest {
-}
-/**
  * NotionImportRequest is a request to start a Notion import into a new workspace.
  */
 export interface NotionImportRequest {
@@ -1154,24 +1144,6 @@ export interface AdminRequestMetrics {
   write_count: number /* int64 */;
   read_auth_count: number /* int64 */;
   read_unauth_count: number /* int64 */;
-}
-/**
- * AdminUsersResponse contains all users in the system.
- */
-export interface AdminUsersResponse {
-  users: UserResponse[];
-}
-/**
- * AdminOrgsResponse contains all organizations in the system.
- */
-export interface AdminOrgsResponse {
-  organizations: OrganizationResponse[];
-}
-/**
- * AdminWorkspacesResponse contains all workspaces in the system.
- */
-export interface AdminWorkspacesResponse {
-  workspaces: WorkspaceResponse[];
 }
 /**
  * ListWorkspacesResponse is a response containing a list of workspaces.
