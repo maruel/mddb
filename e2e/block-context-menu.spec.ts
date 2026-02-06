@@ -333,4 +333,52 @@ test.describe('Block context menu interactions', () => {
     const firstItem = menuItems.nth(0);
     await expect(firstItem).toHaveClass(/focused/);
   });
+
+  test('convert paragraph to Heading 1 changes block type', async ({ page, request }) => {
+    await setupEditorWithBlocks(page, request);
+
+    const prosemirror = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+    const blocks = prosemirror.locator('.block-row');
+    const firstBlock = blocks.nth(0);
+
+    // Verify it starts as paragraph
+    await expect(firstBlock).toHaveAttribute('data-type', 'paragraph');
+
+    const contextMenu = await openContextMenu(page, 0);
+    await contextMenu.locator('text=Heading 1').click();
+    await expect(contextMenu).not.toBeVisible({ timeout: 3000 });
+
+    // Should now be heading with <h1> content element
+    const updatedBlock = prosemirror.locator('.block-row').nth(0);
+    await expect(updatedBlock).toHaveAttribute('data-type', 'heading');
+    const tag = await updatedBlock.locator('.block-content').evaluate((el) => el.tagName.toLowerCase());
+    expect(tag).toBe('h1');
+  });
+
+  test('convert Heading 1 to Heading 2 changes content element tag', async ({ page, request }) => {
+    await setupEditorWithBlocks(page, request);
+
+    const prosemirror = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+
+    // First convert paragraph to Heading 1
+    let contextMenu = await openContextMenu(page, 0);
+    await contextMenu.locator('text=Heading 1').click();
+    await expect(contextMenu).not.toBeVisible({ timeout: 3000 });
+
+    // Verify it's h1
+    const block = prosemirror.locator('.block-row').nth(0);
+    const tag1 = await block.locator('.block-content').evaluate((el) => el.tagName.toLowerCase());
+    expect(tag1).toBe('h1');
+
+    // Now convert to Heading 2
+    contextMenu = await openContextMenu(page, 0);
+    await contextMenu.locator('text=Heading 2').click();
+    await expect(contextMenu).not.toBeVisible({ timeout: 3000 });
+
+    // Should now be <h2>
+    const updatedBlock = prosemirror.locator('.block-row').nth(0);
+    await expect(updatedBlock).toHaveAttribute('data-type', 'heading');
+    const tag2 = await updatedBlock.locator('.block-content').evaluate((el) => el.tagName.toLowerCase());
+    expect(tag2).toBe('h2');
+  });
 });

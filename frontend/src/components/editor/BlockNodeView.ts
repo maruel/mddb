@@ -202,6 +202,11 @@ export class BlockNodeView implements NodeView {
       return false;
     }
 
+    // Heading level changes require a new content element (e.g., <h1> → <h2>)
+    if (node.attrs.type === 'heading' && node.attrs.level !== this.node.attrs.level) {
+      return false;
+    }
+
     this.node = node;
     this.updateDOMAttributes();
 
