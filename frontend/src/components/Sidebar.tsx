@@ -39,6 +39,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onCreateWorkspace: () => void;
   onImportFromNotion: () => void;
+  onMoveNode?: (nodeId: string, newParentId: string) => void;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -142,6 +143,32 @@ export default function Sidebar(props: SidebarProps) {
     }
   };
 
+  // Root drop zone for moving nodes to top level
+  const [isRootDropTarget, setIsRootDropTarget] = createSignal(false);
+
+  const handleRootDragOver = (e: DragEvent) => {
+    // Only accept when dragging directly over the <ul>, not bubbled from children
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    setIsRootDropTarget(true);
+  };
+
+  const handleRootDragLeave = (e: DragEvent) => {
+    if (e.target !== e.currentTarget) return;
+    setIsRootDropTarget(false);
+  };
+
+  const handleRootDrop = (e: DragEvent) => {
+    if (e.target !== e.currentTarget) return;
+    e.preventDefault();
+    setIsRootDropTarget(false);
+    const nodeId = e.dataTransfer?.getData('text/plain');
+    if (nodeId) {
+      props.onMoveNode?.(nodeId, '0');
+    }
+  };
+
   return (
     <aside class={`${styles.sidebar} ${props.isOpen ? styles.open : ''}`}>
       {/* Current workspace header */}
@@ -191,7 +218,13 @@ export default function Sidebar(props: SidebarProps) {
       </Show>
 
       {/* Current workspace pages */}
-      <ul class={styles.pageList}>
+      <ul
+        class={styles.pageList}
+        classList={{ [`${styles.rootDropTarget}`]: isRootDropTarget() }}
+        onDragOver={handleRootDragOver}
+        onDragLeave={handleRootDragLeave}
+        onDrop={handleRootDrop}
+      >
         <For each={props.nodes}>
           {(node) => (
             <SidebarNode
@@ -204,6 +237,7 @@ export default function Sidebar(props: SidebarProps) {
               onFetchChildren={props.onFetchChildren}
               onDeleteNode={props.onDeleteNode}
               onShowHistory={props.onShowHistory}
+              onMoveNode={props.onMoveNode}
               depth={0}
             />
           )}

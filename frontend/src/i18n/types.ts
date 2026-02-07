@@ -322,6 +322,7 @@ export interface Dictionary {
     failedToUpdateRole: string;
     failedToAddRemote: string;
     failedToRemoveRemote: string;
+    failedToMove: string;
     pushFailed: string;
     autoSaveFailed: string;
     noAccessToOrg: string;

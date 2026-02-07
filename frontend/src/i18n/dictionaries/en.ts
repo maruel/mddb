@@ -322,6 +322,7 @@ export const dict: Dictionary = {
     failedToUpdateRole: 'Failed to update role',
     failedToAddRemote: 'Failed to add remote',
     failedToRemoveRemote: 'Failed to remove remote',
+    failedToMove: 'Failed to move',
     pushFailed: 'Push failed',
     autoSaveFailed: 'Auto-save failed',
     noAccessToOrg: 'You do not have access to this organization',

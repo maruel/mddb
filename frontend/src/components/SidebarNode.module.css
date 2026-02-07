@@ -144,6 +144,16 @@
   background: var(--c-bg);
 }
 
+/* Drag-and-drop states */
+.pageItem.dragging {
+  opacity: 0.4;
+}
+
+.pageItem.dropTarget {
+  background: var(--c-primary-light, #dbeafe);
+  border-radius: 4px;
+}
+
 @keyframes slideIn {
   from {
     opacity: 0;

@@ -133,6 +133,11 @@
   padding-top: var(--s-1);
 }
 
+/* Root drop target for drag-and-drop */
+.pageList.rootDropTarget {
+  background: var(--c-primary-light, #dbeafe);
+}
+
 /* Other workspaces section */
 .otherWorkspaces {
   border-top: 1px solid var(--c-border);

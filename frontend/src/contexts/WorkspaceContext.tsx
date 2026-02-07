@@ -63,6 +63,7 @@ interface WorkspaceContextValue {
   fetchNodeChildren: (nodeId: string) => Promise<void>;
   removeNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, newTitle: string) => void;
+  moveNode: (nodeId: string, newParentId: string) => Promise<void>;
 
   // Clear errors
   clearErrors: () => void;
@@ -416,6 +417,67 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     }
   });
 
+  // Move a node to a new parent (or root if newParentId === "0")
+  async function moveNode(nodeId: string, newParentId: string): Promise<void> {
+    const ws = wsApi();
+    if (!ws) return;
+
+    try {
+      await ws.nodes.moveNode(nodeId, { new_parent_id: newParentId });
+
+      setNodesStore(
+        produce((list) => {
+          // Find and remove node from old location
+          let movedNode: NodeResponse | null = null;
+
+          const removeFromList = (nodeList: NodeResponse[]): boolean => {
+            const index = nodeList.findIndex((n) => n.id === nodeId);
+            if (index !== -1) {
+              movedNode = { ...nodeList[index] } as NodeResponse;
+              nodeList.splice(index, 1);
+              return true;
+            }
+            for (const node of nodeList) {
+              if (node.children && removeFromList(node.children)) {
+                if (node.children.length === 0) {
+                  node.has_children = false;
+                }
+                return true;
+              }
+            }
+            return false;
+          };
+          removeFromList(list);
+
+          if (!movedNode) return;
+          const nodeToMove: NodeResponse = movedNode;
+
+          // Add to new parent
+          if (newParentId === '0') {
+            list.push(nodeToMove);
+          } else {
+            const addToParent = (nodeList: NodeResponse[]): boolean => {
+              for (const node of nodeList) {
+                if (node.id === newParentId) {
+                  if (!node.children) node.children = [];
+                  node.children.push(nodeToMove);
+                  node.has_children = true;
+                  return true;
+                }
+                if (node.children && addToParent(node.children)) return true;
+              }
+              return false;
+            };
+            addToParent(list);
+          }
+        })
+      );
+      setSaveError(null);
+    } catch (err) {
+      setSaveError(`${t('errors.failedToMove')}: ${err}`);
+    }
+  }
+
   const value: WorkspaceContextValue = {
     nodes,
     setNodes,
@@ -449,6 +511,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     fetchNodeChildren,
     removeNode,
     updateNodeTitle,
+    moveNode,
     clearErrors,
   };
 

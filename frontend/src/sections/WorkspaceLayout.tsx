@@ -34,6 +34,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     loadNodes,
     fetchNodeChildren,
     removeNode,
+    moveNode,
   } = useWorkspace();
   const { flushAutoSave, loadHistory } = useEditor();
 
@@ -238,6 +239,10 @@ const WorkspaceLayout: ParentComponent = (props) => {
     }
   }
 
+  async function handleMoveNode(nodeId: string, newParentId: string) {
+    await moveNode(nodeId, newParentId);
+  }
+
   return (
     <div class={`${styles.app} ${showMobileSidebar() ? styles.sidebarOpen : ''}`}>
       <Show when={notionImportStatus()} keyed>
@@ -341,6 +346,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
           }}
           onCreateWorkspace={() => setShowCreateWorkspace(true)}
           onImportFromNotion={() => setShowNotionImport(true)}
+          onMoveNode={handleMoveNode}
         />
 
         <main class={styles.main}>

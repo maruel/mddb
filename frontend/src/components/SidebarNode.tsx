@@ -12,6 +12,9 @@ import ChevronRightIcon from '@material-symbols/svg-400/outlined/chevron_right.s
 import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
 import HistoryIcon from '@material-symbols/svg-400/outlined/history.svg?solid';
 
+// Module-level drag state (imperative, not reactive)
+let dragState: { nodeId: string; element: HTMLElement } | null = null;
+
 interface SidebarNodeProps {
   node: NodeResponse;
   selectedId: string | null;
@@ -22,6 +25,7 @@ interface SidebarNodeProps {
   onFetchChildren?: (nodeId: string) => Promise<void>;
   onDeleteNode?: (nodeId: string) => void;
   onShowHistory?: (nodeId: string) => void;
+  onMoveNode?: (nodeId: string, newParentId: string) => void;
   depth: number;
 }
 
@@ -88,14 +92,89 @@ export default function SidebarNode(props: SidebarNodeProps) {
     setShowContextMenu(true);
   };
 
+  // Drag-and-drop state
+  let liRef!: HTMLLIElement;
+  const [isDragging, setIsDragging] = createSignal(false);
+  const [isDropTarget, setIsDropTarget] = createSignal(false);
+  let expandTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const handleDragStart = (e: DragEvent) => {
+    if (!e.dataTransfer) return;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', props.node.id);
+    dragState = { nodeId: props.node.id, element: liRef };
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    dragState = null;
+    setIsDragging(false);
+    setIsDropTarget(false);
+    clearTimeout(expandTimer);
+  };
+
+  const handleDragOver = (e: DragEvent) => {
+    if (!dragState) return;
+    // Reject: dropping on self
+    if (dragState.nodeId === props.node.id) return;
+    // Reject: dropping on a visible descendant (DOM containment check)
+    if (dragState.element.contains(e.currentTarget as Node)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    setIsDropTarget(true);
+
+    // Auto-expand collapsed nodes with children after 600ms hover
+    if (!expandTimer && mightHaveChildren() && !isExpanded()) {
+      expandTimer = setTimeout(() => {
+        setIsExpanded(true);
+        if (!props.node.children && props.onFetchChildren) {
+          setIsLoadingChildren(true);
+          props.onFetchChildren(props.node.id).finally(() => setIsLoadingChildren(false));
+        }
+      }, 600);
+    }
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    // Only clear if we're actually leaving this element, not entering a child
+    const related = e.relatedTarget as Node | null;
+    if (related && (e.currentTarget as Node).contains(related)) return;
+    setIsDropTarget(false);
+    clearTimeout(expandTimer);
+    expandTimer = undefined;
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDropTarget(false);
+    clearTimeout(expandTimer);
+    expandTimer = undefined;
+    if (dragState && dragState.nodeId !== props.node.id) {
+      props.onMoveNode?.(dragState.nodeId, props.node.id);
+    }
+  };
+
   return (
-    <li class={styles.sidebarNodeWrapper} data-testid={`sidebar-node-${props.node.id}`}>
+    <li ref={liRef} class={styles.sidebarNodeWrapper} data-testid={`sidebar-node-${props.node.id}`}>
       <div
         class={styles.pageItem}
-        classList={{ [`${styles.active}`]: props.selectedId === props.node.id }}
+        classList={{
+          [`${styles.active}`]: props.selectedId === props.node.id,
+          [`${styles.dragging}`]: isDragging(),
+          [`${styles.dropTarget}`]: isDropTarget(),
+        }}
         style={{ 'padding-left': `${props.depth * 12 + 8}px` }}
+        draggable="true"
         onClick={() => props.onSelect(props.node)}
         onContextMenu={handleContextMenu}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         <span
           class={styles.iconSlot}
@@ -184,6 +263,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
                 onFetchChildren={props.onFetchChildren}
                 onDeleteNode={props.onDeleteNode}
                 onShowHistory={props.onShowHistory}
+                onMoveNode={props.onMoveNode}
                 depth={props.depth + 1}
               />
             )}
