@@ -4,7 +4,7 @@ import { lazy, Show, Suspense, type JSX } from 'solid-js';
 import { Navigate, useParams, useLocation, useNavigate } from '@solidjs/router';
 import { useAuth } from '../contexts';
 import { useI18n } from '../i18n';
-import { settingsUrl } from '../utils/urls';
+import { settingsUrl, stripSlug } from '../utils/urls';
 import SettingsLayout from './SettingsLayout';
 
 const ProfileSettings = lazy(() => import('../components/settings/ProfileSettings'));
@@ -41,12 +41,8 @@ export function WorkspaceSettingsRoute() {
   // Extract section from hash (e.g., #members, #settings, #sync)
   const section = () => location.hash?.slice(1) || undefined;
 
-  // Extract wsId - handle slug format (id+name)
-  const wsId = () => {
-    const id = params.wsId;
-    // Handle both "id" and "id+slug" formats
-    return id?.split('+')[0] || '';
-  };
+  // Extract wsId - handle "@id+slug" format
+  const wsId = () => stripSlug(params.wsId || '');
 
   // Verify user has access to this workspace
   const hasAccess = () => {
@@ -80,11 +76,8 @@ export function OrgSettingsRoute() {
   // Extract section from hash
   const section = () => location.hash?.slice(1) || undefined;
 
-  // Extract orgId - handle slug format (id+name)
-  const orgId = () => {
-    const id = params.orgId;
-    return id?.split('+')[0] || '';
-  };
+  // Extract orgId - handle "@id+slug" format
+  const orgId = () => stripSlug(params.orgId || '');
 
   // Verify user has access to this organization
   const hasAccess = () => {

@@ -1,4 +1,4 @@
-import { test, expect, registerUser, createClient } from './helpers';
+import { test, expect, registerUser, createClient, getWorkspaceId } from './helpers';
 
 test.describe('Page Hierarchy', () => {
   test.screenshot('create and navigate page hierarchy', async ({ page, request, takeScreenshot }) => {
@@ -23,11 +23,7 @@ test.describe('Page Hierarchy', () => {
     const topLevelPageId = welcomeNodeId!.replace('sidebar-node-', '') as string;
 
     // 4. Get the workspace ID from the URL
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // 5. Create a child page via API
     const childData = await client.ws(wsID).nodes.page.createPage(topLevelPageId, {
@@ -115,12 +111,7 @@ test.describe('Page Hierarchy', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    // Get workspace ID from URL
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Get the welcome page ID
     const welcomePageLink = page.locator('[data-testid^="sidebar-node-"]').first();
@@ -194,9 +185,7 @@ test.describe('Page Hierarchy', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    // Get workspace ID
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const wsID = page.url().match(/\/w\/([^+/]+)/)![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Get root page
     const welcomePageLink = page.locator('[data-testid^="sidebar-node-"]').first();
@@ -254,7 +243,7 @@ test.describe('Page Hierarchy', () => {
 
     // Navigation should go to parent (root page) since child has no siblings
     // Wait for the URL to change to indicate navigation completed (URL format: /w/@{wsId}/@{nodeId}+{title})
-    await expect(page).toHaveURL(new RegExp(`/${rootPageId}\\+`), { timeout: 5000 });
+    await expect(page).toHaveURL(new RegExp(`/@${rootPageId}\\+`), { timeout: 5000 });
   });
 
   test('delete page navigates to sibling when no parent', async ({ page, request }) => {
@@ -264,9 +253,7 @@ test.describe('Page Hierarchy', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
 
-    // Get workspace ID
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const wsID = page.url().match(/\/w\/([^+/]+)/)![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Create two sibling pages at root level
     const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
@@ -313,12 +300,7 @@ test.describe('Page Hierarchy', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // Wait for workspace URL
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Create two sibling pages via API
     const page1Data = await client.ws(wsID).nodes.page.createPage('0', {

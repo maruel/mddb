@@ -1,4 +1,4 @@
-import { test, expect, registerUser, fillEditorContent, switchToMarkdownMode, createClient } from './helpers';
+import { test, expect, registerUser, fillEditorContent, switchToMarkdownMode, createClient, getWorkspaceId } from './helpers';
 
 test.describe('Page rename with navigation', () => {
   test('rename page then quickly navigate away - rename must persist', async ({ page, request }) => {
@@ -11,11 +11,7 @@ test.describe('Page rename with navigation', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // 3. Get workspace ID from URL
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // 4. Create two pages via API
     const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
@@ -88,11 +84,7 @@ test.describe('Page rename with navigation', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Create a page
     const pageData = await client.ws(wsID).nodes.page.createPage('0', {
@@ -140,11 +132,7 @@ test.describe('Page rename with navigation', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Create two pages
     const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
@@ -197,11 +185,7 @@ test.describe('Page rename with navigation', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Create two pages
     const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
@@ -256,11 +240,7 @@ test.describe('Page rename with navigation', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Create two pages
     const page1Data = await client.ws(wsID).nodes.page.createPage('0', {

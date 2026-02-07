@@ -81,12 +81,7 @@ test.describe('Page Links with Dynamic Titles', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // Get workspace ID from URL
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Create two pages
     const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
@@ -118,12 +113,7 @@ test.describe('Page Links with Dynamic Titles', () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
-    // Get workspace ID from URL
-    await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
-    const url = page.url();
-    const wsMatch = url.match(/\/w\/([^+/]+)/);
-    expect(wsMatch).toBeTruthy();
-    const wsID = wsMatch![1] as string;
+    const wsID = await getWorkspaceId(page);
 
     // Create source and target pages
     const targetData = await client.ws(wsID).nodes.page.createPage('0', {
@@ -346,7 +336,7 @@ test.describe('Page Links with Dynamic Titles', () => {
     // Verify target page content is visible
     await expect(editor).toContainText('This is the target page content.', { timeout: 5000 });
 
-    // Verify URL contains target node ID (with or without slug)
-    await expect(page).toHaveURL(new RegExp(`/${targetData.id}`), { timeout: 5000 });
+    // Verify URL contains target node ID (with @ prefix and optional slug)
+    await expect(page).toHaveURL(new RegExp(`/@${targetData.id}`), { timeout: 5000 });
   });
 });
