@@ -109,9 +109,6 @@ func (h *NodeHandler) DeleteNode(ctx context.Context, wsID jsonldb.ID, user *ide
 		return nil, dto.NotFound("node")
 	}
 
-	// Remove links index for this node
-	_ = ws.RemoveLinksForNode(req.ID)
-
 	return &dto.DeleteNodeResponse{Ok: true}, nil
 }
 
@@ -203,14 +200,6 @@ func (h *NodeHandler) CreatePage(ctx context.Context, wsID jsonldb.ID, user *ide
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
 
-	// Update links index for this page if it has content with links
-	if req.Content != "" {
-		linkedNodeIDs := content.ExtractLinkedNodeIDs(req.Content)
-		if len(linkedNodeIDs) > 0 {
-			_ = ws.UpdateLinksForNode(node.ID, linkedNodeIDs)
-		}
-	}
-
 	return &dto.CreatePageResponse{ID: node.ID}, nil
 }
 
@@ -247,14 +236,6 @@ func (h *NodeHandler) UpdatePage(ctx context.Context, wsID jsonldb.ID, user *ide
 		return nil, dto.NotFound("page")
 	}
 
-	// Update links index for this page
-	linkedNodeIDs := content.ExtractLinkedNodeIDs(req.Content)
-	if err := ws.UpdateLinksForNode(req.ID, linkedNodeIDs); err != nil {
-		// Log the error but don't fail the request
-		// The links index is a cache and can be rebuilt
-		_ = err
-	}
-
 	return &dto.UpdatePageResponse{ID: node.ID}, nil
 }
 
@@ -269,9 +250,6 @@ func (h *NodeHandler) DeletePage(ctx context.Context, wsID jsonldb.ID, user *ide
 	if err := ws.DeletePageFromNode(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("page")
 	}
-
-	// Remove links index for this page
-	_ = ws.RemoveLinksForNode(req.ID)
 
 	return &dto.DeletePageResponse{Ok: true}, nil
 }

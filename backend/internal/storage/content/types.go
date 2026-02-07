@@ -245,10 +245,3 @@ type BacklinkInfo struct {
 	NodeID jsonldb.ID `json:"node_id" jsonschema:"description=ID of the page linking to this page"`
 	Title  string     `json:"title" jsonschema:"description=Title of the linking page"`
 }
-
-// LinksIndex stores outgoing links for each node in a workspace.
-// Keys are source node IDs, values are lists of target node IDs.
-type LinksIndex struct {
-	// Links maps source node ID -> list of target node IDs
-	Links map[string][]string `json:"links"`
-}

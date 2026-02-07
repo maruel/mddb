@@ -36,6 +36,7 @@ type WorkspaceFileStore struct {
 	quotas *storage.ResourceQuotas   // Effective quotas (min of server/org/ws)
 	mu     sync.RWMutex              // Protects cache
 	cache  map[jsonldb.ID]jsonldb.ID // nodeID -> parentID
+	links  linkCache                 // In-memory backlink index
 }
 
 // newWorkspaceFileStore creates a new workspace store.
@@ -250,6 +251,9 @@ func (ws *WorkspaceFileStore) WritePage(ctx context.Context, id, parentID jsonld
 		files := []string{ws.gitPath(parentID, id, "index.md")}
 		return "update: page " + id.String(), files, nil
 	})
+	if err == nil {
+		ws.links.update(id, content)
+	}
 	return node, err
 }
 
@@ -305,6 +309,9 @@ func (ws *WorkspaceFileStore) UpdatePage(ctx context.Context, id jsonldb.ID, tit
 		files := []string{ws.gitPath(parentID, id, "index.md")}
 		return "update: page " + id.String(), files, nil
 	})
+	if err == nil {
+		ws.links.update(id, content)
+	}
 	return node, err
 }
 
@@ -346,12 +353,16 @@ func (ws *WorkspaceFileStore) DeletePage(ctx context.Context, id jsonldb.ID, aut
 	parentID := ws.getParent(id)
 	gitPathFile := ws.gitPath(parentID, id, "index.md")
 
-	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
 		if err := ws.deletePage(id); err != nil {
 			return "", nil, err
 		}
 		return "delete: page " + id.String(), []string{gitPathFile}, nil
 	})
+	if err == nil {
+		ws.links.remove(id)
+	}
+	return err
 }
 
 // deletePage deletes a page without committing.
@@ -1278,6 +1289,9 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 		msg := "create: page " + id.String() + " - " + title + " (parent: " + parentID.String() + ")"
 		return msg, files, nil
 	})
+	if err == nil {
+		ws.links.update(node.ID, content)
+	}
 	return node, err
 }
 
@@ -1289,7 +1303,7 @@ func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id jsonldb
 	}
 
 	parentID := ws.getParent(id)
-	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
 		filePath := ws.pageIndexFile(id, parentID)
 		if err := os.Remove(filePath); err != nil {
 			if os.IsNotExist(err) {
@@ -1312,6 +1326,10 @@ func (ws *WorkspaceFileStore) DeletePageFromNode(ctx context.Context, id jsonldb
 		files := []string{ws.gitPath(parentID, id, "index.md")}
 		return "delete: page " + id.String(), files, nil
 	})
+	if err == nil {
+		ws.links.remove(id)
+	}
+	return err
 }
 
 // --- Table-specific operations ---
@@ -1570,119 +1588,22 @@ func ExtractLinkedNodeIDs(content string) []jsonldb.ID {
 	return ids
 }
 
-// linksIndexFile returns the path to the workspace links index file.
-func (ws *WorkspaceFileStore) linksIndexFile() string {
-	return filepath.Join(ws.wsDir, "links.json")
-}
-
-// readLinksIndex reads the links index from disk.
-func (ws *WorkspaceFileStore) readLinksIndex() (*LinksIndex, error) {
-	data, err := os.ReadFile(ws.linksIndexFile())
-	if err != nil {
-		if os.IsNotExist(err) {
-			return &LinksIndex{Links: make(map[string][]string)}, nil
-		}
-		return nil, fmt.Errorf("failed to read links index: %w", err)
-	}
-
-	var index LinksIndex
-	if err := json.Unmarshal(data, &index); err != nil {
-		return nil, fmt.Errorf("failed to parse links index: %w", err)
-	}
-	if index.Links == nil {
-		index.Links = make(map[string][]string)
-	}
-	return &index, nil
-}
-
-// writeLinksIndex writes the links index to disk.
-func (ws *WorkspaceFileStore) writeLinksIndex(index *LinksIndex) error {
-	data, err := json.Marshal(index)
-	if err != nil {
-		return fmt.Errorf("failed to marshal links index: %w", err)
-	}
-	if err := os.WriteFile(ws.linksIndexFile(), data, 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional
-		return fmt.Errorf("failed to write links index: %w", err)
-	}
-	return nil
-}
-
-// UpdateLinksForNode updates the links index with the outgoing links from a node.
-func (ws *WorkspaceFileStore) UpdateLinksForNode(sourceID jsonldb.ID, targetIDs []jsonldb.ID) error {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-
-	index, err := ws.readLinksIndex()
-	if err != nil {
-		return err
-	}
-
-	// Convert target IDs to strings
-	targetStrs := make([]string, len(targetIDs))
-	for i, id := range targetIDs {
-		targetStrs[i] = id.String()
-	}
-
-	// Update the index
-	sourceStr := sourceID.String()
-	if len(targetStrs) == 0 {
-		delete(index.Links, sourceStr)
-	} else {
-		index.Links[sourceStr] = targetStrs
-	}
-
-	return ws.writeLinksIndex(index)
-}
-
-// RemoveLinksForNode removes all outgoing links from a node from the index.
-func (ws *WorkspaceFileStore) RemoveLinksForNode(sourceID jsonldb.ID) error {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-
-	index, err := ws.readLinksIndex()
-	if err != nil {
-		return err
-	}
-
-	delete(index.Links, sourceID.String())
-	return ws.writeLinksIndex(index)
-}
-
 // GetBacklinks returns all nodes that link to the given node.
+// Uses an in-memory cache that is lazily built on first call and
+// incrementally updated on page mutations.
 func (ws *WorkspaceFileStore) GetBacklinks(targetID jsonldb.ID) ([]BacklinkInfo, error) {
-	ws.mu.RLock()
-	defer ws.mu.RUnlock()
-
-	index, err := ws.readLinksIndex()
-	if err != nil {
+	if err := ws.links.ensureBuilt(ws.IterPages); err != nil {
 		return nil, err
 	}
-
-	targetStr := targetID.String()
-	var backlinks []BacklinkInfo
-
-	for sourceStr, targets := range index.Links {
-		for _, t := range targets {
-			if t != targetStr {
-				continue
-			}
-			sourceID, err := jsonldb.DecodeID(sourceStr)
-			if err != nil {
-				continue
-			}
-			// Read the source node to get its title
-			node, err := ws.ReadNode(sourceID)
-			if err != nil {
-				continue
-			}
-			backlinks = append(backlinks, BacklinkInfo{
-				NodeID: sourceID,
-				Title:  node.Title,
-			})
-			break
+	sourceIDs := ws.links.backlinks(targetID)
+	backlinks := make([]BacklinkInfo, 0, len(sourceIDs))
+	for _, srcID := range sourceIDs {
+		node, err := ws.ReadNode(srcID)
+		if err != nil {
+			continue // node may have been deleted between cache and read
 		}
+		backlinks = append(backlinks, BacklinkInfo{NodeID: srcID, Title: node.Title})
 	}
-
 	return backlinks, nil
 }
 

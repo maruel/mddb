@@ -3,6 +3,7 @@ package content
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1428,7 +1429,7 @@ func TestExtractLinkedNodeIDs(t *testing.T) {
 	}
 }
 
-func TestLinksIndex(t *testing.T) {
+func TestGetBacklinks(t *testing.T) {
 	fs, wsID := testFileStore(t)
 	ctx := t.Context()
 	author := git.Author{Name: "Test", Email: "test@test.com"}
@@ -1442,36 +1443,33 @@ func TestLinksIndex(t *testing.T) {
 		t.Fatalf("failed to get workspace store: %v", err)
 	}
 
-	// Create source and target pages
-	source, err := ws.CreatePageUnderParent(ctx, 0, "Source", "", author)
-	if err != nil {
-		t.Fatalf("failed to create source: %v", err)
-	}
-
+	// Create target page.
 	target, err := ws.CreatePageUnderParent(ctx, 0, "Target", "", author)
 	if err != nil {
 		t.Fatalf("failed to create target: %v", err)
 	}
 
-	t.Run("UpdateLinksForNode", func(t *testing.T) {
-		// Add link from source to target
-		err := ws.UpdateLinksForNode(source.ID, []jsonldb.ID{target.ID})
-		if err != nil {
-			t.Fatalf("failed to update links: %v", err)
-		}
-	})
+	// Create source page with a link to target.
+	linkContent := fmt.Sprintf("[Target](/w/%s+ws/%s+target)", wsID, target.ID)
+	source, err := ws.CreatePageUnderParent(ctx, 0, "Source", linkContent, author)
+	if err != nil {
+		t.Fatalf("failed to create source: %v", err)
+	}
 
-	t.Run("GetBacklinks", func(t *testing.T) {
-		// Get backlinks for target - should include source
+	// Create unrelated page with no links.
+	_, err = ws.CreatePageUnderParent(ctx, 0, "Unrelated", "no links here", author)
+	if err != nil {
+		t.Fatalf("failed to create unrelated: %v", err)
+	}
+
+	t.Run("BacklinksFound", func(t *testing.T) {
 		backlinks, err := ws.GetBacklinks(target.ID)
 		if err != nil {
 			t.Fatalf("failed to get backlinks: %v", err)
 		}
-
 		if len(backlinks) != 1 {
 			t.Fatalf("expected 1 backlink, got %d", len(backlinks))
 		}
-
 		if backlinks[0].NodeID != source.ID {
 			t.Errorf("expected backlink from %s, got %s", source.ID, backlinks[0].NodeID)
 		}
@@ -1480,40 +1478,68 @@ func TestLinksIndex(t *testing.T) {
 		}
 	})
 
-	t.Run("GetNodeTitles", func(t *testing.T) {
-		titles, err := ws.GetNodeTitles([]jsonldb.ID{source.ID, target.ID})
+	t.Run("NoBacklinks", func(t *testing.T) {
+		backlinks, err := ws.GetBacklinks(source.ID)
 		if err != nil {
-			t.Fatalf("failed to get node titles: %v", err)
+			t.Fatalf("failed to get backlinks: %v", err)
 		}
-
-		if len(titles) != 2 {
-			t.Errorf("expected 2 titles, got %d", len(titles))
-		}
-		if titles[source.ID] != "Source" {
-			t.Errorf("expected source title 'Source', got %s", titles[source.ID])
-		}
-		if titles[target.ID] != "Target" {
-			t.Errorf("expected target title 'Target', got %s", titles[target.ID])
+		if len(backlinks) != 0 {
+			t.Errorf("expected 0 backlinks, got %d", len(backlinks))
 		}
 	})
 
-	t.Run("RemoveLinksForNode", func(t *testing.T) {
-		// Remove links from source
-		err := ws.RemoveLinksForNode(source.ID)
+	t.Run("BacklinksAfterLinkRemoved", func(t *testing.T) {
+		// Update source to remove the link.
+		_, err := ws.UpdatePage(ctx, source.ID, "Source", "no more links", author)
 		if err != nil {
-			t.Fatalf("failed to remove links: %v", err)
+			t.Fatalf("failed to update page: %v", err)
 		}
-
-		// Backlinks for target should now be empty
 		backlinks, err := ws.GetBacklinks(target.ID)
 		if err != nil {
 			t.Fatalf("failed to get backlinks: %v", err)
 		}
-
 		if len(backlinks) != 0 {
-			t.Errorf("expected 0 backlinks after removal, got %d", len(backlinks))
+			t.Errorf("expected 0 backlinks after link removed, got %d", len(backlinks))
 		}
 	})
+}
+
+func TestGetNodeTitles(t *testing.T) {
+	fs, wsID := testFileStore(t)
+	ctx := t.Context()
+	author := git.Author{Name: "Test", Email: "test@test.com"}
+
+	if err := fs.InitWorkspace(ctx, wsID); err != nil {
+		t.Fatalf("failed to init workspace: %v", err)
+	}
+
+	ws, err := fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		t.Fatalf("failed to get workspace store: %v", err)
+	}
+
+	a, err := ws.CreatePageUnderParent(ctx, 0, "Alpha", "", author)
+	if err != nil {
+		t.Fatalf("failed to create page: %v", err)
+	}
+	b, err := ws.CreatePageUnderParent(ctx, 0, "Beta", "", author)
+	if err != nil {
+		t.Fatalf("failed to create page: %v", err)
+	}
+
+	titles, err := ws.GetNodeTitles([]jsonldb.ID{a.ID, b.ID})
+	if err != nil {
+		t.Fatalf("failed to get node titles: %v", err)
+	}
+	if len(titles) != 2 {
+		t.Errorf("expected 2 titles, got %d", len(titles))
+	}
+	if titles[a.ID] != "Alpha" {
+		t.Errorf("expected 'Alpha', got %s", titles[a.ID])
+	}
+	if titles[b.ID] != "Beta" {
+		t.Errorf("expected 'Beta', got %s", titles[b.ID])
+	}
 }
 
 func TestGetWorkspaceUsage(t *testing.T) {
