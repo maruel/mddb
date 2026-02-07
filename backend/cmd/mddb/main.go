@@ -175,12 +175,12 @@ func mainImpl() error {
 		}
 	}
 	if !set["ms-client-id"] {
-		if v := env["MS_CLIENT_ID"]; v != "" {
+		if v := env["MICROSOFT_CLIENT_ID"]; v != "" {
 			*msClientID = v
 		}
 	}
 	if !set["ms-client-secret"] {
-		if v := env["MS_CLIENT_SECRET"]; v != "" {
+		if v := env["MICROSOFT_CLIENT_SECRET"]; v != "" {
 			*msClientSecret = v
 		}
 	}
@@ -571,14 +571,14 @@ func runOnboarding(dataDir string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read Microsoft Client ID: %w", err)
 	}
-	env["MS_CLIENT_ID"] = strings.TrimSpace(val)
-	if env["MS_CLIENT_ID"] != "" {
+	env["MICROSOFT_CLIENT_ID"] = strings.TrimSpace(val)
+	if env["MICROSOFT_CLIENT_ID"] != "" {
 		fmt.Print("Microsoft Client Secret: ")
 		val, err = reader.ReadString('\n')
 		if err != nil {
 			return fmt.Errorf("failed to read Microsoft Client Secret: %w", err)
 		}
-		env["MS_CLIENT_SECRET"] = strings.TrimSpace(val)
+		env["MICROSOFT_CLIENT_SECRET"] = strings.TrimSpace(val)
 	}
 
 	// GitHub OAuth
