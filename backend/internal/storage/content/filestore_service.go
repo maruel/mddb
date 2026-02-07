@@ -155,17 +155,19 @@ func (svc *FileStoreService) InitWorkspace(ctx context.Context, wsID jsonldb.ID)
 		return fmt.Errorf("failed to initialize git repo for workspace %s: %w", wsID, err)
 	}
 
-	// Write AGENTS.md in the root of the workspace.
-	agentsPath := filepath.Join(wsDir, "AGENTS.md")
-	if err := os.WriteFile(agentsPath, []byte(storage.AgentsMD), 0o644); err != nil { //nolint:gosec // G306: 0o644 is intentional for documentation files
-		return fmt.Errorf("failed to write AGENTS.md: %w", err)
+	// Write embedded static files (AGENTS.md, etc.) to the workspace.
+	written, err := storage.WriteWorkspaceStaticFiles(wsDir)
+	if err != nil {
+		return fmt.Errorf("failed to write workspace static files: %w", err)
 	}
 
-	// Commit AGENTS.md using default author.
-	if err := repo.CommitTx(ctx, git.Author{}, func() (string, []string, error) {
-		return "initial: add AGENTS.md", []string{"AGENTS.md"}, nil
-	}); err != nil {
-		return fmt.Errorf("failed to commit AGENTS.md: %w", err)
+	// Commit static files using default author.
+	if len(written) > 0 {
+		if err := repo.CommitTx(ctx, git.Author{}, func() (string, []string, error) {
+			return "initial: add static files", written, nil
+		}); err != nil {
+			return fmt.Errorf("failed to commit static files: %w", err)
+		}
 	}
 
 	return nil

@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // RootRepo manages the root data directory as a git repository.
@@ -22,7 +24,7 @@ type RootRepo struct {
 
 // NewRootRepo initializes the root data directory as a git repository.
 //
-// On first run it creates .gitignore, commits existing db/ and
+// On first run it writes embedded static files, commits existing db/ and
 // server_config.json, and registers any pre-existing workspace git repos
 // as submodules (migration).
 func NewRootRepo(ctx context.Context, dataDir, defaultName, defaultEmail string) (*RootRepo, error) {
@@ -39,11 +41,12 @@ func NewRootRepo(ctx context.Context, dataDir, defaultName, defaultEmail string)
 
 	rr := &RootRepo{repo: repo, dataDir: dataDir}
 
-	if err := rr.ensureGitignore(ctx); err != nil {
+	staticFiles, err := storage.WriteRootStaticFiles(dataDir)
+	if err != nil {
 		return nil, err
 	}
 
-	if err := rr.initialCommit(ctx); err != nil {
+	if err := rr.initialCommit(ctx, staticFiles); err != nil {
 		return nil, err
 	}
 
@@ -143,36 +146,27 @@ func (rr *RootRepo) RemoveWorkspaceSubmodule(ctx context.Context, wsID string) e
 	return nil
 }
 
-// ensureGitignore creates .gitignore in the data dir if it doesn't exist.
-func (rr *RootRepo) ensureGitignore(_ context.Context) error {
-	path := filepath.Join(rr.dataDir, ".gitignore")
-	if _, err := os.Stat(path); err == nil {
-		return nil
-	}
-	if err := os.WriteFile(path, []byte(".env\n"), 0o644); err != nil { //nolint:gosec // G306: data dir gitignore
-		return fmt.Errorf("failed to create .gitignore: %w", err)
-	}
-	return nil
-}
-
-// initialCommit commits existing db/ and server_config.json if no commits
-// exist yet.
-func (rr *RootRepo) initialCommit(ctx context.Context) error {
+// initialCommit commits static files, db/ and server_config.json if no
+// commits exist yet. staticFiles are the paths returned by
+// WriteRootStaticFiles.
+func (rr *RootRepo) initialCommit(ctx context.Context, staticFiles []string) error {
 	// Check if there are any commits
 	if _, err := rr.repo.gitCombinedOutput(ctx, "rev-parse", "HEAD"); err == nil {
 		return nil // Already has commits
 	}
 
-	// Stage everything trackable
-	files := []string{".gitignore"}
+	// Collect everything trackable
 	if fi, err := os.Stat(filepath.Join(rr.dataDir, "db")); err == nil && fi.IsDir() {
-		files = append(files, "db/")
+		staticFiles = append(staticFiles, "db/")
 	}
 	if _, err := os.Stat(filepath.Join(rr.dataDir, "server_config.json")); err == nil {
-		files = append(files, "server_config.json")
+		staticFiles = append(staticFiles, "server_config.json")
+	}
+	if len(staticFiles) == 0 {
+		return nil
 	}
 
-	args := append([]string{"add", "--"}, files...)
+	args := append([]string{"add", "--"}, staticFiles...)
 	if out, err := rr.repo.gitCombinedOutput(ctx, args...); err != nil {
 		return fmt.Errorf("failed to stage initial files: %w\nOutput: %s", err, string(out))
 	}

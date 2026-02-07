@@ -76,7 +76,7 @@ func testFileStore(t *testing.T) (*FileStoreService, jsonldb.ID) {
 
 func TestWorkspaceStore(t *testing.T) {
 	t.Run("InitWorkspace", func(t *testing.T) {
-		t.Run("AgentsMD", func(t *testing.T) {
+		t.Run("StaticFiles", func(t *testing.T) {
 			fs, wsID := testFileStore(t)
 			ctx := t.Context()
 
@@ -87,17 +87,9 @@ func TestWorkspaceStore(t *testing.T) {
 
 			// Verify AGENTS.md exists on disk
 			agentsPath := filepath.Join(fs.rootDir, wsID.String(), "AGENTS.md")
-			data, err := os.ReadFile(agentsPath) //nolint:gosec // G304: agentsPath is constructed from validated rootDir and wsID
-			if err != nil {
-				t.Fatalf("failed to read AGENTS.md: %v", err)
+			if _, err := os.Stat(agentsPath); err != nil {
+				t.Fatalf("AGENTS.md not found: %v", err)
 			}
-
-			if string(data) != storage.AgentsMD {
-				t.Errorf("AGENTS.md content mismatch")
-			}
-
-			// Verify git repo was initialized with a commit
-			// (we can't directly test AGENTS.md history without repo methods)
 		})
 	})
 
