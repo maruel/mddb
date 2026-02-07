@@ -620,6 +620,24 @@ func (r *ListNodeChildrenRequest) Validate() error {
 	return nil
 }
 
+// MoveNodeRequest is a request to move a node to a new parent.
+type MoveNodeRequest struct {
+	WsID        jsonldb.ID `path:"wsID" tstype:"-"`
+	ID          jsonldb.ID `path:"id" tstype:"-"`
+	NewParentID jsonldb.ID `json:"new_parent_id"` // New parent node ID; 0 = root
+}
+
+// Validate validates the move node request fields.
+func (r *MoveNodeRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	if r.ID.IsZero() {
+		return InvalidField("id", "cannot move root node")
+	}
+	return nil
+}
+
 // --- Assets ---
 
 // ListNodeAssetsRequest is a request to list assets in a node.

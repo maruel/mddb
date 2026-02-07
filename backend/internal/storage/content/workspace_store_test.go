@@ -1067,6 +1067,250 @@ func TestWorkspaceStore(t *testing.T) {
 	})
 }
 
+func TestMoveNode(t *testing.T) {
+	setup := func(t *testing.T) (*WorkspaceFileStore, git.Author) {
+		t.Helper()
+		fs, wsID := testFileStore(t)
+		ctx := t.Context()
+		author := git.Author{Name: "Test", Email: "test@test.com"}
+		if err := fs.InitWorkspace(ctx, wsID); err != nil {
+			t.Fatalf("failed to init workspace: %v", err)
+		}
+		ws, err := fs.GetWorkspaceStore(ctx, wsID)
+		if err != nil {
+			t.Fatalf("failed to get workspace store: %v", err)
+		}
+		return ws, author
+	}
+
+	t.Run("MoveToDifferentParent", func(t *testing.T) {
+		ws, author := setup(t)
+		ctx := t.Context()
+
+		a, err := ws.CreateNode(ctx, "A", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("create A: %v", err)
+		}
+		b, err := ws.CreateNode(ctx, "B", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("create B: %v", err)
+		}
+		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, a.ID, author)
+		if err != nil {
+			t.Fatalf("create child: %v", err)
+		}
+
+		// Move child from A to B.
+		if err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
+			t.Fatalf("move: %v", err)
+		}
+
+		// Child should now be under B.
+		children, err := ws.ListChildren(b.ID)
+		if err != nil {
+			t.Fatalf("list children of B: %v", err)
+		}
+		if len(children) != 1 || children[0].ID != child.ID {
+			t.Errorf("expected child under B, got %v", children)
+		}
+
+		// A should have no children.
+		children, err = ws.ListChildren(a.ID)
+		if err != nil {
+			t.Fatalf("list children of A: %v", err)
+		}
+		if len(children) != 0 {
+			t.Errorf("expected no children under A, got %d", len(children))
+		}
+
+		// Child should be readable.
+		node, err := ws.ReadNode(child.ID)
+		if err != nil {
+			t.Fatalf("read child after move: %v", err)
+		}
+		if node.Title != "Child" {
+			t.Errorf("expected title 'Child', got %q", node.Title)
+		}
+	})
+
+	t.Run("MoveToRoot", func(t *testing.T) {
+		ws, author := setup(t)
+		ctx := t.Context()
+
+		parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("create parent: %v", err)
+		}
+		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, parent.ID, author)
+		if err != nil {
+			t.Fatalf("create child: %v", err)
+		}
+
+		// Move child to root.
+		if err := ws.MoveNode(ctx, child.ID, 0, author); err != nil {
+			t.Fatalf("move to root: %v", err)
+		}
+
+		// Child should be in top-level listing.
+		topLevel, err := ws.ListChildren(0)
+		if err != nil {
+			t.Fatalf("list root: %v", err)
+		}
+		found := false
+		for _, n := range topLevel {
+			if n.ID == child.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Error("expected child in top-level nodes after move to root")
+		}
+	})
+
+	t.Run("CycleRejected", func(t *testing.T) {
+		ws, author := setup(t)
+		ctx := t.Context()
+
+		parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("create parent: %v", err)
+		}
+		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, parent.ID, author)
+		if err != nil {
+			t.Fatalf("create child: %v", err)
+		}
+
+		// Try to move parent under its own child — should fail.
+		err = ws.MoveNode(ctx, parent.ID, child.ID, author)
+		if !errors.Is(err, errCycleDetected) {
+			t.Errorf("expected cycle error, got %v", err)
+		}
+	})
+
+	t.Run("DescendantCycle", func(t *testing.T) {
+		ws, author := setup(t)
+		ctx := t.Context()
+
+		a, err := ws.CreateNode(ctx, "A", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("create A: %v", err)
+		}
+		b, err := ws.CreateNode(ctx, "B", NodeTypeDocument, a.ID, author)
+		if err != nil {
+			t.Fatalf("create B: %v", err)
+		}
+		c, err := ws.CreateNode(ctx, "C", NodeTypeDocument, b.ID, author)
+		if err != nil {
+			t.Fatalf("create C: %v", err)
+		}
+
+		// Try to move A under C (A -> B -> C -> A would be a cycle).
+		err = ws.MoveNode(ctx, a.ID, c.ID, author)
+		if !errors.Is(err, errCycleDetected) {
+			t.Errorf("expected cycle error for descendant, got %v", err)
+		}
+	})
+
+	t.Run("NoOpSameParent", func(t *testing.T) {
+		ws, author := setup(t)
+		ctx := t.Context()
+
+		parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("create parent: %v", err)
+		}
+		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, parent.ID, author)
+		if err != nil {
+			t.Fatalf("create child: %v", err)
+		}
+
+		// Move to same parent — should be a no-op.
+		if err := ws.MoveNode(ctx, child.ID, parent.ID, author); err != nil {
+			t.Fatalf("no-op move: %v", err)
+		}
+
+		// Child should still be under parent.
+		children, err := ws.ListChildren(parent.ID)
+		if err != nil {
+			t.Fatalf("list children: %v", err)
+		}
+		if len(children) != 1 || children[0].ID != child.ID {
+			t.Errorf("expected child still under parent, got %v", children)
+		}
+	})
+
+	t.Run("ChildrenAccessibleAfterMove", func(t *testing.T) {
+		ws, author := setup(t)
+		ctx := t.Context()
+
+		a, err := ws.CreateNode(ctx, "A", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("create A: %v", err)
+		}
+		b, err := ws.CreateNode(ctx, "B", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("create B: %v", err)
+		}
+		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, a.ID, author)
+		if err != nil {
+			t.Fatalf("create child: %v", err)
+		}
+		grandchild, err := ws.CreateNode(ctx, "Grandchild", NodeTypeDocument, child.ID, author)
+		if err != nil {
+			t.Fatalf("create grandchild: %v", err)
+		}
+
+		// Move child (with grandchild) from A to B.
+		if err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
+			t.Fatalf("move: %v", err)
+		}
+
+		// Grandchild should be readable.
+		node, err := ws.ReadNode(grandchild.ID)
+		if err != nil {
+			t.Fatalf("read grandchild after move: %v", err)
+		}
+		if node.Title != "Grandchild" {
+			t.Errorf("expected title 'Grandchild', got %q", node.Title)
+		}
+
+		// Grandchild should appear in child's children list.
+		gc, err := ws.ListChildren(child.ID)
+		if err != nil {
+			t.Fatalf("list grandchild: %v", err)
+		}
+		if len(gc) != 1 || gc[0].ID != grandchild.ID {
+			t.Errorf("expected grandchild under child, got %v", gc)
+		}
+	})
+
+	t.Run("MoveNonExistent", func(t *testing.T) {
+		ws, author := setup(t)
+		ctx := t.Context()
+
+		err := ws.MoveNode(ctx, jsonldb.NewID(), 0, author)
+		if err == nil {
+			t.Error("expected error moving non-existent node")
+		}
+	})
+
+	t.Run("MoveToNonExistentParent", func(t *testing.T) {
+		ws, author := setup(t)
+		ctx := t.Context()
+
+		node, err := ws.CreateNode(ctx, "Node", NodeTypeDocument, 0, author)
+		if err != nil {
+			t.Fatalf("create node: %v", err)
+		}
+
+		err = ws.MoveNode(ctx, node.ID, jsonldb.NewID(), author)
+		if err == nil {
+			t.Error("expected error moving to non-existent parent")
+		}
+	})
+}
+
 func TestQuotas(t *testing.T) {
 	t.Run("PageQuota", func(t *testing.T) {
 		fs, wsID := testFileStore(t)

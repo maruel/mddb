@@ -98,6 +98,19 @@ func (h *NodeHandler) GetNodeTitles(ctx context.Context, wsID jsonldb.ID, _ *ide
 	return &dto.GetNodeTitlesResponse{Titles: titles}, nil
 }
 
+// MoveNode moves a node to a new parent.
+func (h *NodeHandler) MoveNode(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.MoveNodeRequest) (*dto.MoveNodeResponse, error) {
+	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	author := git.Author{Name: user.Name, Email: user.Email}
+	if err := ws.MoveNode(ctx, req.ID, req.NewParentID, author); err != nil {
+		return nil, dto.InternalWithError("Failed to move node", err)
+	}
+	return &dto.MoveNodeResponse{Ok: true}, nil
+}
+
 // DeleteNode deletes a node.
 func (h *NodeHandler) DeleteNode(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.DeleteNodeRequest) (*dto.DeleteNodeResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)

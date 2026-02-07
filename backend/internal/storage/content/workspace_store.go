@@ -1208,6 +1208,54 @@ func (ws *WorkspaceFileStore) createNode(title string, nodeType NodeType, parent
 	return node, files, nil
 }
 
+// MoveNode reparents a node to a new parent (or root if newParentID is zero).
+// It validates that the node exists, the new parent exists (unless root),
+// and that the move would not create a cycle in the tree.
+func (ws *WorkspaceFileStore) MoveNode(ctx context.Context, id, newParentID jsonldb.ID, author git.Author) error {
+	if id.IsZero() {
+		return errPageNotFound
+	}
+
+	// Verify node exists.
+	oldParentID := ws.getParent(id)
+	if !ws.PageExists(id) && !ws.TableExists(id) {
+		return errPageNotFound
+	}
+
+	// Verify new parent exists (unless root).
+	if !newParentID.IsZero() && !ws.PageExists(newParentID) && !ws.TableExists(newParentID) {
+		return fmt.Errorf("new parent not found: %w", errPageNotFound)
+	}
+
+	// No-op if already under the requested parent.
+	if oldParentID == newParentID {
+		return nil
+	}
+
+	// Cycle check: walk from newParentID up to root; if we hit id, it's a cycle.
+	for p := newParentID; !p.IsZero(); p = ws.getParent(p) {
+		if p == id {
+			return errCycleDetected
+		}
+	}
+
+	oldDir := ws.pageDir(id, oldParentID)
+	oldRelDir := ws.relativeDir(id, oldParentID)
+
+	// Compute new directory before moving (uses current cache state for newParentID chain).
+	newRelDir := ws.relativeDir(id, newParentID)
+	newDir := filepath.Join(ws.wsDir, newRelDir)
+
+	return ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		if err := os.Rename(oldDir, newDir); err != nil {
+			return "", nil, fmt.Errorf("failed to move node: %w", err)
+		}
+		ws.setParent(id, newParentID)
+		files := []string{oldRelDir, newRelDir}
+		return "move: node " + id.String() + " to parent " + newParentID.String(), files, nil
+	})
+}
+
 // Repo returns the git.Repo for the workspace. This is exported for handlers
 // that need direct git operations (e.g., git remotes).
 func (ws *WorkspaceFileStore) Repo() *git.Repo {

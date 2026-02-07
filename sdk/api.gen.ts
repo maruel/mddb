@@ -45,6 +45,8 @@ import type {
   ListWSInvitationsResponse,
   LoginRequest,
   LogoutResponse,
+  MoveNodeRequest,
+  MoveNodeResponse,
   NodeResponse,
   NotionImportCancelResponse,
   NotionImportRequest,
@@ -255,6 +257,7 @@ export function createAPIClient(fetchFn: FetchFn) {
             return get<GetNodeTitlesResponse>(fetchFn, url);
           },
           listNodeChildren: (id: string) => get<ListNodeChildrenResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/children`),
+          moveNode: (id: string, options: MoveNodeRequest) => post<MoveNodeResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/move`, options),
         },
         notion: {
           cancelImport: () => post<NotionImportCancelResponse>(fetchFn, `/api/v1/workspaces/${wsID}/notion/import/cancel`),

@@ -87,6 +87,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/delete` | ws:Editor |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history` | ws:Viewer |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/history/{hash}` | ws:Viewer |
+| POST | `/api/v1/workspaces/{wsID}/nodes/{id}/move` | ws:Editor |
 | GET | `/api/v1/workspaces/{wsID}/nodes/{id}/page` | ws:Viewer |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page` | ws:Editor |
 | POST | `/api/v1/workspaces/{wsID}/nodes/{id}/page/create` | ws:Editor |

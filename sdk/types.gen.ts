@@ -319,6 +319,12 @@ export interface GetNodeRequest {
 export interface ListNodeChildrenRequest {
 }
 /**
+ * MoveNodeRequest is a request to move a node to a new parent.
+ */
+export interface MoveNodeRequest {
+  new_parent_id: string; // New parent node ID; 0 = root
+}
+/**
  * ListNodeAssetsRequest is a request to list assets in a node.
  */
 export interface ListNodeAssetsRequest {
@@ -789,6 +795,10 @@ export type DeleteRecordResponse = OkResponse;
 export interface ListNodesResponse {
   nodes: NodeResponse[];
 }
+/**
+ * MoveNodeResponse is a response from moving a node.
+ */
+export type MoveNodeResponse = OkResponse;
 /**
  * ListNodeAssetsResponse is a response containing a list of assets.
  */

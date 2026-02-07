@@ -159,6 +159,9 @@ type ListNodesResponse struct {
 	Nodes []NodeResponse `json:"nodes"`
 }
 
+// MoveNodeResponse is a response from moving a node.
+type MoveNodeResponse = OkResponse
+
 // --- Asset Responses ---
 
 // ListNodeAssetsResponse is a response containing a list of assets.
