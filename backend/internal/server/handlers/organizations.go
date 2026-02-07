@@ -106,10 +106,8 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID jsonldb
 	}
 
 	// Register workspace as a git submodule of the root data repo
-	if h.Svc.RootRepo != nil {
-		if err := h.Svc.RootRepo.AddWorkspaceSubmodule(ctx, ws.ID.String()); err != nil {
-			slog.ErrorContext(ctx, "Failed to add workspace submodule", "wsID", ws.ID, "err", err)
-		}
+	if err := h.Svc.RootRepo.AddWorkspaceSubmodule(ctx, ws.ID.String()); err != nil {
+		slog.ErrorContext(ctx, "Failed to add workspace submodule", "wsID", ws.ID, "err", err)
 	}
 
 	memberCount := h.Svc.WSMembership.CountWSMemberships(ws.ID)

@@ -82,6 +82,11 @@ func setupTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("NewSessionService: %v", err)
 	}
 
+	rootRepo, err := git.NewRootRepo(t.Context(), tempDir, "test", "test@test.com")
+	if err != nil {
+		t.Fatalf("NewRootRepo: %v", err)
+	}
+
 	svc := &handlers.Services{
 		FileStore:     fileStore,
 		Search:        content.NewSearchService(fileStore),
@@ -95,6 +100,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 		Session:       sessionService,
 		EmailVerif:    nil, // disabled
 		Email:         nil, // disabled
+		RootRepo:      rootRepo,
 	}
 	serverCfg := &storage.ServerConfig{
 		JWTSecret:  testJWTSecret,

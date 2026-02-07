@@ -38,9 +38,13 @@ func isMutating(method string) bool {
 	return method == http.MethodPost || method == http.MethodPut || method == http.MethodPatch || method == http.MethodDelete
 }
 
-// commitDBIfMutating commits DB changes after a successful mutating request.
-func commitDBIfMutating(ctx context.Context, r *http.Request, rootRepo *git.RootRepo, author git.Author, handlerErr error) {
-	if rootRepo == nil || handlerErr != nil || !isMutating(r.Method) {
+// commitDBIfMutating commits DB changes after a mutating request.
+//
+// It always attempts the commit regardless of handler outcome: if the handler
+// wrote data before returning an error, the change is already on disk and must
+// be tracked. When no files changed, CommitDBChanges is a no-op.
+func commitDBIfMutating(ctx context.Context, r *http.Request, rootRepo *git.RootRepo, author git.Author) {
+	if !isMutating(r.Method) {
 		return
 	}
 	msg := fmt.Sprintf("%s %s", r.Method, r.URL.Path)
@@ -271,7 +275,7 @@ func WrapWithSvc[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, PtrIn(input))
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{}, err)
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{})
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -331,7 +335,7 @@ func WrapAuth[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, auth.user, PtrIn(input))
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email}, err)
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email})
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -407,7 +411,7 @@ func WrapOrgAuth[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, orgID, auth.user, PtrIn(input))
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email}, err)
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email})
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -477,7 +481,7 @@ func WrapWSAuth[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, wsID, auth.user, PtrIn(input))
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email}, err)
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email})
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -534,7 +538,7 @@ func WrapAuthRaw(
 		ctx := reqctx.WithUser(r.Context(), user)
 		fn(w, r.WithContext(ctx))
 		// Commit DB changes for mutating raw handlers (e.g., asset upload)
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: user.Name, Email: user.Email}, nil)
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: user.Name, Email: user.Email})
 	})
 }
 
@@ -588,7 +592,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, user, PtrIn(input))
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: user.Name, Email: user.Email}, err)
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: user.Name, Email: user.Email})
 		writeJSONResponse(ctx, w, output, err)
 	})
 }

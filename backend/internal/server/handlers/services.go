@@ -35,7 +35,7 @@ type Services struct {
 	Session       *identity.SessionService
 	EmailVerif    *identity.EmailVerificationService // may be nil
 	Email         *email.Service                     // may be nil
-	RootRepo      *git.RootRepo                      // may be nil
+	RootRepo      *git.RootRepo
 }
 
 // BandwidthUpdater allows updating bandwidth limits at runtime.

@@ -18,6 +18,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 	"github.com/maruel/mddb/backend/internal/utils"
 	"golang.org/x/oauth2"
@@ -385,6 +386,12 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if err := h.svc.RootRepo.CommitDBChanges(ctx, git.Author{Name: linkingUser.Name, Email: linkingUser.Email}, "OAuth link "+string(provider)); err != nil {
+			slog.ErrorContext(ctx, "OAuth linking: failed to commit", "error", err)
+			writeErrorResponse(w, dto.Internal("commit"))
+			return
+		}
+
 		slog.InfoContext(ctx, "OAuth: linked identity", "userID", linkingUserID, "provider", provider)
 		http.Redirect(w, r, "/?oauth_linked=true", http.StatusFound)
 		return
@@ -462,6 +469,12 @@ func finishOAuthLogin(svc *Services, cfg *Config, w http.ResponseWriter, r *http
 	if err != nil {
 		slog.ErrorContext(ctx, "OAuth: failed to generate token", "err", err, "userID", user.ID)
 		writeErrorResponse(w, dto.Internal("token_generation"))
+		return
+	}
+
+	if err := svc.RootRepo.CommitDBChanges(ctx, git.Author{Name: user.Name, Email: user.Email}, "OAuth login "+string(provider)); err != nil {
+		slog.ErrorContext(ctx, "OAuth: failed to commit", "err", err, "userID", user.ID)
+		writeErrorResponse(w, dto.Internal("commit"))
 		return
 	}
 

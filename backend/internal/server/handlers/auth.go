@@ -13,6 +13,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -443,6 +444,10 @@ func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID jso
 			return
 		}
 
+		if err := h.svc.RootRepo.CommitDBChanges(ctx, git.Author{}, "create email verification"); err != nil {
+			slog.ErrorContext(ctx, "Failed to commit email verification", "err", err, "user_id", userID)
+		}
+
 		// Build verify URL
 		verifyURL := h.cfg.BaseURL + "/api/v1/auth/email/verify?token=" + verification.Token
 
@@ -486,6 +491,12 @@ func (h *AuthHandler) VerifyEmailRedirect(w http.ResponseWriter, r *http.Request
 	if err := h.VerifyEmail(ctx, req); err != nil {
 		slog.WarnContext(ctx, "Email verification failed", "err", err)
 		http.Redirect(w, r, errorURL+"invalid_or_expired", http.StatusFound)
+		return
+	}
+
+	if err := h.svc.RootRepo.CommitDBChanges(ctx, git.Author{}, "verify email"); err != nil {
+		slog.WarnContext(ctx, "Failed to commit email verification", "err", err)
+		http.Redirect(w, r, errorURL+"commit_failed", http.StatusFound)
 		return
 	}
 
