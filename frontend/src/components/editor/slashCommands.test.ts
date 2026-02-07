@@ -12,7 +12,7 @@ describe('subpage command link insertion', () => {
     // Insert a link with text "Untitled" pointing to a URL
 
     const title = 'Untitled';
-    const url = '/w/ws123+workspace/node456+untitled';
+    const url = '/w/@ws123+workspace/@node456+untitled';
 
     // The CORRECT way: create text with link mark
     const linkMark = marks.link.create({ href: url, title: null });
@@ -33,7 +33,7 @@ describe('subpage command link insertion', () => {
     // This is the BUG: inserting raw markdown text instead of a proper link node
 
     const title = 'Untitled';
-    const url = '/w/ws123+workspace/node456+untitled';
+    const url = '/w/@ws123+workspace/@node456+untitled';
 
     // The WRONG way (current implementation): insert raw markdown text
     const rawMarkdownText = `[${title}](${url})`;
@@ -56,7 +56,7 @@ describe('subpage command link insertion', () => {
   });
 
   it('link mark round-trips through markdown parser and serializer', () => {
-    const originalMarkdown = '[Test Page](/w/ws1+test/n1+page)';
+    const originalMarkdown = '[Test Page](/w/@ws1+test/@n1+page)';
 
     // Parse markdown to ProseMirror document
     const doc = parseMarkdown(originalMarkdown);
@@ -70,7 +70,7 @@ describe('subpage command link insertion', () => {
     const textNode = block?.firstChild;
     expect(textNode?.text).toBe('Test Page');
     expect(textNode?.marks[0]?.type.name).toBe('link');
-    expect(textNode?.marks[0]?.attrs.href).toBe('/w/ws1+test/n1+page');
+    expect(textNode?.marks[0]?.attrs.href).toBe('/w/@ws1+test/@n1+page');
 
     // Serialize back to markdown
     const serialized = serializeToMarkdown(doc);

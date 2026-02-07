@@ -1617,32 +1617,32 @@ func TestExtractLinkedNodeIDs(t *testing.T) {
 		},
 		{
 			name:     "single internal link",
-			content:  "Check [my page](/w/ABC123+ws/" + nodeA.String() + "+my-page) here",
+			content:  "Check [my page](/w/@ABC123+ws/@" + nodeA.String() + "+my-page) here",
 			expected: []jsonldb.ID{nodeA},
 		},
 		{
 			name:     "multiple internal links",
-			content:  "See [page1](/w/ABC123+ws/" + nodeA.String() + "+title1) and [page2](/w/ABC123+ws/" + nodeB.String() + "+title2)",
+			content:  "See [page1](/w/@ABC123+ws/@" + nodeA.String() + "+title1) and [page2](/w/@ABC123+ws/@" + nodeB.String() + "+title2)",
 			expected: []jsonldb.ID{nodeA, nodeB},
 		},
 		{
 			name:     "link without slug",
-			content:  "[page](/w/ABC123/" + nodeA.String() + ")",
+			content:  "[page](/w/@ABC123/@" + nodeA.String() + ")",
 			expected: []jsonldb.ID{nodeA},
 		},
 		{
 			name:     "duplicate links extracted once",
-			content:  "[page1](/w/ABC123+ws/" + nodeC.String() + "+a) and [page1 again](/w/ABC123+ws/" + nodeC.String() + "+b)",
+			content:  "[page1](/w/@ABC123+ws/@" + nodeC.String() + "+a) and [page1 again](/w/@ABC123+ws/@" + nodeC.String() + "+b)",
 			expected: []jsonldb.ID{nodeC},
 		},
 		{
 			name:     "external link ignored",
-			content:  "[google](https://google.com) and [internal](/w/ABC123/" + nodeA.String() + ")",
+			content:  "[google](https://google.com) and [internal](/w/@ABC123/@" + nodeA.String() + ")",
 			expected: []jsonldb.ID{nodeA},
 		},
 		{
 			name:     "mixed content",
-			content:  "# Header\n\nSome text with [a link](/w/WSID/" + nodeB.String() + "+slug) in it.\n\n![image](image.png)",
+			content:  "# Header\n\nSome text with [a link](/w/@WSID/@" + nodeB.String() + "+slug) in it.\n\n![image](image.png)",
 			expected: []jsonldb.ID{nodeB},
 		},
 	}
@@ -1686,7 +1686,7 @@ func TestGetBacklinks(t *testing.T) {
 	}
 
 	// Create source page with a link to target.
-	linkContent := fmt.Sprintf("[Target](/w/%s+ws/%s+target)", wsID, target.ID)
+	linkContent := fmt.Sprintf("[Target](/w/@%s+ws/@%s+target)", wsID, target.ID)
 	source, err := ws.CreatePageUnderParent(ctx, 0, "Source", linkContent, author)
 	if err != nil {
 		t.Fatalf("failed to create source: %v", err)

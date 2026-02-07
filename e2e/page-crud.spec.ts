@@ -210,7 +210,7 @@ test.describe('Page Navigation', () => {
     await expect(page.getByText('Content here')).toBeVisible({ timeout: 5000 });
 
     // URL should contain workspace ID and page ID with slug
-    await expect(page).toHaveURL(new RegExp(`/w/${wsID}[^/]*/${pageData.id}\\+my-awesome-page`));
+    await expect(page).toHaveURL(new RegExp(`/w/@${wsID}[^/]*/@${pageData.id}\\+my-awesome-page`));
   });
 
   test('direct URL navigation loads correct page', async ({ page, request }) => {
@@ -228,7 +228,7 @@ test.describe('Page Navigation', () => {
     });
 
     // Navigate directly to the page URL
-    await page.goto(`/w/${wsID}/${pageData.id}?token=${token}`);
+    await page.goto(`/w/@${wsID}/@${pageData.id}?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // Page content should be visible
@@ -264,7 +264,7 @@ test.describe('Page Navigation', () => {
     });
 
     // Navigate directly to grandchild URL (fresh page load)
-    await page.goto(`/w/${wsID}/${grandchildData.id}?token=${token}`);
+    await page.goto(`/w/@${wsID}/@${grandchildData.id}?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // Grandchild content should be visible
@@ -315,7 +315,7 @@ test.describe('Page Navigation', () => {
     });
 
     // Navigate directly to great-grandchild URL
-    await page.goto(`/w/${wsID}/${greatGrandchildData.id}?token=${token}`);
+    await page.goto(`/w/@${wsID}/@${greatGrandchildData.id}?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // Content should be visible

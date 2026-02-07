@@ -66,7 +66,7 @@ function AuthRoute() {
   return (
     <Switch fallback={<RouteLoading />}>
       <Match when={ready() && user()?.workspace_id}>
-        <Navigate href={`/w/${user()?.workspace_id}`} />
+        <Navigate href={`/w/@${user()?.workspace_id}`} />
       </Match>
       <Match when={ready() && user() && !user()?.workspace_id}>
         <Navigate href="/onboarding" />
@@ -89,7 +89,7 @@ function RootRedirect() {
   return (
     <Switch fallback={<RouteLoading />}>
       <Match when={ready() && user()?.workspace_id}>
-        <Navigate href={`/w/${user()?.workspace_id}`} />
+        <Navigate href={`/w/@${user()?.workspace_id}`} />
       </Match>
       <Match when={ready() && user() && !user()?.workspace_id}>
         {/* User is authenticated but has no workspace - send to onboarding */}

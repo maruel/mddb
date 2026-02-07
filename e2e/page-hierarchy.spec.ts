@@ -253,7 +253,7 @@ test.describe('Page Hierarchy', () => {
     await expect(grandchildNode).not.toBeVisible({ timeout: 5000 });
 
     // Navigation should go to parent (root page) since child has no siblings
-    // Wait for the URL to change to indicate navigation completed (URL format: /w/{wsId}/{nodeId}+{title})
+    // Wait for the URL to change to indicate navigation completed (URL format: /w/@{wsId}/@{nodeId}+{title})
     await expect(page).toHaveURL(new RegExp(`/${rootPageId}\\+`), { timeout: 5000 });
   });
 

@@ -1607,12 +1607,12 @@ func formatMarkdownFile(p *page) []byte {
 
 // --- Page Links Extraction and Backlinks Index ---
 
-// internalLinkPattern matches markdown links to internal pages: [text](/w/{wsID}+{slug}/{nodeID}+{slug})
+// internalLinkPattern matches markdown links to internal pages: [text](/w/@{wsID}+{slug}/@{nodeID}+{slug})
 // The nodeID is captured in group 1.
-var internalLinkPattern = regexp.MustCompile(`\[[^\]]*\]\(/w/[^/+]+(?:\+[^/]*)*/([A-Za-z0-9]+)(?:\+[^)]*)?\)`)
+var internalLinkPattern = regexp.MustCompile(`\[[^\]]*\]\(/w/@[^/+]+(?:\+[^/]*)*/@([A-Za-z0-9]+)(?:\+[^)]*)?\)`)
 
 // ExtractLinkedNodeIDs extracts all node IDs from internal page links in markdown content.
-// Looks for patterns like [text](/w/{wsID}+{slug}/{nodeID}+{slug}) and returns unique node IDs.
+// Looks for patterns like [text](/w/@{wsID}+{slug}/@{nodeID}+{slug}) and returns unique node IDs.
 func ExtractLinkedNodeIDs(content string) []jsonldb.ID {
 	matches := internalLinkPattern.FindAllStringSubmatch(content, -1)
 	seen := make(map[string]bool)

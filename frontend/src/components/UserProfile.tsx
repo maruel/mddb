@@ -170,7 +170,7 @@ export default function UserProfile(props: UserProfileProps) {
                     {(org) => {
                       const isAdmin = () => org.role === OrgRoleAdmin || org.role === OrgRoleOwner;
                       const orgSlug = slugify(org.organization_name || 'organization');
-                      const settingsHref = `/o/${org.organization_id}+${orgSlug}/settings`;
+                      const settingsHref = `/o/@${org.organization_id}+${orgSlug}/settings`;
                       const orgDisplayName = org.organization_name || org.organization_id;
                       return (
                         <div class={styles.orgItem}>

@@ -5,8 +5,10 @@
  * Use this when extracting IDs from route params that may include slugs.
  */
 export function stripSlug(idWithSlug: string): string {
-  const plusIndex = idWithSlug.indexOf('+');
-  return plusIndex >= 0 ? idWithSlug.substring(0, plusIndex) : idWithSlug;
+  let s = idWithSlug;
+  if (s.startsWith('@')) s = s.substring(1);
+  const plusIndex = s.indexOf('+');
+  return plusIndex >= 0 ? s.substring(0, plusIndex) : s;
 }
 
 /**
@@ -27,7 +29,7 @@ export function slugify(text: string): string {
  */
 export function workspaceUrl(wsId: string, wsName?: string): string {
   const wsSlug = slugify(wsName || 'workspace');
-  return `/w/${wsId}+${wsSlug}/`;
+  return `/w/@${wsId}+${wsSlug}/`;
 }
 
 /**
@@ -36,7 +38,7 @@ export function workspaceUrl(wsId: string, wsName?: string): string {
 export function nodeUrl(wsId: string, wsName: string | undefined, nodeId: string, nodeTitle?: string): string {
   const wsSlug = slugify(wsName || 'workspace');
   const nodeSlug = nodeTitle ? slugify(nodeTitle) : '';
-  return `/w/${wsId}+${wsSlug}/${nodeId}${nodeSlug ? '+' + nodeSlug : ''}`;
+  return `/w/@${wsId}+${wsSlug}/@${nodeId}${nodeSlug ? '+' + nodeSlug : ''}`;
 }
 
 /**
@@ -44,7 +46,7 @@ export function nodeUrl(wsId: string, wsName: string | undefined, nodeId: string
  */
 export function workspaceSettingsUrl(wsId: string, wsName?: string): string {
   const wsSlug = slugify(wsName || 'workspace');
-  return `/w/${wsId}+${wsSlug}/settings`;
+  return `/w/@${wsId}+${wsSlug}/settings`;
 }
 
 /**
@@ -52,7 +54,7 @@ export function workspaceSettingsUrl(wsId: string, wsName?: string): string {
  */
 export function orgSettingsUrl(orgId: string, orgName?: string): string {
   const orgSlug = slugify(orgName || 'organization');
-  return `/o/${orgId}+${orgSlug}/settings`;
+  return `/o/@${orgId}+${orgSlug}/settings`;
 }
 
 /** URL pattern matchers */
@@ -74,7 +76,7 @@ export interface SettingsMatch {
  * Parses workspace root URL. Returns null if no match.
  */
 export function parseWorkspaceRoot(path: string): WorkspaceMatch | null {
-  const match = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/?$/);
+  const match = path.match(/^\/w\/@([^+/]+)(?:\+[^/]*)?\/?$/);
   if (match && match[1]) {
     return { wsId: match[1] };
   }
@@ -85,7 +87,7 @@ export function parseWorkspaceRoot(path: string): WorkspaceMatch | null {
  * Parses workspace node URL. Returns null if no match.
  */
 export function parseNodeUrl(path: string): NodeMatch | null {
-  const match = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/([a-zA-Z0-9_-]+)(?:\+.*)?$/);
+  const match = path.match(/^\/w\/@([^+/]+)(?:\+[^/]*)?\/@([a-zA-Z0-9_-]+)(?:\+.*)?$/);
   if (match && match[1] && match[2]) {
     return { wsId: match[1], nodeId: match[2] };
   }
@@ -96,7 +98,7 @@ export function parseNodeUrl(path: string): NodeMatch | null {
  * Parses workspace settings URL. Returns null if no match.
  */
 export function parseWorkspaceSettings(path: string): SettingsMatch | null {
-  const match = path.match(/^\/w\/([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
+  const match = path.match(/^\/w\/@([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
   if (match && match[1]) {
     return { id: match[1] };
   }
@@ -107,7 +109,7 @@ export function parseWorkspaceSettings(path: string): SettingsMatch | null {
  * Parses organization settings URL. Returns null if no match.
  */
 export function parseOrgSettings(path: string): SettingsMatch | null {
-  const match = path.match(/^\/o\/([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
+  const match = path.match(/^\/o\/@([^+/]+)(?:\+[^/]*)?\/settings\/?$/);
   if (match && match[1]) {
     return { id: match[1] };
   }
@@ -140,5 +142,5 @@ export function settingsUrl(type?: 'user' | 'workspace' | 'org' | 'server', id?:
   if (!type || type === 'user') return '/settings/user';
   if (type === 'server') return '/settings/server';
   const slug = slugify(name || type);
-  return `/settings/${type}/${id}+${slug}`;
+  return `/settings/${type}/@${id}+${slug}`;
 }

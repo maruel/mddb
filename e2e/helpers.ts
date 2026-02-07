@@ -72,9 +72,9 @@ export async function registerUser(request: APIRequestContext, prefix: string) {
 
 // Helper to get workspace ID from URL
 export async function getWorkspaceId(page: Page): Promise<string> {
-  await expect(page).toHaveURL(/\/w\/[^/]+/, { timeout: 5000 });
+  await expect(page).toHaveURL(/\/w\/@[^/]+/, { timeout: 5000 });
   const url = page.url();
-  const wsMatch = url.match(/\/w\/([^+/]+)/);
+  const wsMatch = url.match(/\/w\/@([^+/]+)/);
   expect(wsMatch).toBeTruthy();
   const workspaceId = wsMatch?.[1];
   if (!workspaceId) {

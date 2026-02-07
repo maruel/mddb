@@ -124,7 +124,7 @@ export function reverseRewriteAssetUrls(markdown: string, assetUrls: AssetUrlMap
 
 /**
  * Rewrite internal page link display text to show current titles.
- * Transforms: [OldTitle](/w/{wsId}+{slug}/{nodeId}+{slug}) -> [CurrentTitle](/w/{wsId}+{slug}/{nodeId}+{slug})
+ * Transforms: [OldTitle](/w/@{wsId}+{slug}/@{nodeId}+{slug}) -> [CurrentTitle](/w/@{wsId}+{slug}/@{nodeId}+{slug})
  *
  * The URL is preserved exactly as-is; only the display text is updated.
  * Links to nodes not in the title map are left unchanged.
@@ -141,7 +141,7 @@ export function rewriteInternalLinkTitles(markdown: string, nodeTitles: NodeTitl
 
   // Pattern captures: full match, text, wsId, nodeId (and anything after)
   return markdown.replace(
-    /\[([^\]]*)\]\((\/w\/([^/+]+)(?:\+[^/]*)?\/([A-Za-z0-9]+)(?:\+[^)]*)?)\)/g,
+    /\[([^\]]*)\]\((\/w\/@([^/+]+)(?:\+[^/]*)?\/@([A-Za-z0-9]+)(?:\+[^)]*)?)\)/g,
     (match, _text, url, wsId, nodeId) => {
       // Only rewrite links to the current workspace
       if (wsId !== currentWsId) {

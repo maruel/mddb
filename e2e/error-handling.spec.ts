@@ -9,7 +9,7 @@ test.describe('Error Handling - Invalid Routes', () => {
     const wsID = await getWorkspaceId(page);
 
     // Try to navigate to a non-existent page ID
-    await page.goto(`/w/${wsID}/nonexistent-page-id-12345?token=${token}`);
+    await page.goto(`/w/@${wsID}/@nonexistent-page-id-12345?token=${token}`);
 
     // Should either show error message or redirect to workspace root
     // Wait for either an error message to appear OR the sidebar to show
@@ -29,7 +29,7 @@ test.describe('Error Handling - Invalid Routes', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // Try to navigate to a non-existent workspace
-    await page.goto(`/w/invalid-workspace-12345/some-page?token=${token}`);
+    await page.goto(`/w/@invalid-workspace-12345/@some-page?token=${token}`);
 
     // Should handle gracefully: show error, redirect to valid workspace, or load user's workspace
     await expect(async () => {
@@ -111,7 +111,7 @@ test.describe('Error Handling - Concurrent Edits', () => {
 
     // Open same page in second tab
     const page2 = await context.newPage();
-    await page2.goto(`/w/${wsID}/${pageData.id}?token=${token}`);
+    await page2.goto(`/w/@${wsID}/@${pageData.id}?token=${token}`);
     await expect(page2.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // Navigate to page in first tab

@@ -8,11 +8,11 @@ import type { NodeTitleMap } from './markdown-utils';
 
 /**
  * Pattern to extract nodeId from internal page link URLs.
- * Matches: /w/{wsId}+{slug}/{nodeId}+{slug}
+ * Matches: /w/@{wsId}+{slug}/@{nodeId}+{slug}
  * Captures: group 1 = wsId, group 2 = nodeId
  * Note: Pattern aligned with parseNodeUrl in urls.ts
  */
-export const INTERNAL_LINK_URL_PATTERN = /^\/w\/([^/+]+)(?:\+[^/]*)?\/([a-zA-Z0-9_-]+)(?:\+.*)?$/;
+export const INTERNAL_LINK_URL_PATTERN = /^\/w\/@([^/+]+)(?:\+[^/]*)?\/@([a-zA-Z0-9_-]+)(?:\+.*)?$/;
 
 export interface InvalidLinkPluginState {
   decorations: DecorationSet;

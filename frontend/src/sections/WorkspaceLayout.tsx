@@ -228,7 +228,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
         } else if (wsId) {
           await loadNodes(true);
           // Navigate to workspace root, let WorkspaceRoot handle redirect
-          navigate(`/w/${wsId}+${wsName || 'workspace'}/`);
+          navigate(`/w/@${wsId}+${wsName || 'workspace'}/`);
         }
       }
       setSaveError(null);

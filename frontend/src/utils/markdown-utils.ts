@@ -6,10 +6,10 @@ export type NodeTitleMap = Record<string, string>;
 // --- Internal Page Link Utilities ---
 
 /**
- * Pattern to match internal page links: [text](/w/{wsId}+{slug}/{nodeId}+{slug})
+ * Pattern to match internal page links: [text](/w/@{wsId}+{slug}/@{nodeId}+{slug})
  * Captures: group 1 = text, group 2 = wsId, group 3 = nodeId
  */
-const INTERNAL_LINK_PATTERN = /\[([^\]]*)\]\(\/w\/([^/+]+)(?:\+[^/]*)?\/([A-Za-z0-9]+)(?:\+[^)]*)?\)/g;
+const INTERNAL_LINK_PATTERN = /\[([^\]]*)\]\(\/w\/@([^/+]+)(?:\+[^/]*)?\/@([A-Za-z0-9]+)(?:\+[^)]*)?\)/g;
 
 /**
  * Extract all linked node IDs from internal page links in markdown content.

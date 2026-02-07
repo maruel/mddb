@@ -137,36 +137,36 @@ describe('extractLinkedNodeIds', () => {
   });
 
   it('returns empty array if no workspace ID provided', () => {
-    expect(extractLinkedNodeIds('[link](/w/ws123/node456)', '')).toEqual([]);
+    expect(extractLinkedNodeIds('[link](/w/@ws123/@node456)', '')).toEqual([]);
   });
 
   it('extracts single internal link', () => {
-    const markdown = 'Check [my page](/w/ws123+workspace/node456+my-page) here';
+    const markdown = 'Check [my page](/w/@ws123+workspace/@node456+my-page) here';
     expect(extractLinkedNodeIds(markdown, 'ws123')).toEqual(['node456']);
   });
 
   it('extracts multiple internal links', () => {
-    const markdown = 'See [page1](/w/ws123/node1+title) and [page2](/w/ws123/node2)';
+    const markdown = 'See [page1](/w/@ws123/@node1+title) and [page2](/w/@ws123/@node2)';
     expect(extractLinkedNodeIds(markdown, 'ws123')).toEqual(['node1', 'node2']);
   });
 
   it('deduplicates repeated links', () => {
-    const markdown = '[a](/w/ws123/same+a) and [b](/w/ws123/same+b)';
+    const markdown = '[a](/w/@ws123/@same+a) and [b](/w/@ws123/@same+b)';
     expect(extractLinkedNodeIds(markdown, 'ws123')).toEqual(['same']);
   });
 
   it('filters by current workspace', () => {
-    const markdown = '[same ws](/w/ws123/node1) [other ws](/w/other/node2)';
+    const markdown = '[same ws](/w/@ws123/@node1) [other ws](/w/@other/@node2)';
     expect(extractLinkedNodeIds(markdown, 'ws123')).toEqual(['node1']);
   });
 
   it('ignores external URLs', () => {
-    const markdown = '[google](https://google.com) [internal](/w/ws123/node1)';
+    const markdown = '[google](https://google.com) [internal](/w/@ws123/@node1)';
     expect(extractLinkedNodeIds(markdown, 'ws123')).toEqual(['node1']);
   });
 
   it('handles links without slug', () => {
-    const markdown = '[page](/w/ws123/node1)';
+    const markdown = '[page](/w/@ws123/@node1)';
     expect(extractLinkedNodeIds(markdown, 'ws123')).toEqual(['node1']);
   });
 });
@@ -182,37 +182,37 @@ describe('rewriteInternalLinkTitles', () => {
   });
 
   it('returns unchanged if no titles map', () => {
-    const markdown = '[Old](/w/ws123/node1)';
+    const markdown = '[Old](/w/@ws123/@node1)';
     expect(rewriteInternalLinkTitles(markdown, {}, 'ws123')).toBe(markdown);
   });
 
   it('rewrites link display text to current title', () => {
-    const markdown = '[Old Title](/w/ws123+ws/node1+old-title)';
+    const markdown = '[Old Title](/w/@ws123+ws/@node1+old-title)';
     expect(rewriteInternalLinkTitles(markdown, nodeTitles, 'ws123')).toBe(
-      '[Updated Title 1](/w/ws123+ws/node1+old-title)'
+      '[Updated Title 1](/w/@ws123+ws/@node1+old-title)'
     );
   });
 
   it('rewrites multiple links', () => {
-    const markdown = 'See [A](/w/ws123/node1) and [B](/w/ws123/node2)';
+    const markdown = 'See [A](/w/@ws123/@node1) and [B](/w/@ws123/@node2)';
     expect(rewriteInternalLinkTitles(markdown, nodeTitles, 'ws123')).toBe(
-      'See [Updated Title 1](/w/ws123/node1) and [Updated Title 2](/w/ws123/node2)'
+      'See [Updated Title 1](/w/@ws123/@node1) and [Updated Title 2](/w/@ws123/@node2)'
     );
   });
 
   it('preserves URL exactly', () => {
-    const markdown = '[Old](/w/ws123+my-workspace/node1+old-slug)';
+    const markdown = '[Old](/w/@ws123+my-workspace/@node1+old-slug)';
     const result = rewriteInternalLinkTitles(markdown, nodeTitles, 'ws123');
-    expect(result).toContain('/w/ws123+my-workspace/node1+old-slug');
+    expect(result).toContain('/w/@ws123+my-workspace/@node1+old-slug');
   });
 
   it('does not rewrite links to other workspaces', () => {
-    const markdown = '[Other](/w/other-ws/node1+slug)';
+    const markdown = '[Other](/w/@other-ws/@node1+slug)';
     expect(rewriteInternalLinkTitles(markdown, nodeTitles, 'ws123')).toBe(markdown);
   });
 
   it('keeps original if node not in title map', () => {
-    const markdown = '[Unknown](/w/ws123/unknown-node)';
+    const markdown = '[Unknown](/w/@ws123/@unknown-node)';
     expect(rewriteInternalLinkTitles(markdown, nodeTitles, 'ws123')).toBe(markdown);
   });
 });

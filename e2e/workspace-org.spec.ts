@@ -81,7 +81,7 @@ test.describe('Workspace Switching', () => {
       await secondWsOption.click();
 
       // URL should update to new workspace
-      await expect(page).toHaveURL(new RegExp(`/w/${newWsData.id}`), { timeout: 5000 });
+      await expect(page).toHaveURL(new RegExp(`/w/@${newWsData.id}`), { timeout: 5000 });
     }
   });
 
