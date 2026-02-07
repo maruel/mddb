@@ -138,10 +138,10 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Auth endpoints - /api/v1/auth/*
 	// Public
-	mux.Handle("POST /api/v1/auth/login", Wrap(authh.Login, hcfg, limiters))
-	mux.Handle("POST /api/v1/auth/register", Wrap(authh.Register, hcfg, limiters))
-	mux.Handle("POST /api/v1/auth/invitations/org/accept", Wrap(ih.AcceptOrgInvitation, hcfg, limiters))
-	mux.Handle("POST /api/v1/auth/invitations/ws/accept", Wrap(ih.AcceptWSInvitation, hcfg, limiters))
+	mux.Handle("POST /api/v1/auth/login", WrapWithSvc(authh.Login, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/auth/register", WrapWithSvc(authh.Register, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/auth/invitations/org/accept", WrapWithSvc(ih.AcceptOrgInvitation, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/auth/invitations/ws/accept", WrapWithSvc(ih.AcceptWSInvitation, svc, hcfg, limiters))
 	mux.HandleFunc("GET /api/v1/auth/email/verify", authh.VerifyEmailRedirect)
 	mux.Handle("GET /api/v1/auth/providers", Wrap(oh.ListProviders, hcfg, limiters))
 	mux.HandleFunc("GET /api/v1/auth/oauth/{provider}", loginRedirect)

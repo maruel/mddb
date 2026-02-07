@@ -119,7 +119,7 @@ func parseHandler(expr ast.Expr) (role, handler string) {
 	handler = exprName(call.Args[0])
 
 	switch funcName {
-	case "Wrap":
+	case "Wrap", "WrapWithSvc":
 		return "public", handler
 	case "WrapAuth":
 		return "authenticated", handler

@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
 	"github.com/maruel/mddb/backend/internal/server/dto"
@@ -102,6 +103,13 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID jsonldb
 	// Initialize workspace storage
 	if err := h.Svc.FileStore.InitWorkspace(ctx, ws.ID); err != nil {
 		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
+	}
+
+	// Register workspace as a git submodule of the root data repo
+	if h.Svc.RootRepo != nil {
+		if err := h.Svc.RootRepo.AddWorkspaceSubmodule(ctx, ws.ID.String()); err != nil {
+			slog.ErrorContext(ctx, "Failed to add workspace submodule", "wsID", ws.ID, "err", err)
+		}
 	}
 
 	memberCount := h.Svc.WSMembership.CountWSMemberships(ws.ID)

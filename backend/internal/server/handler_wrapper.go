@@ -22,6 +22,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
+	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -30,6 +31,22 @@ func addRequestMetadataToContext(ctx context.Context, r *http.Request) context.C
 	ctx = reqctx.WithClientIP(ctx, reqctx.GetClientIP(r))
 	ctx = reqctx.WithUserAgent(ctx, r.Header.Get("User-Agent"))
 	return ctx
+}
+
+// isMutating returns true for HTTP methods that modify state.
+func isMutating(method string) bool {
+	return method == http.MethodPost || method == http.MethodPut || method == http.MethodPatch || method == http.MethodDelete
+}
+
+// commitDBIfMutating commits DB changes after a successful mutating request.
+func commitDBIfMutating(ctx context.Context, r *http.Request, rootRepo *git.RootRepo, author git.Author, handlerErr error) {
+	if rootRepo == nil || handlerErr != nil || !isMutating(r.Method) {
+		return
+	}
+	msg := fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+	if err := rootRepo.CommitDBChanges(ctx, author, msg); err != nil {
+		slog.ErrorContext(ctx, "Failed to commit DB changes", "err", err)
+	}
 }
 
 // authResult holds the result of JWT/session validation.
@@ -223,6 +240,42 @@ func Wrap[In any, PtrIn interface {
 	})
 }
 
+// WrapWithSvc wraps an unauthenticated handler with access to services (for DB commit hook).
+func WrapWithSvc[In any, PtrIn interface {
+	*In
+	dto.Validatable
+}, Out any](fn func(context.Context, PtrIn) (*Out, error), svc *handlers.Services, cfg *handlers.Config, limiters *ratelimit.Limiters) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := addRequestMetadataToContext(r.Context(), r)
+
+		// Rate limit check for unauthenticated endpoints
+		var ok bool
+		if tier := limiters.MatchUnauth(r.Method, r.URL.Path); tier != nil {
+			w, ok = checkRateLimit(w, tier, reqctx.GetClientIP(r))
+			if !ok {
+				return
+			}
+		}
+
+		input := new(In)
+		if !readAndDecodeBody(ctx, w, r, input, cfg) {
+			return
+		}
+
+		populatePathParams(r, input)
+		populateQueryParams(r, input)
+
+		if err := PtrIn(input).Validate(); err != nil {
+			handleValidationError(ctx, w, err)
+			return
+		}
+
+		output, err := fn(ctx, PtrIn(input))
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{}, err)
+		writeJSONResponse(ctx, w, output, err)
+	})
+}
+
 // checkMaxBytesError checks if an error is a MaxBytesError and returns it, or nil.
 func checkMaxBytesError(err error) *http.MaxBytesError {
 	var maxBytesErr *http.MaxBytesError
@@ -278,6 +331,7 @@ func WrapAuth[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, auth.user, PtrIn(input))
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email}, err)
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -353,6 +407,7 @@ func WrapOrgAuth[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, orgID, auth.user, PtrIn(input))
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email}, err)
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -422,6 +477,7 @@ func WrapWSAuth[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, wsID, auth.user, PtrIn(input))
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email}, err)
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -477,6 +533,8 @@ func WrapAuthRaw(
 		// Store user in context for raw handlers
 		ctx := reqctx.WithUser(r.Context(), user)
 		fn(w, r.WithContext(ctx))
+		// Commit DB changes for mutating raw handlers (e.g., asset upload)
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: user.Name, Email: user.Email}, nil)
 	})
 }
 
@@ -530,6 +588,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, user, PtrIn(input))
+		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: user.Name, Email: user.Email}, err)
 		writeJSONResponse(ctx, w, output, err)
 	})
 }

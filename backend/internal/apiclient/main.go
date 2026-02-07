@@ -377,7 +377,7 @@ func parseHandlerExpr(expr ast.Expr) (wrapperType, handlerName string) {
 	funcName := exprName(call.Fun)
 	// Handler is always the first argument for all WrapFoo functions
 	switch funcName {
-	case "Wrap", "WrapAuth", "WrapOrgAuth", "WrapWSAuth", "WrapAuthRaw", "WrapGlobalAdmin":
+	case "Wrap", "WrapWithSvc", "WrapAuth", "WrapOrgAuth", "WrapWSAuth", "WrapAuthRaw", "WrapGlobalAdmin":
 		if len(call.Args) >= 1 {
 			return funcName, exprName(call.Args[0])
 		}

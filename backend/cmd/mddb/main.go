@@ -299,6 +299,11 @@ func mainImpl() error {
 
 	gitMgr := git.NewManager(*dataDir, "", "")
 
+	rootRepo, err := git.NewRootRepo(ctx, *dataDir, "", "")
+	if err != nil {
+		return fmt.Errorf("failed to initialize root repo: %w", err)
+	}
+
 	fileStore, err := content.NewFileStoreService(*dataDir, gitMgr, wsService, orgService, &serverCfg.Quotas.ResourceQuotas)
 	if err != nil {
 		return fmt.Errorf("failed to initialize file store: %w", err)
@@ -314,6 +319,9 @@ func mainImpl() error {
 		slog.WarnContext(ctx, "Failed to cleanup expired sessions", "error", err)
 	} else if count > 0 {
 		slog.InfoContext(ctx, "Cleaned up expired sessions", "count", count)
+		if err := rootRepo.CommitDBChanges(ctx, git.Author{}, fmt.Sprintf("cleanup %d expired sessions", count)); err != nil {
+			slog.WarnContext(ctx, "Failed to commit session cleanup", "error", err)
+		}
 	}
 
 	// Initialize email verification service and email service (nil if SMTP not configured)
@@ -347,6 +355,7 @@ func mainImpl() error {
 		Session:       sessionService,
 		EmailVerif:    emailVerificationService,
 		Email:         emailService,
+		RootRepo:      rootRepo,
 	}
 	// Open IP geolocation database if configured
 	var geoChecker *ipgeo.Checker
