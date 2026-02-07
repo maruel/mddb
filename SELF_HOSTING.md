@@ -49,7 +49,7 @@ Microsoft OAuth is Microsoft Entra
     1. Accounts in any organizational directory (Any Microsoft Entra ID tenant - Multitenant) and personal Microsoft accounts (e.g. Skype, Xbox)
     1. Redirect URL:
         1. Web
-        1. `https://<hostname>.<tailnet>.ts.net/api/v1/auth/google/callback`
+        1. `https://<hostname>.<tailnet>.ts.net/api/v1/auth/microsoft/callback`
 1. Click "Add a certificate or secret"
 1. New client secret
 1. Duration: 730 days
