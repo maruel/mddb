@@ -11,6 +11,7 @@ import MarkdownPreview from '../components/MarkdownPreview';
 import { useAuth, useWorkspace, useEditor, useRecords } from '../contexts';
 import { useI18n } from '../i18n';
 import { nodeUrl, stripSlug } from '../utils/urls';
+import { relativeLinksToSpaUrls } from '../utils/markdown-utils';
 import type { Property, Commit } from '@sdk/types.gen';
 import styles from './WorkspaceSection.module.css';
 
@@ -106,7 +107,8 @@ export default function NodeView() {
     try {
       setLoadingPreview(true);
       const data = await ws.nodes.history.getNodeVersion(nodeId, commit.hash);
-      setPreviewContent(data.content || '');
+      const wsId = user()?.workspace_id || '';
+      setPreviewContent(relativeLinksToSpaUrls(data.content || '', wsId));
       setPreviewCommit(commit);
     } catch (err) {
       setLoadError(`${t('errors.failedToLoad')}: ${err}`);

@@ -14,7 +14,7 @@ import { useWorkspace } from './WorkspaceContext';
 import { useI18n } from '../i18n';
 import { debounce } from '../utils/debounce';
 import { nodeUrl } from '../utils/urls';
-import { extractLinkedNodeIds } from '../utils/markdown-utils';
+import { extractLinkedNodeIds, relativeLinksToSpaUrls, spaUrlsToRelativeLinks } from '../utils/markdown-utils';
 import type { Commit } from '@sdk/types.gen';
 
 /** Map of asset filename to signed URL */
@@ -85,12 +85,13 @@ export const EditorProvider: ParentComponent = (props) => {
 
     try {
       setAutoSaveStatus('saving');
-      await ws.nodes.page.updatePage(nodeId, { title: title(), content: content() });
+      const wsId = user()?.workspace_id || '';
+      const diskContent = spaUrlsToRelativeLinks(content(), wsId);
+      await ws.nodes.page.updatePage(nodeId, { title: title(), content: diskContent });
       setHasUnsavedChanges(false);
       setAutoSaveStatus('saved');
 
       // Update URL if title changed
-      const wsId = user()?.workspace_id;
       const wsName = user()?.workspace_name;
       if (wsId) {
         const currentPath = window.location.pathname;
@@ -146,12 +147,15 @@ export const EditorProvider: ParentComponent = (props) => {
     const node = selectedNodeData();
     if (node) {
       setTitle(node.title);
-      setContent(node.content || '');
+      // Convert relative file path links from API to SPA URLs for the editor.
+      const wsId = user()?.workspace_id || '';
+      const spaContent = relativeLinksToSpaUrls(node.content || '', wsId);
+      setContent(spaContent);
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setShowHistory(false);
       // Fetch linked node titles in the background
-      fetchLinkedNodeTitles(node.content || '');
+      fetchLinkedNodeTitles(spaContent);
     } else {
       resetEditor();
     }

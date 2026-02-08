@@ -24,6 +24,10 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
+// relativeLinkRe matches markdown links ending in /index.md (relative file paths on disk).
+// Group 1: link text, Group 2: relative href ending in /index.md.
+var relativeLinkRe = regexp.MustCompile(`\[([^\]]*)\]\(([^)]+/index\.md)\)`)
+
 // WorkspaceFileStore is a versioned file storage system for a single workspace.
 // All mutations are committed to git.
 // Storage model: Each page (document or table) is an ID-based directory within the workspace.
@@ -252,12 +256,13 @@ func (ws *WorkspaceFileStore) WritePage(ctx context.Context, id, parentID jsonld
 		return "update: page " + id.String(), files, nil
 	})
 	if err == nil {
-		ws.links.update(id, content)
+		ws.links.update(id, node.Content)
 	}
 	return node, err
 }
 
 // writePage writes a page without committing.
+// Returns the Node (with disk content) and an error.
 func (ws *WorkspaceFileStore) writePage(id, parentID jsonldb.ID, title, content string) (*Node, error) {
 	now := storage.Now()
 	p := &page{
@@ -274,9 +279,9 @@ func (ws *WorkspaceFileStore) writePage(id, parentID jsonldb.ID, title, content 
 	return &Node{
 		ID:       id,
 		ParentID: parentID,
-		Title:    p.title,
+		Title:    title,
 		Type:     NodeTypeDocument,
-		Content:  p.content,
+		Content:  content,
 		Created:  p.created,
 		Modified: p.modified,
 	}, nil
@@ -310,7 +315,7 @@ func (ws *WorkspaceFileStore) UpdatePage(ctx context.Context, id jsonldb.ID, tit
 		return "update: page " + id.String(), files, nil
 	})
 	if err == nil {
-		ws.links.update(id, content)
+		ws.links.update(id, node.Content)
 	}
 	return node, err
 }
@@ -340,9 +345,9 @@ func (ws *WorkspaceFileStore) updatePage(id jsonldb.ID, title, content string) (
 	return &Node{
 		ID:       id,
 		ParentID: parentID,
-		Title:    p.title,
+		Title:    title,
 		Type:     NodeTypeDocument,
-		Content:  p.content,
+		Content:  content,
 		Created:  p.created,
 		Modified: p.modified,
 	}, nil
@@ -1251,6 +1256,7 @@ func (ws *WorkspaceFileStore) MoveNode(ctx context.Context, id, newParentID json
 			return "", nil, fmt.Errorf("failed to move node: %w", err)
 		}
 		ws.setParent(id, newParentID)
+
 		files := []string{oldRelDir, newRelDir}
 		return "move: node " + id.String() + " to parent " + newParentID.String(), files, nil
 	})
@@ -1338,7 +1344,7 @@ func (ws *WorkspaceFileStore) CreatePageUnderParent(ctx context.Context, parentI
 		return msg, files, nil
 	})
 	if err == nil {
-		ws.links.update(node.ID, content)
+		ws.links.update(node.ID, node.Content)
 	}
 	return node, err
 }
@@ -1607,27 +1613,26 @@ func formatMarkdownFile(p *page) []byte {
 
 // --- Page Links Extraction and Backlinks Index ---
 
-// internalLinkPattern matches markdown links to internal pages: [text](/w/@{wsID}+{slug}/@{nodeID}+{slug})
-// The nodeID is captured in group 1.
-var internalLinkPattern = regexp.MustCompile(`\[[^\]]*\]\(/w/@[^/+]+(?:\+[^/]*)*/@([A-Za-z0-9]+)(?:\+[^)]*)?\)`)
-
-// ExtractLinkedNodeIDs extracts all node IDs from internal page links in markdown content.
-// Looks for patterns like [text](/w/@{wsID}+{slug}/@{nodeID}+{slug}) and returns unique node IDs.
+// ExtractLinkedNodeIDs extracts all node IDs from relative path links in markdown content.
+// Matches links like [text](../nodeID/index.md) and extracts the nodeID from the directory name.
 func ExtractLinkedNodeIDs(content string) []jsonldb.ID {
-	matches := internalLinkPattern.FindAllStringSubmatch(content, -1)
+	matches := relativeLinkRe.FindAllStringSubmatch(content, -1)
 	seen := make(map[string]bool)
 	var ids []jsonldb.ID
 
 	for _, match := range matches {
-		if len(match) < 2 {
+		if len(match) < 3 {
 			continue
 		}
-		nodeIDStr := match[1]
+		href := match[2]
+		if strings.HasPrefix(href, "/") || strings.HasPrefix(href, "http") {
+			continue
+		}
+		nodeIDStr := filepath.Base(filepath.Dir(href))
 		if seen[nodeIDStr] {
 			continue
 		}
 		seen[nodeIDStr] = true
-
 		id, err := jsonldb.DecodeID(nodeIDStr)
 		if err == nil && !id.IsZero() {
 			ids = append(ids, id)

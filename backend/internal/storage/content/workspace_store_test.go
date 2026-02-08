@@ -18,7 +18,6 @@ import (
 // testFileStore creates a FileStoreService for testing with unlimited quota.
 // It also creates a workspace in the service for quota testing.
 func testFileStore(t *testing.T) (*FileStoreService, jsonldb.ID) {
-	t.Helper()
 	tmpDir := t.TempDir()
 
 	gitMgr := git.NewManager(tmpDir, "test", "test@test.com")
@@ -74,41 +73,43 @@ func testFileStore(t *testing.T) (*FileStoreService, jsonldb.ID) {
 	return fs, ws.ID
 }
 
-func TestWorkspaceStore(t *testing.T) {
+// initWS is a test helper that creates a FileStoreService, inits the workspace, and returns the store.
+func initWS(t *testing.T) (*FileStoreService, *WorkspaceFileStore, jsonldb.ID) {
+	fs, wsID := testFileStore(t)
+	ctx := t.Context()
+	if err := fs.InitWorkspace(ctx, wsID); err != nil {
+		t.Fatalf("failed to init workspace: %v", err)
+	}
+	ws, err := fs.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		t.Fatalf("failed to get workspace store: %v", err)
+	}
+	return fs, ws, wsID
+}
+
+func TestFileStoreService(t *testing.T) {
 	t.Run("InitWorkspace", func(t *testing.T) {
-		t.Run("StaticFiles", func(t *testing.T) {
-			fs, wsID := testFileStore(t)
-			ctx := t.Context()
-
-			// Initialize workspace
-			if err := fs.InitWorkspace(ctx, wsID); err != nil {
-				t.Fatalf("failed to init workspace: %v", err)
-			}
-
-			// Verify AGENTS.md exists on disk
-			agentsPath := filepath.Join(fs.rootDir, wsID.String(), "AGENTS.md")
-			if _, err := os.Stat(agentsPath); err != nil {
-				t.Fatalf("AGENTS.md not found: %v", err)
-			}
-		})
-	})
-
-	t.Run("PageOperations", func(t *testing.T) {
 		fs, wsID := testFileStore(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		// Initialize git repo for workspace
 		if err := fs.InitWorkspace(ctx, wsID); err != nil {
 			t.Fatalf("failed to init workspace: %v", err)
 		}
 
-		// Get workspace store
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
+		// Verify AGENTS.md exists on disk.
+		agentsPath := filepath.Join(fs.rootDir, wsID.String(), "AGENTS.md")
+		if _, err := os.Stat(agentsPath); err != nil {
+			t.Fatalf("AGENTS.md not found: %v", err)
 		}
+	})
+}
 
+func TestWorkspaceFileStore(t *testing.T) {
+	author := git.Author{Name: "Test", Email: "test@test.com"}
+
+	t.Run("PageOperations", func(t *testing.T) {
+		_, ws, _ := initWS(t)
+		ctx := t.Context()
 		nodeID := jsonldb.NewID()
 
 		t.Run("WritePage", func(t *testing.T) {
@@ -146,7 +147,6 @@ func TestWorkspaceStore(t *testing.T) {
 				t.Errorf("expected title 'Updated Title', got %q", updated.Title)
 			}
 
-			// Verify update persisted
 			readUpdated, err := ws.ReadPage(nodeID)
 			if err != nil {
 				t.Fatalf("failed to read updated page: %v", err)
@@ -157,43 +157,27 @@ func TestWorkspaceStore(t *testing.T) {
 		})
 
 		t.Run("DeletePage", func(t *testing.T) {
-			err := ws.DeletePage(ctx, nodeID, author)
-			if err != nil {
+			if err := ws.DeletePage(ctx, nodeID, author); err != nil {
 				t.Fatalf("failed to delete page: %v", err)
 			}
-
-			// Verify deletion
-			_, err = ws.ReadPage(nodeID)
-			if err == nil {
+			if _, err := ws.ReadPage(nodeID); err == nil {
 				t.Error("expected error reading deleted page")
 			}
 		})
 
 		t.Run("ReadNonExistent", func(t *testing.T) {
-			_, err := ws.ReadPage(jsonldb.NewID())
-			if err == nil {
+			if _, err := ws.ReadPage(jsonldb.NewID()); err == nil {
 				t.Error("expected error reading non-existent page")
 			}
 		})
 	})
 
 	t.Run("ListPages", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
+		fs, ws, wsID := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Create multiple pages
-		var nodeIDs []jsonldb.ID
-		for i := 0; i < 3; i++ {
+		nodeIDs := make([]jsonldb.ID, 0, 3)
+		for i := range 3 {
 			id := jsonldb.NewID()
 			nodeIDs = append(nodeIDs, id)
 			if _, err := ws.WritePage(ctx, id, 0, "Page "+string(rune(48+i)), "content", author); err != nil {
@@ -205,7 +189,6 @@ func TestWorkspaceStore(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to list pages: %v", err)
 		}
-
 		count := 0
 		for p := range it {
 			count++
@@ -213,7 +196,6 @@ func TestWorkspaceStore(t *testing.T) {
 				t.Error("iterator yielded nil page")
 			}
 		}
-
 		if count != 3 {
 			t.Errorf("expected 3 pages, got %d", count)
 		}
@@ -233,18 +215,8 @@ func TestWorkspaceStore(t *testing.T) {
 	})
 
 	t.Run("TableOperations", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
+		_, ws, _ := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
-
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
 
 		tableID := jsonldb.NewID()
 		node := &Node{
@@ -294,7 +266,6 @@ func TestWorkspaceStore(t *testing.T) {
 				if err != nil {
 					t.Fatalf("failed to iter records: %v", err)
 				}
-
 				count := 0
 				for r := range it {
 					count++
@@ -302,7 +273,6 @@ func TestWorkspaceStore(t *testing.T) {
 						t.Errorf("expected record ID %v, got %v", record.ID, r.ID)
 					}
 				}
-
 				if count != 1 {
 					t.Errorf("expected 1 record, got %d", count)
 				}
@@ -315,17 +285,14 @@ func TestWorkspaceStore(t *testing.T) {
 					Created:  record.Created,
 					Modified: storage.Now(),
 				}
-
 				if err := ws.UpdateRecord(ctx, tableID, updated, author); err != nil {
 					t.Fatalf("failed to update record: %v", err)
 				}
 
-				// Verify update
 				it, err := ws.IterRecords(tableID)
 				if err != nil {
 					t.Fatalf("failed to iter records: %v", err)
 				}
-
 				for r := range it {
 					if r.ID == record.ID {
 						if r.Data["name"] != "updated" {
@@ -341,12 +308,10 @@ func TestWorkspaceStore(t *testing.T) {
 					t.Fatalf("failed to delete record: %v", err)
 				}
 
-				// Verify deletion
 				it, err := ws.IterRecords(tableID)
 				if err != nil {
 					t.Fatalf("failed to iter records: %v", err)
 				}
-
 				for r := range it {
 					if r.ID == record.ID {
 						t.Error("expected record to be deleted")
@@ -359,16 +324,12 @@ func TestWorkspaceStore(t *testing.T) {
 			if err := ws.DeleteTable(ctx, tableID, author); err != nil {
 				t.Fatalf("failed to delete table: %v", err)
 			}
-
-			// Verify deletion
-			_, err := ws.ReadTable(tableID)
-			if err == nil {
+			if _, err := ws.ReadTable(tableID); err == nil {
 				t.Error("expected error reading deleted table")
 			}
 		})
 
 		t.Run("UpdateRecord_DataPersistence", func(t *testing.T) {
-			// Create a new table for this test
 			testTableID := jsonldb.NewID()
 			testTable := &Node{
 				ID:       testTableID,
@@ -385,7 +346,6 @@ func TestWorkspaceStore(t *testing.T) {
 				t.Fatalf("failed to write table: %v", err)
 			}
 
-			// Create a record with initial data
 			initialRecord := &DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"name": "original", "value": "data"},
@@ -396,7 +356,6 @@ func TestWorkspaceStore(t *testing.T) {
 				t.Fatalf("failed to append record: %v", err)
 			}
 
-			// Update the record with new data
 			updatedRecord := &DataRecord{
 				ID:       initialRecord.ID,
 				Data:     map[string]any{"name": "updated", "value": "new data"},
@@ -407,19 +366,16 @@ func TestWorkspaceStore(t *testing.T) {
 				t.Fatalf("failed to update record: %v", err)
 			}
 
-			// Verify the data was persisted by iterating records
 			it, err := ws.IterRecords(testTableID)
 			if err != nil {
 				t.Fatalf("failed to iter records: %v", err)
 			}
-
 			found := false
 			for r := range it {
 				if r.ID != initialRecord.ID {
 					continue
 				}
 				found = true
-				// Verify the updated data was persisted
 				if r.Data == nil {
 					t.Error("record data is nil - data was not persisted")
 				}
@@ -431,14 +387,12 @@ func TestWorkspaceStore(t *testing.T) {
 				}
 				break
 			}
-
 			if !found {
 				t.Error("record not found after update")
 			}
 		})
 
 		t.Run("UpdateRecord_NilDataBecomesEmptyMap", func(t *testing.T) {
-			// Create a new table for this test
 			testTableID := jsonldb.NewID()
 			testTable := &Node{
 				ID:       testTableID,
@@ -454,7 +408,6 @@ func TestWorkspaceStore(t *testing.T) {
 				t.Fatalf("failed to write table: %v", err)
 			}
 
-			// Create a record with initial data
 			initialRecord := &DataRecord{
 				ID:       jsonldb.NewID(),
 				Data:     map[string]any{"name": "test"},
@@ -465,7 +418,6 @@ func TestWorkspaceStore(t *testing.T) {
 				t.Fatalf("failed to append record: %v", err)
 			}
 
-			// Update with nil data (simulating the bug scenario)
 			updatedRecord := &DataRecord{
 				ID:       initialRecord.ID,
 				Data:     nil, // Explicitly nil
@@ -473,29 +425,22 @@ func TestWorkspaceStore(t *testing.T) {
 				Modified: storage.Now(),
 			}
 
-			// Call updateRecord directly to test without the handler's nil-check
 			parentID := ws.getParent(testTableID)
 			if err := ws.updateRecord(testTableID, parentID, updatedRecord); err != nil {
 				t.Fatalf("failed to update record: %v", err)
 			}
 
-			// Verify the record was persisted (data should be nil but not cause issues)
 			it, err := ws.IterRecords(testTableID)
 			if err != nil {
 				t.Fatalf("failed to iter records: %v", err)
 			}
-
 			found := false
 			for r := range it {
-				if r.ID != initialRecord.ID {
-					continue
+				if r.ID == initialRecord.ID {
+					found = true
+					break
 				}
-				found = true
-				// Data being nil is acceptable - it just means there's no data
-				// The important thing is that the record itself was persisted
-				break
 			}
-
 			if !found {
 				t.Error("record not found after update with nil data")
 			}
@@ -503,18 +448,8 @@ func TestWorkspaceStore(t *testing.T) {
 	})
 
 	t.Run("AssetOperations", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
+		_, ws, _ := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
-
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
 
 		nodeID := jsonldb.NewID()
 		if _, err := ws.WritePage(ctx, nodeID, 0, "With Assets", "content", author); err != nil {
@@ -549,7 +484,6 @@ func TestWorkspaceStore(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to iter assets: %v", err)
 			}
-
 			count := 0
 			for asset := range it {
 				count++
@@ -557,7 +491,6 @@ func TestWorkspaceStore(t *testing.T) {
 					t.Errorf("expected name %q, got %q", assetName, asset.Name)
 				}
 			}
-
 			if count != 1 {
 				t.Errorf("expected 1 asset, got %d", count)
 			}
@@ -567,101 +500,60 @@ func TestWorkspaceStore(t *testing.T) {
 			if err := ws.DeleteAsset(ctx, nodeID, assetName, author); err != nil {
 				t.Fatalf("failed to delete asset: %v", err)
 			}
-
-			// Verify deletion
-			_, err := ws.ReadAsset(nodeID, assetName)
-			if err == nil {
+			if _, err := ws.ReadAsset(nodeID, assetName); err == nil {
 				t.Error("expected error reading deleted asset")
 			}
 		})
 	})
 
 	t.Run("PageVersionHistory", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
+		_, ws, _ := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
-
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
 		nodeID := jsonldb.NewID()
 
-		// Create initial version
 		if _, err := ws.WritePage(ctx, nodeID, 0, "Initial", "initial content", author); err != nil {
 			t.Fatalf("failed to write initial page: %v", err)
 		}
-
-		// Create second version
 		if _, err := ws.UpdatePage(ctx, nodeID, "Updated", "updated content", author); err != nil {
 			t.Fatalf("failed to update page: %v", err)
 		}
 
-		// Get history
 		history, err := ws.GetHistory(ctx, nodeID, 10)
 		if err != nil {
 			t.Fatalf("failed to get history: %v", err)
 		}
-
 		if len(history) < 2 {
 			t.Errorf("expected at least 2 commits, got %d", len(history))
 		}
 	})
 
 	t.Run("NestedPageVersionHistory", func(t *testing.T) {
-		// This test verifies that GetHistory works for nested pages.
-		// Bug fix: GetHistory was using just id.String() as the git path,
-		// but nested pages have commits at paths like {parentID}/{id}/index.md.
-		// The fix uses relativeDir() to include the full parent chain.
-		fs, wsID := testFileStore(t)
+		_, ws, _ := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Create parent page
 		parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
 		if err != nil {
 			t.Fatalf("failed to create parent: %v", err)
 		}
-
-		// Create child page under parent
 		child, err := ws.CreatePageUnderParent(ctx, parent.ID, "Child", "initial content", author)
 		if err != nil {
 			t.Fatalf("failed to create child: %v", err)
 		}
 
-		// Update child page multiple times to create history
 		for i := 1; i <= 3; i++ {
 			if _, err := ws.UpdatePage(ctx, child.ID, "Child", "content v"+string(rune(48+i)), author); err != nil {
 				t.Fatalf("failed to update child page (v%d): %v", i, err)
 			}
 		}
 
-		// Get history for the nested child page
 		history, err := ws.GetHistory(ctx, child.ID, 10)
 		if err != nil {
 			t.Fatalf("failed to get history for nested page: %v", err)
 		}
-
-		// Should have at least 4 commits: 1 create + 3 updates
 		if len(history) < 4 {
 			t.Errorf("expected at least 4 commits for nested page, got %d", len(history))
 		}
 
-		// Verify the history is for the correct file (commit messages should contain the child ID)
 		foundChildCommit := false
 		for _, commit := range history {
 			if strings.Contains(commit.Message, child.ID.String()) {
@@ -675,27 +567,14 @@ func TestWorkspaceStore(t *testing.T) {
 	})
 
 	t.Run("NodeTree", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
+		_, ws, _ := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Create top-level nodes (parentID=0 means top-level, no root node).
 		var zeroID jsonldb.ID
 		node1, err := ws.CreateNode(ctx, "Node 1", NodeTypeDocument, zeroID, author)
 		if err != nil {
 			t.Fatalf("failed to create node 1: %v", err)
 		}
-
-		// Top-level node should have its own ID (not zero).
 		if node1.ID.IsZero() {
 			t.Errorf("expected node1 to have non-zero ID")
 		}
@@ -705,13 +584,10 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Fatalf("failed to create node 2: %v", err)
 		}
 
-		// ReadNode(0) should return error (no root node exists).
-		_, err = ws.ReadNode(0)
-		if err == nil {
+		if _, err = ws.ReadNode(0); err == nil {
 			t.Fatalf("expected error reading node 0, got nil")
 		}
 
-		// ReadNode should work for actual nodes.
 		readNode1, err := ws.ReadNode(node1.ID)
 		if err != nil {
 			t.Fatalf("failed to read node 1: %v", err)
@@ -720,7 +596,6 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Errorf("expected title 'Node 1', got %q", readNode1.Title)
 		}
 
-		// ListChildren(0) returns top-level nodes.
 		topLevel, err := ws.ListChildren(0)
 		if err != nil {
 			t.Fatalf("failed to list children of 0: %v", err)
@@ -729,7 +604,6 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Errorf("expected [node1] in ListChildren(0), got %v", topLevel)
 		}
 
-		// ListChildren(node1) returns node2.
 		children, err := ws.ListChildren(node1.ID)
 		if err != nil {
 			t.Fatalf("failed to list children: %v", err)
@@ -740,37 +614,23 @@ func TestWorkspaceStore(t *testing.T) {
 	})
 
 	t.Run("ListChildren_ReturnsOnlyTopLevelNodes", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
+		_, ws, _ := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Create a hierarchy: topLevel -> child -> grandchild
 		var zeroID jsonldb.ID
 		topLevel, err := ws.CreateNode(ctx, "Top Level", NodeTypeDocument, zeroID, author)
 		if err != nil {
 			t.Fatalf("failed to create top-level: %v", err)
 		}
-
 		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, topLevel.ID, author)
 		if err != nil {
 			t.Fatalf("failed to create child: %v", err)
 		}
-
 		grandchild, err := ws.CreateNode(ctx, "Grandchild", NodeTypeDocument, child.ID, author)
 		if err != nil {
 			t.Fatalf("failed to create grandchild: %v", err)
 		}
 
-		// ListChildren(0) returns only top-level nodes.
 		topLevelNodes, err := ws.ListChildren(0)
 		if err != nil {
 			t.Fatalf("failed to list children of 0: %v", err)
@@ -781,14 +641,9 @@ func TestWorkspaceStore(t *testing.T) {
 		if len(topLevelNodes) > 0 && topLevelNodes[0].ID != topLevel.ID {
 			t.Errorf("expected topLevel node, got %v", topLevelNodes[0].ID)
 		}
-
-		// Top-level node should have parentID=0.
 		if !topLevelNodes[0].ParentID.IsZero() {
 			t.Errorf("expected top-level node to have zero ParentID, got %v", topLevelNodes[0].ParentID)
 		}
-
-		// Children should NOT be populated (lazy loading).
-		// HasChildren should be true to indicate the node has children.
 		if !topLevelNodes[0].HasChildren {
 			t.Error("expected HasChildren to be true (node has children)")
 		}
@@ -796,7 +651,6 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Errorf("expected Children to be empty (lazy load), got %d children", len(topLevelNodes[0].Children))
 		}
 
-		// ListChildren(topLevel) returns only direct children.
 		children, err := ws.ListChildren(topLevel.ID)
 		if err != nil {
 			t.Fatalf("failed to list children: %v", err)
@@ -805,7 +659,6 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Errorf("expected [child], got %v", children)
 		}
 
-		// ListChildren(child) returns only grandchild.
 		grandchildren, err := ws.ListChildren(child.ID)
 		if err != nil {
 			t.Fatalf("failed to list grandchildren: %v", err)
@@ -816,64 +669,40 @@ func TestWorkspaceStore(t *testing.T) {
 	})
 
 	t.Run("TopLevelPages", func(t *testing.T) {
-		// No-root model: workspace is the container.
-		// - Top-level pages are stored at <workspace>/<id>/index.md
-		// - Creating with parentID=0 always creates a top-level page with new ID
-		fs, wsID := testFileStore(t)
+		fs, ws, wsID := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Create the first top-level page (parentID=0).
 		var zeroID jsonldb.ID
 		page1, err := ws.CreateNode(ctx, "Welcome", NodeTypeDocument, zeroID, author)
 		if err != nil {
 			t.Fatalf("failed to create page 1: %v", err)
 		}
-
-		// Top-level page should have a non-zero ID.
 		if page1.ID.IsZero() {
 			t.Errorf("expected page1 to have non-zero ID")
 		}
 
-		// Verify page is stored at <workspace>/<id>/index.md.
 		page1Path := filepath.Join(fs.rootDir, wsID.String(), page1.ID.String(), "index.md")
 		if _, err := os.Stat(page1Path); err != nil {
 			t.Errorf("expected page at %s, got error: %v", page1Path, err)
 		}
 
-		// Create another top-level page (parentID=0).
 		page2, err := ws.CreateNode(ctx, "Page 2", NodeTypeDocument, zeroID, author)
 		if err != nil {
 			t.Fatalf("failed to create page 2: %v", err)
 		}
-
-		// Both should have non-zero IDs.
 		if page2.ID.IsZero() {
 			t.Errorf("expected page2 to have non-zero ID")
 		}
 
-		// Verify page2 is stored in its own directory.
 		page2Path := filepath.Join(fs.rootDir, wsID.String(), page2.ID.String(), "index.md")
 		if _, err := os.Stat(page2Path); err != nil {
 			t.Errorf("expected page at %s, got error: %v", page2Path, err)
 		}
 
-		// ReadNode(0) should return error (no root node).
-		_, err = ws.ReadNode(0)
-		if err == nil {
+		if _, err = ws.ReadNode(0); err == nil {
 			t.Fatalf("expected error reading node 0")
 		}
 
-		// ReadNode should work for actual pages.
 		readPage1, err := ws.ReadNode(page1.ID)
 		if err != nil {
 			t.Fatalf("failed to read page1: %v", err)
@@ -882,7 +711,6 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Errorf("expected title 'Welcome', got %q", readPage1.Title)
 		}
 
-		// ListChildren(0) returns both top-level pages.
 		topLevel, err := ws.ListChildren(zeroID)
 		if err != nil {
 			t.Fatalf("failed to list children: %v", err)
@@ -892,43 +720,24 @@ func TestWorkspaceStore(t *testing.T) {
 		}
 	})
 
-	t.Run("TopLevelPageViaCreatePageUnderParent", func(t *testing.T) {
-		// This test verifies that CreatePageUnderParent with parentID=0
-		// creates a top-level page with a new ID.
-		fs, wsID := testFileStore(t)
+	t.Run("CreatePageUnderParent", func(t *testing.T) {
+		fs, ws, wsID := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Create top-level page using CreatePageUnderParent with parentID=0.
 		var zeroID jsonldb.ID
 		page, err := ws.CreatePageUnderParent(ctx, zeroID, "My First Page", "", author)
 		if err != nil {
 			t.Fatalf("failed to create page: %v", err)
 		}
-
-		t.Logf("Created page with ID: %v", page.ID)
-
-		// Page should have non-zero ID.
 		if page.ID.IsZero() {
 			t.Errorf("expected page to have non-zero ID")
 		}
 
-		// Verify page is stored at <workspace>/<id>/index.md.
 		pagePath := filepath.Join(fs.rootDir, wsID.String(), page.ID.String(), "index.md")
 		if _, err := os.Stat(pagePath); err != nil {
 			t.Errorf("expected page at %s, got error: %v", pagePath, err)
 		}
 
-		// Verify we can read the page.
 		readPage, err := ws.ReadNode(page.ID)
 		if err != nil {
 			t.Fatalf("failed to read page: %v", err)
@@ -937,48 +746,32 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Errorf("expected title 'My First Page', got %q", readPage.Title)
 		}
 
-		// Delete the page.
 		if err := ws.DeletePage(ctx, page.ID, author); err != nil {
 			t.Fatalf("failed to delete page: %v", err)
 		}
-
-		// Verify page is gone.
 		if _, err := os.Stat(pagePath); !os.IsNotExist(err) {
 			t.Errorf("expected page to be deleted, but file still exists")
 		}
 	})
 
 	t.Run("ErrorHandling", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
+		_, ws, _ := initWS(t)
 		ctx := t.Context()
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
 		t.Run("ReadNonExistentPage", func(t *testing.T) {
-			_, err := ws.ReadPage(jsonldb.NewID())
-			if err == nil {
+			if _, err := ws.ReadPage(jsonldb.NewID()); err == nil {
 				t.Error("expected error reading non-existent page")
 			}
 		})
 
 		t.Run("ReadNonExistentTable", func(t *testing.T) {
-			_, err := ws.ReadTable(jsonldb.NewID())
-			if err == nil {
+			if _, err := ws.ReadTable(jsonldb.NewID()); err == nil {
 				t.Error("expected error reading non-existent table")
 			}
 		})
 
 		t.Run("DeleteNonExistentPage", func(t *testing.T) {
-			author := git.Author{Name: "Test", Email: "test@test.com"}
-			err := ws.DeletePage(ctx, jsonldb.NewID(), author)
-			if err == nil {
+			if err := ws.DeletePage(ctx, jsonldb.NewID(), author); err == nil {
 				t.Error("expected error deleting non-existent page")
 			}
 		})
@@ -988,7 +781,6 @@ func TestWorkspaceStore(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected nil error for non-existent page, got: %v", err)
 			}
-
 			count := 0
 			for range iter {
 				count++
@@ -1000,61 +792,40 @@ func TestWorkspaceStore(t *testing.T) {
 	})
 
 	t.Run("GitPathWithNestedPages", func(t *testing.T) {
-		// No-root model:
-		// - Top-level page: <workspace>/<id>/index.md (git path: "<id>/index.md")
-		// - Child: <workspace>/<top_level_id>/<child_id>/index.md
-		// - Grandchild: <workspace>/<top_level_id>/<child_id>/<grandchild_id>/index.md
-		fs, wsID := testFileStore(t)
+		_, ws, _ := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "test", Email: "test@test.com"}
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Create hierarchy: topLevel -> child -> grandchild
 		topLevel, err := ws.CreateNode(ctx, "Top Level", NodeTypeDocument, 0, author)
 		if err != nil {
 			t.Fatalf("failed to create top-level: %v", err)
 		}
-
 		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, topLevel.ID, author)
 		if err != nil {
 			t.Fatalf("failed to create child: %v", err)
 		}
-
 		grandchild, err := ws.CreateNode(ctx, "Grandchild", NodeTypeDocument, child.ID, author)
 		if err != nil {
 			t.Fatalf("failed to create grandchild: %v", err)
 		}
 
-		// Top-level page is at <id>/index.md.
 		topLevelPath := ws.gitPath(topLevel.ParentID, topLevel.ID, "index.md")
 		expectedTopLevelPath := filepath.Join(topLevel.ID.String(), "index.md")
 		if topLevelPath != expectedTopLevelPath {
 			t.Errorf("topLevel gitPath mismatch: got %s, expected %s", topLevelPath, expectedTopLevelPath)
 		}
 
-		// Child is under top-level's directory.
 		childPath := ws.gitPath(child.ParentID, child.ID, "index.md")
 		expectedChildPath := filepath.Join(topLevel.ID.String(), child.ID.String(), "index.md")
 		if childPath != expectedChildPath {
 			t.Errorf("child gitPath mismatch:\n  got:      %s\n  expected: %s", childPath, expectedChildPath)
 		}
 
-		// Grandchild is under child's directory.
 		grandchildPath := ws.gitPath(grandchild.ParentID, grandchild.ID, "index.md")
 		expectedGrandchildPath := filepath.Join(topLevel.ID.String(), child.ID.String(), grandchild.ID.String(), "index.md")
 		if grandchildPath != expectedGrandchildPath {
 			t.Errorf("grandchild gitPath mismatch:\n  got:      %s\n  expected: %s", grandchildPath, expectedGrandchildPath)
 		}
 
-		// Verify files exist at expected locations.
 		if _, err := os.Stat(filepath.Join(ws.wsDir, topLevel.ID.String(), "index.md")); err != nil {
 			t.Errorf("expected top-level page at workspace/<id>/index.md: %v", err)
 		}
@@ -1065,503 +836,474 @@ func TestWorkspaceStore(t *testing.T) {
 			t.Errorf("expected grandchild page at workspace/<topLevel>/<child>/<grandchild>/index.md: %v", err)
 		}
 	})
-}
 
-func TestMoveNode(t *testing.T) {
-	setup := func(t *testing.T) (*WorkspaceFileStore, git.Author) {
-		t.Helper()
-		fs, wsID := testFileStore(t)
-		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-		return ws, author
-	}
+	t.Run("MoveNode", func(t *testing.T) {
+		t.Run("MoveToDifferentParent", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
 
-	t.Run("MoveToDifferentParent", func(t *testing.T) {
-		ws, author := setup(t)
-		ctx := t.Context()
-
-		a, err := ws.CreateNode(ctx, "A", NodeTypeDocument, 0, author)
-		if err != nil {
-			t.Fatalf("create A: %v", err)
-		}
-		b, err := ws.CreateNode(ctx, "B", NodeTypeDocument, 0, author)
-		if err != nil {
-			t.Fatalf("create B: %v", err)
-		}
-		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, a.ID, author)
-		if err != nil {
-			t.Fatalf("create child: %v", err)
-		}
-
-		// Move child from A to B.
-		if err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
-			t.Fatalf("move: %v", err)
-		}
-
-		// Child should now be under B.
-		children, err := ws.ListChildren(b.ID)
-		if err != nil {
-			t.Fatalf("list children of B: %v", err)
-		}
-		if len(children) != 1 || children[0].ID != child.ID {
-			t.Errorf("expected child under B, got %v", children)
-		}
-
-		// A should have no children.
-		children, err = ws.ListChildren(a.ID)
-		if err != nil {
-			t.Fatalf("list children of A: %v", err)
-		}
-		if len(children) != 0 {
-			t.Errorf("expected no children under A, got %d", len(children))
-		}
-
-		// Child should be readable.
-		node, err := ws.ReadNode(child.ID)
-		if err != nil {
-			t.Fatalf("read child after move: %v", err)
-		}
-		if node.Title != "Child" {
-			t.Errorf("expected title 'Child', got %q", node.Title)
-		}
-	})
-
-	t.Run("MoveToRoot", func(t *testing.T) {
-		ws, author := setup(t)
-		ctx := t.Context()
-
-		parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
-		if err != nil {
-			t.Fatalf("create parent: %v", err)
-		}
-		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, parent.ID, author)
-		if err != nil {
-			t.Fatalf("create child: %v", err)
-		}
-
-		// Move child to root.
-		if err := ws.MoveNode(ctx, child.ID, 0, author); err != nil {
-			t.Fatalf("move to root: %v", err)
-		}
-
-		// Child should be in top-level listing.
-		topLevel, err := ws.ListChildren(0)
-		if err != nil {
-			t.Fatalf("list root: %v", err)
-		}
-		found := false
-		for _, n := range topLevel {
-			if n.ID == child.ID {
-				found = true
-				break
+			a, err := ws.CreateNode(ctx, "A", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("create A: %v", err)
 			}
-		}
-		if !found {
-			t.Error("expected child in top-level nodes after move to root")
-		}
-	})
+			b, err := ws.CreateNode(ctx, "B", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("create B: %v", err)
+			}
+			child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, a.ID, author)
+			if err != nil {
+				t.Fatalf("create child: %v", err)
+			}
 
-	t.Run("CycleRejected", func(t *testing.T) {
-		ws, author := setup(t)
-		ctx := t.Context()
+			if err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
+				t.Fatalf("move: %v", err)
+			}
 
-		parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
-		if err != nil {
-			t.Fatalf("create parent: %v", err)
-		}
-		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, parent.ID, author)
-		if err != nil {
-			t.Fatalf("create child: %v", err)
-		}
+			children, err := ws.ListChildren(b.ID)
+			if err != nil {
+				t.Fatalf("list children of B: %v", err)
+			}
+			if len(children) != 1 || children[0].ID != child.ID {
+				t.Errorf("expected child under B, got %v", children)
+			}
 
-		// Try to move parent under its own child — should fail.
-		err = ws.MoveNode(ctx, parent.ID, child.ID, author)
-		if !errors.Is(err, errCycleDetected) {
-			t.Errorf("expected cycle error, got %v", err)
-		}
-	})
+			children, err = ws.ListChildren(a.ID)
+			if err != nil {
+				t.Fatalf("list children of A: %v", err)
+			}
+			if len(children) != 0 {
+				t.Errorf("expected no children under A, got %d", len(children))
+			}
 
-	t.Run("DescendantCycle", func(t *testing.T) {
-		ws, author := setup(t)
-		ctx := t.Context()
-
-		a, err := ws.CreateNode(ctx, "A", NodeTypeDocument, 0, author)
-		if err != nil {
-			t.Fatalf("create A: %v", err)
-		}
-		b, err := ws.CreateNode(ctx, "B", NodeTypeDocument, a.ID, author)
-		if err != nil {
-			t.Fatalf("create B: %v", err)
-		}
-		c, err := ws.CreateNode(ctx, "C", NodeTypeDocument, b.ID, author)
-		if err != nil {
-			t.Fatalf("create C: %v", err)
-		}
-
-		// Try to move A under C (A -> B -> C -> A would be a cycle).
-		err = ws.MoveNode(ctx, a.ID, c.ID, author)
-		if !errors.Is(err, errCycleDetected) {
-			t.Errorf("expected cycle error for descendant, got %v", err)
-		}
-	})
-
-	t.Run("NoOpSameParent", func(t *testing.T) {
-		ws, author := setup(t)
-		ctx := t.Context()
-
-		parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
-		if err != nil {
-			t.Fatalf("create parent: %v", err)
-		}
-		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, parent.ID, author)
-		if err != nil {
-			t.Fatalf("create child: %v", err)
-		}
-
-		// Move to same parent — should be a no-op.
-		if err := ws.MoveNode(ctx, child.ID, parent.ID, author); err != nil {
-			t.Fatalf("no-op move: %v", err)
-		}
-
-		// Child should still be under parent.
-		children, err := ws.ListChildren(parent.ID)
-		if err != nil {
-			t.Fatalf("list children: %v", err)
-		}
-		if len(children) != 1 || children[0].ID != child.ID {
-			t.Errorf("expected child still under parent, got %v", children)
-		}
-	})
-
-	t.Run("ChildrenAccessibleAfterMove", func(t *testing.T) {
-		ws, author := setup(t)
-		ctx := t.Context()
-
-		a, err := ws.CreateNode(ctx, "A", NodeTypeDocument, 0, author)
-		if err != nil {
-			t.Fatalf("create A: %v", err)
-		}
-		b, err := ws.CreateNode(ctx, "B", NodeTypeDocument, 0, author)
-		if err != nil {
-			t.Fatalf("create B: %v", err)
-		}
-		child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, a.ID, author)
-		if err != nil {
-			t.Fatalf("create child: %v", err)
-		}
-		grandchild, err := ws.CreateNode(ctx, "Grandchild", NodeTypeDocument, child.ID, author)
-		if err != nil {
-			t.Fatalf("create grandchild: %v", err)
-		}
-
-		// Move child (with grandchild) from A to B.
-		if err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
-			t.Fatalf("move: %v", err)
-		}
-
-		// Grandchild should be readable.
-		node, err := ws.ReadNode(grandchild.ID)
-		if err != nil {
-			t.Fatalf("read grandchild after move: %v", err)
-		}
-		if node.Title != "Grandchild" {
-			t.Errorf("expected title 'Grandchild', got %q", node.Title)
-		}
-
-		// Grandchild should appear in child's children list.
-		gc, err := ws.ListChildren(child.ID)
-		if err != nil {
-			t.Fatalf("list grandchild: %v", err)
-		}
-		if len(gc) != 1 || gc[0].ID != grandchild.ID {
-			t.Errorf("expected grandchild under child, got %v", gc)
-		}
-	})
-
-	t.Run("MoveNonExistent", func(t *testing.T) {
-		ws, author := setup(t)
-		ctx := t.Context()
-
-		err := ws.MoveNode(ctx, jsonldb.NewID(), 0, author)
-		if err == nil {
-			t.Error("expected error moving non-existent node")
-		}
-	})
-
-	t.Run("MoveToNonExistentParent", func(t *testing.T) {
-		ws, author := setup(t)
-		ctx := t.Context()
-
-		node, err := ws.CreateNode(ctx, "Node", NodeTypeDocument, 0, author)
-		if err != nil {
-			t.Fatalf("create node: %v", err)
-		}
-
-		err = ws.MoveNode(ctx, node.ID, jsonldb.NewID(), author)
-		if err == nil {
-			t.Error("expected error moving to non-existent parent")
-		}
-	})
-}
-
-func TestQuotas(t *testing.T) {
-	t.Run("PageQuota", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
-		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
-
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		// Set quota to 2 pages
-		_, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
-			w.Quotas.MaxPages = 2
-			return nil
+			node, err := ws.ReadNode(child.ID)
+			if err != nil {
+				t.Fatalf("read child after move: %v", err)
+			}
+			if node.Title != "Child" {
+				t.Errorf("expected title 'Child', got %q", node.Title)
+			}
 		})
-		if err != nil {
-			t.Fatalf("failed to set quota: %v", err)
-		}
 
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
+		t.Run("MoveToRoot", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
 
-		// Create first page - should succeed
-		id1 := jsonldb.NewID()
-		if _, err := ws.WritePage(ctx, id1, 0, "Page 1", "content", author); err != nil {
-			t.Fatalf("failed to create page 1: %v", err)
-		}
+			parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("create parent: %v", err)
+			}
+			child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, parent.ID, author)
+			if err != nil {
+				t.Fatalf("create child: %v", err)
+			}
 
-		// Create second page - should succeed
-		id2 := jsonldb.NewID()
-		if _, err := ws.WritePage(ctx, id2, 0, "Page 2", "content", author); err != nil {
-			t.Fatalf("failed to create page 2: %v", err)
-		}
+			if err := ws.MoveNode(ctx, child.ID, 0, author); err != nil {
+				t.Fatalf("move to root: %v", err)
+			}
 
-		// Create third page - should ideally fail, but quota enforcement might be lenient
-		id3 := jsonldb.NewID()
-		_, err = ws.WritePage(ctx, id3, 0, "Page 3", "content", author)
-		if err != nil {
-			t.Logf("Got error creating page 3: %v (quota may be enforced)", err)
-		}
+			topLevel, err := ws.ListChildren(0)
+			if err != nil {
+				t.Fatalf("list root: %v", err)
+			}
+			found := false
+			for _, n := range topLevel {
+				if n.ID == child.ID {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Error("expected child in top-level nodes after move to root")
+			}
+		})
+
+		t.Run("CycleRejected", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("create parent: %v", err)
+			}
+			child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, parent.ID, author)
+			if err != nil {
+				t.Fatalf("create child: %v", err)
+			}
+
+			err = ws.MoveNode(ctx, parent.ID, child.ID, author)
+			if !errors.Is(err, errCycleDetected) {
+				t.Errorf("expected cycle error, got %v", err)
+			}
+		})
+
+		t.Run("DescendantCycle", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			a, err := ws.CreateNode(ctx, "A", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("create A: %v", err)
+			}
+			b, err := ws.CreateNode(ctx, "B", NodeTypeDocument, a.ID, author)
+			if err != nil {
+				t.Fatalf("create B: %v", err)
+			}
+			c, err := ws.CreateNode(ctx, "C", NodeTypeDocument, b.ID, author)
+			if err != nil {
+				t.Fatalf("create C: %v", err)
+			}
+
+			err = ws.MoveNode(ctx, a.ID, c.ID, author)
+			if !errors.Is(err, errCycleDetected) {
+				t.Errorf("expected cycle error for descendant, got %v", err)
+			}
+		})
+
+		t.Run("NoOpSameParent", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			parent, err := ws.CreateNode(ctx, "Parent", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("create parent: %v", err)
+			}
+			child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, parent.ID, author)
+			if err != nil {
+				t.Fatalf("create child: %v", err)
+			}
+
+			if err := ws.MoveNode(ctx, child.ID, parent.ID, author); err != nil {
+				t.Fatalf("no-op move: %v", err)
+			}
+
+			children, err := ws.ListChildren(parent.ID)
+			if err != nil {
+				t.Fatalf("list children: %v", err)
+			}
+			if len(children) != 1 || children[0].ID != child.ID {
+				t.Errorf("expected child still under parent, got %v", children)
+			}
+		})
+
+		t.Run("ChildrenAccessibleAfterMove", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			a, err := ws.CreateNode(ctx, "A", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("create A: %v", err)
+			}
+			b, err := ws.CreateNode(ctx, "B", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("create B: %v", err)
+			}
+			child, err := ws.CreateNode(ctx, "Child", NodeTypeDocument, a.ID, author)
+			if err != nil {
+				t.Fatalf("create child: %v", err)
+			}
+			grandchild, err := ws.CreateNode(ctx, "Grandchild", NodeTypeDocument, child.ID, author)
+			if err != nil {
+				t.Fatalf("create grandchild: %v", err)
+			}
+
+			if err := ws.MoveNode(ctx, child.ID, b.ID, author); err != nil {
+				t.Fatalf("move: %v", err)
+			}
+
+			node, err := ws.ReadNode(grandchild.ID)
+			if err != nil {
+				t.Fatalf("read grandchild after move: %v", err)
+			}
+			if node.Title != "Grandchild" {
+				t.Errorf("expected title 'Grandchild', got %q", node.Title)
+			}
+
+			gc, err := ws.ListChildren(child.ID)
+			if err != nil {
+				t.Fatalf("list grandchild: %v", err)
+			}
+			if len(gc) != 1 || gc[0].ID != grandchild.ID {
+				t.Errorf("expected grandchild under child, got %v", gc)
+			}
+		})
+
+		t.Run("MoveNonExistent", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			err := ws.MoveNode(ctx, jsonldb.NewID(), 0, author)
+			if err == nil {
+				t.Error("expected error moving non-existent node")
+			}
+		})
+
+		t.Run("MoveToNonExistentParent", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			node, err := ws.CreateNode(ctx, "Node", NodeTypeDocument, 0, author)
+			if err != nil {
+				t.Fatalf("create node: %v", err)
+			}
+
+			err = ws.MoveNode(ctx, node.ID, jsonldb.NewID(), author)
+			if err == nil {
+				t.Error("expected error moving to non-existent parent")
+			}
+		})
+
+		t.Run("PreservesLinks", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			pageA, err := ws.CreatePageUnderParent(ctx, 0, "A", "", author)
+			if err != nil {
+				t.Fatalf("create A: %v", err)
+			}
+			pageB, err := ws.CreatePageUnderParent(ctx, 0, "B", "", author)
+			if err != nil {
+				t.Fatalf("create B: %v", err)
+			}
+			pageC, err := ws.CreatePageUnderParent(ctx, pageA.ID, "C", "", author)
+			if err != nil {
+				t.Fatalf("create C: %v", err)
+			}
+
+			cLink := fmt.Sprintf("See [B](../%s/index.md)", pageB.ID)
+			if _, err := ws.UpdatePage(ctx, pageC.ID, "C", cLink, author); err != nil {
+				t.Fatalf("update C: %v", err)
+			}
+			bLink := fmt.Sprintf("See [C](../%s/index.md)", pageC.ID)
+			if _, err := ws.UpdatePage(ctx, pageB.ID, "B", bLink, author); err != nil {
+				t.Fatalf("update B: %v", err)
+			}
+
+			if err := ws.MoveNode(ctx, pageC.ID, 0, author); err != nil {
+				t.Fatalf("move C: %v", err)
+			}
+
+			nodeC, err := ws.ReadPage(pageC.ID)
+			if err != nil {
+				t.Fatalf("read C: %v", err)
+			}
+			if nodeC.Content != cLink {
+				t.Errorf("C link should be preserved, want %q, got %q", cLink, nodeC.Content)
+			}
+
+			nodeB, err := ws.ReadPage(pageB.ID)
+			if err != nil {
+				t.Fatalf("read B: %v", err)
+			}
+			if nodeB.Content != bLink {
+				t.Errorf("B link should be preserved, want %q, got %q", bLink, nodeB.Content)
+			}
+		})
 	})
 
-	t.Run("StorageQuota", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
-		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
+	t.Run("Quotas", func(t *testing.T) {
+		t.Run("PageQuota", func(t *testing.T) {
+			fs, _, wsID := initWS(t)
+			ctx := t.Context()
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		// Set workspace quota to 1 MB
-		_, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
-			w.Quotas.MaxStorageBytes = 1024 * 1024 // 1 MB
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("failed to set quota: %v", err)
-		}
-
-		// Set org quota high so workspace quota is the limiting factor
-		org, err := fs.wsSvc.Get(wsID)
-		var zeroOrgID jsonldb.ID
-		if err == nil && org.OrganizationID != zeroOrgID {
-			_, _ = fs.orgSvc.Modify(org.OrganizationID, func(o *identity.Organization) error {
-				o.Quotas.MaxTotalStorageBytes = 1000 * 1024 * 1024 * 1024 // 1TB
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+				w.Quotas.MaxPages = 2
 				return nil
-			})
-		}
+			}); err != nil {
+				t.Fatalf("failed to set quota: %v", err)
+			}
 
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
+			// Re-get store after quota change.
+			fs.InvalidateWorkspaceStore(wsID)
+			ws, err := fs.GetWorkspaceStore(ctx, wsID)
+			if err != nil {
+				t.Fatalf("failed to get workspace store: %v", err)
+			}
 
-		// Try to create a 2MB page - should fail
-		largeContent := make([]byte, 2*1024*1024)
-		for i := range len(largeContent) {
-			largeContent[i] = byte('x')
-		}
+			id1 := jsonldb.NewID()
+			if _, err := ws.WritePage(ctx, id1, 0, "Page 1", "content", author); err != nil {
+				t.Fatalf("failed to create page 1: %v", err)
+			}
 
-		id := jsonldb.NewID()
-		_, err = ws.WritePage(ctx, id, 0, "Large", string(largeContent), author)
-		if err == nil {
-			t.Logf("WritePage succeeded - quota enforcement might not be strict")
-		} else if !errors.Is(err, errQuotaExceeded) {
-			t.Logf("Got error: %v (not quota exceeded)", err)
-		}
-	})
+			id2 := jsonldb.NewID()
+			if _, err := ws.WritePage(ctx, id2, 0, "Page 2", "content", author); err != nil {
+				t.Fatalf("failed to create page 2: %v", err)
+			}
 
-	t.Run("RecordQuota", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
-		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
-
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		// Set quota to allow only 5 records per table
-		_, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
-			w.Quotas.MaxRecordsPerTable = 5
-			return nil
+			id3 := jsonldb.NewID()
+			_, err = ws.WritePage(ctx, id3, 0, "Page 3", "content", author)
+			if err != nil {
+				t.Logf("Got error creating page 3: %v (quota may be enforced)", err)
+			}
 		})
-		if err != nil {
-			t.Fatalf("failed to set quota: %v", err)
-		}
 
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
+		t.Run("StorageQuota", func(t *testing.T) {
+			fs, _, wsID := initWS(t)
+			ctx := t.Context()
 
-		tableID := jsonldb.NewID()
-		tableNode := &Node{
-			ID:       tableID,
-			Title:    "Test",
-			Type:     NodeTypeTable,
-			Created:  storage.Now(),
-			Modified: storage.Now(),
-		}
-		if err := ws.WriteTable(ctx, tableNode, true, author); err != nil {
-			t.Fatalf("failed to create table: %v", err)
-		}
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+				w.Quotas.MaxStorageBytes = 1024 * 1024 // 1 MB
+				return nil
+			}); err != nil {
+				t.Fatalf("failed to set quota: %v", err)
+			}
 
-		// Create 5 records - should succeed
-		for i := range 5 {
-			rec := &DataRecord{
-				ID:       jsonldb.NewID(),
-				Data:     map[string]any{"name": "Record"},
+			org, err := fs.wsSvc.Get(wsID)
+			var zeroOrgID jsonldb.ID
+			if err == nil && org.OrganizationID != zeroOrgID {
+				_, _ = fs.orgSvc.Modify(org.OrganizationID, func(o *identity.Organization) error {
+					o.Quotas.MaxTotalStorageBytes = 1000 * 1024 * 1024 * 1024 // 1TB
+					return nil
+				})
+			}
+
+			fs.InvalidateWorkspaceStore(wsID)
+			ws, err := fs.GetWorkspaceStore(ctx, wsID)
+			if err != nil {
+				t.Fatalf("failed to get workspace store: %v", err)
+			}
+
+			largeContent := make([]byte, 2*1024*1024)
+			for i := range len(largeContent) {
+				largeContent[i] = byte('x')
+			}
+
+			id := jsonldb.NewID()
+			_, err = ws.WritePage(ctx, id, 0, "Large", string(largeContent), author)
+			if err == nil {
+				t.Logf("WritePage succeeded - quota enforcement might not be strict")
+			} else if !errors.Is(err, errQuotaExceeded) {
+				t.Logf("Got error: %v (not quota exceeded)", err)
+			}
+		})
+
+		t.Run("RecordQuota", func(t *testing.T) {
+			fs, _, wsID := initWS(t)
+			ctx := t.Context()
+
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+				w.Quotas.MaxRecordsPerTable = 5
+				return nil
+			}); err != nil {
+				t.Fatalf("failed to set quota: %v", err)
+			}
+
+			fs.InvalidateWorkspaceStore(wsID)
+			ws, err := fs.GetWorkspaceStore(ctx, wsID)
+			if err != nil {
+				t.Fatalf("failed to get workspace store: %v", err)
+			}
+
+			tableID := jsonldb.NewID()
+			tableNode := &Node{
+				ID:       tableID,
+				Title:    "Test",
+				Type:     NodeTypeTable,
 				Created:  storage.Now(),
 				Modified: storage.Now(),
 			}
-			if err := ws.AppendRecord(ctx, tableID, rec, author); err != nil {
-				t.Fatalf("failed to create record %d: %v", i, err)
+			if err := ws.WriteTable(ctx, tableNode, true, author); err != nil {
+				t.Fatalf("failed to create table: %v", err)
 			}
-		}
 
-		// Try to create a 6th record - should fail
-		rec := &DataRecord{
-			ID:       jsonldb.NewID(),
-			Data:     map[string]any{"name": "Extra"},
-			Created:  storage.Now(),
-			Modified: storage.Now(),
-		}
-		if err := ws.AppendRecord(ctx, tableID, rec, author); err == nil {
-			t.Error("expected record quota exceeded error")
-		}
+			for i := range 5 {
+				rec := &DataRecord{
+					ID:       jsonldb.NewID(),
+					Data:     map[string]any{"name": "Record"},
+					Created:  storage.Now(),
+					Modified: storage.Now(),
+				}
+				if err := ws.AppendRecord(ctx, tableID, rec, author); err != nil {
+					t.Fatalf("failed to create record %d: %v", i, err)
+				}
+			}
+
+			rec := &DataRecord{
+				ID:       jsonldb.NewID(),
+				Data:     map[string]any{"name": "Extra"},
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+			}
+			if err := ws.AppendRecord(ctx, tableID, rec, author); err == nil {
+				t.Error("expected record quota exceeded error")
+			}
+		})
+
+		t.Run("UpdateRecord_SameSizeAllowed", func(t *testing.T) {
+			fs, _, wsID := initWS(t)
+			ctx := t.Context()
+
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+				w.Quotas.MaxStorageBytes = 1024 * 1024 // 1MB
+				return nil
+			}); err != nil {
+				t.Fatalf("failed to set quota: %v", err)
+			}
+
+			fs.InvalidateWorkspaceStore(wsID)
+			ws, err := fs.GetWorkspaceStore(ctx, wsID)
+			if err != nil {
+				t.Fatalf("failed to get workspace store: %v", err)
+			}
+
+			tableID := jsonldb.NewID()
+			tableNode := &Node{
+				ID:       tableID,
+				Title:    "Test",
+				Type:     NodeTypeTable,
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+			}
+			if err := ws.WriteTable(ctx, tableNode, true, author); err != nil {
+				t.Fatalf("failed to create table: %v", err)
+			}
+
+			recordID := jsonldb.NewID()
+			record := &DataRecord{
+				ID:       recordID,
+				Data:     map[string]any{"field": strings.Repeat("a", 100)},
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+			}
+			if err := ws.AppendRecord(ctx, tableID, record, author); err != nil {
+				t.Fatalf("failed to create record: %v", err)
+			}
+
+			_, storageUsage, _ := ws.GetWorkspaceUsage()
+			if _, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
+				w.Quotas.MaxStorageBytes = storageUsage
+				return nil
+			}); err != nil {
+				t.Fatalf("failed to reduce quota: %v", err)
+			}
+
+			updatedRecord := &DataRecord{
+				ID:       recordID,
+				Data:     map[string]any{"field": strings.Repeat("b", 100)},
+				Created:  record.Created,
+				Modified: record.Modified,
+			}
+
+			err = ws.UpdateRecord(ctx, tableID, updatedRecord, author)
+			if err != nil {
+				t.Errorf("same-size update should succeed: %v", err)
+			}
+		})
 	})
 
-	t.Run("UpdateRecord_SameSizeAllowed", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
+	t.Run("Markdown", func(t *testing.T) {
+		fs, ws, wsID := initWS(t)
 		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
 
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		_, err := fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
-			w.Quotas.MaxStorageBytes = 1024 * 1024 // 1MB
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("failed to set quota: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		tableID := jsonldb.NewID()
-		tableNode := &Node{
-			ID:       tableID,
-			Title:    "Test",
-			Type:     NodeTypeTable,
-			Created:  storage.Now(),
-			Modified: storage.Now(),
-		}
-		if err := ws.WriteTable(ctx, tableNode, true, author); err != nil {
-			t.Fatalf("failed to create table: %v", err)
-		}
-
-		recordID := jsonldb.NewID()
-		record := &DataRecord{
-			ID:       recordID,
-			Data:     map[string]any{"field": strings.Repeat("a", 100)},
-			Created:  storage.Now(),
-			Modified: storage.Now(),
-		}
-		if err := ws.AppendRecord(ctx, tableID, record, author); err != nil {
-			t.Fatalf("failed to create record: %v", err)
-		}
-
-		// Set quota to exactly current usage
-		_, storageUsage, _ := ws.GetWorkspaceUsage()
-		_, err = fs.wsSvc.Modify(wsID, func(w *identity.Workspace) error {
-			w.Quotas.MaxStorageBytes = storageUsage
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("failed to reduce quota: %v", err)
-		}
-
-		// Same-size update should succeed
-		updatedRecord := &DataRecord{
-			ID:       recordID,
-			Data:     map[string]any{"field": strings.Repeat("b", 100)},
-			Created:  record.Created,
-			Modified: record.Modified,
-		}
-
-		err = ws.UpdateRecord(ctx, tableID, updatedRecord, author)
-		if err != nil {
-			t.Errorf("same-size update should succeed: %v", err)
-		}
-	})
-}
-
-func TestMarkdown(t *testing.T) {
-	t.Run("Formatting", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
-		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
-
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Write page with specific content
 		nodeID := jsonldb.NewID()
-		_, err = ws.WritePage(ctx, nodeID, 0, "Format Test", "# Content\n\nWith multiple lines", author)
-		if err != nil {
+		if _, err := ws.WritePage(ctx, nodeID, 0, "Format Test", "# Content\n\nWith multiple lines", author); err != nil {
 			t.Fatalf("failed to write page: %v", err)
 		}
 
-		// Read the file directly to verify format
 		filePath := filepath.Join(fs.rootDir, wsID.String(), nodeID.String(), "index.md")
 		data, err := os.ReadFile(filePath) //nolint:gosec // G304: test code with controlled path
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}
-
 		content := string(data)
 
 		t.Run("FrontMatterDelimiters", func(t *testing.T) {
@@ -1592,10 +1334,203 @@ func TestMarkdown(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("RelativeLinks", func(t *testing.T) {
+		_, ws, _ := initWS(t)
+		ctx := t.Context()
+
+		pageA, err := ws.CreatePageUnderParent(ctx, 0, "A", "", author)
+		if err != nil {
+			t.Fatalf("create A: %v", err)
+		}
+		pageB, err := ws.CreatePageUnderParent(ctx, 0, "B", "", author)
+		if err != nil {
+			t.Fatalf("create B: %v", err)
+		}
+
+		t.Run("RoundTrip", func(t *testing.T) {
+			relLink := fmt.Sprintf("[B](../%s/index.md)", pageB.ID)
+			content := "See " + relLink + " for details."
+			if _, err := ws.UpdatePage(ctx, pageA.ID, "A", content, author); err != nil {
+				t.Fatalf("update: %v", err)
+			}
+			node, err := ws.ReadPage(pageA.ID)
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			if !strings.Contains(node.Content, relLink) {
+				t.Errorf("want %q in content, got: %s", relLink, node.Content)
+			}
+		})
+
+		t.Run("NoLinksPassthrough", func(t *testing.T) {
+			content := "Plain text with no links."
+			if _, err := ws.UpdatePage(ctx, pageA.ID, "A", content, author); err != nil {
+				t.Fatalf("update: %v", err)
+			}
+			node, err := ws.ReadPage(pageA.ID)
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			if node.Content != content {
+				t.Errorf("want %q, got %q", content, node.Content)
+			}
+		})
+
+		t.Run("CreateWithLinks", func(t *testing.T) {
+			relLink := fmt.Sprintf("[A](../%s/index.md)", pageA.ID)
+			page, err := ws.CreatePageUnderParent(ctx, 0, "D", "Link to "+relLink, author)
+			if err != nil {
+				t.Fatalf("create: %v", err)
+			}
+			node, err := ws.ReadPage(page.ID)
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			if !strings.Contains(node.Content, relLink) {
+				t.Errorf("want %q in content, got: %s", relLink, node.Content)
+			}
+		})
+	})
+
+	t.Run("Backlinks", func(t *testing.T) {
+		_, ws, _ := initWS(t)
+		ctx := t.Context()
+
+		target, err := ws.CreatePageUnderParent(ctx, 0, "Target", "", author)
+		if err != nil {
+			t.Fatalf("failed to create target: %v", err)
+		}
+		linkContent := fmt.Sprintf("[Target](../%s/index.md)", target.ID)
+		source, err := ws.CreatePageUnderParent(ctx, 0, "Source", linkContent, author)
+		if err != nil {
+			t.Fatalf("failed to create source: %v", err)
+		}
+		if _, err = ws.CreatePageUnderParent(ctx, 0, "Unrelated", "no links here", author); err != nil {
+			t.Fatalf("failed to create unrelated: %v", err)
+		}
+
+		t.Run("Found", func(t *testing.T) {
+			backlinks, err := ws.GetBacklinks(target.ID)
+			if err != nil {
+				t.Fatalf("failed to get backlinks: %v", err)
+			}
+			if len(backlinks) != 1 {
+				t.Fatalf("expected 1 backlink, got %d", len(backlinks))
+			}
+			if backlinks[0].NodeID != source.ID {
+				t.Errorf("expected backlink from %s, got %s", source.ID, backlinks[0].NodeID)
+			}
+			if backlinks[0].Title != "Source" {
+				t.Errorf("expected backlink title 'Source', got %s", backlinks[0].Title)
+			}
+		})
+
+		t.Run("None", func(t *testing.T) {
+			backlinks, err := ws.GetBacklinks(source.ID)
+			if err != nil {
+				t.Fatalf("failed to get backlinks: %v", err)
+			}
+			if len(backlinks) != 0 {
+				t.Errorf("expected 0 backlinks, got %d", len(backlinks))
+			}
+		})
+
+		t.Run("AfterLinkRemoved", func(t *testing.T) {
+			if _, err := ws.UpdatePage(ctx, source.ID, "Source", "no more links", author); err != nil {
+				t.Fatalf("failed to update page: %v", err)
+			}
+			backlinks, err := ws.GetBacklinks(target.ID)
+			if err != nil {
+				t.Fatalf("failed to get backlinks: %v", err)
+			}
+			if len(backlinks) != 0 {
+				t.Errorf("expected 0 backlinks after link removed, got %d", len(backlinks))
+			}
+		})
+	})
+
+	t.Run("NodeTitles", func(t *testing.T) {
+		_, ws, _ := initWS(t)
+		ctx := t.Context()
+
+		a, err := ws.CreatePageUnderParent(ctx, 0, "Alpha", "", author)
+		if err != nil {
+			t.Fatalf("failed to create page: %v", err)
+		}
+		b, err := ws.CreatePageUnderParent(ctx, 0, "Beta", "", author)
+		if err != nil {
+			t.Fatalf("failed to create page: %v", err)
+		}
+
+		titles, err := ws.GetNodeTitles([]jsonldb.ID{a.ID, b.ID})
+		if err != nil {
+			t.Fatalf("failed to get node titles: %v", err)
+		}
+		if len(titles) != 2 {
+			t.Errorf("expected 2 titles, got %d", len(titles))
+		}
+		if titles[a.ID] != "Alpha" {
+			t.Errorf("expected 'Alpha', got %s", titles[a.ID])
+		}
+		if titles[b.ID] != "Beta" {
+			t.Errorf("expected 'Beta', got %s", titles[b.ID])
+		}
+	})
+
+	t.Run("WorkspaceUsage", func(t *testing.T) {
+		t.Run("CountsPages", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			for i := range 3 {
+				nodeID := jsonldb.NewID()
+				if _, err := ws.WritePage(ctx, nodeID, 0, "Page "+string(rune(49+i)), "content", author); err != nil {
+					t.Fatalf("failed to create page: %v", err)
+				}
+			}
+
+			pageCount, _, err := ws.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatalf("failed to get usage: %v", err)
+			}
+			if pageCount != 3 {
+				t.Errorf("expected pageCount=3, got %d", pageCount)
+			}
+		})
+
+		t.Run("HybridNodeCountedOnce", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			nodeID := jsonldb.NewID()
+			if _, err := ws.WritePage(ctx, nodeID, 0, "Hybrid", "content", author); err != nil {
+				t.Fatalf("failed to create page: %v", err)
+			}
+
+			hybridNode := &Node{
+				ID:       nodeID,
+				Title:    "Hybrid",
+				Type:     NodeTypeTable,
+				Created:  storage.Now(),
+				Modified: storage.Now(),
+			}
+			if err := ws.WriteTable(ctx, hybridNode, false, author); err != nil {
+				t.Fatalf("failed to add table metadata: %v", err)
+			}
+
+			pageCount, _, err := ws.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatalf("failed to get usage: %v", err)
+			}
+			if pageCount != 1 {
+				t.Errorf("expected pageCount=1 for hybrid node, got %d", pageCount)
+			}
+		})
+	})
 }
 
 func TestExtractLinkedNodeIDs(t *testing.T) {
-	// Generate valid node IDs for testing
 	nodeA := jsonldb.NewID()
 	nodeB := jsonldb.NewID()
 	nodeC := jsonldb.NewID()
@@ -1616,34 +1551,44 @@ func TestExtractLinkedNodeIDs(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name:     "single internal link",
-			content:  "Check [my page](/w/@ABC123+ws/@" + nodeA.String() + "+my-page) here",
+			name:     "sibling relative link",
+			content:  "Check [my page](../" + nodeA.String() + "/index.md) here",
 			expected: []jsonldb.ID{nodeA},
 		},
 		{
-			name:     "multiple internal links",
-			content:  "See [page1](/w/@ABC123+ws/@" + nodeA.String() + "+title1) and [page2](/w/@ABC123+ws/@" + nodeB.String() + "+title2)",
+			name:     "multiple relative links",
+			content:  "See [page1](../" + nodeA.String() + "/index.md) and [page2](../" + nodeB.String() + "/index.md)",
 			expected: []jsonldb.ID{nodeA, nodeB},
 		},
 		{
-			name:     "link without slug",
-			content:  "[page](/w/@ABC123/@" + nodeA.String() + ")",
+			name:     "child link",
+			content:  "[page](" + nodeA.String() + "/index.md)",
 			expected: []jsonldb.ID{nodeA},
 		},
 		{
 			name:     "duplicate links extracted once",
-			content:  "[page1](/w/@ABC123+ws/@" + nodeC.String() + "+a) and [page1 again](/w/@ABC123+ws/@" + nodeC.String() + "+b)",
+			content:  "[a](../" + nodeC.String() + "/index.md) and [b](../" + nodeC.String() + "/index.md)",
 			expected: []jsonldb.ID{nodeC},
 		},
 		{
 			name:     "external link ignored",
-			content:  "[google](https://google.com) and [internal](/w/@ABC123/@" + nodeA.String() + ")",
+			content:  "[google](https://google.com) and [internal](../" + nodeA.String() + "/index.md)",
 			expected: []jsonldb.ID{nodeA},
 		},
 		{
-			name:     "mixed content",
-			content:  "# Header\n\nSome text with [a link](/w/@WSID/@" + nodeB.String() + "+slug) in it.\n\n![image](image.png)",
+			name:     "deep relative link",
+			content:  "# Header\n\nSome text with [a link](../../" + nodeB.String() + "/index.md) in it.\n\n![image](image.png)",
 			expected: []jsonldb.ID{nodeB},
+		},
+		{
+			name:     "absolute link ignored",
+			content:  "[abs](/some/" + nodeA.String() + "/index.md)",
+			expected: nil,
+		},
+		{
+			name:     "invalid ID ignored",
+			content:  "[bad](../not-valid-id/index.md)",
+			expected: nil,
 		},
 	}
 
@@ -1663,196 +1608,4 @@ func TestExtractLinkedNodeIDs(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestGetBacklinks(t *testing.T) {
-	fs, wsID := testFileStore(t)
-	ctx := t.Context()
-	author := git.Author{Name: "Test", Email: "test@test.com"}
-
-	if err := fs.InitWorkspace(ctx, wsID); err != nil {
-		t.Fatalf("failed to init workspace: %v", err)
-	}
-
-	ws, err := fs.GetWorkspaceStore(ctx, wsID)
-	if err != nil {
-		t.Fatalf("failed to get workspace store: %v", err)
-	}
-
-	// Create target page.
-	target, err := ws.CreatePageUnderParent(ctx, 0, "Target", "", author)
-	if err != nil {
-		t.Fatalf("failed to create target: %v", err)
-	}
-
-	// Create source page with a link to target.
-	linkContent := fmt.Sprintf("[Target](/w/@%s+ws/@%s+target)", wsID, target.ID)
-	source, err := ws.CreatePageUnderParent(ctx, 0, "Source", linkContent, author)
-	if err != nil {
-		t.Fatalf("failed to create source: %v", err)
-	}
-
-	// Create unrelated page with no links.
-	_, err = ws.CreatePageUnderParent(ctx, 0, "Unrelated", "no links here", author)
-	if err != nil {
-		t.Fatalf("failed to create unrelated: %v", err)
-	}
-
-	t.Run("BacklinksFound", func(t *testing.T) {
-		backlinks, err := ws.GetBacklinks(target.ID)
-		if err != nil {
-			t.Fatalf("failed to get backlinks: %v", err)
-		}
-		if len(backlinks) != 1 {
-			t.Fatalf("expected 1 backlink, got %d", len(backlinks))
-		}
-		if backlinks[0].NodeID != source.ID {
-			t.Errorf("expected backlink from %s, got %s", source.ID, backlinks[0].NodeID)
-		}
-		if backlinks[0].Title != "Source" {
-			t.Errorf("expected backlink title 'Source', got %s", backlinks[0].Title)
-		}
-	})
-
-	t.Run("NoBacklinks", func(t *testing.T) {
-		backlinks, err := ws.GetBacklinks(source.ID)
-		if err != nil {
-			t.Fatalf("failed to get backlinks: %v", err)
-		}
-		if len(backlinks) != 0 {
-			t.Errorf("expected 0 backlinks, got %d", len(backlinks))
-		}
-	})
-
-	t.Run("BacklinksAfterLinkRemoved", func(t *testing.T) {
-		// Update source to remove the link.
-		_, err := ws.UpdatePage(ctx, source.ID, "Source", "no more links", author)
-		if err != nil {
-			t.Fatalf("failed to update page: %v", err)
-		}
-		backlinks, err := ws.GetBacklinks(target.ID)
-		if err != nil {
-			t.Fatalf("failed to get backlinks: %v", err)
-		}
-		if len(backlinks) != 0 {
-			t.Errorf("expected 0 backlinks after link removed, got %d", len(backlinks))
-		}
-	})
-}
-
-func TestGetNodeTitles(t *testing.T) {
-	fs, wsID := testFileStore(t)
-	ctx := t.Context()
-	author := git.Author{Name: "Test", Email: "test@test.com"}
-
-	if err := fs.InitWorkspace(ctx, wsID); err != nil {
-		t.Fatalf("failed to init workspace: %v", err)
-	}
-
-	ws, err := fs.GetWorkspaceStore(ctx, wsID)
-	if err != nil {
-		t.Fatalf("failed to get workspace store: %v", err)
-	}
-
-	a, err := ws.CreatePageUnderParent(ctx, 0, "Alpha", "", author)
-	if err != nil {
-		t.Fatalf("failed to create page: %v", err)
-	}
-	b, err := ws.CreatePageUnderParent(ctx, 0, "Beta", "", author)
-	if err != nil {
-		t.Fatalf("failed to create page: %v", err)
-	}
-
-	titles, err := ws.GetNodeTitles([]jsonldb.ID{a.ID, b.ID})
-	if err != nil {
-		t.Fatalf("failed to get node titles: %v", err)
-	}
-	if len(titles) != 2 {
-		t.Errorf("expected 2 titles, got %d", len(titles))
-	}
-	if titles[a.ID] != "Alpha" {
-		t.Errorf("expected 'Alpha', got %s", titles[a.ID])
-	}
-	if titles[b.ID] != "Beta" {
-		t.Errorf("expected 'Beta', got %s", titles[b.ID])
-	}
-}
-
-func TestGetWorkspaceUsage(t *testing.T) {
-	t.Run("CountsPages", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
-		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
-
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Create multiple pages
-		for i := range 3 {
-			nodeID := jsonldb.NewID()
-			_, err = ws.WritePage(ctx, nodeID, 0, "Page "+string(rune(49+i)), "content", author)
-			if err != nil {
-				t.Fatalf("failed to create page: %v", err)
-			}
-		}
-
-		// Get usage - should count pages
-		pageCount, _, err := ws.GetWorkspaceUsage()
-		if err != nil {
-			t.Fatalf("failed to get usage: %v", err)
-		}
-
-		if pageCount != 3 {
-			t.Errorf("expected pageCount=3, got %d", pageCount)
-		}
-	})
-
-	t.Run("HybridNodeCountedOnce", func(t *testing.T) {
-		fs, wsID := testFileStore(t)
-		ctx := t.Context()
-		author := git.Author{Name: "Test", Email: "test@test.com"}
-
-		if err := fs.InitWorkspace(ctx, wsID); err != nil {
-			t.Fatalf("failed to init workspace: %v", err)
-		}
-
-		ws, err := fs.GetWorkspaceStore(ctx, wsID)
-		if err != nil {
-			t.Fatalf("failed to get workspace store: %v", err)
-		}
-
-		// Create a hybrid node (page + table)
-		nodeID := jsonldb.NewID()
-		_, err = ws.WritePage(ctx, nodeID, 0, "Hybrid", "content", author)
-		if err != nil {
-			t.Fatalf("failed to create page: %v", err)
-		}
-
-		hybridNode := &Node{
-			ID:       nodeID,
-			Title:    "Hybrid",
-			Type:     NodeTypeTable,
-			Created:  storage.Now(),
-			Modified: storage.Now(),
-		}
-		if err := ws.WriteTable(ctx, hybridNode, false, author); err != nil {
-			t.Fatalf("failed to add table metadata: %v", err)
-		}
-
-		pageCount, _, err := ws.GetWorkspaceUsage()
-		if err != nil {
-			t.Fatalf("failed to get usage: %v", err)
-		}
-
-		// Hybrid node should be counted once, not twice
-		if pageCount != 1 {
-			t.Errorf("expected pageCount=1 for hybrid node, got %d", pageCount)
-		}
-	})
 }
