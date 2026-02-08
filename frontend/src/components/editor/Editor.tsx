@@ -14,6 +14,7 @@ import { nodes, marks, createEditorState, schema } from './prosemirror-config';
 import { parseMarkdown } from './markdown-parser';
 import { serializeToMarkdown } from './markdown-serializer';
 import { createBlockNodeView } from './BlockNodeView';
+import { toggleTaskBlock } from './blockCommands';
 import { createSlashCommandPlugin, type SlashMenuState } from './slashCommandPlugin';
 import { createDropUploadPlugin } from './dropUploadPlugin';
 import { createInvalidLinkPlugin, updateInvalidLinkState, INTERNAL_LINK_URL_PATTERN } from './invalidLinkPlugin';
@@ -279,6 +280,20 @@ export default function Editor(props: EditorProps) {
       handleDOMEvents: {
         click: (_view, event) => {
           const target = event.target as HTMLElement;
+
+          // Handle checkbox toggle: clicks on the real checkbox element
+          if (target.classList.contains('block-task-checkbox')) {
+            event.preventDefault();
+            const taskEl = target.closest('.block-task');
+            if (taskEl) {
+              const pos = editorView.posAtDOM(taskEl, 0);
+              const $pos = editorView.state.doc.resolve(pos);
+              const blockPos = $pos.depth >= 1 ? $pos.before(1) : pos;
+              toggleTaskBlock(blockPos)(editorView.state, editorView.dispatch);
+            }
+            return true;
+          }
+
           const anchor = target.closest('a');
           if (!anchor) return false;
 

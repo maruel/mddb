@@ -845,8 +845,8 @@ test.describe('Editor Toolbar Button States', () => {
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // Click inside the first task list item and select text
-    await editor.locator('.block-row[data-type="task"] .block-content').first().selectText();
+    // Click inside the first task list item and select text (target the text span, not the wrapper)
+    await editor.locator('.block-row[data-type="task"] .block-task-text').first().selectText();
 
     // The checkbox button should be active
     const checkboxButton = page.locator('button[title="Task List"]');

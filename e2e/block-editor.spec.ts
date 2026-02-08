@@ -54,30 +54,18 @@ Another paragraph`;
   // Wait for editor to load
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 
-  // Verify editor loaded with content
+  // Verify editor loaded with content (use auto-retrying assertions, not snapshot reads)
   const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
   await expect(editor).toBeVisible({ timeout: 5000 });
+  await expect(editor).toContainText('Bullet one', { timeout: 5000 });
+  await expect(editor).toContainText('Number one');
+  await expect(editor).toContainText('Heading 1');
+  await expect(editor).toContainText('A quote');
 
-  const content = await editor.innerText();
-  expect(content).toContain('Bullet one');
-  expect(content).toContain('Number one');
-  expect(content).toContain('Heading 1');
-  expect(content).toContain('A quote');
-
-  // Verify block structure: bullet items should be visible as list items
-  const bulletBlocks = editor.locator('.block-row[data-type="bullet"]');
-  const bulletCount = await bulletBlocks.count();
-  expect(bulletCount).toBeGreaterThan(0);
-
-  // Verify heading blocks
-  const headingBlocks = editor.locator('.block-row[data-type="heading"]');
-  const headingCount = await headingBlocks.count();
-  expect(headingCount).toBeGreaterThan(0);
-
-  // Verify numbered blocks exist
-  const numberBlocks = editor.locator('.block-row[data-type="number"]');
-  const numberCount = await numberBlocks.count();
-  expect(numberCount).toBeGreaterThan(0);
+  // Verify block structure
+  await expect(editor.locator('.block-row[data-type="bullet"]').first()).toBeVisible();
+  await expect(editor.locator('.block-row[data-type="heading"]').first()).toBeVisible();
+  await expect(editor.locator('.block-row[data-type="number"]').first()).toBeVisible();
 });
 
 test('drag handles are present on all blocks', async ({ page, request }) => {

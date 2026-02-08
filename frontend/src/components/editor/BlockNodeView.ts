@@ -80,10 +80,17 @@ export class BlockNodeView implements NodeView {
         break;
       }
       case 'task': {
-        element = document.createElement('div');
-        element.className = 'block-task';
-        element.dataset.checked = String(checked || false);
-        break;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'block-task block-content';
+        wrapper.dataset.checked = String(checked || false);
+        const cb = document.createElement('span');
+        cb.className = 'block-task-checkbox';
+        cb.contentEditable = 'false';
+        wrapper.appendChild(cb);
+        const content = document.createElement('span');
+        content.className = 'block-task-text';
+        wrapper.appendChild(content);
+        return { contentDOM: content, wrapperDOM: wrapper };
       }
       case 'bullet':
       case 'number': {
@@ -211,9 +218,9 @@ export class BlockNodeView implements NodeView {
     this.updateDOMAttributes();
 
     if (node.attrs.type === 'task') {
-      const taskContent = this.dom.querySelector('.block-task');
-      if (taskContent) {
-        (taskContent as HTMLElement).dataset.checked = String(node.attrs.checked || false);
+      const taskWrapper = this.dom.querySelector('.block-task');
+      if (taskWrapper) {
+        (taskWrapper as HTMLElement).dataset.checked = String(node.attrs.checked || false);
       }
     }
 
@@ -263,6 +270,11 @@ export class BlockNodeView implements NodeView {
     }
     // Ignore class attribute changes on block-row (e.g., 'dragging', 'selected')
     if (mutation.type === 'attributes' && mutation.target === this.dom) {
+      return true;
+    }
+    // Ignore mutations on the checkbox element and its parent wrapper (data-checked changes)
+    const target = mutation.target as HTMLElement;
+    if (target.classList?.contains('block-task-checkbox') || target.classList?.contains('block-task')) {
       return true;
     }
     return false;

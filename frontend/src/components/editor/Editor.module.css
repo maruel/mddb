@@ -602,44 +602,45 @@
 
 /* Task list checkbox */
 .prosemirrorEditor :global(.block-task) {
-  position: relative;
-  padding-left: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
 }
 
-.prosemirrorEditor :global(.block-task)::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.25em;
+.prosemirrorEditor :global(.block-task-checkbox) {
+  display: inline-block;
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
+  margin-top: 0.25em;
   border: 2px solid var(--c-border);
   border-radius: 3px;
   background: var(--c-bg);
   cursor: pointer;
   transition: all 0.15s ease;
+  user-select: none;
 }
 
-.prosemirrorEditor :global(.block-task:hover)::before {
+.prosemirrorEditor :global(.block-task:hover) :global(.block-task-checkbox) {
   border-color: var(--c-primary);
 }
 
-.prosemirrorEditor :global(.block-task[data-checked='true'])::before {
+.prosemirrorEditor :global(.block-task[data-checked='true']) :global(.block-task-checkbox) {
   background: var(--c-primary);
   border-color: var(--c-primary);
 }
 
-.prosemirrorEditor :global(.block-task[data-checked='true'])::after {
+.prosemirrorEditor :global(.block-task[data-checked='true']) :global(.block-task-checkbox)::after {
   content: '✓';
-  position: absolute;
-  left: 2px;
-  top: 0.15em;
+  display: block;
   font-size: 12px;
+  line-height: 16px;
+  text-align: center;
   color: white;
   font-weight: bold;
 }
 
-.prosemirrorEditor :global(.block-task[data-checked='true']) {
+.prosemirrorEditor :global(.block-task[data-checked='true']) :global(.block-task-text) {
   color: var(--c-text-light);
   text-decoration: line-through;
 }
