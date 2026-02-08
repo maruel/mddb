@@ -66,6 +66,11 @@ function createMarkdownIt(): MarkdownIt {
     return true;
   });
 
+  // Disable table parsing — the flat block editor has no table node type.
+  // With this disabled, markdown-it leaves pipe-delimited text as paragraphs
+  // instead of emitting table_open/etc. tokens that crash prosemirror-markdown.
+  md.disable('table');
+
   return md;
 }
 

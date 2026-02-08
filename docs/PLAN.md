@@ -51,6 +51,7 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 - **Advanced Table Views**: Filter/sort dropdowns, column visibility toggles, view rename/duplicate.
 - **High-Performance UX**: Virtualization, command palettes, and relationship graphs.
 - **Notion-like Editing**: A block-based **WYSIWYG editor** for a seamless, intuitive experience.
+- **Inline Markdown Tables**: Add `table` node type to ProseMirror schema, handle `table_open`/`thead_open`/`tr_open`/`th_open`/`td_open` tokens in `markdown-parser.ts`, and render/edit tables in the flat block editor. Currently table syntax is disabled in markdown-it (`md.disable('table')`) to avoid a crash.
 - **Data Integrity**: Migration to SQLite for metadata while preserving the self-describing on-disk format.
 - **Large File Uploads**: Streaming uploads for video/large assets (avoid memory buffering), chunked/resumable uploads (tus protocol), progress tracking.
 

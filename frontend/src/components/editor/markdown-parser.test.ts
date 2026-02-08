@@ -317,6 +317,15 @@ describe('markdown-parser', () => {
       expect(serialized).toBe(original);
     });
 
+    it('handles markdown table without crashing', () => {
+      const markdown = '| Col1 | Col2 |\n| --- | --- |\n| a | b |';
+      expect(() => parseMarkdown(markdown)).not.toThrow();
+      const doc = parseMarkdown(markdown);
+      // Table content should be preserved as text (paragraphs), not silently dropped
+      expect(doc.textContent).toContain('Col1');
+      expect(doc.textContent).toContain('a');
+    });
+
     it('roundtrips emphasis combinations', () => {
       const original = '**bold** and *italic* and **_bold italic_**';
       const doc = parseMarkdown(original);
