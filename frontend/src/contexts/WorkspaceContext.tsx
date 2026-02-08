@@ -11,9 +11,11 @@ import {
   type Accessor,
 } from 'solid-js';
 import { createStore, produce, reconcile } from 'solid-js/store';
+import { useNavigate } from '@solidjs/router';
 import { useAuth } from './AuthContext';
 import { useI18n } from '../i18n';
 import { OrgRoleAdmin, OrgRoleOwner, WSRoleAdmin, WSRoleEditor, type NodeResponse } from '@sdk/types.gen';
+import { workspaceUrl } from '../utils/urls';
 
 interface WorkspaceContextValue {
   // Node tree
@@ -73,6 +75,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue>();
 
 export const WorkspaceProvider: ParentComponent = (props) => {
   const { t, ready: i18nReady } = useI18n();
+  const navigate = useNavigate();
   const { user, setUser, api, wsApi, login } = useAuth();
 
   // Node state
@@ -264,6 +267,11 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setLoadedNodeId(null);
       setLoadedForWorkspace(null);
       await loadNodes();
+      // Navigate to the new workspace root to clear any stale node ID from the URL.
+      const u = user();
+      if (u?.workspace_id) {
+        navigate(workspaceUrl(u.workspace_id, u.workspace_name));
+      }
     } catch (err) {
       setLoadError(`${t('errors.failedToSwitch')}: ${err}`);
     } finally {

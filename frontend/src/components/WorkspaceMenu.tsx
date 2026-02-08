@@ -1,12 +1,10 @@
 // Dropdown menu for switching workspaces and accessing workspace settings.
 
 import { createSignal, For, Show, createMemo } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
 import { useI18n } from '../i18n';
 import { useAuth } from '../contexts';
 import { useWorkspace } from '../contexts';
 import { useClickOutside } from '../composables/useClickOutside';
-import { workspaceUrl } from '../utils/urls';
 import type { WSMembershipResponse } from '@sdk/types.gen';
 import styles from './WorkspaceMenu.module.css';
 
@@ -32,7 +30,6 @@ interface OrgWithWorkspaces {
 
 export default function WorkspaceMenu(props: WorkspaceMenuProps) {
   const { t } = useI18n();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const { switchWorkspace } = useWorkspace();
   const [isOpen, setIsOpen] = createSignal(false);
@@ -87,13 +84,6 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
     props.onSwitchWorkspace?.();
     if (wsId !== currentWsId()) {
       await switchWorkspace(wsId);
-      // Navigate to the new workspace after switching
-      const u = user();
-      const newWsId = u?.workspace_id;
-      const wsName = u?.workspace_name;
-      if (newWsId) {
-        navigate(workspaceUrl(newWsId, wsName));
-      }
     }
   };
 

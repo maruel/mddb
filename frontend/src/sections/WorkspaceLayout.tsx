@@ -9,7 +9,7 @@ import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
 import NotionImportModal, { type NotionImportData } from '../components/NotionImportModal';
 import { useAuth, useWorkspace, useEditor } from '../contexts';
 import { useI18n } from '../i18n';
-import { settingsUrl, nodeUrl, workspaceUrl } from '../utils/urls';
+import { settingsUrl, nodeUrl } from '../utils/urls';
 import type { NodeResponse, NotionImportStatusResponse } from '@sdk/types.gen';
 import styles from './WorkspaceSection.module.css';
 
@@ -78,15 +78,8 @@ const WorkspaceLayout: ParentComponent = (props) => {
     const result = await org.notion.startImport({
       notion_token: data.notionToken,
     });
-    // Switch to the new workspace
+    // Switch to the new workspace (switchWorkspace navigates automatically)
     await switchWorkspace(result.workspace_id);
-    // Navigate to the new workspace
-    const u = user();
-    const newWsId = u?.workspace_id;
-    const wsName = u?.workspace_name;
-    if (newWsId) {
-      navigate(workspaceUrl(newWsId, wsName));
-    }
     // Start polling for import status
     startNotionImportPolling(result.workspace_id);
     setNotionImportStatus({ status: 'running', progress: 0, total: 0 });
