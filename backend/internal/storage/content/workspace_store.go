@@ -1660,6 +1660,41 @@ func (ws *WorkspaceFileStore) GetBacklinks(targetID jsonldb.ID) ([]BacklinkInfo,
 	return backlinks, nil
 }
 
+// InvalidLink describes an internal link whose target node does not exist.
+type InvalidLink struct {
+	SourceID jsonldb.ID
+	Target   string
+}
+
+// ValidateLinks checks every internal link in the workspace and returns those
+// pointing to non-existent nodes.
+func (ws *WorkspaceFileStore) ValidateLinks() ([]InvalidLink, error) {
+	if err := ws.refreshCache(); err != nil {
+		return nil, fmt.Errorf("refresh cache: %w", err)
+	}
+	if err := ws.links.ensureBuilt(ws.IterPages); err != nil {
+		return nil, fmt.Errorf("build link cache: %w", err)
+	}
+
+	// Snapshot of existing node IDs.
+	ws.mu.RLock()
+	existing := make(map[jsonldb.ID]struct{}, len(ws.cache))
+	for id := range ws.cache {
+		existing[id] = struct{}{}
+	}
+	ws.mu.RUnlock()
+
+	var invalid []InvalidLink
+	for srcID, targets := range ws.links.forwardAll() {
+		for _, tgtID := range targets {
+			if _, ok := existing[tgtID]; !ok {
+				invalid = append(invalid, InvalidLink{SourceID: srcID, Target: tgtID.String()})
+			}
+		}
+	}
+	return invalid, nil
+}
+
 // GetNodeTitles returns a map of node IDs to their titles for the given IDs.
 func (ws *WorkspaceFileStore) GetNodeTitles(ids []jsonldb.ID) (map[jsonldb.ID]string, error) {
 	titles := make(map[jsonldb.ID]string)

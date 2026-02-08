@@ -118,6 +118,17 @@ func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID jsonldb
 	wsDir := filepath.Join(svc.rootDir, wsID.String())
 	store := newWorkspaceFileStore(wsDir, repo, &effective)
 	svc.stores[wsID] = store
+
+	invalid, err := store.ValidateLinks()
+	if err != nil {
+		slog.Error("link validation failed", "wsID", wsID, "error", err)
+	} else {
+		for _, l := range invalid {
+			slog.Warn("invalid internal link: target node not found",
+				"wsID", wsID, "source", l.SourceID, "target", l.Target)
+		}
+	}
+
 	return store, nil
 }
 

@@ -4,6 +4,7 @@ package content
 
 import (
 	"iter"
+	"slices"
 	"sync"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
@@ -110,6 +111,17 @@ func (c *linkCache) backlinks(targetID jsonldb.ID) []jsonldb.ID {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.backward[targetID]
+}
+
+// forwardAll returns a snapshot of all forward links (source → targets).
+func (c *linkCache) forwardAll() map[jsonldb.ID][]jsonldb.ID {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	out := make(map[jsonldb.ID][]jsonldb.ID, len(c.forward))
+	for src, targets := range c.forward {
+		out[src] = slices.Clone(targets)
+	}
+	return out
 }
 
 // removeBackwardLocked removes sourceID from the backward entry for targetID. Caller must hold mu for writing.

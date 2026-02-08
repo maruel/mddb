@@ -1450,6 +1450,82 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 	})
 
+	t.Run("ValidateLinks", func(t *testing.T) {
+		t.Run("AllValid", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			a, err := ws.CreatePageUnderParent(ctx, 0, "A", "", author)
+			if err != nil {
+				t.Fatalf("create A: %v", err)
+			}
+			linkToA := fmt.Sprintf("[A](../%s/index.md)", a.ID)
+			if _, err := ws.CreatePageUnderParent(ctx, 0, "B", linkToA, author); err != nil {
+				t.Fatalf("create B: %v", err)
+			}
+
+			invalid, err := ws.ValidateLinks()
+			if err != nil {
+				t.Fatalf("ValidateLinks: %v", err)
+			}
+			if len(invalid) != 0 {
+				t.Errorf("expected 0 invalid links, got %d: %v", len(invalid), invalid)
+			}
+		})
+
+		t.Run("DanglingLink", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			ghost := jsonldb.NewID()
+			linkToGhost := fmt.Sprintf("[Ghost](../%s/index.md)", ghost)
+			src, err := ws.CreatePageUnderParent(ctx, 0, "Src", linkToGhost, author)
+			if err != nil {
+				t.Fatalf("create Src: %v", err)
+			}
+
+			invalid, err := ws.ValidateLinks()
+			if err != nil {
+				t.Fatalf("ValidateLinks: %v", err)
+			}
+			if len(invalid) != 1 {
+				t.Fatalf("expected 1 invalid link, got %d: %v", len(invalid), invalid)
+			}
+			if invalid[0].SourceID != src.ID {
+				t.Errorf("expected source=%s, got %s", src.ID, invalid[0].SourceID)
+			}
+			if invalid[0].Target != ghost.String() {
+				t.Errorf("expected target=%s, got %s", ghost, invalid[0].Target)
+			}
+		})
+
+		t.Run("MixedValidAndInvalid", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+			ctx := t.Context()
+
+			existing, err := ws.CreatePageUnderParent(ctx, 0, "Real", "", author)
+			if err != nil {
+				t.Fatalf("create Real: %v", err)
+			}
+			ghost := jsonldb.NewID()
+			content := fmt.Sprintf("[Real](../%s/index.md) and [Ghost](../%s/index.md)", existing.ID, ghost)
+			if _, err := ws.CreatePageUnderParent(ctx, 0, "Linker", content, author); err != nil {
+				t.Fatalf("create Linker: %v", err)
+			}
+
+			invalid, err := ws.ValidateLinks()
+			if err != nil {
+				t.Fatalf("ValidateLinks: %v", err)
+			}
+			if len(invalid) != 1 {
+				t.Fatalf("expected 1 invalid link, got %d: %v", len(invalid), invalid)
+			}
+			if invalid[0].Target != ghost.String() {
+				t.Errorf("expected target=%s, got %s", ghost, invalid[0].Target)
+			}
+		})
+	})
+
 	t.Run("NodeTitles", func(t *testing.T) {
 		_, ws, _ := initWS(t)
 		ctx := t.Context()

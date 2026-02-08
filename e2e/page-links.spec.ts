@@ -122,8 +122,8 @@ test.describe('Page Links with Dynamic Titles', () => {
     });
     const targetID = targetData.id as string;
 
-    // Create source page with a link to target
-    const linkContent = `Link to [Target Page](/w/@${wsID}/@${targetID})`;
+    // Create source page with a relative-path link to target (matches on-disk format).
+    const linkContent = `Link to [Target Page](../${targetID}/index.md)`;
     const sourceData = await client.ws(wsID).nodes.page.createPage('0', {
       title: 'Source Page',
       content: linkContent,
