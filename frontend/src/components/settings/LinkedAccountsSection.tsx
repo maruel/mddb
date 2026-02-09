@@ -6,8 +6,9 @@ import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from
 import { useAuth } from '../../contexts';
 import { useI18n } from '../../i18n';
 import styles from './LinkedAccountsSection.module.css';
+import { GoogleIcon, MicrosoftIcon, GitHubIcon } from '../OAuthIcons';
 
-import PublicIcon from '@material-symbols/svg-400/outlined/public.svg?solid';
+import type { JSX } from 'solid-js';
 
 interface Props {
   oauthIdentities: OAuthIdentity[] | undefined;
@@ -19,13 +20,13 @@ interface Props {
 interface ProviderInfo {
   id: OAuthProvider;
   name: string;
-  icon: SolidSVG;
+  icon: (props: JSX.SvgSVGAttributes<SVGSVGElement>) => JSX.Element;
 }
 
 const PROVIDERS: ProviderInfo[] = [
-  { id: OAuthProviderGoogle, name: 'Google', icon: PublicIcon },
-  { id: OAuthProviderMicrosoft, name: 'Microsoft', icon: PublicIcon },
-  { id: OAuthProviderGitHub, name: 'GitHub', icon: PublicIcon },
+  { id: OAuthProviderGoogle, name: 'Google', icon: GoogleIcon },
+  { id: OAuthProviderMicrosoft, name: 'Microsoft', icon: MicrosoftIcon },
+  { id: OAuthProviderGitHub, name: 'GitHub', icon: GitHubIcon },
 ];
 
 export default function LinkedAccountsSection(props: Props) {
@@ -120,9 +121,7 @@ export default function LinkedAccountsSection(props: Props) {
               <Show when={isAvailable()}>
                 <div class={styles.providerRow}>
                   <div class={styles.providerInfo}>
-                    <span class={styles.providerIcon}>
-                      <provider.icon />
-                    </span>
+                    <provider.icon class={styles.providerIcon} />
                     <span class={styles.providerName}>{provider.name}</span>
                     <Show when={linked()} keyed>
                       {(identity) => (
