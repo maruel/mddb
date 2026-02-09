@@ -18,7 +18,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/git"
 )
 
 func init() {
@@ -99,7 +98,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(r.Context(), wsID)
 	if err != nil {
 		writeErrorResponse(w, dto.Internal("workspace"))

@@ -11,6 +11,11 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
+// GitAuthor returns the git.Author for a user.
+func GitAuthor(u *identity.User) git.Author {
+	return git.Author{Name: u.Name, Email: u.PreferredEmail()}
+}
+
 // --- Entity to DTO conversions ---
 
 func userToResponse(u *identity.User) *dto.UserResponse {

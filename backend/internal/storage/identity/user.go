@@ -38,6 +38,31 @@ func (u *User) GetID() jsonldb.ID {
 	return u.ID
 }
 
+// PreferredEmail returns the best email for external attribution
+// (e.g. git commits). Priority: GitHub > Google > Microsoft > raw email.
+func (u *User) PreferredEmail() string {
+	best := u.Email
+	bestRank := 4
+	for i := range u.OAuthIdentities {
+		var rank int
+		switch u.OAuthIdentities[i].Provider {
+		case OAuthProviderGitHub:
+			rank = 1
+		case OAuthProviderGoogle:
+			rank = 2
+		case OAuthProviderMicrosoft:
+			rank = 3
+		default:
+			continue
+		}
+		if rank < bestRank {
+			best = u.OAuthIdentities[i].Email
+			bestRank = rank
+		}
+	}
+	return best
+}
+
 // UserSettings represents global user preferences.
 type UserSettings struct {
 	Theme                string       `json:"theme" jsonschema:"description=UI theme preference (light/dark/system)"`

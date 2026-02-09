@@ -335,7 +335,7 @@ func WrapAuth[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, auth.user, PtrIn(input))
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email})
+		commitDBIfMutating(ctx, r, svc.RootRepo, handlers.GitAuthor(auth.user))
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -411,7 +411,7 @@ func WrapOrgAuth[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, orgID, auth.user, PtrIn(input))
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email})
+		commitDBIfMutating(ctx, r, svc.RootRepo, handlers.GitAuthor(auth.user))
 		writeJSONResponse(ctx, w, output, err)
 	})
 }
@@ -481,7 +481,7 @@ func WrapWSAuth[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, wsID, auth.user, PtrIn(input))
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email})
+		commitDBIfMutating(ctx, r, svc.RootRepo, handlers.GitAuthor(auth.user))
 		triggerAutoPush(svc, r.Method, wsID, err)
 		writeJSONResponse(ctx, w, output, err)
 	})
@@ -550,7 +550,7 @@ func WrapAuthRaw(
 		ctx := reqctx.WithUser(r.Context(), user)
 		fn(w, r.WithContext(ctx))
 		// Commit DB changes for mutating raw handlers (e.g., asset upload)
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: user.Name, Email: user.Email})
+		commitDBIfMutating(ctx, r, svc.RootRepo, handlers.GitAuthor(user))
 		triggerAutoPush(svc, r.Method, wsID, nil)
 	})
 }
@@ -605,7 +605,7 @@ func WrapGlobalAdmin[In any, PtrIn interface {
 		}
 
 		output, err := fn(ctx, user, PtrIn(input))
-		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: user.Name, Email: user.Email})
+		commitDBIfMutating(ctx, r, svc.RootRepo, handlers.GitAuthor(user))
 		writeJSONResponse(ctx, w, output, err)
 	})
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -41,7 +40,7 @@ func (h *ViewHandler) CreateView(ctx context.Context, wsID jsonldb.ID, user *ide
 	node.Views = append(node.Views, view)
 	node.Modified = storage.Now()
 
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.InternalWithError("Failed to save view", err)
 	}
@@ -95,7 +94,7 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID jsonldb.ID, user *ide
 	}
 
 	node.Modified = storage.Now()
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.InternalWithError("Failed to update view", err)
 	}
@@ -132,7 +131,7 @@ func (h *ViewHandler) DeleteView(ctx context.Context, wsID jsonldb.ID, user *ide
 	node.Views = newViews
 	node.Modified = storage.Now()
 
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.InternalWithError("Failed to delete view", err)
 	}

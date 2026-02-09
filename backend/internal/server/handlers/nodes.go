@@ -12,7 +12,6 @@ import (
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
-	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -104,7 +103,7 @@ func (h *NodeHandler) MoveNode(ctx context.Context, wsID jsonldb.ID, user *ident
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.MoveNode(ctx, req.ID, req.NewParentID, author); err != nil {
 		return nil, dto.InternalWithError("Failed to move node", err)
 	}
@@ -117,7 +116,7 @@ func (h *NodeHandler) DeleteNode(ctx context.Context, wsID jsonldb.ID, user *ide
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.DeletePage(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("node")
 	}
@@ -190,7 +189,7 @@ func (h *NodeHandler) DeleteNodeAsset(ctx context.Context, wsID jsonldb.ID, user
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.DeleteAsset(ctx, req.NodeID, req.AssetName, author); err != nil {
 		return nil, dto.NotFound("asset")
 	}
@@ -207,7 +206,7 @@ func (h *NodeHandler) CreatePage(ctx context.Context, wsID jsonldb.ID, user *ide
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
 
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	node, err := ws.CreatePageUnderParent(ctx, req.ParentID, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
@@ -243,7 +242,7 @@ func (h *NodeHandler) UpdatePage(ctx context.Context, wsID jsonldb.ID, user *ide
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	node, err := ws.UpdatePage(ctx, req.ID, req.Title, req.Content, author)
 	if err != nil {
 		return nil, dto.NotFound("page")
@@ -259,7 +258,7 @@ func (h *NodeHandler) DeletePage(ctx context.Context, wsID jsonldb.ID, user *ide
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.DeletePageFromNode(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("page")
 	}
@@ -292,7 +291,7 @@ func (h *NodeHandler) CreateTable(ctx context.Context, wsID jsonldb.ID, user *id
 		return nil, dto.InternalWithError("Failed to check table quota", err)
 	}
 
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	node, err := ws.CreateTableUnderParent(ctx, req.ParentID, req.Title, propertiesToEntity(req.Properties), author)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create table", err)
@@ -344,7 +343,7 @@ func (h *NodeHandler) UpdateTable(ctx context.Context, wsID jsonldb.ID, user *id
 	node.Properties = propertiesToEntity(req.Properties)
 	node.Modified = storage.Now()
 
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
@@ -358,7 +357,7 @@ func (h *NodeHandler) DeleteTable(ctx context.Context, wsID jsonldb.ID, user *id
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.DeleteTableFromNode(ctx, req.ID, author); err != nil {
 		return nil, dto.NotFound("table")
 	}
@@ -500,7 +499,7 @@ func (h *NodeHandler) CreateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 		Modified: now,
 	}
 
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.AppendRecord(ctx, req.ID, record, author); err != nil {
 		return nil, dto.InternalWithError("Failed to create record", err)
 	}
@@ -549,7 +548,7 @@ func (h *NodeHandler) UpdateRecord(ctx context.Context, wsID jsonldb.ID, user *i
 		Modified: storage.Now(),
 	}
 
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.UpdateRecord(ctx, req.ID, record, author); err != nil {
 		return nil, dto.InternalWithError("Failed to update record", err)
 	}
@@ -585,7 +584,7 @@ func (h *NodeHandler) DeleteRecord(ctx context.Context, wsID jsonldb.ID, user *i
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
 	}
-	author := git.Author{Name: user.Name, Email: user.Email}
+	author := GitAuthor(user)
 	if err := ws.DeleteRecord(ctx, req.ID, req.RID, author); err != nil {
 		return nil, dto.NotFound("record")
 	}
