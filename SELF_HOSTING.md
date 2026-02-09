@@ -53,8 +53,9 @@ Microsoft OAuth is Microsoft Entra
 1. Click "Add a certificate or secret"
 1. New client secret
 1. Duration: 730 days
-1. Copy Value as `MICROSOFT_CLIENT_ID`
-1. Copy Secret ID as `MICROSOFT_CLIENT_SECRET`
+1. `MICROSOFT_CLIENT_ID`: "Application (client) ID" — a UUID on the overview page
+1. `MICROSOFT_CLIENT_SECRET`: Client Secret = Certificates & secrets → Client secrets → the Value column (only
+   visible right after creation, not the "Secret ID" column)
 1. Set branding
     1. https://<host>/terms
     1. https://<host>/privacy
