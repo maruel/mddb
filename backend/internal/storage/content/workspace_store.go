@@ -527,7 +527,10 @@ func (ws *WorkspaceFileStore) GetWorkspaceUsage() (pageCount int, storageUsage i
 
 	err = filepath.Walk(ws.wsDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return nil //nolint:nilerr // skip transient errors (e.g. git maintenance.lock race)
+		}
+		if info.IsDir() && info.Name() == ".git" {
+			return filepath.SkipDir
 		}
 		if !info.IsDir() {
 			storageUsage += info.Size()

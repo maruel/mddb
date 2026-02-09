@@ -221,7 +221,10 @@ func (svc *FileStoreService) GetOrganizationUsage(orgID jsonldb.ID) (int64, erro
 			if err != nil {
 				return nil //nolint:nilerr // Intentionally continue walking on error
 			}
-			if info != nil && !info.IsDir() {
+			if info.IsDir() && info.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			if !info.IsDir() {
 				totalUsage += info.Size()
 			}
 			return nil
@@ -241,7 +244,10 @@ func (svc *FileStoreService) GetServerUsage() (int64, error) {
 		if err != nil {
 			return nil //nolint:nilerr // Intentionally continue walking on error
 		}
-		if info != nil && !info.IsDir() {
+		if info.IsDir() && info.Name() == ".git" {
+			return filepath.SkipDir
+		}
+		if !info.IsDir() {
 			totalUsage += info.Size()
 		}
 		return nil

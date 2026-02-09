@@ -1575,6 +1575,39 @@ func TestWorkspaceFileStore(t *testing.T) {
 			}
 		})
 
+		t.Run("ExcludesGitDir", func(t *testing.T) {
+			_, ws, _ := initWS(t)
+
+			// Create a fake .git/objects/maintenance.lock to simulate git internals.
+			// GetWorkspaceUsage must skip .git and not fail if transient files vanish.
+			lockDir := filepath.Join(ws.wsDir, ".git", "objects")
+			if err := os.MkdirAll(lockDir, 0o750); err != nil {
+				t.Fatal(err)
+			}
+			lockFile := filepath.Join(lockDir, "maintenance.lock")
+			if err := os.WriteFile(lockFile, []byte("x"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			_, storageBytes, err := ws.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatalf("GetWorkspaceUsage failed with .git present: %v", err)
+			}
+
+			// Storage must not include the .git contents.
+			// Remove .git and compare.
+			if err := os.RemoveAll(filepath.Join(ws.wsDir, ".git")); err != nil {
+				t.Fatal(err)
+			}
+			_, withoutGit, err := ws.GetWorkspaceUsage()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if storageBytes != withoutGit {
+				t.Errorf("storage with .git=%d, without=%d; .git contents should be excluded", storageBytes, withoutGit)
+			}
+		})
+
 		t.Run("HybridNodeCountedOnce", func(t *testing.T) {
 			_, ws, _ := initWS(t)
 			ctx := t.Context()
