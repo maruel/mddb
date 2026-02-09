@@ -57,7 +57,7 @@ func TestUserStorage(t *testing.T) {
 					ID:    jsonldb.ID(1),
 					Email: "test@example.com",
 					OAuthIdentities: []OAuthIdentity{
-						{Provider: "google", ProviderID: "123"},
+						{Provider: OAuthProviderGoogle, ProviderID: "123"},
 					},
 				},
 				PasswordHash: "hash",
@@ -287,7 +287,7 @@ func TestUserService(t *testing.T) {
 
 		_, oauthErr = oauthService.Modify(oauthUser.ID, func(u *User) error {
 			u.OAuthIdentities = append(u.OAuthIdentities, OAuthIdentity{
-				Provider:   "google",
+				Provider:   OAuthProviderGoogle,
 				ProviderID: "google-123",
 				Email:      "oauth@gmail.com",
 			})
@@ -324,7 +324,7 @@ func TestUserService(t *testing.T) {
 		t.Run("update OAuth identity", func(t *testing.T) {
 			_, updateErr := oauthService.Modify(oauthUser.ID, func(u *User) error {
 				u.OAuthIdentities = []OAuthIdentity{
-					{Provider: "microsoft", ProviderID: "ms-456", Email: "oauth@outlook.com"},
+					{Provider: OAuthProviderMicrosoft, ProviderID: "ms-456", Email: "oauth@outlook.com"},
 				}
 				return nil
 			})
@@ -361,8 +361,8 @@ func TestUserService(t *testing.T) {
 
 			_, err = service.Modify(user.ID, func(u *User) error {
 				u.OAuthIdentities = []OAuthIdentity{
-					{Provider: "google", ProviderID: "google-123", Email: "user@gmail.com"},
-					{Provider: "github", ProviderID: "github-456", Email: "user@github.com"},
+					{Provider: OAuthProviderGoogle, ProviderID: "google-123", Email: "user@gmail.com"},
+					{Provider: OAuthProviderGitHub, ProviderID: "github-456", Email: "user@github.com"},
 				}
 				return nil
 			})
@@ -403,7 +403,7 @@ func TestUserService(t *testing.T) {
 
 			_, err = service.Modify(user.ID, func(u *User) error {
 				u.OAuthIdentities = []OAuthIdentity{
-					{Provider: "google", ProviderID: "google-123"},
+					{Provider: OAuthProviderGoogle, ProviderID: "google-123"},
 				}
 				return nil
 			})
@@ -446,8 +446,8 @@ func TestUserService(t *testing.T) {
 
 		_, modErr := service1.Modify(persistUser.ID, func(u *User) error {
 			u.OAuthIdentities = []OAuthIdentity{
-				{Provider: "google", ProviderID: "google-persist-123"},
-				{Provider: "github", ProviderID: "github-persist-456"},
+				{Provider: OAuthProviderGoogle, ProviderID: "google-persist-123"},
+				{Provider: OAuthProviderGitHub, ProviderID: "github-persist-456"},
 			}
 			return nil
 		})

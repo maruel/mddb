@@ -252,15 +252,15 @@ func CannotUnlinkOnlyAuth() *APIError {
 }
 
 // ProviderAlreadyLinked creates a 409 error when provider is already linked.
-func ProviderAlreadyLinked(provider string) *APIError {
+func ProviderAlreadyLinked(provider OAuthProvider) *APIError {
 	return NewAPIError(http.StatusConflict, ErrorCodeProviderAlreadyLinked,
-		provider+" is already linked to your account")
+		string(provider)+" is already linked to your account")
 }
 
 // ProviderNotLinked creates a 404 error when provider is not linked.
-func ProviderNotLinked(provider string) *APIError {
+func ProviderNotLinked(provider OAuthProvider) *APIError {
 	return NewAPIError(http.StatusNotFound, ErrorCodeProviderNotLinked,
-		provider+" is not linked to your account")
+		string(provider)+" is not linked to your account")
 }
 
 // EmailInUse creates a 409 error when email is already in use.

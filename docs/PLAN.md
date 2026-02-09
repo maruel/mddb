@@ -29,16 +29,16 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 - **Streamlined Onboarding**: Unified UI and CLI experience for new users, including **template repository starters**.
 - **Global Administration**: Tools for system-wide oversight.
 - **Enhanced Authentication**:
-  - [ ] Refactor `OAuthIdentity.Provider` from `string` to typed `OAuthProvider` enum.
-  - [ ] Add GitHub OAuth provider support.
-  - [ ] Implement multi-provider account linking (manual link/unlink endpoints).
+  - [x] Refactor `OAuthIdentity.Provider` from `string` to typed `OAuthProvider` enum.
+  - [x] Add GitHub OAuth provider support.
+  - [x] Implement multi-provider account linking (manual link/unlink endpoints).
   - [x] Add `EmailVerified` field to User; trust OAuth emails as pre-verified.
   - [x] Support email change with re-verification (when email sending enabled).
   - [x] Email verification via magic links (SMTP-based, optional).
   - [x] Localized invitation emails for org/workspace invitations.
 - **Security Hardening**:
   - [ ] Add authentication to asset serving endpoint (currently public).
-  - [ ] Fix parameter naming in asset handlers (`orgID` → `wsID`).
+  - [x] Fix parameter naming in asset handlers (`orgID` → `wsID`).
   - [ ] Implement membership cascade: deleting org membership removes workspace memberships.
   - [ ] Add optional public asset sharing with workspace-level settings.
 

@@ -107,7 +107,7 @@ const (
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
 type OAuthIdentity struct {
-	Provider   OAuthProvider `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft)"`
+	Provider   OAuthProvider `json:"provider" jsonschema:"description=OAuth provider name (google/microsoft/github)"`
 	ProviderID string        `json:"provider_id" jsonschema:"description=User ID at the OAuth provider"`
 	Email      string        `json:"email" jsonschema:"description=Email address from OAuth provider"`
 	AvatarURL  string        `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`

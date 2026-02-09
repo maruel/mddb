@@ -104,7 +104,7 @@ func (h *OAuthHandler) LinkOAuth(_ context.Context, user *identity.User, req *dt
 	// Check if provider is already linked
 	for _, ident := range user.OAuthIdentities {
 		if ident.Provider == provider {
-			return nil, dto.ProviderAlreadyLinked(string(provider))
+			return nil, dto.ProviderAlreadyLinked(dto.OAuthProvider(provider))
 		}
 	}
 
@@ -133,7 +133,7 @@ func (h *OAuthHandler) UnlinkOAuth(_ context.Context, user *identity.User, req *
 		}
 	}
 	if !found {
-		return nil, dto.ProviderNotLinked(string(provider))
+		return nil, dto.ProviderNotLinked(dto.OAuthProvider(provider))
 	}
 
 	// Check if user has another auth method (password or other OAuth)
