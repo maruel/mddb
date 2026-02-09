@@ -18,7 +18,7 @@ import (
 // It tracks db/*.jsonl and server_config.json, and manages workspace
 // directories as git submodules.
 type RootRepo struct {
-	repo    *Repo
+	repo    *ExecRepo
 	dataDir string
 }
 
@@ -34,7 +34,7 @@ func NewRootRepo(ctx context.Context, dataDir, defaultName, defaultEmail string)
 	if defaultEmail == "" {
 		defaultEmail = "mddb@localhost"
 	}
-	repo, err := newRepo(ctx, dataDir, defaultName, defaultEmail)
+	repo, err := newExecRepo(ctx, dataDir, defaultName, defaultEmail)
 	if err != nil {
 		return nil, fmt.Errorf("root repo init: %w", err)
 	}

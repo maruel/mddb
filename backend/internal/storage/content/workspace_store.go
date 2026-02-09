@@ -36,7 +36,7 @@ var relativeLinkRe = regexp.MustCompile(`\[([^\]]*)\]\(([^)]+/index\.md)\)`)
 //   - Assets: files within each page's directory namespace.
 type WorkspaceFileStore struct {
 	wsDir  string                    // Pre-computed: rootDir/wsID
-	repo   *git.Repo                 // Cached git repository
+	repo   git.Repository            // Cached git repository
 	quotas *storage.ResourceQuotas   // Effective quotas (min of server/org/ws)
 	mu     sync.RWMutex              // Protects cache
 	cache  map[jsonldb.ID]jsonldb.ID // nodeID -> parentID
@@ -45,7 +45,7 @@ type WorkspaceFileStore struct {
 
 // newWorkspaceFileStore creates a new workspace store.
 // This is called internally by FileStoreService.GetWorkspaceStore.
-func newWorkspaceFileStore(wsDir string, repo *git.Repo, quotas *storage.ResourceQuotas) *WorkspaceFileStore {
+func newWorkspaceFileStore(wsDir string, repo git.Repository, quotas *storage.ResourceQuotas) *WorkspaceFileStore {
 	return &WorkspaceFileStore{
 		wsDir:  wsDir,
 		repo:   repo,
@@ -1262,9 +1262,9 @@ func (ws *WorkspaceFileStore) MoveNode(ctx context.Context, id, newParentID json
 	})
 }
 
-// Repo returns the git.Repo for the workspace. This is exported for handlers
+// Repo returns the git Repository for the workspace. This is exported for handlers
 // that need direct git operations (e.g., git remotes).
-func (ws *WorkspaceFileStore) Repo() *git.Repo {
+func (ws *WorkspaceFileStore) Repo() git.Repository {
 	return ws.repo
 }
 

@@ -10,15 +10,35 @@ import (
 	"testing"
 )
 
+var backends = []struct {
+	name    string
+	backend Backend
+}{
+	{"Exec", BackendExec},
+	{"GoGit", BackendGoGit},
+}
+
 func TestRepo(t *testing.T) {
 	t.Parallel()
+
+	for _, b := range backends {
+		t.Run(b.name, func(t *testing.T) {
+			t.Parallel()
+			backend := b.backend
+			testRepoAll(t, backend)
+		})
+	}
+}
+
+func testRepoAll(t *testing.T, backend Backend) {
+	t.Helper()
 
 	t.Run("Init", func(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
 
-		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "Test User", "test@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatalf("Repo() failed: %v", err)
@@ -55,7 +75,7 @@ func TestRepo(t *testing.T) {
 		tmpDir := t.TempDir()
 		ctx := t.Context()
 
-		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "Test User", "test@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatalf("Repo() failed: %v", err)
@@ -97,7 +117,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "Test User", "test@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatalf("Repo() failed: %v", err)
@@ -146,7 +166,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "Test User", "test@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatalf("Repo() failed: %v", err)
@@ -196,7 +216,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "Test User", "test@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -250,7 +270,7 @@ func TestRepo(t *testing.T) {
 		// Local repo
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "Test User", "test@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "Test User", "test@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -295,7 +315,7 @@ func TestRepo(t *testing.T) {
 		tmpDir := t.TempDir()
 		ctx := t.Context()
 
-		mgr := NewManager(tmpDir, "Root User", "root@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "Root User", "root@example.com", backend)
 
 		// Create root repo
 		rootRepo, err := mgr.Repo(ctx, "")
@@ -354,7 +374,7 @@ func TestRepo(t *testing.T) {
 		tmpDir := t.TempDir()
 		ctx := t.Context()
 
-		mgr := NewManager(tmpDir, "", "")
+		mgr := NewManagerWithBackend(tmpDir, "", "", backend)
 		_, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatalf("Repo() failed: %v", err)
@@ -377,7 +397,7 @@ func TestRepo(t *testing.T) {
 		// Local
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "email")
+		mgr := NewManagerWithBackend(tmpDir, "User", "email", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -419,7 +439,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "email")
+		mgr := NewManagerWithBackend(tmpDir, "User", "email", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -464,7 +484,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "email")
+		mgr := NewManagerWithBackend(tmpDir, "User", "email", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -503,7 +523,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "email")
+		mgr := NewManagerWithBackend(tmpDir, "User", "email", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -537,7 +557,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "email")
+		mgr := NewManagerWithBackend(tmpDir, "User", "email", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -574,7 +594,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "email")
+		mgr := NewManagerWithBackend(tmpDir, "User", "email", backend)
 
 		repo1, err := mgr.Repo(ctx, "")
 		if err != nil {
@@ -600,7 +620,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "email")
+		mgr := NewManagerWithBackend(tmpDir, "User", "email", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -617,7 +637,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "email")
+		mgr := NewManagerWithBackend(tmpDir, "User", "email", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -633,7 +653,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "user@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "User", "user@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -678,7 +698,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "user@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "User", "user@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -713,7 +733,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "user@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "User", "user@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -732,7 +752,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "user@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "User", "user@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -771,7 +791,7 @@ func TestRepo(t *testing.T) {
 		t.Parallel()
 		tmpDir := t.TempDir()
 		ctx := t.Context()
-		mgr := NewManager(tmpDir, "User", "user@example.com")
+		mgr := NewManagerWithBackend(tmpDir, "User", "user@example.com", backend)
 		repo, err := mgr.Repo(ctx, "")
 		if err != nil {
 			t.Fatal(err)
@@ -831,6 +851,7 @@ func TestRepo(t *testing.T) {
 }
 
 func checkConfig(t *testing.T, dir, key, expected string) {
+	t.Helper()
 	// #nosec G204
 	cmd := exec.Command("git", "config", key)
 	cmd.Dir = dir
