@@ -424,6 +424,29 @@ export interface Dictionary {
     untitledSubpage: string;
   };
 
+  notifications: {
+    title: string;
+    markAllRead: string;
+    empty: string;
+    loadMore: string;
+    enablePush: string;
+    pushDenied: string;
+    pushEnabled: string;
+    preferences: string;
+    channelEmail: string;
+    channelWeb: string;
+    typeOrgInvite: string;
+    typeWsInvite: string;
+    typeMemberJoined: string;
+    typeMemberRemoved: string;
+    typePageMention: string;
+    typePageEdited: string;
+    timeJustNow: string;
+    timeMinutesAgo: string;
+    timeHoursAgo: string;
+    timeDaysAgo: string;
+  };
+
   server: {
     title: string;
     serverSettings: string;

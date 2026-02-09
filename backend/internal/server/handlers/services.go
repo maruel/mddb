@@ -24,20 +24,22 @@ import (
 
 // Services holds all service dependencies for handlers.
 type Services struct {
-	FileStore     *content.FileStoreService
-	Search        *content.SearchService
-	User          *identity.UserService
-	Organization  *identity.OrganizationService
-	Workspace     *identity.WorkspaceService
-	OrgInvitation *identity.OrganizationInvitationService
-	WSInvitation  *identity.WorkspaceInvitationService
-	OrgMembership *identity.OrganizationMembershipService
-	WSMembership  *identity.WorkspaceMembershipService
-	Session       *identity.SessionService
-	EmailVerif    *identity.EmailVerificationService // may be nil
-	Email         *email.Service                     // may be nil
-	RootRepo      *git.RootRepo
-	SyncService   *syncsvc.Service // may be nil
+	FileStore        *content.FileStoreService
+	Search           *content.SearchService
+	User             *identity.UserService
+	Organization     *identity.OrganizationService
+	Workspace        *identity.WorkspaceService
+	OrgInvitation    *identity.OrganizationInvitationService
+	WSInvitation     *identity.WorkspaceInvitationService
+	OrgMembership    *identity.OrganizationMembershipService
+	WSMembership     *identity.WorkspaceMembershipService
+	Session          *identity.SessionService
+	EmailVerif       *identity.EmailVerificationService // may be nil
+	Email            *email.Service                     // may be nil
+	RootRepo         *git.RootRepo
+	SyncService      *syncsvc.Service                  // may be nil
+	Notification     *identity.NotificationService     // may be nil
+	PushSubscription *identity.PushSubscriptionService // may be nil
 }
 
 // BandwidthUpdater allows updating bandwidth limits at runtime.

@@ -95,6 +95,16 @@ func (h *UserHandler) RemoveOrgMember(ctx context.Context, orgID jsonldb.ID, use
 	if err := h.Svc.WSMembership.DeleteByUserInOrg(req.UserID, orgID); err != nil {
 		return nil, dto.InternalWithError("Failed to cascade workspace memberships", err)
 	}
+
+	// Notify the removed user.
+	org, _ := h.Svc.Organization.Get(orgID)
+	orgName := ""
+	if org != nil {
+		orgName = org.Name
+	}
+	h.Svc.Emit(ctx, nil, req.UserID, identity.NotifMemberRemoved,
+		"You were removed from "+orgName, "", orgID.String(), user.ID)
+
 	return &dto.OkResponse{Ok: true}, nil
 }
 
@@ -130,7 +140,7 @@ func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID jsonldb.ID, _
 // UpdateUserSettings updates user global settings.
 func (h *UserHandler) UpdateUserSettings(ctx context.Context, user *identity.User, req *dto.UpdateUserSettingsRequest) (*dto.UserResponse, error) {
 	_, err := h.Svc.User.Modify(user.ID, func(u *identity.User) error {
-		u.Settings = userSettingsToEntity(req.Settings)
+		u.Settings = userSettingsToEntity(req.Settings, u.Settings)
 		return nil
 	})
 	if err != nil {

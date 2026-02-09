@@ -128,6 +128,16 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | * | `/api/` | public |
 | GET | `/api/v1/github-app/available` | public |
 | POST | `/api/v1/github-app/repos` | authenticated |
+| GET | `/api/v1/notifications` | authenticated |
+| GET | `/api/v1/notifications/preferences` | authenticated |
+| POST | `/api/v1/notifications/preferences` | authenticated |
+| POST | `/api/v1/notifications/read-all` | authenticated |
+| POST | `/api/v1/notifications/subscribe` | authenticated |
+| GET | `/api/v1/notifications/unread-count` | authenticated |
+| POST | `/api/v1/notifications/unsubscribe` | authenticated |
+| GET | `/api/v1/notifications/vapid-key` | authenticated |
+| POST | `/api/v1/notifications/{id}/delete` | authenticated |
+| POST | `/api/v1/notifications/{id}/read` | authenticated |
 | POST | `/api/v1/organizations` | authenticated |
 | GET | `/api/v1/organizations/{orgID}` | org:Member |
 | POST | `/api/v1/organizations/{orgID}` | org:Admin |

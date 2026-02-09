@@ -20,6 +20,7 @@ import type {
   CreateWorkspaceRequest,
   DeleteNodeAssetResponse,
   DeleteNodeResponse,
+  DeleteNotificationResponse,
   DeletePageResponse,
   DeleteRecordResponse,
   DeleteTableResponse,
@@ -41,6 +42,8 @@ import type {
   ListNodeChildrenResponse,
   ListNodeVersionsRequest,
   ListNodeVersionsResponse,
+  ListNotificationsRequest,
+  ListNotificationsResponse,
   ListOrgInvitationsResponse,
   ListRecordsRequest,
   ListRecordsResponse,
@@ -49,9 +52,12 @@ import type {
   ListWSInvitationsResponse,
   LoginRequest,
   LogoutResponse,
+  MarkAllNotificationsReadResponse,
+  MarkNotificationReadResponse,
   MoveNodeRequest,
   MoveNodeResponse,
   NodeResponse,
+  NotificationPrefsDTO,
   NotionImportCancelResponse,
   NotionImportRequest,
   NotionImportResponse,
@@ -60,6 +66,10 @@ import type {
   OrgInvitationResponse,
   OrganizationResponse,
   ProvidersResponse,
+  PushSubscribeRequest,
+  PushSubscribeResponse,
+  PushUnsubscribeRequest,
+  PushUnsubscribeResponse,
   RegisterRequest,
   RemoveOrgMemberRequest,
   RevokeAllSessionsResponse,
@@ -73,7 +83,9 @@ import type {
   SetupGitHubAppRemoteRequest,
   SwitchWorkspaceRequest,
   SwitchWorkspaceResponse,
+  UnreadCountResponse,
   UpdateGitRemoteRequest,
+  UpdateNotificationPrefsRequest,
   UpdateOrgMemberRoleRequest,
   UpdateOrgPreferencesRequest,
   UpdateOrganizationRequest,
@@ -92,6 +104,7 @@ import type {
   UpdateWSMembershipSettingsRequest,
   UpdateWorkspaceRequest,
   UserResponse,
+  VAPIDKeyResponse,
   WSInvitationResponse,
   WSMembershipResponse,
   WorkspaceResponse,
@@ -166,6 +179,31 @@ export function createAPIClient(fetchFn: FetchFn) {
     githubApp: {
       isGitHubAppAvailable: () => get<GitHubAppAvailableResponse>(fetchFn, `/api/v1/github-app/available`),
       listGitHubAppRepos: (options: ListGitHubAppReposRequest) => post<ListGitHubAppReposResponse>(fetchFn, `/api/v1/github-app/repos`, options),
+    },
+    notifications: {
+      preferences: {
+        getNotificationPrefs: () => get<NotificationPrefsDTO>(fetchFn, `/api/v1/notifications/preferences`),
+        updateNotificationPrefs: (options: UpdateNotificationPrefsRequest) => post<NotificationPrefsDTO>(fetchFn, `/api/v1/notifications/preferences`, options),
+      },
+      readAll: {
+        markAllNotificationsRead: () => post<MarkAllNotificationsReadResponse>(fetchFn, `/api/v1/notifications/read-all`),
+      },
+      vapidKey: {
+        getVAPIDPublicKey: () => get<VAPIDKeyResponse>(fetchFn, `/api/v1/notifications/vapid-key`),
+      },
+      deleteNotification: (id: string) => post<DeleteNotificationResponse>(fetchFn, `/api/v1/notifications/${id}/delete`),
+      getUnreadCount: () => get<UnreadCountResponse>(fetchFn, `/api/v1/notifications/unread-count`),
+      async listNotifications(options: ListNotificationsRequest): Promise<ListNotificationsResponse> {
+        const params = new URLSearchParams();
+        if (options.Limit) params.set('limit', String(options.Limit));
+        if (options.Offset) params.set('offset', String(options.Offset));
+        if (options.UnreadOnly) params.set('unread_only', String(options.UnreadOnly));
+        const url = `/api/v1/notifications` + (params.toString() ? `?${params}` : '');
+        return get<ListNotificationsResponse>(fetchFn, url);
+      },
+      markNotificationRead: (id: string) => post<MarkNotificationReadResponse>(fetchFn, `/api/v1/notifications/${id}/read`),
+      subscribePush: (options: PushSubscribeRequest) => post<PushSubscribeResponse>(fetchFn, `/api/v1/notifications/subscribe`, options),
+      unsubscribePush: (options: PushUnsubscribeRequest) => post<PushUnsubscribeResponse>(fetchFn, `/api/v1/notifications/unsubscribe`, options),
     },
     organizations: {
       createOrganization: (options: CreateOrganizationRequest) => post<OrganizationResponse>(fetchFn, `/api/v1/organizations`, options),

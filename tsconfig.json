@@ -33,5 +33,6 @@
     }
   },
   "include": ["frontend/src", "sdk"],
+  "exclude": ["frontend/src/sw.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

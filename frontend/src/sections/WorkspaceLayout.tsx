@@ -4,6 +4,7 @@ import { createSignal, Show, For, onCleanup, type ParentComponent } from 'solid-
 import { useNavigate } from '@solidjs/router';
 import Sidebar from '../components/Sidebar';
 import UserMenu from '../components/UserMenu';
+import NotificationBell from '../components/NotificationBell';
 import NotionImportBanner from '../components/NotionImportBanner';
 import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
 import NotionImportModal, { type NotionImportData } from '../components/NotionImportModal';
@@ -274,6 +275,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
           </Show>
         </div>
         <div class={styles.userInfo}>
+          <NotificationBell />
           <UserMenu
             onProfile={() => {
               navigate(settingsUrl('user'));

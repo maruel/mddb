@@ -1463,3 +1463,119 @@ func (r *NotionImportCancelRequest) Validate() error {
 	}
 	return nil
 }
+
+// --- Notification Requests ---
+
+// ListNotificationsRequest is a request to list notifications for the authenticated user.
+type ListNotificationsRequest struct {
+	Limit      int  `query:"limit"`
+	Offset     int  `query:"offset"`
+	UnreadOnly bool `query:"unread_only"`
+}
+
+// Validate validates the list notifications request.
+func (r *ListNotificationsRequest) Validate() error {
+	return nil
+}
+
+// GetUnreadCountRequest is a request to get the unread notification count.
+type GetUnreadCountRequest struct{}
+
+// Validate validates the get unread count request.
+func (r *GetUnreadCountRequest) Validate() error {
+	return nil
+}
+
+// MarkNotificationReadRequest marks a single notification as read.
+type MarkNotificationReadRequest struct {
+	ID jsonldb.ID `path:"id" tstype:"-"`
+}
+
+// Validate validates the mark notification read request.
+func (r *MarkNotificationReadRequest) Validate() error {
+	if r.ID.IsZero() {
+		return MissingField("id")
+	}
+	return nil
+}
+
+// MarkAllNotificationsReadRequest marks all notifications as read.
+type MarkAllNotificationsReadRequest struct{}
+
+// Validate validates the mark all read request.
+func (r *MarkAllNotificationsReadRequest) Validate() error {
+	return nil
+}
+
+// DeleteNotificationRequest deletes a single notification.
+type DeleteNotificationRequest struct {
+	ID jsonldb.ID `path:"id" tstype:"-"`
+}
+
+// Validate validates the delete notification request.
+func (r *DeleteNotificationRequest) Validate() error {
+	if r.ID.IsZero() {
+		return MissingField("id")
+	}
+	return nil
+}
+
+// GetNotificationPrefsRequest gets notification preferences.
+type GetNotificationPrefsRequest struct{}
+
+// Validate validates the get notification prefs request.
+func (r *GetNotificationPrefsRequest) Validate() error {
+	return nil
+}
+
+// UpdateNotificationPrefsRequest updates notification channel preferences.
+type UpdateNotificationPrefsRequest struct {
+	Overrides map[string]ChannelSetDTO `json:"overrides"`
+}
+
+// Validate validates the update notification prefs request.
+func (r *UpdateNotificationPrefsRequest) Validate() error {
+	return nil
+}
+
+// GetVAPIDKeyRequest gets the server's VAPID public key.
+type GetVAPIDKeyRequest struct{}
+
+// Validate validates the get VAPID key request.
+func (r *GetVAPIDKeyRequest) Validate() error {
+	return nil
+}
+
+// PushSubscribeRequest saves a push subscription.
+type PushSubscribeRequest struct {
+	Endpoint string `json:"endpoint"`
+	P256dh   string `json:"p256dh"`
+	Auth     string `json:"auth"`
+}
+
+// Validate validates the push subscribe request.
+func (r *PushSubscribeRequest) Validate() error {
+	if r.Endpoint == "" {
+		return MissingField("endpoint")
+	}
+	if r.P256dh == "" {
+		return MissingField("p256dh")
+	}
+	if r.Auth == "" {
+		return MissingField("auth")
+	}
+	return nil
+}
+
+// PushUnsubscribeRequest removes a push subscription.
+type PushUnsubscribeRequest struct {
+	Endpoint string `json:"endpoint"`
+}
+
+// Validate validates the push unsubscribe request.
+func (r *PushUnsubscribeRequest) Validate() error {
+	if r.Endpoint == "" {
+		return MissingField("endpoint")
+	}
+	return nil
+}

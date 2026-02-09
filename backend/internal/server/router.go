@@ -253,6 +253,19 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	// Search
 	mux.Handle("POST /api/v1/workspaces/{wsID}/search", WrapWSAuth(sh.Search, svc, hcfg, identity.WSRoleViewer, limiters))
 
+	// Notification endpoints - /api/v1/notifications/*
+	notifh := &handlers.NotificationHandler{Svc: svc, Cfg: hcfg}
+	mux.Handle("GET /api/v1/notifications", WrapAuth(notifh.ListNotifications, svc, hcfg, limiters))
+	mux.Handle("GET /api/v1/notifications/unread-count", WrapAuth(notifh.GetUnreadCount, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/notifications/{id}/read", WrapAuth(notifh.MarkNotificationRead, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/notifications/read-all", WrapAuth(notifh.MarkAllNotificationsRead, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/notifications/{id}/delete", WrapAuth(notifh.DeleteNotification, svc, hcfg, limiters))
+	mux.Handle("GET /api/v1/notifications/preferences", WrapAuth(notifh.GetNotificationPrefs, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/notifications/preferences", WrapAuth(notifh.UpdateNotificationPrefs, svc, hcfg, limiters))
+	mux.Handle("GET /api/v1/notifications/vapid-key", WrapAuth(notifh.GetVAPIDPublicKey, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/notifications/subscribe", WrapAuth(notifh.SubscribePush, svc, hcfg, limiters))
+	mux.Handle("POST /api/v1/notifications/unsubscribe", WrapAuth(notifh.UnsubscribePush, svc, hcfg, limiters))
+
 	// GitHub webhook (unauthenticated, signature-verified)
 	if cfg.GitHubApp.WebhookSecret != "" || cfg.GitHubApp.PrivateKey != nil {
 		wh := &handlers.GitHubWebhookHandler{

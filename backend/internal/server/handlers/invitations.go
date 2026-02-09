@@ -49,6 +49,17 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID jsonl
 		}
 	}
 
+	// Notify the invitee (if they already have an account).
+	if invitee, err := h.Svc.User.GetByEmail(req.Email); err == nil {
+		org, _ := h.Svc.Organization.Get(orgID)
+		orgName := ""
+		if org != nil {
+			orgName = org.Name
+		}
+		h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), invitee.ID, identity.NotifOrgInvite,
+			user.Name+" invited you to "+orgName, "", orgID.String(), user.ID)
+	}
+
 	return orgInvitationToResponse(invitation), nil
 }
 
@@ -94,6 +105,17 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID jsonldb
 				}
 			}
 		}
+	}
+
+	// Notify the invitee (if they already have an account).
+	if invitee, err := h.Svc.User.GetByEmail(req.Email); err == nil {
+		wsObj, _ := h.Svc.Workspace.Get(wsID)
+		wsName := ""
+		if wsObj != nil {
+			wsName = wsObj.Name
+		}
+		h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), invitee.ID, identity.NotifWSInvite,
+			user.Name+" invited you to "+wsName, "", wsID.String(), user.ID)
 	}
 
 	return wsInvitationToResponse(invitation), nil
@@ -162,6 +184,19 @@ func (h *InvitationHandler) AcceptOrgInvitation(ctx context.Context, req *dto.Ac
 
 	// Set active context
 	uwm.populateActiveContext(userResp)
+
+	// Notify org admins that a new member joined.
+	org, _ := h.Svc.Organization.Get(inv.OrganizationID)
+	orgName := ""
+	if org != nil {
+		orgName = org.Name
+	}
+	for m := range h.Svc.OrgMembership.IterByOrg(inv.OrganizationID) {
+		if m.UserID != user.ID && (m.Role == identity.OrgRoleAdmin || m.Role == identity.OrgRoleOwner) {
+			h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), m.UserID, identity.NotifMemberJoined,
+				user.Name+" joined "+orgName, "", inv.OrganizationID.String(), user.ID)
+		}
+	}
 
 	return &dto.AuthResponse{
 		Token: token,
@@ -236,6 +271,14 @@ func (h *InvitationHandler) AcceptWSInvitation(ctx context.Context, req *dto.Acc
 
 	// Set active context
 	uwm.populateActiveContext(userResp)
+
+	// Notify workspace admins that a new member joined.
+	for m := range h.Svc.WSMembership.IterByWorkspace(inv.WorkspaceID) {
+		if m.UserID != user.ID && m.Role == identity.WSRoleAdmin {
+			h.Svc.Emit(ctx, h.Cfg.VAPIDKeys(), m.UserID, identity.NotifMemberJoined,
+				user.Name+" joined "+ws.Name, "", inv.WorkspaceID.String(), user.ID)
+		}
+	}
 
 	return &dto.AuthResponse{
 		Token: token,

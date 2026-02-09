@@ -844,7 +844,7 @@ func writeMethod(b *strings.Builder, m *NamespaceMethod, indent string, scope Sc
 	fmt.Fprintf(b, "%sasync %s(%s): Promise<%s> {\n", indent, m.Name, paramStr, ep.ResponseType)
 	fmt.Fprintf(b, "%s  const params = new URLSearchParams();\n", indent)
 	for _, qf := range m.QueryFields {
-		if qf.TypeName == "int" || qf.TypeName == "int64" {
+		if qf.TypeName == "int" || qf.TypeName == "int64" || qf.TypeName == "bool" {
 			fmt.Fprintf(b, "%s  if (options.%s) params.set('%s', String(options.%s));\n", indent, qf.TSName, qf.TagName, qf.TSName)
 		} else {
 			fmt.Fprintf(b, "%s  if (options.%s) params.set('%s', options.%s);\n", indent, qf.TSName, qf.TagName, qf.TSName)

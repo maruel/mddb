@@ -1,0 +1,87 @@
+/* Notification preferences panel styles. */
+
+.section {
+  margin-top: var(--s-4);
+}
+
+.section h3 {
+  margin-bottom: var(--s-3);
+}
+
+.error {
+  padding: var(--s-2) var(--s-3);
+  background: #fef2f2;
+  color: var(--c-danger);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  margin-bottom: var(--s-3);
+}
+
+.pushSection {
+  margin-bottom: var(--s-4);
+}
+
+.pushButton {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg);
+  color: var(--c-text);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition:
+    background var(--transition),
+    border-color var(--transition);
+}
+
+.pushButton:hover:not(:disabled) {
+  border-color: var(--c-primary);
+}
+
+.pushButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pushActive {
+  background: var(--c-primary);
+  color: white;
+  border-color: var(--c-primary);
+}
+
+.pushDenied {
+  font-size: 0.8rem;
+  color: var(--c-danger);
+  margin-top: var(--s-2);
+}
+
+.prefsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.prefsTable th {
+  text-align: center;
+  padding: var(--s-2);
+  font-weight: 500;
+  color: var(--c-text-light);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.prefsTable th:first-child {
+  text-align: left;
+}
+
+.prefsTable td {
+  padding: var(--s-2);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.typeLabel {
+  color: var(--c-text);
+}
+
+.toggleCell {
+  text-align: center;
+}

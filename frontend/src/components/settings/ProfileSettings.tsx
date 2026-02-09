@@ -2,24 +2,24 @@
 
 import { createSignal, createEffect, onMount, Show, For } from 'solid-js';
 import { useNavigate, useLocation } from '@solidjs/router';
-import type { UserSettings, WorkspaceMembershipSettings, OrgMembershipResponse } from '@sdk/types.gen';
+import type { UserSettings, OrgMembershipResponse } from '@sdk/types.gen';
 import { OrgRoleAdmin, OrgRoleOwner } from '@sdk/types.gen';
 import { useAuth } from '../../contexts';
 import { useI18n, type Locale } from '../../i18n';
 import { settingsUrl } from '../../utils/urls';
 import LinkedAccountsSection from './LinkedAccountsSection';
 import PasswordSection from './PasswordSection';
+import NotificationSettings from './NotificationSettings';
 import styles from './ProfileSettings.module.css';
 
 export default function ProfileSettings() {
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, api, wsApi } = useAuth();
+  const { user, api } = useAuth();
 
   const [theme, setTheme] = createSignal('light');
   const [language, setLanguage] = createSignal('en');
-  const [notifications, setNotifications] = createSignal(true);
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -70,33 +70,8 @@ export default function ProfileSettings() {
     setLanguage(u?.settings?.language || 'en');
   });
 
-  const loadData = async () => {
-    const u = user();
-    if (!u) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Load membership settings (notifications)
-      const currentWsMembership = u.workspaces?.find((m) => m.workspace_id === u.workspace_id);
-      if (currentWsMembership) {
-        setNotifications(currentWsMembership.settings?.notifications ?? true);
-      }
-    } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  createEffect(() => {
-    loadData();
-  });
-
   const savePersonalSettings = async (e: Event) => {
     e.preventDefault();
-    const ws = wsApi();
 
     try {
       setLoading(true);
@@ -108,17 +83,7 @@ export default function ProfileSettings() {
         language: language(),
       };
 
-      const promises: Promise<unknown>[] = [api().auth.updateUserSettings({ settings: userSettings })];
-
-      // Only update workspace membership settings if we have a workspace
-      if (ws) {
-        const memSettings: WorkspaceMembershipSettings = {
-          notifications: notifications(),
-        };
-        promises.push(ws.settings.updateWSMembershipSettings({ settings: memSettings }));
-      }
-
-      await Promise.all(promises);
+      await api().auth.updateUserSettings({ settings: userSettings });
 
       // Update locale immediately so UI refreshes
       const lang = language() as Locale;
@@ -227,18 +192,6 @@ export default function ProfileSettings() {
                     <option value="es">{t('settings.languageEs')}</option>
                   </select>
                 </div>
-                <Show when={u().workspace_id}>
-                  <div class={styles.formItem}>
-                    <label class={styles.checkboxLabel}>
-                      <input
-                        type="checkbox"
-                        checked={notifications()}
-                        onChange={(e) => setNotifications(e.currentTarget.checked)}
-                      />
-                      {t('settings.enableNotifications')}
-                    </label>
-                  </div>
-                </Show>
                 <button type="submit" class={styles.saveButton} disabled={loading()}>
                   {t('settings.saveChanges')}
                 </button>
@@ -253,6 +206,8 @@ export default function ProfileSettings() {
             />
 
             <PasswordSection hasPassword={u().has_password ?? false} onSuccess={setSuccess} onError={setError} />
+
+            <NotificationSettings />
           </>
         )}
       </Show>

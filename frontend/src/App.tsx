@@ -2,7 +2,7 @@
 
 import { lazy, Show, Switch, Match, Suspense, type ParentComponent } from 'solid-js';
 import { Router, Route, Navigate, A } from '@solidjs/router';
-import { AuthProvider, useAuth } from './contexts';
+import { AuthProvider, useAuth, NotificationProvider } from './contexts';
 import AppErrorBoundary from './components/ErrorBoundary';
 import PWAInstallBanner from './components/PWAInstallBanner';
 
@@ -46,13 +46,13 @@ function NotFound() {
 
 // Route guard that redirects unauthenticated users to /login
 const RequireAuth: ParentComponent = (props) => {
-  const { user, ready } = useAuth();
+  const { user, ready, api } = useAuth();
 
   // Wait for auth check to complete before making decisions
   return (
     <Show when={ready()} fallback={<RouteLoading />}>
       <Show when={user()} fallback={<Navigate href="/login" />}>
-        {props.children}
+        <NotificationProvider api={api}>{props.children}</NotificationProvider>
       </Show>
     </Show>
   );

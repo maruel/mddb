@@ -351,7 +351,9 @@ func wsMembershipSettingsToEntity(s dto.WorkspaceMembershipSettings) identity.Wo
 	}
 }
 
-func userSettingsToEntity(s dto.UserSettings) identity.UserSettings {
+// userSettingsToEntity converts DTO user settings to entity.
+// prev is used to preserve fields not exposed in the DTO (e.g. NotificationPrefs).
+func userSettingsToEntity(s dto.UserSettings, prev identity.UserSettings) identity.UserSettings {
 	wsIDs := make([]jsonldb.ID, 0, len(s.LastActiveWorkspaces))
 	for _, idStr := range s.LastActiveWorkspaces {
 		if id, err := jsonldb.DecodeID(idStr); err == nil && !id.IsZero() {
@@ -362,6 +364,7 @@ func userSettingsToEntity(s dto.UserSettings) identity.UserSettings {
 		Theme:                s.Theme,
 		Language:             s.Language,
 		LastActiveWorkspaces: wsIDs,
+		NotificationPrefs:    prev.NotificationPrefs,
 	}
 }
 

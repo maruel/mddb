@@ -346,6 +346,16 @@ func mainImpl() error {
 		}
 	}
 
+	notificationService, err := identity.NewNotificationService(filepath.Join(dbDir, "notifications.jsonl"))
+	if err != nil {
+		return fmt.Errorf("failed to initialize notification service: %w", err)
+	}
+
+	pushSubscriptionService, err := identity.NewPushSubscriptionService(filepath.Join(dbDir, "push_subscriptions.jsonl"))
+	if err != nil {
+		return fmt.Errorf("failed to initialize push subscription service: %w", err)
+	}
+
 	// Initialize email verification service and email service (nil if SMTP not configured)
 	var emailVerificationService *identity.EmailVerificationService
 	var emailService *email.Service
@@ -405,20 +415,22 @@ func mainImpl() error {
 	syncService := syncsvc.New(wsService, fileStore, ghAppClient, rootRepo)
 
 	svc := &handlers.Services{
-		FileStore:     fileStore,
-		Search:        content.NewSearchService(fileStore),
-		User:          userService,
-		Organization:  orgService,
-		Workspace:     wsService,
-		OrgInvitation: orgInvService,
-		WSInvitation:  wsInvService,
-		OrgMembership: orgMemService,
-		WSMembership:  wsMemService,
-		Session:       sessionService,
-		EmailVerif:    emailVerificationService,
-		Email:         emailService,
-		RootRepo:      rootRepo,
-		SyncService:   syncService,
+		FileStore:        fileStore,
+		Search:           content.NewSearchService(fileStore),
+		User:             userService,
+		Organization:     orgService,
+		Workspace:        wsService,
+		OrgInvitation:    orgInvService,
+		WSInvitation:     wsInvService,
+		OrgMembership:    orgMemService,
+		WSMembership:     wsMemService,
+		Session:          sessionService,
+		EmailVerif:       emailVerificationService,
+		Email:            emailService,
+		RootRepo:         rootRepo,
+		SyncService:      syncService,
+		Notification:     notificationService,
+		PushSubscription: pushSubscriptionService,
 	}
 
 	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()
@@ -449,6 +461,9 @@ func mainImpl() error {
 		BaseContext:       func(_ net.Listener) context.Context { return ctx },
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+
+	// Start notification cleanup goroutine (runs once on startup, then daily).
+	go runNotificationCleanup(ctx, notificationService, rootRepo, &serverCfg.Quotas)
 
 	// Run server in goroutine
 	serverErr := make(chan error, 1)
@@ -663,6 +678,57 @@ func runOnboarding(dataDir string) error {
 	fmt.Println("")
 
 	return nil
+}
+
+// runNotificationCleanup periodically deletes old notifications and caps per-user counts.
+func runNotificationCleanup(ctx context.Context, notifSvc *identity.NotificationService, rootRepo *git.RootRepo, quotas *storage.ServerQuotas) {
+	cleanup := func() {
+		retentionDays := quotas.NotificationRetentionDays
+		if retentionDays <= 0 {
+			retentionDays = 90
+		}
+		maxPerUser := quotas.MaxNotificationsPerUser
+		if maxPerUser <= 0 {
+			maxPerUser = 500
+		}
+
+		cutoff := storage.ToTime(time.Now().AddDate(0, 0, -retentionDays))
+		var totalDeleted int
+
+		if count, err := notifSvc.DeleteOlderThan(cutoff); err != nil {
+			slog.WarnContext(ctx, "Failed to delete old notifications", "error", err)
+		} else {
+			totalDeleted += count
+		}
+
+		if count, err := notifSvc.DeleteExcessPerUser(maxPerUser); err != nil {
+			slog.WarnContext(ctx, "Failed to cap notifications per user", "error", err)
+		} else {
+			totalDeleted += count
+		}
+
+		if totalDeleted > 0 {
+			slog.InfoContext(ctx, "Notification cleanup", "deleted", totalDeleted)
+			if err := rootRepo.CommitDBChanges(ctx, git.Author{}, fmt.Sprintf("cleanup %d notifications", totalDeleted)); err != nil {
+				slog.WarnContext(ctx, "Failed to commit notification cleanup", "error", err)
+			}
+		}
+	}
+
+	// Run once at startup.
+	cleanup()
+
+	// Then run daily.
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			cleanup()
+		}
+	}
 }
 
 // watchExecutable watches the current executable for modifications and calls

@@ -99,6 +99,7 @@ export default tseslint.config(
   {
     ignores: [
       'frontend/src/*.gen.ts',
+      'frontend/src/sw.ts', // Built separately by VitePWA injectManifest
       'frontend/dist/**',
       'sdk/types.gen.ts', // Generated file
       'e2e/*.cjs', // CommonJS scripts

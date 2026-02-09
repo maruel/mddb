@@ -1,0 +1,218 @@
+/* Notification bell icon with badge and dropdown panel. */
+
+.bellWrapper {
+  position: relative;
+}
+
+.bellButton {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: var(--s-1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border-radius: var(--radius);
+  transition: background var(--transition);
+}
+
+.bellButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.bellButton svg {
+  width: 20px;
+  height: 20px;
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--c-danger);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 360px;
+  max-height: 480px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.panelHeader h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.markAllButton {
+  background: none;
+  border: none;
+  color: var(--c-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--radius);
+}
+
+.markAllButton:hover {
+  background: var(--c-bg-hover);
+}
+
+.panelBody {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.empty {
+  padding: var(--s-6);
+  text-align: center;
+  color: var(--c-text-muted);
+  font-size: 0.85rem;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border-bottom: 1px solid var(--c-border);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.item:hover {
+  background: var(--c-bg-hover);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.unread {
+  background: var(--c-bg-alt);
+}
+
+.unread .itemTitle {
+  font-weight: 600;
+}
+
+.itemContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.itemTitle {
+  font-size: 0.85rem;
+  color: var(--c-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemBody {
+  font-size: 0.8rem;
+  color: var(--c-text-light);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.itemMeta {
+  display: flex;
+  gap: var(--s-2);
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
+  margin-top: 4px;
+}
+
+.actor {
+  font-weight: 500;
+}
+
+.deleteButton {
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.item:hover .deleteButton {
+  opacity: 1;
+}
+
+.deleteButton:hover {
+  color: var(--c-danger);
+  background: var(--c-bg-hover);
+}
+
+.deleteButton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.loadMoreButton {
+  width: 100%;
+  padding: var(--s-2);
+  border: none;
+  background: none;
+  color: var(--c-primary);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.loadMoreButton:hover {
+  background: var(--c-bg-hover);
+}
+
+.loadMoreButton:disabled {
+  color: var(--c-text-muted);
+  cursor: default;
+}
+
+@media (max-width: 768px) {
+  .panel {
+    width: calc(100vw - 16px);
+    right: -8px;
+  }
+}

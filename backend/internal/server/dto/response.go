@@ -610,3 +610,37 @@ type ServerConfigResponse struct {
 
 // UpdateServerConfigResponse is a response from updating server configuration.
 type UpdateServerConfigResponse = OkResponse
+
+// --- Notification Responses ---
+
+// ListNotificationsResponse is a response containing paginated notifications.
+type ListNotificationsResponse struct {
+	Notifications []NotificationDTO `json:"notifications"`
+	Total         int               `json:"total"`
+	UnreadCount   int               `json:"unread_count"`
+}
+
+// UnreadCountResponse returns the unread notification count.
+type UnreadCountResponse struct {
+	Count int `json:"count"`
+}
+
+// VAPIDKeyResponse returns the server's VAPID public key.
+type VAPIDKeyResponse struct {
+	PublicKey string `json:"public_key"`
+}
+
+// MarkNotificationReadResponse is a response from marking a notification read.
+type MarkNotificationReadResponse = OkResponse
+
+// MarkAllNotificationsReadResponse is a response from marking all notifications read.
+type MarkAllNotificationsReadResponse = OkResponse
+
+// DeleteNotificationResponse is a response from deleting a notification.
+type DeleteNotificationResponse = OkResponse
+
+// PushSubscribeResponse is a response from subscribing to push notifications.
+type PushSubscribeResponse = OkResponse
+
+// PushUnsubscribeResponse is a response from unsubscribing from push notifications.
+type PushUnsubscribeResponse = OkResponse

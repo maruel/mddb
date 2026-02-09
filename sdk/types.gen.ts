@@ -659,6 +659,64 @@ export interface NotionImportStatusRequest {
  */
 export interface NotionImportCancelRequest {
 }
+/**
+ * ListNotificationsRequest is a request to list notifications for the authenticated user.
+ */
+export interface ListNotificationsRequest {
+  Limit: number /* int */;
+  Offset: number /* int */;
+  UnreadOnly: boolean;
+}
+/**
+ * GetUnreadCountRequest is a request to get the unread notification count.
+ */
+export interface GetUnreadCountRequest {
+}
+/**
+ * MarkNotificationReadRequest marks a single notification as read.
+ */
+export interface MarkNotificationReadRequest {
+}
+/**
+ * MarkAllNotificationsReadRequest marks all notifications as read.
+ */
+export interface MarkAllNotificationsReadRequest {
+}
+/**
+ * DeleteNotificationRequest deletes a single notification.
+ */
+export interface DeleteNotificationRequest {
+}
+/**
+ * GetNotificationPrefsRequest gets notification preferences.
+ */
+export interface GetNotificationPrefsRequest {
+}
+/**
+ * UpdateNotificationPrefsRequest updates notification channel preferences.
+ */
+export interface UpdateNotificationPrefsRequest {
+  overrides: { [key: string]: ChannelSetDTO};
+}
+/**
+ * GetVAPIDKeyRequest gets the server's VAPID public key.
+ */
+export interface GetVAPIDKeyRequest {
+}
+/**
+ * PushSubscribeRequest saves a push subscription.
+ */
+export interface PushSubscribeRequest {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+/**
+ * PushUnsubscribeRequest removes a push subscription.
+ */
+export interface PushUnsubscribeRequest {
+  endpoint: string;
+}
 
 //////////
 // source: response.go
@@ -1306,6 +1364,46 @@ export interface ServerConfigResponse {
  * UpdateServerConfigResponse is a response from updating server configuration.
  */
 export type UpdateServerConfigResponse = OkResponse;
+/**
+ * ListNotificationsResponse is a response containing paginated notifications.
+ */
+export interface ListNotificationsResponse {
+  notifications: NotificationDTO[];
+  total: number /* int */;
+  unread_count: number /* int */;
+}
+/**
+ * UnreadCountResponse returns the unread notification count.
+ */
+export interface UnreadCountResponse {
+  count: number /* int */;
+}
+/**
+ * VAPIDKeyResponse returns the server's VAPID public key.
+ */
+export interface VAPIDKeyResponse {
+  public_key: string;
+}
+/**
+ * MarkNotificationReadResponse is a response from marking a notification read.
+ */
+export type MarkNotificationReadResponse = OkResponse;
+/**
+ * MarkAllNotificationsReadResponse is a response from marking all notifications read.
+ */
+export type MarkAllNotificationsReadResponse = OkResponse;
+/**
+ * DeleteNotificationResponse is a response from deleting a notification.
+ */
+export type DeleteNotificationResponse = OkResponse;
+/**
+ * PushSubscribeResponse is a response from subscribing to push notifications.
+ */
+export type PushSubscribeResponse = OkResponse;
+/**
+ * PushUnsubscribeResponse is a response from unsubscribing from push notifications.
+ */
+export type PushUnsubscribeResponse = OkResponse;
 
 //////////
 // source: types.go
@@ -1648,4 +1746,32 @@ export const SortDesc: SortDir = "desc";
 export interface Group {
   property: string;
   hidden?: any[];
+}
+/**
+ * NotificationDTO is the API representation of a notification.
+ */
+export interface NotificationDTO {
+  id: string;
+  type: string;
+  title: string;
+  body?: string;
+  resource_id?: string;
+  actor_id?: string;
+  actor_name?: string;
+  read: boolean;
+  created_at: Time;
+}
+/**
+ * ChannelSetDTO indicates which delivery channels are enabled.
+ */
+export interface ChannelSetDTO {
+  email: boolean;
+  web: boolean;
+}
+/**
+ * NotificationPrefsDTO holds user notification preferences.
+ */
+export interface NotificationPrefsDTO {
+  defaults: { [key: string]: ChannelSetDTO};
+  overrides: { [key: string]: ChannelSetDTO};
 }

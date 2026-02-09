@@ -3,7 +3,9 @@
 package storage
 
 import (
+	"crypto/ecdh"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +14,13 @@ import (
 
 	"github.com/maruel/mddb/backend/internal/email"
 )
+
+// VAPIDConfig holds the ECDSA P-256 key pair for Web Push (RFC 8030).
+// Keys are base64url-encoded. Generated once on first boot if missing.
+type VAPIDConfig struct {
+	PublicKey  string `json:"vapid_public_key"`
+	PrivateKey string `json:"vapid_private_key"`
+}
 
 // ServerConfig stores all server-wide configuration.
 // Loaded from server_config.json, created with defaults if missing.
@@ -22,6 +31,9 @@ type ServerConfig struct {
 
 	// SMTP holds email configuration. Empty host disables email features.
 	SMTP email.Config `json:"smtp"`
+
+	// VAPID holds the Web Push VAPID key pair. Auto-generated if empty on first load.
+	VAPID VAPIDConfig `json:"vapid"`
 
 	// Quotas defines server-wide resource limits.
 	Quotas ServerQuotas `json:"quotas"`
@@ -103,6 +115,14 @@ type ServerQuotas struct {
 	// MaxEgressBandwidthBps limits total egress bandwidth in bytes per second.
 	// 0 means unlimited.
 	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps"`
+
+	// NotificationRetentionDays is how many days to keep notifications before GC.
+	// 0 means no age-based deletion.
+	NotificationRetentionDays int `json:"notification_retention_days"`
+
+	// MaxNotificationsPerUser caps notifications per user. Oldest are deleted when exceeded.
+	// 0 means unlimited.
+	MaxNotificationsPerUser int `json:"max_notifications_per_user"`
 }
 
 // Validate checks that all quota values are non-negative.
@@ -135,6 +155,12 @@ func (q *ServerQuotas) Validate() error {
 	if q.MaxEgressBandwidthBps < 0 {
 		return errors.New("max_egress_bandwidth_bps must be non-negative")
 	}
+	if q.NotificationRetentionDays < 0 {
+		return errors.New("notification_retention_days must be non-negative")
+	}
+	if q.MaxNotificationsPerUser < 0 {
+		return errors.New("max_notifications_per_user must be non-negative")
+	}
 	return nil
 }
 
@@ -146,14 +172,16 @@ func DefaultServerQuotas() ServerQuotas {
 		maxUsers = 200
 	}
 	return ServerQuotas{
-		ResourceQuotas:        DefaultResourceQuotas(),
-		MaxRequestBodyBytes:   10 * 1024 * 1024, // 10 MiB
-		MaxSessionsPerUser:    10,               // 10 sessions
-		MaxOrganizations:      1000,             // 1000 organizations
-		MaxWorkspaces:         10000,            // 10000 workspaces
-		MaxUsers:              maxUsers,
-		MaxTotalStorageBytes:  100 * 1024 * 1024 * 1024, // 100 GiB
-		MaxEgressBandwidthBps: 0,                        // unlimited
+		ResourceQuotas:            DefaultResourceQuotas(),
+		MaxRequestBodyBytes:       10 * 1024 * 1024, // 10 MiB
+		MaxSessionsPerUser:        10,               // 10 sessions
+		MaxOrganizations:          1000,             // 1000 organizations
+		MaxWorkspaces:             10000,            // 10000 workspaces
+		MaxUsers:                  maxUsers,
+		MaxTotalStorageBytes:      100 * 1024 * 1024 * 1024, // 100 GiB
+		MaxEgressBandwidthBps:     0,                        // unlimited
+		NotificationRetentionDays: 90,                       // 90 days
+		MaxNotificationsPerUser:   500,                      // 500 per user
 	}
 }
 
@@ -204,6 +232,17 @@ func LoadServerConfig(dataDir string) (*ServerConfig, error) {
 		if _, err := rand.Read(cfg.JWTSecret); err != nil {
 			return nil, fmt.Errorf("failed to generate JWT secret: %w", err)
 		}
+		modified = true
+	}
+
+	// Auto-generate VAPID key pair if missing
+	if cfg.VAPID.PublicKey == "" || cfg.VAPID.PrivateKey == "" {
+		key, err := ecdh.P256().GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate VAPID key pair: %w", err)
+		}
+		cfg.VAPID.PublicKey = base64.RawURLEncoding.EncodeToString(key.PublicKey().Bytes())
+		cfg.VAPID.PrivateKey = base64.RawURLEncoding.EncodeToString(key.Bytes())
 		modified = true
 	}
 

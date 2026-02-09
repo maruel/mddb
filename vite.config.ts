@@ -17,6 +17,9 @@ export default defineConfig({
     solid(),
     solidSVG(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icon.svg'],
       manifest: {
@@ -46,26 +49,8 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
-        sourcemap: false,
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
-        navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [
-          {
-            urlPattern: /^\/assets\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'assets-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-        ],
       },
     }),
     visualizer({
