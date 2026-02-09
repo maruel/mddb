@@ -467,6 +467,36 @@ export interface DeleteGitRequest {
 export interface PushGitRequest {
 }
 /**
+ * PullGitRequest is a request to pull from the git remote.
+ */
+export interface PullGitRequest {
+}
+/**
+ * GetSyncStatusRequest is a request to get the sync status for a workspace.
+ */
+export interface GetSyncStatusRequest {
+}
+/**
+ * SetupGitHubAppRemoteRequest is a request to configure a GitHub App-based remote.
+ */
+export interface SetupGitHubAppRemoteRequest {
+  installation_id: number /* int64 */;
+  repo_owner: string;
+  repo_name: string;
+  branch: string;
+}
+/**
+ * ListGitHubAppReposRequest is a request to list repos for a GitHub App installation.
+ */
+export interface ListGitHubAppReposRequest {
+  installation_id: number /* int64 */;
+}
+/**
+ * GitHubAppAvailableRequest is a request to check if GitHub App is configured.
+ */
+export interface GitHubAppAvailableRequest {
+}
+/**
  * ChangeEmailRequest is a request to change the user's email address.
  */
 export interface ChangeEmailRequest {
@@ -1019,9 +1049,49 @@ export interface GitRemoteResponse {
   url: string;
   type: string;
   auth_type: string;
+  installation_id?: number /* int64 */;
+  repo_owner?: string;
+  repo_name?: string;
+  branch?: string;
+  sync_status?: string;
+  last_sync_error?: string;
   created: Time;
   last_sync?: Time;
 }
+/**
+ * GitHubAppRepoResponse represents a GitHub repository from App installation.
+ */
+export interface GitHubAppRepoResponse {
+  full_name: string;
+  owner: string;
+  name: string;
+  private: boolean;
+  html_url: string;
+}
+/**
+ * ListGitHubAppReposResponse is a response containing GitHub App repos.
+ */
+export interface ListGitHubAppReposResponse {
+  repos: GitHubAppRepoResponse[];
+}
+/**
+ * GitSyncStatusResponse is a response containing sync status.
+ */
+export interface GitSyncStatusResponse {
+  sync_status: string;
+  last_sync?: Time;
+  last_sync_error?: string;
+}
+/**
+ * GitHubAppAvailableResponse indicates whether GitHub App is configured.
+ */
+export interface GitHubAppAvailableResponse {
+  available: boolean;
+}
+/**
+ * PullGitResponse is a response from pulling from git remote.
+ */
+export type PullGitResponse = OkResponse;
 /**
  * NodeResponse is the API representation of a node.
  */

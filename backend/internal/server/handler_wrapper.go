@@ -482,8 +482,18 @@ func WrapWSAuth[In any, PtrIn interface {
 
 		output, err := fn(ctx, wsID, auth.user, PtrIn(input))
 		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: auth.user.Name, Email: auth.user.Email})
+		triggerAutoPush(svc, r.Method, wsID, err)
 		writeJSONResponse(ctx, w, output, err)
 	})
+}
+
+// triggerAutoPush fires an async push if the request was mutating, successful,
+// and the workspace has auto-push enabled.
+func triggerAutoPush(svc *handlers.Services, method string, wsID jsonldb.ID, handlerErr error) {
+	if handlerErr != nil || !isMutating(method) || wsID.IsZero() || svc.SyncService == nil {
+		return
+	}
+	svc.SyncService.TriggerPush(wsID)
 }
 
 // WrapAuthRaw wraps a raw http.HandlerFunc with authentication and role checking.
@@ -515,9 +525,11 @@ func WrapAuthRaw(
 		}
 
 		// Check workspace membership if wsID is in path
+		var wsID jsonldb.ID
 		wsIDStr := r.PathValue("wsID")
 		if wsIDStr != "" {
-			wsID, err := jsonldb.DecodeID(wsIDStr)
+			var err error
+			wsID, err = jsonldb.DecodeID(wsIDStr)
 			if err != nil {
 				http.Error(w, "Invalid workspace ID format", http.StatusBadRequest)
 				return
@@ -539,6 +551,7 @@ func WrapAuthRaw(
 		fn(w, r.WithContext(ctx))
 		// Commit DB changes for mutating raw handlers (e.g., asset upload)
 		commitDBIfMutating(ctx, r, svc.RootRepo, git.Author{Name: user.Name, Email: user.Email})
+		triggerAutoPush(svc, r.Method, wsID, nil)
 	})
 }
 

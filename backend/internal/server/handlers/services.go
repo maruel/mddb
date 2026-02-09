@@ -18,6 +18,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/syncsvc"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
@@ -36,6 +37,7 @@ type Services struct {
 	EmailVerif    *identity.EmailVerificationService // may be nil
 	Email         *email.Service                     // may be nil
 	RootRepo      *git.RootRepo
+	SyncService   *syncsvc.Service // may be nil
 }
 
 // BandwidthUpdater allows updating bandwidth limits at runtime.

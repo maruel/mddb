@@ -175,15 +175,21 @@ var (
 
 // GitRemote represents the single remote repository configuration for a workspace.
 type GitRemote struct {
-	URL      string       `json:"url,omitempty" jsonschema:"description=Git repository URL"`
-	Type     string       `json:"type,omitempty" jsonschema:"description=Remote type (github/gitlab/custom)"`
-	AuthType string       `json:"auth_type,omitempty" jsonschema:"description=Authentication method (token/ssh)"`
-	Token    string       `json:"token,omitempty" jsonschema:"description=Authentication token"`
-	Created  storage.Time `json:"created,omitzero" jsonschema:"description=Remote creation timestamp"`
-	LastSync storage.Time `json:"last_sync,omitzero" jsonschema:"description=Last synchronization timestamp"`
+	URL            string       `json:"url,omitempty" jsonschema:"description=Git repository URL"`
+	Type           string       `json:"type,omitempty" jsonschema:"description=Remote type (github/gitlab/custom)"`
+	AuthType       string       `json:"auth_type,omitempty" jsonschema:"description=Authentication method (token/ssh/github_app)"`
+	Token          string       `json:"token,omitempty" jsonschema:"description=Authentication token"`
+	InstallationID int64        `json:"installation_id,omitempty" jsonschema:"description=GitHub App installation ID"`
+	RepoOwner      string       `json:"repo_owner,omitempty" jsonschema:"description=Repository owner (org or user)"`
+	RepoName       string       `json:"repo_name,omitempty" jsonschema:"description=Repository name"`
+	Branch         string       `json:"branch,omitempty" jsonschema:"description=Branch to sync"`
+	LastSyncError  string       `json:"last_sync_error,omitempty" jsonschema:"description=Last sync error message"`
+	SyncStatus     string       `json:"sync_status,omitempty" jsonschema:"description=Current sync status (idle/syncing/error/conflict)"`
+	Created        storage.Time `json:"created,omitzero" jsonschema:"description=Remote creation timestamp"`
+	LastSync       storage.Time `json:"last_sync,omitzero" jsonschema:"description=Last synchronization timestamp"`
 }
 
-// IsZero returns true if the GitRemote has no URL configured.
+// IsZero returns true if the GitRemote has no URL configured and no GitHub App installation.
 func (g *GitRemote) IsZero() bool {
-	return g.URL == ""
+	return g.URL == "" && g.InstallationID == 0
 }

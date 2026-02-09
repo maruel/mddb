@@ -1052,6 +1052,82 @@ func (r *PushGitRequest) Validate() error {
 	return nil
 }
 
+// PullGitRequest is a request to pull from the git remote.
+type PullGitRequest struct {
+	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+}
+
+// Validate validates the pull git remote request fields.
+func (r *PullGitRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	return nil
+}
+
+// GetSyncStatusRequest is a request to get the sync status for a workspace.
+type GetSyncStatusRequest struct {
+	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+}
+
+// Validate validates the get sync status request fields.
+func (r *GetSyncStatusRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	return nil
+}
+
+// SetupGitHubAppRemoteRequest is a request to configure a GitHub App-based remote.
+type SetupGitHubAppRemoteRequest struct {
+	WsID           jsonldb.ID `path:"wsID" tstype:"-"`
+	InstallationID int64      `json:"installation_id"`
+	RepoOwner      string     `json:"repo_owner"`
+	RepoName       string     `json:"repo_name"`
+	Branch         string     `json:"branch"`
+}
+
+// Validate validates the setup GitHub App remote request fields.
+func (r *SetupGitHubAppRemoteRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	if r.InstallationID == 0 {
+		return MissingField("installation_id")
+	}
+	if r.RepoOwner == "" {
+		return MissingField("repo_owner")
+	}
+	if r.RepoName == "" {
+		return MissingField("repo_name")
+	}
+	if r.Branch == "" {
+		r.Branch = "main"
+	}
+	return nil
+}
+
+// ListGitHubAppReposRequest is a request to list repos for a GitHub App installation.
+type ListGitHubAppReposRequest struct {
+	InstallationID int64 `json:"installation_id"`
+}
+
+// Validate validates the list GitHub App repos request fields.
+func (r *ListGitHubAppReposRequest) Validate() error {
+	if r.InstallationID == 0 {
+		return MissingField("installation_id")
+	}
+	return nil
+}
+
+// GitHubAppAvailableRequest is a request to check if GitHub App is configured.
+type GitHubAppAvailableRequest struct{}
+
+// Validate is a no-op for GitHubAppAvailableRequest.
+func (r *GitHubAppAvailableRequest) Validate() error {
+	return nil
+}
+
 // --- Email Change ---
 
 // ChangeEmailRequest is a request to change the user's email address.

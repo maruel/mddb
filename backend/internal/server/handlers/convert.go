@@ -108,12 +108,18 @@ func workspaceToResponse(w *identity.Workspace, memberCount int) *dto.WorkspaceR
 
 func gitRemoteToResponse(wsID jsonldb.ID, g *identity.GitRemote) *dto.GitRemoteResponse {
 	return &dto.GitRemoteResponse{
-		WorkspaceID: wsID,
-		URL:         g.URL,
-		Type:        g.Type,
-		AuthType:    g.AuthType,
-		Created:     g.Created,
-		LastSync:    g.LastSync,
+		WorkspaceID:    wsID,
+		URL:            g.URL,
+		Type:           g.Type,
+		AuthType:       g.AuthType,
+		InstallationID: g.InstallationID,
+		RepoOwner:      g.RepoOwner,
+		RepoName:       g.RepoName,
+		Branch:         g.Branch,
+		SyncStatus:     g.SyncStatus,
+		LastSyncError:  g.LastSyncError,
+		Created:        g.Created,
+		LastSync:       g.LastSync,
 	}
 }
 

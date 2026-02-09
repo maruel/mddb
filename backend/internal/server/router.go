@@ -9,6 +9,7 @@ package server
 //go:generate go run ../apiclient -q
 
 import (
+	"crypto/rsa"
 	"embed"
 	"io"
 	"io/fs"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/frontend"
+	"github.com/maruel/mddb/backend/internal/githubapp"
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ipgeo"
@@ -37,7 +39,15 @@ type Config struct {
 	Revision  string
 	Dirty     bool
 	OAuth     OAuthConfig
+	GitHubApp GitHubAppConfig
 	IPGeo     *ipgeo.Checker
+}
+
+// GitHubAppConfig holds GitHub App credentials for installation-based auth.
+type GitHubAppConfig struct {
+	AppID         int64
+	PrivateKey    *rsa.PrivateKey // parsed PEM at startup
+	WebhookSecret string
 }
 
 // OAuthConfig holds OAuth provider credentials.
@@ -92,7 +102,12 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	ih := &handlers.InvitationHandler{Svc: svc, Cfg: hcfg}
 	mh := &handlers.MembershipHandler{Svc: svc, Cfg: hcfg}
 	orgh := &handlers.OrganizationHandler{Svc: svc, Cfg: hcfg}
-	grh := &handlers.GitRemoteHandler{Svc: svc}
+	// GitHub App client for git remote handler.
+	var ghAppClient *githubapp.Client
+	if cfg.GitHubApp.PrivateKey != nil {
+		ghAppClient = githubapp.NewClient(cfg.GitHubApp.AppID, cfg.GitHubApp.PrivateKey)
+	}
+	grh := &handlers.GitRemoteHandler{Svc: svc, GitHubApp: ghAppClient}
 
 	// Health check (public)
 	hh := &handlers.HealthHandler{Cfg: hcfg}
@@ -185,7 +200,14 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("GET /api/v1/workspaces/{wsID}/settings/git", WrapWSAuth(grh.GetGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git", WrapWSAuth(grh.UpdateGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/push", WrapWSAuth(grh.PushGit, svc, hcfg, identity.WSRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/pull", WrapWSAuth(grh.PullGit, svc, hcfg, identity.WSRoleAdmin, limiters))
+	mux.Handle("GET /api/v1/workspaces/{wsID}/settings/git/status", WrapWSAuth(grh.GetSyncStatus, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/github-app", WrapWSAuth(grh.SetupGitHubAppRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/settings/git/delete", WrapWSAuth(grh.DeleteGitRemote, svc, hcfg, identity.WSRoleAdmin, limiters))
+
+	// GitHub App routes
+	mux.Handle("POST /api/v1/github-app/repos", WrapAuth(grh.ListGitHubAppRepos, svc, hcfg, limiters))
+	mux.Handle("GET /api/v1/github-app/available", Wrap(grh.IsGitHubAppAvailable, hcfg, limiters))
 	// Notion import cancel
 	mux.Handle("POST /api/v1/workspaces/{wsID}/notion/import/cancel", WrapWSAuth(nih.CancelImport, svc, hcfg, identity.WSRoleAdmin, limiters))
 	// Users and invitations
@@ -230,6 +252,16 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/assets/{name}/delete", WrapWSAuth(nh.DeleteNodeAsset, svc, hcfg, identity.WSRoleEditor, limiters))
 	// Search
 	mux.Handle("POST /api/v1/workspaces/{wsID}/search", WrapWSAuth(sh.Search, svc, hcfg, identity.WSRoleViewer, limiters))
+
+	// GitHub webhook (unauthenticated, signature-verified)
+	if cfg.GitHubApp.WebhookSecret != "" || cfg.GitHubApp.PrivateKey != nil {
+		wh := &handlers.GitHubWebhookHandler{
+			WebhookSecret: cfg.GitHubApp.WebhookSecret,
+			SyncService:   svc.SyncService,
+			WsSvc:         svc.Workspace,
+		}
+		mux.HandleFunc("POST /api/v1/webhooks/github", wh.HandleWebhook)
+	}
 
 	// File serving (raw asset files) - requires signed URL (sig + exp query params)
 	mux.HandleFunc("GET /assets/{wsID}/{id}/{name}", ah.ServeAssetFile)

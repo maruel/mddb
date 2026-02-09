@@ -62,6 +62,58 @@ Microsoft OAuth is Microsoft Entra
 1. Add yourself as owner
 1. Validate a domain name with a `/.well-known/microsoft-identity-association.json` file
 
+## GitHub App (Live Sync)
+
+A GitHub App enables bidirectional sync between workspaces and GitHub repositories. Edits auto-push to GitHub,
+and GitHub pushes trigger automatic pulls via webhooks.
+
+### Creating the GitHub App
+
+1. Go to https://github.com/settings/apps/new
+1. **App name**: e.g. "mddb-sync"
+1. **Homepage URL**: your mddb instance URL
+1. **Webhook URL**: `https://<host>/api/v1/webhooks/github`
+1. **Webhook secret**: generate a random string (e.g. `openssl rand -hex 32`)
+1. **Repository permissions**:
+   - Contents: Read & write
+   - Metadata: Read-only
+1. **Subscribe to events**: Push
+1. **Where can this GitHub App be installed?**: "Only on this account" (or "Any account" for multi-org)
+1. Click "Create GitHub App"
+
+### Generating a Private Key
+
+1. On the App settings page, scroll to "Private keys"
+1. Click "Generate a private key" — a `.pem` file downloads
+1. Store it securely
+
+### Environment Variables
+
+Set these on your mddb server:
+
+- `GITHUB_APP_ID`: The App ID shown on the app settings page
+- `GITHUB_APP_PRIVATE_KEY`: The full PEM private key contents (inline, with newlines)
+- `GITHUB_APP_WEBHOOK_SECRET`: The webhook secret you chose above
+
+Example in a systemd service:
+
+```ini
+Environment=GITHUB_APP_ID=123456
+Environment=GITHUB_APP_WEBHOOK_SECRET=your-webhook-secret
+Environment=GITHUB_APP_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----"
+```
+
+### Installing the App
+
+1. Go to `https://github.com/apps/<app-name>/installations/new`
+1. Select the account/organization and grant access to specific repositories
+1. In mddb workspace settings, go to the Sync tab and click "GitHub App" to connect
+
+### Commit Attribution
+
+Link your GitHub account in Settings > Linked Accounts so that push commits are attributed to your GitHub
+identity.
+
 ### Outbound email via SMTP
 
 - I personally use Maileroo but you can use any SMTP provider that support TLS.

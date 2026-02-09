@@ -368,13 +368,48 @@ type WorkspaceResponse struct {
 
 // GitRemoteResponse is the API representation of a git remote.
 type GitRemoteResponse struct {
-	WorkspaceID jsonldb.ID `json:"workspace_id" jsonschema:"description=Workspace this remote belongs to"`
-	URL         string     `json:"url" jsonschema:"description=Git repository URL"`
-	Type        string     `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
-	AuthType    string     `json:"auth_type" jsonschema:"description=Authentication method (token/ssh)"`
-	Created     Time       `json:"created" jsonschema:"description=Remote creation Unix timestamp"`
-	LastSync    Time       `json:"last_sync,omitempty" jsonschema:"description=Last synchronization Unix timestamp"`
+	WorkspaceID    jsonldb.ID `json:"workspace_id" jsonschema:"description=Workspace this remote belongs to"`
+	URL            string     `json:"url" jsonschema:"description=Git repository URL"`
+	Type           string     `json:"type" jsonschema:"description=Remote type (github/gitlab/custom)"`
+	AuthType       string     `json:"auth_type" jsonschema:"description=Authentication method (token/ssh/github_app)"`
+	InstallationID int64      `json:"installation_id,omitempty" jsonschema:"description=GitHub App installation ID"`
+	RepoOwner      string     `json:"repo_owner,omitempty" jsonschema:"description=Repository owner"`
+	RepoName       string     `json:"repo_name,omitempty" jsonschema:"description=Repository name"`
+	Branch         string     `json:"branch,omitempty" jsonschema:"description=Branch to sync"`
+	SyncStatus     string     `json:"sync_status,omitempty" jsonschema:"description=Current sync status (idle/syncing/error/conflict)"`
+	LastSyncError  string     `json:"last_sync_error,omitempty" jsonschema:"description=Last sync error message"`
+	Created        Time       `json:"created" jsonschema:"description=Remote creation Unix timestamp"`
+	LastSync       Time       `json:"last_sync,omitempty" jsonschema:"description=Last synchronization Unix timestamp"`
 }
+
+// GitHubAppRepoResponse represents a GitHub repository from App installation.
+type GitHubAppRepoResponse struct {
+	FullName string `json:"full_name" jsonschema:"description=Full repository name (owner/repo)"`
+	Owner    string `json:"owner" jsonschema:"description=Repository owner"`
+	Name     string `json:"name" jsonschema:"description=Repository name"`
+	Private  bool   `json:"private" jsonschema:"description=Whether the repository is private"`
+	HTMLURL  string `json:"html_url" jsonschema:"description=URL to the repository on GitHub"`
+}
+
+// ListGitHubAppReposResponse is a response containing GitHub App repos.
+type ListGitHubAppReposResponse struct {
+	Repos []GitHubAppRepoResponse `json:"repos" jsonschema:"description=Available repositories"`
+}
+
+// GitSyncStatusResponse is a response containing sync status.
+type GitSyncStatusResponse struct {
+	SyncStatus    string `json:"sync_status" jsonschema:"description=Current sync status (idle/syncing/error/conflict)"`
+	LastSync      Time   `json:"last_sync,omitempty" jsonschema:"description=Last synchronization Unix timestamp"`
+	LastSyncError string `json:"last_sync_error,omitempty" jsonschema:"description=Last sync error message"`
+}
+
+// GitHubAppAvailableResponse indicates whether GitHub App is configured.
+type GitHubAppAvailableResponse struct {
+	Available bool `json:"available" jsonschema:"description=Whether GitHub App is configured on the server"`
+}
+
+// PullGitResponse is a response from pulling from git remote.
+type PullGitResponse = OkResponse
 
 // NodeResponse is the API representation of a node.
 type NodeResponse struct {

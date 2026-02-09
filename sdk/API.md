@@ -54,7 +54,10 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | GET | `/api/v1/workspaces/{wsID}/settings/git` | ws:Admin |
 | POST | `/api/v1/workspaces/{wsID}/settings/git` | ws:Admin |
 | POST | `/api/v1/workspaces/{wsID}/settings/git/delete` | ws:Admin |
+| POST | `/api/v1/workspaces/{wsID}/settings/git/github-app` | ws:Admin |
+| POST | `/api/v1/workspaces/{wsID}/settings/git/pull` | ws:Admin |
 | POST | `/api/v1/workspaces/{wsID}/settings/git/push` | ws:Admin |
+| GET | `/api/v1/workspaces/{wsID}/settings/git/status` | ws:Viewer |
 | POST | `/api/v1/workspaces/{wsID}/settings/membership` | ws:Viewer |
 
 ## Users
@@ -123,6 +126,8 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | Method | Path | Auth |
 |--------|------|------|
 | * | `/api/` | public |
+| GET | `/api/v1/github-app/available` | public |
+| POST | `/api/v1/github-app/repos` | authenticated |
 | POST | `/api/v1/organizations` | authenticated |
 | GET | `/api/v1/organizations/{orgID}` | org:Member |
 | POST | `/api/v1/organizations/{orgID}` | org:Admin |
@@ -132,6 +137,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | POST | `/api/v1/organizations/{orgID}/workspaces` | org:Admin |
 | GET | `/api/v1/server/config` | globalAdmin |
 | POST | `/api/v1/server/config` | globalAdmin |
+| POST | `/api/v1/webhooks/github` | public |
 | GET | `/api/v1/workspaces/{wsID}` | ws:Viewer |
 | POST | `/api/v1/workspaces/{wsID}` | ws:Admin |
 | POST | `/api/v1/workspaces/{wsID}/notion/import/cancel` | ws:Admin |

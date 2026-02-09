@@ -220,3 +220,99 @@
 .linkButton:hover {
   text-decoration: underline;
 }
+
+.conflictAlert {
+  padding: var(--s-3);
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: var(--radius);
+  margin-bottom: var(--s-4);
+}
+
+.conflictFiles {
+  margin-top: var(--s-2);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  color: #78350f;
+}
+
+.syncBadge {
+  display: inline-block;
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.syncBadge[data-status='idle'] {
+  background: #f0fdf4;
+  color: var(--c-success);
+}
+
+.syncBadge[data-status='syncing'] {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.syncBadge[data-status='error'] {
+  background: #fef2f2;
+  color: var(--c-danger);
+}
+
+.syncBadge[data-status='conflict'] {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.autoPushRow {
+  margin-top: var(--s-4);
+  padding: var(--s-3);
+  background: var(--c-bg-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--c-border);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.checkboxLabel input[type='checkbox'] {
+  width: auto;
+}
+
+.setupTabs {
+  display: flex;
+  gap: var(--s-2);
+  margin: var(--s-4) 0;
+}
+
+.setupTab,
+.activeSetupTab {
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--c-text-light);
+}
+
+.activeSetupTab {
+  background: var(--c-primary);
+  color: white;
+  border-color: var(--c-primary);
+}
+
+.inputRow {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.inputRow input {
+  flex: 1;
+}

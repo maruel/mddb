@@ -9,6 +9,8 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -28,6 +30,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/lmittmann/tint"
 	"github.com/maruel/mddb/backend/internal/email"
+	"github.com/maruel/mddb/backend/internal/githubapp"
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ipgeo"
@@ -35,6 +38,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
+	"github.com/maruel/mddb/backend/internal/syncsvc"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
 )
@@ -58,6 +62,9 @@ func mainImpl() error {
 	msClientSecret := flag.String("ms-client-secret", "", "Microsoft OAuth client secret")
 	githubClientID := flag.String("github-client-id", "", "GitHub OAuth client ID")
 	githubClientSecret := flag.String("github-client-secret", "", "GitHub OAuth client secret")
+	githubAppID := flag.String("github-app-id", "", "GitHub App ID (int64)")
+	githubAppPrivateKey := flag.String("github-app-private-key", "", "GitHub App private key (PEM string)")
+	githubAppWebhookSecret := flag.String("github-app-webhook-secret", "", "GitHub App webhook secret")
 	geoDB := flag.String("geo-db", "", "Path to MaxMind MMDB file for IP geolocation (optional)")
 	flag.Parse()
 	if len(flag.Args()) > 0 {
@@ -192,6 +199,21 @@ func mainImpl() error {
 	if !set["github-client-secret"] {
 		if v := env["GITHUB_CLIENT_SECRET"]; v != "" {
 			*githubClientSecret = v
+		}
+	}
+	if !set["github-app-id"] {
+		if v := env["GITHUB_APP_ID"]; v != "" {
+			*githubAppID = v
+		}
+	}
+	if !set["github-app-private-key"] {
+		if v := env["GITHUB_APP_PRIVATE_KEY"]; v != "" {
+			*githubAppPrivateKey = v
+		}
+	}
+	if !set["github-app-webhook-secret"] {
+		if v := env["GITHUB_APP_WEBHOOK_SECRET"]; v != "" {
+			*githubAppWebhookSecret = v
 		}
 	}
 	if !set["geo-db"] {
@@ -342,6 +364,46 @@ func mainImpl() error {
 		return fmt.Errorf("failed to watch executable: %w", err)
 	}
 
+	// Open IP geolocation database if configured
+	var geoChecker *ipgeo.Checker
+	if *geoDB != "" {
+		var err error
+		geoChecker, err = ipgeo.Open(*geoDB)
+		if err != nil {
+			return fmt.Errorf("failed to open geo database: %w", err)
+		}
+		defer func() { _ = geoChecker.Close() }()
+		slog.InfoContext(ctx, "IP geolocation enabled", "db", *geoDB)
+	}
+
+	// Parse GitHub App config if provided
+	var ghAppConfig server.GitHubAppConfig
+	var ghAppClient *githubapp.Client
+	if *githubAppID != "" && *githubAppPrivateKey != "" {
+		appID, err := strconv.ParseInt(*githubAppID, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid github-app-id: %w", err)
+		}
+		block, _ := pem.Decode([]byte(*githubAppPrivateKey))
+		if block == nil {
+			return errors.New("failed to parse GitHub App private key PEM")
+		}
+		privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse GitHub App private key: %w", err)
+		}
+		ghAppConfig = server.GitHubAppConfig{
+			AppID:         appID,
+			PrivateKey:    privateKey,
+			WebhookSecret: *githubAppWebhookSecret,
+		}
+		ghAppClient = githubapp.NewClient(appID, privateKey)
+		slog.InfoContext(ctx, "GitHub App configured", "appID", appID)
+	}
+
+	// Initialize sync service
+	syncService := syncsvc.New(wsService, fileStore, ghAppClient, rootRepo)
+
 	svc := &handlers.Services{
 		FileStore:     fileStore,
 		Search:        content.NewSearchService(fileStore),
@@ -356,17 +418,7 @@ func mainImpl() error {
 		EmailVerif:    emailVerificationService,
 		Email:         emailService,
 		RootRepo:      rootRepo,
-	}
-	// Open IP geolocation database if configured
-	var geoChecker *ipgeo.Checker
-	if *geoDB != "" {
-		var err error
-		geoChecker, err = ipgeo.Open(*geoDB)
-		if err != nil {
-			return fmt.Errorf("failed to open geo database: %w", err)
-		}
-		defer func() { _ = geoChecker.Close() }()
-		slog.InfoContext(ctx, "IP geolocation enabled", "db", *geoDB)
+		SyncService:   syncService,
 	}
 
 	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()
@@ -388,6 +440,7 @@ func mainImpl() error {
 			GitHubClientSecret: *githubClientSecret,
 			TestOAuth:          os.Getenv("TEST_OAUTH") == "1",
 		},
+		GitHubApp: ghAppConfig,
 	}
 
 	httpServer := &http.Server{

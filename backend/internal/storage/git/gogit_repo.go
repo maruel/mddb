@@ -277,6 +277,75 @@ func (r *GoGitRepo) Push(ctx context.Context, remoteName, branch string) error {
 	})
 }
 
+// Fetch fetches from a remote repository.
+func (r *GoGitRepo) Fetch(ctx context.Context, remoteName, branch string) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+	defer cancel()
+
+	remote, err := r.repo.Remote(remoteName)
+	if err != nil {
+		return fmt.Errorf("failed to get remote: %w", err)
+	}
+
+	opts := &gogit.FetchOptions{RemoteName: remoteName}
+	if branch != "" {
+		refSpec := config.RefSpec(fmt.Sprintf("+refs/heads/%s:refs/remotes/%s/%s", branch, remoteName, branch))
+		opts.RefSpecs = []config.RefSpec{refSpec}
+	}
+	_ = remote
+	err = r.repo.FetchContext(ctx, opts)
+	if err != nil && err.Error() == "already up-to-date" {
+		return nil
+	}
+	return err
+}
+
+// Pull fetches and merges from a remote. go-git doesn't support merge natively,
+// so this is a limited implementation that only works for fast-forward merges.
+func (r *GoGitRepo) Pull(ctx context.Context, remoteName, branch string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Minute)
+	defer cancel()
+
+	w, err := r.repo.Worktree()
+	if err != nil {
+		return false, fmt.Errorf("failed to get worktree: %w", err)
+	}
+
+	if branch == "" {
+		ref, err := r.repo.Head()
+		if err == nil {
+			branch = ref.Name().Short()
+		} else {
+			branch = "master"
+		}
+	}
+
+	refName := plumbing.NewRemoteReferenceName(remoteName, branch)
+	err = w.PullContext(ctx, &gogit.PullOptions{
+		RemoteName:    remoteName,
+		ReferenceName: plumbing.NewBranchReferenceName(branch),
+	})
+	_ = refName
+	if err != nil {
+		if err.Error() == "already up-to-date" {
+			return false, nil
+		}
+		return false, fmt.Errorf("pull failed: %w", err)
+	}
+	return true, nil
+}
+
+// HasUnmergedFiles returns true if there are unmerged files. go-git has limited
+// merge support, so this always returns false.
+func (r *GoGitRepo) HasUnmergedFiles(_ context.Context) (bool, error) {
+	return false, nil
+}
+
+// AbortMerge aborts an in-progress merge. go-git has limited merge support.
+func (r *GoGitRepo) AbortMerge(_ context.Context) error {
+	return nil
+}
+
 // goGitCommitFS implements fs.FS for a specific commit using go-git.
 type goGitCommitFS struct {
 	repo *gogit.Repository

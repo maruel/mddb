@@ -233,6 +233,21 @@ export interface Dictionary {
     tokenHint: string;
     addRemote: string;
     confirmRemoveRemote: string;
+    // GitHub App sync
+    connectGitHub: string;
+    selectRepository: string;
+    gitHubAppSetup: string;
+    manualSetup: string;
+    autoPush: string;
+    autoPushHint: string;
+    pull: string;
+    syncStatusIdle: string;
+    syncStatusSyncing: string;
+    syncStatusError: string;
+    syncStatusConflict: string;
+    conflictMessage: string;
+    branchColumn: string;
+    statusColumn: string;
     // Roles
     roleAdmin: string;
     roleEditor: string;
@@ -326,6 +341,7 @@ export interface Dictionary {
     failedToRemoveRemote: string;
     failedToMove: string;
     pushFailed: string;
+    pullFailed: string;
     autoSaveFailed: string;
     noAccessToOrg: string;
     noAccessToWs: string;
@@ -341,6 +357,8 @@ export interface Dictionary {
     remoteAdded: string;
     remoteRemoved: string;
     pushSuccessful: string;
+    pullSuccessful: string;
+    gitHubAppConfigured: string;
     memberRemoved: string;
   };
 

@@ -3,6 +3,7 @@
 package git
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/fs"
@@ -225,6 +226,66 @@ func (r *ExecRepo) Push(ctx context.Context, remoteName, branch string) error {
 	}
 
 	return r.gitRun(ctx, "push", remoteName, branch)
+}
+
+// Fetch fetches from a remote repository.
+func (r *ExecRepo) Fetch(ctx context.Context, remoteName, branch string) error {
+	args := []string{"fetch", remoteName}
+	if branch != "" {
+		args = append(args, branch)
+	}
+	return r.gitRun(ctx, args...)
+}
+
+// Pull fetches and merges from a remote. Returns true if files changed.
+func (r *ExecRepo) Pull(ctx context.Context, remoteName, branch string) (bool, error) {
+	if branch == "" {
+		branch = "master"
+		out, err := r.gitCombinedOutput(ctx, "rev-parse", "--abbrev-ref", "HEAD")
+		if err == nil {
+			branch = strings.TrimSpace(string(out))
+		}
+	}
+
+	// Get HEAD before merge.
+	headBefore, _ := r.gitOutput(ctx, "rev-parse", "HEAD")
+
+	// Fetch first.
+	if err := r.Fetch(ctx, remoteName, branch); err != nil {
+		return false, fmt.Errorf("fetch failed: %w", err)
+	}
+
+	// Merge.
+	ref := remoteName + "/" + branch
+	out, err := r.gitCombinedOutput(ctx, "merge", ref, "--no-edit")
+	if err != nil {
+		// Check for conflicts.
+		hasConflicts, _ := r.HasUnmergedFiles(ctx)
+		if hasConflicts {
+			_ = r.AbortMerge(ctx)
+			return false, fmt.Errorf("merge conflicts detected: %s", strings.TrimSpace(string(out)))
+		}
+		return false, fmt.Errorf("merge failed: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+
+	// Check if HEAD changed.
+	headAfter, _ := r.gitOutput(ctx, "rev-parse", "HEAD")
+	changed := !bytes.Equal(headBefore, headAfter)
+	return changed, nil
+}
+
+// HasUnmergedFiles returns true if there are unmerged files (merge conflicts).
+func (r *ExecRepo) HasUnmergedFiles(ctx context.Context) (bool, error) {
+	out, err := r.gitCombinedOutput(ctx, "diff", "--name-only", "--diff-filter=U")
+	if err != nil {
+		return false, err
+	}
+	return strings.TrimSpace(string(out)) != "", nil
+}
+
+// AbortMerge aborts an in-progress merge.
+func (r *ExecRepo) AbortMerge(ctx context.Context) error {
+	return r.gitRun(ctx, "merge", "--abort")
 }
 
 // gitCmd creates an exec.Cmd for git with standard environment settings.

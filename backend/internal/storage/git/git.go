@@ -4,11 +4,29 @@ package git
 
 import (
 	"context"
+	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
+
+// InjectTokenInURL injects an authentication token into a git remote URL.
+// Supports GitHub (x-access-token) and GitLab (oauth2) URL patterns.
+func InjectTokenInURL(remoteURL, token, remoteType string) string {
+	if token == "" {
+		return remoteURL
+	}
+	switch {
+	case strings.Contains(remoteURL, "github.com") || remoteType == "github":
+		return strings.Replace(remoteURL, "https://github.com", fmt.Sprintf("https://x-access-token:%s@github.com", token), 1)
+	case strings.Contains(remoteURL, "gitlab.com") || remoteType == "gitlab":
+		return strings.Replace(remoteURL, "https://gitlab.com", fmt.Sprintf("https://oauth2:%s@gitlab.com", token), 1)
+	default:
+		return remoteURL
+	}
+}
 
 // Repository is the interface for git operations on a single repository.
 type Repository interface {
@@ -31,6 +49,15 @@ type Repository interface {
 	SetRemote(ctx context.Context, name, url string) error
 	// Push pushes changes to a remote repository.
 	Push(ctx context.Context, remoteName, branch string) error
+	// Fetch fetches from a remote repository.
+	Fetch(ctx context.Context, remoteName, branch string) error
+	// Pull fetches and merges from a remote. Returns true if files changed.
+	// Returns an error if there are merge conflicts.
+	Pull(ctx context.Context, remoteName, branch string) (changed bool, err error)
+	// HasUnmergedFiles returns true if there are unmerged files (merge conflicts).
+	HasUnmergedFiles(ctx context.Context) (bool, error)
+	// AbortMerge aborts an in-progress merge.
+	AbortMerge(ctx context.Context) error
 }
 
 // Backend selects which git implementation to use.
