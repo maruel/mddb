@@ -546,6 +546,12 @@ export interface UpdateOrgMemberRoleRequest {
   role: OrganizationRole;
 }
 /**
+ * RemoveOrgMemberRequest is a request to remove a user from an organization.
+ */
+export interface RemoveOrgMemberRequest {
+  user_id: string;
+}
+/**
  * UpdateWSMemberRoleRequest is a request to update a user's workspace role.
  */
 export interface UpdateWSMemberRoleRequest {

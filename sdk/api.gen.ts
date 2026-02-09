@@ -57,6 +57,7 @@ import type {
   OrganizationResponse,
   ProvidersResponse,
   RegisterRequest,
+  RemoveOrgMemberRequest,
   RevokeAllSessionsResponse,
   RevokeSessionRequest,
   RevokeSessionResponse,
@@ -186,6 +187,7 @@ export function createAPIClient(fetchFn: FetchFn) {
         },
         users: {
           listUsers: () => get<ListUsersResponse>(fetchFn, `/api/v1/organizations/${orgID}/users`),
+          removeOrgMember: (options: RemoveOrgMemberRequest) => post<OkResponse>(fetchFn, `/api/v1/organizations/${orgID}/users/remove`, options),
           updateOrgMemberRole: (options: UpdateOrgMemberRoleRequest) => post<UserResponse>(fetchFn, `/api/v1/organizations/${orgID}/users/role`, options),
         },
         workspaces: {

@@ -16,6 +16,7 @@ interface MembersTableProps {
   roleOptions: RoleOption[];
   roleField: 'workspace_role' | 'org_role';
   onUpdateRole: (userId: string, role: string) => void;
+  onRemove?: (userId: string) => void;
   loading?: boolean;
 }
 
@@ -33,6 +34,9 @@ export default function MembersTable(props: MembersTableProps) {
           <th>{t('settings.nameColumn')}</th>
           <th>{t('settings.emailColumn')}</th>
           <th>{t('settings.roleColumn')}</th>
+          <Show when={props.onRemove}>
+            <th>{t('settings.actionsColumn')}</th>
+          </Show>
         </tr>
       </thead>
       <tbody>
@@ -55,6 +59,19 @@ export default function MembersTable(props: MembersTableProps) {
                   </select>
                 </Show>
               </td>
+              <Show when={props.onRemove}>
+                <td>
+                  <Show when={member.id !== props.currentUserId}>
+                    <button
+                      class={styles.removeButton}
+                      onClick={() => props.onRemove?.(member.id)}
+                      disabled={props.loading}
+                    >
+                      {t('common.remove')}
+                    </button>
+                  </Show>
+                </td>
+              </Show>
             </tr>
           )}
         </For>

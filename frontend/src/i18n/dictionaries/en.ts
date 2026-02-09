@@ -260,6 +260,9 @@ export const dict: Dictionary = {
     openOrgSettings: 'Open Organization Settings',
     adminOnlySettings: 'Only admins can modify organization settings.',
     settings: 'Settings',
+    actionsColumn: 'Actions',
+    confirmRemoveMember:
+      'Are you sure you want to remove this member? They will lose access to all workspaces in this organization.',
   },
 
   table: {
@@ -327,6 +330,7 @@ export const dict: Dictionary = {
     autoSaveFailed: 'Auto-save failed',
     noAccessToOrg: 'You do not have access to this organization',
     noAccessToWs: 'You do not have access to this workspace',
+    failedToRemoveMember: 'Failed to remove member',
   },
 
   success: {
@@ -338,6 +342,7 @@ export const dict: Dictionary = {
     remoteAdded: 'Remote added',
     remoteRemoved: 'Remote removed',
     pushSuccessful: 'Push successful',
+    memberRemoved: 'Member removed',
   },
 
   pwa: {

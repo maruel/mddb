@@ -39,7 +39,7 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 - **Security Hardening**:
   - [ ] Add authentication to asset serving endpoint (currently public).
   - [x] Fix parameter naming in asset handlers (`orgID` → `wsID`).
-  - [ ] Implement membership cascade: deleting org membership removes workspace memberships.
+  - [x] Implement membership cascade: deleting org membership removes workspace memberships.
   - [ ] Add optional public asset sharing with workspace-level settings.
 
 ### Next Steps (Phase 7+)

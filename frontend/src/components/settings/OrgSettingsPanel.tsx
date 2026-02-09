@@ -141,6 +141,22 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     }
   };
 
+  const handleRemoveMember = async (userId: string) => {
+    if (!confirm(t('settings.confirmRemoveMember'))) return;
+    const org = orgApi();
+
+    try {
+      setLoading(true);
+      await org.users.removeOrgMember({ user_id: userId });
+      setSuccess(t('success.memberRemoved'));
+      loadData();
+    } catch (err) {
+      setError(`${t('errors.failedToRemoveMember')}: ${err}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleUpdateRole = async (userId: string, role: string) => {
     const org = orgApi();
 
@@ -241,6 +257,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
               roleOptions={orgRoleOptions}
               roleField="org_role"
               onUpdateRole={handleUpdateRole}
+              onRemove={handleRemoveMember}
               loading={loading()}
             />
             <InviteForm

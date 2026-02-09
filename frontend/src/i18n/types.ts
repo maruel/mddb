@@ -260,6 +260,8 @@ export interface Dictionary {
     openOrgSettings: string;
     adminOnlySettings: string;
     settings: string;
+    actionsColumn: string;
+    confirmRemoveMember: string;
   };
 
   table: {
@@ -327,6 +329,7 @@ export interface Dictionary {
     autoSaveFailed: string;
     noAccessToOrg: string;
     noAccessToWs: string;
+    failedToRemoveMember: string;
   };
 
   success: {
@@ -338,6 +341,7 @@ export interface Dictionary {
     remoteAdded: string;
     remoteRemoved: string;
     pushSuccessful: string;
+    memberRemoved: string;
   };
 
   pwa: {

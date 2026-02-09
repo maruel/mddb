@@ -1228,6 +1228,23 @@ func (r *UpdateOrgMemberRoleRequest) Validate() error {
 	return nil
 }
 
+// RemoveOrgMemberRequest is a request to remove a user from an organization.
+type RemoveOrgMemberRequest struct {
+	OrgID  jsonldb.ID `path:"orgID" tstype:"-"`
+	UserID jsonldb.ID `json:"user_id"`
+}
+
+// Validate validates the remove org member request fields.
+func (r *RemoveOrgMemberRequest) Validate() error {
+	if r.OrgID.IsZero() {
+		return MissingField("orgID")
+	}
+	if r.UserID.IsZero() {
+		return MissingField("user_id")
+	}
+	return nil
+}
+
 // UpdateWSMemberRoleRequest is a request to update a user's workspace role.
 type UpdateWSMemberRoleRequest struct {
 	WsID   jsonldb.ID    `path:"wsID" tstype:"-"`

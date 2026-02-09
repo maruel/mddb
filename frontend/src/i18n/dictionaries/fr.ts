@@ -260,6 +260,9 @@ export const dict: Dictionary = {
     openOrgSettings: "Ouvrir les paramètres de l'organisation",
     adminOnlySettings: "Seuls les administrateurs peuvent modifier les paramètres de l'organisation.",
     settings: 'Paramètres',
+    actionsColumn: 'Actions',
+    confirmRemoveMember:
+      "Voulez-vous vraiment retirer ce membre ? Il perdra l'accès à tous les espaces de travail de cette organisation.",
   },
 
   table: {
@@ -327,6 +330,7 @@ export const dict: Dictionary = {
     autoSaveFailed: "Échec de l'enregistrement automatique",
     noAccessToOrg: "Vous n'avez pas accès à cette organisation",
     noAccessToWs: "Vous n'avez pas accès à cet espace de travail",
+    failedToRemoveMember: 'Échec de la suppression du membre',
   },
 
   success: {
@@ -338,6 +342,7 @@ export const dict: Dictionary = {
     remoteAdded: 'Dépôt distant ajouté',
     remoteRemoved: 'Dépôt distant supprimé',
     pushSuccessful: 'Push réussi',
+    memberRemoved: 'Membre retiré',
   },
 
   pwa: {

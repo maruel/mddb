@@ -167,6 +167,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("POST /api/v1/organizations/{orgID}/settings", WrapOrgAuth(orgh.UpdateOrgPreferences, svc, hcfg, identity.OrgRoleAdmin, limiters))
 	mux.Handle("GET /api/v1/organizations/{orgID}/users", WrapOrgAuth(uh.ListUsers, svc, hcfg, identity.OrgRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/organizations/{orgID}/users/role", WrapOrgAuth(uh.UpdateOrgMemberRole, svc, hcfg, identity.OrgRoleAdmin, limiters))
+	mux.Handle("POST /api/v1/organizations/{orgID}/users/remove", WrapOrgAuth(uh.RemoveOrgMember, svc, hcfg, identity.OrgRoleAdmin, limiters))
 	mux.Handle("GET /api/v1/organizations/{orgID}/invitations", WrapOrgAuth(ih.ListOrgInvitations, svc, hcfg, identity.OrgRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/organizations/{orgID}/invitations", WrapOrgAuth(ih.CreateOrgInvitation, svc, hcfg, identity.OrgRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/organizations/{orgID}/workspaces", WrapOrgAuth(orgh.CreateWorkspace, svc, hcfg, identity.OrgRoleAdmin, limiters))

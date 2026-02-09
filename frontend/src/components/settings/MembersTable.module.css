@@ -28,3 +28,22 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.removeButton {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-danger, #dc3545);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--c-danger, #dc3545);
+  cursor: pointer;
+}
+
+.removeButton:hover {
+  background: var(--c-danger, #dc3545);
+  color: white;
+}
+
+.removeButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -64,6 +64,40 @@ func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID jsonldb.ID,
 	return userWithMembershipsToResponse(uwm), nil
 }
 
+// RemoveOrgMember removes a user from an organization and cascades to remove
+// all their workspace memberships within the organization.
+func (h *UserHandler) RemoveOrgMember(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.RemoveOrgMemberRequest) (*dto.OkResponse, error) {
+	if req.UserID == user.ID {
+		return nil, dto.Forbidden("cannot remove yourself")
+	}
+
+	m, err := h.Svc.OrgMembership.Get(req.UserID, orgID)
+	if err != nil {
+		return nil, dto.NotFound("membership not found")
+	}
+
+	// Prevent removing the last owner.
+	if m.Role == identity.OrgRoleOwner {
+		ownerCount := 0
+		for om := range h.Svc.OrgMembership.IterByOrg(orgID) {
+			if om.Role == identity.OrgRoleOwner {
+				ownerCount++
+			}
+		}
+		if ownerCount <= 1 {
+			return nil, dto.Forbidden("cannot remove the last owner")
+		}
+	}
+
+	if err := h.Svc.OrgMembership.Delete(m.ID); err != nil {
+		return nil, dto.InternalWithError("Failed to delete org membership", err)
+	}
+	if err := h.Svc.WSMembership.DeleteByUserInOrg(req.UserID, orgID); err != nil {
+		return nil, dto.InternalWithError("Failed to cascade workspace memberships", err)
+	}
+	return &dto.OkResponse{Ok: true}, nil
+}
+
 // UpdateWSMemberRole updates a user's workspace role.
 func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.UpdateWSMemberRoleRequest) (*dto.UserResponse, error) {
 	if req.UserID.IsZero() || req.Role == "" {
