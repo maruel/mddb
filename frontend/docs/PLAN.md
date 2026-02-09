@@ -52,7 +52,7 @@ Components receive 10+ props with 6+ callbacks. Use context instead:
 ### Accessibility (A11y)
 - [ ] Add `aria-label` to icon-only buttons (Sidebar, menus)
 - [x] Add `role="alert" aria-live="polite"` to error messages
-- [ ] Replace emoji icons with semantic SVG icons
+- [x] Replace emoji icons with semantic SVG icons (`@material-symbols/svg-400`)
 
 ### Type Safety
 - [ ] Replace unsafe type assertions (`user() as UserResponse`) with type guards
@@ -83,23 +83,22 @@ Components receive 10+ props with 6+ callbacks. Use context instead:
 See [PLAN_VIEWS.md](PLAN_VIEWS.md) for detailed implementation plan.
 
 - [x] Backend Support: API endpoints, storage, and server-side query logic
-- [ ] View Management UI: Tabs and dropdowns for switching/creating views
-- [ ] Filter Builder: Visual interface for complex AND/OR queries
-- [ ] Sort/Column UI: Drag-and-drop interfaces
-- [ ] View Persistence: Link UI state to backend view configurations
+- [x] View Management UI: ViewTabs with create/delete and view type switching.
+- [ ] Filter Builder: Visual interface for complex AND/OR queries (backend support ready, UI pending).
+- [ ] Sort/Column UI: Drag-and-drop interfaces (backend support ready, UI pending).
+- [x] View Persistence: RecordsContext wired to backend view CRUD and filter/sort APIs.
 
 ### Phase 4: Advanced UX
-- [ ] Block-based WYSIWYG Editor (TipTap or SolidJS implementation)
-  - [ ] High-fidelity Markdown serialization
-  - [ ] Slash commands and block drag-and-drop
-- [ ] Property Management UI: Adding/renaming table columns
-- [ ] Inline Editing: Spreadsheet-like keyboard navigation
-- [ ] Undo/Redo: See `docs/PLAN_UNDO.md`
+- [x] Block-based WYSIWYG Editor (ProseMirror with flat block architecture)
+  - [x] High-fidelity Markdown serialization
+  - [x] Slash commands and block drag-and-drop
+- [x] Property Management UI: Add columns via "+" button with type selection (AddColumnDropdown).
+- [x] Inline Editing: Click-to-edit table cells with type-specific inputs (TableCell).
+- [x] Undo/Redo: ProseMirror history plugin (Ctrl+Z / Ctrl+Shift+Z).
 - [ ] Bulk Actions: Multi-record operations
 
 ### Future Enhancements
 - [ ] Command Palette (Ctrl+K): Navigation and action modal
-- [ ] Slash Commands: Inline editor commands
 - [ ] Table Virtualization: 50k+ records with zero lag
 - [ ] Relationship Graph: Visualize backlinks and connections
 - [ ] Adaptive Themes: Per-organization branding

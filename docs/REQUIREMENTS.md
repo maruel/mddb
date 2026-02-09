@@ -22,13 +22,13 @@ mddb is a local-first markdown document and database system. The architecture fo
 - [x] **Linear Identity Model**: One user account can belong to multiple organizations.
 - [x] **Role-Based Access**: Granular permissions (Admin, Editor, Viewer).
 - [x] **Hierarchical Authorization**: Workspace access requires organization membership (enforced in middleware).
-- [ ] **Membership Cascade**: Removing org membership should cascade to workspace memberships.
+- [x] **Membership Cascade**: Removing org membership should cascade to workspace memberships.
 
 ### 3. Authentication & Identity
 - [x] **OAuth Providers**: Support for Google and Microsoft OAuth.
-- [ ] **GitHub OAuth**: Support for GitHub as an OAuth provider.
-- [ ] **Multi-Provider Accounts**: Users can link multiple OAuth providers to one account.
-- [ ] **Account Reconciliation**: Auto-link accounts by verified email; manual linking for mismatched emails.
+- [x] **GitHub OAuth**: Support for GitHub as an OAuth provider.
+- [x] **Multi-Provider Accounts**: Users can link multiple OAuth providers to one account.
+- [x] **Account Reconciliation**: Auto-link accounts by verified email; manual linking for mismatched emails.
 - [x] **Email Verification**: Magic link verification for password-based accounts (when SMTP configured).
 - [x] **Email Change**: Users can change their primary email (triggers re-verification when SMTP configured).
 - [x] **Invitation Emails**: Localized email notifications for organization and workspace invitations.
@@ -50,15 +50,27 @@ mddb is a local-first markdown document and database system. The architecture fo
 
 ### 7. Security
 - [x] **API Authorization**: All workspace endpoints verify organization membership before workspace membership.
+- [x] **Rate Limiting**: 4-tier token bucket (auth, write, read-auth, read-unauth) with configurable per-minute rates.
+- [x] **Bandwidth Limiting**: Configurable egress throttling (bytes/sec).
 - [ ] **Asset Authorization**: Asset serving endpoint needs authentication (currently public).
 - [ ] **Public Asset Option**: Optional public asset sharing with configurable workspace settings.
 
 ### 8. User Experience
-- [ ] **Notion-like Editing**: Block-based WYSIWYG editor that feels native and intuitive, while preserving the underlying self-describing Markdown format.
+- [x] **Notion-like Editing**: Block-based WYSIWYG editor (ProseMirror) with slash commands, drag-and-drop, and high-fidelity Markdown serialization.
+- [x] **Table Views**: Saved view configurations (table, board, gallery, list) with server-side filter/sort engine.
+- [x] **Backlinks**: Bidirectional link indexing with lazy build and incremental updates.
+- [x] **Onboarding**: Guided organization and workspace setup wizard.
+- [x] **PWA**: Offline caching, install banners, standalone mode.
+- [x] **Notion Import**: Import workspaces from Notion export archives.
+
+### 9. Administration
+- [x] **Global Admin**: System-wide admin role, middleware, and oversight API endpoints.
+- [x] **GeoIP Tracking**: Per-request country code via MaxMind MMDB, stored in sessions.
+- [x] **Git Remote Sync**: Manual push for organization repositories with secret management.
 
 ## Globalization
-- [x] **i18n**: Support for multiple languages (infrastructure in place).
-- [ ] **l10n**: Full regional formatting and localization.
+- [x] **i18n**: Support for multiple languages (English, French, German, Spanish).
+- [ ] **l10n**: Full regional date/number formatting.
 
 ## Roadmap & AI Integration
 - [ ] **MCP Server**: Enabling AI agents to interact with the data repository.

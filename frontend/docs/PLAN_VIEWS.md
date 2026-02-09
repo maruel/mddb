@@ -92,16 +92,16 @@ Update `ListRecords` to support server-side filtering and sorting.
 ## Phases
 
 ### Phase 1: Backend Foundation
-- [ ] DTOs and Types.
-- [ ] Handler implementation.
-- [ ] Storage layer updates (ensure views are saved to `metadata.json`).
+- [x] DTOs and Types.
+- [x] Handler implementation.
+- [x] Storage layer updates (views saved in `metadata.json`).
 
 ### Phase 2: Frontend State & SDK
-- [ ] SDK generation.
-- [ ] `RecordsContext` updates.
-- [ ] Basic "View Tabs" UI (read-only list of views).
+- [x] SDK generation.
+- [x] `RecordsContext` updates (views, activeViewId, filters, sorts, CRUD methods).
+- [x] Basic "View Tabs" UI (ViewTabs with create/delete/switch).
 
 ### Phase 3: View Management UI
-- [ ] Create/Edit/Delete View UI.
-- [ ] View Toolbar (Filter/Sort UI).
-- [ ] Wiring up `ListRecords` with filters.
+- [x] Create/Edit/Delete View UI (ViewTabs context menu).
+- [ ] View Toolbar (Filter/Sort UI dropdowns — backend ready, UI pending).
+- [x] Wiring up `ListRecords` with filters (client-side filter matching with 12 operators).

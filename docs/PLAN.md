@@ -43,14 +43,12 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
   - [ ] Add optional public asset sharing with workspace-level settings.
 
 ### Next Steps (Phase 7+)
-- **Connectivity**: Backlinks and relational data modeling.
 - **Intelligence**: Semantic search and AI agent readiness (MCP).
 - **Global Presence**: Full localization and offline PWA capabilities.
 
 ### Future Evolution
-- **Advanced Table Views**: Filter/sort dropdowns, column visibility toggles, view rename/duplicate.
+- **Advanced Table Views**: Filter/sort UI dropdowns, column visibility toggles, view rename/duplicate.
 - **High-Performance UX**: Virtualization, command palettes, and relationship graphs.
-- **Notion-like Editing**: A block-based **WYSIWYG editor** for a seamless, intuitive experience.
 - **Inline Markdown Tables**: Add `table` node type to ProseMirror schema, handle `table_open`/`thead_open`/`tr_open`/`th_open`/`td_open` tokens in `markdown-parser.ts`, and render/edit tables in the flat block editor. Currently table syntax is disabled in markdown-it (`md.disable('table')`) to avoid a crash.
 - **Data Integrity**: Migration to SQLite for metadata while preserving the self-describing on-disk format.
 - **Large File Uploads**: Streaming uploads for video/large assets (avoid memory buffering), chunked/resumable uploads (tus protocol), progress tracking.
@@ -60,6 +58,12 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 - **Default View**: Virtual "All" view auto-created when table has no saved views.
 - **Column Management**: Add columns via "+" button in table header with type selection.
 - **Default Name Column**: New tables start with a "Name" text column like Notion.
+- **View CRUD API**: Backend endpoints for creating, updating, and deleting views.
+- **Filter/Sort Engine**: Server-side query engine with 12 operators and nested AND/OR logic.
+- **Backlinks**: Bidirectional link cache with lazy indexing and API integration.
+- **Block Editor**: ProseMirror-based WYSIWYG with slash commands, drag-and-drop, and Markdown serialization.
+- **Undo/Redo**: ProseMirror history plugin (Ctrl+Z / Ctrl+Shift+Z).
+- **Inline Cell Editing**: Click-to-edit table cells with type-specific inputs.
 
 ## Requirements
 See [REQUIREMENTS.md](REQUIREMENTS.md) for complete system requirements.

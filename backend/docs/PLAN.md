@@ -21,11 +21,11 @@ This document focuses on the backend roadmap for mddb, covering API design, stor
 - [x] **Global Admin Infrastructure**:
     - [x] Global admin role and middleware.
     - [x] Admin API endpoints for system oversight.
-- [ ] **Operational Safeguards**:
-    - [ ] Request rate limiting.
-    - [ ] Bandwidth/egress tracking.
-- [ ] **User Analytics**:
-    - [ ] IP address and GeoIP tracking on signup.
+- [x] **Operational Safeguards**:
+    - [x] Request rate limiting (4-tier token bucket: auth, write, read-auth, read-unauth).
+    - [x] Bandwidth/egress tracking (token bucket limiter, configurable bytes/sec).
+- [x] **User Analytics**:
+    - [x] IP address and GeoIP tracking (MaxMind MMDB, per-request country code, stored in sessions).
 - [ ] **Security Hardening**:
     - [ ] Passkey/WebAuthn support.
 
@@ -44,11 +44,11 @@ This document focuses on the backend roadmap for mddb, covering API design, stor
 - [ ] **JSONLDB Sharding**: Support for sharding extremely large datasets.
 
 ### Phase 4: Table Views & Query Engine
-- [ ] **View Model**: Backend storage for persistent filters, sorts, and layouts in `metadata.json`.
-- [ ] **Filter/Sort Engine**: Server-side query engine for JSONLDB supporting nested logic.
-- [ ] **View API**: CRUD endpoints for managing view configurations.
+- [x] **View Model**: Backend storage for persistent filters, sorts, and layouts in `metadata.json`.
+- [x] **Filter/Sort Engine**: Server-side query engine for JSONLDB supporting nested logic (12 operators, AND/OR).
+- [x] **View API**: CRUD endpoints for managing view configurations (create, update, delete).
 
 ## Integration & Future
 - [ ] **MCP Server**: Model Context Protocol implementation for AI agents.
 - [ ] **SQLite Migration**: Transitioning metadata and global tables to SQLite while maintaining JSONL affinity.
-- [ ] **Backlinks Indexing**: Background processing for inter-page relationships.
+- [x] **Backlinks Indexing**: Bidirectional link cache with lazy build, incremental updates, and API integration.
