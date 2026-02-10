@@ -47,12 +47,12 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	wsIDStr := r.PathValue("wsID")
 	nodeIDStr := r.PathValue("id")
 
-	wsID, err := ksid.DecodeID(wsIDStr)
+	wsID, err := ksid.Parse(wsIDStr)
 	if err != nil {
 		writeErrorResponse(w, dto.BadRequest("invalid_ws_id"))
 		return
 	}
-	nodeID, err := ksid.DecodeID(nodeIDStr)
+	nodeID, err := ksid.Parse(nodeIDStr)
 	if err != nil {
 		writeErrorResponse(w, dto.BadRequest("invalid_node_id"))
 		return
@@ -167,12 +167,12 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wsID, err := ksid.DecodeID(wsIDStr)
+	wsID, err := ksid.Parse(wsIDStr)
 	if err != nil {
 		writeErrorResponse(w, dto.BadRequest("invalid_ws_id"))
 		return
 	}
-	nodeID, err := ksid.DecodeID(nodeIDStr)
+	nodeID, err := ksid.Parse(nodeIDStr)
 	if err != nil {
 		writeErrorResponse(w, dto.BadRequest("invalid_node_id"))
 		return

@@ -380,7 +380,7 @@ func WrapOrgAuth[In any, PtrIn interface {
 			http.Error(w, "Organization ID required", http.StatusBadRequest)
 			return
 		}
-		orgID, err := ksid.DecodeID(orgIDStr)
+		orgID, err := ksid.Parse(orgIDStr)
 		if err != nil {
 			http.Error(w, "Invalid organization ID format", http.StatusBadRequest)
 			return
@@ -455,7 +455,7 @@ func WrapWSAuth[In any, PtrIn interface {
 		var wsID ksid.ID
 		wsIDStr := r.PathValue("wsID")
 		if wsIDStr != "" {
-			wsID, err = ksid.DecodeID(wsIDStr)
+			wsID, err = ksid.Parse(wsIDStr)
 			if err != nil {
 				http.Error(w, "Invalid workspace ID format", http.StatusBadRequest)
 				return
@@ -529,7 +529,7 @@ func WrapAuthRaw(
 		wsIDStr := r.PathValue("wsID")
 		if wsIDStr != "" {
 			var err error
-			wsID, err = ksid.DecodeID(wsIDStr)
+			wsID, err = ksid.Parse(wsIDStr)
 			if err != nil {
 				http.Error(w, "Invalid workspace ID format", http.StatusBadRequest)
 				return
@@ -657,7 +657,7 @@ func validateJWTAndSession(r *http.Request, userService *identity.UserService, s
 		return nil, 0, "", errInvalidUserIDToken
 	}
 
-	userID, err := ksid.DecodeID(userIDStr)
+	userID, err := ksid.Parse(userIDStr)
 	if err != nil {
 		return nil, 0, "", errInvalidUserIDFmt
 	}
@@ -671,7 +671,7 @@ func validateJWTAndSession(r *http.Request, userService *identity.UserService, s
 	var sessionID ksid.ID
 	if sessionService != nil {
 		if sidStr, ok := claims["sid"].(string); ok && sidStr != "" {
-			sessionID, err = ksid.DecodeID(sidStr)
+			sessionID, err = ksid.Parse(sidStr)
 			if err != nil {
 				return nil, 0, "", errInvalidToken
 			}
@@ -743,7 +743,7 @@ func populatePathParams(r *http.Request, input any) {
 		case field.Type.Kind() == reflect.String:
 			elem.Field(i).SetString(paramValue)
 		case field.Type == jsonldbIDType:
-			if id, err := ksid.DecodeID(paramValue); err == nil {
+			if id, err := ksid.Parse(paramValue); err == nil {
 				elem.Field(i).Set(reflect.ValueOf(id))
 			}
 		}

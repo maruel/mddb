@@ -82,7 +82,7 @@ func (ws *WorkspaceFileStore) walkDirForCache(dir string, parentID ksid.ID) erro
 			continue
 		}
 
-		id, err := ksid.DecodeID(entry.Name())
+		id, err := ksid.Parse(entry.Name())
 		if err != nil {
 			continue
 		}
@@ -408,7 +408,7 @@ func (ws *WorkspaceFileStore) iterPagesRecursive(dir string, parentID ksid.ID, y
 		if !entry.IsDir() {
 			continue
 		}
-		id, err := ksid.DecodeID(entry.Name())
+		id, err := ksid.Parse(entry.Name())
 		if err != nil {
 			continue
 		}
@@ -438,7 +438,7 @@ func (ws *WorkspaceFileStore) ReadNode(id ksid.ID) (*Node, error) {
 	entries, _ := os.ReadDir(nodeDir)
 	for _, entry := range entries {
 		if entry.IsDir() {
-			if _, err := ksid.DecodeID(entry.Name()); err == nil {
+			if _, err := ksid.Parse(entry.Name()); err == nil {
 				node.Children = []*Node{} // Has children - set empty slice to indicate expandable
 				break
 			}
@@ -730,7 +730,7 @@ func (ws *WorkspaceFileStore) iterTablesRecursive(dir string, parentID ksid.ID, 
 		if !entry.IsDir() {
 			continue
 		}
-		id, err := ksid.DecodeID(entry.Name())
+		id, err := ksid.Parse(entry.Name())
 		if err != nil {
 			continue
 		}
@@ -1525,7 +1525,7 @@ func (ws *WorkspaceFileStore) ListChildren(parentID ksid.ID) ([]*Node, error) {
 		if !entry.IsDir() {
 			continue
 		}
-		id, err := ksid.DecodeID(entry.Name())
+		id, err := ksid.Parse(entry.Name())
 		if err != nil {
 			continue
 		}
@@ -1540,7 +1540,7 @@ func (ws *WorkspaceFileStore) ListChildren(parentID ksid.ID) ([]*Node, error) {
 		childEntries, _ := os.ReadDir(nodePath)
 		for _, childEntry := range childEntries {
 			if childEntry.IsDir() {
-				if _, decErr := ksid.DecodeID(childEntry.Name()); decErr == nil {
+				if _, decErr := ksid.Parse(childEntry.Name()); decErr == nil {
 					node.HasChildren = true
 					break
 				}
@@ -1637,7 +1637,7 @@ func ExtractLinkedNodeIDs(content string) []ksid.ID {
 			continue
 		}
 		seen[nodeIDStr] = true
-		id, err := ksid.DecodeID(nodeIDStr)
+		id, err := ksid.Parse(nodeIDStr)
 		if err == nil && !id.IsZero() {
 			ids = append(ids, id)
 		}

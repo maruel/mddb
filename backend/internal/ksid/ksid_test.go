@@ -212,7 +212,7 @@ func TestID(t *testing.T) {
 		})
 	})
 
-	t.Run("DecodeID", func(t *testing.T) {
+	t.Run("Parse", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			tests := []struct {
 				name  string
@@ -226,12 +226,12 @@ func TestID(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					got, err := DecodeID(tt.input)
+					got, err := Parse(tt.input)
 					if err != nil {
-						t.Fatalf("DecodeID error: %v", err)
+						t.Fatalf("Parse error: %v", err)
 					}
 					if got != tt.want {
-						t.Errorf("DecodeID() = %d, want %d", got, tt.want)
+						t.Errorf("Parse() = %d, want %d", got, tt.want)
 					}
 				})
 			}
@@ -242,9 +242,9 @@ func TestID(t *testing.T) {
 			ids := []ID{0, 1, 100, NewID(), ID(1 << 30), ID(1 << 60)}
 			for _, original := range ids {
 				encoded := original.String()
-				decoded, err := DecodeID(encoded)
+				decoded, err := Parse(encoded)
 				if err != nil {
-					t.Fatalf("DecodeID(%q) error: %v", encoded, err)
+					t.Fatalf("Parse(%q) error: %v", encoded, err)
 				}
 				if decoded != original {
 					t.Errorf("Round trip failed for %d: encoded=%q, decoded=%d", original, encoded, decoded)
@@ -269,7 +269,7 @@ func TestID(t *testing.T) {
 
 			for _, tt := range tests {
 				t.Run(tt.name, func(t *testing.T) {
-					_, err := DecodeID(tt.input)
+					_, err := Parse(tt.input)
 					if err == nil {
 						t.Error("expected error, got nil")
 					}
@@ -704,11 +704,11 @@ func BenchmarkIDEncode(b *testing.B) {
 	}
 }
 
-func BenchmarkDecodeID(b *testing.B) {
+func BenchmarkParse(b *testing.B) {
 	id := NewID()
 	encoded := id.String()
 	b.ResetTimer()
 	for b.Loop() {
-		_, _ = DecodeID(encoded)
+		_, _ = Parse(encoded)
 	}
 }

@@ -356,7 +356,7 @@ func wsMembershipSettingsToEntity(s dto.WorkspaceMembershipSettings) identity.Wo
 func userSettingsToEntity(s dto.UserSettings, prev identity.UserSettings) identity.UserSettings {
 	wsIDs := make([]ksid.ID, 0, len(s.LastActiveWorkspaces))
 	for _, idStr := range s.LastActiveWorkspaces {
-		if id, err := ksid.DecodeID(idStr); err == nil && !id.IsZero() {
+		if id, err := ksid.Parse(idStr); err == nil && !id.IsZero() {
 			wsIDs = append(wsIDs, id)
 		}
 	}

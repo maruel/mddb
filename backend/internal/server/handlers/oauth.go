@@ -177,7 +177,7 @@ func parseLinkingState(state string) (ksid.ID, identity.OAuthProvider) {
 	if len(parts) < 2 {
 		return 0, ""
 	}
-	userID, err := ksid.DecodeID(parts[0])
+	userID, err := ksid.Parse(parts[0])
 	if err != nil {
 		return 0, ""
 	}
