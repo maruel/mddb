@@ -1,5 +1,16 @@
-// Implements a k-sortable, 64-bit unique identifier generator.
-
+// Package rid provides k-sortable, 64-bit unique identifiers.
+//
+// IDs are generated with [NewID], encoded to compact base32 Extended Hex
+// strings (≤13 chars, lexicographically sortable), and decoded with [DecodeID].
+// They implement [json.Marshaler], [json.Unmarshaler], [encoding.TextMarshaler],
+// and [encoding.TextUnmarshaler] so they work transparently as JSON values and
+// map keys.
+//
+// For multi-process deployments, call [InitIDSlice] once at startup to
+// partition the slice field and guarantee no collisions across instances.
+//
+// [IDList] is a convenience type that marshals to/from comma-separated ID
+// strings, useful for query parameters.
 package rid
 
 import (
