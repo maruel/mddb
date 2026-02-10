@@ -63,7 +63,7 @@ func mainImpl() error {
 	githubClientID := flag.String("github-client-id", "", "GitHub OAuth client ID")
 	githubClientSecret := flag.String("github-client-secret", "", "GitHub OAuth client secret")
 	githubAppID := flag.String("github-app-id", "", "GitHub App ID (int64)")
-	githubAppPrivateKey := flag.String("github-app-private-key", "", "GitHub App private key (PEM string)")
+	githubAppPrivateKeyFile := flag.String("github-app-private-key-file", "", "path to GitHub App private key PEM file")
 	githubAppWebhookSecret := flag.String("github-app-webhook-secret", "", "GitHub App webhook secret")
 	geoDB := flag.String("geo-db", "", "Path to MaxMind MMDB file for IP geolocation (optional)")
 	flag.Parse()
@@ -206,9 +206,9 @@ func mainImpl() error {
 			*githubAppID = v
 		}
 	}
-	if !set["github-app-private-key"] {
-		if v := env["GITHUB_APP_PRIVATE_KEY"]; v != "" {
-			*githubAppPrivateKey = v
+	if !set["github-app-private-key-file"] {
+		if v := env["GITHUB_APP_PRIVATE_KEY_FILE"]; v != "" {
+			*githubAppPrivateKeyFile = v
 		}
 	}
 	if !set["github-app-webhook-secret"] {
@@ -389,12 +389,16 @@ func mainImpl() error {
 	// Parse GitHub App config if provided
 	var ghAppConfig server.GitHubAppConfig
 	var ghAppClient *githubapp.Client
-	if *githubAppID != "" && *githubAppPrivateKey != "" {
+	if *githubAppID != "" && *githubAppPrivateKeyFile != "" {
 		appID, err := strconv.ParseInt(*githubAppID, 10, 64)
 		if err != nil {
 			return fmt.Errorf("invalid github-app-id: %w", err)
 		}
-		block, _ := pem.Decode([]byte(*githubAppPrivateKey))
+		pemData, err := os.ReadFile(*githubAppPrivateKeyFile)
+		if err != nil {
+			return fmt.Errorf("failed to read GitHub App private key file: %w", err)
+		}
+		block, _ := pem.Decode(pemData)
 		if block == nil {
 			return errors.New("failed to parse GitHub App private key PEM")
 		}
