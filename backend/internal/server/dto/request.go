@@ -1120,6 +1120,14 @@ func (r *ListGitHubAppReposRequest) Validate() error {
 	return nil
 }
 
+// ListGitHubAppInstallationsRequest is a request to list GitHub App installations.
+type ListGitHubAppInstallationsRequest struct{}
+
+// Validate is a no-op for ListGitHubAppInstallationsRequest.
+func (r *ListGitHubAppInstallationsRequest) Validate() error {
+	return nil
+}
+
 // GitHubAppAvailableRequest is a request to check if GitHub App is configured.
 type GitHubAppAvailableRequest struct{}
 

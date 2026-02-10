@@ -115,6 +115,54 @@ func (c *Client) GetInstallationToken(ctx context.Context, installationID int64)
 	return result.Token, result.ExpiresAt, nil
 }
 
+// Installation represents a GitHub App installation.
+type Installation struct {
+	ID      int64  `json:"id"`
+	Account string `json:"account"`
+}
+
+// ListInstallations lists all installations of this GitHub App.
+func (c *Client) ListInstallations(ctx context.Context) ([]Installation, error) {
+	jwtToken, err := c.GenerateJWT()
+	if err != nil {
+		return nil, fmt.Errorf("generate JWT: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/app/installations?per_page=100", http.NoBody)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+jwtToken)
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("list installations: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("GitHub API error %d: %s", resp.StatusCode, string(body))
+	}
+
+	var raw []struct {
+		ID      int64 `json:"id"`
+		Account struct {
+			Login string `json:"login"`
+		} `json:"account"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("decode installations response: %w", err)
+	}
+
+	installations := make([]Installation, len(raw))
+	for i, r := range raw {
+		installations[i] = Installation{ID: r.ID, Account: r.Account.Login}
+	}
+	return installations, nil
+}
+
 // ListInstallationRepos lists repositories accessible to an installation.
 func (c *Client) ListInstallationRepos(ctx context.Context, installationID int64) ([]Repo, error) {
 	token, _, err := c.GetInstallationToken(ctx, installationID)

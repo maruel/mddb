@@ -207,6 +207,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// GitHub App routes
 	mux.Handle("POST /api/v1/github-app/repos", WrapAuth(grh.ListGitHubAppRepos, svc, hcfg, limiters))
+	mux.Handle("GET /api/v1/github-app/installations", WrapAuth(grh.ListGitHubAppInstallations, svc, hcfg, limiters))
 	mux.Handle("GET /api/v1/github-app/available", Wrap(grh.IsGitHubAppAvailable, hcfg, limiters))
 	// Notion import cancel
 	mux.Handle("POST /api/v1/workspaces/{wsID}/notion/import/cancel", WrapWSAuth(nih.CancelImport, svc, hcfg, identity.WSRoleAdmin, limiters))

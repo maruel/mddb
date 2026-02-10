@@ -11,6 +11,7 @@ import {
   type WorkspaceRole,
   type GitRemoteResponse,
   type GitHubAppRepoResponse,
+  type GitHubAppInstallationResponse,
 } from '@sdk/types.gen';
 import MembersTable from './MembersTable';
 import InviteForm from './InviteForm';
@@ -48,8 +49,9 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
   // GitHub App state
   const [gitHubAppAvailable, setGitHubAppAvailable] = createSignal(false);
+  const [ghInstallations, setGhInstallations] = createSignal<GitHubAppInstallationResponse[]>([]);
   const [ghAppRepos, setGhAppRepos] = createSignal<GitHubAppRepoResponse[]>([]);
-  const [ghInstallationId, setGhInstallationId] = createSignal('');
+  const [ghSelectedInstallation, setGhSelectedInstallation] = createSignal('');
   const [ghSelectedRepo, setGhSelectedRepo] = createSignal('');
   const [ghBranch, setGhBranch] = createSignal('main');
   const [ghLoadingRepos, setGhLoadingRepos] = createSignal(false);
@@ -118,11 +120,18 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       }
 
       if (activeTab() === 'sync' && isAdmin() && ws) {
-        // Check GitHub App availability
+        // Check GitHub App availability and load installations
         try {
           const availResp = await api().githubApp.isGitHubAppAvailable();
           setGitHubAppAvailable(availResp.available);
-          if (!availResp.available) {
+          if (availResp.available) {
+            try {
+              const instResp = await api().githubApp.listGitHubAppInstallations();
+              setGhInstallations(instResp.installations || []);
+            } catch {
+              setGhInstallations([]);
+            }
+          } else {
             setSyncSetupMode('manual');
           }
         } catch {
@@ -314,12 +323,15 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     }
   };
 
-  const handleLoadGhRepos = async () => {
-    const instId = parseInt(ghInstallationId(), 10);
+  const handleLoadGhRepos = async (installationId?: string) => {
+    const idStr = installationId ?? ghSelectedInstallation();
+    const instId = parseInt(idStr, 10);
     if (!instId) return;
 
     try {
       setGhLoadingRepos(true);
+      setGhAppRepos([]);
+      setGhSelectedRepo('');
       setError(null);
       const resp = await api().githubApp.listGitHubAppRepos({ installation_id: instId });
       setGhAppRepos(resp.repos || []);
@@ -342,7 +354,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setLoading(true);
       setError(null);
       const remoteData = await ws.settings.git.setupGitHubAppRemote({
-        installation_id: parseInt(ghInstallationId(), 10),
+        installation_id: parseInt(ghSelectedInstallation(), 10),
         repo_owner: selected.owner,
         repo_name: selected.name,
         branch: ghBranch() || 'main',
@@ -350,7 +362,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setGitRemote(remoteData);
       setSuccess(t('success.gitHubAppConfigured') || 'GitHub App remote configured');
       setGhAppRepos([]);
-      setGhInstallationId('');
+      setGhSelectedInstallation('');
       setGhSelectedRepo('');
     } catch (err) {
       setError(`${t('errors.failedToAddRemote')}: ${err}`);
@@ -624,22 +636,32 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
           </Show>
 
           <Show when={!gitRemote()}>
-            {/* Setup mode tabs - only show both if GitHub App is available */}
-            <Show when={gitHubAppAvailable()}>
-              <div class={styles.setupTabs}>
-                <button
-                  class={syncSetupMode() === 'github' ? styles.activeSetupTab : styles.setupTab}
-                  onClick={() => setSyncSetupMode('github')}
-                >
-                  {t('settings.gitHubAppSetup')}
-                </button>
-                <button
-                  class={syncSetupMode() === 'manual' ? styles.activeSetupTab : styles.setupTab}
-                  onClick={() => setSyncSetupMode('manual')}
-                >
-                  {t('settings.manualSetup')}
-                </button>
-              </div>
+            {/* Setup mode tabs - always show both, gray out GitHub App when unavailable */}
+            <div class={styles.setupTabs}>
+              <button
+                class={
+                  !gitHubAppAvailable()
+                    ? styles.disabledSetupTab
+                    : syncSetupMode() === 'github'
+                      ? styles.activeSetupTab
+                      : styles.setupTab
+                }
+                onClick={() => gitHubAppAvailable() && setSyncSetupMode('github')}
+                disabled={!gitHubAppAvailable()}
+              >
+                {t('settings.gitHubAppSetup')}
+              </button>
+              <button
+                class={syncSetupMode() === 'manual' ? styles.activeSetupTab : styles.setupTab}
+                onClick={() => setSyncSetupMode('manual')}
+              >
+                {t('settings.manualSetup')}
+              </button>
+            </div>
+
+            {/* GitHub App not configured message */}
+            <Show when={syncSetupMode() === 'github' && !gitHubAppAvailable()}>
+              <div class={styles.notConfiguredMessage}>{t('settings.gitHubAppNotConfigured')}</div>
             </Show>
 
             {/* GitHub App setup */}
@@ -648,25 +670,29 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                 <h4>{t('settings.gitHubAppSetup')}</h4>
                 <form onSubmit={handleSetupGitHubApp} class={styles.settingsForm}>
                   <div class={styles.formItem}>
-                    <label>Installation ID</label>
-                    <div class={styles.inputRow}>
-                      <input
-                        type="number"
-                        value={ghInstallationId()}
-                        onInput={(e) => setGhInstallationId(e.target.value)}
-                        placeholder="12345678"
-                        required
-                      />
-                      <button
-                        type="button"
-                        class={styles.smallButton}
-                        onClick={handleLoadGhRepos}
-                        disabled={ghLoadingRepos() || !ghInstallationId()}
-                      >
-                        {ghLoadingRepos() ? t('common.loading') : t('settings.selectRepository')}
-                      </button>
-                    </div>
+                    <label>{t('settings.selectInstallation')}</label>
+                    <select
+                      value={ghSelectedInstallation()}
+                      onChange={(e) => {
+                        setGhSelectedInstallation(e.target.value);
+                        if (e.target.value) handleLoadGhRepos(e.target.value);
+                      }}
+                      required
+                    >
+                      <option value="">--</option>
+                      <For each={ghInstallations()}>
+                        {(inst) => (
+                          <option value={String(inst.id)}>
+                            {inst.account} ({inst.id})
+                          </option>
+                        )}
+                      </For>
+                    </select>
                   </div>
+
+                  <Show when={ghLoadingRepos()}>
+                    <p class={styles.hint}>{t('common.loading')}</p>
+                  </Show>
 
                   <Show when={ghAppRepos().length > 0}>
                     <div class={styles.formItem}>
@@ -703,7 +729,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
             </Show>
 
             {/* Manual PAT setup */}
-            <Show when={syncSetupMode() === 'manual' || !gitHubAppAvailable()}>
+            <Show when={syncSetupMode() === 'manual'}>
               <div class={styles.addRemoteSection}>
                 <h4>{t('settings.addNewRemote')}</h4>
                 <form onSubmit={handleAddOrUpdateRemote} class={styles.settingsForm}>

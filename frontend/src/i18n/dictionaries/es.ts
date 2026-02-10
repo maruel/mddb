@@ -237,6 +237,8 @@ export const dict: Dictionary = {
     selectRepository: 'Seleccionar repositorio',
     gitHubAppSetup: 'Aplicación GitHub',
     manualSetup: 'Configuración manual',
+    selectInstallation: 'Seleccionar instalación',
+    gitHubAppNotConfigured: 'La aplicación GitHub no está configurada en este servidor',
     autoPush: 'Envío automático',
     autoPushHint: 'Enviar automáticamente los cambios al remoto después de cada edición.',
     pull: 'Obtener',

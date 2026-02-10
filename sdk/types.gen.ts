@@ -492,6 +492,11 @@ export interface ListGitHubAppReposRequest {
   installation_id: number /* int64 */;
 }
 /**
+ * ListGitHubAppInstallationsRequest is a request to list GitHub App installations.
+ */
+export interface ListGitHubAppInstallationsRequest {
+}
+/**
  * GitHubAppAvailableRequest is a request to check if GitHub App is configured.
  */
 export interface GitHubAppAvailableRequest {
@@ -1139,6 +1144,19 @@ export interface GitSyncStatusResponse {
   sync_status: string;
   last_sync?: Time;
   last_sync_error?: string;
+}
+/**
+ * GitHubAppInstallationResponse represents a GitHub App installation.
+ */
+export interface GitHubAppInstallationResponse {
+  id: number /* int64 */;
+  account: string;
+}
+/**
+ * ListGitHubAppInstallationsResponse is a response containing GitHub App installations.
+ */
+export interface ListGitHubAppInstallationsResponse {
+  installations: GitHubAppInstallationResponse[];
 }
 /**
  * GitHubAppAvailableResponse indicates whether GitHub App is configured.

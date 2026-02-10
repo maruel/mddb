@@ -127,6 +127,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 |--------|------|------|
 | * | `/api/` | public |
 | GET | `/api/v1/github-app/available` | public |
+| GET | `/api/v1/github-app/installations` | authenticated |
 | POST | `/api/v1/github-app/repos` | authenticated |
 | GET | `/api/v1/notifications` | authenticated |
 | GET | `/api/v1/notifications/preferences` | authenticated |

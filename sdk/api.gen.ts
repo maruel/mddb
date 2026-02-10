@@ -36,6 +36,7 @@ import type {
   GitRemoteResponse,
   GitSyncStatusResponse,
   HealthResponse,
+  ListGitHubAppInstallationsResponse,
   ListGitHubAppReposRequest,
   ListGitHubAppReposResponse,
   ListNodeAssetsResponse,
@@ -178,6 +179,7 @@ export function createAPIClient(fetchFn: FetchFn) {
     },
     githubApp: {
       isGitHubAppAvailable: () => get<GitHubAppAvailableResponse>(fetchFn, `/api/v1/github-app/available`),
+      listGitHubAppInstallations: () => get<ListGitHubAppInstallationsResponse>(fetchFn, `/api/v1/github-app/installations`),
       listGitHubAppRepos: (options: ListGitHubAppReposRequest) => post<ListGitHubAppReposResponse>(fetchFn, `/api/v1/github-app/repos`, options),
     },
     notifications: {

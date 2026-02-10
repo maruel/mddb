@@ -206,6 +206,27 @@ func (h *GitRemoteHandler) ListGitHubAppRepos(ctx context.Context, _ *identity.U
 	return &dto.ListGitHubAppReposResponse{Repos: dtoRepos}, nil
 }
 
+// ListGitHubAppInstallations lists all installations of the GitHub App.
+func (h *GitRemoteHandler) ListGitHubAppInstallations(ctx context.Context, _ *identity.User, _ *dto.ListGitHubAppInstallationsRequest) (*dto.ListGitHubAppInstallationsResponse, error) {
+	if h.GitHubApp == nil {
+		return nil, errors.New("GitHub App not configured")
+	}
+
+	installations, err := h.GitHubApp.ListInstallations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	dtoInstallations := make([]dto.GitHubAppInstallationResponse, len(installations))
+	for i, inst := range installations {
+		dtoInstallations[i] = dto.GitHubAppInstallationResponse{
+			ID:      inst.ID,
+			Account: inst.Account,
+		}
+	}
+	return &dto.ListGitHubAppInstallationsResponse{Installations: dtoInstallations}, nil
+}
+
 // IsGitHubAppAvailable returns whether the GitHub App is configured.
 func (h *GitRemoteHandler) IsGitHubAppAvailable(_ context.Context, _ *dto.GitHubAppAvailableRequest) (*dto.GitHubAppAvailableResponse, error) {
 	return &dto.GitHubAppAvailableResponse{Available: h.GitHubApp != nil}, nil

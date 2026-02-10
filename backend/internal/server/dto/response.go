@@ -403,6 +403,17 @@ type GitSyncStatusResponse struct {
 	LastSyncError string `json:"last_sync_error,omitempty" jsonschema:"description=Last sync error message"`
 }
 
+// GitHubAppInstallationResponse represents a GitHub App installation.
+type GitHubAppInstallationResponse struct {
+	ID      int64  `json:"id" jsonschema:"description=Installation ID"`
+	Account string `json:"account" jsonschema:"description=GitHub account (user or org) name"`
+}
+
+// ListGitHubAppInstallationsResponse is a response containing GitHub App installations.
+type ListGitHubAppInstallationsResponse struct {
+	Installations []GitHubAppInstallationResponse `json:"installations" jsonschema:"description=Available installations"`
+}
+
 // GitHubAppAvailableResponse indicates whether GitHub App is configured.
 type GitHubAppAvailableResponse struct {
 	Available bool `json:"available" jsonschema:"description=Whether GitHub App is configured on the server"`

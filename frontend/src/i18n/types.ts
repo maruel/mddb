@@ -238,6 +238,8 @@ export interface Dictionary {
     selectRepository: string;
     gitHubAppSetup: string;
     manualSetup: string;
+    selectInstallation: string;
+    gitHubAppNotConfigured: string;
     autoPush: string;
     autoPushHint: string;
     pull: string;

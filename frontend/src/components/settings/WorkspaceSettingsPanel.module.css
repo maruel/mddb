@@ -308,11 +308,23 @@
   border-color: var(--c-primary);
 }
 
-.inputRow {
-  display: flex;
-  gap: var(--s-2);
+.disabledSetupTab {
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg-alt);
+  cursor: not-allowed;
+  font-weight: 500;
+  color: var(--c-text-light);
+  opacity: 0.6;
 }
 
-.inputRow input {
-  flex: 1;
+.notConfiguredMessage {
+  padding: var(--s-4);
+  background: var(--c-bg-alt);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  color: var(--c-text-light);
+  text-align: center;
+  margin-top: var(--s-4);
 }
