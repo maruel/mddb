@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 

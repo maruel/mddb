@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // TestSchemaHeader tests the schemaHeader type and its methods.

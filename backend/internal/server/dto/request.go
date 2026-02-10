@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"unicode"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // validateEmail checks if the email has valid format.

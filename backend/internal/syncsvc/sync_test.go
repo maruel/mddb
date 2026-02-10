@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 

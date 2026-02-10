@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 func TestAssetDownloader_ExternalURLsPassThrough(t *testing.T) {

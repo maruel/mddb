@@ -5,7 +5,7 @@ package content
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 func makeRecord(data map[string]any) *DataRecord {

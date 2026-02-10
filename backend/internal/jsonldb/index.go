@@ -6,7 +6,7 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // UniqueIndex provides O(1) lookup by a unique secondary key.

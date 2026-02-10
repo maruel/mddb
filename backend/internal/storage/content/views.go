@@ -2,7 +2,7 @@
 
 package content
 
-import "github.com/maruel/mddb/backend/internal/ksid"
+import "github.com/maruel/ksid"
 
 // View represents a saved table view configuration.
 type View struct {

@@ -3,11 +3,13 @@ module github.com/maruel/mddb
 go 1.25.5
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/invopop/jsonschema v0.13.0
 	github.com/lmittmann/tint v1.1.2
+	github.com/maruel/ksid v0.1.0
 	github.com/mattn/go-colorable v0.1.14
 	github.com/mattn/go-isatty v0.0.20
 	github.com/oschwald/maxminddb-golang/v2 v2.1.1
@@ -20,7 +22,6 @@ require (
 	dario.cat/mergo v1.0.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
-	github.com/SherClockHolmes/webpush-go v1.4.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect

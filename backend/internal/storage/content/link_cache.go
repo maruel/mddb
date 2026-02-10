@@ -7,7 +7,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // linkCache maintains a bidirectional index of internal page links.

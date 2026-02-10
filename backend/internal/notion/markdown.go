@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // MarkdownConverter converts Notion blocks to markdown with optional asset downloading.

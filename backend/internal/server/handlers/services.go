@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
-	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"

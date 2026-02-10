@@ -10,7 +10,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // testRow is a simple row type for testing.

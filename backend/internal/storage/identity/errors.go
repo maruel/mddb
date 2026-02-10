@@ -5,7 +5,7 @@ package identity
 import (
 	"errors"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // Shared error constants for identity services.

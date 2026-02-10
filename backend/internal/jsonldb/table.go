@@ -16,7 +16,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 var errZeroID = errors.New("row has zero ID")

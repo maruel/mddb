@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"

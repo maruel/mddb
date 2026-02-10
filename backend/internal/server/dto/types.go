@@ -5,7 +5,7 @@ package dto
 import (
 	"errors"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 

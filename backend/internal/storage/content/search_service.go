@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // SearchService handles full-text search across nodes.

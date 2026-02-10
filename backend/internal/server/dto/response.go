@@ -3,7 +3,7 @@
 package dto
 
 import (
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // --- Common Responses ---

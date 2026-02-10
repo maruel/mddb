@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"

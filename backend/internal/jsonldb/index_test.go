@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 func TestUniqueIndex(t *testing.T) {

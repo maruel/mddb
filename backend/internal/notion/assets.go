@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/ksid"
+	"github.com/maruel/ksid"
 )
 
 // AssetDownloader handles downloading and caching of Notion assets.
