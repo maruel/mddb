@@ -53,7 +53,7 @@ export function serializeToMarkdown(doc: ProseMirrorNode): string {
 
     // Build line with appropriate prefix
     const indentStr = '  '.repeat(indent);
-    let prefix = '';
+    let prefix: string;
 
     switch (type) {
       case 'bullet': {

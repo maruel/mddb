@@ -65,7 +65,7 @@ export default function UserMenu(props: UserMenuProps) {
   };
 
   return (
-    <div class={styles.userMenu} ref={menuRef}>
+    <div class={styles.userMenu} ref={(el) => (menuRef = el)}>
       <button
         class={styles.avatarButton}
         onClick={() => setIsOpen(!isOpen())}

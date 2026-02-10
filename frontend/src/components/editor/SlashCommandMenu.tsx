@@ -245,7 +245,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
   return (
     <Show when={props.state.active}>
       <div
-        ref={menuRef}
+        ref={(el) => (menuRef = el)}
         class={styles.slashMenu}
         data-testid="slash-command-menu"
         style={{

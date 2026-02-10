@@ -165,7 +165,7 @@ export function ContextMenu(props: ContextMenuProps) {
   return (
     <Portal>
       <div
-        ref={menuRef}
+        ref={(el) => (menuRef = el)}
         class={styles.menu}
         style={{
           left: `${adjustedPosition().x}px`,

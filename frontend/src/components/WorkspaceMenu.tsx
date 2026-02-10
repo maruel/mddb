@@ -106,7 +106,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
   const hasMultipleOrgs = createMemo(() => groupedWorkspaces().length > 1);
 
   return (
-    <div class={styles.wsMenu} ref={menuRef}>
+    <div class={styles.wsMenu} ref={(el) => (menuRef = el)}>
       <button
         class={styles.wsButton}
         onClick={() => setIsOpen(!isOpen())}

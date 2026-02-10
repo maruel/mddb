@@ -76,7 +76,7 @@ export default function NotificationBell() {
   };
 
   return (
-    <div class={styles.bellWrapper} ref={panelRef}>
+    <div class={styles.bellWrapper} ref={(el) => (panelRef = el)}>
       <button
         class={styles.bellButton}
         onClick={toggle}

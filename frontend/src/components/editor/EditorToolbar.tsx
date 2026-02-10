@@ -197,7 +197,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
   return (
     <Show when={props.position}>
       <div
-        ref={toolbarRef}
+        ref={(el) => (toolbarRef = el)}
         class={`${styles.floatingToolbar} ${above() ? styles.above : ''}`}
         data-testid="floating-toolbar"
         style={{

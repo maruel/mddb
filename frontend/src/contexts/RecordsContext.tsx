@@ -182,7 +182,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         const aVal = a.data?.[sort.property];
         const bVal = b.data?.[sort.property];
 
-        let cmp = 0;
+        let cmp: number;
         if (aVal === bVal) {
           cmp = 0;
         } else if (aVal === null || aVal === undefined) {

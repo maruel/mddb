@@ -158,7 +158,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
   };
 
   return (
-    <li ref={liRef} class={styles.sidebarNodeWrapper} data-testid={`sidebar-node-${props.node.id}`}>
+    <li ref={(el) => (liRef = el)} class={styles.sidebarNodeWrapper} data-testid={`sidebar-node-${props.node.id}`}>
       <div
         class={styles.pageItem}
         classList={{

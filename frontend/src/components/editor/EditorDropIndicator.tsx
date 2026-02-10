@@ -71,7 +71,7 @@ export function EditorDropIndicator(props: EditorDropIndicatorProps) {
   });
 
   return (
-    <div ref={containerRef} class={styles.container}>
+    <div ref={(el) => (containerRef = el)} class={styles.container}>
       <Show when={indicatorY() !== null}>
         <div class={styles.indicator} style={{ top: `${indicatorY()}px` }} role="presentation" aria-hidden="true" />
       </Show>
