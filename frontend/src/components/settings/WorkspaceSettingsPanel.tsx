@@ -278,7 +278,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setSuccess(null);
       await ws.settings.git.pushGit();
       setSuccess(t('success.pushSuccessful') || 'Push successful');
-      loadData();
+      await loadData();
     } catch (err) {
       setError(`${t('errors.pushFailed')}: ${err}`);
     } finally {
@@ -296,7 +296,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setSuccess(null);
       await ws.settings.git.pullGit();
       setSuccess(t('success.pullSuccessful') || 'Pull successful');
-      loadData();
+      await loadData();
     } catch (err) {
       setError(`${t('errors.pullFailed')}: ${err}`);
     } finally {
@@ -379,10 +379,10 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     try {
       setLoading(true);
       setError(null);
-      // Toggle by updating workspace settings via workspace update
-      // WorkspaceSettings.git_auto_push is controlled via workspace update
-      await ws.workspaces.updateWorkspace({});
-      // The toggle is managed through workspace settings - for now just update local state
+      const wsData = await ws.workspaces.getWorkspace();
+      await ws.workspaces.updateWorkspace({
+        settings: { ...wsData.settings, git_auto_push: newVal },
+      });
       setGitAutoPush(newVal);
     } catch (err) {
       setError(`${t('errors.failedToSave')}: ${err}`);
@@ -579,60 +579,62 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
           </Show>
 
           <Show when={gitRemote()}>
-            {(remote) => {
-              const lastSync = remote().last_sync;
-              return (
-                <>
-                  <table class={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>{t('settings.urlColumn')}</th>
-                        <Show when={remote().branch}>
-                          <th>{t('settings.branchColumn')}</th>
-                        </Show>
-                        <th>{t('settings.statusColumn')}</th>
-                        <th>{t('settings.lastSyncColumn')}</th>
-                        <th>{t('common.actions')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td>{remote().url}</td>
-                        <Show when={remote().branch}>
-                          <td>{remote().branch}</td>
-                        </Show>
-                        <td>
-                          <span class={styles.syncBadge} data-status={syncStatus() || 'idle'}>
-                            {syncStatusLabel()}
-                          </span>
-                        </td>
-                        <td>{lastSync ? new Date(lastSync).toLocaleString() : t('settings.never')}</td>
-                        <td class={styles.actions}>
-                          <button onClick={handlePush} disabled={loading()} class={styles.smallButton}>
-                            {t('common.push')}
-                          </button>
-                          <button onClick={handlePull} disabled={loading()} class={styles.smallButton}>
-                            {t('settings.pull')}
-                          </button>
-                          <button onClick={handleDeleteRemote} disabled={loading()} class={styles.deleteButtonSmall}>
-                            {t('common.remove')}
-                          </button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+            {(remote) => (
+              <>
+                <table class={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>{t('settings.urlColumn')}</th>
+                      <Show when={remote().branch}>
+                        <th>{t('settings.branchColumn')}</th>
+                      </Show>
+                      <th>{t('settings.statusColumn')}</th>
+                      <th>{t('settings.lastSyncColumn')}</th>
+                      <th>{t('common.actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{remote().url}</td>
+                      <Show when={remote().branch}>
+                        <td>{remote().branch}</td>
+                      </Show>
+                      <td>
+                        <span class={styles.syncBadge} data-status={syncStatus() || 'idle'}>
+                          {syncStatusLabel()}
+                        </span>
+                      </td>
+                      <td>
+                        {(() => {
+                          const ls = remote().last_sync;
+                          return ls ? new Date(ls).toLocaleString() : t('settings.never');
+                        })()}
+                      </td>
+                      <td class={styles.actions}>
+                        <button onClick={handlePush} disabled={loading()} class={styles.smallButton}>
+                          {t('common.push')}
+                        </button>
+                        <button onClick={handlePull} disabled={loading()} class={styles.smallButton}>
+                          {t('settings.pull')}
+                        </button>
+                        <button onClick={handleDeleteRemote} disabled={loading()} class={styles.deleteButtonSmall}>
+                          {t('common.remove')}
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
 
-                  {/* Auto-push toggle */}
-                  <div class={styles.autoPushRow}>
-                    <label class={styles.checkboxLabel}>
-                      <input type="checkbox" checked={gitAutoPush()} onChange={handleToggleAutoPush} />
-                      {t('settings.autoPush')}
-                    </label>
-                    <p class={styles.hint}>{t('settings.autoPushHint')}</p>
-                  </div>
-                </>
-              );
-            }}
+                {/* Auto-push toggle */}
+                <div class={styles.autoPushRow}>
+                  <label class={styles.checkboxLabel}>
+                    <input type="checkbox" checked={gitAutoPush()} onChange={handleToggleAutoPush} />
+                    {t('settings.autoPush')}
+                  </label>
+                  <p class={styles.hint}>{t('settings.autoPushHint')}</p>
+                </div>
+              </>
+            )}
           </Show>
 
           <Show when={!gitRemote()}>

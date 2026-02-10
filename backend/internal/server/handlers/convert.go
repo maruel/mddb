@@ -399,7 +399,6 @@ func workspaceQuotasToEntity(q dto.WorkspaceQuotas) identity.WorkspaceQuotas {
 	return resourceQuotasToEntity(q)
 }
 
-//nolint:unused // Reserved for future use
 func workspaceSettingsToEntity(s dto.WorkspaceSettings) identity.WorkspaceSettings {
 	return identity.WorkspaceSettings{
 		AllowedDomains: s.AllowedDomains,

@@ -225,7 +225,15 @@ func (r *ExecRepo) Push(ctx context.Context, remoteName, branch string) error {
 		}
 	}
 
-	return r.gitRun(ctx, "push", remoteName, branch)
+	// Use HEAD:<branch> so the current local branch is pushed to the
+	// configured remote branch even when their names differ (e.g. local
+	// "master" → remote "main").
+	refspec := "HEAD:refs/heads/" + branch
+	out, err := r.gitCombinedOutput(ctx, "push", remoteName, refspec)
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }
 
 // Fetch fetches from a remote repository.
@@ -234,7 +242,11 @@ func (r *ExecRepo) Fetch(ctx context.Context, remoteName, branch string) error {
 	if branch != "" {
 		args = append(args, branch)
 	}
-	return r.gitRun(ctx, args...)
+	out, err := r.gitCombinedOutput(ctx, args...)
+	if err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
 }
 
 // Pull fetches and merges from a remote. Returns true if files changed.

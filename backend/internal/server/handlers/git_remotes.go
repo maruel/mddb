@@ -71,6 +71,19 @@ func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID,
 	return gitRemoteToResponse(wsID, &ws.GitRemote), nil
 }
 
+// getAuthURL returns the remote URL with authentication injected.
+// For github_app remotes, it fetches a fresh installation token.
+func (h *GitRemoteHandler) getAuthURL(ctx context.Context, remote *identity.GitRemote) (string, error) {
+	if remote.AuthType == "github_app" && h.GitHubApp != nil {
+		token, _, err := h.GitHubApp.GetInstallationToken(ctx, remote.InstallationID)
+		if err != nil {
+			return "", fmt.Errorf("get installation token: %w", err)
+		}
+		return fmt.Sprintf("https://x-access-token:%s@github.com/%s/%s.git", token, remote.RepoOwner, remote.RepoName), nil
+	}
+	return git.InjectTokenInURL(remote.URL, remote.Token, remote.Type), nil
+}
+
 // PushGit pushes changes to the git remote.
 func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.PushGitRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.Workspace.Get(wsID)
@@ -87,7 +100,10 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 	}
 	repo := wsStore.Repo()
 
-	url := git.InjectTokenInURL(ws.GitRemote.URL, ws.GitRemote.Token, ws.GitRemote.Type)
+	url, err := h.getAuthURL(ctx, &ws.GitRemote)
+	if err != nil {
+		return nil, err
+	}
 	if err := repo.SetRemote(ctx, gitRemoteName, url); err != nil {
 		return nil, fmt.Errorf("failed to set git remote: %w", err)
 	}
