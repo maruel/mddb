@@ -9,13 +9,13 @@ import (
 	"net/http"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 // Emit creates a notification and asynchronously dispatches it via enabled channels.
 // It never blocks or returns errors — delivery failures are logged and ignored.
-func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID rid.ID, notifType identity.NotificationType, title, body, resourceID string, actorID rid.ID) {
+func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID ksid.ID, notifType identity.NotificationType, title, body, resourceID string, actorID ksid.ID) {
 	if svc.Notification == nil {
 		return
 	}

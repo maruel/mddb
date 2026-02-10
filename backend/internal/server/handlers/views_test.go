@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -13,7 +13,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
-func setupTestServices(t *testing.T) (*Services, rid.ID) {
+func setupTestServices(t *testing.T) (*Services, ksid.ID) {
 	t.Helper()
 	dir, err := os.MkdirTemp("", "mddb-views-test-*")
 	if err != nil {
@@ -26,7 +26,7 @@ func setupTestServices(t *testing.T) (*Services, rid.ID) {
 	})
 
 	// Initialize ID generation for testing
-	if err := rid.InitIDSlice(0, 1); err != nil {
+	if err := ksid.InitIDSlice(0, 1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -78,7 +78,7 @@ func setupTestServices(t *testing.T) (*Services, rid.ID) {
 	return svc, ws.ID
 }
 
-func createTestTable(t *testing.T, svc *Services, wsID rid.ID) rid.ID {
+func createTestTable(t *testing.T, svc *Services, wsID ksid.ID) ksid.ID {
 	t.Helper()
 	ctx := t.Context()
 	ws, err := svc.FileStore.GetWorkspaceStore(ctx, wsID)
@@ -169,8 +169,8 @@ func TestViewCRUD(t *testing.T) {
 
 	// 3. ListRecords with View
 	// First add data
-	record1 := &content.DataRecord{ID: rid.NewID(), Data: map[string]any{"Name": "Alice", "Age": float64(25)}}
-	record2 := &content.DataRecord{ID: rid.NewID(), Data: map[string]any{"Name": "Bob", "Age": float64(10)}}
+	record1 := &content.DataRecord{ID: ksid.NewID(), Data: map[string]any{"Name": "Alice", "Age": float64(25)}}
+	record2 := &content.DataRecord{ID: ksid.NewID(), Data: map[string]any{"Name": "Bob", "Age": float64(10)}}
 	author := git.Author{Name: user.Name, Email: user.Email}
 	if err := ws.AppendRecord(ctx, nodeID, record1, author); err != nil {
 		t.Fatalf("AppendRecord failed: %v", err)
@@ -254,7 +254,7 @@ func TestListRecordsValidation(t *testing.T) {
 		req := &dto.ListRecordsRequest{
 			WsID:   wsID,
 			ID:     nodeID,
-			ViewID: rid.NewID(), // Non-existent view
+			ViewID: ksid.NewID(), // Non-existent view
 			Limit:  100,
 		}
 		_, err := nh.ListRecords(ctx, wsID, user, req)
@@ -371,8 +371,8 @@ func TestListRecordsValidation(t *testing.T) {
 func TestCreateViewValidation(t *testing.T) {
 	t.Run("InvalidViewType", func(t *testing.T) {
 		req := &dto.CreateViewRequest{
-			WsID:   rid.NewID(),
-			NodeID: rid.NewID(),
+			WsID:   ksid.NewID(),
+			NodeID: ksid.NewID(),
 			Name:   "Test View",
 			Type:   "invalid_type",
 		}
@@ -384,8 +384,8 @@ func TestCreateViewValidation(t *testing.T) {
 
 	t.Run("ValidViewType", func(t *testing.T) {
 		req := &dto.CreateViewRequest{
-			WsID:   rid.NewID(),
-			NodeID: rid.NewID(),
+			WsID:   ksid.NewID(),
+			NodeID: ksid.NewID(),
 			Name:   "Test View",
 			Type:   dto.ViewTypeTable,
 		}

@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 func TestUniqueIndex(t *testing.T) {
@@ -64,7 +64,7 @@ func TestUniqueIndex(t *testing.T) {
 		}
 
 		// Test delete
-		if _, err := table.Delete(rid.ID(1)); err != nil {
+		if _, err := table.Delete(ksid.ID(1)); err != nil {
 			t.Fatal(err)
 		}
 		if got := byName.Get("alice-renamed"); got != nil {
@@ -191,7 +191,7 @@ func TestIndex(t *testing.T) {
 		}
 
 		// Test delete
-		if _, err := table.Delete(rid.ID(2)); err != nil {
+		if _, err := table.Delete(ksid.ID(2)); err != nil {
 			t.Fatal(err)
 		}
 		ids = collectIDs(byFirstLetter.Iter("a"))
@@ -301,7 +301,7 @@ func TestIndex(t *testing.T) {
 		}
 
 		// Delete it - should clean up the key entirely
-		if _, err := table.Delete(rid.ID(1)); err != nil {
+		if _, err := table.Delete(ksid.ID(1)); err != nil {
 			t.Fatal(err)
 		}
 

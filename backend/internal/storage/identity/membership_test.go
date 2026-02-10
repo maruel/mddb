@@ -4,16 +4,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 func TestOrganizationMembership(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			valid := &OrganizationMembership{
-				ID:             rid.ID(1),
-				UserID:         rid.ID(100),
-				OrganizationID: rid.ID(200),
+				ID:             ksid.ID(1),
+				UserID:         ksid.ID(100),
+				OrganizationID: ksid.ID(200),
 				Role:           OrgRoleAdmin,
 			}
 			if err := valid.Validate(); err != nil {
@@ -23,9 +23,9 @@ func TestOrganizationMembership(t *testing.T) {
 
 		t.Run("zero ID", func(t *testing.T) {
 			zeroID := &OrganizationMembership{
-				ID:             rid.ID(0),
-				UserID:         rid.ID(100),
-				OrganizationID: rid.ID(200),
+				ID:             ksid.ID(0),
+				UserID:         ksid.ID(100),
+				OrganizationID: ksid.ID(200),
 				Role:           OrgRoleAdmin,
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -35,9 +35,9 @@ func TestOrganizationMembership(t *testing.T) {
 
 		t.Run("zero UserID", func(t *testing.T) {
 			zeroUser := &OrganizationMembership{
-				ID:             rid.ID(1),
-				UserID:         rid.ID(0),
-				OrganizationID: rid.ID(200),
+				ID:             ksid.ID(1),
+				UserID:         ksid.ID(0),
+				OrganizationID: ksid.ID(200),
 				Role:           OrgRoleAdmin,
 			}
 			if err := zeroUser.Validate(); err == nil {
@@ -47,9 +47,9 @@ func TestOrganizationMembership(t *testing.T) {
 
 		t.Run("zero OrganizationID", func(t *testing.T) {
 			zeroOrg := &OrganizationMembership{
-				ID:             rid.ID(1),
-				UserID:         rid.ID(100),
-				OrganizationID: rid.ID(0),
+				ID:             ksid.ID(1),
+				UserID:         ksid.ID(100),
+				OrganizationID: ksid.ID(0),
 				Role:           OrgRoleAdmin,
 			}
 			if err := zeroOrg.Validate(); err == nil {
@@ -59,9 +59,9 @@ func TestOrganizationMembership(t *testing.T) {
 
 		t.Run("invalid role", func(t *testing.T) {
 			invalidRole := &OrganizationMembership{
-				ID:             rid.ID(1),
-				UserID:         rid.ID(100),
-				OrganizationID: rid.ID(200),
+				ID:             ksid.ID(1),
+				UserID:         ksid.ID(100),
+				OrganizationID: ksid.ID(200),
 				Role:           "invalid",
 			}
 			if err := invalidRole.Validate(); err == nil {
@@ -72,9 +72,9 @@ func TestOrganizationMembership(t *testing.T) {
 
 	t.Run("Clone", func(t *testing.T) {
 		original := &OrganizationMembership{
-			ID:             rid.ID(1),
-			UserID:         rid.ID(100),
-			OrganizationID: rid.ID(200),
+			ID:             ksid.ID(1),
+			UserID:         ksid.ID(100),
+			OrganizationID: ksid.ID(200),
 			Role:           OrgRoleOwner,
 		}
 
@@ -94,9 +94,9 @@ func TestOrganizationMembership(t *testing.T) {
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		m := &OrganizationMembership{ID: rid.ID(42)}
-		if m.GetID() != rid.ID(42) {
-			t.Errorf("GetID() = %v, want %v", m.GetID(), rid.ID(42))
+		m := &OrganizationMembership{ID: ksid.ID(42)}
+		if m.GetID() != ksid.ID(42) {
+			t.Errorf("GetID() = %v, want %v", m.GetID(), ksid.ID(42))
 		}
 	})
 }
@@ -158,9 +158,9 @@ func TestWorkspaceMembership(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			valid := &WorkspaceMembership{
-				ID:          rid.ID(1),
-				UserID:      rid.ID(100),
-				WorkspaceID: rid.ID(200),
+				ID:          ksid.ID(1),
+				UserID:      ksid.ID(100),
+				WorkspaceID: ksid.ID(200),
 				Role:        WSRoleEditor,
 			}
 			if err := valid.Validate(); err != nil {
@@ -170,9 +170,9 @@ func TestWorkspaceMembership(t *testing.T) {
 
 		t.Run("zero ID", func(t *testing.T) {
 			zeroID := &WorkspaceMembership{
-				ID:          rid.ID(0),
-				UserID:      rid.ID(100),
-				WorkspaceID: rid.ID(200),
+				ID:          ksid.ID(0),
+				UserID:      ksid.ID(100),
+				WorkspaceID: ksid.ID(200),
 				Role:        WSRoleEditor,
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -182,9 +182,9 @@ func TestWorkspaceMembership(t *testing.T) {
 
 		t.Run("zero UserID", func(t *testing.T) {
 			zeroUser := &WorkspaceMembership{
-				ID:          rid.ID(1),
-				UserID:      rid.ID(0),
-				WorkspaceID: rid.ID(200),
+				ID:          ksid.ID(1),
+				UserID:      ksid.ID(0),
+				WorkspaceID: ksid.ID(200),
 				Role:        WSRoleEditor,
 			}
 			if err := zeroUser.Validate(); err == nil {
@@ -194,9 +194,9 @@ func TestWorkspaceMembership(t *testing.T) {
 
 		t.Run("zero WorkspaceID", func(t *testing.T) {
 			zeroWS := &WorkspaceMembership{
-				ID:          rid.ID(1),
-				UserID:      rid.ID(100),
-				WorkspaceID: rid.ID(0),
+				ID:          ksid.ID(1),
+				UserID:      ksid.ID(100),
+				WorkspaceID: ksid.ID(0),
 				Role:        WSRoleEditor,
 			}
 			if err := zeroWS.Validate(); err == nil {
@@ -206,9 +206,9 @@ func TestWorkspaceMembership(t *testing.T) {
 
 		t.Run("invalid role", func(t *testing.T) {
 			invalidRole := &WorkspaceMembership{
-				ID:          rid.ID(1),
-				UserID:      rid.ID(100),
-				WorkspaceID: rid.ID(200),
+				ID:          ksid.ID(1),
+				UserID:      ksid.ID(100),
+				WorkspaceID: ksid.ID(200),
 				Role:        "invalid",
 			}
 			if err := invalidRole.Validate(); err == nil {
@@ -219,9 +219,9 @@ func TestWorkspaceMembership(t *testing.T) {
 
 	t.Run("Clone", func(t *testing.T) {
 		original := &WorkspaceMembership{
-			ID:          rid.ID(1),
-			UserID:      rid.ID(100),
-			WorkspaceID: rid.ID(200),
+			ID:          ksid.ID(1),
+			UserID:      ksid.ID(100),
+			WorkspaceID: ksid.ID(200),
 			Role:        WSRoleAdmin,
 		}
 
@@ -241,9 +241,9 @@ func TestWorkspaceMembership(t *testing.T) {
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		m := &WorkspaceMembership{ID: rid.ID(42)}
-		if m.GetID() != rid.ID(42) {
-			t.Errorf("GetID() = %v, want %v", m.GetID(), rid.ID(42))
+		m := &WorkspaceMembership{ID: ksid.ID(42)}
+		if m.GetID() != ksid.ID(42) {
+			t.Errorf("GetID() = %v, want %v", m.GetID(), ksid.ID(42))
 		}
 	})
 }
@@ -344,14 +344,14 @@ func TestOrganizationMembershipService(t *testing.T) {
 		})
 
 		t.Run("empty userID", func(t *testing.T) {
-			_, createErr := service.Create(rid.ID(0), org.ID, OrgRoleAdmin)
+			_, createErr := service.Create(ksid.ID(0), org.ID, OrgRoleAdmin)
 			if createErr == nil {
 				t.Error("Expected error for empty userID")
 			}
 		})
 
 		t.Run("empty orgID", func(t *testing.T) {
-			_, createErr := service.Create(user.ID, rid.ID(0), OrgRoleAdmin)
+			_, createErr := service.Create(user.ID, ksid.ID(0), OrgRoleAdmin)
 			if createErr == nil {
 				t.Error("Expected error for empty orgID")
 			}
@@ -370,7 +370,7 @@ func TestOrganizationMembershipService(t *testing.T) {
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			_, getErr := service.Get(rid.ID(99999), org.ID)
+			_, getErr := service.Get(ksid.ID(99999), org.ID)
 			if getErr == nil {
 				t.Error("Expected error for non-existent membership")
 			}
@@ -432,14 +432,14 @@ func TestOrganizationMembershipService(t *testing.T) {
 
 	t.Run("Delete", func(t *testing.T) {
 		t.Run("zero ID", func(t *testing.T) {
-			delErr := service.Delete(rid.ID(0))
+			delErr := service.Delete(ksid.ID(0))
 			if delErr == nil {
 				t.Error("Expected error for Delete with zero ID")
 			}
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			delErr := service.Delete(rid.ID(99999))
+			delErr := service.Delete(ksid.ID(99999))
 			if delErr == nil {
 				t.Error("Expected error for Delete with non-existent ID")
 			}

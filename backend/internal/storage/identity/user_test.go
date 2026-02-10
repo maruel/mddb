@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 func TestUserStorage(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			valid := &userStorage{
-				User:         User{ID: rid.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 3}},
+				User:         User{ID: ksid.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 3}},
 				PasswordHash: "hash",
 			}
 			if err := valid.Validate(); err != nil {
@@ -22,7 +22,7 @@ func TestUserStorage(t *testing.T) {
 
 		t.Run("zero ID", func(t *testing.T) {
 			zeroID := &userStorage{
-				User:         User{ID: rid.ID(0), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 3}},
+				User:         User{ID: ksid.ID(0), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 3}},
 				PasswordHash: "hash",
 			}
 			if err := zeroID.Validate(); err == nil {
@@ -32,7 +32,7 @@ func TestUserStorage(t *testing.T) {
 
 		t.Run("empty email", func(t *testing.T) {
 			emptyEmail := &userStorage{
-				User:         User{ID: rid.ID(1), Email: "", Quotas: UserQuota{MaxOrganizations: 3}},
+				User:         User{ID: ksid.ID(1), Email: "", Quotas: UserQuota{MaxOrganizations: 3}},
 				PasswordHash: "hash",
 			}
 			if err := emptyEmail.Validate(); err == nil {
@@ -41,7 +41,7 @@ func TestUserStorage(t *testing.T) {
 		})
 		t.Run("invalid quota", func(t *testing.T) {
 			invalidQuota := &userStorage{
-				User:         User{ID: rid.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 0}},
+				User:         User{ID: ksid.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 0}},
 				PasswordHash: "hash",
 			}
 			if err := invalidQuota.Validate(); err == nil {
@@ -54,7 +54,7 @@ func TestUserStorage(t *testing.T) {
 		t.Run("with OAuthIdentities", func(t *testing.T) {
 			original := &userStorage{
 				User: User{
-					ID:    rid.ID(1),
+					ID:    ksid.ID(1),
 					Email: "test@example.com",
 					OAuthIdentities: []OAuthIdentity{
 						{Provider: OAuthProviderGoogle, ProviderID: "123"},
@@ -73,7 +73,7 @@ func TestUserStorage(t *testing.T) {
 
 		t.Run("nil OAuthIdentities", func(t *testing.T) {
 			noOAuth := &userStorage{
-				User:         User{ID: rid.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 3}},
+				User:         User{ID: ksid.ID(1), Email: "test@example.com", Quotas: UserQuota{MaxOrganizations: 3}},
 				PasswordHash: "hash",
 			}
 			cloneNoOAuth := noOAuth.Clone()
@@ -141,14 +141,14 @@ func TestUserService(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			_, getErr := service.Get(rid.ID(0))
+			_, getErr := service.Get(ksid.ID(0))
 			if getErr == nil {
 				t.Error("Expected error for zero ID")
 			}
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			_, getErr := service.Get(rid.ID(99999))
+			_, getErr := service.Get(ksid.ID(99999))
 			if getErr == nil {
 				t.Error("Expected error for non-existent user")
 			}
@@ -215,7 +215,7 @@ func TestUserService(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			_, modErr := service.Modify(rid.ID(0), func(u *User) error {
+			_, modErr := service.Modify(ksid.ID(0), func(u *User) error {
 				return nil
 			})
 			if modErr == nil {
@@ -224,7 +224,7 @@ func TestUserService(t *testing.T) {
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			_, modErr := service.Modify(rid.ID(99999), func(u *User) error {
+			_, modErr := service.Modify(ksid.ID(99999), func(u *User) error {
 				return nil
 			})
 			if modErr == nil {

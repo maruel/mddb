@@ -8,7 +8,7 @@ import (
 	"slices"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -84,13 +84,13 @@ func (p *NotificationPreferences) EffectiveChannels(t NotificationType) ChannelS
 
 // Notification represents an in-app notification for a user.
 type Notification struct {
-	ID         rid.ID           `json:"id"`
-	UserID     rid.ID           `json:"user_id"`
+	ID         ksid.ID          `json:"id"`
+	UserID     ksid.ID          `json:"user_id"`
 	Type       NotificationType `json:"type"`
 	Title      string           `json:"title"`
 	Body       string           `json:"body,omitempty"`
 	ResourceID string           `json:"resource_id,omitempty"`
-	ActorID    rid.ID           `json:"actor_id,omitempty"`
+	ActorID    ksid.ID          `json:"actor_id,omitempty"`
 	Read       bool             `json:"read"`
 	Created    storage.Time     `json:"created"`
 }
@@ -102,7 +102,7 @@ func (n *Notification) Clone() *Notification {
 }
 
 // GetID returns the notification's ID.
-func (n *Notification) GetID() rid.ID {
+func (n *Notification) GetID() ksid.ID {
 	return n.ID
 }
 
@@ -126,7 +126,7 @@ func (n *Notification) Validate() error {
 // NotificationService manages notification persistence.
 type NotificationService struct {
 	table    *jsonldb.Table[*Notification]
-	byUserID *jsonldb.Index[rid.ID, *Notification]
+	byUserID *jsonldb.Index[ksid.ID, *Notification]
 }
 
 // NewNotificationService creates a new notification service.
@@ -135,14 +135,14 @@ func NewNotificationService(tablePath string) (*NotificationService, error) {
 	if err != nil {
 		return nil, err
 	}
-	byUserID := jsonldb.NewIndex(table, func(n *Notification) rid.ID { return n.UserID })
+	byUserID := jsonldb.NewIndex(table, func(n *Notification) ksid.ID { return n.UserID })
 	return &NotificationService{table: table, byUserID: byUserID}, nil
 }
 
 // Create creates a new notification.
-func (s *NotificationService) Create(userID rid.ID, notifType NotificationType, title, body, resourceID string, actorID rid.ID) (*Notification, error) {
+func (s *NotificationService) Create(userID ksid.ID, notifType NotificationType, title, body, resourceID string, actorID ksid.ID) (*Notification, error) {
 	n := &Notification{
-		ID:         rid.NewID(),
+		ID:         ksid.NewID(),
 		UserID:     userID,
 		Type:       notifType,
 		Title:      title,
@@ -158,7 +158,7 @@ func (s *NotificationService) Create(userID rid.ID, notifType NotificationType, 
 }
 
 // Get retrieves a notification by ID.
-func (s *NotificationService) Get(id rid.ID) (*Notification, error) {
+func (s *NotificationService) Get(id ksid.ID) (*Notification, error) {
 	n := s.table.Get(id)
 	if n == nil {
 		return nil, errNotificationNotFound
@@ -167,7 +167,7 @@ func (s *NotificationService) Get(id rid.ID) (*Notification, error) {
 }
 
 // ListByUser returns notifications for a user, newest first, with optional limit, offset, and unread filter.
-func (s *NotificationService) ListByUser(userID rid.ID, limit, offset int, unreadOnly bool) []*Notification {
+func (s *NotificationService) ListByUser(userID ksid.ID, limit, offset int, unreadOnly bool) []*Notification {
 	var all []*Notification
 	for n := range s.byUserID.Iter(userID) {
 		if unreadOnly && n.Read {
@@ -201,7 +201,7 @@ func (s *NotificationService) ListByUser(userID rid.ID, limit, offset int, unrea
 }
 
 // CountByUser returns the total number of notifications for a user.
-func (s *NotificationService) CountByUser(userID rid.ID) int {
+func (s *NotificationService) CountByUser(userID ksid.ID) int {
 	count := 0
 	for range s.byUserID.Iter(userID) {
 		count++
@@ -210,7 +210,7 @@ func (s *NotificationService) CountByUser(userID rid.ID) int {
 }
 
 // CountUnread returns the number of unread notifications for a user.
-func (s *NotificationService) CountUnread(userID rid.ID) int {
+func (s *NotificationService) CountUnread(userID ksid.ID) int {
 	count := 0
 	for n := range s.byUserID.Iter(userID) {
 		if !n.Read {
@@ -221,7 +221,7 @@ func (s *NotificationService) CountUnread(userID rid.ID) int {
 }
 
 // MarkRead marks a single notification as read.
-func (s *NotificationService) MarkRead(id, userID rid.ID) error {
+func (s *NotificationService) MarkRead(id, userID ksid.ID) error {
 	n := s.table.Get(id)
 	if n == nil || n.UserID != userID {
 		return errNotificationNotFound
@@ -234,8 +234,8 @@ func (s *NotificationService) MarkRead(id, userID rid.ID) error {
 }
 
 // MarkAllRead marks all notifications for a user as read.
-func (s *NotificationService) MarkAllRead(userID rid.ID) error {
-	var ids []rid.ID
+func (s *NotificationService) MarkAllRead(userID ksid.ID) error {
+	var ids []ksid.ID
 	for n := range s.byUserID.Iter(userID) {
 		if !n.Read {
 			ids = append(ids, n.ID)
@@ -253,7 +253,7 @@ func (s *NotificationService) MarkAllRead(userID rid.ID) error {
 }
 
 // Delete deletes a single notification owned by the given user.
-func (s *NotificationService) Delete(id, userID rid.ID) error {
+func (s *NotificationService) Delete(id, userID ksid.ID) error {
 	n := s.table.Get(id)
 	if n == nil || n.UserID != userID {
 		return errNotificationNotFound
@@ -264,7 +264,7 @@ func (s *NotificationService) Delete(id, userID rid.ID) error {
 
 // DeleteOlderThan deletes notifications created before cutoff. Returns count deleted.
 func (s *NotificationService) DeleteOlderThan(cutoff storage.Time) (int, error) {
-	var toDelete []rid.ID
+	var toDelete []ksid.ID
 	for n := range s.table.Iter(0) {
 		if n.Created.Before(cutoff) {
 			toDelete = append(toDelete, n.ID)
@@ -282,7 +282,7 @@ func (s *NotificationService) DeleteOlderThan(cutoff storage.Time) (int, error) 
 
 // DeleteExcessPerUser caps notifications per user at maxPerUser, deleting oldest. Returns total deleted.
 func (s *NotificationService) DeleteExcessPerUser(maxPerUser int) (int, error) {
-	byUser := make(map[rid.ID][]*Notification)
+	byUser := make(map[ksid.ID][]*Notification)
 	for n := range s.table.Iter(0) {
 		byUser[n.UserID] = append(byUser[n.UserID], n)
 	}

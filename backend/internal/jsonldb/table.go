@@ -16,7 +16,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 var errZeroID = errors.New("row has zero ID")
@@ -31,7 +31,7 @@ type Row[T any] interface {
 	// GetID returns the unique identifier for this row.
 	//
 	// Must be non-zero.
-	GetID() rid.ID
+	GetID() ksid.ID
 
 	// Validate checks data integrity.
 	//
@@ -66,7 +66,7 @@ type Table[T Row[T]] struct {
 	mu           sync.RWMutex
 	schema       schemaHeader
 	rows         []T
-	byID         map[rid.ID]int // maps ID to index in rows
+	byID         map[ksid.ID]int // maps ID to index in rows
 	blobRefCount map[BlobRef]int
 	observers    []TableObserver[T]
 	blobStore    blobStore // lazily initialized for tables with blob fields
@@ -129,7 +129,7 @@ func (t *Table[T]) SetProperties(props json.RawMessage) error {
 }
 
 // Get returns a clone of the row with the given ID, or nil if not found.
-func (t *Table[T]) Get(id rid.ID) T {
+func (t *Table[T]) Get(id ksid.ID) T {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if idx, ok := t.byID[id]; ok {
@@ -144,7 +144,7 @@ func (t *Table[T]) Get(id rid.ID) T {
 // Returns the deleted row, or nil if no row with that ID exists.
 // The entire table is rewritten to disk on success.
 // Blobs are only deleted if no other rows reference them.
-func (t *Table[T]) Delete(id rid.ID) (T, error) {
+func (t *Table[T]) Delete(id ksid.ID) (T, error) {
 	var zero T
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -160,7 +160,7 @@ func (t *Table[T]) Delete(id rid.ID) (T, error) {
 	t.rows = append(t.rows[:idx], t.rows[idx+1:]...)
 
 	// Rebuild index (indices shifted after removal)
-	t.byID = make(map[rid.ID]int, len(t.rows))
+	t.byID = make(map[ksid.ID]int, len(t.rows))
 	for i, row := range t.rows {
 		t.byID[row.GetID()] = i
 	}
@@ -258,7 +258,7 @@ func (t *Table[T]) Update(row T) (T, error) {
 // If fn returns an error, the row is not modified. If validation fails after
 // fn returns, the row is not modified. If the disk write fails, the in-memory
 // state is rolled back.
-func (t *Table[T]) Modify(id rid.ID, fn func(row T) error) (T, error) {
+func (t *Table[T]) Modify(id ksid.ID, fn func(row T) error) (T, error) {
 	var zero T
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -329,7 +329,7 @@ func (t *Table[T]) load() error {
 	data, err := os.ReadFile(t.path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			t.byID = make(map[rid.ID]int)
+			t.byID = make(map[ksid.ID]int)
 			t.blobRefCount = make(map[BlobRef]int)
 			return nil
 		}
@@ -338,10 +338,10 @@ func (t *Table[T]) load() error {
 
 	n := bytes.Count(data, []byte{'\n'})
 	t.rows = make([]T, 0, n)
-	t.byID = make(map[rid.ID]int, n)
+	t.byID = make(map[ksid.ID]int, n)
 	t.blobRefCount = make(map[BlobRef]int)
 	lineNum := 0
-	var prevID rid.ID
+	var prevID ksid.ID
 	needsSort := false
 	for line := range bytes.SplitSeq(data, []byte{'\n'}) {
 		if len(line) == 0 {
@@ -418,7 +418,7 @@ func (t *Table[T]) injectBlobStoreLocked(row T) {
 // Pass 0 to iterate over all rows from the beginning.
 // The reader lock is held for the duration of iteration; avoid long-running
 // operations inside the loop to prevent blocking writers.
-func (t *Table[T]) Iter(startID rid.ID) iter.Seq[T] {
+func (t *Table[T]) Iter(startID ksid.ID) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		t.mu.RLock()
 		defer t.mu.RUnlock()

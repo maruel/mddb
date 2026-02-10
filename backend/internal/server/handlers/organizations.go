@@ -6,7 +6,7 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -18,7 +18,7 @@ type OrganizationHandler struct {
 }
 
 // GetOrganization retrieves current organization details.
-func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID rid.ID, _ *identity.User, _ *dto.GetOrganizationRequest) (*dto.OrganizationResponse, error) {
+func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID ksid.ID, _ *identity.User, _ *dto.GetOrganizationRequest) (*dto.OrganizationResponse, error) {
 	org, err := h.Svc.Organization.Get(orgID)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID rid.ID,
 }
 
 // UpdateOrgPreferences updates organization-wide preferences/settings and quotas.
-func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID rid.ID, _ *identity.User, req *dto.UpdateOrgPreferencesRequest) (*dto.OrganizationResponse, error) {
+func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID ksid.ID, _ *identity.User, req *dto.UpdateOrgPreferencesRequest) (*dto.OrganizationResponse, error) {
 	org, err := h.Svc.Organization.Modify(orgID, func(org *identity.Organization) error {
 		if req.Settings != nil {
 			org.Settings = organizationSettingsToEntity(*req.Settings)
@@ -56,7 +56,7 @@ func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID ri
 }
 
 // UpdateOrganization updates organization details (name).
-func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID rid.ID, _ *identity.User, req *dto.UpdateOrganizationRequest) (*dto.OrganizationResponse, error) {
+func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID ksid.ID, _ *identity.User, req *dto.UpdateOrganizationRequest) (*dto.OrganizationResponse, error) {
 	org, err := h.Svc.Organization.Modify(orgID, func(org *identity.Organization) error {
 		org.Name = req.Name
 		return nil
@@ -70,7 +70,7 @@ func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID rid.
 }
 
 // CreateWorkspace creates a new workspace within an organization.
-func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID rid.ID, user *identity.User, req *dto.CreateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
+func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID, user *identity.User, req *dto.CreateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
 	if req.Name == "" {
 		return nil, dto.MissingField("name")
 	}
@@ -115,7 +115,7 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID rid.ID,
 }
 
 // GetWorkspace retrieves workspace details.
-func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID rid.ID, _ *identity.User, _ *dto.GetWorkspaceRequest) (*dto.WorkspaceResponse, error) {
+func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID ksid.ID, _ *identity.User, _ *dto.GetWorkspaceRequest) (*dto.WorkspaceResponse, error) {
 	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,7 @@ func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID rid.ID, _ *id
 }
 
 // UpdateWorkspace updates workspace details (name, quotas, and/or settings).
-func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID rid.ID, _ *identity.User, req *dto.UpdateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
+func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID ksid.ID, _ *identity.User, req *dto.UpdateWorkspaceRequest) (*dto.WorkspaceResponse, error) {
 	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		if req.Name != "" {
 			ws.Name = req.Name

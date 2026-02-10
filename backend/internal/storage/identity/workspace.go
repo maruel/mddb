@@ -8,15 +8,15 @@ import (
 	"iter"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // Workspace represents an isolated content container within an organization.
 // Each workspace has its own pages, tables, assets, and git remote.
 type Workspace struct {
-	ID             rid.ID            `json:"id" jsonschema:"description=Unique workspace identifier"`
-	OrganizationID rid.ID            `json:"organization_id" jsonschema:"description=Parent organization ID"`
+	ID             ksid.ID           `json:"id" jsonschema:"description=Unique workspace identifier"`
+	OrganizationID ksid.ID           `json:"organization_id" jsonschema:"description=Parent organization ID"`
 	Name           string            `json:"name" jsonschema:"description=Display name of the workspace"`
 	Quotas         WorkspaceQuotas   `json:"quotas" jsonschema:"description=Resource limits for the workspace"`
 	Settings       WorkspaceSettings `json:"settings" jsonschema:"description=Workspace-wide configuration"`
@@ -35,7 +35,7 @@ func (w *Workspace) Clone() *Workspace {
 }
 
 // GetID returns the Workspace's ID.
-func (w *Workspace) GetID() rid.ID {
+func (w *Workspace) GetID() ksid.ID {
 	return w.ID
 }
 
@@ -81,7 +81,7 @@ func DefaultWorkspaceQuotas() WorkspaceQuotas {
 // WorkspaceService handles workspace management.
 type WorkspaceService struct {
 	table *jsonldb.Table[*Workspace]
-	byOrg *jsonldb.Index[rid.ID, *Workspace]
+	byOrg *jsonldb.Index[ksid.ID, *Workspace]
 }
 
 // NewWorkspaceService creates a new workspace service.
@@ -90,7 +90,7 @@ func NewWorkspaceService(tablePath string) (*WorkspaceService, error) {
 	if err != nil {
 		return nil, err
 	}
-	byOrg := jsonldb.NewIndex(table, func(w *Workspace) rid.ID { return w.OrganizationID })
+	byOrg := jsonldb.NewIndex(table, func(w *Workspace) ksid.ID { return w.OrganizationID })
 	return &WorkspaceService{
 		table: table,
 		byOrg: byOrg,
@@ -98,7 +98,7 @@ func NewWorkspaceService(tablePath string) (*WorkspaceService, error) {
 }
 
 // Create creates a new workspace in an organization.
-func (s *WorkspaceService) Create(_ context.Context, orgID rid.ID, name string) (*Workspace, error) {
+func (s *WorkspaceService) Create(_ context.Context, orgID ksid.ID, name string) (*Workspace, error) {
 	if orgID.IsZero() {
 		return nil, errOrgIDEmpty
 	}
@@ -107,7 +107,7 @@ func (s *WorkspaceService) Create(_ context.Context, orgID rid.ID, name string) 
 	}
 
 	ws := &Workspace{
-		ID:             rid.NewID(),
+		ID:             ksid.NewID(),
 		OrganizationID: orgID,
 		Name:           name,
 		Quotas:         DefaultWorkspaceQuotas(),
@@ -120,7 +120,7 @@ func (s *WorkspaceService) Create(_ context.Context, orgID rid.ID, name string) 
 }
 
 // Get retrieves a workspace by ID.
-func (s *WorkspaceService) Get(id rid.ID) (*Workspace, error) {
+func (s *WorkspaceService) Get(id ksid.ID) (*Workspace, error) {
 	ws := s.table.Get(id)
 	if ws == nil {
 		return nil, errWorkspaceNotFound
@@ -129,7 +129,7 @@ func (s *WorkspaceService) Get(id rid.ID) (*Workspace, error) {
 }
 
 // Modify atomically modifies a workspace.
-func (s *WorkspaceService) Modify(id rid.ID, fn func(ws *Workspace) error) (*Workspace, error) {
+func (s *WorkspaceService) Modify(id ksid.ID, fn func(ws *Workspace) error) (*Workspace, error) {
 	if id.IsZero() {
 		return nil, errWorkspaceNotFound
 	}
@@ -137,17 +137,17 @@ func (s *WorkspaceService) Modify(id rid.ID, fn func(ws *Workspace) error) (*Wor
 }
 
 // IterByOrg iterates over workspaces in an organization. O(1) via index.
-func (s *WorkspaceService) IterByOrg(orgID rid.ID) iter.Seq[*Workspace] {
+func (s *WorkspaceService) IterByOrg(orgID ksid.ID) iter.Seq[*Workspace] {
 	return s.byOrg.Iter(orgID)
 }
 
 // Iter iterates over all workspaces with ID greater than startID.
-func (s *WorkspaceService) Iter(startID rid.ID) iter.Seq[*Workspace] {
+func (s *WorkspaceService) Iter(startID ksid.ID) iter.Seq[*Workspace] {
 	return s.table.Iter(startID)
 }
 
 // CountByOrg returns the number of workspaces in an organization.
-func (s *WorkspaceService) CountByOrg(orgID rid.ID) int {
+func (s *WorkspaceService) CountByOrg(orgID ksid.ID) int {
 	count := 0
 	for range s.byOrg.Iter(orgID) {
 		count++
@@ -161,7 +161,7 @@ func (s *WorkspaceService) Count() int {
 }
 
 // Delete deletes a workspace.
-func (s *WorkspaceService) Delete(id rid.ID) error {
+func (s *WorkspaceService) Delete(id ksid.ID) error {
 	if id.IsZero() {
 		return errWorkspaceNotFound
 	}

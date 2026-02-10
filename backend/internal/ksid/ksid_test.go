@@ -1,4 +1,4 @@
-package rid
+package ksid
 
 import (
 	"encoding/json"

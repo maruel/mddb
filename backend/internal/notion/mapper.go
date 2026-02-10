@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
@@ -16,27 +16,27 @@ import (
 // Mapper converts Notion types to mddb types.
 type Mapper struct {
 	// NotionToMddb maps Notion IDs to mddb IDs.
-	NotionToMddb map[string]rid.ID
+	NotionToMddb map[string]ksid.ID
 	// PendingRelations maps property names to Notion database IDs that need resolution.
 	PendingRelations map[string]string
 
 	// Asset context for downloading files (set before mapping records)
 	assets *AssetDownloader
-	nodeID rid.ID
+	nodeID ksid.ID
 }
 
 // NewMapper creates a new type mapper.
 func NewMapper() *Mapper {
 	return &Mapper{
-		NotionToMddb:     make(map[string]rid.ID),
+		NotionToMddb:     make(map[string]ksid.ID),
 		PendingRelations: make(map[string]string),
 	}
 }
 
 // NewMapperWithIDs creates a new type mapper with pre-existing ID mappings.
 // Use this for incremental imports to reuse existing mddb IDs.
-func NewMapperWithIDs(existingIDs map[string]rid.ID) *Mapper {
-	ids := make(map[string]rid.ID, len(existingIDs))
+func NewMapperWithIDs(existingIDs map[string]ksid.ID) *Mapper {
+	ids := make(map[string]ksid.ID, len(existingIDs))
 	maps.Copy(ids, existingIDs)
 	return &Mapper{
 		NotionToMddb:     ids,
@@ -46,7 +46,7 @@ func NewMapperWithIDs(existingIDs map[string]rid.ID) *Mapper {
 
 // SetAssetContext configures the mapper to download assets for the given node.
 // Call this before mapping database records to enable file downloading.
-func (m *Mapper) SetAssetContext(assets *AssetDownloader, nodeID rid.ID) {
+func (m *Mapper) SetAssetContext(assets *AssetDownloader, nodeID ksid.ID) {
 	m.assets = assets
 	m.nodeID = nodeID
 }
@@ -105,18 +105,18 @@ func (m *Mapper) ClearPendingRelations() {
 
 // AssignNodeID pre-assigns an mddb ID to a Notion page or database ID.
 // This allows parent resolution to work when children are processed before parents.
-func (m *Mapper) AssignNodeID(notionID string) rid.ID {
+func (m *Mapper) AssignNodeID(notionID string) ksid.ID {
 	if existing, ok := m.NotionToMddb[notionID]; ok {
 		return existing
 	}
-	id := rid.NewID()
+	id := ksid.NewID()
 	m.NotionToMddb[notionID] = id
 	return id
 }
 
 // AssignRecordID pre-assigns an mddb ID to a Notion page ID without mapping it.
 // This allows relation resolution to work for records in the same database.
-func (m *Mapper) AssignRecordID(notionID string) rid.ID {
+func (m *Mapper) AssignRecordID(notionID string) ksid.ID {
 	return m.AssignNodeID(notionID) // Same logic, different semantic name
 }
 
@@ -125,7 +125,7 @@ func (m *Mapper) MapDatabase(db *Database) (*content.Node, error) {
 	// Use pre-assigned ID if available, otherwise create new
 	nodeID, ok := m.NotionToMddb[db.ID]
 	if !ok {
-		nodeID = rid.NewID()
+		nodeID = ksid.NewID()
 		m.NotionToMddb[db.ID] = nodeID
 	}
 
@@ -286,7 +286,7 @@ func (m *Mapper) MapPage(page *Page) (*content.Node, error) {
 	// Use pre-assigned ID if available, otherwise create new
 	nodeID, ok := m.NotionToMddb[page.ID]
 	if !ok {
-		nodeID = rid.NewID()
+		nodeID = ksid.NewID()
 		m.NotionToMddb[page.ID] = nodeID
 	}
 
@@ -328,7 +328,7 @@ func (m *Mapper) MapPageIconCover(node *content.Node, page *Page, assets *AssetD
 
 // resolveParentID converts a Notion Parent to an mddb node ID.
 // Returns zero ID for workspace-level items or unresolved parents.
-func (m *Mapper) resolveParentID(parent Parent) rid.ID {
+func (m *Mapper) resolveParentID(parent Parent) ksid.ID {
 	var notionID string
 	switch parent.Type {
 	case "page_id":
@@ -369,7 +369,7 @@ func (m *Mapper) MapDatabasePage(page *Page, schema map[string]DBProperty) (*con
 	// Use pre-assigned ID if available (from AssignRecordID), otherwise create new
 	recordID, ok := m.NotionToMddb[page.ID]
 	if !ok {
-		recordID = rid.NewID()
+		recordID = ksid.NewID()
 		m.NotionToMddb[page.ID] = recordID
 	}
 

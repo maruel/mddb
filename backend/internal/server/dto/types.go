@@ -5,7 +5,7 @@ package dto
 import (
 	"errors"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -213,7 +213,7 @@ type SearchResult struct {
 
 // View represents a saved table view configuration.
 type View struct {
-	ID      rid.ID       `json:"id" jsonschema:"description=Unique view identifier"`
+	ID      ksid.ID      `json:"id" jsonschema:"description=Unique view identifier"`
 	Name    string       `json:"name" jsonschema:"description=View display name"`
 	Type    ViewType     `json:"type" jsonschema:"description=View layout type (table/board/gallery/list/calendar)"`
 	Default bool         `json:"default,omitempty" jsonschema:"description=Whether this is the default view"`
@@ -331,15 +331,15 @@ type Group struct {
 
 // NotificationDTO is the API representation of a notification.
 type NotificationDTO struct {
-	ID         rid.ID `json:"id" jsonschema:"description=Unique notification identifier"`
-	Type       string `json:"type" jsonschema:"description=Notification type (org_invite, ws_invite, member_joined, member_removed, page_mention, page_edited)"`
-	Title      string `json:"title" jsonschema:"description=Human-readable summary"`
-	Body       string `json:"body,omitempty" jsonschema:"description=Optional detail text"`
-	ResourceID string `json:"resource_id,omitempty" jsonschema:"description=Related resource identifier"`
-	ActorID    rid.ID `json:"actor_id,omitempty" jsonschema:"description=User who triggered the notification"`
-	ActorName  string `json:"actor_name,omitempty" jsonschema:"description=Display name of actor"`
-	Read       bool   `json:"read" jsonschema:"description=Whether the notification has been read"`
-	CreatedAt  Time   `json:"created_at" jsonschema:"description=Creation timestamp"`
+	ID         ksid.ID `json:"id" jsonschema:"description=Unique notification identifier"`
+	Type       string  `json:"type" jsonschema:"description=Notification type (org_invite, ws_invite, member_joined, member_removed, page_mention, page_edited)"`
+	Title      string  `json:"title" jsonschema:"description=Human-readable summary"`
+	Body       string  `json:"body,omitempty" jsonschema:"description=Optional detail text"`
+	ResourceID string  `json:"resource_id,omitempty" jsonschema:"description=Related resource identifier"`
+	ActorID    ksid.ID `json:"actor_id,omitempty" jsonschema:"description=User who triggered the notification"`
+	ActorName  string  `json:"actor_name,omitempty" jsonschema:"description=Display name of actor"`
+	Read       bool    `json:"read" jsonschema:"description=Whether the notification has been read"`
+	CreatedAt  Time    `json:"created_at" jsonschema:"description=Creation timestamp"`
 }
 
 // ChannelSetDTO indicates which delivery channels are enabled.

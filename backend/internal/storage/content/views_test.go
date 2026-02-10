@@ -5,13 +5,13 @@ package content
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 func TestViewValidate(t *testing.T) {
 	t.Run("valid view", func(t *testing.T) {
 		v := &View{
-			ID:   rid.NewID(),
+			ID:   ksid.NewID(),
 			Name: "My View",
 			Type: ViewTypeTable,
 		}
@@ -32,7 +32,7 @@ func TestViewValidate(t *testing.T) {
 
 	t.Run("missing name", func(t *testing.T) {
 		v := &View{
-			ID:   rid.NewID(),
+			ID:   ksid.NewID(),
 			Type: ViewTypeTable,
 		}
 		if err := v.Validate(); err == nil {
@@ -42,7 +42,7 @@ func TestViewValidate(t *testing.T) {
 }
 
 func TestViewGetID(t *testing.T) {
-	id := rid.NewID()
+	id := ksid.NewID()
 	v := &View{ID: id}
 	if v.GetID() != id {
 		t.Errorf("GetID() = %v, want %v", v.GetID(), id)

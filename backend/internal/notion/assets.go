@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 // AssetDownloader handles downloading and caching of Notion assets.
@@ -48,7 +48,7 @@ func NewAssetDownloader(outputDir string) *AssetDownloader {
 // DownloadAsset downloads an asset from URL and returns the local path.
 // Returns empty string if the URL is external (not a Notion-hosted file).
 // The asset is stored in {nodeDir}/assets/{hash}-{filename}.
-func (d *AssetDownloader) DownloadAsset(nodeID rid.ID, assetURL string) (string, error) {
+func (d *AssetDownloader) DownloadAsset(nodeID ksid.ID, assetURL string) (string, error) {
 	if assetURL == "" {
 		return "", nil
 	}
@@ -168,7 +168,7 @@ func isNotionAssetURL(assetURL string) bool {
 }
 
 // ProcessMediaBlock downloads assets from a media block and returns the local path.
-func (d *AssetDownloader) ProcessMediaBlock(nodeID rid.ID, media *MediaBlock) (string, error) {
+func (d *AssetDownloader) ProcessMediaBlock(nodeID ksid.ID, media *MediaBlock) (string, error) {
 	if media == nil {
 		return "", nil
 	}
@@ -184,7 +184,7 @@ func (d *AssetDownloader) ProcessMediaBlock(nodeID rid.ID, media *MediaBlock) (s
 }
 
 // ProcessFileValue downloads assets from a file property value.
-func (d *AssetDownloader) ProcessFileValue(nodeID rid.ID, fv *FileValue) (string, error) {
+func (d *AssetDownloader) ProcessFileValue(nodeID ksid.ID, fv *FileValue) (string, error) {
 	if fv == nil {
 		return "", nil
 	}
@@ -201,7 +201,7 @@ func (d *AssetDownloader) ProcessFileValue(nodeID rid.ID, fv *FileValue) (string
 
 // ProcessIcon downloads an icon if it's a file and returns the result.
 // Returns the emoji string for emoji icons, or local path for file-based icons.
-func (d *AssetDownloader) ProcessIcon(nodeID rid.ID, icon *Icon) (string, error) {
+func (d *AssetDownloader) ProcessIcon(nodeID ksid.ID, icon *Icon) (string, error) {
 	if icon == nil {
 		return "", nil
 	}
@@ -222,7 +222,7 @@ func (d *AssetDownloader) ProcessIcon(nodeID rid.ID, icon *Icon) (string, error)
 }
 
 // ProcessCover downloads a cover image and returns the local path.
-func (d *AssetDownloader) ProcessCover(nodeID rid.ID, cover *File) (string, error) {
+func (d *AssetDownloader) ProcessCover(nodeID ksid.ID, cover *File) (string, error) {
 	if cover == nil {
 		return "", nil
 	}

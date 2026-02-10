@@ -1,4 +1,4 @@
-// Package rid provides k-sortable, 64-bit unique identifiers.
+// Package ksid provides k-sortable, 64-bit unique identifiers.
 //
 // IDs are generated with [NewID], encoded to compact base32 Extended Hex
 // strings (≤13 chars, lexicographically sortable), and decoded with [DecodeID].
@@ -11,7 +11,7 @@
 //
 // [IDList] is a convenience type that marshals to/from comma-separated ID
 // strings, useful for query parameters.
-package rid
+package ksid
 
 import (
 	"encoding/base32"

@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -79,7 +79,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.Fatalf("failed to get workspace store: %v", err)
 	}
 
-	dbID := rid.NewID()
+	dbID := ksid.NewID()
 	node := &Node{
 		ID:       dbID,
 		Title:    "Benchmark Table",
@@ -100,7 +100,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	b.Run("CreateRecord", func(b *testing.B) {
 		for i := range b.N {
 			record := &DataRecord{
-				ID:       rid.NewID(),
+				ID:       ksid.NewID(),
 				Created:  storage.Now(),
 				Modified: storage.Now(),
 				Data: map[string]any{
@@ -119,14 +119,14 @@ func BenchmarkTableOperations(b *testing.B) {
 	// To make this isolated, we can pre-populate a DB with N records
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a table with 1000 records
-		readDBID := rid.NewID()
+		readDBID := ksid.NewID()
 		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
 		if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
 			record := &DataRecord{
-				ID:       rid.NewID(),
+				ID:       ksid.NewID(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  storage.Now(),
 				Modified: storage.Now(),
@@ -151,7 +151,7 @@ func BenchmarkTableOperations(b *testing.B) {
 
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
-		readDBID := rid.ID(100)
+		readDBID := ksid.ID(100)
 		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
 		if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
 			b.Fatal(err)
@@ -159,7 +159,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		// Write 10,000 records
 		for range 10000 {
 			record := &DataRecord{
-				ID:       rid.NewID(),
+				ID:       ksid.NewID(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  storage.Now(),
 				Modified: storage.Now(),

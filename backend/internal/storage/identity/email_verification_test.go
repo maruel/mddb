@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -18,7 +18,7 @@ func TestEmailVerificationService(t *testing.T) {
 		t.Fatalf("NewEmailVerificationService failed: %v", err)
 	}
 
-	userID := rid.NewID()
+	userID := ksid.NewID()
 	email := "test@example.com"
 
 	t.Run("Create", func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestEmailVerificationService(t *testing.T) {
 	})
 
 	t.Run("DeleteByUserID", func(t *testing.T) {
-		user2ID := rid.NewID()
+		user2ID := ksid.NewID()
 
 		v1, err := service.Create(user2ID, "test1@example.com")
 		if err != nil {
@@ -136,8 +136,8 @@ func TestEmailVerificationService(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		// Test valid verification
 		v := &EmailVerification{
-			ID:     rid.NewID(),
-			UserID: rid.NewID(),
+			ID:     ksid.NewID(),
+			UserID: ksid.NewID(),
 			Email:  "test@example.com",
 			Token:  "abc123",
 		}
@@ -146,18 +146,18 @@ func TestEmailVerificationService(t *testing.T) {
 		}
 
 		// Test missing ID
-		v.ID = rid.ID(0)
+		v.ID = ksid.ID(0)
 		if err := v.Validate(); err == nil {
 			t.Error("Missing ID should fail validation")
 		}
-		v.ID = rid.NewID()
+		v.ID = ksid.NewID()
 
 		// Test missing UserID
-		v.UserID = rid.ID(0)
+		v.UserID = ksid.ID(0)
 		if err := v.Validate(); err == nil {
 			t.Error("Missing UserID should fail validation")
 		}
-		v.UserID = rid.NewID()
+		v.UserID = ksid.NewID()
 
 		// Test missing Email
 		v.Email = ""

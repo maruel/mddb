@@ -5,7 +5,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -19,7 +19,7 @@ type ViewHandler struct {
 }
 
 // CreateView creates a new view for a table.
-func (h *ViewHandler) CreateView(ctx context.Context, wsID rid.ID, user *identity.User, req *dto.CreateViewRequest) (*dto.CreateViewResponse, error) {
+func (h *ViewHandler) CreateView(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.CreateViewRequest) (*dto.CreateViewResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -30,7 +30,7 @@ func (h *ViewHandler) CreateView(ctx context.Context, wsID rid.ID, user *identit
 		return nil, dto.NotFound("table")
 	}
 
-	viewID := rid.NewID()
+	viewID := ksid.NewID()
 	view := content.View{
 		ID:   viewID,
 		Name: req.Name,
@@ -49,7 +49,7 @@ func (h *ViewHandler) CreateView(ctx context.Context, wsID rid.ID, user *identit
 }
 
 // UpdateView updates an existing view.
-func (h *ViewHandler) UpdateView(ctx context.Context, wsID rid.ID, user *identity.User, req *dto.UpdateViewRequest) (*dto.UpdateViewResponse, error) {
+func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdateViewRequest) (*dto.UpdateViewResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
@@ -103,7 +103,7 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID rid.ID, user *identit
 }
 
 // DeleteView deletes a view.
-func (h *ViewHandler) DeleteView(ctx context.Context, wsID rid.ID, user *identity.User, req *dto.DeleteViewRequest) (*dto.DeleteViewResponse, error) {
+func (h *ViewHandler) DeleteView(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.DeleteViewRequest) (*dto.DeleteViewResponse, error) {
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)

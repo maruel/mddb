@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 // TestSchemaHeader tests the schemaHeader type and its methods.
@@ -120,7 +120,7 @@ type schemaTestStruct struct {
 }
 
 func (s schemaTestStruct) Clone() schemaTestStruct { return s }
-func (s schemaTestStruct) GetID() rid.ID           { return rid.ID(s.ID) } //nolint:gosec // test code with small integers
+func (s schemaTestStruct) GetID() ksid.ID          { return ksid.ID(s.ID) } //nolint:gosec // test code with small integers
 func (s schemaTestStruct) Validate() error         { return nil }
 
 // TestSchemaFromType tests schemaFromType indirectly through Table creation.

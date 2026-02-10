@@ -8,14 +8,14 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // Session represents an active user session.
 type Session struct {
-	ID          rid.ID       `json:"id" jsonschema:"description=Unique session identifier"`
-	UserID      rid.ID       `json:"user_id" jsonschema:"description=User who owns this session"`
+	ID          ksid.ID      `json:"id" jsonschema:"description=Unique session identifier"`
+	UserID      ksid.ID      `json:"user_id" jsonschema:"description=User who owns this session"`
 	TokenHash   string       `json:"token_hash" jsonschema:"description=SHA-256 hash of the JWT token"`
 	DeviceInfo  string       `json:"device_info" jsonschema:"description=Parsed User-Agent (browser/OS)"`
 	IPAddress   string       `json:"ip_address" jsonschema:"description=Client IP address at login"`
@@ -33,7 +33,7 @@ func (s *Session) Clone() *Session {
 }
 
 // GetID returns the session's ID.
-func (s *Session) GetID() rid.ID {
+func (s *Session) GetID() ksid.ID {
 	return s.ID
 }
 
@@ -54,7 +54,7 @@ func (s *Session) Validate() error {
 // SessionService handles session management.
 type SessionService struct {
 	table    *jsonldb.Table[*Session]
-	byUserID *jsonldb.Index[rid.ID, *Session]
+	byUserID *jsonldb.Index[ksid.ID, *Session]
 }
 
 // NewSessionService creates a new session service.
@@ -63,20 +63,20 @@ func NewSessionService(tablePath string) (*SessionService, error) {
 	if err != nil {
 		return nil, err
 	}
-	byUserID := jsonldb.NewIndex(table, func(s *Session) rid.ID { return s.UserID })
+	byUserID := jsonldb.NewIndex(table, func(s *Session) ksid.ID { return s.UserID })
 	return &SessionService{table: table, byUserID: byUserID}, nil
 }
 
 // Create creates a new session with an auto-generated ID.
 // maxSessions limits the number of active sessions per user. Use 0 to disable the limit.
-func (s *SessionService) Create(userID rid.ID, tokenHash, deviceInfo, ipAddress, countryCode string, expiresAt storage.Time, maxSessions int) (*Session, error) {
-	return s.CreateWithID(rid.NewID(), userID, tokenHash, deviceInfo, ipAddress, countryCode, expiresAt, maxSessions)
+func (s *SessionService) Create(userID ksid.ID, tokenHash, deviceInfo, ipAddress, countryCode string, expiresAt storage.Time, maxSessions int) (*Session, error) {
+	return s.CreateWithID(ksid.NewID(), userID, tokenHash, deviceInfo, ipAddress, countryCode, expiresAt, maxSessions)
 }
 
 // CreateWithID creates a new session with a pre-specified ID.
 // This is useful when the session ID needs to be included in the JWT before creating the session.
 // maxSessions limits the number of active sessions per user. Use 0 to disable the limit.
-func (s *SessionService) CreateWithID(id, userID rid.ID, tokenHash, deviceInfo, ipAddress, countryCode string, expiresAt storage.Time, maxSessions int) (*Session, error) {
+func (s *SessionService) CreateWithID(id, userID ksid.ID, tokenHash, deviceInfo, ipAddress, countryCode string, expiresAt storage.Time, maxSessions int) (*Session, error) {
 	if id.IsZero() {
 		return nil, errSessionIDRequired
 	}
@@ -118,7 +118,7 @@ func (s *SessionService) CreateWithID(id, userID rid.ID, tokenHash, deviceInfo, 
 }
 
 // Get retrieves a session by ID.
-func (s *SessionService) Get(id rid.ID) (*Session, error) {
+func (s *SessionService) Get(id ksid.ID) (*Session, error) {
 	session := s.table.Get(id)
 	if session == nil {
 		return nil, errSessionNotFound
@@ -127,7 +127,7 @@ func (s *SessionService) Get(id rid.ID) (*Session, error) {
 }
 
 // GetByUserID returns an iterator over all sessions for a user.
-func (s *SessionService) GetByUserID(userID rid.ID) iter.Seq[*Session] {
+func (s *SessionService) GetByUserID(userID ksid.ID) iter.Seq[*Session] {
 	return func(yield func(*Session) bool) {
 		for session := range s.byUserID.Iter(userID) {
 			if !yield(session.Clone()) {
@@ -138,7 +138,7 @@ func (s *SessionService) GetByUserID(userID rid.ID) iter.Seq[*Session] {
 }
 
 // GetActiveByUserID returns an iterator over active (non-revoked, non-expired) sessions for a user.
-func (s *SessionService) GetActiveByUserID(userID rid.ID) iter.Seq[*Session] {
+func (s *SessionService) GetActiveByUserID(userID ksid.ID) iter.Seq[*Session] {
 	now := storage.Now()
 	return func(yield func(*Session) bool) {
 		for session := range s.byUserID.Iter(userID) {
@@ -164,7 +164,7 @@ func (s *SessionService) CountActive() int {
 }
 
 // Revoke marks a session as revoked.
-func (s *SessionService) Revoke(id rid.ID) error {
+func (s *SessionService) Revoke(id ksid.ID) error {
 	_, err := s.table.Modify(id, func(session *Session) error {
 		if !session.RevokedAt.IsZero() {
 			return nil // Already revoked
@@ -176,8 +176,8 @@ func (s *SessionService) Revoke(id rid.ID) error {
 }
 
 // RevokeAllForUser revokes all sessions for a user. Returns the count of revoked sessions.
-func (s *SessionService) RevokeAllForUser(userID rid.ID) (int, error) {
-	var ids []rid.ID
+func (s *SessionService) RevokeAllForUser(userID ksid.ID) (int, error) {
+	var ids []ksid.ID
 	for session := range s.byUserID.Iter(userID) {
 		if session.RevokedAt.IsZero() {
 			ids = append(ids, session.ID)
@@ -195,7 +195,7 @@ func (s *SessionService) RevokeAllForUser(userID rid.ID) (int, error) {
 }
 
 // UpdateLastUsed updates the LastUsed timestamp for a session.
-func (s *SessionService) UpdateLastUsed(id rid.ID) error {
+func (s *SessionService) UpdateLastUsed(id ksid.ID) error {
 	_, err := s.table.Modify(id, func(session *Session) error {
 		session.LastUsed = storage.Now()
 		return nil
@@ -204,7 +204,7 @@ func (s *SessionService) UpdateLastUsed(id rid.ID) error {
 }
 
 // IsValid checks if a session is valid (not revoked and not expired).
-func (s *SessionService) IsValid(id rid.ID) (bool, error) {
+func (s *SessionService) IsValid(id ksid.ID) (bool, error) {
 	session := s.table.Get(id)
 	if session == nil {
 		return false, errSessionNotFound
@@ -221,7 +221,7 @@ func (s *SessionService) IsValid(id rid.ID) (bool, error) {
 // CleanupExpired removes sessions that have been expired for more than the given duration.
 func (s *SessionService) CleanupExpired(olderThan time.Duration) (int, error) {
 	cutoff := storage.ToTime(time.Now().Add(-olderThan))
-	var toDelete []rid.ID
+	var toDelete []ksid.ID
 
 	for session := range s.table.Iter(0) {
 		if session.ExpiresAt.Before(cutoff) {

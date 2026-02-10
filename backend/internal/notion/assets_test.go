@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 func TestAssetDownloader_ExternalURLsPassThrough(t *testing.T) {
@@ -23,7 +23,7 @@ func TestAssetDownloader_ExternalURLsPassThrough(t *testing.T) {
 
 	tempDir := t.TempDir()
 	downloader := NewAssetDownloader(tempDir)
-	nodeID := rid.NewID()
+	nodeID := ksid.NewID()
 
 	// Test with an external URL (non-Notion) - should return original URL
 	result, err := downloader.DownloadAsset(nodeID, server.URL+"/test.png")

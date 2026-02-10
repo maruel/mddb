@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"gopkg.in/yaml.v3"
 )
@@ -152,7 +152,7 @@ func (m *ViewManifest) ToContentViews(notionID string) []content.View {
 // configToView converts a ViewConfig to a content.View.
 func configToView(cfg *ViewConfig) content.View {
 	view := content.View{
-		ID:      rid.NewID(),
+		ID:      ksid.NewID(),
 		Name:    cfg.Name,
 		Type:    mapViewType(cfg.Type),
 		Default: cfg.Default,

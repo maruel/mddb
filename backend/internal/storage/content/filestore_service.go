@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -28,7 +28,7 @@ type FileStoreService struct {
 	orgSvc       *identity.OrganizationService
 	serverQuotas *storage.ResourceQuotas
 	mu           sync.RWMutex
-	stores       map[rid.ID]*WorkspaceFileStore // wsID -> WorkspaceFileStore
+	stores       map[ksid.ID]*WorkspaceFileStore // wsID -> WorkspaceFileStore
 }
 
 // page is an internal type for reading/writing page markdown files.
@@ -68,13 +68,13 @@ func NewFileStoreService(rootDir string, gitMgr *git.Manager, wsSvc *identity.Wo
 		wsSvc:        wsSvc,
 		orgSvc:       orgSvc,
 		serverQuotas: serverQuotas,
-		stores:       make(map[rid.ID]*WorkspaceFileStore),
+		stores:       make(map[ksid.ID]*WorkspaceFileStore),
 	}, nil
 }
 
 // GetWorkspaceStore returns a WorkspaceFileStore for the given workspace.
 // Creates and caches the store on first access.
-func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID rid.ID) (*WorkspaceFileStore, error) {
+func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID ksid.ID) (*WorkspaceFileStore, error) {
 	if wsID.IsZero() {
 		return nil, errWSIDRequired
 	}
@@ -134,7 +134,7 @@ func (svc *FileStoreService) GetWorkspaceStore(ctx context.Context, wsID rid.ID)
 
 // InvalidateWorkspaceStore removes a cached workspace store so that
 // the next GetWorkspaceStore call recomputes effective quotas.
-func (svc *FileStoreService) InvalidateWorkspaceStore(wsID rid.ID) {
+func (svc *FileStoreService) InvalidateWorkspaceStore(wsID ksid.ID) {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
 	delete(svc.stores, wsID)
@@ -145,12 +145,12 @@ func (svc *FileStoreService) InvalidateWorkspaceStore(wsID rid.ID) {
 func (svc *FileStoreService) InvalidateAllStores() {
 	svc.mu.Lock()
 	defer svc.mu.Unlock()
-	svc.stores = make(map[rid.ID]*WorkspaceFileStore)
+	svc.stores = make(map[ksid.ID]*WorkspaceFileStore)
 }
 
 // InitWorkspace initializes storage for a new workspace.
 // Creates the workspace directory structure and initializes git.
-func (svc *FileStoreService) InitWorkspace(ctx context.Context, wsID rid.ID) error {
+func (svc *FileStoreService) InitWorkspace(ctx context.Context, wsID ksid.ID) error {
 	if wsID.IsZero() {
 		return errWSIDRequired
 	}
@@ -186,7 +186,7 @@ func (svc *FileStoreService) InitWorkspace(ctx context.Context, wsID rid.ID) err
 
 // CheckOrgStorageQuota returns an error if adding the given bytes would exceed the organization's total storage quota.
 // This checks the sum of storage usage across all workspaces in the organization.
-func (svc *FileStoreService) CheckOrgStorageQuota(wsID rid.ID, additionalBytes int64) error {
+func (svc *FileStoreService) CheckOrgStorageQuota(wsID ksid.ID, additionalBytes int64) error {
 	ws, err := svc.wsSvc.Get(wsID)
 	if err != nil {
 		return err
@@ -208,7 +208,7 @@ func (svc *FileStoreService) CheckOrgStorageQuota(wsID rid.ID, additionalBytes i
 }
 
 // GetOrganizationUsage returns the total storage usage across all workspaces in the organization.
-func (svc *FileStoreService) GetOrganizationUsage(orgID rid.ID) (int64, error) {
+func (svc *FileStoreService) GetOrganizationUsage(orgID ksid.ID) (int64, error) {
 	if orgID.IsZero() {
 		return 0, errOrgIDRequired
 	}

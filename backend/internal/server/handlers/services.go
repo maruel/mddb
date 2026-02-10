@@ -12,7 +12,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/maruel/mddb/backend/internal/email"
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -66,7 +66,7 @@ type Config struct {
 const AssetURLExpiry = 1 * time.Hour
 
 // GenerateSignedAssetURL creates a signed rooted path for asset access.
-func (c *Config) GenerateSignedAssetURL(wsID, nodeID rid.ID, name string) string {
+func (c *Config) GenerateSignedAssetURL(wsID, nodeID ksid.ID, name string) string {
 	expiry := time.Now().Add(AssetURLExpiry).Unix()
 	path := fmt.Sprintf("%s/%s/%s", wsID, nodeID, name)
 	sig := c.generateSignature(path, expiry)
@@ -106,7 +106,7 @@ func (c *Config) GenerateTokenWithSession(sessionSvc *identity.SessionService, u
 	expiresAt := time.Now().Add(tokenExpiration)
 
 	// Pre-generate session ID so we can include it in the JWT
-	sessionID := rid.NewID()
+	sessionID := ksid.NewID()
 
 	// Build claims with session ID
 	claims := jwt.MapClaims{

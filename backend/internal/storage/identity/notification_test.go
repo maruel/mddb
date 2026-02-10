@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -17,8 +17,8 @@ func TestNotificationService(t *testing.T) {
 		t.Fatalf("NewNotificationService failed: %v", err)
 	}
 
-	userID := rid.NewID()
-	actorID := rid.NewID()
+	userID := ksid.NewID()
+	actorID := ksid.NewID()
 
 	t.Run("Create", func(t *testing.T) {
 		n, err := svc.Create(userID, NotifOrgInvite, "You were invited", "To Acme org", "org123", actorID)
@@ -54,7 +54,7 @@ func TestNotificationService(t *testing.T) {
 	})
 
 	t.Run("GetNotFound", func(t *testing.T) {
-		_, err := svc.Get(rid.NewID())
+		_, err := svc.Get(ksid.NewID())
 		if err == nil {
 			t.Fatal("expected error for missing notification")
 		}
@@ -65,8 +65,8 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
-		uid := rid.NewID()
-		otherUID := rid.NewID()
+		uid := ksid.NewID()
+		otherUID := ksid.NewID()
 
 		for i := range 5 {
 			title := "notif " + string(rune('A'+i))
@@ -94,7 +94,7 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
-		uid := rid.NewID()
+		uid := ksid.NewID()
 		for i := range 10 {
 			title := "n" + string(rune('0'+i))
 			if _, err := svc2.Create(uid, NotifPageMention, title, "", "", 0); err != nil {
@@ -113,7 +113,7 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
-		uid := rid.NewID()
+		uid := ksid.NewID()
 		n1, err := svc2.Create(uid, NotifOrgInvite, "a", "", "", 0)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
@@ -136,7 +136,7 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
-		uid := rid.NewID()
+		uid := ksid.NewID()
 		if _, err := svc2.Create(uid, NotifOrgInvite, "a", "", "", 0); err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
@@ -154,7 +154,7 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
-		uid := rid.NewID()
+		uid := ksid.NewID()
 		n1, err := svc2.Create(uid, NotifOrgInvite, "a", "", "", 0)
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
@@ -193,7 +193,7 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
-		if err := svc.MarkRead(n.ID, rid.NewID()); err == nil {
+		if err := svc.MarkRead(n.ID, ksid.NewID()); err == nil {
 			t.Fatal("expected error marking read for wrong user")
 		}
 	})
@@ -203,7 +203,7 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
-		uid := rid.NewID()
+		uid := ksid.NewID()
 		for _, title := range []string{"a", "b", "c"} {
 			if _, err := svc2.Create(uid, NotifOrgInvite, title, "", "", 0); err != nil {
 				t.Fatalf("Create failed: %v", err)
@@ -236,7 +236,7 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
-		if err := svc.Delete(n.ID, rid.NewID()); err == nil {
+		if err := svc.Delete(n.ID, ksid.NewID()); err == nil {
 			t.Fatal("expected error deleting for wrong user")
 		}
 	})
@@ -246,7 +246,7 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
-		uid := rid.NewID()
+		uid := ksid.NewID()
 		if _, err := svc2.Create(uid, NotifOrgInvite, "old", "", "", 0); err != nil {
 			t.Fatalf("Create failed: %v", err)
 		}
@@ -270,7 +270,7 @@ func TestNotificationService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewNotificationService failed: %v", err)
 		}
-		uid := rid.NewID()
+		uid := ksid.NewID()
 		for range 5 {
 			if _, err := svc2.Create(uid, NotifOrgInvite, "x", "", "", 0); err != nil {
 				t.Fatalf("Create failed: %v", err)
@@ -297,27 +297,27 @@ func TestNotificationService(t *testing.T) {
 		}{
 			{
 				name:    "valid",
-				n:       &Notification{ID: rid.NewID(), UserID: rid.NewID(), Type: NotifOrgInvite, Title: "hi"},
+				n:       &Notification{ID: ksid.NewID(), UserID: ksid.NewID(), Type: NotifOrgInvite, Title: "hi"},
 				wantErr: false,
 			},
 			{
 				name:    "missing_id",
-				n:       &Notification{UserID: rid.NewID(), Type: NotifOrgInvite, Title: "hi"},
+				n:       &Notification{UserID: ksid.NewID(), Type: NotifOrgInvite, Title: "hi"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_user_id",
-				n:       &Notification{ID: rid.NewID(), Type: NotifOrgInvite, Title: "hi"},
+				n:       &Notification{ID: ksid.NewID(), Type: NotifOrgInvite, Title: "hi"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_type",
-				n:       &Notification{ID: rid.NewID(), UserID: rid.NewID(), Title: "hi"},
+				n:       &Notification{ID: ksid.NewID(), UserID: ksid.NewID(), Title: "hi"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_title",
-				n:       &Notification{ID: rid.NewID(), UserID: rid.NewID(), Type: NotifOrgInvite},
+				n:       &Notification{ID: ksid.NewID(), UserID: ksid.NewID(), Type: NotifOrgInvite},
 				wantErr: true,
 			},
 		}

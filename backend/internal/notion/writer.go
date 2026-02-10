@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
@@ -21,7 +21,7 @@ type Writer struct {
 	WorkspaceID string
 
 	mu     sync.Mutex
-	tables map[rid.ID]*jsonldb.Table[*content.DataRecord]
+	tables map[ksid.ID]*jsonldb.Table[*content.DataRecord]
 }
 
 // NewWriter creates a new writer for the given output directory and workspace.
@@ -29,7 +29,7 @@ func NewWriter(outputDir, workspaceID string) *Writer {
 	return &Writer{
 		OutputDir:   outputDir,
 		WorkspaceID: workspaceID,
-		tables:      make(map[rid.ID]*jsonldb.Table[*content.DataRecord]),
+		tables:      make(map[ksid.ID]*jsonldb.Table[*content.DataRecord]),
 	}
 }
 
@@ -39,7 +39,7 @@ func (w *Writer) workspacePath() string {
 }
 
 // nodePath returns the path to a node's directory.
-func (w *Writer) nodePath(nodeID rid.ID) string {
+func (w *Writer) nodePath(nodeID ksid.ID) string {
 	return filepath.Join(w.workspacePath(), nodeID.String())
 }
 
@@ -109,8 +109,8 @@ type TableMetadata struct {
 
 // NodeEntry is a manifest entry for a node (stored in nodes.jsonl).
 type NodeEntry struct {
-	ID       rid.ID       `json:"id"`
-	ParentID rid.ID       `json:"parent_id,omitempty"`
+	ID       ksid.ID      `json:"id"`
+	ParentID ksid.ID      `json:"parent_id,omitempty"`
 	Title    string       `json:"title"`
 	Type     string       `json:"type"`
 	Icon     string       `json:"icon,omitempty"`
@@ -169,7 +169,7 @@ func (w *Writer) WriteNodeEntry(node *content.Node) (rerr error) {
 }
 
 // ClearNodeData removes the data.jsonl file for a node to prepare for re-import.
-func (w *Writer) ClearNodeData(nodeID rid.ID) error {
+func (w *Writer) ClearNodeData(nodeID ksid.ID) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -185,7 +185,7 @@ func (w *Writer) ClearNodeData(nodeID rid.ID) error {
 }
 
 // getTable returns the jsonldb.Table for a node, creating it if needed.
-func (w *Writer) getTable(nodeID rid.ID) (*jsonldb.Table[*content.DataRecord], error) {
+func (w *Writer) getTable(nodeID ksid.ID) (*jsonldb.Table[*content.DataRecord], error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
@@ -207,7 +207,7 @@ func (w *Writer) getTable(nodeID rid.ID) (*jsonldb.Table[*content.DataRecord], e
 
 // WriteRecords writes records to a table's data.jsonl file using jsonldb.Table.
 // Properties are stored in the table header for schema-aware deserialization.
-func (w *Writer) WriteRecords(nodeID rid.ID, properties []content.Property, records []*content.DataRecord) error {
+func (w *Writer) WriteRecords(nodeID ksid.ID, properties []content.Property, records []*content.DataRecord) error {
 	table, err := w.getTable(nodeID)
 	if err != nil {
 		return err
@@ -234,7 +234,7 @@ func (w *Writer) WriteRecords(nodeID rid.ID, properties []content.Property, reco
 }
 
 // AppendRecord appends a single record to a table's data.jsonl file.
-func (w *Writer) AppendRecord(nodeID rid.ID, record *content.DataRecord) error {
+func (w *Writer) AppendRecord(nodeID ksid.ID, record *content.DataRecord) error {
 	table, err := w.getTable(nodeID)
 	if err != nil {
 		return err
@@ -249,8 +249,8 @@ func (w *Writer) AppendRecord(nodeID rid.ID, record *content.DataRecord) error {
 
 // IDMapping stores the Notion ID to mddb ID mapping for incremental imports.
 type IDMapping struct {
-	Version int               `json:"version"`
-	IDs     map[string]rid.ID `json:"ids"` // Notion ID -> mddb ID
+	Version int                `json:"version"`
+	IDs     map[string]ksid.ID `json:"ids"` // Notion ID -> mddb ID
 }
 
 // idMappingPath returns the path to the ID mapping file.
@@ -260,12 +260,12 @@ func (w *Writer) idMappingPath() string {
 
 // LoadIDMapping loads the ID mapping from disk if it exists.
 // Returns an empty map if the file doesn't exist.
-func (w *Writer) LoadIDMapping() (map[string]rid.ID, error) {
+func (w *Writer) LoadIDMapping() (map[string]ksid.ID, error) {
 	path := w.idMappingPath()
 	data, err := os.ReadFile(path) //nolint:gosec // G304: path is constructed from validated input
 	if err != nil {
 		if os.IsNotExist(err) {
-			return make(map[string]rid.ID), nil
+			return make(map[string]ksid.ID), nil
 		}
 		return nil, fmt.Errorf("failed to read ID mapping: %w", err)
 	}
@@ -279,7 +279,7 @@ func (w *Writer) LoadIDMapping() (map[string]rid.ID, error) {
 }
 
 // SaveIDMapping saves the ID mapping to disk.
-func (w *Writer) SaveIDMapping(ids map[string]rid.ID) error {
+func (w *Writer) SaveIDMapping(ids map[string]ksid.ID) error {
 	mapping := IDMapping{
 		Version: 1,
 		IDs:     ids,

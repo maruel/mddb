@@ -10,7 +10,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 // testRow is a simple row type for testing.
@@ -24,8 +24,8 @@ func (r *testRow) Clone() *testRow {
 	return &c
 }
 
-func (r *testRow) GetID() rid.ID {
-	return rid.ID(r.ID) //nolint:gosec // test code with small integers
+func (r *testRow) GetID() ksid.ID {
+	return ksid.ID(r.ID) //nolint:gosec // test code with small integers
 }
 
 func (r *testRow) Validate() error {
@@ -44,8 +44,8 @@ func (r *validatingRow) Clone() *validatingRow {
 	return &c
 }
 
-func (r *validatingRow) GetID() rid.ID {
-	return rid.ID(r.ID) //nolint:gosec // test code with small integers
+func (r *validatingRow) GetID() ksid.ID {
+	return ksid.ID(r.ID) //nolint:gosec // test code with small integers
 }
 
 func (r *validatingRow) Validate() error {
@@ -66,8 +66,8 @@ func (r *alwaysInvalidRow) Clone() *alwaysInvalidRow {
 	return &c
 }
 
-func (r *alwaysInvalidRow) GetID() rid.ID {
-	return rid.ID(r.ID) //nolint:gosec // test code with small integers
+func (r *alwaysInvalidRow) GetID() ksid.ID {
+	return ksid.ID(r.ID) //nolint:gosec // test code with small integers
 }
 
 func (r *alwaysInvalidRow) Validate() error {
@@ -89,8 +89,8 @@ func (r *blobTestRow) Clone() *blobTestRow {
 	}
 }
 
-func (r *blobTestRow) GetID() rid.ID {
-	return rid.ID(r.ID) //nolint:gosec // test code
+func (r *blobTestRow) GetID() ksid.ID {
+	return ksid.ID(r.ID) //nolint:gosec // test code
 }
 
 func (r *blobTestRow) Validate() error {
@@ -168,14 +168,14 @@ func TestTable(t *testing.T) {
 
 			tests := []struct {
 				name   string
-				id     rid.ID
+				id     ksid.ID
 				wantID int
 				found  bool
 			}{
-				{"existing ID", rid.ID(10), 10, true},
-				{"existing ID 2", rid.ID(20), 20, true},
-				{"non-existing ID", rid.ID(999), 0, false},
-				{"zero ID", rid.ID(0), 0, false},
+				{"existing ID", ksid.ID(10), 10, true},
+				{"existing ID 2", ksid.ID(20), 20, true},
+				{"non-existing ID", ksid.ID(999), 0, false},
+				{"zero ID", ksid.ID(0), 0, false},
 			}
 
 			for _, tt := range tests {
@@ -198,10 +198,10 @@ func TestTable(t *testing.T) {
 			table, _ := setupTable(t)
 
 			_ = table.Append(&testRow{ID: 1, Name: "Original"})
-			got := table.Get(rid.ID(1))
+			got := table.Get(ksid.ID(1))
 			got.Name = "Modified"
 
-			gotAgain := table.Get(rid.ID(1))
+			gotAgain := table.Get(ksid.ID(1))
 			if gotAgain.Name == "Modified" {
 				t.Error("Get() returned reference instead of clone")
 			}
@@ -218,7 +218,7 @@ func TestTable(t *testing.T) {
 			_ = table.Append(&testRow{ID: 3, Name: "Three"})
 
 			t.Run("delete existing row", func(t *testing.T) {
-				deleted, err := table.Delete(rid.ID(2))
+				deleted, err := table.Delete(ksid.ID(2))
 				if err != nil {
 					t.Fatalf("Delete error: %v", err)
 				}
@@ -231,13 +231,13 @@ func TestTable(t *testing.T) {
 				if table.Len() != 2 {
 					t.Errorf("Len() = %d, want 2 after delete", table.Len())
 				}
-				if table.Get(rid.ID(2)) != nil {
+				if table.Get(ksid.ID(2)) != nil {
 					t.Error("Deleted row still accessible via Get")
 				}
 			})
 
 			t.Run("delete non-existing row", func(t *testing.T) {
-				deleted, err := table.Delete(rid.ID(999))
+				deleted, err := table.Delete(ksid.ID(999))
 				if err != nil {
 					t.Fatalf("Delete error: %v", err)
 				}
@@ -255,7 +255,7 @@ func TestTable(t *testing.T) {
 				if table2.Len() != 2 {
 					t.Errorf("Reloaded table Len() = %d, want 2", table2.Len())
 				}
-				if table2.Get(rid.ID(2)) != nil {
+				if table2.Get(ksid.ID(2)) != nil {
 					t.Error("Deleted row still present after reload")
 				}
 			})
@@ -267,7 +267,7 @@ func TestTable(t *testing.T) {
 			_ = table.Append(&testRow{ID: 1, Name: "One"})
 			_ = table.Append(&testRow{ID: 2, Name: "Two"})
 
-			deleted, err := table.Delete(rid.ID(1))
+			deleted, err := table.Delete(ksid.ID(1))
 			if err != nil {
 				t.Fatalf("Delete error: %v", err)
 			}
@@ -276,7 +276,7 @@ func TestTable(t *testing.T) {
 			}
 
 			// Verify index was rebuilt correctly
-			got := table.Get(rid.ID(2))
+			got := table.Get(ksid.ID(2))
 			if got == nil || got.ID != 2 {
 				t.Error("Get(2) failed after deleting first row")
 			}
@@ -288,7 +288,7 @@ func TestTable(t *testing.T) {
 			_ = table.Append(&testRow{ID: 1, Name: "One"})
 			_ = table.Append(&testRow{ID: 2, Name: "Two"})
 
-			deleted, err := table.Delete(rid.ID(2))
+			deleted, err := table.Delete(ksid.ID(2))
 			if err != nil {
 				t.Fatalf("Delete error: %v", err)
 			}
@@ -297,7 +297,7 @@ func TestTable(t *testing.T) {
 			}
 
 			// Verify first row still accessible
-			got := table.Get(rid.ID(1))
+			got := table.Get(ksid.ID(1))
 			if got == nil || got.ID != 1 {
 				t.Error("Get(1) failed after deleting last row")
 			}
@@ -309,12 +309,12 @@ func TestTable(t *testing.T) {
 			_ = table.Append(&testRow{ID: 1, Name: "Original"})
 			_ = table.Append(&testRow{ID: 2, Name: "Two"})
 
-			deleted, _ := table.Delete(rid.ID(1))
+			deleted, _ := table.Delete(ksid.ID(1))
 			deleted.Name = "Modified"
 
 			// Re-add and verify it's not affected by mutation
 			_ = table.Append(&testRow{ID: 1, Name: "Readded"})
-			got := table.Get(rid.ID(1))
+			got := table.Get(ksid.ID(1))
 			if got.Name != "Readded" {
 				t.Error("Delete() returned reference instead of clone")
 			}
@@ -337,7 +337,7 @@ func TestTable(t *testing.T) {
 					t.Errorf("Update() returned prev = %+v, want Name=Original", prev)
 				}
 
-				got := table.Get(rid.ID(1))
+				got := table.Get(ksid.ID(1))
 				if got == nil || got.Name != "Updated" {
 					t.Errorf("Get() after Update = %+v, want Name=Updated", got)
 				}
@@ -358,7 +358,7 @@ func TestTable(t *testing.T) {
 				if err != nil {
 					t.Fatalf("NewTable error: %v", err)
 				}
-				got := table2.Get(rid.ID(1))
+				got := table2.Get(ksid.ID(1))
 				if got == nil || got.Name != "Updated" {
 					t.Errorf("Reloaded row = %+v, want Name=Updated", got)
 				}
@@ -514,15 +514,15 @@ not valid json
 
 			tests := []struct {
 				name      string
-				startID   rid.ID
+				startID   ksid.ID
 				wantCount int
 				wantFirst int
 			}{
 				{"all rows", 0, 4, 10},
-				{"from ID 10", rid.ID(10), 3, 20},
-				{"from ID 25", rid.ID(25), 2, 30},
-				{"from ID 40", rid.ID(40), 0, 0},
-				{"from ID beyond max", rid.ID(100), 0, 0},
+				{"from ID 10", ksid.ID(10), 3, 20},
+				{"from ID 25", ksid.ID(25), 2, 30},
+				{"from ID 40", ksid.ID(40), 0, 0},
+				{"from ID beyond max", ksid.ID(100), 0, 0},
 			}
 
 			for _, tt := range tests {
@@ -567,7 +567,7 @@ not valid json
 				row.Name = "Modified"
 			}
 
-			got := table.Get(rid.ID(1))
+			got := table.Get(ksid.ID(1))
 			if got.Name == "Modified" {
 				t.Error("Iter returned reference instead of clone")
 			}
@@ -650,7 +650,7 @@ not valid json
 				table := &Table[*testRow]{
 					path:   path,
 					rows:   nil,
-					byID:   make(map[rid.ID]int),
+					byID:   make(map[ksid.ID]int),
 					schema: schemaHeader{Version: "1.0"},
 				}
 
@@ -690,7 +690,7 @@ not valid json
 			}
 
 			// Read back
-			loaded := table.Get(rid.ID(1))
+			loaded := table.Get(ksid.ID(1))
 			if loaded.Content.Ref != blob.Ref {
 				t.Errorf("loaded hash = %q, want %q", loaded.Content.Ref, blob.Ref)
 			}
@@ -740,7 +740,7 @@ not valid json
 				t.Fatalf("reload error: %v", err)
 			}
 
-			loaded := table2.Get(rid.ID(1))
+			loaded := table2.Get(ksid.ID(1))
 			if loaded.Content.Ref != blob.Ref {
 				t.Errorf("reloaded hash = %q, want %q", loaded.Content.Ref, blob.Ref)
 			}
@@ -773,7 +773,7 @@ not valid json
 				t.Fatal(err)
 			}
 
-			loaded := table.Get(rid.ID(1))
+			loaded := table.Get(ksid.ID(1))
 			if !loaded.Content.IsZero() {
 				t.Error("expected unset blob")
 			}
@@ -804,7 +804,7 @@ not valid json
 				t.Fatal(err)
 			}
 
-			if _, err := table.Delete(rid.ID(1)); err != nil {
+			if _, err := table.Delete(ksid.ID(1)); err != nil {
 				t.Fatal(err)
 			}
 
@@ -845,12 +845,12 @@ not valid json
 			}
 
 			// Delete one row
-			if _, err := table.Delete(rid.ID(1)); err != nil {
+			if _, err := table.Delete(ksid.ID(1)); err != nil {
 				t.Fatal(err)
 			}
 
 			// Blob should still exist because row2 still references it
-			row2 := table.Get(rid.ID(2))
+			row2 := table.Get(ksid.ID(2))
 			r, err := row2.Content.Reader()
 			if err != nil {
 				t.Fatalf("Reader() error after deleting row1: %v", err)
@@ -893,14 +893,14 @@ not valid json
 			}
 
 			// Update row, keeping the same blob
-			row := table.Get(rid.ID(1))
+			row := table.Get(ksid.ID(1))
 			row.Name = "updated"
 			if _, err := table.Update(row); err != nil {
 				t.Fatal(err)
 			}
 
 			// Blob should still exist
-			updated := table.Get(rid.ID(1))
+			updated := table.Get(ksid.ID(1))
 			r, err := updated.Content.Reader()
 			if err != nil {
 				t.Fatalf("Reader() error after update: %v", err)
@@ -1018,7 +1018,7 @@ not valid json
 			table, _ := setupTable(t)
 			_ = table.Append(&testRow{ID: 1, Name: "original"})
 
-			result, err := table.Modify(rid.ID(1), func(row *testRow) error {
+			result, err := table.Modify(ksid.ID(1), func(row *testRow) error {
 				row.Name = "modified"
 				return nil
 			})
@@ -1030,7 +1030,7 @@ not valid json
 			}
 
 			// Verify persisted
-			got := table.Get(rid.ID(1))
+			got := table.Get(ksid.ID(1))
 			if got.Name != "modified" {
 				t.Errorf("Get after Modify = %q, want %q", got.Name, "modified")
 			}
@@ -1039,7 +1039,7 @@ not valid json
 		t.Run("not found", func(t *testing.T) {
 			table, _ := setupTable(t)
 
-			_, err := table.Modify(rid.ID(999), func(row *testRow) error {
+			_, err := table.Modify(ksid.ID(999), func(row *testRow) error {
 				return nil
 			})
 			if err == nil {
@@ -1051,7 +1051,7 @@ not valid json
 			table, _ := setupTable(t)
 			_ = table.Append(&testRow{ID: 1, Name: "original"})
 
-			_, err := table.Modify(rid.ID(1), func(row *testRow) error {
+			_, err := table.Modify(ksid.ID(1), func(row *testRow) error {
 				return errors.New("callback failed")
 			})
 			if err == nil {
@@ -1059,7 +1059,7 @@ not valid json
 			}
 
 			// Verify unchanged
-			got := table.Get(rid.ID(1))
+			got := table.Get(ksid.ID(1))
 			if got.Name != "original" {
 				t.Errorf("Row changed despite callback error: %q", got.Name)
 			}
@@ -1070,7 +1070,7 @@ not valid json
 			table, _ := NewTable[*validatingRow](path)
 			_ = table.Append(&validatingRow{ID: 1, Name: "valid"})
 
-			_, err := table.Modify(rid.ID(1), func(row *validatingRow) error {
+			_, err := table.Modify(ksid.ID(1), func(row *validatingRow) error {
 				row.FailValidate = true
 				return nil
 			})
@@ -1086,7 +1086,7 @@ not valid json
 			obs := &mockObserver{}
 			table.AddObserver(obs)
 
-			_, _ = table.Modify(rid.ID(1), func(row *testRow) error {
+			_, _ = table.Modify(ksid.ID(1), func(row *testRow) error {
 				row.Name = "modified"
 				return nil
 			})
@@ -1100,7 +1100,7 @@ not valid json
 			table, _ := setupTable(t)
 			_ = table.Append(&testRow{ID: 1, Name: "original"})
 
-			result, _ := table.Modify(rid.ID(1), func(row *testRow) error {
+			result, _ := table.Modify(ksid.ID(1), func(row *testRow) error {
 				row.Name = "modified"
 				return nil
 			})
@@ -1109,7 +1109,7 @@ not valid json
 			result.Name = "mutated"
 
 			// Verify table unaffected
-			got := table.Get(rid.ID(1))
+			got := table.Get(ksid.ID(1))
 			if got.Name != "modified" {
 				t.Errorf("Table affected by mutating returned clone: %q", got.Name)
 			}
@@ -1140,7 +1140,7 @@ not valid json
 			}
 
 			// Test OnDelete
-			if _, err := table.Delete(rid.ID(1)); err != nil {
+			if _, err := table.Delete(ksid.ID(1)); err != nil {
 				t.Fatal(err)
 			}
 			if !slices.Equal(obs.deletes, []int{1}) {
@@ -1218,7 +1218,7 @@ not valid json
 
 			// Verify Iter with startID works
 			idsFrom15 := make([]int, 0, 2)
-			for row := range table.Iter(rid.ID(15)) {
+			for row := range table.Iter(ksid.ID(15)) {
 				idsFrom15 = append(idsFrom15, row.ID)
 			}
 			wantFrom15 := []int{20, 30}
@@ -1279,7 +1279,7 @@ not valid json
 
 			// Verify Iter with startID works correctly after sorting
 			idsFrom2 := make([]int, 0, 3)
-			for row := range table.Iter(rid.ID(2)) {
+			for row := range table.Iter(ksid.ID(2)) {
 				idsFrom2 = append(idsFrom2, row.ID)
 			}
 
@@ -1415,7 +1415,7 @@ func TestRow(t *testing.T) {
 			tests := []struct {
 				name string
 				row  *testRow
-				want rid.ID
+				want ksid.ID
 			}{
 				{"zero ID", &testRow{ID: 0}, 0},
 				{"positive ID", &testRow{ID: 42}, 42},

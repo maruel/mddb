@@ -9,19 +9,19 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
 // WorkspaceInvitation represents an invitation for a user to join a workspace.
 type WorkspaceInvitation struct {
-	ID          rid.ID        `json:"id" jsonschema:"description=Unique invitation identifier"`
-	WorkspaceID rid.ID        `json:"workspace_id" jsonschema:"description=Workspace the user is invited to"`
+	ID          ksid.ID       `json:"id" jsonschema:"description=Unique invitation identifier"`
+	WorkspaceID ksid.ID       `json:"workspace_id" jsonschema:"description=Workspace the user is invited to"`
 	Email       string        `json:"email" jsonschema:"description=Email address of the invitee"`
 	Role        WorkspaceRole `json:"role" jsonschema:"description=Role assigned upon acceptance"`
 	Token       string        `json:"token" jsonschema:"description=Secret token for invitation verification"`
-	InvitedBy   rid.ID        `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
+	InvitedBy   ksid.ID       `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
 	ExpiresAt   storage.Time  `json:"expires_at" jsonschema:"description=Invitation expiration timestamp"`
 	Created     storage.Time  `json:"created" jsonschema:"description=Invitation creation timestamp"`
 }
@@ -33,7 +33,7 @@ func (i *WorkspaceInvitation) Clone() *WorkspaceInvitation {
 }
 
 // GetID returns the WorkspaceInvitation's ID.
-func (i *WorkspaceInvitation) GetID() rid.ID {
+func (i *WorkspaceInvitation) GetID() ksid.ID {
 	return i.ID
 }
 
@@ -66,7 +66,7 @@ func (i *WorkspaceInvitation) IsExpired() bool {
 type WorkspaceInvitationService struct {
 	table   *jsonldb.Table[*WorkspaceInvitation]
 	byToken *jsonldb.UniqueIndex[string, *WorkspaceInvitation]
-	byWSID  *jsonldb.Index[rid.ID, *WorkspaceInvitation]
+	byWSID  *jsonldb.Index[ksid.ID, *WorkspaceInvitation]
 }
 
 // NewWorkspaceInvitationService creates a new workspace invitation service.
@@ -76,12 +76,12 @@ func NewWorkspaceInvitationService(tablePath string) (*WorkspaceInvitationServic
 		return nil, err
 	}
 	byToken := jsonldb.NewUniqueIndex(table, func(i *WorkspaceInvitation) string { return i.Token })
-	byWSID := jsonldb.NewIndex(table, func(i *WorkspaceInvitation) rid.ID { return i.WorkspaceID })
+	byWSID := jsonldb.NewIndex(table, func(i *WorkspaceInvitation) ksid.ID { return i.WorkspaceID })
 	return &WorkspaceInvitationService{table: table, byToken: byToken, byWSID: byWSID}, nil
 }
 
 // Create creates a new workspace invitation.
-func (s *WorkspaceInvitationService) Create(email string, wsID rid.ID, role WorkspaceRole, invitedBy rid.ID) (*WorkspaceInvitation, error) {
+func (s *WorkspaceInvitationService) Create(email string, wsID ksid.ID, role WorkspaceRole, invitedBy ksid.ID) (*WorkspaceInvitation, error) {
 	if email == "" {
 		return nil, errEmailEmpty
 	}
@@ -96,7 +96,7 @@ func (s *WorkspaceInvitationService) Create(email string, wsID rid.ID, role Work
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 	invitation := &WorkspaceInvitation{
-		ID:          rid.NewID(),
+		ID:          ksid.NewID(),
 		WorkspaceID: wsID,
 		Email:       email,
 		Role:        role,
@@ -121,7 +121,7 @@ func (s *WorkspaceInvitationService) GetByToken(token string) (*WorkspaceInvitat
 }
 
 // Delete deletes an invitation.
-func (s *WorkspaceInvitationService) Delete(id rid.ID) error {
+func (s *WorkspaceInvitationService) Delete(id ksid.ID) error {
 	if id.IsZero() {
 		return errWSInvitationIDEmpty
 	}
@@ -135,13 +135,13 @@ func (s *WorkspaceInvitationService) Delete(id rid.ID) error {
 }
 
 // IterByWorkspace iterates over all invitations for a workspace. O(1) via index.
-func (s *WorkspaceInvitationService) IterByWorkspace(wsID rid.ID) iter.Seq[*WorkspaceInvitation] {
+func (s *WorkspaceInvitationService) IterByWorkspace(wsID ksid.ID) iter.Seq[*WorkspaceInvitation] {
 	return s.byWSID.Iter(wsID)
 }
 
 // DeleteAllByWorkspace removes all invitations for a workspace.
-func (s *WorkspaceInvitationService) DeleteAllByWorkspace(wsID rid.ID) error {
-	var toDelete []rid.ID //nolint:prealloc // Iterator length unknown
+func (s *WorkspaceInvitationService) DeleteAllByWorkspace(wsID ksid.ID) error {
+	var toDelete []ksid.ID //nolint:prealloc // Iterator length unknown
 	for inv := range s.byWSID.Iter(wsID) {
 		toDelete = append(toDelete, inv.ID)
 	}

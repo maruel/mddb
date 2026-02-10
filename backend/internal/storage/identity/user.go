@@ -15,14 +15,14 @@ import (
 	"iter"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // User represents a system user (persistent fields only).
 type User struct {
-	ID              rid.ID          `json:"id" jsonschema:"description=Unique user identifier"`
+	ID              ksid.ID         `json:"id" jsonschema:"description=Unique user identifier"`
 	Email           string          `json:"email" jsonschema:"description=User email address"`
 	EmailVerified   bool            `json:"email_verified,omitempty" jsonschema:"description=Whether the email has been verified"`
 	Name            string          `json:"name" jsonschema:"description=User display name"`
@@ -35,7 +35,7 @@ type User struct {
 }
 
 // GetID returns the User's ID.
-func (u *User) GetID() rid.ID {
+func (u *User) GetID() ksid.ID {
 	return u.ID
 }
 
@@ -68,7 +68,7 @@ func (u *User) PreferredEmail() string {
 type UserSettings struct {
 	Theme                string                  `json:"theme" jsonschema:"description=UI theme preference (light/dark/system)"`
 	Language             string                  `json:"language" jsonschema:"description=Preferred language code (en/fr/etc)"`
-	LastActiveWorkspaces []rid.ID                `json:"last_active_workspaces,omitempty" jsonschema:"description=Recently used workspace IDs in LRU order (most recent first)"`
+	LastActiveWorkspaces []ksid.ID               `json:"last_active_workspaces,omitempty" jsonschema:"description=Recently used workspace IDs in LRU order (most recent first)"`
 	NotificationPrefs    NotificationPreferences `json:"notification_prefs,omitzero" jsonschema:"description=Per-type notification channel preferences"`
 }
 
@@ -141,7 +141,7 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 	}
 	// First user becomes global admin
 	isFirstUser := s.table.Len() == 0
-	id := rid.NewID()
+	id := ksid.NewID()
 	now := storage.Now()
 	stored := &userStorage{
 		User: User{
@@ -165,7 +165,7 @@ func (s *UserService) Create(email, password, name string) (*User, error) {
 }
 
 // Get retrieves a user by ID.
-func (s *UserService) Get(id rid.ID) (*User, error) {
+func (s *UserService) Get(id ksid.ID) (*User, error) {
 	if id.IsZero() {
 		return nil, errUserIDEmpty
 	}
@@ -216,7 +216,7 @@ func (s *UserService) GetByOAuth(provider OAuthProvider, providerID string) (*Us
 }
 
 // Modify atomically modifies a user.
-func (s *UserService) Modify(id rid.ID, fn func(user *User) error) (*User, error) {
+func (s *UserService) Modify(id ksid.ID, fn func(user *User) error) (*User, error) {
 	if id.IsZero() {
 		return nil, errUserIDEmpty
 	}
@@ -231,7 +231,7 @@ func (s *UserService) Modify(id rid.ID, fn func(user *User) error) (*User, error
 }
 
 // Iter iterates over users with ID greater than startID. Pass 0 to iterate from the beginning.
-func (s *UserService) Iter(startID rid.ID) iter.Seq[*User] {
+func (s *UserService) Iter(startID ksid.ID) iter.Seq[*User] {
 	return func(yield func(*User) bool) {
 		for stored := range s.table.Iter(startID) {
 			user := stored.User
@@ -243,7 +243,7 @@ func (s *UserService) Iter(startID rid.ID) iter.Seq[*User] {
 }
 
 // HasPassword checks if the user has a password set.
-func (s *UserService) HasPassword(id rid.ID) bool {
+func (s *UserService) HasPassword(id ksid.ID) bool {
 	if id.IsZero() {
 		return false
 	}
@@ -255,7 +255,7 @@ func (s *UserService) HasPassword(id rid.ID) bool {
 }
 
 // VerifyPassword checks if the provided password matches the user's stored hash.
-func (s *UserService) VerifyPassword(id rid.ID, password string) bool {
+func (s *UserService) VerifyPassword(id ksid.ID, password string) bool {
 	if id.IsZero() || password == "" {
 		return false
 	}
@@ -269,7 +269,7 @@ func (s *UserService) VerifyPassword(id rid.ID, password string) bool {
 // SetPassword sets or updates the user's password.
 // If the user already has a password, currentPassword must match.
 // If the user is OAuth-only (no password), currentPassword is ignored.
-func (s *UserService) SetPassword(id rid.ID, currentPassword, newPassword string) error {
+func (s *UserService) SetPassword(id ksid.ID, currentPassword, newPassword string) error {
 	if id.IsZero() {
 		return errUserIDEmpty
 	}
@@ -324,11 +324,11 @@ type oauthKey struct {
 // oauthIndex indexes users by their OAuth identities (multi-valued).
 type oauthIndex struct {
 	table *jsonldb.Table[*userStorage]
-	byKey map[oauthKey]rid.ID
+	byKey map[oauthKey]ksid.ID
 }
 
 func newOAuthIndex(table *jsonldb.Table[*userStorage]) *oauthIndex {
-	idx := &oauthIndex{table: table, byKey: make(map[oauthKey]rid.ID)}
+	idx := &oauthIndex{table: table, byKey: make(map[oauthKey]ksid.ID)}
 	table.AddObserver(idx)
 	return idx
 }
@@ -379,7 +379,7 @@ func (u *userStorage) Clone() *userStorage {
 }
 
 // GetID returns the userStorage's ID.
-func (u *userStorage) GetID() rid.ID {
+func (u *userStorage) GetID() ksid.ID {
 	return u.ID
 }
 

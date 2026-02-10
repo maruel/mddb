@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -17,7 +17,7 @@ import (
 
 // testFileStore creates a FileStoreService for testing with unlimited quota.
 // It also creates a workspace in the service for quota testing.
-func testFileStore(t *testing.T) (*FileStoreService, rid.ID) {
+func testFileStore(t *testing.T) (*FileStoreService, ksid.ID) {
 	tmpDir := t.TempDir()
 
 	gitMgr := git.NewManager(tmpDir, "test", "test@test.com")
@@ -74,7 +74,7 @@ func testFileStore(t *testing.T) (*FileStoreService, rid.ID) {
 }
 
 // initWS is a test helper that creates a FileStoreService, inits the workspace, and returns the store.
-func initWS(t *testing.T) (*FileStoreService, *WorkspaceFileStore, rid.ID) {
+func initWS(t *testing.T) (*FileStoreService, *WorkspaceFileStore, ksid.ID) {
 	fs, wsID := testFileStore(t)
 	ctx := t.Context()
 	if err := fs.InitWorkspace(ctx, wsID); err != nil {
@@ -110,7 +110,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 	t.Run("PageOperations", func(t *testing.T) {
 		_, ws, _ := initWS(t)
 		ctx := t.Context()
-		nodeID := rid.NewID()
+		nodeID := ksid.NewID()
 
 		t.Run("WritePage", func(t *testing.T) {
 			page, err := ws.WritePage(ctx, nodeID, 0, "Test Title", "# Test Content", author)
@@ -166,7 +166,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 
 		t.Run("ReadNonExistent", func(t *testing.T) {
-			if _, err := ws.ReadPage(rid.NewID()); err == nil {
+			if _, err := ws.ReadPage(ksid.NewID()); err == nil {
 				t.Error("expected error reading non-existent page")
 			}
 		})
@@ -176,9 +176,9 @@ func TestWorkspaceFileStore(t *testing.T) {
 		fs, ws, wsID := initWS(t)
 		ctx := t.Context()
 
-		nodeIDs := make([]rid.ID, 0, 3)
+		nodeIDs := make([]ksid.ID, 0, 3)
 		for i := range 3 {
-			id := rid.NewID()
+			id := ksid.NewID()
 			nodeIDs = append(nodeIDs, id)
 			if _, err := ws.WritePage(ctx, id, 0, "Page "+string(rune(48+i)), "content", author); err != nil {
 				t.Fatalf("failed to write page %d: %v", i, err)
@@ -218,7 +218,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		_, ws, _ := initWS(t)
 		ctx := t.Context()
 
-		tableID := rid.NewID()
+		tableID := ksid.NewID()
 		node := &Node{
 			ID:       tableID,
 			Title:    "Test Table",
@@ -249,7 +249,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 
 		t.Run("RecordOperations", func(t *testing.T) {
 			record := &DataRecord{
-				ID:       rid.NewID(),
+				ID:       ksid.NewID(),
 				Data:     map[string]any{"name": "test", "value": "data"},
 				Created:  storage.Now(),
 				Modified: storage.Now(),
@@ -330,7 +330,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 
 		t.Run("UpdateRecord_DataPersistence", func(t *testing.T) {
-			testTableID := rid.NewID()
+			testTableID := ksid.NewID()
 			testTable := &Node{
 				ID:       testTableID,
 				Title:    "Test Table",
@@ -347,7 +347,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			}
 
 			initialRecord := &DataRecord{
-				ID:       rid.NewID(),
+				ID:       ksid.NewID(),
 				Data:     map[string]any{"name": "original", "value": "data"},
 				Created:  storage.Now(),
 				Modified: storage.Now(),
@@ -393,7 +393,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 
 		t.Run("UpdateRecord_NilDataBecomesEmptyMap", func(t *testing.T) {
-			testTableID := rid.NewID()
+			testTableID := ksid.NewID()
 			testTable := &Node{
 				ID:       testTableID,
 				Title:    "Test Table",
@@ -409,7 +409,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			}
 
 			initialRecord := &DataRecord{
-				ID:       rid.NewID(),
+				ID:       ksid.NewID(),
 				Data:     map[string]any{"name": "test"},
 				Created:  storage.Now(),
 				Modified: storage.Now(),
@@ -451,7 +451,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		_, ws, _ := initWS(t)
 		ctx := t.Context()
 
-		nodeID := rid.NewID()
+		nodeID := ksid.NewID()
 		if _, err := ws.WritePage(ctx, nodeID, 0, "With Assets", "content", author); err != nil {
 			t.Fatalf("failed to write page: %v", err)
 		}
@@ -509,7 +509,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 	t.Run("PageVersionHistory", func(t *testing.T) {
 		_, ws, _ := initWS(t)
 		ctx := t.Context()
-		nodeID := rid.NewID()
+		nodeID := ksid.NewID()
 
 		if _, err := ws.WritePage(ctx, nodeID, 0, "Initial", "initial content", author); err != nil {
 			t.Fatalf("failed to write initial page: %v", err)
@@ -570,7 +570,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		_, ws, _ := initWS(t)
 		ctx := t.Context()
 
-		var zeroID rid.ID
+		var zeroID ksid.ID
 		node1, err := ws.CreateNode(ctx, "Node 1", NodeTypeDocument, zeroID, author)
 		if err != nil {
 			t.Fatalf("failed to create node 1: %v", err)
@@ -617,7 +617,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		_, ws, _ := initWS(t)
 		ctx := t.Context()
 
-		var zeroID rid.ID
+		var zeroID ksid.ID
 		topLevel, err := ws.CreateNode(ctx, "Top Level", NodeTypeDocument, zeroID, author)
 		if err != nil {
 			t.Fatalf("failed to create top-level: %v", err)
@@ -672,7 +672,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		fs, ws, wsID := initWS(t)
 		ctx := t.Context()
 
-		var zeroID rid.ID
+		var zeroID ksid.ID
 		page1, err := ws.CreateNode(ctx, "Welcome", NodeTypeDocument, zeroID, author)
 		if err != nil {
 			t.Fatalf("failed to create page 1: %v", err)
@@ -724,7 +724,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		fs, ws, wsID := initWS(t)
 		ctx := t.Context()
 
-		var zeroID rid.ID
+		var zeroID ksid.ID
 		page, err := ws.CreatePageUnderParent(ctx, zeroID, "My First Page", "", author)
 		if err != nil {
 			t.Fatalf("failed to create page: %v", err)
@@ -759,25 +759,25 @@ func TestWorkspaceFileStore(t *testing.T) {
 		ctx := t.Context()
 
 		t.Run("ReadNonExistentPage", func(t *testing.T) {
-			if _, err := ws.ReadPage(rid.NewID()); err == nil {
+			if _, err := ws.ReadPage(ksid.NewID()); err == nil {
 				t.Error("expected error reading non-existent page")
 			}
 		})
 
 		t.Run("ReadNonExistentTable", func(t *testing.T) {
-			if _, err := ws.ReadTable(rid.NewID()); err == nil {
+			if _, err := ws.ReadTable(ksid.NewID()); err == nil {
 				t.Error("expected error reading non-existent table")
 			}
 		})
 
 		t.Run("DeleteNonExistentPage", func(t *testing.T) {
-			if err := ws.DeletePage(ctx, rid.NewID(), author); err == nil {
+			if err := ws.DeletePage(ctx, ksid.NewID(), author); err == nil {
 				t.Error("expected error deleting non-existent page")
 			}
 		})
 
 		t.Run("IterAssets_NonExistentPage", func(t *testing.T) {
-			iter, err := ws.IterAssets(rid.NewID())
+			iter, err := ws.IterAssets(ksid.NewID())
 			if err != nil {
 				t.Fatalf("expected nil error for non-existent page, got: %v", err)
 			}
@@ -1031,7 +1031,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			_, ws, _ := initWS(t)
 			ctx := t.Context()
 
-			err := ws.MoveNode(ctx, rid.NewID(), 0, author)
+			err := ws.MoveNode(ctx, ksid.NewID(), 0, author)
 			if err == nil {
 				t.Error("expected error moving non-existent node")
 			}
@@ -1046,7 +1046,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("create node: %v", err)
 			}
 
-			err = ws.MoveNode(ctx, node.ID, rid.NewID(), author)
+			err = ws.MoveNode(ctx, node.ID, ksid.NewID(), author)
 			if err == nil {
 				t.Error("expected error moving to non-existent parent")
 			}
@@ -1119,17 +1119,17 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("failed to get workspace store: %v", err)
 			}
 
-			id1 := rid.NewID()
+			id1 := ksid.NewID()
 			if _, err := ws.WritePage(ctx, id1, 0, "Page 1", "content", author); err != nil {
 				t.Fatalf("failed to create page 1: %v", err)
 			}
 
-			id2 := rid.NewID()
+			id2 := ksid.NewID()
 			if _, err := ws.WritePage(ctx, id2, 0, "Page 2", "content", author); err != nil {
 				t.Fatalf("failed to create page 2: %v", err)
 			}
 
-			id3 := rid.NewID()
+			id3 := ksid.NewID()
 			_, err = ws.WritePage(ctx, id3, 0, "Page 3", "content", author)
 			if err != nil {
 				t.Logf("Got error creating page 3: %v (quota may be enforced)", err)
@@ -1148,7 +1148,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			}
 
 			org, err := fs.wsSvc.Get(wsID)
-			var zeroOrgID rid.ID
+			var zeroOrgID ksid.ID
 			if err == nil && org.OrganizationID != zeroOrgID {
 				_, _ = fs.orgSvc.Modify(org.OrganizationID, func(o *identity.Organization) error {
 					o.Quotas.MaxTotalStorageBytes = 1000 * 1024 * 1024 * 1024 // 1TB
@@ -1167,7 +1167,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				largeContent[i] = byte('x')
 			}
 
-			id := rid.NewID()
+			id := ksid.NewID()
 			_, err = ws.WritePage(ctx, id, 0, "Large", string(largeContent), author)
 			if err == nil {
 				t.Logf("WritePage succeeded - quota enforcement might not be strict")
@@ -1193,7 +1193,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("failed to get workspace store: %v", err)
 			}
 
-			tableID := rid.NewID()
+			tableID := ksid.NewID()
 			tableNode := &Node{
 				ID:       tableID,
 				Title:    "Test",
@@ -1207,7 +1207,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 
 			for i := range 5 {
 				rec := &DataRecord{
-					ID:       rid.NewID(),
+					ID:       ksid.NewID(),
 					Data:     map[string]any{"name": "Record"},
 					Created:  storage.Now(),
 					Modified: storage.Now(),
@@ -1218,7 +1218,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			}
 
 			rec := &DataRecord{
-				ID:       rid.NewID(),
+				ID:       ksid.NewID(),
 				Data:     map[string]any{"name": "Extra"},
 				Created:  storage.Now(),
 				Modified: storage.Now(),
@@ -1245,7 +1245,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("failed to get workspace store: %v", err)
 			}
 
-			tableID := rid.NewID()
+			tableID := ksid.NewID()
 			tableNode := &Node{
 				ID:       tableID,
 				Title:    "Test",
@@ -1257,7 +1257,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 				t.Fatalf("failed to create table: %v", err)
 			}
 
-			recordID := rid.NewID()
+			recordID := ksid.NewID()
 			record := &DataRecord{
 				ID:       recordID,
 				Data:     map[string]any{"field": strings.Repeat("a", 100)},
@@ -1294,7 +1294,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 		fs, ws, wsID := initWS(t)
 		ctx := t.Context()
 
-		nodeID := rid.NewID()
+		nodeID := ksid.NewID()
 		if _, err := ws.WritePage(ctx, nodeID, 0, "Format Test", "# Content\n\nWith multiple lines", author); err != nil {
 			t.Fatalf("failed to write page: %v", err)
 		}
@@ -1477,7 +1477,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			_, ws, _ := initWS(t)
 			ctx := t.Context()
 
-			ghost := rid.NewID()
+			ghost := ksid.NewID()
 			linkToGhost := fmt.Sprintf("[Ghost](../%s/index.md)", ghost)
 			src, err := ws.CreatePageUnderParent(ctx, 0, "Src", linkToGhost, author)
 			if err != nil {
@@ -1507,7 +1507,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			if err != nil {
 				t.Fatalf("create Real: %v", err)
 			}
-			ghost := rid.NewID()
+			ghost := ksid.NewID()
 			content := fmt.Sprintf("[Real](../%s/index.md) and [Ghost](../%s/index.md)", existing.ID, ghost)
 			if _, err := ws.CreatePageUnderParent(ctx, 0, "Linker", content, author); err != nil {
 				t.Fatalf("create Linker: %v", err)
@@ -1539,7 +1539,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			t.Fatalf("failed to create page: %v", err)
 		}
 
-		titles, err := ws.GetNodeTitles([]rid.ID{a.ID, b.ID})
+		titles, err := ws.GetNodeTitles([]ksid.ID{a.ID, b.ID})
 		if err != nil {
 			t.Fatalf("failed to get node titles: %v", err)
 		}
@@ -1560,7 +1560,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			ctx := t.Context()
 
 			for i := range 3 {
-				nodeID := rid.NewID()
+				nodeID := ksid.NewID()
 				if _, err := ws.WritePage(ctx, nodeID, 0, "Page "+string(rune(49+i)), "content", author); err != nil {
 					t.Fatalf("failed to create page: %v", err)
 				}
@@ -1612,7 +1612,7 @@ func TestWorkspaceFileStore(t *testing.T) {
 			_, ws, _ := initWS(t)
 			ctx := t.Context()
 
-			nodeID := rid.NewID()
+			nodeID := ksid.NewID()
 			if _, err := ws.WritePage(ctx, nodeID, 0, "Hybrid", "content", author); err != nil {
 				t.Fatalf("failed to create page: %v", err)
 			}
@@ -1640,14 +1640,14 @@ func TestWorkspaceFileStore(t *testing.T) {
 }
 
 func TestExtractLinkedNodeIDs(t *testing.T) {
-	nodeA := rid.NewID()
-	nodeB := rid.NewID()
-	nodeC := rid.NewID()
+	nodeA := ksid.NewID()
+	nodeB := ksid.NewID()
+	nodeC := ksid.NewID()
 
 	tests := []struct {
 		name     string
 		content  string
-		expected []rid.ID
+		expected []ksid.ID
 	}{
 		{
 			name:     "empty content",
@@ -1662,32 +1662,32 @@ func TestExtractLinkedNodeIDs(t *testing.T) {
 		{
 			name:     "sibling relative link",
 			content:  "Check [my page](../" + nodeA.String() + "/index.md) here",
-			expected: []rid.ID{nodeA},
+			expected: []ksid.ID{nodeA},
 		},
 		{
 			name:     "multiple relative links",
 			content:  "See [page1](../" + nodeA.String() + "/index.md) and [page2](../" + nodeB.String() + "/index.md)",
-			expected: []rid.ID{nodeA, nodeB},
+			expected: []ksid.ID{nodeA, nodeB},
 		},
 		{
 			name:     "child link",
 			content:  "[page](" + nodeA.String() + "/index.md)",
-			expected: []rid.ID{nodeA},
+			expected: []ksid.ID{nodeA},
 		},
 		{
 			name:     "duplicate links extracted once",
 			content:  "[a](../" + nodeC.String() + "/index.md) and [b](../" + nodeC.String() + "/index.md)",
-			expected: []rid.ID{nodeC},
+			expected: []ksid.ID{nodeC},
 		},
 		{
 			name:     "external link ignored",
 			content:  "[google](https://google.com) and [internal](../" + nodeA.String() + "/index.md)",
-			expected: []rid.ID{nodeA},
+			expected: []ksid.ID{nodeA},
 		},
 		{
 			name:     "deep relative link",
 			content:  "# Header\n\nSome text with [a link](../../" + nodeB.String() + "/index.md) in it.\n\n![image](image.png)",
-			expected: []rid.ID{nodeB},
+			expected: []ksid.ID{nodeB},
 		},
 		{
 			name:     "absolute link ignored",

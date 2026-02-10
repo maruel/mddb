@@ -2,11 +2,11 @@
 
 package content
 
-import "github.com/maruel/mddb/backend/internal/rid"
+import "github.com/maruel/mddb/backend/internal/ksid"
 
 // View represents a saved table view configuration.
 type View struct {
-	ID      rid.ID   `json:"id" jsonschema:"description=Unique view identifier"`
+	ID      ksid.ID  `json:"id" jsonschema:"description=Unique view identifier"`
 	Name    string   `json:"name" jsonschema:"description=View display name"`
 	Type    ViewType `json:"type" jsonschema:"description=View layout type (table/board/gallery/list/calendar)"`
 	Default bool     `json:"default,omitempty" jsonschema:"description=Whether this is the default view"`
@@ -21,7 +21,7 @@ type View struct {
 }
 
 // GetID returns the View's ID.
-func (v *View) GetID() rid.ID {
+func (v *View) GetID() ksid.ID {
 	return v.ID
 }
 

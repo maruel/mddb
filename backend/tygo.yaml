@@ -3,7 +3,7 @@ packages:
     enum_style: "union"
     type_mappings:
       "time.Time": "string"
-      "rid.ID": "string"
+      "ksid.ID": "string"
       "storage.Time": "number"
     exclude_files:
       - validate.go

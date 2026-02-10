@@ -5,14 +5,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 func TestOrganization(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			valid := &Organization{
-				ID:   rid.ID(1),
+				ID:   ksid.ID(1),
 				Name: "Test Org",
 				Quotas: OrganizationQuotas{
 					MaxWorkspacesPerOrg:    3,
@@ -28,7 +28,7 @@ func TestOrganization(t *testing.T) {
 
 		t.Run("zero ID", func(t *testing.T) {
 			zeroID := &Organization{
-				ID:   rid.ID(0),
+				ID:   ksid.ID(0),
 				Name: "Test Org",
 				Quotas: OrganizationQuotas{
 					MaxWorkspacesPerOrg:    3,
@@ -44,7 +44,7 @@ func TestOrganization(t *testing.T) {
 
 		t.Run("empty name", func(t *testing.T) {
 			emptyName := &Organization{
-				ID:   rid.ID(1),
+				ID:   ksid.ID(1),
 				Name: "",
 				Quotas: OrganizationQuotas{
 					MaxWorkspacesPerOrg:    3,
@@ -59,7 +59,7 @@ func TestOrganization(t *testing.T) {
 		})
 		t.Run("invalid quota", func(t *testing.T) {
 			invalidQuota := &Organization{
-				ID:   rid.ID(1),
+				ID:   ksid.ID(1),
 				Name: "Test Org",
 				Quotas: OrganizationQuotas{
 					MaxWorkspacesPerOrg:    0,
@@ -76,7 +76,7 @@ func TestOrganization(t *testing.T) {
 
 	t.Run("Clone", func(t *testing.T) {
 		original := &Organization{
-			ID:   rid.ID(1),
+			ID:   ksid.ID(1),
 			Name: "Test Org",
 		}
 
@@ -91,9 +91,9 @@ func TestOrganization(t *testing.T) {
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		org := &Organization{ID: rid.ID(42)}
-		if org.GetID() != rid.ID(42) {
-			t.Errorf("GetID() = %v, want %v", org.GetID(), rid.ID(42))
+		org := &Organization{ID: ksid.ID(42)}
+		if org.GetID() != ksid.ID(42) {
+			t.Errorf("GetID() = %v, want %v", org.GetID(), ksid.ID(42))
 		}
 	})
 }
@@ -165,7 +165,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			_, getErr := service.Get(rid.ID(99999))
+			_, getErr := service.Get(ksid.ID(99999))
 			if getErr == nil {
 				t.Error("Expected error for non-existent organization")
 			}
@@ -189,7 +189,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			_, modErr := service.Modify(rid.ID(99999), func(o *Organization) error {
+			_, modErr := service.Modify(ksid.ID(99999), func(o *Organization) error {
 				return nil
 			})
 			if modErr == nil {
@@ -198,7 +198,7 @@ func TestOrganizationService(t *testing.T) {
 		})
 
 		t.Run("zero ID", func(t *testing.T) {
-			_, modErr := service.Modify(rid.ID(0), func(o *Organization) error {
+			_, modErr := service.Modify(ksid.ID(0), func(o *Organization) error {
 				return nil
 			})
 			if modErr == nil {

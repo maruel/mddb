@@ -5,12 +5,12 @@ package content
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/rid"
+	"github.com/maruel/mddb/backend/internal/ksid"
 )
 
 func makeRecord(data map[string]any) *DataRecord {
 	return &DataRecord{
-		ID:   rid.NewID(),
+		ID:   ksid.NewID(),
 		Data: data,
 	}
 }

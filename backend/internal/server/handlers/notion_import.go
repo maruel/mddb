@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/maruel/mddb/backend/internal/ksid"
 	"github.com/maruel/mddb/backend/internal/notion"
-	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -32,7 +32,7 @@ type NotionImportHandler struct {
 	Cfg *Config
 
 	mu     sync.Mutex
-	states map[rid.ID]*importState // wsID -> state
+	states map[ksid.ID]*importState // wsID -> state
 }
 
 // NewNotionImportHandler creates a new handler for Notion imports.
@@ -40,12 +40,12 @@ func NewNotionImportHandler(svc *Services, cfg *Config) *NotionImportHandler {
 	return &NotionImportHandler{
 		Svc:    svc,
 		Cfg:    cfg,
-		states: make(map[rid.ID]*importState),
+		states: make(map[ksid.ID]*importState),
 	}
 }
 
 // StartImport creates a new workspace and starts an async Notion import.
-func (h *NotionImportHandler) StartImport(ctx context.Context, orgID rid.ID, user *identity.User, req *dto.NotionImportRequest) (*dto.NotionImportResponse, error) {
+func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, user *identity.User, req *dto.NotionImportRequest) (*dto.NotionImportResponse, error) {
 	// Check server-wide workspace quota
 	if h.Cfg.Quotas.MaxWorkspaces > 0 && h.Svc.Workspace.Count() >= h.Cfg.Quotas.MaxWorkspaces {
 		return nil, dto.QuotaExceeded("workspaces", h.Cfg.Quotas.MaxWorkspaces)
@@ -100,7 +100,7 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID rid.ID, use
 }
 
 // GetStatus returns the current status of an import.
-func (h *NotionImportHandler) GetStatus(_ context.Context, orgID rid.ID, _ *identity.User, req *dto.NotionImportStatusRequest) (*dto.NotionImportStatusResponse, error) {
+func (h *NotionImportHandler) GetStatus(_ context.Context, orgID ksid.ID, _ *identity.User, req *dto.NotionImportStatusRequest) (*dto.NotionImportStatusResponse, error) {
 	// Verify workspace belongs to org
 	ws, err := h.Svc.Workspace.Get(req.ImportWsID)
 	if err != nil {
@@ -146,7 +146,7 @@ func (h *NotionImportHandler) GetStatus(_ context.Context, orgID rid.ID, _ *iden
 }
 
 // CancelImport cancels a running import.
-func (h *NotionImportHandler) CancelImport(_ context.Context, wsID rid.ID, _ *identity.User, _ *dto.NotionImportCancelRequest) (*dto.NotionImportCancelResponse, error) {
+func (h *NotionImportHandler) CancelImport(_ context.Context, wsID ksid.ID, _ *identity.User, _ *dto.NotionImportCancelRequest) (*dto.NotionImportCancelResponse, error) {
 	h.mu.Lock()
 	state := h.states[wsID]
 	h.mu.Unlock()
@@ -173,7 +173,7 @@ func (h *NotionImportHandler) CancelImport(_ context.Context, wsID rid.ID, _ *id
 }
 
 // runImport performs the actual Notion import in the background.
-func (h *NotionImportHandler) runImport(ctx context.Context, wsID rid.ID, notionToken string, state *importState) {
+func (h *NotionImportHandler) runImport(ctx context.Context, wsID ksid.ID, notionToken string, state *importState) {
 	defer func() {
 		if r := recover(); r != nil {
 			slog.Error("Notion import panic", "wsID", wsID, "err", r)
