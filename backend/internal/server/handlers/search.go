@@ -5,7 +5,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -17,7 +17,7 @@ type SearchHandler struct {
 }
 
 // Search performs a full-text search across all nodes.
-func (h *SearchHandler) Search(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.SearchRequest) (*dto.SearchResponse, error) {
+func (h *SearchHandler) Search(ctx context.Context, wsID rid.ID, _ *identity.User, req *dto.SearchRequest) (*dto.SearchResponse, error) {
 	results, err := h.Svc.Search.Search(ctx, wsID, content.SearchOptions{
 		Query:       req.Query,
 		Limit:       req.Limit,

@@ -3,7 +3,7 @@ packages:
     enum_style: "union"
     type_mappings:
       "time.Time": "string"
-      "jsonldb.ID": "string"
+      "rid.ID": "string"
       "storage.Time": "number"
     exclude_files:
       - validate.go

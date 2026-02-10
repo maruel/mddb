@@ -5,7 +5,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -39,7 +39,7 @@ func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.
 	// Persist active workspace in user settings (LRU: prepend to list, limit to 10)
 	if _, err := h.Svc.User.Modify(user.ID, func(u *identity.User) error {
 		// Remove this workspace from current list (if present)
-		newList := make([]jsonldb.ID, 0, len(u.Settings.LastActiveWorkspaces)+1)
+		newList := make([]rid.ID, 0, len(u.Settings.LastActiveWorkspaces)+1)
 		newList = append(newList, req.WsID) // Prepend as most recent
 		for _, id := range u.Settings.LastActiveWorkspaces {
 			if id != req.WsID {
@@ -86,7 +86,7 @@ func (h *MembershipHandler) SwitchWorkspace(ctx context.Context, user *identity.
 }
 
 // UpdateWSMembershipSettings updates user preferences within a workspace.
-func (h *MembershipHandler) UpdateWSMembershipSettings(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.UpdateWSMembershipSettingsRequest) (*dto.WSMembershipResponse, error) {
+func (h *MembershipHandler) UpdateWSMembershipSettings(ctx context.Context, wsID rid.ID, user *identity.User, req *dto.UpdateWSMembershipSettingsRequest) (*dto.WSMembershipResponse, error) {
 	m, err := h.Svc.WSMembership.Get(user.ID, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace membership", err)

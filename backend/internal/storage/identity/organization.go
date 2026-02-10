@@ -9,13 +9,14 @@ import (
 	"iter"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // Organization represents a billing and administrative entity.
 // It contains workspaces and manages organization-level settings and quotas.
 type Organization struct {
-	ID           jsonldb.ID           `json:"id" jsonschema:"description=Unique organization identifier"`
+	ID           rid.ID               `json:"id" jsonschema:"description=Unique organization identifier"`
 	Name         string               `json:"name" jsonschema:"description=Display name of the organization"`
 	BillingEmail string               `json:"billing_email,omitempty" jsonschema:"description=Primary billing contact email"`
 	Quotas       OrganizationQuotas   `json:"quotas" jsonschema:"description=Resource limits for the organization"`
@@ -30,7 +31,7 @@ func (o *Organization) Clone() *Organization {
 }
 
 // GetID returns the Organization's ID.
-func (o *Organization) GetID() jsonldb.ID {
+func (o *Organization) GetID() rid.ID {
 	return o.ID
 }
 
@@ -110,7 +111,7 @@ func (s *OrganizationService) Create(_ context.Context, name, billingEmail strin
 		return nil, errOrgNameRequired
 	}
 	org := &Organization{
-		ID:           jsonldb.NewID(),
+		ID:           rid.NewID(),
 		Name:         name,
 		BillingEmail: billingEmail,
 		Quotas:       DefaultOrganizationQuotas(),
@@ -126,7 +127,7 @@ func (s *OrganizationService) Create(_ context.Context, name, billingEmail strin
 }
 
 // Get retrieves an organization by ID.
-func (s *OrganizationService) Get(id jsonldb.ID) (*Organization, error) {
+func (s *OrganizationService) Get(id rid.ID) (*Organization, error) {
 	org := s.table.Get(id)
 	if org == nil {
 		return nil, errOrgNotFound
@@ -135,7 +136,7 @@ func (s *OrganizationService) Get(id jsonldb.ID) (*Organization, error) {
 }
 
 // Modify atomically modifies an organization.
-func (s *OrganizationService) Modify(id jsonldb.ID, fn func(org *Organization) error) (*Organization, error) {
+func (s *OrganizationService) Modify(id rid.ID, fn func(org *Organization) error) (*Organization, error) {
 	if id.IsZero() {
 		return nil, errOrgNotFound
 	}
@@ -143,12 +144,12 @@ func (s *OrganizationService) Modify(id jsonldb.ID, fn func(org *Organization) e
 }
 
 // Iter iterates over organizations with ID greater than startID.
-func (s *OrganizationService) Iter(startID jsonldb.ID) iter.Seq[*Organization] {
+func (s *OrganizationService) Iter(startID rid.ID) iter.Seq[*Organization] {
 	return s.table.Iter(startID)
 }
 
 // Delete deletes an organization.
-func (s *OrganizationService) Delete(id jsonldb.ID) error {
+func (s *OrganizationService) Delete(id rid.ID) error {
 	if id.IsZero() {
 		return errOrgNotFound
 	}

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -24,7 +24,7 @@ func newTestService(t *testing.T) (*Service, *identity.WorkspaceService) {
 
 func TestTryAcquireRelease(t *testing.T) {
 	svc, _ := newTestService(t)
-	id := jsonldb.NewID()
+	id := rid.NewID()
 
 	if !svc.tryAcquire(id) {
 		t.Fatal("expected to acquire")
@@ -45,7 +45,7 @@ func TestPush_NoRemote(t *testing.T) {
 	svc, wsSvc := newTestService(t)
 	ctx := context.Background()
 
-	orgID := jsonldb.NewID()
+	orgID := rid.NewID()
 	ws, err := wsSvc.Create(ctx, orgID, "test-ws")
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +61,7 @@ func TestPull_NoRemote(t *testing.T) {
 	svc, wsSvc := newTestService(t)
 	ctx := context.Background()
 
-	orgID := jsonldb.NewID()
+	orgID := rid.NewID()
 	ws, err := wsSvc.Create(ctx, orgID, "test-ws")
 	if err != nil {
 		t.Fatal(err)
@@ -77,7 +77,7 @@ func TestPush_NotFound(t *testing.T) {
 	svc, _ := newTestService(t)
 	ctx := context.Background()
 
-	err := svc.Push(ctx, jsonldb.NewID())
+	err := svc.Push(ctx, rid.NewID())
 	if err == nil {
 		t.Fatal("expected error for non-existent workspace")
 	}
@@ -153,7 +153,7 @@ func TestSetSyncStatus(t *testing.T) {
 	svc, wsSvc := newTestService(t)
 	ctx := context.Background()
 
-	orgID := jsonldb.NewID()
+	orgID := rid.NewID()
 	ws, err := wsSvc.Create(ctx, orgID, "test-ws")
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +187,7 @@ func TestUpdateLastSync(t *testing.T) {
 	svc, wsSvc := newTestService(t)
 	ctx := context.Background()
 
-	orgID := jsonldb.NewID()
+	orgID := rid.NewID()
 	ws, err := wsSvc.Create(ctx, orgID, "test-ws")
 	if err != nil {
 		t.Fatal(err)

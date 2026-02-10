@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/githubapp"
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -27,9 +27,9 @@ type Service struct {
 	rootRepo  *git.RootRepo
 
 	mu      sync.Mutex
-	active  map[jsonldb.ID]struct{}
-	timers  map[jsonldb.ID]*time.Timer
-	cancels map[jsonldb.ID]context.CancelFunc
+	active  map[rid.ID]struct{}
+	timers  map[rid.ID]*time.Timer
+	cancels map[rid.ID]context.CancelFunc
 }
 
 // New creates a new sync service.
@@ -39,16 +39,16 @@ func New(wsSvc *identity.WorkspaceService, fileStore *content.FileStoreService, 
 		fileStore: fileStore,
 		githubApp: githubApp,
 		rootRepo:  rootRepo,
-		active:    make(map[jsonldb.ID]struct{}),
-		timers:    make(map[jsonldb.ID]*time.Timer),
-		cancels:   make(map[jsonldb.ID]context.CancelFunc),
+		active:    make(map[rid.ID]struct{}),
+		timers:    make(map[rid.ID]*time.Timer),
+		cancels:   make(map[rid.ID]context.CancelFunc),
 	}
 }
 
 const autoPushDebounce = 5 * time.Second
 
 // TriggerPush starts an async debounced push for a workspace if GitAutoPush is enabled.
-func (s *Service) TriggerPush(wsID jsonldb.ID) {
+func (s *Service) TriggerPush(wsID rid.ID) {
 	ws, err := s.wsSvc.Get(wsID)
 	if err != nil || ws.GitRemote.IsZero() || !ws.Settings.GitAutoPush {
 		return
@@ -76,7 +76,7 @@ func (s *Service) TriggerPush(wsID jsonldb.ID) {
 }
 
 // Push pushes workspace changes to the configured remote.
-func (s *Service) Push(ctx context.Context, wsID jsonldb.ID) error {
+func (s *Service) Push(ctx context.Context, wsID rid.ID) error {
 	if !s.tryAcquire(wsID) {
 		return nil // another sync in progress
 	}
@@ -127,7 +127,7 @@ func (s *Service) Push(ctx context.Context, wsID jsonldb.ID) error {
 }
 
 // Pull fetches and merges from the remote into the workspace.
-func (s *Service) Pull(ctx context.Context, wsID jsonldb.ID) error {
+func (s *Service) Pull(ctx context.Context, wsID rid.ID) error {
 	if !s.tryAcquire(wsID) {
 		return nil
 	}
@@ -197,7 +197,7 @@ func (s *Service) getAuthURL(ctx context.Context, ws *identity.Workspace) (strin
 	return url, nil
 }
 
-func (s *Service) tryAcquire(wsID jsonldb.ID) bool {
+func (s *Service) tryAcquire(wsID rid.ID) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if _, ok := s.active[wsID]; ok {
@@ -207,13 +207,13 @@ func (s *Service) tryAcquire(wsID jsonldb.ID) bool {
 	return true
 }
 
-func (s *Service) release(wsID jsonldb.ID) {
+func (s *Service) release(wsID rid.ID) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.active, wsID)
 }
 
-func (s *Service) setSyncStatus(wsID jsonldb.ID, status, lastError string) {
+func (s *Service) setSyncStatus(wsID rid.ID, status, lastError string) {
 	if _, err := s.wsSvc.Modify(wsID, func(ws *identity.Workspace) error {
 		ws.GitRemote.SyncStatus = status
 		ws.GitRemote.LastSyncError = lastError
@@ -223,7 +223,7 @@ func (s *Service) setSyncStatus(wsID jsonldb.ID, status, lastError string) {
 	}
 }
 
-func (s *Service) updateLastSync(wsID jsonldb.ID) {
+func (s *Service) updateLastSync(wsID rid.ID) {
 	if _, err := s.wsSvc.Modify(wsID, func(ws *identity.Workspace) error {
 		ws.GitRemote.SyncStatus = "idle"
 		ws.GitRemote.LastSyncError = ""

@@ -1,8 +1,9 @@
 // Implements a k-sortable, 64-bit unique identifier generator.
 
-package jsonldb
+package rid
 
 import (
+	"encoding/base32"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -22,6 +23,10 @@ const (
 	// sliceMask is the bitmask for extracting the 15-bit slice value.
 	sliceMask = 0x7FFF
 )
+
+// base32Enc uses base32 "Extended Hex" alphabet (0-9A-V) which is ASCII-sorted
+// and case-insensitive safe for filesystems.
+var base32Enc = base32.HexEncoding.WithPadding(base32.NoPadding)
 
 // ID is a time-sortable 64-bit identifier resistant to collisions.
 //

@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -47,12 +47,12 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	wsIDStr := r.PathValue("wsID")
 	nodeIDStr := r.PathValue("id")
 
-	wsID, err := jsonldb.DecodeID(wsIDStr)
+	wsID, err := rid.DecodeID(wsIDStr)
 	if err != nil {
 		writeErrorResponse(w, dto.BadRequest("invalid_ws_id"))
 		return
 	}
-	nodeID, err := jsonldb.DecodeID(nodeIDStr)
+	nodeID, err := rid.DecodeID(nodeIDStr)
 	if err != nil {
 		writeErrorResponse(w, dto.BadRequest("invalid_node_id"))
 		return
@@ -167,12 +167,12 @@ func (h *AssetHandler) ServeAssetFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wsID, err := jsonldb.DecodeID(wsIDStr)
+	wsID, err := rid.DecodeID(wsIDStr)
 	if err != nil {
 		writeErrorResponse(w, dto.BadRequest("invalid_ws_id"))
 		return
 	}
-	nodeID, err := jsonldb.DecodeID(nodeIDStr)
+	nodeID, err := rid.DecodeID(nodeIDStr)
 	if err != nil {
 		writeErrorResponse(w, dto.BadRequest("invalid_node_id"))
 		return

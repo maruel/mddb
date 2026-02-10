@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -81,7 +81,7 @@ func CountryCode(ctx context.Context) string {
 }
 
 // WithSessionID adds the session ID to the context.
-func WithSessionID(ctx context.Context, id jsonldb.ID) context.Context {
+func WithSessionID(ctx context.Context, id rid.ID) context.Context {
 	return context.WithValue(ctx, keySessionID, id)
 }
 
@@ -107,8 +107,8 @@ func UserAgent(ctx context.Context) string {
 }
 
 // SessionID extracts the session ID from the context.
-func SessionID(ctx context.Context) jsonldb.ID {
-	if v, ok := ctx.Value(keySessionID).(jsonldb.ID); ok {
+func SessionID(ctx context.Context) rid.ID {
+	if v, ok := ctx.Value(keySessionID).(rid.ID); ok {
 		return v
 	}
 	return 0

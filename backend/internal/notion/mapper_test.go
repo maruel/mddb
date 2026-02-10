@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
 
@@ -324,8 +324,8 @@ func TestResolveRelations(t *testing.T) {
 	m := NewMapper()
 
 	// Simulate mapping two databases
-	mddbID1 := jsonldb.NewID()
-	mddbID2 := jsonldb.NewID()
+	mddbID1 := rid.NewID()
+	mddbID2 := rid.NewID()
 	m.NotionToMddb["notion-db-1"] = mddbID1
 	m.NotionToMddb["notion-db-2"] = mddbID2
 

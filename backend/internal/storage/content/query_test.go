@@ -5,12 +5,12 @@ package content
 import (
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 )
 
 func makeRecord(data map[string]any) *DataRecord {
 	return &DataRecord{
-		ID:   jsonldb.NewID(),
+		ID:   rid.NewID(),
 		Data: data,
 	}
 }

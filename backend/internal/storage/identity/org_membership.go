@@ -7,6 +7,7 @@ import (
 	"iter"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -53,9 +54,9 @@ func (r OrganizationRole) CanDeleteOrg() bool {
 
 // OrganizationMembership represents a user's relationship with an organization.
 type OrganizationMembership struct {
-	ID             jsonldb.ID       `json:"id" jsonschema:"description=Unique membership identifier"`
-	UserID         jsonldb.ID       `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
-	OrganizationID jsonldb.ID       `json:"organization_id" jsonschema:"description=Organization ID the user is a member of"`
+	ID             rid.ID           `json:"id" jsonschema:"description=Unique membership identifier"`
+	UserID         rid.ID           `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
+	OrganizationID rid.ID           `json:"organization_id" jsonschema:"description=Organization ID the user is a member of"`
 	Role           OrganizationRole `json:"role" jsonschema:"description=User role within the organization (owner/admin/member)"`
 	Created        storage.Time     `json:"created" jsonschema:"description=Membership creation timestamp"`
 }
@@ -67,7 +68,7 @@ func (m *OrganizationMembership) Clone() *OrganizationMembership {
 }
 
 // GetID returns the OrganizationMembership's ID.
-func (m *OrganizationMembership) GetID() jsonldb.ID {
+func (m *OrganizationMembership) GetID() rid.ID {
 	return m.ID
 }
 
@@ -91,8 +92,8 @@ func (m *OrganizationMembership) Validate() error {
 // OrganizationMembershipService handles user-organization relationships.
 type OrganizationMembershipService struct {
 	table       *jsonldb.Table[*OrganizationMembership]
-	byUserID    *jsonldb.Index[jsonldb.ID, *OrganizationMembership]
-	byOrgID     *jsonldb.Index[jsonldb.ID, *OrganizationMembership]
+	byUserID    *jsonldb.Index[rid.ID, *OrganizationMembership]
+	byOrgID     *jsonldb.Index[rid.ID, *OrganizationMembership]
 	byUserOrg   *jsonldb.UniqueIndex[userOrgKey, *OrganizationMembership]
 	userService *UserService
 	orgService  *OrganizationService
@@ -104,8 +105,8 @@ func NewOrganizationMembershipService(tablePath string, userService *UserService
 	if err != nil {
 		return nil, err
 	}
-	byUserID := jsonldb.NewIndex(table, func(m *OrganizationMembership) jsonldb.ID { return m.UserID })
-	byOrgID := jsonldb.NewIndex(table, func(m *OrganizationMembership) jsonldb.ID { return m.OrganizationID })
+	byUserID := jsonldb.NewIndex(table, func(m *OrganizationMembership) rid.ID { return m.UserID })
+	byOrgID := jsonldb.NewIndex(table, func(m *OrganizationMembership) rid.ID { return m.OrganizationID })
 	byUserOrg := jsonldb.NewUniqueIndex(table, func(m *OrganizationMembership) userOrgKey {
 		return userOrgKey{UserID: m.UserID, OrgID: m.OrganizationID}
 	})
@@ -120,12 +121,12 @@ func NewOrganizationMembershipService(tablePath string, userService *UserService
 }
 
 // findByUserAndOrg finds a membership by user and organization IDs. O(1) via index.
-func (s *OrganizationMembershipService) findByUserAndOrg(userID, orgID jsonldb.ID) *OrganizationMembership {
+func (s *OrganizationMembershipService) findByUserAndOrg(userID, orgID rid.ID) *OrganizationMembership {
 	return s.byUserOrg.Get(userOrgKey{UserID: userID, OrgID: orgID})
 }
 
 // Create adds a user to an organization.
-func (s *OrganizationMembershipService) Create(userID, orgID jsonldb.ID, role OrganizationRole) (*OrganizationMembership, error) {
+func (s *OrganizationMembershipService) Create(userID, orgID rid.ID, role OrganizationRole) (*OrganizationMembership, error) {
 	if userID.IsZero() {
 		return nil, errUserIDEmpty
 	}
@@ -158,7 +159,7 @@ func (s *OrganizationMembershipService) Create(userID, orgID jsonldb.ID, role Or
 	}
 
 	membership := &OrganizationMembership{
-		ID:             jsonldb.NewID(),
+		ID:             rid.NewID(),
 		UserID:         userID,
 		OrganizationID: orgID,
 		Role:           role,
@@ -171,7 +172,7 @@ func (s *OrganizationMembershipService) Create(userID, orgID jsonldb.ID, role Or
 }
 
 // Get retrieves a specific user-org relationship.
-func (s *OrganizationMembershipService) Get(userID, orgID jsonldb.ID) (*OrganizationMembership, error) {
+func (s *OrganizationMembershipService) Get(userID, orgID rid.ID) (*OrganizationMembership, error) {
 	m := s.findByUserAndOrg(userID, orgID)
 	if m == nil {
 		return nil, errOrgMembershipNotFound
@@ -180,7 +181,7 @@ func (s *OrganizationMembershipService) Get(userID, orgID jsonldb.ID) (*Organiza
 }
 
 // GetByID retrieves a membership by its ID.
-func (s *OrganizationMembershipService) GetByID(id jsonldb.ID) (*OrganizationMembership, error) {
+func (s *OrganizationMembershipService) GetByID(id rid.ID) (*OrganizationMembership, error) {
 	m := s.table.Get(id)
 	if m == nil {
 		return nil, errOrgMembershipNotFound
@@ -189,17 +190,17 @@ func (s *OrganizationMembershipService) GetByID(id jsonldb.ID) (*OrganizationMem
 }
 
 // IterByUser iterates over all org memberships for a user. O(1) via index.
-func (s *OrganizationMembershipService) IterByUser(userID jsonldb.ID) iter.Seq[*OrganizationMembership] {
+func (s *OrganizationMembershipService) IterByUser(userID rid.ID) iter.Seq[*OrganizationMembership] {
 	return s.byUserID.Iter(userID)
 }
 
 // IterByOrg iterates over all memberships in an organization. O(1) via index.
-func (s *OrganizationMembershipService) IterByOrg(orgID jsonldb.ID) iter.Seq[*OrganizationMembership] {
+func (s *OrganizationMembershipService) IterByOrg(orgID rid.ID) iter.Seq[*OrganizationMembership] {
 	return s.byOrgID.Iter(orgID)
 }
 
 // CountUserMemberships returns the number of organizations a user belongs to.
-func (s *OrganizationMembershipService) CountUserMemberships(userID jsonldb.ID) int {
+func (s *OrganizationMembershipService) CountUserMemberships(userID rid.ID) int {
 	count := 0
 	for range s.byUserID.Iter(userID) {
 		count++
@@ -208,7 +209,7 @@ func (s *OrganizationMembershipService) CountUserMemberships(userID jsonldb.ID) 
 }
 
 // CountOrgMemberships returns the number of members in an organization.
-func (s *OrganizationMembershipService) CountOrgMemberships(orgID jsonldb.ID) int {
+func (s *OrganizationMembershipService) CountOrgMemberships(orgID rid.ID) int {
 	count := 0
 	for range s.byOrgID.Iter(orgID) {
 		count++
@@ -217,7 +218,7 @@ func (s *OrganizationMembershipService) CountOrgMemberships(orgID jsonldb.ID) in
 }
 
 // Modify atomically modifies a membership.
-func (s *OrganizationMembershipService) Modify(id jsonldb.ID, fn func(m *OrganizationMembership) error) (*OrganizationMembership, error) {
+func (s *OrganizationMembershipService) Modify(id rid.ID, fn func(m *OrganizationMembership) error) (*OrganizationMembership, error) {
 	if id.IsZero() {
 		return nil, errOrgMembershipNotFound
 	}
@@ -225,7 +226,7 @@ func (s *OrganizationMembershipService) Modify(id jsonldb.ID, fn func(m *Organiz
 }
 
 // Delete removes a membership.
-func (s *OrganizationMembershipService) Delete(id jsonldb.ID) error {
+func (s *OrganizationMembershipService) Delete(id rid.ID) error {
 	if id.IsZero() {
 		return errOrgMembershipNotFound
 	}
@@ -239,7 +240,7 @@ func (s *OrganizationMembershipService) Delete(id jsonldb.ID) error {
 }
 
 // HasOwner checks if an organization has at least one owner.
-func (s *OrganizationMembershipService) HasOwner(orgID jsonldb.ID) bool {
+func (s *OrganizationMembershipService) HasOwner(orgID rid.ID) bool {
 	for m := range s.byOrgID.Iter(orgID) {
 		if m.Role == OrgRoleOwner {
 			return true

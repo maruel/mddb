@@ -17,7 +17,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ratelimit"
@@ -56,7 +56,7 @@ func commitDBIfMutating(ctx context.Context, r *http.Request, rootRepo *git.Root
 // authResult holds the result of JWT/session validation.
 type authResult struct {
 	user        *identity.User
-	sessionID   jsonldb.ID
+	sessionID   rid.ID
 	tokenString string
 }
 
@@ -166,7 +166,7 @@ func validateAuthWithContext(ctx context.Context, r *http.Request, svc *handlers
 // Returns an error string and HTTP status code if access is denied.
 func checkWSMembership(
 	user *identity.User,
-	wsID jsonldb.ID,
+	wsID rid.ID,
 	svc *handlers.Services,
 	requiredRole identity.WorkspaceRole,
 ) (errMsg string, statusCode int) {
@@ -342,14 +342,14 @@ func WrapAuth[In any, PtrIn interface {
 
 // WrapOrgAuth wraps an authenticated handler function for organization-scoped routes.
 // It validates JWT, checks organization membership with required role, and parses the request.
-// The function must have signature: func(context.Context, jsonldb.ID, *identity.User, *In) (*Out, error)
+// The function must have signature: func(context.Context, rid.ID, *identity.User, *In) (*Out, error)
 // where orgID is the organization ID from the path.
 // *In must implement dto.Validatable.
 func WrapOrgAuth[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
+	fn func(context.Context, rid.ID, *identity.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	requiredRole identity.OrganizationRole,
@@ -380,7 +380,7 @@ func WrapOrgAuth[In any, PtrIn interface {
 			http.Error(w, "Organization ID required", http.StatusBadRequest)
 			return
 		}
-		orgID, err := jsonldb.DecodeID(orgIDStr)
+		orgID, err := rid.DecodeID(orgIDStr)
 		if err != nil {
 			http.Error(w, "Invalid organization ID format", http.StatusBadRequest)
 			return
@@ -418,7 +418,7 @@ func WrapOrgAuth[In any, PtrIn interface {
 
 // WrapWSAuth wraps an authenticated handler function for workspace-scoped routes.
 // It validates JWT, checks workspace membership (or org admin access), and parses the request.
-// The function must have signature: func(context.Context, jsonldb.ID, *identity.User, *In) (*Out, error)
+// The function must have signature: func(context.Context, rid.ID, *identity.User, *In) (*Out, error)
 // where wsID is the workspace ID from the path, user is the authenticated user.
 // Org admins/owners automatically have admin access to workspaces within their org.
 // *In must implement dto.Validatable.
@@ -426,7 +426,7 @@ func WrapWSAuth[In any, PtrIn interface {
 	*In
 	dto.Validatable
 }, Out any](
-	fn func(context.Context, jsonldb.ID, *identity.User, PtrIn) (*Out, error),
+	fn func(context.Context, rid.ID, *identity.User, PtrIn) (*Out, error),
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	requiredRole identity.WorkspaceRole,
@@ -452,10 +452,10 @@ func WrapWSAuth[In any, PtrIn interface {
 		}
 
 		// Check workspace membership
-		var wsID jsonldb.ID
+		var wsID rid.ID
 		wsIDStr := r.PathValue("wsID")
 		if wsIDStr != "" {
-			wsID, err = jsonldb.DecodeID(wsIDStr)
+			wsID, err = rid.DecodeID(wsIDStr)
 			if err != nil {
 				http.Error(w, "Invalid workspace ID format", http.StatusBadRequest)
 				return
@@ -489,7 +489,7 @@ func WrapWSAuth[In any, PtrIn interface {
 
 // triggerAutoPush fires an async push if the request was mutating, successful,
 // and the workspace has auto-push enabled.
-func triggerAutoPush(svc *handlers.Services, method string, wsID jsonldb.ID, handlerErr error) {
+func triggerAutoPush(svc *handlers.Services, method string, wsID rid.ID, handlerErr error) {
 	if handlerErr != nil || !isMutating(method) || wsID.IsZero() || svc.SyncService == nil {
 		return
 	}
@@ -525,11 +525,11 @@ func WrapAuthRaw(
 		}
 
 		// Check workspace membership if wsID is in path
-		var wsID jsonldb.ID
+		var wsID rid.ID
 		wsIDStr := r.PathValue("wsID")
 		if wsIDStr != "" {
 			var err error
-			wsID, err = jsonldb.DecodeID(wsIDStr)
+			wsID, err = rid.DecodeID(wsIDStr)
 			if err != nil {
 				http.Error(w, "Invalid workspace ID format", http.StatusBadRequest)
 				return
@@ -624,7 +624,7 @@ var (
 // validateJWTAndSession extracts and validates the JWT token and session from the request.
 // Returns the user, session ID, token string, and any error.
 // If sessionService is nil, session validation is skipped (backwards compatible).
-func validateJWTAndSession(r *http.Request, userService *identity.UserService, sessionService *identity.SessionService, jwtSecret []byte) (*identity.User, jsonldb.ID, string, error) {
+func validateJWTAndSession(r *http.Request, userService *identity.UserService, sessionService *identity.SessionService, jwtSecret []byte) (*identity.User, rid.ID, string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return nil, 0, "", errUnauthorized
@@ -657,7 +657,7 @@ func validateJWTAndSession(r *http.Request, userService *identity.UserService, s
 		return nil, 0, "", errInvalidUserIDToken
 	}
 
-	userID, err := jsonldb.DecodeID(userIDStr)
+	userID, err := rid.DecodeID(userIDStr)
 	if err != nil {
 		return nil, 0, "", errInvalidUserIDFmt
 	}
@@ -668,10 +668,10 @@ func validateJWTAndSession(r *http.Request, userService *identity.UserService, s
 	}
 
 	// Validate session if sessionService is provided and token has session ID
-	var sessionID jsonldb.ID
+	var sessionID rid.ID
 	if sessionService != nil {
 		if sidStr, ok := claims["sid"].(string); ok && sidStr != "" {
-			sessionID, err = jsonldb.DecodeID(sidStr)
+			sessionID, err = rid.DecodeID(sidStr)
 			if err != nil {
 				return nil, 0, "", errInvalidToken
 			}
@@ -725,7 +725,7 @@ func populatePathParams(r *http.Request, input any) {
 	}
 
 	typ := elem.Type()
-	jsonldbIDType := reflect.TypeFor[jsonldb.ID]()
+	jsonldbIDType := reflect.TypeFor[rid.ID]()
 	for i := range typ.NumField() {
 		field := typ.Field(i)
 		tag := field.Tag.Get("path")
@@ -743,7 +743,7 @@ func populatePathParams(r *http.Request, input any) {
 		case field.Type.Kind() == reflect.String:
 			elem.Field(i).SetString(paramValue)
 		case field.Type == jsonldbIDType:
-			if id, err := jsonldb.DecodeID(paramValue); err == nil {
+			if id, err := rid.DecodeID(paramValue); err == nil {
 				elem.Field(i).Set(reflect.ValueOf(id))
 			}
 		}

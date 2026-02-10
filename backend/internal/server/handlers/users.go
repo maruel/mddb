@@ -5,7 +5,7 @@ package handlers
 import (
 	"context"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -16,7 +16,7 @@ type UserHandler struct {
 }
 
 // ListUsers returns all users in the organization.
-func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *identity.User, _ *dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
+func (h *UserHandler) ListUsers(ctx context.Context, orgID rid.ID, _ *identity.User, _ *dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
 	// Filter by organization membership and convert to response
 	var users []dto.UserResponse
 	for user := range h.Svc.User.Iter(0) {
@@ -36,7 +36,7 @@ func (h *UserHandler) ListUsers(ctx context.Context, orgID jsonldb.ID, _ *identi
 }
 
 // UpdateOrgMemberRole updates a user's organization role.
-func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID jsonldb.ID, _ *identity.User, req *dto.UpdateOrgMemberRoleRequest) (*dto.UserResponse, error) {
+func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID rid.ID, _ *identity.User, req *dto.UpdateOrgMemberRoleRequest) (*dto.UserResponse, error) {
 	if req.UserID.IsZero() || req.Role == "" {
 		return nil, dto.MissingField("user_id or role")
 	}
@@ -66,7 +66,7 @@ func (h *UserHandler) UpdateOrgMemberRole(ctx context.Context, orgID jsonldb.ID,
 
 // RemoveOrgMember removes a user from an organization and cascades to remove
 // all their workspace memberships within the organization.
-func (h *UserHandler) RemoveOrgMember(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.RemoveOrgMemberRequest) (*dto.OkResponse, error) {
+func (h *UserHandler) RemoveOrgMember(ctx context.Context, orgID rid.ID, user *identity.User, req *dto.RemoveOrgMemberRequest) (*dto.OkResponse, error) {
 	if req.UserID == user.ID {
 		return nil, dto.Forbidden("cannot remove yourself")
 	}
@@ -109,7 +109,7 @@ func (h *UserHandler) RemoveOrgMember(ctx context.Context, orgID jsonldb.ID, use
 }
 
 // UpdateWSMemberRole updates a user's workspace role.
-func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.UpdateWSMemberRoleRequest) (*dto.UserResponse, error) {
+func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID rid.ID, _ *identity.User, req *dto.UpdateWSMemberRoleRequest) (*dto.UserResponse, error) {
 	if req.UserID.IsZero() || req.Role == "" {
 		return nil, dto.MissingField("user_id or role")
 	}

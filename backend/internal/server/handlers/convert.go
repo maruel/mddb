@@ -3,7 +3,7 @@
 package handlers
 
 import (
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -111,7 +111,7 @@ func workspaceToResponse(w *identity.Workspace, memberCount int) *dto.WorkspaceR
 	return resp
 }
 
-func gitRemoteToResponse(wsID jsonldb.ID, g *identity.GitRemote) *dto.GitRemoteResponse {
+func gitRemoteToResponse(wsID rid.ID, g *identity.GitRemote) *dto.GitRemoteResponse {
 	return &dto.GitRemoteResponse{
 		WorkspaceID:    wsID,
 		URL:            g.URL,
@@ -354,9 +354,9 @@ func wsMembershipSettingsToEntity(s dto.WorkspaceMembershipSettings) identity.Wo
 // userSettingsToEntity converts DTO user settings to entity.
 // prev is used to preserve fields not exposed in the DTO (e.g. NotificationPrefs).
 func userSettingsToEntity(s dto.UserSettings, prev identity.UserSettings) identity.UserSettings {
-	wsIDs := make([]jsonldb.ID, 0, len(s.LastActiveWorkspaces))
+	wsIDs := make([]rid.ID, 0, len(s.LastActiveWorkspaces))
 	for _, idStr := range s.LastActiveWorkspaces {
-		if id, err := jsonldb.DecodeID(idStr); err == nil && !id.IsZero() {
+		if id, err := rid.DecodeID(idStr); err == nil && !id.IsZero() {
 			wsIDs = append(wsIDs, id)
 		}
 	}
@@ -419,7 +419,7 @@ type orgMembershipWithName struct {
 type wsMembershipWithName struct {
 	*identity.WorkspaceMembership
 	WorkspaceName  string
-	OrganizationID jsonldb.ID
+	OrganizationID rid.ID
 }
 
 // userWithMemberships wraps a user with their org and workspace memberships.
@@ -428,9 +428,9 @@ type userWithMemberships struct {
 	HasPassword    bool
 	OrgMemberships []orgMembershipWithName
 	WSMemberships  []wsMembershipWithName
-	CurrentOrgID   jsonldb.ID
+	CurrentOrgID   rid.ID
 	CurrentOrgRole identity.OrganizationRole
-	CurrentWSID    jsonldb.ID
+	CurrentWSID    rid.ID
 	CurrentWSRole  identity.WorkspaceRole
 }
 
@@ -503,7 +503,7 @@ func getUserWithMemberships(
 	wsMemService *identity.WorkspaceMembershipService,
 	orgService *identity.OrganizationService,
 	wsService *identity.WorkspaceService,
-	userID jsonldb.ID,
+	userID rid.ID,
 ) (*userWithMemberships, error) {
 	user, err := userService.Get(userID)
 	if err != nil {

@@ -1,4 +1,4 @@
-package jsonldb
+package rid
 
 import (
 	"encoding/json"

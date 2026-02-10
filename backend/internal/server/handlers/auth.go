@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/email"
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -24,7 +24,7 @@ type AuthHandler struct {
 
 	// Rate limiting for verification emails (1 per 10s per user)
 	verifyRateLimitMu sync.Mutex
-	verifyRateLimit   map[jsonldb.ID]time.Time
+	verifyRateLimit   map[rid.ID]time.Time
 }
 
 // NewAuthHandler creates a new auth handler.
@@ -32,7 +32,7 @@ func NewAuthHandler(svc *Services, cfg *Config) *AuthHandler {
 	return &AuthHandler{
 		svc:             svc,
 		cfg:             cfg,
-		verifyRateLimit: make(map[jsonldb.ID]time.Time),
+		verifyRateLimit: make(map[rid.ID]time.Time),
 	}
 }
 
@@ -275,7 +275,7 @@ func (h *AuthHandler) RevokeSession(ctx context.Context, user *identity.User, re
 func (h *AuthHandler) RevokeAllSessions(ctx context.Context, user *identity.User, _ *dto.RevokeAllSessionsRequest) (*dto.RevokeAllSessionsResponse, error) {
 	currentSessionID := reqctx.SessionID(ctx)
 
-	var toRevoke []jsonldb.ID
+	var toRevoke []rid.ID
 	for session := range h.svc.Session.GetActiveByUserID(user.ID) {
 		if session.ID != currentSessionID {
 			toRevoke = append(toRevoke, session.ID)
@@ -435,7 +435,7 @@ func (h *AuthHandler) VerifyEmail(ctx context.Context, req *dto.VerifyEmailReque
 
 // sendVerificationEmailAsync sends a verification email in the background.
 // Errors are logged but don't affect the caller.
-func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID jsonldb.ID, toEmail, name string, locale email.Locale) {
+func (h *AuthHandler) sendVerificationEmailAsync(ctx context.Context, userID rid.ID, toEmail, name string, locale email.Locale) {
 	go func() {
 		// Create verification token
 		verification, err := h.svc.EmailVerif.Create(userID, toEmail)

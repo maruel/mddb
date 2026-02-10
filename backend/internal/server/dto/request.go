@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"unicode"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 )
 
 // validateEmail checks if the email has valid format.
@@ -171,10 +171,10 @@ func (r *GetMeRequest) Validate() error {
 // CreatePageRequest is a request to create a page under a parent node.
 // The parent ID is in the path ({id}); use "0" for root.
 type CreatePageRequest struct {
-	WsID     jsonldb.ID `path:"wsID" tstype:"-"`
-	ParentID jsonldb.ID `path:"id" tstype:"-"` // Parent node ID; 0 = root
-	Title    string     `json:"title"`
-	Content  string     `json:"content,omitempty"`
+	WsID     rid.ID `path:"wsID" tstype:"-"`
+	ParentID rid.ID `path:"id" tstype:"-"` // Parent node ID; 0 = root
+	Title    string `json:"title"`
+	Content  string `json:"content,omitempty"`
 }
 
 // Validate validates the create page request fields.
@@ -191,8 +191,8 @@ func (r *CreatePageRequest) Validate() error {
 
 // GetPageRequest is a request to get a page's content.
 type GetPageRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
+	ID   rid.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the get page request fields.
@@ -206,10 +206,10 @@ func (r *GetPageRequest) Validate() error {
 
 // UpdatePageRequest is a request to update a page's content.
 type UpdatePageRequest struct {
-	WsID    jsonldb.ID `path:"wsID" tstype:"-"`
-	ID      jsonldb.ID `path:"id" tstype:"-"`
-	Title   string     `json:"title"`
-	Content string     `json:"content"`
+	WsID    rid.ID `path:"wsID" tstype:"-"`
+	ID      rid.ID `path:"id" tstype:"-"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
 }
 
 // Validate validates the update page request fields.
@@ -227,8 +227,8 @@ func (r *UpdatePageRequest) Validate() error {
 // DeletePageRequest is a request to delete a page from a node.
 // This removes the index.md but keeps the node directory if table data exists.
 type DeletePageRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
+	ID   rid.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the delete page request fields.
@@ -244,8 +244,8 @@ func (r *DeletePageRequest) Validate() error {
 
 // DeleteNodeRequest is a request to delete a node.
 type DeleteNodeRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
+	ID   rid.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the delete node request fields.
@@ -261,9 +261,9 @@ func (r *DeleteNodeRequest) Validate() error {
 
 // ListNodeVersionsRequest is a request to list node version history.
 type ListNodeVersionsRequest struct {
-	WsID  jsonldb.ID `path:"wsID" tstype:"-"`
-	ID    jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
-	Limit int        `query:"limit"`        // Max commits to return (1-1000, default 1000).
+	WsID  rid.ID `path:"wsID" tstype:"-"`
+	ID    rid.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	Limit int    `query:"limit"`        // Max commits to return (1-1000, default 1000).
 }
 
 // Validate validates the list node versions request fields.
@@ -277,9 +277,9 @@ func (r *ListNodeVersionsRequest) Validate() error {
 
 // GetNodeVersionRequest is a request to get a specific node version.
 type GetNodeVersionRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
-	Hash string     `path:"hash" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
+	ID   rid.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	Hash string `path:"hash" tstype:"-"`
 }
 
 // Validate validates the get node version request fields.
@@ -299,8 +299,8 @@ func (r *GetNodeVersionRequest) Validate() error {
 // GetTableRequest is a request to get a table.
 // Now used for /nodes/{id}/table endpoint.
 type GetTableRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
+	ID   rid.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the get table request fields.
@@ -315,8 +315,8 @@ func (r *GetTableRequest) Validate() error {
 // CreateTableRequest is a request to create a table under a parent node.
 // The parent ID is in the path ({id}); use "0" for root.
 type CreateTableRequest struct {
-	WsID       jsonldb.ID `path:"wsID" tstype:"-"`
-	ParentID   jsonldb.ID `path:"id" tstype:"-"` // Parent node ID; 0 = root
+	WsID       rid.ID     `path:"wsID" tstype:"-"`
+	ParentID   rid.ID     `path:"id" tstype:"-"` // Parent node ID; 0 = root
 	Title      string     `json:"title"`
 	Properties []Property `json:"properties"`
 }
@@ -336,8 +336,8 @@ func (r *CreateTableRequest) Validate() error {
 // UpdateTableRequest is a request to update a table.
 // Now used for /nodes/{id}/table endpoint.
 type UpdateTableRequest struct {
-	WsID       jsonldb.ID `path:"wsID" tstype:"-"`
-	ID         jsonldb.ID `path:"id" tstype:"-"`
+	WsID       rid.ID     `path:"wsID" tstype:"-"`
+	ID         rid.ID     `path:"id" tstype:"-"`
 	Title      string     `json:"title"`
 	Properties []Property `json:"properties"`
 }
@@ -357,8 +357,8 @@ func (r *UpdateTableRequest) Validate() error {
 // DeleteTableRequest is a request to delete a table from a node.
 // This removes the metadata.json and data.jsonl but keeps the node directory if page exists.
 type DeleteTableRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
+	ID   rid.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the delete table request fields.
@@ -374,10 +374,10 @@ func (r *DeleteTableRequest) Validate() error {
 
 // CreateViewRequest is a request to create a new view for a table.
 type CreateViewRequest struct {
-	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID jsonldb.ID `path:"id" tstype:"-"`
-	Name   string     `json:"name"`
-	Type   ViewType   `json:"type"`
+	WsID   rid.ID   `path:"wsID" tstype:"-"`
+	NodeID rid.ID   `path:"id" tstype:"-"`
+	Name   string   `json:"name"`
+	Type   ViewType `json:"type"`
 }
 
 // Validate validates the create view request fields.
@@ -402,9 +402,9 @@ func (r *CreateViewRequest) Validate() error {
 
 // UpdateViewRequest is a request to update an existing view.
 type UpdateViewRequest struct {
-	WsID    jsonldb.ID   `path:"wsID" tstype:"-"`
-	NodeID  jsonldb.ID   `path:"id" tstype:"-"`
-	ViewID  jsonldb.ID   `path:"viewID" tstype:"-"`
+	WsID    rid.ID       `path:"wsID" tstype:"-"`
+	NodeID  rid.ID       `path:"id" tstype:"-"`
+	ViewID  rid.ID       `path:"viewID" tstype:"-"`
 	Name    string       `json:"name,omitempty"`
 	Type    ViewType     `json:"type,omitempty"`
 	Columns []ViewColumn `json:"columns,omitempty"`
@@ -440,9 +440,9 @@ func (r *UpdateViewRequest) Validate() error {
 
 // DeleteViewRequest is a request to delete a view.
 type DeleteViewRequest struct {
-	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID jsonldb.ID `path:"id" tstype:"-"`
-	ViewID jsonldb.ID `path:"viewID" tstype:"-"`
+	WsID   rid.ID `path:"wsID" tstype:"-"`
+	NodeID rid.ID `path:"id" tstype:"-"`
+	ViewID rid.ID `path:"viewID" tstype:"-"`
 }
 
 // Validate validates the delete view request fields.
@@ -462,13 +462,13 @@ func (r *DeleteViewRequest) Validate() error {
 // ListRecordsRequest is a request to list records in a table.
 // Now used for /nodes/{id}/table/records endpoint.
 type ListRecordsRequest struct {
-	WsID    jsonldb.ID `path:"wsID" tstype:"-"`
-	ID      jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
-	ViewID  jsonldb.ID `query:"view_id"`      // Optional: apply saved view configuration
-	Filters string     `query:"filters"`      // Optional: JSON-encoded ad-hoc filters
-	Sorts   string     `query:"sorts"`        // Optional: JSON-encoded ad-hoc sorts
-	Offset  int        `query:"offset"`
-	Limit   int        `query:"limit"`
+	WsID    rid.ID `path:"wsID" tstype:"-"`
+	ID      rid.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	ViewID  rid.ID `query:"view_id"`      // Optional: apply saved view configuration
+	Filters string `query:"filters"`      // Optional: JSON-encoded ad-hoc filters
+	Sorts   string `query:"sorts"`        // Optional: JSON-encoded ad-hoc sorts
+	Offset  int    `query:"offset"`
+	Limit   int    `query:"limit"`
 }
 
 // Validate validates the list records request fields.
@@ -483,8 +483,8 @@ func (r *ListRecordsRequest) Validate() error {
 // CreateRecordRequest is a request to create a record.
 // Now used for /nodes/{id}/table/records/create endpoint.
 type CreateRecordRequest struct {
-	WsID jsonldb.ID     `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID     `path:"id" tstype:"-"` // Node ID; 0 = root
+	WsID rid.ID         `path:"wsID" tstype:"-"`
+	ID   rid.ID         `path:"id" tstype:"-"` // Node ID; 0 = root
 	Data map[string]any `json:"data"`
 }
 
@@ -500,9 +500,9 @@ func (r *CreateRecordRequest) Validate() error {
 // UpdateRecordRequest is a request to update a record.
 // Now used for /nodes/{id}/table/records/{rid} endpoint.
 type UpdateRecordRequest struct {
-	WsID jsonldb.ID     `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID     `path:"id" tstype:"-"` // Node ID; 0 = root
-	RID  jsonldb.ID     `path:"rid" tstype:"-"`
+	WsID rid.ID         `path:"wsID" tstype:"-"`
+	ID   rid.ID         `path:"id" tstype:"-"` // Node ID; 0 = root
+	RID  rid.ID         `path:"rid" tstype:"-"`
 	Data map[string]any `json:"data"`
 }
 
@@ -521,9 +521,9 @@ func (r *UpdateRecordRequest) Validate() error {
 // GetRecordRequest is a request to get a record.
 // Now used for /nodes/{id}/table/records/{rid} endpoint.
 type GetRecordRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
-	RID  jsonldb.ID `path:"rid" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
+	ID   rid.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	RID  rid.ID `path:"rid" tstype:"-"`
 }
 
 // Validate validates the get record request fields.
@@ -541,9 +541,9 @@ func (r *GetRecordRequest) Validate() error {
 // DeleteRecordRequest is a request to delete a record.
 // Now used for /nodes/{id}/table/records/{rid}/delete endpoint.
 type DeleteRecordRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
-	RID  jsonldb.ID `path:"rid" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
+	ID   rid.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	RID  rid.ID `path:"rid" tstype:"-"`
 }
 
 // Validate validates the delete record request fields.
@@ -562,13 +562,13 @@ func (r *DeleteRecordRequest) Validate() error {
 
 // ListNodesRequest is a request to list nodes.
 type ListNodesRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
 }
 
 // GetNodeTitlesRequest is a request to get titles for multiple nodes.
 type GetNodeTitlesRequest struct {
-	WsID jsonldb.ID     `path:"wsID" tstype:"-"`
-	IDs  jsonldb.IDList `query:"ids" tstype:"string"` // Comma-separated node IDs
+	WsID rid.ID     `path:"wsID" tstype:"-"`
+	IDs  rid.IDList `query:"ids" tstype:"string"` // Comma-separated node IDs
 }
 
 // Validate validates the get node titles request fields.
@@ -592,8 +592,8 @@ func (r *ListNodesRequest) Validate() error {
 
 // GetNodeRequest is a request to get a node.
 type GetNodeRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
-	ID   jsonldb.ID `path:"id" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
+	ID   rid.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the get node request fields.
@@ -607,8 +607,8 @@ func (r *GetNodeRequest) Validate() error {
 
 // ListNodeChildrenRequest is a request to list children of a node.
 type ListNodeChildrenRequest struct {
-	WsID     jsonldb.ID `path:"wsID" tstype:"-"`
-	ParentID jsonldb.ID `path:"id" tstype:"-"` // Parent node ID; 0 = root
+	WsID     rid.ID `path:"wsID" tstype:"-"`
+	ParentID rid.ID `path:"id" tstype:"-"` // Parent node ID; 0 = root
 }
 
 // Validate validates the list children request fields.
@@ -622,9 +622,9 @@ func (r *ListNodeChildrenRequest) Validate() error {
 
 // MoveNodeRequest is a request to move a node to a new parent.
 type MoveNodeRequest struct {
-	WsID        jsonldb.ID `path:"wsID" tstype:"-"`
-	ID          jsonldb.ID `path:"id" tstype:"-"`
-	NewParentID jsonldb.ID `json:"new_parent_id"` // New parent node ID; 0 = root
+	WsID        rid.ID `path:"wsID" tstype:"-"`
+	ID          rid.ID `path:"id" tstype:"-"`
+	NewParentID rid.ID `json:"new_parent_id"` // New parent node ID; 0 = root
 }
 
 // Validate validates the move node request fields.
@@ -642,8 +642,8 @@ func (r *MoveNodeRequest) Validate() error {
 
 // ListNodeAssetsRequest is a request to list assets in a node.
 type ListNodeAssetsRequest struct {
-	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	WsID   rid.ID `path:"wsID" tstype:"-"`
+	NodeID rid.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 }
 
 // Validate validates the list node assets request fields.
@@ -657,8 +657,8 @@ func (r *ListNodeAssetsRequest) Validate() error {
 
 // UploadNodeAssetRequest is a request to upload an asset to a node.
 type UploadNodeAssetRequest struct {
-	WsID   jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	WsID   rid.ID `path:"wsID" tstype:"-"`
+	NodeID rid.ID `path:"id" tstype:"-"` // Node ID; 0 = root
 }
 
 // Validate validates the upload node asset request fields.
@@ -672,9 +672,9 @@ func (r *UploadNodeAssetRequest) Validate() error {
 
 // DeleteNodeAssetRequest is a request to delete an asset from a node.
 type DeleteNodeAssetRequest struct {
-	WsID      jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID    jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
-	AssetName string     `path:"name" tstype:"-"`
+	WsID      rid.ID `path:"wsID" tstype:"-"`
+	NodeID    rid.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	AssetName string `path:"name" tstype:"-"`
 }
 
 // Validate validates the delete node asset request fields.
@@ -691,9 +691,9 @@ func (r *DeleteNodeAssetRequest) Validate() error {
 
 // ServeAssetRequest is a request to serve an asset file directly.
 type ServeAssetRequest struct {
-	WsID      jsonldb.ID `path:"wsID" tstype:"-"`
-	NodeID    jsonldb.ID `path:"id" tstype:"-"` // Node ID; 0 = root
-	AssetName string     `path:"name" tstype:"-"`
+	WsID      rid.ID `path:"wsID" tstype:"-"`
+	NodeID    rid.ID `path:"id" tstype:"-"` // Node ID; 0 = root
+	AssetName string `path:"name" tstype:"-"`
 }
 
 // Validate validates the serve asset request fields.
@@ -712,12 +712,12 @@ func (r *ServeAssetRequest) Validate() error {
 
 // SearchRequest is a request to search pages and tables.
 type SearchRequest struct {
-	WsID        jsonldb.ID `path:"wsID" tstype:"-"`
-	Query       string     `json:"query"`
-	Limit       int        `json:"limit,omitempty"`
-	MatchTitle  bool       `json:"match_title,omitempty"`
-	MatchBody   bool       `json:"match_body,omitempty"`
-	MatchFields bool       `json:"match_fields,omitempty"`
+	WsID        rid.ID `path:"wsID" tstype:"-"`
+	Query       string `json:"query"`
+	Limit       int    `json:"limit,omitempty"`
+	MatchTitle  bool   `json:"match_title,omitempty"`
+	MatchBody   bool   `json:"match_body,omitempty"`
+	MatchFields bool   `json:"match_fields,omitempty"`
 }
 
 // Validate validates the search request fields.
@@ -735,7 +735,7 @@ func (r *SearchRequest) Validate() error {
 
 // CreateOrgInvitationRequest is a request to create an organization invitation.
 type CreateOrgInvitationRequest struct {
-	OrgID  jsonldb.ID       `path:"orgID" tstype:"-"`
+	OrgID  rid.ID           `path:"orgID" tstype:"-"`
 	Email  string           `json:"email"`
 	Role   OrganizationRole `json:"role"`
 	Locale string           `json:"locale,omitempty"` // Optional: language for invitation email (en, fr, de, es)
@@ -743,7 +743,7 @@ type CreateOrgInvitationRequest struct {
 
 // CreateWSInvitationRequest is a request to create a workspace invitation.
 type CreateWSInvitationRequest struct {
-	WsID   jsonldb.ID    `path:"wsID" tstype:"-"`
+	WsID   rid.ID        `path:"wsID" tstype:"-"`
 	Email  string        `json:"email"`
 	Role   WorkspaceRole `json:"role"`
 	Locale string        `json:"locale,omitempty"` // Optional: language for invitation email (en, fr, de, es)
@@ -779,7 +779,7 @@ func (r *CreateWSInvitationRequest) Validate() error {
 
 // ListOrgInvitationsRequest is a request to list invitations for an organization.
 type ListOrgInvitationsRequest struct {
-	OrgID jsonldb.ID `path:"orgID" tstype:"-"`
+	OrgID rid.ID `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the list org invitations request fields.
@@ -792,7 +792,7 @@ func (r *ListOrgInvitationsRequest) Validate() error {
 
 // ListWSInvitationsRequest is a request to list invitations for a workspace.
 type ListWSInvitationsRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
 }
 
 // Validate validates the list workspace invitations request fields.
@@ -828,7 +828,7 @@ func (r *AcceptInvitationRequest) Validate() error {
 
 // SwitchWorkspaceRequest is a request to switch active workspace.
 type SwitchWorkspaceRequest struct {
-	WsID jsonldb.ID `json:"ws_id"`
+	WsID rid.ID `json:"ws_id"`
 }
 
 // Validate validates the switch workspace request fields.
@@ -841,7 +841,7 @@ func (r *SwitchWorkspaceRequest) Validate() error {
 
 // UpdateWSMembershipSettingsRequest is a request to update user preferences within a workspace.
 type UpdateWSMembershipSettingsRequest struct {
-	WsID     jsonldb.ID                  `path:"wsID" tstype:"-"`
+	WsID     rid.ID                      `path:"wsID" tstype:"-"`
 	Settings WorkspaceMembershipSettings `json:"settings"`
 }
 
@@ -857,7 +857,7 @@ func (r *UpdateWSMembershipSettingsRequest) Validate() error {
 
 // UpdateOrgPreferencesRequest is a request to update organization-wide preferences.
 type UpdateOrgPreferencesRequest struct {
-	OrgID    jsonldb.ID            `path:"orgID" tstype:"-"`
+	OrgID    rid.ID                `path:"orgID" tstype:"-"`
 	Settings *OrganizationSettings `json:"settings,omitempty"`
 	Quotas   *OrganizationQuotas   `json:"quotas,omitempty"`
 }
@@ -889,7 +889,7 @@ func (r *UpdateOrgPreferencesRequest) Validate() error {
 
 // GetOrganizationRequest is a request to get organization details.
 type GetOrganizationRequest struct {
-	OrgID jsonldb.ID `path:"orgID" tstype:"-"`
+	OrgID rid.ID `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the get organization request fields.
@@ -902,8 +902,8 @@ func (r *GetOrganizationRequest) Validate() error {
 
 // UpdateOrganizationRequest is a request to update organization details.
 type UpdateOrganizationRequest struct {
-	OrgID jsonldb.ID `path:"orgID" tstype:"-"`
-	Name  string     `json:"name,omitempty"`
+	OrgID rid.ID `path:"orgID" tstype:"-"`
+	Name  string `json:"name,omitempty"`
 }
 
 // Validate validates the update organization request fields.
@@ -932,8 +932,8 @@ func (r *CreateOrganizationRequest) Validate() error {
 
 // CreateWorkspaceRequest is a request to create a new workspace within an organization.
 type CreateWorkspaceRequest struct {
-	OrgID jsonldb.ID `path:"orgID" tstype:"-"`
-	Name  string     `json:"name"`
+	OrgID rid.ID `path:"orgID" tstype:"-"`
+	Name  string `json:"name"`
 }
 
 // Validate validates the create workspace request fields.
@@ -949,7 +949,7 @@ func (r *CreateWorkspaceRequest) Validate() error {
 
 // GetWorkspaceRequest is a request to get workspace details.
 type GetWorkspaceRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
 }
 
 // Validate validates the get workspace request fields.
@@ -962,7 +962,7 @@ func (r *GetWorkspaceRequest) Validate() error {
 
 // UpdateWorkspaceRequest is a request to update workspace details.
 type UpdateWorkspaceRequest struct {
-	WsID     jsonldb.ID         `path:"wsID" tstype:"-"`
+	WsID     rid.ID             `path:"wsID" tstype:"-"`
 	Name     string             `json:"name,omitempty"`
 	Quotas   *WorkspaceQuotas   `json:"quotas,omitempty"`
 	Settings *WorkspaceSettings `json:"settings,omitempty"`
@@ -990,7 +990,7 @@ func (r *UpdateWorkspaceRequest) Validate() error {
 
 // GetGitRemoteRequest is a request to get the git remote for a workspace.
 type GetGitRemoteRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
 }
 
 // Validate validates the get git remote request fields.
@@ -1003,11 +1003,11 @@ func (r *GetGitRemoteRequest) Validate() error {
 
 // UpdateGitRemoteRequest is a request to set (create or update) the git remote for a workspace.
 type UpdateGitRemoteRequest struct {
-	WsID     jsonldb.ID `path:"wsID" tstype:"-"`
-	URL      string     `json:"url"`
-	Type     string     `json:"type"`      // github, gitlab, custom
-	AuthType string     `json:"auth_type"` // token, ssh
-	Token    string     `json:"token,omitempty"`
+	WsID     rid.ID `path:"wsID" tstype:"-"`
+	URL      string `json:"url"`
+	Type     string `json:"type"`      // github, gitlab, custom
+	AuthType string `json:"auth_type"` // token, ssh
+	Token    string `json:"token,omitempty"`
 }
 
 // Validate validates the set git remote request fields.
@@ -1029,7 +1029,7 @@ func (r *UpdateGitRemoteRequest) Validate() error {
 
 // DeleteGitRequest is a request to delete the git remote for a workspace.
 type DeleteGitRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
 }
 
 // Validate validates the delete git remote request fields.
@@ -1042,7 +1042,7 @@ func (r *DeleteGitRequest) Validate() error {
 
 // PushGitRequest is a request to push to the git remote.
 type PushGitRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
 }
 
 // Validate validates the push git remote request fields.
@@ -1055,7 +1055,7 @@ func (r *PushGitRequest) Validate() error {
 
 // PullGitRequest is a request to pull from the git remote.
 type PullGitRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
 }
 
 // Validate validates the pull git remote request fields.
@@ -1068,7 +1068,7 @@ func (r *PullGitRequest) Validate() error {
 
 // GetSyncStatusRequest is a request to get the sync status for a workspace.
 type GetSyncStatusRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
 }
 
 // Validate validates the get sync status request fields.
@@ -1081,11 +1081,11 @@ func (r *GetSyncStatusRequest) Validate() error {
 
 // SetupGitHubAppRemoteRequest is a request to configure a GitHub App-based remote.
 type SetupGitHubAppRemoteRequest struct {
-	WsID           jsonldb.ID `path:"wsID" tstype:"-"`
-	InstallationID int64      `json:"installation_id"`
-	RepoOwner      string     `json:"repo_owner"`
-	RepoName       string     `json:"repo_name"`
-	Branch         string     `json:"branch"`
+	WsID           rid.ID `path:"wsID" tstype:"-"`
+	InstallationID int64  `json:"installation_id"`
+	RepoOwner      string `json:"repo_owner"`
+	RepoName       string `json:"repo_name"`
+	Branch         string `json:"branch"`
 }
 
 // Validate validates the setup GitHub App remote request fields.
@@ -1258,7 +1258,7 @@ func (r *ListSessionsRequest) Validate() error {
 
 // RevokeSessionRequest is a request to revoke a specific session.
 type RevokeSessionRequest struct {
-	SessionID jsonldb.ID `json:"session_id"`
+	SessionID rid.ID `json:"session_id"`
 }
 
 // Validate validates the revoke session request fields.
@@ -1281,7 +1281,7 @@ func (r *RevokeAllSessionsRequest) Validate() error {
 
 // ListUsersRequest is a request to list users.
 type ListUsersRequest struct {
-	OrgID jsonldb.ID `path:"orgID" tstype:"-"`
+	OrgID rid.ID `path:"orgID" tstype:"-"`
 }
 
 // Validate validates the list users request fields.
@@ -1294,8 +1294,8 @@ func (r *ListUsersRequest) Validate() error {
 
 // UpdateOrgMemberRoleRequest is a request to update a user's organization role.
 type UpdateOrgMemberRoleRequest struct {
-	OrgID  jsonldb.ID       `path:"orgID" tstype:"-"`
-	UserID jsonldb.ID       `json:"user_id"`
+	OrgID  rid.ID           `path:"orgID" tstype:"-"`
+	UserID rid.ID           `json:"user_id"`
 	Role   OrganizationRole `json:"role"`
 }
 
@@ -1315,8 +1315,8 @@ func (r *UpdateOrgMemberRoleRequest) Validate() error {
 
 // RemoveOrgMemberRequest is a request to remove a user from an organization.
 type RemoveOrgMemberRequest struct {
-	OrgID  jsonldb.ID `path:"orgID" tstype:"-"`
-	UserID jsonldb.ID `json:"user_id"`
+	OrgID  rid.ID `path:"orgID" tstype:"-"`
+	UserID rid.ID `json:"user_id"`
 }
 
 // Validate validates the remove org member request fields.
@@ -1332,8 +1332,8 @@ func (r *RemoveOrgMemberRequest) Validate() error {
 
 // UpdateWSMemberRoleRequest is a request to update a user's workspace role.
 type UpdateWSMemberRoleRequest struct {
-	WsID   jsonldb.ID    `path:"wsID" tstype:"-"`
-	UserID jsonldb.ID    `json:"user_id"`
+	WsID   rid.ID        `path:"wsID" tstype:"-"`
+	UserID rid.ID        `json:"user_id"`
 	Role   WorkspaceRole `json:"role"`
 }
 
@@ -1427,8 +1427,8 @@ func (r *UpdateServerConfigRequest) Validate() error {
 
 // NotionImportRequest is a request to start a Notion import into a new workspace.
 type NotionImportRequest struct {
-	OrgID       jsonldb.ID `path:"orgID" tstype:"-"`
-	NotionToken string     `json:"notion_token"`
+	OrgID       rid.ID `path:"orgID" tstype:"-"`
+	NotionToken string `json:"notion_token"`
 }
 
 // Validate validates the notion import request fields.
@@ -1445,8 +1445,8 @@ func (r *NotionImportRequest) Validate() error {
 
 // NotionImportStatusRequest is a request to get the status of a Notion import.
 type NotionImportStatusRequest struct {
-	OrgID      jsonldb.ID `path:"orgID" tstype:"-"`
-	ImportWsID jsonldb.ID `path:"importWsID" json:"-"`
+	OrgID      rid.ID `path:"orgID" tstype:"-"`
+	ImportWsID rid.ID `path:"importWsID" json:"-"`
 }
 
 // Validate validates the notion import status request fields.
@@ -1462,7 +1462,7 @@ func (r *NotionImportStatusRequest) Validate() error {
 
 // NotionImportCancelRequest is a request to cancel a running Notion import.
 type NotionImportCancelRequest struct {
-	WsID jsonldb.ID `path:"wsID" tstype:"-"`
+	WsID rid.ID `path:"wsID" tstype:"-"`
 }
 
 // Validate validates the notion import cancel request fields.
@@ -1497,7 +1497,7 @@ func (r *GetUnreadCountRequest) Validate() error {
 
 // MarkNotificationReadRequest marks a single notification as read.
 type MarkNotificationReadRequest struct {
-	ID jsonldb.ID `path:"id" tstype:"-"`
+	ID rid.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the mark notification read request.
@@ -1518,7 +1518,7 @@ func (r *MarkAllNotificationsReadRequest) Validate() error {
 
 // DeleteNotificationRequest deletes a single notification.
 type DeleteNotificationRequest struct {
-	ID jsonldb.ID `path:"id" tstype:"-"`
+	ID rid.ID `path:"id" tstype:"-"`
 }
 
 // Validate validates the delete notification request.

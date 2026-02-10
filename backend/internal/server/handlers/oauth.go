@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/server/reqctx"
 	"github.com/maruel/mddb/backend/internal/storage"
@@ -161,14 +161,14 @@ func (h *OAuthHandler) UnlinkOAuth(_ context.Context, user *identity.User, req *
 }
 
 // generateLinkingState creates an OAuth state for linking that includes the user ID.
-func generateLinkingState(userID jsonldb.ID, provider identity.OAuthProvider) string {
+func generateLinkingState(userID rid.ID, provider identity.OAuthProvider) string {
 	randomPart, _ := utils.GenerateToken(16)
 	return fmt.Sprintf("%s%s:%s:%s", linkingStatePrefix, userID.String(), string(provider), randomPart)
 }
 
 // parseLinkingState parses a linking state and returns the user ID and provider.
 // Returns zero ID if the state is not a linking state.
-func parseLinkingState(state string) (jsonldb.ID, identity.OAuthProvider) {
+func parseLinkingState(state string) (rid.ID, identity.OAuthProvider) {
 	if !strings.HasPrefix(state, linkingStatePrefix) {
 		return 0, ""
 	}
@@ -177,7 +177,7 @@ func parseLinkingState(state string) (jsonldb.ID, identity.OAuthProvider) {
 	if len(parts) < 2 {
 		return 0, ""
 	}
-	userID, err := jsonldb.DecodeID(parts[0])
+	userID, err := rid.DecodeID(parts[0])
 	if err != nil {
 		return 0, ""
 	}

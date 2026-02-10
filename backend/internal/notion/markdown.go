@@ -6,18 +6,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 )
 
 // MarkdownConverter converts Notion blocks to markdown with optional asset downloading.
 type MarkdownConverter struct {
 	assets *AssetDownloader
-	nodeID jsonldb.ID
+	nodeID rid.ID
 	mapper *Mapper // For resolving child page/database links
 }
 
 // NewMarkdownConverter creates a converter, optionally with asset downloading.
-func NewMarkdownConverter(assets *AssetDownloader, nodeID jsonldb.ID) *MarkdownConverter {
+func NewMarkdownConverter(assets *AssetDownloader, nodeID rid.ID) *MarkdownConverter {
 	return &MarkdownConverter{
 		assets: assets,
 		nodeID: nodeID,
@@ -25,7 +25,7 @@ func NewMarkdownConverter(assets *AssetDownloader, nodeID jsonldb.ID) *MarkdownC
 }
 
 // NewMarkdownConverterWithLinks creates a converter with asset downloading and link resolution.
-func NewMarkdownConverterWithLinks(assets *AssetDownloader, nodeID jsonldb.ID, mapper *Mapper) *MarkdownConverter {
+func NewMarkdownConverterWithLinks(assets *AssetDownloader, nodeID rid.ID, mapper *Mapper) *MarkdownConverter {
 	return &MarkdownConverter{
 		assets: assets,
 		nodeID: nodeID,

@@ -2,14 +2,14 @@
 
 package content
 
-import "github.com/maruel/mddb/backend/internal/jsonldb"
+import "github.com/maruel/mddb/backend/internal/rid"
 
 // View represents a saved table view configuration.
 type View struct {
-	ID      jsonldb.ID `json:"id" jsonschema:"description=Unique view identifier"`
-	Name    string     `json:"name" jsonschema:"description=View display name"`
-	Type    ViewType   `json:"type" jsonschema:"description=View layout type (table/board/gallery/list/calendar)"`
-	Default bool       `json:"default,omitempty" jsonschema:"description=Whether this is the default view"`
+	ID      rid.ID   `json:"id" jsonschema:"description=Unique view identifier"`
+	Name    string   `json:"name" jsonschema:"description=View display name"`
+	Type    ViewType `json:"type" jsonschema:"description=View layout type (table/board/gallery/list/calendar)"`
+	Default bool     `json:"default,omitempty" jsonschema:"description=Whether this is the default view"`
 
 	// Display configuration
 	Columns []ViewColumn `json:"columns,omitempty" jsonschema:"description=Column visibility and ordering"`
@@ -21,7 +21,7 @@ type View struct {
 }
 
 // GetID returns the View's ID.
-func (v *View) GetID() jsonldb.ID {
+func (v *View) GetID() rid.ID {
 	return v.ID
 }
 

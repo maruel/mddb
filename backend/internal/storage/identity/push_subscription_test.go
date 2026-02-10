@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 )
 
 func TestPushSubscriptionService(t *testing.T) {
@@ -16,7 +16,7 @@ func TestPushSubscriptionService(t *testing.T) {
 		t.Fatalf("NewPushSubscriptionService failed: %v", err)
 	}
 
-	userID := jsonldb.NewID()
+	userID := rid.NewID()
 
 	t.Run("Create", func(t *testing.T) {
 		sub, err := svc.Create(userID, "https://push.example.com/1", "p256dh-key", "auth-secret")
@@ -62,8 +62,8 @@ func TestPushSubscriptionService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewPushSubscriptionService failed: %v", err)
 		}
-		uid := jsonldb.NewID()
-		otherUID := jsonldb.NewID()
+		uid := rid.NewID()
+		otherUID := rid.NewID()
 
 		if _, err := svc2.Create(uid, "https://a.com", "k1", "a1"); err != nil {
 			t.Fatalf("Create failed: %v", err)
@@ -89,7 +89,7 @@ func TestPushSubscriptionService(t *testing.T) {
 		if err != nil {
 			t.Fatalf("NewPushSubscriptionService failed: %v", err)
 		}
-		uid := jsonldb.NewID()
+		uid := rid.NewID()
 		endpoint := "https://push.example.com/delete-ep"
 		if _, err := svc2.Create(uid, endpoint, "k", "a"); err != nil {
 			t.Fatalf("Create failed: %v", err)
@@ -133,22 +133,22 @@ func TestPushSubscriptionService(t *testing.T) {
 		}{
 			{
 				name:    "valid",
-				sub:     &PushSubscription{ID: jsonldb.NewID(), UserID: jsonldb.NewID(), Endpoint: "https://push.example.com"},
+				sub:     &PushSubscription{ID: rid.NewID(), UserID: rid.NewID(), Endpoint: "https://push.example.com"},
 				wantErr: false,
 			},
 			{
 				name:    "missing_id",
-				sub:     &PushSubscription{UserID: jsonldb.NewID(), Endpoint: "https://push.example.com"},
+				sub:     &PushSubscription{UserID: rid.NewID(), Endpoint: "https://push.example.com"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_user_id",
-				sub:     &PushSubscription{ID: jsonldb.NewID(), Endpoint: "https://push.example.com"},
+				sub:     &PushSubscription{ID: rid.NewID(), Endpoint: "https://push.example.com"},
 				wantErr: true,
 			},
 			{
 				name:    "missing_endpoint",
-				sub:     &PushSubscription{ID: jsonldb.NewID(), UserID: jsonldb.NewID()},
+				sub:     &PushSubscription{ID: rid.NewID(), UserID: rid.NewID()},
 				wantErr: true,
 			},
 		}

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -18,7 +18,7 @@ func TestEmailVerificationService(t *testing.T) {
 		t.Fatalf("NewEmailVerificationService failed: %v", err)
 	}
 
-	userID := jsonldb.NewID()
+	userID := rid.NewID()
 	email := "test@example.com"
 
 	t.Run("Create", func(t *testing.T) {
@@ -82,7 +82,7 @@ func TestEmailVerificationService(t *testing.T) {
 	})
 
 	t.Run("DeleteByUserID", func(t *testing.T) {
-		user2ID := jsonldb.NewID()
+		user2ID := rid.NewID()
 
 		v1, err := service.Create(user2ID, "test1@example.com")
 		if err != nil {
@@ -136,8 +136,8 @@ func TestEmailVerificationService(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		// Test valid verification
 		v := &EmailVerification{
-			ID:     jsonldb.NewID(),
-			UserID: jsonldb.NewID(),
+			ID:     rid.NewID(),
+			UserID: rid.NewID(),
 			Email:  "test@example.com",
 			Token:  "abc123",
 		}
@@ -146,18 +146,18 @@ func TestEmailVerificationService(t *testing.T) {
 		}
 
 		// Test missing ID
-		v.ID = jsonldb.ID(0)
+		v.ID = rid.ID(0)
 		if err := v.Validate(); err == nil {
 			t.Error("Missing ID should fail validation")
 		}
-		v.ID = jsonldb.NewID()
+		v.ID = rid.NewID()
 
 		// Test missing UserID
-		v.UserID = jsonldb.ID(0)
+		v.UserID = rid.ID(0)
 		if err := v.Validate(); err == nil {
 			t.Error("Missing UserID should fail validation")
 		}
-		v.UserID = jsonldb.NewID()
+		v.UserID = rid.NewID()
 
 		// Test missing Email
 		v.Email = ""

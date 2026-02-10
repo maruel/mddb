@@ -6,7 +6,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 )
 
 // SearchService handles full-text search across nodes.
@@ -23,7 +23,7 @@ func NewSearchService(fileStore *FileStoreService) *SearchService {
 }
 
 // Search performs a full-text search across all nodes.
-func (s *SearchService) Search(ctx context.Context, orgID jsonldb.ID, opts SearchOptions) ([]SearchResult, error) {
+func (s *SearchService) Search(ctx context.Context, orgID rid.ID, opts SearchOptions) ([]SearchResult, error) {
 	// TODO: Implement full-text search working with workspace stores
 	_ = ctx
 	_ = orgID

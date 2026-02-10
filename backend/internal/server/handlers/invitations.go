@@ -7,7 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/maruel/mddb/backend/internal/email"
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -20,7 +20,7 @@ type InvitationHandler struct {
 }
 
 // CreateOrgInvitation creates a new organization invitation.
-func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID jsonldb.ID, user *identity.User, req *dto.CreateOrgInvitationRequest) (*dto.OrgInvitationResponse, error) {
+func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID rid.ID, user *identity.User, req *dto.CreateOrgInvitationRequest) (*dto.OrgInvitationResponse, error) {
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
@@ -64,7 +64,7 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID jsonl
 }
 
 // ListOrgInvitations returns all pending invitations for an organization.
-func (h *InvitationHandler) ListOrgInvitations(ctx context.Context, orgID jsonldb.ID, _ *identity.User, _ *dto.ListOrgInvitationsRequest) (*dto.ListOrgInvitationsResponse, error) {
+func (h *InvitationHandler) ListOrgInvitations(ctx context.Context, orgID rid.ID, _ *identity.User, _ *dto.ListOrgInvitationsRequest) (*dto.ListOrgInvitationsResponse, error) {
 	var responses []dto.OrgInvitationResponse //nolint:prealloc // Iterator length unknown
 	for inv := range h.Svc.OrgInvitation.IterByOrg(orgID) {
 		responses = append(responses, *orgInvitationToResponse(inv))
@@ -73,7 +73,7 @@ func (h *InvitationHandler) ListOrgInvitations(ctx context.Context, orgID jsonld
 }
 
 // CreateWSInvitation creates a new workspace invitation.
-func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID jsonldb.ID, user *identity.User, req *dto.CreateWSInvitationRequest) (*dto.WSInvitationResponse, error) {
+func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID rid.ID, user *identity.User, req *dto.CreateWSInvitationRequest) (*dto.WSInvitationResponse, error) {
 	if req.Email == "" || req.Role == "" {
 		return nil, dto.MissingField("email or role")
 	}
@@ -122,7 +122,7 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID jsonldb
 }
 
 // ListWSInvitations returns all pending invitations for a workspace.
-func (h *InvitationHandler) ListWSInvitations(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.ListWSInvitationsRequest) (*dto.ListWSInvitationsResponse, error) {
+func (h *InvitationHandler) ListWSInvitations(ctx context.Context, wsID rid.ID, _ *identity.User, _ *dto.ListWSInvitationsRequest) (*dto.ListWSInvitationsResponse, error) {
 	var responses []dto.WSInvitationResponse //nolint:prealloc // Iterator length unknown
 	for inv := range h.Svc.WSInvitation.IterByWorkspace(wsID) {
 		responses = append(responses, *wsInvitationToResponse(inv))

@@ -9,18 +9,19 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
 // OrganizationInvitation represents an invitation for a user to join an organization.
 type OrganizationInvitation struct {
-	ID             jsonldb.ID       `json:"id" jsonschema:"description=Unique invitation identifier"`
-	OrganizationID jsonldb.ID       `json:"organization_id" jsonschema:"description=Organization the user is invited to"`
+	ID             rid.ID           `json:"id" jsonschema:"description=Unique invitation identifier"`
+	OrganizationID rid.ID           `json:"organization_id" jsonschema:"description=Organization the user is invited to"`
 	Email          string           `json:"email" jsonschema:"description=Email address of the invitee"`
 	Role           OrganizationRole `json:"role" jsonschema:"description=Role assigned upon acceptance"`
 	Token          string           `json:"token" jsonschema:"description=Secret token for invitation verification"`
-	InvitedBy      jsonldb.ID       `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
+	InvitedBy      rid.ID           `json:"invited_by" jsonschema:"description=User ID who created the invitation"`
 	ExpiresAt      storage.Time     `json:"expires_at" jsonschema:"description=Invitation expiration timestamp"`
 	Created        storage.Time     `json:"created" jsonschema:"description=Invitation creation timestamp"`
 }
@@ -32,7 +33,7 @@ func (i *OrganizationInvitation) Clone() *OrganizationInvitation {
 }
 
 // GetID returns the OrganizationInvitation's ID.
-func (i *OrganizationInvitation) GetID() jsonldb.ID {
+func (i *OrganizationInvitation) GetID() rid.ID {
 	return i.ID
 }
 
@@ -65,7 +66,7 @@ func (i *OrganizationInvitation) IsExpired() bool {
 type OrganizationInvitationService struct {
 	table   *jsonldb.Table[*OrganizationInvitation]
 	byToken *jsonldb.UniqueIndex[string, *OrganizationInvitation]
-	byOrgID *jsonldb.Index[jsonldb.ID, *OrganizationInvitation]
+	byOrgID *jsonldb.Index[rid.ID, *OrganizationInvitation]
 }
 
 // NewOrganizationInvitationService creates a new organization invitation service.
@@ -75,12 +76,12 @@ func NewOrganizationInvitationService(tablePath string) (*OrganizationInvitation
 		return nil, err
 	}
 	byToken := jsonldb.NewUniqueIndex(table, func(i *OrganizationInvitation) string { return i.Token })
-	byOrgID := jsonldb.NewIndex(table, func(i *OrganizationInvitation) jsonldb.ID { return i.OrganizationID })
+	byOrgID := jsonldb.NewIndex(table, func(i *OrganizationInvitation) rid.ID { return i.OrganizationID })
 	return &OrganizationInvitationService{table: table, byToken: byToken, byOrgID: byOrgID}, nil
 }
 
 // Create creates a new organization invitation.
-func (s *OrganizationInvitationService) Create(email string, orgID jsonldb.ID, role OrganizationRole, invitedBy jsonldb.ID) (*OrganizationInvitation, error) {
+func (s *OrganizationInvitationService) Create(email string, orgID rid.ID, role OrganizationRole, invitedBy rid.ID) (*OrganizationInvitation, error) {
 	if email == "" {
 		return nil, errEmailEmpty
 	}
@@ -95,7 +96,7 @@ func (s *OrganizationInvitationService) Create(email string, orgID jsonldb.ID, r
 		return nil, fmt.Errorf("failed to generate token: %w", err)
 	}
 	invitation := &OrganizationInvitation{
-		ID:             jsonldb.NewID(),
+		ID:             rid.NewID(),
 		OrganizationID: orgID,
 		Email:          email,
 		Role:           role,
@@ -120,7 +121,7 @@ func (s *OrganizationInvitationService) GetByToken(token string) (*OrganizationI
 }
 
 // Delete deletes an invitation.
-func (s *OrganizationInvitationService) Delete(id jsonldb.ID) error {
+func (s *OrganizationInvitationService) Delete(id rid.ID) error {
 	if id.IsZero() {
 		return errOrgInvitationIDEmpty
 	}
@@ -134,7 +135,7 @@ func (s *OrganizationInvitationService) Delete(id jsonldb.ID) error {
 }
 
 // IterByOrg iterates over all invitations for an organization. O(1) via index.
-func (s *OrganizationInvitationService) IterByOrg(orgID jsonldb.ID) iter.Seq[*OrganizationInvitation] {
+func (s *OrganizationInvitationService) IterByOrg(orgID rid.ID) iter.Seq[*OrganizationInvitation] {
 	return s.byOrgID.Iter(orgID)
 }
 

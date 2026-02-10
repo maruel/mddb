@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -21,8 +21,8 @@ func TestAssetHandler(t *testing.T) {
 	ah := &AssetHandler{Svc: &Services{}, Cfg: cfg}
 
 	t.Run("GenerateSignedAssetURL", func(t *testing.T) {
-		wsID := jsonldb.ID(123)
-		nodeID := jsonldb.ID(456)
+		wsID := rid.ID(123)
+		nodeID := rid.ID(456)
 		name := "test-image.png"
 
 		url := cfg.GenerateSignedAssetURL(wsID, nodeID, name)

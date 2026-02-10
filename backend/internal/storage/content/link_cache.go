@@ -7,7 +7,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 )
 
 // linkCache maintains a bidirectional index of internal page links.
@@ -20,8 +20,8 @@ import (
 type linkCache struct {
 	mu       sync.RWMutex
 	built    bool
-	forward  map[jsonldb.ID][]jsonldb.ID // source → target IDs
-	backward map[jsonldb.ID][]jsonldb.ID // target → source IDs
+	forward  map[rid.ID][]rid.ID // source → target IDs
+	backward map[rid.ID][]rid.ID // target → source IDs
 }
 
 // buildLocked populates both maps by scanning all pages. Caller must hold mu for writing.
@@ -30,8 +30,8 @@ func (c *linkCache) buildLocked(iterPages func() (iter.Seq[*Node], error)) error
 	if err != nil {
 		return err
 	}
-	c.forward = make(map[jsonldb.ID][]jsonldb.ID)
-	c.backward = make(map[jsonldb.ID][]jsonldb.ID)
+	c.forward = make(map[rid.ID][]rid.ID)
+	c.backward = make(map[rid.ID][]rid.ID)
 	for page := range pages {
 		targets := ExtractLinkedNodeIDs(page.Content)
 		if len(targets) == 0 {
@@ -65,7 +65,7 @@ func (c *linkCache) ensureBuilt(iterPages func() (iter.Seq[*Node], error)) error
 
 // update recomputes entries for sourceID based on its current content.
 // Call after a page is created or updated.
-func (c *linkCache) update(sourceID jsonldb.ID, content string) {
+func (c *linkCache) update(sourceID rid.ID, content string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if !c.built {
@@ -93,7 +93,7 @@ func (c *linkCache) update(sourceID jsonldb.ID, content string) {
 }
 
 // remove deletes all entries for a deleted page.
-func (c *linkCache) remove(sourceID jsonldb.ID) {
+func (c *linkCache) remove(sourceID rid.ID) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if !c.built {
@@ -107,17 +107,17 @@ func (c *linkCache) remove(sourceID jsonldb.ID) {
 
 // backlinks returns source IDs that link to targetID.
 // Must be called after ensureBuilt.
-func (c *linkCache) backlinks(targetID jsonldb.ID) []jsonldb.ID {
+func (c *linkCache) backlinks(targetID rid.ID) []rid.ID {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.backward[targetID]
 }
 
 // forwardAll returns a snapshot of all forward links (source → targets).
-func (c *linkCache) forwardAll() map[jsonldb.ID][]jsonldb.ID {
+func (c *linkCache) forwardAll() map[rid.ID][]rid.ID {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	out := make(map[jsonldb.ID][]jsonldb.ID, len(c.forward))
+	out := make(map[rid.ID][]rid.ID, len(c.forward))
 	for src, targets := range c.forward {
 		out[src] = slices.Clone(targets)
 	}
@@ -125,7 +125,7 @@ func (c *linkCache) forwardAll() map[jsonldb.ID][]jsonldb.ID {
 }
 
 // removeBackwardLocked removes sourceID from the backward entry for targetID. Caller must hold mu for writing.
-func (c *linkCache) removeBackwardLocked(targetID, sourceID jsonldb.ID) {
+func (c *linkCache) removeBackwardLocked(targetID, sourceID rid.ID) {
 	srcs := c.backward[targetID]
 	for i, s := range srcs {
 		if s == sourceID {

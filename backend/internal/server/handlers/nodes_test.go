@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
@@ -14,7 +14,7 @@ import (
 )
 
 // testServices creates a Services struct with a FileStore for testing.
-func testServices(t *testing.T) (*Services, jsonldb.ID) {
+func testServices(t *testing.T) (*Services, rid.ID) {
 	t.Helper()
 	tmpDir := t.TempDir()
 
@@ -77,8 +77,8 @@ func TestNodeHandler(t *testing.T) {
 			}
 
 			// Create parent
-			// Note: 0 is used as jsonldb.ID zero value for root parent
-			var rootID jsonldb.ID
+			// Note: 0 is used as rid.ID zero value for root parent
+			var rootID rid.ID
 			parent, err := wsStore.CreateNode(ctx, "Parent", content.NodeTypeDocument, rootID, author)
 			if err != nil {
 				t.Fatalf("failed to create parent: %v", err)

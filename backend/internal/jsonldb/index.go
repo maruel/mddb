@@ -5,6 +5,8 @@ package jsonldb
 import (
 	"iter"
 	"sync"
+
+	"github.com/maruel/mddb/backend/internal/rid"
 )
 
 // UniqueIndex provides O(1) lookup by a unique secondary key.
@@ -16,7 +18,7 @@ type UniqueIndex[K comparable, T Row[T]] struct {
 	table   *Table[T]
 	keyFunc func(T) K
 	mu      sync.Mutex
-	byKey   map[K]ID
+	byKey   map[K]rid.ID
 }
 
 // NewUniqueIndex creates a unique index on the given table.
@@ -27,7 +29,7 @@ func NewUniqueIndex[K comparable, T Row[T]](table *Table[T], keyFunc func(T) K) 
 	idx := &UniqueIndex[K, T]{
 		table:   table,
 		keyFunc: keyFunc,
-		byKey:   make(map[K]ID),
+		byKey:   make(map[K]rid.ID),
 	}
 	table.AddObserver(idx)
 	return idx
@@ -80,7 +82,7 @@ type Index[K comparable, T Row[T]] struct {
 	table   *Table[T]
 	keyFunc func(T) K
 	mu      sync.Mutex
-	byKey   map[K]map[ID]struct{}
+	byKey   map[K]map[rid.ID]struct{}
 }
 
 // NewIndex creates a non-unique index on the given table.
@@ -91,7 +93,7 @@ func NewIndex[K comparable, T Row[T]](table *Table[T], keyFunc func(T) K) *Index
 	idx := &Index[K, T]{
 		table:   table,
 		keyFunc: keyFunc,
-		byKey:   make(map[K]map[ID]struct{}),
+		byKey:   make(map[K]map[rid.ID]struct{}),
 	}
 	table.AddObserver(idx)
 	return idx
@@ -102,7 +104,7 @@ func (idx *Index[K, T]) Iter(key K) iter.Seq[T] {
 	return func(yield func(T) bool) {
 		// Copy IDs under lock to avoid holding lock during iteration.
 		idx.mu.Lock()
-		ids := make([]ID, 0, len(idx.byKey[key]))
+		ids := make([]rid.ID, 0, len(idx.byKey[key]))
 		for id := range idx.byKey[key] {
 			ids = append(ids, id)
 		}
@@ -126,7 +128,7 @@ func (idx *Index[K, T]) OnAppend(row T) {
 	key := idx.keyFunc(row)
 	idx.mu.Lock()
 	if idx.byKey[key] == nil {
-		idx.byKey[key] = make(map[ID]struct{})
+		idx.byKey[key] = make(map[rid.ID]struct{})
 	}
 	idx.byKey[key][row.GetID()] = struct{}{}
 	idx.mu.Unlock()
@@ -145,7 +147,7 @@ func (idx *Index[K, T]) OnUpdate(prev, curr T) {
 		}
 	}
 	if idx.byKey[newKey] == nil {
-		idx.byKey[newKey] = make(map[ID]struct{})
+		idx.byKey[newKey] = make(map[rid.ID]struct{})
 	}
 	idx.byKey[newKey][id] = struct{}{}
 	idx.mu.Unlock()

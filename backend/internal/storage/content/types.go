@@ -3,14 +3,14 @@
 package content
 
 import (
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // Node represents the unified content entity (can be a Page, a Table, or both).
 type Node struct {
-	ID          jsonldb.ID   `json:"id" jsonschema:"description=Unique node identifier"`
-	ParentID    jsonldb.ID   `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
+	ID          rid.ID       `json:"id" jsonschema:"description=Unique node identifier"`
+	ParentID    rid.ID       `json:"parent_id,omitempty" jsonschema:"description=Parent node ID for hierarchical structure"`
 	Title       string       `json:"title" jsonschema:"description=Node title"`
 	Content     string       `json:"content,omitempty" jsonschema:"description=Markdown content (Page part)"`
 	Properties  []Property   `json:"properties,omitempty" jsonschema:"description=Schema definition (Table part)"`
@@ -40,7 +40,7 @@ const (
 
 // DataRecord represents a record in a table.
 type DataRecord struct {
-	ID       jsonldb.ID     `json:"id" jsonschema:"description=Unique record identifier"`
+	ID       rid.ID         `json:"id" jsonschema:"description=Unique record identifier"`
 	Data     map[string]any `json:"data" jsonschema:"description=Record field values keyed by property name"`
 	Created  storage.Time   `json:"created" jsonschema:"description=Record creation timestamp"`
 	Modified storage.Time   `json:"modified" jsonschema:"description=Last modification timestamp"`
@@ -84,7 +84,7 @@ func cloneValue(v any) any {
 }
 
 // GetID returns the DataRecord's ID.
-func (r *DataRecord) GetID() jsonldb.ID {
+func (r *DataRecord) GetID() rid.ID {
 	return r.ID
 }
 
@@ -110,8 +110,8 @@ type Asset struct {
 // SearchResult represents a single search result.
 type SearchResult struct {
 	Type     string            `json:"type" jsonschema:"description=Result type (page or record)"`
-	NodeID   jsonldb.ID        `json:"node_id" jsonschema:"description=Node containing the result"`
-	RecordID jsonldb.ID        `json:"record_id,omitempty" jsonschema:"description=Record ID if result is a table record"`
+	NodeID   rid.ID            `json:"node_id" jsonschema:"description=Node containing the result"`
+	RecordID rid.ID            `json:"record_id,omitempty" jsonschema:"description=Record ID if result is a table record"`
 	Title    string            `json:"title" jsonschema:"description=Title of the matched item"`
 	Snippet  string            `json:"snippet" jsonschema:"description=Text snippet with match context"`
 	Score    float64           `json:"score" jsonschema:"description=Relevance score"`
@@ -197,7 +197,7 @@ type Property struct {
 // RelationConfig defines the target and behavior of a relation property.
 type RelationConfig struct {
 	// TargetNodeID is the node (table) that this relation points to.
-	TargetNodeID jsonldb.ID `json:"target_node_id" jsonschema:"description=Target table node ID"`
+	TargetNodeID rid.ID `json:"target_node_id" jsonschema:"description=Target table node ID"`
 	// IsDualLink indicates if this is a bidirectional relation.
 	IsDualLink bool `json:"is_dual_link,omitempty" jsonschema:"description=Whether this is a bidirectional relation"`
 	// DualPropertyName is the name of the corresponding property in the target table.
@@ -242,6 +242,6 @@ type FormulaConfig struct {
 
 // BacklinkInfo represents a page that links to another page.
 type BacklinkInfo struct {
-	NodeID jsonldb.ID `json:"node_id" jsonschema:"description=ID of the page linking to this page"`
-	Title  string     `json:"title" jsonschema:"description=Title of the linking page"`
+	NodeID rid.ID `json:"node_id" jsonschema:"description=ID of the page linking to this page"`
+	Title  string `json:"title" jsonschema:"description=Title of the linking page"`
 }

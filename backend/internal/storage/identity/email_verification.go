@@ -8,14 +8,15 @@ import (
 	"time"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/utils"
 )
 
 // EmailVerification represents a pending email verification.
 type EmailVerification struct {
-	ID        jsonldb.ID   `json:"id" jsonschema:"description=Unique verification identifier"`
-	UserID    jsonldb.ID   `json:"user_id" jsonschema:"description=User who requested verification"`
+	ID        rid.ID       `json:"id" jsonschema:"description=Unique verification identifier"`
+	UserID    rid.ID       `json:"user_id" jsonschema:"description=User who requested verification"`
 	Email     string       `json:"email" jsonschema:"description=Email address being verified"`
 	Token     string       `json:"token" jsonschema:"description=64-char hex verification token"`
 	ExpiresAt storage.Time `json:"expires_at" jsonschema:"description=Token expiration timestamp (24h from creation)"`
@@ -29,7 +30,7 @@ func (e *EmailVerification) Clone() *EmailVerification {
 }
 
 // GetID returns the verification's ID.
-func (e *EmailVerification) GetID() jsonldb.ID {
+func (e *EmailVerification) GetID() rid.ID {
 	return e.ID
 }
 
@@ -54,7 +55,7 @@ func (e *EmailVerification) Validate() error {
 type EmailVerificationService struct {
 	table    *jsonldb.Table[*EmailVerification]
 	byToken  *jsonldb.UniqueIndex[string, *EmailVerification]
-	byUserID *jsonldb.Index[jsonldb.ID, *EmailVerification]
+	byUserID *jsonldb.Index[rid.ID, *EmailVerification]
 }
 
 // NewEmailVerificationService creates a new email verification service.
@@ -64,13 +65,13 @@ func NewEmailVerificationService(tablePath string) (*EmailVerificationService, e
 		return nil, err
 	}
 	byToken := jsonldb.NewUniqueIndex(table, func(e *EmailVerification) string { return e.Token })
-	byUserID := jsonldb.NewIndex(table, func(e *EmailVerification) jsonldb.ID { return e.UserID })
+	byUserID := jsonldb.NewIndex(table, func(e *EmailVerification) rid.ID { return e.UserID })
 	return &EmailVerificationService{table: table, byToken: byToken, byUserID: byUserID}, nil
 }
 
 // Create creates a new email verification token with 24-hour expiry.
 // It first deletes any existing verification tokens for the user.
-func (s *EmailVerificationService) Create(userID jsonldb.ID, email string) (*EmailVerification, error) {
+func (s *EmailVerificationService) Create(userID rid.ID, email string) (*EmailVerification, error) {
 	if userID.IsZero() {
 		return nil, errVerificationUserIDRequired
 	}
@@ -91,7 +92,7 @@ func (s *EmailVerificationService) Create(userID jsonldb.ID, email string) (*Ema
 
 	now := storage.Now()
 	verification := &EmailVerification{
-		ID:        jsonldb.NewID(),
+		ID:        rid.NewID(),
 		UserID:    userID,
 		Email:     email,
 		Token:     token,
@@ -118,7 +119,7 @@ func (s *EmailVerificationService) GetByToken(token string) (*EmailVerification,
 }
 
 // Get retrieves a verification by ID.
-func (s *EmailVerificationService) Get(id jsonldb.ID) (*EmailVerification, error) {
+func (s *EmailVerificationService) Get(id rid.ID) (*EmailVerification, error) {
 	if id.IsZero() {
 		return nil, errVerificationIDRequired
 	}
@@ -130,7 +131,7 @@ func (s *EmailVerificationService) Get(id jsonldb.ID) (*EmailVerification, error
 }
 
 // Delete removes a verification by ID.
-func (s *EmailVerificationService) Delete(id jsonldb.ID) error {
+func (s *EmailVerificationService) Delete(id rid.ID) error {
 	if id.IsZero() {
 		return errVerificationIDRequired
 	}
@@ -139,12 +140,12 @@ func (s *EmailVerificationService) Delete(id jsonldb.ID) error {
 }
 
 // DeleteByUserID removes all verifications for a user.
-func (s *EmailVerificationService) DeleteByUserID(userID jsonldb.ID) error {
+func (s *EmailVerificationService) DeleteByUserID(userID rid.ID) error {
 	if userID.IsZero() {
 		return errVerificationUserIDRequired
 	}
 
-	var toDelete []jsonldb.ID
+	var toDelete []rid.ID
 	for verification := range s.byUserID.Iter(userID) {
 		toDelete = append(toDelete, verification.ID)
 	}
@@ -163,7 +164,7 @@ func (s *EmailVerificationService) IsExpired(verification *EmailVerification) bo
 }
 
 // Iter iterates over all verifications.
-func (s *EmailVerificationService) Iter(startID jsonldb.ID) iter.Seq[*EmailVerification] {
+func (s *EmailVerificationService) Iter(startID rid.ID) iter.Seq[*EmailVerification] {
 	return func(yield func(*EmailVerification) bool) {
 		for v := range s.table.Iter(startID) {
 			if !yield(v.Clone()) {

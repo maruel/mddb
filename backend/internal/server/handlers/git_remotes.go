@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/maruel/mddb/backend/internal/githubapp"
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -24,7 +24,7 @@ type GitRemoteHandler struct {
 }
 
 // GetGitRemote returns the git remote for a workspace, or null if none exists.
-func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID rid.ID, _ *identity.User, _ *dto.GetGitRemoteRequest) (*dto.GitRemoteResponse, error) {
 	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (h *GitRemoteHandler) GetGitRemote(ctx context.Context, wsID jsonldb.ID, _ 
 }
 
 // UpdateGitRemote creates or updates the git remote for a workspace.
-func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.UpdateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
+func (h *GitRemoteHandler) UpdateGitRemote(ctx context.Context, wsID rid.ID, _ *identity.User, req *dto.UpdateGitRemoteRequest) (*dto.GitRemoteResponse, error) {
 	ws, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		created := ws.GitRemote.Created
 		lastSync := ws.GitRemote.LastSync
@@ -85,7 +85,7 @@ func (h *GitRemoteHandler) getAuthURL(ctx context.Context, remote *identity.GitR
 }
 
 // PushGit pushes changes to the git remote.
-func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.PushGitRequest) (*dto.OkResponse, error) {
+func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID rid.ID, _ *identity.User, _ *dto.PushGitRequest) (*dto.OkResponse, error) {
 	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func (h *GitRemoteHandler) PushGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 }
 
 // PullGit pulls changes from the git remote.
-func (h *GitRemoteHandler) PullGit(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.PullGitRequest) (*dto.OkResponse, error) {
+func (h *GitRemoteHandler) PullGit(ctx context.Context, wsID rid.ID, _ *identity.User, _ *dto.PullGitRequest) (*dto.OkResponse, error) {
 	if h.Svc.SyncService == nil {
 		return nil, errors.New("sync service not available")
 	}
@@ -133,7 +133,7 @@ func (h *GitRemoteHandler) PullGit(ctx context.Context, wsID jsonldb.ID, _ *iden
 }
 
 // GetSyncStatus returns the current sync status for a workspace.
-func (h *GitRemoteHandler) GetSyncStatus(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.GetSyncStatusRequest) (*dto.GitSyncStatusResponse, error) {
+func (h *GitRemoteHandler) GetSyncStatus(ctx context.Context, wsID rid.ID, _ *identity.User, _ *dto.GetSyncStatusRequest) (*dto.GitSyncStatusResponse, error) {
 	ws, err := h.Svc.Workspace.Get(wsID)
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func (h *GitRemoteHandler) GetSyncStatus(ctx context.Context, wsID jsonldb.ID, _
 }
 
 // SetupGitHubAppRemote configures a workspace to use a GitHub App installation for sync.
-func (h *GitRemoteHandler) SetupGitHubAppRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, req *dto.SetupGitHubAppRemoteRequest) (*dto.GitRemoteResponse, error) {
+func (h *GitRemoteHandler) SetupGitHubAppRemote(ctx context.Context, wsID rid.ID, _ *identity.User, req *dto.SetupGitHubAppRemoteRequest) (*dto.GitRemoteResponse, error) {
 	if h.GitHubApp == nil {
 		return nil, errors.New("GitHub App not configured")
 	}
@@ -249,7 +249,7 @@ func (h *GitRemoteHandler) IsGitHubAppAvailable(_ context.Context, _ *dto.GitHub
 }
 
 // DeleteGitRemote deletes the git remote for a workspace.
-func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, wsID jsonldb.ID, _ *identity.User, _ *dto.DeleteGitRequest) (*dto.OkResponse, error) {
+func (h *GitRemoteHandler) DeleteGitRemote(ctx context.Context, wsID rid.ID, _ *identity.User, _ *dto.DeleteGitRequest) (*dto.OkResponse, error) {
 	_, err := h.Svc.Workspace.Modify(wsID, func(ws *identity.Workspace) error {
 		if ws.GitRemote.IsZero() {
 			return dto.NotFound("remote")

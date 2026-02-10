@@ -5,7 +5,7 @@ package identity
 import (
 	"errors"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 )
 
 // Shared error constants for identity services.
@@ -22,6 +22,6 @@ var (
 
 // userOrgKey is a composite key for user+organization lookups.
 type userOrgKey struct {
-	UserID jsonldb.ID
-	OrgID  jsonldb.ID
+	UserID rid.ID
+	OrgID  rid.ID
 }

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 )
 
@@ -70,7 +70,7 @@ func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractS
 	existingIDs, err := e.writer.LoadIDMapping()
 	if err != nil {
 		e.progress.OnWarning(fmt.Sprintf("Failed to load ID mapping, starting fresh: %v", err))
-		existingIDs = make(map[string]jsonldb.ID)
+		existingIDs = make(map[string]rid.ID)
 	}
 	if len(existingIDs) > 0 {
 		e.progress.OnProgress(0, fmt.Sprintf("Loaded %d existing ID mappings", len(existingIDs)))

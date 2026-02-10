@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/git"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
@@ -79,7 +79,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		b.Fatalf("failed to get workspace store: %v", err)
 	}
 
-	dbID := jsonldb.NewID()
+	dbID := rid.NewID()
 	node := &Node{
 		ID:       dbID,
 		Title:    "Benchmark Table",
@@ -100,7 +100,7 @@ func BenchmarkTableOperations(b *testing.B) {
 	b.Run("CreateRecord", func(b *testing.B) {
 		for i := range b.N {
 			record := &DataRecord{
-				ID:       jsonldb.NewID(),
+				ID:       rid.NewID(),
 				Created:  storage.Now(),
 				Modified: storage.Now(),
 				Data: map[string]any{
@@ -119,14 +119,14 @@ func BenchmarkTableOperations(b *testing.B) {
 	// To make this isolated, we can pre-populate a DB with N records
 	b.Run("ReadRecords", func(b *testing.B) {
 		// Prepare a table with 1000 records
-		readDBID := jsonldb.NewID()
+		readDBID := rid.NewID()
 		readNode := &Node{ID: readDBID, Title: "Read Bench", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
 		if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
 			b.Fatal(err)
 		}
 		for range 1000 {
 			record := &DataRecord{
-				ID:       jsonldb.NewID(),
+				ID:       rid.NewID(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  storage.Now(),
 				Modified: storage.Now(),
@@ -151,7 +151,7 @@ func BenchmarkTableOperations(b *testing.B) {
 
 	// Benchmark Reading Page of Records
 	b.Run("ReadRecordsPage", func(b *testing.B) {
-		readDBID := jsonldb.ID(100)
+		readDBID := rid.ID(100)
 		readNode := &Node{ID: readDBID, Title: "Read Bench Page", Type: NodeTypeTable, Created: storage.Now(), Modified: storage.Now()}
 		if err := wsStore.WriteTable(ctx, readNode, true, author); err != nil {
 			b.Fatal(err)
@@ -159,7 +159,7 @@ func BenchmarkTableOperations(b *testing.B) {
 		// Write 10,000 records
 		for range 10000 {
 			record := &DataRecord{
-				ID:       jsonldb.NewID(),
+				ID:       rid.NewID(),
 				Data:     map[string]any{"c1": "test"},
 				Created:  storage.Now(),
 				Modified: storage.Now(),

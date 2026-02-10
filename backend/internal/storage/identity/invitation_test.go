@@ -4,16 +4,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 )
 
 func TestOrganizationInvitation(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			valid := &OrganizationInvitation{
-				ID:             jsonldb.ID(1),
+				ID:             rid.ID(1),
 				Email:          "test@example.com",
-				OrganizationID: jsonldb.ID(100),
+				OrganizationID: rid.ID(100),
 				Role:           OrgRoleMember,
 				Token:          "token123",
 			}
@@ -24,9 +24,9 @@ func TestOrganizationInvitation(t *testing.T) {
 
 		t.Run("zero ID", func(t *testing.T) {
 			zeroID := &OrganizationInvitation{
-				ID:             jsonldb.ID(0),
+				ID:             rid.ID(0),
 				Email:          "test@example.com",
-				OrganizationID: jsonldb.ID(100),
+				OrganizationID: rid.ID(100),
 				Role:           OrgRoleMember,
 				Token:          "token123",
 			}
@@ -37,9 +37,9 @@ func TestOrganizationInvitation(t *testing.T) {
 
 		t.Run("empty email", func(t *testing.T) {
 			emptyEmail := &OrganizationInvitation{
-				ID:             jsonldb.ID(1),
+				ID:             rid.ID(1),
 				Email:          "",
-				OrganizationID: jsonldb.ID(100),
+				OrganizationID: rid.ID(100),
 				Role:           OrgRoleMember,
 				Token:          "token123",
 			}
@@ -50,9 +50,9 @@ func TestOrganizationInvitation(t *testing.T) {
 
 		t.Run("zero org ID", func(t *testing.T) {
 			zeroOrg := &OrganizationInvitation{
-				ID:             jsonldb.ID(1),
+				ID:             rid.ID(1),
 				Email:          "test@example.com",
-				OrganizationID: jsonldb.ID(0),
+				OrganizationID: rid.ID(0),
 				Role:           OrgRoleMember,
 				Token:          "token123",
 			}
@@ -63,9 +63,9 @@ func TestOrganizationInvitation(t *testing.T) {
 
 		t.Run("empty token", func(t *testing.T) {
 			emptyToken := &OrganizationInvitation{
-				ID:             jsonldb.ID(1),
+				ID:             rid.ID(1),
 				Email:          "test@example.com",
-				OrganizationID: jsonldb.ID(100),
+				OrganizationID: rid.ID(100),
 				Role:           OrgRoleMember,
 				Token:          "",
 			}
@@ -77,9 +77,9 @@ func TestOrganizationInvitation(t *testing.T) {
 
 	t.Run("Clone", func(t *testing.T) {
 		original := &OrganizationInvitation{
-			ID:             jsonldb.ID(1),
+			ID:             rid.ID(1),
 			Email:          "test@example.com",
-			OrganizationID: jsonldb.ID(100),
+			OrganizationID: rid.ID(100),
 			Role:           OrgRoleAdmin,
 			Token:          "token123",
 		}
@@ -100,9 +100,9 @@ func TestOrganizationInvitation(t *testing.T) {
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		inv := &OrganizationInvitation{ID: jsonldb.ID(42)}
-		if inv.GetID() != jsonldb.ID(42) {
-			t.Errorf("GetID() = %v, want %v", inv.GetID(), jsonldb.ID(42))
+		inv := &OrganizationInvitation{ID: rid.ID(42)}
+		if inv.GetID() != rid.ID(42) {
+			t.Errorf("GetID() = %v, want %v", inv.GetID(), rid.ID(42))
 		}
 	})
 }
@@ -113,8 +113,8 @@ func TestOrganizationInvitationService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	orgID := jsonldb.ID(100)
-	inviterID := jsonldb.ID(1)
+	orgID := rid.ID(100)
+	inviterID := rid.ID(1)
 	email := "invitee@example.com"
 	role := OrgRoleMember
 	var inv, inv2 *OrganizationInvitation
@@ -152,7 +152,7 @@ func TestOrganizationInvitationService(t *testing.T) {
 		})
 
 		t.Run("zero orgID", func(t *testing.T) {
-			_, createErr := service.Create(email, jsonldb.ID(0), role, inviterID)
+			_, createErr := service.Create(email, rid.ID(0), role, inviterID)
 			if createErr == nil {
 				t.Error("Expected error for zero orgID")
 			}
@@ -199,7 +199,7 @@ func TestOrganizationInvitationService(t *testing.T) {
 
 		t.Run("different org", func(t *testing.T) {
 			count := 0
-			for range service.IterByOrg(jsonldb.ID(999)) {
+			for range service.IterByOrg(rid.ID(999)) {
 				count++
 			}
 			if count != 0 {
@@ -210,14 +210,14 @@ func TestOrganizationInvitationService(t *testing.T) {
 
 	t.Run("Delete", func(t *testing.T) {
 		t.Run("zero ID", func(t *testing.T) {
-			delErr := service.Delete(jsonldb.ID(0))
+			delErr := service.Delete(rid.ID(0))
 			if delErr == nil {
 				t.Error("Expected error for Delete with zero ID")
 			}
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			delErr := service.Delete(jsonldb.ID(99999))
+			delErr := service.Delete(rid.ID(99999))
 			if delErr == nil {
 				t.Error("Expected error for Delete with non-existent ID")
 			}
@@ -250,9 +250,9 @@ func TestWorkspaceInvitation(t *testing.T) {
 	t.Run("Validate", func(t *testing.T) {
 		t.Run("valid", func(t *testing.T) {
 			valid := &WorkspaceInvitation{
-				ID:          jsonldb.ID(1),
+				ID:          rid.ID(1),
 				Email:       "test@example.com",
-				WorkspaceID: jsonldb.ID(100),
+				WorkspaceID: rid.ID(100),
 				Role:        WSRoleEditor,
 				Token:       "token123",
 			}
@@ -263,9 +263,9 @@ func TestWorkspaceInvitation(t *testing.T) {
 
 		t.Run("zero ID", func(t *testing.T) {
 			zeroID := &WorkspaceInvitation{
-				ID:          jsonldb.ID(0),
+				ID:          rid.ID(0),
 				Email:       "test@example.com",
-				WorkspaceID: jsonldb.ID(100),
+				WorkspaceID: rid.ID(100),
 				Role:        WSRoleEditor,
 				Token:       "token123",
 			}
@@ -276,9 +276,9 @@ func TestWorkspaceInvitation(t *testing.T) {
 
 		t.Run("empty email", func(t *testing.T) {
 			emptyEmail := &WorkspaceInvitation{
-				ID:          jsonldb.ID(1),
+				ID:          rid.ID(1),
 				Email:       "",
-				WorkspaceID: jsonldb.ID(100),
+				WorkspaceID: rid.ID(100),
 				Role:        WSRoleEditor,
 				Token:       "token123",
 			}
@@ -289,9 +289,9 @@ func TestWorkspaceInvitation(t *testing.T) {
 
 		t.Run("zero workspace ID", func(t *testing.T) {
 			zeroWS := &WorkspaceInvitation{
-				ID:          jsonldb.ID(1),
+				ID:          rid.ID(1),
 				Email:       "test@example.com",
-				WorkspaceID: jsonldb.ID(0),
+				WorkspaceID: rid.ID(0),
 				Role:        WSRoleEditor,
 				Token:       "token123",
 			}
@@ -302,9 +302,9 @@ func TestWorkspaceInvitation(t *testing.T) {
 
 		t.Run("empty token", func(t *testing.T) {
 			emptyToken := &WorkspaceInvitation{
-				ID:          jsonldb.ID(1),
+				ID:          rid.ID(1),
 				Email:       "test@example.com",
-				WorkspaceID: jsonldb.ID(100),
+				WorkspaceID: rid.ID(100),
 				Role:        WSRoleEditor,
 				Token:       "",
 			}
@@ -316,9 +316,9 @@ func TestWorkspaceInvitation(t *testing.T) {
 
 	t.Run("Clone", func(t *testing.T) {
 		original := &WorkspaceInvitation{
-			ID:          jsonldb.ID(1),
+			ID:          rid.ID(1),
 			Email:       "test@example.com",
-			WorkspaceID: jsonldb.ID(100),
+			WorkspaceID: rid.ID(100),
 			Role:        WSRoleAdmin,
 			Token:       "token123",
 		}
@@ -339,9 +339,9 @@ func TestWorkspaceInvitation(t *testing.T) {
 	})
 
 	t.Run("GetID", func(t *testing.T) {
-		inv := &WorkspaceInvitation{ID: jsonldb.ID(42)}
-		if inv.GetID() != jsonldb.ID(42) {
-			t.Errorf("GetID() = %v, want %v", inv.GetID(), jsonldb.ID(42))
+		inv := &WorkspaceInvitation{ID: rid.ID(42)}
+		if inv.GetID() != rid.ID(42) {
+			t.Errorf("GetID() = %v, want %v", inv.GetID(), rid.ID(42))
 		}
 	})
 }
@@ -352,8 +352,8 @@ func TestWorkspaceInvitationService(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wsID := jsonldb.ID(100)
-	inviterID := jsonldb.ID(1)
+	wsID := rid.ID(100)
+	inviterID := rid.ID(1)
 	email := "invitee@example.com"
 	role := WSRoleEditor
 	var inv, inv2 *WorkspaceInvitation
@@ -391,7 +391,7 @@ func TestWorkspaceInvitationService(t *testing.T) {
 		})
 
 		t.Run("zero wsID", func(t *testing.T) {
-			_, createErr := service.Create(email, jsonldb.ID(0), role, inviterID)
+			_, createErr := service.Create(email, rid.ID(0), role, inviterID)
 			if createErr == nil {
 				t.Error("Expected error for zero wsID")
 			}
@@ -438,7 +438,7 @@ func TestWorkspaceInvitationService(t *testing.T) {
 
 		t.Run("different workspace", func(t *testing.T) {
 			count := 0
-			for range service.IterByWorkspace(jsonldb.ID(999)) {
+			for range service.IterByWorkspace(rid.ID(999)) {
 				count++
 			}
 			if count != 0 {
@@ -449,14 +449,14 @@ func TestWorkspaceInvitationService(t *testing.T) {
 
 	t.Run("Delete", func(t *testing.T) {
 		t.Run("zero ID", func(t *testing.T) {
-			delErr := service.Delete(jsonldb.ID(0))
+			delErr := service.Delete(rid.ID(0))
 			if delErr == nil {
 				t.Error("Expected error for Delete with zero ID")
 			}
 		})
 
 		t.Run("non-existent", func(t *testing.T) {
-			delErr := service.Delete(jsonldb.ID(99999))
+			delErr := service.Delete(rid.ID(99999))
 			if delErr == nil {
 				t.Error("Expected error for Delete with non-existent ID")
 			}

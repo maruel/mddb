@@ -7,6 +7,7 @@ import (
 	"iter"
 
 	"github.com/maruel/mddb/backend/internal/jsonldb"
+	"github.com/maruel/mddb/backend/internal/rid"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
@@ -48,9 +49,9 @@ func (r WorkspaceRole) CanManageSettings() bool {
 
 // WorkspaceMembership represents a user's relationship with a workspace.
 type WorkspaceMembership struct {
-	ID          jsonldb.ID                  `json:"id" jsonschema:"description=Unique membership identifier"`
-	UserID      jsonldb.ID                  `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
-	WorkspaceID jsonldb.ID                  `json:"workspace_id" jsonschema:"description=Workspace ID the user is a member of"`
+	ID          rid.ID                      `json:"id" jsonschema:"description=Unique membership identifier"`
+	UserID      rid.ID                      `json:"user_id" jsonschema:"description=User ID this membership belongs to"`
+	WorkspaceID rid.ID                      `json:"workspace_id" jsonschema:"description=Workspace ID the user is a member of"`
 	Role        WorkspaceRole               `json:"role" jsonschema:"description=User role within the workspace (admin/editor/viewer)"`
 	Settings    WorkspaceMembershipSettings `json:"settings" jsonschema:"description=User preferences within this workspace"`
 	Created     storage.Time                `json:"created" jsonschema:"description=Membership creation timestamp"`
@@ -63,7 +64,7 @@ func (m *WorkspaceMembership) Clone() *WorkspaceMembership {
 }
 
 // GetID returns the WorkspaceMembership's ID.
-func (m *WorkspaceMembership) GetID() jsonldb.ID {
+func (m *WorkspaceMembership) GetID() rid.ID {
 	return m.ID
 }
 
@@ -92,8 +93,8 @@ type WorkspaceMembershipSettings struct {
 // WorkspaceMembershipService handles user-workspace relationships.
 type WorkspaceMembershipService struct {
 	table      *jsonldb.Table[*WorkspaceMembership]
-	byUserID   *jsonldb.Index[jsonldb.ID, *WorkspaceMembership]
-	byWSID     *jsonldb.Index[jsonldb.ID, *WorkspaceMembership]
+	byUserID   *jsonldb.Index[rid.ID, *WorkspaceMembership]
+	byWSID     *jsonldb.Index[rid.ID, *WorkspaceMembership]
 	byUserWS   *jsonldb.UniqueIndex[userWSKey, *WorkspaceMembership]
 	wsService  *WorkspaceService
 	orgService *OrganizationService
@@ -105,8 +106,8 @@ func NewWorkspaceMembershipService(tablePath string, wsService *WorkspaceService
 	if err != nil {
 		return nil, err
 	}
-	byUserID := jsonldb.NewIndex(table, func(m *WorkspaceMembership) jsonldb.ID { return m.UserID })
-	byWSID := jsonldb.NewIndex(table, func(m *WorkspaceMembership) jsonldb.ID { return m.WorkspaceID })
+	byUserID := jsonldb.NewIndex(table, func(m *WorkspaceMembership) rid.ID { return m.UserID })
+	byWSID := jsonldb.NewIndex(table, func(m *WorkspaceMembership) rid.ID { return m.WorkspaceID })
 	byUserWS := jsonldb.NewUniqueIndex(table, func(m *WorkspaceMembership) userWSKey {
 		return userWSKey{UserID: m.UserID, WSID: m.WorkspaceID}
 	})
@@ -121,12 +122,12 @@ func NewWorkspaceMembershipService(tablePath string, wsService *WorkspaceService
 }
 
 // findByUserAndWorkspace finds a membership by user and workspace IDs. O(1) via index.
-func (s *WorkspaceMembershipService) findByUserAndWorkspace(userID, wsID jsonldb.ID) *WorkspaceMembership {
+func (s *WorkspaceMembershipService) findByUserAndWorkspace(userID, wsID rid.ID) *WorkspaceMembership {
 	return s.byUserWS.Get(userWSKey{UserID: userID, WSID: wsID})
 }
 
 // Create adds a user to a workspace.
-func (s *WorkspaceMembershipService) Create(userID, wsID jsonldb.ID, role WorkspaceRole) (*WorkspaceMembership, error) {
+func (s *WorkspaceMembershipService) Create(userID, wsID rid.ID, role WorkspaceRole) (*WorkspaceMembership, error) {
 	if userID.IsZero() {
 		return nil, errUserIDEmpty
 	}
@@ -154,7 +155,7 @@ func (s *WorkspaceMembershipService) Create(userID, wsID jsonldb.ID, role Worksp
 	}
 
 	membership := &WorkspaceMembership{
-		ID:          jsonldb.NewID(),
+		ID:          rid.NewID(),
 		UserID:      userID,
 		WorkspaceID: wsID,
 		Role:        role,
@@ -167,7 +168,7 @@ func (s *WorkspaceMembershipService) Create(userID, wsID jsonldb.ID, role Worksp
 }
 
 // Get retrieves a specific user-workspace relationship.
-func (s *WorkspaceMembershipService) Get(userID, wsID jsonldb.ID) (*WorkspaceMembership, error) {
+func (s *WorkspaceMembershipService) Get(userID, wsID rid.ID) (*WorkspaceMembership, error) {
 	m := s.findByUserAndWorkspace(userID, wsID)
 	if m == nil {
 		return nil, errWSMembershipNotFound
@@ -176,7 +177,7 @@ func (s *WorkspaceMembershipService) Get(userID, wsID jsonldb.ID) (*WorkspaceMem
 }
 
 // GetByID retrieves a membership by its ID.
-func (s *WorkspaceMembershipService) GetByID(id jsonldb.ID) (*WorkspaceMembership, error) {
+func (s *WorkspaceMembershipService) GetByID(id rid.ID) (*WorkspaceMembership, error) {
 	m := s.table.Get(id)
 	if m == nil {
 		return nil, errWSMembershipNotFound
@@ -185,17 +186,17 @@ func (s *WorkspaceMembershipService) GetByID(id jsonldb.ID) (*WorkspaceMembershi
 }
 
 // IterByUser iterates over all workspace memberships for a user. O(1) via index.
-func (s *WorkspaceMembershipService) IterByUser(userID jsonldb.ID) iter.Seq[*WorkspaceMembership] {
+func (s *WorkspaceMembershipService) IterByUser(userID rid.ID) iter.Seq[*WorkspaceMembership] {
 	return s.byUserID.Iter(userID)
 }
 
 // IterByWorkspace iterates over all memberships in a workspace. O(1) via index.
-func (s *WorkspaceMembershipService) IterByWorkspace(wsID jsonldb.ID) iter.Seq[*WorkspaceMembership] {
+func (s *WorkspaceMembershipService) IterByWorkspace(wsID rid.ID) iter.Seq[*WorkspaceMembership] {
 	return s.byWSID.Iter(wsID)
 }
 
 // CountWSMemberships returns the number of members in a workspace.
-func (s *WorkspaceMembershipService) CountWSMemberships(wsID jsonldb.ID) int {
+func (s *WorkspaceMembershipService) CountWSMemberships(wsID rid.ID) int {
 	count := 0
 	for range s.byWSID.Iter(wsID) {
 		count++
@@ -204,7 +205,7 @@ func (s *WorkspaceMembershipService) CountWSMemberships(wsID jsonldb.ID) int {
 }
 
 // Modify atomically modifies a membership.
-func (s *WorkspaceMembershipService) Modify(id jsonldb.ID, fn func(m *WorkspaceMembership) error) (*WorkspaceMembership, error) {
+func (s *WorkspaceMembershipService) Modify(id rid.ID, fn func(m *WorkspaceMembership) error) (*WorkspaceMembership, error) {
 	if id.IsZero() {
 		return nil, errWSMembershipNotFound
 	}
@@ -212,7 +213,7 @@ func (s *WorkspaceMembershipService) Modify(id jsonldb.ID, fn func(m *WorkspaceM
 }
 
 // Delete removes a membership.
-func (s *WorkspaceMembershipService) Delete(id jsonldb.ID) error {
+func (s *WorkspaceMembershipService) Delete(id rid.ID) error {
 	if id.IsZero() {
 		return errWSMembershipNotFound
 	}
@@ -226,8 +227,8 @@ func (s *WorkspaceMembershipService) Delete(id jsonldb.ID) error {
 }
 
 // DeleteAllByWorkspace removes all memberships for a workspace.
-func (s *WorkspaceMembershipService) DeleteAllByWorkspace(wsID jsonldb.ID) error {
-	var toDelete []jsonldb.ID //nolint:prealloc // Iterator length unknown
+func (s *WorkspaceMembershipService) DeleteAllByWorkspace(wsID rid.ID) error {
+	var toDelete []rid.ID //nolint:prealloc // Iterator length unknown
 	for m := range s.byWSID.Iter(wsID) {
 		toDelete = append(toDelete, m.ID)
 	}
@@ -243,8 +244,8 @@ func (s *WorkspaceMembershipService) DeleteAllByWorkspace(wsID jsonldb.ID) error
 // in workspaces belonging to a specific organization.
 // This should be called when removing a user from an organization
 // to prevent orphaned workspace memberships.
-func (s *WorkspaceMembershipService) DeleteByUserInOrg(userID, orgID jsonldb.ID) error {
-	var toDelete []jsonldb.ID
+func (s *WorkspaceMembershipService) DeleteByUserInOrg(userID, orgID rid.ID) error {
+	var toDelete []rid.ID
 	for m := range s.byUserID.Iter(userID) {
 		ws, err := s.wsService.Get(m.WorkspaceID)
 		if err != nil {
@@ -273,6 +274,6 @@ var (
 
 // userWSKey is a composite key for user+workspace lookups.
 type userWSKey struct {
-	UserID jsonldb.ID
-	WSID   jsonldb.ID
+	UserID rid.ID
+	WSID   rid.ID
 }
