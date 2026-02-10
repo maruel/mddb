@@ -111,11 +111,14 @@ code block
 
   // Verify that drag handles are present on all block types
   const blocks = prosemirror.locator('.block-row');
+  // Wait for blocks to be fully rendered (8 expected based on markdownContent)
+  await expect(blocks).toHaveCount(8, { timeout: 10000 });
   const blockCount = await blocks.count();
-  expect(blockCount).toBeGreaterThan(0);
 
   // Each block should have a drag handle
   const handles = prosemirror.locator('[data-testid="row-handle"]');
+  // Wait for handles to be rendered (rendered via Solid render, may have slight delay)
+  await expect(handles).toHaveCount(blockCount, { timeout: 5000 });
   const handleCount = await handles.count();
   
   // Should have at least as many handles as blocks (in flat architecture, 1:1)
