@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
 
 // JSDOM doesn't implement scrollTo, which causes tests to fail or log errors
 // when using components that scroll (like the editor or sidebars).
