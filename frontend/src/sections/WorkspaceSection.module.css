@@ -88,25 +88,27 @@
 }
 
 .editorStatus {
-  flex: 1;
   display: flex;
   gap: var(--s-3);
   align-items: center;
-  font-size: 0.85rem;
+  margin-left: auto;
 }
 
-.unsavedIndicator {
-  color: #d97706;
-  font-weight: 500;
-}
-
-.savingIndicator {
-  color: var(--c-primary);
-  animation: spin 1s linear infinite;
-}
-
+.unsavedIndicator,
+.savingIndicator,
 .savedIndicator {
-  color: var(--c-success);
+  display: inline-flex;
+  align-items: center;
+}
+
+.unsavedIndicator,
+.savingIndicator,
+.savedIndicator {
+  color: var(--c-text-muted);
+}
+
+.savingIndicator svg {
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {

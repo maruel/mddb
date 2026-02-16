@@ -14,6 +14,9 @@ import { nodeUrl, stripSlug } from '../utils/urls';
 import { relativeLinksToSpaUrls } from '../utils/markdown-utils';
 import type { Property, Commit } from '@sdk/types.gen';
 import styles from './WorkspaceSection.module.css';
+import EditIcon from '@material-symbols/svg-400/outlined/edit.svg?solid';
+import SyncIcon from '@material-symbols/svg-400/outlined/sync.svg?solid';
+import CloudDoneIcon from '@material-symbols/svg-400/outlined/cloud_done.svg?solid';
 
 const Editor = lazy(() => import('../components/editor/Editor'));
 
@@ -143,13 +146,13 @@ export default function NodeView() {
               />
               <div class={styles.editorStatus}>
                 <Show when={hasUnsavedChanges() && autoSaveStatus() === 'idle'}>
-                  <span class={styles.unsavedIndicator}>● {t('editor.unsaved')}</span>
+                  <span class={styles.unsavedIndicator} title={t('editor.unsaved')}><EditIcon /></span>
                 </Show>
                 <Show when={autoSaveStatus() === 'saving'}>
-                  <span class={styles.savingIndicator}>⟳ {t('common.saving')}</span>
+                  <span class={styles.savingIndicator} title={t('common.saving')}><SyncIcon /></span>
                 </Show>
                 <Show when={autoSaveStatus() === 'saved'}>
-                  <span class={styles.savedIndicator}>✓ {t('common.saved')}</span>
+                  <span class={styles.savedIndicator} title={t('common.saved')}><CloudDoneIcon /></span>
                 </Show>
               </div>
             </div>
