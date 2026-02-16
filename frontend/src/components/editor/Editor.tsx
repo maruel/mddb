@@ -281,17 +281,19 @@ export default function Editor(props: EditorProps) {
         click: (_view, event) => {
           const target = event.target as HTMLElement;
 
-          // Handle checkbox toggle: clicks on the real checkbox element
-          if (target.classList.contains('block-task-checkbox')) {
-            event.preventDefault();
-            const taskEl = target.closest('.block-task');
-            if (taskEl) {
+          // Handle checkbox toggle: clicks on the ::before pseudo-element area (left padding)
+          const taskEl = target.closest('.block-task') as HTMLElement | null;
+          if (taskEl) {
+            const taskRect = taskEl.getBoundingClientRect();
+            // Check if click is in the left padding area where the checkbox pseudo-element is
+            if (event.clientX < taskRect.left + 22) {
+              event.preventDefault();
               const pos = editorView.posAtDOM(taskEl, 0);
               const $pos = editorView.state.doc.resolve(pos);
               const blockPos = $pos.depth >= 1 ? $pos.before(1) : pos;
               toggleTaskBlock(blockPos)(editorView.state, editorView.dispatch);
+              return true;
             }
-            return true;
           }
 
           const anchor = target.closest('a');

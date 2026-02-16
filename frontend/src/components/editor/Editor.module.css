@@ -600,47 +600,43 @@
   color: var(--c-text-muted, var(--c-text-light));
 }
 
-/* Task list checkbox */
+/* Task list checkbox (rendered via ::before pseudo-element like bullet/number) */
 .prosemirrorEditor :global(.block-task) {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
+  position: relative;
+  padding-left: 24px;
 }
 
-.prosemirrorEditor :global(.block-task-checkbox) {
-  display: inline-block;
-  flex-shrink: 0;
+.prosemirrorEditor :global(.block-task)::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.25em;
   width: 16px;
   height: 16px;
-  margin-top: 0.25em;
   border: 2px solid var(--c-border);
   border-radius: 3px;
   background: var(--c-bg);
   cursor: pointer;
   transition: all 0.15s ease;
-  user-select: none;
+  box-sizing: border-box;
 }
 
-.prosemirrorEditor :global(.block-task:hover) :global(.block-task-checkbox) {
+.prosemirrorEditor :global(.block-task:hover)::before {
   border-color: var(--c-primary);
 }
 
-.prosemirrorEditor :global(.block-task[data-checked='true']) :global(.block-task-checkbox) {
+.prosemirrorEditor :global(.block-task[data-checked='true'])::before {
   background: var(--c-primary);
   border-color: var(--c-primary);
-}
-
-.prosemirrorEditor :global(.block-task[data-checked='true']) :global(.block-task-checkbox)::after {
   content: '✓';
-  display: block;
   font-size: 12px;
-  line-height: 16px;
+  line-height: 12px;
   text-align: center;
   color: white;
   font-weight: bold;
 }
 
-.prosemirrorEditor :global(.block-task[data-checked='true']) :global(.block-task-text) {
+.prosemirrorEditor :global(.block-task[data-checked='true']) {
   color: var(--c-text-light);
   text-decoration: line-through;
 }
