@@ -44,7 +44,7 @@ func (h *ViewHandler) CreateView(ctx context.Context, wsID ksid.ID, user *identi
 	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.InternalWithError("Failed to save view", err)
 	}
-
+	h.Svc.PublishEvent(wsID, dto.EventTableUpdated, req.NodeID, user.ID)
 	return &dto.CreateViewResponse{ID: viewID}, nil
 }
 
@@ -98,7 +98,7 @@ func (h *ViewHandler) UpdateView(ctx context.Context, wsID ksid.ID, user *identi
 	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.InternalWithError("Failed to update view", err)
 	}
-
+	h.Svc.PublishEvent(wsID, dto.EventTableUpdated, req.NodeID, user.ID)
 	return &dto.UpdateViewResponse{ID: req.ViewID}, nil
 }
 
@@ -135,7 +135,7 @@ func (h *ViewHandler) DeleteView(ctx context.Context, wsID ksid.ID, user *identi
 	if err := ws.WriteTable(ctx, node, false, author); err != nil {
 		return nil, dto.InternalWithError("Failed to delete view", err)
 	}
-
+	h.Svc.PublishEvent(wsID, dto.EventTableUpdated, req.NodeID, user.ID)
 	return &dto.DeleteViewResponse{Ok: true}, nil
 }
 

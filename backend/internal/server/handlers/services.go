@@ -14,6 +14,7 @@ import (
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -40,6 +41,7 @@ type Services struct {
 	SyncService      *syncsvc.Service                  // may be nil
 	Notification     *identity.NotificationService     // may be nil
 	PushSubscription *identity.PushSubscriptionService // may be nil
+	Broker           *sse.Broker
 }
 
 // BandwidthUpdater allows updating bandwidth limits at runtime.
@@ -85,6 +87,33 @@ func (c *Config) generateSignature(path string, expiry int64) string {
 func (c *Config) VerifyAssetSignature(path, sig string, expiry int64) bool {
 	expected := c.generateSignature(path, expiry)
 	return hmac.Equal([]byte(expected), []byte(sig))
+}
+
+// PublishEvent publishes a workspace SSE event if the broker is configured.
+func (s *Services) PublishEvent(wsID ksid.ID, eventType dto.EventType, nodeID, actorID ksid.ID) {
+	if s.Broker == nil {
+		return
+	}
+	s.Broker.Publish(wsID, dto.WorkspaceEvent{
+		Type:     eventType,
+		NodeID:   nodeID,
+		ActorID:  actorID,
+		Modified: storage.Now(),
+	})
+}
+
+// PublishRecordEvent publishes a record-level workspace SSE event.
+func (s *Services) PublishRecordEvent(wsID, nodeID, recordID, actorID ksid.ID) {
+	if s.Broker == nil {
+		return
+	}
+	s.Broker.Publish(wsID, dto.WorkspaceEvent{
+		Type:     dto.EventRecordsChanged,
+		NodeID:   nodeID,
+		RecordID: recordID,
+		ActorID:  actorID,
+		Modified: storage.Now(),
+	})
 }
 
 const tokenExpiration = 24 * time.Hour

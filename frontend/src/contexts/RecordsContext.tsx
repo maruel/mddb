@@ -12,10 +12,19 @@ import {
   onCleanup,
 } from 'solid-js';
 import { useAuth } from './AuthContext';
+import { useEventSource } from './EventSourceContext';
 import { useWorkspace } from './WorkspaceContext';
 import { useI18n } from '../i18n';
 import { debounce } from '../utils/debounce';
-import type { DataRecordResponse, View, Filter, Sort, ViewType } from '@sdk/types.gen';
+import {
+  EventRecordsChanged,
+  EventTableUpdated,
+  type DataRecordResponse,
+  type View,
+  type Filter,
+  type Sort,
+  type ViewType,
+} from '@sdk/types.gen';
 
 const PAGE_SIZE = 50;
 const FILTER_DEBOUNCE_MS = 300;
@@ -252,6 +261,18 @@ export const RecordsProvider: ParentComponent = (props) => {
       loadRecords(node.id);
     } else {
       clearRecords();
+    }
+  });
+
+  // Auto-refetch records when SSE reports external record/table changes
+  const { lastEvent } = useEventSource();
+  createEffect(() => {
+    const evt = lastEvent();
+    if (!evt) return;
+    const nodeId = selectedNodeId();
+    if (!nodeId || evt.node_id !== nodeId) return;
+    if (evt.type === EventRecordsChanged || evt.type === EventTableUpdated) {
+      loadRecords(nodeId);
     }
   });
 

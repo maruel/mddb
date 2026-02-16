@@ -34,6 +34,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/server"
 	"github.com/maruel/mddb/backend/internal/server/handlers"
 	"github.com/maruel/mddb/backend/internal/server/ipgeo"
+	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/content"
 	"github.com/maruel/mddb/backend/internal/storage/git"
@@ -435,6 +436,7 @@ func mainImpl() error {
 		SyncService:      syncService,
 		Notification:     notificationService,
 		PushSubscription: pushSubscriptionService,
+		Broker:           sse.NewBroker(),
 	}
 
 	buildVersion, buildGoVersion, buildRevision, buildDirty := getBuildInfo()

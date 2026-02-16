@@ -31,7 +31,7 @@ func (h *AdminHandler) GetServerDetail(ctx context.Context, _ *identity.User, _ 
 		orgCount++
 		memberCount := h.Svc.OrgMembership.CountOrgMemberships(org.ID)
 
-		workspaces := make([]dto.AdminWorkspaceDetail, 0) //nolint:prealloc // size unknown from iterator
+		workspaces := make([]dto.AdminWorkspaceDetail, 0)
 		for ws := range h.Svc.Workspace.IterByOrg(org.ID) {
 			wsCount++
 			wsMemberCount := h.Svc.WSMembership.CountWSMemberships(ws.ID)

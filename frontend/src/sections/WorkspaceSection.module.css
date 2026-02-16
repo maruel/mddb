@@ -73,6 +73,33 @@
   overflow: hidden;
 }
 
+.conflictBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-2);
+  background: var(--c-warning-bg, #fff3cd);
+  border-bottom: 1px solid var(--c-warning-border, #ffc107);
+  font-size: 0.85rem;
+}
+
+.conflictBanner span {
+  flex: 1;
+}
+
+.conflictBanner button {
+  padding: var(--s-05) var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm, 4px);
+  background: var(--c-bg);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.conflictBanner button:hover {
+  background: var(--c-bg-hover, #f0f0f0);
+}
+
 .editorLoading {
   padding: var(--s-2);
   color: var(--c-text-muted);

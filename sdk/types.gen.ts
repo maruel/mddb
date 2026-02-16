@@ -1767,6 +1767,44 @@ export interface Group {
   hidden?: any[];
 }
 /**
+ * EventType identifies the kind of workspace event sent via SSE.
+ */
+export type EventType = string;
+/**
+ * EventNodeCreated is sent when a new node (page or table) is created.
+ */
+export const EventNodeCreated: EventType = "node_created";
+/**
+ * EventNodeUpdated is sent when a node's content or title changes.
+ */
+export const EventNodeUpdated: EventType = "node_updated";
+/**
+ * EventNodeDeleted is sent when a node is removed.
+ */
+export const EventNodeDeleted: EventType = "node_deleted";
+/**
+ * EventNodeMoved is sent when a node is moved to a new parent.
+ */
+export const EventNodeMoved: EventType = "node_moved";
+/**
+ * EventRecordsChanged is sent when a table record is created, updated, or deleted.
+ */
+export const EventRecordsChanged: EventType = "records_changed";
+/**
+ * EventTableUpdated is sent when a table schema or view changes.
+ */
+export const EventTableUpdated: EventType = "table_updated";
+/**
+ * WorkspaceEvent is the payload sent to SSE clients for real-time workspace updates.
+ */
+export interface WorkspaceEvent {
+  type: EventType;
+  node_id: string;
+  record_id?: string;
+  actor_id: string;
+  modified: Time;
+}
+/**
  * NotificationDTO is the API representation of a notification.
  */
 export interface NotificationDTO {

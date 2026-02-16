@@ -38,6 +38,9 @@ export default function NodeView() {
     handleTitleChange,
     handleContentChange,
     linkedNodeTitles,
+    externalChange,
+    dismissExternalChange,
+    refreshFromServer,
   } = useEditor();
   const { records, hasMore, loadMoreRecords, addRecord, updateRecord, deleteRecord, views, activeViewId } =
     useRecords();
@@ -135,6 +138,13 @@ export default function NodeView() {
     <>
       <Show when={selectedNodeId()}>
         <div class={styles.editor}>
+          <Show when={externalChange()}>
+            <div class={styles.conflictBanner}>
+              <span>{t('sse.externalChange')}</span>
+              <button onClick={refreshFromServer}>{t('sse.refreshContent')}</button>
+              <button onClick={dismissExternalChange}>{t('sse.dismissNotice')}</button>
+            </div>
+          </Show>
           <Show when={!previewCommit()}>
             <div class={styles.editorHeader}>
               <input

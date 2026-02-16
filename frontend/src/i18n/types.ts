@@ -506,4 +506,10 @@ export interface Dictionary {
     reqPerMin: string;
     refresh: string;
   };
+
+  sse: {
+    externalChange: string;
+    refreshContent: string;
+    dismissNotice: string;
+  };
 }

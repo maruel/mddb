@@ -254,6 +254,11 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	// Search
 	mux.Handle("POST /api/v1/workspaces/{wsID}/search", WrapWSAuth(sh.Search, svc, hcfg, identity.WSRoleViewer, limiters))
 
+	// SSE events (EventSource can't set headers; token accepted as query param)
+	sseH := &handlers.SSEHandler{Svc: svc, Cfg: hcfg}
+	sseAuth := WrapAuthRaw(sseH.ServeHTTP, svc, hcfg, identity.WSRoleViewer, limiters)
+	mux.HandleFunc("GET /api/v1/workspaces/{wsID}/events", handlers.InjectTokenFromQuery(sseAuth).ServeHTTP)
+
 	// Notification endpoints - /api/v1/notifications/*
 	notifh := &handlers.NotificationHandler{Svc: svc, Cfg: hcfg}
 	mux.Handle("GET /api/v1/notifications", WrapAuth(notifh.ListNotifications, svc, hcfg, limiters))

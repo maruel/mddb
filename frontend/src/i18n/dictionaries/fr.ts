@@ -503,4 +503,10 @@ export const dict: Dictionary = {
     reqPerMin: 'req/min',
     refresh: 'Actualiser',
   },
+
+  sse: {
+    externalChange: 'Cette page a été modifiée par un autre utilisateur.',
+    refreshContent: 'Actualiser',
+    dismissNotice: 'Ignorer',
+  },
 };

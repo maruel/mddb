@@ -151,5 +151,6 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | POST | `/api/v1/webhooks/github` | public |
 | GET | `/api/v1/workspaces/{wsID}` | ws:Viewer |
 | POST | `/api/v1/workspaces/{wsID}` | ws:Admin |
+| GET | `/api/v1/workspaces/{wsID}/events` | public |
 | POST | `/api/v1/workspaces/{wsID}/notion/import/cancel` | ws:Admin |
 

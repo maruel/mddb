@@ -10,12 +10,13 @@ import {
   type Accessor,
 } from 'solid-js';
 import { useAuth } from './AuthContext';
+import { useEventSource } from './EventSourceContext';
 import { useWorkspace } from './WorkspaceContext';
 import { useI18n } from '../i18n';
 import { debounce } from '../utils/debounce';
 import { nodeUrl } from '../utils/urls';
 import { extractLinkedNodeIds, relativeLinksToSpaUrls, spaUrlsToRelativeLinks } from '../utils/markdown-utils';
-import type { Commit } from '@sdk/types.gen';
+import { EventNodeUpdated, type Commit } from '@sdk/types.gen';
 
 /** Map of asset filename to signed URL */
 export type AssetUrlMap = Record<string, string>;
@@ -45,6 +46,11 @@ interface EditorContextValue {
   history: Accessor<Commit[]>;
   loadHistory: (nodeId: string) => Promise<void>;
 
+  // External change detection (SSE)
+  externalChange: Accessor<boolean>;
+  dismissExternalChange: () => void;
+  refreshFromServer: () => void;
+
   // Actions
   triggerAutoSave: () => void;
   flushAutoSave: () => void;
@@ -58,7 +64,8 @@ const EditorContext = createContext<EditorContextValue>();
 export const EditorProvider: ParentComponent = (props) => {
   const { t } = useI18n();
   const { user, wsApi } = useAuth();
-  const { selectedNodeId, selectedNodeData, updateNodeTitle, setLoadError, setSaveError } = useWorkspace();
+  const { selectedNodeId, selectedNodeData, updateNodeTitle, loadNode, setLoadError, setSaveError } = useWorkspace();
+  const { lastEvent } = useEventSource();
 
   // Editor state
   const [title, setTitle] = createSignal('');
@@ -75,6 +82,26 @@ export const EditorProvider: ParentComponent = (props) => {
   // History state
   const [showHistory, setShowHistory] = createSignal(false);
   const [history, setHistory] = createSignal<Commit[]>([]);
+
+  // External change detection (SSE)
+  const [externalChange, setExternalChange] = createSignal(false);
+  const dismissExternalChange = () => setExternalChange(false);
+  const refreshFromServer = () => {
+    const nodeId = selectedNodeId();
+    if (nodeId) {
+      setExternalChange(false);
+      loadNode(nodeId);
+    }
+  };
+
+  // Detect external edits on current page via SSE
+  createEffect(() => {
+    const evt = lastEvent();
+    if (!evt) return;
+    if (evt.type === EventNodeUpdated && evt.node_id === selectedNodeId()) {
+      setExternalChange(true);
+    }
+  });
 
   // Debounced auto-save
   // eslint-disable-next-line solid/reactivity -- intentionally reads current signal values when debounced function executes
@@ -154,6 +181,7 @@ export const EditorProvider: ParentComponent = (props) => {
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setShowHistory(false);
+      setExternalChange(false);
       // Fetch linked node titles in the background
       fetchLinkedNodeTitles(spaContent);
     } else {
@@ -169,6 +197,7 @@ export const EditorProvider: ParentComponent = (props) => {
     setShowHistory(false);
     setHistory([]);
     setLinkedNodeTitles({});
+    setExternalChange(false);
   }
 
   function handleTitleChange(newTitle: string) {
@@ -224,6 +253,9 @@ export const EditorProvider: ParentComponent = (props) => {
     setShowHistory,
     history,
     loadHistory,
+    externalChange,
+    dismissExternalChange,
+    refreshFromServer,
     triggerAutoSave: debouncedAutoSave,
     flushAutoSave: debouncedAutoSave.flush,
     resetEditor,

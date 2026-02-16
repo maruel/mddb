@@ -327,6 +327,35 @@ type Group struct {
 	Hidden   []any  `json:"hidden,omitempty" jsonschema:"description=Group values to hide"`
 }
 
+// --- SSE Event Types ---
+
+// EventType identifies the kind of workspace event sent via SSE.
+type EventType string
+
+const (
+	// EventNodeCreated is sent when a new node (page or table) is created.
+	EventNodeCreated EventType = "node_created"
+	// EventNodeUpdated is sent when a node's content or title changes.
+	EventNodeUpdated EventType = "node_updated"
+	// EventNodeDeleted is sent when a node is removed.
+	EventNodeDeleted EventType = "node_deleted"
+	// EventNodeMoved is sent when a node is moved to a new parent.
+	EventNodeMoved EventType = "node_moved"
+	// EventRecordsChanged is sent when a table record is created, updated, or deleted.
+	EventRecordsChanged EventType = "records_changed"
+	// EventTableUpdated is sent when a table schema or view changes.
+	EventTableUpdated EventType = "table_updated"
+)
+
+// WorkspaceEvent is the payload sent to SSE clients for real-time workspace updates.
+type WorkspaceEvent struct {
+	Type     EventType `json:"type"`
+	NodeID   ksid.ID   `json:"node_id"`
+	RecordID ksid.ID   `json:"record_id,omitempty"`
+	ActorID  ksid.ID   `json:"actor_id"`
+	Modified Time      `json:"modified"`
+}
+
 // --- Notification Types ---
 
 // NotificationDTO is the API representation of a notification.

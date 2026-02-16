@@ -13,8 +13,19 @@ import {
 import { createStore, produce, reconcile } from 'solid-js/store';
 import { useNavigate } from '@solidjs/router';
 import { useAuth } from './AuthContext';
+import { useEventSource } from './EventSourceContext';
 import { useI18n } from '../i18n';
-import { OrgRoleAdmin, OrgRoleOwner, WSRoleAdmin, WSRoleEditor, type NodeResponse } from '@sdk/types.gen';
+import {
+  EventNodeCreated,
+  EventNodeDeleted,
+  EventNodeMoved,
+  EventNodeUpdated,
+  OrgRoleAdmin,
+  OrgRoleOwner,
+  WSRoleAdmin,
+  WSRoleEditor,
+  type NodeResponse,
+} from '@sdk/types.gen';
 import { workspaceUrl } from '../utils/urls';
 
 interface WorkspaceContextValue {
@@ -414,6 +425,21 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   createEffect(() => {
     if (user()) {
       loadNodes();
+    }
+  });
+
+  // React to SSE workspace events: refetch node tree on structural changes
+  const { lastEvent } = useEventSource();
+  createEffect(() => {
+    const evt = lastEvent();
+    if (!evt) return;
+    if (
+      evt.type === EventNodeCreated ||
+      evt.type === EventNodeDeleted ||
+      evt.type === EventNodeMoved ||
+      evt.type === EventNodeUpdated
+    ) {
+      loadNodes(true);
     }
   });
 
