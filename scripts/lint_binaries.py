@@ -4,8 +4,7 @@ import stat
 import subprocess
 import sys
 
-ALLOWED_BINARY_EXT = {".ico", ".jpg", ".gif", ".png", ".svg", ".webp", ".br", ".zst"}
-ALLOWED_EXECUTABLE = {"scripts/", ".github/"}
+ALLOWED_BINARY_EXT = {".br", ".gif", ".ico", ".jpg", ".png", ".svg", ".webp", ".zst"}
 
 
 def is_binary(file_path):
@@ -16,6 +15,15 @@ def is_binary(file_path):
         with open(file_path, "rb") as f:
             chunk = f.read(1024)
             return b"\0" in chunk
+    except Exception:
+        return False
+
+
+def has_shebang(file_path):
+    """Check if file starts with a shebang line."""
+    try:
+        with open(file_path, "rb") as f:
+            return f.read(2) == b"#!"
     except Exception:
         return False
 
@@ -42,7 +50,7 @@ def main():
         ext = os.path.splitext(f)[1].lower()
         if is_binary(f) and ext not in ALLOWED_BINARY_EXT:
             unexpected_binaries.append(f)
-        if is_executable(f) and not any(f.startswith(p) for p in ALLOWED_EXECUTABLE):
+        if is_executable(f) and not has_shebang(f):
             unexpected_executables.append(f)
 
     rc = 0
