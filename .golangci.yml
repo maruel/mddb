@@ -28,6 +28,13 @@ linters:
     - usestdlibvars
     - whitespace
   settings:
+    gosec:
+      excludes:
+        - G117 # Struct fields named Password/Secret are not leaked secrets.
+        - G703 # Taint-based path traversal: too many false positives.
+        - G704 # Taint-based SSRF: flags all http.Client.Do calls.
+        - G705 # Taint-based XSS: flags all ResponseWriter.Write calls.
+        - G706 # Taint-based log injection: flags structured slog calls.
     exhaustive:
       default-signifies-exhaustive: true
     gocritic:
@@ -44,6 +51,8 @@ linters:
     rules:
       - path: (.+)\.go$
         text: should have a package comment
+      - path: _test\.go$
+        text: "G101:"
     paths:
       - third_party$
       - builtin$

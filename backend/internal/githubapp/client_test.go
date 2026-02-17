@@ -91,7 +91,7 @@ func TestGetInstallationToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if token != "ghs_test_token_123" { //nolint:gosec // test value
+	if token != "ghs_test_token_123" {
 		t.Fatalf("unexpected token: %s", token)
 	}
 	if tokenExpiry.Before(time.Now()) {

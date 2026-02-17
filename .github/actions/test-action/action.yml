@@ -10,7 +10,8 @@ runs:
   steps:
     - name: Lint (Go)
       if: runner.os == 'Linux'
-      uses: golangci/golangci-lint-action@v9
+      run: make lint-go
+      shell: bash
     - name: Lint (Frontend)
       if: runner.os == 'Linux'
       run: make lint-frontend

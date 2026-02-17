@@ -302,7 +302,7 @@ func (r *ExecRepo) AbortMerge(ctx context.Context) error {
 
 // gitCmd creates an exec.Cmd for git with standard environment settings.
 func (r *ExecRepo) gitCmd(ctx context.Context, args ...string) *exec.Cmd {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // G204: args are internal, not user input
 	cmd.Dir = r.dir
 	cmd.Env = append(os.Environ(),
 		"GIT_CONFIG_GLOBAL=/dev/null",

@@ -100,7 +100,7 @@ func TestAssetHandler(t *testing.T) {
 			path := "123/456/test.png"
 			sig := cfg.generateSignature(path, expiry)
 
-			req := httptest.NewRequest(http.MethodGet, "/assets/123/456/test.png?sig="+sig+"&exp="+string(rune(expiry)), http.NoBody)
+			req := httptest.NewRequest(http.MethodGet, "/assets/123/456/test.png", http.NoBody)
 			req.SetPathValue("wsID", "123")
 			req.SetPathValue("id", "456")
 			req.SetPathValue("name", "test.png")
