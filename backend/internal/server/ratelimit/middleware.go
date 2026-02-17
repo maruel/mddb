@@ -54,6 +54,13 @@ func (rw *rateLimitResponseWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
+// Flush implements http.Flusher for SSE support through the middleware chain.
+func (rw *rateLimitResponseWriter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 // Unwrap returns the underlying ResponseWriter for middleware that needs it.
 func (rw *rateLimitResponseWriter) Unwrap() http.ResponseWriter {
 	return rw.ResponseWriter

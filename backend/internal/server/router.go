@@ -10,8 +10,6 @@ package server
 
 import (
 	"crypto/rsa"
-	"embed"
-	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -291,7 +289,13 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	})
 
 	// Serve embedded SolidJS frontend with SPA fallback
-	mux.Handle("/", NewEmbeddedSPAHandler(frontend.Files))
+	dist, _ := fs.Sub(frontend.Files, "dist")
+	mux.HandleFunc("/", newStaticHandler(dist))
+
+	// Wrap mux with compression middleware chain.
+	var inner http.Handler = mux
+	inner = compressMiddleware(inner)
+	inner = decompressMiddleware(inner)
 
 	f := func(w http.ResponseWriter, r *http.Request) {
 		clientIP := reqctx.GetClientIP(r)
@@ -306,7 +310,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 			status:           http.StatusOK,
 			bandwidthLimiter: bandwidthLim,
 		}
-		mux.ServeHTTP(rw, r)
+		inner.ServeHTTP(rw, r)
 		slog.InfoContext(r.Context(), "http",
 			"m", r.Method,
 			"p", r.URL.Path,
@@ -347,79 +351,16 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return n, err
 }
 
-// EmbeddedSPAHandler serves an embedded single-page application with fallback to index.html.
-type EmbeddedSPAHandler struct {
-	fs embed.FS
-}
-
-// NewEmbeddedSPAHandler creates a handler for the embedded frontend.
-func NewEmbeddedSPAHandler(f embed.FS) *EmbeddedSPAHandler {
-	return &EmbeddedSPAHandler{fs: f}
-}
-
-// ServeHTTP implements http.Handler for embedded SPA routing.
-func (h *EmbeddedSPAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Set security headers for all responses
-	setSecurityHeaders(w)
-
-	// Try to serve the exact file from dist/
-	path := "dist" + r.URL.Path
-	f, err := h.fs.Open(path)
-	if err == nil {
-		if err := f.Close(); err != nil {
-			slog.Error("Failed to close embedded file", "path", path, "error", err)
-		}
-		// File exists, serve it from embedded FS
-		fsys, err := fs.Sub(h.fs, "dist")
-		if err != nil {
-			slog.Error("Failed to create sub-filesystem", "error", err)
-			http.NotFound(w, r)
-			return
-		}
-		fileServer := http.FileServer(http.FS(fsys))
-		// Set appropriate cache headers based on file type
-		setCacheHeaders(w, r.URL.Path)
-		fileServer.ServeHTTP(w, r)
-		return
-	}
-
-	// File not found - check if this is a static asset path that should 404
-	if strings.HasPrefix(r.URL.Path, "/assets/") {
-		http.NotFound(w, r)
-		return
-	}
-
-	// Fall back to index.html for SPA routing
-	indexFile, err := h.fs.Open("dist/index.html")
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	defer func() {
-		if err := indexFile.Close(); err != nil {
-			slog.Error("Failed to close index.html", "error", err)
-		}
-	}()
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-	// Serve index.html
-	if _, err := io.Copy(w, indexFile); err != nil {
-		slog.Error("Failed to serve index.html", "error", err)
+// Flush implements http.Flusher for SSE support through the middleware chain.
+func (rw *responseWriter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
 	}
 }
 
-// containsDot checks if a path contains a dot (file extension).
-func containsDot(path string) bool {
-	for i := len(path) - 1; i >= 0; i-- {
-		if path[i] == '/' {
-			return false
-		}
-		if path[i] == '.' {
-			return true
-		}
-	}
-	return false
+// Unwrap returns the underlying ResponseWriter for http.ResponseController.
+func (rw *responseWriter) Unwrap() http.ResponseWriter {
+	return rw.ResponseWriter
 }
 
 // setSecurityHeaders sets security-related HTTP headers.
@@ -432,57 +373,6 @@ func setSecurityHeaders(w http.ResponseWriter) {
 	w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 	// Prevent XSS in older browsers (modern browsers ignore this)
 	w.Header().Set("X-XSS-Protection", "1; mode=block")
-}
-
-// setCacheHeaders sets Cache-Control headers based on file path.
-// Caching strategy:
-//   - /assets/* (Vite hashed files): immutable, 1 year
-//   - workbox-*.js (hashed): immutable, 1 year
-//   - sw.js, registerSW.js: no-cache (service workers must be fresh)
-//   - manifest.webmanifest, manifest.json: 1 hour
-//   - icons (png, svg, ico): 1 hour
-//   - other files with extensions: 1 hour
-func setCacheHeaders(w http.ResponseWriter, path string) {
-	// Vite-hashed assets under /assets/ - immutable, cache 1 year
-	if strings.HasPrefix(path, "/assets/") {
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		return
-	}
-
-	// Get the filename from the path
-	filename := path
-	if idx := strings.LastIndex(path, "/"); idx >= 0 {
-		filename = path[idx+1:]
-	}
-
-	// Service worker files must always be revalidated
-	if filename == "sw.js" || filename == "registerSW.js" {
-		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-		return
-	}
-
-	// Workbox runtime is hashed, can be cached long-term
-	if strings.HasPrefix(filename, "workbox-") && strings.HasSuffix(filename, ".js") {
-		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-		return
-	}
-
-	// PWA manifests - cache 1 hour (increase later)
-	if filename == "manifest.webmanifest" || filename == "manifest.json" {
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		return
-	}
-
-	// Icons and static images - cache 1 hour (increase later)
-	if strings.HasSuffix(filename, ".png") || strings.HasSuffix(filename, ".svg") || strings.HasSuffix(filename, ".ico") {
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-		return
-	}
-
-	// Other files with extensions - default 1 hour cache
-	if containsDot(path) {
-		w.Header().Set("Cache-Control", "public, max-age=3600")
-	}
 }
 
 // roundDuration rounds d to 3 significant digits with minimum 1µs precision.

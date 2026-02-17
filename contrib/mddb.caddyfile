@@ -9,9 +9,6 @@
 # Docs: https://caddyserver.com/docs/caddyfile/directives/reverse_proxy
 
 mddb.example.com {
-	# Compression (zstd preferred, then gzip)
-	encode zstd gzip
-
 	# Security headers
 	header {
 		# HSTS (1 year, include subdomains, allow preload)
