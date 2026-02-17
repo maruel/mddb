@@ -156,13 +156,19 @@ export default function NodeView() {
               />
               <div class={styles.editorStatus}>
                 <Show when={hasUnsavedChanges() && autoSaveStatus() === 'idle'}>
-                  <span class={styles.unsavedIndicator} title={t('editor.unsaved')}><EditIcon /></span>
+                  <span class={styles.unsavedIndicator} title={t('editor.unsaved')}>
+                    <EditIcon />
+                  </span>
                 </Show>
                 <Show when={autoSaveStatus() === 'saving'}>
-                  <span class={styles.savingIndicator} title={t('common.saving')}><SyncIcon /></span>
+                  <span class={styles.savingIndicator} title={t('common.saving')}>
+                    <SyncIcon />
+                  </span>
                 </Show>
                 <Show when={autoSaveStatus() === 'saved'}>
-                  <span class={styles.savedIndicator} title={t('common.saved')}><CloudDoneIcon /></span>
+                  <span class={styles.savedIndicator} title={t('common.saved')}>
+                    <CloudDoneIcon />
+                  </span>
                 </Show>
               </div>
             </div>
