@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import os
+import stat
 import subprocess
 import sys
+
+ALLOWED_BINARY_EXT = {".ico", ".jpg", ".gif", ".png", ".svg", ".webp", ".br", ".zst"}
+ALLOWED_EXECUTABLE = {"scripts/", ".github/"}
 
 
 def is_binary(file_path):
@@ -16,31 +20,43 @@ def is_binary(file_path):
         return False
 
 
+def is_executable(file_path):
+    """Check if file has executable bit set."""
+    try:
+        return os.stat(file_path).st_mode & stat.S_IXUSR != 0
+    except Exception:
+        return False
+
+
 def main():
     try:
-        # Get all tracked files
         files = subprocess.check_output(["git", "ls-files"], text=True).splitlines()
     except subprocess.CalledProcessError as e:
         print(f"Error running git: {e}", file=sys.stderr)
         return 1
 
-    binaries = []
-    for f in files:
-        if is_binary(f):
-            # Exclude known binary types that are allowed if any (e.g. icons/images)
-            # For mddb, the Makefile target was quite broad but typically images
-            # are in data/ or frontend/src/assets
-            ext = os.path.splitext(f)[1].lower()
-            if ext in [".ico", ".jpg", ".gif", ".png", ".svg", ".webp"]:
-                continue
-            binaries.append(f)
+    unexpected_binaries = []
+    unexpected_executables = []
 
-    if binaries:
-        print("Error: Binary executables found in repository:")
-        for b in binaries:
-            print(b)
-        return 1
-    return 0
+    for f in files:
+        ext = os.path.splitext(f)[1].lower()
+        if is_binary(f) and ext not in ALLOWED_BINARY_EXT:
+            unexpected_binaries.append(f)
+        if is_executable(f) and not any(f.startswith(p) for p in ALLOWED_EXECUTABLE):
+            unexpected_executables.append(f)
+
+    rc = 0
+    if unexpected_binaries:
+        print("Error: unexpected binary files in repository:")
+        for b in unexpected_binaries:
+            print(f"  {b}")
+        rc = 1
+    if unexpected_executables:
+        print("Error: unexpected executable files in repository:")
+        for e in unexpected_executables:
+            print(f"  {e}")
+        rc = 1
+    return rc
 
 
 if __name__ == "__main__":
