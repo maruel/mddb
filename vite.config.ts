@@ -51,6 +51,9 @@ export default defineConfig({
       },
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
+        buildPlugins: {
+          vite: [{ name: 'sw-quiet', config: () => ({ build: { reportCompressedSize: false }, logLevel: 'silent' }) }],
+        },
       },
     }),
     visualizer({
@@ -61,6 +64,7 @@ export default defineConfig({
     }),
   ],
   build: {
+    reportCompressedSize: false,
     outDir: '../backend/frontend/dist',  // relative to frontend/
     emptyOutDir: true,
     minify: 'terser',
