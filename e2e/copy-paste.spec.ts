@@ -22,6 +22,8 @@ test('paste standard HTML lists into the editor', async ({ page, request }) => {
 
   const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
   await expect(editor).toBeVisible({ timeout: 5000 });
+  // Wait for the created page content to load (not the Welcome page)
+  await expect(editor).not.toContainText('Welcome', { timeout: 5000 });
   await editor.focus();
 
   // Paste a bullet list
@@ -89,6 +91,8 @@ test('copy content from editor as markdown', async ({ page, request, context }) 
 
   const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
   await expect(editor).toBeVisible({ timeout: 5000 });
+  // Wait for the created page content to load
+  await expect(editor).toContainText('Bullet item', { timeout: 5000 });
 
   // Select all content
   await editor.focus();
@@ -124,6 +128,8 @@ test('paste HTML headings into the editor', async ({ page, request }) => {
 
   const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
   await expect(editor).toBeVisible({ timeout: 5000 });
+  // Wait for the created page content to load (not the Welcome page)
+  await expect(editor).not.toContainText('Welcome', { timeout: 5000 });
   await editor.focus();
 
   // Paste HTML with h1, h2, and a paragraph
@@ -172,6 +178,8 @@ test('copy headings from editor as markdown', async ({ page, request, context })
 
   const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
   await expect(editor).toBeVisible({ timeout: 5000 });
+  // Wait for the created page content to load
+  await expect(editor).toContainText('Big Title', { timeout: 5000 });
 
   // Select all and copy
   await editor.focus();
@@ -246,6 +254,8 @@ test('heading copy-paste round-trip preserves structure', async ({ page, request
 
   const editor2 = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
   await expect(editor2).toBeVisible({ timeout: 5000 });
+  // Wait for the empty page to load (not the previous page's content)
+  await expect(editor2).not.toContainText('Subsection', { timeout: 5000 });
   await editor2.focus();
 
   // Paste the copied content
@@ -281,6 +291,8 @@ test('paste markdown into editor', async ({ page, request }) => {
 
   const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
   await expect(editor).toBeVisible({ timeout: 5000 });
+  // Wait for the created page content to load (not the Welcome page)
+  await expect(editor).not.toContainText('Welcome', { timeout: 5000 });
   await editor.focus();
 
   // Paste markdown text
