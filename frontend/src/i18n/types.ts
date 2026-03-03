@@ -313,6 +313,12 @@ export interface Dictionary {
     typeSelect: string;
     typeUrl: string;
     typeEmail: string;
+    sort: string;
+    filter: string;
+    addSort: string;
+    noSorts: string;
+    ascending: string;
+    descending: string;
   };
 
   errors: {

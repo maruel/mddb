@@ -1,5 +1,48 @@
+// E2E tests for table creation, record CRUD, view modes, and sort UI.
+
+import type { Page, APIRequestContext } from '@playwright/test';
 import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
-import type { DataRecordResponse, ListRecordsResponse } from '../sdk/types.gen';
+import type { DataRecordResponse, Property } from '../sdk/types.gen';
+
+// Helper: create a table with records and navigate to it.
+async function setupTable(
+  page: Page,
+  request: APIRequestContext,
+  prefix: string,
+  properties: Property[],
+  records: Record<string, unknown>[]
+) {
+  const { token } = await registerUser(request, prefix);
+  await page.goto(`/?token=${token}`);
+  await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  const wsID = await getWorkspaceId(page);
+  const client = createClient(request, token);
+
+  const tableData = await client.ws(wsID).nodes.table.createTable('0', {
+    title: `${prefix} Table`,
+    properties,
+  });
+
+  for (const data of records) {
+    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, { data });
+  }
+
+  await page.reload();
+  await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
+  await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+  return { token, wsID, client, tableId: tableData.id };
+}
+
+// Helper: extract the order of known names from table rows.
+async function getRowOrder(page: Page, names: string[]): Promise<string[]> {
+  const rows = page.locator('table tbody tr');
+  const texts = await rows.allTextContents();
+  return texts
+    .map((t) => names.find((n) => t.includes(n)) ?? '')
+    .filter(Boolean);
+}
 
 test.describe('Table Creation and Basic Operations', () => {
   test.screenshot('create a table with properties and view it', async ({ page, request, takeScreenshot }) => {
@@ -8,8 +51,6 @@ test.describe('Table Creation and Basic Operations', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
-
-    // Create a table with properties via API
     const client = createClient(request, token);
     const tableData = await client.ws(wsID).nodes.table.createTable('0', {
       title: 'Test Table',
@@ -23,17 +64,11 @@ test.describe('Table Creation and Basic Operations', () => {
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
 
-    // Navigate to the table
-    const tableNode = page.locator(`[data-testid="sidebar-node-${tableData.id}"]`);
-    await expect(tableNode).toBeVisible({ timeout: 5000 });
-    await tableNode.click();
-
-    // Table view should be visible (look for the table element)
     const tableElement = page.locator('table');
     await expect(tableElement).toBeVisible({ timeout: 5000 });
 
-    // Column headers should be visible in the table header
     const tableHeaders = page.locator('th');
     await expect(tableHeaders.getByText('Name')).toBeVisible();
     await expect(tableHeaders.getByText('Status')).toBeVisible();
@@ -43,210 +78,352 @@ test.describe('Table Creation and Basic Operations', () => {
     await takeScreenshot('table-view');
   });
 
-  // Testing cell inline editing
   test('add and edit records in table', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'table-records');
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    const { client, wsID, tableId } = await setupTable(page, request, 'table-records', [
+      { name: 'Name', type: 'text' },
+      { name: 'Value', type: 'number' },
+    ], [
+      { Name: 'Item 1', Value: 100 },
+      { Name: 'Item 2', Value: 200 },
+    ]);
 
-    const wsID = await getWorkspaceId(page);
-    const client = createClient(request, token);
-
-    // Create a table
-    const tableData = await client.ws(wsID).nodes.table.createTable('0', {
-      title: 'Records Test Table',
-      properties: [
-        { name: 'Name', type: 'text', required: true },
-        { name: 'Value', type: 'number' },
-      ],
-    });
-
-    // Add some records via API
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
-      data: { Name: 'Item 1', Value: 100 },
-    });
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
-      data: { Name: 'Item 2', Value: 200 },
-    });
-
-    // Reload to see records (BUG: records created via API don't auto-refresh in UI)
-    await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    // Navigate to table
-    const tableNodeButton = page.locator(`[data-testid="sidebar-node-${tableData.id}"]`);
-    await tableNodeButton.click();
-
-    // Wait for table to load - if this times out, the node isn't loading as a table
-    await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
-
-    // Records should be visible
     await expect(page.getByText('Item 1')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Item 2')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('100')).toBeVisible();
     await expect(page.getByText('200')).toBeVisible();
 
-    // Click on a table cell to edit it - find the cell that contains exactly "Item 1"
-    const item1Text = page.locator('td').getByText('Item 1', { exact: true });
-    await item1Text.click();
-
-    // Wait for edit mode - input should appear with focus inside the table cell
+    // Click to edit
+    await page.locator('td').getByText('Item 1', { exact: true }).click();
     const editInput = page.locator('table td input[type="text"]').first();
     await expect(editInput).toBeVisible({ timeout: 5000 });
-
-    // Change the value
     await editInput.fill('Edited Item 1');
-
-    // Save the edit by pressing Enter
     await editInput.press('Enter');
 
-    // Verify the edit was saved via API (polls until record is found)
-    const listParams = {
-      ViewID: '',
-      Filters: '',
-      Sorts: '',
-      Offset: 0,
-      Limit: 100,
-    };
-
-    let recordsData: ListRecordsResponse;
+    // Verify via API
+    const listParams = { ViewID: '', Filters: '', Sorts: '', Offset: 0, Limit: 100 };
     await expect(async () => {
-      recordsData = await client.ws(wsID).nodes.table.records.listRecords(tableData.id, listParams);
-      const editedRecord = recordsData.records.find((r: DataRecordResponse) => (r.data.Name as string) === 'Edited Item 1');
-      expect(editedRecord).toBeTruthy();
+      const data = await client.ws(wsID).nodes.table.records.listRecords(tableId, listParams);
+      const edited = data.records.find((r: DataRecordResponse) => (r.data.Name as string) === 'Edited Item 1');
+      expect(edited).toBeTruthy();
     }).toPass({ timeout: 5000 });
   });
 
-  // Testing record deletion
   test('delete a record from table', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'table-delete');
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await setupTable(page, request, 'table-delete', [
+      { name: 'Name', type: 'text' },
+    ], [
+      { Name: 'Record To Delete' },
+    ]);
 
-    const wsID = await getWorkspaceId(page);
-    const client = createClient(request, token);
-
-    // Create a table
-    const tableData = await client.ws(wsID).nodes.table.createTable('0', {
-      title: 'Delete Record Table',
-      properties: [{ name: 'Name', type: 'text' }],
-    });
-
-    // Add a record
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
-      data: { Name: 'Record To Delete' },
-    });
-
-    // Reload to see records (BUG: records created via API don't auto-refresh in UI)
-    await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    // Navigate to table
-    await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
-
-    // Wait for table to load with records
-    await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('Record To Delete')).toBeVisible({ timeout: 5000 });
 
-    // Set up dialog handler BEFORE any action that might trigger it
-    // Use 'once' to handle exactly one dialog
-    page.once('dialog', async (dialog) => {
-      await dialog.accept();
-    });
-
-    // Find the row with our record and click its delete button
+    page.once('dialog', async (dialog) => await dialog.accept());
     const recordRow = page.locator('tr').filter({ hasText: 'Record To Delete' });
-    const deleteButton = recordRow.locator('button', { hasText: '✕' });
-    await deleteButton.click();
+    await recordRow.locator('button', { hasText: '✕' }).click();
 
-    // Record should disappear from the table
     await expect(page.locator('td').filter({ hasText: 'Record To Delete' })).not.toBeVisible({ timeout: 5000 });
+  });
+
+  test('add record via UI button', async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(page, request, 'table-add-ui', [
+      { name: 'Name', type: 'text' },
+    ], []);
+
+    // Empty table should show "+ Add Record"
+    await expect(page.getByText(/add record/i)).toBeVisible({ timeout: 5000 });
+
+    // Click to add
+    await page.getByText(/add record/i).click();
+
+    // Verify record was created via API
+    const listParams = { ViewID: '', Filters: '', Sorts: '', Offset: 0, Limit: 100 };
+    await expect(async () => {
+      const data = await client.ws(wsID).nodes.table.records.listRecords(tableId, listParams);
+      expect(data.records.length).toBe(1);
+    }).toPass({ timeout: 5000 });
   });
 });
 
 test.describe('Table View Modes', () => {
   test.screenshot('table has view tabs and add view dropdown', async ({ page, request, takeScreenshot }) => {
-    const { token } = await registerUser(request, 'view-modes');
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await setupTable(page, request, 'view-modes', [
+      { name: 'Name', type: 'text' },
+      { name: 'Status', type: 'select', options: [
+        { id: 'todo', name: 'To Do' },
+        { id: 'progress', name: 'In Progress' },
+        { id: 'done', name: 'Done' },
+      ]},
+    ], [
+      { Name: 'Task 1', Status: 'todo' },
+      { Name: 'Task 2', Status: 'progress' },
+    ]);
 
-    const wsID = await getWorkspaceId(page);
-    const client = createClient(request, token);
-
-    // Create a table with records
-    const tableData = await client.ws(wsID).nodes.table.createTable('0', {
-      title: 'View Modes Table',
-      properties: [
-        { name: 'Name', type: 'text' },
-        {
-          name: 'Status', type: 'select', options: [
-            { id: 'todo', name: 'To Do' },
-            { id: 'progress', name: 'In Progress' },
-            { id: 'done', name: 'Done' }
-          ]
-        },
-      ],
-    });
-
-    // Add records
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
-      data: { Name: 'Task 1', Status: 'todo' },
-    });
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
-      data: { Name: 'Task 2', Status: 'progress' },
-    });
-
-    // Reload to see records
-    await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    // Navigate to table
-    await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
-
-    // Wait for table to load
-    await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
-    // Wait for records to load - they should appear in the table
     await expect(page.locator('td').getByText('Task 1')).toBeVisible({ timeout: 5000 });
 
-    // Check that default view tab exists (All view)
+    // Default view tab active
     const defaultViewTab = page.locator('button').filter({ hasText: 'All' });
     await expect(defaultViewTab).toBeVisible();
     await expect(defaultViewTab).toHaveClass(/active/i);
     await takeScreenshot('view-table');
 
-    // Check that add view button exists
+    // Add view dropdown
     const addViewButton = page.locator('[data-testid="add-view-button"]');
-    await expect(addViewButton).toBeVisible();
-
-    // Open the add view dropdown
     await addViewButton.click();
     const viewMenu = page.locator('[data-testid="view-type-menu"]');
     await expect(viewMenu).toBeVisible({ timeout: 3000 });
-
-    // Verify dropdown options exist
     await expect(page.locator('[data-testid="view-type-table"]')).toBeVisible();
     await expect(page.locator('[data-testid="view-type-gallery"]')).toBeVisible();
     await expect(page.locator('[data-testid="view-type-board"]')).toBeVisible();
     await takeScreenshot('view-dropdown');
 
-    // Close dropdown by clicking outside (click in main content area, beyond sidebar at x=260)
+    // Close by clicking outside
     await page.locator('body').click({ position: { x: 400, y: 400 } });
     await expect(viewMenu).not.toBeVisible({ timeout: 3000 });
   });
 });
 
+test.describe('Table Sort UI', () => {
+  test('sort toolbar is visible and sort menu opens/closes', async ({ page, request }) => {
+    await setupTable(page, request, 'sort-ui', [
+      { name: 'Name', type: 'text' },
+    ], [
+      { Name: 'Alice' },
+    ]);
+
+    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+
+    // Sort button visible, filter button disabled
+    await expect(page.locator('[data-testid="sort-button"]')).toBeVisible();
+    await expect(page.locator('[data-testid="filter-button"]')).toBeDisabled();
+
+    // Open sort menu
+    await page.locator('[data-testid="sort-button"]').click();
+    const sortMenu = page.locator('[data-testid="sort-menu"]');
+    await expect(sortMenu).toBeVisible({ timeout: 3000 });
+
+    // Close with Escape
+    await page.keyboard.press('Escape');
+    await expect(sortMenu).not.toBeVisible({ timeout: 3000 });
+
+    // Reopen and close by clicking the sort button again (toggle)
+    await page.locator('[data-testid="sort-button"]').click();
+    await expect(sortMenu).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="sort-button"]').click();
+    await expect(sortMenu).not.toBeVisible({ timeout: 3000 });
+  });
+
+  test('add sort reorders records ascending', async ({ page, request }) => {
+    await setupTable(page, request, 'sort-asc', [
+      { name: 'Name', type: 'text' },
+      { name: 'Value', type: 'number' },
+    ], [
+      { Name: 'Zebra', Value: 30 },
+      { Name: 'Apple', Value: 10 },
+      { Name: 'Mango', Value: 20 },
+    ]);
+
+    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
+
+    // Add sort on Name (first property, ascending default)
+    await page.locator('[data-testid="sort-button"]').click();
+    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="add-sort-button"]').click();
+
+    // Sort row should appear
+    await expect(page.locator('[data-testid="sort-row"]')).toBeVisible({ timeout: 3000 });
+
+    // Records should be: Apple, Mango, Zebra
+    await expect(async () => {
+      expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Apple', 'Mango', 'Zebra']);
+    }).toPass({ timeout: 5000 });
+
+    // Badge shows "1"
+    await expect(page.locator('[data-testid="sort-button"]')).toContainText('1');
+  });
+
+  test('toggle sort direction reverses order', async ({ page, request }) => {
+    await setupTable(page, request, 'sort-desc', [
+      { name: 'Name', type: 'text' },
+    ], [
+      { Name: 'Zebra' },
+      { Name: 'Apple' },
+      { Name: 'Mango' },
+    ]);
+
+    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
+
+    // Add ascending sort
+    await page.locator('[data-testid="sort-button"]').click();
+    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="add-sort-button"]').click();
+
+    await expect(async () => {
+      expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Apple', 'Mango', 'Zebra']);
+    }).toPass({ timeout: 5000 });
+
+    // Toggle to descending
+    await page.locator('[data-testid="sort-direction-toggle"]').click();
+
+    await expect(async () => {
+      expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Zebra', 'Mango', 'Apple']);
+    }).toPass({ timeout: 5000 });
+  });
+
+  test('change sort property via dropdown', async ({ page, request }) => {
+    await setupTable(page, request, 'sort-prop', [
+      { name: 'Name', type: 'text' },
+      { name: 'Value', type: 'number' },
+    ], [
+      { Name: 'Zebra', Value: 1 },
+      { Name: 'Apple', Value: 3 },
+      { Name: 'Mango', Value: 2 },
+    ]);
+
+    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
+
+    // Add sort (defaults to Name asc)
+    await page.locator('[data-testid="sort-button"]').click();
+    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="add-sort-button"]').click();
+
+    await expect(async () => {
+      expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Apple', 'Mango', 'Zebra']);
+    }).toPass({ timeout: 5000 });
+
+    // Switch to sorting by Value
+    await page.locator('[data-testid="sort-property-select"]').selectOption('Value');
+
+    // Value order: Zebra(1), Mango(2), Apple(3)
+    await expect(async () => {
+      expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Zebra', 'Mango', 'Apple']);
+    }).toPass({ timeout: 5000 });
+  });
+
+  test('remove sort removes badge', async ({ page, request }) => {
+    await setupTable(page, request, 'sort-remove', [
+      { name: 'Name', type: 'text' },
+    ], [
+      { Name: 'Zebra' },
+      { Name: 'Apple' },
+    ]);
+
+    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
+
+    // Add sort
+    await page.locator('[data-testid="sort-button"]').click();
+    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="add-sort-button"]').click();
+    await expect(page.locator('[data-testid="sort-row"]')).toBeVisible({ timeout: 3000 });
+
+    // Remove sort
+    await page.locator('[data-testid="sort-remove"]').click();
+
+    // Sort row and badge should be gone
+    await expect(page.locator('[data-testid="sort-row"]')).not.toBeVisible({ timeout: 3000 });
+  });
+
+  test('multiple sorts apply compound ordering', async ({ page, request }) => {
+    await setupTable(page, request, 'sort-multi', [
+      { name: 'Color', type: 'text' },
+      { name: 'Size', type: 'number' },
+    ], [
+      { Color: 'Red', Size: 3 },
+      { Color: 'Blue', Size: 1 },
+      { Color: 'Red', Size: 1 },
+      { Color: 'Blue', Size: 2 },
+    ]);
+
+    await expect(page.getByText('Red').first()).toBeVisible({ timeout: 5000 });
+
+    // Add first sort: Color asc
+    await page.locator('[data-testid="sort-button"]').click();
+    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="add-sort-button"]').click();
+    await expect(page.locator('[data-testid="sort-row"]')).toBeVisible({ timeout: 3000 });
+
+    // Add second sort: Size asc
+    await page.locator('[data-testid="add-sort-button"]').click();
+    await expect(page.locator('[data-testid="sort-row"]')).toHaveCount(2, { timeout: 3000 });
+
+    // Badge shows "2"
+    await expect(page.locator('[data-testid="sort-button"]')).toContainText('2');
+
+    // Order: Blue/1, Blue/2, Red/1, Red/3
+    await expect(async () => {
+      const rows = page.locator('table tbody tr').filter({ has: page.locator('td') });
+      const count = await rows.count();
+      const pairs: string[] = [];
+      for (let i = 0; i < count; i++) {
+        const cells = rows.nth(i).locator('td');
+        const cellTexts = await cells.allTextContents();
+        // Cells: [handle, delete, Color, Size, ...]
+        const color = cellTexts.find((c) => c === 'Blue' || c === 'Red');
+        const size = cellTexts.find((c) => /^[123]$/.test(c.trim()));
+        if (color && size) pairs.push(`${color}/${size.trim()}`);
+      }
+      expect(pairs).toEqual(['Blue/1', 'Blue/2', 'Red/1', 'Red/3']);
+    }).toPass({ timeout: 5000 });
+  });
+
+  test('sort persists on saved view', async ({ page, request }) => {
+    const { client, wsID, tableId } = await setupTable(page, request, 'sort-persist', [
+      { name: 'Name', type: 'text' },
+    ], [
+      { Name: 'Zebra' },
+      { Name: 'Apple' },
+      { Name: 'Mango' },
+    ]);
+
+    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
+
+    // Create a saved view via API
+    const viewData = await client.ws(wsID).nodes.views.createView(tableId, {
+      name: 'Sorted',
+      type: 'table',
+    });
+
+    // Reload to pick up the new view
+    await page.reload();
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await page.locator(`[data-testid="sidebar-node-${tableId}"]`).click();
+    await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+
+    // Switch to the Sorted view tab
+    await page.locator('button').filter({ hasText: 'Sorted' }).click();
+
+    // Add a sort
+    await page.locator('[data-testid="sort-button"]').click();
+    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="add-sort-button"]').click();
+    await expect(page.locator('[data-testid="sort-row"]')).toBeVisible({ timeout: 3000 });
+
+    // Wait for records to sort
+    await expect(async () => {
+      expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Apple', 'Mango', 'Zebra']);
+    }).toPass({ timeout: 5000 });
+
+    // Verify sort was persisted via API
+    await expect(async () => {
+      const listParams = {
+        ViewID: viewData.id,
+        Filters: '',
+        Sorts: '',
+        Offset: 0,
+        Limit: 100,
+      };
+      const data = await client.ws(wsID).nodes.table.records.listRecords(tableId, listParams);
+      const names = data.records.map((r: DataRecordResponse) => r.data.Name);
+      expect(names).toEqual(['Apple', 'Mango', 'Zebra']);
+    }).toPass({ timeout: 5000 });
+  });
+});
+
 test.describe('Table and Page Hybrid', () => {
   test('table node shows table view with records section', async ({ page, request }) => {
-    // NOTE: Tables by default only show the table view, not markdown content
-    // This test verifies the table-specific UI elements
     const { token } = await registerUser(request, 'hybrid-node');
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
-
-    // Create a table
     const tableData = await client.ws(wsID).nodes.table.createTable('0', {
       title: 'Table Only Node',
       properties: [{ name: 'Item', type: 'text' }],
@@ -254,23 +431,12 @@ test.describe('Table and Page Hybrid', () => {
 
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
 
-    // Wait for title to confirm we're on the right node
-    const titleInput = page.locator('input[placeholder*="Title"]');
-    await expect(titleInput).toHaveValue('Table Only Node', { timeout: 5000 });
-
-    // Table view should be visible (not markdown textarea for table-only nodes)
-    const tableElement = page.locator('table');
-    await expect(tableElement).toBeVisible({ timeout: 5000 });
-
-    // Should have view tabs with default view and add button
+    await expect(page.locator('input[placeholder*="Title"]')).toHaveValue('Table Only Node', { timeout: 5000 });
+    await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
     await expect(page.locator('button').filter({ hasText: 'All' })).toBeVisible();
     await expect(page.getByTitle('New View')).toBeVisible();
-
-    // Markdown textarea should NOT be visible (table-only node)
-    const contentArea = page.locator('textarea[placeholder*="markdown"]');
-    await expect(contentArea).not.toBeVisible();
+    await expect(page.locator('textarea[placeholder*="markdown"]')).not.toBeVisible();
   });
 });

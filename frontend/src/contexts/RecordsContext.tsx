@@ -29,6 +29,9 @@ import {
 const PAGE_SIZE = 50;
 const FILTER_DEBOUNCE_MS = 300;
 
+/** Virtual view ID used when no saved views exist. */
+export const DEFAULT_VIEW_ID = '__default__';
+
 interface RecordsContextValue {
   records: Accessor<DataRecordResponse[]>;
   hasMore: Accessor<boolean>;
@@ -112,8 +115,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     setSaveError(null);
   };
 
-  // Virtual default view used when no views exist
-  const DEFAULT_VIEW_ID = '__default__';
+  // Virtual default view used when no views exist (uses module-level constant)
 
   // Client-side filter matching
   function matchesFilter(record: DataRecordResponse, filter: Filter): boolean {
@@ -224,16 +226,21 @@ export const RecordsProvider: ParentComponent = (props) => {
     debouncedServerReload.cancel();
   });
 
-  // Load records when selected node changes and has table content
+  // Load records when selected node changes and has table content.
+  // Track only the node ID to avoid re-running when other node data updates.
+  let prevNodeId: string | undefined;
   createEffect(() => {
     const node = selectedNodeData();
+    const nodeId = node?.id;
+    if (nodeId === prevNodeId) return;
+    prevNodeId = nodeId;
+
     if (node?.has_table) {
       batch(() => {
         const nodeViews = node.views || [];
 
         if (nodeViews.length > 0) {
           setViews(nodeViews);
-          // Default to first view or the one marked default
           const defaultView = nodeViews.find((v) => v.default) || nodeViews[0];
           if (defaultView) {
             setActiveViewIdSignal(defaultView.id);
@@ -259,7 +266,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         }
       });
       loadRecords(node.id);
-    } else {
+    } else if (prevNodeId !== undefined) {
       clearRecords();
     }
   });
@@ -537,15 +544,10 @@ export const RecordsProvider: ParentComponent = (props) => {
 
       setViews(views().map((v) => (v.id === viewId ? { ...v, ...updates } : v)));
 
-      // If updating active view's filters/sorts, update local state and apply
-      if (viewId === activeViewId()) {
-        if (updates.filters) setActiveFilters(updates.filters);
-        if (updates.sorts) setActiveSorts(updates.sorts);
-        // Apply filters/sorts (use client-side if cached)
-        if (updates.filters || updates.sorts) {
-          applyFiltersAndSorts();
-        }
-      }
+      // Note: we do NOT re-apply sorts/filters here. The caller is expected to
+      // use setSorts()/setFilters() for immediate local application before calling
+      // updateView() for persistence. Re-applying after the async API call would
+      // overwrite any user changes made while the request was in flight.
       setSaveError(null);
     } catch (err) {
       setSaveError(`${t('errors.failedToSave')}: ${err}`);

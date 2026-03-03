@@ -3,7 +3,7 @@
 export { AuthProvider, useAuth } from './AuthContext';
 export { WorkspaceProvider, useWorkspace } from './WorkspaceContext';
 export { EditorProvider, useEditor } from './EditorContext';
-export { RecordsProvider, useRecords } from './RecordsContext';
+export { RecordsProvider, useRecords, DEFAULT_VIEW_ID } from './RecordsContext';
 export { NotificationProvider, useNotifications } from './NotificationContext';
 export { EventSourceProvider, useEventSource } from './EventSourceContext';
 

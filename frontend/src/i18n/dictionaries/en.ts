@@ -314,6 +314,12 @@ export const dict: Dictionary = {
     typeSelect: 'Select',
     typeUrl: 'URL',
     typeEmail: 'Email',
+    sort: 'Sort',
+    filter: 'Filter',
+    addSort: 'Add sort',
+    noSorts: 'No sorts applied',
+    ascending: 'Ascending',
+    descending: 'Descending',
   },
 
   errors: {

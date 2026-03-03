@@ -1,0 +1,105 @@
+/* Styles for SortMenu dropdown component. */
+
+.menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: var(--s-1);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  min-width: 320px;
+  z-index: 100;
+  padding: var(--s-3);
+}
+
+.empty {
+  color: var(--c-text-muted);
+  font-size: 0.85rem;
+  padding: var(--s-2) 0;
+}
+
+.sortRow {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) 0;
+}
+
+.sortRow select {
+  flex: 1;
+  min-width: 0;
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: 0.85rem;
+}
+
+.dirButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-1);
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  color: var(--c-text-light);
+  transition: all var(--transition);
+}
+
+.dirButton:hover {
+  background: var(--c-bg-hover);
+  color: var(--c-primary);
+}
+
+.dirButton svg {
+  font-size: 1rem;
+}
+
+.removeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-1);
+  border: none;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  color: var(--c-text-muted);
+  transition: all var(--transition);
+}
+
+.removeButton:hover {
+  background: var(--c-bg-hover);
+  color: var(--c-danger);
+}
+
+.removeButton svg {
+  font-size: 1rem;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  padding: var(--s-1) 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--c-primary);
+  font-size: 0.85rem;
+  margin-top: var(--s-1);
+  transition: opacity var(--transition);
+}
+
+.addButton:hover {
+  opacity: 0.8;
+}
+
+.addButton svg {
+  font-size: 1rem;
+}
