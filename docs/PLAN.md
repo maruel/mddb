@@ -23,9 +23,16 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
   - [ ] Add optional public asset sharing with workspace-level settings.
 - **Intelligence**: Semantic search and AI agent readiness (MCP).
 - **Global Presence**: Full localization and offline PWA capabilities.
+- **Advanced Table Views**: Filter/sort UI (backend + state management done, UI pending).
+  - [x] Backend filter/sort model, query engine, and validation.
+  - [x] View persistence (filters/sorts saved per view).
+  - [x] RecordsContext with client-side and server-side filter/sort execution.
+  - [ ] ViewToolbar with Filter and Sort buttons.
+  - [ ] SortMenu dropdown (property + direction per row).
+  - [ ] FilterMenu dropdown (property + operator + value per row, compound AND/OR).
+  - [ ] Column visibility toggles, view rename/duplicate.
 
 ## Future Evolution
-- **Advanced Table Views**: Filter/sort UI dropdowns, column visibility toggles, view rename/duplicate.
 - **High-Performance UX**: Virtualization, command palettes, and relationship graphs.
 - **Inline Markdown Tables**: Add `table` node type to ProseMirror schema, handle `table_open`/`thead_open`/`tr_open`/`th_open`/`td_open` tokens in `markdown-parser.ts`, and render/edit tables in the flat block editor. Currently table syntax is disabled in markdown-it (`md.disable('table')`) to avoid a crash.
 - **Data Integrity**: Migration to SQLite for metadata while preserving the self-describing on-disk format.
