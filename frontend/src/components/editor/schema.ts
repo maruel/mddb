@@ -41,6 +41,7 @@ const blockSpec: NodeSpec = {
     // Task list items: li.task-list-item with optional data-checked
     {
       tag: 'li.task-list-item',
+      priority: 70,
       getAttrs(dom: HTMLElement) {
         return {
           type: 'task',
@@ -51,7 +52,28 @@ const blockSpec: NodeSpec = {
     },
 
     // Bullet and numbered list items: plain li, context determines bullet vs number
-    // For now, default to bullet; number type is handled via attributes from HTML5 data
+    {
+      tag: 'ul li',
+      priority: 70,
+      getAttrs(dom: HTMLElement) {
+        return {
+          type: 'bullet',
+          indent: parseInt(dom.dataset.indent || '0', 10),
+        };
+      },
+    },
+    {
+      tag: 'ol li',
+      priority: 70,
+      getAttrs(dom: HTMLElement) {
+        return {
+          type: 'number',
+          indent: parseInt(dom.dataset.indent || '0', 10),
+        };
+      },
+    },
+
+    // Fallback for plain li
     {
       tag: 'li',
       getAttrs(dom: HTMLElement) {
@@ -105,6 +127,22 @@ const blockSpec: NodeSpec = {
     {
       tag: 'hr',
       attrs: { type: 'divider' },
+    },
+
+    // Catch mddb's own serialized format (divs with data-type)
+    {
+      tag: 'div[data-type]',
+      priority: 60, // Higher than default
+      getAttrs(dom: HTMLElement) {
+        const type = dom.dataset.type as BlockType;
+        return {
+          type,
+          indent: parseInt(dom.dataset.indent || '0', 10),
+          level: dom.dataset.level ? parseInt(dom.dataset.level, 10) : null,
+          checked: dom.dataset.checked === 'true' ? true : dom.dataset.checked === 'false' ? false : null,
+          language: dom.dataset.language || null,
+        };
+      },
     },
 
     // Paragraph: default, catch-all

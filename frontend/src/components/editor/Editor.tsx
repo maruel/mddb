@@ -13,6 +13,7 @@ import {
 import { nodes, marks, createEditorState, schema } from './prosemirror-config';
 import { parseMarkdown } from './markdown-parser';
 import { serializeToMarkdown } from './markdown-serializer';
+import { transformPastedHTML } from './dom-parser';
 import { createBlockNodeView } from './BlockNodeView';
 import { toggleTaskBlock } from './blockCommands';
 import { createSlashCommandPlugin, type SlashMenuState } from './slashCommandPlugin';
@@ -261,6 +262,31 @@ export default function Editor(props: EditorProps) {
     const editorView = new EditorView(editorEl, {
       state,
       editable: () => !props.readOnly,
+      transformPastedHTML(html) {
+        return transformPastedHTML(html);
+      },
+      clipboardTextSerializer(slice) {
+        return localSerializeMarkdown(slice.content as any);
+      },
+      handlePaste(editorView, event) {
+        const html = event.clipboardData?.getData('text/html');
+        if (html) return false; // Let transformPastedHTML handle it
+
+        const text = event.clipboardData?.getData('text/plain');
+        if (!text) return false;
+
+        // Heuristic: if it has multiple lines or markdown markers, parse as markdown
+        const hasMarkers = /^[#>\-*\d+]|[`\[*_]/.test(text) || text.includes('\n');
+        if (hasMarkers) {
+          const doc = localParseMarkdown(text);
+          if (doc) {
+            const slice = doc.slice(0, doc.content.size);
+            editorView.dispatch(editorView.state.tr.replaceSelection(slice));
+            return true;
+          }
+        }
+        return false;
+      },
       nodeViews: {
         block: createBlockNodeView,
       },
