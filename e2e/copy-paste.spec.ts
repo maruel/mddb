@@ -27,7 +27,7 @@ test('paste standard HTML lists into the editor', async ({ page, request }) => {
   // Paste a bullet list
   await page.keyboard.press('Control+A');
   await page.evaluate(() => {
-    const editor = document.querySelector('.ProseMirror');
+    const el = document.querySelector('.ProseMirror');
     const dt = new DataTransfer();
     dt.setData('text/html', '<ul><li>Bullet 1</li><li>Bullet 2</li></ul>');
     const event = new ClipboardEvent('paste', {
@@ -35,7 +35,7 @@ test('paste standard HTML lists into the editor', async ({ page, request }) => {
       bubbles: true,
       cancelable: true,
     });
-    editor?.dispatchEvent(event);
+    el?.dispatchEvent(event);
   });
 
   // Verify bullet list blocks were created
@@ -50,7 +50,7 @@ test('paste standard HTML lists into the editor', async ({ page, request }) => {
   // Paste a numbered list
   await page.keyboard.press('Control+A');
   await page.evaluate(() => {
-    const editor = document.querySelector('.ProseMirror');
+    const el = document.querySelector('.ProseMirror');
     const dt = new DataTransfer();
     dt.setData('text/html', '<ol><li>Number 1</li><li>Number 2</li></ol>');
     const event = new ClipboardEvent('paste', {
@@ -58,7 +58,7 @@ test('paste standard HTML lists into the editor', async ({ page, request }) => {
       bubbles: true,
       cancelable: true,
     });
-    editor?.dispatchEvent(event);
+    el?.dispatchEvent(event);
   });
 
   // Verify numbered list blocks were created
@@ -129,7 +129,7 @@ test('paste HTML headings into the editor', async ({ page, request }) => {
   // Paste HTML with h1, h2, and a paragraph
   await page.keyboard.press('Control+A');
   await page.evaluate(() => {
-    const editor = document.querySelector('.ProseMirror');
+    const el = document.querySelector('.ProseMirror');
     const dt = new DataTransfer();
     dt.setData('text/html', '<h1>Title</h1><h2>Subtitle</h2><p>Body text</p>');
     const event = new ClipboardEvent('paste', {
@@ -137,7 +137,7 @@ test('paste HTML headings into the editor', async ({ page, request }) => {
       bubbles: true,
       cancelable: true,
     });
-    editor?.dispatchEvent(event);
+    el?.dispatchEvent(event);
   });
 
   // Verify heading and paragraph blocks were created
@@ -285,7 +285,7 @@ test('paste markdown into editor', async ({ page, request }) => {
 
   // Paste markdown text
   await page.evaluate(() => {
-    const editor = document.querySelector('.ProseMirror');
+    const el = document.querySelector('.ProseMirror');
     const dt = new DataTransfer();
     dt.setData('text/plain', '# Heading\n\n- Item 1\n- Item 2');
     const event = new ClipboardEvent('paste', {
@@ -293,7 +293,7 @@ test('paste markdown into editor', async ({ page, request }) => {
       bubbles: true,
       cancelable: true,
     });
-    editor?.dispatchEvent(event);
+    el?.dispatchEvent(event);
   });
 
   // Verify blocks were created

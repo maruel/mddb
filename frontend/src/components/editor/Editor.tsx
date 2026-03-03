@@ -266,9 +266,9 @@ export default function Editor(props: EditorProps) {
         return transformPastedHTML(html);
       },
       clipboardTextSerializer(slice) {
-        return localSerializeMarkdown(slice.content as any);
+        return localSerializeMarkdown(schema.node('doc', null, slice.content));
       },
-      handlePaste(editorView, event) {
+      handlePaste(_view, event) {
         const html = event.clipboardData?.getData('text/html');
         if (html) return false; // Let transformPastedHTML handle it
 
@@ -276,11 +276,11 @@ export default function Editor(props: EditorProps) {
         if (!text) return false;
 
         // Heuristic: if it has multiple lines or markdown markers, parse as markdown
-        const hasMarkers = /^[#>\-*\d+]|[`\[*_]/.test(text) || text.includes('\n');
+        const hasMarkers = /^[#>\-*\d+]|[`[*_]/.test(text) || text.includes('\n');
         if (hasMarkers) {
-          const doc = localParseMarkdown(text);
-          if (doc) {
-            const slice = doc.slice(0, doc.content.size);
+          const parsed = localParseMarkdown(text);
+          if (parsed) {
+            const slice = parsed.slice(0, parsed.content.size);
             editorView.dispatch(editorView.state.tr.replaceSelection(slice));
             return true;
           }
