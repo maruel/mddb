@@ -65,7 +65,7 @@ func (h *InvitationHandler) CreateOrgInvitation(ctx context.Context, orgID ksid.
 
 // ListOrgInvitations returns all pending invitations for an organization.
 func (h *InvitationHandler) ListOrgInvitations(ctx context.Context, orgID ksid.ID, _ *identity.User, _ *dto.ListOrgInvitationsRequest) (*dto.ListOrgInvitationsResponse, error) {
-	var responses []dto.OrgInvitationResponse //nolint:prealloc // Iterator length unknown
+	var responses []dto.OrgInvitationResponse
 	for inv := range h.Svc.OrgInvitation.IterByOrg(orgID) {
 		responses = append(responses, *orgInvitationToResponse(inv))
 	}
@@ -123,7 +123,7 @@ func (h *InvitationHandler) CreateWSInvitation(ctx context.Context, wsID ksid.ID
 
 // ListWSInvitations returns all pending invitations for a workspace.
 func (h *InvitationHandler) ListWSInvitations(ctx context.Context, wsID ksid.ID, _ *identity.User, _ *dto.ListWSInvitationsRequest) (*dto.ListWSInvitationsResponse, error) {
-	var responses []dto.WSInvitationResponse //nolint:prealloc // Iterator length unknown
+	var responses []dto.WSInvitationResponse
 	for inv := range h.Svc.WSInvitation.IterByWorkspace(wsID) {
 		responses = append(responses, *wsInvitationToResponse(inv))
 	}

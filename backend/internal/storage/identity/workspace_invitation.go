@@ -141,7 +141,7 @@ func (s *WorkspaceInvitationService) IterByWorkspace(wsID ksid.ID) iter.Seq[*Wor
 
 // DeleteAllByWorkspace removes all invitations for a workspace.
 func (s *WorkspaceInvitationService) DeleteAllByWorkspace(wsID ksid.ID) error {
-	var toDelete []ksid.ID //nolint:prealloc // Iterator length unknown
+	var toDelete []ksid.ID
 	for inv := range s.byWSID.Iter(wsID) {
 		toDelete = append(toDelete, inv.ID)
 	}

@@ -58,7 +58,8 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB
+	r.Body = http.MaxBytesReader(w, r.Body, 10<<20) // 10 MB
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		writeErrorResponse(w, dto.BadRequest("form_parse"))
 		return
 	}

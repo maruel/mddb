@@ -65,7 +65,7 @@ func (s *Service) TriggerPush(wsID ksid.ID) {
 		t.Stop()
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) //nolint:gosec // cancel stored in s.cancels and called via defer in timer goroutine
 	s.cancels[wsID] = cancel
 	s.timers[wsID] = time.AfterFunc(autoPushDebounce, func() {
 		defer cancel()

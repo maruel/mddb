@@ -228,7 +228,7 @@ func (s *WorkspaceMembershipService) Delete(id ksid.ID) error {
 
 // DeleteAllByWorkspace removes all memberships for a workspace.
 func (s *WorkspaceMembershipService) DeleteAllByWorkspace(wsID ksid.ID) error {
-	var toDelete []ksid.ID //nolint:prealloc // Iterator length unknown
+	var toDelete []ksid.ID
 	for m := range s.byWSID.Iter(wsID) {
 		toDelete = append(toDelete, m.ID)
 	}

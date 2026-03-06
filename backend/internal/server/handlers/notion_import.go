@@ -78,7 +78,7 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 	}
 
 	// Create import state with a fresh context (independent of HTTP request lifecycle)
-	importCtx, cancel := context.WithCancel(context.Background())
+	importCtx, cancel := context.WithCancel(context.Background()) //nolint:gosec // cancel stored in state and called when import completes or is cancelled
 	state := &importState{
 		status:    "running",
 		cancel:    cancel,
