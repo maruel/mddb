@@ -15,7 +15,7 @@
 }
 
 .empty {
-  color: var(--c-text-muted);
+  color: var(--c-text-light);
   font-size: 0.85rem;
   padding: var(--s-2) 0;
 }
@@ -69,7 +69,7 @@
   border-radius: 4px;
   background: none;
   cursor: pointer;
-  color: var(--c-text-muted);
+  color: var(--c-text-light);
   transition: all var(--transition);
 }
 

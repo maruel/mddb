@@ -48,7 +48,7 @@
 }
 
 .item.danger {
-  color: var(--c-error);
+  color: var(--c-danger);
 }
 
 .item.danger:hover,

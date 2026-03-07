@@ -279,13 +279,13 @@
 /* Invalid (broken) internal links - needs higher specificity to override link color */
 .prosemirrorEditor :global(.ProseMirror a .invalid-link),
 .prosemirrorEditor :global(.ProseMirror a.invalid-link) {
-  color: var(--c-error);
+  color: var(--c-danger);
   text-decoration: line-through;
 }
 
 .prosemirrorEditor :global(.ProseMirror a .invalid-link:hover),
 .prosemirrorEditor :global(.ProseMirror a.invalid-link:hover) {
-  color: var(--c-error);
+  color: var(--c-danger);
 }
 
 /* Images */
@@ -579,7 +579,7 @@
   top: 0;
   width: 24px;
   text-align: center;
-  color: var(--c-text-muted, var(--c-text-light));
+  color: var(--c-text-light);
   font-weight: bold;
 }
 
@@ -597,7 +597,7 @@
   top: 0;
   width: 24px;
   text-align: center;
-  color: var(--c-text-muted, var(--c-text-light));
+  color: var(--c-text-light);
 }
 
 /* Task list checkbox (rendered via ::before pseudo-element like bullet/number) */

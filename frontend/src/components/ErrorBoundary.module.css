@@ -15,13 +15,13 @@
 .errorBoundary h2 {
   margin: 0 0 1rem;
   font-size: 1.5rem;
-  color: var(--c-error, #d32f2f);
+  color: var(--c-danger);
 }
 
 .errorMessage {
   margin: 0 0 1.5rem;
   font-size: 1rem;
-  color: var(--c-text-secondary, #666);
+  color: var(--c-text-light);
 }
 
 .errorDetails {
@@ -33,7 +33,7 @@
 
 .errorDetails summary {
   cursor: pointer;
-  color: var(--c-text-secondary, #666);
+  color: var(--c-text-light);
   font-size: 0.875rem;
 }
 

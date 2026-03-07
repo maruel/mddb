@@ -102,7 +102,7 @@
 
 .editorLoading {
   padding: var(--s-2);
-  color: var(--c-text-muted);
+  color: var(--c-text-light);
 }
 
 .editorHeader {
@@ -131,7 +131,7 @@
 .unsavedIndicator,
 .savingIndicator,
 .savedIndicator {
-  color: var(--c-text-muted);
+  color: var(--c-text-light);
 }
 
 .savingIndicator svg {
@@ -379,7 +379,7 @@
 .closePreviewButton {
   background: transparent;
   border: none;
-  color: var(--c-text-muted);
+  color: var(--c-text-light);
   cursor: pointer;
   font-size: 0.85rem;
   padding: var(--s-1) var(--s-2);

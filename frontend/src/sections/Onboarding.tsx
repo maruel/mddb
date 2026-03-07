@@ -125,7 +125,7 @@ export default function Onboarding() {
       }}
     >
       <Show when={error()}>
-        <div style={{ color: 'var(--c-error, red)', 'margin-bottom': '1rem' }}>{error()}</div>
+        <div style={{ color: 'var(--c-danger)', 'margin-bottom': '1rem' }}>{error()}</div>
       </Show>
       <Show when={!error()}>
         <div style={{ 'font-size': '1.5rem', 'margin-bottom': '1rem' }}>

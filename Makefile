@@ -90,7 +90,7 @@ coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm coverage
 
-lint: lint-go lint-frontend lint-python lint-binaries
+lint: lint-go lint-frontend lint-python lint-binaries lint-css
 
 lint-go:
 	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
@@ -104,6 +104,9 @@ lint-python:
 
 lint-binaries:
 	@python3 scripts/lint_binaries.py
+
+lint-css:
+	@python3 scripts/lint_css_vars.py
 
 lint-fix: $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run ./... --fix || true

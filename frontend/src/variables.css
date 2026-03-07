@@ -14,8 +14,18 @@ body {
 :root {
   /* Primary brand color for buttons, links, accents */
   --c-primary: #2563eb;
+  /* RGB components of --c-primary for use in rgba() */
+  --c-primary-rgb: 37, 99, 235;
   /* Hover state for primary buttons */
   --c-primary-hover: #1d4ed8;
+  /* Darker primary for active/pressed states */
+  --c-primary-dark: #1565c0;
+  /* Light primary tint for selected/highlighted backgrounds */
+  --c-primary-light: #dbeafe;
+  /* Very light primary background for banners/callouts */
+  --c-primary-bg: #eef6ff;
+  /* Focus ring border color */
+  --c-border-focus: #2563eb;
 
   /* Default text color */
   --c-text: #1f2937;
@@ -28,6 +38,8 @@ body {
   --c-bg-alt: #e5e7eb;
   /* Subtle hover for menu items, list items, table rows */
   --c-bg-hover: rgba(0, 0, 0, 0.04);
+  /* Secondary/muted background */
+  --c-bg-secondary: #f5f5f5;
 
   /* Default border color */
   --c-border: #e5e7eb;
@@ -35,13 +47,20 @@ body {
   --c-success: #16a34a;
   /* Errors, destructive actions */
   --c-danger: #dc2626;
+  /* Error background tint */
+  --c-error-bg: rgba(239, 68, 68, 0.1);
+  /* Warning background and border */
+  --c-warning-bg: #fff3cd;
+  --c-warning-border: #ffc107;
 
-  /* Spacing scale: 4px base (s-1=4px, s-2=8px, s-3=16px, s-4=24px, s-5=32px) */
+  /* Spacing scale: 4px base (s-05=2px, s-1=4px, s-2=8px, s-3=16px, s-4=24px, s-5=32px, s-6=40px) */
+  --s-05: 0.125rem;
   --s-1: 0.25rem;
   --s-2: 0.5rem;
   --s-3: 1rem;
   --s-4: 1.5rem;
   --s-5: 2rem;
+  --s-6: 2.5rem;
 
   /* Typography */
   --font: system-ui, -apple-system, sans-serif;
@@ -49,6 +68,8 @@ body {
 
   /* Default border radius */
   --radius: 6px;
+  /* Smaller border radius for compact elements */
+  --radius-sm: 4px;
   /* Default box shadow */
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   /* Elevated shadow for dropdowns and popovers */

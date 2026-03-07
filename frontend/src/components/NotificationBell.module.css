@@ -99,7 +99,7 @@
 .empty {
   padding: var(--s-6);
   text-align: center;
-  color: var(--c-text-muted);
+  color: var(--c-text-light);
   font-size: 0.85rem;
 }
 
@@ -155,7 +155,7 @@
   display: flex;
   gap: var(--s-2);
   font-size: 0.75rem;
-  color: var(--c-text-muted);
+  color: var(--c-text-light);
   margin-top: 4px;
 }
 
@@ -166,7 +166,7 @@
 .deleteButton {
   background: none;
   border: none;
-  color: var(--c-text-muted);
+  color: var(--c-text-light);
   cursor: pointer;
   padding: 2px;
   border-radius: var(--radius);
@@ -206,7 +206,7 @@
 }
 
 .loadMoreButton:disabled {
-  color: var(--c-text-muted);
+  color: var(--c-text-light);
   cursor: default;
 }
 
