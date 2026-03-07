@@ -30,7 +30,12 @@ export default function ViewToolbar(props: ViewToolbarProps) {
   return (
     <div class={styles.toolbar}>
       <div class={styles.sortWrapper} ref={(el) => (sortWrapperRef = el)}>
-        <button class={styles.toolbarButton} onClick={() => setShowSortMenu(!showSortMenu())} data-testid="sort-button">
+        <button
+          class={styles.toolbarButton}
+          classList={{ [`${styles.active}`]: activeSorts().length > 0 }}
+          onClick={() => setShowSortMenu(!showSortMenu())}
+          data-testid="sort-button"
+        >
           <SwapVertIcon />
           {t('table.sort')}
           <Show when={activeSorts().length > 0}>

@@ -1,105 +1,155 @@
 /* Styles for ViewTabs component - horizontal tabs for saved table views. */
 
 .container {
-  position: relative;
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  /* No overflow:hidden here — would clip the add-view dropdown */
 }
 
 .tabs {
   display: flex;
-  align-items: center;
-  gap: 2px;
-  background: var(--c-bg-alt);
-  padding: 2px;
-  border-radius: var(--radius);
+  align-items: stretch;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Wrapper holds the tab button and optional delete button as siblings */
+.tabWrapper {
+  display: flex;
+  align-items: stretch;
+  position: relative;
 }
 
 .tab {
   display: flex;
   align-items: center;
   gap: var(--s-1);
-  padding: var(--s-1) var(--s-3);
+  padding: var(--s-2) var(--s-3);
   border: none;
   background: none;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   cursor: pointer;
-  border-radius: 4px;
-  color: var(--c-text);
+  color: var(--c-text-light);
   white-space: nowrap;
-  transition: background var(--transition);
+  /* Bottom inset shadow acts as active underline indicator */
+  box-shadow: inset 0 -2px 0 0 transparent;
+  transition:
+    color var(--transition),
+    background var(--transition),
+    box-shadow var(--transition);
 }
 
 .tab:hover {
-  background: var(--c-bg);
+  color: var(--c-text);
+  background: var(--c-bg-hover);
 }
 
 .tab.active {
-  background: var(--c-bg);
-  box-shadow: var(--shadow);
+  color: var(--c-text);
   font-weight: 500;
+  box-shadow: inset 0 -2px 0 0 var(--c-primary);
 }
 
 .icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0.7;
+  opacity: 0.6;
+}
+
+.tab.active .icon {
+  opacity: 1;
 }
 
 .icon svg {
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .name {
-  max-width: 120px;
+  max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.defaultBadge {
-  font-size: 0.65rem;
-  background: var(--c-primary);
-  color: white;
-  padding: 1px 4px;
-  border-radius: 3px;
-  margin-left: var(--s-1);
+/* Delete button: sibling of .tab, revealed on wrapper hover */
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  padding: 0;
+  margin-left: -10px; /* tuck under tab's right padding */
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--c-text-light);
+  opacity: 0;
+  flex-shrink: 0;
+  transition:
+    opacity var(--transition),
+    color var(--transition);
 }
 
+.tabWrapper:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  color: var(--c-danger);
+}
+
+.deleteBtn svg {
+  font-size: 0.8rem;
+}
+
+/* Add view button */
 .addWrapper {
   position: relative;
+  display: flex;
+  align-items: center;
+  padding-left: var(--s-1);
 }
 
 .addButton {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--s-1);
   padding: var(--s-1) var(--s-2);
   border: none;
   background: none;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--c-text-light);
+  font-size: 0.8rem;
+  white-space: nowrap;
   transition: all var(--transition);
 }
 
 .addButton svg {
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .addButton:hover {
-  background: var(--c-bg);
-  color: var(--c-primary);
+  background: var(--c-bg-hover);
+  color: var(--c-text);
 }
 
 .dropdown {
   position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: var(--s-1);
+  top: calc(100% + 4px);
+  left: 0;
   background: var(--c-bg);
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  min-width: 140px;
+  min-width: 150px;
   z-index: 100;
   overflow: hidden;
 }
@@ -116,6 +166,7 @@
   cursor: pointer;
   text-align: left;
   color: var(--c-text);
+  white-space: nowrap;
 }
 
 .dropdown button:hover {
@@ -134,8 +185,8 @@
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  min-width: 100px;
-  z-index: 100;
+  min-width: 120px;
+  z-index: 200;
   overflow: hidden;
 }
 
@@ -160,5 +211,5 @@
 }
 
 .deleteAction:hover {
-  background: #fef2f2 !important;
+  background: rgba(220, 38, 38, 0.05) !important;
 }

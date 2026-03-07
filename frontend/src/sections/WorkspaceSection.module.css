@@ -169,6 +169,16 @@
   flex: 1;
 }
 
+/* Single horizontal bar containing view tabs (left) and toolbar controls (right) */
+.viewBar {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--c-border);
+  margin: 0 calc(-1 * var(--s-3)) var(--s-2);
+  padding: 0 var(--s-3);
+  min-height: 40px;
+}
+
 .breadcrumbs {
   display: flex;
   align-items: center;

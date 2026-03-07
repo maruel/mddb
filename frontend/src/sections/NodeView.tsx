@@ -230,8 +230,10 @@ export default function NodeView() {
 
               <Show when={selectedNodeData()?.has_table}>
                 <div class={styles.tableView}>
-                  <ViewTabs />
-                  <ViewToolbar properties={selectedNodeData()?.properties || []} />
+                  <div class={styles.viewBar}>
+                    <ViewTabs />
+                    <ViewToolbar properties={selectedNodeData()?.properties || []} />
+                  </div>
                   <Show when={viewType() === 'table'}>
                     <TableTable
                       tableId={selectedNodeId() || ''}

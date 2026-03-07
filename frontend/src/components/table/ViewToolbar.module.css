@@ -3,8 +3,11 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-2) 0;
+  gap: var(--s-1);
+  padding: 0 var(--s-1);
+  border-left: 1px solid var(--c-border);
+  margin-left: var(--s-1);
+  flex-shrink: 0;
 }
 
 .sortWrapper {
@@ -15,14 +18,17 @@
   display: inline-flex;
   align-items: center;
   gap: var(--s-1);
-  padding: var(--s-1) var(--s-3);
-  border: 1px solid var(--c-border);
+  padding: var(--s-1) var(--s-2);
+  border: none;
   border-radius: var(--radius);
-  background: var(--c-bg);
+  background: none;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--c-text-light);
-  transition: all var(--transition);
+  white-space: nowrap;
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 
 .toolbarButton:hover {
@@ -30,30 +36,38 @@
   color: var(--c-text);
 }
 
+.toolbarButton.active {
+  color: var(--c-primary);
+}
+
+.toolbarButton.active:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+
 .toolbarButton:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .toolbarButton:disabled:hover {
-  background: var(--c-bg);
+  background: none;
   color: var(--c-text-light);
 }
 
 .toolbarButton svg {
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 4px;
-  border-radius: 9px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
   background: var(--c-primary);
   color: white;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
 }
