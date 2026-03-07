@@ -330,6 +330,7 @@ export interface Dictionary {
     insertColumnRight: string;
     deleteColumn: string;
     confirmDeleteColumn: string;
+    removeSort: string;
     typeMultiSelect: string;
     typePhone: string;
   };

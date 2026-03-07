@@ -11,6 +11,7 @@ vi.mock('../contexts', () => ({
     setSorts: vi.fn(),
     updateView: vi.fn(),
     activeViewId: () => '__default__',
+    activeSorts: () => [],
   }),
   DEFAULT_VIEW_ID: '__default__',
 }));

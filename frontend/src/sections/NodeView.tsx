@@ -7,7 +7,6 @@ import TableGrid from '../components/TableGrid';
 import TableGallery from '../components/TableGallery';
 import TableBoard from '../components/TableBoard';
 import ViewTabs from '../components/table/ViewTabs';
-import ViewToolbar from '../components/table/ViewToolbar';
 import MarkdownPreview from '../components/MarkdownPreview';
 import { useAuth, useWorkspace, useEditor, useRecords } from '../contexts';
 import { useI18n } from '../i18n';
@@ -264,7 +263,6 @@ export default function NodeView() {
                 <div class={styles.tableView}>
                   <div class={styles.viewBar}>
                     <ViewTabs />
-                    <ViewToolbar properties={selectedNodeData()?.properties || []} />
                   </div>
                   <Show when={viewType() === 'table'}>
                     <TableTable

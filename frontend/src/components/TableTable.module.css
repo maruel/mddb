@@ -137,6 +137,19 @@
   font-size: 0.7rem;
 }
 
+.sortIndicator {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--s-1);
+  color: var(--c-primary);
+  font-size: 0.85rem;
+}
+
+.sortIndicator svg {
+  width: 14px;
+  height: 14px;
+}
+
 /* New row - subtle bottom row */
 .newRow {
   border-bottom: none;

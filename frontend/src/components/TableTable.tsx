@@ -10,6 +10,9 @@ import { AddColumnDropdown } from './table/AddColumnDropdown';
 import { useI18n } from '../i18n';
 import { useRecords, DEFAULT_VIEW_ID } from '../contexts';
 
+import ArrowUpwardIcon from '@material-symbols/svg-400/outlined/arrow_upward.svg?solid';
+import ArrowDownwardIcon from '@material-symbols/svg-400/outlined/arrow_downward.svg?solid';
+
 interface TableTableProps {
   tableId: string;
   columns: Property[];
@@ -29,7 +32,7 @@ interface TableTableProps {
 
 export default function TableTable(props: TableTableProps) {
   const { t } = useI18n();
-  const { setSorts, updateView, activeViewId } = useRecords();
+  const { setSorts, updateView, activeViewId, activeSorts } = useRecords();
 
   const [editingCell, setEditingCell] = createSignal<{
     recordId: string;
@@ -137,16 +140,27 @@ export default function TableTable(props: TableTableProps) {
     setColumnMenu({ colIndex, x: rect.left, y: rect.bottom + 4 });
   };
 
-  const getColumnActions = (): ContextMenuAction[] => {
+  const getColumnActions = (colIndex: number): ContextMenuAction[] => {
+    const column = props.columns[colIndex];
+    const activeSort = column ? activeSorts().find((s) => s.property === column.name) : undefined;
+
     const actions: ContextMenuAction[] = [
       { id: 'rename', label: t('table.renameColumn') || 'Rename' },
       { id: 'sort-asc', label: t('table.sortAscending') || 'Sort Ascending' },
       { id: 'sort-desc', label: t('table.sortDescending') || 'Sort Descending' },
     ];
 
+    if (activeSort) {
+      actions.push({
+        id: 'remove-sort',
+        label: t('table.removeSort') || 'Remove sort',
+        separator: true,
+      });
+    }
+
     if (props.onInsertColumn) {
       actions.push(
-        { id: 'insert-left', label: t('table.insertColumnLeft') || 'Insert Left', separator: true },
+        { id: 'insert-left', label: t('table.insertColumnLeft') || 'Insert Left', separator: !activeSort },
         { id: 'insert-right', label: t('table.insertColumnRight') || 'Insert Right' }
       );
     }
@@ -166,7 +180,23 @@ export default function TableTable(props: TableTableProps) {
   const applySort = (colIndex: number, direction: typeof SortAsc | typeof SortDesc) => {
     const column = props.columns[colIndex];
     if (!column) return;
-    const newSorts = [{ property: column.name, direction }];
+    const existing = activeSorts();
+    const existingIdx = existing.findIndex((s) => s.property === column.name);
+    const newSorts =
+      existingIdx >= 0
+        ? existing.map((s, i) => (i === existingIdx ? { ...s, direction } : s))
+        : [...existing, { property: column.name, direction }];
+    setSorts(newSorts);
+    const viewId = activeViewId();
+    if (viewId && viewId !== DEFAULT_VIEW_ID) {
+      updateView(viewId, { sorts: newSorts });
+    }
+  };
+
+  const removeSort = (colIndex: number) => {
+    const column = props.columns[colIndex];
+    if (!column) return;
+    const newSorts = activeSorts().filter((s) => s.property !== column.name);
     setSorts(newSorts);
     const viewId = activeViewId();
     if (viewId && viewId !== DEFAULT_VIEW_ID) {
@@ -191,6 +221,9 @@ export default function TableTable(props: TableTableProps) {
         break;
       case 'sort-desc':
         applySort(state.colIndex, SortDesc);
+        break;
+      case 'remove-sort':
+        removeSort(state.colIndex);
         break;
       case 'insert-left':
         props.onInsertColumn?.(state.colIndex);
@@ -258,6 +291,15 @@ export default function TableTable(props: TableTableProps) {
                           {column.name}
                           <Show when={column.required}>
                             <span class={styles.required}>*</span>
+                          </Show>
+                          <Show when={activeSorts().find((s) => s.property === column.name)}>
+                            {(sort) => (
+                              <span class={styles.sortIndicator} data-testid="sort-indicator">
+                                <Show when={sort().direction === SortAsc} fallback={<ArrowDownwardIcon />}>
+                                  <ArrowUpwardIcon />
+                                </Show>
+                              </span>
+                            )}
                           </Show>
                         </>
                       }
@@ -371,7 +413,7 @@ export default function TableTable(props: TableTableProps) {
         {(state) => (
           <ContextMenu
             position={{ x: state().x, y: state().y }}
-            actions={getColumnActions()}
+            actions={getColumnActions(state().colIndex)}
             onAction={handleColumnAction}
             onClose={() => setColumnMenu(null)}
           />

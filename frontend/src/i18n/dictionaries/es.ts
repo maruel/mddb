@@ -331,6 +331,7 @@ export const dict: Dictionary = {
     insertColumnRight: 'Insertar a la derecha',
     deleteColumn: 'Eliminar columna',
     confirmDeleteColumn: '¿Eliminar esta columna y todos sus datos?',
+    removeSort: 'Eliminar orden',
     typeMultiSelect: 'Selección múltiple',
     typePhone: 'Teléfono',
   },

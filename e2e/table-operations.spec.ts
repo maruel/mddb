@@ -181,7 +181,7 @@ test.describe('Table View Modes', () => {
 });
 
 test.describe('Table Sort UI', () => {
-  test('sort toolbar is visible and sort menu opens/closes', async ({ page, request }) => {
+  test('column header sort menu appears and closes', async ({ page, request }) => {
     await setupTable(page, request, 'sort-ui', [
       { name: 'Name', type: 'text' },
     ], [
@@ -190,56 +190,41 @@ test.describe('Table Sort UI', () => {
 
     await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
 
-    // Sort button visible, filter button disabled
-    await expect(page.locator('[data-testid="sort-button"]')).toBeVisible();
-    await expect(page.locator('[data-testid="filter-button"]')).toBeDisabled();
-
-    // Open sort menu
-    await page.locator('[data-testid="sort-button"]').click();
-    const sortMenu = page.locator('[data-testid="sort-menu"]');
-    await expect(sortMenu).toBeVisible({ timeout: 3000 });
+    // Click column header to open context menu
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await expect(page.locator('[data-testid="context-menu-sort-asc"]')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('[data-testid="context-menu-sort-desc"]')).toBeVisible();
 
     // Close with Escape
     await page.keyboard.press('Escape');
-    await expect(sortMenu).not.toBeVisible({ timeout: 3000 });
-
-    // Reopen and close by clicking the sort button again (toggle)
-    await page.locator('[data-testid="sort-button"]').click();
-    await expect(sortMenu).toBeVisible({ timeout: 3000 });
-    await page.locator('[data-testid="sort-button"]').click();
-    await expect(sortMenu).not.toBeVisible({ timeout: 3000 });
+    await expect(page.locator('[data-testid="context-menu-sort-asc"]')).not.toBeVisible({ timeout: 3000 });
   });
 
-  test('add sort reorders records ascending', async ({ page, request }) => {
+  test('sort ascending via column header', async ({ page, request }) => {
     await setupTable(page, request, 'sort-asc', [
       { name: 'Name', type: 'text' },
-      { name: 'Value', type: 'number' },
     ], [
-      { Name: 'Zebra', Value: 30 },
-      { Name: 'Apple', Value: 10 },
-      { Name: 'Mango', Value: 20 },
+      { Name: 'Zebra' },
+      { Name: 'Apple' },
+      { Name: 'Mango' },
     ]);
 
     await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
 
-    // Add sort on Name (first property, ascending default)
-    await page.locator('[data-testid="sort-button"]').click();
-    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
-    await page.locator('[data-testid="add-sort-button"]').click();
-
-    // Sort row should appear
-    await expect(page.locator('[data-testid="sort-row"]')).toBeVisible({ timeout: 3000 });
+    // Sort ascending via column header menu
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-sort-asc"]').click();
 
     // Records should be: Apple, Mango, Zebra
     await expect(async () => {
       expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Apple', 'Mango', 'Zebra']);
     }).toPass({ timeout: 5000 });
 
-    // Badge shows "1"
-    await expect(page.locator('[data-testid="sort-button"]')).toContainText('1');
+    // Sort indicator should appear on header
+    await expect(page.locator('[data-testid="sort-indicator"]')).toBeVisible();
   });
 
-  test('toggle sort direction reverses order', async ({ page, request }) => {
+  test('sort descending via column header', async ({ page, request }) => {
     await setupTable(page, request, 'sort-desc', [
       { name: 'Name', type: 'text' },
     ], [
@@ -250,54 +235,16 @@ test.describe('Table Sort UI', () => {
 
     await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
 
-    // Add ascending sort
-    await page.locator('[data-testid="sort-button"]').click();
-    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
-    await page.locator('[data-testid="add-sort-button"]').click();
-
-    await expect(async () => {
-      expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Apple', 'Mango', 'Zebra']);
-    }).toPass({ timeout: 5000 });
-
-    // Toggle to descending
-    await page.locator('[data-testid="sort-direction-toggle"]').click();
+    // Sort descending via column header menu
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-sort-desc"]').click();
 
     await expect(async () => {
       expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Zebra', 'Mango', 'Apple']);
     }).toPass({ timeout: 5000 });
   });
 
-  test('change sort property via dropdown', async ({ page, request }) => {
-    await setupTable(page, request, 'sort-prop', [
-      { name: 'Name', type: 'text' },
-      { name: 'Value', type: 'number' },
-    ], [
-      { Name: 'Zebra', Value: 1 },
-      { Name: 'Apple', Value: 3 },
-      { Name: 'Mango', Value: 2 },
-    ]);
-
-    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
-
-    // Add sort (defaults to Name asc)
-    await page.locator('[data-testid="sort-button"]').click();
-    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
-    await page.locator('[data-testid="add-sort-button"]').click();
-
-    await expect(async () => {
-      expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Apple', 'Mango', 'Zebra']);
-    }).toPass({ timeout: 5000 });
-
-    // Switch to sorting by Value
-    await page.locator('[data-testid="sort-property-select"]').selectOption('Value');
-
-    // Value order: Zebra(1), Mango(2), Apple(3)
-    await expect(async () => {
-      expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Zebra', 'Mango', 'Apple']);
-    }).toPass({ timeout: 5000 });
-  });
-
-  test('remove sort removes badge', async ({ page, request }) => {
+  test('remove sort clears ordering', async ({ page, request }) => {
     await setupTable(page, request, 'sort-remove', [
       { name: 'Name', type: 'text' },
     ], [
@@ -307,17 +254,18 @@ test.describe('Table Sort UI', () => {
 
     await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
 
-    // Add sort
-    await page.locator('[data-testid="sort-button"]').click();
-    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
-    await page.locator('[data-testid="add-sort-button"]').click();
-    await expect(page.locator('[data-testid="sort-row"]')).toBeVisible({ timeout: 3000 });
+    // Add ascending sort
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-sort-asc"]').click();
+    await expect(page.locator('[data-testid="sort-indicator"]')).toBeVisible({ timeout: 3000 });
 
-    // Remove sort
-    await page.locator('[data-testid="sort-remove"]').click();
+    // Remove sort via column header menu
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await expect(page.locator('[data-testid="context-menu-remove-sort"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="context-menu-remove-sort"]').click();
 
-    // Sort row and badge should be gone
-    await expect(page.locator('[data-testid="sort-row"]')).not.toBeVisible({ timeout: 3000 });
+    // Sort indicator should be gone
+    await expect(page.locator('[data-testid="sort-indicator"]')).not.toBeVisible({ timeout: 3000 });
   });
 
   test('multiple sorts apply compound ordering', async ({ page, request }) => {
@@ -333,18 +281,16 @@ test.describe('Table Sort UI', () => {
 
     await expect(page.getByText('Red').first()).toBeVisible({ timeout: 5000 });
 
-    // Add first sort: Color asc
-    await page.locator('[data-testid="sort-button"]').click();
-    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
-    await page.locator('[data-testid="add-sort-button"]').click();
-    await expect(page.locator('[data-testid="sort-row"]')).toBeVisible({ timeout: 3000 });
+    // Sort by Color ascending
+    await page.locator('th').filter({ hasText: 'Color' }).first().click();
+    await page.locator('[data-testid="context-menu-sort-asc"]').click();
 
-    // Add second sort: Size asc
-    await page.locator('[data-testid="add-sort-button"]').click();
-    await expect(page.locator('[data-testid="sort-row"]')).toHaveCount(2, { timeout: 3000 });
+    // Sort by Size ascending (additive)
+    await page.locator('th').filter({ hasText: 'Size' }).first().click();
+    await page.locator('[data-testid="context-menu-sort-asc"]').click();
 
-    // Badge shows "2"
-    await expect(page.locator('[data-testid="sort-button"]')).toContainText('2');
+    // Both columns should show sort indicators
+    await expect(page.locator('[data-testid="sort-indicator"]')).toHaveCount(2, { timeout: 3000 });
 
     // Order: Blue/1, Blue/2, Red/1, Red/3
     await expect(async () => {
@@ -354,7 +300,6 @@ test.describe('Table Sort UI', () => {
       for (let i = 0; i < count; i++) {
         const cells = rows.nth(i).locator('td');
         const cellTexts = await cells.allTextContents();
-        // Cells: [handle, delete, Color, Size, ...]
         const color = cellTexts.find((c) => c === 'Blue' || c === 'Red');
         const size = cellTexts.find((c) => /^[123]$/.test(c.trim()));
         if (color && size) pairs.push(`${color}/${size.trim()}`);
@@ -389,11 +334,9 @@ test.describe('Table Sort UI', () => {
     // Switch to the Sorted view tab
     await page.locator('button').filter({ hasText: 'Sorted' }).click();
 
-    // Add a sort
-    await page.locator('[data-testid="sort-button"]').click();
-    await expect(page.locator('[data-testid="add-sort-button"]')).toBeVisible({ timeout: 3000 });
-    await page.locator('[data-testid="add-sort-button"]').click();
-    await expect(page.locator('[data-testid="sort-row"]')).toBeVisible({ timeout: 3000 });
+    // Sort ascending via column header menu
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-sort-asc"]').click();
 
     // Wait for records to sort
     await expect(async () => {
