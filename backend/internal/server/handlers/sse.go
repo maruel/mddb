@@ -3,6 +3,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -66,6 +67,13 @@ func (h *SSEHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
+	flusher.Flush()
+
+	// Send server revision on connect so clients can detect binary upgrades.
+	revMsg := fmt.Appendf(nil, "event: server\ndata: {\"revision\":%q}\n\n", h.Cfg.Revision)
+	if _, err := w.Write(revMsg); err != nil {
+		return
+	}
 	flusher.Flush()
 
 	ticker := time.NewTicker(sseKeepAliveInterval)

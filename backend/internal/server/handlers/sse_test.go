@@ -47,6 +47,7 @@ func TestSSEHandler_StreamsEvent(t *testing.T) {
 	broker := sse.NewBroker()
 	h := &SSEHandler{
 		Svc: &Services{Broker: broker},
+		Cfg: &Config{Revision: "test-revision"},
 	}
 
 	wsID := ksid.NewID()
@@ -94,6 +95,12 @@ func TestSSEHandler_StreamsEvent(t *testing.T) {
 	<-done
 
 	body := w.Body()
+	if !strings.Contains(body, "event: server") {
+		t.Fatalf("expected server revision event in body, got: %s", body)
+	}
+	if !strings.Contains(body, "test-revision") {
+		t.Fatalf("expected revision in body, got: %s", body)
+	}
 	if !strings.Contains(body, "event: workspace") {
 		t.Fatalf("expected SSE event in body, got: %s", body)
 	}

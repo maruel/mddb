@@ -19,6 +19,10 @@ interface EventSourceContextValue {
 
 const EventSourceCtx = createContext<EventSourceContextValue>();
 
+// Module-level: persists across reconnects and workspace switches so we can
+// detect when a new binary is deployed (revision changes on reconnect).
+let knownRevision: string | null = null;
+
 export const EventSourceProvider: ParentComponent = (props) => {
   const { user, token } = useAuth();
   const [lastEvent, setLastEvent] = createSignal<WorkspaceEvent | null>(null);
@@ -45,6 +49,19 @@ export const EventSourceProvider: ParentComponent = (props) => {
         // Self-filter: ignore events caused by the current user.
         if (evt.actor_id === userId) return;
         setLastEvent(evt);
+      } catch {
+        // Ignore malformed events.
+      }
+    });
+
+    es.addEventListener('server', (e: MessageEvent) => {
+      try {
+        const { revision } = JSON.parse(e.data) as { revision: string };
+        if (knownRevision === null) {
+          knownRevision = revision;
+        } else if (revision !== knownRevision) {
+          window.location.reload();
+        }
       } catch {
         // Ignore malformed events.
       }
