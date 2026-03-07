@@ -321,6 +321,8 @@ export interface Dictionary {
     descending: string;
     openRecord: string;
     duplicateRecord: string;
+    renameView: string;
+    duplicateView: string;
     renameColumn: string;
     sortAscending: string;
     sortDescending: string;

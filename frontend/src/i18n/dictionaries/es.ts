@@ -322,6 +322,8 @@ export const dict: Dictionary = {
     descending: 'Descendente',
     openRecord: 'Abrir',
     duplicateRecord: 'Duplicar',
+    renameView: 'Renombrar vista',
+    duplicateView: 'Duplicar vista',
     renameColumn: 'Renombrar',
     sortAscending: 'Ordenar ascendente',
     sortDescending: 'Ordenar descendente',

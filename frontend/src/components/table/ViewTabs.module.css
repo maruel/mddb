@@ -78,6 +78,18 @@
   text-overflow: ellipsis;
 }
 
+.renameInput {
+  max-width: 140px;
+  min-width: 60px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--c-text);
+  outline: none;
+}
+
 /* Delete button: sibling of .tab, revealed on wrapper hover */
 .deleteBtn {
   display: flex;
@@ -171,45 +183,4 @@
 
 .dropdown button:hover {
   background: var(--c-bg-hover);
-}
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 99;
-}
-
-.contextMenu {
-  position: fixed;
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
-  min-width: 120px;
-  z-index: 200;
-  overflow: hidden;
-}
-
-.contextMenu button {
-  display: block;
-  width: 100%;
-  padding: var(--s-2) var(--s-3);
-  border: none;
-  background: none;
-  font-size: 0.85rem;
-  cursor: pointer;
-  text-align: left;
-  color: var(--c-text);
-}
-
-.contextMenu button:hover {
-  background: var(--c-bg-hover);
-}
-
-.deleteAction {
-  color: var(--c-danger) !important;
-}
-
-.deleteAction:hover {
-  background: rgba(220, 38, 38, 0.05) !important;
 }

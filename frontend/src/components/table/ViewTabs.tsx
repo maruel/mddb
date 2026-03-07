@@ -5,6 +5,7 @@ import { useRecords } from '../../contexts';
 import { useClickOutside } from '../../composables/useClickOutside';
 import { useI18n } from '../../i18n';
 import type { View, ViewType } from '@sdk/types.gen';
+import { ContextMenu, type ContextMenuAction } from '../shared';
 import styles from './ViewTabs.module.css';
 
 import TableRowsIcon from '@material-symbols/svg-400/outlined/table_rows.svg?solid';
@@ -25,11 +26,16 @@ const VIEW_ICONS: Record<ViewType, SolidSVG> = {
 
 export default function ViewTabs() {
   const { t } = useI18n();
-  const { views, activeViewId, setActiveViewId, createView, deleteView } = useRecords();
+  const { views, activeViewId, setActiveViewId, createView, updateView, deleteView } = useRecords();
 
   const [showNewViewMenu, setShowNewViewMenu] = createSignal(false);
-  const [contextMenuView, setContextMenuView] = createSignal<View | null>(null);
-  const [contextMenuPos, setContextMenuPos] = createSignal<{ x: number; y: number } | null>(null);
+
+  // Context menu for right-clicking a tab
+  const [tabMenu, setTabMenu] = createSignal<{ view: View; x: number; y: number } | null>(null);
+
+  // Inline rename state
+  const [renamingViewId, setRenamingViewId] = createSignal<string | null>(null);
+  const [renameValue, setRenameValue] = createSignal('');
 
   let addWrapperRef: HTMLDivElement | undefined;
   useClickOutside(
@@ -47,22 +53,54 @@ export default function ViewTabs() {
     setShowNewViewMenu(false);
   };
 
-  const handleContextMenu = (e: MouseEvent, view: View) => {
+  const handleTabContextMenu = (e: MouseEvent, view: View) => {
     e.preventDefault();
-    setContextMenuView(view);
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
+    setTabMenu({ view, x: e.clientX, y: e.clientY });
   };
 
-  const handleDeleteView = () => {
-    const view = contextMenuView();
-    if (view) deleteView(view.id);
-    setContextMenuView(null);
-    setContextMenuPos(null);
+  const getTabActions = (view: View): ContextMenuAction[] => {
+    const actions: ContextMenuAction[] = [
+      { id: 'rename', label: t('table.renameView') || 'Rename view' },
+      { id: 'duplicate', label: t('table.duplicateView') || 'Duplicate view' },
+    ];
+    if (!view.default) {
+      actions.push({
+        id: 'delete',
+        label: t('common.delete') || 'Delete',
+        danger: true,
+        separator: true,
+      });
+    }
+    return actions;
   };
 
-  const closeContextMenu = () => {
-    setContextMenuView(null);
-    setContextMenuPos(null);
+  const handleTabAction = (actionId: string) => {
+    const state = tabMenu();
+    setTabMenu(null);
+    if (!state) return;
+
+    switch (actionId) {
+      case 'rename':
+        setRenameValue(state.view.name);
+        setRenamingViewId(state.view.id);
+        break;
+      case 'duplicate':
+        createView(state.view.name + ' (copy)', state.view.type);
+        break;
+      case 'delete':
+        deleteView(state.view.id);
+        break;
+    }
+  };
+
+  const commitRename = () => {
+    const viewId = renamingViewId();
+    if (!viewId) return;
+    const newName = renameValue().trim();
+    if (newName) {
+      updateView(viewId, { name: newName });
+    }
+    setRenamingViewId(null);
   };
 
   return (
@@ -77,13 +115,27 @@ export default function ViewTabs() {
                   class={styles.tab}
                   classList={{ [`${styles.active}`]: view.id === activeViewId() }}
                   onClick={() => handleTabClick(view.id)}
-                  onContextMenu={(e) => handleContextMenu(e, view)}
+                  onContextMenu={(e) => handleTabContextMenu(e, view)}
                   title={view.name}
                 >
                   <span class={styles.icon}>
                     <Icon />
                   </span>
-                  <span class={styles.name}>{view.name}</span>
+                  <Show when={renamingViewId() === view.id} fallback={<span class={styles.name}>{view.name}</span>}>
+                    <input
+                      class={styles.renameInput}
+                      value={renameValue()}
+                      onInput={(e) => setRenameValue(e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') commitRename();
+                        if (e.key === 'Escape') setRenamingViewId(null);
+                        e.stopPropagation();
+                      }}
+                      onBlur={commitRename}
+                      ref={(el) => setTimeout(() => el?.select(), 0)}
+                    />
+                  </Show>
                 </button>
                 <Show when={!view.default}>
                   <button
@@ -144,17 +196,15 @@ export default function ViewTabs() {
         </Show>
       </div>
 
-      {/* Right-click context menu for additional actions */}
-      <Show when={contextMenuPos()}>
-        {(pos) => (
-          <Show when={contextMenuView()}>
-            <div class={styles.overlay} onClick={closeContextMenu} />
-            <div class={styles.contextMenu} style={{ left: `${pos().x}px`, top: `${pos().y}px` }}>
-              <button class={styles.deleteAction} onClick={handleDeleteView}>
-                {t('common.delete')}
-              </button>
-            </div>
-          </Show>
+      {/* Tab right-click context menu */}
+      <Show when={tabMenu()}>
+        {(state) => (
+          <ContextMenu
+            position={{ x: state().x, y: state().y }}
+            actions={getTabActions(state().view)}
+            onAction={handleTabAction}
+            onClose={() => setTabMenu(null)}
+          />
         )}
       </Show>
     </div>
