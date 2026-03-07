@@ -81,24 +81,16 @@ export default function NodeView() {
   // Local loading state for preview (operation-specific) - can be used for UI feedback
   const [_loadingPreview, setLoadingPreview] = createSignal(false);
 
-  // Handle adding a column to table
-  async function handleAddColumn(column: Property) {
-    const nodeId = selectedNodeId();
+  async function updateTableProperties(nodeId: string, updatedProperties: Property[]) {
     const nodeData = selectedNodeData();
     const ws = wsApi();
-    if (!nodeId || !nodeData || !ws) return;
-
+    if (!nodeData || !ws) return;
     try {
       setSavingNodeId(nodeId);
-      const currentProperties: Property[] = nodeData.properties || [];
-      const updatedProperties: Property[] = [...currentProperties, column];
-
       await ws.nodes.table.updateTable(nodeId, {
         title: nodeData.title,
         properties: updatedProperties,
       });
-
-      // Reload node to get updated schema
       await loadNode(nodeId);
       setSaveError(null);
     } catch (err) {
@@ -106,6 +98,46 @@ export default function NodeView() {
     } finally {
       setSavingNodeId(null);
     }
+  }
+
+  // Handle adding a column to table
+  async function handleAddColumn(column: Property) {
+    const nodeId = selectedNodeId();
+    const nodeData = selectedNodeData();
+    if (!nodeId || !nodeData) return;
+    const currentProperties: Property[] = nodeData.properties || [];
+    await updateTableProperties(nodeId, [...currentProperties, column]);
+  }
+
+  // Handle renaming or editing a column
+  async function handleUpdateColumn(index: number, column: Property) {
+    const nodeId = selectedNodeId();
+    const nodeData = selectedNodeData();
+    if (!nodeId || !nodeData) return;
+    const currentProperties: Property[] = [...(nodeData.properties || [])];
+    currentProperties[index] = column;
+    await updateTableProperties(nodeId, currentProperties);
+  }
+
+  // Handle deleting a column
+  async function handleDeleteColumn(index: number) {
+    const nodeId = selectedNodeId();
+    const nodeData = selectedNodeData();
+    if (!nodeId || !nodeData) return;
+    const currentProperties: Property[] = [...(nodeData.properties || [])];
+    currentProperties.splice(index, 1);
+    await updateTableProperties(nodeId, currentProperties);
+  }
+
+  // Handle inserting a new text column at a position
+  async function handleInsertColumn(beforeIndex: number) {
+    const nodeId = selectedNodeId();
+    const nodeData = selectedNodeData();
+    if (!nodeId || !nodeData) return;
+    const currentProperties: Property[] = [...(nodeData.properties || [])];
+    const newColumn: Property = { name: 'New Column', type: 'text', required: false };
+    currentProperties.splice(beforeIndex, 0, newColumn);
+    await updateTableProperties(nodeId, currentProperties);
   }
 
   async function loadPreview(nodeId: string, commit: Commit) {
@@ -243,6 +275,9 @@ export default function NodeView() {
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
                       onAddColumn={handleAddColumn}
+                      onUpdateColumn={handleUpdateColumn}
+                      onDeleteColumn={handleDeleteColumn}
+                      onInsertColumn={handleInsertColumn}
                       onLoadMore={loadMoreRecords}
                       hasMore={hasMore()}
                     />

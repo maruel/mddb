@@ -5,6 +5,16 @@ import TableTable from './TableTable';
 import { I18nProvider } from '../i18n';
 import type { DataRecordResponse, Property } from '@sdk/types.gen';
 
+// Mock RecordsContext so TableTable can be tested without a provider
+vi.mock('../contexts', () => ({
+  useRecords: () => ({
+    setSorts: vi.fn(),
+    updateView: vi.fn(),
+    activeViewId: () => '__default__',
+  }),
+  DEFAULT_VIEW_ID: '__default__',
+}));
+
 // Mock CSS module
 vi.mock('./TableTable.module.css', () => ({
   default: {

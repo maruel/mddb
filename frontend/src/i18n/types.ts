@@ -319,6 +319,17 @@ export interface Dictionary {
     noSorts: string;
     ascending: string;
     descending: string;
+    openRecord: string;
+    duplicateRecord: string;
+    renameColumn: string;
+    sortAscending: string;
+    sortDescending: string;
+    insertColumnLeft: string;
+    insertColumnRight: string;
+    deleteColumn: string;
+    confirmDeleteColumn: string;
+    typeMultiSelect: string;
+    typePhone: string;
   };
 
   errors: {

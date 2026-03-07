@@ -38,6 +38,26 @@
   text-transform: uppercase;
   letter-spacing: 0.02em;
   user-select: none;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.headerCell:hover {
+  background: var(--c-bg-hover);
+  color: var(--c-text);
+}
+
+.renameInput {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: var(--c-text);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  outline: none;
 }
 
 .row {

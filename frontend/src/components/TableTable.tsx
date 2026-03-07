@@ -1,13 +1,14 @@
 // Notion-like table view with inline editing.
 
 import { createSignal, For, Show } from 'solid-js';
-import { type DataRecordResponse, type Property } from '@sdk/types.gen';
+import { type DataRecordResponse, type Property, SortAsc, SortDesc } from '@sdk/types.gen';
 import styles from './TableTable.module.css';
 import { RowHandle, ContextMenu, type ContextMenuAction } from './shared';
 import { TABLE_RECORD_MIME } from './table/TableRow';
 import { TableCell } from './table/TableCell';
 import { AddColumnDropdown } from './table/AddColumnDropdown';
 import { useI18n } from '../i18n';
+import { useRecords, DEFAULT_VIEW_ID } from '../contexts';
 
 interface TableTableProps {
   tableId: string;
@@ -19,12 +20,17 @@ interface TableTableProps {
   onDuplicateRecord?: (recordId: string) => void;
   onOpenRecord?: (recordId: string) => void;
   onAddColumn?: (column: Property) => void;
+  onUpdateColumn?: (index: number, column: Property) => void;
+  onDeleteColumn?: (index: number) => void;
+  onInsertColumn?: (beforeIndex: number) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
 }
 
 export default function TableTable(props: TableTableProps) {
   const { t } = useI18n();
+  const { setSorts, updateView, activeViewId } = useRecords();
+
   const [editingCell, setEditingCell] = createSignal<{
     recordId: string;
     columnId: string;
@@ -36,6 +42,17 @@ export default function TableTable(props: TableTableProps) {
     x: number;
     y: number;
   } | null>(null);
+
+  // Column header menu state
+  const [columnMenu, setColumnMenu] = createSignal<{
+    colIndex: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Inline column rename state
+  const [renamingColumn, setRenamingColumn] = createSignal<number | null>(null);
+  const [renameValue, setRenameValue] = createSignal('');
 
   // Add a new empty row
   const handleAddRow = () => {
@@ -112,6 +129,94 @@ export default function TableTable(props: TableTableProps) {
     setMenuState(null);
   };
 
+  // Column header click → show menu below the header
+  const handleHeaderClick = (e: MouseEvent, colIndex: number) => {
+    // Don't open menu when clicking the rename input
+    if ((e.target as HTMLElement).tagName === 'INPUT') return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setColumnMenu({ colIndex, x: rect.left, y: rect.bottom + 4 });
+  };
+
+  const getColumnActions = (): ContextMenuAction[] => {
+    const actions: ContextMenuAction[] = [
+      { id: 'rename', label: t('table.renameColumn') || 'Rename' },
+      { id: 'sort-asc', label: t('table.sortAscending') || 'Sort Ascending' },
+      { id: 'sort-desc', label: t('table.sortDescending') || 'Sort Descending' },
+    ];
+
+    if (props.onInsertColumn) {
+      actions.push(
+        { id: 'insert-left', label: t('table.insertColumnLeft') || 'Insert Left', separator: true },
+        { id: 'insert-right', label: t('table.insertColumnRight') || 'Insert Right' }
+      );
+    }
+
+    if (props.onDeleteColumn && props.columns.length > 1) {
+      actions.push({
+        id: 'delete-column',
+        label: t('table.deleteColumn') || 'Delete column',
+        danger: true,
+        separator: true,
+      });
+    }
+
+    return actions;
+  };
+
+  const applySort = (colIndex: number, direction: typeof SortAsc | typeof SortDesc) => {
+    const column = props.columns[colIndex];
+    if (!column) return;
+    const newSorts = [{ property: column.name, direction }];
+    setSorts(newSorts);
+    const viewId = activeViewId();
+    if (viewId && viewId !== DEFAULT_VIEW_ID) {
+      updateView(viewId, { sorts: newSorts });
+    }
+  };
+
+  const handleColumnAction = (actionId: string) => {
+    const state = columnMenu();
+    if (!state) return;
+    const column = props.columns[state.colIndex];
+    setColumnMenu(null);
+    if (!column) return;
+
+    switch (actionId) {
+      case 'rename':
+        setRenameValue(column.name);
+        setRenamingColumn(state.colIndex);
+        break;
+      case 'sort-asc':
+        applySort(state.colIndex, SortAsc);
+        break;
+      case 'sort-desc':
+        applySort(state.colIndex, SortDesc);
+        break;
+      case 'insert-left':
+        props.onInsertColumn?.(state.colIndex);
+        break;
+      case 'insert-right':
+        props.onInsertColumn?.(state.colIndex + 1);
+        break;
+      case 'delete-column':
+        if (confirm(t('table.confirmDeleteColumn') || 'Delete this column and all its data?')) {
+          props.onDeleteColumn?.(state.colIndex);
+        }
+        break;
+    }
+  };
+
+  const commitRename = () => {
+    const idx = renamingColumn();
+    if (idx === null) return;
+    const column = props.columns[idx];
+    const newName = renameValue().trim();
+    if (column && newName && newName !== column.name) {
+      props.onUpdateColumn?.(idx, { ...column, name: newName });
+    }
+    setRenamingColumn(null);
+  };
+
   const handleCellSave = (recordId: string, columnName: string, value: string) => {
     const column = props.columns.find((c) => c.name === columnName);
     if (!column || !props.onUpdateRecord) {
@@ -144,11 +249,30 @@ export default function TableTable(props: TableTableProps) {
                 <th class={styles.actionsHeader} />
               </Show>
               <For each={props.columns}>
-                {(column) => (
-                  <th class={styles.headerCell}>
-                    {column.name}
-                    <Show when={column.required}>
-                      <span class={styles.required}>*</span>
+                {(column, colIndex) => (
+                  <th class={styles.headerCell} onClick={(e) => handleHeaderClick(e, colIndex())}>
+                    <Show
+                      when={renamingColumn() === colIndex()}
+                      fallback={
+                        <>
+                          {column.name}
+                          <Show when={column.required}>
+                            <span class={styles.required}>*</span>
+                          </Show>
+                        </>
+                      }
+                    >
+                      <input
+                        class={styles.renameInput}
+                        value={renameValue()}
+                        onInput={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitRename();
+                          if (e.key === 'Escape') setRenamingColumn(null);
+                        }}
+                        onBlur={commitRename}
+                        ref={(el) => setTimeout(() => el?.select(), 0)}
+                      />
                     </Show>
                   </th>
                 )}
@@ -238,6 +362,18 @@ export default function TableTable(props: TableTableProps) {
             actions={getRowActions()}
             onAction={handleRowAction}
             onClose={() => setMenuState(null)}
+          />
+        )}
+      </Show>
+
+      {/* Column header menu */}
+      <Show when={columnMenu()}>
+        {(state) => (
+          <ContextMenu
+            position={{ x: state().x, y: state().y }}
+            actions={getColumnActions()}
+            onAction={handleColumnAction}
+            onClose={() => setColumnMenu(null)}
           />
         )}
       </Show>

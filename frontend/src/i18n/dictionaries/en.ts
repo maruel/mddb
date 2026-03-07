@@ -320,6 +320,17 @@ export const dict: Dictionary = {
     noSorts: 'No sorts applied',
     ascending: 'Ascending',
     descending: 'Descending',
+    openRecord: 'Open',
+    duplicateRecord: 'Duplicate',
+    renameColumn: 'Rename',
+    sortAscending: 'Sort Ascending',
+    sortDescending: 'Sort Descending',
+    insertColumnLeft: 'Insert Left',
+    insertColumnRight: 'Insert Right',
+    deleteColumn: 'Delete column',
+    confirmDeleteColumn: 'Delete this column and all its data?',
+    typeMultiSelect: 'Multi-select',
+    typePhone: 'Phone',
   },
 
   errors: {
