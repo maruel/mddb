@@ -1,17 +1,19 @@
 // Notion-like table view with inline editing.
 
 import { createSignal, For, Show } from 'solid-js';
-import { type DataRecordResponse, type Property, SortAsc, SortDesc } from '@sdk/types.gen';
+import { type DataRecordResponse, type Filter, type Property, SortAsc, SortDesc } from '@sdk/types.gen';
 import styles from './TableTable.module.css';
 import { RowHandle, ContextMenu, type ContextMenuAction } from './shared';
 import { TABLE_RECORD_MIME } from './table/TableRow';
 import { TableCell } from './table/TableCell';
 import { AddColumnDropdown } from './table/AddColumnDropdown';
+import { FilterPanel } from './table/FilterPanel';
 import { useI18n } from '../i18n';
 import { useRecords, DEFAULT_VIEW_ID } from '../contexts';
 
 import ArrowUpwardIcon from '@material-symbols/svg-400/outlined/arrow_upward.svg?solid';
 import ArrowDownwardIcon from '@material-symbols/svg-400/outlined/arrow_downward.svg?solid';
+import FilterAltIcon from '@material-symbols/svg-400/outlined/filter_alt.svg?solid';
 
 interface TableTableProps {
   tableId: string;
@@ -32,7 +34,7 @@ interface TableTableProps {
 
 export default function TableTable(props: TableTableProps) {
   const { t } = useI18n();
-  const { setSorts, updateView, activeViewId, activeSorts } = useRecords();
+  const { setSorts, setFilters, updateView, activeViewId, activeSorts, activeFilters } = useRecords();
 
   const [editingCell, setEditingCell] = createSignal<{
     recordId: string;
@@ -49,6 +51,14 @@ export default function TableTable(props: TableTableProps) {
   // Column header menu state
   const [columnMenu, setColumnMenu] = createSignal<{
     colIndex: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Filter panel state
+  const [filterPanel, setFilterPanel] = createSignal<{
+    colIndex: number;
+    column: Property;
     x: number;
     y: number;
   } | null>(null);
@@ -143,6 +153,7 @@ export default function TableTable(props: TableTableProps) {
   const getColumnActions = (colIndex: number): ContextMenuAction[] => {
     const column = props.columns[colIndex];
     const activeSort = column ? activeSorts().find((s) => s.property === column.name) : undefined;
+    const activeFilter = column ? activeFilters().find((f) => f.property === column.name) : undefined;
 
     const actions: ContextMenuAction[] = [
       { id: 'rename', label: t('table.renameColumn') || 'Rename' },
@@ -158,9 +169,15 @@ export default function TableTable(props: TableTableProps) {
       });
     }
 
+    actions.push({
+      id: 'filter-by',
+      label: activeFilter ? `${t('table.filterBy') || 'Filter by...'} \u2713` : t('table.filterBy') || 'Filter by...',
+      separator: true,
+    });
+
     if (props.onInsertColumn) {
       actions.push(
-        { id: 'insert-left', label: t('table.insertColumnLeft') || 'Insert Left', separator: !activeSort },
+        { id: 'insert-left', label: t('table.insertColumnLeft') || 'Insert Left', separator: true },
         { id: 'insert-right', label: t('table.insertColumnRight') || 'Insert Right' }
       );
     }
@@ -204,6 +221,30 @@ export default function TableTable(props: TableTableProps) {
     }
   };
 
+  const applyFilter = (colIndex: number, filter: Filter) => {
+    const column = props.columns[colIndex];
+    if (!column) return;
+    const existing = activeFilters();
+    const idx = existing.findIndex((f) => f.property === column.name);
+    const newFilters = idx >= 0 ? existing.map((f, i) => (i === idx ? filter : f)) : [...existing, filter];
+    setFilters(newFilters);
+    const viewId = activeViewId();
+    if (viewId && viewId !== DEFAULT_VIEW_ID) {
+      updateView(viewId, { filters: newFilters });
+    }
+  };
+
+  const removeFilter = (colIndex: number) => {
+    const column = props.columns[colIndex];
+    if (!column) return;
+    const newFilters = activeFilters().filter((f) => f.property !== column.name);
+    setFilters(newFilters);
+    const viewId = activeViewId();
+    if (viewId && viewId !== DEFAULT_VIEW_ID) {
+      updateView(viewId, { filters: newFilters });
+    }
+  };
+
   const handleColumnAction = (actionId: string) => {
     const state = columnMenu();
     if (!state) return;
@@ -224,6 +265,9 @@ export default function TableTable(props: TableTableProps) {
         break;
       case 'remove-sort':
         removeSort(state.colIndex);
+        break;
+      case 'filter-by':
+        setFilterPanel({ colIndex: state.colIndex, column, x: state.x, y: state.y });
         break;
       case 'insert-left':
         props.onInsertColumn?.(state.colIndex);
@@ -300,6 +344,11 @@ export default function TableTable(props: TableTableProps) {
                                 </Show>
                               </span>
                             )}
+                          </Show>
+                          <Show when={activeFilters().find((f) => f.property === column.name)}>
+                            <span class={styles.filterIndicator} data-testid="filter-indicator">
+                              <FilterAltIcon />
+                            </span>
                           </Show>
                         </>
                       }
@@ -416,6 +465,20 @@ export default function TableTable(props: TableTableProps) {
             actions={getColumnActions(state().colIndex)}
             onAction={handleColumnAction}
             onClose={() => setColumnMenu(null)}
+          />
+        )}
+      </Show>
+
+      {/* Filter panel */}
+      <Show when={filterPanel()}>
+        {(state) => (
+          <FilterPanel
+            column={state().column}
+            position={{ x: state().x, y: state().y }}
+            currentFilter={activeFilters().find((f) => f.property === state().column.name)}
+            onApply={(f) => applyFilter(state().colIndex, f)}
+            onRemove={() => removeFilter(state().colIndex)}
+            onClose={() => setFilterPanel(null)}
           />
         )}
       </Show>

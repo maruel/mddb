@@ -9,9 +9,11 @@ import type { DataRecordResponse, Property } from '@sdk/types.gen';
 vi.mock('../contexts', () => ({
   useRecords: () => ({
     setSorts: vi.fn(),
+    setFilters: vi.fn(),
     updateView: vi.fn(),
     activeViewId: () => '__default__',
     activeSorts: () => [],
+    activeFilters: () => [],
   }),
   DEFAULT_VIEW_ID: '__default__',
 }));

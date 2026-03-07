@@ -1,0 +1,83 @@
+/* Positioned filter panel for per-column filtering. */
+
+.panel {
+  position: fixed;
+  z-index: 1000;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: var(--s-3);
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.row {
+  display: flex;
+}
+
+.select {
+  flex: 1;
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.input {
+  flex: 1;
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-size: 0.875rem;
+  outline: none;
+  width: 100%;
+}
+
+.input:focus {
+  border-color: var(--c-primary);
+}
+
+.actions {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+  padding-top: var(--s-1);
+}
+
+.applyBtn {
+  flex: 1;
+  padding: var(--s-1) var(--s-3);
+  background: var(--c-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.applyBtn:hover {
+  opacity: 0.9;
+}
+
+.removeBtn {
+  padding: var(--s-1) var(--s-2);
+  background: transparent;
+  color: var(--c-danger);
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-decoration: underline;
+}
+
+.removeBtn:hover {
+  opacity: 0.8;
+}

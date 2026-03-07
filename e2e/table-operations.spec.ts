@@ -359,6 +359,189 @@ test.describe('Table Sort UI', () => {
   });
 });
 
+test.describe('Table Filter UI', () => {
+  test('filter panel opens from column header menu', async ({ page, request }) => {
+    await setupTable(
+      page,
+      request,
+      'filter-open',
+      [{ name: 'Name', type: 'text' }],
+      [{ Name: 'Alice' }, { Name: 'Bob' }]
+    );
+
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await expect(page.locator('[data-testid="context-menu-filter-by"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="context-menu-filter-by"]').click();
+    await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('[data-testid="filter-operator"]')).toBeVisible();
+    await expect(page.locator('[data-testid="filter-apply"]')).toBeVisible();
+  });
+
+  test('filter by contains hides non-matching records', async ({ page, request }) => {
+    await setupTable(
+      page,
+      request,
+      'filter-contains',
+      [{ name: 'Name', type: 'text' }],
+      [{ Name: 'Alice' }, { Name: 'Bob' }, { Name: 'Charlie' }]
+    );
+
+    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Bob')).toBeVisible();
+    await expect(page.getByText('Charlie')).toBeVisible();
+
+    // Open filter panel for Name column
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-filter-by"]').click();
+    await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
+
+    // Set operator to "contains" and value to "li"
+    await page.locator('[data-testid="filter-operator"]').selectOption('contains');
+    await page.locator('[data-testid="filter-value"]').fill('li');
+    await page.locator('[data-testid="filter-apply"]').click();
+
+    // Only Alice and Charlie contain "li"
+    await expect(async () => {
+      await expect(page.getByText('Alice')).toBeVisible();
+      await expect(page.getByText('Charlie')).toBeVisible();
+      await expect(page.getByText('Bob')).not.toBeVisible();
+    }).toPass({ timeout: 5000 });
+  });
+
+  test('filter by equals shows only exact match', async ({ page, request }) => {
+    await setupTable(
+      page,
+      request,
+      'filter-equals',
+      [{ name: 'Name', type: 'text' }],
+      [{ Name: 'Alice' }, { Name: 'Bob' }, { Name: 'Alice B' }]
+    );
+
+    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-filter-by"]').click();
+    await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
+
+    await page.locator('[data-testid="filter-operator"]').selectOption('equals');
+    await page.locator('[data-testid="filter-value"]').fill('Alice');
+    await page.locator('[data-testid="filter-apply"]').click();
+
+    await expect(async () => {
+      const rows = page.locator('table tbody tr:not(.newRow)');
+      const visible = await rows.filter({ hasText: 'Alice' }).count();
+      expect(visible).toBe(1);
+      await expect(page.getByText('Bob')).not.toBeVisible();
+    }).toPass({ timeout: 5000 });
+  });
+
+  test('remove filter restores all records', async ({ page, request }) => {
+    await setupTable(
+      page,
+      request,
+      'filter-remove',
+      [{ name: 'Name', type: 'text' }],
+      [{ Name: 'Alice' }, { Name: 'Bob' }]
+    );
+
+    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+
+    // Apply a filter
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-filter-by"]').click();
+    await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="filter-operator"]').selectOption('equals');
+    await page.locator('[data-testid="filter-value"]').fill('Alice');
+    await page.locator('[data-testid="filter-apply"]').click();
+
+    await expect(async () => {
+      await expect(page.getByText('Bob')).not.toBeVisible();
+    }).toPass({ timeout: 5000 });
+
+    // Remove the filter
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-filter-by"]').click();
+    await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('[data-testid="filter-remove"]')).toBeVisible();
+    await page.locator('[data-testid="filter-remove"]').click();
+
+    await expect(async () => {
+      await expect(page.getByText('Alice')).toBeVisible();
+      await expect(page.getByText('Bob')).toBeVisible();
+    }).toPass({ timeout: 5000 });
+  });
+
+  test('filter indicator appears in column header when filter is active', async ({ page, request }) => {
+    await setupTable(
+      page,
+      request,
+      'filter-indicator',
+      [{ name: 'Name', type: 'text' }],
+      [{ Name: 'Alice' }, { Name: 'Bob' }]
+    );
+
+    // No indicator initially
+    await expect(page.locator('[data-testid="filter-indicator"]')).not.toBeVisible();
+
+    // Apply a filter
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-filter-by"]').click();
+    await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="filter-value"]').fill('Alice');
+    await page.locator('[data-testid="filter-apply"]').click();
+
+    // Indicator appears
+    await expect(page.locator('[data-testid="filter-indicator"]')).toBeVisible({ timeout: 3000 });
+  });
+
+  test('two-column filters compound (AND)', async ({ page, request }) => {
+    await setupTable(
+      page,
+      request,
+      'filter-compound',
+      [
+        { name: 'Name', type: 'text' },
+        { name: 'Age', type: 'number' },
+      ],
+      [
+        { Name: 'Alice', Age: 30 },
+        { Name: 'Bob', Age: 25 },
+        { Name: 'Charlie', Age: 30 },
+      ]
+    );
+
+    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+
+    // Filter Name contains 'li'
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('[data-testid="context-menu-filter-by"]').click();
+    await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="filter-operator"]').selectOption('contains');
+    await page.locator('[data-testid="filter-value"]').fill('li');
+    await page.locator('[data-testid="filter-apply"]').click();
+
+    // Alice and Charlie pass; Bob is hidden
+    await expect(async () => {
+      await expect(page.getByText('Bob')).not.toBeVisible();
+    }).toPass({ timeout: 5000 });
+
+    // Filter Age equals 30
+    await page.locator('th').filter({ hasText: 'Age' }).first().click();
+    await page.locator('[data-testid="context-menu-filter-by"]').click();
+    await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="filter-operator"]').selectOption('equals');
+    await page.locator('[data-testid="filter-value"]').fill('30');
+    await page.locator('[data-testid="filter-apply"]').click();
+
+    // Only Alice and Charlie remain (both have li AND age=30)
+    await expect(async () => {
+      await expect(page.getByText('Alice')).toBeVisible();
+      await expect(page.getByText('Charlie')).toBeVisible();
+      await expect(page.getByText('Bob')).not.toBeVisible();
+    }).toPass({ timeout: 5000 });
+  });
+});
+
 test.describe('Table and Page Hybrid', () => {
   test('table node shows table view with records section', async ({ page, request }) => {
     const { token } = await registerUser(request, 'hybrid-node');
