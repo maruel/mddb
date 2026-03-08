@@ -16,6 +16,7 @@ import ArrowUpwardIcon from '@material-symbols/svg-400/outlined/arrow_upward.svg
 import ArrowDownwardIcon from '@material-symbols/svg-400/outlined/arrow_downward.svg?solid';
 import FilterAltIcon from '@material-symbols/svg-400/outlined/filter_alt.svg?solid';
 import CloseIcon from '@material-symbols/svg-400/outlined/close.svg?solid';
+import OpenInFullIcon from '@material-symbols/svg-400/outlined/open_in_full.svg?solid';
 
 interface TableTableProps {
   tableId: string;
@@ -444,6 +445,44 @@ export default function TableTable(props: TableTableProps) {
     setEditingCell(null);
   };
 
+  // Navigate to an adjacent cell after Tab/Enter
+  const moveFocus = (direction: 'next' | 'prev' | 'down') => {
+    const current = editingCell();
+    if (!current) return;
+    const cols = visibleColumns();
+    const rows = props.records;
+    const colIdx = cols.findIndex((c) => c.name === current.columnId);
+    const rowIdx = rows.findIndex((r) => r.id === current.recordId);
+    if (colIdx < 0 || rowIdx < 0) return;
+
+    let nextColIdx = colIdx;
+    let nextRowIdx = rowIdx;
+
+    if (direction === 'next') {
+      if (colIdx < cols.length - 1) {
+        nextColIdx = colIdx + 1;
+      } else {
+        nextColIdx = 0;
+        nextRowIdx = rowIdx + 1;
+      }
+    } else if (direction === 'prev') {
+      if (colIdx > 0) {
+        nextColIdx = colIdx - 1;
+      } else {
+        nextColIdx = cols.length - 1;
+        nextRowIdx = rowIdx - 1;
+      }
+    } else {
+      nextRowIdx = rowIdx + 1;
+    }
+
+    if (nextRowIdx < 0 || nextRowIdx >= rows.length) return;
+    const nextCol = cols[nextColIdx];
+    const nextRow = rows[nextRowIdx];
+    if (!nextCol || !nextRow) return;
+    setEditingCell({ recordId: nextRow.id, columnId: nextCol.name });
+  };
+
   const removeSortByName = (colName: string) => {
     const idx = props.columns.findIndex((c) => c.name === colName);
     if (idx >= 0) removeSort(idx);
@@ -511,6 +550,9 @@ export default function TableTable(props: TableTableProps) {
             <tr class={styles.headerRow}>
               {/* Handle column header */}
               <th class={styles.handleHeader} />
+              <Show when={props.onOpenRecord}>
+                <th class={styles.expandHeader} />
+              </Show>
               <Show when={props.onDeleteRecord}>
                 <th class={styles.actionsHeader} />
               </Show>
@@ -610,6 +652,22 @@ export default function TableTable(props: TableTableProps) {
                       onContextMenu={handleRowContextMenu}
                     />
                   </td>
+                  <Show when={props.onOpenRecord}>
+                    {(onOpen) => (
+                      <td class={styles.expandCell}>
+                        <button
+                          class={styles.expandBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpen()(record.id);
+                          }}
+                          title={t('table.openRecord') || 'Open'}
+                        >
+                          <OpenInFullIcon />
+                        </button>
+                      </td>
+                    )}
+                  </Show>
                   <Show when={props.onDeleteRecord}>
                     <td class={styles.actionsCell}>
                       <button
@@ -634,6 +692,9 @@ export default function TableTable(props: TableTableProps) {
                           onStartEdit={() => setEditingCell({ recordId: record.id, columnId: column.name })}
                           onSave={(value) => handleCellSave(record.id, column.name, value)}
                           onCancel={() => setEditingCell(null)}
+                          onTabNext={() => moveFocus('next')}
+                          onTabPrev={() => moveFocus('prev')}
+                          onEnterDown={() => moveFocus('down')}
                         />
                       );
                     }}
@@ -649,6 +710,7 @@ export default function TableTable(props: TableTableProps) {
                   colSpan={
                     visibleColumns().length +
                     1 +
+                    (props.onOpenRecord ? 1 : 0) +
                     (props.onDeleteRecord ? 1 : 0) +
                     (props.onAddColumn ? 1 : 0) +
                     (hiddenColumns().length > 0 ? 1 : 0)

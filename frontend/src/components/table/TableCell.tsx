@@ -19,6 +19,9 @@ export interface TableCellProps {
   onStartEdit: () => void;
   onSave: (value: string) => void;
   onCancel: () => void;
+  onTabNext?: () => void;
+  onTabPrev?: () => void;
+  onEnterDown?: () => void;
 }
 
 /**
@@ -73,13 +76,19 @@ export function TableCell(props: TableCellProps) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleCellSave();
+      props.onEnterDown?.();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       setEditCancelled(true);
       props.onCancel();
     } else if (e.key === 'Tab') {
-      // Save current and let browser handle focus movement
+      e.preventDefault();
       handleCellSave();
+      if (e.shiftKey) {
+        props.onTabPrev?.();
+      } else {
+        props.onTabNext?.();
+      }
     }
   };
 
@@ -111,7 +120,7 @@ export function TableCell(props: TableCellProps) {
 
   const onKeyDown = (e: KeyboardEvent) => {
     // Sync current value from input before handling key press
-    if (e.key === 'Enter' || e.key === 'Tab') {
+    if (e.key === 'Enter' || e.key === 'Tab' || e.key === 'Escape') {
       setEditValue(getCurrentValue());
     }
     handleKeyDown(e);

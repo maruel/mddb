@@ -130,6 +130,54 @@
   vertical-align: middle;
 }
 
+/* Expand column - shows open-record button on row hover */
+.expandHeader {
+  width: 24px;
+  min-width: 24px;
+  padding: 0;
+}
+
+.expandCell {
+  width: 24px;
+  min-width: 24px;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.expandBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--c-text-light);
+  border-radius: var(--radius);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    color var(--transition),
+    background var(--transition);
+}
+
+.expandBtn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.row:hover .expandBtn {
+  opacity: 1;
+}
+
+.expandBtn:hover {
+  color: var(--c-primary);
+  background: var(--c-bg-hover);
+}
+
 /* Hide handle by default, show on row hover */
 .handleCell :global(.row-handle) {
   opacity: 0;
