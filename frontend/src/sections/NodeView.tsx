@@ -8,6 +8,7 @@ import TableGallery from '../components/TableGallery';
 import TableBoard from '../components/TableBoard';
 import RecordDetail from '../components/RecordDetail';
 import ViewTabs from '../components/table/ViewTabs';
+import { AddColumnDropdown } from '../components/table/AddColumnDropdown';
 import MarkdownPreview from '../components/MarkdownPreview';
 import { useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from '../contexts';
 import { useI18n } from '../i18n';
@@ -26,7 +27,15 @@ export default function NodeView() {
   const navigate = useNavigate();
   const params = useParams<{ wsId: string; nodeId: string }>();
   const { user, token, wsApi } = useAuth();
-  const { selectedNodeId, selectedNodeData, setSavingNodeId, setLoadError, setSaveError, loadNode } = useWorkspace();
+  const {
+    selectedNodeId,
+    selectedNodeData,
+    setSelectedNodeData,
+    setSavingNodeId,
+    setLoadError,
+    setSaveError,
+    loadNode,
+  } = useWorkspace();
   const {
     title,
     content,
@@ -156,7 +165,9 @@ export default function NodeView() {
         title: nodeData.title,
         properties: updatedProperties,
       });
-      await loadNode(nodeId);
+      // Update selectedNodeData directly — loadNode() skips re-fetching the current node
+      // due to a loadedNodeId guard, so we apply the new properties optimistically.
+      setSelectedNodeData({ ...nodeData, properties: updatedProperties });
       setSaveError(null);
     } catch (err) {
       setSaveError(`${t('errors.failedToSave')}: ${err}`);
@@ -329,6 +340,11 @@ export default function NodeView() {
                 <div class={styles.tableView}>
                   <div class={styles.viewBar}>
                     <ViewTabs />
+                    <Show when={viewType() !== 'table'}>
+                      <div class={styles.viewBarAddField}>
+                        <AddColumnDropdown onAddColumn={handleAddColumn} />
+                      </div>
+                    </Show>
                   </div>
                   <Show when={viewType() === 'table'}>
                     <TableTable

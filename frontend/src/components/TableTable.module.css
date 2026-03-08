@@ -458,3 +458,8 @@
   flex-shrink: 0;
   user-select: none;
 }
+
+.addColumnTh {
+  padding: 0;
+  min-width: 36px;
+}

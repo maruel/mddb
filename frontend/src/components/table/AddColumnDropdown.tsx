@@ -47,7 +47,7 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
   };
 
   return (
-    <th class={styles.addColumnCell}>
+    <div class={styles.addColumnCell}>
       <div class={styles.addColumnWrapper}>
         <button
           class={styles.addColumnBtn}
@@ -84,6 +84,6 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
           </div>
         </Show>
       </div>
-    </th>
+    </div>
   );
 }

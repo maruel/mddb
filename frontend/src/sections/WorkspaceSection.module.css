@@ -179,6 +179,14 @@
   min-height: 40px;
 }
 
+.viewBarAddField {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  padding: 0 var(--s-2);
+  border-left: 1px solid var(--c-border);
+}
+
 .breadcrumbs {
   display: flex;
   align-items: center;

@@ -639,7 +639,13 @@ export default function TableTable(props: TableTableProps) {
                   );
                 }}
               </For>
-              <Show when={props.onAddColumn}>{(onAddColumn) => <AddColumnDropdown onAddColumn={onAddColumn()} />}</Show>
+              <Show when={props.onAddColumn}>
+                {(onAddColumn) => (
+                  <th class={styles.addColumnTh}>
+                    <AddColumnDropdown onAddColumn={onAddColumn()} />
+                  </th>
+                )}
+              </Show>
               <Show when={hiddenColumns().length > 0}>
                 <th class={styles.hiddenColumnsCell}>
                   <div ref={(el) => (hiddenDropdownRef = el)} class={styles.hiddenColumnsWrapper}>
