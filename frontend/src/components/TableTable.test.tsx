@@ -202,7 +202,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('shows inline input when editing (Notion-style, no save/cancel buttons)', async () => {
+  it('shows inline input when editing (no save/cancel buttons)', async () => {
     renderWithI18n(() => (
       <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
@@ -218,14 +218,14 @@ describe('TableTable', () => {
       // When editing, an input appears directly without save/cancel buttons
       const input = document.querySelector('input[type="text"]');
       expect(input).toBeTruthy();
-      // No separate save/cancel buttons in Notion-style UI
+      // No separate save/cancel buttons
       const cancelButton = document.querySelector('.cancelBtn');
       expect(cancelButton).toBeFalsy();
     });
   });
 
-  it('shows add row option when no records (Notion-style)', async () => {
-    // In Notion-style, empty tables just show headers and "+ New" row
+  it('shows add row option when no records', async () => {
+    // Empty tables just show headers and "+ New" row
     renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={[]} onAddRecord={vi.fn()} />);
 
     await waitFor(() => {
@@ -268,7 +268,7 @@ describe('TableTable', () => {
     ));
 
     await waitFor(() => {
-      // Should have a clickable "+ New" row (Notion-style)
+      // Should have a clickable "+ New" row
       const newRowText = screen.getByText(/\+ add record/i);
       expect(newRowText).toBeTruthy();
     });
@@ -362,7 +362,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('handles cell save on blur (Notion-style)', async () => {
+  it('handles cell save on blur', async () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
@@ -385,7 +385,7 @@ describe('TableTable', () => {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
     fireEvent.input(input, { target: { value: 'Alice Updated' } });
 
-    // Blur to save (Notion-style auto-save)
+    // Blur to trigger auto-save
     fireEvent.blur(input);
 
     await waitFor(() => {
@@ -398,7 +398,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('handles cell cancel with Escape key (Notion-style)', async () => {
+  it('handles cell cancel with Escape key', async () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
@@ -421,7 +421,7 @@ describe('TableTable', () => {
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
     fireEvent.input(input, { target: { value: 'Alice Updated' } });
 
-    // Press Escape to cancel (Notion-style)
+    // Press Escape to cancel
     // In real browser, blur fires after component re-renders removing input
     // In tests, we just verify Escape doesn't immediately save
     fireEvent.keyDown(input, { key: 'Escape' });

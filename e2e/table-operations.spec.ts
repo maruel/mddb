@@ -190,8 +190,8 @@ test.describe('Table Sort UI', () => {
 
     await expect(page.getByText('Alice', { exact: true })).toBeVisible({ timeout: 5000 });
 
-    // Click column header to open context menu
-    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    // Right-click column header to open context menu
+    await page.locator('th').filter({ hasText: 'Name' }).first().click({ button: 'right' });
     await expect(page.locator('[data-testid="context-menu-sort-asc"]')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('[data-testid="context-menu-sort-desc"]')).toBeVisible();
 
@@ -211,9 +211,8 @@ test.describe('Table Sort UI', () => {
 
     await expect(page.getByText('Zebra', { exact: true })).toBeVisible({ timeout: 5000 });
 
-    // Sort ascending via column header menu
+    // Sort ascending by clicking the column header once
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
-    await page.locator('[data-testid="context-menu-sort-asc"]').click();
 
     // Records should be: Apple, Mango, Zebra
     await expect(async () => {
@@ -235,9 +234,9 @@ test.describe('Table Sort UI', () => {
 
     await expect(page.getByText('Zebra', { exact: true })).toBeVisible({ timeout: 5000 });
 
-    // Sort descending via column header menu
+    // Sort descending: click once (asc), then again (desc)
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
-    await page.locator('[data-testid="context-menu-sort-desc"]').click();
+    await page.locator('th').filter({ hasText: 'Name' }).first().click();
 
     await expect(async () => {
       expect(await getRowOrder(page, ['Apple', 'Mango', 'Zebra'])).toEqual(['Zebra', 'Mango', 'Apple']);
@@ -254,15 +253,12 @@ test.describe('Table Sort UI', () => {
 
     await expect(page.getByText('Zebra', { exact: true })).toBeVisible({ timeout: 5000 });
 
-    // Add ascending sort
+    // Add ascending sort by clicking header once
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
-    await page.locator('[data-testid="context-menu-sort-asc"]').click();
     await expect(page.locator('[data-testid="sort-indicator"]')).toBeVisible({ timeout: 3000 });
 
-    // Remove sort via column header menu
-    await page.locator('th').filter({ hasText: 'Name' }).first().click();
-    await expect(page.locator('[data-testid="context-menu-remove-sort"]')).toBeVisible({ timeout: 3000 });
-    await page.locator('[data-testid="context-menu-remove-sort"]').click();
+    // Remove sort via chips bar
+    await page.locator('[data-testid="sort-chip-Name"] button').click();
 
     // Sort indicator should be gone
     await expect(page.locator('[data-testid="sort-indicator"]')).not.toBeVisible({ timeout: 3000 });
@@ -281,13 +277,11 @@ test.describe('Table Sort UI', () => {
 
     await expect(page.getByText('Red', { exact: true }).first()).toBeVisible({ timeout: 5000 });
 
-    // Sort by Color ascending
+    // Sort by Color ascending (click once)
     await page.locator('th').filter({ hasText: 'Color' }).first().click();
-    await page.locator('[data-testid="context-menu-sort-asc"]').click();
 
-    // Sort by Size ascending (additive)
+    // Sort by Size ascending (additive, click once)
     await page.locator('th').filter({ hasText: 'Size' }).first().click();
-    await page.locator('[data-testid="context-menu-sort-asc"]').click();
 
     // Both columns should show sort indicators
     await expect(page.locator('[data-testid="sort-indicator"]')).toHaveCount(2, { timeout: 3000 });
@@ -334,9 +328,8 @@ test.describe('Table Sort UI', () => {
     // Switch to the Sorted view tab
     await page.locator('button').filter({ hasText: 'Sorted' }).click();
 
-    // Sort ascending via column header menu
+    // Sort ascending by clicking the column header once
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
-    await page.locator('[data-testid="context-menu-sort-asc"]').click();
 
     // Wait for records to sort
     await expect(async () => {
@@ -369,7 +362,7 @@ test.describe('Table Filter UI', () => {
       [{ Name: 'Alice' }, { Name: 'Bob' }]
     );
 
-    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('th').filter({ hasText: 'Name' }).first().click({ button: 'right' });
     await expect(page.locator('[data-testid="context-menu-filter-by"]')).toBeVisible({ timeout: 3000 });
     await page.locator('[data-testid="context-menu-filter-by"]').click();
     await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
@@ -391,7 +384,7 @@ test.describe('Table Filter UI', () => {
     await expect(page.getByText('Charlie', { exact: true })).toBeVisible();
 
     // Open filter panel for Name column
-    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('th').filter({ hasText: 'Name' }).first().click({ button: 'right' });
     await page.locator('[data-testid="context-menu-filter-by"]').click();
     await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
 
@@ -419,7 +412,7 @@ test.describe('Table Filter UI', () => {
 
     await expect(page.getByText('Alice', { exact: true })).toBeVisible({ timeout: 5000 });
 
-    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('th').filter({ hasText: 'Name' }).first().click({ button: 'right' });
     await page.locator('[data-testid="context-menu-filter-by"]').click();
     await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
 
@@ -447,7 +440,7 @@ test.describe('Table Filter UI', () => {
     await expect(page.getByText('Alice', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Apply a filter
-    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('th').filter({ hasText: 'Name' }).first().click({ button: 'right' });
     await page.locator('[data-testid="context-menu-filter-by"]').click();
     await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
     await page.locator('[data-testid="filter-operator"]').selectOption('equals');
@@ -459,7 +452,7 @@ test.describe('Table Filter UI', () => {
     }).toPass({ timeout: 5000 });
 
     // Remove the filter
-    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('th').filter({ hasText: 'Name' }).first().click({ button: 'right' });
     await page.locator('[data-testid="context-menu-filter-by"]').click();
     await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
     await expect(page.locator('[data-testid="filter-remove"]')).toBeVisible();
@@ -484,7 +477,7 @@ test.describe('Table Filter UI', () => {
     await expect(page.locator('[data-testid="filter-indicator"]')).not.toBeVisible();
 
     // Apply a filter
-    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('th').filter({ hasText: 'Name' }).first().click({ button: 'right' });
     await page.locator('[data-testid="context-menu-filter-by"]').click();
     await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
     await page.locator('[data-testid="filter-value"]').fill('Alice');
@@ -513,7 +506,7 @@ test.describe('Table Filter UI', () => {
     await expect(page.getByText('Alice', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Filter Name contains 'li'
-    await page.locator('th').filter({ hasText: 'Name' }).first().click();
+    await page.locator('th').filter({ hasText: 'Name' }).first().click({ button: 'right' });
     await page.locator('[data-testid="context-menu-filter-by"]').click();
     await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
     await page.locator('[data-testid="filter-operator"]').selectOption('contains');
@@ -526,7 +519,7 @@ test.describe('Table Filter UI', () => {
     }).toPass({ timeout: 5000 });
 
     // Filter Age equals 30
-    await page.locator('th').filter({ hasText: 'Age' }).first().click();
+    await page.locator('th').filter({ hasText: 'Age' }).first().click({ button: 'right' });
     await page.locator('[data-testid="context-menu-filter-by"]').click();
     await expect(page.locator('[data-testid="filter-panel"]')).toBeVisible({ timeout: 3000 });
     await page.locator('[data-testid="filter-operator"]').selectOption('equals');

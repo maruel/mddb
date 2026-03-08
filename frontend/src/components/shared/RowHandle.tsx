@@ -15,7 +15,7 @@ export interface RowHandleProps {
 
 /**
  * A shared drag handle component used for table rows.
- * Inspired by Notion's 6-dot drag handle.
+ * Displays a 6-dot grip icon that appears on hover.
  */
 export function RowHandle(props: RowHandleProps) {
   const handleDragStart = (e: DragEvent) => {

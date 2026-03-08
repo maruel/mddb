@@ -1,4 +1,4 @@
-// Flat block schema for Notion-style editor with uniform drag-drop.
+// Flat block schema for uniform drag-drop block editor.
 // Every visible line is a top-level block node with attributes for type, indentation, and styling.
 
 import { Schema, type NodeSpec, type DOMOutputSpec } from 'prosemirror-model';

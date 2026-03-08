@@ -1,4 +1,4 @@
-// Notion-like table view with inline editing.
+// Table view with inline editing.
 
 import { createSignal, createEffect, onCleanup, For, Show } from 'solid-js';
 import { type DataRecordResponse, type Filter, type Property, SortAsc, SortDesc } from '@sdk/types.gen';
@@ -15,6 +15,7 @@ import { useClickOutside } from '../composables/useClickOutside';
 import ArrowUpwardIcon from '@material-symbols/svg-400/outlined/arrow_upward.svg?solid';
 import ArrowDownwardIcon from '@material-symbols/svg-400/outlined/arrow_downward.svg?solid';
 import FilterAltIcon from '@material-symbols/svg-400/outlined/filter_alt.svg?solid';
+import CloseIcon from '@material-symbols/svg-400/outlined/close.svg?solid';
 
 interface TableTableProps {
   tableId: string;
@@ -240,10 +241,25 @@ export default function TableTable(props: TableTableProps) {
     setMenuState(null);
   };
 
-  // Column header click → show menu below the header
+  // Left-click on column header → cycle sort (none → asc → desc → none)
   const handleHeaderClick = (e: MouseEvent, colIndex: number) => {
-    // Don't open menu when clicking the rename input
     if ((e.target as HTMLElement).tagName === 'INPUT') return;
+    const column = props.columns[colIndex];
+    if (!column) return;
+    const existing = activeSorts().find((s) => s.property === column.name);
+    if (!existing) {
+      applySort(colIndex, SortAsc);
+    } else if (existing.direction === SortAsc) {
+      applySort(colIndex, SortDesc);
+    } else {
+      removeSort(colIndex);
+    }
+  };
+
+  // Right-click on column header → show context menu
+  const handleHeaderContextMenu = (e: MouseEvent, colIndex: number) => {
+    if ((e.target as HTMLElement).tagName === 'INPUT') return;
+    e.preventDefault();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setColumnMenu({ colIndex, x: rect.left, y: rect.bottom + 4 });
   };
@@ -428,8 +444,67 @@ export default function TableTable(props: TableTableProps) {
     setEditingCell(null);
   };
 
+  const removeSortByName = (colName: string) => {
+    const idx = props.columns.findIndex((c) => c.name === colName);
+    if (idx >= 0) removeSort(idx);
+  };
+
+  const removeFilterByName = (colName: string) => {
+    const idx = props.columns.findIndex((c) => c.name === colName);
+    if (idx >= 0) removeFilter(idx);
+  };
+
   return (
     <div class={styles.container}>
+      <Show when={activeSorts().length > 0 || activeFilters().length > 0}>
+        <div class={styles.chipsBar} data-testid="active-chips-bar">
+          <For each={activeSorts()}>
+            {(sort) => (
+              <div class={styles.chip} data-testid={`sort-chip-${sort.property}`}>
+                <span class={styles.chipIcon}>
+                  <Show when={sort.direction === SortAsc} fallback={<ArrowDownwardIcon />}>
+                    <ArrowUpwardIcon />
+                  </Show>
+                </span>
+                <span class={styles.chipLabel}>{sort.property}</span>
+                <button
+                  class={styles.chipRemove}
+                  onClick={() => removeSortByName(sort.property)}
+                  title={t('table.removeSort') || 'Remove sort'}
+                >
+                  <CloseIcon />
+                </button>
+              </div>
+            )}
+          </For>
+          <For each={activeFilters()}>
+            {(filter) => {
+              const prop = filter.property ?? '';
+              return (
+                <div class={`${styles.chip} ${styles.chipFilter}`} data-testid={`filter-chip-${prop}`}>
+                  <span class={styles.chipIcon}>
+                    <FilterAltIcon />
+                  </span>
+                  <span class={styles.chipLabel}>
+                    {prop}
+                    <Show when={filter.value !== undefined && filter.value !== ''}>
+                      {': '}
+                      {String(filter.value)}
+                    </Show>
+                  </span>
+                  <button
+                    class={styles.chipRemove}
+                    onClick={() => removeFilterByName(prop)}
+                    title={t('table.removeFilter') || 'Remove filter'}
+                  >
+                    <CloseIcon />
+                  </button>
+                </div>
+              );
+            }}
+          </For>
+        </div>
+      </Show>
       <div class={styles.tableWrapper}>
         <table class={styles.table} classList={{ [`${styles.resizing}`]: !!resizing() }}>
           <thead>
@@ -447,6 +522,7 @@ export default function TableTable(props: TableTableProps) {
                       class={styles.headerCell}
                       style={{ width: `${colWidth(column.name)}px`, 'min-width': `${MIN_COL_WIDTH}px` }}
                       onClick={(e) => handleHeaderClick(e, realIndex())}
+                      onContextMenu={(e) => handleHeaderContextMenu(e, realIndex())}
                     >
                       <Show
                         when={renamingColumn() === realIndex()}
