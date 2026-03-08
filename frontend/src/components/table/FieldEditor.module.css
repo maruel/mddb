@@ -1,0 +1,44 @@
+/* Styles for always-editable field inputs in card-style views. */
+
+.input {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  width: 100%;
+  padding: 1px 0;
+  min-width: 0;
+}
+
+.input:focus {
+  outline: none;
+  background: var(--c-bg-hover);
+  border-radius: 4px;
+  padding: 1px var(--s-1);
+}
+
+.select {
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  width: 100%;
+  padding: 1px 0;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.select:focus {
+  outline: none;
+  background: var(--c-bg-hover);
+  border-radius: 4px;
+}
+
+.checkbox {
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
+  accent-color: var(--c-primary, #0066cc);
+}

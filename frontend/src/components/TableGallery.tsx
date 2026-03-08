@@ -4,7 +4,7 @@ import { For, Show } from 'solid-js';
 import type { DataRecordResponse, Property } from '@sdk/types.gen';
 import { PropertyTypeURL } from '@sdk/types.gen';
 import { updateRecordField, handleEnterBlur, getRecordTitle } from './table/tableUtils';
-import { FieldValue } from './table/FieldValue';
+import { FieldEditor } from './table/FieldEditor';
 import { TableRow } from './table/TableRow';
 import { useI18n } from '../i18n';
 import styles from './TableGallery.module.css';
@@ -95,7 +95,7 @@ export default function TableGallery(props: TableGalleryProps) {
                             <div class={styles.field}>
                               <span class={styles.fieldName}>{col.name}</span>
                               <span class={styles.fieldValue}>
-                                <FieldValue record={record} column={col} />
+                                <FieldEditor record={record} column={col} onUpdate={props.onUpdateRecord} />
                               </span>
                             </div>
                           )}
