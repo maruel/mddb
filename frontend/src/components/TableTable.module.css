@@ -237,3 +237,75 @@
 .loadMore button:hover {
   background: var(--c-bg-alt);
 }
+
+/* Hidden columns indicator */
+.hiddenColumnsCell {
+  padding: var(--s-2) var(--s-2);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.hiddenColumnsWrapper {
+  position: relative;
+}
+
+.hiddenColumnsBtn {
+  padding: var(--s-1) var(--s-2);
+  border: 1px dashed var(--c-border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--c-text-light);
+  font-size: 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.hiddenColumnsBtn:hover {
+  background: var(--c-bg-hover);
+  color: var(--c-text);
+}
+
+.hiddenColumnsDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: var(--s-1);
+  min-width: 160px;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+  z-index: 20;
+  padding: var(--s-1) 0;
+}
+
+.hiddenColumnItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-1) var(--s-3);
+  font-size: 0.8rem;
+  gap: var(--s-2);
+}
+
+.hiddenColumnItem span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--c-text);
+}
+
+.hiddenColumnItem button {
+  flex-shrink: 0;
+  padding: var(--s-1) var(--s-2);
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--c-primary);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.hiddenColumnItem button:hover {
+  background: var(--c-bg-hover);
+}

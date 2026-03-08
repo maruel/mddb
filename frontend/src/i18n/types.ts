@@ -349,6 +349,9 @@ export interface Dictionary {
     opLte: string;
     typeMultiSelect: string;
     typePhone: string;
+    hideColumn: string;
+    showColumn: string;
+    hiddenColumns: string;
   };
 
   errors: {

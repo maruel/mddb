@@ -10,6 +10,7 @@ import { AddColumnDropdown } from './table/AddColumnDropdown';
 import { FilterPanel } from './table/FilterPanel';
 import { useI18n } from '../i18n';
 import { useRecords, DEFAULT_VIEW_ID } from '../contexts';
+import { useClickOutside } from '../composables/useClickOutside';
 
 import ArrowUpwardIcon from '@material-symbols/svg-400/outlined/arrow_upward.svg?solid';
 import ArrowDownwardIcon from '@material-symbols/svg-400/outlined/arrow_downward.svg?solid';
@@ -85,6 +86,45 @@ export default function TableTable(props: TableTableProps) {
   };
 
   const colWidth = (colName: string): number => dragWidths()[colName] ?? storedWidth(colName) ?? DEFAULT_COL_WIDTH;
+
+  // Column visibility
+  const [hiddenDropdownOpen, setHiddenDropdownOpen] = createSignal(false);
+  let hiddenDropdownRef: HTMLDivElement | undefined;
+  useClickOutside(
+    () => hiddenDropdownRef,
+    () => setHiddenDropdownOpen(false)
+  );
+
+  const isColumnVisible = (colName: string): boolean => {
+    const vid = activeViewId();
+    const cols = views().find((v) => v.id === vid)?.columns;
+    if (!cols || cols.length === 0) return true;
+    const entry = cols.find((vc) => vc.property === colName);
+    return entry ? entry.visible : true;
+  };
+
+  const visibleColumns = () => props.columns.filter((col) => isColumnVisible(col.name));
+  const hiddenColumns = () => props.columns.filter((col) => !isColumnVisible(col.name));
+
+  const hideColumn = (colName: string) => {
+    const viewId = activeViewId();
+    if (!viewId || viewId === DEFAULT_VIEW_ID) return;
+    if (visibleColumns().length <= 1) return;
+    const existing = views().find((v) => v.id === viewId)?.columns ?? [];
+    const hasEntry = existing.some((vc) => vc.property === colName);
+    const newCols = hasEntry
+      ? existing.map((vc) => (vc.property === colName ? { ...vc, visible: false } : vc))
+      : [...existing, { property: colName, visible: false }];
+    updateView(viewId, { columns: newCols });
+  };
+
+  const showColumn = (colName: string) => {
+    const viewId = activeViewId();
+    if (!viewId || viewId === DEFAULT_VIEW_ID) return;
+    const existing = views().find((v) => v.id === viewId)?.columns ?? [];
+    const newCols = existing.map((vc) => (vc.property === colName ? { ...vc, visible: true } : vc));
+    updateView(viewId, { columns: newCols });
+  };
 
   const handleResizeStart = (e: MouseEvent, colName: string) => {
     e.preventDefault();
@@ -233,9 +273,22 @@ export default function TableTable(props: TableTableProps) {
       separator: true,
     });
 
+    if (activeViewId() !== DEFAULT_VIEW_ID) {
+      actions.push({
+        id: 'hide-column',
+        label: t('table.hideColumn') || 'Hide column',
+        disabled: visibleColumns().length <= 1,
+        separator: true,
+      });
+    }
+
     if (props.onInsertColumn) {
       actions.push(
-        { id: 'insert-left', label: t('table.insertColumnLeft') || 'Insert Left', separator: true },
+        {
+          id: 'insert-left',
+          label: t('table.insertColumnLeft') || 'Insert Left',
+          separator: !actions.find((a) => a.id === 'hide-column'),
+        },
         { id: 'insert-right', label: t('table.insertColumnRight') || 'Insert Right' }
       );
     }
@@ -327,6 +380,9 @@ export default function TableTable(props: TableTableProps) {
       case 'filter-by':
         setFilterPanel({ colIndex: state.colIndex, column, x: state.x, y: state.y });
         break;
+      case 'hide-column':
+        hideColumn(column.name);
+        break;
       case 'insert-left':
         props.onInsertColumn?.(state.colIndex);
         break;
@@ -383,59 +439,87 @@ export default function TableTable(props: TableTableProps) {
               <Show when={props.onDeleteRecord}>
                 <th class={styles.actionsHeader} />
               </Show>
-              <For each={props.columns}>
-                {(column, colIndex) => (
-                  <th
-                    class={styles.headerCell}
-                    style={{ width: `${colWidth(column.name)}px`, 'min-width': `${MIN_COL_WIDTH}px` }}
-                    onClick={(e) => handleHeaderClick(e, colIndex())}
-                  >
-                    <Show
-                      when={renamingColumn() === colIndex()}
-                      fallback={
-                        <>
-                          {column.name}
-                          <Show when={column.required}>
-                            <span class={styles.required}>*</span>
-                          </Show>
-                          <Show when={activeSorts().find((s) => s.property === column.name)}>
-                            {(sort) => (
-                              <span class={styles.sortIndicator} data-testid="sort-indicator">
-                                <Show when={sort().direction === SortAsc} fallback={<ArrowDownwardIcon />}>
-                                  <ArrowUpwardIcon />
-                                </Show>
-                              </span>
-                            )}
-                          </Show>
-                          <Show when={activeFilters().find((f) => f.property === column.name)}>
-                            <span class={styles.filterIndicator} data-testid="filter-indicator">
-                              <FilterAltIcon />
-                            </span>
-                          </Show>
-                        </>
-                      }
+              <For each={visibleColumns()}>
+                {(column) => {
+                  const realIndex = () => props.columns.indexOf(column);
+                  return (
+                    <th
+                      class={styles.headerCell}
+                      style={{ width: `${colWidth(column.name)}px`, 'min-width': `${MIN_COL_WIDTH}px` }}
+                      onClick={(e) => handleHeaderClick(e, realIndex())}
                     >
-                      <input
-                        class={styles.renameInput}
-                        value={renameValue()}
-                        onInput={(e) => setRenameValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') commitRename();
-                          if (e.key === 'Escape') setRenamingColumn(null);
-                        }}
-                        onBlur={commitRename}
-                        ref={(el) => setTimeout(() => el?.select(), 0)}
+                      <Show
+                        when={renamingColumn() === realIndex()}
+                        fallback={
+                          <>
+                            {column.name}
+                            <Show when={column.required}>
+                              <span class={styles.required}>*</span>
+                            </Show>
+                            <Show when={activeSorts().find((s) => s.property === column.name)}>
+                              {(sort) => (
+                                <span class={styles.sortIndicator} data-testid="sort-indicator">
+                                  <Show when={sort().direction === SortAsc} fallback={<ArrowDownwardIcon />}>
+                                    <ArrowUpwardIcon />
+                                  </Show>
+                                </span>
+                              )}
+                            </Show>
+                            <Show when={activeFilters().find((f) => f.property === column.name)}>
+                              <span class={styles.filterIndicator} data-testid="filter-indicator">
+                                <FilterAltIcon />
+                              </span>
+                            </Show>
+                          </>
+                        }
+                      >
+                        <input
+                          class={styles.renameInput}
+                          value={renameValue()}
+                          onInput={(e) => setRenameValue(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitRename();
+                            if (e.key === 'Escape') setRenamingColumn(null);
+                          }}
+                          onBlur={commitRename}
+                          ref={(el) => setTimeout(() => el?.select(), 0)}
+                        />
+                      </Show>
+                      <div
+                        class={styles.resizeHandle}
+                        classList={{ [`${styles.resizeHandleActive}`]: resizing()?.colName === column.name }}
+                        onMouseDown={(e) => handleResizeStart(e, column.name)}
                       />
-                    </Show>
-                    <div
-                      class={styles.resizeHandle}
-                      classList={{ [`${styles.resizeHandleActive}`]: resizing()?.colName === column.name }}
-                      onMouseDown={(e) => handleResizeStart(e, column.name)}
-                    />
-                  </th>
-                )}
+                    </th>
+                  );
+                }}
               </For>
               <Show when={props.onAddColumn}>{(onAddColumn) => <AddColumnDropdown onAddColumn={onAddColumn()} />}</Show>
+              <Show when={hiddenColumns().length > 0}>
+                <th class={styles.hiddenColumnsCell}>
+                  <div ref={(el) => (hiddenDropdownRef = el)} class={styles.hiddenColumnsWrapper}>
+                    <button
+                      class={styles.hiddenColumnsBtn}
+                      data-testid="hidden-columns-btn"
+                      onClick={() => setHiddenDropdownOpen(!hiddenDropdownOpen())}
+                    >
+                      {hiddenColumns().length} {t('table.hiddenColumns') || 'hidden'}
+                    </button>
+                    <Show when={hiddenDropdownOpen()}>
+                      <div class={styles.hiddenColumnsDropdown} data-testid="hidden-columns-dropdown">
+                        <For each={hiddenColumns()}>
+                          {(col) => (
+                            <div class={styles.hiddenColumnItem}>
+                              <span>{col.name}</span>
+                              <button onClick={() => showColumn(col.name)}>{t('table.showColumn') || 'Show'}</button>
+                            </div>
+                          )}
+                        </For>
+                      </div>
+                    </Show>
+                  </div>
+                </th>
+              </Show>
             </tr>
           </thead>
           <tbody>
@@ -461,7 +545,7 @@ export default function TableTable(props: TableTableProps) {
                       </button>
                     </td>
                   </Show>
-                  <For each={props.columns}>
+                  <For each={visibleColumns()}>
                     {(column) => {
                       const isEditing = () =>
                         editingCell()?.recordId === record.id && editingCell()?.columnId === column.name;
@@ -486,7 +570,13 @@ export default function TableTable(props: TableTableProps) {
               <tr class={styles.newRow}>
                 <td
                   class={styles.newRowPlaceholder}
-                  colSpan={props.columns.length + 1 + (props.onDeleteRecord ? 1 : 0) + (props.onAddColumn ? 1 : 0)}
+                  colSpan={
+                    visibleColumns().length +
+                    1 +
+                    (props.onDeleteRecord ? 1 : 0) +
+                    (props.onAddColumn ? 1 : 0) +
+                    (hiddenColumns().length > 0 ? 1 : 0)
+                  }
                   onClick={handleAddRow}
                 >
                   + {t('table.addRecord') || 'New'}

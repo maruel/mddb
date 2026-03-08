@@ -350,6 +350,9 @@ export const dict: Dictionary = {
     opLte: '<=',
     typeMultiSelect: 'Selección múltiple',
     typePhone: 'Teléfono',
+    hideColumn: 'Ocultar columna',
+    showColumn: 'Mostrar',
+    hiddenColumns: 'oculta(s)',
   },
 
   errors: {
