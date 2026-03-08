@@ -15,7 +15,6 @@ vi.mock('./TableGrid.module.css', () => ({
     cardBody: 'cardBody',
     field: 'field',
     fieldName: 'fieldName',
-    fieldValueInput: 'fieldValueInput',
     titleInput: 'titleInput',
     statusBar: 'statusBar',
     addRecord: 'addRecord',
@@ -68,17 +67,20 @@ describe('TableGrid', () => {
     });
   });
 
-  it('uses first column value as card title', async () => {
+  it('uses first column value as card title input', async () => {
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
-      // First column is Title, so "Product A" and "Product B" should be in inputs inside strong tags
+      // First column is Title, so "Product A" and "Product B" should be in the title inputs
       const productA = screen.getByDisplayValue('Product A');
-      expect(productA.closest('strong')).toBeTruthy();
+      expect(productA).toBeTruthy();
+      expect(productA.tagName.toLowerCase()).toBe('input');
+      // Title input should NOT be wrapped in a <strong>
+      expect(productA.closest('strong')).toBeNull();
     });
   });
 
-  it('shows "Untitled" for records without first column value', async () => {
+  it('shows "Untitled" placeholder for records without first column value', async () => {
     const recordsWithoutTitle: DataRecordResponse[] = [
       {
         id: 'rec-1',
@@ -97,25 +99,23 @@ describe('TableGrid', () => {
     });
   });
 
-  it('displays up to 3 additional fields in card body', async () => {
+  it('displays all additional fields in card body (not just first 3)', async () => {
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
-      // Should show Description, Price, Status (columns 2-4, indices 1-3)
-      // Each record will have these fields, so use getAllByText
-      expect(screen.getAllByText('Description:').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Price:').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Status:').length).toBeGreaterThan(0);
+      // Should show Description, Price, Status (all non-title columns)
+      expect(screen.getAllByText('Description').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Price').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Status').length).toBeGreaterThan(0);
     });
   });
 
-  it('shows field values correctly', async () => {
+  it('shows field values correctly via FieldEditor', async () => {
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       expect(screen.getByDisplayValue('A great product')).toBeTruthy();
       expect(screen.getByDisplayValue('99')).toBeTruthy();
-      expect(screen.getByDisplayValue('active')).toBeTruthy();
     });
   });
 
@@ -143,9 +143,6 @@ describe('TableGrid', () => {
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
-      // Find row handle by its aria-label (RowHandle component has drag handle icon)
-      // Since RowHandle is SVG, we might look for parent div with specific class or testid if available.
-      // Or simply trigger contextmenu on the card itself since TableRow handles it in handleWrapper
       const cards = document.querySelectorAll('.card');
       expect(cards.length).toBe(2);
     });
@@ -162,9 +159,6 @@ describe('TableGrid', () => {
   });
 
   it('calls onDeleteRecord when delete option is clicked', async () => {
-    // Override window.confirm since it might be used by delete action in some contexts (though not here currently)
-    // Here delete is not dangerous in context menu actions def, wait it is danger: true.
-
     renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {

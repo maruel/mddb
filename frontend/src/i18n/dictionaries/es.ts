@@ -354,6 +354,8 @@ export const dict: Dictionary = {
     showColumn: 'Mostrar',
     hiddenColumns: 'oculta(s)',
     recordCount: 'registros',
+    groupBy: 'Agrupar por',
+    recordDetail: 'Detalle del registro',
   },
 
   errors: {

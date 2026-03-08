@@ -3,7 +3,7 @@
 import { For, Show, createMemo } from 'solid-js';
 import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '@sdk/types.gen';
 import { updateRecordField, handleEnterBlur, getRecordTitle } from './table/tableUtils';
-import { FieldValue } from './table/FieldValue';
+import { FieldEditor } from './table/FieldEditor';
 import { TableRow } from './table/TableRow';
 import { useI18n } from '../i18n';
 import styles from './TableBoard.module.css';
@@ -16,14 +16,27 @@ interface TableBoardProps {
   onDeleteRecord: (id: string) => void;
   onDuplicateRecord?: (id: string) => void;
   onOpenRecord?: (id: string) => void;
+  groupByColumn?: string;
+  onGroupByChange?: (columnName: string) => void;
 }
 
 export default function TableBoard(props: TableBoardProps) {
   const { t } = useI18n();
 
-  const groupColumn = createMemo(() =>
-    props.columns.find((c) => c.type === PropertyTypeSelect || c.type === PropertyTypeMultiSelect)
+  // Columns eligible for grouping.
+  const groupableColumns = createMemo(() =>
+    props.columns.filter((c) => c.type === PropertyTypeSelect || c.type === PropertyTypeMultiSelect)
   );
+
+  const groupColumn = createMemo(() => {
+    const cols = groupableColumns();
+    if (cols.length === 0) return undefined;
+    if (props.groupByColumn) {
+      const found = cols.find((c) => c.name === props.groupByColumn);
+      if (found) return found;
+    }
+    return cols[0];
+  });
 
   const groups = createMemo(() => {
     const col = groupColumn();
@@ -74,6 +87,21 @@ export default function TableBoard(props: TableBoardProps) {
   return (
     <div class={styles.board}>
       <Show when={groupColumn()} fallback={<div class={styles.noGroup}>{t('table.addSelectColumn')}</div>}>
+        <Show when={groupableColumns().length > 1 && props.onGroupByChange}>
+          <div class={styles.boardHeader}>
+            <label class={styles.groupByLabel} for="board-group-by">
+              {t('table.groupBy')}:
+            </label>
+            <select
+              id="board-group-by"
+              class={styles.groupBySelect}
+              value={groupColumn()?.name ?? ''}
+              onChange={(e) => props.onGroupByChange?.(e.currentTarget.value)}
+            >
+              <For each={groupableColumns()}>{(col) => <option value={col.name}>{col.name}</option>}</For>
+            </select>
+          </div>
+        </Show>
         <div class={styles.columns}>
           <For each={groups()}>
             {(group) => (
@@ -117,7 +145,7 @@ export default function TableBoard(props: TableBoardProps) {
                                 <div class={styles.field}>
                                   <span class={styles.fieldName}>{col.name}</span>
                                   <span class={styles.fieldValue}>
-                                    <FieldValue record={record} column={col} />
+                                    <FieldEditor record={record} column={col} onUpdate={props.onUpdateRecord} />
                                   </span>
                                 </div>
                               )}

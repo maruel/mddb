@@ -2,7 +2,8 @@
 
 import { For, Show } from 'solid-js';
 import type { DataRecordResponse, Property } from '@sdk/types.gen';
-import { updateRecordField, handleEnterBlur, getRecordTitle, getFieldValue } from './table/tableUtils';
+import { updateRecordField, handleEnterBlur, getRecordTitle } from './table/tableUtils';
+import { FieldEditor } from './table/FieldEditor';
 import { TableRow } from './table/TableRow';
 import { useI18n } from '../i18n';
 import styles from './TableGrid.module.css';
@@ -20,6 +21,9 @@ interface TableGridProps {
 export default function TableGrid(props: TableGridProps) {
   const { t } = useI18n();
 
+  const titleColumn = () => props.columns[0];
+  const bodyColumns = () => props.columns.slice(1);
+
   return (
     <div class={styles.container}>
       <div class={styles.grid}>
@@ -33,36 +37,40 @@ export default function TableGrid(props: TableGridProps) {
               class={styles.card}
             >
               <div class={styles.cardHeader}>
-                <strong>
+                <Show when={titleColumn()}>
+                  {(col) => (
+                    <input
+                      type="text"
+                      value={getRecordTitle(record, props.columns)}
+                      placeholder={t('table.untitled') || 'Untitled'}
+                      onBlur={(e) => updateRecordField(record, col().name, e.target.value, props.onUpdateRecord)}
+                      onKeyDown={handleEnterBlur}
+                      class={styles.titleInput}
+                    />
+                  )}
+                </Show>
+                <Show when={!titleColumn()}>
                   <input
                     type="text"
-                    value={getRecordTitle(record, props.columns)}
+                    value=""
                     placeholder={t('table.untitled') || 'Untitled'}
-                    onBlur={(e) =>
-                      props.columns[0] &&
-                      updateRecordField(record, props.columns[0].name, e.target.value, props.onUpdateRecord)
-                    }
-                    onKeyDown={handleEnterBlur}
                     class={styles.titleInput}
+                    disabled
                   />
-                </strong>
+                </Show>
               </div>
-              <div class={styles.cardBody}>
-                <For each={props.columns.slice(1, 4)}>
-                  {(col) => (
-                    <div class={styles.field}>
-                      <span class={styles.fieldName}>{col.name}:</span>
-                      <input
-                        type="text"
-                        value={getFieldValue(record, col.name)}
-                        onBlur={(e) => updateRecordField(record, col.name, e.target.value, props.onUpdateRecord)}
-                        onKeyDown={handleEnterBlur}
-                        class={styles.fieldValueInput}
-                      />
-                    </div>
-                  )}
-                </For>
-              </div>
+              <Show when={bodyColumns().length > 0}>
+                <div class={styles.cardBody}>
+                  <For each={bodyColumns()}>
+                    {(col) => (
+                      <div class={styles.field}>
+                        <span class={styles.fieldName}>{col.name}</span>
+                        <FieldEditor record={record} column={col} onUpdate={props.onUpdateRecord} />
+                      </div>
+                    )}
+                  </For>
+                </div>
+              </Show>
             </TableRow>
           )}
         </For>

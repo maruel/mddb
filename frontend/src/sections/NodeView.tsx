@@ -6,6 +6,7 @@ import TableTable from '../components/TableTable';
 import TableGrid from '../components/TableGrid';
 import TableGallery from '../components/TableGallery';
 import TableBoard from '../components/TableBoard';
+import RecordDetail from '../components/RecordDetail';
 import ViewTabs from '../components/table/ViewTabs';
 import MarkdownPreview from '../components/MarkdownPreview';
 import { useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from '../contexts';
@@ -52,11 +53,13 @@ export default function NodeView() {
     views,
     activeViewId,
     setActiveViewId,
+    updateView,
   } = useRecords();
   const [searchParams, setSearchParams] = useSearchParams<{ view?: string }>();
 
   const [previewContent, setPreviewContent] = createSignal<string | null>(null);
   const [previewCommit, setPreviewCommit] = createSignal<Commit | null>(null);
+  const [openRecordId, setOpenRecordId] = createSignal<string | null>(null);
 
   // Derive view type from active view in RecordsContext
   const activeView = createMemo(() => views().find((v) => v.id === activeViewId()));
@@ -308,6 +311,7 @@ export default function NodeView() {
                       onInsertColumn={handleInsertColumn}
                       onLoadMore={loadMoreRecords}
                       hasMore={hasMore()}
+                      onOpenRecord={(id) => setOpenRecordId(id)}
                     />
                   </Show>
                   <Show when={viewType() === 'list'}>
@@ -317,6 +321,7 @@ export default function NodeView() {
                       onAddRecord={() => addRecord({})}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
+                      onOpenRecord={(id) => setOpenRecordId(id)}
                     />
                   </Show>
                   <Show when={viewType() === 'gallery'}>
@@ -326,6 +331,7 @@ export default function NodeView() {
                       onAddRecord={() => addRecord({})}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
+                      onOpenRecord={(id) => setOpenRecordId(id)}
                     />
                   </Show>
                   <Show when={viewType() === 'board'}>
@@ -335,11 +341,28 @@ export default function NodeView() {
                       onAddRecord={addRecord}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
+                      onOpenRecord={(id) => setOpenRecordId(id)}
+                      groupByColumn={activeView()?.groups?.[0]?.property}
+                      onGroupByChange={(columnName) => {
+                        const id = activeViewId();
+                        if (id) updateView(id, { groups: [{ property: columnName }] });
+                      }}
                     />
                   </Show>
                 </div>
               </Show>
             </div>
+          </Show>
+          <Show when={openRecordId()}>
+            {(id) => (
+              <RecordDetail
+                recordId={id()}
+                records={records()}
+                columns={selectedNodeData()?.properties || []}
+                onUpdate={updateRecord}
+                onClose={() => setOpenRecordId(null)}
+              />
+            )}
           </Show>
 
           <Show when={previewContent() !== null && previewCommit()}>

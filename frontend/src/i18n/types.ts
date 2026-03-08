@@ -353,6 +353,8 @@ export interface Dictionary {
     showColumn: string;
     hiddenColumns: string;
     recordCount: string;
+    groupBy: string;
+    recordDetail: string;
   };
 
   errors: {

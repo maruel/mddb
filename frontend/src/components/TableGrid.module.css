@@ -51,6 +51,10 @@
   font-weight: 600;
 }
 
+.fieldName::after {
+  content: ':';
+}
+
 .titleInput {
   background: none;
   border: none;
@@ -63,22 +67,6 @@
 }
 
 .titleInput:focus {
-  outline: none;
-  background: var(--c-bg-hover);
-  border-radius: 4px;
-}
-
-.fieldValueInput {
-  background: none;
-  border: none;
-  font-family: inherit;
-  font-size: 0.9rem;
-  color: inherit;
-  width: 100%;
-  padding: 2px 0;
-}
-
-.fieldValueInput:focus {
   outline: none;
   background: var(--c-bg-hover);
   border-radius: 4px;

@@ -17,6 +17,37 @@
   margin: var(--s-4);
 }
 
+.boardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+.groupByLabel {
+  font-size: 0.82rem;
+  color: var(--c-text-light);
+  white-space: nowrap;
+}
+
+.groupBySelect {
+  font-size: 0.82rem;
+  font-family: inherit;
+  color: var(--c-text);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 2px var(--s-2);
+  cursor: pointer;
+}
+
+.groupBySelect:focus {
+  outline: none;
+  border-color: var(--c-border-focus);
+}
+
 .columns {
   display: flex;
   gap: var(--s-3);

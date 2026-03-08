@@ -9,6 +9,9 @@ import type { DataRecordResponse, Property } from '@sdk/types.gen';
 vi.mock('./TableBoard.module.css', () => ({
   default: {
     board: 'board',
+    boardHeader: 'boardHeader',
+    groupByLabel: 'groupByLabel',
+    groupBySelect: 'groupBySelect',
     noGroup: 'noGroup',
     columns: 'columns',
     column: 'column',
