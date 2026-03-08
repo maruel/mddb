@@ -8,6 +8,7 @@ import type { DataRecordResponse, Property } from '@sdk/types.gen';
 // Mock CSS module
 vi.mock('./TableGallery.module.css', () => ({
   default: {
+    container: 'container',
     gallery: 'gallery',
     card: 'card',
     imageContainer: 'imageContainer',
@@ -20,6 +21,9 @@ vi.mock('./TableGallery.module.css', () => ({
     field: 'field',
     fieldName: 'fieldName',
     fieldValue: 'fieldValue',
+    empty: 'empty',
+    statusBar: 'statusBar',
+    titleInput: 'titleInput',
   },
 }));
 
@@ -147,8 +151,9 @@ describe('TableGallery', () => {
     ));
 
     await waitFor(() => {
+      // Title renders as an editable input in the card header
       const title = screen.getByDisplayValue('Product A');
-      expect(title.closest('strong')).toBeTruthy();
+      expect(title.tagName).toBe('INPUT');
     });
   });
 
@@ -171,15 +176,16 @@ describe('TableGallery', () => {
     });
   });
 
-  it('displays up to 2 additional fields in card body', async () => {
+  it('displays all body fields in card', async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      // Should show Image (col 2) and Description (col 3), but Image is used for display
-      // So should show Description and Price (each record has these fields)
-      expect(screen.getAllByText('Description:').length).toBeGreaterThan(0);
+      // Image column is used as cover; remaining body columns (Description, Price) render as field labels.
+      // Colon is added via CSS ::after, so DOM text is just the column name.
+      expect(screen.getAllByText('Description').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Price').length).toBeGreaterThan(0);
     });
   });
 
@@ -239,14 +245,13 @@ describe('TableGallery', () => {
   });
 
   it('renders empty gallery when no records', async () => {
-    const { container } = renderWithI18n(() => (
+    renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={[]} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      const gallery = container.querySelector('.gallery');
-      expect(gallery).toBeTruthy();
-      expect(gallery?.children.length).toBe(0);
+      // Empty state message replaces the gallery grid
+      expect(screen.getByText('No records')).toBeTruthy();
     });
   });
 

@@ -1,0 +1,46 @@
+/* Shared read-mode field value styles used across table views. */
+
+.selectChip {
+  display: inline-block;
+  padding: 1px var(--s-2);
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 500;
+  background: var(--c-bg-hover);
+  color: var(--c-text);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.multiChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  font-size: 0.9em;
+  color: var(--c-primary);
+  font-weight: 600;
+}
+
+.link {
+  color: var(--c-primary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: inline-block;
+}
+
+.link:hover {
+  text-decoration: underline;
+}

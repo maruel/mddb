@@ -1,8 +1,18 @@
+/* Gallery view for table records, emphasizing images. */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--s-4);
-  padding: var(--s-3) 0 var(--s-3) 28px;
+  padding: var(--s-4) var(--s-3) var(--s-3) 28px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .card {
@@ -13,6 +23,8 @@
   transition:
     transform var(--transition),
     box-shadow var(--transition);
+  display: flex;
+  flex-direction: column;
 }
 
 .card:hover {
@@ -27,6 +39,7 @@
   align-items: center;
   justify-content: center;
   border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
 }
 
 .image {
@@ -42,29 +55,41 @@
 
 .cardContent {
   padding: var(--s-3);
+  flex: 1;
 }
 
 .cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   margin-bottom: var(--s-2);
 }
 
 .cardBody {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 
 .field {
-  margin-bottom: var(--s-1);
   display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-bottom: var(--s-1);
   overflow: hidden;
 }
 
 .fieldName {
   color: var(--c-text-light);
-  margin-right: var(--s-2);
   flex-shrink: 0;
+  font-size: 0.78rem;
+}
+
+.fieldName::after {
+  content: ':';
+}
+
+.fieldValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  color: var(--c-text);
 }
 
 .titleInput {
@@ -82,20 +107,24 @@
   outline: none;
   background: var(--c-bg-hover);
   border-radius: 4px;
+  padding: 2px var(--s-1);
 }
 
-.fieldValueInput {
-  background: none;
-  border: none;
-  font-family: inherit;
-  font-size: 0.85rem;
-  color: inherit;
-  width: 100%;
-  padding: 2px 0;
+.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-text-light);
+  font-style: italic;
+  font-size: 0.9rem;
 }
 
-.fieldValueInput:focus {
-  outline: none;
-  background: var(--c-bg-hover);
-  border-radius: 4px;
+.statusBar {
+  padding: var(--s-1) var(--s-3);
+  font-size: 0.75rem;
+  color: var(--c-text-light);
+  border-top: 1px solid var(--c-border);
+  flex-shrink: 0;
+  user-select: none;
 }

@@ -1,16 +1,16 @@
 // Table cell component with inline editing for different property types.
 
-import { createSignal, Show, For, type Accessor, type JSXElement } from 'solid-js';
+import { createSignal, Show, For, type Accessor } from 'solid-js';
 import {
   type DataRecordResponse,
   type Property,
   PropertyTypeCheckbox,
   PropertyTypeSelect,
-  PropertyTypeMultiSelect,
   PropertyTypeNumber,
   PropertyTypeDate,
 } from '@sdk/types.gen';
 import styles from './TableCell.module.css';
+import { FieldValue } from './FieldValue';
 
 export interface TableCellProps {
   record: DataRecordResponse;
@@ -42,45 +42,6 @@ export function TableCell(props: TableCellProps) {
       setEditValue(String(getCellValue()));
       setEditCancelled(false);
       props.onStartEdit();
-    }
-  };
-
-  const renderSelectChip = (id: string): JSXElement => {
-    const opt = props.column.options?.find((o) => o.id === id || o.name === id);
-    const label = opt?.name ?? id;
-    const color = opt?.color;
-    return (
-      <span class={styles.selectChip} style={color ? { background: color, color: '#fff' } : {}}>
-        {label}
-      </span>
-    );
-  };
-
-  const renderCellContent = (): JSXElement => {
-    const value = getCellValue();
-
-    switch (props.column.type) {
-      case 'checkbox':
-        return <span class={styles.checkbox}>{value === 'true' || value === true ? '✓' : ''}</span>;
-      case PropertyTypeSelect: {
-        const id = String(value);
-        return id ? renderSelectChip(id) : null;
-      }
-      case PropertyTypeMultiSelect: {
-        const ids = String(value)
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean);
-        return ids.length > 0 ? (
-          <span class={styles.multiChips}>
-            <For each={ids}>{(id) => renderSelectChip(id)}</For>
-          </span>
-        ) : null;
-      }
-      case 'date':
-        return value ? new Date(value as string).toLocaleDateString() : '';
-      default:
-        return String(value);
     }
   };
 
@@ -234,7 +195,14 @@ export function TableCell(props: TableCellProps) {
 
   return (
     <td class={`${styles.cell}${props.isEditing() ? ` ${styles.editing}` : ''}`} onClick={handleClick}>
-      <Show when={props.isEditing()} fallback={<div class={styles.cellContent}>{renderCellContent()}</div>}>
+      <Show
+        when={props.isEditing()}
+        fallback={
+          <div class={styles.cellContent}>
+            <FieldValue record={props.record} column={props.column} />
+          </div>
+        }
+      >
         {renderCellInput()}
       </Show>
     </td>
