@@ -1,6 +1,6 @@
 // Notion-like table view with inline editing.
 
-import { createSignal, For, Show } from 'solid-js';
+import { createSignal, createEffect, onCleanup, For, Show } from 'solid-js';
 import { type DataRecordResponse, type Filter, type Property, SortAsc, SortDesc } from '@sdk/types.gen';
 import styles from './TableTable.module.css';
 import { RowHandle, ContextMenu, type ContextMenuAction } from './shared';
@@ -32,9 +32,12 @@ interface TableTableProps {
   hasMore?: boolean;
 }
 
+const DEFAULT_COL_WIDTH = 150;
+const MIN_COL_WIDTH = 50;
+
 export default function TableTable(props: TableTableProps) {
   const { t } = useI18n();
-  const { setSorts, setFilters, updateView, activeViewId, activeSorts, activeFilters } = useRecords();
+  const { setSorts, setFilters, updateView, activeViewId, activeSorts, activeFilters, views } = useRecords();
 
   const [editingCell, setEditingCell] = createSignal<{
     recordId: string;
@@ -66,6 +69,61 @@ export default function TableTable(props: TableTableProps) {
   // Inline column rename state
   const [renamingColumn, setRenamingColumn] = createSignal<number | null>(null);
   const [renameValue, setRenameValue] = createSignal('');
+
+  // Column resize state
+  const [dragWidths, setDragWidths] = createSignal<Record<string, number>>({});
+  const [resizing, setResizing] = createSignal<{
+    colName: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+
+  const storedWidth = (colName: string): number | undefined => {
+    const vid = activeViewId();
+    const cols = views().find((v) => v.id === vid)?.columns;
+    return cols?.find((vc) => vc.property === colName)?.width;
+  };
+
+  const colWidth = (colName: string): number => dragWidths()[colName] ?? storedWidth(colName) ?? DEFAULT_COL_WIDTH;
+
+  const handleResizeStart = (e: MouseEvent, colName: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const th = (e.currentTarget as HTMLElement).closest('th');
+    const startWidth = th?.getBoundingClientRect().width ?? colWidth(colName);
+    setResizing({ colName, startX: e.clientX, startWidth });
+  };
+
+  createEffect(() => {
+    if (!resizing()) return;
+    const handleMouseMove = (e: MouseEvent) => {
+      const s = resizing();
+      if (!s) return;
+      const newWidth = Math.max(MIN_COL_WIDTH, s.startWidth + e.clientX - s.startX);
+      setDragWidths((prev) => ({ ...prev, [s.colName]: newWidth }));
+    };
+    const handleMouseUp = () => {
+      const s = resizing();
+      if (!s) return;
+      const finalWidth = dragWidths()[s.colName] ?? s.startWidth;
+      const viewId = activeViewId();
+      if (viewId && viewId !== DEFAULT_VIEW_ID) {
+        const existing = views().find((v) => v.id === viewId)?.columns ?? [];
+        const hasEntry = existing.some((vc) => vc.property === s.colName);
+        const newCols = hasEntry
+          ? existing.map((vc) => (vc.property === s.colName ? { ...vc, width: finalWidth } : vc))
+          : [...existing, { property: s.colName, width: finalWidth, visible: true }];
+        updateView(viewId, { columns: newCols });
+      }
+      setResizing(null);
+    };
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    onCleanup(() => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    });
+  });
 
   // Add a new empty row
   const handleAddRow = () => {
@@ -317,7 +375,7 @@ export default function TableTable(props: TableTableProps) {
   return (
     <div class={styles.container}>
       <div class={styles.tableWrapper}>
-        <table class={styles.table}>
+        <table class={styles.table} classList={{ [`${styles.resizing}`]: !!resizing() }}>
           <thead>
             <tr class={styles.headerRow}>
               {/* Handle column header */}
@@ -327,7 +385,11 @@ export default function TableTable(props: TableTableProps) {
               </Show>
               <For each={props.columns}>
                 {(column, colIndex) => (
-                  <th class={styles.headerCell} onClick={(e) => handleHeaderClick(e, colIndex())}>
+                  <th
+                    class={styles.headerCell}
+                    style={{ width: `${colWidth(column.name)}px`, 'min-width': `${MIN_COL_WIDTH}px` }}
+                    onClick={(e) => handleHeaderClick(e, colIndex())}
+                  >
                     <Show
                       when={renamingColumn() === colIndex()}
                       fallback={
@@ -365,6 +427,11 @@ export default function TableTable(props: TableTableProps) {
                         ref={(el) => setTimeout(() => el?.select(), 0)}
                       />
                     </Show>
+                    <div
+                      class={styles.resizeHandle}
+                      classList={{ [`${styles.resizeHandleActive}`]: resizing()?.colName === column.name }}
+                      onMouseDown={(e) => handleResizeStart(e, column.name)}
+                    />
                   </th>
                 )}
               </For>

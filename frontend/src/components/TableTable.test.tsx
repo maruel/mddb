@@ -14,6 +14,7 @@ vi.mock('../contexts', () => ({
     activeViewId: () => '__default__',
     activeSorts: () => [],
     activeFilters: () => [],
+    views: () => [],
   }),
   DEFAULT_VIEW_ID: '__default__',
 }));
@@ -50,6 +51,9 @@ vi.mock('./TableTable.module.css', () => ({
     addColumnActions: 'addColumnActions',
     addColumnConfirm: 'addColumnConfirm',
     addColumnCancel: 'addColumnCancel',
+    resizing: 'resizing',
+    resizeHandle: 'resizeHandle',
+    resizeHandleActive: 'resizeHandleActive',
   },
 }));
 
