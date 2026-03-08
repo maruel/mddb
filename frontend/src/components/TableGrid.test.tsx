@@ -8,14 +8,17 @@ import type { DataRecordResponse, Property } from '@sdk/types.gen';
 // Mock CSS module
 vi.mock('./TableGrid.module.css', () => ({
   default: {
+    container: 'container',
     grid: 'grid',
     card: 'card',
     cardHeader: 'cardHeader',
-    deleteBtn: 'deleteBtn',
     cardBody: 'cardBody',
     field: 'field',
     fieldName: 'fieldName',
-    fieldValue: 'fieldValue',
+    fieldValueInput: 'fieldValueInput',
+    titleInput: 'titleInput',
+    statusBar: 'statusBar',
+    addRecord: 'addRecord',
   },
 }));
 
@@ -180,6 +183,34 @@ describe('TableGrid', () => {
     });
 
     expect(mockDeleteRecord).toHaveBeenCalledWith('rec-1');
+  });
+
+  it('shows add record button when onAddRecord is provided', async () => {
+    const mockAddRecord = vi.fn();
+
+    renderWithI18n(() => (
+      <TableGrid
+        columns={mockColumns}
+        records={mockRecords}
+        onDeleteRecord={mockDeleteRecord}
+        onAddRecord={mockAddRecord}
+      />
+    ));
+
+    await waitFor(() => {
+      expect(screen.getByText(/add record/i)).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText(/add record/i));
+    expect(mockAddRecord).toHaveBeenCalledOnce();
+  });
+
+  it('hides add record button when onAddRecord is not provided', async () => {
+    renderWithI18n(() => <TableGrid columns={mockColumns} records={mockRecords} onDeleteRecord={mockDeleteRecord} />);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/add record/i)).toBeNull();
+    });
   });
 
   it('renders empty grid when no records', async () => {

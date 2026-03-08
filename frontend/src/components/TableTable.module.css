@@ -413,7 +413,7 @@
   background: var(--c-bg);
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--shadow-lg);
   z-index: 20;
   padding: var(--s-1) 0;
 }

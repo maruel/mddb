@@ -12,6 +12,7 @@ import styles from './TableGallery.module.css';
 interface TableGalleryProps {
   records: DataRecordResponse[];
   columns: Property[];
+  onAddRecord?: () => void;
   onUpdateRecord?: (id: string, data: Record<string, unknown>) => void;
   onDeleteRecord: (id: string) => void;
   onDuplicateRecord?: (id: string) => void;
@@ -109,7 +110,14 @@ export default function TableGallery(props: TableGalleryProps) {
         </div>
       </Show>
       <div class={styles.statusBar}>
-        {props.records.length} {t('table.recordCount') || 'records'}
+        <span>
+          {props.records.length} {t('table.recordCount') || 'records'}
+        </span>
+        <Show when={props.onAddRecord}>
+          <button class={styles.addRecord} onClick={() => props.onAddRecord?.()}>
+            + {t('table.addRecord') || 'Add Record'}
+          </button>
+        </Show>
       </div>
     </div>
   );

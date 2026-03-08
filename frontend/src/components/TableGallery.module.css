@@ -127,4 +127,25 @@
   border-top: 1px solid var(--c-border);
   flex-shrink: 0;
   user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.addRecord {
+  background: none;
+  border: none;
+  color: var(--c-text-light);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px var(--s-2);
+  border-radius: var(--radius);
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+
+.addRecord:hover {
+  background: var(--c-bg-hover);
+  color: var(--c-text);
 }

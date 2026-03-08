@@ -284,6 +284,7 @@ export default function NodeView() {
                     <TableGrid
                       records={records()}
                       columns={selectedNodeData()?.properties || []}
+                      onAddRecord={() => addRecord({})}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
                     />
@@ -292,6 +293,7 @@ export default function NodeView() {
                     <TableGallery
                       records={records()}
                       columns={selectedNodeData()?.properties || []}
+                      onAddRecord={() => addRecord({})}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
                     />

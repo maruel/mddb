@@ -24,6 +24,7 @@ vi.mock('./TableGallery.module.css', () => ({
     empty: 'empty',
     statusBar: 'statusBar',
     titleInput: 'titleInput',
+    addRecord: 'addRecord',
   },
 }));
 
@@ -252,6 +253,36 @@ describe('TableGallery', () => {
     await waitFor(() => {
       // Empty state message replaces the gallery grid
       expect(screen.getByText('No records')).toBeTruthy();
+    });
+  });
+
+  it('shows add record button when onAddRecord is provided', async () => {
+    const mockAddRecord = vi.fn();
+
+    renderWithI18n(() => (
+      <TableGallery
+        columns={mockColumnsWithImage}
+        records={mockRecordsWithImage}
+        onDeleteRecord={mockDeleteRecord}
+        onAddRecord={mockAddRecord}
+      />
+    ));
+
+    await waitFor(() => {
+      expect(screen.getByText(/add record/i)).toBeTruthy();
+    });
+
+    fireEvent.click(screen.getByText(/add record/i));
+    expect(mockAddRecord).toHaveBeenCalledOnce();
+  });
+
+  it('hides add record button when onAddRecord is not provided', async () => {
+    renderWithI18n(() => (
+      <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
+    ));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/add record/i)).toBeNull();
     });
   });
 
