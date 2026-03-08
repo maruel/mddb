@@ -50,6 +50,7 @@ export default function NodeView() {
     addRecord,
     updateRecord,
     deleteRecord,
+    duplicateRecord,
     views,
     activeViewId,
     setActiveViewId,
@@ -305,6 +306,7 @@ export default function NodeView() {
                       onAddRecord={addRecord}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
+                      onDuplicateRecord={duplicateRecord}
                       onAddColumn={handleAddColumn}
                       onUpdateColumn={handleUpdateColumn}
                       onDeleteColumn={handleDeleteColumn}
@@ -321,6 +323,7 @@ export default function NodeView() {
                       onAddRecord={() => addRecord({})}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
+                      onDuplicateRecord={duplicateRecord}
                       onOpenRecord={(id) => setOpenRecordId(id)}
                     />
                   </Show>
@@ -331,6 +334,7 @@ export default function NodeView() {
                       onAddRecord={() => addRecord({})}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
+                      onDuplicateRecord={duplicateRecord}
                       onOpenRecord={(id) => setOpenRecordId(id)}
                     />
                   </Show>
@@ -341,6 +345,7 @@ export default function NodeView() {
                       onAddRecord={addRecord}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
+                      onDuplicateRecord={duplicateRecord}
                       onOpenRecord={(id) => setOpenRecordId(id)}
                       groupByColumn={activeView()?.groups?.[0]?.property}
                       onGroupByChange={(columnName) => {
@@ -361,6 +366,8 @@ export default function NodeView() {
                 columns={selectedNodeData()?.properties || []}
                 onUpdate={updateRecord}
                 onClose={() => setOpenRecordId(null)}
+                onDelete={(rid) => deleteRecord(rid)}
+                onDuplicate={(rid) => duplicateRecord(rid)}
               />
             )}
           </Show>

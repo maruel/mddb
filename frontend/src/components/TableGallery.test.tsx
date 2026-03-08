@@ -141,8 +141,10 @@ describe('TableGallery', () => {
     ));
 
     await waitFor(() => {
-      // Product B has no image, should show placeholder
-      expect(screen.getByText('No Image')).toBeTruthy();
+      // Product B has no image: the fallback placeholder should be visible (not hidden)
+      const placeholders = screen.getAllByText('No Image');
+      const visible = placeholders.filter((el) => (el as HTMLElement).style.display !== 'none');
+      expect(visible.length).toBeGreaterThan(0);
     });
   });
 

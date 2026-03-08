@@ -60,6 +60,7 @@ interface RecordsContextValue {
   addRecord: (data: Record<string, unknown>) => Promise<void>;
   updateRecord: (recordId: string, data: Record<string, unknown>) => Promise<void>;
   deleteRecord: (recordId: string) => Promise<void>;
+  duplicateRecord: (recordId: string) => Promise<void>;
   clearRecords: () => void;
 
   // View management
@@ -490,6 +491,28 @@ export const RecordsProvider: ParentComponent = (props) => {
     }
   }
 
+  async function duplicateRecord(recordId: string) {
+    const nodeId = selectedNodeId();
+    const ws = wsApi();
+    if (!nodeId || !ws) return;
+
+    const record = records().find((r) => r.id === recordId);
+    if (!record) return;
+
+    try {
+      setSavingRecordId('__new__'); // Special marker for creating new record
+      // Invalidate cache since data is changing
+      setAllRecords(null);
+      await ws.nodes.table.records.createRecord(nodeId, { data: record.data || {} });
+      await loadRecords(nodeId);
+      setSaveError(null);
+    } catch (err) {
+      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
+    } finally {
+      setSavingRecordId(null);
+    }
+  }
+
   async function createView(name: string, type: ViewType) {
     const nodeId = selectedNodeId();
     const ws = wsApi();
@@ -608,6 +631,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     addRecord,
     updateRecord,
     deleteRecord,
+    duplicateRecord,
     clearRecords,
     setActiveViewId,
     setFilters,

@@ -68,7 +68,15 @@ export default function TableGallery(props: TableGalleryProps) {
                             src={String(record.data[col().name])}
                             alt={getRecordTitle(record, props.columns) || 'Record'}
                             class={styles.image}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const sibling = e.currentTarget.nextSibling as HTMLElement | null;
+                              sibling?.style.setProperty('display', 'flex');
+                            }}
                           />
+                          <div class={styles.imagePlaceholder} style={{ display: 'none' }}>
+                            {t('table.noImage')}
+                          </div>
                         </Show>
                       </div>
                     )}

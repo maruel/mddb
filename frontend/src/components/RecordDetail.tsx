@@ -6,6 +6,8 @@ import { updateRecordField, handleEnterBlur, getRecordTitle } from './table/tabl
 import { FieldEditor } from './table/FieldEditor';
 import { useI18n } from '../i18n';
 import styles from './RecordDetail.module.css';
+import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
+import ContentCopyIcon from '@material-symbols/svg-400/outlined/content_copy.svg?solid';
 
 interface RecordDetailProps {
   recordId: string;
@@ -13,6 +15,8 @@ interface RecordDetailProps {
   columns: Property[];
   onUpdate: (id: string, data: Record<string, unknown>) => void;
   onClose: () => void;
+  onDelete?: (id: string) => void;
+  onDuplicate?: (id: string) => void;
 }
 
 export default function RecordDetail(props: RecordDetailProps) {
@@ -38,9 +42,37 @@ export default function RecordDetail(props: RecordDetailProps) {
       <div class={styles.panel} onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t('table.recordDetail')}>
         <div class={styles.header}>
           <h2 class={styles.headerTitle}>{t('table.recordDetail')}</h2>
-          <button class={styles.closeButton} onClick={() => props.onClose()} aria-label={t('common.close')}>
-            ×
-          </button>
+          <div class={styles.headerActions}>
+            <Show when={props.onDuplicate}>
+              <button
+                class={styles.actionButton}
+                onClick={() => {
+                  props.onDuplicate?.(props.recordId);
+                  props.onClose();
+                }}
+                aria-label={t('table.duplicateRecord')}
+                title={t('table.duplicateRecord')}
+              >
+                <ContentCopyIcon />
+              </button>
+            </Show>
+            <Show when={props.onDelete}>
+              <button
+                class={styles.actionButton}
+                onClick={() => {
+                  props.onDelete?.(props.recordId);
+                  props.onClose();
+                }}
+                aria-label={t('table.deleteRecord')}
+                title={t('table.deleteRecord')}
+              >
+                <DeleteIcon />
+              </button>
+            </Show>
+            <button class={styles.closeButton} onClick={() => props.onClose()} aria-label={t('common.close')}>
+              ×
+            </button>
+          </div>
         </div>
         <div class={styles.body}>
           <Show when={record()}>

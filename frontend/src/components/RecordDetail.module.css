@@ -40,6 +40,34 @@
   flex-shrink: 0;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.actionButton {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--c-text-light);
+  padding: 4px 6px;
+  border-radius: var(--radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background var(--transition),
+    color var(--transition);
+}
+
+.actionButton:hover {
+  background: var(--c-bg-hover);
+  color: var(--c-text);
+}
+
 .headerTitle {
   font-size: 0.875rem;
   font-weight: 600;
