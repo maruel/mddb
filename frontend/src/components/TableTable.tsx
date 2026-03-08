@@ -1,6 +1,7 @@
 // Table view with inline editing.
 
 import { createSignal, createEffect, onCleanup, For, Show } from 'solid-js';
+import { Dynamic } from 'solid-js/web';
 import { type DataRecordResponse, type Filter, type Property, SortAsc, SortDesc } from '@sdk/types.gen';
 import styles from './TableTable.module.css';
 import { RowHandle, ContextMenu, type ContextMenuAction } from './shared';
@@ -17,6 +18,13 @@ import ArrowDownwardIcon from '@material-symbols/svg-400/outlined/arrow_downward
 import FilterAltIcon from '@material-symbols/svg-400/outlined/filter_alt.svg?solid';
 import CloseIcon from '@material-symbols/svg-400/outlined/close.svg?solid';
 import OpenInFullIcon from '@material-symbols/svg-400/outlined/open_in_full.svg?solid';
+import AbcIcon from '@material-symbols/svg-400/outlined/abc.svg?solid';
+import NumbersIcon from '@material-symbols/svg-400/outlined/numbers.svg?solid';
+import CheckBoxOutlineBlankIcon from '@material-symbols/svg-400/outlined/check_box_outline_blank.svg?solid';
+import CalendarMonthIcon from '@material-symbols/svg-400/outlined/calendar_month.svg?solid';
+import LabelIcon from '@material-symbols/svg-400/outlined/label.svg?solid';
+import LinkIcon from '@material-symbols/svg-400/outlined/link.svg?solid';
+import AlternateEmailIcon from '@material-symbols/svg-400/outlined/alternate_email.svg?solid';
 
 interface TableTableProps {
   tableId: string;
@@ -37,6 +45,18 @@ interface TableTableProps {
 
 const DEFAULT_COL_WIDTH = 150;
 const MIN_COL_WIDTH = 50;
+
+const COLUMN_TYPE_ICONS: Record<string, SolidSVG> = {
+  text: AbcIcon,
+  number: NumbersIcon,
+  checkbox: CheckBoxOutlineBlankIcon,
+  date: CalendarMonthIcon,
+  select: LabelIcon,
+  multi_select: LabelIcon,
+  url: LinkIcon,
+  email: AlternateEmailIcon,
+  phone: AlternateEmailIcon,
+};
 
 export default function TableTable(props: TableTableProps) {
   const { t } = useI18n();
@@ -570,6 +590,13 @@ export default function TableTable(props: TableTableProps) {
                         when={renamingColumn() === realIndex()}
                         fallback={
                           <>
+                            <Show when={COLUMN_TYPE_ICONS[column.type]}>
+                              {(Icon) => (
+                                <span class={styles.typeIcon}>
+                                  <Dynamic component={Icon()} />
+                                </span>
+                              )}
+                            </Show>
                             {column.name}
                             <Show when={column.required}>
                               <span class={styles.required}>*</span>
@@ -739,6 +766,10 @@ export default function TableTable(props: TableTableProps) {
           <button onClick={() => props.onLoadMore?.()}>{t('table.loadMore')}</button>
         </div>
       </Show>
+
+      <div class={styles.statusBar}>
+        {props.records.length} {t('table.recordCount') || 'records'}
+      </div>
 
       {/* Row context menu */}
       <Show when={menuState()}>

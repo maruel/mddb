@@ -353,6 +353,7 @@ export const dict: Dictionary = {
     hideColumn: 'Spalte ausblenden',
     showColumn: 'Einblenden',
     hiddenColumns: 'ausgeblendet',
+    recordCount: 'Einträge',
   },
 
   errors: {

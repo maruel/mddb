@@ -353,6 +353,7 @@ export const dict: Dictionary = {
     hideColumn: 'Hide column',
     showColumn: 'Show',
     hiddenColumns: 'hidden',
+    recordCount: 'records',
   },
 
   errors: {

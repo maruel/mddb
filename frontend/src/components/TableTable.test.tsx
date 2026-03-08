@@ -106,7 +106,8 @@ describe('TableTable', () => {
     await waitFor(() => {
       expect(screen.getByText('Name')).toBeTruthy();
       expect(screen.getByText('Age')).toBeTruthy();
-      expect(screen.getByText('Active')).toBeTruthy();
+      // 'Active' appears in header (checkbox col) and in select cell (option name), so use getAllByText
+      expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
       expect(screen.getByText('Birthday')).toBeTruthy();
       expect(screen.getByText('Status')).toBeTruthy();
     });
@@ -280,11 +281,13 @@ describe('TableTable', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('active')).toBeTruthy();
+      // Status 'active' resolves to option name 'Active'
+      expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
     });
 
-    // Click on a status cell to enter edit mode
-    const statusCell = screen.getByText('active');
+    // Click on a status cell to enter edit mode — find the chip inside a <td>
+    const chips = screen.getAllByText('Active');
+    const statusCell = chips.find((el) => el.closest('td'))!;
     fireEvent.click(statusCell);
 
     await waitFor(() => {

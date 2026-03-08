@@ -352,6 +352,7 @@ export interface Dictionary {
     hideColumn: string;
     showColumn: string;
     hiddenColumns: string;
+    recordCount: string;
   };
 
   errors: {

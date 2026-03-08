@@ -1,12 +1,12 @@
 // Table cell component with inline editing for different property types.
 
-import { createSignal, Show, type Accessor } from 'solid-js';
-import { For } from 'solid-js';
+import { createSignal, Show, For, type Accessor, type JSXElement } from 'solid-js';
 import {
   type DataRecordResponse,
   type Property,
   PropertyTypeCheckbox,
   PropertyTypeSelect,
+  PropertyTypeMultiSelect,
   PropertyTypeNumber,
   PropertyTypeDate,
 } from '@sdk/types.gen';
@@ -45,19 +45,40 @@ export function TableCell(props: TableCellProps) {
     }
   };
 
-  const renderCellContent = () => {
+  const renderSelectChip = (id: string): JSXElement => {
+    const opt = props.column.options?.find((o) => o.id === id || o.name === id);
+    const label = opt?.name ?? id;
+    const color = opt?.color;
+    return (
+      <span class={styles.selectChip} style={color ? { background: color, color: '#fff' } : {}}>
+        {label}
+      </span>
+    );
+  };
+
+  const renderCellContent = (): JSXElement => {
     const value = getCellValue();
 
     switch (props.column.type) {
       case 'checkbox':
-        return value ? '\u2713' : '';
-      case 'select':
-      case 'multi_select':
-        return String(value);
+        return <span class={styles.checkbox}>{value === 'true' || value === true ? '✓' : ''}</span>;
+      case PropertyTypeSelect: {
+        const id = String(value);
+        return id ? renderSelectChip(id) : null;
+      }
+      case PropertyTypeMultiSelect: {
+        const ids = String(value)
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        return ids.length > 0 ? (
+          <span class={styles.multiChips}>
+            <For each={ids}>{(id) => renderSelectChip(id)}</For>
+          </span>
+        ) : null;
+      }
       case 'date':
         return value ? new Date(value as string).toLocaleDateString() : '';
-      case 'number':
-        return String(value);
       default:
         return String(value);
     }
