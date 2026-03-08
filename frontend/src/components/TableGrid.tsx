@@ -25,7 +25,7 @@ export default function TableGrid(props: TableGridProps) {
   const bodyColumns = () => props.columns.slice(1);
 
   return (
-    <div class={styles.container}>
+    <div class={styles.container} data-testid="list">
       <div class={styles.grid}>
         <For each={props.records}>
           {(record) => (

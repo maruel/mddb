@@ -85,7 +85,7 @@ export default function TableBoard(props: TableBoardProps) {
   };
 
   return (
-    <div class={styles.board}>
+    <div class={styles.board} data-testid="board">
       <Show when={groupColumn()} fallback={<div class={styles.noGroup}>{t('table.addSelectColumn')}</div>}>
         <Show when={groupableColumns().length > 1 && props.onGroupByChange}>
           <div class={styles.boardHeader}>
@@ -105,8 +105,8 @@ export default function TableBoard(props: TableBoardProps) {
         <div class={styles.columns}>
           <For each={groups()}>
             {(group) => (
-              <div class={styles.column}>
-                <div class={styles.columnHeader}>
+              <div class={styles.column} data-testid="board-column">
+                <div class={styles.columnHeader} data-testid="board-column-header">
                   <div class={styles.columnTitle}>
                     <Show when={group.color}>
                       <span class={styles.colorDot} style={{ background: group.color }} />

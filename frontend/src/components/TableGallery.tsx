@@ -42,9 +42,9 @@ export default function TableGallery(props: TableGalleryProps) {
   };
 
   return (
-    <div class={styles.container}>
+    <div class={styles.container} data-testid="gallery-view">
       <Show when={props.records.length > 0} fallback={<div class={styles.empty}>{t('table.noRecords')}</div>}>
-        <div class={styles.gallery}>
+        <div class={styles.gallery} data-testid="gallery">
           <For each={props.records}>
             {(record) => {
               const imgCol = imageColumn();
