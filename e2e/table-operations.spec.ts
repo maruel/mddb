@@ -417,7 +417,7 @@ test.describe('Table Filter UI', () => {
       [{ Name: 'Alice' }, { Name: 'Bob' }, { Name: 'Alice B' }]
     );
 
-    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Alice', { exact: true })).toBeVisible({ timeout: 5000 });
 
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
     await page.locator('[data-testid="context-menu-filter-by"]').click();
