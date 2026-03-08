@@ -1,7 +1,10 @@
+/* Kanban board view for table records. */
+
 .board {
-  padding: var(--s-3) 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   overflow-x: auto;
-  min-height: 400px;
 }
 
 .noGroup {
@@ -11,28 +14,47 @@
   background: var(--c-bg-alt);
   border-radius: var(--radius);
   border: 2px dashed var(--c-border);
+  margin: var(--s-4);
 }
 
 .columns {
   display: flex;
   gap: var(--s-3);
   align-items: flex-start;
+  padding: var(--s-3);
+  flex: 1;
+  min-height: 0;
 }
 
 .column {
   flex: 0 0 280px;
   background: var(--c-bg-alt);
   border-radius: var(--radius);
-  max-height: calc(100vh - 300px);
   display: flex;
   flex-direction: column;
+  max-height: 100%;
 }
 
 .columnHeader {
-  padding: var(--s-3);
+  padding: var(--s-2) var(--s-3);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
+}
+
+.columnTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+}
+
+.colorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .columnName {
@@ -40,6 +62,9 @@
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .columnCount {
@@ -48,12 +73,13 @@
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .cards {
-  padding: 0 var(--s-3) var(--s-3) 28px;
+  padding: 0 var(--s-2) var(--s-2) 28px;
   overflow-y: auto;
-  flex-grow: 1;
+  flex: 1;
 }
 
 .card {
@@ -66,15 +92,7 @@
 }
 
 .cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--s-2);
-}
-
-.cardHeader strong {
-  font-size: 0.9rem;
-  word-break: break-word;
+  margin-bottom: var(--s-1);
 }
 
 .cardBody {
@@ -82,14 +100,28 @@
 }
 
 .field {
-  margin-top: var(--s-1);
   display: flex;
-  color: var(--c-text-light);
+  align-items: baseline;
+  gap: var(--s-2);
+  margin-top: var(--s-1);
+  overflow: hidden;
 }
 
 .fieldName {
-  margin-right: var(--s-2);
-  font-weight: 500;
+  color: var(--c-text-light);
+  flex-shrink: 0;
+  font-size: 0.78rem;
+}
+
+.fieldName::after {
+  content: ':';
+}
+
+.fieldValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .titleInput {
@@ -107,20 +139,25 @@
   outline: none;
   background: var(--c-bg-hover);
   border-radius: 4px;
+  padding: 2px var(--s-1);
 }
 
-.fieldValueInput {
-  background: none;
-  border: none;
-  font-family: inherit;
-  font-size: 0.8rem;
-  color: inherit;
+.addCard {
   width: 100%;
-  padding: 2px 0;
+  padding: var(--s-2) var(--s-2);
+  border: none;
+  background: transparent;
+  color: var(--c-text-light);
+  font-size: 0.82rem;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition:
+    background var(--transition),
+    color var(--transition);
 }
 
-.fieldValueInput:focus {
-  outline: none;
+.addCard:hover {
   background: var(--c-bg-hover);
-  border-radius: 4px;
+  color: var(--c-text);
 }

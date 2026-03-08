@@ -300,6 +300,7 @@ export default function NodeView() {
                     <TableBoard
                       records={records()}
                       columns={selectedNodeData()?.properties || []}
+                      onAddRecord={addRecord}
                       onUpdateRecord={updateRecord}
                       onDeleteRecord={deleteRecord}
                     />

@@ -2,7 +2,8 @@
 
 import { For, Show, createMemo } from 'solid-js';
 import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '@sdk/types.gen';
-import { updateRecordField, handleEnterBlur, getRecordTitle, getFieldValue } from './table/tableUtils';
+import { updateRecordField, handleEnterBlur, getRecordTitle } from './table/tableUtils';
+import { FieldValue } from './table/FieldValue';
 import { TableRow } from './table/TableRow';
 import { useI18n } from '../i18n';
 import styles from './TableBoard.module.css';
@@ -10,6 +11,7 @@ import styles from './TableBoard.module.css';
 interface TableBoardProps {
   records: DataRecordResponse[];
   columns: Property[];
+  onAddRecord?: (data: Record<string, unknown>) => void;
   onUpdateRecord?: (id: string, data: Record<string, unknown>) => void;
   onDeleteRecord: (id: string) => void;
   onDuplicateRecord?: (id: string) => void;
@@ -19,32 +21,29 @@ interface TableBoardProps {
 export default function TableBoard(props: TableBoardProps) {
   const { t } = useI18n();
 
-  // Find the first select column to group by (memoized for performance)
   const groupColumn = createMemo(() =>
     props.columns.find((c) => c.type === PropertyTypeSelect || c.type === PropertyTypeMultiSelect)
   );
 
   const groups = createMemo(() => {
     const col = groupColumn();
-    if (!col) return [{ name: 'All Records', records: props.records, fromOptions: true }];
+    if (!col) return [{ id: '', name: 'All Records', color: undefined, records: props.records }];
 
-    const grouped: Record<string, { name: string; records: DataRecordResponse[]; fromOptions?: boolean }> = {};
+    const grouped: Record<string, { id: string; name: string; color?: string; records: DataRecordResponse[] }> = {};
 
-    // Initialize groups from column options if available
     if (col.options) {
       col.options.forEach((opt) => {
-        grouped[opt.id] = { name: opt.name, records: [], fromOptions: true };
+        grouped[opt.id] = { id: opt.id, name: opt.name, color: opt.color, records: [] };
       });
     }
 
-    // Add "No Group" for records without a value
-    grouped['__none__'] = { name: t('table.noGroup') || 'No Group', records: [], fromOptions: true };
+    grouped['__none__'] = { id: '__none__', name: t('table.noGroup') || 'No Group', color: undefined, records: [] };
 
     props.records.forEach((record) => {
       const val = record.data[col.name];
       if (val && typeof val === 'string') {
         if (!grouped[val]) {
-          grouped[val] = { name: val, records: [] };
+          grouped[val] = { id: val, name: val, color: undefined, records: [] };
         }
         grouped[val].records.push(record);
       } else {
@@ -52,9 +51,25 @@ export default function TableBoard(props: TableBoardProps) {
       }
     });
 
-    // Filter to show groups with records, plus empty groups from options
-    return Object.values(grouped).filter((g) => g.records.length > 0 || g.fromOptions);
+    return Object.values(grouped).filter((g) => g.records.length > 0 || g.id !== '__none__');
   });
+
+  // Body columns: all except the title column and the group column.
+  const bodyColumns = createMemo(() => {
+    const col = groupColumn();
+    const titleCol = props.columns[0];
+    return props.columns.filter((c) => c !== titleCol && c !== col);
+  });
+
+  const handleAddCard = (groupId: string) => {
+    const col = groupColumn();
+    if (!props.onAddRecord) return;
+    const data: Record<string, unknown> = {};
+    if (col && groupId !== '__none__') {
+      data[col.name] = groupId;
+    }
+    props.onAddRecord(data);
+  };
 
   return (
     <div class={styles.board}>
@@ -64,7 +79,12 @@ export default function TableBoard(props: TableBoardProps) {
             {(group) => (
               <div class={styles.column}>
                 <div class={styles.columnHeader}>
-                  <span class={styles.columnName}>{group.name}</span>
+                  <div class={styles.columnTitle}>
+                    <Show when={group.color}>
+                      <span class={styles.colorDot} style={{ background: group.color }} />
+                    </Show>
+                    <span class={styles.columnName}>{group.name}</span>
+                  </div>
                   <span class={styles.columnCount}>{group.records.length}</span>
                 </div>
                 <div class={styles.cards}>
@@ -78,41 +98,40 @@ export default function TableBoard(props: TableBoardProps) {
                         class={styles.card}
                       >
                         <div class={styles.cardHeader}>
-                          <strong>
-                            <input
-                              type="text"
-                              value={getRecordTitle(record, props.columns)}
-                              placeholder={t('table.untitled') || 'Untitled'}
-                              onBlur={(e) =>
-                                props.columns[0] &&
-                                updateRecordField(record, props.columns[0].name, e.target.value, props.onUpdateRecord)
-                              }
-                              onKeyDown={handleEnterBlur}
-                              class={styles.titleInput}
-                            />
-                          </strong>
+                          <input
+                            type="text"
+                            value={getRecordTitle(record, props.columns)}
+                            placeholder={t('table.untitled') || 'Untitled'}
+                            onBlur={(e) =>
+                              props.columns[0] &&
+                              updateRecordField(record, props.columns[0].name, e.target.value, props.onUpdateRecord)
+                            }
+                            onKeyDown={handleEnterBlur}
+                            class={styles.titleInput}
+                          />
                         </div>
-                        <div class={styles.cardBody}>
-                          <For each={props.columns.slice(1, 4).filter((c) => c.name !== groupColumn()?.name)}>
-                            {(col) => (
-                              <div class={styles.field}>
-                                <span class={styles.fieldName}>{col.name}:</span>
-                                <input
-                                  type="text"
-                                  value={getFieldValue(record, col.name)}
-                                  onBlur={(e) =>
-                                    updateRecordField(record, col.name, e.target.value, props.onUpdateRecord)
-                                  }
-                                  onKeyDown={handleEnterBlur}
-                                  class={styles.fieldValueInput}
-                                />
-                              </div>
-                            )}
-                          </For>
-                        </div>
+                        <Show when={bodyColumns().length > 0}>
+                          <div class={styles.cardBody}>
+                            <For each={bodyColumns()}>
+                              {(col) => (
+                                <div class={styles.field}>
+                                  <span class={styles.fieldName}>{col.name}</span>
+                                  <span class={styles.fieldValue}>
+                                    <FieldValue record={record} column={col} />
+                                  </span>
+                                </div>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
                       </TableRow>
                     )}
                   </For>
+                  <Show when={props.onAddRecord}>
+                    <button class={styles.addCard} onClick={() => handleAddCard(group.id)}>
+                      + {t('table.addRecord') || 'Add'}
+                    </button>
+                  </Show>
                 </div>
               </div>
             )}

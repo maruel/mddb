@@ -13,16 +13,19 @@ vi.mock('./TableBoard.module.css', () => ({
     columns: 'columns',
     column: 'column',
     columnHeader: 'columnHeader',
+    columnTitle: 'columnTitle',
+    colorDot: 'colorDot',
     columnName: 'columnName',
     columnCount: 'columnCount',
     cards: 'cards',
     card: 'card',
     cardHeader: 'cardHeader',
-    deleteBtn: 'deleteBtn',
     cardBody: 'cardBody',
     field: 'field',
     fieldName: 'fieldName',
     fieldValue: 'fieldValue',
+    titleInput: 'titleInput',
+    addCard: 'addCard',
   },
 }));
 
@@ -159,7 +162,7 @@ describe('TableBoard', () => {
 
     await waitFor(() => {
       const task1 = screen.getByDisplayValue('Task 1');
-      expect(task1.closest('strong')).toBeTruthy();
+      expect(task1.tagName).toBe('INPUT');
     });
   });
 
@@ -189,8 +192,8 @@ describe('TableBoard', () => {
 
     await waitFor(() => {
       // Should show Priority and Assignee, but not Status (the group column)
-      expect(screen.getAllByText('Priority:').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Assignee:').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Priority').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Assignee').length).toBeGreaterThan(0);
     });
   });
 
