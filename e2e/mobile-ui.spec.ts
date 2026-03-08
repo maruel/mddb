@@ -103,7 +103,7 @@ test.describe('Mobile UI - Sidebar Toggle', () => {
     await expect(sidebar).not.toHaveClass(/mobileOpen/, { timeout: 3000 });
 
     // Page content should be visible
-    await expect(page.getByText('Mobile content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Mobile content', { exact: true })).toBeVisible({ timeout: 5000 });
   });
 });
 
@@ -129,7 +129,7 @@ test.describe('Mobile UI - Layout', () => {
     const hamburgerButton = page.locator('button[aria-label="Toggle menu"], [class*="hamburger"]');
     await hamburgerButton.click();
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
-    await expect(page.getByText('Testing mobile layout')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Testing mobile layout', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Main content should be nearly full width (accounting for some padding)
     const mainContent = page.locator('main, [class*="main"]');
@@ -221,13 +221,13 @@ test.describe('Mobile UI - Touch Interactions', () => {
 
     // Tap on first page
     await page.locator(`[data-testid="sidebar-node-${page1Data.id}"]`).tap();
-    await expect(page.getByText('Tap content 1')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Tap content 1', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Open sidebar again
     await hamburgerButton.click();
 
     // Tap on second page
     await page.locator(`[data-testid="sidebar-node-${page2Data.id}"]`).tap();
-    await expect(page.getByText('Tap content 2')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Tap content 2', { exact: true })).toBeVisible({ timeout: 5000 });
   });
 });

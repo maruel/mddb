@@ -26,7 +26,7 @@ test.describe('User Profile Settings', () => {
 
     // User info should be displayed
     await expect(page.getByText(email)).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('profile-view Test User')).toBeVisible();
+    await expect(page.getByText('profile-view Test User', { exact: true })).toBeVisible();
 
     await takeScreenshot('profile-page');
   });
@@ -168,7 +168,7 @@ test.describe('Workspace Settings', () => {
 
     // Current user should be in the list
     await expect(page.getByText(email)).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('members-list Test User')).toBeVisible();
+    await expect(page.getByText('members-list Test User', { exact: true })).toBeVisible();
   });
 
   test('rename workspace', async ({ page, request }) => {

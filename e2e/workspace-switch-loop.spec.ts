@@ -21,7 +21,7 @@ test('switching workspace while viewing a node does not cause 404 loop', async (
   await page.reload();
   await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
   await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
-  await expect(page.getByText('This page only exists in workspace 1')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText('This page only exists in workspace 1', { exact: true })).toBeVisible({ timeout: 5000 });
 
   // Create a second workspace
   const meResponse = await request.get('/api/v1/auth/me', {
@@ -43,7 +43,7 @@ test('switching workspace while viewing a node does not cause 404 loop', async (
 
   // Navigate back to the WS1 page so URL contains the old node ID
   await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
-  await expect(page.getByText('This page only exists in workspace 1')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText('This page only exists in workspace 1', { exact: true })).toBeVisible({ timeout: 5000 });
 
   // Collect 404 responses after the switch
   const notFoundRequests: string[] = [];
@@ -74,7 +74,7 @@ test('switching workspace while viewing a node does not cause 404 loop', async (
   await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
   // The old node's content must not be visible
-  await expect(page.getByText('This page only exists in workspace 1')).not.toBeVisible({ timeout: 3000 });
+  await expect(page.getByText('This page only exists in workspace 1', { exact: true })).not.toBeVisible({ timeout: 3000 });
 
   // Allow a brief settling period, then check that we didn't get a flood of 404s.
   // A single transient 404 is tolerable; a loop produces many.

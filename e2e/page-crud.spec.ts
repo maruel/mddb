@@ -24,7 +24,7 @@ test.describe('Page CRUD Operations', () => {
     const pageNode = page.locator(`[data-testid="sidebar-node-${pageID}"]`);
     await expect(pageNode).toBeVisible({ timeout: 5000 });
     await pageNode.click();
-    await expect(page.getByText('This page will be deleted')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('This page will be deleted', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Set up dialog handler BEFORE any action that might trigger it
     // Use 'once' to handle exactly one dialog
@@ -121,7 +121,7 @@ test.describe('Page CRUD Operations', () => {
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageID}"]`).click();
-    await expect(page.getByText('Initial content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Initial content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Initially, no unsaved indicator (use class selector)
     const unsavedIndicator = page.locator('[class*="unsavedIndicator"]');
@@ -169,23 +169,23 @@ test.describe('Page Navigation', () => {
 
     // Navigate to page 1
     await page.locator(`[data-testid="sidebar-node-${page1Data.id}"]`).click();
-    await expect(page.getByText('Content of page 1')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of page 1', { exact: true })).toBeVisible({ timeout: 5000 });
     await takeScreenshot('page1-view');
 
     // Navigate to page 2
     await page.locator(`[data-testid="sidebar-node-${page2Data.id}"]`).click();
-    await expect(page.getByText('Content of page 2')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of page 2', { exact: true })).toBeVisible({ timeout: 5000 });
     await takeScreenshot('page2-view');
 
     // Click browser back button
     await page.goBack();
 
     // Should show page 1 again
-    await expect(page.getByText('Content of page 1')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of page 1', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Forward button should return to page 2
     await page.goForward();
-    await expect(page.getByText('Content of page 2')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of page 2', { exact: true })).toBeVisible({ timeout: 5000 });
   });
 
   test('URL updates with page slug when navigating', async ({ page, request }) => {
@@ -207,7 +207,7 @@ test.describe('Page Navigation', () => {
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
-    await expect(page.getByText('Content here')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content here', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // URL should contain workspace ID and page ID with slug
     await expect(page).toHaveURL(new RegExp(`/w/@${wsID}[^/]*/@${pageData.id}\\+my-awesome-page`));
@@ -232,7 +232,7 @@ test.describe('Page Navigation', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // Page content should be visible
-    await expect(page.getByText('Loaded via direct URL')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Loaded via direct URL', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Title input should have the correct value
     const titleInput = page.locator('input[placeholder*="Title"]');
@@ -268,7 +268,7 @@ test.describe('Page Navigation', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // Grandchild content should be visible
-    await expect(page.getByText('Grandchild content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Grandchild content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     await takeScreenshot('grandchild-direct-nav');
 
@@ -319,7 +319,7 @@ test.describe('Page Navigation', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // Content should be visible
-    await expect(page.getByText('Deep content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Deep content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // All ancestors should be expanded and great-grandchild should be visible
     const greatGrandchildNode = page.locator(`[data-testid="sidebar-node-${greatGrandchildData.id}"]`);
@@ -373,7 +373,7 @@ test.describe('Page Navigation', () => {
     await expect(page.locator(`[data-testid="sidebar-node-${grandchildData.id}"]`)).toBeVisible({ timeout: 5000 });
     await page.locator(`[data-testid="sidebar-node-${grandchildData.id}"]`).click();
 
-    await expect(page.getByText('Grandchild content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Grandchild content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Check breadcrumbs are visible (use exact match)
     const breadcrumbs = page.locator('nav[class*="breadcrumbs"]');
@@ -385,7 +385,7 @@ test.describe('Page Navigation', () => {
     await breadcrumbs.getByText('Alpha', { exact: true }).click();
 
     // Should navigate to parent
-    await expect(page.getByText('Parent content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Parent content', { exact: true })).toBeVisible({ timeout: 5000 });
   });
 });
 

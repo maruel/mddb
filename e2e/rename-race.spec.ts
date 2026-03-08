@@ -36,7 +36,7 @@ test.describe('Page rename with navigation', () => {
     await page1Node.click();
 
     // Wait for page content to load
-    await expect(page.getByText('Content of page to rename')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of page to rename', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // 7. Rename the page by editing the title input
     const titleInput = page.locator('input[placeholder*="Title"]');
@@ -55,12 +55,12 @@ test.describe('Page rename with navigation', () => {
     await page2Node.click();
 
     // Wait for Page 2 to load
-    await expect(page.getByText('Content of other page')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of other page', { exact: true })).toBeVisible({ timeout: 5000 });
     await expect(titleInput).toHaveValue('Other Page');
 
     // 9. Navigate back to Page 1 to verify rename persisted
     await page1Node.click();
-    await expect(page.getByText('Content of page to rename')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of page to rename', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // 10. Verify the title was saved - this is the critical assertion
     await expect(titleInput).toHaveValue('RENAMED PAGE TITLE');
@@ -100,7 +100,7 @@ test.describe('Page rename with navigation', () => {
     const pageNode = page.locator(`[data-testid="sidebar-node-${pageID}"]`);
     await expect(pageNode).toBeVisible({ timeout: 5000 });
     await pageNode.click();
-    await expect(page.getByText('Some content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Some content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Rename the page
     const titleInput = page.locator('input[placeholder*="Title"]');
@@ -153,7 +153,7 @@ test.describe('Page rename with navigation', () => {
     // Navigate to Page 1
     const page1Node = page.locator(`[data-testid="sidebar-node-${page1ID}"]`);
     await page1Node.click();
-    await expect(page.getByText('Content for rapid rename test')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content for rapid rename test', { exact: true })).toBeVisible({ timeout: 5000 });
 
     const titleInput = page.locator('input[placeholder*="Title"]');
 
@@ -166,7 +166,7 @@ test.describe('Page rename with navigation', () => {
     // Immediately navigate away
     const page2Node = page.locator(`[data-testid="sidebar-node-${page2ID}"]`);
     await page2Node.click();
-    await expect(page.getByText('Navigation target content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Navigation target content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Navigate back and verify the FINAL rename persisted
     await page1Node.click();
@@ -206,7 +206,7 @@ test.describe('Page rename with navigation', () => {
     // Navigate to Page 1
     const page1Node = page.locator(`[data-testid="sidebar-node-${page1ID}"]`);
     await page1Node.click();
-    await expect(page.getByText('Original content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Original content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Edit content (switch to markdown mode for reliable interaction)
     await fillEditorContent(page, 'MODIFIED CONTENT - this should persist');
@@ -261,7 +261,7 @@ test.describe('Page rename with navigation', () => {
     // Navigate to Page 1
     const page1Node = page.locator(`[data-testid="sidebar-node-${page1ID}"]`);
     await page1Node.click();
-    await expect(page.getByText('Original content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Original content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Edit both title and content
     const titleInput = page.locator('input[placeholder*="Title"]');

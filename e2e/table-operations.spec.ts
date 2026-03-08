@@ -70,10 +70,10 @@ test.describe('Table Creation and Basic Operations', () => {
     await expect(tableElement).toBeVisible({ timeout: 5000 });
 
     const tableHeaders = page.locator('th');
-    await expect(tableHeaders.getByText('Name')).toBeVisible();
-    await expect(tableHeaders.getByText('Status')).toBeVisible();
-    await expect(tableHeaders.getByText('Priority')).toBeVisible();
-    await expect(tableHeaders.getByText('Due Date')).toBeVisible();
+    await expect(tableHeaders.getByText('Name', { exact: true })).toBeVisible();
+    await expect(tableHeaders.getByText('Status', { exact: true })).toBeVisible();
+    await expect(tableHeaders.getByText('Priority', { exact: true })).toBeVisible();
+    await expect(tableHeaders.getByText('Due Date', { exact: true })).toBeVisible();
 
     await takeScreenshot('table-view');
   });
@@ -87,8 +87,8 @@ test.describe('Table Creation and Basic Operations', () => {
       { Name: 'Item 2', Value: 200 },
     ]);
 
-    await expect(page.getByText('Item 1')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('200')).toBeVisible();
+    await expect(page.getByText('Item 1', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('200', { exact: true })).toBeVisible();
 
     // Click to edit
     await page.locator('td').getByText('Item 1', { exact: true }).click();
@@ -113,7 +113,7 @@ test.describe('Table Creation and Basic Operations', () => {
       { Name: 'Record To Delete' },
     ]);
 
-    await expect(page.getByText('Record To Delete')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Record To Delete', { exact: true })).toBeVisible({ timeout: 5000 });
 
     page.once('dialog', async (dialog) => await dialog.accept());
     const recordRow = page.locator('tr').filter({ hasText: 'Record To Delete' });
@@ -156,7 +156,7 @@ test.describe('Table View Modes', () => {
       { Name: 'Task 2', Status: 'progress' },
     ]);
 
-    await expect(page.locator('td').getByText('Task 1')).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('td').getByText('Task 1', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Default view tab active
     const defaultViewTab = page.locator('button').filter({ hasText: 'All' });
@@ -188,7 +188,7 @@ test.describe('Table Sort UI', () => {
       { Name: 'Alice' },
     ]);
 
-    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Alice', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Click column header to open context menu
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
@@ -209,7 +209,7 @@ test.describe('Table Sort UI', () => {
       { Name: 'Mango' },
     ]);
 
-    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Zebra', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Sort ascending via column header menu
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
@@ -233,7 +233,7 @@ test.describe('Table Sort UI', () => {
       { Name: 'Mango' },
     ]);
 
-    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Zebra', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Sort descending via column header menu
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
@@ -252,7 +252,7 @@ test.describe('Table Sort UI', () => {
       { Name: 'Apple' },
     ]);
 
-    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Zebra', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Add ascending sort
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
@@ -279,7 +279,7 @@ test.describe('Table Sort UI', () => {
       { Color: 'Blue', Size: 2 },
     ]);
 
-    await expect(page.getByText('Red').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Red', { exact: true }).first()).toBeVisible({ timeout: 5000 });
 
     // Sort by Color ascending
     await page.locator('th').filter({ hasText: 'Color' }).first().click();
@@ -317,7 +317,7 @@ test.describe('Table Sort UI', () => {
       { Name: 'Mango' },
     ]);
 
-    await expect(page.getByText('Zebra')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Zebra', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Create a saved view via API
     const viewData = await client.ws(wsID).nodes.views.createView(tableId, {
@@ -386,9 +386,9 @@ test.describe('Table Filter UI', () => {
       [{ Name: 'Alice' }, { Name: 'Bob' }, { Name: 'Charlie' }]
     );
 
-    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('Bob')).toBeVisible();
-    await expect(page.getByText('Charlie')).toBeVisible();
+    await expect(page.getByText('Alice', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Bob', { exact: true })).toBeVisible();
+    await expect(page.getByText('Charlie', { exact: true })).toBeVisible();
 
     // Open filter panel for Name column
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
@@ -402,9 +402,9 @@ test.describe('Table Filter UI', () => {
 
     // Only Alice and Charlie contain "li"
     await expect(async () => {
-      await expect(page.getByText('Alice')).toBeVisible();
-      await expect(page.getByText('Charlie')).toBeVisible();
-      await expect(page.getByText('Bob')).not.toBeVisible();
+      await expect(page.getByText('Alice', { exact: true })).toBeVisible();
+      await expect(page.getByText('Charlie', { exact: true })).toBeVisible();
+      await expect(page.getByText('Bob', { exact: true })).not.toBeVisible();
     }).toPass({ timeout: 5000 });
   });
 
@@ -431,7 +431,7 @@ test.describe('Table Filter UI', () => {
       const rows = page.locator('table tbody tr:not(.newRow)');
       const visible = await rows.filter({ hasText: 'Alice' }).count();
       expect(visible).toBe(1);
-      await expect(page.getByText('Bob')).not.toBeVisible();
+      await expect(page.getByText('Bob', { exact: true })).not.toBeVisible();
     }).toPass({ timeout: 5000 });
   });
 
@@ -444,7 +444,7 @@ test.describe('Table Filter UI', () => {
       [{ Name: 'Alice' }, { Name: 'Bob' }]
     );
 
-    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Alice', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Apply a filter
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
@@ -455,7 +455,7 @@ test.describe('Table Filter UI', () => {
     await page.locator('[data-testid="filter-apply"]').click();
 
     await expect(async () => {
-      await expect(page.getByText('Bob')).not.toBeVisible();
+      await expect(page.getByText('Bob', { exact: true })).not.toBeVisible();
     }).toPass({ timeout: 5000 });
 
     // Remove the filter
@@ -466,8 +466,8 @@ test.describe('Table Filter UI', () => {
     await page.locator('[data-testid="filter-remove"]').click();
 
     await expect(async () => {
-      await expect(page.getByText('Alice')).toBeVisible();
-      await expect(page.getByText('Bob')).toBeVisible();
+      await expect(page.getByText('Alice', { exact: true })).toBeVisible();
+      await expect(page.getByText('Bob', { exact: true })).toBeVisible();
     }).toPass({ timeout: 5000 });
   });
 
@@ -510,7 +510,7 @@ test.describe('Table Filter UI', () => {
       ]
     );
 
-    await expect(page.getByText('Alice')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Alice', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Filter Name contains 'li'
     await page.locator('th').filter({ hasText: 'Name' }).first().click();
@@ -522,7 +522,7 @@ test.describe('Table Filter UI', () => {
 
     // Alice and Charlie pass; Bob is hidden
     await expect(async () => {
-      await expect(page.getByText('Bob')).not.toBeVisible();
+      await expect(page.getByText('Bob', { exact: true })).not.toBeVisible();
     }).toPass({ timeout: 5000 });
 
     // Filter Age equals 30
@@ -535,9 +535,9 @@ test.describe('Table Filter UI', () => {
 
     // Only Alice and Charlie remain (both have li AND age=30)
     await expect(async () => {
-      await expect(page.getByText('Alice')).toBeVisible();
-      await expect(page.getByText('Charlie')).toBeVisible();
-      await expect(page.getByText('Bob')).not.toBeVisible();
+      await expect(page.getByText('Alice', { exact: true })).toBeVisible();
+      await expect(page.getByText('Charlie', { exact: true })).toBeVisible();
+      await expect(page.getByText('Bob', { exact: true })).not.toBeVisible();
     }).toPass({ timeout: 5000 });
   });
 });

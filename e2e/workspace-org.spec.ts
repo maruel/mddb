@@ -74,7 +74,7 @@ test.describe('Workspace Switching', () => {
       await wsMenu.click();
 
       // Should see both workspaces
-      const secondWsOption = page.getByText('Second Workspace');
+      const secondWsOption = page.getByText('Second Workspace', { exact: true });
       await expect(secondWsOption).toBeVisible({ timeout: 3000 });
 
       // Click to switch
@@ -103,7 +103,7 @@ test.describe('Workspace Switching', () => {
     await page.reload();
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
     await page.locator(`[data-testid="sidebar-node-${page1Data.id}"]`).click();
-    await expect(page.getByText('Content in workspace 1')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content in workspace 1', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Get org and create second workspace
     const meResponse = await request.get('/api/v1/auth/me', {
@@ -131,7 +131,7 @@ test.describe('Workspace Switching', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
 
     // The first workspace page should NOT be visible (we're now in WS2)
-    await expect(page.getByText('Content in workspace 1')).not.toBeVisible({ timeout: 3000 });
+    await expect(page.getByText('Content in workspace 1', { exact: true })).not.toBeVisible({ timeout: 3000 });
   });
 });
 
@@ -186,7 +186,7 @@ test.describe('User Menu', () => {
 
     // Should show user info in dropdown
     await expect(page.getByText(email)).toBeVisible({ timeout: 3000 });
-    await expect(page.getByText('user-menu Test User')).toBeVisible();
+    await expect(page.getByText('user-menu Test User', { exact: true })).toBeVisible();
   });
 
   test('user menu has profile and logout options', async ({ page, request }) => {

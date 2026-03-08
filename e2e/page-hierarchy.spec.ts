@@ -49,7 +49,7 @@ test.describe('Page Hierarchy', () => {
     await childNodeInSidebar.click();
 
     // 9. Verify the child page content is displayed
-    await expect(page.getByText('This is a child page content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('This is a child page content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // 10. Verify URL contains workspace
     expect(page.url()).toContain('/w/');
@@ -98,7 +98,7 @@ test.describe('Page Hierarchy', () => {
 
     // 13. Navigate to grandchild and verify
     await grandchildNode.click();
-    await expect(page.getByText('This is a grandchild page')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('This is a grandchild page', { exact: true })).toBeVisible({ timeout: 5000 });
 
     await takeScreenshot('grandchild-page');
   });
@@ -158,7 +158,7 @@ test.describe('Page Hierarchy', () => {
 
     // Navigate to grandchild first
     await grandchildNode.click();
-    await expect(page.getByText('Grandchild content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Grandchild content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Delete the grandchild using the delete button (use > div > button to avoid matching nested nodes)
     const grandchildPageItem = grandchildNode.locator('> div').first();
@@ -171,7 +171,7 @@ test.describe('Page Hierarchy', () => {
     await expect(grandchildNode).not.toBeVisible({ timeout: 10000 });
 
     // Verify navigation went to parent (child page)
-    await expect(page.getByText('Child content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Child content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Also verify the child still exists in sidebar
     await expect(childNode).toBeVisible({ timeout: 5000 });
@@ -229,7 +229,7 @@ test.describe('Page Hierarchy', () => {
     // Navigate to child page first (click on page item div, not the li wrapper)
     const childPageItem = childNode.locator('> div').first();
     await childPageItem.click();
-    await expect(page.getByText('Child content')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Child content', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Delete the child page (which should also remove grandchild from view)
     await childPageItem.hover();
@@ -274,7 +274,7 @@ test.describe('Page Hierarchy', () => {
 
     const page2Node = page.locator(`[data-testid="sidebar-node-${page2ID}"]`);
     await page2Node.click();
-    await expect(page.getByText('Content two')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content two', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Delete Page Two - should navigate to Page One (previous sibling)
     const page2Item = page2Node.locator('> div').first();
@@ -287,7 +287,7 @@ test.describe('Page Hierarchy', () => {
     await expect(page2Node).not.toBeVisible({ timeout: 10000 });
 
     // Should navigate to Page One (previous sibling)
-    await expect(page.getByText('Content one')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content one', { exact: true })).toBeVisible({ timeout: 5000 });
     const page1NodeItem = page.locator(`[data-testid="sidebar-node-${page1ID}"] > div`).first();
     await expect(page1NodeItem).toHaveClass(/active/, { timeout: 5000 });
   });
@@ -327,14 +327,14 @@ test.describe('Page Hierarchy', () => {
 
     // Navigate to first page
     await firstPageNode.click();
-    await expect(page.getByText('Content of first page')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of first page', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Navigate to second page
     await secondPageNode.click();
-    await expect(page.getByText('Content of second page')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of second page', { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Navigate back to first page
     await firstPageNode.click();
-    await expect(page.getByText('Content of first page')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Content of first page', { exact: true })).toBeVisible({ timeout: 5000 });
   });
 });
