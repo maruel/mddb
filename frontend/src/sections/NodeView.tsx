@@ -1,14 +1,14 @@
 // Node view component displaying editor or table based on node type.
 
 import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal } from 'solid-js';
-import { useParams, useNavigate } from '@solidjs/router';
+import { useParams, useNavigate, useSearchParams } from '@solidjs/router';
 import TableTable from '../components/TableTable';
 import TableGrid from '../components/TableGrid';
 import TableGallery from '../components/TableGallery';
 import TableBoard from '../components/TableBoard';
 import ViewTabs from '../components/table/ViewTabs';
 import MarkdownPreview from '../components/MarkdownPreview';
-import { useAuth, useWorkspace, useEditor, useRecords } from '../contexts';
+import { useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from '../contexts';
 import { useI18n } from '../i18n';
 import { nodeUrl, stripSlug } from '../utils/urls';
 import { relativeLinksToSpaUrls } from '../utils/markdown-utils';
@@ -42,8 +42,18 @@ export default function NodeView() {
     dismissExternalChange,
     refreshFromServer,
   } = useEditor();
-  const { records, hasMore, loadMoreRecords, addRecord, updateRecord, deleteRecord, views, activeViewId } =
-    useRecords();
+  const {
+    records,
+    hasMore,
+    loadMoreRecords,
+    addRecord,
+    updateRecord,
+    deleteRecord,
+    views,
+    activeViewId,
+    setActiveViewId,
+  } = useRecords();
+  const [searchParams, setSearchParams] = useSearchParams<{ view?: string }>();
 
   const [previewContent, setPreviewContent] = createSignal<string | null>(null);
   const [previewCommit, setPreviewCommit] = createSignal<Commit | null>(null);
@@ -51,6 +61,26 @@ export default function NodeView() {
   // Derive view type from active view in RecordsContext
   const activeView = createMemo(() => views().find((v) => v.id === activeViewId()));
   const viewType = createMemo(() => activeView()?.type || 'table');
+
+  // When views load, apply ?view= param if it matches a known view ID.
+  createEffect(() => {
+    const loadedViews = views();
+    const paramId = searchParams.view;
+    if (!loadedViews.length || !paramId) return;
+    if (loadedViews.some((v) => v.id === paramId) && paramId !== activeViewId()) {
+      setActiveViewId(paramId);
+    }
+  });
+
+  // Keep ?view= param in sync with the active view ID.
+  createEffect(() => {
+    const id = activeViewId();
+    if (!id || id === DEFAULT_VIEW_ID) {
+      setSearchParams({ view: undefined });
+    } else {
+      setSearchParams({ view: id });
+    }
+  });
 
   // Load node when nodeId param changes
   createEffect(() => {
