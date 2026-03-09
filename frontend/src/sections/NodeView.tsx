@@ -1,6 +1,6 @@
 // Node view component displaying editor or table based on node type.
 
-import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack } from 'solid-js';
+import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on } from 'solid-js';
 import { useParams, useNavigate, useSearchParams } from '@solidjs/router';
 import TableTable from '../components/TableTable';
 import TableGrid from '../components/TableGrid';
@@ -91,64 +91,47 @@ export default function NodeView() {
   const activeView = createMemo(() => views().find((v) => v.id === activeViewId()));
   const viewType = createMemo(() => activeView()?.type || 'table');
 
-  // Apply the URL ?view= param exactly once per node navigation (not on createView()).
-  // A non-reactive variable tracks which nodeId we've already applied the param for,
-  // preventing createView() from triggering a re-application that would override
-  // the newly-created view's activeViewId with the stale URL param.
-  let urlParamAppliedForNode: string | undefined;
+  // Signal: true once the URL ?view= param has been applied for the current node.
+  // This gates the URL sync effect so it cannot fire before initialization is complete,
+  // preventing it from clearing the incoming ?view= param during node transitions.
+  const [viewParamApplied, setViewParamApplied] = createSignal(false);
+
+  // 1. Reset on every node navigation so the apply effect runs again for the new node.
   createEffect(
     on(
       () => stripSlug(params.nodeId),
       () => {
-        urlParamAppliedForNode = undefined; // Reset on node navigation
+        setViewParamApplied(false);
       }
     )
   );
+
+  // 2. Apply URL ?view= param and track back/forward navigation.
+  // Runs reactively whenever views load or searchParams.view changes (history navigation).
+  // Once views are ready, marks initialization done so the sync effect can take over.
   createEffect(() => {
     const paramNodeId = stripSlug(params.nodeId);
     const nodeId = selectedNodeId();
     const loadedViews = views();
-    // Only apply when the URL node matches the loaded node and views are ready.
     if (!paramNodeId || !nodeId || paramNodeId !== nodeId || loadedViews.length === 0) return;
-    if (urlParamAppliedForNode === paramNodeId) return; // Already applied for this node
-    urlParamAppliedForNode = paramNodeId;
-    const paramId = untrack(() => searchParams.view);
-    if (paramId && loadedViews.some((v) => v.id === paramId) && paramId !== untrack(() => activeViewId())) {
+    const paramId = searchParams.view;
+    if (paramId && loadedViews.some((v) => v.id === paramId)) {
       setActiveViewId(paramId);
     }
+    setViewParamApplied(true);
   });
 
-  // When the URL ?view= param changes due to browser back/forward navigation, apply it.
-  createEffect(
-    on(
-      () => searchParams.view,
-      (paramId) => {
-        if (!paramId) return;
-        const loadedViews = untrack(() => views());
-        if (loadedViews.some((v) => v.id === paramId) && paramId !== untrack(() => activeViewId())) {
-          setActiveViewId(paramId);
-        }
-      },
-      { defer: true } // Initial mount is handled by the node-load effect above
-    )
-  );
-
-  // Keep ?view= param in sync with the active view ID.
-  // defer:true prevents this from running on initial mount with activeViewId()=undefined,
-  // which would clear the incoming ?view= param before the apply effect above can read it.
-  createEffect(
-    on(
-      () => activeViewId(),
-      (id) => {
-        if (!id || id === DEFAULT_VIEW_ID) {
-          setSearchParams({ view: undefined });
-        } else {
-          setSearchParams({ view: id });
-        }
-      },
-      { defer: true }
-    )
-  );
+  // 3. Sync activeViewId → URL. Gated on viewParamApplied so it only runs after the
+  // apply effect above has finished, preventing it from clearing the incoming ?view= param.
+  createEffect(() => {
+    if (!viewParamApplied()) return;
+    const id = activeViewId();
+    if (!id || id === DEFAULT_VIEW_ID) {
+      setSearchParams({ view: undefined });
+    } else {
+      setSearchParams({ view: id });
+    }
+  });
 
   // Load node when nodeId param changes
   createEffect(() => {
