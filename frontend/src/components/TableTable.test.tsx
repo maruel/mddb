@@ -137,8 +137,10 @@ describe('TableTable', () => {
     renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     await waitFor(() => {
-      // Alice's Active is true, should show checkmark
-      expect(screen.getByText('✓')).toBeTruthy();
+      // Alice's Active is true, should show a checked native checkbox
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      const checked = Array.from(checkboxes).find((cb) => (cb as HTMLInputElement).checked);
+      expect(checked).toBeTruthy();
     });
   });
 
@@ -291,9 +293,8 @@ describe('TableTable', () => {
     fireEvent.click(statusCell);
 
     await waitFor(() => {
-      // Should now have a select dropdown
-      const select = document.querySelector('select');
-      expect(select).toBeTruthy();
+      // Should now have a custom select dropdown with a clear option (—)
+      expect(screen.getByText('—')).toBeTruthy();
     });
   });
 
@@ -351,15 +352,22 @@ describe('TableTable', () => {
     ));
 
     await waitFor(() => {
-      // The checkmark shows for Active=true
-      expect(screen.getByText('✓')).toBeTruthy();
+      // Active=true renders as a checked native checkbox in read mode
+      const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+      const checked = Array.from(checkboxes).find((cb) => (cb as HTMLInputElement).checked);
+      expect(checked).toBeTruthy();
     });
 
-    // Click on the checkmark cell
-    const checkmarkCell = screen.getByText('✓');
-    fireEvent.click(checkmarkCell);
+    // Click on the Active cell (handle=td[0], Name=td[1], Age=td[2], Active=td[3])
+    const table = document.querySelector('table');
+    const rows = table?.querySelectorAll('tbody tr');
+    const activeCell = rows?.[0].querySelectorAll('td')[3];
+    if (activeCell) {
+      fireEvent.click(activeCell);
+    }
 
     await waitFor(() => {
+      // In edit mode there is still a checkbox input (now editable)
       const checkbox = document.querySelector('input[type="checkbox"]');
       expect(checkbox).toBeTruthy();
     });
