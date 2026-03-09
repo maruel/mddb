@@ -25,13 +25,18 @@
   display: flex;
   align-items: stretch;
   position: relative;
+  border-radius: var(--radius-sm);
+}
+
+.tabWrapper:hover {
+  background: var(--c-bg-hover);
 }
 
 .tab {
   display: flex;
   align-items: center;
   gap: var(--s-1);
-  padding: var(--s-2) var(--s-3);
+  padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
   border: none;
   background: none;
   font-size: 0.85rem;
@@ -48,7 +53,6 @@
 
 .tab:hover {
   color: var(--c-text);
-  background: var(--c-bg-hover);
 }
 
 .tab.active {
@@ -96,8 +100,7 @@
   align-items: center;
   justify-content: center;
   width: 20px;
-  padding: 0;
-  margin-left: -10px; /* tuck under tab's right padding */
+  padding: 0 var(--s-1);
   border: none;
   background: none;
   cursor: pointer;

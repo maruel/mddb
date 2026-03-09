@@ -1,6 +1,6 @@
 // Table cell component with inline editing for different property types.
 
-import { createSignal, Show, type Accessor } from 'solid-js';
+import { createSignal, Show, type Accessor, type JSXElement } from 'solid-js';
 import {
   type DataRecordResponse,
   type Property,
@@ -24,6 +24,7 @@ export interface TableCellProps {
   onTabNext?: () => void;
   onTabPrev?: () => void;
   onEnterDown?: () => void;
+  prefix?: JSXElement;
 }
 
 /**
@@ -201,6 +202,7 @@ export function TableCell(props: TableCellProps) {
         when={props.isEditing()}
         fallback={
           <div class={styles.cellContent}>
+            {props.prefix}
             <FieldValue record={props.record} column={props.column} />
           </div>
         }

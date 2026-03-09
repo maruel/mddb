@@ -14,6 +14,20 @@ import {
 } from '@sdk/types.gen';
 import styles from './FieldValue.module.css';
 
+function truncateUrl(url: string): string {
+  try {
+    const { hostname, pathname } = new URL(url);
+    if (pathname === '/') return hostname;
+    const full = hostname + pathname;
+    if (full.length <= 32) return full;
+    const start = 4;
+    const end = 7;
+    return hostname + pathname.slice(0, start + 1) + '\u2026' + pathname.slice(-end);
+  } catch {
+    return url.length > 32 ? url.slice(0, 29) + '\u2026' : url;
+  }
+}
+
 interface FieldValueProps {
   record: DataRecordResponse;
   column: Property;
@@ -69,7 +83,7 @@ export function FieldValue(props: FieldValueProps): JSXElement {
       <Match when={props.column.type === PropertyTypeURL}>
         <Show when={strValue()}>
           <a href={strValue()} class={styles.link} target="_blank" rel="noopener noreferrer">
-            {strValue()}
+            {truncateUrl(strValue())}
           </a>
         </Show>
       </Match>

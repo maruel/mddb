@@ -14,7 +14,7 @@ import GridViewIcon from '@material-symbols/svg-400/outlined/grid_view.svg?solid
 import ViewStreamIcon from '@material-symbols/svg-400/outlined/view_stream.svg?solid';
 import CalendarMonthIcon from '@material-symbols/svg-400/outlined/calendar_month.svg?solid';
 import AddIcon from '@material-symbols/svg-400/outlined/add.svg?solid';
-import CloseIcon from '@material-symbols/svg-400/outlined/close.svg?solid';
+import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
 
 const VIEW_ICONS: Record<ViewType, SolidSVG> = {
   table: TableRowsIcon,
@@ -144,7 +144,7 @@ export default function ViewTabs() {
                     title={t('common.delete') || 'Delete'}
                     tabIndex={-1}
                   >
-                    <CloseIcon />
+                    <DeleteIcon />
                   </button>
                 </Show>
               </div>

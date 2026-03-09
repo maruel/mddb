@@ -15,6 +15,7 @@ import { useClickOutside } from '../composables/useClickOutside';
 
 import ArrowUpwardIcon from '@material-symbols/svg-400/outlined/arrow_upward.svg?solid';
 import ArrowDownwardIcon from '@material-symbols/svg-400/outlined/arrow_downward.svg?solid';
+import DescriptionIcon from '@material-symbols/svg-400/outlined/description.svg?solid';
 import FilterAltIcon from '@material-symbols/svg-400/outlined/filter_alt.svg?solid';
 import CloseIcon from '@material-symbols/svg-400/outlined/close.svg?solid';
 import OpenInFullIcon from '@material-symbols/svg-400/outlined/open_in_full.svg?solid';
@@ -762,7 +763,7 @@ export default function TableTable(props: TableTableProps) {
                     </td>
                   </Show>
                   <For each={visibleColumns()}>
-                    {(column) => {
+                    {(column, colIdx) => {
                       const isEditing = () =>
                         editingCell()?.recordId === record.id && editingCell()?.columnId === column.name;
 
@@ -771,6 +772,13 @@ export default function TableTable(props: TableTableProps) {
                           record={record}
                           column={column}
                           isEditing={isEditing}
+                          prefix={
+                            colIdx() === 0 ? (
+                              <span class={styles.rowPageIcon}>
+                                <DescriptionIcon />
+                              </span>
+                            ) : undefined
+                          }
                           onStartEdit={() => setEditingCell({ recordId: record.id, columnId: column.name })}
                           onSave={(value) => handleCellSave(record.id, column.name, value)}
                           onCancel={() => setEditingCell(null)}
