@@ -1,4 +1,4 @@
-// Kanban board view for table records, grouped by select/multi-select columns.
+// Kanban board view for table records, grouped by select/multi-select columns. Multi-select records appear in all matching groups (replace-all drag behavior).
 
 import { For, Show, createMemo } from 'solid-js';
 import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '@sdk/types.gen';
@@ -18,6 +18,21 @@ interface TableBoardProps {
   onOpenRecord?: (id: string) => void;
   groupByColumn?: string;
   onGroupByChange?: (columnName: string) => void;
+}
+
+// For each record, returns the list of matching group option IDs.
+// Multi-select records can appear in multiple groups.
+function getRecordGroupIds(record: DataRecordResponse, col: Property): string[] {
+  const raw = String(record.data[col.name] ?? '');
+  if (!raw) return ['__none__'];
+  if (col.type === PropertyTypeMultiSelect) {
+    const ids = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    return ids.length > 0 ? ids : ['__none__'];
+  }
+  return [raw]; // single select
 }
 
 export default function TableBoard(props: TableBoardProps) {
@@ -53,15 +68,13 @@ export default function TableBoard(props: TableBoardProps) {
     grouped['__none__'] = { id: '__none__', name: t('table.noGroup') || 'No Group', color: undefined, records: [] };
 
     props.records.forEach((record) => {
-      const val = record.data[col.name];
-      if (val && typeof val === 'string') {
-        if (!grouped[val]) {
-          grouped[val] = { id: val, name: val, color: undefined, records: [] };
+      const groupIds = getRecordGroupIds(record, col);
+      groupIds.forEach((gid) => {
+        if (!grouped[gid]) {
+          grouped[gid] = { id: gid, name: gid, color: undefined, records: [] };
         }
-        grouped[val].records.push(record);
-      } else {
-        grouped['__none__']?.records.push(record);
-      }
+        grouped[gid].records.push(record);
+      });
     });
 
     return Object.values(grouped).filter((g) => g.records.length > 0 || g.id !== '__none__');

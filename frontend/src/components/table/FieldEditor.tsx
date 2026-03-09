@@ -15,7 +15,7 @@ import {
   PropertyTypePhone,
   PropertyTypeUser,
 } from '@sdk/types.gen';
-import { updateRecordField, handleEnterBlur, getFieldValue } from './tableUtils';
+import { updateRecordField, handleEnterBlur, getFieldValue, chipTextColor } from './tableUtils';
 import { useRecords } from '../../contexts/RecordsContext';
 import { useI18n } from '../../i18n';
 import styles from './FieldEditor.module.css';
@@ -49,23 +49,31 @@ export interface MultiSelectEditorProps {
 }
 
 export function MultiSelectEditor(props: MultiSelectEditorProps) {
+  const { t } = useI18n();
   const [open, setOpen] = createSignal(false);
   const [dropPos, setDropPos] = createSignal<DropPos | null>(null);
+  const [query, setQuery] = createSignal('');
+  const [focusedIndex, setFocusedIndex] = createSignal(-1);
   let triggerRef: HTMLDivElement | undefined;
   let dropRef: HTMLDivElement | undefined;
 
   const openDropdown = () => {
     if (triggerRef) setDropPos(getDropPos(triggerRef));
+    setFocusedIndex(-1);
     setOpen(true);
   };
 
   const closeDropdown = () => {
     setOpen(false);
     setDropPos(null);
+    setQuery('');
+    setFocusedIndex(-1);
     props.onClose?.();
   };
 
   // Click-outside detection for the portal dropdown.
+  // Use capture phase so the handler fires before any element-level or delegated handlers,
+  // ensuring dropRef is reliable and no SolidJS delegation interference.
   createEffect(() => {
     if (!open()) return;
     const handler = (e: MouseEvent) => {
@@ -73,13 +81,15 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
       if (!triggerRef?.contains(target) && !dropRef?.contains(target)) {
         setOpen(false);
         setDropPos(null);
+        setQuery('');
+        setFocusedIndex(-1);
         props.onClose?.();
       }
     };
-    const id = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    const id = setTimeout(() => document.addEventListener('mousedown', handler, true), 0);
     onCleanup(() => {
       clearTimeout(id);
-      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('mousedown', handler, true);
     });
   });
 
@@ -117,7 +127,28 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
     props.onSave(next.join(','));
   };
 
-  const unselectedOptions = () => (props.column.options ?? []).filter((o) => !selectedIds().includes(o.id));
+  const filteredOptions = () => {
+    const q = query().toLowerCase();
+    return (props.column.options ?? []).filter((o) => o.name.toLowerCase().includes(q));
+  };
+
+  const handleSearchKeyDown = (e: KeyboardEvent) => {
+    const opts = filteredOptions();
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex((i) => (i + 1) % opts.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex((i) => (i <= 0 ? opts.length - 1 : i - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const idx = focusedIndex();
+      const opt = opts[idx];
+      if (idx >= 0 && opt) {
+        toggle(opt.id);
+      }
+    }
+  };
 
   return (
     <div class={styles.multiSelectWrapper} ref={(el) => (triggerRef = el)} onClick={openDropdown}>
@@ -126,7 +157,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
           {(id) => {
             const color = optionColor(id);
             return (
-              <span class={styles.chip} style={color ? { background: color, color: '#fff' } : {}}>
+              <span class={styles.chip} style={color ? { background: color, color: chipTextColor(color) } : {}}>
                 {optionName(id)}
                 <button
                   class={styles.chipRemove}
@@ -144,33 +175,50 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
           }}
         </For>
       </div>
-      <Show when={open() && unselectedOptions().length > 0 && dropPos()}>
+      <Show when={open() && dropPos()}>
         {(pos) => (
           <Portal>
             <div
               ref={(el) => (dropRef = el)}
               class={styles.portalDropdown}
+              data-testid="select-dropdown"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               style={{
                 left: `${pos().left}px`,
                 top: `${pos().top}px`,
                 'min-width': `${pos().minWidth}px`,
               }}
             >
-              <For each={unselectedOptions()}>
-                {(opt) => (
-                  <div
-                    class={styles.optionItem}
-                    onMouseDown={(e) => {
-                      e.preventDefault(); // prevent blur before toggle
-                      toggle(opt.id);
-                    }}
-                  >
-                    <Show when={opt.color}>
-                      <span class={styles.optionColor} style={{ background: opt.color }} />
-                    </Show>
-                    {opt.name}
-                  </div>
-                )}
+              <input
+                ref={(el) => setTimeout(() => el?.focus(), 0)}
+                type="text"
+                class={styles.searchInput}
+                placeholder={t('table.searchOptions')}
+                value={query()}
+                onInput={(e) => setQuery(e.currentTarget.value)}
+                onKeyDown={handleSearchKeyDown}
+              />
+              <For each={filteredOptions()}>
+                {(opt, index) => {
+                  const isSelected = () => selectedIds().includes(opt.id);
+                  const isFocused = () => focusedIndex() === index();
+                  return (
+                    <div
+                      class={`${styles.optionItem}${isFocused() ? ` ${styles.optionItemFocused}` : ''}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault(); // prevent blur before toggle
+                        toggle(opt.id);
+                      }}
+                    >
+                      <span class={styles.optionCheckmark}>{isSelected() ? '✓' : ''}</span>
+                      <Show when={opt.color}>
+                        <span class={styles.optionColor} style={{ background: opt.color }} />
+                      </Show>
+                      {opt.name}
+                    </div>
+                  );
+                }}
               </For>
             </div>
           </Portal>
@@ -189,22 +237,29 @@ export interface SingleSelectEditorProps {
 }
 
 export function SingleSelectEditor(props: SingleSelectEditorProps) {
+  const { t } = useI18n();
   const [open, setOpen] = createSignal(false);
   const [dropPos, setDropPos] = createSignal<DropPos | null>(null);
+  const [query, setQuery] = createSignal('');
+  const [focusedIndex, setFocusedIndex] = createSignal(-1);
   let triggerRef: HTMLDivElement | undefined;
   let dropRef: HTMLDivElement | undefined;
 
   const openDropdown = () => {
     if (triggerRef) setDropPos(getDropPos(triggerRef));
+    setFocusedIndex(-1);
     setOpen(true);
   };
 
   const closeDropdown = () => {
     setOpen(false);
     setDropPos(null);
+    setQuery('');
+    setFocusedIndex(-1);
     props.onClose?.();
   };
 
+  // Click-outside detection: use capture phase for reliability.
   createEffect(() => {
     if (!open()) return;
     const handler = (e: MouseEvent) => {
@@ -212,13 +267,15 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
       if (!triggerRef?.contains(target) && !dropRef?.contains(target)) {
         setOpen(false);
         setDropPos(null);
+        setQuery('');
+        setFocusedIndex(-1);
         props.onClose?.();
       }
     };
-    const id = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    const id = setTimeout(() => document.addEventListener('mousedown', handler, true), 0);
     onCleanup(() => {
       clearTimeout(id);
-      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('mousedown', handler, true);
     });
   });
 
@@ -251,6 +308,30 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
     closeDropdown();
   };
 
+  // filteredOptions excludes the "—" none item; keyboard nav covers column options only (index 0+).
+  const filteredOptions = () => {
+    const q = query().toLowerCase();
+    return (props.column.options ?? []).filter((o) => o.name.toLowerCase().includes(q));
+  };
+
+  const handleSearchKeyDown = (e: KeyboardEvent) => {
+    const opts = filteredOptions();
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex((i) => (i + 1) % opts.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex((i) => (i <= 0 ? opts.length - 1 : i - 1));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const idx = focusedIndex();
+      const opt = opts[idx];
+      if (idx >= 0 && opt) {
+        handleSelect(opt.id);
+      }
+    }
+  };
+
   return (
     <div
       class={styles.singleSelectWrapper}
@@ -258,14 +339,17 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
       onClick={() => (open() ? closeDropdown() : openDropdown())}
     >
       <Show when={selectedOption()} fallback={<span class={styles.selectPlaceholder}>--</span>}>
-        {(opt) => (
-          <span class={styles.chip} style={opt().color ? { background: opt().color, color: '#fff' } : {}}>
-            {opt().name}
-            <button class={styles.chipRemove} onClick={handleClear} type="button" aria-label="Clear">
-              ×
-            </button>
-          </span>
-        )}
+        {(opt) => {
+          const color = opt().color ?? '';
+          return (
+            <span class={styles.chip} style={color ? { background: color, color: chipTextColor(color) } : {}}>
+              {opt().name}
+              <button class={styles.chipRemove} onClick={handleClear} type="button" aria-label="Clear">
+                ×
+              </button>
+            </span>
+          );
+        }}
       </Show>
       <Show when={open() && dropPos()}>
         {(pos) => (
@@ -273,12 +357,24 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
             <div
               ref={(el) => (dropRef = el)}
               class={styles.portalDropdown}
+              data-testid="select-dropdown"
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               style={{
                 left: `${pos().left}px`,
                 top: `${pos().top}px`,
                 'min-width': `${pos().minWidth}px`,
               }}
             >
+              <input
+                ref={(el) => setTimeout(() => el?.focus(), 0)}
+                type="text"
+                class={styles.searchInput}
+                placeholder={t('table.searchOptions')}
+                value={query()}
+                onInput={(e) => setQuery(e.currentTarget.value)}
+                onKeyDown={handleSearchKeyDown}
+              />
               <div
                 class={styles.optionItem}
                 onMouseDown={(e) => {
@@ -289,21 +385,25 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
               >
                 <span class={styles.optionNone}>—</span>
               </div>
-              <For each={props.column.options}>
-                {(opt) => (
-                  <div
-                    class={styles.optionItem}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelect(opt.id);
-                    }}
-                  >
-                    <Show when={opt.color}>
-                      <span class={styles.optionColor} style={{ background: opt.color }} />
-                    </Show>
-                    {opt.name}
-                  </div>
-                )}
+              <For each={filteredOptions()}>
+                {(opt, index) => {
+                  const isActive = () => opt.id === props.value || opt.name === props.value;
+                  const isFocused = () => focusedIndex() === index();
+                  return (
+                    <div
+                      class={`${styles.optionItem}${isActive() ? ` ${styles.optionItemActive}` : ''}${isFocused() ? ` ${styles.optionItemFocused}` : ''}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelect(opt.id);
+                      }}
+                    >
+                      <Show when={opt.color}>
+                        <span class={styles.optionColor} style={{ background: opt.color }} />
+                      </Show>
+                      {opt.name}
+                    </div>
+                  );
+                }}
               </For>
             </div>
           </Portal>
@@ -359,10 +459,10 @@ export function UserEditor(props: UserEditorProps) {
         props.onClose?.();
       }
     };
-    const id = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    const id = setTimeout(() => document.addEventListener('mousedown', handler, true), 0);
     onCleanup(() => {
       clearTimeout(id);
-      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('mousedown', handler, true);
     });
   });
 

@@ -81,3 +81,62 @@
 .removeBtn:hover {
   opacity: 0.8;
 }
+
+.optionPicker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.optionSearch {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.optionSearch:focus {
+  outline: none;
+  border-color: var(--c-primary, #0066cc);
+}
+
+.optionPickerList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.optionPickerItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  background: var(--c-bg-hover);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color var(--transition);
+}
+
+.optionPickerItem:hover {
+  border-color: var(--c-border);
+}
+
+.optionPickerItemSelected {
+  border-color: var(--c-primary, #0066cc);
+}
+
+.optionPickerSwatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

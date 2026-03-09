@@ -3,8 +3,8 @@
 .selectChip {
   display: inline-block;
   padding: 1px var(--s-2);
-  border-radius: 4px;
-  font-size: 0.8em;
+  border-radius: 10px;
+  font-size: 0.78rem;
   font-weight: 500;
   background: var(--c-bg-hover);
   color: var(--c-text);

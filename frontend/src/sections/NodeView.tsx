@@ -409,6 +409,11 @@ export default function NodeView() {
                       onDeleteColumn={handleDeleteColumn}
                       onInsertColumn={handleInsertColumn}
                       onReorderColumns={handleReorderColumns}
+                      onUpdateColumns={(cols) => {
+                        const nodeId = selectedNodeId();
+                        if (nodeId) return updateTableProperties(nodeId, cols);
+                        return Promise.resolve();
+                      }}
                       onLoadMore={loadMoreRecords}
                       hasMore={hasMore()}
                       onOpenRecord={(id) => setOpenRecordId(id)}

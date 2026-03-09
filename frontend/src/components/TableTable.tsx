@@ -2,13 +2,22 @@
 
 import { createSignal, createEffect, onCleanup, For, Show } from 'solid-js';
 import { Dynamic } from 'solid-js/web';
-import { type DataRecordResponse, type Filter, type Property, SortAsc, SortDesc } from '@sdk/types.gen';
+import {
+  type DataRecordResponse,
+  type Filter,
+  type Property,
+  PropertyTypeSelect,
+  PropertyTypeMultiSelect,
+  SortAsc,
+  SortDesc,
+} from '@sdk/types.gen';
 import styles from './TableTable.module.css';
 import { RowHandle, ContextMenu, type ContextMenuAction } from './shared';
 import { TABLE_RECORD_MIME } from './table/TableRow';
 import { TableCell } from './table/TableCell';
 import { AddColumnDropdown } from './table/AddColumnDropdown';
 import { FilterPanel } from './table/FilterPanel';
+import { SelectOptionsEditor } from './table/SelectOptionsEditor';
 import { useI18n } from '../i18n';
 import { useRecords, DEFAULT_VIEW_ID } from '../contexts';
 import { useClickOutside } from '../composables/useClickOutside';
@@ -41,6 +50,7 @@ interface TableTableProps {
   onDeleteColumn?: (index: number) => void;
   onInsertColumn?: (beforeIndex: number) => void;
   onReorderColumns?: (newOrder: Property[]) => void;
+  onUpdateColumns?: (cols: Property[]) => Promise<void>;
   onLoadMore?: () => void;
   hasMore?: boolean;
 }
@@ -86,6 +96,13 @@ export default function TableTable(props: TableTableProps) {
   // Filter panel state
   const [filterPanel, setFilterPanel] = createSignal<{
     colIndex: number;
+    column: Property;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Select options editor state
+  const [optionsEditor, setOptionsEditor] = createSignal<{
     column: Property;
     x: number;
     y: number;
@@ -331,11 +348,20 @@ export default function TableTable(props: TableTableProps) {
     const activeSort = column ? activeSorts().find((s) => s.property === column.name) : undefined;
     const activeFilter = column ? activeFilters().find((f) => f.property === column.name) : undefined;
 
-    const actions: ContextMenuAction[] = [
-      { id: 'rename', label: t('table.renameColumn') || 'Rename' },
+    const actions: ContextMenuAction[] = [{ id: 'rename', label: t('table.renameColumn') || 'Rename' }];
+
+    if (
+      column &&
+      (column.type === PropertyTypeSelect || column.type === PropertyTypeMultiSelect) &&
+      props.onUpdateColumns
+    ) {
+      actions.push({ id: 'edit-options', label: t('table.editOptions') || 'Edit options' });
+    }
+
+    actions.push(
       { id: 'sort-asc', label: t('table.sortAscending') || 'Sort Ascending' },
-      { id: 'sort-desc', label: t('table.sortDescending') || 'Sort Descending' },
-    ];
+      { id: 'sort-desc', label: t('table.sortDescending') || 'Sort Descending' }
+    );
 
     if (activeSort) {
       actions.push({
@@ -445,6 +471,9 @@ export default function TableTable(props: TableTableProps) {
       case 'rename':
         setRenameValue(column.name);
         setRenamingColumn(state.colIndex);
+        break;
+      case 'edit-options':
+        setOptionsEditor({ column, x: state.x, y: state.y });
         break;
       case 'sort-asc':
         applySort(state.colIndex, SortAsc);
@@ -868,6 +897,20 @@ export default function TableTable(props: TableTableProps) {
             onApply={(f) => applyFilter(state().colIndex, f)}
             onRemove={() => removeFilter(state().colIndex)}
             onClose={() => setFilterPanel(null)}
+          />
+        )}
+      </Show>
+
+      {/* Select options editor */}
+      <Show when={optionsEditor()}>
+        {(state) => (
+          <SelectOptionsEditor
+            column={state().column}
+            allColumns={props.columns}
+            records={props.records}
+            position={{ x: state().x, y: state().y }}
+            onUpdateColumns={(cols) => props.onUpdateColumns?.(cols) ?? Promise.resolve()}
+            onClose={() => setOptionsEditor(null)}
           />
         )}
       </Show>

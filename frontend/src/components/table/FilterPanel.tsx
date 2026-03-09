@@ -108,6 +108,31 @@ export function FilterPanel(props: FilterPanelProps) {
 
   const needsValue = () => !NO_VALUE_OPS.includes(operator());
 
+  const [optionQuery, setOptionQuery] = createSignal('');
+
+  const isMultiOp = () => props.column.type === PropertyTypeMultiSelect || operator() === FilterOpContains;
+
+  const selectedOptionIds = () =>
+    value()
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+  const filteredColumnOptions = () => {
+    const q = optionQuery().toLowerCase();
+    return (props.column.options ?? []).filter((o) => !q || o.name.toLowerCase().includes(q));
+  };
+
+  const toggleOption = (id: string) => {
+    if (isMultiOp()) {
+      const current = selectedOptionIds();
+      const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+      setValue(next.join(','));
+    } else {
+      setValue(selectedOptionIds()[0] === id ? '' : id);
+    }
+  };
+
   // Viewport boundary detection
   createEffect(() => {
     if (!panelRef) return;
@@ -191,21 +216,63 @@ export function FilterPanel(props: FilterPanelProps) {
             <Show
               when={props.column.type === PropertyTypeCheckbox}
               fallback={
-                <input
-                  class={styles.input}
-                  type={
-                    props.column.type === PropertyTypeNumber
-                      ? 'number'
-                      : props.column.type === PropertyTypeDate
-                        ? 'date'
-                        : 'text'
+                <Show
+                  when={
+                    (props.column.type === PropertyTypeSelect || props.column.type === PropertyTypeMultiSelect) &&
+                    (props.column.options?.length ?? 0) > 0
                   }
-                  value={value()}
-                  onInput={(e) => setValue(e.currentTarget.value)}
-                  placeholder={t('table.filterValue')}
-                  data-testid="filter-value"
-                  autofocus
-                />
+                  fallback={
+                    <input
+                      class={styles.input}
+                      type={
+                        props.column.type === PropertyTypeNumber
+                          ? 'number'
+                          : props.column.type === PropertyTypeDate
+                            ? 'date'
+                            : 'text'
+                      }
+                      value={value()}
+                      onInput={(e) => setValue(e.currentTarget.value)}
+                      placeholder={t('table.filterValue')}
+                      data-testid="filter-value"
+                      autofocus
+                    />
+                  }
+                >
+                  <div class={styles.optionPicker}>
+                    <input
+                      class={styles.optionSearch}
+                      type="text"
+                      placeholder={t('table.searchOptions') || 'Search…'}
+                      value={optionQuery()}
+                      onInput={(e) => setOptionQuery(e.currentTarget.value)}
+                      data-testid="filter-option-search"
+                    />
+                    <div class={styles.optionPickerList}>
+                      <For each={filteredColumnOptions()}>
+                        {(opt) => {
+                          const isSelected = () => selectedOptionIds().includes(opt.id);
+                          return (
+                            <div
+                              class={styles.optionPickerItem}
+                              classList={{ [`${styles.optionPickerItemSelected}`]: isSelected() }}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                toggleOption(opt.id);
+                              }}
+                              data-testid={`filter-option-${opt.id}`}
+                            >
+                              <Show when={opt.color}>
+                                <span class={styles.optionPickerSwatch} style={{ background: opt.color }} />
+                              </Show>
+                              {opt.name}
+                            </div>
+                          );
+                        }}
+                      </For>
+                    </div>
+                  </div>
+                </Show>
               }
             >
               <select

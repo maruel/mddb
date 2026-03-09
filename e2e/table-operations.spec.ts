@@ -70,7 +70,8 @@ test.describe('Table Creation and Basic Operations', () => {
     await expect(tableElement).toBeVisible({ timeout: 5000 });
 
     const tableHeaders = page.locator('th');
-    await expect(tableHeaders.getByText('Name', { exact: true })).toBeVisible();
+    // Use exact:false since required columns append '*' to the name
+    await expect(tableHeaders.getByText('Name', { exact: false })).toBeVisible();
     await expect(tableHeaders.getByText('Status', { exact: true })).toBeVisible();
     await expect(tableHeaders.getByText('Priority', { exact: true })).toBeVisible();
     await expect(tableHeaders.getByText('Due Date', { exact: true })).toBeVisible();

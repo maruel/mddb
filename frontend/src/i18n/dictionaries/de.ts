@@ -373,6 +373,12 @@ export const dict: Dictionary = {
     recordCount: 'Einträge',
     groupBy: 'Gruppieren nach',
     recordDetail: 'Datensatzdetails',
+    searchOptions: 'Optionen suchen…',
+    editOptions: 'Optionen bearbeiten',
+    addOption: 'Option hinzufügen',
+    optionPlaceholder: 'Optionsname',
+    deleteOption: 'Option löschen',
+    optionUsedWarning: 'Verwendet von {n} Eintrag/Einträgen',
   },
 
   errors: {

@@ -1,0 +1,225 @@
+/* Option management panel for select/multi_select columns. */
+
+.panel {
+  position: fixed;
+  z-index: 1000;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  width: 280px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--c-border);
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--c-text-light);
+  padding: 2px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.closeBtn:hover {
+  color: var(--c-text);
+  background: var(--c-bg-hover);
+}
+
+.optionList {
+  overflow-y: auto;
+  flex: 1;
+  padding: 4px 0;
+}
+
+.optionRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  position: relative;
+  transition: background var(--transition);
+}
+
+.optionRow:hover {
+  background: var(--c-bg-hover);
+}
+
+.optionRowDragging {
+  opacity: 0.4;
+}
+
+.optionRowDragOver {
+  border-top: 2px solid var(--c-primary, #0066cc);
+}
+
+.dragHandle {
+  color: var(--c-text-light);
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+/* Color swatch */
+
+.swatchWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.swatchBtn {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-hover);
+  cursor: pointer;
+  padding: 0;
+  display: block;
+}
+
+.swatchBtn:hover {
+  border-color: var(--c-text-light);
+}
+
+.swatchPicker {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  z-index: 1010;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, 18px);
+  gap: 4px;
+}
+
+.swatchChoice {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.swatchChoice:hover {
+  border-color: var(--c-text);
+}
+
+.swatchChoiceActive {
+  border-color: var(--c-text) !important;
+}
+
+/* Option name input */
+
+.optionNameInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--c-text);
+  padding: 2px 4px;
+  border-radius: 3px;
+  min-width: 0;
+}
+
+.optionNameInput:focus {
+  outline: none;
+  background: var(--c-bg-hover);
+}
+
+/* Usage count hint */
+
+.usageHint {
+  font-size: 0.75rem;
+  color: var(--c-text-light);
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+/* Delete button */
+
+.deleteBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--c-text-light);
+  padding: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.optionRow:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  color: var(--c-danger, #e03e3e);
+  background: var(--c-bg-alt);
+}
+
+/* Add option button */
+
+.addOptionBtn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--c-text-light);
+  font-size: 0.82rem;
+  padding: 8px 12px;
+  text-align: left;
+  width: 100%;
+  border-top: 1px solid var(--c-border);
+  flex-shrink: 0;
+  transition: background var(--transition);
+}
+
+.addOptionBtn:hover {
+  background: var(--c-bg-hover);
+  color: var(--c-text);
+}
+
+.addOptionBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

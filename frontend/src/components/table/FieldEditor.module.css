@@ -143,3 +143,36 @@
   white-space: nowrap;
   max-width: 120px;
 }
+
+.searchInput {
+  width: 100%;
+  padding: 5px 10px;
+  border: none;
+  border-bottom: 1px solid var(--c-border);
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  outline: none;
+}
+
+.optionItemActive {
+  background: var(--c-bg-hover);
+  font-weight: 500;
+}
+
+.optionItemFocused {
+  background: var(--c-primary-light, #e8f0fe);
+  outline: none;
+}
+
+.optionCheckmark {
+  width: 12px;
+  color: var(--c-primary, #0066cc);
+  flex-shrink: 0;
+  font-size: 0.8rem;
+}

@@ -254,6 +254,53 @@ func TestWorkspaceFileStore(t *testing.T) {
 			}
 		})
 
+		t.Run("SelectOptionsRoundTrip", func(t *testing.T) {
+			// Write a table with a select property that has options, then read
+			// it back and verify options are preserved (regression test).
+			selectID := ksid.NewID()
+			selectNode := &Node{
+				ID:    selectID,
+				Title: "Select Table",
+				Type:  NodeTypeTable,
+				Properties: []Property{
+					{
+						Name: "Status",
+						Type: PropertyTypeSelect,
+						Options: []SelectOption{
+							{ID: "opt1", Name: "Alpha", Color: "#e03e3e"},
+							{ID: "opt2", Name: "Beta"},
+						},
+					},
+				},
+			}
+			if err := ws.WriteTable(ctx, selectNode, true, author); err != nil {
+				t.Fatalf("failed to write table: %v", err)
+			}
+			read, err := ws.ReadNode(selectID)
+			if err != nil {
+				t.Fatalf("failed to read node: %v", err)
+			}
+			if len(read.Properties) != 1 {
+				t.Fatalf("expected 1 property, got %d", len(read.Properties))
+			}
+			prop := read.Properties[0]
+			if prop.Name != "Status" {
+				t.Errorf("expected property name 'Status', got %q", prop.Name)
+			}
+			if prop.Type != PropertyTypeSelect {
+				t.Errorf("expected property type 'select', got %q", prop.Type)
+			}
+			if len(prop.Options) != 2 {
+				t.Fatalf("expected 2 options, got %d", len(prop.Options))
+			}
+			if prop.Options[0].ID != "opt1" || prop.Options[0].Name != "Alpha" || prop.Options[0].Color != "#e03e3e" {
+				t.Errorf("unexpected option[0]: %+v", prop.Options[0])
+			}
+			if prop.Options[1].ID != "opt2" || prop.Options[1].Name != "Beta" {
+				t.Errorf("unexpected option[1]: %+v", prop.Options[1])
+			}
+		})
+
 		t.Run("RecordOperations", func(t *testing.T) {
 			record := &DataRecord{
 				ID:       ksid.NewID(),

@@ -51,7 +51,15 @@ See [PLAN_VIEWS.md](PLAN_VIEWS.md) for detailed implementation plan.
 - [ ] Advanced filter UI: compound AND/OR conditions (currently single filter per column)
 
 ### Select Column UX
-See [PLAN_SELECT_UX.md](PLAN_SELECT_UX.md) for detailed implementation plan.
+
+- [x] `multi_select` in AddColumnDropdown with inline option creation
+- [x] Search + keyboard nav in select/multi-select dropdowns
+- [x] `SelectOptionsEditor` panel (rename, recolor, delete options)
+- [x] "Edit options" in column header context menu
+- [x] Filter panel option picker for select/multi-select columns
+- [x] Board view multi-select grouping fix
+- [x] Chip style consistency and text contrast (`chipTextColor`)
+- [x] Drag-to-reorder options in SelectOptionsEditor
 
 ### Advanced UX
 - [ ] Bulk Actions: Multi-record operations

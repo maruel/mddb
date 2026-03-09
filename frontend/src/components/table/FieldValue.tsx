@@ -15,6 +15,7 @@ import {
 } from '@sdk/types.gen';
 import { useRecords } from '../../contexts/RecordsContext';
 import { useI18n } from '../../i18n';
+import { chipTextColor } from './tableUtils';
 import styles from './FieldValue.module.css';
 
 function truncateUrl(url: string): string {
@@ -63,7 +64,7 @@ export function FieldValue(props: FieldValueProps): JSXElement {
     const label = opt?.name ?? id;
     const color = opt?.color;
     return (
-      <span class={styles.selectChip} style={color ? { background: color, color: '#fff' } : {}}>
+      <span class={styles.selectChip} style={color ? { background: color, color: chipTextColor(color) } : {}}>
         {label}
       </span>
     );

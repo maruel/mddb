@@ -536,14 +536,9 @@ func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID ksid.ID
 		if title, ok := metadata["title"].(string); ok {
 			node.Title = title
 		}
-		if props, ok := metadata["properties"].([]any); ok {
-			for _, prop := range props {
-				if propMap, ok := prop.(map[string]any); ok {
-					node.Properties = append(node.Properties, Property{
-						Name: propMap["name"].(string),
-						Type: PropertyType(propMap["type"].(string)),
-					})
-				}
+		if props, ok := metadata["properties"]; ok {
+			if propsData, err := json.Marshal(props); err == nil {
+				_ = json.Unmarshal(propsData, &node.Properties)
 			}
 		}
 		if views, ok := metadata["views"]; ok {
@@ -635,14 +630,9 @@ func (ws *WorkspaceFileStore) ReadTable(id ksid.ID) (*Node, error) {
 		}
 	}
 
-	if props, ok := metadata["properties"].([]any); ok {
-		for _, prop := range props {
-			if propMap, ok := prop.(map[string]any); ok {
-				node.Properties = append(node.Properties, Property{
-					Name: propMap["name"].(string),
-					Type: PropertyType(propMap["type"].(string)),
-				})
-			}
+	if props, ok := metadata["properties"]; ok {
+		if propsData, err := json.Marshal(props); err == nil {
+			_ = json.Unmarshal(propsData, &node.Properties)
 		}
 	}
 

@@ -373,6 +373,12 @@ export interface Dictionary {
     recordCount: string;
     groupBy: string;
     recordDetail: string;
+    searchOptions: string;
+    editOptions: string;
+    addOption: string;
+    optionPlaceholder: string;
+    deleteOption: string;
+    optionUsedWarning: string;
   };
 
   errors: {

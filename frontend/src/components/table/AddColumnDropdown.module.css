@@ -99,3 +99,125 @@
 .addColumnCancel:hover {
   background: var(--c-border);
 }
+
+/* Inline options editor for select/multi_select columns */
+
+.inlineOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  padding: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.inlineOptionRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.inlineOptionRow:hover {
+  background: var(--c-bg-hover);
+}
+
+.inlineSwatchWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.inlineSwatchBtn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-hover);
+  cursor: pointer;
+  padding: 0;
+  display: block;
+}
+
+.inlineSwatchPicker {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  z-index: 200;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, 16px);
+  gap: 4px;
+}
+
+.inlineSwatchChoice {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.inlineSwatchChoice:hover {
+  border-color: var(--c-text);
+}
+
+.inlineOptionInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--c-text);
+  padding: 1px 2px;
+  min-width: 0;
+}
+
+.inlineOptionInput:focus {
+  outline: none;
+}
+
+.inlineOptionDelete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--c-text-light);
+  padding: 0;
+  font-size: 0.9rem;
+  line-height: 1;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.inlineOptionRow:hover .inlineOptionDelete {
+  opacity: 1;
+}
+
+.inlineOptionDelete:hover {
+  color: var(--c-danger, #e03e3e);
+}
+
+.inlineAddOptionBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--c-text-light);
+  font-size: 0.78rem;
+  padding: 3px 4px;
+  text-align: left;
+  border-radius: 3px;
+  transition: background var(--transition);
+}
+
+.inlineAddOptionBtn:hover {
+  background: var(--c-bg-hover);
+  color: var(--c-text);
+}
