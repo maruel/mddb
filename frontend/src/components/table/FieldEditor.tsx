@@ -1,6 +1,7 @@
 // Shared always-editable field input for card-style views (gallery, grid).
 
-import { For, Show, Switch, Match, createSignal } from 'solid-js';
+import { For, Show, Switch, Match, createSignal, createEffect, onCleanup, onMount } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import {
   type DataRecordResponse,
   type Property,
@@ -14,7 +15,6 @@ import {
   PropertyTypePhone,
 } from '@sdk/types.gen';
 import { updateRecordField, handleEnterBlur, getFieldValue } from './tableUtils';
-import { useClickOutside } from '../../composables/useClickOutside';
 import styles from './FieldEditor.module.css';
 
 interface FieldEditorProps {
@@ -23,25 +23,79 @@ interface FieldEditorProps {
   onUpdate?: (id: string, data: Record<string, unknown>) => void;
 }
 
-interface MultiSelectEditorProps {
+interface DropPos {
+  left: number;
+  top: number;
+  minWidth: number;
+}
+
+/** Compute viewport-relative position for a portal dropdown below a trigger element. */
+function getDropPos(trigger: HTMLElement): DropPos {
+  const rect = trigger.getBoundingClientRect();
+  return { left: rect.left, top: rect.bottom + 4, minWidth: Math.max(rect.width, 160) };
+}
+
+export interface MultiSelectEditorProps {
   column: Property;
   value: string;
   onSave: (v: string) => void;
   /** Called when the editor requests to be closed (Escape or click-outside). */
   onClose?: () => void;
+  /** Open the dropdown immediately on mount (used when embedded in a table cell). */
+  autoOpen?: boolean;
 }
 
 export function MultiSelectEditor(props: MultiSelectEditorProps) {
   const [open, setOpen] = createSignal(false);
-  let wrapperRef: HTMLDivElement | undefined;
+  const [dropPos, setDropPos] = createSignal<DropPos | null>(null);
+  let triggerRef: HTMLDivElement | undefined;
+  let dropRef: HTMLDivElement | undefined;
 
-  useClickOutside(
-    () => wrapperRef,
-    () => {
-      setOpen(false);
-      props.onClose?.();
-    }
-  );
+  const openDropdown = () => {
+    if (triggerRef) setDropPos(getDropPos(triggerRef));
+    setOpen(true);
+  };
+
+  const closeDropdown = () => {
+    setOpen(false);
+    setDropPos(null);
+    props.onClose?.();
+  };
+
+  // Click-outside detection for the portal dropdown.
+  createEffect(() => {
+    if (!open()) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!triggerRef?.contains(target) && !dropRef?.contains(target)) {
+        setOpen(false);
+        setDropPos(null);
+        props.onClose?.();
+      }
+    };
+    const id = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    onCleanup(() => {
+      clearTimeout(id);
+      document.removeEventListener('mousedown', handler);
+    });
+  });
+
+  // Escape key.
+  createEffect(() => {
+    if (!open()) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeDropdown();
+      }
+    };
+    document.addEventListener('keydown', handler, true);
+    onCleanup(() => document.removeEventListener('keydown', handler, true));
+  });
+
+  onMount(() => {
+    if (props.autoOpen) openDropdown();
+  });
 
   const selectedIds = () =>
     props.value
@@ -62,20 +116,8 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
 
   const unselectedOptions = () => (props.column.options ?? []).filter((o) => !selectedIds().includes(o.id));
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setOpen(false);
-      props.onClose?.();
-    }
-  };
-
   return (
-    <div
-      class={styles.multiSelectWrapper}
-      ref={(el) => (wrapperRef = el)}
-      onKeyDown={handleKeyDown}
-      onClick={() => setOpen(true)}
-    >
+    <div class={styles.multiSelectWrapper} ref={(el) => (triggerRef = el)} onClick={openDropdown}>
       <div class={styles.chipList}>
         <For each={selectedIds()}>
           {(id) => {
@@ -99,77 +141,118 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
           }}
         </For>
       </div>
-      <Show when={open() && unselectedOptions().length > 0}>
-        <div class={styles.optionsList}>
-          <For each={unselectedOptions()}>
-            {(opt) => (
-              <div
-                class={styles.optionItem}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggle(opt.id);
-                }}
-              >
-                <Show when={opt.color}>
-                  <span class={styles.optionColor} style={{ background: opt.color }} />
-                </Show>
-                {opt.name}
-              </div>
-            )}
-          </For>
-        </div>
+      <Show when={open() && unselectedOptions().length > 0 && dropPos()}>
+        {(pos) => (
+          <Portal>
+            <div
+              ref={(el) => (dropRef = el)}
+              class={styles.portalDropdown}
+              style={{
+                left: `${pos().left}px`,
+                top: `${pos().top}px`,
+                'min-width': `${pos().minWidth}px`,
+              }}
+            >
+              <For each={unselectedOptions()}>
+                {(opt) => (
+                  <div
+                    class={styles.optionItem}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // prevent blur before toggle
+                      toggle(opt.id);
+                    }}
+                  >
+                    <Show when={opt.color}>
+                      <span class={styles.optionColor} style={{ background: opt.color }} />
+                    </Show>
+                    {opt.name}
+                  </div>
+                )}
+              </For>
+            </div>
+          </Portal>
+        )}
       </Show>
     </div>
   );
 }
 
-interface SingleSelectEditorProps {
+export interface SingleSelectEditorProps {
   column: Property;
   value: string;
   onSave: (v: string) => void;
   onClose?: () => void;
+  autoOpen?: boolean;
 }
 
-function SingleSelectEditor(props: SingleSelectEditorProps) {
+export function SingleSelectEditor(props: SingleSelectEditorProps) {
   const [open, setOpen] = createSignal(false);
-  let wrapperRef: HTMLDivElement | undefined;
+  const [dropPos, setDropPos] = createSignal<DropPos | null>(null);
+  let triggerRef: HTMLDivElement | undefined;
+  let dropRef: HTMLDivElement | undefined;
 
-  useClickOutside(
-    () => wrapperRef,
-    () => {
-      setOpen(false);
-      props.onClose?.();
-    }
-  );
+  const openDropdown = () => {
+    if (triggerRef) setDropPos(getDropPos(triggerRef));
+    setOpen(true);
+  };
+
+  const closeDropdown = () => {
+    setOpen(false);
+    setDropPos(null);
+    props.onClose?.();
+  };
+
+  createEffect(() => {
+    if (!open()) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!triggerRef?.contains(target) && !dropRef?.contains(target)) {
+        setOpen(false);
+        setDropPos(null);
+        props.onClose?.();
+      }
+    };
+    const id = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    onCleanup(() => {
+      clearTimeout(id);
+      document.removeEventListener('mousedown', handler);
+    });
+  });
+
+  createEffect(() => {
+    if (!open()) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeDropdown();
+      }
+    };
+    document.addEventListener('keydown', handler, true);
+    onCleanup(() => document.removeEventListener('keydown', handler, true));
+  });
+
+  onMount(() => {
+    if (props.autoOpen) openDropdown();
+  });
 
   const selectedOption = () => props.column.options?.find((o) => o.id === props.value || o.name === props.value);
 
   const handleSelect = (optId: string) => {
     props.onSave(optId);
-    setOpen(false);
-    props.onClose?.();
+    closeDropdown();
   };
 
   const handleClear = (e: MouseEvent) => {
     e.stopPropagation();
     props.onSave('');
-    setOpen(false);
-    props.onClose?.();
-  };
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setOpen(false);
-      props.onClose?.();
-    }
+    closeDropdown();
   };
 
   return (
     <div
       class={styles.singleSelectWrapper}
-      ref={(el) => (wrapperRef = el)}
-      onKeyDown={handleKeyDown}
-      onClick={() => setOpen(!open())}
+      ref={(el) => (triggerRef = el)}
+      onClick={() => (open() ? closeDropdown() : openDropdown())}
     >
       <Show when={selectedOption()} fallback={<span class={styles.selectPlaceholder}>--</span>}>
         {(opt) => (
@@ -181,36 +264,47 @@ function SingleSelectEditor(props: SingleSelectEditorProps) {
           </span>
         )}
       </Show>
-      <Show when={open()}>
-        <div class={styles.optionsList}>
-          <div
-            class={styles.optionItem}
-            onClick={(e) => {
-              e.stopPropagation();
-              props.onSave('');
-              setOpen(false);
-              props.onClose?.();
-            }}
-          >
-            <span class={styles.optionNone}>—</span>
-          </div>
-          <For each={props.column.options}>
-            {(opt) => (
+      <Show when={open() && dropPos()}>
+        {(pos) => (
+          <Portal>
+            <div
+              ref={(el) => (dropRef = el)}
+              class={styles.portalDropdown}
+              style={{
+                left: `${pos().left}px`,
+                top: `${pos().top}px`,
+                'min-width': `${pos().minWidth}px`,
+              }}
+            >
               <div
                 class={styles.optionItem}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelect(opt.id);
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  props.onSave('');
+                  closeDropdown();
                 }}
               >
-                <Show when={opt.color}>
-                  <span class={styles.optionColor} style={{ background: opt.color }} />
-                </Show>
-                {opt.name}
+                <span class={styles.optionNone}>—</span>
               </div>
-            )}
-          </For>
-        </div>
+              <For each={props.column.options}>
+                {(opt) => (
+                  <div
+                    class={styles.optionItem}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelect(opt.id);
+                    }}
+                  >
+                    <Show when={opt.color}>
+                      <span class={styles.optionColor} style={{ background: opt.color }} />
+                    </Show>
+                    {opt.name}
+                  </div>
+                )}
+              </For>
+            </div>
+          </Portal>
+        )}
       </Show>
     </div>
   );

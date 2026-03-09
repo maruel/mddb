@@ -76,19 +76,15 @@
   font-size: 0.85rem;
 }
 
-.optionsList {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 50;
+.portalDropdown {
+  position: fixed;
+  z-index: 1000;
   background: var(--c-bg);
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  min-width: 140px;
   max-height: 200px;
   overflow-y: auto;
-  margin-top: 2px;
 }
 
 .optionItem {

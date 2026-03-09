@@ -1,6 +1,6 @@
 // Table cell component with inline editing for different property types.
 
-import { createSignal, Show, For, type Accessor } from 'solid-js';
+import { createSignal, Show, type Accessor } from 'solid-js';
 import {
   type DataRecordResponse,
   type Property,
@@ -12,7 +12,7 @@ import {
 } from '@sdk/types.gen';
 import styles from './TableCell.module.css';
 import { FieldValue } from './FieldValue';
-import { MultiSelectEditor } from './FieldEditor';
+import { MultiSelectEditor, SingleSelectEditor } from './FieldEditor';
 
 export interface TableCellProps {
   record: DataRecordResponse;
@@ -143,32 +143,20 @@ export function TableCell(props: TableCellProps) {
               props.onSave(v);
             }}
             onClose={props.onCancel}
+            autoOpen
           />
         );
       case PropertyTypeSelect:
-        if (props.column.options && props.column.options.length > 0) {
-          return (
-            <select
-              ref={focusRef}
-              value={initialValue}
-              onChange={syncAndSave}
-              onBlur={syncAndBlur}
-              onKeyDown={onKeyDown}
-              class={styles.input}
-            >
-              <option value="">--</option>
-              <For each={props.column.options}>{(option) => <option value={option.id}>{option.name}</option>}</For>
-            </select>
-          );
-        }
         return (
-          <input
-            ref={focusRef}
-            type="text"
+          <SingleSelectEditor
+            column={props.column}
             value={initialValue}
-            onBlur={syncAndBlur}
-            onKeyDown={onKeyDown}
-            class={styles.input}
+            onSave={(v) => {
+              setEditValue(v);
+              props.onSave(v);
+            }}
+            onClose={props.onCancel}
+            autoOpen
           />
         );
       case PropertyTypeNumber:
