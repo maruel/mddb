@@ -3,7 +3,7 @@
 // with group names, emoji characters, and names (for search) for the icon picker.
 // Output: frontend/src/components/editor/emoji-groups.json
 
-import { readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -20,7 +20,6 @@ const groups = raw.map((g) => ({
   e: g.emojis.map((em) => ({ c: em.emoji, n: em.name })),
 }));
 
-writeFileSync(outFile, JSON.stringify(groups, null, 2) + '\n');
-
-const total = groups.reduce((s, g) => s + g.e.length, 0);
-console.log(`Generated ${total} emojis in ${groups.length} groups → ${outFile}`);
+const content = JSON.stringify(groups, null, 2) + '\n';
+const existing = existsSync(outFile) ? readFileSync(outFile, 'utf8') : null;
+if (existing !== content) writeFileSync(outFile, content);

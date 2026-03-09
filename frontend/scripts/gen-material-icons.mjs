@@ -2,7 +2,7 @@
 // Reads filenames from @material-symbols/svg-400/outlined/, excludes -fill variants.
 // Output: frontend/src/components/editor/material-symbols-names.json
 
-import { readdirSync, writeFileSync } from 'fs';
+import { readdirSync, writeFileSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -15,5 +15,7 @@ const names = readdirSync(outlined)
   .map((f) => f.slice(0, -4)) // strip .svg
   .sort();
 
-writeFileSync(outFile, JSON.stringify(names, null, 2) + '\n');
-console.log(`Generated ${names.length} icon names → ${outFile}`);
+const content = JSON.stringify(names, null, 2) + '\n';
+let existing;
+try { existing = readFileSync(outFile, 'utf8'); } catch { existing = null; }
+if (existing !== content) writeFileSync(outFile, content);
