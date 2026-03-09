@@ -205,6 +205,13 @@ export default function NodeView() {
     await updateTableProperties(nodeId, currentProperties);
   }
 
+  // Handle reordering columns via drag-and-drop
+  async function handleReorderColumns(newProperties: Property[]) {
+    const nodeId = selectedNodeId();
+    if (!nodeId) return;
+    await updateTableProperties(nodeId, newProperties);
+  }
+
   // Handle inserting a new text column at a position
   async function handleInsertColumn(beforeIndex: number) {
     const nodeId = selectedNodeId();
@@ -359,6 +366,7 @@ export default function NodeView() {
                       onUpdateColumn={handleUpdateColumn}
                       onDeleteColumn={handleDeleteColumn}
                       onInsertColumn={handleInsertColumn}
+                      onReorderColumns={handleReorderColumns}
                       onLoadMore={loadMoreRecords}
                       hasMore={hasMore()}
                       onOpenRecord={(id) => setOpenRecordId(id)}

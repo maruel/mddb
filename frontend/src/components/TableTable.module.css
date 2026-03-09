@@ -463,3 +463,13 @@
   padding: 0;
   min-width: 36px;
 }
+
+/* Column drag-to-reorder */
+.colDragging {
+  opacity: 0.4;
+  cursor: grabbing !important;
+}
+
+.colDragOver {
+  box-shadow: inset 3px 0 0 var(--c-primary);
+}

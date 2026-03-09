@@ -39,6 +39,7 @@ interface TableTableProps {
   onUpdateColumn?: (index: number, column: Property) => void;
   onDeleteColumn?: (index: number) => void;
   onInsertColumn?: (beforeIndex: number) => void;
+  onReorderColumns?: (newOrder: Property[]) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
 }
@@ -108,6 +109,45 @@ export default function TableTable(props: TableTableProps) {
   };
 
   const colWidth = (colName: string): number => dragWidths()[colName] ?? storedWidth(colName) ?? DEFAULT_COL_WIDTH;
+
+  // Column drag-to-reorder state
+  const [draggingColName, setDraggingColName] = createSignal<string | null>(null);
+  const [dragOverColName, setDragOverColName] = createSignal<string | null>(null);
+
+  const handleColDragStart = (e: DragEvent, colName: string) => {
+    if (resizing()) {
+      e.preventDefault();
+      return;
+    }
+    e.dataTransfer?.setData('text/plain', colName);
+    setDraggingColName(colName);
+  };
+
+  const handleColDragOver = (e: DragEvent, colName: string) => {
+    e.preventDefault();
+    if (colName !== draggingColName()) setDragOverColName(colName);
+  };
+
+  const handleColDragEnd = () => {
+    setDraggingColName(null);
+    setDragOverColName(null);
+  };
+
+  const handleColDrop = (e: DragEvent, targetColName: string) => {
+    e.preventDefault();
+    const srcName = draggingColName();
+    setDraggingColName(null);
+    setDragOverColName(null);
+    if (!srcName || srcName === targetColName || !props.onReorderColumns) return;
+    const cols = [...props.columns];
+    const srcIdx = cols.findIndex((c) => c.name === srcName);
+    if (srcIdx < 0) return;
+    const [moved] = cols.splice(srcIdx, 1) as [Property];
+    const targetIdx = cols.findIndex((c) => c.name === targetColName);
+    if (targetIdx < 0) return;
+    cols.splice(targetIdx, 0, moved);
+    props.onReorderColumns(cols);
+  };
 
   // Column visibility
   const [hiddenDropdownOpen, setHiddenDropdownOpen] = createSignal(false);
@@ -582,9 +622,18 @@ export default function TableTable(props: TableTableProps) {
                   return (
                     <th
                       class={styles.headerCell}
+                      classList={{
+                        [`${styles.colDragging}`]: draggingColName() === column.name,
+                        [`${styles.colDragOver}`]: dragOverColName() === column.name,
+                      }}
                       style={{ width: `${colWidth(column.name)}px`, 'min-width': `${MIN_COL_WIDTH}px` }}
+                      draggable={!!props.onReorderColumns && realIndex() > 0}
                       onClick={(e) => handleHeaderClick(e, realIndex())}
                       onContextMenu={(e) => handleHeaderContextMenu(e, realIndex())}
+                      onDragStart={(e) => handleColDragStart(e, column.name)}
+                      onDragOver={(e) => realIndex() > 0 && handleColDragOver(e, column.name)}
+                      onDrop={(e) => realIndex() > 0 && handleColDrop(e, column.name)}
+                      onDragEnd={handleColDragEnd}
                     >
                       <Show
                         when={renamingColumn() === realIndex()}
