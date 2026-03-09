@@ -125,39 +125,41 @@ type WorkspaceMembershipSettings struct {
 }
 
 // ResourceQuotas defines per-workspace content limits shared by server, org, and workspace layers.
-// A zero value means "no limit at this layer" (inherit from other layers).
+// At org and workspace layers: -1 means "inherit from parent", 0 means "disabled", positive means a limit.
+// At server layer all fields must be strictly positive.
 type ResourceQuotas struct {
-	MaxPages              int   `json:"max_pages" jsonschema:"description=Maximum pages per workspace (0=no limit at this layer)"`
-	MaxStorageBytes       int64 `json:"max_storage_bytes" jsonschema:"description=Maximum storage per workspace in bytes (0=no limit at this layer)"`
-	MaxRecordsPerTable    int   `json:"max_records_per_table" jsonschema:"description=Maximum records per table (0=no limit at this layer)"`
-	MaxAssetSizeBytes     int64 `json:"max_asset_size_bytes" jsonschema:"description=Maximum single asset file size in bytes (0=no limit at this layer)"`
-	MaxTablesPerWorkspace int   `json:"max_tables_per_workspace" jsonschema:"description=Maximum tables per workspace (0=no limit at this layer)"`
-	MaxColumnsPerTable    int   `json:"max_columns_per_table" jsonschema:"description=Maximum columns per table (0=no limit at this layer)"`
+	MaxPages              int   `json:"max_pages" jsonschema:"description=Maximum pages per workspace (-1=inherit, 0=disabled, positive=limit)"`
+	MaxStorageBytes       int64 `json:"max_storage_bytes" jsonschema:"description=Maximum storage per workspace in bytes (-1=inherit, 0=disabled, positive=limit)"`
+	MaxRecordsPerTable    int   `json:"max_records_per_table" jsonschema:"description=Maximum records per table (-1=inherit, 0=disabled, positive=limit)"`
+	MaxAssetSizeBytes     int64 `json:"max_asset_size_bytes" jsonschema:"description=Maximum single asset file size in bytes (-1=inherit, 0=disabled, positive=limit)"`
+	MaxTablesPerWorkspace int   `json:"max_tables_per_workspace" jsonschema:"description=Maximum tables per workspace (-1=inherit, 0=disabled, positive=limit)"`
+	MaxColumnsPerTable    int   `json:"max_columns_per_table" jsonschema:"description=Maximum columns per table (-1=inherit, 0=disabled, positive=limit)"`
 }
 
-// Validate checks that all resource quota values are non-negative.
+// Validate checks that all resource quota values are valid for org/workspace layers.
+// -1 (inherit), 0 (disabled), and positive values are accepted. Values below -1 are invalid.
 // The prefix is prepended to field names in error messages (e.g., "quotas").
 func (q *ResourceQuotas) Validate(prefix string) error {
 	if prefix != "" {
 		prefix += "."
 	}
-	if q.MaxPages < 0 {
-		return InvalidField(prefix+"max_pages", "must be non-negative")
+	if q.MaxPages < -1 {
+		return InvalidField(prefix+"max_pages", "must be -1 (inherit), 0 (disabled), or positive")
 	}
-	if q.MaxStorageBytes < 0 {
-		return InvalidField(prefix+"max_storage_bytes", "must be non-negative")
+	if q.MaxStorageBytes < -1 {
+		return InvalidField(prefix+"max_storage_bytes", "must be -1 (inherit), 0 (disabled), or positive")
 	}
-	if q.MaxRecordsPerTable < 0 {
-		return InvalidField(prefix+"max_records_per_table", "must be non-negative")
+	if q.MaxRecordsPerTable < -1 {
+		return InvalidField(prefix+"max_records_per_table", "must be -1 (inherit), 0 (disabled), or positive")
 	}
-	if q.MaxAssetSizeBytes < 0 {
-		return InvalidField(prefix+"max_asset_size_bytes", "must be non-negative")
+	if q.MaxAssetSizeBytes < -1 {
+		return InvalidField(prefix+"max_asset_size_bytes", "must be -1 (inherit), 0 (disabled), or positive")
 	}
-	if q.MaxTablesPerWorkspace < 0 {
-		return InvalidField(prefix+"max_tables_per_workspace", "must be non-negative")
+	if q.MaxTablesPerWorkspace < -1 {
+		return InvalidField(prefix+"max_tables_per_workspace", "must be -1 (inherit), 0 (disabled), or positive")
 	}
-	if q.MaxColumnsPerTable < 0 {
-		return InvalidField(prefix+"max_columns_per_table", "must be non-negative")
+	if q.MaxColumnsPerTable < -1 {
+		return InvalidField(prefix+"max_columns_per_table", "must be -1 (inherit), 0 (disabled), or positive")
 	}
 	return nil
 }
@@ -173,7 +175,7 @@ type OrganizationQuotas struct {
 }
 
 // WorkspaceQuotas is a type alias for ResourceQuotas.
-// Zero values mean "inherit from server/org layer".
+// -1 means "inherit from parent", 0 means "disabled", positive means a limit.
 type WorkspaceQuotas = ResourceQuotas
 
 // UserQuota defines limits for a user.

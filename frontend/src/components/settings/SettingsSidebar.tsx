@@ -7,6 +7,7 @@ import { useI18n } from '../../i18n';
 import { settingsUrl, type UnifiedSettingsMatch } from '../../utils/urls';
 import { OrgRoleAdmin, OrgRoleOwner, WSRoleAdmin } from '@sdk/types.gen';
 import SettingsNavItem from './SettingsNavItem';
+import { workspaceTabDefs, orgTabDefs } from './settingsTabs';
 import styles from './SettingsSidebar.module.css';
 
 interface SettingsSidebarProps {
@@ -85,25 +86,13 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
         const wsId = ws.workspace_id;
         const wsName = ws.workspace_name || wsId;
         const isAdmin = ws.role === WSRoleAdmin;
-        const children: NavItem[] = [
-          {
-            id: `ws-${wsId}-members`,
-            label: t('settings.members'),
-            url: settingsUrl('workspace', wsId, wsName) + '#members',
-          },
-          {
-            id: `ws-${wsId}-settings`,
-            label: t('settings.settings'),
-            url: settingsUrl('workspace', wsId, wsName) + '#settings',
-          },
-        ];
-        if (isAdmin) {
-          children.push({
-            id: `ws-${wsId}-sync`,
-            label: t('settings.gitSync'),
-            url: settingsUrl('workspace', wsId, wsName) + '#sync',
-          });
-        }
+        const children: NavItem[] = workspaceTabDefs
+          .filter((tab) => !tab.adminOnly || isAdmin)
+          .map((tab) => ({
+            id: `ws-${wsId}-${tab.id}`,
+            label: t(tab.labelKey as Parameters<typeof t>[0]),
+            url: settingsUrl('workspace', wsId, wsName) + `#${tab.id}`,
+          }));
         return {
           id: `ws-${wsId}`,
           label: wsName,
@@ -130,18 +119,11 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
           id: `org-${orgId}`,
           label: orgName,
           url: settingsUrl('org', orgId, orgName),
-          children: [
-            {
-              id: `org-${orgId}-members`,
-              label: t('settings.members'),
-              url: settingsUrl('org', orgId, orgName) + '#members',
-            },
-            {
-              id: `org-${orgId}-settings`,
-              label: t('settings.settings'),
-              url: settingsUrl('org', orgId, orgName) + '#settings',
-            },
-          ],
+          children: orgTabDefs.map((tab) => ({
+            id: `org-${orgId}-${tab.id}`,
+            label: t(tab.labelKey as Parameters<typeof t>[0]),
+            url: settingsUrl('org', orgId, orgName) + `#${tab.id}`,
+          })),
         };
       });
 

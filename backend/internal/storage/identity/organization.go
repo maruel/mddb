@@ -79,9 +79,17 @@ type OrganizationQuotas struct {
 }
 
 // DefaultOrganizationQuotas returns the default quotas for a new organization.
-// ResourceQuotas fields default to zero (no org-level content restriction).
+// ResourceQuotas fields default to -1 (inherit from server).
 func DefaultOrganizationQuotas() OrganizationQuotas {
 	return OrganizationQuotas{
+		ResourceQuotas: storage.ResourceQuotas{
+			MaxPages:              -1,
+			MaxStorageBytes:       -1,
+			MaxRecordsPerTable:    -1,
+			MaxAssetSizeBytes:     -1,
+			MaxTablesPerWorkspace: -1,
+			MaxColumnsPerTable:    -1,
+		},
 		MaxWorkspacesPerOrg:    3,
 		MaxMembersPerOrg:       10,
 		MaxMembersPerWorkspace: 10,

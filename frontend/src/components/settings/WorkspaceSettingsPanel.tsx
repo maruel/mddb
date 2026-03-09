@@ -12,9 +12,11 @@ import {
   type GitRemoteResponse,
   type GitHubAppRepoResponse,
   type GitHubAppInstallationResponse,
+  type ResourceQuotas,
 } from '@sdk/types.gen';
 import MembersTable from './MembersTable';
 import InviteForm from './InviteForm';
+import ResourceQuotaForm from './ResourceQuotaForm';
 import styles from './WorkspaceSettingsPanel.module.css';
 
 interface WorkspaceSettingsPanelProps {
@@ -23,7 +25,7 @@ interface WorkspaceSettingsPanelProps {
   onNavigateToOrgSettings: (orgId: string, orgName: string) => void;
 }
 
-type Tab = 'members' | 'settings' | 'sync';
+type Tab = 'members' | 'settings' | 'quotas' | 'sync';
 
 export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProps) {
   const { t } = useI18n();
@@ -31,9 +33,9 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const location = useLocation();
   const { user, orgApi, wsApi, api } = useAuth();
 
-  // Determine initial tab from section prop
   const getInitialTab = (): Tab => {
     if (props.section === 'settings') return 'settings';
+    if (props.section === 'quotas') return 'quotas';
     if (props.section === 'sync') return 'sync';
     return 'members';
   };
@@ -66,13 +68,18 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
   const [originalWsName, setOriginalWsName] = createSignal('');
   const [gitAutoPush, setGitAutoPush] = createSignal(false);
 
-  // Workspace Quotas
-  const [maxPages, setMaxPages] = createSignal(0);
-  const [maxStorageBytes, setMaxStorageBytes] = createSignal(0);
-  const [maxRecordsPerTable, setMaxRecordsPerTable] = createSignal(0);
-  const [maxAssetSizeBytes, setMaxAssetSizeBytes] = createSignal(0);
-  const [maxTablesPerWorkspace, setMaxTablesPerWorkspace] = createSignal(0);
-  const [maxColumnsPerTable, setMaxColumnsPerTable] = createSignal(0);
+  // Resource quotas: -1 = inherit from parent, 0 = disabled, positive = limit
+  const [resourceQuotas, setResourceQuotas] = createSignal<ResourceQuotas>({
+    max_pages: -1,
+    max_storage_bytes: -1,
+    max_records_per_table: -1,
+    max_asset_size_bytes: -1,
+    max_tables_per_workspace: -1,
+    max_columns_per_table: -1,
+  });
+
+  // Server+org upper bounds for workspace quotas (shown as ceiling hints)
+  const [parentLimits, setParentLimits] = createSignal<ResourceQuotas | null>(null);
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -80,7 +87,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
   const isAdmin = () => user()?.workspace_role === WSRoleAdmin;
 
-  // Update URL hash when tab changes
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     const newHash = tab === 'members' ? '' : `#${tab}`;
@@ -105,22 +111,23 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
         setInvitations(invsData.invitations?.filter((i): i is WSInvitationResponse => !!i) || []);
       }
 
-      if (activeTab() === 'settings' && ws) {
+      if ((activeTab() === 'settings' || activeTab() === 'quotas') && ws) {
         const wsData = await ws.workspaces.getWorkspace();
         setWsName(wsData.name);
         setOriginalWsName(wsData.name);
         setGitAutoPush(wsData.settings.git_auto_push);
-        // Load quotas
-        setMaxPages(wsData.quotas.max_pages);
-        setMaxStorageBytes(wsData.quotas.max_storage_bytes);
-        setMaxRecordsPerTable(wsData.quotas.max_records_per_table);
-        setMaxAssetSizeBytes(wsData.quotas.max_asset_size_bytes);
-        setMaxTablesPerWorkspace(wsData.quotas.max_tables_per_workspace);
-        setMaxColumnsPerTable(wsData.quotas.max_columns_per_table);
+        setResourceQuotas({
+          max_pages: wsData.quotas.max_pages,
+          max_storage_bytes: wsData.quotas.max_storage_bytes,
+          max_records_per_table: wsData.quotas.max_records_per_table,
+          max_asset_size_bytes: wsData.quotas.max_asset_size_bytes,
+          max_tables_per_workspace: wsData.quotas.max_tables_per_workspace,
+          max_columns_per_table: wsData.quotas.max_columns_per_table,
+        });
+        setParentLimits(wsData.parent_resource_limits);
       }
 
       if (activeTab() === 'sync' && isAdmin() && ws) {
-        // Check GitHub App availability and load installations
         try {
           const availResp = await api().githubApp.isGitHubAppAvailable();
           setGitHubAppAvailable(availResp.available);
@@ -139,7 +146,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
           setSyncSetupMode('manual');
         }
 
-        // Load git remote
         try {
           const remoteData = await ws.settings.git.getGitRemote();
           setGitRemote(remoteData);
@@ -147,7 +153,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
           setGitRemote(null);
         }
 
-        // Load sync status
         try {
           const statusData = await ws.settings.git.getSyncStatus();
           setSyncStatus(statusData.sync_status || '');
@@ -167,10 +172,10 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     loadData();
   });
 
-  // Update tab when section prop changes
   createEffect(() => {
     const section = props.section;
     if (section === 'settings') setActiveTab('settings');
+    else if (section === 'quotas') setActiveTab('quotas');
     else if (section === 'sync') setActiveTab('sync');
     else if (section === 'members' || !section) setActiveTab('members');
   });
@@ -217,24 +222,30 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setError(null);
       setSuccess(null);
 
-      // Update name if changed
       if (wsName() !== originalWsName() && wsName().trim()) {
         await ws.workspaces.updateWorkspace({ name: wsName().trim() });
         setOriginalWsName(wsName().trim());
       }
 
-      // Update quotas
-      await ws.workspaces.updateWorkspace({
-        quotas: {
-          max_pages: maxPages(),
-          max_storage_bytes: maxStorageBytes(),
-          max_records_per_table: maxRecordsPerTable(),
-          max_asset_size_bytes: maxAssetSizeBytes(),
-          max_tables_per_workspace: maxTablesPerWorkspace(),
-          max_columns_per_table: maxColumnsPerTable(),
-        },
-      });
+      setSuccess(t('success.workspaceSettingsSaved') || 'Workspace settings saved successfully');
+    } catch (err) {
+      setError(`${t('errors.failedToSave')}: ${err}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const saveWorkspaceQuotas = async (e: Event) => {
+    e.preventDefault();
+    const ws = wsApi();
+    if (!ws) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      await ws.workspaces.updateWorkspace({ quotas: resourceQuotas() });
       setSuccess(t('success.workspaceSettingsSaved') || 'Workspace settings saved successfully');
     } catch (err) {
       setError(`${t('errors.failedToSave')}: ${err}`);
@@ -427,6 +438,9 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
         <button class={activeTab() === 'settings' ? styles.activeTab : ''} onClick={() => handleTabChange('settings')}>
           {t('settings.workspace')}
         </button>
+        <button class={activeTab() === 'quotas' ? styles.activeTab : ''} onClick={() => handleTabChange('quotas')}>
+          {t('settings.quotas')}
+        </button>
         <Show when={isAdmin()}>
           <button class={activeTab() === 'sync' ? styles.activeTab : ''} onClick={() => handleTabChange('sync')}>
             {t('settings.gitSync')}
@@ -474,87 +488,49 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
                 <input type="text" value={wsName()} onInput={(e) => setWsName(e.target.value)} required />
               </div>
 
-              <h4>{t('settings.workspaceQuotas')}</h4>
-              <div class={styles.formGrid}>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxPages')}</label>
-                  <input
-                    type="number"
-                    value={maxPages()}
-                    onInput={(e) => setMaxPages(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxStorageBytes')}</label>
-                  <input
-                    type="number"
-                    value={maxStorageBytes()}
-                    onInput={(e) => setMaxStorageBytes(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxRecordsPerTable')}</label>
-                  <input
-                    type="number"
-                    value={maxRecordsPerTable()}
-                    onInput={(e) => setMaxRecordsPerTable(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxAssetSizeBytes')}</label>
-                  <input
-                    type="number"
-                    value={maxAssetSizeBytes()}
-                    onInput={(e) => setMaxAssetSizeBytes(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxTablesPerWorkspace')}</label>
-                  <input
-                    type="number"
-                    value={maxTablesPerWorkspace()}
-                    onInput={(e) => setMaxTablesPerWorkspace(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxColumnsPerTable')}</label>
-                  <input
-                    type="number"
-                    value={maxColumnsPerTable()}
-                    onInput={(e) => setMaxColumnsPerTable(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-              </div>
-
               <button type="submit" class={styles.saveButton} disabled={loading()}>
                 {t('settings.saveWorkspaceSettings')}
               </button>
             </form>
-          </Show>
 
-          <div class={styles.orgLink}>
-            <p>{t('settings.orgSettingsHint')}</p>
-            <button
-              onClick={() => {
-                const u = user();
-                const orgId = u?.organization_id;
-                const orgMembership = u?.organizations?.find((m) => m.organization_id === orgId);
-                const orgName = orgMembership?.organization_name || '';
-                if (orgId) {
-                  props.onNavigateToOrgSettings(orgId, orgName);
-                }
-              }}
-              class={styles.linkButton}
-            >
-              {t('settings.openOrgSettings')} →
-            </button>
-          </div>
+            <div class={styles.orgLink}>
+              <p>{t('settings.orgSettingsHint')}</p>
+              <button
+                onClick={() => {
+                  const u = user();
+                  const orgId = u?.organization_id;
+                  const orgMembership = u?.organizations?.find((m) => m.organization_id === orgId);
+                  const orgName = orgMembership?.organization_name || '';
+                  if (orgId) {
+                    props.onNavigateToOrgSettings(orgId, orgName);
+                  }
+                }}
+                class={styles.linkButton}
+              >
+                {t('settings.openOrgSettings')} →
+              </button>
+            </div>
+          </Show>
+        </section>
+      </Show>
+
+      <Show when={activeTab() === 'quotas'}>
+        <section class={styles.section}>
+          <h3>{t('settings.quotas')}</h3>
+          <Show when={isAdmin()} fallback={<p>{t('settings.adminOnlyWorkspace')}</p>}>
+            <form onSubmit={saveWorkspaceQuotas} class={styles.settingsForm}>
+              <ResourceQuotaForm
+                value={resourceQuotas}
+                onChange={setResourceQuotas}
+                ceiling={parentLimits}
+                ceilingLabel={t('settings.parentCeiling')}
+                allowInherit={true}
+              />
+              <button type="submit" class={styles.saveButton} disabled={loading()}>
+                {t('common.save')}
+              </button>
+            </form>
+          </Show>
         </section>
       </Show>
 
@@ -638,7 +614,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
           </Show>
 
           <Show when={!gitRemote()}>
-            {/* Setup mode tabs - always show both, gray out GitHub App when unavailable */}
             <div class={styles.setupTabs}>
               <button
                 class={
@@ -661,12 +636,10 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
               </button>
             </div>
 
-            {/* GitHub App not configured message */}
             <Show when={syncSetupMode() === 'github' && !gitHubAppAvailable()}>
               <div class={styles.notConfiguredMessage}>{t('settings.gitHubAppNotConfigured')}</div>
             </Show>
 
-            {/* GitHub App setup */}
             <Show when={syncSetupMode() === 'github' && gitHubAppAvailable()}>
               <div class={styles.addRemoteSection}>
                 <h4>{t('settings.gitHubAppSetup')}</h4>
@@ -730,7 +703,6 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
               </div>
             </Show>
 
-            {/* Manual PAT setup */}
             <Show when={syncSetupMode() === 'manual'}>
               <div class={styles.addRemoteSection}>
                 <h4>{t('settings.addNewRemote')}</h4>

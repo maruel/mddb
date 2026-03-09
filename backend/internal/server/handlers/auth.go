@@ -162,7 +162,7 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.Use
 
 	memberCount := h.svc.OrgMembership.CountOrgMemberships(org.ID)
 	workspaceCount := h.svc.Workspace.CountByOrg(org.ID)
-	return organizationToResponse(org, memberCount, workspaceCount), nil
+	return organizationToResponse(org, memberCount, workspaceCount, h.cfg.Quotas.ResourceQuotas), nil
 }
 
 // populateActiveContext populates organization/workspace context in the UserResponse.

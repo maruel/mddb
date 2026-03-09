@@ -64,7 +64,14 @@ func testFileStore(t *testing.T) (*FileStoreService, ksid.ID) {
 		t.Fatalf("failed to set unlimited workspace quotas: %v", err)
 	}
 
-	serverQuotas := storage.DefaultResourceQuotas()
+	serverQuotas := storage.ResourceQuotas{
+		MaxPages:              1_000_000,
+		MaxStorageBytes:       1_000_000_000_000, // 1TB
+		MaxRecordsPerTable:    1_000_000,
+		MaxAssetSizeBytes:     1024 * 1024 * 1024, // 1GB
+		MaxTablesPerWorkspace: 10_000,
+		MaxColumnsPerTable:    1_000,
+	}
 	fs, err := NewFileStoreService(tmpDir, gitMgr, wsService, orgService, &serverQuotas)
 	if err != nil {
 		t.Fatalf("failed to create FileStoreService: %v", err)

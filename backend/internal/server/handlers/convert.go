@@ -82,28 +82,30 @@ func wsInvitationToResponse(i *identity.WorkspaceInvitation) *dto.WSInvitationRe
 	}
 }
 
-func organizationToResponse(o *identity.Organization, memberCount, workspaceCount int) *dto.OrganizationResponse {
+func organizationToResponse(o *identity.Organization, memberCount, workspaceCount int, serverLimits storage.ResourceQuotas) *dto.OrganizationResponse {
 	return &dto.OrganizationResponse{
-		ID:             o.ID,
-		Name:           o.Name,
-		BillingEmail:   o.BillingEmail,
-		Quotas:         organizationQuotasToDTO(&o.Quotas),
-		Settings:       organizationSettingsToDTO(o.Settings),
-		MemberCount:    memberCount,
-		WorkspaceCount: workspaceCount,
-		Created:        o.Created,
+		ID:                   o.ID,
+		Name:                 o.Name,
+		BillingEmail:         o.BillingEmail,
+		Quotas:               organizationQuotasToDTO(&o.Quotas),
+		Settings:             organizationSettingsToDTO(o.Settings),
+		MemberCount:          memberCount,
+		WorkspaceCount:       workspaceCount,
+		Created:              o.Created,
+		ServerResourceLimits: resourceQuotasToDTO(serverLimits),
 	}
 }
 
-func workspaceToResponse(w *identity.Workspace, memberCount int) *dto.WorkspaceResponse {
+func workspaceToResponse(w *identity.Workspace, memberCount int, parentLimits storage.ResourceQuotas) *dto.WorkspaceResponse {
 	resp := &dto.WorkspaceResponse{
-		ID:             w.ID,
-		OrganizationID: w.OrganizationID,
-		Name:           w.Name,
-		Quotas:         workspaceQuotasToDTO(w.Quotas),
-		Settings:       workspaceSettingsToDTO(w.Settings),
-		MemberCount:    memberCount,
-		Created:        w.Created,
+		ID:                   w.ID,
+		OrganizationID:       w.OrganizationID,
+		Name:                 w.Name,
+		Quotas:               workspaceQuotasToDTO(w.Quotas),
+		Settings:             workspaceSettingsToDTO(w.Settings),
+		MemberCount:          memberCount,
+		Created:              w.Created,
+		ParentResourceLimits: resourceQuotasToDTO(parentLimits),
 	}
 	if !w.GitRemote.IsZero() {
 		resp.GitRemote = gitRemoteToResponse(w.ID, &w.GitRemote)

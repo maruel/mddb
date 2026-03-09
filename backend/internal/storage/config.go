@@ -125,14 +125,11 @@ type ServerQuotas struct {
 	MaxNotificationsPerUser int `json:"max_notifications_per_user"`
 }
 
-// Validate checks that all quota values are non-negative.
-// MaxAssetSizeBytes must be positive (it's the ultimate fallback).
+// Validate checks that all quota values are valid.
+// All ResourceQuotas fields must be positive (server is the ultimate fallback; zero is not allowed).
 func (q *ServerQuotas) Validate() error {
-	if err := q.ResourceQuotas.Validate(); err != nil {
+	if err := q.ValidatePositive(); err != nil {
 		return err
-	}
-	if q.MaxAssetSizeBytes <= 0 {
-		return errors.New("max_asset_size_bytes must be positive")
 	}
 	if q.MaxRequestBodyBytes < 0 {
 		return errors.New("max_request_body_bytes must be non-negative")

@@ -283,6 +283,10 @@ export const dict: Dictionary = {
     maxStorageBytes: 'Stockage max (octets)',
     maxRecordsPerTable: 'Enregistrements max par table',
     maxAssetSizeBytes: 'Taille max fichier (octets)',
+    serverCeiling: 'Plafond serveur',
+    parentCeiling: 'Plafond parent',
+    inheritFromParent: 'Hériter du parent',
+    quotas: 'Quotas',
     orgSettingsHint:
       "Pour les paramètres à l'échelle de l'organisation comme les domaines email autorisés, allez dans les paramètres de l'organisation.",
     openOrgSettings: "Ouvrir les paramètres de l'organisation",

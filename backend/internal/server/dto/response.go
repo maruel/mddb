@@ -381,6 +381,10 @@ type OrganizationResponse struct {
 	MemberCount    int                  `json:"member_count" jsonschema:"description=Number of members"`
 	WorkspaceCount int                  `json:"workspace_count" jsonschema:"description=Number of workspaces"`
 	Created        Time                 `json:"created" jsonschema:"description=Organization creation Unix timestamp"`
+
+	// ServerResourceLimits shows the server-imposed upper bound for each resource quota.
+	// The organization's resource quotas cannot exceed these server-level limits.
+	ServerResourceLimits ResourceQuotas `json:"server_resource_limits" jsonschema:"description=Server-imposed upper bounds for resource quotas"`
 }
 
 // WorkspaceResponse is the API representation of a workspace.
@@ -393,6 +397,11 @@ type WorkspaceResponse struct {
 	GitRemote      *GitRemoteResponse `json:"git_remote,omitempty" jsonschema:"description=Git remote configuration"`
 	MemberCount    int                `json:"member_count" jsonschema:"description=Number of members"`
 	Created        Time               `json:"created" jsonschema:"description=Workspace creation Unix timestamp"`
+
+	// ParentResourceLimits shows the effective upper bound imposed by the server and organization.
+	// The workspace's resource quotas cannot exceed these combined limits.
+	// Zero means unlimited at the parent level.
+	ParentResourceLimits ResourceQuotas `json:"parent_resource_limits" jsonschema:"description=Effective upper bounds from server and organization layers"`
 }
 
 // GitRemoteResponse is the API representation of a git remote.

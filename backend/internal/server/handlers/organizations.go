@@ -8,6 +8,7 @@ import (
 
 	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
@@ -25,7 +26,7 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, orgID ksid.ID
 	}
 	memberCount := h.Svc.OrgMembership.CountOrgMemberships(orgID)
 	workspaceCount := h.Svc.Workspace.CountByOrg(orgID)
-	return organizationToResponse(org, memberCount, workspaceCount), nil
+	return organizationToResponse(org, memberCount, workspaceCount, h.Cfg.Quotas.ResourceQuotas), nil
 }
 
 // UpdateOrgPreferences updates organization-wide preferences/settings and quotas.
@@ -52,7 +53,7 @@ func (h *OrganizationHandler) UpdateOrgPreferences(ctx context.Context, orgID ks
 
 	memberCount := h.Svc.OrgMembership.CountOrgMemberships(orgID)
 	workspaceCount := h.Svc.Workspace.CountByOrg(orgID)
-	return organizationToResponse(org, memberCount, workspaceCount), nil
+	return organizationToResponse(org, memberCount, workspaceCount, h.Cfg.Quotas.ResourceQuotas), nil
 }
 
 // UpdateOrganization updates organization details (name).
@@ -66,7 +67,7 @@ func (h *OrganizationHandler) UpdateOrganization(ctx context.Context, orgID ksid
 	}
 	memberCount := h.Svc.OrgMembership.CountOrgMemberships(orgID)
 	workspaceCount := h.Svc.Workspace.CountByOrg(orgID)
-	return organizationToResponse(org, memberCount, workspaceCount), nil
+	return organizationToResponse(org, memberCount, workspaceCount, h.Cfg.Quotas.ResourceQuotas), nil
 }
 
 // CreateWorkspace creates a new workspace within an organization.
@@ -111,7 +112,8 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 	}
 
 	memberCount := h.Svc.WSMembership.CountWSMemberships(ws.ID)
-	return workspaceToResponse(ws, memberCount), nil
+	parentLimits := h.workspaceParentLimits(org)
+	return workspaceToResponse(ws, memberCount, parentLimits), nil
 }
 
 // GetWorkspace retrieves workspace details.
@@ -120,8 +122,13 @@ func (h *OrganizationHandler) GetWorkspace(_ context.Context, wsID ksid.ID, _ *i
 	if err != nil {
 		return nil, err
 	}
+	org, err := h.Svc.Organization.Get(ws.OrganizationID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get organization", err)
+	}
 	memberCount := h.Svc.WSMembership.CountWSMemberships(wsID)
-	return workspaceToResponse(ws, memberCount), nil
+	parentLimits := h.workspaceParentLimits(org)
+	return workspaceToResponse(ws, memberCount, parentLimits), nil
 }
 
 // UpdateWorkspace updates workspace details (name, quotas, and/or settings).
@@ -147,6 +154,19 @@ func (h *OrganizationHandler) UpdateWorkspace(_ context.Context, wsID ksid.ID, _
 		h.Svc.FileStore.InvalidateWorkspaceStore(wsID)
 	}
 
+	org, err := h.Svc.Organization.Get(ws.OrganizationID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get organization", err)
+	}
+
 	memberCount := h.Svc.WSMembership.CountWSMemberships(wsID)
-	return workspaceToResponse(ws, memberCount), nil
+	parentLimits := h.workspaceParentLimits(org)
+	return workspaceToResponse(ws, memberCount, parentLimits), nil
+}
+
+// workspaceParentLimits computes the effective resource quota upper bounds
+// imposed by the server and organization layers (ignoring the workspace layer).
+// This is the ceiling that a workspace's resource quotas cannot exceed.
+func (h *OrganizationHandler) workspaceParentLimits(org *identity.Organization) storage.ResourceQuotas {
+	return storage.EffectiveQuotas(h.Cfg.Quotas.ResourceQuotas, org.Quotas.ResourceQuotas, storage.AllInheritResourceQuotas())
 }

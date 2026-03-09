@@ -283,6 +283,10 @@ export const dict: Dictionary = {
     maxStorageBytes: 'Max. Speicher (Bytes)',
     maxRecordsPerTable: 'Max. Datensätze pro Tabelle',
     maxAssetSizeBytes: 'Max. Asset-Größe (Bytes)',
+    serverCeiling: 'Server-Obergrenze',
+    parentCeiling: 'Übergeordnete Obergrenze',
+    inheritFromParent: 'Vom übergeordneten erben',
+    quotas: 'Kontingente',
     orgSettingsHint:
       'Für organisationsweite Einstellungen wie erlaubte E-Mail-Domains gehen Sie zu den Organisationseinstellungen.',
     openOrgSettings: 'Organisationseinstellungen öffnen',

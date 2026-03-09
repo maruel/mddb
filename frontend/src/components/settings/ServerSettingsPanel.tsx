@@ -3,7 +3,8 @@
 import { createSignal, createEffect, Show, lazy } from 'solid-js';
 import { useAuth } from '../../contexts';
 import { useI18n } from '../../i18n';
-import type { ServerConfigResponse } from '@sdk/types.gen';
+import type { ResourceQuotas, ServerConfigResponse } from '@sdk/types.gen';
+import ResourceQuotaForm from './ResourceQuotaForm';
 import styles from './ServerSettingsPanel.module.css';
 
 const AdminDashboard = lazy(() => import('./AdminDashboard'));
@@ -24,19 +25,23 @@ export default function ServerSettingsPanel() {
   const [smtpPassword, setSmtpPassword] = createSignal('');
   const [smtpFrom, setSmtpFrom] = createSignal('');
 
-  // Quota fields
+  // The 6 shared ResourceQuotas fields
+  const [resourceQuotas, setResourceQuotas] = createSignal<ResourceQuotas>({
+    max_pages: 0,
+    max_storage_bytes: 0,
+    max_records_per_table: 0,
+    max_asset_size_bytes: 0,
+    max_tables_per_workspace: 0,
+    max_columns_per_table: 0,
+  });
+
+  // Server-specific quota fields (not part of ResourceQuotas)
   const [maxRequestBodyBytes, setMaxRequestBodyBytes] = createSignal(0);
   const [maxSessionsPerUser, setMaxSessionsPerUser] = createSignal(0);
-  const [maxTablesPerWorkspace, setMaxTablesPerWorkspace] = createSignal(0);
-  const [maxColumnsPerTable, setMaxColumnsPerTable] = createSignal(0);
-  const [maxRecordsPerTable, setMaxRecordsPerTable] = createSignal(0);
-  const [maxPages, setMaxPages] = createSignal(0);
-  const [maxStorageBytes, setMaxStorageBytes] = createSignal(0);
   const [maxOrganizations, setMaxOrganizations] = createSignal(0);
   const [maxWorkspaces, setMaxWorkspaces] = createSignal(0);
   const [maxUsers, setMaxUsers] = createSignal(0);
   const [maxTotalStorageBytes, setMaxTotalStorageBytes] = createSignal(0);
-  const [maxAssetSizeBytes, setMaxAssetSizeBytes] = createSignal(0);
   const [maxEgressBandwidthBps, setMaxEgressBandwidthBps] = createSignal(0);
 
   // Rate limit fields
@@ -56,29 +61,29 @@ export default function ServerSettingsPanel() {
       const data = await api().server.getConfig();
       setConfig(data);
 
-      // Populate SMTP fields
       setSmtpHost(data.smtp.host || '');
       setSmtpPort(data.smtp.port || 587);
       setSmtpUsername(data.smtp.username || '');
       setSmtpFrom(data.smtp.from || '');
-      setSmtpPassword(''); // Always empty on load
+      setSmtpPassword('');
 
-      // Populate quota fields
+      setResourceQuotas({
+        max_pages: data.quotas.max_pages,
+        max_storage_bytes: data.quotas.max_storage_bytes,
+        max_records_per_table: data.quotas.max_records_per_table,
+        max_asset_size_bytes: data.quotas.max_asset_size_bytes,
+        max_tables_per_workspace: data.quotas.max_tables_per_workspace,
+        max_columns_per_table: data.quotas.max_columns_per_table,
+      });
+
       setMaxRequestBodyBytes(data.quotas.max_request_body_bytes);
       setMaxSessionsPerUser(data.quotas.max_sessions_per_user);
-      setMaxTablesPerWorkspace(data.quotas.max_tables_per_workspace);
-      setMaxColumnsPerTable(data.quotas.max_columns_per_table);
-      setMaxRecordsPerTable(data.quotas.max_records_per_table);
-      setMaxPages(data.quotas.max_pages);
-      setMaxStorageBytes(data.quotas.max_storage_bytes);
       setMaxOrganizations(data.quotas.max_organizations);
       setMaxWorkspaces(data.quotas.max_workspaces);
       setMaxUsers(data.quotas.max_users);
       setMaxTotalStorageBytes(data.quotas.max_total_storage_bytes);
-      setMaxAssetSizeBytes(data.quotas.max_asset_size_bytes);
       setMaxEgressBandwidthBps(data.quotas.max_egress_bandwidth_bps);
 
-      // Populate rate limit fields
       setAuthRatePerMin(data.rate_limits.auth_rate_per_min);
       setWriteRatePerMin(data.rate_limits.write_rate_per_min);
       setReadAuthRatePerMin(data.rate_limits.read_auth_rate_per_min);
@@ -106,13 +111,12 @@ export default function ServerSettingsPanel() {
           host: smtpHost(),
           port: smtpPort(),
           username: smtpUsername(),
-          password: smtpPassword(), // Empty preserves existing
+          password: smtpPassword(),
           from: smtpFrom(),
         },
       });
 
       setSuccess(t('server.configurationSaved'));
-      // Reload to get updated state
       await loadConfig();
     } catch (err) {
       setError(`${t('errors.failedToSave')}: ${err}`);
@@ -130,18 +134,13 @@ export default function ServerSettingsPanel() {
 
       await api().server.updateConfig({
         quotas: {
+          ...resourceQuotas(),
           max_request_body_bytes: maxRequestBodyBytes(),
           max_sessions_per_user: maxSessionsPerUser(),
-          max_tables_per_workspace: maxTablesPerWorkspace(),
-          max_columns_per_table: maxColumnsPerTable(),
-          max_records_per_table: maxRecordsPerTable(),
-          max_pages: maxPages(),
-          max_storage_bytes: maxStorageBytes(),
           max_organizations: maxOrganizations(),
           max_workspaces: maxWorkspaces(),
           max_users: maxUsers(),
           max_total_storage_bytes: maxTotalStorageBytes(),
-          max_asset_size_bytes: maxAssetSizeBytes(),
           max_egress_bandwidth_bps: maxEgressBandwidthBps(),
         },
         rate_limits: {
@@ -258,6 +257,10 @@ export default function ServerSettingsPanel() {
       <Show when={activeTab() === 'quotas'}>
         <section class={styles.section}>
           <form onSubmit={saveQuotas} class={styles.settingsForm}>
+            <h3>{t('settings.quotas')}</h3>
+            <ResourceQuotaForm value={resourceQuotas} onChange={setResourceQuotas} />
+
+            <h3>{t('server.quotas')}</h3>
             <div class={styles.formGrid}>
               <div class={styles.formItem}>
                 <label>{t('server.maxRequestBodyBytes')}</label>
@@ -275,56 +278,6 @@ export default function ServerSettingsPanel() {
                   type="number"
                   value={maxSessionsPerUser()}
                   onInput={(e) => setMaxSessionsPerUser(parseInt(e.target.value) || 0)}
-                  min="0"
-                />
-              </div>
-
-              <div class={styles.formItem}>
-                <label>{t('server.maxTablesPerWorkspace')}</label>
-                <input
-                  type="number"
-                  value={maxTablesPerWorkspace()}
-                  onInput={(e) => setMaxTablesPerWorkspace(parseInt(e.target.value) || 0)}
-                  min="0"
-                />
-              </div>
-
-              <div class={styles.formItem}>
-                <label>{t('server.maxColumnsPerTable')}</label>
-                <input
-                  type="number"
-                  value={maxColumnsPerTable()}
-                  onInput={(e) => setMaxColumnsPerTable(parseInt(e.target.value) || 0)}
-                  min="0"
-                />
-              </div>
-
-              <div class={styles.formItem}>
-                <label>{t('server.maxRecordsPerTable')}</label>
-                <input
-                  type="number"
-                  value={maxRecordsPerTable()}
-                  onInput={(e) => setMaxRecordsPerTable(parseInt(e.target.value) || 0)}
-                  min="0"
-                />
-              </div>
-
-              <div class={styles.formItem}>
-                <label>{t('server.maxPages')}</label>
-                <input
-                  type="number"
-                  value={maxPages()}
-                  onInput={(e) => setMaxPages(parseInt(e.target.value) || 0)}
-                  min="0"
-                />
-              </div>
-
-              <div class={styles.formItem}>
-                <label>{t('server.maxStorageBytes')}</label>
-                <input
-                  type="number"
-                  value={maxStorageBytes()}
-                  onInput={(e) => setMaxStorageBytes(parseInt(e.target.value) || 0)}
                   min="0"
                 />
               </div>
@@ -366,16 +319,6 @@ export default function ServerSettingsPanel() {
                   value={maxTotalStorageBytes()}
                   onInput={(e) => setMaxTotalStorageBytes(parseInt(e.target.value) || 0)}
                   min="0"
-                />
-              </div>
-
-              <div class={styles.formItem}>
-                <label>{t('server.maxAssetSizeBytes')}</label>
-                <input
-                  type="number"
-                  value={maxAssetSizeBytes()}
-                  onInput={(e) => setMaxAssetSizeBytes(parseInt(e.target.value) || 0)}
-                  min="1"
                 />
               </div>
 

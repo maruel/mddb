@@ -40,7 +40,7 @@ func (w *Workspace) GetID() ksid.ID {
 }
 
 // Validate checks that the Workspace is valid.
-// Quota fields of 0 mean "inherit from server/org layer".
+// Quota fields of -1 mean "inherit from server/org layer".
 func (w *Workspace) Validate() error {
 	if w.ID.IsZero() {
 		return errIDRequired
@@ -69,12 +69,15 @@ type WorkspaceSettings struct {
 type WorkspaceQuotas = storage.ResourceQuotas
 
 // DefaultWorkspaceQuotas returns the default quotas for a new workspace.
+// All fields default to -1 (inherit from server/org layer).
 func DefaultWorkspaceQuotas() WorkspaceQuotas {
 	return WorkspaceQuotas{
-		MaxPages:           1000,
-		MaxStorageBytes:    1024 * 1024 * 1024, // 1 GiB
-		MaxRecordsPerTable: 10000,
-		MaxAssetSizeBytes:  50 * 1024 * 1024, // 50 MiB
+		MaxPages:              -1,
+		MaxStorageBytes:       -1,
+		MaxRecordsPerTable:    -1,
+		MaxAssetSizeBytes:     -1,
+		MaxTablesPerWorkspace: -1,
+		MaxColumnsPerTable:    -1,
 	}
 }
 

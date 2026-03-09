@@ -4,10 +4,11 @@ import { createSignal, createEffect, createMemo, Show } from 'solid-js';
 import { useNavigate, useLocation } from '@solidjs/router';
 import { useAuth } from '../../contexts';
 import { useI18n } from '../../i18n';
-import type { UserResponse, OrgInvitationResponse, OrganizationRole } from '@sdk/types.gen';
+import type { UserResponse, OrgInvitationResponse, OrganizationRole, ResourceQuotas } from '@sdk/types.gen';
 import { OrgRoleOwner, OrgRoleAdmin } from '@sdk/types.gen';
 import MembersTable from './MembersTable';
 import InviteForm from './InviteForm';
+import ResourceQuotaForm from './ResourceQuotaForm';
 import styles from './OrgSettingsPanel.module.css';
 
 interface OrgSettingsPanelProps {
@@ -15,7 +16,7 @@ interface OrgSettingsPanelProps {
   section?: string;
 }
 
-type Tab = 'members' | 'settings';
+type Tab = 'members' | 'settings' | 'quotas';
 
 export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const { t } = useI18n();
@@ -23,9 +24,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const location = useLocation();
   const { user, api } = useAuth();
 
-  // Determine initial tab from section prop
   const getInitialTab = (): Tab => {
     if (props.section === 'settings') return 'settings';
+    if (props.section === 'quotas') return 'quotas';
     return 'members';
   };
 
@@ -33,31 +34,34 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const [members, setMembers] = createSignal<UserResponse[]>([]);
   const [invitations, setInvitations] = createSignal<OrgInvitationResponse[]>([]);
 
-  // Organization settings states
   const [orgName, setOrgName] = createSignal('');
   const [originalOrgName, setOriginalOrgName] = createSignal('');
 
-  // Organization quotas
+  // Organization-specific quotas (not part of ResourceQuotas)
   const [maxWorkspacesPerOrg, setMaxWorkspacesPerOrg] = createSignal(0);
   const [maxMembersPerOrg, setMaxMembersPerOrg] = createSignal(0);
   const [maxMembersPerWorkspace, setMaxMembersPerWorkspace] = createSignal(0);
   const [maxTotalStorageBytes, setMaxTotalStorageBytes] = createSignal(0);
-  // Organization resource quotas (0 = no limit at this layer)
-  const [maxPages, setMaxPages] = createSignal(0);
-  const [maxStorageBytes, setMaxStorageBytes] = createSignal(0);
-  const [maxRecordsPerTable, setMaxRecordsPerTable] = createSignal(0);
-  const [maxAssetSizeBytes, setMaxAssetSizeBytes] = createSignal(0);
-  const [maxTablesPerWorkspace, setMaxTablesPerWorkspace] = createSignal(0);
-  const [maxColumnsPerTable, setMaxColumnsPerTable] = createSignal(0);
+
+  // Resource quotas: -1 = inherit from server, 0 = disabled, positive = limit
+  const [resourceQuotas, setResourceQuotas] = createSignal<ResourceQuotas>({
+    max_pages: -1,
+    max_storage_bytes: -1,
+    max_records_per_table: -1,
+    max_asset_size_bytes: -1,
+    max_tables_per_workspace: -1,
+    max_columns_per_table: -1,
+  });
+
+  // Server-imposed upper bounds for resource quotas (shown as ceiling hints)
+  const [serverLimits, setServerLimits] = createSignal<ResourceQuotas | null>(null);
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
   const [success, setSuccess] = createSignal<string | null>(null);
 
-  // Create org-scoped API client for the specified orgId
   const orgApi = createMemo(() => api().org(props.orgId));
 
-  // Get user's role in this organization
   const userOrgRole = createMemo(() => {
     const membership = user()?.organizations?.find((m) => m.organization_id === props.orgId);
     return membership?.role;
@@ -68,11 +72,30 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     return role === OrgRoleOwner || role === OrgRoleAdmin;
   });
 
-  // Update URL hash when tab changes
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
     const newHash = tab === 'members' ? '' : `#${tab}`;
     navigate(location.pathname + newHash, { replace: true });
+  };
+
+  const loadOrgData = async () => {
+    const org = orgApi();
+    const orgData = await org.organizations.getOrganization();
+    setOrgName(orgData.name);
+    setOriginalOrgName(orgData.name);
+    setMaxWorkspacesPerOrg(orgData.quotas.max_workspaces_per_org);
+    setMaxMembersPerOrg(orgData.quotas.max_members_per_org);
+    setMaxMembersPerWorkspace(orgData.quotas.max_members_per_workspace);
+    setMaxTotalStorageBytes(orgData.quotas.max_total_storage_bytes);
+    setResourceQuotas({
+      max_pages: orgData.quotas.max_pages,
+      max_storage_bytes: orgData.quotas.max_storage_bytes,
+      max_records_per_table: orgData.quotas.max_records_per_table,
+      max_asset_size_bytes: orgData.quotas.max_asset_size_bytes,
+      max_tables_per_workspace: orgData.quotas.max_tables_per_workspace,
+      max_columns_per_table: orgData.quotas.max_columns_per_table,
+    });
+    setServerLimits(orgData.server_resource_limits);
   };
 
   const loadData = async () => {
@@ -91,22 +114,8 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
         setInvitations(invsData.invitations?.filter((i): i is OrgInvitationResponse => !!i) || []);
       }
 
-      if (activeTab() === 'settings') {
-        const orgData = await org.organizations.getOrganization();
-        setOrgName(orgData.name);
-        setOriginalOrgName(orgData.name);
-        // Load quotas
-        setMaxWorkspacesPerOrg(orgData.quotas.max_workspaces_per_org);
-        setMaxMembersPerOrg(orgData.quotas.max_members_per_org);
-        setMaxMembersPerWorkspace(orgData.quotas.max_members_per_workspace);
-        setMaxTotalStorageBytes(orgData.quotas.max_total_storage_bytes);
-        // Resource quotas
-        setMaxPages(orgData.quotas.max_pages);
-        setMaxStorageBytes(orgData.quotas.max_storage_bytes);
-        setMaxRecordsPerTable(orgData.quotas.max_records_per_table);
-        setMaxAssetSizeBytes(orgData.quotas.max_asset_size_bytes);
-        setMaxTablesPerWorkspace(orgData.quotas.max_tables_per_workspace);
-        setMaxColumnsPerTable(orgData.quotas.max_columns_per_table);
+      if (activeTab() === 'settings' || activeTab() === 'quotas') {
+        await loadOrgData();
       }
     } catch (err) {
       setError(`${t('errors.failedToLoad')}: ${err}`);
@@ -119,10 +128,10 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     loadData();
   });
 
-  // Update tab when section prop changes
   createEffect(() => {
     const section = props.section;
     if (section === 'settings') setActiveTab('settings');
+    else if (section === 'quotas') setActiveTab('quotas');
     else if (section === 'members' || !section) setActiveTab('members');
   });
 
@@ -172,6 +181,14 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     }
   };
 
+  const buildQuotasPayload = () => ({
+    max_workspaces_per_org: maxWorkspacesPerOrg(),
+    max_members_per_org: maxMembersPerOrg(),
+    max_members_per_workspace: maxMembersPerWorkspace(),
+    max_total_storage_bytes: maxTotalStorageBytes(),
+    ...resourceQuotas(),
+  });
+
   const saveOrgSettings = async (e: Event) => {
     e.preventDefault();
     const org = orgApi();
@@ -181,28 +198,30 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setError(null);
       setSuccess(null);
 
-      // Update org name if changed
       if (orgName() !== originalOrgName() && orgName().trim()) {
         await org.organizations.updateOrganization({ name: orgName().trim() });
         setOriginalOrgName(orgName().trim());
       }
 
-      // Update quotas
-      await org.settings.updateOrgPreferences({
-        quotas: {
-          max_workspaces_per_org: maxWorkspacesPerOrg(),
-          max_members_per_org: maxMembersPerOrg(),
-          max_members_per_workspace: maxMembersPerWorkspace(),
-          max_total_storage_bytes: maxTotalStorageBytes(),
-          max_pages: maxPages(),
-          max_storage_bytes: maxStorageBytes(),
-          max_records_per_table: maxRecordsPerTable(),
-          max_asset_size_bytes: maxAssetSizeBytes(),
-          max_tables_per_workspace: maxTablesPerWorkspace(),
-          max_columns_per_table: maxColumnsPerTable(),
-        },
-      });
+      await org.settings.updateOrgPreferences({ quotas: buildQuotasPayload() });
+      setSuccess(t('success.orgSettingsSaved') || 'Organization settings saved');
+    } catch (err) {
+      setError(`${t('errors.failedToSave')}: ${err}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const saveOrgQuotas = async (e: Event) => {
+    e.preventDefault();
+    const org = orgApi();
+
+    try {
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      await org.settings.updateOrgPreferences({ quotas: buildQuotasPayload() });
       setSuccess(t('success.orgSettingsSaved') || 'Organization settings saved');
     } catch (err) {
       setError(`${t('errors.failedToSave')}: ${err}`);
@@ -237,6 +256,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
         </button>
         <button class={activeTab() === 'settings' ? styles.activeTab : ''} onClick={() => handleTabChange('settings')}>
           {t('settings.settings')}
+        </button>
+        <button class={activeTab() === 'quotas' ? styles.activeTab : ''} onClick={() => handleTabChange('quotas')}>
+          {t('settings.quotas')}
         </button>
       </div>
 
@@ -319,62 +341,28 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
                     min="1"
                   />
                 </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxPages')}</label>
-                  <input
-                    type="number"
-                    value={maxPages()}
-                    onInput={(e) => setMaxPages(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxStorageBytes')}</label>
-                  <input
-                    type="number"
-                    value={maxStorageBytes()}
-                    onInput={(e) => setMaxStorageBytes(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxRecordsPerTable')}</label>
-                  <input
-                    type="number"
-                    value={maxRecordsPerTable()}
-                    onInput={(e) => setMaxRecordsPerTable(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxAssetSizeBytes')}</label>
-                  <input
-                    type="number"
-                    value={maxAssetSizeBytes()}
-                    onInput={(e) => setMaxAssetSizeBytes(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxTablesPerWorkspace')}</label>
-                  <input
-                    type="number"
-                    value={maxTablesPerWorkspace()}
-                    onInput={(e) => setMaxTablesPerWorkspace(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
-                <div class={styles.formItem}>
-                  <label>{t('settings.maxColumnsPerTable')}</label>
-                  <input
-                    type="number"
-                    value={maxColumnsPerTable()}
-                    onInput={(e) => setMaxColumnsPerTable(parseInt(e.target.value) || 0)}
-                    min="0"
-                  />
-                </div>
               </div>
 
+              <button type="submit" class={styles.saveButton} disabled={loading()}>
+                {t('common.save')}
+              </button>
+            </form>
+          </Show>
+        </section>
+      </Show>
+
+      <Show when={activeTab() === 'quotas'}>
+        <section class={styles.section}>
+          <h3>{t('settings.quotas')}</h3>
+          <Show when={isAdmin()} fallback={<p>{t('settings.adminOnlySettings')}</p>}>
+            <form onSubmit={saveOrgQuotas} class={styles.settingsForm}>
+              <ResourceQuotaForm
+                value={resourceQuotas}
+                onChange={setResourceQuotas}
+                ceiling={serverLimits}
+                ceilingLabel={t('settings.serverCeiling')}
+                allowInherit={true}
+              />
               <button type="submit" class={styles.saveButton} disabled={loading()}>
                 {t('common.save')}
               </button>

@@ -126,7 +126,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 
 	// Enforce maximum asset file size using effective quotas
 	eq := ws.EffectiveQuotas()
-	if eq.MaxAssetSizeBytes > 0 && int64(len(data)) > eq.MaxAssetSizeBytes {
+	if int64(len(data)) > eq.MaxAssetSizeBytes {
 		writeErrorResponse(w, dto.PayloadTooLarge(eq.MaxAssetSizeBytes))
 		return
 	}

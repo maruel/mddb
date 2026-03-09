@@ -1,0 +1,53 @@
+/* Styles for the shared ResourceQuotaForm component. */
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.formItem {
+  /* No bottom margin needed inside a grid */
+}
+
+.formItem label:first-child {
+  display: block;
+  margin-bottom: var(--s-2);
+  font-weight: 500;
+}
+
+.formItem input[type='number'] {
+  width: 100%;
+  padding: var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+/* Disabled input shown when a quota is set to inherit (-1). */
+.inheritedInput {
+  width: 100%;
+  padding: var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg-alt);
+  color: var(--c-text-light);
+  cursor: default;
+}
+
+.inheritLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-size: 0.85rem;
+  color: var(--c-text-light);
+  margin-bottom: var(--s-2);
+  cursor: pointer;
+}
+
+.ceilingHint {
+  margin: var(--s-1) 0 0 0;
+  font-size: 0.78rem;
+  color: var(--c-text-light);
+  font-style: italic;
+}

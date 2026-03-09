@@ -132,11 +132,8 @@ func (ws *WorkspaceFileStore) deleteFromCache(id ksid.ID) {
 }
 
 // checkPageQuota returns an error if creating a new page would exceed quota.
-// Skips the check if MaxPages is 0 (unlimited).
+// MaxPages=0 means disabled (0 pages allowed). Server always provides a positive floor.
 func (ws *WorkspaceFileStore) checkPageQuota() error {
-	if ws.quotas.MaxPages == 0 {
-		return nil
-	}
 	count, _, err := ws.GetWorkspaceUsage()
 	if err != nil {
 		return err
@@ -148,11 +145,8 @@ func (ws *WorkspaceFileStore) checkPageQuota() error {
 }
 
 // checkStorageQuota returns an error if adding the given bytes would exceed workspace storage quota.
-// Skips the check if MaxStorageBytes is 0 (unlimited).
+// MaxStorageBytes=0 means disabled (0 bytes allowed). Server always provides a positive floor.
 func (ws *WorkspaceFileStore) checkStorageQuota(additionalBytes int64) error {
-	if ws.quotas.MaxStorageBytes == 0 {
-		return nil
-	}
 	_, usage, err := ws.GetWorkspaceUsage()
 	if err != nil {
 		return err
@@ -796,11 +790,8 @@ func (ws *WorkspaceFileStore) iterTablesRecursive(dir string, parentID ksid.ID, 
 
 // CheckTableQuota checks if the workspace has reached its table limit.
 // Returns ErrTableQuotaExceeded if the limit is reached.
-// Skips the check if MaxTablesPerWorkspace is 0 (unlimited).
+// MaxTablesPerWorkspace=0 means disabled (0 tables allowed).
 func (ws *WorkspaceFileStore) CheckTableQuota() error {
-	if ws.quotas.MaxTablesPerWorkspace == 0 {
-		return nil
-	}
 	tables, err := ws.IterTables()
 	if err != nil {
 		return err
@@ -839,7 +830,7 @@ func (ws *WorkspaceFileStore) appendRecord(tableID, tableParentID ksid.ID, recor
 	}
 
 	if table != nil {
-		if ws.quotas.MaxRecordsPerTable > 0 && table.Len() >= ws.quotas.MaxRecordsPerTable {
+		if table.Len() >= ws.quotas.MaxRecordsPerTable {
 			return fmt.Errorf("record quota exceeded: max %d", ws.quotas.MaxRecordsPerTable)
 		}
 	} else {

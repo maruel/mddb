@@ -295,7 +295,7 @@ func (h *NodeHandler) CreateTable(ctx context.Context, wsID ksid.ID, user *ident
 	eq := ws.EffectiveQuotas()
 
 	// Check column quota
-	if eq.MaxColumnsPerTable > 0 && len(req.Properties) > eq.MaxColumnsPerTable {
+	if len(req.Properties) > eq.MaxColumnsPerTable {
 		return nil, dto.QuotaExceeded("columns per table", eq.MaxColumnsPerTable)
 	}
 
@@ -346,7 +346,7 @@ func (h *NodeHandler) UpdateTable(ctx context.Context, wsID ksid.ID, user *ident
 
 	// Check column quota
 	eq := ws.EffectiveQuotas()
-	if eq.MaxColumnsPerTable > 0 && len(req.Properties) > eq.MaxColumnsPerTable {
+	if len(req.Properties) > eq.MaxColumnsPerTable {
 		return nil, dto.QuotaExceeded("columns per table", eq.MaxColumnsPerTable)
 	}
 

@@ -284,6 +284,11 @@ export interface Dictionary {
     maxStorageBytes: string;
     maxRecordsPerTable: string;
     maxAssetSizeBytes: string;
+    // Quota ceiling hints (shown next to quota inputs to display the parent-imposed upper bound)
+    serverCeiling: string;
+    parentCeiling: string;
+    inheritFromParent: string;
+    quotas: string;
     orgSettingsHint: string;
     openOrgSettings: string;
     adminOnlySettings: string;

@@ -1143,6 +1143,11 @@ export interface OrganizationResponse {
   member_count: number /* int */;
   workspace_count: number /* int */;
   created: Time;
+  /**
+   * ServerResourceLimits shows the server-imposed upper bound for each resource quota.
+   * The organization's resource quotas cannot exceed these server-level limits.
+   */
+  server_resource_limits: ResourceQuotas;
 }
 /**
  * WorkspaceResponse is the API representation of a workspace.
@@ -1156,6 +1161,12 @@ export interface WorkspaceResponse {
   git_remote?: GitRemoteResponse;
   member_count: number /* int */;
   created: Time;
+  /**
+   * ParentResourceLimits shows the effective upper bound imposed by the server and organization.
+   * The workspace's resource quotas cannot exceed these combined limits.
+   * Zero means unlimited at the parent level.
+   */
+  parent_resource_limits: ResourceQuotas;
 }
 /**
  * GitRemoteResponse is the API representation of a git remote.
@@ -1630,7 +1641,8 @@ export interface WorkspaceMembershipSettings {
 }
 /**
  * ResourceQuotas defines per-workspace content limits shared by server, org, and workspace layers.
- * A zero value means "no limit at this layer" (inherit from other layers).
+ * At org and workspace layers: -1 means "inherit from parent", 0 means "disabled", positive means a limit.
+ * At server layer all fields must be strictly positive.
  */
 export interface ResourceQuotas {
   max_pages: number /* int */;
@@ -1651,7 +1663,7 @@ export interface OrganizationQuotas extends ResourceQuotas {
 }
 /**
  * WorkspaceQuotas is a type alias for ResourceQuotas.
- * Zero values mean "inherit from server/org layer".
+ * -1 means "inherit from parent", 0 means "disabled", positive means a limit.
  */
 export type WorkspaceQuotas = ResourceQuotas;
 /**
