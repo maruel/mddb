@@ -58,8 +58,26 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, 10<<20) // 10 MB
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
+	// Use the server-level MaxAssetSizeBytes as the upload limit.
+	maxBytes := h.Cfg.Quotas.MaxAssetSizeBytes
+
+	// Fast pre-check via Content-Length before reading the body, so we can
+	// return a structured JSON error. (Browsers always send Content-Length for
+	// multipart uploads.)
+	if r.ContentLength > maxBytes {
+		writeErrorResponse(w, dto.PayloadTooLarge(maxBytes))
+		return
+	}
+
+	// MaxBytesReader as a hard backstop for requests without Content-Length.
+	// If it triggers, Go writes 413 automatically; the pre-check above covers
+	// the normal browser path with a structured JSON response.
+	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
+	if err := r.ParseMultipartForm(maxBytes); err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			return // Go already wrote 413 via MaxBytesReader
+		}
 		writeErrorResponse(w, dto.BadRequest("form_parse"))
 		return
 	}

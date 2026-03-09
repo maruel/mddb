@@ -248,7 +248,11 @@ export default function NodeView() {
 
   async function handleUploadCover(file: File): Promise<string> {
     const result = await coverUpload.uploadFile(file);
-    if (!result) return '';
+    if (!result) {
+      const err = coverUpload.error();
+      if (err) setSaveError(err);
+      return '';
+    }
     // Reload node to get updated asset URLs
     const nodeId = selectedNodeId();
     if (nodeId) loadNode(nodeId);

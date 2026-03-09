@@ -541,8 +541,11 @@ func WrapAuthRaw(
 			}
 		}
 
-		// Limit request body size for raw handlers
-		if cfg != nil && cfg.Quotas.MaxRequestBodyBytes > 0 {
+		// Limit request body size for raw handlers, but skip for multipart
+		// uploads — the asset handler enforces its own per-quota limit.
+		ct := r.Header.Get("Content-Type")
+		isMultipart := len(ct) >= 9 && ct[:9] == "multipart"
+		if !isMultipart && cfg != nil && cfg.Quotas.MaxRequestBodyBytes > 0 {
 			r.Body = http.MaxBytesReader(w, r.Body, cfg.Quotas.MaxRequestBodyBytes)
 		}
 

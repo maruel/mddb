@@ -26,7 +26,9 @@ export function PageHeader(props: PageHeaderProps) {
 
   async function handleCoverFileInput(file: File) {
     const filename = await props.onUploadCover(file);
-    props.onCoverChange(filename);
+    if (filename) {
+      props.onCoverChange(filename);
+    }
   }
 
   function handleCoverDrop(e: DragEvent) {

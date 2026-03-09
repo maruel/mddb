@@ -506,6 +506,76 @@ func TestWorkspaceFileStore(t *testing.T) {
 		})
 	})
 
+	t.Run("UpdatePageFrontmatter", func(t *testing.T) {
+		_, ws, _ := initWS(t)
+		ctx := t.Context()
+
+		t.Run("SetIconAndCover", func(t *testing.T) {
+			// Simulate: create page via CreatePageUnderParent (normal production flow)
+			node, err := ws.CreatePageUnderParent(ctx, 0, "My Page", "content", author)
+			if err != nil {
+				t.Fatalf("failed to create page: %v", err)
+			}
+
+			// Upload an asset (as would happen during cover image upload)
+			imageData := []byte("fake image data")
+			asset, err := ws.SaveAsset(ctx, node.ID, "cover.jpg", imageData, author)
+			if err != nil {
+				t.Fatalf("failed to save asset: %v", err)
+			}
+
+			// Now update frontmatter with the asset as cover
+			updated, err := ws.UpdatePageFrontmatter(ctx, node.ID, "🎨", asset.Name, author)
+			if err != nil {
+				t.Fatalf("UpdatePageFrontmatter failed: %v", err)
+			}
+			if updated.Icon != "🎨" {
+				t.Errorf("expected icon '🎨', got %q", updated.Icon)
+			}
+			if updated.Cover != "cover.jpg" {
+				t.Errorf("expected cover 'cover.jpg', got %q", updated.Cover)
+			}
+
+			// Verify persisted on disk
+			readBack, err := ws.ReadPage(node.ID)
+			if err != nil {
+				t.Fatalf("failed to read page after frontmatter update: %v", err)
+			}
+			if readBack.Icon != "🎨" {
+				t.Errorf("persisted icon: expected '🎨', got %q", readBack.Icon)
+			}
+			if readBack.Cover != "cover.jpg" {
+				t.Errorf("persisted cover: expected 'cover.jpg', got %q", readBack.Cover)
+			}
+		})
+
+		t.Run("ClearCover", func(t *testing.T) {
+			node, err := ws.CreatePageUnderParent(ctx, 0, "Page With Cover", "content", author)
+			if err != nil {
+				t.Fatalf("failed to create page: %v", err)
+			}
+			// Set icon and cover
+			if _, err := ws.UpdatePageFrontmatter(ctx, node.ID, "🎨", "cover.jpg", author); err != nil {
+				t.Fatalf("failed to set frontmatter: %v", err)
+			}
+			// Clear cover
+			updated, err := ws.UpdatePageFrontmatter(ctx, node.ID, "🎨", "", author)
+			if err != nil {
+				t.Fatalf("failed to clear cover: %v", err)
+			}
+			if updated.Cover != "" {
+				t.Errorf("expected empty cover, got %q", updated.Cover)
+			}
+		})
+
+		t.Run("NonExistentPage", func(t *testing.T) {
+			_, err := ws.UpdatePageFrontmatter(ctx, ksid.NewID(), "🎨", "cover.jpg", author)
+			if err == nil {
+				t.Error("expected error for non-existent page")
+			}
+		})
+	})
+
 	t.Run("PageVersionHistory", func(t *testing.T) {
 		_, ws, _ := initWS(t)
 		ctx := t.Context()

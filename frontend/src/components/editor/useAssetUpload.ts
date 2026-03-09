@@ -79,8 +79,14 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
       });
 
       if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Upload failed: ${response.status} ${errText}`);
+        let message = `Upload failed (${response.status})`;
+        try {
+          const errJson = await response.json();
+          if (errJson?.error?.message) message = errJson.error.message;
+        } catch {
+          // non-JSON body: use status text
+        }
+        throw new Error(message);
       }
 
       const result: UploadNodeAssetResponse = await response.json();

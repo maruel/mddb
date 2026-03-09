@@ -288,6 +288,25 @@ func QuotaExceededInt64(resource string, limit int64) *APIError {
 // PayloadTooLarge creates a 413 error for oversized request bodies.
 func PayloadTooLarge(maxBytes int64) *APIError {
 	return NewAPIError(http.StatusRequestEntityTooLarge, ErrorCodePayloadTooLarge,
-		fmt.Sprintf("Request body too large: maximum %d bytes allowed", maxBytes)).
+		fmt.Sprintf("File too large: maximum %s allowed", humanBytes(maxBytes))).
 		WithDetail("max_bytes", maxBytes)
+}
+
+// humanBytes formats a byte count as a human-readable string (e.g. "10 MB", "512 KB").
+func humanBytes(b int64) string {
+	const (
+		kb = 1024
+		mb = 1024 * kb
+		gb = 1024 * mb
+	)
+	switch {
+	case b >= gb:
+		return fmt.Sprintf("%.0f GB", float64(b)/gb)
+	case b >= mb:
+		return fmt.Sprintf("%.0f MB", float64(b)/mb)
+	case b >= kb:
+		return fmt.Sprintf("%.0f KB", float64(b)/kb)
+	default:
+		return fmt.Sprintf("%d bytes", b)
+	}
 }
