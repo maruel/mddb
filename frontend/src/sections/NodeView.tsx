@@ -91,16 +91,6 @@ export default function NodeView() {
   const activeView = createMemo(() => views().find((v) => v.id === activeViewId()));
   const viewType = createMemo(() => activeView()?.type || 'table');
 
-  // Keep ?view= param in sync with the active view ID.
-  createEffect(() => {
-    const id = activeViewId();
-    if (!id || id === DEFAULT_VIEW_ID) {
-      setSearchParams({ view: undefined });
-    } else {
-      setSearchParams({ view: id });
-    }
-  });
-
   // Apply the URL ?view= param exactly once per node navigation (not on createView()).
   // A non-reactive variable tracks which nodeId we've already applied the param for,
   // preventing createView() from triggering a re-application that would override
@@ -140,6 +130,23 @@ export default function NodeView() {
         }
       },
       { defer: true } // Initial mount is handled by the node-load effect above
+    )
+  );
+
+  // Keep ?view= param in sync with the active view ID.
+  // defer:true prevents this from running on initial mount with activeViewId()=undefined,
+  // which would clear the incoming ?view= param before the apply effect above can read it.
+  createEffect(
+    on(
+      () => activeViewId(),
+      (id) => {
+        if (!id || id === DEFAULT_VIEW_ID) {
+          setSearchParams({ view: undefined });
+        } else {
+          setSearchParams({ view: id });
+        }
+      },
+      { defer: true }
     )
   );
 
