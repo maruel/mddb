@@ -1,45 +1,44 @@
-# Flat Block Editor — Remaining Work
+# Flat Block Editor — Implementation Status
 
-Flat block model (Notion-style) is implemented. Schema, markdown round-trip, drag-and-drop,
-keyboard commands, input rules, migration, and tests (308 unit, E2E drag reorder) all working.
+Flat block model (Notion-style) is fully implemented and tested. Schema, markdown round-trip,
+drag-and-drop, keyboard commands, input rules, migration, comprehensive unit tests (308+),
+and E2E tests all working.
 
-## Open Bugs
+## Recent Fixes (Completed)
 
-### List Item Vertical Alignment — MEDIUM
+### List Item Vertical Alignment — FIXED
 
-Numbered list numbers and bullet points are not vertically aligned with text content.
-Task list checkboxes are correctly aligned.
+Bullet, numbered, and task list items now have consistent vertical alignment via `::before`
+pseudo-elements. All three list types correctly align with text content.
 
-**Location:** `Editor.module.css` (`.block-row[data-type="bullet"]`, `.block-row[data-type="number"]`)
+**Location:** `Editor.module.css` (`.block-bullet`, `.block-number`, `.block-task`)
 
-**Suggested fix:** Compare CSS for task vs bullet/number blocks — check `::before` pseudo-element
-positioning, `align-items`, and `line-height`. May need explicit vertical centering with flexbox.
+### Context Menu — FIXED
 
-### Context Menu — CRITICAL
+1. ✓ Hover highlighting works on all menu items via `onMouseEnter` state update
+2. ✓ Arrow key navigation fully implemented (ArrowUp/ArrowDown with wraparound)
+3. ✓ Undo stack integrity maintained via single-transaction commands
 
-1. Only first menu item highlights on mouse hover
-2. Up/down arrow keyboard navigation has no effect
-3. Clicking items works but corrupts undo stack afterward
+**Location:** `BlockContextMenu.tsx`, `shared/ContextMenu.tsx`
 
-**Location:** `BlockContextMenu.tsx`, `blockCommands.ts`
+## E2E Tests
 
-**Suggested debug steps:**
-- **Hover:** Check CSS `:hover` selectors and z-index stacking
-- **Keyboard nav:** Verify `onKeyDown` handler is attached and `e.preventDefault()` called
-- **Undo corruption:** Check ProseMirror transactions — ensure single transaction per action,
-  no state mutations outside transactions, no `addToHistory: false` meta
+- ✓ `e2e/block-context-menu.spec.ts` — context menu hover, clicks, multi-block actions
+- ✓ `e2e/block-drag-reorder.spec.ts` — drag-drop reordering via synthetic events
+- ✓ `e2e/block-editor.spec.ts` — input rules, keyboard navigation, block creation
+- ✓ `e2e/block-handle-visibility.spec.ts` — drag handle rendering
 
 ## Deferred Work
 
+- [ ] Keyboard undo/redo (Ctrl-Z) — ProseMirror `history()` plugin is loaded but keybindings
+      not wired; tracked in `PLAN_UNDO.md`
 - [ ] Table row reorder persistence (pending backend sort API decision)
-- [ ] Context menu E2E tests
-- [ ] Undo/redo E2E tests
 - [ ] Touch drag support (long-press initiation)
-- [ ] Nested container blocks (toggles, callouts, columns)
+- [ ] Nested container blocks (toggles, callouts, columns) — `nested-schema.ts` exists but unused
 
 ## Key Decisions
 
-1. **Multi-block selection:** Yes — topmost handle visible, drag moves all, context menu applies to all.
+1. **Multi-block selection:** Implemented — topmost handle visible, drag moves all, context menu applies to all.
 2. **Code blocks:** Single movable unit (entire fenced block).
 3. **Cross-context drag:** Not supported (editor ↔ table out of scope).
 4. **Block IDs:** Not needed — markdown is storage, positions suffice at runtime.

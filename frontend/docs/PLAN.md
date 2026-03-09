@@ -6,8 +6,8 @@ Roadmap for the SolidJS frontend, focusing on architecture, performance, and use
 ## Architecture Improvements
 
 ### Reduce Prop Drilling
-- [ ] **Refactor Sidebar** - consume workspace context directly instead of 10+ callback props
-- [ ] **Refactor WorkspaceMenu** - consume auth/workspace context directly
+- [ ] **Refactor Sidebar** — still receives ~18 callback props; should consume workspace context directly
+- [x] **Refactor WorkspaceMenu** — now consumes auth/workspace context directly
 
 ### Error Handling
 - [ ] **Add retry UI** for failed operations
@@ -20,7 +20,7 @@ Roadmap for the SolidJS frontend, focusing on architecture, performance, and use
 - [ ] Add `aria-label` to icon-only buttons (Sidebar, menus) — currently using `title` attributes
 
 ### Type Safety
-- [ ] Replace unsafe type assertions (`user() as UserResponse`) with type guards
+- [x] Replace unsafe type assertions (`user() as UserResponse`) with type guards
 - [ ] Add validation logging for missing columns in table lookups
 
 ### Performance
@@ -39,12 +39,19 @@ Roadmap for the SolidJS frontend, focusing on architecture, performance, and use
 ### Table Views System
 See [PLAN_VIEWS.md](PLAN_VIEWS.md) for detailed implementation plan.
 
-- [x] Backend filter/sort model, query engine, view persistence.
-- [x] RecordsContext state management with client-side and server-side execution.
-- [x] View tabs (create, switch, delete).
-- [ ] ViewToolbar with Filter and Sort buttons.
-- [ ] SortMenu: property + direction per row.
-- [ ] FilterMenu: property + operator + value per row, compound AND/OR.
+- [x] Backend filter/sort model, query engine, view persistence
+- [x] RecordsContext state management with client-side and server-side execution
+- [x] View tabs (create, switch, delete, rename, duplicate)
+- [x] Sort via column header (left-click cycles direction; right-click context menu; additive)
+- [x] Filter via per-column FilterPanel (type-aware operators; active filter chip bar)
+- [x] Column visibility, resizing, and reordering — persisted per view
+- [x] Record detail slide-over panel
+- [ ] ~~ViewToolbar with Filter and Sort buttons~~ — REMOVED (moved to column header)
+- [ ] ~~SortMenu / FilterMenu as global dropdowns~~ — REMOVED (replaced by per-column UI)
+- [ ] Advanced filter UI: compound AND/OR conditions (currently single filter per column)
+
+### Select Column UX
+See [PLAN_SELECT_UX.md](PLAN_SELECT_UX.md) for detailed implementation plan.
 
 ### Advanced UX
 - [ ] Bulk Actions: Multi-record operations
