@@ -1,6 +1,6 @@
 // Shared always-editable field input for card-style views (gallery, grid).
 
-import { For, Switch, Match, createSignal } from 'solid-js';
+import { For, Show, Switch, Match, createSignal } from 'solid-js';
 import {
   type DataRecordResponse,
   type Property,
@@ -23,13 +23,24 @@ interface FieldEditorProps {
   onUpdate?: (id: string, data: Record<string, unknown>) => void;
 }
 
-function MultiSelectEditor(props: { column: Property; value: string; onSave: (v: string) => void }) {
+interface MultiSelectEditorProps {
+  column: Property;
+  value: string;
+  onSave: (v: string) => void;
+  /** Called when the editor requests to be closed (Escape or click-outside). */
+  onClose?: () => void;
+}
+
+export function MultiSelectEditor(props: MultiSelectEditorProps) {
   const [open, setOpen] = createSignal(false);
   let wrapperRef: HTMLDivElement | undefined;
 
   useClickOutside(
     () => wrapperRef,
-    () => setOpen(false)
+    () => {
+      setOpen(false);
+      props.onClose?.();
+    }
   );
 
   const selectedIds = () =>
@@ -37,6 +48,11 @@ function MultiSelectEditor(props: { column: Property; value: string; onSave: (v:
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
+
+  const optionByIdOrName = (id: string) => props.column.options?.find((o) => o.id === id || o.name === id);
+
+  const optionName = (id: string) => optionByIdOrName(id)?.name ?? id;
+  const optionColor = (id: string) => optionByIdOrName(id)?.color;
 
   const toggle = (id: string) => {
     const current = selectedIds();
@@ -46,10 +62,11 @@ function MultiSelectEditor(props: { column: Property; value: string; onSave: (v:
 
   const unselectedOptions = () => (props.column.options ?? []).filter((o) => !selectedIds().includes(o.id));
 
-  const optionName = (id: string) => props.column.options?.find((o) => o.id === id)?.name ?? id;
-
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') setOpen(false);
+    if (e.key === 'Escape') {
+      setOpen(false);
+      props.onClose?.();
+    }
   };
 
   return (
@@ -61,43 +78,140 @@ function MultiSelectEditor(props: { column: Property; value: string; onSave: (v:
     >
       <div class={styles.chipList}>
         <For each={selectedIds()}>
-          {(id) => (
-            <span class={styles.chip}>
-              {optionName(id)}
-              <button
-                class={styles.chipRemove}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggle(id);
-                }}
-                type="button"
-                aria-label={`Remove ${optionName(id)}`}
-              >
-                ×
-              </button>
-            </span>
-          )}
-        </For>
-      </div>
-      <Switch>
-        <Match when={open() && unselectedOptions().length > 0}>
-          <div class={styles.optionsList}>
-            <For each={unselectedOptions()}>
-              {(opt) => (
-                <div
-                  class={styles.optionItem}
+          {(id) => {
+            const color = optionColor(id);
+            return (
+              <span class={styles.chip} style={color ? { background: color, color: '#fff' } : {}}>
+                {optionName(id)}
+                <button
+                  class={styles.chipRemove}
                   onClick={(e) => {
                     e.stopPropagation();
-                    toggle(opt.id);
+                    toggle(id);
                   }}
+                  type="button"
+                  aria-label={`Remove ${optionName(id)}`}
                 >
-                  {opt.name}
-                </div>
-              )}
-            </For>
+                  ×
+                </button>
+              </span>
+            );
+          }}
+        </For>
+      </div>
+      <Show when={open() && unselectedOptions().length > 0}>
+        <div class={styles.optionsList}>
+          <For each={unselectedOptions()}>
+            {(opt) => (
+              <div
+                class={styles.optionItem}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggle(opt.id);
+                }}
+              >
+                <Show when={opt.color}>
+                  <span class={styles.optionColor} style={{ background: opt.color }} />
+                </Show>
+                {opt.name}
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
+    </div>
+  );
+}
+
+interface SingleSelectEditorProps {
+  column: Property;
+  value: string;
+  onSave: (v: string) => void;
+  onClose?: () => void;
+}
+
+function SingleSelectEditor(props: SingleSelectEditorProps) {
+  const [open, setOpen] = createSignal(false);
+  let wrapperRef: HTMLDivElement | undefined;
+
+  useClickOutside(
+    () => wrapperRef,
+    () => {
+      setOpen(false);
+      props.onClose?.();
+    }
+  );
+
+  const selectedOption = () => props.column.options?.find((o) => o.id === props.value || o.name === props.value);
+
+  const handleSelect = (optId: string) => {
+    props.onSave(optId);
+    setOpen(false);
+    props.onClose?.();
+  };
+
+  const handleClear = (e: MouseEvent) => {
+    e.stopPropagation();
+    props.onSave('');
+    setOpen(false);
+    props.onClose?.();
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setOpen(false);
+      props.onClose?.();
+    }
+  };
+
+  return (
+    <div
+      class={styles.singleSelectWrapper}
+      ref={(el) => (wrapperRef = el)}
+      onKeyDown={handleKeyDown}
+      onClick={() => setOpen(!open())}
+    >
+      <Show when={selectedOption()} fallback={<span class={styles.selectPlaceholder}>--</span>}>
+        {(opt) => (
+          <span class={styles.chip} style={opt().color ? { background: opt().color, color: '#fff' } : {}}>
+            {opt().name}
+            <button class={styles.chipRemove} onClick={handleClear} type="button" aria-label="Clear">
+              ×
+            </button>
+          </span>
+        )}
+      </Show>
+      <Show when={open()}>
+        <div class={styles.optionsList}>
+          <div
+            class={styles.optionItem}
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onSave('');
+              setOpen(false);
+              props.onClose?.();
+            }}
+          >
+            <span class={styles.optionNone}>—</span>
           </div>
-        </Match>
-      </Switch>
+          <For each={props.column.options}>
+            {(opt) => (
+              <div
+                class={styles.optionItem}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSelect(opt.id);
+                }}
+              >
+                <Show when={opt.color}>
+                  <span class={styles.optionColor} style={{ background: opt.color }} />
+                </Show>
+                {opt.name}
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
     </div>
   );
 }
@@ -128,10 +242,7 @@ export function FieldEditor(props: FieldEditorProps) {
       </Match>
 
       <Match when={props.column.type === PropertyTypeSelect}>
-        <select value={value()} onChange={(e) => save(e.currentTarget.value)} class={styles.select}>
-          <option value="">--</option>
-          <For each={props.column.options}>{(opt) => <option value={opt.id}>{opt.name}</option>}</For>
-        </select>
+        <SingleSelectEditor column={props.column} value={value()} onSave={save} />
       </Match>
 
       <Match when={props.column.type === PropertyTypeMultiSelect}>

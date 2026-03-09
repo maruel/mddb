@@ -6,11 +6,13 @@ import {
   type Property,
   PropertyTypeCheckbox,
   PropertyTypeSelect,
+  PropertyTypeMultiSelect,
   PropertyTypeNumber,
   PropertyTypeDate,
 } from '@sdk/types.gen';
 import styles from './TableCell.module.css';
 import { FieldValue } from './FieldValue';
+import { MultiSelectEditor } from './FieldEditor';
 
 export interface TableCellProps {
   record: DataRecordResponse;
@@ -129,6 +131,18 @@ export function TableCell(props: TableCellProps) {
             onChange={syncAndSave}
             onKeyDown={onKeyDown}
             class={styles.input}
+          />
+        );
+      case PropertyTypeMultiSelect:
+        return (
+          <MultiSelectEditor
+            column={props.column}
+            value={editValue()}
+            onSave={(v) => {
+              setEditValue(v);
+              props.onSave(v);
+            }}
+            onClose={props.onCancel}
           />
         );
       case PropertyTypeSelect:
