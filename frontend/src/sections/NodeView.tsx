@@ -1,6 +1,6 @@
 // Node view component displaying editor or table based on node type.
 
-import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on } from 'solid-js';
+import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack } from 'solid-js';
 import { useParams, useNavigate, useSearchParams } from '@solidjs/router';
 import TableTable from '../components/TableTable';
 import TableGrid from '../components/TableGrid';
@@ -107,18 +107,31 @@ export default function NodeView() {
   );
 
   // 2. Apply URL ?view= param and track back/forward navigation.
-  // Runs reactively whenever views load or searchParams.view changes (history navigation).
-  // Once views are ready, marks initialization done so the sync effect can take over.
+  // Pre-init: tracks views() to wait for them to load, applies the initial URL param, then
+  // marks initialization done. Post-init: tracks only searchParams.view for back/forward —
+  // views() is untracked so createView() additions don't re-trigger stale URL param application.
   createEffect(() => {
     const paramNodeId = stripSlug(params.nodeId);
     const nodeId = selectedNodeId();
-    const loadedViews = views();
-    if (!paramNodeId || !nodeId || paramNodeId !== nodeId || loadedViews.length === 0) return;
-    const paramId = searchParams.view;
-    if (paramId && loadedViews.some((v) => v.id === paramId)) {
-      setActiveViewId(paramId);
+    if (!paramNodeId || !nodeId || paramNodeId !== nodeId) return;
+    const paramId = searchParams.view; // Always tracked for back/forward
+    if (!viewParamApplied()) {
+      const loadedViews = views(); // Tracked only pre-init
+      if (loadedViews.length === 0) return;
+      if (paramId && loadedViews.some((v) => v.id === paramId)) {
+        setActiveViewId(paramId);
+      }
+      setViewParamApplied(true);
+      return;
     }
-    setViewParamApplied(true);
+    // Post-init: handle back/forward navigation; untrack views/activeViewId to avoid
+    // re-running when createView() or deleteView() mutates views().
+    if (paramId) {
+      const loadedViews = untrack(() => views());
+      if (loadedViews.some((v) => v.id === paramId) && paramId !== untrack(() => activeViewId())) {
+        setActiveViewId(paramId);
+      }
+    }
   });
 
   // 3. Sync activeViewId → URL. Gated on viewParamApplied so it only runs after the
