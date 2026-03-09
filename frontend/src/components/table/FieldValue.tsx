@@ -46,7 +46,12 @@ export function FieldValue(props: FieldValueProps): JSXElement {
   return (
     <Switch fallback={<>{strValue()}</>}>
       <Match when={props.column.type === PropertyTypeCheckbox}>
-        <span class={styles.checkbox}>{rawValue() === 'true' || rawValue() === true ? '✓' : ''}</span>
+        <input
+          type="checkbox"
+          class={styles.checkbox}
+          checked={rawValue() === 'true' || rawValue() === true}
+          readOnly
+        />
       </Match>
       <Match when={props.column.type === PropertyTypeSelect}>
         <Show when={strValue()}>{renderChip(strValue())}</Show>

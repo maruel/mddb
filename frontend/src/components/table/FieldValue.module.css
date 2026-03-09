@@ -21,14 +21,13 @@
 }
 
 .checkbox {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.1em;
-  height: 1.1em;
-  font-size: 0.9em;
-  color: var(--c-primary);
-  font-weight: 600;
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  cursor: default;
+  accent-color: var(--c-primary);
+  vertical-align: middle;
+  pointer-events: none;
 }
 
 .link {
