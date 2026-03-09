@@ -90,6 +90,8 @@ import type {
   UpdateOrgMemberRoleRequest,
   UpdateOrgPreferencesRequest,
   UpdateOrganizationRequest,
+  UpdatePageFrontmatterRequest,
+  UpdatePageFrontmatterResponse,
   UpdatePageRequest,
   UpdatePageResponse,
   UpdateRecordRequest,
@@ -271,6 +273,7 @@ export function createAPIClient(fetchFn: FetchFn) {
             deletePage: (id: string) => post<DeletePageResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/page/delete`),
             getPage: (id: string) => get<GetPageResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/page`),
             updatePage: (id: string, options: UpdatePageRequest) => post<UpdatePageResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/page`, options),
+            updatePageFrontmatter: (id: string, options: UpdatePageFrontmatterRequest) => post<UpdatePageFrontmatterResponse>(fetchFn, `/api/v1/workspaces/${wsID}/nodes/${id}/page/frontmatter`, options),
           },
           table: {
             records: {

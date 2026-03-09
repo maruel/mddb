@@ -76,6 +76,7 @@ interface WorkspaceContextValue {
   fetchNodeChildren: (nodeId: string) => Promise<void>;
   removeNode: (nodeId: string) => void;
   updateNodeTitle: (nodeId: string, newTitle: string) => void;
+  updateNodeIcon: (nodeId: string, newIcon: string) => void;
   moveNode: (nodeId: string, newParentId: string) => Promise<void>;
 
   // Clear errors
@@ -157,6 +158,26 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       })
     );
     setBreadcrumbPath((path) => path.map((node) => (node.id === nodeId ? { ...node, title: newTitle } : node)));
+  };
+
+  const updateNodeIcon = (nodeId: string, newIcon: string) => {
+    setNodesStore(
+      produce((list) => {
+        const update = (nodeList: NodeResponse[]): boolean => {
+          for (const node of nodeList) {
+            if (node.id === nodeId) {
+              node.icon = newIcon;
+              return true;
+            }
+            if (node.children) {
+              if (update(node.children)) return true;
+            }
+          }
+          return false;
+        };
+        update(list);
+      })
+    );
   };
 
   // Remove a node from the store (used after deletion)
@@ -545,6 +566,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     fetchNodeChildren,
     removeNode,
     updateNodeTitle,
+    updateNodeIcon,
     moveNode,
     clearErrors,
   };

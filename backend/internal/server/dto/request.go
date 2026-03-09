@@ -224,6 +224,23 @@ func (r *UpdatePageRequest) Validate() error {
 	return nil
 }
 
+// UpdatePageFrontmatterRequest is a request to update a page's icon and cover image.
+// Pass an empty string to clear a field.
+type UpdatePageFrontmatterRequest struct {
+	WsID  ksid.ID `path:"wsID" tstype:"-"`
+	ID    ksid.ID `path:"id" tstype:"-"`
+	Icon  string  `json:"icon"`
+	Cover string  `json:"cover"`
+}
+
+// Validate validates the update page frontmatter request fields.
+func (r *UpdatePageFrontmatterRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	return nil
+}
+
 // DeletePageRequest is a request to delete a page from a node.
 // This removes the index.md but keeps the node directory if table data exists.
 type DeletePageRequest struct {

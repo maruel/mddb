@@ -144,6 +144,8 @@ func nodeToResponse(n *content.Node) *dto.NodeResponse {
 		Modified:    n.Modified,
 		Tags:        n.Tags,
 		FaviconURL:  n.FaviconURL,
+		Icon:        n.Icon,
+		Cover:       n.Cover,
 		HasPage:     hasPage,
 		HasTable:    hasTable,
 		HasChildren: n.HasChildren,

@@ -224,6 +224,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.GetPage, svc, hcfg, identity.WSRoleViewer, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page", WrapWSAuth(nh.UpdatePage, svc, hcfg, identity.WSRoleEditor, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/delete", WrapWSAuth(nh.DeletePage, svc, hcfg, identity.WSRoleEditor, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/page/frontmatter", WrapWSAuth(nh.UpdatePageFrontmatter, svc, hcfg, identity.WSRoleEditor, limiters))
 	// Tables (under nodes)
 	mux.Handle("POST /api/v1/workspaces/{wsID}/nodes/{id}/table/create", WrapWSAuth(nh.CreateTable, svc, hcfg, identity.WSRoleEditor, limiters))
 	mux.Handle("GET /api/v1/workspaces/{wsID}/nodes/{id}/table", WrapWSAuth(nh.GetTable, svc, hcfg, identity.WSRoleViewer, limiters))

@@ -93,6 +93,17 @@ export const dict: Dictionary = {
     taskList: 'Checkliste',
     blockquote: 'Zitat',
     codeBlock: 'Code-Block',
+    addIcon: 'Symbol hinzufügen',
+    addCover: 'Titelbild hinzufügen',
+    changeIcon: 'Symbol ändern',
+    changeCover: 'Titelbild ändern',
+    removeCover: 'Titelbild entfernen',
+    removeIcon: 'Symbol entfernen',
+    iconPickerTitle: 'Symbol auswählen',
+    iconPickerEmoji: 'Emoji',
+    iconPickerIcons: 'Symbole',
+    iconPickerSearch: 'Suchen...',
+    uploadCover: 'Bild hochladen',
   },
 
   welcome: {

@@ -434,6 +434,8 @@ type NodeResponse struct {
 	Modified    Time              `json:"modified" jsonschema:"description=Last modification Unix timestamp"`
 	Tags        []string          `json:"tags,omitempty" jsonschema:"description=Node tags"`
 	FaviconURL  string            `json:"favicon_url,omitempty" jsonschema:"description=Favicon URL"`
+	Icon        string            `json:"icon,omitempty" jsonschema:"description=Page icon: emoji character or MDI icon name"`
+	Cover       string            `json:"cover,omitempty" jsonschema:"description=Cover image asset filename"`
 	HasPage     bool              `json:"has_page" jsonschema:"description=Whether node has page content (index.md exists)"`
 	HasTable    bool              `json:"has_table" jsonschema:"description=Whether node has table content (metadata.json exists)"`
 	HasChildren bool              `json:"has_children,omitempty" jsonschema:"description=Whether node has child nodes"`
@@ -458,6 +460,11 @@ type CreatePageResponse struct {
 
 // UpdatePageResponse is a response from updating a page.
 type UpdatePageResponse struct {
+	ID ksid.ID `json:"id" jsonschema:"description=Node identifier"`
+}
+
+// UpdatePageFrontmatterResponse is a response from updating a page's icon and cover.
+type UpdatePageFrontmatterResponse struct {
 	ID ksid.ID `json:"id" jsonschema:"description=Node identifier"`
 }
 

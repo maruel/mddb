@@ -95,6 +95,17 @@ export interface Dictionary {
     taskList: string;
     blockquote: string;
     codeBlock: string;
+    addIcon: string;
+    addCover: string;
+    changeIcon: string;
+    changeCover: string;
+    removeCover: string;
+    removeIcon: string;
+    iconPickerTitle: string;
+    iconPickerEmoji: string;
+    iconPickerIcons: string;
+    iconPickerSearch: string;
+    uploadCover: string;
   };
 
   welcome: {

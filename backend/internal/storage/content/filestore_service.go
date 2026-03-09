@@ -38,6 +38,8 @@ type page struct {
 	created  storage.Time
 	modified storage.Time
 	tags     []string
+	icon     string // emoji character or MDI icon name
+	cover    string // asset filename used as cover image
 }
 
 // NewFileStoreService creates a versioned file store service.

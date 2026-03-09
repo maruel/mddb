@@ -94,6 +94,17 @@ export const dict: Dictionary = {
     taskList: 'Task list',
     blockquote: 'Quote',
     codeBlock: 'Code block',
+    addIcon: 'Add icon',
+    addCover: 'Add cover',
+    changeIcon: 'Change icon',
+    changeCover: 'Change cover',
+    removeCover: 'Remove cover',
+    removeIcon: 'Remove icon',
+    iconPickerTitle: 'Choose icon',
+    iconPickerEmoji: 'Emoji',
+    iconPickerIcons: 'Icons',
+    iconPickerSearch: 'Search...',
+    uploadCover: 'Upload image',
   },
 
   welcome: {

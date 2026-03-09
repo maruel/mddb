@@ -241,6 +241,8 @@ func (ws *WorkspaceFileStore) ReadPage(id ksid.ID) (*Node, error) {
 		Content:  p.content,
 		Created:  p.created,
 		Modified: p.modified,
+		Icon:     p.icon,
+		Cover:    p.cover,
 	}, nil
 }
 
@@ -285,6 +287,8 @@ func (ws *WorkspaceFileStore) writePage(id, parentID ksid.ID, title, content str
 		Content:  content,
 		Created:  p.created,
 		Modified: p.modified,
+		Icon:     p.icon,
+		Cover:    p.cover,
 	}, nil
 }
 
@@ -352,6 +356,47 @@ func (ws *WorkspaceFileStore) updatePage(id ksid.ID, title, content string) (*No
 		Created:  p.created,
 		Modified: p.modified,
 	}, nil
+}
+
+// UpdatePageFrontmatter updates the icon and cover fields of a page and commits to git.
+// Pass empty string to clear a field.
+func (ws *WorkspaceFileStore) UpdatePageFrontmatter(ctx context.Context, id ksid.ID, icon, cover string, author git.Author) (*Node, error) {
+	var node *Node
+	err := ws.repo.CommitTx(ctx, author, func() (string, []string, error) {
+		parentID := ws.getParent(id)
+		filePath := ws.pageIndexFile(id, parentID)
+
+		data, err := os.ReadFile(filePath) //nolint:gosec // G304: filePath is constructed from validated id
+		if err != nil {
+			if os.IsNotExist(err) {
+				return "", nil, errPageNotFound
+			}
+			return "", nil, fmt.Errorf("failed to read page: %w", err)
+		}
+
+		p := ParseMarkdown(data)
+		p.icon = icon
+		p.cover = cover
+
+		if err := ws.writePageFile(id, parentID, p); err != nil {
+			return "", nil, err
+		}
+
+		node = &Node{
+			ID:       id,
+			ParentID: parentID,
+			Title:    p.title,
+			Type:     NodeTypeDocument,
+			Content:  p.content,
+			Created:  p.created,
+			Modified: p.modified,
+			Icon:     p.icon,
+			Cover:    p.cover,
+		}
+		files := []string{ws.gitPath(parentID, id, "index.md")}
+		return "update: frontmatter " + id.String(), files, nil
+	})
+	return node, err
 }
 
 // DeletePage deletes a page and commits to git.
@@ -485,6 +530,8 @@ func (ws *WorkspaceFileStore) ReadNodeFromPath(path string, id, parentID ksid.ID
 		node.Content = p.content
 		node.Created = p.created
 		node.Modified = p.modified
+		node.Icon = p.icon
+		node.Cover = p.cover
 	}
 
 	if hasMetadata {
@@ -1558,7 +1605,7 @@ func (ws *WorkspaceFileStore) ListChildren(parentID ksid.ID) ([]*Node, error) {
 // ParseMarkdown parses a markdown file with optional YAML front matter.
 func ParseMarkdown(data []byte) *page {
 	content := string(data)
-	var title string
+	var title, icon, cover string
 	var created, modified storage.Time
 
 	if strings.HasPrefix(content, "---") {
@@ -1580,6 +1627,10 @@ func ParseMarkdown(data []byte) *page {
 					if t, err := time.Parse(time.RFC3339, dateStr); err == nil {
 						modified = storage.ToTime(t)
 					}
+				case strings.HasPrefix(line, "icon:"):
+					icon = strings.TrimSpace(strings.TrimPrefix(line, "icon:"))
+				case strings.HasPrefix(line, "cover:"):
+					cover = strings.TrimSpace(strings.TrimPrefix(line, "cover:"))
 				}
 			}
 		}
@@ -1597,6 +1648,8 @@ func ParseMarkdown(data []byte) *page {
 		content:  content,
 		created:  created,
 		modified: modified,
+		icon:     icon,
+		cover:    cover,
 	}
 }
 
@@ -1608,6 +1661,12 @@ func formatMarkdownFile(p *page) []byte {
 	buf.WriteString("modified: " + p.modified.AsTime().Format(time.RFC3339) + "\n")
 	if len(p.tags) > 0 {
 		buf.WriteString("tags: [" + strings.Join(p.tags, ", ") + "]\n")
+	}
+	if p.icon != "" {
+		buf.WriteString("icon: " + p.icon + "\n")
+	}
+	if p.cover != "" {
+		buf.WriteString("cover: " + p.cover + "\n")
 	}
 	buf.WriteString("---")
 	buf.WriteString("\n\n")

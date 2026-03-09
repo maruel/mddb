@@ -93,6 +93,17 @@ export const dict: Dictionary = {
     taskList: 'Lista de tareas',
     blockquote: 'Cita',
     codeBlock: 'Bloque de código',
+    addIcon: 'Agregar ícono',
+    addCover: 'Agregar portada',
+    changeIcon: 'Cambiar ícono',
+    changeCover: 'Cambiar portada',
+    removeCover: 'Quitar portada',
+    removeIcon: 'Quitar ícono',
+    iconPickerTitle: 'Elegir ícono',
+    iconPickerEmoji: 'Emoji',
+    iconPickerIcons: 'Íconos',
+    iconPickerSearch: 'Buscar...',
+    uploadCover: 'Subir imagen',
   },
 
   welcome: {

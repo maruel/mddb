@@ -51,6 +51,12 @@ interface EditorContextValue {
   dismissExternalChange: () => void;
   refreshFromServer: () => void;
 
+  // Frontmatter (icon and cover)
+  icon: Accessor<string>;
+  cover: Accessor<string>;
+  handleIconChange: (newIcon: string) => Promise<void>;
+  handleCoverChange: (newCover: string) => Promise<void>;
+
   // Actions
   triggerAutoSave: () => void;
   flushAutoSave: () => void;
@@ -64,7 +70,8 @@ const EditorContext = createContext<EditorContextValue>();
 export const EditorProvider: ParentComponent = (props) => {
   const { t } = useI18n();
   const { user, wsApi } = useAuth();
-  const { selectedNodeId, selectedNodeData, updateNodeTitle, loadNode, setLoadError, setSaveError } = useWorkspace();
+  const { selectedNodeId, selectedNodeData, updateNodeTitle, updateNodeIcon, loadNode, setLoadError, setSaveError } =
+    useWorkspace();
   const { lastEvent } = useEventSource();
 
   // Editor state
@@ -72,6 +79,10 @@ export const EditorProvider: ParentComponent = (props) => {
   const [content, setContent] = createSignal('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
   const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+
+  // Frontmatter state
+  const [icon, setIcon] = createSignal('');
+  const [cover, setCover] = createSignal('');
 
   // Asset URLs accessor - derived from selectedNodeData
   const assetUrls = (): AssetUrlMap => selectedNodeData()?.asset_urls || {};
@@ -178,6 +189,8 @@ export const EditorProvider: ParentComponent = (props) => {
       const wsId = user()?.workspace_id || '';
       const spaContent = relativeLinksToSpaUrls(node.content || '', wsId);
       setContent(spaContent);
+      setIcon(node.icon || '');
+      setCover(node.cover || '');
       setHasUnsavedChanges(false);
       setAutoSaveStatus('idle');
       setShowHistory(false);
@@ -192,12 +205,39 @@ export const EditorProvider: ParentComponent = (props) => {
   function resetEditor() {
     setTitle('');
     setContent('');
+    setIcon('');
+    setCover('');
     setHasUnsavedChanges(false);
     setAutoSaveStatus('idle');
     setShowHistory(false);
     setHistory([]);
     setLinkedNodeTitles({});
     setExternalChange(false);
+  }
+
+  async function handleIconChange(newIcon: string) {
+    const nodeId = selectedNodeId();
+    const ws = wsApi();
+    if (!nodeId || !ws) return;
+    setIcon(newIcon);
+    updateNodeIcon(nodeId, newIcon);
+    try {
+      await ws.nodes.page.updatePageFrontmatter(nodeId, { icon: newIcon, cover: cover() });
+    } catch (err) {
+      setSaveError(`${t('errors.failedToSave')}: ${err}`);
+    }
+  }
+
+  async function handleCoverChange(newCover: string) {
+    const nodeId = selectedNodeId();
+    const ws = wsApi();
+    if (!nodeId || !ws) return;
+    setCover(newCover);
+    try {
+      await ws.nodes.page.updatePageFrontmatter(nodeId, { icon: icon(), cover: newCover });
+    } catch (err) {
+      setSaveError(`${t('errors.failedToSave')}: ${err}`);
+    }
   }
 
   function handleTitleChange(newTitle: string) {
@@ -256,6 +296,10 @@ export const EditorProvider: ParentComponent = (props) => {
     externalChange,
     dismissExternalChange,
     refreshFromServer,
+    icon,
+    cover,
+    handleIconChange,
+    handleCoverChange,
     triggerAutoSave: debouncedAutoSave,
     flushAutoSave: debouncedAutoSave.flush,
     resetEditor,

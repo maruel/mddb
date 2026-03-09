@@ -1,0 +1,152 @@
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cover image */
+.coverWrapper {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: var(--c-bg-alt);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.coverWrapper.coverDragging {
+  outline: 2px dashed var(--c-primary);
+  outline-offset: -2px;
+}
+
+.coverImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  display: block;
+}
+
+.coverOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: var(--s-2);
+  padding: var(--s-2);
+  opacity: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.25) 0%, transparent 60%);
+  transition: opacity 0.15s;
+}
+
+.coverWrapper:hover .coverOverlay {
+  opacity: 1;
+}
+
+.coverBtn {
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--c-text);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.coverBtn:hover {
+  background: #fff;
+}
+
+/* Meta row: icon + hover-action buttons */
+.metaRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3) 0;
+  min-height: 44px;
+  position: relative;
+}
+
+/* Icon display */
+.iconWrapper {
+  position: relative;
+  flex-shrink: 0;
+  /* Pull icon up to overlap cover when cover is visible */
+  margin-top: -28px;
+}
+
+.iconButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+}
+
+.iconButton:hover {
+  background: var(--c-bg-hover);
+}
+
+.pageIcon {
+  font-size: 3rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pageIcon svg {
+  width: 3rem;
+  height: 3rem;
+  color: var(--c-text);
+}
+
+:global(.material-symbols-outlined).pageIcon {
+  font-size: 3rem;
+}
+
+/* Hover action buttons ("Add icon", "Add cover") */
+.hoverActions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  opacity: 0;
+  transition: opacity 0.15s;
+  position: relative;
+}
+
+.metaRow:hover .hoverActions {
+  opacity: 1;
+}
+
+.hoverBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: 0.8rem;
+  color: var(--c-text-light);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.hoverBtn:hover {
+  color: var(--c-text);
+  background: var(--c-bg-hover);
+}
+
+.hoverBtn svg {
+  width: 1rem;
+  height: 1rem;
+}

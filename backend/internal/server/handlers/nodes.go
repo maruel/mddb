@@ -252,6 +252,21 @@ func (h *NodeHandler) UpdatePage(ctx context.Context, wsID ksid.ID, user *identi
 	return &dto.UpdatePageResponse{ID: node.ID}, nil
 }
 
+// UpdatePageFrontmatter updates the icon and cover of a page.
+func (h *NodeHandler) UpdatePageFrontmatter(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.UpdatePageFrontmatterRequest) (*dto.UpdatePageFrontmatterResponse, error) {
+	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
+	if err != nil {
+		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	author := GitAuthor(user)
+	node, err := ws.UpdatePageFrontmatter(ctx, req.ID, req.Icon, req.Cover, author)
+	if err != nil {
+		return nil, dto.NotFound("page")
+	}
+	h.Svc.PublishEvent(wsID, dto.EventNodeUpdated, node.ID, user.ID)
+	return &dto.UpdatePageFrontmatterResponse{ID: node.ID}, nil
+}
+
 // DeletePage removes the page content from a node.
 // The node directory is kept if table content exists.
 func (h *NodeHandler) DeletePage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.DeletePageRequest) (*dto.DeletePageResponse, error) {

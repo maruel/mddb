@@ -10,6 +10,8 @@ import RecordDetail from '../components/RecordDetail';
 import ViewTabs from '../components/table/ViewTabs';
 import { AddColumnDropdown } from '../components/table/AddColumnDropdown';
 import MarkdownPreview from '../components/MarkdownPreview';
+import { PageHeader } from '../components/editor/PageHeader';
+import { useAssetUpload } from '../components/editor/useAssetUpload';
 import { useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from '../contexts';
 import { useI18n } from '../i18n';
 import { nodeUrl, stripSlug } from '../utils/urls';
@@ -51,7 +53,21 @@ export default function NodeView() {
     externalChange,
     dismissExternalChange,
     refreshFromServer,
+    icon,
+    cover,
+    handleIconChange,
+    handleCoverChange,
   } = useEditor();
+
+  const coverUpload = useAssetUpload({
+    get wsId() {
+      return user()?.workspace_id ?? '';
+    },
+    get nodeId() {
+      return selectedNodeId() ?? '';
+    },
+    getToken: () => token(),
+  });
   const {
     records,
     hasMore,
@@ -223,6 +239,15 @@ export default function NodeView() {
     await updateTableProperties(nodeId, currentProperties);
   }
 
+  async function handleUploadCover(file: File): Promise<string> {
+    const result = await coverUpload.uploadFile(file);
+    if (!result) return '';
+    // Reload node to get updated asset URLs
+    const nodeId = selectedNodeId();
+    if (nodeId) loadNode(nodeId);
+    return result.name;
+  }
+
   async function loadPreview(nodeId: string, commit: Commit) {
     const ws = wsApi();
     if (!ws) return;
@@ -262,6 +287,16 @@ export default function NodeView() {
             </div>
           </Show>
           <Show when={!previewCommit()}>
+            <Show when={selectedNodeData()?.has_page}>
+              <PageHeader
+                icon={icon()}
+                cover={cover()}
+                coverUrl={cover() ? (assetUrls()[cover()] ?? '') : ''}
+                onIconChange={handleIconChange}
+                onCoverChange={handleCoverChange}
+                onUploadCover={handleUploadCover}
+              />
+            </Show>
             <div class={styles.editorHeader}>
               <input
                 type="text"

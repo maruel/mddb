@@ -188,6 +188,14 @@ export interface UpdatePageRequest {
   content: string;
 }
 /**
+ * UpdatePageFrontmatterRequest is a request to update a page's icon and cover image.
+ * Pass an empty string to clear a field.
+ */
+export interface UpdatePageFrontmatterRequest {
+  icon: string;
+  cover: string;
+}
+/**
  * DeletePageRequest is a request to delete a page from a node.
  * This removes the index.md but keeps the node directory if table data exists.
  */
@@ -1183,6 +1191,8 @@ export interface NodeResponse {
   modified: Time;
   tags?: string[];
   favicon_url?: string;
+  icon?: string;
+  cover?: string;
   has_page: boolean;
   has_table: boolean;
   has_children?: boolean;
@@ -1210,6 +1220,12 @@ export interface CreatePageResponse {
  * UpdatePageResponse is a response from updating a page.
  */
 export interface UpdatePageResponse {
+  id: string;
+}
+/**
+ * UpdatePageFrontmatterResponse is a response from updating a page's icon and cover.
+ */
+export interface UpdatePageFrontmatterResponse {
   id: string;
 }
 /**

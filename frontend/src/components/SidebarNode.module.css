@@ -110,6 +110,24 @@
   opacity: 0;
 }
 
+/* Sidebar icon for emoji/MDI page icons */
+.sidebarIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95em;
+  line-height: 1;
+}
+
+.sidebarIcon svg {
+  width: 1em;
+  height: 1em;
+}
+
+.sidebarIcon :global(.material-symbols-outlined) {
+  font-size: 1em;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);

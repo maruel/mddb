@@ -11,6 +11,7 @@ import TableChartIcon from '@material-symbols/svg-400/outlined/table_chart.svg?s
 import ChevronRightIcon from '@material-symbols/svg-400/outlined/chevron_right.svg?solid';
 import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
 import HistoryIcon from '@material-symbols/svg-400/outlined/history.svg?solid';
+import { IconDisplay } from './editor/IconPicker';
 
 // Module-level drag state (imperative, not reactive)
 let dragState: { nodeId: string; element: HTMLElement } | null = null;
@@ -183,7 +184,13 @@ export default function SidebarNode(props: SidebarNodeProps) {
           data-testid={`expand-icon-${props.node.id}`}
         >
           <span class={styles.nodeIcon}>
-            {props.node.has_table && !props.node.has_page ? <TableChartIcon /> : <DescriptionIcon />}
+            {props.node.icon ? (
+              <IconDisplay icon={props.node.icon} class={styles.sidebarIcon} />
+            ) : props.node.has_table && !props.node.has_page ? (
+              <TableChartIcon />
+            ) : (
+              <DescriptionIcon />
+            )}
           </span>
           <span
             class={styles.expandIcon}
