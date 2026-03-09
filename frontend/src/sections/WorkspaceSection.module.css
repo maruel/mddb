@@ -187,6 +187,15 @@
   border-left: 1px solid var(--c-border);
 }
 
+.calendarPlaceholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-text-light);
+  font-size: 0.9rem;
+}
+
 .breadcrumbs {
   display: flex;
   align-items: center;

@@ -379,6 +379,7 @@ export const dict: Dictionary = {
     optionPlaceholder: 'Optionsname',
     deleteOption: 'Option löschen',
     optionUsedWarning: 'Verwendet von {n} Eintrag/Einträgen',
+    calendarNotAvailable: 'Die Kalenderansicht ist noch nicht verfügbar.',
   },
 
   errors: {

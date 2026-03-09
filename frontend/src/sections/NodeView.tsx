@@ -3,7 +3,7 @@
 import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack } from 'solid-js';
 import { useParams, useNavigate, useSearchParams } from '@solidjs/router';
 import TableTable from '../components/TableTable';
-import TableGrid from '../components/TableGrid';
+import TableList from '../components/TableList';
 import TableGallery from '../components/TableGallery';
 import TableBoard from '../components/TableBoard';
 import RecordDetail from '../components/RecordDetail';
@@ -420,7 +420,7 @@ export default function NodeView() {
                     />
                   </Show>
                   <Show when={viewType() === 'list'}>
-                    <TableGrid
+                    <TableList
                       records={records()}
                       columns={selectedNodeData()?.properties || []}
                       onAddRecord={() => addRecord({})}
@@ -429,6 +429,9 @@ export default function NodeView() {
                       onDuplicateRecord={duplicateRecord}
                       onOpenRecord={(id) => setOpenRecordId(id)}
                     />
+                  </Show>
+                  <Show when={viewType() === 'calendar'}>
+                    <div class={styles.calendarPlaceholder}>{t('table.calendarNotAvailable')}</div>
                   </Show>
                   <Show when={viewType() === 'gallery'}>
                     <TableGallery

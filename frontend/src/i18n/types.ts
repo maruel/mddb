@@ -379,6 +379,7 @@ export interface Dictionary {
     optionPlaceholder: string;
     deleteOption: string;
     optionUsedWarning: string;
+    calendarNotAvailable: string;
   };
 
   errors: {
