@@ -777,10 +777,6 @@ export default function TableTable(props: TableTableProps) {
                           onTabNext={() => moveFocus('next')}
                           onTabPrev={() => moveFocus('prev')}
                           onEnterDown={() => moveFocus('down')}
-                          onUpdateOptions={(opts) => {
-                            const idx = props.columns.indexOf(column);
-                            if (idx >= 0) props.onUpdateColumn?.(idx, { ...column, options: opts });
-                          }}
                         />
                       );
                     }}

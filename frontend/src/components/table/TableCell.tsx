@@ -4,7 +4,6 @@ import { createSignal, Show, type Accessor } from 'solid-js';
 import {
   type DataRecordResponse,
   type Property,
-  type SelectOption,
   PropertyTypeCheckbox,
   PropertyTypeSelect,
   PropertyTypeMultiSelect,
@@ -25,7 +24,6 @@ export interface TableCellProps {
   onTabNext?: () => void;
   onTabPrev?: () => void;
   onEnterDown?: () => void;
-  onUpdateOptions?: (options: SelectOption[]) => void;
 }
 
 /**
@@ -146,7 +144,6 @@ export function TableCell(props: TableCellProps) {
             }}
             onClose={props.onCancel}
             autoOpen
-            onUpdateOptions={props.onUpdateOptions}
           />
         );
       case PropertyTypeSelect:
@@ -160,7 +157,6 @@ export function TableCell(props: TableCellProps) {
             }}
             onClose={props.onCancel}
             autoOpen
-            onUpdateOptions={props.onUpdateOptions}
           />
         );
       case PropertyTypeNumber:

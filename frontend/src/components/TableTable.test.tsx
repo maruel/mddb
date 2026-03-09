@@ -361,7 +361,7 @@ describe('TableTable', () => {
     // Click on the Active cell (handle=td[0], Name=td[1], Age=td[2], Active=td[3])
     const table = document.querySelector('table');
     const rows = table?.querySelectorAll('tbody tr');
-    const activeCell = rows?.[0].querySelectorAll('td')[3];
+    const activeCell = rows?.[0]?.querySelectorAll('td')[3];
     if (activeCell) {
       fireEvent.click(activeCell);
     }

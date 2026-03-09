@@ -101,84 +101,13 @@
   background: var(--c-bg-hover);
 }
 
-.optionNone {
-  color: var(--c-text-light);
-}
-
-.optionCheck {
-  margin-left: auto;
-  color: var(--c-primary);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.optionSelected {
-  font-weight: 500;
-}
-
-.colorDot {
-  width: 12px;
-  height: 12px;
+.optionColor {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.15);
   flex-shrink: 0;
-  cursor: pointer;
-  padding: 0;
-  background: none;
 }
 
-.colorDot:hover {
-  transform: scale(1.2);
-}
-
-.colorPicker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--c-border);
-}
-
-.colorSwatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  padding: 0;
-}
-
-.colorSwatch:hover {
-  outline: 2px solid var(--c-primary);
-  outline-offset: 1px;
-}
-
-.colorSwatchNone {
-  background: var(--c-bg) !important;
-  border-style: dashed;
-  color: var(--c-text-light);
-  font-size: 0.75rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.addTagRow {
-  padding: 4px 8px;
-  border-top: 1px solid var(--c-border);
-}
-
-.addTagInput {
-  width: 100%;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: 0.85rem;
-  color: inherit;
-  outline: none;
-  padding: 3px 2px;
-}
-
-.addTagInput::placeholder {
+.optionNone {
   color: var(--c-text-light);
 }
