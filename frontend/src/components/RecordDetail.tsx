@@ -17,6 +17,7 @@ interface RecordDetailProps {
   onClose: () => void;
   onDelete?: (id: string) => void;
   onDuplicate?: (id: string) => void;
+  onUpdateColumn?: (col: Property) => void;
 }
 
 export default function RecordDetail(props: RecordDetailProps) {
@@ -98,7 +99,12 @@ export default function RecordDetail(props: RecordDetailProps) {
                     <div class={styles.field}>
                       <label class={styles.fieldLabel}>{col.name}</label>
                       <div class={styles.fieldValue}>
-                        <FieldEditor record={rec()} column={col} onUpdate={props.onUpdate} />
+                        <FieldEditor
+                          record={rec()}
+                          column={col}
+                          onUpdate={props.onUpdate}
+                          onUpdateOptions={(opts) => props.onUpdateColumn?.({ ...col, options: opts })}
+                        />
                       </div>
                     </div>
                   )}

@@ -17,6 +17,7 @@ interface TableGalleryProps {
   onDeleteRecord: (id: string) => void;
   onDuplicateRecord?: (id: string) => void;
   onOpenRecord?: (id: string) => void;
+  onUpdateColumn?: (col: Property) => void;
 }
 
 export default function TableGallery(props: TableGalleryProps) {
@@ -103,7 +104,12 @@ export default function TableGallery(props: TableGalleryProps) {
                             <div class={styles.field}>
                               <span class={styles.fieldName}>{col.name}</span>
                               <span class={styles.fieldValue}>
-                                <FieldEditor record={record} column={col} onUpdate={props.onUpdateRecord} />
+                                <FieldEditor
+                                  record={record}
+                                  column={col}
+                                  onUpdate={props.onUpdateRecord}
+                                  onUpdateOptions={(opts) => props.onUpdateColumn?.({ ...col, options: opts })}
+                                />
                               </span>
                             </div>
                           )}

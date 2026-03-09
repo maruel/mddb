@@ -16,6 +16,7 @@ interface TableGridProps {
   onDeleteRecord: (id: string) => void;
   onDuplicateRecord?: (id: string) => void;
   onOpenRecord?: (id: string) => void;
+  onUpdateColumn?: (col: Property) => void;
 }
 
 export default function TableGrid(props: TableGridProps) {
@@ -65,7 +66,12 @@ export default function TableGrid(props: TableGridProps) {
                     {(col) => (
                       <div class={styles.field}>
                         <span class={styles.fieldName}>{col.name}</span>
-                        <FieldEditor record={record} column={col} onUpdate={props.onUpdateRecord} />
+                        <FieldEditor
+                          record={record}
+                          column={col}
+                          onUpdate={props.onUpdateRecord}
+                          onUpdateOptions={(opts) => props.onUpdateColumn?.({ ...col, options: opts })}
+                        />
                       </div>
                     )}
                   </For>

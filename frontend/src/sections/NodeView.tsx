@@ -416,6 +416,12 @@ export default function NodeView() {
                       onDeleteRecord={deleteRecord}
                       onDuplicateRecord={duplicateRecord}
                       onOpenRecord={(id) => setOpenRecordId(id)}
+                      onUpdateColumn={(col) => {
+                        const nodeData = selectedNodeData();
+                        if (!nodeData) return;
+                        const idx = (nodeData.properties ?? []).findIndex((p) => p.name === col.name);
+                        if (idx >= 0) handleUpdateColumn(idx, col);
+                      }}
                     />
                   </Show>
                   <Show when={viewType() === 'gallery'}>
@@ -427,6 +433,12 @@ export default function NodeView() {
                       onDeleteRecord={deleteRecord}
                       onDuplicateRecord={duplicateRecord}
                       onOpenRecord={(id) => setOpenRecordId(id)}
+                      onUpdateColumn={(col) => {
+                        const nodeData = selectedNodeData();
+                        if (!nodeData) return;
+                        const idx = (nodeData.properties ?? []).findIndex((p) => p.name === col.name);
+                        if (idx >= 0) handleUpdateColumn(idx, col);
+                      }}
                     />
                   </Show>
                   <Show when={viewType() === 'board'}>
@@ -442,6 +454,12 @@ export default function NodeView() {
                       onGroupByChange={(columnName) => {
                         const id = activeViewId();
                         if (id) updateView(id, { groups: [{ property: columnName }] });
+                      }}
+                      onUpdateColumn={(col) => {
+                        const nodeData = selectedNodeData();
+                        if (!nodeData) return;
+                        const idx = (nodeData.properties ?? []).findIndex((p) => p.name === col.name);
+                        if (idx >= 0) handleUpdateColumn(idx, col);
                       }}
                     />
                   </Show>
@@ -459,6 +477,12 @@ export default function NodeView() {
                 onClose={() => setOpenRecordId(null)}
                 onDelete={(rid) => deleteRecord(rid)}
                 onDuplicate={(rid) => duplicateRecord(rid)}
+                onUpdateColumn={(col) => {
+                  const nodeData = selectedNodeData();
+                  if (!nodeData) return;
+                  const idx = (nodeData.properties ?? []).findIndex((p) => p.name === col.name);
+                  if (idx >= 0) handleUpdateColumn(idx, col);
+                }}
               />
             )}
           </Show>

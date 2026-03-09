@@ -5,6 +5,7 @@ import { Portal } from 'solid-js/web';
 import {
   type DataRecordResponse,
   type Property,
+  type SelectOption,
   PropertyTypeCheckbox,
   PropertyTypeSelect,
   PropertyTypeMultiSelect,
@@ -17,10 +18,13 @@ import {
 import { updateRecordField, handleEnterBlur, getFieldValue } from './tableUtils';
 import styles from './FieldEditor.module.css';
 
+const PRESET_COLORS = ['#e03e3e', '#e07b39', '#dfab01', '#4ca154', '#0b7285', '#1864ab', '#6741d9', '#c2255c'];
+
 interface FieldEditorProps {
   record: DataRecordResponse;
   column: Property;
   onUpdate?: (id: string, data: Record<string, unknown>) => void;
+  onUpdateOptions?: (options: SelectOption[]) => void;
 }
 
 interface DropPos {
@@ -43,11 +47,14 @@ export interface MultiSelectEditorProps {
   onClose?: () => void;
   /** Open the dropdown immediately on mount (used when embedded in a table cell). */
   autoOpen?: boolean;
+  onUpdateOptions?: (options: SelectOption[]) => void;
 }
 
 export function MultiSelectEditor(props: MultiSelectEditorProps) {
   const [open, setOpen] = createSignal(false);
   const [dropPos, setDropPos] = createSignal<DropPos | null>(null);
+  const [colorPickerFor, setColorPickerFor] = createSignal<string | null>(null);
+  const [newTagName, setNewTagName] = createSignal('');
   let triggerRef: HTMLDivElement | undefined;
   let dropRef: HTMLDivElement | undefined;
 
@@ -59,6 +66,8 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
   const closeDropdown = () => {
     setOpen(false);
     setDropPos(null);
+    setColorPickerFor(null);
+    setNewTagName('');
     props.onClose?.();
   };
 
@@ -70,6 +79,8 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
       if (!triggerRef?.contains(target) && !dropRef?.contains(target)) {
         setOpen(false);
         setDropPos(null);
+        setColorPickerFor(null);
+        setNewTagName('');
         props.onClose?.();
       }
     };
@@ -114,7 +125,24 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
     props.onSave(next.join(','));
   };
 
-  const unselectedOptions = () => (props.column.options ?? []).filter((o) => !selectedIds().includes(o.id));
+  const addNewOption = () => {
+    const name = newTagName().trim();
+    if (!name || !props.onUpdateOptions) return;
+    const newOpt: SelectOption = { id: crypto.randomUUID(), name };
+    const updated = [...(props.column.options ?? []), newOpt];
+    props.onUpdateOptions(updated);
+    // Auto-select the new option
+    const current = selectedIds();
+    props.onSave([...current, newOpt.id].join(','));
+    setNewTagName('');
+  };
+
+  const changeOptionColor = (optId: string, color: string | undefined) => {
+    if (!props.onUpdateOptions) return;
+    const updated = (props.column.options ?? []).map((o) => (o.id === optId ? { ...o, color } : o));
+    props.onUpdateOptions(updated);
+    setColorPickerFor(null);
+  };
 
   return (
     <div class={styles.multiSelectWrapper} ref={(el) => (triggerRef = el)} onClick={openDropdown}>
@@ -141,7 +169,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
           }}
         </For>
       </div>
-      <Show when={open() && unselectedOptions().length > 0 && dropPos()}>
+      <Show when={open() && dropPos()}>
         {(pos) => (
           <Portal>
             <div
@@ -153,22 +181,81 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
                 'min-width': `${pos().minWidth}px`,
               }}
             >
-              <For each={unselectedOptions()}>
+              <For each={props.column.options ?? []}>
                 {(opt) => (
-                  <div
-                    class={styles.optionItem}
-                    onMouseDown={(e) => {
-                      e.preventDefault(); // prevent blur before toggle
-                      toggle(opt.id);
-                    }}
-                  >
-                    <Show when={opt.color}>
-                      <span class={styles.optionColor} style={{ background: opt.color }} />
+                  <>
+                    <Show when={colorPickerFor() === opt.id}>
+                      <div class={styles.colorPicker}>
+                        <For each={PRESET_COLORS}>
+                          {(color) => (
+                            <button
+                              class={styles.colorSwatch}
+                              style={{ background: color }}
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                changeOptionColor(opt.id, color);
+                              }}
+                            />
+                          )}
+                        </For>
+                        <button
+                          class={`${styles.colorSwatch} ${styles.colorSwatchNone}`}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            changeOptionColor(opt.id, undefined);
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
                     </Show>
-                    {opt.name}
-                  </div>
+                    <div
+                      class={`${styles.optionItem}${selectedIds().includes(opt.id) ? ` ${styles.optionSelected}` : ''}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        toggle(opt.id);
+                      }}
+                    >
+                      <button
+                        class={styles.colorDot}
+                        type="button"
+                        style={opt.color ? { background: opt.color } : { background: 'var(--c-border)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setColorPickerFor(colorPickerFor() === opt.id ? null : opt.id);
+                        }}
+                      />
+                      {opt.name}
+                      <Show when={selectedIds().includes(opt.id)}>
+                        <span class={styles.optionCheck}>✓</span>
+                      </Show>
+                    </div>
+                  </>
                 )}
               </For>
+              <Show when={props.onUpdateOptions}>
+                <div class={styles.addTagRow}>
+                  <input
+                    class={styles.addTagInput}
+                    placeholder="Add option…"
+                    value={newTagName()}
+                    onInput={(e) => setNewTagName(e.currentTarget.value)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addNewOption();
+                      }
+                    }}
+                  />
+                </div>
+              </Show>
             </div>
           </Portal>
         )}
@@ -183,11 +270,14 @@ export interface SingleSelectEditorProps {
   onSave: (v: string) => void;
   onClose?: () => void;
   autoOpen?: boolean;
+  onUpdateOptions?: (options: SelectOption[]) => void;
 }
 
 export function SingleSelectEditor(props: SingleSelectEditorProps) {
   const [open, setOpen] = createSignal(false);
   const [dropPos, setDropPos] = createSignal<DropPos | null>(null);
+  const [colorPickerFor, setColorPickerFor] = createSignal<string | null>(null);
+  const [newTagName, setNewTagName] = createSignal('');
   let triggerRef: HTMLDivElement | undefined;
   let dropRef: HTMLDivElement | undefined;
 
@@ -199,6 +289,8 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
   const closeDropdown = () => {
     setOpen(false);
     setDropPos(null);
+    setColorPickerFor(null);
+    setNewTagName('');
     props.onClose?.();
   };
 
@@ -209,6 +301,8 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
       if (!triggerRef?.contains(target) && !dropRef?.contains(target)) {
         setOpen(false);
         setDropPos(null);
+        setColorPickerFor(null);
+        setNewTagName('');
         props.onClose?.();
       }
     };
@@ -242,10 +336,21 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
     closeDropdown();
   };
 
-  const handleClear = (e: MouseEvent) => {
-    e.stopPropagation();
-    props.onSave('');
-    closeDropdown();
+  const addNewOption = () => {
+    const name = newTagName().trim();
+    if (!name || !props.onUpdateOptions) return;
+    const newOpt: SelectOption = { id: crypto.randomUUID(), name };
+    const updated = [...(props.column.options ?? []), newOpt];
+    props.onUpdateOptions(updated);
+    // Single-select: just add the option, do NOT auto-select
+    setNewTagName('');
+  };
+
+  const changeOptionColor = (optId: string, color: string | undefined) => {
+    if (!props.onUpdateOptions) return;
+    const updated = (props.column.options ?? []).map((o) => (o.id === optId ? { ...o, color } : o));
+    props.onUpdateOptions(updated);
+    setColorPickerFor(null);
   };
 
   return (
@@ -258,7 +363,16 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
         {(opt) => (
           <span class={styles.chip} style={opt().color ? { background: opt().color, color: '#fff' } : {}}>
             {opt().name}
-            <button class={styles.chipRemove} onClick={handleClear} type="button" aria-label="Clear">
+            <button
+              class={styles.chipRemove}
+              onClick={(e) => {
+                e.stopPropagation();
+                props.onSave('');
+                closeDropdown();
+              }}
+              type="button"
+              aria-label="Clear"
+            >
               ×
             </button>
           </span>
@@ -288,20 +402,79 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
               </div>
               <For each={props.column.options}>
                 {(opt) => (
-                  <div
-                    class={styles.optionItem}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelect(opt.id);
-                    }}
-                  >
-                    <Show when={opt.color}>
-                      <span class={styles.optionColor} style={{ background: opt.color }} />
+                  <>
+                    <Show when={colorPickerFor() === opt.id}>
+                      <div class={styles.colorPicker}>
+                        <For each={PRESET_COLORS}>
+                          {(color) => (
+                            <button
+                              class={styles.colorSwatch}
+                              style={{ background: color }}
+                              type="button"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                changeOptionColor(opt.id, color);
+                              }}
+                            />
+                          )}
+                        </For>
+                        <button
+                          class={`${styles.colorSwatch} ${styles.colorSwatchNone}`}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            changeOptionColor(opt.id, undefined);
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
                     </Show>
-                    {opt.name}
-                  </div>
+                    <div
+                      class={`${styles.optionItem}${selectedOption()?.id === opt.id ? ` ${styles.optionSelected}` : ''}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelect(opt.id);
+                      }}
+                    >
+                      <button
+                        class={styles.colorDot}
+                        type="button"
+                        style={opt.color ? { background: opt.color } : { background: 'var(--c-border)' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setColorPickerFor(colorPickerFor() === opt.id ? null : opt.id);
+                        }}
+                      />
+                      {opt.name}
+                      <Show when={selectedOption()?.id === opt.id}>
+                        <span class={styles.optionCheck}>✓</span>
+                      </Show>
+                    </div>
+                  </>
                 )}
               </For>
+              <Show when={props.onUpdateOptions}>
+                <div class={styles.addTagRow}>
+                  <input
+                    class={styles.addTagInput}
+                    placeholder="Add option…"
+                    value={newTagName()}
+                    onInput={(e) => setNewTagName(e.currentTarget.value)}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addNewOption();
+                      }
+                    }}
+                  />
+                </div>
+              </Show>
             </div>
           </Portal>
         )}
@@ -336,11 +509,21 @@ export function FieldEditor(props: FieldEditorProps) {
       </Match>
 
       <Match when={props.column.type === PropertyTypeSelect}>
-        <SingleSelectEditor column={props.column} value={value()} onSave={save} />
+        <SingleSelectEditor
+          column={props.column}
+          value={value()}
+          onSave={save}
+          onUpdateOptions={props.onUpdateOptions}
+        />
       </Match>
 
       <Match when={props.column.type === PropertyTypeMultiSelect}>
-        <MultiSelectEditor column={props.column} value={value()} onSave={save} />
+        <MultiSelectEditor
+          column={props.column}
+          value={value()}
+          onSave={save}
+          onUpdateOptions={props.onUpdateOptions}
+        />
       </Match>
 
       <Match when={props.column.type === PropertyTypeNumber}>
