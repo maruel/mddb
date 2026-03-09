@@ -2,7 +2,7 @@
 // Integrates schema, plugins, and keymaps for the new block-based architecture.
 
 import { EditorState, type Plugin } from 'prosemirror-state';
-import { history } from 'prosemirror-history';
+import { history, undo, redo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { baseKeymap } from 'prosemirror-commands';
 import { dropCursor } from 'prosemirror-dropcursor';
@@ -37,7 +37,10 @@ export function createEditorState(doc: ProseMirrorNode, extraPlugins?: Plugin[])
       // Keymap for block operations (Enter, Backspace, Tab, etc.)
       buildBlockKeymap(),
 
-      // Standard ProseMirror keymap (Ctrl+Z, basic editing)
+      // Undo/Redo keybindings (must come before history plugin)
+      keymap({ 'Mod-z': undo, 'Mod-y': redo, 'Shift-Mod-z': redo }),
+
+      // Standard ProseMirror keymap (basic editing)
       keymap(baseKeymap),
 
       // Undo/Redo history
