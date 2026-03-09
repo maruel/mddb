@@ -17,6 +17,7 @@ import { debounce } from '../utils/debounce';
 import { nodeUrl } from '../utils/urls';
 import { extractLinkedNodeIds, relativeLinksToSpaUrls, spaUrlsToRelativeLinks } from '../utils/markdown-utils';
 import { EventNodeUpdated, type Commit } from '@sdk/types.gen';
+import { useUndo } from '../hooks/useUndo';
 
 /** Map of asset filename to signed URL */
 export type AssetUrlMap = Record<string, string>;
@@ -63,6 +64,12 @@ interface EditorContextValue {
   resetEditor: () => void;
   handleTitleChange: (newTitle: string) => void;
   handleContentChange: (newContent: string) => void;
+
+  // Application-level undo/redo (title changes)
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 }
 
 const EditorContext = createContext<EditorContextValue>();
@@ -73,6 +80,14 @@ export const EditorProvider: ParentComponent = (props) => {
   const { selectedNodeId, selectedNodeData, updateNodeTitle, updateNodeIcon, loadNode, setLoadError, setSaveError } =
     useWorkspace();
   const { lastEvent } = useEventSource();
+
+  // Application-level undo stack (title changes; editor content undo is handled by ProseMirror)
+  const undoActions = useUndo();
+  // Tracks the title value before the first edit in the current editing session.
+  // null means no edit has happened since the last node load or undo.
+  let titleBeforeEdit: string | null = null;
+  // Prevents re-entering undo tracking when undo itself calls handleTitleChange.
+  let applyingTitleUndo = false;
 
   // Editor state
   const [title, setTitle] = createSignal('');
@@ -183,6 +198,9 @@ export const EditorProvider: ParentComponent = (props) => {
   // Sync editor state when selected node changes
   createEffect(() => {
     const node = selectedNodeData();
+    // Clear undo stack on every node navigation
+    undoActions.clear();
+    titleBeforeEdit = null;
     if (node) {
       setTitle(node.title);
       // Convert relative file path links from API to SPA URLs for the editor.
@@ -241,6 +259,26 @@ export const EditorProvider: ParentComponent = (props) => {
   }
 
   function handleTitleChange(newTitle: string) {
+    // On first edit in this session, capture the pre-edit title for undo.
+    if (!applyingTitleUndo && titleBeforeEdit === null) {
+      const oldTitle = title();
+      titleBeforeEdit = oldTitle;
+      undoActions.push({
+        description: t('common.undo'),
+        undo: async () => {
+          applyingTitleUndo = true;
+          titleBeforeEdit = null;
+          handleTitleChange(oldTitle);
+          applyingTitleUndo = false;
+        },
+        redo: async () => {
+          applyingTitleUndo = true;
+          titleBeforeEdit = null;
+          handleTitleChange(newTitle);
+          applyingTitleUndo = false;
+        },
+      });
+    }
     setTitle(newTitle);
     const id = selectedNodeId();
     if (id) {
@@ -305,6 +343,10 @@ export const EditorProvider: ParentComponent = (props) => {
     resetEditor,
     handleTitleChange,
     handleContentChange,
+    undo: undoActions.undo,
+    redo: undoActions.redo,
+    canUndo: undoActions.canUndo,
+    canRedo: undoActions.canRedo,
   };
 
   return <EditorContext.Provider value={value}>{props.children}</EditorContext.Provider>;

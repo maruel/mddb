@@ -18,6 +18,8 @@ export const dict: Dictionary = {
     push: 'Enviar',
     remove: 'Quitar',
     creating: 'Creando...',
+    undo: 'Deshacer',
+    redo: 'Rehacer',
   },
 
   app: {

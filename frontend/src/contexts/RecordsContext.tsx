@@ -16,6 +16,7 @@ import { useEventSource } from './EventSourceContext';
 import { useWorkspace } from './WorkspaceContext';
 import { useI18n } from '../i18n';
 import { debounce } from '../utils/debounce';
+import { useUndo } from '../hooks/useUndo';
 import {
   EventRecordsChanged,
   EventTableUpdated,
@@ -79,6 +80,12 @@ interface RecordsContextValue {
 
   // Clear errors
   clearErrors: () => void;
+
+  // Application-level undo/redo (record CRUD)
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
+  canUndo: () => boolean;
+  canRedo: () => boolean;
 }
 
 const RecordsContext = createContext<RecordsContextValue>();
@@ -87,6 +94,11 @@ export const RecordsProvider: ParentComponent = (props) => {
   const { t } = useI18n();
   const { wsApi } = useAuth();
   const { selectedNodeId, selectedNodeData } = useWorkspace();
+
+  // Application-level undo stack for record CRUD operations.
+  const undoActions = useUndo();
+  // Prevents re-entering undo tracking when undo/redo calls CRUD functions.
+  let isUndoing = false;
 
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
   const [hasMore, setHasMore] = createSignal(false);
@@ -303,6 +315,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = node?.id;
     if (nodeId === prevNodeId) return;
     prevNodeId = nodeId;
+    undoActions.clear();
 
     if (node?.has_table) {
       batch(() => {
@@ -512,9 +525,40 @@ export const RecordsProvider: ParentComponent = (props) => {
       setSavingRecordId('__new__'); // Special marker for creating new record
       // Invalidate cache since data is changing
       setAllRecords(null);
-      await ws.nodes.table.records.createRecord(nodeId, { data });
+      const result = await ws.nodes.table.records.createRecord(nodeId, { data });
       await loadRecords(nodeId);
       setSaveError(null);
+
+      if (!isUndoing) {
+        const createdId = result.id;
+        const capturedNodeId = nodeId;
+        const capturedData = { ...data };
+        undoActions.push({
+          description: t('common.undo'),
+          undo: async () => {
+            const ws2 = wsApi();
+            if (!ws2) return;
+            isUndoing = true;
+            try {
+              await ws2.nodes.table.records.deleteRecord(capturedNodeId, createdId);
+              await loadRecords(capturedNodeId);
+            } finally {
+              isUndoing = false;
+            }
+          },
+          redo: async () => {
+            const ws2 = wsApi();
+            if (!ws2) return;
+            isUndoing = true;
+            try {
+              await ws2.nodes.table.records.createRecord(capturedNodeId, { data: capturedData });
+              await loadRecords(capturedNodeId);
+            } finally {
+              isUndoing = false;
+            }
+          },
+        });
+      }
     } catch (err) {
       setSaveError(`${t('errors.failedToCreate')}: ${err}`);
     } finally {
@@ -527,6 +571,10 @@ export const RecordsProvider: ParentComponent = (props) => {
     const ws = wsApi();
     if (!nodeId || !ws) return;
 
+    // Capture previous field values before overwriting.
+    const prevRecord = records().find((r) => r.id === recordId);
+    const prevData: Record<string, unknown> = prevRecord?.data ? { ...prevRecord.data } : {};
+
     try {
       setSavingRecordId(recordId);
       // Invalidate cache since data is changing
@@ -534,6 +582,42 @@ export const RecordsProvider: ParentComponent = (props) => {
       await ws.nodes.table.records.updateRecord(nodeId, recordId, { data });
       await loadRecords(nodeId);
       setSaveError(null);
+
+      if (!isUndoing) {
+        const capturedNodeId = nodeId;
+        const capturedRecordId = recordId;
+        const capturedPrevData = prevData;
+        const capturedNewData = { ...data };
+        undoActions.push({
+          description: t('common.undo'),
+          undo: async () => {
+            const ws2 = wsApi();
+            if (!ws2) return;
+            isUndoing = true;
+            try {
+              await ws2.nodes.table.records.updateRecord(capturedNodeId, capturedRecordId, {
+                data: capturedPrevData,
+              });
+              await loadRecords(capturedNodeId);
+            } finally {
+              isUndoing = false;
+            }
+          },
+          redo: async () => {
+            const ws2 = wsApi();
+            if (!ws2) return;
+            isUndoing = true;
+            try {
+              await ws2.nodes.table.records.updateRecord(capturedNodeId, capturedRecordId, {
+                data: capturedNewData,
+              });
+              await loadRecords(capturedNodeId);
+            } finally {
+              isUndoing = false;
+            }
+          },
+        });
+      }
     } catch (err) {
       setSaveError(`${t('errors.failedToSave')}: ${err}`);
     } finally {
@@ -547,6 +631,10 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!nodeId || !ws) return;
     if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
 
+    // Capture full record data before deletion for undo.
+    const record = records().find((r) => r.id === recordId);
+    const savedData: Record<string, unknown> = record?.data ? { ...record.data } : {};
+
     try {
       setDeletingRecordId(recordId);
       // Invalidate cache since data is changing
@@ -554,6 +642,43 @@ export const RecordsProvider: ParentComponent = (props) => {
       await ws.nodes.table.records.deleteRecord(nodeId, recordId);
       await loadRecords(nodeId);
       setSaveError(null);
+
+      if (!isUndoing) {
+        const capturedNodeId = nodeId;
+        const capturedData = savedData;
+        // Track the re-created record ID so redo can delete the right record.
+        let reCreatedId: string | null = null;
+        undoActions.push({
+          description: t('common.undo'),
+          undo: async () => {
+            const ws2 = wsApi();
+            if (!ws2) return;
+            isUndoing = true;
+            try {
+              const result = await ws2.nodes.table.records.createRecord(capturedNodeId, {
+                data: capturedData,
+              });
+              reCreatedId = result.id;
+              await loadRecords(capturedNodeId);
+            } finally {
+              isUndoing = false;
+            }
+          },
+          redo: async () => {
+            if (!reCreatedId) return;
+            const ws2 = wsApi();
+            if (!ws2) return;
+            isUndoing = true;
+            try {
+              await ws2.nodes.table.records.deleteRecord(capturedNodeId, reCreatedId);
+              reCreatedId = null;
+              await loadRecords(capturedNodeId);
+            } finally {
+              isUndoing = false;
+            }
+          },
+        });
+      }
     } catch (err) {
       setSaveError(`${t('errors.failedToDelete')}: ${err}`);
     } finally {
@@ -712,6 +837,10 @@ export const RecordsProvider: ParentComponent = (props) => {
     updateView,
     deleteView,
     clearErrors,
+    undo: undoActions.undo,
+    redo: undoActions.redo,
+    canUndo: undoActions.canUndo,
+    canRedo: undoActions.canRedo,
   };
 
   return <RecordsContext.Provider value={value}>{props.children}</RecordsContext.Provider>;

@@ -1,6 +1,6 @@
 // Workspace layout with header, sidebar, and content outlet.
 
-import { createSignal, Show, For, onCleanup, type ParentComponent } from 'solid-js';
+import { createSignal, Show, For, onCleanup, onMount, type ParentComponent } from 'solid-js';
 import { useNavigate } from '@solidjs/router';
 import Sidebar from '../components/Sidebar';
 import UserMenu from '../components/UserMenu';
@@ -8,7 +8,7 @@ import NotificationBell from '../components/NotificationBell';
 import NotionImportBanner from '../components/NotionImportBanner';
 import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
 import NotionImportModal, { type NotionImportData } from '../components/NotionImportModal';
-import { useAuth, useWorkspace, useEditor } from '../contexts';
+import { useAuth, useWorkspace, useEditor, useRecords } from '../contexts';
 import { useI18n } from '../i18n';
 import { settingsUrl, nodeUrl } from '../utils/urls';
 import type { NodeResponse, NotionImportStatusResponse } from '@sdk/types.gen';
@@ -23,6 +23,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   const {
     nodes,
     selectedNodeId,
+    selectedNodeData,
     breadcrumbPath,
     loading,
     setCreatingNode,
@@ -37,7 +38,37 @@ const WorkspaceLayout: ParentComponent = (props) => {
     removeNode,
     moveNode,
   } = useWorkspace();
-  const { flushAutoSave, loadHistory } = useEditor();
+  const { flushAutoSave, loadHistory, undo: editorUndo, redo: editorRedo } = useEditor();
+  const { undo: recordsUndo, redo: recordsRedo } = useRecords();
+
+  // Global Ctrl-Z / Ctrl-Shift-Z handler for application-level undo/redo.
+  // ProseMirror and native inputs handle their own undo — skip if an editable
+  // element has focus so we do not interfere.
+  onMount(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return;
+      const active = document.activeElement as HTMLElement | null;
+      if (active?.isContentEditable || active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA') return;
+
+      e.preventDefault();
+      const isTable = selectedNodeData()?.has_table ?? false;
+      if (e.shiftKey) {
+        if (isTable) {
+          recordsRedo();
+        } else {
+          editorRedo();
+        }
+      } else {
+        if (isTable) {
+          recordsUndo();
+        } else {
+          editorUndo();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    onCleanup(() => window.removeEventListener('keydown', handleKeyDown));
+  });
 
   // UI state - sidebar open by default on desktop, closed on mobile
   const [showMobileSidebar, setShowMobileSidebar] = createSignal(window.innerWidth > 768);

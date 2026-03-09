@@ -20,6 +20,8 @@ export interface Dictionary {
     push: string;
     remove: string;
     creating: string;
+    undo: string;
+    redo: string;
   };
 
   app: {
