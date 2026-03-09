@@ -322,6 +322,8 @@ export interface Dictionary {
     typeCheckbox: string;
     typeDate: string;
     typeSelect: string;
+    typeUser: string;
+    userRemoved: string;
     typeUrl: string;
     typeEmail: string;
     sort: string;

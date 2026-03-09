@@ -731,6 +731,17 @@ export interface PushSubscribeRequest {
 export interface PushUnsubscribeRequest {
   endpoint: string;
 }
+/**
+ * ListWorkspaceMembersRequest is a request to list workspace members.
+ */
+export interface ListWorkspaceMembersRequest {
+}
+/**
+ * ResolveUsersRequest is a request to resolve user IDs to display info.
+ */
+export interface ResolveUsersRequest {
+  ids: string[];
+}
 
 //////////
 // source: response.go
@@ -962,6 +973,39 @@ export interface ListOrgInvitationsResponse {
  */
 export interface ListWSInvitationsResponse {
   invitations: WSInvitationResponse[];
+}
+/**
+ * WorkspaceMemberResponse is a compact user representation for workspace member listings.
+ * Used by the user column type to populate the picker and display names.
+ */
+export interface WorkspaceMemberResponse {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+}
+/**
+ * ListWorkspaceMembersResponse is a response containing current workspace members.
+ */
+export interface ListWorkspaceMembersResponse {
+  members: WorkspaceMemberResponse[];
+}
+/**
+ * ResolvedUser represents a resolved user reference from a user-type column value.
+ * IsGhost is true when the user ID is valid but the user is no longer a member.
+ */
+export interface ResolvedUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+  is_ghost?: boolean;
+}
+/**
+ * ResolveUsersResponse is a response containing resolved user details.
+ */
+export interface ResolveUsersResponse {
+  users: ResolvedUser[];
 }
 /**
  * SwitchWorkspaceResponse is a response from switching workspace.
@@ -1475,6 +1519,10 @@ export const PropertyTypeSelect = "select";
  */
 export const PropertyTypeMultiSelect = "multi_select";
 /**
+ * PropertyTypeUser stores a reference to a workspace member by user ID.
+ */
+export const PropertyTypeUser = "user";
+/**
  * PropertyTypeURL stores URLs with validation.
  */
 export const PropertyTypeURL = "url";
@@ -1486,7 +1534,7 @@ export const PropertyTypeEmail = "email";
  * PropertyTypePhone stores phone numbers with validation.
  */
 export const PropertyTypePhone = "phone";
-export type PropertyType = typeof PropertyTypeText | typeof PropertyTypeNumber | typeof PropertyTypeCheckbox | typeof PropertyTypeDate | typeof PropertyTypeSelect | typeof PropertyTypeMultiSelect | typeof PropertyTypeURL | typeof PropertyTypeEmail | typeof PropertyTypePhone;
+export type PropertyType = typeof PropertyTypeText | typeof PropertyTypeNumber | typeof PropertyTypeCheckbox | typeof PropertyTypeDate | typeof PropertyTypeSelect | typeof PropertyTypeMultiSelect | typeof PropertyTypeUser | typeof PropertyTypeURL | typeof PropertyTypeEmail | typeof PropertyTypePhone;
 /**
  * SelectOption represents an option for select/multi_select properties.
  */

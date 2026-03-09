@@ -111,3 +111,35 @@
 .optionNone {
   color: var(--c-text-light);
 }
+
+.memberAvatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6em;
+  font-weight: 600;
+  background: var(--c-primary);
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.ghostLabel {
+  font-size: 0.8em;
+  opacity: 0.7;
+}
+
+.memberEmail {
+  margin-left: auto;
+  font-size: 0.78em;
+  color: var(--c-text-light, var(--c-text));
+  opacity: 0.7;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}

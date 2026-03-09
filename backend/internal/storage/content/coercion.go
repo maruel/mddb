@@ -47,7 +47,7 @@ const (
 // propertyAffinity returns the SQLite affinity for a property type.
 func propertyAffinity(pt PropertyType) affinity {
 	switch pt {
-	case PropertyTypeText, PropertyTypeURL, PropertyTypeEmail, PropertyTypePhone:
+	case PropertyTypeText, PropertyTypeURL, PropertyTypeEmail, PropertyTypePhone, PropertyTypeUser:
 		return affinityTEXT
 	case PropertyTypeNumber:
 		return affinityNUMERIC

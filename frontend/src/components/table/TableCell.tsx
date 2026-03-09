@@ -9,10 +9,11 @@ import {
   PropertyTypeMultiSelect,
   PropertyTypeNumber,
   PropertyTypeDate,
+  PropertyTypeUser,
 } from '@sdk/types.gen';
 import styles from './TableCell.module.css';
 import { FieldValue } from './FieldValue';
-import { MultiSelectEditor, SingleSelectEditor } from './FieldEditor';
+import { MultiSelectEditor, SingleSelectEditor, UserEditor } from './FieldEditor';
 
 export interface TableCellProps {
   record: DataRecordResponse;
@@ -151,6 +152,18 @@ export function TableCell(props: TableCellProps) {
         return (
           <SingleSelectEditor
             column={props.column}
+            value={initialValue}
+            onSave={(v) => {
+              setEditValue(v);
+              props.onSave(v);
+            }}
+            onClose={props.onCancel}
+            autoOpen
+          />
+        );
+      case PropertyTypeUser:
+        return (
+          <UserEditor
             value={initialValue}
             onSave={(v) => {
               setEditValue(v);

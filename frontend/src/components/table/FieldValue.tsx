@@ -11,7 +11,10 @@ import {
   PropertyTypeURL,
   PropertyTypeEmail,
   PropertyTypePhone,
+  PropertyTypeUser,
 } from '@sdk/types.gen';
+import { useRecords } from '../../contexts/RecordsContext';
+import { useI18n } from '../../i18n';
 import styles from './FieldValue.module.css';
 
 function truncateUrl(url: string): string {
@@ -38,6 +41,15 @@ interface FieldValueProps {
  * Used by table, gallery, and grid views.
  */
 export function FieldValue(props: FieldValueProps): JSXElement {
+  const { t } = useI18n();
+  // resolvedUsers may be undefined if used outside RecordsProvider (e.g. tests).
+  let records: ReturnType<typeof useRecords> | undefined;
+  try {
+    records = useRecords();
+  } catch {
+    // Outside RecordsProvider context — user columns will fall back to showing the raw ID.
+  }
+
   const rawValue = () => props.record.data[props.column.name] ?? '';
   const strValue = () => String(rawValue());
   const chips = () =>
@@ -99,6 +111,34 @@ export function FieldValue(props: FieldValueProps): JSXElement {
           <a href={`tel:${strValue()}`} class={styles.link}>
             {strValue()}
           </a>
+        </Show>
+      </Match>
+      <Match when={props.column.type === PropertyTypeUser}>
+        <Show when={strValue()}>
+          {(() => {
+            const userId = strValue();
+            const resolved = records?.resolvedUsers().get(userId);
+            const name = resolved?.name ?? userId;
+            const avatarUrl = resolved?.avatar_url;
+            const isGhost = resolved?.is_ghost ?? false;
+            const initials = name
+              .split(' ')
+              .map((w) => w[0])
+              .join('')
+              .slice(0, 2)
+              .toUpperCase();
+            return (
+              <span class={`${styles.userChip}${isGhost ? ` ${styles.ghost}` : ''}`}>
+                <Show when={avatarUrl} fallback={<span class={styles.userAvatar}>{initials}</span>}>
+                  <img src={avatarUrl} class={styles.userAvatar} alt="" />
+                </Show>
+                {name}
+                <Show when={isGhost}>
+                  <span class={styles.userGhostLabel}>({t('table.userRemoved')})</span>
+                </Show>
+              </span>
+            );
+          })()}
         </Show>
       </Match>
     </Switch>

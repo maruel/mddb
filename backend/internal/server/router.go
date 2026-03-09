@@ -210,6 +210,8 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	// Notion import cancel
 	mux.Handle("POST /api/v1/workspaces/{wsID}/notion/import/cancel", WrapWSAuth(nih.CancelImport, svc, hcfg, identity.WSRoleAdmin, limiters))
 	// Users and invitations
+	mux.Handle("GET /api/v1/workspaces/{wsID}/members", WrapWSAuth(uh.ListWorkspaceMembers, svc, hcfg, identity.WSRoleViewer, limiters))
+	mux.Handle("POST /api/v1/workspaces/{wsID}/users/resolve", WrapWSAuth(uh.ResolveUsers, svc, hcfg, identity.WSRoleViewer, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/users/role", WrapWSAuth(uh.UpdateWSMemberRole, svc, hcfg, identity.WSRoleAdmin, limiters))
 	mux.Handle("GET /api/v1/workspaces/{wsID}/invitations", WrapWSAuth(ih.ListWSInvitations, svc, hcfg, identity.WSRoleAdmin, limiters))
 	mux.Handle("POST /api/v1/workspaces/{wsID}/invitations", WrapWSAuth(ih.CreateWSInvitation, svc, hcfg, identity.WSRoleAdmin, limiters))

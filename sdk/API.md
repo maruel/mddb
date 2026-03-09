@@ -67,6 +67,7 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | GET | `/api/v1/organizations/{orgID}/users` | org:Admin |
 | POST | `/api/v1/organizations/{orgID}/users/remove` | org:Admin |
 | POST | `/api/v1/organizations/{orgID}/users/role` | org:Admin |
+| POST | `/api/v1/workspaces/{wsID}/users/resolve` | ws:Viewer |
 | POST | `/api/v1/workspaces/{wsID}/users/role` | ws:Admin |
 
 ## Invitations
@@ -153,5 +154,6 @@ Include JWT token in Authorization header: `Authorization: Bearer <token>`
 | GET | `/api/v1/workspaces/{wsID}` | ws:Viewer |
 | POST | `/api/v1/workspaces/{wsID}` | ws:Admin |
 | GET | `/api/v1/workspaces/{wsID}/events` | public |
+| GET | `/api/v1/workspaces/{wsID}/members` | ws:Viewer |
 | POST | `/api/v1/workspaces/{wsID}/notion/import/cancel` | ws:Admin |
 

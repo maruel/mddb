@@ -323,6 +323,8 @@ export const dict: Dictionary = {
     typeCheckbox: 'Kontrollkästchen',
     typeDate: 'Datum',
     typeSelect: 'Auswahl',
+    typeUser: 'Benutzer',
+    userRemoved: 'entfernt',
     typeUrl: 'URL',
     typeEmail: 'E-Mail',
     sort: 'Sortieren',

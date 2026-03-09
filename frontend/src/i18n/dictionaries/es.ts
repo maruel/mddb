@@ -323,6 +323,8 @@ export const dict: Dictionary = {
     typeCheckbox: 'Casilla',
     typeDate: 'Fecha',
     typeSelect: 'Selección',
+    typeUser: 'Usuario',
+    userRemoved: 'eliminado',
     typeUrl: 'URL',
     typeEmail: 'Correo',
     sort: 'Ordenar',

@@ -15,6 +15,16 @@ type UserHandler struct {
 	Svc *Services
 }
 
+// bestAvatarURL returns the first non-empty avatar URL from a user's OAuth identities.
+func bestAvatarURL(u *identity.User) string {
+	for i := range u.OAuthIdentities {
+		if u.OAuthIdentities[i].AvatarURL != "" {
+			return u.OAuthIdentities[i].AvatarURL
+		}
+	}
+	return ""
+}
+
 // ListUsers returns all users in the organization.
 func (h *UserHandler) ListUsers(ctx context.Context, orgID ksid.ID, _ *identity.User, _ *dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
 	// Filter by organization membership and convert to response
@@ -135,6 +145,58 @@ func (h *UserHandler) UpdateWSMemberRole(ctx context.Context, wsID ksid.ID, _ *i
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}
 	return userWithMembershipsToResponse(uwm), nil
+}
+
+// ListWorkspaceMembers returns the current members of a workspace.
+// Used by user-type table columns to populate the member picker.
+func (h *UserHandler) ListWorkspaceMembers(_ context.Context, wsID ksid.ID, _ *identity.User, _ *dto.ListWorkspaceMembersRequest) (*dto.ListWorkspaceMembersResponse, error) {
+	var members []dto.WorkspaceMemberResponse
+	for m := range h.Svc.WSMembership.IterByWorkspace(wsID) {
+		u, err := h.Svc.User.Get(m.UserID)
+		if err != nil {
+			continue
+		}
+		members = append(members, dto.WorkspaceMemberResponse{
+			ID:        u.ID,
+			Name:      u.Name,
+			Email:     u.Email,
+			AvatarURL: bestAvatarURL(u),
+		})
+	}
+	return &dto.ListWorkspaceMembersResponse{Members: members}, nil
+}
+
+// ResolveUsers resolves a list of user IDs to display info, marking removed members as ghosts.
+// Used by user-type table columns to display values for users no longer in the workspace.
+func (h *UserHandler) ResolveUsers(_ context.Context, wsID ksid.ID, _ *identity.User, req *dto.ResolveUsersRequest) (*dto.ResolveUsersResponse, error) {
+	// Build set of current workspace member IDs for ghost detection.
+	memberSet := make(map[string]struct{})
+	for m := range h.Svc.WSMembership.IterByWorkspace(wsID) {
+		memberSet[m.UserID.String()] = struct{}{}
+	}
+
+	users := make([]dto.ResolvedUser, 0, len(req.IDs))
+	for _, rawID := range req.IDs {
+		id, err := ksid.Parse(rawID)
+		if err != nil {
+			// Not a valid ID; skip.
+			continue
+		}
+		u, err := h.Svc.User.Get(id)
+		if err != nil {
+			// User account deleted entirely; skip.
+			continue
+		}
+		_, isMember := memberSet[rawID]
+		users = append(users, dto.ResolvedUser{
+			ID:        u.ID,
+			Name:      u.Name,
+			Email:     u.Email,
+			AvatarURL: bestAvatarURL(u),
+			IsGhost:   !isMember,
+		})
+	}
+	return &dto.ResolveUsersResponse{Users: users}, nil
 }
 
 // UpdateUserSettings updates user global settings.

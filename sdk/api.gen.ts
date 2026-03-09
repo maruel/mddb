@@ -51,6 +51,7 @@ import type {
   ListSessionsResponse,
   ListUsersResponse,
   ListWSInvitationsResponse,
+  ListWorkspaceMembersResponse,
   LoginRequest,
   LogoutResponse,
   MarkAllNotificationsReadResponse,
@@ -73,6 +74,8 @@ import type {
   PushUnsubscribeResponse,
   RegisterRequest,
   RemoveOrgMemberRequest,
+  ResolveUsersRequest,
+  ResolveUsersResponse,
   RevokeAllSessionsResponse,
   RevokeSessionRequest,
   RevokeSessionResponse,
@@ -329,12 +332,14 @@ export function createAPIClient(fetchFn: FetchFn) {
           updateWSMembershipSettings: (options: UpdateWSMembershipSettingsRequest) => post<WSMembershipResponse>(fetchFn, `/api/v1/workspaces/${wsID}/settings/membership`, options),
         },
         users: {
+          resolveUsers: (options: ResolveUsersRequest) => post<ResolveUsersResponse>(fetchFn, `/api/v1/workspaces/${wsID}/users/resolve`, options),
           updateWSMemberRole: (options: UpdateWSMemberRoleRequest) => post<UserResponse>(fetchFn, `/api/v1/workspaces/${wsID}/users/role`, options),
         },
         workspaces: {
           getWorkspace: () => get<WorkspaceResponse>(fetchFn, `/api/v1/workspaces/${wsID}`),
           updateWorkspace: (options: UpdateWorkspaceRequest) => post<WorkspaceResponse>(fetchFn, `/api/v1/workspaces/${wsID}`, options),
         },
+        listWorkspaceMembers: () => get<ListWorkspaceMembersResponse>(fetchFn, `/api/v1/workspaces/${wsID}/members`),
         search: (options: SearchRequest) => post<SearchResponse>(fetchFn, `/api/v1/workspaces/${wsID}/search`, options),
       };
     },

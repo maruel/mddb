@@ -12,6 +12,7 @@ const COLUMN_TYPES: { type: PropertyType; labelKey: string }[] = [
   { type: 'checkbox', labelKey: 'table.typeCheckbox' },
   { type: 'date', labelKey: 'table.typeDate' },
   { type: 'select', labelKey: 'table.typeSelect' },
+  { type: 'user', labelKey: 'table.typeUser' },
   { type: 'url', labelKey: 'table.typeUrl' },
   { type: 'email', labelKey: 'table.typeEmail' },
 ];

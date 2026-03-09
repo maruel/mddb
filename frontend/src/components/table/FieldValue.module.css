@@ -43,3 +43,43 @@
 .link:hover {
   text-decoration: underline;
 }
+
+.userChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px var(--s-2);
+  border-radius: 4px;
+  font-size: 0.85em;
+  background: var(--c-bg-hover);
+  color: var(--c-text);
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userChip.ghost {
+  opacity: 0.6;
+}
+
+.userAvatar {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6em;
+  font-weight: 600;
+  background: var(--c-primary);
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.userGhostLabel {
+  font-size: 0.8em;
+  opacity: 0.6;
+}

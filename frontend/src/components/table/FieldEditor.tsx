@@ -13,8 +13,11 @@ import {
   PropertyTypeURL,
   PropertyTypeEmail,
   PropertyTypePhone,
+  PropertyTypeUser,
 } from '@sdk/types.gen';
 import { updateRecordField, handleEnterBlur, getFieldValue } from './tableUtils';
+import { useRecords } from '../../contexts/RecordsContext';
+import { useI18n } from '../../i18n';
 import styles from './FieldEditor.module.css';
 
 interface FieldEditorProps {
@@ -310,6 +313,183 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
   );
 }
 
+export interface UserEditorProps {
+  value: string;
+  onSave: (v: string) => void;
+  onClose?: () => void;
+  autoOpen?: boolean;
+}
+
+/** Dropdown editor for user-type columns. Shows workspace members as options. */
+export function UserEditor(props: UserEditorProps) {
+  const { t } = useI18n();
+  const [open, setOpen] = createSignal(false);
+  const [dropPos, setDropPos] = createSignal<DropPos | null>(null);
+  let triggerRef: HTMLDivElement | undefined;
+  let dropRef: HTMLDivElement | undefined;
+
+  let records: ReturnType<typeof useRecords> | undefined;
+  try {
+    records = useRecords();
+  } catch {
+    // Outside provider — no members available.
+  }
+
+  const members = () => records?.workspaceMembers() ?? [];
+  const resolvedUsers = () => records?.resolvedUsers() ?? new Map();
+
+  const openDropdown = () => {
+    if (triggerRef) setDropPos(getDropPos(triggerRef));
+    setOpen(true);
+  };
+
+  const closeDropdown = () => {
+    setOpen(false);
+    setDropPos(null);
+    props.onClose?.();
+  };
+
+  createEffect(() => {
+    if (!open()) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!triggerRef?.contains(target) && !dropRef?.contains(target)) {
+        setOpen(false);
+        setDropPos(null);
+        props.onClose?.();
+      }
+    };
+    const id = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    onCleanup(() => {
+      clearTimeout(id);
+      document.removeEventListener('mousedown', handler);
+    });
+  });
+
+  createEffect(() => {
+    if (!open()) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeDropdown();
+      }
+    };
+    document.addEventListener('keydown', handler, true);
+    onCleanup(() => document.removeEventListener('keydown', handler, true));
+  });
+
+  onMount(() => {
+    if (props.autoOpen) openDropdown();
+  });
+
+  const selectedMember = () => {
+    const id = props.value;
+    if (!id) return null;
+    const resolved = resolvedUsers().get(id);
+    if (resolved) return resolved;
+    const member = members().find((m) => m.id === id);
+    if (member)
+      return { id: member.id, name: member.name, email: member.email, avatar_url: member.avatar_url, is_ghost: false };
+    return null;
+  };
+
+  const handleSelect = (userId: string) => {
+    props.onSave(userId);
+    closeDropdown();
+  };
+
+  const handleClear = (e: MouseEvent) => {
+    e.stopPropagation();
+    props.onSave('');
+    closeDropdown();
+  };
+
+  return (
+    <div
+      class={styles.singleSelectWrapper}
+      ref={(el) => (triggerRef = el)}
+      onClick={() => (open() ? closeDropdown() : openDropdown())}
+    >
+      <Show when={selectedMember()} fallback={<span class={styles.selectPlaceholder}>--</span>}>
+        {(user) => {
+          const initials = user()
+            .name.split(' ')
+            .map((w: string) => w[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase();
+          return (
+            <span class={styles.chip}>
+              <Show when={user().avatar_url} fallback={<span class={styles.memberAvatar}>{initials}</span>}>
+                <img src={user().avatar_url} class={styles.memberAvatar} alt="" />
+              </Show>
+              {user().name}
+              <Show when={user().is_ghost}>
+                {' '}
+                <span class={styles.ghostLabel}>({t('table.userRemoved')})</span>
+              </Show>
+              <button class={styles.chipRemove} onClick={handleClear} type="button" aria-label="Clear">
+                ×
+              </button>
+            </span>
+          );
+        }}
+      </Show>
+      <Show when={open() && dropPos()}>
+        {(pos) => (
+          <Portal>
+            <div
+              ref={(el) => (dropRef = el)}
+              class={styles.portalDropdown}
+              style={{
+                left: `${pos().left}px`,
+                top: `${pos().top}px`,
+                'min-width': `${pos().minWidth}px`,
+              }}
+            >
+              <div
+                class={styles.optionItem}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  props.onSave('');
+                  closeDropdown();
+                }}
+              >
+                <span class={styles.optionNone}>—</span>
+              </div>
+              <For each={members()}>
+                {(member) => {
+                  const initials = member.name
+                    .split(' ')
+                    .map((w) => w[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase();
+                  return (
+                    <div
+                      class={styles.optionItem}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelect(member.id);
+                      }}
+                    >
+                      <Show when={member.avatar_url} fallback={<span class={styles.memberAvatar}>{initials}</span>}>
+                        <img src={member.avatar_url} class={styles.memberAvatar} alt="" />
+                      </Show>
+                      {member.name}
+                      <span class={styles.memberEmail}>{member.email}</span>
+                    </div>
+                  );
+                }}
+              </For>
+            </div>
+          </Portal>
+        )}
+      </Show>
+    </div>
+  );
+}
+
 export function FieldEditor(props: FieldEditorProps) {
   const value = () => getFieldValue(props.record, props.column.name);
   const save = (v: string) => updateRecordField(props.record, props.column.name, v, props.onUpdate);
@@ -385,6 +565,10 @@ export function FieldEditor(props: FieldEditorProps) {
           onKeyDown={handleEnterBlur}
           class={styles.input}
         />
+      </Match>
+
+      <Match when={props.column.type === PropertyTypeUser}>
+        <UserEditor value={value()} onSave={save} />
       </Match>
     </Switch>
   );

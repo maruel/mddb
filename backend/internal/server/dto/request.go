@@ -1605,3 +1605,24 @@ func (r *PushUnsubscribeRequest) Validate() error {
 	}
 	return nil
 }
+
+// ListWorkspaceMembersRequest is a request to list workspace members.
+type ListWorkspaceMembersRequest struct{}
+
+// Validate validates the list workspace members request.
+func (r *ListWorkspaceMembersRequest) Validate() error {
+	return nil
+}
+
+// ResolveUsersRequest is a request to resolve user IDs to display info.
+type ResolveUsersRequest struct {
+	IDs []string `json:"ids"`
+}
+
+// Validate validates the resolve users request.
+func (r *ResolveUsersRequest) Validate() error {
+	if len(r.IDs) == 0 {
+		return MissingField("ids")
+	}
+	return nil
+}

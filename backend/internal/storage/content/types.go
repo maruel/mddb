@@ -152,6 +152,11 @@ const (
 	// PropertyTypeMultiSelect stores multiple selections from predefined options.
 	PropertyTypeMultiSelect PropertyType = "multi_select"
 
+	// Reference types.
+
+	// PropertyTypeUser stores a reference to a workspace member by user ID.
+	PropertyTypeUser PropertyType = "user"
+
 	// Validated text types.
 
 	// PropertyTypeURL stores URLs with validation.

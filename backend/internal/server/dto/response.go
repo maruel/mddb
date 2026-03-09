@@ -218,6 +218,35 @@ type ListWSInvitationsResponse struct {
 
 // --- Membership Responses ---
 
+// WorkspaceMemberResponse is a compact user representation for workspace member listings.
+// Used by the user column type to populate the picker and display names.
+type WorkspaceMemberResponse struct {
+	ID        ksid.ID `json:"id" jsonschema:"description=User identifier"`
+	Name      string  `json:"name" jsonschema:"description=Display name"`
+	Email     string  `json:"email" jsonschema:"description=Email address"`
+	AvatarURL string  `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
+}
+
+// ListWorkspaceMembersResponse is a response containing current workspace members.
+type ListWorkspaceMembersResponse struct {
+	Members []WorkspaceMemberResponse `json:"members" jsonschema:"description=Current workspace members"`
+}
+
+// ResolvedUser represents a resolved user reference from a user-type column value.
+// IsGhost is true when the user ID is valid but the user is no longer a member.
+type ResolvedUser struct {
+	ID        ksid.ID `json:"id" jsonschema:"description=User identifier"`
+	Name      string  `json:"name" jsonschema:"description=Display name"`
+	Email     string  `json:"email" jsonschema:"description=Email address"`
+	AvatarURL string  `json:"avatar_url,omitempty" jsonschema:"description=Profile picture URL from OAuth provider"`
+	IsGhost   bool    `json:"is_ghost,omitempty" jsonschema:"description=True if user is no longer a workspace member"`
+}
+
+// ResolveUsersResponse is a response containing resolved user details.
+type ResolveUsersResponse struct {
+	Users []ResolvedUser `json:"users" jsonschema:"description=Resolved user details indexed by user ID"`
+}
+
 // SwitchWorkspaceResponse is a response from switching workspace.
 type SwitchWorkspaceResponse struct {
 	Token string        `json:"token"`

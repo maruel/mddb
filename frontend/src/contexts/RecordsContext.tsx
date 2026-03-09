@@ -19,11 +19,14 @@ import { debounce } from '../utils/debounce';
 import {
   EventRecordsChanged,
   EventTableUpdated,
+  PropertyTypeUser,
   type DataRecordResponse,
   type View,
   type Filter,
   type Sort,
   type ViewType,
+  type WorkspaceMemberResponse,
+  type ResolvedUser,
 } from '@sdk/types.gen';
 
 const PAGE_SIZE = 50;
@@ -34,6 +37,9 @@ export const DEFAULT_VIEW_ID = '__default__';
 
 interface RecordsContextValue {
   records: Accessor<DataRecordResponse[]>;
+  workspaceMembers: Accessor<WorkspaceMemberResponse[]>;
+  // Map from user ID string to resolved user info (includes ghosts).
+  resolvedUsers: Accessor<Map<string, ResolvedUser>>;
   hasMore: Accessor<boolean>;
   views: Accessor<View[]>;
   activeViewId: Accessor<string | undefined>;
@@ -85,6 +91,11 @@ export const RecordsProvider: ParentComponent = (props) => {
   const [records, setRecords] = createSignal<DataRecordResponse[]>([]);
   const [hasMore, setHasMore] = createSignal(false);
 
+  // Workspace members for user-type column picker and ghost resolution.
+  const [workspaceMembers, setWorkspaceMembers] = createSignal<WorkspaceMemberResponse[]>([]);
+  // Map from user ID → resolved user (active or ghost).
+  const [resolvedUsers, setResolvedUsers] = createSignal<Map<string, ResolvedUser>>(new Map());
+
   // Full dataset cache for client-side filtering when all records are loaded
   // allRecords stores the unfiltered dataset when hasMore is false
   const [allRecords, setAllRecords] = createSignal<DataRecordResponse[] | null>(null);
@@ -115,6 +126,63 @@ export const RecordsProvider: ParentComponent = (props) => {
     setLoadError(null);
     setSaveError(null);
   };
+
+  // Fetch workspace members whenever the API client changes (i.e. on workspace switch).
+  createEffect(() => {
+    const ws = wsApi();
+    if (!ws) return;
+    ws.listWorkspaceMembers().then((res) => {
+      setWorkspaceMembers(res.members ?? []);
+    });
+  });
+
+  // Resolve ghost users: called after loading records to surface removed members.
+  async function resolveGhostUsers(loadedRecords: DataRecordResponse[]) {
+    const ws = wsApi();
+    const node = selectedNodeData();
+    if (!ws || !node?.properties) return;
+
+    // Collect user-type column names.
+    const userCols = node.properties.filter((p) => p.type === PropertyTypeUser).map((p) => p.name);
+    if (userCols.length === 0) return;
+
+    // Gather unique user IDs referenced in records.
+    const memberIds = new Set(workspaceMembers().map((m) => m.id));
+    const unknownIds = new Set<string>();
+    for (const rec of loadedRecords) {
+      for (const col of userCols) {
+        const v = rec.data?.[col];
+        if (typeof v === 'string' && v && !memberIds.has(v)) {
+          unknownIds.add(v);
+        }
+      }
+    }
+
+    // Build the merged map from current members + any previously cached resolved users.
+    const merged = new Map(resolvedUsers());
+    for (const m of workspaceMembers()) {
+      merged.set(m.id, { id: m.id, name: m.name, email: m.email, avatar_url: m.avatar_url, is_ghost: false });
+    }
+
+    if (unknownIds.size === 0) {
+      setResolvedUsers(merged);
+      return;
+    }
+
+    // Only resolve IDs not already cached.
+    const toFetch = [...unknownIds].filter((id) => !merged.has(id));
+    if (toFetch.length > 0) {
+      try {
+        const res = await ws.users.resolveUsers({ ids: toFetch });
+        for (const u of res.users ?? []) {
+          merged.set(u.id, u);
+        }
+      } catch {
+        // Non-critical: ghost users remain unresolved.
+      }
+    }
+    setResolvedUsers(merged);
+  }
 
   // Virtual default view used when no views exist (uses module-level constant)
 
@@ -360,6 +428,8 @@ export const RecordsProvider: ParentComponent = (props) => {
         setAllRecords(null);
       }
       setLoadError(null);
+      // Resolve any ghost user references in the loaded records.
+      resolveGhostUsers(loadedRecords);
     } catch (err) {
       setLoadError(`${t('errors.failedToLoad')}: ${err}`);
     } finally {
@@ -612,6 +682,8 @@ export const RecordsProvider: ParentComponent = (props) => {
 
   const value: RecordsContextValue = {
     records,
+    workspaceMembers,
+    resolvedUsers,
     hasMore,
     views,
     activeViewId,
