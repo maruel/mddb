@@ -24,7 +24,6 @@
   transition:
     transform var(--transition),
     box-shadow var(--transition);
-  display: flex;
   flex-direction: column;
 }
 

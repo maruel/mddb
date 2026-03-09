@@ -105,12 +105,13 @@ export default function TableBoard(props: TableBoardProps) {
         <div class={styles.columns}>
           <For each={groups()}>
             {(group) => (
-              <div class={styles.column} data-testid="board-column">
+              <div
+                class={styles.column}
+                data-testid="board-column"
+                style={group.color ? { '--column-color': group.color } : {}}
+              >
                 <div class={styles.columnHeader} data-testid="board-column-header">
                   <div class={styles.columnTitle}>
-                    <Show when={group.color}>
-                      <span class={styles.colorDot} style={{ background: group.color }} />
-                    </Show>
                     <span class={styles.columnName}>{group.name}</span>
                   </div>
                   <span class={styles.columnCount}>{group.records.length}</span>
