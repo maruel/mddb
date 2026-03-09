@@ -110,7 +110,7 @@ test.screenshot('all column types in all view modes', async ({ page, request, ta
 
   // Screenshot 2: list (grid cards) view
   await addView('list');
-  await expect(page.locator('[data-testid="list"]')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('[data-testid="list-view"]')).toBeVisible({ timeout: 5000 });
   await takeScreenshot('list-view');
 
   // Screenshot 3: gallery view
