@@ -5,6 +5,7 @@ set -eu
 
 SHORT_SHA="${GITHUB_SHA:0:7}"
 DEPLOY_DIR=$(mktemp -d)
+echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
 cd "$DEPLOY_DIR"
 
 git init
@@ -79,5 +80,3 @@ git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.
   commit -m "Playwright report for ${SHORT_SHA}" || exit 0
 git push origin HEAD:gh-pages
 
-# Export deploy directory for pages upload
-echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
