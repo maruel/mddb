@@ -83,12 +83,12 @@ func (h *GitHubWebhookHandler) HandleWebhook(w http.ResponseWriter, r *http.Requ
 
 	// Iterate all workspaces to find matching ones.
 	var matched int
-	for ws := range h.WsSvc.Iter(0) { //nolint:contextcheck // goroutine uses background context intentionally
+	for ws := range h.WsSvc.Iter(0) {
 		if ws.GitRemote.RepoOwner == owner && ws.GitRemote.RepoName == name {
 			matched++
 			wsID := ws.ID
 			go func() {
-				ctx := context.Background()
+				ctx := context.WithoutCancel(r.Context())
 				if err := h.SyncService.Pull(ctx, wsID); err != nil {
 					slog.Error("Webhook pull failed", "wsID", wsID, "repo", repoFullName, "err", err)
 				}

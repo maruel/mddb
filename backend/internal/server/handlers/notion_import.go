@@ -77,8 +77,8 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
 	}
 
-	// Create import state with a fresh context (independent of HTTP request lifecycle)
-	importCtx, cancel := context.WithCancel(context.Background()) //nolint:gosec // cancel stored in state and called when import completes or is cancelled
+	// Create import state with a context that outlives the HTTP request but preserves values.
+	importCtx, cancel := context.WithCancel(context.WithoutCancel(ctx)) //nolint:gosec // cancel stored in state and called when import completes or is cancelled
 	state := &importState{
 		status:    "running",
 		cancel:    cancel,
@@ -90,7 +90,7 @@ func (h *NotionImportHandler) StartImport(ctx context.Context, orgID ksid.ID, us
 	h.mu.Unlock()
 
 	// Start async import goroutine
-	go h.runImport(importCtx, ws.ID, req.NotionToken, state) //nolint:contextcheck // intentional: background import outlives request
+	go h.runImport(importCtx, ws.ID, req.NotionToken, state)
 
 	return &dto.NotionImportResponse{
 		WorkspaceID:   ws.ID,
