@@ -148,6 +148,18 @@ export interface APIError {
 // source: request.go
 
 /**
+ * DefaultPageLimit is the default number of items returned per page.
+ */
+export const DefaultPageLimit = 50;
+/**
+ * MaxPageLimit is the maximum number of items allowed per page.
+ */
+export const MaxPageLimit = 1000;
+/**
+ * MaxVersionsLimit is the maximum number of version history entries.
+ */
+export const MaxVersionsLimit = 1000;
+/**
  * LoginRequest is a request to log in.
  */
 export interface LoginRequest {

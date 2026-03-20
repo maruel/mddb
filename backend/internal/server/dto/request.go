@@ -10,6 +10,31 @@ import (
 	"github.com/maruel/ksid"
 )
 
+const (
+	// DefaultPageLimit is the default number of items returned per page.
+	DefaultPageLimit = 50
+	// MaxPageLimit is the maximum number of items allowed per page.
+	MaxPageLimit = 1000
+	// MaxVersionsLimit is the maximum number of version history entries.
+	MaxVersionsLimit = 1000
+)
+
+// validatePagination checks offset/limit bounds and applies defaults.
+func validatePagination(offset, limit *int, defaultLimit, maxLimit int) error {
+	if *offset < 0 {
+		return InvalidField("offset", "must be >= 0")
+	}
+	if *limit < 0 {
+		return InvalidField("limit", "must be >= 0")
+	}
+	if *limit == 0 {
+		*limit = defaultLimit
+	} else if *limit > maxLimit {
+		*limit = maxLimit
+	}
+	return nil
+}
+
 // validateEmail checks if the email has valid format.
 func validateEmail(email string) error {
 	if email == "" {
@@ -289,6 +314,12 @@ func (r *ListNodeVersionsRequest) Validate() error {
 		return MissingField("wsID")
 	}
 	// ID can be zero (root)
+	if r.Limit < 0 {
+		return InvalidField("limit", "must be >= 0")
+	}
+	if r.Limit == 0 || r.Limit > MaxVersionsLimit {
+		r.Limit = MaxVersionsLimit
+	}
 	return nil
 }
 
@@ -494,6 +525,9 @@ func (r *ListRecordsRequest) Validate() error {
 		return MissingField("wsID")
 	}
 	// ID can be zero (root)
+	if err := validatePagination(&r.Offset, &r.Limit, DefaultPageLimit, MaxPageLimit); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -744,6 +778,14 @@ func (r *SearchRequest) Validate() error {
 	}
 	if r.Query == "" {
 		return MissingField("query")
+	}
+	if r.Limit < 0 {
+		return InvalidField("limit", "must be >= 0")
+	}
+	if r.Limit == 0 {
+		r.Limit = DefaultPageLimit
+	} else if r.Limit > MaxPageLimit {
+		r.Limit = MaxPageLimit
 	}
 	return nil
 }
@@ -1501,6 +1543,9 @@ type ListNotificationsRequest struct {
 
 // Validate validates the list notifications request.
 func (r *ListNotificationsRequest) Validate() error {
+	if err := validatePagination(&r.Offset, &r.Limit, DefaultPageLimit, MaxPageLimit); err != nil {
+		return err
+	}
 	return nil
 }
 

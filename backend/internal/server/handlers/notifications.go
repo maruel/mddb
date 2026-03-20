@@ -17,11 +17,7 @@ type NotificationHandler struct {
 
 // ListNotifications returns paginated notifications for the authenticated user.
 func (h *NotificationHandler) ListNotifications(_ context.Context, user *identity.User, req *dto.ListNotificationsRequest) (*dto.ListNotificationsResponse, error) {
-	limit := req.Limit
-	if limit <= 0 {
-		limit = 50
-	}
-	notifs := h.Svc.Notification.ListByUser(user.ID, limit, req.Offset, req.UnreadOnly)
+	notifs := h.Svc.Notification.ListByUser(user.ID, req.Limit, req.Offset, req.UnreadOnly)
 	dtos := make([]dto.NotificationDTO, len(notifs))
 	for i, n := range notifs {
 		dtos[i] = notificationToDTO(n, h.Svc.User)
