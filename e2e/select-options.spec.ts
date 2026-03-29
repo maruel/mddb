@@ -247,8 +247,8 @@ test.describe('Select Dropdown Interaction', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
     await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
-    // Wait for the data row to render (it has multiple tds, unlike the single-td add-row)
-    await expect(page.locator('table tbody tr td:nth-child(2)').first()).toBeVisible({ timeout: 5000 });
+    // Wait for a data row to render (add-row has no row-handle)
+    await expect(page.locator('[data-testid="row-handle"]').first()).toBeVisible({ timeout: 5000 });
 
     return { wsID, client, tableId: tableData.id };
   }
