@@ -416,6 +416,8 @@ test.describe('Select Column UX', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
     await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+    // Wait for a data row to render (add-row has no row-handle)
+    await expect(page.locator('[data-testid="row-handle"]').first()).toBeVisible({ timeout: 5000 });
 
     // Click the Tags cell to open MultiSelectEditor
     const row = page.locator('table tbody tr').first();
