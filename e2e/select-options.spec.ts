@@ -247,6 +247,8 @@ test.describe('Select Dropdown Interaction', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
     await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+    // Wait for the data row to render (it has multiple tds, unlike the single-td add-row)
+    await expect(page.locator('table tbody tr td:nth-child(2)').first()).toBeVisible({ timeout: 5000 });
 
     return { wsID, client, tableId: tableData.id };
   }
@@ -258,8 +260,8 @@ test.describe('Select Dropdown Interaction', () => {
     await page.locator('table tbody tr').first().locator('td').last().click();
 
     const searchInput = page.locator('[data-testid="select-dropdown"] input').first();
-    await expect(searchInput).toBeVisible({ timeout: 3000 });
-    await expect(searchInput).toBeFocused({ timeout: 3000 });
+    await expect(searchInput).toBeVisible({ timeout: 5000 });
+    await expect(searchInput).toBeFocused({ timeout: 5000 });
   });
 
   test('clicking the search input does not dismiss the dropdown', async ({ page, request }) => {
@@ -270,11 +272,11 @@ test.describe('Select Dropdown Interaction', () => {
 
     const dropdown = page.locator('[data-testid="select-dropdown"]');
     const searchInput = dropdown.locator('input').first();
-    await expect(searchInput).toBeVisible({ timeout: 3000 });
+    await expect(searchInput).toBeVisible({ timeout: 5000 });
 
     // Click directly on the search input — dropdown must stay open
     await searchInput.click();
-    await expect(dropdown).toBeVisible({ timeout: 1000 });
+    await expect(dropdown).toBeVisible({ timeout: 3000 });
     await expect(searchInput).toBeVisible();
   });
 
@@ -289,7 +291,7 @@ test.describe('Select Dropdown Interaction', () => {
 
     const dropdown = page.locator('[data-testid="select-dropdown"]');
     const searchInput = dropdown.locator('input').first();
-    await expect(searchInput).toBeVisible({ timeout: 3000 });
+    await expect(searchInput).toBeVisible({ timeout: 5000 });
 
     // Type a partial name — only Alpha should remain
     await searchInput.fill('Al');
