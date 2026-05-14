@@ -116,7 +116,7 @@ func (s *Services) PublishRecordEvent(wsID, nodeID, recordID, actorID ksid.ID) {
 	})
 }
 
-const tokenExpiration = 24 * time.Hour
+const tokenExpiration = 31 * 24 * time.Hour
 
 // GenerateToken generates a JWT token for the given user (without session tracking).
 func (c *Config) GenerateToken(user *identity.User) (string, error) {
