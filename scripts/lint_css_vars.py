@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-# Lint for CSS custom properties and selectors in frontend/src.
+"""Lint for CSS custom properties and selectors in frontend/src."""
+
 import re
 import subprocess
 import sys

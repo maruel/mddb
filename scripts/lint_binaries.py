@@ -1,5 +1,6 @@
-# Lint binary files in the repository for consistency.
 #!/usr/bin/env python3
+"""Lint binary files in the repository for consistency."""
+
 import os
 import stat
 import subprocess
