@@ -1,3 +1,4 @@
+// Vitest test setup with jsdom polyfills (scrollTo stub) and jest-dom matchers.
 import { vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 

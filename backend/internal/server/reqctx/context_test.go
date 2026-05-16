@@ -1,3 +1,5 @@
+// Tests for request context utilities.
+
 package reqctx
 
 import (

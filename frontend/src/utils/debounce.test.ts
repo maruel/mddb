@@ -1,3 +1,4 @@
+// Tests for the debounce utility.
 import { describe, it, expect, vi } from 'vitest';
 import { debounce } from './debounce';
 

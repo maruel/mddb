@@ -1,3 +1,5 @@
+// Tests for user account management.
+
 package identity
 
 import (

@@ -1,3 +1,5 @@
+// Tests for the workspace store.
+
 package content
 
 import (

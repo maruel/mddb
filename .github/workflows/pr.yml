@@ -1,3 +1,4 @@
+# PR workflow: build, lint, and test on pull_request.
 name: PR
 on:
   pull_request:

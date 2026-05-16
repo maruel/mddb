@@ -1,3 +1,5 @@
+// Tests for asset serving handlers.
+
 package handlers
 
 import (

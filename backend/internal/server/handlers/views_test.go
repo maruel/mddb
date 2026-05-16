@@ -1,3 +1,5 @@
+// Tests for table views API handlers.
+
 package handlers
 
 import (

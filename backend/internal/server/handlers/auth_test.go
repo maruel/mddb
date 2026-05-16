@@ -1,3 +1,5 @@
+// Tests for authentication handlers.
+
 package handlers
 
 import (

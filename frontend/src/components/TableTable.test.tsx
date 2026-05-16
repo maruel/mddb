@@ -1,3 +1,4 @@
+// Tests for the TableTable view.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
 import type { JSX } from 'solid-js';

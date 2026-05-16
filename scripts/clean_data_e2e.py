@@ -1,3 +1,4 @@
+# Clean up test data after e2e test runs.
 #!/usr/bin/env python3
 import os
 import shutil

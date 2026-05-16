@@ -1,3 +1,4 @@
+// Vite build configuration for the SolidJS frontend.
 import { defineConfig } from 'vite';
 import solid from 'vite-plugin-solid';
 import solidSVG from 'vite-solid-svg';

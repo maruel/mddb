@@ -1,3 +1,4 @@
+# CI workflow: build, lint, and test on push.
 name: CI
 on:
   push:

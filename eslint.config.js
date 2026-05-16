@@ -1,3 +1,4 @@
+// ESLint configuration for TypeScript and SolidJS.
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import solid from 'eslint-plugin-solid/configs/typescript';

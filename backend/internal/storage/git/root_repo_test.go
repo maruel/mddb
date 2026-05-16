@@ -1,3 +1,5 @@
+// Tests for root repository management.
+
 package git
 
 import (

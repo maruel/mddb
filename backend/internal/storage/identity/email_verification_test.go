@@ -1,3 +1,5 @@
+// Tests for email verification.
+
 package identity
 
 import (

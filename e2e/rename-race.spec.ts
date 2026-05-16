@@ -1,3 +1,4 @@
+// E2E tests for page rename race conditions during navigation.
 import { test, expect, registerUser, fillEditorContent, switchToMarkdownMode, createClient, getWorkspaceId } from './helpers';
 
 test.describe('Page rename with navigation', () => {

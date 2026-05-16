@@ -1,3 +1,4 @@
+// E2E tests for page parent-child hierarchy and nesting.
 import { test, expect, registerUser, createClient, getWorkspaceId } from './helpers';
 
 test.describe('Page Hierarchy', () => {

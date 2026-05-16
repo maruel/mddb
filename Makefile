@@ -1,3 +1,4 @@
+# Build, test, and development commands.
 .PHONY: help build dev test e2e e2e-slow coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade docs
 
 # Variables

@@ -1,3 +1,5 @@
+// Tests for the JSONLDB blob type.
+
 package jsonldb
 
 import (

@@ -1,3 +1,4 @@
+// E2E tests for OAuth2 authentication flow.
 import { test, expect, registerUser } from './helpers';
 
 test.describe('API routing', () => {

@@ -1,3 +1,5 @@
+// Tests for content type coercion.
+
 package content
 
 import (

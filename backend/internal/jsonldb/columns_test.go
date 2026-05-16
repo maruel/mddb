@@ -1,3 +1,5 @@
+// Tests for JSONLDB column serialization.
+
 package jsonldb
 
 import (

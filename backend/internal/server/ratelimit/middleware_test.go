@@ -1,3 +1,5 @@
+// Tests for rate limiting middleware.
+
 package ratelimit
 
 import (

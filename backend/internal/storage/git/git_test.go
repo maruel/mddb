@@ -1,3 +1,5 @@
+// Tests for Git operations.
+
 package git
 
 import (

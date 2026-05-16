@@ -1,3 +1,5 @@
+// Tests for push notification subscriptions.
+
 package identity
 
 import (

@@ -1,3 +1,4 @@
+// E2E tests for page create, read, update, and delete operations.
 import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from './helpers';
 
 test.describe('Page CRUD Operations', () => {

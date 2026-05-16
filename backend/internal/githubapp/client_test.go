@@ -1,3 +1,5 @@
+// Tests for the GitHub App client.
+
 package githubapp
 
 import (

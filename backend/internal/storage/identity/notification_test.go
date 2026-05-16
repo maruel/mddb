@@ -1,3 +1,5 @@
+// Tests for user notifications.
+
 package identity
 
 import (

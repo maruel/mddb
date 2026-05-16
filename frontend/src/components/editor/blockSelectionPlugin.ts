@@ -1,3 +1,4 @@
+// ProseMirror plugin that applies visual styling to multi-block selections via decorations.
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
 import { getSelectedBlockPositions } from './blockDragPlugin';

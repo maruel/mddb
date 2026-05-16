@@ -1,3 +1,4 @@
+// Tests for ProseMirror block commands.
 import { describe, it, expect } from 'vitest';
 import { EditorState } from 'prosemirror-state';
 import type { Node } from 'prosemirror-model';

@@ -1,3 +1,5 @@
+// Tests for SSE event handlers.
+
 package handlers
 
 import (

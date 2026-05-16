@@ -1,3 +1,5 @@
+// Benchmarks for table operations.
+
 package content
 
 import (

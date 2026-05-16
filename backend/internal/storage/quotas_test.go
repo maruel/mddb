@@ -1,3 +1,5 @@
+// Tests for quota enforcement.
+
 package storage
 
 import "testing"

@@ -1,3 +1,4 @@
+// Shared drag handle component rendering a 6-dot grip icon for draggable rows.
 import styles from './RowHandle.module.css';
 
 export interface RowHandleProps {

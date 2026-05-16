@@ -1,3 +1,5 @@
+// Tests for security utilities.
+
 package utils
 
 import (

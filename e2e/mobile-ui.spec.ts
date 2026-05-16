@@ -1,3 +1,4 @@
+// E2E tests for mobile-responsive sidebar and UI.
 import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from './helpers';
 
 // Use mobile viewport for all tests in this file

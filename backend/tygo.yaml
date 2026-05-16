@@ -1,3 +1,4 @@
+# tygo configuration for Go-to-TypeScript type generation.
 packages:
   - path: "github.com/maruel/mddb/backend/internal/server/dto"
     enum_style: "union"

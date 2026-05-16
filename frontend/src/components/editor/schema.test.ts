@@ -1,3 +1,4 @@
+// Tests for the block editor schema.
 import { describe, it, expect } from 'vitest';
 import { schema } from './schema';
 import { DOMSerializer, DOMParser } from 'prosemirror-model';

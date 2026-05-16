@@ -1,3 +1,4 @@
+// Playwright end-to-end test configuration.
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({

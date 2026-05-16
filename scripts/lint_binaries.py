@@ -1,3 +1,4 @@
+# Lint binary files in the repository for consistency.
 #!/usr/bin/env python3
 import os
 import stat

@@ -1,3 +1,5 @@
+// Integration tests for the HTTP server.
+
 package server
 
 import (

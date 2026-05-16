@@ -1,3 +1,4 @@
+// Generate favicon and PWA icon assets from SVG.
 import sharp from 'sharp';
 import { readFileSync, mkdirSync } from 'fs';
 import { dirname, join } from 'path';

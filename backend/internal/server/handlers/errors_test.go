@@ -1,3 +1,5 @@
+// Tests for error handling middleware.
+
 package handlers
 
 import (

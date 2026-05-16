@@ -1,3 +1,5 @@
+// Tests for organization invitations.
+
 package identity
 
 import (

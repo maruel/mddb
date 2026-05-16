@@ -1,3 +1,4 @@
+// Tests for ProseMirror block input rules.
 import { describe, it, expect } from 'vitest';
 import { EditorState, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';

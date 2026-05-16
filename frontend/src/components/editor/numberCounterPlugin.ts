@@ -1,3 +1,4 @@
+// ProseMirror plugin that auto-numbers numbered list blocks based on indentation level.
 import { Plugin } from 'prosemirror-state';
 
 /**

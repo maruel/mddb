@@ -1,3 +1,4 @@
+// E2E tests for invalid route handling and error pages.
 import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from './helpers';
 
 test.describe('Error Handling - Invalid Routes', () => {

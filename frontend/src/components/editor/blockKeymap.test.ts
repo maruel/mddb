@@ -1,3 +1,4 @@
+// Tests for block editor keyboard shortcuts.
 import { describe, it, expect } from 'vitest';
 import { EditorState, TextSelection, type Command, type Transaction } from 'prosemirror-state';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';

@@ -1,3 +1,4 @@
+# pnpm workspace configuration.
 allowBuilds:
   esbuild: true
   sharp: true

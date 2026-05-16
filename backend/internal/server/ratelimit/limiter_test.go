@@ -1,3 +1,5 @@
+// Tests for the rate limiter.
+
 package ratelimit
 
 import (

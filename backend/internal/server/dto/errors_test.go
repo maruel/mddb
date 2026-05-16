@@ -1,3 +1,5 @@
+// Tests for DTO error constructors.
+
 package dto
 
 import (

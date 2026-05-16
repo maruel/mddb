@@ -1,3 +1,5 @@
+// Tests for organization management.
+
 package identity
 
 import (

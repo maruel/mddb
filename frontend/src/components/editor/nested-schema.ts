@@ -1,3 +1,4 @@
+// ProseMirror schema extending markdown base with list nodes, underline, and strikethrough marks.
 import { Schema } from 'prosemirror-model';
 import { schema as baseSchema } from 'prosemirror-markdown';
 import { addListNodes } from 'prosemirror-schema-list';

@@ -1,3 +1,5 @@
+// Tests for workspace membership.
+
 package identity
 
 import (

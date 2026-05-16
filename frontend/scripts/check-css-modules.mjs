@@ -1,3 +1,4 @@
+// Validate CSS module references against component imports.
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { dirname, join, basename, relative } from 'path';
 import { fileURLToPath } from 'url';

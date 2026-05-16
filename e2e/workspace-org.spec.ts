@@ -1,3 +1,4 @@
+// E2E tests for workspace and organization creation flow.
 import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
 
 test.describe('First Login Flow', () => {

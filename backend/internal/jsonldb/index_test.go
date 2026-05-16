@@ -1,3 +1,5 @@
+// Tests for JSONLDB index operations.
+
 package jsonldb
 
 import (

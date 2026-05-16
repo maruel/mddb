@@ -1,3 +1,4 @@
+// E2E tests for user settings and language switching.
 import type { Page } from '@playwright/test';
 import { test, expect, registerUser } from './helpers';
 

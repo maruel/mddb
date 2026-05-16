@@ -1,3 +1,5 @@
+// Tests for the SSE broker.
+
 package sse
 
 import (

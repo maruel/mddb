@@ -1,3 +1,5 @@
+// Tests for node/page API handlers.
+
 package handlers
 
 import (

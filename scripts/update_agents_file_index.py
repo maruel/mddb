@@ -1,201 +1,293 @@
 #!/usr/bin/env python3
-"""Update AGENTS.md with a file index based on first-line comments."""
+# Copyright 2025 Marc-Antoine Ruel. All rights reserved.
+# Use of this source code is governed under the Apache License, Version 2.0
+# that can be found in the LICENSE file.
 
+"""Update AGENTS.md files (containing a file index marker) with an auto-generated index.
+
+To opt-in a directory, add these two markers to its AGENTS.md:
+
+    <!-- BEGIN FILE INDEX -->
+    <!-- END FILE INDEX -->
+
+The script auto-discovers all AGENTS.md files tracked by git that contain the
+markers, generates a file index from first-line comments, and injects it between
+the markers. It also ensures a CLAUDE.md symlink exists next to every AGENTS.md.
+"""
+
+import argparse
+import fnmatch
 import os
 import re
 import subprocess
 import sys
 
-# Common Configuration
-SECTION_START = "<!-- BEGIN FILE INDEX -->"
-SECTION_END = "<!-- END FILE INDEX -->"
-SECTION_TITLE = "## File Index"
-
-# Extensions to check and their comment prefixes
-EXTENSIONS = {
-    ".cjs": "//",
-    ".go": "//",
-    ".js": "//",
-    ".md": "#",
-    ".mjs": "//",
-    ".py": "#",
-    ".sh": "#",
-    ".ts": "//",
-    ".tsx": "//",
-    ".yaml": "#",
-    ".yml": "#",
-    "Makefile": "#",
-}
-
-IGNORE_FILES = {
-    "AGENTS.md",
-    "CLAUDE.md",
-}
-
-# Configuration for each scan
-CONFIGS = [
-    {
-        "root_dir": "backend",
-        "target_file": "backend/AGENTS.md",
-        "exclude_dirs": set(),
-    },
-    {
-        "root_dir": "frontend",
-        "target_file": "frontend/AGENTS.md",
-        "exclude_dirs": set(),
-    },
-    {
-        "root_dir": ".",
-        "target_file": "AGENTS.md",
-        "exclude_dirs": {"backend", "frontend"},
-    },
-]
-
 
 def get_git_files():
     try:
-        # Use -z to handle spaces in filenames correctly, though rare
         result = subprocess.run(["git", "ls-files", "-z"], capture_output=True, text=True, check=True)
-        # Split by null terminator and filter empty strings
         return [f for f in result.stdout.split("\0") if f]
-    except subprocess.CalledProcessError as e:
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
         print(f"Error listing git files: {e}", file=sys.stderr)
         return []
-    except FileNotFoundError:
-        print("Error: git not found", file=sys.stderr)
-        return []
 
 
-def get_file_comment(filepath):
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            lines = [f.readline() for _ in range(10)]
+def _py_docstring(lines, i):
+    """Extract the description from a Python triple-quoted docstring starting at lines[i].
 
-            # Check extension/filename for comment style
-            _, ext = os.path.splitext(filepath)
-            fname = os.path.basename(filepath)
-            prefix = EXTENSIONS.get(ext) or EXTENSIONS.get(fname)
-            if not prefix:
-                if fname == "Makefile":
-                    prefix = "#"
-                elif "Dockerfile" in fname:
-                    prefix = "#"
-                else:
-                    return None
+    Returns the description string, or "" if none found.
+    """
+    sline = lines[i].strip()
+    quote = sline[:3]
+    # Single-line docstring: """text"""
+    if sline.endswith(quote) and len(sline) > 6:
+        return sline[3:-3].strip()
+    # Multi-line: return the first content line.
+    content = sline[3:].strip()
+    if content:
+        return content
+    # Opening quotes on their own line; use next non-empty line.
+    for j in range(i + 1, len(lines)):
+        if lines[j] and lines[j].strip():
+            return lines[j].strip()
+    return ""
 
-            # Skip shebang if present
-            start_idx = 0
-            if lines[0] and lines[0].startswith("#!"):
-                start_idx = 1
 
-            for i in range(start_idx, len(lines)):
-                line = lines[i]
-                if not line:
-                    break
-                sline = line.strip()
-                if not sline:
-                    continue
+def get_file_description(filepath):
+    """Return the description for a file, or None if not applicable.
 
-                # Skip common directives/metadata that aren't descriptions
-                if sline.startswith(f"{prefix}go:"):
-                    continue
-                if sline.startswith(f"{prefix} +build"):
-                    continue
-                if sline.startswith(f"{prefix} nolint"):
-                    continue
-
-                if sline.startswith(prefix):
-                    comment = sline[len(prefix) :].strip()
-                    # Skip empty comments
-                    if not comment:
-                        continue
-                    return comment
-
-                # If we hit code before a comment, give up
-                return None
-    except Exception:
+    Returns None if the file type has no comment convention (or is explicitly
+    excluded). Returns "" if the file supports comments but has no description,
+    which is treated as an error by callers.
+    """
+    # Glob patterns mapping filenames to their comment prefix. None skips the file.
+    comment_prefixes = {
+        "*.d.ts": None,
+        "pnpm-lock.yaml": None,
+        "*.cjs": "//",
+        "*.go": "//",
+        "*.js": "//",
+        "*.kt": "//",
+        "*.md": "#",
+        "*.mjs": "//",
+        "*.py": "#",
+        "*.sh": "#",
+        "*.swift": "//",
+        "*.ts": "//",
+        "*.tsx": "//",
+        "*.yaml": "#",
+        "*.yml": "#",
+        "Dockerfile*": "#",
+        "Makefile": "#",
+    }
+    if os.path.islink(filepath):
         return None
-    return None
-
-
-def generate_index_for_config(config, all_files):
-    root_dir = config["root_dir"]
-    exclude = config["exclude_dirs"]
-    files_found = []
-    for filepath in all_files:
-        # Filter based on root_dir
-        if root_dir == ".":
-            # For root scan, exclude files that start with excluded directories
-            if any(filepath.startswith(ex + "/") or filepath == ex for ex in exclude):
+    fname = os.path.basename(filepath)
+    match = next(((pat, p) for pat, p in comment_prefixes.items() if fnmatch.fnmatch(fname, pat)), None)
+    if match is None:
+        return None  # extension not recognised
+    _, prefix = match
+    if not prefix:
+        return None  # explicitly excluded pattern
+    with open(filepath, encoding="utf-8") as f:
+        lines = [f.readline() for _ in range(20)]
+    in_copyright = False
+    for i, line in enumerate(lines):
+        if not line:
+            break
+        sline = line.strip()
+        if not sline:
+            in_copyright = False
+            continue
+        if fname.endswith(".py") and (sline.startswith('"""') or sline.startswith("'''")):
+            return _py_docstring(lines, i)
+        # Skip common directives/metadata that aren't descriptions.
+        if sline.startswith(f"{prefix}go:"):
+            continue
+        if sline.startswith(f"{prefix} +build"):
+            continue
+        if sline.startswith(f"{prefix} nolint"):
+            continue
+        if sline.startswith(f"{prefix} swift-tools-version:"):
+            continue
+        if sline.startswith(f"{prefix} ///"):
+            continue
+        # Skip YAML front-matter delimiters and shebangs.
+        if sline == "---" or sline.startswith("#!"):
+            continue
+        # Skip copyright headers and their continuation lines (until blank).
+        if in_copyright:
+            continue
+        if " copyright " in sline.lower():
+            in_copyright = True
+            continue
+        # Skip PEP 723 inline script metadata fields (requires-python, dependencies, etc.)
+        # that appear between # /// script and # /// markers.
+        if fname.endswith(".py") and (
+            sline.startswith(f"{prefix} requires-") or sline.startswith(f"{prefix} dependencies")
+        ):
+            continue
+        if sline.startswith(prefix):
+            comment = sline[len(prefix) :].strip()
+            if not comment:
                 continue
-            # relpath is just the filepath
-            relpath = filepath
-        else:
-            # For subdir scan, only include files inside root_dir
+            return comment
+        # Hit code before a comment.
+        return ""
+    return ""
+
+
+def discover_configs(all_files):
+    """Auto-discover workspace roots from AGENTS.md files that contain a file index marker.
+
+    Returns a dict mapping target AGENTS.md path to its set of excluded child directories.
+    """
+    candidates = sorted(f for f in all_files if os.path.basename(f) == "AGENTS.md")
+    configs = {"AGENTS.md": set()}
+    for f in candidates:
+        with open(f, "r", encoding="utf-8") as fh:
+            if "<!-- BEGIN FILE INDEX -->" in fh.read():
+                configs[f] = set()
+    # For each config, find child workspaces and add them to exclude_dirs.
+    for target, exclude in configs.items():
+        root = os.path.dirname(target)
+        prefix = root + "/" if root else ""
+        for other_target in configs:
+            oroot = os.path.dirname(other_target)
+            if oroot == root:
+                continue
+            if not prefix:
+                child_rel = oroot
+            elif oroot.startswith(prefix):
+                child_rel = oroot[len(prefix) :]
+            else:
+                continue
+            if "/" not in child_rel:
+                exclude.add(child_rel)
+    return configs
+
+
+def generate_index(target, exclude, all_files, all_configs):
+    """Generate the file index for target, returning (content, missing) where
+    missing is a list of files that support comments but have no description."""
+    root_dir = os.path.dirname(target)
+    files_found = []
+    missing = []
+    for filepath in all_files:
+        # Skip own AGENTS.md.
+        if filepath == target:
+            continue
+        # Scope to root_dir.
+        if root_dir:
             if not filepath.startswith(root_dir + "/"):
                 continue
-            # relpath is relative to root_dir
             relpath = filepath[len(root_dir) + 1 :]
-
-        # Filter ignored files
-        if os.path.basename(filepath) in IGNORE_FILES:
+        else:
+            relpath = filepath
+        # Check excluded subdirectories, but let sub-workspace AGENTS.md through.
+        rel_parts = relpath.replace("\\", "/").split("/")
+        if rel_parts[0] in exclude and filepath not in all_configs:
             continue
-
-        # Check extension
-        _, ext = os.path.splitext(filepath)
-        fname = os.path.basename(filepath)
-        if ext in EXTENSIONS or fname in EXTENSIONS:
-            comment = get_file_comment(filepath)
-            if comment:
-                files_found.append((relpath, comment))
-
-    files_found.sort()
-    lines = []
-    lines.append(SECTION_TITLE)
-    lines.append("")
-    lines.append("Autogenerated file index based on first-line comments.")
-    lines.append("")
-    for path, comment in files_found:
+        # Skip any file in a testdata/ directory.
+        if "testdata" in rel_parts:
+            continue
+        desc = get_file_description(filepath)
+        if desc is None:
+            continue  # file type has no comment convention
+        if desc == "":
+            missing.append(relpath)
+        else:
+            files_found.append((relpath, desc))
+    desc = "Autogenerated from first-line comments. Run scripts/update_agents_file_index.py to refresh."
+    lines = ["## File Index", "", desc, ""]
+    for path, comment in sorted(files_found):
         lines.append(f"- `{path}`: {comment}")
-    return "\n".join(lines)
+    return "\n".join(lines), missing
 
 
-def update_markdown_file(target_file, content):
+def update_markdown(target_file: str, content: str, check: bool) -> bool:
+    """Update or check the file index in target_file. Returns True if a change was made (or needed)."""
     if not os.path.exists(target_file):
-        print(f"Warning: {target_file} not found. Skipping.")
-        return
-
+        print(f"Warning: {target_file} not found, skipping.")
+        return False
+    start = "<!-- BEGIN FILE INDEX -->"
+    end = "<!-- END FILE INDEX -->"
     with open(target_file, "r", encoding="utf-8") as f:
         original = f.read()
-
-    new_section = f"{SECTION_START}\n{content}\n{SECTION_END}"
-
-    if SECTION_START in original and SECTION_END in original:
-        # Replace existing
-        pattern = re.compile(f"{re.escape(SECTION_START)}.*?{re.escape(SECTION_END)}", re.DOTALL)
+    new_section = f"{start}\n{content}\n{end}"
+    if start in original and end in original:
+        pattern = re.compile(f"{re.escape(start)}.*?{re.escape(end)}", re.DOTALL)
         updated = pattern.sub(new_section, original)
     else:
-        # Append
-        if original.strip():
-            updated = original.rstrip() + "\n\n" + new_section + "\n"
-        else:
-            updated = new_section + "\n"
-
+        updated = (original.rstrip() + "\n\n" + new_section + "\n") if original.strip() else (new_section + "\n")
+    if updated == original:
+        return False
+    if check:
+        print(
+            f"Error: {target_file} file index is out of date. Run scripts/update_agents_file_index.py to fix.",
+            file=sys.stderr,
+        )
+        return True
     with open(target_file, "w", encoding="utf-8") as f:
         f.write(updated)
-    # print(f"Updated {target_file}")
+    print(f"Updated: {target_file}")
+    return True
 
 
-def main():
+def ensure_claude_symlinks(all_files: list[str], check: bool) -> int:
+    """Ensure every AGENTS.md has a sibling CLAUDE.md symlink pointing to it."""
+    ret = 0
+    for f in all_files:
+        if os.path.basename(f) != "AGENTS.md":
+            continue
+        d = os.path.dirname(f) or "."
+        link = os.path.join(d, "CLAUDE.md")
+        if os.path.islink(link) and os.readlink(link) == "AGENTS.md":
+            continue
+        if os.path.exists(link):
+            print(f"Error: {link} exists but is not a symlink to AGENTS.md.", file=sys.stderr)
+            return 1
+        if check:
+            print(
+                f"Error: {link} -> AGENTS.md symlink is missing. Run scripts/update_agents_file_index.py to fix.",
+                file=sys.stderr,
+            )
+            ret = 1
+            continue
+        os.symlink("AGENTS.md", link)
+        print(f"Created: {link} -> AGENTS.md")
+    return ret
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="check that indexes are up to date without modifying files (exit 1 if not)",
+    )
+    args = parser.parse_args()
+
     all_files = get_git_files()
     if not all_files:
         print("No files found in git repository.")
         return 1
-    for config in CONFIGS:
-        # print(f"Processing {config['target_file']}...")
-        content = generate_index_for_config(config, all_files)
-        update_markdown_file(config["target_file"], content)
-    return 0
+    ret = ensure_claude_symlinks(all_files, check=args.check)
+    if ret and not args.check:
+        return ret
+    configs = discover_configs(all_files)
+    all_missing = []
+    for target, exclude in configs.items():
+        content, missing = generate_index(target, exclude, all_files, configs)
+        if update_markdown(target, content, check=args.check):
+            ret = 1
+        all_missing.extend(missing)
+    if all_missing:
+        print("Error: the following files have no description comment:", file=sys.stderr)
+        for f in sorted(all_missing):
+            print(f"  {f}", file=sys.stderr)
+        ret = 1
+    return ret
 
 
 if __name__ == "__main__":

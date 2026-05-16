@@ -1,3 +1,5 @@
+// Tests for content type helpers.
+
 package content
 
 import (

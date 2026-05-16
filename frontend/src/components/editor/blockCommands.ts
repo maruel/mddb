@@ -1,3 +1,4 @@
+// ProseMirror commands for block operations: delete, duplicate, convert, indent/outdent, and toggle task.
 import { type Command } from 'prosemirror-state';
 import { type BlockType } from './schema';
 
