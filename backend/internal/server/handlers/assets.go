@@ -73,7 +73,7 @@ func (h *AssetHandler) UploadNodeAssetHandler(w http.ResponseWriter, r *http.Req
 	// If it triggers, Go writes 413 automatically; the pre-check above covers
 	// the normal browser path with a structured JSON response.
 	r.Body = http.MaxBytesReader(w, r.Body, maxBytes)
-	if err := r.ParseMultipartForm(maxBytes); err != nil {
+	if err := r.ParseMultipartForm(maxBytes); err != nil { //nolint:gosec // bounded by MaxBytesReader above
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
 			return // Go already wrote 413 via MaxBytesReader
