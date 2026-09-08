@@ -197,9 +197,6 @@
 }
 
 .breadcrumbs {
-  display: flex;
-  align-items: center;
-  gap: var(--s-1);
   font-size: 0.85rem;
   color: rgba(255, 255, 255, 0.85);
   overflow: hidden;
@@ -207,8 +204,39 @@
   white-space: nowrap;
 }
 
+.breadcrumbList,
+.breadcrumbSegment {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.breadcrumbList {
+  min-width: 0;
+  list-style: none;
+}
+
+.breadcrumbSegment {
+  min-width: 0;
+}
+
 .breadcrumbItem {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
   cursor: pointer;
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.breadcrumbItem:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.breadcrumbCurrent {
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -245,21 +273,43 @@
 }
 
 .historyItem {
-  background: var(--c-bg);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  list-style: none;
+}
+
+.historyButton {
+  display: block;
+  width: 100%;
   padding: var(--s-3);
+  border: 1px solid var(--c-border);
+  background: var(--c-bg);
+  border-radius: var(--radius);
+  color: inherit;
   cursor: pointer;
+  font: inherit;
+  text-align: left;
   transition: border-color var(--transition);
 }
 
-.historyItem:hover {
+.historyButton:hover {
   border-color: var(--c-primary);
 }
 
-.activeHistoryItem {
+.activeHistoryItem .historyButton {
   border-color: var(--c-primary);
   background: var(--c-bg-alt);
+}
+
+.historyButton:focus-visible {
+  outline: 2px solid var(--c-border-focus);
+  outline-offset: 2px;
+}
+
+.noHistory {
+  padding: var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: var(--c-bg);
+  color: var(--c-text-light);
 }
 
 .historyMeta {

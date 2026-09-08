@@ -1,8 +1,9 @@
 // Modal component for creating a new organization.
 
-import { createSignal, Show } from 'solid-js';
+import { createSignal, createUniqueId, Show } from 'solid-js';
 import { useI18n } from '../i18n';
-import styles from './Onboarding.module.css';
+import { Button, Dialog } from './shared';
+import styles from './CreateOrgModal.module.css';
 
 interface CreateOrgData {
   name: string;
@@ -19,6 +20,7 @@ export default function CreateOrgModal(props: CreateOrgModalProps) {
   const [name, setName] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const nameInputId = createUniqueId();
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -38,52 +40,49 @@ export default function CreateOrgModal(props: CreateOrgModalProps) {
     }
   };
 
-  const handleOverlayClick = (e: MouseEvent) => {
-    // Only allow closing by clicking overlay if not first org
-    if (!props.isFirstOrg && e.target === e.currentTarget) {
-      props.onClose();
-    }
-  };
-
   return (
-    <div class={styles.overlay} onClick={handleOverlayClick}>
-      <div class={styles.modal}>
-        <header class={styles.header}>
-          <h2>{props.isFirstOrg ? t('createOrg.firstOrgTitle') : t('createOrg.title')}</h2>
-          <p>{props.isFirstOrg ? t('createOrg.firstOrgDescription') : t('createOrg.description')}</p>
-        </header>
+    <Dialog
+      ariaLabel={props.isFirstOrg ? t('createOrg.firstOrgTitle') : t('createOrg.title')}
+      dismissOnBackdrop={!props.isFirstOrg}
+      dismissOnEscape={!props.isFirstOrg}
+      onClose={props.onClose}
+    >
+      <header class={styles.header}>
+        <h2>{props.isFirstOrg ? t('createOrg.firstOrgTitle') : t('createOrg.title')}</h2>
+        <p>{props.isFirstOrg ? t('createOrg.firstOrgDescription') : t('createOrg.description')}</p>
+      </header>
 
-        {error() && <div class={styles.error}>{error()}</div>}
+      <Show when={error()}>{(message) => <div class={styles.error}>{message()}</div>}</Show>
 
-        <form onSubmit={handleSubmit}>
-          <div class={styles.formGroup}>
-            <label>{t('createOrg.nameLabel')}</label>
-            <input
-              type="text"
-              value={name()}
-              onInput={(e) => setName(e.target.value)}
-              placeholder={t('createOrg.namePlaceholder') || ''}
-              autofocus
-            />
-          </div>
+      <form onSubmit={handleSubmit}>
+        <div class={styles.formGroup}>
+          <label for={nameInputId}>{t('createOrg.nameLabel')}</label>
+          <input
+            id={nameInputId}
+            type="text"
+            value={name()}
+            onInput={(e) => setName(e.target.value)}
+            placeholder={t('createOrg.namePlaceholder') || ''}
+            autofocus
+          />
+        </div>
 
-          <div class={styles.actions}>
-            <Show when={!props.isFirstOrg}>
-              <button type="button" class={styles.secondaryButton} onClick={() => props.onClose()}>
-                {t('common.cancel')}
-              </button>
-            </Show>
-            <button
-              type="submit"
-              class={styles.primaryButton}
-              disabled={!name().trim() || loading()}
-              style={props.isFirstOrg ? { flex: 1 } : undefined}
-            >
-              {loading() ? t('common.creating') : t('createOrg.create')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class={styles.actions}>
+          <Show when={!props.isFirstOrg}>
+            <Button variant="secondary" class={styles.secondaryButton} onClick={props.onClose}>
+              {t('common.cancel')}
+            </Button>
+          </Show>
+          <Button
+            type="submit"
+            variant="primary"
+            class={`${styles.primaryButton} ${props.isFirstOrg ? styles.fullWidth : ''}`}
+            disabled={!name().trim() || loading()}
+          >
+            {loading() ? t('common.creating') : t('createOrg.create')}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
   );
 }

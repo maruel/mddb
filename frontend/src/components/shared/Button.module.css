@@ -1,0 +1,43 @@
+.button {
+  font: inherit;
+}
+
+.button:focus-visible {
+  outline: 2px solid var(--c-border-focus);
+  outline-offset: 2px;
+}
+
+.primary {
+  border: none;
+  background: var(--c-primary);
+  color: white;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--c-primary-hover);
+}
+
+.secondary {
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text-light);
+}
+
+.secondary:hover:not(:disabled) {
+  background: var(--c-bg-alt);
+}
+
+.ghost,
+.unstyled {
+  border: none;
+  background: transparent;
+}
+
+.ghost {
+  color: var(--c-text-light);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--c-bg-hover);
+  color: var(--c-text);
+}

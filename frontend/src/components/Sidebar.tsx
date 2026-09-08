@@ -1,6 +1,6 @@
 // Sidebar navigation component containing workspace selection and page tree.
 
-import { createSignal, For, Show, createMemo } from 'solid-js';
+import { createSignal, For, Show, createEffect, createMemo } from 'solid-js';
 import SidebarNode from './SidebarNode';
 import { useI18n } from '../i18n';
 import { useAuth } from '../contexts';
@@ -39,7 +39,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onCreateWorkspace: () => void;
   onImportFromNotion: () => void;
-  onMoveNode?: (nodeId: string, newParentId: string) => void;
+  onMoveNode?: (nodeId: string, newParentId: string) => Promise<void> | void;
 }
 
 export default function Sidebar(props: SidebarProps) {
@@ -50,6 +50,32 @@ export default function Sidebar(props: SidebarProps) {
   const [isEditingName, setIsEditingName] = createSignal(false);
   const [editNameValue, setEditNameValue] = createSignal('');
   const [isSaving, setIsSaving] = createSignal(false);
+  const [focusedNodeId, setFocusedNodeId] = createSignal<string | null>(null);
+  const [movingNodeId, setMovingNodeId] = createSignal<string | null>(null);
+
+  createEffect(() => {
+    const selectedId = props.selectedNodeId;
+    if (selectedId) {
+      setFocusedNodeId(selectedId);
+    } else if (!focusedNodeId() && props.nodes[0]) {
+      setFocusedNodeId(props.nodes[0].id);
+    }
+  });
+
+  const moveNode = async (nodeId: string, newParentId: string) => {
+    setMovingNodeId(null);
+    await props.onMoveNode?.(nodeId, newParentId);
+    await Promise.resolve();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+    const movedItem = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="treeitem"]')).find(
+      (item) => item.dataset.nodeId === nodeId
+    );
+    if (movedItem) {
+      setFocusedNodeId(nodeId);
+      movedItem.focus();
+    }
+  };
 
   const currentWsId = () => user()?.workspace_id || '';
   const currentWsName = () => {
@@ -219,6 +245,8 @@ export default function Sidebar(props: SidebarProps) {
 
       {/* Current workspace pages */}
       <ul
+        role="tree"
+        aria-label={t('app.workspaceTree')}
         class={styles.pageList}
         classList={{ [`${styles.rootDropTarget}`]: isRootDropTarget() }}
         onDragOver={handleRootDragOver}
@@ -226,19 +254,24 @@ export default function Sidebar(props: SidebarProps) {
         onDrop={handleRootDrop}
       >
         <For each={props.nodes}>
-          {(node) => (
+          {(node, index) => (
             <SidebarNode
               node={node}
               selectedId={props.selectedNodeId}
               ancestorIds={props.ancestorIds}
+              focusedNodeId={focusedNodeId()}
+              movingNodeId={movingNodeId()}
               onSelect={props.onSelectNode}
+              onFocusNode={setFocusedNodeId}
+              onStartMove={setMovingNodeId}
               onCreateChildPage={props.onCreateChildPage}
               onCreateChildTable={props.onCreateChildTable}
               onFetchChildren={props.onFetchChildren}
               onDeleteNode={props.onDeleteNode}
               onShowHistory={props.onShowHistory}
-              onMoveNode={props.onMoveNode}
+              onMoveNode={moveNode}
               depth={0}
+              isFirstTreeItem={index() === 0}
             />
           )}
         </For>

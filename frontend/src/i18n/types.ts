@@ -38,11 +38,19 @@ export interface Dictionary {
     createSubPage: string;
     createSubTable: string;
     collapseSidebar: string;
+    collapseNode: string;
+    expandNode: string;
+    breadcrumbs: string;
+    moveNode: string;
+    moveNodeHere: string;
+    moveToRoot: string;
     otherWorkspaces: string;
     switchWorkspace: string;
+    workspaceTree: string;
   };
 
   userMenu: {
+    label: string;
     logout: string;
     profile: string;
   };

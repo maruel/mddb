@@ -1,7 +1,8 @@
 // Modal for importing a workspace from Notion.
 
-import { createSignal, onCleanup, onMount } from 'solid-js';
+import { createSignal, createUniqueId, Show } from 'solid-js';
 import { useI18n } from '../i18n';
+import { Button, Dialog } from './shared';
 import styles from './NotionImportModal.module.css';
 
 export interface NotionImportData {
@@ -20,20 +21,7 @@ export default function NotionImportModal(props: NotionImportModalProps) {
   const [notionToken, setNotionToken] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
-
-  const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && !loading()) {
-      props.onClose();
-    }
-  };
-
-  onMount(() => {
-    document.addEventListener('keydown', handleKeyDown);
-  });
-
-  onCleanup(() => {
-    document.removeEventListener('keydown', handleKeyDown);
-  });
+  const notionTokenInputId = createUniqueId();
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -53,78 +41,82 @@ export default function NotionImportModal(props: NotionImportModalProps) {
     }
   };
 
-  const handleOverlayClick = (e: MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      props.onClose();
-    }
-  };
-
   return (
-    <div class={styles.overlay} onClick={handleOverlayClick}>
-      <div class={styles.modal}>
-        <header class={styles.header}>
-          <h2>{t('notionImport.title')}</h2>
-          <p>{t('notionImport.description')}</p>
-        </header>
+    <Dialog
+      ariaLabel={t('notionImport.title')}
+      class={styles.modal}
+      dismissOnBackdrop={true}
+      dismissOnEscape={() => !loading()}
+      onClose={props.onClose}
+    >
+      <header class={styles.header}>
+        <h2>{t('notionImport.title')}</h2>
+        <p>{t('notionImport.description')}</p>
+      </header>
 
-        {error() && <div class={styles.error}>{error()}</div>}
+      <Show when={error()}>{(message) => <div class={styles.error}>{message()}</div>}</Show>
 
-        <div class={styles.setupBox}>
-          <div class={styles.setupHeader}>
-            <span class={styles.setupTitle}>{t('notionImport.setupTitle')}</span>
-            <a href={NOTION_INTEGRATION_URL} target="_blank" rel="noopener noreferrer" class={styles.createLink}>
-              {t('notionImport.createIntegration')} &#x2197;
-            </a>
-          </div>
-          <ol class={styles.setupSteps}>
-            <li>
-              {t('notionImport.step1Header')}
-              <ol class={styles.subSteps}>
-                <li>{t('notionImport.step1a')}</li>
-                <li>{t('notionImport.step1b')}</li>
-                <li>{t('notionImport.step1c')}</li>
-                <li>{t('notionImport.step1d')}</li>
-              </ol>
-            </li>
-            <li>
-              {t('notionImport.step2Header')}
-              <ol class={styles.subSteps}>
-                <li>{t('notionImport.step2a')}</li>
-                <li>{t('notionImport.step2b')}</li>
-              </ol>
-            </li>
-            <li>
-              {t('notionImport.step3Header')}
-              <ol class={styles.subSteps}>
-                <li>{t('notionImport.step3a')}</li>
-                <li>{t('notionImport.step3b')}</li>
-              </ol>
-            </li>
-          </ol>
+      <div class={styles.setupBox}>
+        <div class={styles.setupHeader}>
+          <span class={styles.setupTitle}>{t('notionImport.setupTitle')}</span>
+          <a href={NOTION_INTEGRATION_URL} target="_blank" rel="noopener noreferrer" class={styles.createLink}>
+            {t('notionImport.createIntegration')} &#x2197;
+          </a>
+        </div>
+        <ol class={styles.setupSteps}>
+          <li>
+            {t('notionImport.step1Header')}
+            <ol class={styles.subSteps}>
+              <li>{t('notionImport.step1a')}</li>
+              <li>{t('notionImport.step1b')}</li>
+              <li>{t('notionImport.step1c')}</li>
+              <li>{t('notionImport.step1d')}</li>
+            </ol>
+          </li>
+          <li>
+            {t('notionImport.step2Header')}
+            <ol class={styles.subSteps}>
+              <li>{t('notionImport.step2a')}</li>
+              <li>{t('notionImport.step2b')}</li>
+            </ol>
+          </li>
+          <li>
+            {t('notionImport.step3Header')}
+            <ol class={styles.subSteps}>
+              <li>{t('notionImport.step3a')}</li>
+              <li>{t('notionImport.step3b')}</li>
+            </ol>
+          </li>
+        </ol>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div class={styles.formGroup}>
+          <label for={notionTokenInputId}>{t('notionImport.notionToken')}</label>
+          <input
+            id={notionTokenInputId}
+            type="password"
+            value={notionToken()}
+            onInput={(e) => setNotionToken(e.target.value)}
+            placeholder={t('notionImport.notionTokenPlaceholder') || ''}
+            autofocus
+          />
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div class={styles.formGroup}>
-            <label>{t('notionImport.notionToken')}</label>
-            <input
-              type="password"
-              value={notionToken()}
-              onInput={(e) => setNotionToken(e.target.value)}
-              placeholder={t('notionImport.notionTokenPlaceholder') || ''}
-              autofocus
-            />
-          </div>
-
-          <div class={styles.actions}>
-            <button type="button" class={styles.secondaryButton} onClick={() => props.onClose()}>
-              {t('common.cancel')}
-            </button>
-            <button type="submit" class={styles.primaryButton} disabled={!notionToken().trim() || loading()}>
-              {loading() ? t('notionImport.importing') : t('notionImport.startImport')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class={styles.actions}>
+          <Button variant="secondary" class={styles.secondaryButton} onClick={props.onClose}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            variant="primary"
+            class={styles.primaryButton}
+            disabled={!notionToken().trim() || loading()}
+          >
+            {loading() ? t('notionImport.importing') : t('notionImport.startImport')}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
   );
 }

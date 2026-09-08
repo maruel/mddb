@@ -1,0 +1,76 @@
+.header {
+  margin-bottom: var(--s-4);
+  text-align: center;
+}
+
+.header h2 {
+  font-size: 1.25rem;
+  margin-bottom: var(--s-2);
+}
+
+.header p {
+  color: var(--c-text-light);
+  font-size: 0.9rem;
+}
+
+.formGroup {
+  margin-bottom: var(--s-4);
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: var(--s-2);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.formGroup input {
+  width: 100%;
+  padding: var(--s-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+}
+
+.actions {
+  display: flex;
+  gap: var(--s-3);
+  margin-top: var(--s-4);
+}
+
+.primaryButton {
+  flex: 2;
+  display: block;
+  padding: var(--s-3);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.primaryButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  flex: 1;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.fullWidth {
+  flex: 1;
+}
+
+.error {
+  padding: var(--s-3);
+  margin-bottom: var(--s-4);
+  border-radius: var(--radius);
+  background: #fef2f2;
+  color: var(--c-danger);
+  text-align: center;
+  font-size: 0.85rem;
+}

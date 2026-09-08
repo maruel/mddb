@@ -106,14 +106,12 @@
 .item {
   display: flex;
   align-items: flex-start;
-  gap: var(--s-2);
-  padding: var(--s-3);
   border-bottom: 1px solid var(--c-border);
-  cursor: pointer;
   transition: background var(--transition);
 }
 
-.item:hover {
+.item:hover,
+.item:focus-within {
   background: var(--c-bg-hover);
 }
 
@@ -132,6 +130,27 @@
 .itemContent {
   flex: 1;
   min-width: 0;
+}
+
+.itemButton {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  padding: var(--s-3);
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.itemButton:focus-visible,
+.deleteButton:focus-visible,
+.markAllButton:focus-visible,
+.loadMoreButton:focus-visible {
+  outline: 2px solid var(--c-border-focus);
+  outline-offset: -2px;
 }
 
 .itemTitle {
@@ -177,7 +196,8 @@
   transition: opacity var(--transition);
 }
 
-.item:hover .deleteButton {
+.item:hover .deleteButton,
+.item:focus-within .deleteButton {
   opacity: 1;
 }
 

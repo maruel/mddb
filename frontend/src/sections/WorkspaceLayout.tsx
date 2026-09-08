@@ -70,13 +70,59 @@ const WorkspaceLayout: ParentComponent = (props) => {
     onCleanup(() => window.removeEventListener('keydown', handleKeyDown));
   });
 
-  // UI state - sidebar open by default on desktop, closed on mobile
-  const [showMobileSidebar, setShowMobileSidebar] = createSignal(window.innerWidth > 768);
+  // Keep desktop collapse and mobile overlay state independent across breakpoint changes.
+  const [isMobileLayout, setIsMobileLayout] = createSignal(window.innerWidth <= 768);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = createSignal(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = createSignal(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
   const [showNotionImport, setShowNotionImport] = createSignal(false);
   const [notionImportStatus, setNotionImportStatus] = createSignal<NotionImportStatusResponse | null>(null);
   const [notionImportWsId, setNotionImportWsId] = createSignal<string | null>(null);
   const [nodeCreationParentId, setNodeCreationParentId] = createSignal<string | null>(null);
+
+  const isSidebarOpen = () => (isMobileLayout() ? mobileSidebarOpen() : desktopSidebarOpen());
+  const toggleSidebar = () => {
+    if (isMobileLayout()) {
+      setMobileSidebarOpen(!mobileSidebarOpen());
+    } else {
+      setDesktopSidebarOpen(!desktopSidebarOpen());
+    }
+  };
+  const closeSidebar = () => {
+    if (isMobileLayout()) {
+      setMobileSidebarOpen(false);
+    } else {
+      setDesktopSidebarOpen(false);
+    }
+  };
+  const isFirstWorkspace = () => {
+    const currentUser = user();
+    return !currentUser?.workspace_id && (currentUser?.workspaces ?? []).length === 0;
+  };
+
+  onMount(() => {
+    const handleResize = () => {
+      const nextIsMobile = window.innerWidth <= 768;
+      if (nextIsMobile !== isMobileLayout()) {
+        setIsMobileLayout(nextIsMobile);
+        setMobileSidebarOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (event.key === 'Escape' && isMobileLayout() && mobileSidebarOpen()) {
+        event.preventDefault();
+        setMobileSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('keydown', handleKeyDown);
+    onCleanup(() => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('keydown', handleKeyDown);
+    });
+  });
 
   // Notion import polling
   let importPollInterval: number | undefined;
@@ -211,8 +257,8 @@ const WorkspaceLayout: ParentComponent = (props) => {
       navigate(nodeUrl(wsId, wsName, node.id, node.title));
     }
     // Only close sidebar on mobile
-    if (window.innerWidth <= 768) {
-      setShowMobileSidebar(false);
+    if (isMobileLayout()) {
+      setMobileSidebarOpen(false);
     }
   };
 
@@ -269,7 +315,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   }
 
   return (
-    <div class={`${styles.app} ${showMobileSidebar() ? styles.sidebarOpen : ''}`}>
+    <div class={`${styles.app} ${isSidebarOpen() ? styles.sidebarOpen : ''}`}>
       <Show when={notionImportStatus()} keyed>
         {(status) => (
           <NotionImportBanner
@@ -283,25 +329,39 @@ const WorkspaceLayout: ParentComponent = (props) => {
         <div class={styles.headerLeft}>
           <button
             class={styles.hamburger}
-            onClick={() => setShowMobileSidebar(!showMobileSidebar())}
+            onClick={toggleSidebar}
             aria-label="Toggle menu"
+            aria-expanded={isSidebarOpen()}
           >
             <MenuIcon />
           </button>
           <Show when={selectedNodeId()}>
-            <nav class={styles.breadcrumbs}>
-              <For each={breadcrumbPath()}>
-                {(crumb, i) => (
-                  <>
-                    <Show when={i() > 0}>
-                      <span class={styles.breadcrumbSeparator}>/</span>
-                    </Show>
-                    <span class={styles.breadcrumbItem} onClick={() => handleNodeClick(crumb)}>
-                      {crumb.title}
-                    </span>
-                  </>
-                )}
-              </For>
+            <nav class={styles.breadcrumbs} aria-label={t('app.breadcrumbs')}>
+              <ol class={styles.breadcrumbList}>
+                <For each={breadcrumbPath()}>
+                  {(crumb, i) => (
+                    <li class={styles.breadcrumbSegment}>
+                      <Show when={i() > 0}>
+                        <span class={styles.breadcrumbSeparator} aria-hidden="true">
+                          /
+                        </span>
+                      </Show>
+                      <Show
+                        when={i() < breadcrumbPath().length - 1}
+                        fallback={
+                          <span class={styles.breadcrumbCurrent} aria-current="page">
+                            {crumb.title}
+                          </span>
+                        }
+                      >
+                        <button type="button" class={styles.breadcrumbItem} onClick={() => handleNodeClick(crumb)}>
+                          {crumb.title}
+                        </button>
+                      </Show>
+                    </li>
+                  )}
+                </For>
+              </ol>
             </nav>
           </Show>
         </div>
@@ -316,12 +376,15 @@ const WorkspaceLayout: ParentComponent = (props) => {
       </header>
 
       <div class={styles.container}>
-        <div
-          class={`${styles.mobileBackdrop} ${showMobileSidebar() ? styles.mobileBackdropVisible : ''}`}
-          onClick={() => setShowMobileSidebar(false)}
-        />
+        <Show when={isMobileLayout()}>
+          <div
+            class={`${styles.mobileBackdrop} ${mobileSidebarOpen() ? styles.mobileBackdropVisible : ''}`}
+            data-testid="workspace-sidebar-backdrop"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        </Show>
         <Sidebar
-          isOpen={showMobileSidebar()}
+          isOpen={isSidebarOpen()}
           loading={loading()}
           nodes={nodes}
           selectedNodeId={selectedNodeId()}
@@ -329,25 +392,25 @@ const WorkspaceLayout: ParentComponent = (props) => {
           onCreatePage={() => {
             setNodeCreationParentId(null);
             createNode('document');
-            setShowMobileSidebar(false);
+            closeSidebar();
           }}
           onCreateTable={() => {
             setNodeCreationParentId(null);
             createNode('table');
-            setShowMobileSidebar(false);
+            closeSidebar();
           }}
           onCreateChildPage={(parentId: string) => {
             setNodeCreationParentId(parentId);
             createNode('document', parentId);
-            setShowMobileSidebar(false);
+            closeSidebar();
           }}
           onCreateChildTable={(parentId: string) => {
             setNodeCreationParentId(parentId);
             createNode('table', parentId);
-            setShowMobileSidebar(false);
+            closeSidebar();
           }}
           onSelectNode={handleNodeClick}
-          onCloseMobileSidebar={() => setShowMobileSidebar(false)}
+          onCloseMobileSidebar={closeSidebar}
           onFetchChildren={fetchNodeChildren}
           onDeleteNode={handleDeleteNode}
           onShowHistory={(nodeId: string) => {
@@ -366,7 +429,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
             const wsId = user()?.workspace_id;
             const wsName = user()?.workspace_name;
             if (wsId) {
-              setShowMobileSidebar(false);
+              closeSidebar();
               navigate(settingsUrl('workspace', wsId, wsName));
             }
           }}
@@ -389,7 +452,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
         <CreateWorkspaceModal
           onClose={() => setShowCreateWorkspace(false)}
           onCreate={createWorkspace}
-          isFirstWorkspace={true}
+          isFirstWorkspace={isFirstWorkspace()}
         />
       </Show>
       <Show when={showNotionImport()}>

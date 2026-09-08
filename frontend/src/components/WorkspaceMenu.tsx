@@ -5,6 +5,7 @@ import { useI18n } from '../i18n';
 import { useAuth } from '../contexts';
 import { useWorkspace } from '../contexts';
 import { useClickOutside } from '../composables/useClickOutside';
+import { Button, Menu, MenuItem } from './shared';
 import type { WSMembershipResponse } from '@sdk/types.gen';
 import styles from './WorkspaceMenu.module.css';
 
@@ -34,6 +35,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
   const { switchWorkspace } = useWorkspace();
   const [isOpen, setIsOpen] = createSignal(false);
   let menuRef: HTMLDivElement | undefined;
+  let triggerRef: HTMLButtonElement | undefined;
 
   // Group workspaces by organization
   const groupedWorkspaces = createMemo((): OrgWithWorkspaces[] => {
@@ -107,7 +109,9 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
 
   return (
     <div class={styles.wsMenu} ref={(el) => (menuRef = el)}>
-      <button
+      <Button
+        ref={(el) => (triggerRef = el)}
+        variant="unstyled"
         class={styles.wsButton}
         onClick={() => setIsOpen(!isOpen())}
         title={currentWsName()}
@@ -119,10 +123,15 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
         <span class={styles.chevron} aria-hidden="true">
           {isOpen() ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         </span>
-      </button>
+      </Button>
 
       <Show when={isOpen()}>
-        <div class={styles.dropdown} role="menu">
+        <Menu
+          ariaLabel={t('app.switchWorkspace') || 'Switch workspace'}
+          class={styles.dropdown}
+          onClose={() => setIsOpen(false)}
+          trigger={() => triggerRef}
+        >
           <div class={styles.wsList}>
             <For each={groupedWorkspaces()}>
               {(org) => (
@@ -132,10 +141,9 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
                   </Show>
                   <For each={org.workspaces}>
                     {(ws) => (
-                      <button
+                      <MenuItem
                         class={`${styles.wsItem} ${ws.workspace_id === currentWsId() ? styles.active : ''}`}
                         onClick={() => handleSwitchWorkspace(ws.workspace_id)}
-                        role="menuitem"
                       >
                         <span class={styles.wsItemName}>{ws.workspace_name || ws.workspace_id}</span>
                         <Show when={ws.workspace_id === currentWsId()}>
@@ -143,7 +151,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
                             <CheckIcon />
                           </span>
                         </Show>
-                      </button>
+                      </MenuItem>
                     )}
                   </For>
                 </>
@@ -151,25 +159,25 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
             </For>
           </div>
           <div class={styles.divider} />
-          <button class={styles.menuItem} onClick={handleOpenSettings} role="menuitem">
+          <MenuItem class={styles.menuItem} onClick={handleOpenSettings}>
             <span class={styles.icon} aria-hidden="true">
               <SettingsIcon />
             </span>
             {t('app.settings')}
-          </button>
-          <button class={styles.menuItem} onClick={handleCreateWorkspace} role="menuitem">
+          </MenuItem>
+          <MenuItem class={styles.menuItem} onClick={handleCreateWorkspace}>
             <span class={styles.plusIcon} aria-hidden="true">
               <AddIcon />
             </span>
             {t('createWorkspace.title')}
-          </button>
-          <button class={styles.menuItem} onClick={handleImportFromNotion} role="menuitem">
+          </MenuItem>
+          <MenuItem class={styles.menuItem} onClick={handleImportFromNotion}>
             <span class={styles.icon} aria-hidden="true">
               <DownloadIcon />
             </span>
             {t('notionImport.title')}
-          </button>
-        </div>
+          </MenuItem>
+        </Menu>
       </Show>
     </div>
   );

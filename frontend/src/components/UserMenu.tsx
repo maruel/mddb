@@ -5,6 +5,7 @@ import { useNavigate } from '@solidjs/router';
 import { useI18n } from '../i18n';
 import { useAuth } from '../contexts';
 import { useClickOutside } from '../composables/useClickOutside';
+import { Button, Menu, MenuItem } from './shared';
 import styles from './UserMenu.module.css';
 
 interface UserMenuProps {
@@ -17,6 +18,7 @@ export default function UserMenu(props: UserMenuProps) {
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = createSignal(false);
   let menuRef: HTMLDivElement | undefined;
+  let triggerRef: HTMLButtonElement | undefined;
 
   // Get avatar URL from OAuth identities (prefer first one with avatar)
   const getAvatarUrl = () => {
@@ -66,11 +68,13 @@ export default function UserMenu(props: UserMenuProps) {
 
   return (
     <div class={styles.userMenu} ref={(el) => (menuRef = el)}>
-      <button
+      <Button
+        ref={(el) => (triggerRef = el)}
+        variant="unstyled"
         class={styles.avatarButton}
         onClick={() => setIsOpen(!isOpen())}
         title={userName() || userEmail()}
-        aria-label={t('userMenu.profile') || 'User menu'}
+        aria-label={t('userMenu.label')}
         aria-expanded={isOpen()}
         aria-haspopup="menu"
         data-testid="user-menu-button"
@@ -80,10 +84,15 @@ export default function UserMenu(props: UserMenuProps) {
             <img src={url()} alt={userName() || 'User'} class={styles.avatarImage} referrerPolicy="no-referrer" />
           )}
         </Show>
-      </button>
+      </Button>
 
       <Show when={isOpen()}>
-        <div class={styles.dropdown} role="menu">
+        <Menu
+          ariaLabel={t('userMenu.label')}
+          class={styles.dropdown}
+          onClose={() => setIsOpen(false)}
+          trigger={() => triggerRef}
+        >
           <div class={styles.userInfo}>
             <span class={styles.userName}>{userName()}</span>
             <span class={styles.userEmail}>{userEmail()}</span>
@@ -92,13 +101,13 @@ export default function UserMenu(props: UserMenuProps) {
             </Show>
           </div>
           <div class={styles.divider} />
-          <button class={styles.menuItem} onClick={handleProfile} role="menuitem">
+          <MenuItem class={styles.menuItem} onClick={handleProfile}>
             {t('userMenu.profile')}
-          </button>
-          <button class={styles.menuItem} onClick={handleLogout} role="menuitem">
+          </MenuItem>
+          <MenuItem class={styles.menuItem} onClick={handleLogout}>
             {t('userMenu.logout')}
-          </button>
-        </div>
+          </MenuItem>
+        </Menu>
       </Show>
     </div>
   );

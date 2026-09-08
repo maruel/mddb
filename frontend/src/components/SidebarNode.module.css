@@ -14,11 +14,30 @@
   padding: var(--s-3);
   padding-left: var(--s-2);
   border-bottom: 1px solid var(--c-border);
-  cursor: pointer;
   transition: background var(--transition);
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.pageButton {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.pageButton:focus-visible,
+.expandButton:focus-visible,
+.hoverDeleteButton:focus-visible {
+  outline: 2px solid var(--c-border-focus);
+  outline-offset: 2px;
 }
 
 .pageItem:hover {
@@ -41,7 +60,15 @@
   justify-content: center;
 }
 
-.iconSlot.hasChildren {
+.expandButton {
+  position: relative;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
   cursor: pointer;
 }
 
@@ -52,13 +79,13 @@
   transition: opacity 0.15s ease;
 }
 
-.iconSlot.hasChildren:hover .nodeIcon,
-.pageItem:hover .iconSlot.hasChildren .nodeIcon {
+.expandButton:hover .nodeIcon,
+.pageItem:hover .expandButton .nodeIcon {
   opacity: 0;
 }
 
-.iconSlot.hasChildren:hover .expandIcon,
-.pageItem:hover .iconSlot.hasChildren .expandIcon {
+.expandButton:hover .expandIcon,
+.pageItem:hover .expandButton .expandIcon {
   opacity: 1;
 }
 
@@ -90,7 +117,7 @@
   font-size: 11px;
 }
 
-.iconSlot.hasChildren:hover .expandIcon:not(.loading) {
+.expandButton:hover .expandIcon:not(.loading) {
   color: var(--c-text);
   background: var(--c-bg-alt);
 }
@@ -106,7 +133,7 @@
 }
 
 /* When loading, hide the page icon */
-.iconSlot:has(.expandIcon.loading) .nodeIcon {
+.expandButton:has(.expandIcon.loading) .nodeIcon {
   opacity: 0;
 }
 
@@ -154,6 +181,10 @@
 }
 
 .pageItem:hover .hoverDeleteButton {
+  opacity: 0.6;
+}
+
+.pageItem:focus-within .hoverDeleteButton {
   opacity: 0.6;
 }
 

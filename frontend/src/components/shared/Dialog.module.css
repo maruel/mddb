@@ -1,0 +1,65 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-3);
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - var(--s-6));
+  padding: var(--s-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--c-bg);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.2s ease-out;
+}
+
+@supports (height: 100dvh) {
+  .dialog {
+    max-height: calc(100dvh - var(--s-6));
+  }
+}
+
+.drawerOverlay {
+  z-index: 200;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  max-height: none;
+  width: 420px;
+  max-width: 90vw;
+  padding: 0;
+  border-left: 1px solid var(--c-border);
+  border-radius: 0;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+}

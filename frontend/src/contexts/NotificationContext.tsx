@@ -17,7 +17,7 @@ import { subscribeToPush, unsubscribeFromPush } from '../notifications/push-mana
 const POLL_INTERVAL_MS = 60_000;
 const PAGE_SIZE = 20;
 
-interface NotificationContextValue {
+export interface NotificationContextValue {
   notifications: Accessor<NotificationDTO[]>;
   unreadCount: Accessor<number>;
   isLoading: Accessor<boolean>;

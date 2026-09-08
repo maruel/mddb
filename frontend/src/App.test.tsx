@@ -783,7 +783,7 @@ describe('App', () => {
       fireEvent.click(screen.getByTestId('create-workspace-button'));
 
       await waitFor(() => {
-        expect(screen.getByTestId('create-workspace-modal-first')).toBeTruthy();
+        expect(screen.getByTestId('create-workspace-modal')).toBeTruthy();
       });
     });
   });

@@ -1,6 +1,6 @@
 // Shared always-editable field input for card-style views (gallery, grid).
 
-import { For, Show, Switch, Match, createSignal, createEffect, onCleanup, onMount } from 'solid-js';
+import { For, Show, Switch, Match, createSignal, createEffect, onCleanup, onMount, type JSX } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import {
   type DataRecordResponse,
@@ -18,6 +18,7 @@ import {
 import { updateRecordField, handleEnterBlur, getFieldValue, chipTextColor } from './tableUtils';
 import { useRecords } from '../../contexts/RecordsContext';
 import { useI18n } from '../../i18n';
+import { useDialogOverlayTarget } from '../shared/Dialog';
 import styles from './FieldEditor.module.css';
 
 interface FieldEditorProps {
@@ -36,6 +37,12 @@ interface DropPos {
 function getDropPos(trigger: HTMLElement): DropPos {
   const rect = trigger.getBoundingClientRect();
   return { left: rect.left, top: rect.bottom + 4, minWidth: Math.max(rect.width, 160) };
+}
+
+/** Keeps field dropdowns inside a dialog's modal tree while preserving body portals elsewhere. */
+function FieldDropdownPortal(props: { children: JSX.Element }) {
+  const dialogOverlayTarget = useDialogOverlayTarget();
+  return <Portal mount={dialogOverlayTarget() ?? document.body}>{props.children}</Portal>;
 }
 
 export interface MultiSelectEditorProps {
@@ -177,7 +184,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
       </div>
       <Show when={open() && dropPos()}>
         {(pos) => (
-          <Portal>
+          <FieldDropdownPortal>
             <div
               ref={(el) => (dropRef = el)}
               class={styles.portalDropdown}
@@ -221,7 +228,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
                 }}
               </For>
             </div>
-          </Portal>
+          </FieldDropdownPortal>
         )}
       </Show>
     </div>
@@ -353,7 +360,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
       </Show>
       <Show when={open() && dropPos()}>
         {(pos) => (
-          <Portal>
+          <FieldDropdownPortal>
             <div
               ref={(el) => (dropRef = el)}
               class={styles.portalDropdown}
@@ -406,7 +413,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
                 }}
               </For>
             </div>
-          </Portal>
+          </FieldDropdownPortal>
         )}
       </Show>
     </div>
@@ -537,7 +544,7 @@ export function UserEditor(props: UserEditorProps) {
       </Show>
       <Show when={open() && dropPos()}>
         {(pos) => (
-          <Portal>
+          <FieldDropdownPortal>
             <div
               ref={(el) => (dropRef = el)}
               class={styles.portalDropdown}
@@ -583,7 +590,7 @@ export function UserEditor(props: UserEditorProps) {
                 }}
               </For>
             </div>
-          </Portal>
+          </FieldDropdownPortal>
         )}
       </Show>
     </div>

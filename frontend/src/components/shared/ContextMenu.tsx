@@ -19,6 +19,7 @@ export interface ContextMenuProps {
   actions: ContextMenuAction[];
   onAction: (actionId: string) => void;
   onClose: () => void;
+  trigger?: () => HTMLElement | undefined;
 }
 
 /**
@@ -36,6 +37,13 @@ export function ContextMenu(props: ContextMenuProps) {
       .map((action, i) => ({ action, i }))
       .filter(({ action }) => !action.disabled)
       .map(({ i }) => i);
+
+  const focusAction = (actionIndex: number) => {
+    const item = menuRef?.querySelector<HTMLButtonElement>(`[data-context-action-index="${actionIndex}"]`);
+    if (!item) return;
+    setFocusedIndex(actionIndex);
+    item.focus();
+  };
 
   // Adjust position to stay within viewport
   createEffect(() => {
@@ -101,7 +109,7 @@ export function ContextMenu(props: ContextMenuProps) {
           const nextPos = currentPos >= 0 ? (currentPos + 1) % enabledIndices.length : 0;
           const nextIndex = enabledIndices[nextPos];
           if (nextIndex !== undefined) {
-            setFocusedIndex(nextIndex);
+            focusAction(nextIndex);
           }
           break;
         }
@@ -115,7 +123,7 @@ export function ContextMenu(props: ContextMenuProps) {
               : enabledIndices.length - 1;
           const prevIndex = enabledIndices[prevPos];
           if (prevIndex !== undefined) {
-            setFocusedIndex(prevIndex);
+            focusAction(prevIndex);
           }
           break;
         }
@@ -140,12 +148,18 @@ export function ContextMenu(props: ContextMenuProps) {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    onCleanup(() => document.removeEventListener('keydown', handleKeyDown));
+    onCleanup(() => {
+      document.removeEventListener('keydown', handleKeyDown);
+      props.trigger?.()?.focus();
+    });
   });
 
   // Focus menu on mount for keyboard accessibility
   createEffect(() => {
-    menuRef?.focus();
+    const firstIndex = getEnabledIndices()[0];
+    if (firstIndex !== undefined) {
+      focusAction(firstIndex);
+    }
   });
 
   const handleAction = (action: ContextMenuAction) => {
@@ -189,6 +203,7 @@ export function ContextMenu(props: ContextMenuProps) {
                 disabled={action.disabled}
                 tabIndex={-1}
                 aria-disabled={action.disabled}
+                data-context-action-index={index()}
                 data-testid={`context-menu-${action.id}`}
               >
                 <Show when={action.icon}>

@@ -1,6 +1,6 @@
 // Bell icon with unread badge and notification dropdown panel.
 
-import { createSignal, Show, For, onCleanup } from 'solid-js';
+import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useClickOutside } from '../composables/useClickOutside';
 import { useI18n } from '../i18n';
@@ -39,30 +39,36 @@ export default function NotificationBell() {
   } = useNotifications();
   const [isOpen, setIsOpen] = createSignal(false);
   let panelRef: HTMLDivElement | undefined;
+  let triggerRef: HTMLButtonElement | undefined;
 
-  useClickOutside(
-    () => panelRef,
-    () => setIsOpen(false)
-  );
+  const closePanel = () => {
+    if (!isOpen()) return;
+    setIsOpen(false);
+    queueMicrotask(() => triggerRef?.focus());
+  };
+
+  useClickOutside(() => panelRef, closePanel);
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') setIsOpen(false);
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closePanel();
+    }
   };
+
+  createEffect(() => {
+    if (!isOpen()) return;
+    document.addEventListener('keydown', handleKeyDown);
+    onCleanup(() => document.removeEventListener('keydown', handleKeyDown));
+  });
 
   const toggle = async () => {
     const opening = !isOpen();
     setIsOpen(opening);
     if (opening) {
       await refresh();
-      document.addEventListener('keydown', handleKeyDown);
-    } else {
-      document.removeEventListener('keydown', handleKeyDown);
     }
   };
-
-  onCleanup(() => {
-    document.removeEventListener('keydown', handleKeyDown);
-  });
 
   const handleItemClick = async (n: NotificationDTO) => {
     if (!n.read) {
@@ -78,11 +84,13 @@ export default function NotificationBell() {
   return (
     <div class={styles.bellWrapper} ref={(el) => (panelRef = el)}>
       <button
+        ref={(el) => (triggerRef = el)}
+        type="button"
         class={styles.bellButton}
         onClick={toggle}
         aria-label={t('notifications.title') || 'Notifications'}
         aria-expanded={isOpen()}
-        aria-haspopup="true"
+        aria-controls="notifications-panel"
       >
         <NotificationsIcon />
         <Show when={unreadCount() > 0}>
@@ -91,11 +99,11 @@ export default function NotificationBell() {
       </button>
 
       <Show when={isOpen()}>
-        <div class={styles.panel} role="dialog" aria-label={t('notifications.title') || 'Notifications'}>
+        <div id="notifications-panel" class={styles.panel} role="region" aria-label={t('notifications.title')}>
           <div class={styles.panelHeader}>
             <h3>{t('notifications.title')}</h3>
             <Show when={unreadCount() > 0}>
-              <button class={styles.markAllButton} onClick={markAllAsRead}>
+              <button type="button" class={styles.markAllButton} onClick={markAllAsRead}>
                 {t('notifications.markAllRead')}
               </button>
             </Show>
@@ -108,20 +116,23 @@ export default function NotificationBell() {
             >
               <For each={notifications()}>
                 {(n) => (
-                  <div class={`${styles.item} ${n.read ? '' : styles.unread}`} onClick={() => handleItemClick(n)}>
-                    <div class={styles.itemContent}>
-                      <div class={styles.itemTitle}>{n.title}</div>
-                      <Show when={n.body}>
-                        <div class={styles.itemBody}>{n.body}</div>
-                      </Show>
-                      <div class={styles.itemMeta}>
-                        <span>{relativeTime(n.created_at, t)}</span>
-                        <Show when={n.actor_name}>
-                          <span class={styles.actor}>{n.actor_name}</span>
+                  <div class={`${styles.item} ${n.read ? '' : styles.unread}`}>
+                    <button type="button" class={styles.itemButton} onClick={() => handleItemClick(n)}>
+                      <div class={styles.itemContent}>
+                        <div class={styles.itemTitle}>{n.title}</div>
+                        <Show when={n.body}>
+                          <div class={styles.itemBody}>{n.body}</div>
                         </Show>
+                        <div class={styles.itemMeta}>
+                          <span>{relativeTime(n.created_at, t)}</span>
+                          <Show when={n.actor_name}>
+                            <span class={styles.actor}>{n.actor_name}</span>
+                          </Show>
+                        </div>
                       </div>
-                    </div>
+                    </button>
                     <button
+                      type="button"
                       class={styles.deleteButton}
                       onClick={(e) => handleDelete(e, n.id)}
                       aria-label={t('common.delete') || 'Delete'}
@@ -132,7 +143,7 @@ export default function NotificationBell() {
                 )}
               </For>
               <Show when={hasMore()}>
-                <button class={styles.loadMoreButton} onClick={loadMore} disabled={isLoading()}>
+                <button type="button" class={styles.loadMoreButton} onClick={loadMore} disabled={isLoading()}>
                   {t('notifications.loadMore')}
                 </button>
               </Show>

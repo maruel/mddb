@@ -341,23 +341,29 @@ export default function NodeView() {
                     <li
                       class={styles.historyItem}
                       classList={{ [styles.activeHistoryItem as string]: previewCommit()?.hash === commit.hash }}
-                      onClick={() => {
-                        const id = selectedNodeId();
-                        if (id) loadPreview(id, commit);
-                      }}
                     >
-                      <div class={styles.historyMeta}>
-                        <span class={styles.historyDate}>{new Date(commit.timestamp).toLocaleString()}</span>
-                        <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
-                      </div>
-                      <div class={styles.historyMessage}>
-                        {commit.author_name} &lt;{commit.author_email}&gt;
-                      </div>
+                      <button
+                        type="button"
+                        class={styles.historyButton}
+                        aria-pressed={previewCommit()?.hash === commit.hash}
+                        onClick={() => {
+                          const id = selectedNodeId();
+                          if (id) loadPreview(id, commit);
+                        }}
+                      >
+                        <div class={styles.historyMeta}>
+                          <span class={styles.historyDate}>{new Date(commit.timestamp).toLocaleString()}</span>
+                          <span class={styles.historyHash}>{commit.hash.substring(0, 7)}</span>
+                        </div>
+                        <div class={styles.historyMessage}>
+                          {commit.author_name} &lt;{commit.author_email}&gt;
+                        </div>
+                      </button>
                     </li>
                   )}
                 </For>
                 <Show when={history().length === 0}>
-                  <li class={styles.historyItem}>{t('editor.noHistory')}</li>
+                  <li class={styles.noHistory}>{t('editor.noHistory')}</li>
                 </Show>
               </ul>
             </div>

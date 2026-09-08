@@ -1,8 +1,9 @@
 // Modal component for creating a new workspace.
 
-import { createSignal, Show } from 'solid-js';
+import { createSignal, createUniqueId, Show } from 'solid-js';
 import { useI18n } from '../i18n';
-import styles from './Onboarding.module.css';
+import { Button, Dialog } from './shared';
+import styles from './CreateWorkspaceModal.module.css';
 
 interface CreateWorkspaceData {
   name: string;
@@ -19,6 +20,7 @@ export default function CreateWorkspaceModal(props: CreateWorkspaceModalProps) {
   const [name, setName] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
+  const nameInputId = createUniqueId();
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -38,54 +40,51 @@ export default function CreateWorkspaceModal(props: CreateWorkspaceModalProps) {
     }
   };
 
-  const handleOverlayClick = (e: MouseEvent) => {
-    // Only allow closing by clicking overlay if not first workspace
-    if (!props.isFirstWorkspace && e.target === e.currentTarget) {
-      props.onClose();
-    }
-  };
-
   return (
-    <div class={styles.overlay} onClick={handleOverlayClick}>
-      <div class={styles.modal}>
-        <header class={styles.header}>
-          <h2>{props.isFirstWorkspace ? t('createWorkspace.firstWorkspaceTitle') : t('createWorkspace.title')}</h2>
-          <p>
-            {props.isFirstWorkspace ? t('createWorkspace.firstWorkspaceDescription') : t('createWorkspace.description')}
-          </p>
-        </header>
+    <Dialog
+      ariaLabel={props.isFirstWorkspace ? t('createWorkspace.firstWorkspaceTitle') : t('createWorkspace.title')}
+      dismissOnBackdrop={!props.isFirstWorkspace}
+      dismissOnEscape={!props.isFirstWorkspace}
+      onClose={props.onClose}
+    >
+      <header class={styles.header}>
+        <h2>{props.isFirstWorkspace ? t('createWorkspace.firstWorkspaceTitle') : t('createWorkspace.title')}</h2>
+        <p>
+          {props.isFirstWorkspace ? t('createWorkspace.firstWorkspaceDescription') : t('createWorkspace.description')}
+        </p>
+      </header>
 
-        {error() && <div class={styles.error}>{error()}</div>}
+      <Show when={error()}>{(message) => <div class={styles.error}>{message()}</div>}</Show>
 
-        <form onSubmit={handleSubmit}>
-          <div class={styles.formGroup}>
-            <label>{t('createWorkspace.nameLabel')}</label>
-            <input
-              type="text"
-              value={name()}
-              onInput={(e) => setName(e.target.value)}
-              placeholder={t('createWorkspace.namePlaceholder') || ''}
-              autofocus
-            />
-          </div>
+      <form onSubmit={handleSubmit}>
+        <div class={styles.formGroup}>
+          <label for={nameInputId}>{t('createWorkspace.nameLabel')}</label>
+          <input
+            id={nameInputId}
+            type="text"
+            value={name()}
+            onInput={(e) => setName(e.target.value)}
+            placeholder={t('createWorkspace.namePlaceholder') || ''}
+            autofocus
+          />
+        </div>
 
-          <div class={styles.actions}>
-            <Show when={!props.isFirstWorkspace}>
-              <button type="button" class={styles.secondaryButton} onClick={() => props.onClose()}>
-                {t('common.cancel')}
-              </button>
-            </Show>
-            <button
-              type="submit"
-              class={styles.primaryButton}
-              disabled={!name().trim() || loading()}
-              style={props.isFirstWorkspace ? { flex: 1 } : undefined}
-            >
-              {loading() ? t('common.creating') : t('createWorkspace.create')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div class={styles.actions}>
+          <Show when={!props.isFirstWorkspace}>
+            <Button variant="secondary" class={styles.secondaryButton} onClick={props.onClose}>
+              {t('common.cancel')}
+            </Button>
+          </Show>
+          <Button
+            type="submit"
+            variant="primary"
+            class={`${styles.primaryButton} ${props.isFirstWorkspace ? styles.fullWidth : ''}`}
+            disabled={!name().trim() || loading()}
+          >
+            {loading() ? t('common.creating') : t('createWorkspace.create')}
+          </Button>
+        </div>
+      </form>
+    </Dialog>
   );
 }

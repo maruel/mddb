@@ -17,18 +17,30 @@ export default function SettingsLayout(props: SettingsLayoutProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [isMobileLayout, setIsMobileLayout] = createSignal(window.innerWidth <= 768);
   const [showMobileSidebar, setShowMobileSidebar] = createSignal(false);
 
   // Handle Escape key to close mobile sidebar
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && showMobileSidebar()) {
+    if (e.key === 'Escape' && isMobileLayout() && showMobileSidebar()) {
       setShowMobileSidebar(false);
     }
   };
 
   onMount(() => {
+    const handleResize = () => {
+      const nextIsMobile = window.innerWidth <= 768;
+      if (nextIsMobile !== isMobileLayout()) {
+        setIsMobileLayout(nextIsMobile);
+        setShowMobileSidebar(false);
+      }
+    };
     window.addEventListener('keydown', handleKeyDown);
-    onCleanup(() => window.removeEventListener('keydown', handleKeyDown));
+    window.addEventListener('resize', handleResize);
+    onCleanup(() => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    });
   });
 
   const handleBack = () => {
@@ -79,7 +91,7 @@ export default function SettingsLayout(props: SettingsLayoutProps) {
         <div class={styles.headerLeft}>
           <button
             class={styles.hamburger}
-            onClick={() => setShowMobileSidebar(!showMobileSidebar())}
+            onClick={() => isMobileLayout() && setShowMobileSidebar(!showMobileSidebar())}
             aria-label="Toggle settings menu"
           >
             &#9776;
@@ -94,11 +106,15 @@ export default function SettingsLayout(props: SettingsLayoutProps) {
       </header>
 
       <div class={styles.layout}>
-        <Show when={showMobileSidebar()}>
+        <Show when={isMobileLayout() && showMobileSidebar()}>
           <div class={styles.mobileBackdrop} onClick={() => setShowMobileSidebar(false)} />
         </Show>
 
-        <SettingsSidebar isOpen={showMobileSidebar()} currentRoute={currentRoute()} onNavigate={handleNavigate} />
+        <SettingsSidebar
+          isOpen={isMobileLayout() && showMobileSidebar()}
+          currentRoute={currentRoute()}
+          onNavigate={handleNavigate}
+        />
 
         <main class={styles.content}>{props.children}</main>
       </div>
