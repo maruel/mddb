@@ -1,4 +1,5 @@
 # pnpm workspace configuration.
+engineStrict: true
 allowBuilds:
   esbuild: true
   sharp: true

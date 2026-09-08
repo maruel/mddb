@@ -1,7 +1,19 @@
 {
   "name": "mddb-frontend",
   "version": "0.1.0",
+  "packageManager": "pnpm@11.21.0",
   "type": "module",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=11 <12"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^24.0.0",
+      "onFail": "download"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "node frontend/scripts/gen-material-icons.mjs && node frontend/scripts/gen-emoji-groups.mjs && vite build",
@@ -60,10 +72,5 @@
     "vite-solid-svg": "^0.0.4",
     "vitest": "^4.0.18",
     "workbox-precaching": "^7.4.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp"
-    ]
   }
 }

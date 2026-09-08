@@ -24,14 +24,18 @@ jobs:
     env:
       CGO_ENABLED: "0"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       # Setup
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.x'
+      - uses: pnpm/setup@v2
+        with:
+          cache: true
+          install: false
       - name: Configure Python for Windows
         run: |
           $pythonPath = (Get-Command python).Source
@@ -45,14 +49,6 @@ jobs:
           Write-Host "Configured pnpm python to $pythonPath"
         if: runner.os == 'Windows'
         shell: pwsh
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
       # Lint
       - name: Lint (Go)
         if: runner.os == 'Linux'
@@ -73,13 +69,13 @@ jobs:
         run: make coverage
       - name: Upload Coverage
         if: runner.os == 'Linux'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.out,coverage/lcov.info
       # E2E
       - run: make e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         id: playwright-report
         if: always()
         with:
@@ -129,10 +125,10 @@ jobs:
         run: ./.github/deploy-playwright-report.sh
       - name: Upload Pages artifact
         if: always() && runner.os == 'Linux' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ${{ env.DEPLOY_DIR }}
       - name: Deploy to GitHub Pages
         id: deploy
         if: always() && runner.os == 'Linux' && github.ref == 'refs/heads/main'
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
