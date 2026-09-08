@@ -82,12 +82,11 @@ For developers or advanced setup:
 
 ## Building from Source
 
-Development requires Node.js 24 via nvm and pnpm 11.21.0 via Corepack. Clone the repository and run:
+Development requires Node.js 24 via nvm and pnpm 12.4.0. Clone the repository and run:
 
 ```bash
 nvm install
 nvm use
-corepack enable pnpm
 make build-all
 ```
 
