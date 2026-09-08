@@ -33,13 +33,14 @@ test.describe('Page CRUD Operations', () => {
       await dialog.accept();
     });
 
-    // Hover over the sidebar node to reveal the delete button (🗑)
-    await pageNode.hover();
+    // Hover over the page item to reveal the delete button.
+    const pageItem = pageNode.locator('> div').first();
+    await pageItem.hover();
 
-    // Click the delete button (appears on hover)
-    const deleteButton = pageNode.locator('button[class*="hoverDeleteButton"]');
-    await expect(deleteButton).toBeVisible({ timeout: 2000 });
-    await deleteButton.click({ force: true });
+    // Click the delete button (appears on hover).
+    const deleteButton = pageItem.getByTestId('delete-node-button');
+    await expect(deleteButton).toBeVisible({ timeout: 3000 });
+    await deleteButton.click();
 
     // Wait for the page to be removed from sidebar
     await expect(pageNode).not.toBeVisible({ timeout: 5000 });

@@ -62,19 +62,34 @@ export default function Sidebar(props: SidebarProps) {
     }
   });
 
+  const focusMovedNode = async (nodeId: string, newParentId: string) => {
+    for (let frame = 0; frame < 3; frame += 1) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const movedItem = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="treeitem"]')).find(
+        (item) => item.dataset.nodeId === nodeId
+      );
+      if (!movedItem) continue;
+
+      const movedNodeList = movedItem.closest('li')?.parentElement;
+      const atDestination =
+        newParentId === '0'
+          ? movedNodeList?.getAttribute('role') === 'tree'
+          : document
+              .querySelector<HTMLButtonElement>(`[data-node-id="${newParentId}"]`)
+              ?.closest('li')
+              ?.contains(movedItem);
+      if (!atDestination) continue;
+
+      setFocusedNodeId(nodeId);
+      movedItem.focus();
+      return;
+    }
+  };
+
   const moveNode = async (nodeId: string, newParentId: string) => {
     setMovingNodeId(null);
     await props.onMoveNode?.(nodeId, newParentId);
-    await Promise.resolve();
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-
-    const movedItem = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="treeitem"]')).find(
-      (item) => item.dataset.nodeId === nodeId
-    );
-    if (movedItem) {
-      setFocusedNodeId(nodeId);
-      movedItem.focus();
-    }
+    await focusMovedNode(nodeId, newParentId);
   };
 
   const currentWsId = () => user()?.workspace_id || '';
