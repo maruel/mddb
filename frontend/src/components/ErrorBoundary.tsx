@@ -29,23 +29,25 @@ function ErrorFallback(props: ErrorFallbackProps) {
   };
 
   return (
-    <div class={styles.errorBoundary} role="alert" aria-live="assertive" aria-atomic="true">
-      <h2>{t('recovery.title') || 'Something went wrong'}</h2>
-      <p class={styles.errorMessage}>{t('recovery.message') || 'The workspace encountered an unexpected problem.'}</p>
-      <details class={styles.errorDetails}>
-        <summary>{t('recovery.technicalDetails') || 'Technical details'}</summary>
-        <pre data-testid="error-diagnostic">{diagnostic()}</pre>
-      </details>
-      <div class={styles.actions}>
-        <Button variant="primary" onClick={props.reset}>
-          {t('recovery.retry') || 'Try again'}
-        </Button>
-        <Button variant="secondary" onClick={() => window.location.reload()}>
-          {t('recovery.reload') || 'Reload app'}
-        </Button>
-        <Button variant="secondary" onClick={copyDiagnostic}>
-          {t('recovery.copyDetails') || 'Copy diagnostic details'}
-        </Button>
+    <div class={styles.errorBoundary}>
+      <div class={styles.alertContent} role="alert" aria-live="assertive" aria-atomic="true">
+        <h2>{t('recovery.title') || 'Something went wrong'}</h2>
+        <p class={styles.errorMessage}>{t('recovery.message') || 'The workspace encountered an unexpected problem.'}</p>
+        <details class={styles.errorDetails}>
+          <summary>{t('recovery.technicalDetails') || 'Technical details'}</summary>
+          <pre data-testid="error-diagnostic">{diagnostic()}</pre>
+        </details>
+        <div class={styles.actions}>
+          <Button variant="primary" onClick={props.reset}>
+            {t('recovery.retry') || 'Try again'}
+          </Button>
+          <Button variant="secondary" onClick={() => window.location.reload()}>
+            {t('recovery.reload') || 'Reload app'}
+          </Button>
+          <Button variant="secondary" onClick={copyDiagnostic}>
+            {t('recovery.copyDetails') || 'Copy diagnostic details'}
+          </Button>
+        </div>
       </div>
       <p class={styles.copyStatus} role="status" aria-live="polite">
         {copyState() === 'copied'

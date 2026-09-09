@@ -49,7 +49,9 @@ describe('AppErrorBoundary', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Copy diagnostic details' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(expect.stringContaining('The test workspace failed')));
-    await screen.findByText('Diagnostic details copied');
+    const copyStatus = screen.getByRole('status');
+    await waitFor(() => expect(copyStatus).toHaveTextContent('Diagnostic details copied'));
+    expect(copyStatus.closest('[role="alert"]')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Permit recovery' }));
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));

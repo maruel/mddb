@@ -1,6 +1,6 @@
 // Fixed live-region feedback for transient workspace operation failures.
 
-import { onCleanup, onMount } from 'solid-js';
+import { createEffect, on, onCleanup } from 'solid-js';
 import { useI18n } from '../i18n';
 import { Button } from './shared';
 import styles from './TransientFeedback.module.css';
@@ -16,14 +16,25 @@ export function TransientFeedback(props: TransientFeedbackProps) {
   const { t } = useI18n();
   let dismissTimer: number | undefined;
 
-  onMount(() => {
-    dismissTimer = window.setTimeout(props.onDismiss, DISMISS_AFTER_MS);
-  });
-
-  onCleanup(() => {
+  const clearDismissTimer = () => {
     if (dismissTimer !== undefined) {
       window.clearTimeout(dismissTimer);
+      dismissTimer = undefined;
     }
+  };
+
+  createEffect(
+    on(
+      () => props.message,
+      () => {
+        clearDismissTimer();
+        dismissTimer = window.setTimeout(props.onDismiss, DISMISS_AFTER_MS);
+      }
+    )
+  );
+
+  onCleanup(() => {
+    clearDismissTimer();
   });
 
   return (

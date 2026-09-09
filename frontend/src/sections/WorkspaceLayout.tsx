@@ -30,9 +30,9 @@ const WorkspaceLayout: ParentComponent = (props) => {
     setCreatingNode,
     setDeletingNodeId,
     loadError,
+    setLoadError,
     saveError,
     setSaveError,
-    clearErrors,
     switchWorkspace,
     createWorkspace,
     loadNodes,
@@ -453,8 +453,15 @@ const WorkspaceLayout: ParentComponent = (props) => {
         />
 
         <main class={styles.main}>
-          <Show when={loadError() || saveError()}>
-            {(error) => <TransientFeedback message={error()} onDismiss={clearErrors} />}
+          <Show
+            when={loadError()}
+            fallback={
+              <Show when={saveError()}>
+                {(error) => <TransientFeedback message={error()} onDismiss={() => setSaveError(null)} />}
+              </Show>
+            }
+          >
+            {(error) => <TransientFeedback message={error()} onDismiss={() => setLoadError(null)} />}
           </Show>
           {props.children}
         </main>
