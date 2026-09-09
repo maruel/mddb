@@ -7,6 +7,7 @@ test.describe('Page CRUD Operations', () => {
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('connection-status')).toHaveText('Connected', { timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
@@ -33,11 +34,13 @@ test.describe('Page CRUD Operations', () => {
       await dialog.accept();
     });
 
-    // Hover over the page item to reveal the delete button.
+    // Hover over the page item to reveal its pointer delete affordance.
+    // The accessible tree owns the sole Tab stop; deletion is also exposed
+    // through its keyboard context menu.
     const pageItem = pageNode.locator('> div').first();
     await pageItem.hover();
 
-    // Click the delete button (appears on hover).
+    // Use the control's stable identity rather than its non-focusable DOM tag.
     const deleteButton = pageItem.getByTestId('delete-node-button');
     await expect(deleteButton).toBeVisible({ timeout: 3000 });
     await deleteButton.click();
@@ -125,7 +128,7 @@ test.describe('Page CRUD Operations', () => {
     await page.locator(`[data-testid="sidebar-node-${pageID}"]`).click();
     await expect(page.getByText('Initial content', { exact: true })).toBeVisible({ timeout: 5000 });
 
-    // Initially, no unsaved indicator (use class selector)
+    // Initially, no unsaved editor status (use the dedicated status class).
     const unsavedIndicator = page.locator('[class*="unsavedIndicator"]');
     await expect(unsavedIndicator).not.toBeVisible();
 
@@ -134,14 +137,48 @@ test.describe('Page CRUD Operations', () => {
 
     // Unsaved indicator should appear
     await expect(unsavedIndicator).toBeVisible({ timeout: 2000 });
+    await expect(unsavedIndicator).toHaveText('Unsaved');
 
     // Wait for autosave to complete - the unsaved indicator should disappear
-    // (saving indicator may flash too quickly to catch reliably)
+    // (saving may flash too quickly to catch reliably). The saved status is
+    // deliberately retained long enough to announce a successful autosave.
     await expect(unsavedIndicator).not.toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[class*="savedIndicator"]')).toHaveText('Saved', { timeout: 10000 });
 
     // Verify content was saved via API
     const savedData = await client.ws(wsID).nodes.page.getPage(pageID);
     expect(savedData.content).toBe('Modified content');
+  });
+
+  test('shows a fixed transient failure message when autosave fails', async ({ page, request }) => {
+    const { token } = await registerUser(request, 'autosave-feedback');
+    const client = createClient(request, token);
+    await page.goto(`/?token=${token}`);
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    const wsID = await getWorkspaceId(page);
+    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
+      title: 'Autosave feedback',
+      content: 'Initial content',
+    });
+
+    await page.reload();
+    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+    await expect(page.locator('input[placeholder*="Title"]')).toHaveValue('Autosave feedback', { timeout: 5000 });
+
+    await page.route(`**/nodes/${pageData.id}/page`, async (route) => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"save failed"}' });
+        return;
+      }
+      await route.continue();
+    });
+    await fillEditorContent(page, 'Unsaved after failed autosave');
+
+    const feedback = page.getByTestId('workspace-feedback');
+    await expect(feedback).toBeVisible({ timeout: 10000 });
+    await expect(feedback).toContainText('Auto-save failed');
+    await expect(feedback).toHaveCSS('position', 'fixed');
+    await expect(page.locator('[class*="saveErrorIndicator"]')).toContainText('Auto-save failed');
   });
 });
 

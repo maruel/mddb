@@ -117,6 +117,17 @@ export const dict: Dictionary = {
     uploadCover: 'Upload image',
   },
 
+  recovery: {
+    title: 'Something went wrong',
+    message: 'The workspace encountered an unexpected problem.',
+    technicalDetails: 'Technical details',
+    retry: 'Try again',
+    reload: 'Reload app',
+    copyDetails: 'Copy diagnostic details',
+    copied: 'Diagnostic details copied',
+    copyFailed: 'Could not copy diagnostic details',
+  },
+
   welcome: {
     title: 'Welcome to mddb',
     subtitle: 'Select a node from the sidebar or create a new one to get started.',
@@ -584,5 +595,7 @@ export const dict: Dictionary = {
     externalChange: 'This page was edited by another user.',
     refreshContent: 'Refresh',
     dismissNotice: 'Dismiss',
+    connected: 'Connected',
+    reconnecting: 'Reconnecting',
   },
 };

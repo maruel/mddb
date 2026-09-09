@@ -116,6 +116,17 @@ export const dict: Dictionary = {
     uploadCover: 'Subir imagen',
   },
 
+  recovery: {
+    title: 'Algo salió mal',
+    message: 'El espacio de trabajo encontró un problema inesperado.',
+    technicalDetails: 'Detalles técnicos',
+    retry: 'Intentar de nuevo',
+    reload: 'Recargar aplicación',
+    copyDetails: 'Copiar detalles de diagnóstico',
+    copied: 'Detalles de diagnóstico copiados',
+    copyFailed: 'No se pudieron copiar los detalles de diagnóstico',
+  },
+
   welcome: {
     title: 'Bienvenido a mddb',
     subtitle: 'Selecciona un elemento de la barra lateral o crea uno nuevo para comenzar.',
@@ -584,5 +595,7 @@ export const dict: Dictionary = {
     externalChange: 'Esta página fue editada por otro usuario.',
     refreshContent: 'Actualizar',
     dismissNotice: 'Descartar',
+    connected: 'Conectado',
+    reconnecting: 'Reconectando',
   },
 };

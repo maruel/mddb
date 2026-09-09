@@ -314,18 +314,27 @@ export default function NodeView() {
               />
               <div class={styles.editorStatus}>
                 <Show when={hasUnsavedChanges() && autoSaveStatus() === 'idle'}>
-                  <span class={styles.unsavedIndicator} title={t('editor.unsaved')}>
-                    <EditIcon />
+                  <span class={styles.unsavedIndicator} role="status" aria-live="polite" aria-atomic="true">
+                    <EditIcon aria-hidden="true" />
+                    <span>{t('editor.unsaved') || 'Unsaved'}</span>
                   </span>
                 </Show>
                 <Show when={autoSaveStatus() === 'saving'}>
-                  <span class={styles.savingIndicator} title={t('common.saving')}>
-                    <SyncIcon />
+                  <span class={styles.savingIndicator} role="status" aria-live="polite" aria-atomic="true">
+                    <SyncIcon aria-hidden="true" />
+                    <span>{t('common.saving') || 'Saving...'}</span>
                   </span>
                 </Show>
                 <Show when={autoSaveStatus() === 'saved'}>
-                  <span class={styles.savedIndicator} title={t('common.saved')}>
-                    <CloudDoneIcon />
+                  <span class={styles.savedIndicator} role="status" aria-live="polite" aria-atomic="true">
+                    <CloudDoneIcon aria-hidden="true" />
+                    <span>{t('common.saved') || 'Saved'}</span>
+                  </span>
+                </Show>
+                <Show when={autoSaveStatus() === 'error'}>
+                  <span class={styles.saveErrorIndicator} role="status" aria-live="assertive" aria-atomic="true">
+                    <span aria-hidden="true">!</span>
+                    <span>{t('errors.autoSaveFailed') || 'Auto-save failed'}</span>
                   </span>
                 </Show>
               </div>

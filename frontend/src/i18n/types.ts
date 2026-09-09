@@ -118,6 +118,17 @@ export interface Dictionary {
     uploadCover: string;
   };
 
+  recovery: {
+    title: string;
+    message: string;
+    technicalDetails: string;
+    retry: string;
+    reload: string;
+    copyDetails: string;
+    copied: string;
+    copyFailed: string;
+  };
+
   welcome: {
     title: string;
     subtitle: string;
@@ -588,5 +599,7 @@ export interface Dictionary {
     externalChange: string;
     refreshContent: string;
     dismissNotice: string;
+    connected: string;
+    reconnecting: string;
   };
 }

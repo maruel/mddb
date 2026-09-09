@@ -8,7 +8,8 @@ import NotificationBell from '../components/NotificationBell';
 import NotionImportBanner from '../components/NotionImportBanner';
 import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
 import NotionImportModal, { type NotionImportData } from '../components/NotionImportModal';
-import { useAuth, useWorkspace, useEditor, useRecords } from '../contexts';
+import { TransientFeedback } from '../components/TransientFeedback';
+import { useAuth, useWorkspace, useEditor, useEventSource, useRecords } from '../contexts';
 import { useI18n } from '../i18n';
 import { settingsUrl, nodeUrl } from '../utils/urls';
 import type { NodeResponse, NotionImportStatusResponse } from '@sdk/types.gen';
@@ -31,6 +32,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     loadError,
     saveError,
     setSaveError,
+    clearErrors,
     switchWorkspace,
     createWorkspace,
     loadNodes,
@@ -38,6 +40,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     removeNode,
     moveNode,
   } = useWorkspace();
+  const { connected } = useEventSource();
   const { flushAutoSave, loadHistory, undo: editorUndo, redo: editorRedo } = useEditor();
   const { undo: recordsUndo, redo: recordsRedo } = useRecords();
 
@@ -366,6 +369,17 @@ const WorkspaceLayout: ParentComponent = (props) => {
           </Show>
         </div>
         <div class={styles.userInfo}>
+          <span
+            class={styles.connectionStatus}
+            classList={{ [styles.connectionReconnecting as string]: !connected() }}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            data-testid="connection-status"
+          >
+            <span class={styles.connectionIndicator} aria-hidden="true" />
+            {connected() ? t('sse.connected') || 'Connected' : t('sse.reconnecting') || 'Reconnecting'}
+          </span>
           <NotificationBell />
           <UserMenu
             onProfile={() => {
@@ -440,9 +454,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
 
         <main class={styles.main}>
           <Show when={loadError() || saveError()}>
-            <div class={styles.error} role="alert" aria-live="polite">
-              {loadError() || saveError()}
-            </div>
+            {(error) => <TransientFeedback message={error()} onDismiss={clearErrors} />}
           </Show>
           {props.children}
         </main>

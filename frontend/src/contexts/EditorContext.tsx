@@ -6,6 +6,7 @@ import {
   createSignal,
   createEffect,
   onCleanup,
+  untrack,
   type ParentComponent,
   type Accessor,
 } from 'solid-js';
@@ -33,7 +34,7 @@ interface EditorContextValue {
   setContent: (content: string) => void;
   hasUnsavedChanges: Accessor<boolean>;
   setHasUnsavedChanges: (has: boolean) => void;
-  autoSaveStatus: Accessor<'idle' | 'saving' | 'saved'>;
+  autoSaveStatus: Accessor<'idle' | 'saving' | 'saved' | 'error'>;
 
   // Asset URLs (filename -> signed URL)
   assetUrls: Accessor<AssetUrlMap>;
@@ -93,7 +94,8 @@ export const EditorProvider: ParentComponent = (props) => {
   const [title, setTitle] = createSignal('');
   const [content, setContent] = createSignal('');
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
-  const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved'>('idle');
+  const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  let savedStatusTimer: number | undefined;
 
   // Frontmatter state
   const [icon, setIcon] = createSignal('');
@@ -154,20 +156,27 @@ export const EditorProvider: ParentComponent = (props) => {
         }
       }
 
-      setTimeout(() => {
-        if (autoSaveStatus() === 'saved') {
+      if (savedStatusTimer !== undefined) {
+        window.clearTimeout(savedStatusTimer);
+      }
+      savedStatusTimer = window.setTimeout(() => {
+        savedStatusTimer = undefined;
+        if (untrack(autoSaveStatus) === 'saved') {
           setAutoSaveStatus('idle');
         }
       }, 2000);
     } catch (err) {
       setSaveError(`${t('errors.autoSaveFailed')}: ${err}`);
-      setAutoSaveStatus('idle');
+      setAutoSaveStatus('error');
     }
   }, 2000);
 
   // Cleanup debounce on unmount
   onCleanup(() => {
     debouncedAutoSave.flush();
+    if (savedStatusTimer !== undefined) {
+      window.clearTimeout(savedStatusTimer);
+    }
   });
 
   // Fetch linked node titles when content has internal links

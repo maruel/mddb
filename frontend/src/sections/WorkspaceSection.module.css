@@ -43,6 +43,25 @@
   font-size: 0.85rem;
 }
 
+.connectionStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.connectionIndicator {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--c-success);
+}
+
+.connectionReconnecting .connectionIndicator {
+  background: var(--c-warning-border);
+}
+
 .container {
   display: flex;
   flex: 1;
@@ -55,14 +74,6 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--c-bg);
-}
-
-.error {
-  padding: var(--s-3);
-  background: #fef2f2;
-  color: var(--c-danger);
-  border-bottom: 1px solid #fecaca;
-  font-size: 0.85rem;
 }
 
 .editor {
@@ -123,15 +134,22 @@
 
 .unsavedIndicator,
 .savingIndicator,
-.savedIndicator {
+.savedIndicator,
+.saveErrorIndicator {
   display: inline-flex;
+  gap: var(--s-1);
   align-items: center;
+  white-space: nowrap;
 }
 
 .unsavedIndicator,
 .savingIndicator,
 .savedIndicator {
   color: var(--c-text-light);
+}
+
+.saveErrorIndicator {
+  color: var(--c-danger);
 }
 
 .savingIndicator svg {

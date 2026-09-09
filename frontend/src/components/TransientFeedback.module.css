@@ -1,0 +1,28 @@
+/* Fixed live-region feedback styles for transient workspace operation failures. */
+
+.feedback {
+  position: fixed;
+  right: var(--s-3);
+  bottom: var(--s-3);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: min(32rem, calc(100vw - var(--s-6)));
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-danger);
+  border-radius: var(--radius);
+  background: var(--c-error-bg);
+  box-shadow: var(--shadow-lg);
+  color: var(--c-text);
+}
+
+.message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dismiss {
+  flex: none;
+  color: var(--c-text);
+}
