@@ -45,6 +45,12 @@ export const dict: Dictionary = {
     otherWorkspaces: 'Andere Arbeitsbereiche',
     switchWorkspace: 'Arbeitsbereich wechseln',
     workspaceTree: 'Arbeitsbereichsseiten',
+    keyboardShortcuts: 'Tastenkürzel',
+    keyboardShortcutsDescription: 'Nutze diese Kürzel außerhalb von Textfeldern und dem Editor.',
+    showKeyboardShortcuts: 'Tastenkürzel anzeigen',
+    focusWorkspaceTree: 'Arbeitsbereichsseiten fokussieren',
+    moveThroughWorkspacePages: 'Arbeitsbereichsseiten durchgehen',
+    openFocusedWorkspacePage: 'Fokussierte Arbeitsbereichsseite öffnen',
   },
 
   userMenu: {

@@ -45,6 +45,12 @@ export const dict: Dictionary = {
     otherWorkspaces: 'Other workspaces',
     switchWorkspace: 'Switch workspace',
     workspaceTree: 'Workspace pages',
+    keyboardShortcuts: 'Keyboard shortcuts',
+    keyboardShortcutsDescription: 'Use these shortcuts outside text fields and the editor.',
+    showKeyboardShortcuts: 'Show keyboard shortcuts',
+    focusWorkspaceTree: 'Focus workspace pages',
+    moveThroughWorkspacePages: 'Move through workspace pages',
+    openFocusedWorkspacePage: 'Open focused workspace page',
   },
 
   userMenu: {

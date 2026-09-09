@@ -47,6 +47,12 @@ export interface Dictionary {
     otherWorkspaces: string;
     switchWorkspace: string;
     workspaceTree: string;
+    keyboardShortcuts: string;
+    keyboardShortcutsDescription: string;
+    showKeyboardShortcuts: string;
+    focusWorkspaceTree: string;
+    moveThroughWorkspacePages: string;
+    openFocusedWorkspacePage: string;
   };
 
   userMenu: {

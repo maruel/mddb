@@ -14,6 +14,7 @@ import LeftPanelCloseIcon from '@material-symbols/svg-400/outlined/left_panel_cl
 import ChevronRightIcon from '@material-symbols/svg-400/outlined/chevron_right.svg?solid';
 import AddIcon from '@material-symbols/svg-400/outlined/add.svg?solid';
 import DownloadIcon from '@material-symbols/svg-400/outlined/download.svg?solid';
+import KeyboardIcon from '@material-symbols/svg-400/outlined/keyboard.svg?solid';
 
 interface OrgWithWorkspaces {
   orgId: string;
@@ -39,6 +40,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onCreateWorkspace: () => void;
   onImportFromNotion: () => void;
+  onShowKeyboardShortcuts: () => void;
   onMoveNode?: (nodeId: string, newParentId: string) => Promise<void> | void;
 }
 
@@ -263,6 +265,7 @@ export default function Sidebar(props: SidebarProps) {
         role="tree"
         aria-label={t('app.workspaceTree')}
         class={styles.pageList}
+        data-testid="workspace-tree"
         classList={{ [`${styles.rootDropTarget}`]: isRootDropTarget() }}
         onDragOver={handleRootDragOver}
         onDragLeave={handleRootDragLeave}
@@ -329,6 +332,16 @@ export default function Sidebar(props: SidebarProps) {
 
         {/* Actions */}
         <div class={styles.sidebarActions}>
+          <button
+            class={styles.actionButton}
+            onClick={() => props.onShowKeyboardShortcuts()}
+            data-testid="keyboard-shortcuts-button"
+          >
+            <span class={styles.actionIcon} aria-hidden="true">
+              <KeyboardIcon />
+            </span>
+            {t('app.keyboardShortcuts')}
+          </button>
           <button
             class={styles.actionButton}
             onClick={() => props.onCreateWorkspace()}

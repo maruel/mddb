@@ -8,6 +8,7 @@ import NotificationBell from '../components/NotificationBell';
 import NotionImportBanner from '../components/NotionImportBanner';
 import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
 import NotionImportModal, { type NotionImportData } from '../components/NotionImportModal';
+import KeyboardShortcutsDialog from '../components/KeyboardShortcutsDialog';
 import { TransientFeedback } from '../components/TransientFeedback';
 import { useAuth, useWorkspace, useEditor, useEventSource, useRecords } from '../contexts';
 import { useI18n } from '../i18n';
@@ -79,6 +80,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = createSignal(false);
   const [showCreateWorkspace, setShowCreateWorkspace] = createSignal(false);
   const [showNotionImport, setShowNotionImport] = createSignal(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = createSignal(false);
   const [notionImportStatus, setNotionImportStatus] = createSignal<NotionImportStatusResponse | null>(null);
   const [notionImportWsId, setNotionImportWsId] = createSignal<string | null>(null);
   const [nodeCreationParentId, setNodeCreationParentId] = createSignal<string | null>(null);
@@ -103,6 +105,36 @@ const WorkspaceLayout: ParentComponent = (props) => {
     return !currentUser?.workspace_id && (currentUser?.workspaces ?? []).length === 0;
   };
 
+  const isEditingText = (target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    return (
+      target.isContentEditable ||
+      target.matches('input, textarea, select, [role="textbox"]') ||
+      target.closest('[contenteditable="true"], input, textarea, select, [role="textbox"]') !== null
+    );
+  };
+
+  const focusWorkspaceTree = () => {
+    if (isMobileLayout()) {
+      setMobileSidebarOpen(true);
+    } else {
+      setDesktopSidebarOpen(true);
+    }
+
+    let attempts = 0;
+    const focusActiveTreeItem = () => {
+      const tree = document.querySelector<HTMLElement>('[data-testid="workspace-tree"]');
+      const activeTreeItem = tree?.querySelector<HTMLButtonElement>('[role="treeitem"][tabindex="0"]');
+      if (activeTreeItem) {
+        activeTreeItem.focus();
+        return;
+      }
+      attempts += 1;
+      if (attempts < 3) requestAnimationFrame(focusActiveTreeItem);
+    };
+    requestAnimationFrame(focusActiveTreeItem);
+  };
+
   onMount(() => {
     const handleResize = () => {
       const nextIsMobile = window.innerWidth <= 768;
@@ -125,6 +157,36 @@ const WorkspaceLayout: ParentComponent = (props) => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('keydown', handleKeyDown);
     });
+  });
+
+  onMount(() => {
+    const handleKeyboardShortcut = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        isEditingText(event.target) ||
+        showKeyboardShortcuts()
+      ) {
+        return;
+      }
+
+      if (event.code === 'Slash' && event.shiftKey) {
+        event.preventDefault();
+        setShowKeyboardShortcuts(true);
+        return;
+      }
+
+      if (event.key === 'g' && !event.shiftKey) {
+        event.preventDefault();
+        focusWorkspaceTree();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyboardShortcut);
+    onCleanup(() => window.removeEventListener('keydown', handleKeyboardShortcut));
   });
 
   // Notion import polling
@@ -449,6 +511,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
           }}
           onCreateWorkspace={() => setShowCreateWorkspace(true)}
           onImportFromNotion={() => setShowNotionImport(true)}
+          onShowKeyboardShortcuts={() => setShowKeyboardShortcuts(true)}
           onMoveNode={handleMoveNode}
         />
 
@@ -476,6 +539,9 @@ const WorkspaceLayout: ParentComponent = (props) => {
       </Show>
       <Show when={showNotionImport()}>
         <NotionImportModal onClose={() => setShowNotionImport(false)} onImport={handleNotionImport} />
+      </Show>
+      <Show when={showKeyboardShortcuts()}>
+        <KeyboardShortcutsDialog onClose={() => setShowKeyboardShortcuts(false)} />
       </Show>
     </div>
   );

@@ -45,6 +45,12 @@ export const dict: Dictionary = {
     otherWorkspaces: 'Otros espacios',
     switchWorkspace: 'Cambiar espacio',
     workspaceTree: 'Páginas del espacio',
+    keyboardShortcuts: 'Atajos de teclado',
+    keyboardShortcutsDescription: 'Usa estos atajos fuera de los campos de texto y del editor.',
+    showKeyboardShortcuts: 'Mostrar atajos de teclado',
+    focusWorkspaceTree: 'Enfocar las páginas del espacio',
+    moveThroughWorkspacePages: 'Recorrer las páginas del espacio',
+    openFocusedWorkspacePage: 'Abrir la página del espacio enfocada',
   },
 
   userMenu: {
