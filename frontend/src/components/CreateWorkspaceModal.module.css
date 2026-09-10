@@ -69,7 +69,7 @@
   padding: var(--s-3);
   margin-bottom: var(--s-4);
   border-radius: var(--radius);
-  background: #fef2f2;
+  background: var(--c-surface-danger);
   color: var(--c-danger);
   text-align: center;
   font-size: 0.85rem;

@@ -12,18 +12,13 @@ body {
 }
 
 :root {
+  /* Semantic color, surface, state, and elevation foundation for the light theme. */
   /* Primary brand color for buttons, links, accents */
   --c-primary: #2563eb;
-  /* RGB components of --c-primary for use in rgba() */
-  --c-primary-rgb: 37, 99, 235;
   /* Hover state for primary buttons */
   --c-primary-hover: #1d4ed8;
   /* Darker primary for active/pressed states */
   --c-primary-dark: #1565c0;
-  /* Light primary tint for selected/highlighted backgrounds */
-  --c-primary-light: #dbeafe;
-  /* Very light primary background for banners/callouts */
-  --c-primary-bg: #eef6ff;
   /* Focus ring border color */
   --c-border-focus: #2563eb;
 
@@ -31,27 +26,86 @@ body {
   --c-text: #1f2937;
   /* Secondary/muted text */
   --c-text-light: #6b7280;
+  /* Text placed on primary or dark brand surfaces */
+  --c-text-inverse: #fff;
+  /* Code and inline-code foreground */
+  --c-text-code: #c7254e;
+  /* Positive status foreground */
+  --c-text-success: #166534;
+  /* Warning status foreground */
+  --c-text-warning: #92400e;
+  /* Strong warning status foreground */
+  --c-text-warning-strong: #78350f;
 
-  /* Main background */
-  --c-bg: #fff;
-  /* Alternate background for panels, sections, button hover */
-  --c-bg-alt: #e5e7eb;
-  /* Subtle hover for menu items, list items, table rows */
-  --c-bg-hover: rgba(0, 0, 0, 0.04);
-  /* Secondary/muted background */
-  --c-bg-secondary: #f5f5f5;
+  /* Default canvas and raised content surface */
+  --c-surface: #fff;
+  /* Muted panel surface */
+  --c-surface-subtle: #f5f5f5;
+  /* Recessed section and compact-control surface */
+  --c-surface-sunken: #e5e7eb;
+  /* Subtle hover for menu items, list items, and table rows */
+  --c-surface-hover: rgba(0, 0, 0, 0.04);
+  /* Selected item and editable field surface */
+  --c-surface-selected: #dbeafe;
+  /* Informational callout surface */
+  --c-surface-info: #eff6ff;
+  /* Brand callout surface */
+  --c-surface-primary: #eef6ff;
+  /* Error and destructive-action surfaces */
+  --c-surface-danger: #fef2f2;
+  --c-surface-danger-strong: #fee2e2;
+  /* Translucent hover and temporary-feedback danger surface. */
+  --c-surface-danger-subtle: rgba(239, 68, 68, 0.1);
+  /* Success and enabled-state surfaces */
+  --c-surface-success: #f0fdf4;
+  --c-surface-success-strong: #dcfce7;
+  /* Warning, conflict, and paused-state surfaces */
+  --c-surface-warning: #fff3cd;
+  --c-surface-warning-strong: #fef3c7;
+  --c-surface-warning-subtle: #fffbeb;
+  /* Cancelled imports retain their distinct warning callout surface. */
+  --c-surface-warning-cancelled: #fefce8;
 
   /* Default border color */
   --c-border: #e5e7eb;
+  /* Destructive and warning state borders */
+  --c-border-danger: #fecaca;
+  --c-border-success: #22c55e;
+  --c-border-warning: #ffc107;
+  --c-border-warning-subtle: #fde68a;
+  /* Cancelled imports use a stronger warning border than generic warnings. */
+  --c-border-warning-cancelled: #eab308;
   /* Success messages, positive actions */
   --c-success: #16a34a;
   /* Errors, destructive actions */
   --c-danger: #dc2626;
-  /* Error background tint */
-  --c-error-bg: rgba(239, 68, 68, 0.1);
-  /* Warning background and border */
-  --c-warning-bg: #fff3cd;
-  --c-warning-border: #ffc107;
+  /* Brand/provider surfaces whose identities are part of their login controls */
+  --c-provider-github: #24292e;
+  --c-provider-microsoft: #2f2f2f;
+
+  /* Overlay layers: modal, drawer, and lower-priority responsive scrims. */
+  --c-overlay-modal: rgba(0, 0, 0, 0.5);
+  --c-overlay-drawer: rgba(0, 0, 0, 0.35);
+  --c-overlay-subtle: rgba(0, 0, 0, 0.3);
+  --c-overlay-image: rgba(0, 0, 0, 0.25);
+  --c-on-primary-muted: rgba(255, 255, 255, 0.85);
+  --c-on-primary-subtle: rgba(255, 255, 255, 0.5);
+  /* Header actions use the original low-emphasis white overlay. */
+  --c-on-primary-action-rest: rgba(255, 255, 255, 0.15);
+  --c-on-primary-action-hover: rgba(255, 255, 255, 0.25);
+  /* The avatar control remains more prominent than adjacent header actions. */
+  --c-on-primary-avatar-rest: rgba(255, 255, 255, 0.2);
+  /* Dismissal is intentionally quieter than a general header-action hover. */
+  --c-on-primary-dismiss-hover: rgba(255, 255, 255, 0.1);
+  --c-on-primary-border: rgba(255, 255, 255, 0.3);
+  --c-on-primary-border-hover: rgba(255, 255, 255, 0.6);
+  --c-on-primary-image: rgba(255, 255, 255, 0.9);
+
+  /* Compatibility aliases for existing component modules. */
+  --c-bg: var(--c-surface);
+  --c-bg-alt: var(--c-surface-sunken);
+  --c-bg-hover: var(--c-surface-hover);
+  --c-error-bg: var(--c-surface-danger-subtle);
 
   /* Spacing scale: 4px base (s-05=2px, s-1=4px, s-2=8px, s-3=16px, s-4=24px, s-5=32px, s-6=40px) */
   --s-05: 0.125rem;
@@ -70,10 +124,18 @@ body {
   --radius: 6px;
   /* Smaller border radius for compact elements */
   --radius-sm: 4px;
-  /* Default box shadow */
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  /* Elevated shadow for dropdowns and popovers */
-  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.12);
+  /* Elevation tokens keep overlays and surfaces visually ordered. */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-drawer: -4px 0 16px rgba(0, 0, 0, 0.12);
+  --shadow-dialog: 0 10px 40px rgba(0, 0, 0, 0.2);
+  --shadow-icon-picker: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --shadow-control-selected: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --focus-ring: 0 0 0 2px var(--c-surface-selected);
+  /* Compatibility aliases for existing component modules. */
+  --shadow: var(--shadow-sm);
+  --shadow-lg: var(--shadow-menu);
   /* Default transition timing */
   --transition: 0.15s ease;
 }

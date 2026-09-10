@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   padding: var(--s-3) var(--s-4);
   display: flex;
   align-items: center;
@@ -40,7 +40,7 @@
 }
 
 .installButton {
-  background: white;
+  background: var(--c-surface);
   color: var(--c-primary);
   border: none;
   padding: var(--s-2) var(--s-3);
@@ -55,15 +55,15 @@
 
 .dismissButton {
   background: transparent;
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: var(--c-text-inverse);
+  border: 1px solid var(--c-on-primary-subtle);
   padding: var(--s-2) var(--s-3);
   border-radius: var(--radius);
   cursor: pointer;
 }
 
 .dismissButton:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--c-on-primary-dismiss-hover);
 }
 
 @media (max-width: 480px) {

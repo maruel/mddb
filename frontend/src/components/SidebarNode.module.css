@@ -45,7 +45,7 @@
 }
 
 .pageItem.active {
-  background: #eff6ff;
+  background: var(--c-surface-info);
   border-left: 3px solid var(--c-primary);
   padding-left: calc(var(--s-2) - 3px);
 }
@@ -199,7 +199,7 @@
 }
 
 .pageItem.dropTarget {
-  background: var(--c-primary-light, #dbeafe);
+  background: var(--c-surface-selected);
   border-radius: 4px;
 }
 

@@ -73,7 +73,7 @@
 }
 
 .optionRowDragOver {
-  border-top: 2px solid var(--c-primary, #0066cc);
+  border-top: 2px solid var(--c-primary);
 }
 
 .dragHandle {
@@ -194,7 +194,7 @@
 }
 
 .deleteBtn:hover {
-  color: var(--c-danger, #e03e3e);
+  color: var(--c-danger);
   background: var(--c-bg-alt);
 }
 

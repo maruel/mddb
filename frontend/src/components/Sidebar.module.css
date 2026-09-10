@@ -135,7 +135,7 @@
 
 /* Root drop target for drag-and-drop */
 .pageList.rootDropTarget {
-  background: var(--c-primary-light, #dbeafe);
+  background: var(--c-surface-selected);
 }
 
 /* Other workspaces section */

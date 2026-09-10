@@ -7,7 +7,7 @@
   justify-content: center;
   padding: var(--s-3);
   overflow: auto;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--c-overlay-modal);
 }
 
 .dialog {
@@ -19,7 +19,7 @@
   overscroll-behavior: contain;
   background: var(--c-bg);
   border-radius: var(--radius);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-dialog);
   animation: slideUp 0.2s ease-out;
 }
 
@@ -34,7 +34,7 @@
   display: block;
   padding: 0;
   overflow: hidden;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--c-overlay-drawer);
 }
 
 .drawer {

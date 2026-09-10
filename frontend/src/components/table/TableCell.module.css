@@ -32,7 +32,7 @@
   border-radius: 0;
   font-size: inherit;
   font-family: inherit;
-  background: var(--c-primary-light, #e8f0fe);
+  background: var(--c-surface-selected);
   outline: none;
   box-shadow: inset 0 0 0 2px var(--c-primary);
 }

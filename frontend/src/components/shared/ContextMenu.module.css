@@ -7,7 +7,7 @@
   background: var(--c-bg);
   border: 1px solid var(--c-border);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-popover);
   outline: none;
 }
 
@@ -53,7 +53,7 @@
 
 .item.danger:hover,
 .item.danger.focused {
-  background: var(--c-error-bg, rgba(239, 68, 68, 0.1));
+  background: var(--c-surface-danger-subtle);
 }
 
 .icon {

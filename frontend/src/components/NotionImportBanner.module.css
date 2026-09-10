@@ -3,24 +3,24 @@
   align-items: center;
   gap: var(--s-3);
   padding: var(--s-3) var(--s-4);
-  background: var(--c-primary-bg, #eef6ff);
+  background: var(--c-surface-primary);
   border-bottom: 1px solid var(--c-primary);
   font-size: 0.85rem;
 }
 
 .banner.success {
-  background: #f0fdf4;
-  border-color: #22c55e;
+  background: var(--c-surface-success);
+  border-color: var(--c-border-success);
 }
 
 .banner.error {
-  background: #fef2f2;
+  background: var(--c-surface-danger);
   border-color: var(--c-danger);
 }
 
 .banner.cancelled {
-  background: #fefce8;
-  border-color: #eab308;
+  background: var(--c-surface-warning-cancelled);
+  border-color: var(--c-border-warning-cancelled);
 }
 
 .icon {

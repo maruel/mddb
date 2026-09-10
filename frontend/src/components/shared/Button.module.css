@@ -10,7 +10,7 @@
 .primary {
   border: none;
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
 }
 
 .primary:hover:not(:disabled) {

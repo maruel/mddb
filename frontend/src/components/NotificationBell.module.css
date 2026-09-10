@@ -7,7 +7,7 @@
 .bellButton {
   background: transparent;
   border: none;
-  color: white;
+  color: var(--c-text-inverse);
   cursor: pointer;
   padding: var(--s-1);
   display: flex;
@@ -19,7 +19,7 @@
 }
 
 .bellButton:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--c-on-primary-action-rest);
 }
 
 .bellButton svg {
@@ -36,7 +36,7 @@
   padding: 0 4px;
   border-radius: 8px;
   background: var(--c-danger);
-  color: white;
+  color: var(--c-text-inverse);
   font-size: 0.65rem;
   font-weight: 600;
   display: flex;

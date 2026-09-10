@@ -90,7 +90,7 @@
 }
 
 .row:hover {
-  background: var(--c-bg-hover, rgba(0, 0, 0, 0.02));
+  background: var(--c-surface-hover);
 }
 
 .row:hover .actionsCell .deleteBtn {
@@ -201,7 +201,7 @@
 
 .deleteBtn:hover {
   background: var(--c-danger);
-  color: white;
+  color: var(--c-text-inverse);
   opacity: 1;
 }
 
@@ -267,7 +267,7 @@
 }
 
 .newRowPlaceholder:hover {
-  background: var(--c-bg-hover, rgba(0, 0, 0, 0.02));
+  background: var(--c-surface-hover);
 }
 
 .empty {
@@ -304,7 +304,7 @@
   gap: var(--s-1);
   padding: var(--s-1) var(--s-3);
   border-bottom: 1px solid var(--c-border);
-  background: var(--c-bg-alt, rgba(0, 0, 0, 0.02));
+  background: var(--c-surface-sunken);
   flex-shrink: 0;
 }
 

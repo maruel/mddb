@@ -74,7 +74,7 @@
   font-size: 0.6em;
   font-weight: 600;
   background: var(--c-primary);
-  color: #fff;
+  color: var(--c-text-inverse);
   flex-shrink: 0;
   overflow: hidden;
 }

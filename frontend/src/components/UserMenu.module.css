@@ -6,8 +6,8 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--c-on-primary-border);
+  background: var(--c-on-primary-avatar-rest);
   cursor: pointer;
   padding: 0;
   overflow: hidden;
@@ -18,7 +18,7 @@
 }
 
 .avatarButton:hover {
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: var(--c-on-primary-border-hover);
 }
 
 .avatarImage {
@@ -28,7 +28,7 @@
 }
 
 .initials {
-  color: white;
+  color: var(--c-text-inverse);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;

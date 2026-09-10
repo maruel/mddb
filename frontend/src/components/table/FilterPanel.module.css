@@ -56,7 +56,7 @@
   flex: 1;
   padding: var(--s-1) var(--s-3);
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
@@ -102,7 +102,7 @@
 
 .optionSearch:focus {
   outline: none;
-  border-color: var(--c-primary, #0066cc);
+  border-color: var(--c-primary);
 }
 
 .optionPickerList {
@@ -131,7 +131,7 @@
 }
 
 .optionPickerItemSelected {
-  border-color: var(--c-primary, #0066cc);
+  border-color: var(--c-primary);
 }
 
 .optionPickerSwatch {

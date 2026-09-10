@@ -31,16 +31,16 @@
 
 .removeButton {
   padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--c-danger, #dc3545);
+  border: 1px solid var(--c-danger);
   border-radius: var(--radius);
   background: transparent;
-  color: var(--c-danger, #dc3545);
+  color: var(--c-danger);
   cursor: pointer;
 }
 
 .removeButton:hover {
-  background: var(--c-danger, #dc3545);
-  color: white;
+  background: var(--c-danger);
+  color: var(--c-text-inverse);
 }
 
 .removeButton:disabled {

@@ -22,7 +22,7 @@
   cursor: pointer;
   width: 14px;
   height: 14px;
-  accent-color: var(--c-primary, #0066cc);
+  accent-color: var(--c-primary);
 }
 
 /* Shared chip and options styles for single- and multi-select */
@@ -123,7 +123,7 @@
   font-size: 0.6em;
   font-weight: 600;
   background: var(--c-primary);
-  color: #fff;
+  color: var(--c-text-inverse);
   flex-shrink: 0;
   overflow: hidden;
 }
@@ -136,7 +136,7 @@
 .memberEmail {
   margin-left: auto;
   font-size: 0.78em;
-  color: var(--c-text-light, var(--c-text));
+  color: var(--c-text-light);
   opacity: 0.7;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -166,13 +166,13 @@
 }
 
 .optionItemFocused {
-  background: var(--c-primary-light, #e8f0fe);
+  background: var(--c-surface-selected);
   outline: none;
 }
 
 .optionCheckmark {
   width: 12px;
-  color: var(--c-primary, #0066cc);
+  color: var(--c-primary);
   flex-shrink: 0;
   font-size: 0.8rem;
 }

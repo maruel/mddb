@@ -35,6 +35,9 @@ Issues identified during full-stack review. Items marked ~~strikethrough~~ have 
 - **9 independent UI state signals in TableTable.tsx** — editing, menus, filter panel, options editor, rename, drag, resize all independent. No mutual exclusion. A discriminated union / state machine would prevent impossible states.
 - **Prop drilling in view components** — Gallery, Grid, List, Board all pass 5+ CRUD callbacks. A `TableViewContext` would simplify.
 - **`setTimeout(() => el?.select(), 0)` repeated 5x** — ViewTabs, SelectOptionsEditor, FieldEditor (2x), TableCell. Extract to utility using `requestAnimationFrame`.
+- **Complete semantic CSS token adoption** — Rename remaining legacy `--c-bg*` and `--shadow*` consumers to their semantic equivalents, then remove compatibility aliases so styles have one canonical vocabulary.
+- **Allow documented component color exceptions** — Extend the CSS color-literal rule with a narrowly scoped inline suppression for genuinely component-owned brand or data colors that cannot be represented as shared semantic tokens.
+- **Rationalize single-use visual tokens** — Establish approved on-primary opacity and elevation scales, then replace component-oriented token names where visual changes have explicit design approval.
 
 ### API
 

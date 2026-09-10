@@ -137,8 +137,8 @@ export default function Onboarding() {
           style={{
             width: '40px',
             height: '40px',
-            border: '3px solid var(--c-border, #ccc)',
-            'border-top-color': 'var(--c-primary, #007bff)',
+            border: '3px solid var(--c-border)',
+            'border-top-color': 'var(--c-primary)',
             'border-radius': '50%',
             animation: 'spin 1s linear infinite',
           }}

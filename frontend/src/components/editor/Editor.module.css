@@ -67,7 +67,7 @@
 
 .formatButton.isActive {
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
 }
 
 .separator {
@@ -115,7 +115,7 @@
 .modeIndicatorActive {
   background: var(--c-bg) !important;
   color: var(--c-text) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-control-selected);
 }
 
 /* ProseMirror Editor */
@@ -245,7 +245,7 @@
   border-radius: 3px;
   font-family: var(--font-mono);
   font-size: 0.9em;
-  color: #c7254e;
+  color: var(--c-text-code);
 }
 
 .prosemirrorEditor :global(.ProseMirror pre) {
@@ -330,7 +330,7 @@
 
 /* Selection */
 .prosemirrorEditor :global(.ProseMirror ::selection) {
-  background: rgba(var(--c-primary-rgb, 99, 102, 241), 0.2);
+  background: color-mix(in srgb, var(--c-primary) 20%, transparent);
 }
 
 /* Drop cursor */
@@ -342,7 +342,7 @@
 .prosemirrorEditor :global(.ProseMirror.drop-target-active) {
   outline: 2px dashed var(--c-primary);
   outline-offset: -2px;
-  background: rgba(var(--c-primary-rgb, 99, 102, 241), 0.05);
+  background: color-mix(in srgb, var(--c-primary) 5%, transparent);
 }
 
 /* Gap cursor (for placing cursor where no content exists) */
@@ -524,7 +524,7 @@
 
 /* Selected block styling */
 .prosemirrorEditor :global(.block-row.selected) {
-  background: rgba(var(--c-primary-rgb, 99, 102, 241), 0.08);
+  background: color-mix(in srgb, var(--c-primary) 8%, transparent);
   border-radius: var(--radius);
 }
 
@@ -632,7 +632,7 @@
   font-size: 12px;
   line-height: 12px;
   text-align: center;
-  color: white;
+  color: var(--c-text-inverse);
   font-weight: bold;
 }
 
@@ -706,7 +706,7 @@
 
 /* Multi-block selection styling */
 .prosemirrorEditor :global(.block-row.in-selection) {
-  background: rgba(var(--c-primary-rgb, 99, 102, 241), 0.1);
+  background: color-mix(in srgb, var(--c-primary) 10%, transparent);
   border-radius: var(--radius);
 }
 

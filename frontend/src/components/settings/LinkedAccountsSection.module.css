@@ -53,7 +53,7 @@
   font-size: 0.75rem;
   padding: var(--s-1) var(--s-2);
   background: var(--c-success);
-  color: white;
+  color: var(--c-text-inverse);
   border-radius: var(--radius);
 }
 
@@ -77,7 +77,7 @@
 .linkButton {
   padding: var(--s-2) var(--s-4);
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
@@ -105,7 +105,7 @@
 
 .unlinkButton:hover:not(:disabled) {
   background: var(--c-danger);
-  color: white;
+  color: var(--c-text-inverse);
 }
 
 .unlinkButton:disabled {

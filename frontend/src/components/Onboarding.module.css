@@ -1,7 +1,7 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--c-overlay-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,7 +13,7 @@
   width: 100%;
   max-width: 440px;
   border-radius: var(--radius);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-dialog);
   padding: var(--s-5);
   animation: slideUp 0.2s ease-out;
 }
@@ -78,7 +78,7 @@
   width: 100%;
   padding: var(--s-3);
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   border: none;
   border-radius: var(--radius);
   font-size: 0.9rem;
@@ -126,7 +126,7 @@
 
 .error {
   padding: var(--s-3);
-  background: #fef2f2;
+  background: var(--c-surface-danger);
   color: var(--c-danger);
   border-radius: var(--radius);
   margin-bottom: var(--s-4);

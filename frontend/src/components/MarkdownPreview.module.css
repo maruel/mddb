@@ -77,7 +77,7 @@
   border-radius: 3px;
   font-family: var(--font-mono);
   font-size: 0.9em;
-  color: #c7254e;
+  color: var(--c-text-code);
 }
 
 .preview pre {

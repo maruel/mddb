@@ -25,7 +25,7 @@
 }
 
 .navItem.active {
-  background: #eff6ff;
+  background: var(--c-surface-info);
   border-left-color: var(--c-primary);
   color: var(--c-primary);
   font-weight: 500;

@@ -3,7 +3,7 @@
 .panel {
   display: flex;
   flex-direction: column;
-  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-drawer);
 }
 
 .header {
@@ -109,11 +109,11 @@
 
 .titleInput:focus {
   outline: none;
-  border-bottom-color: var(--c-primary, #0066cc);
+  border-bottom-color: var(--c-primary);
 }
 
 .fieldValue {
-  background: var(--c-bg-alt, var(--c-bg-hover));
+  background: var(--c-surface-sunken);
   border-radius: var(--radius);
   padding: var(--s-1) var(--s-2);
   font-size: 0.9rem;

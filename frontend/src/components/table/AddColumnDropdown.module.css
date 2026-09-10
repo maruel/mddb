@@ -40,7 +40,7 @@
   background: var(--c-bg);
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-popover);
   min-width: 220px;
   z-index: 100;
   display: flex;
@@ -62,7 +62,7 @@
 .columnTypeSelect:focus {
   outline: none;
   border-color: var(--c-primary);
-  box-shadow: 0 0 0 2px var(--c-primary-light, rgba(59, 130, 246, 0.2));
+  box-shadow: var(--focus-ring);
 }
 
 .addColumnActions {
@@ -84,7 +84,7 @@
 
 .addColumnConfirm {
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
 }
 
 .addColumnConfirm:hover {
@@ -202,7 +202,7 @@
 }
 
 .inlineOptionDelete:hover {
-  color: var(--c-danger, #e03e3e);
+  color: var(--c-danger);
 }
 
 .inlineAddOptionBtn {

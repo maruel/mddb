@@ -62,7 +62,7 @@
 }
 
 .initialsLarge {
-  color: white;
+  color: var(--c-text-inverse);
   font-size: 1.5rem;
   font-weight: 600;
 }
@@ -86,7 +86,7 @@
   display: inline-block;
   padding: var(--s-1) var(--s-2);
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   font-size: 0.75rem;
   border-radius: var(--radius);
   text-transform: capitalize;
@@ -103,7 +103,7 @@
 
 .error {
   padding: var(--s-3);
-  background: #fef2f2;
+  background: var(--c-surface-danger);
   color: var(--c-danger);
   border-radius: var(--radius);
   margin-bottom: var(--s-4);
@@ -111,7 +111,7 @@
 
 .success {
   padding: var(--s-3);
-  background: #f0fdf4;
+  background: var(--c-surface-success);
   color: var(--c-success);
   border-radius: var(--radius);
   margin-bottom: var(--s-4);
@@ -159,7 +159,7 @@
 .saveButton {
   padding: var(--s-3) var(--s-5);
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   border: none;
   border-radius: var(--radius);
   cursor: pointer;

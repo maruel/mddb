@@ -42,7 +42,7 @@
 
 .error {
   padding: var(--s-3);
-  background: #fef2f2;
+  background: var(--c-surface-danger);
   color: var(--c-danger);
   border-radius: var(--radius);
   margin-bottom: var(--s-4);
@@ -50,7 +50,7 @@
 
 .success {
   padding: var(--s-3);
-  background: #f0fdf4;
+  background: var(--c-surface-success);
   color: var(--c-success);
   border-radius: var(--radius);
   margin-bottom: var(--s-4);
@@ -97,7 +97,7 @@
 .saveButton {
   padding: var(--s-3) var(--s-5);
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
@@ -146,7 +146,7 @@
   padding: var(--s-2) var(--s-3);
   font-size: 0.85rem;
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   border: none;
   border-radius: var(--radius);
   cursor: pointer;
@@ -159,15 +159,15 @@
 .deleteButtonSmall {
   padding: var(--s-2) var(--s-3);
   font-size: 0.85rem;
-  background: #fef2f2;
+  background: var(--c-surface-danger);
   color: var(--c-danger);
-  border: 1px solid #fecaca;
+  border: 1px solid var(--c-border-danger);
   border-radius: var(--radius);
   cursor: pointer;
 }
 
 .deleteButtonSmall:hover {
-  background: #fee2e2;
+  background: var(--c-surface-danger-strong);
 }
 
 .addRemoteSection {
@@ -212,9 +212,9 @@
 
 .conflictAlert {
   padding: var(--s-3);
-  background: #fffbeb;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background: var(--c-surface-warning-subtle);
+  color: var(--c-text-warning);
+  border: 1px solid var(--c-border-warning-subtle);
   border-radius: var(--radius);
   margin-bottom: var(--s-4);
 }
@@ -223,7 +223,7 @@
   margin-top: var(--s-2);
   font-size: 0.8rem;
   white-space: pre-wrap;
-  color: #78350f;
+  color: var(--c-text-warning-strong);
 }
 
 .syncBadge {
@@ -235,23 +235,23 @@
 }
 
 .syncBadge[data-status='idle'] {
-  background: #f0fdf4;
+  background: var(--c-surface-success);
   color: var(--c-success);
 }
 
 .syncBadge[data-status='syncing'] {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--c-surface-info);
+  color: var(--c-primary);
 }
 
 .syncBadge[data-status='error'] {
-  background: #fef2f2;
+  background: var(--c-surface-danger);
   color: var(--c-danger);
 }
 
 .syncBadge[data-status='conflict'] {
-  background: #fffbeb;
-  color: #92400e;
+  background: var(--c-surface-warning-subtle);
+  color: var(--c-text-warning);
 }
 
 .autoPushRow {
@@ -293,7 +293,7 @@
 
 .activeSetupTab {
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   border-color: var(--c-primary);
 }
 

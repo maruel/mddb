@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lint for CSS custom properties and selectors in frontend/src."""
+"""Lint frontend CSS variables, module selectors, and semantic color tokens."""
 
 import re
 import subprocess
@@ -12,6 +12,7 @@ _CLASS_DEF_RE = re.compile(r"\.([a-zA-Z][\w-]*)")
 _IMPORT_RE = re.compile(r'import\s+(\w+)\s+from\s+["\']([^"\']+\.module\.css)["\']')
 _CSS_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 _CSS_GLOBAL_RE = re.compile(r":global\([^)]*\)")
+_COLOR_LITERAL_RE = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
 
 
 def check_css_vars(css_files: list[str], source_files: list[str]) -> list[tuple[str, int, str]]:
@@ -116,6 +117,21 @@ def check_unused_selectors(files: list[str]) -> list[str]:
     return errors
 
 
+def check_semantic_color_tokens(css_files: list[str]) -> list[tuple[str, int, str]]:
+    """Reject component color literals that should be named in variables.css."""
+    errors: list[tuple[str, int, str]] = []
+    for path in css_files:
+        if Path(path).name == "variables.css":
+            continue
+        try:
+            css_text = _CSS_COMMENT_RE.sub("", Path(path).read_text())
+        except OSError:
+            continue
+        for m in _COLOR_LITERAL_RE.finditer(css_text):
+            errors.append((path, css_text[: m.start()].count("\n") + 1, m.group()))
+    return errors
+
+
 def main() -> int:
     try:
         files = subprocess.check_output(["git", "ls-files", "frontend/src"], text=True).splitlines()
@@ -140,6 +156,13 @@ def main() -> int:
         print("Error: CSS module selector issues:")
         for msg in selector_errors:
             print(msg)
+        rc = 1
+
+    color_errors = check_semantic_color_tokens(css_files)
+    if color_errors:
+        print("Error: component CSS must use semantic color tokens:")
+        for path, line, color in color_errors:
+            print(f"  {path}:{line}: {color}")
         rc = 1
 
     return rc

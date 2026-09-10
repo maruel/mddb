@@ -10,7 +10,7 @@
 
 .error {
   padding: var(--s-2) var(--s-3);
-  background: #fef2f2;
+  background: var(--c-surface-danger);
   color: var(--c-danger);
   border-radius: var(--radius);
   font-size: 0.85rem;
@@ -45,7 +45,7 @@
 
 .pushActive {
   background: var(--c-primary);
-  color: white;
+  color: var(--c-text-inverse);
   border-color: var(--c-primary);
 }
 
