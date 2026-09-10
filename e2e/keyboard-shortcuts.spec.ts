@@ -47,11 +47,27 @@ test.describe('Workspace keyboard shortcuts', () => {
       await expect(dialog).not.toBeVisible();
       await expect(shortcutsButton).toBeFocused();
 
-      await page.keyboard.press('Shift+/');
+      await page.keyboard.press('?');
       await expect(dialog).toBeVisible({ timeout: 3000 });
       await page.keyboard.press('Escape');
       await expect(dialog).not.toBeVisible();
       await expect(shortcutsButton).toBeFocused();
+    });
+
+    await test.step('an open modal owns workspace shortcuts', async () => {
+      await page.getByTestId('create-workspace-button').click();
+      const createWorkspaceDialog = page.getByRole('dialog', { name: 'Create workspace' });
+      await expect(createWorkspaceDialog).toBeVisible({ timeout: 3000 });
+      await createWorkspaceDialog.focus();
+
+      await page.keyboard.press('g');
+      await expect(createWorkspaceDialog).toBeFocused();
+      await page.keyboard.press('?');
+
+      await expect(createWorkspaceDialog).toBeVisible();
+      await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).not.toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(createWorkspaceDialog).not.toBeVisible();
     });
 
     await test.step('G enters page navigation and Enter opens the focused page', async () => {

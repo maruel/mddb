@@ -114,6 +114,8 @@ const WorkspaceLayout: ParentComponent = (props) => {
     );
   };
 
+  const hasOpenModal = () => document.querySelector('[aria-modal="true"]') !== null;
+
   const focusWorkspaceTree = () => {
     if (isMobileLayout()) {
       setMobileSidebarOpen(true);
@@ -168,18 +170,18 @@ const WorkspaceLayout: ParentComponent = (props) => {
         event.metaKey ||
         event.altKey ||
         isEditingText(event.target) ||
-        showKeyboardShortcuts()
+        hasOpenModal()
       ) {
         return;
       }
 
-      if (event.code === 'Slash' && event.shiftKey) {
+      if (event.key === '?') {
         event.preventDefault();
         setShowKeyboardShortcuts(true);
         return;
       }
 
-      if (event.key === 'g' && !event.shiftKey) {
+      if (event.key.toLowerCase() === 'g' && !event.shiftKey) {
         event.preventDefault();
         focusWorkspaceTree();
       }
