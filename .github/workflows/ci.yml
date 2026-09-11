@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+concurrency:
+  group: pages
+  cancel-in-progress: false
 permissions:
   contents: write
   pages: write
