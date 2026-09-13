@@ -82,6 +82,9 @@ body {
   /* Brand/provider surfaces whose identities are part of their login controls */
   --c-provider-github: #24292e;
   --c-provider-microsoft: #2f2f2f;
+  /* Calculated contrast for colored select-option chips. */
+  --c-chip-text-dark: #111;
+  --c-chip-text-light: #fff;
 
   /* Overlay layers: modal, drawer, and lower-priority responsive scrims. */
   --c-overlay-modal: rgba(0, 0, 0, 0.5);

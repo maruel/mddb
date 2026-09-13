@@ -9,22 +9,11 @@ import styles from './SelectOptionsEditor.module.css';
 import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
 import CloseIcon from '@material-symbols/svg-400/outlined/close.svg?solid';
 import DragIndicatorIcon from '@material-symbols/svg-400/outlined/drag_indicator.svg?solid';
+import optionColorPalette from './selectOptionColorPalette.json';
 
-/** 12 accessible preset swatches. '#ffffff' = no color (renders as default). */
-export const OPTION_COLORS = [
-  '#e03e3e',
-  '#d9730d',
-  '#dfab01',
-  '#0f7b6c',
-  '#0b6e99',
-  '#6940a5',
-  '#ad1a72',
-  '#64473a',
-  '#9b9a97',
-  '#37352f',
-  '#787774',
-  '#ffffff',
-];
+// Persisted select-option color values, with a separate default-color sentinel.
+export const OPTION_COLORS = optionColorPalette.colors;
+export const NO_OPTION_COLOR = optionColorPalette.noColor;
 
 function generateOptionId(existing: SelectOption[]): string {
   const ids = new Set(existing.map((o) => o.id));
@@ -122,7 +111,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
   };
 
   const handleRecolor = (id: string, color: string) => {
-    const c = color === '#ffffff' ? undefined : color;
+    const c = color === NO_OPTION_COLOR ? undefined : color;
     const next = localOptions().map((o) => (o.id === id ? { ...o, color: c } : o));
     setLocalOptions(next);
     setOpenSwatchFor(null);
@@ -242,7 +231,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
                             <button
                               class={styles.swatchChoice}
                               style={
-                                color === '#ffffff'
+                                color === NO_OPTION_COLOR
                                   ? { background: 'var(--c-bg-hover)', border: '1px solid var(--c-border)' }
                                   : { background: color }
                               }

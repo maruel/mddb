@@ -107,7 +107,7 @@ lint-binaries:
 	@python3 scripts/lint_binaries.py
 
 lint-css:
-	@python3 scripts/lint_css_vars.py --allow-hardcoded-typescript-colors
+	@python3 scripts/lint_css_vars.py
 
 lint-fix: $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run ./... --fix || true

@@ -3,7 +3,7 @@
 import { createSignal, Show, For } from 'solid-js';
 import type { Property, PropertyType, SelectOption } from '@sdk/types.gen';
 import { useI18n } from '../../i18n';
-import { OPTION_COLORS } from './SelectOptionsEditor';
+import { NO_OPTION_COLOR, OPTION_COLORS } from './SelectOptionsEditor';
 import styles from './AddColumnDropdown.module.css';
 
 // Column types available for adding
@@ -62,7 +62,7 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
   };
 
   const handleOptionRecolor = (id: string, color: string) => {
-    const c = color === '#ffffff' ? undefined : color;
+    const c = color === NO_OPTION_COLOR ? undefined : color;
     setInlineOptions(inlineOptions().map((o) => (o.id === id ? { ...o, color: c } : o)));
     setOpenSwatchFor(null);
   };
@@ -147,7 +147,7 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
                                   <button
                                     class={styles.inlineSwatchChoice}
                                     style={
-                                      color === '#ffffff'
+                                      color === NO_OPTION_COLOR
                                         ? {
                                             background: 'var(--c-bg-hover)',
                                             border: '1px solid var(--c-border)',
