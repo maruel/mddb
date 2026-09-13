@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Lint frontend CSS variables, module selectors, and semantic color tokens."""
+"""Lint CSS variables, module selectors, and raw colors in frontend sources."""
 
+import argparse
 import re
 import subprocess
 import sys
@@ -10,36 +11,140 @@ _VAR_DEF_RE = re.compile(r"(--[\w-]+)\s*:")
 _VAR_USE_RE = re.compile(r"var\((--[\w-]+)")
 _CLASS_DEF_RE = re.compile(r"\.([a-zA-Z][\w-]*)")
 _IMPORT_RE = re.compile(r'import\s+(\w+)\s+from\s+["\']([^"\']+\.module\.css)["\']')
-_CSS_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 _CSS_GLOBAL_RE = re.compile(r":global\([^)]*\)")
-_COLOR_LITERAL_RE = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
+_HEX_COLOR_RE = re.compile(r"(?<!&)#[0-9a-fA-F]{3,8}\b")
+_FUNC_COLOR_RE = re.compile(r"\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(([^)]*)\)")
+_NAMED_COLORS = frozenset(
+    """
+    aliceblue antiquewhite aqua aquamarine azure beige bisque black
+    blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate
+    coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod
+    darkgray darkgrey darkgreen darkkhaki darkmagenta darkolivegreen darkorange darkorchid
+    darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet
+    deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen
+    fuchsia gainsboro ghostwhite gold goldenrod gray grey green
+    greenyellow honeydew hotpink indianred indigo ivory khaki lavender
+    lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray
+    lightgrey lightgreen lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey
+    lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine
+    mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen
+    mediumturquoise mediumvioletred
+    midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive
+    olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred
+    papayawhip peachpuff peru pink plum powderblue purple red
+    rebeccapurple rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell
+    sienna silver skyblue slateblue slategray slategrey snow springgreen
+    steelblue tan teal thistle tomato turquoise violet wheat
+    white whitesmoke yellow yellowgreen
+    """.split()
+)
+_NAMED_COLOR_RE = re.compile(rf"(?<![-\w.])({'|'.join(sorted(_NAMED_COLORS))})(?![-\w])", re.IGNORECASE)
+_PROP_DEF_RE = re.compile(r"--[A-Za-z][\w-]*\s*:[^;{}]*;")
+_THEME_COLOR_META_RE = re.compile(r"<meta\b[^>]*\bname=[\"']theme-color[\"'][^>]*>", re.IGNORECASE)
 
 
-def check_css_vars(css_files: list[str], source_files: list[str]) -> list[tuple[str, int, str]]:
-    """Report CSS custom properties used but not defined anywhere."""
-    defined: set[str] = set()
-    for path in css_files:
-        try:
-            for m in _VAR_DEF_RE.finditer(Path(path).read_text()):
-                defined.add(m.group(1))
-        except OSError:
-            pass
+def _strip_comments(
+    text: str,
+    *,
+    blank_strings: bool = False,
+    line_comments: bool = False,
+    html_comments: bool = False,
+) -> str:
+    """Blank comments and optional quoted strings while preserving line numbers."""
+    chars = list(text)
+    quote: str | None = None
+    i = 0
+    while i < len(chars):
+        if quote is not None:
+            if blank_strings and text[i] != "\n":
+                chars[i] = " "
+            if text[i] == "\\":
+                if blank_strings and i + 1 < len(chars) and text[i + 1] != "\n":
+                    chars[i + 1] = " "
+                i += 2
+                continue
+            if text[i] == quote:
+                quote = None
+            i += 1
+            continue
+
+        if text[i] in {'"', "'", "`"}:
+            quote = text[i]
+            if blank_strings:
+                chars[i] = " "
+            i += 1
+            continue
+
+        marker_length = 0
+        end_marker = ""
+        if html_comments and text.startswith("<!--", i):
+            marker_length = 4
+            end_marker = "-->"
+        elif text.startswith("/*", i):
+            marker_length = 2
+            end_marker = "*/"
+        elif line_comments and text.startswith("//", i):
+            end = text.find("\n", i)
+            if end < 0:
+                end = len(chars)
+            for j in range(i, end):
+                chars[j] = " "
+            i = end
+            continue
+
+        if marker_length:
+            end = text.find(end_marker, i + marker_length)
+            if end < 0:
+                end = len(chars)
+            else:
+                end += len(end_marker)
+            for j in range(i, end):
+                if chars[j] != "\n":
+                    chars[j] = " "
+            i = end
+            continue
+
+        i += 1
+    return "".join(chars)
+
+
+def _read_source(path: str | Path) -> str:
+    source_path = Path(path)
+    text = source_path.read_text(encoding="utf-8")
+    suffix = source_path.suffix
+    return _strip_comments(
+        text,
+        line_comments=suffix in {".html", ".ts", ".tsx"},
+        html_comments=suffix == ".html",
+    )
+
+
+def check_css_vars(variable_files: list[str], source_files: list[str], token_file: str) -> list[tuple[str, int, str]]:
+    """Report variables unavailable from the shared token file or owning source file."""
+    variable_texts = {Path(path).resolve(): _read_source(path) for path in variable_files}
+    token_path = Path(token_file).resolve()
+    token_text = variable_texts.get(token_path)
+    if token_text is None:
+        token_text = _read_source(token_file)
+    shared = {m.group(1) for m in _VAR_DEF_RE.finditer(token_text)}
+    local = {path: {m.group(1) for m in _VAR_DEF_RE.finditer(text)} for path, text in variable_texts.items()}
 
     errors: list[tuple[str, int, str]] = []
     for path in source_files:
-        try:
-            text = Path(path).read_text()
-            for m in _VAR_USE_RE.finditer(text):
-                var = m.group(1)
-                if var not in defined:
-                    errors.append((path, text[: m.start()].count("\n") + 1, var))
-        except OSError:
-            pass
+        resolved = Path(path).resolve()
+        text = variable_texts.get(resolved)
+        if text is None:
+            text = _read_source(path)
+        available = shared | local.get(resolved, set())
+        for m in _VAR_USE_RE.finditer(text):
+            var = m.group(1)
+            if var not in available:
+                errors.append((path, text[: m.start()].count("\n") + 1, var))
     return errors
 
 
 def extract_css_classes(text: str) -> set[str]:
-    cleaned = _CSS_GLOBAL_RE.sub("", _CSS_COMMENT_RE.sub("", text))
+    cleaned = _CSS_GLOBAL_RE.sub("", _strip_comments(text, blank_strings=True))
     return {m.group(1) for m in _CLASS_DEF_RE.finditer(cleaned)}
 
 
@@ -65,19 +170,11 @@ def check_unused_selectors(files: list[str]) -> list[str]:
     module_css = [f for f in files if f.endswith(".module.css")]
     ts_files = [f for f in files if f.endswith((".ts", ".tsx"))]
 
-    ts_texts: dict[str, str] = {}
-    for path in ts_files:
-        try:
-            ts_texts[path] = Path(path).read_text()
-        except OSError:
-            pass
+    ts_texts = {path: _read_source(path) for path in ts_files}
 
     errors: list[str] = []
     for css_path in module_css:
-        try:
-            css_text = Path(css_path).read_text()
-        except OSError:
-            continue
+        css_text = _read_source(css_path)
 
         defined_classes = extract_css_classes(css_text)
         if not defined_classes:
@@ -103,7 +200,7 @@ def check_unused_selectors(files: list[str]) -> list[str]:
             if dyn_line:
                 errors.append(
                     f"  {ts_path}:{dyn_line}: dynamic CSS module access `{alias}[...]`"
-                    " — use an explicit Record<Variant, string> map instead"
+                    ": use an explicit Record<Variant, string> map instead"
                 )
                 skip = True
                 break
@@ -117,52 +214,117 @@ def check_unused_selectors(files: list[str]) -> list[str]:
     return errors
 
 
-def check_semantic_color_tokens(css_files: list[str]) -> list[tuple[str, int, str]]:
-    """Reject component color literals that should be named in variables.css."""
+def _blank_span(match: re.Match[str]) -> str:
+    return re.sub(r"[^\n]", " ", match.group(0))
+
+
+def check_hardcoded_colors(files: list[str], *, check_named_colors: bool = True) -> list[tuple[str, int, str]]:
+    """Report raw colors outside CSS custom-property declarations.
+
+    Functional colors that take their color from a var() (for example,
+    rgb(var(--color-shadow-rgb), 0.5)) are token-based and stay allowed.
+    Named colors are checked in CSS, but not TypeScript, where words such as
+    "red" and "green" are also component variant names and visible copy.
+    """
     errors: list[tuple[str, int, str]] = []
-    for path in css_files:
-        if Path(path).name == "variables.css":
-            continue
-        try:
-            css_text = _CSS_COMMENT_RE.sub("", Path(path).read_text())
-        except OSError:
-            continue
-        for m in _COLOR_LITERAL_RE.finditer(css_text):
-            errors.append((path, css_text[: m.start()].count("\n") + 1, m.group()))
+    seen: set[tuple[str, int, str]] = set()
+    for path in files:
+        text = _PROP_DEF_RE.sub(_blank_span, _read_source(path))
+        if Path(path).suffix == ".html":
+            text = _THEME_COLOR_META_RE.sub(_blank_span, text)
+        for lineno, line in enumerate(text.splitlines(), start=1):
+            values: list[str] = []
+            for m in _HEX_COLOR_RE.finditer(line):
+                values.append(m.group(0).lower())
+            for m in _FUNC_COLOR_RE.finditer(line):
+                if "var(" in m.group(2):
+                    continue
+                values.append(f"{m.group(1).lower()}({re.sub(r'\s+', '', m.group(2))})")
+            if check_named_colors:
+                values.extend(m.group(1).lower() for m in _NAMED_COLOR_RE.finditer(line))
+            for value in values:
+                key = (path, lineno, value)
+                if key not in seen:
+                    seen.add(key)
+                    errors.append(key)
     return errors
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--source-path",
+        type=Path,
+        default=Path("frontend"),
+        help="frontend source directory (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--token-file",
+        type=Path,
+        default=Path("frontend/src/global.css"),
+        help="shared CSS token file (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--allow-hardcoded-colors",
+        action="store_true",
+        help="skip raw-color checks while migrating an existing frontend",
+    )
+    parser.add_argument(
+        "--allow-hardcoded-typescript-colors",
+        action="store_true",
+        help="skip raw-color checks in TypeScript and TSX files",
+    )
+    args = parser.parse_args()
+
     try:
-        files = subprocess.check_output(["git", "ls-files", "frontend/src"], text=True).splitlines()
+        files = subprocess.check_output(
+            ["git", "ls-files", "--cached", "--others", "--exclude-standard", str(args.source_path)],
+            text=True,
+        ).splitlines()
+        files = [path for path in files if Path(path).is_file()]
+        files.sort()
     except subprocess.CalledProcessError as e:
         print(f"Error running git: {e}", file=sys.stderr)
         return 1
 
     css_files = [f for f in files if f.endswith(".css")]
-    source_files = [f for f in files if f.endswith((".css", ".ts", ".tsx"))]
+    html_files = [f for f in files if f.endswith(".html")]
+    variable_files = css_files + html_files
+    token_file = str(args.token_file)
+    if token_file not in variable_files:
+        variable_files.append(token_file)
+    source_files = [f for f in files if f.endswith((".css", ".html", ".ts", ".tsx"))]
+
+    raw_color_source_files = [f for f in source_files if f.endswith((".ts", ".tsx"))]
+    try:
+        var_errors = check_css_vars(variable_files, source_files, token_file)
+        selector_errors = check_unused_selectors(files)
+        color_errors: list[tuple[str, int, str]] = []
+        if not args.allow_hardcoded_colors:
+            color_errors = check_hardcoded_colors(css_files + html_files)
+            if not args.allow_hardcoded_typescript_colors:
+                color_errors += check_hardcoded_colors(raw_color_source_files, check_named_colors=False)
+    except (OSError, UnicodeError) as e:
+        print(f"Error reading source file: {e}", file=sys.stderr)
+        return 1
 
     rc = 0
-
-    var_errors = check_css_vars(css_files, source_files)
     if var_errors:
         print("Error: undefined CSS custom properties:")
         for path, line, var in sorted(var_errors):
             print(f"  {path}:{line}: {var}")
         rc = 1
 
-    selector_errors = check_unused_selectors(files)
     if selector_errors:
         print("Error: CSS module selector issues:")
         for msg in selector_errors:
             print(msg)
         rc = 1
 
-    color_errors = check_semantic_color_tokens(css_files)
     if color_errors:
-        print("Error: component CSS must use semantic color tokens:")
-        for path, line, color in color_errors:
-            print(f"  {path}:{line}: {color}")
+        print(f"Error: hardcoded color values (use var(); shared tokens: {args.token_file}):")
+        for path, line, value in sorted(color_errors):
+            print(f"  {path}:{line}: {value}")
         rc = 1
 
     return rc

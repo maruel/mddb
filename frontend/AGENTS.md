@@ -183,7 +183,7 @@ To find a suitable icon:
 
 Icons behave like text. They default to `1em` size and inherit `currentColor`.
 
-- **Global rules**: Defined in `src/variables.css`.
+- **Global rules**: Defined in `src/global.css`.
 - **Custom sizing**: Set `font-size` on the parent container or the `svg` element itself.
 - **Vertical alignment**: Use `display: inline-flex` and `align-items: center` on the parent for perfect centering.
 
