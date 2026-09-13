@@ -363,14 +363,16 @@ test.describe('Select Column UX', () => {
     await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
     await page.locator(`[data-testid="sidebar-node-${tableData.id}"]`).click();
     await expect(page.locator('table')).toBeVisible({ timeout: 5000 });
+    // Wait for the data row to render (add-row has no row-handle).
+    await expect(page.locator('[data-testid="row-handle"]').first()).toBeVisible({ timeout: 5000 });
 
     // Click the Status cell to open the dropdown
     const row = page.locator('table tbody tr').first();
     await row.locator('td').last().click();
 
     // ArrowDown once moves to 'Alpha' (index 0 in filteredOptions; the -- none item is outside keyboard nav)
-    const searchInput = page.locator('input[placeholder*="Search"]').last();
-    await expect(searchInput).toBeVisible({ timeout: 3000 });
+    const searchInput = page.locator('[data-testid="select-dropdown"] input').first();
+    await expect(searchInput).toBeVisible({ timeout: 5000 });
     await searchInput.press('ArrowDown');
     // Press Enter to select it
     await searchInput.press('Enter');
