@@ -125,9 +125,7 @@ format-python:
 	@ruff check . --fix
 
 git-hooks:
-	@mkdir -p .git/hooks
-	@cp ./scripts/pre-commit .git/hooks/pre-commit
-	@cp ./scripts/pre-push .git/hooks/pre-push
+	@./scripts/install-git-hooks.sh
 	@git config merge.ours.driver true
 	@echo "✓ Git hooks installed"
 

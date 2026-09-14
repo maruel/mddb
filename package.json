@@ -15,6 +15,7 @@
     }
   },
   "scripts": {
+    "check:pre-commit": "scripts/check-staged.sh",
     "dev": "vite",
     "build": "node frontend/scripts/gen-material-icons.mjs && node frontend/scripts/gen-emoji-groups.mjs && vite build",
     "preview": "vite preview",
@@ -25,7 +26,9 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json",
     "lint": "tsc --noEmit && tsc --noEmit -p tsconfig.e2e.json && eslint frontend/src sdk e2e playwright.config.ts && prettier --check frontend/src && node frontend/scripts/check-css-modules.mjs",
     "lint:fix": "eslint frontend/src sdk e2e playwright.config.ts --fix && prettier --write frontend/src",
-    "format": "prettier --write frontend/src"
+    "format": "prettier --write frontend/src",
+    "hooks:install": "scripts/install-git-hooks.sh",
+    "prepare": "pnpm hooks:install"
   },
   "dependencies": {
     "@solid-primitives/i18n": "^2.2.1",
