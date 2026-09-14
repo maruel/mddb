@@ -3,10 +3,10 @@
 .panel {
   position: fixed;
   z-index: 1000;
-  background: var(--c-bg);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
   width: 280px;
   max-height: 420px;
   display: flex;
@@ -35,9 +35,9 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   padding: 2px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   font-size: 1rem;
@@ -46,7 +46,7 @@
 
 .closeBtn:hover {
   color: var(--c-text);
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }
 
 .optionList {
@@ -61,11 +61,11 @@
   gap: 4px;
   padding: 3px 8px;
   position: relative;
-  transition: background var(--transition);
+  transition: background var(--transition-fast);
 }
 
 .optionRow:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }
 
 .optionRowDragging {
@@ -73,11 +73,11 @@
 }
 
 .optionRowDragOver {
-  border-top: 2px solid var(--c-primary);
+  border-top: 2px solid var(--c-border-accent);
 }
 
 .dragHandle {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   cursor: grab;
   display: flex;
   align-items: center;
@@ -101,14 +101,14 @@
   height: 14px;
   border-radius: 50%;
   border: 1px solid var(--c-border);
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   cursor: pointer;
   padding: 0;
   display: block;
 }
 
 .swatchBtn:hover {
-  border-color: var(--c-text-light);
+  border-color: var(--c-border-muted);
 }
 
 .swatchPicker {
@@ -117,10 +117,10 @@
   left: 0;
   margin-top: 4px;
   z-index: 1010;
-  background: var(--c-bg);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
   padding: 6px;
   display: grid;
   grid-template-columns: repeat(4, 18px);
@@ -137,11 +137,11 @@
 }
 
 .swatchChoice:hover {
-  border-color: var(--c-text);
+  border-color: var(--c-border-strong);
 }
 
 .swatchChoiceActive {
-  border-color: var(--c-text) !important;
+  border-color: var(--c-border-strong) !important;
 }
 
 /* Option name input */
@@ -160,14 +160,14 @@
 
 .optionNameInput:focus {
   outline: none;
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }
 
 /* Usage count hint */
 
 .usageHint {
   font-size: 0.75rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   flex-shrink: 0;
   padding: 0 2px;
 }
@@ -178,7 +178,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   padding: 2px;
   border-radius: 3px;
   display: flex;
@@ -186,7 +186,7 @@
   font-size: 1rem;
   flex-shrink: 0;
   opacity: 0;
-  transition: opacity var(--transition);
+  transition: opacity var(--transition-fast);
 }
 
 .optionRow:hover .deleteBtn {
@@ -194,8 +194,8 @@
 }
 
 .deleteBtn:hover {
-  color: var(--c-danger);
-  background: var(--c-bg-alt);
+  color: var(--c-text-danger);
+  background: var(--c-surface-control-hover);
 }
 
 /* Add option button */
@@ -204,18 +204,18 @@
   border: none;
   background: none;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.82rem;
   padding: 8px 12px;
   text-align: left;
   width: 100%;
   border-top: 1px solid var(--c-border);
   flex-shrink: 0;
-  transition: background var(--transition);
+  transition: background var(--transition-fast);
 }
 
 .addOptionBtn:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
 }
 

@@ -15,7 +15,7 @@ const ServerSettingsPanel = lazy(() => import('../components/settings/ServerSett
 // Loading fallback
 function SettingsLoading() {
   const { t } = useI18n();
-  return <div style={{ padding: '2rem', color: 'var(--c-text-light)' }}>{t('common.loading')}</div>;
+  return <div style={{ padding: '2rem', color: 'var(--c-text-muted)' }}>{t('common.loading')}</div>;
 }
 
 // Guard component for server settings (global admin only)

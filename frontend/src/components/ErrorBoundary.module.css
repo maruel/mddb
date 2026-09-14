@@ -22,13 +22,13 @@
 .errorBoundary h2 {
   margin: 0 0 1rem;
   font-size: 1.5rem;
-  color: var(--c-danger);
+  color: var(--c-text-danger);
 }
 
 .errorMessage {
   margin: 0 0 1.5rem;
   font-size: 1rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .errorDetails {
@@ -40,7 +40,7 @@
 
 .errorDetails summary {
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.875rem;
 }
 
@@ -71,6 +71,6 @@
 .copyStatus {
   min-height: 1.25rem;
   margin-top: var(--s-2);
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.875rem;
 }

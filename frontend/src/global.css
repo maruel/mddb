@@ -14,73 +14,69 @@ body {
 
 :root {
   /* Semantic color, surface, state, and elevation foundation for the light theme. */
-  /* Primary brand color for buttons, links, accents */
-  --c-primary: #2563eb;
-  /* Hover state for primary buttons */
-  --c-primary-hover: #1d4ed8;
-  /* Focus ring border color */
+  /* Interactive accent roles. Separate roles may diverge in future themes. */
+  --c-action-primary: #2563eb;
+  --c-action-primary-hover: #1d4ed8;
+  --c-border-accent: #2563eb;
   --c-border-focus: #2563eb;
+  --c-control-accent: #2563eb;
+  --c-divider: #e5e7eb;
+  --c-focus-on-brand: #fff;
+  --c-text-accent: #2563eb;
 
-  /* Default text color */
+  /* Text roles. */
   --c-text: #1f2937;
-  /* Secondary/muted text */
-  --c-text-light: #6b7280;
-  /* Text placed on primary or dark brand surfaces */
+  --c-text-muted: #4b5563;
   --c-text-inverse: #fff;
-  /* Code and inline-code foreground */
   --c-text-code: #c7254e;
-  /* Positive status foreground */
+  --c-text-danger: #b91c1c;
   --c-text-success: #166534;
-  /* Warning status foreground */
   --c-text-warning: #92400e;
-  /* Strong warning status foreground */
   --c-text-warning-strong: #78350f;
 
-  /* Default canvas and raised content surface */
+  /* Neutral and interaction surfaces. */
   --c-surface: #fff;
-  /* Muted panel surface */
   --c-surface-subtle: #f5f5f5;
-  /* Recessed section and compact-control surface */
   --c-surface-sunken: #e5e7eb;
-  /* Subtle hover for menu items, list items, and table rows */
   --c-surface-hover: rgba(0, 0, 0, 0.04);
-  /* Selected item and editable field surface */
+  --c-surface-badge-neutral: #e5e7eb;
+  --c-surface-control: #e5e7eb;
+  --c-surface-control-disabled: #e5e7eb;
+  --c-surface-control-hover: #e5e7eb;
+  --c-surface-code: #e5e7eb;
+  --c-surface-panel: #e5e7eb;
+  --c-surface-page: #e5e7eb;
+  --c-surface-table-header: #e5e7eb;
   --c-surface-selected: #dbeafe;
-  /* Informational callout surface */
   --c-surface-info: #eff6ff;
-  /* Brand callout surface */
-  --c-surface-primary: #eef6ff;
-  /* Error and destructive-action surfaces */
+  --c-surface-accent: #eef6ff;
+  --c-surface-accent-solid: #2563eb;
+
+  /* Status surfaces. */
   --c-surface-danger: #fef2f2;
   --c-surface-danger-strong: #fee2e2;
-  /* Translucent hover and temporary-feedback danger surface. */
   --c-surface-danger-subtle: rgba(239, 68, 68, 0.1);
-  /* Success and enabled-state surfaces */
+  --c-surface-danger-solid: #dc2626;
   --c-surface-success: #f0fdf4;
   --c-surface-success-strong: #dcfce7;
-  /* Warning, conflict, and paused-state surfaces */
+  --c-surface-success-solid: #16a34a;
   --c-surface-warning: #fff3cd;
   --c-surface-warning-strong: #fef3c7;
   --c-surface-warning-subtle: #fffbeb;
-  /* Cancelled imports retain their distinct warning callout surface. */
   --c-surface-warning-cancelled: #fefce8;
+  --c-surface-warning-solid: #ffc107;
 
-  /* Default border color */
+  /* Border roles. */
   --c-border: #e5e7eb;
-  /* Destructive and warning state borders */
+  --c-border-muted: #4b5563;
+  --c-border-strong: #1f2937;
   --c-border-danger: #fecaca;
+  --c-border-danger-strong: #dc2626;
   --c-border-success: #22c55e;
   --c-border-warning: #ffc107;
   --c-border-warning-subtle: #fde68a;
-  /* Cancelled imports use a stronger warning border than generic warnings. */
   --c-border-warning-cancelled: #eab308;
-  /* Success messages, positive actions */
-  --c-success: #16a34a;
-  /* Errors, destructive actions */
-  --c-danger: #dc2626;
-  /* Brand/provider surfaces whose identities are part of their login controls */
-  --c-provider-github: #24292e;
-  --c-provider-microsoft: #2f2f2f;
+
   /* Calculated contrast for colored select-option chips. */
   --c-chip-text-dark: #111;
   --c-chip-text-light: #fff;
@@ -90,24 +86,12 @@ body {
   --c-overlay-drawer: rgba(0, 0, 0, 0.35);
   --c-overlay-subtle: rgba(0, 0, 0, 0.3);
   --c-overlay-image: rgba(0, 0, 0, 0.25);
-  --c-on-primary-muted: rgba(255, 255, 255, 0.85);
-  --c-on-primary-subtle: rgba(255, 255, 255, 0.5);
-  /* Header actions use the original low-emphasis white overlay. */
-  --c-on-primary-action-rest: rgba(255, 255, 255, 0.15);
-  --c-on-primary-action-hover: rgba(255, 255, 255, 0.25);
-  /* The avatar control remains more prominent than adjacent header actions. */
-  --c-on-primary-avatar-rest: rgba(255, 255, 255, 0.2);
-  /* Dismissal is intentionally quieter than a general header-action hover. */
-  --c-on-primary-dismiss-hover: rgba(255, 255, 255, 0.1);
-  --c-on-primary-border: rgba(255, 255, 255, 0.3);
-  --c-on-primary-border-hover: rgba(255, 255, 255, 0.6);
-  --c-on-primary-image: rgba(255, 255, 255, 0.9);
-
-  /* Compatibility aliases for existing component modules. */
-  --c-bg: var(--c-surface);
-  --c-bg-alt: var(--c-surface-sunken);
-  --c-bg-hover: var(--c-surface-hover);
-  --c-error-bg: var(--c-surface-danger-subtle);
+  --c-on-brand-text-muted: rgba(255, 255, 255, 0.92);
+  --c-on-brand-text-subtle: rgba(255, 255, 255, 0.5);
+  --c-on-brand-control: rgba(255, 255, 255, 0.15);
+  --c-on-brand-control-hover: rgba(255, 255, 255, 0.25);
+  --c-on-brand-border: rgba(255, 255, 255, 0.3);
+  --c-on-brand-border-hover: rgba(255, 255, 255, 0.6);
 
   /* Spacing scale: 4px base (s-05=2px, s-1=4px, s-2=8px, s-3=16px, s-4=24px, s-5=32px, s-6=40px) */
   --s-05: 0.125rem;
@@ -121,24 +105,22 @@ body {
   /* Typography */
   --font-mono: ui-monospace, monospace;
 
-  /* Default border radius */
-  --radius: 6px;
-  /* Smaller border radius for compact elements */
+  /* Shape scale. */
+  --radius-md: 6px;
   --radius-sm: 4px;
-  /* Elevation tokens keep overlays and surfaces visually ordered. */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  /* Elevation roles. */
+  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.1);
   --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.12);
   --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.15);
   --shadow-drawer: -4px 0 16px rgba(0, 0, 0, 0.12);
   --shadow-dialog: 0 10px 40px rgba(0, 0, 0, 0.2);
-  --shadow-icon-picker: 0 8px 24px rgba(0, 0, 0, 0.15);
   --shadow-control-selected: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.12);
   --focus-ring: 0 0 0 2px var(--c-surface-selected);
-  /* Compatibility aliases for existing component modules. */
-  --shadow: var(--shadow-sm);
-  --shadow-lg: var(--shadow-menu);
-  /* Default transition timing */
-  --transition: 0.15s ease;
+
+  /* Motion scale. */
+  --transition-fast: 0.15s ease;
 }
 
 /* Global Icon Styling */

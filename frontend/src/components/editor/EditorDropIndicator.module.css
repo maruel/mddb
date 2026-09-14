@@ -15,7 +15,7 @@
   left: 28px; /* Align with block content (past the handle area) */
   right: 8px;
   height: 2px;
-  background: var(--c-primary);
+  background: var(--c-surface-accent-solid);
   border-radius: 1px;
   z-index: 100;
 }
@@ -28,7 +28,7 @@
   top: -3px;
   width: 8px;
   height: 8px;
-  background: var(--c-primary);
+  background: var(--c-surface-accent-solid);
   border-radius: 50%;
 }
 

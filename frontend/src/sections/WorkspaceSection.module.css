@@ -17,7 +17,7 @@
 }
 
 .header {
-  background: var(--c-primary);
+  background: var(--c-surface-accent-solid);
   color: var(--c-text-inverse);
   padding: var(--s-1) var(--s-4);
   display: flex;
@@ -55,11 +55,11 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: var(--c-success);
+  background: var(--c-surface-success-solid);
 }
 
 .connectionReconnecting .connectionIndicator {
-  background: var(--c-border-warning);
+  background: var(--c-surface-warning-solid);
 }
 
 .container {
@@ -73,7 +73,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--c-bg);
+  background: var(--c-surface);
 }
 
 .editor {
@@ -102,7 +102,7 @@
   padding: var(--s-05) var(--s-2);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-sm);
-  background: var(--c-bg);
+  background: var(--c-surface);
   cursor: pointer;
   font-size: 0.8rem;
 }
@@ -113,7 +113,7 @@
 
 .editorLoading {
   padding: var(--s-2);
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .editorHeader {
@@ -145,11 +145,11 @@
 .unsavedIndicator,
 .savingIndicator,
 .savedIndicator {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .saveErrorIndicator {
-  color: var(--c-danger);
+  color: var(--c-text-danger);
 }
 
 .savingIndicator svg {
@@ -180,7 +180,7 @@
 }
 
 .tableView {
-  border-top: 3px solid var(--c-bg-alt);
+  border-top: 3px solid var(--c-border);
   padding: var(--s-3);
   display: flex;
   flex-direction: column;
@@ -210,13 +210,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.9rem;
 }
 
 .breadcrumbs {
   font-size: 0.85rem;
-  color: var(--c-on-primary-muted);
+  color: var(--c-on-brand-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -250,7 +250,7 @@
 }
 
 .breadcrumbItem:focus-visible {
-  outline: 2px solid var(--c-text-inverse);
+  outline: 2px solid var(--c-focus-on-brand);
   outline-offset: 2px;
 }
 
@@ -265,12 +265,12 @@
 }
 
 .breadcrumbSeparator {
-  color: var(--c-on-primary-subtle);
+  color: var(--c-on-brand-text-subtle);
   flex-shrink: 0;
 }
 
 .historyPanel {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-panel);
   border-bottom: 1px solid var(--c-border);
   padding: var(--s-3);
   max-height: 250px;
@@ -299,22 +299,22 @@
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);
-  background: var(--c-bg);
-  border-radius: var(--radius);
+  background: var(--c-surface);
+  border-radius: var(--radius-md);
   color: inherit;
   cursor: pointer;
   font: inherit;
   text-align: left;
-  transition: border-color var(--transition);
+  transition: border-color var(--transition-fast);
 }
 
 .historyButton:hover {
-  border-color: var(--c-primary);
+  border-color: var(--c-border-accent);
 }
 
 .activeHistoryItem .historyButton {
-  border-color: var(--c-primary);
-  background: var(--c-bg-alt);
+  border-color: var(--c-border-accent);
+  background: var(--c-surface-selected);
 }
 
 .historyButton:focus-visible {
@@ -325,16 +325,16 @@
 .noHistory {
   padding: var(--s-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  background: var(--c-bg);
-  color: var(--c-text-light);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  color: var(--c-text-muted);
 }
 
 .historyMeta {
   display: flex;
   justify-content: space-between;
   font-size: 0.75rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   margin-bottom: var(--s-1);
 }
 
@@ -344,7 +344,7 @@
 
 .historyHash {
   font-family: var(--font-mono);
-  background: var(--c-bg-alt);
+  background: var(--c-surface-code);
   padding: 0 4px;
   border-radius: 3px;
 }
@@ -428,7 +428,7 @@
 
 .previewPane {
   border-top: 1px solid var(--c-border);
-  background: var(--c-bg);
+  background: var(--c-surface);
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -441,7 +441,7 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--s-2) var(--s-4);
-  background: var(--c-bg-alt);
+  background: var(--c-surface-panel);
   border-bottom: 1px solid var(--c-border);
 }
 
@@ -458,21 +458,21 @@
 
 .previewMeta {
   font-size: 0.75rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .closePreviewButton {
   background: transparent;
   border: none;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   cursor: pointer;
   font-size: 0.85rem;
   padding: var(--s-1) var(--s-2);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .closePreviewButton:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
 }
 

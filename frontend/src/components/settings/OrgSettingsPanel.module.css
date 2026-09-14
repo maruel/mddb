@@ -17,9 +17,9 @@
   padding: var(--s-3) var(--s-4);
   cursor: pointer;
   font-weight: 500;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   border-bottom: 2px solid transparent;
-  transition: all var(--transition);
+  transition: all var(--transition-fast);
 }
 
 .tabs button:hover {
@@ -27,8 +27,8 @@
 }
 
 .tabs button.activeTab {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-text-accent);
+  border-bottom-color: var(--c-border-accent);
 }
 
 .section {
@@ -43,24 +43,24 @@
 .error {
   padding: var(--s-3);
   background: var(--c-surface-danger);
-  color: var(--c-danger);
-  border-radius: var(--radius);
+  color: var(--c-text-danger);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
 }
 
 .success {
   padding: var(--s-3);
   background: var(--c-surface-success);
-  color: var(--c-success);
-  border-radius: var(--radius);
+  color: var(--c-text-success);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
 }
 
 .settingsForm {
-  background: var(--c-bg);
+  background: var(--c-surface);
   padding: var(--s-4);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .formItem {
@@ -79,7 +79,7 @@
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .formGrid {
@@ -96,7 +96,7 @@
 .settingsForm h4 {
   font-size: 1rem;
   margin: var(--s-4) 0 var(--s-3) 0;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .settingsForm h4:first-of-type {
@@ -105,16 +105,16 @@
 
 .saveButton {
   padding: var(--s-3) var(--s-5);
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: 500;
 }
 
 .saveButton:hover {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }
 
 .saveButton:disabled {

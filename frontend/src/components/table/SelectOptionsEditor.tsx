@@ -232,7 +232,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
                               class={styles.swatchChoice}
                               style={
                                 color === NO_OPTION_COLOR
-                                  ? { background: 'var(--c-bg-hover)', border: '1px solid var(--c-border)' }
+                                  ? { background: 'var(--c-surface-hover)', border: '1px solid var(--c-border)' }
                                   : { background: color }
                               }
                               classList={{ [`${styles.swatchChoiceActive}`]: (opt.color ?? '') === color }}

@@ -14,14 +14,14 @@
 
 .table th {
   font-weight: 600;
-  color: var(--c-text-light);
-  background: var(--c-bg-alt);
+  color: var(--c-text-muted);
+  background: var(--c-surface-table-header);
 }
 
 .roleSelect {
   padding: var(--s-2);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .roleSelect:disabled {
@@ -31,15 +31,15 @@
 
 .removeButton {
   padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--c-danger);
-  border-radius: var(--radius);
+  border: 1px solid var(--c-border-danger-strong);
+  border-radius: var(--radius-md);
   background: transparent;
-  color: var(--c-danger);
+  color: var(--c-text-danger);
   cursor: pointer;
 }
 
 .removeButton:hover {
-  background: var(--c-danger);
+  background: var(--c-surface-danger-solid);
   color: var(--c-text-inverse);
 }
 

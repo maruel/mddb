@@ -2,7 +2,7 @@
 
 .sidebar {
   width: 240px;
-  background: var(--c-bg);
+  background: var(--c-surface);
   border-right: 1px solid var(--c-border);
   display: flex;
   flex-direction: column;
@@ -23,7 +23,7 @@
     z-index: 100;
     transform: translateX(-100%);
     transition:
-      transform var(--transition),
+      transform var(--transition-fast),
       visibility 0s 0.15s;
     visibility: hidden;
   }
@@ -31,7 +31,7 @@
   .sidebar.mobileOpen {
     transform: translateX(0);
     transition:
-      transform var(--transition),
+      transform var(--transition-fast),
       visibility 0s 0s;
     visibility: visible;
   }

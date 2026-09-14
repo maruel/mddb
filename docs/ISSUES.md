@@ -1,14 +1,12 @@
 # Code Review Issues
 
-Issues identified during full-stack review. Items marked ~~strikethrough~~ have been fixed.
+Outstanding issues identified during full-stack review.
 
 ## High Priority
 
 ### Backend
 
-- ~~**Missing Limit/Offset validation** — `ListRecordsRequest`, `SearchRequest`, `ListNodeVersionsRequest` have no bounds checking. Could allow negative offsets or huge limits. (`request.go`)~~ **DONE**
 - **Unimplemented search** — `search_service.go` returns "not implemented" for full-text search. Two TODOs remain.
-- ~~**Context misuse in goroutines** — `auth.go:439` captures request `ctx` in async email goroutine that outlives the request; `github_webhook.go:91` and `notion_import.go:81` use `context.Background()`.~~ **DONE**
 
 ### Frontend
 
@@ -35,9 +33,7 @@ Issues identified during full-stack review. Items marked ~~strikethrough~~ have 
 - **9 independent UI state signals in TableTable.tsx** — editing, menus, filter panel, options editor, rename, drag, resize all independent. No mutual exclusion. A discriminated union / state machine would prevent impossible states.
 - **Prop drilling in view components** — Gallery, Grid, List, Board all pass 5+ CRUD callbacks. A `TableViewContext` would simplify.
 - **`setTimeout(() => el?.select(), 0)` repeated 5x** — ViewTabs, SelectOptionsEditor, FieldEditor (2x), TableCell. Extract to utility using `requestAnimationFrame`.
-- **Complete semantic CSS token adoption** — Rename remaining legacy `--c-bg*` and `--shadow*` consumers to their semantic equivalents, then remove compatibility aliases so styles have one canonical vocabulary.
 - **Allow documented component color exceptions** — Extend the CSS color-literal rule with a narrowly scoped inline suppression for genuinely component-owned brand or data colors that cannot be represented as shared semantic tokens.
-- **Rationalize single-use visual tokens** — Establish approved on-primary opacity and elevation scales, then replace component-oriented token names where visual changes have explicit design approval.
 - **Harden workspace-tree focus fallback** — After workspace replacement, fall back to the first tree item when stale roving-tabindex state leaves no active item.
 - **Simplify shortcut editing guard** — Remove the redundant direct target check now that the ancestor editable-control check owns the shortcut exclusion rule.
 

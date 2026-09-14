@@ -149,7 +149,7 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
                                     style={
                                       color === NO_OPTION_COLOR
                                         ? {
-                                            background: 'var(--c-bg-hover)',
+                                            background: 'var(--c-surface-hover)',
                                             border: '1px solid var(--c-border)',
                                           }
                                         : { background: color }

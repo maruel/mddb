@@ -10,9 +10,9 @@
 .noGroup {
   padding: var(--s-5);
   text-align: center;
-  color: var(--c-text-light);
-  background: var(--c-bg-alt);
-  border-radius: var(--radius);
+  color: var(--c-text-muted);
+  background: var(--c-surface-panel);
+  border-radius: var(--radius-md);
   border: 2px dashed var(--c-border);
   margin: var(--s-4);
 }
@@ -28,7 +28,7 @@
 
 .groupByLabel {
   font-size: 0.82rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   white-space: nowrap;
 }
 
@@ -36,9 +36,9 @@
   font-size: 0.82rem;
   font-family: inherit;
   color: var(--c-text);
-  background: var(--c-bg);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   padding: 2px var(--s-2);
   cursor: pointer;
 }
@@ -60,8 +60,8 @@
 .column {
   --column-color: var(--c-border);
   flex: 0 0 280px;
-  background: var(--c-bg-alt);
-  border-radius: var(--radius);
+  background: var(--c-surface-panel);
+  border-radius: var(--radius-md);
   display: flex;
   flex-direction: column;
   max-height: 100%;
@@ -94,7 +94,7 @@
 }
 
 .columnCount {
-  background: var(--c-border);
+  background: var(--c-surface-badge-neutral);
   font-size: 0.75rem;
   padding: 2px 8px;
   border-radius: 10px;
@@ -109,11 +109,11 @@
 }
 
 .card {
-  background: var(--c-bg);
-  border-radius: var(--radius);
+  background: var(--c-surface);
+  border-radius: var(--radius-md);
   padding: var(--s-3);
   margin-bottom: var(--s-2);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-raised);
   cursor: grab;
   flex-direction: column;
 }
@@ -135,7 +135,7 @@
 }
 
 .fieldName {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   flex-shrink: 0;
   font-size: 0.78rem;
 }
@@ -164,7 +164,7 @@
 
 .titleInput:focus {
   outline: none;
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   border-radius: 4px;
   padding: 2px var(--s-1);
 }
@@ -174,17 +174,17 @@
   padding: var(--s-2) var(--s-2);
   border: none;
   background: transparent;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.82rem;
   text-align: left;
   cursor: pointer;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   transition:
-    background var(--transition),
-    color var(--transition);
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .addCard:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
 }

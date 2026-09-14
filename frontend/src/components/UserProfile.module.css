@@ -23,15 +23,15 @@
   border: none;
   font-size: 0.9rem;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   padding: var(--s-2) var(--s-3);
-  border-radius: var(--radius);
-  transition: all var(--transition);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
 }
 
 .backButton:hover {
   color: var(--c-text);
-  background: var(--c-bg-alt);
+  background: var(--c-surface-control-hover);
 }
 
 .userInfoSection {
@@ -39,8 +39,8 @@
   align-items: center;
   gap: var(--s-5);
   padding: var(--s-5);
-  background: var(--c-bg-alt);
-  border-radius: var(--radius);
+  background: var(--c-surface-panel);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-5);
 }
 
@@ -48,7 +48,7 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: var(--c-primary);
+  background: var(--c-surface-accent-solid);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,17 +79,17 @@
 }
 
 .userEmail {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   margin: 0 0 var(--s-2) 0;
 }
 
 .userRole {
   display: inline-block;
   padding: var(--s-1) var(--s-2);
-  background: var(--c-primary);
+  background: var(--c-surface-accent-solid);
   color: var(--c-text-inverse);
   font-size: 0.75rem;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   text-transform: capitalize;
 }
 
@@ -105,24 +105,24 @@
 .error {
   padding: var(--s-3);
   background: var(--c-surface-danger);
-  color: var(--c-danger);
-  border-radius: var(--radius);
+  color: var(--c-text-danger);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
 }
 
 .success {
   padding: var(--s-3);
   background: var(--c-surface-success);
-  color: var(--c-success);
-  border-radius: var(--radius);
+  color: var(--c-text-success);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
 }
 
 .settingsForm {
-  background: var(--c-bg);
+  background: var(--c-surface);
   padding: var(--s-4);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .formItem {
@@ -141,7 +141,7 @@
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .checkboxLabel {
@@ -159,16 +159,16 @@
 
 .saveButton {
   padding: var(--s-3) var(--s-5);
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: 500;
 }
 
 .saveButton:hover {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }
 
 .saveButton:disabled {
@@ -187,9 +187,9 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--s-3) var(--s-4);
-  background: var(--c-bg);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .orgInfo {
@@ -204,7 +204,7 @@
 
 .orgNameLink {
   font-weight: 500;
-  color: var(--c-primary);
+  color: var(--c-text-accent);
   text-decoration: none;
 }
 
@@ -215,14 +215,14 @@
 .orgRole {
   font-size: 0.75rem;
   padding: var(--s-1) var(--s-2);
-  background: var(--c-bg-alt);
-  border-radius: var(--radius);
-  color: var(--c-text-light);
+  background: var(--c-surface-badge-neutral);
+  border-radius: var(--radius-md);
+  color: var(--c-text-muted);
   text-transform: capitalize;
 }
 
 .emptyState {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-style: italic;
   padding: var(--s-3);
 }

@@ -1,5 +1,7 @@
 /* Styles for the PageHeader component. */
 .pageHeader {
+  --cover-control-surface: rgba(255, 255, 255, 0.9);
+
   display: flex;
   flex-direction: column;
 }
@@ -10,12 +12,12 @@
   width: 100%;
   height: 200px;
   overflow: hidden;
-  background: var(--c-bg-alt);
+  background: var(--c-surface-subtle);
   border-bottom: 1px solid var(--c-border);
 }
 
 .coverWrapper.coverDragging {
-  outline: 2px dashed var(--c-primary);
+  outline: 2px dashed var(--c-border-accent);
   outline-offset: -2px;
 }
 
@@ -47,7 +49,7 @@
 .coverBtn {
   font-size: 0.75rem;
   padding: 4px 10px;
-  background: var(--c-on-primary-image);
+  background: var(--cover-control-surface);
   color: var(--c-text);
   border: none;
   border-radius: 4px;
@@ -90,7 +92,7 @@
 }
 
 .iconButton:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }
 
 .pageIcon {
@@ -130,7 +132,7 @@
   align-items: center;
   gap: var(--s-1);
   font-size: 0.8rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   background: none;
   border: none;
   cursor: pointer;
@@ -144,7 +146,7 @@
 
 .hoverBtn:hover {
   color: var(--c-text);
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }
 
 .hoverBtn svg {

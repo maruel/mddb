@@ -10,10 +10,10 @@
 }
 
 .modal {
-  background: var(--c-bg);
+  background: var(--c-surface);
   width: 100%;
   max-width: 440px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-dialog);
   padding: var(--s-5);
   animation: slideUp 0.2s ease-out;
@@ -37,7 +37,7 @@
 }
 
 .header p {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.9rem;
 }
 
@@ -66,30 +66,30 @@
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .formGroup input:disabled {
-  background: var(--c-bg-alt);
-  color: var(--c-text-light);
+  background: var(--c-surface-control-disabled);
+  color: var(--c-text-muted);
 }
 
 .primaryButton {
   display: block;
   width: 100%;
   padding: var(--s-3);
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--transition);
+  transition: background var(--transition-fast);
 }
 
 .primaryButton:hover {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }
 
 .primaryButton:disabled {
@@ -101,14 +101,14 @@
   padding: var(--s-3) var(--s-4);
   background: none;
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  color: var(--c-text-light);
+  border-radius: var(--radius-md);
+  color: var(--c-text-muted);
   cursor: pointer;
   font-weight: 500;
 }
 
 .secondaryButton:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-control-hover);
 }
 
 .actions {
@@ -128,8 +128,8 @@
 .error {
   padding: var(--s-3);
   background: var(--c-surface-danger);
-  color: var(--c-danger);
-  border-radius: var(--radius);
+  color: var(--c-text-danger);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
   text-align: center;
   font-size: 0.85rem;

@@ -1,17 +1,20 @@
 /* Styles for the Auth component. */
 .authContainer {
+  --auth-provider-github-surface: #24292e;
+  --auth-provider-microsoft-surface: #2f2f2f;
+
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: var(--c-bg-alt);
+  background: var(--c-surface-page);
 }
 
 .authForm {
-  background: var(--c-bg);
+  background: var(--c-surface);
   padding: var(--s-5);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
   width: 100%;
   max-width: 380px;
 }
@@ -30,30 +33,30 @@
   display: block;
   margin-bottom: var(--s-2);
   font-size: 0.85rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .formGroup input {
   width: 100%;
   padding: var(--s-2) var(--s-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .authForm button[type='submit'] {
   width: 100%;
   padding: var(--s-3);
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 0.9rem;
   margin-top: var(--s-3);
 }
 
 .authForm button[type='submit']:hover {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }
 
 .authForm button[type='submit']:disabled {
@@ -62,9 +65,9 @@
 
 .error {
   background: var(--c-surface-danger);
-  color: var(--c-danger);
+  color: var(--c-text-danger);
   padding: var(--s-3);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-3);
   text-align: center;
   font-size: 0.85rem;
@@ -74,13 +77,13 @@
   margin-top: var(--s-4);
   text-align: center;
   font-size: 0.85rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .toggle button {
   background: none;
   border: none;
-  color: var(--c-primary);
+  color: var(--c-text-accent);
   cursor: pointer;
   text-decoration: underline;
 }
@@ -93,13 +96,13 @@
 }
 
 .authFooter a {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.75rem;
   text-decoration: none;
 }
 
 .authFooter a:hover {
-  color: var(--c-primary);
+  color: var(--c-text-accent);
 }
 
 .divider {
@@ -107,7 +110,7 @@
   align-items: center;
   margin-top: var(--s-4);
   margin-bottom: var(--s-3);
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.85rem;
 }
 
@@ -143,24 +146,24 @@
   justify-content: center;
   align-items: center;
   padding: var(--s-3);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   text-decoration: none;
   font-size: 0.85rem;
-  transition: opacity var(--transition);
+  transition: opacity var(--transition-fast);
 }
 
 .googleButton {
-  background: var(--c-bg);
+  background: var(--c-surface);
   color: var(--c-text);
   border: 1px solid var(--c-border);
 }
 
 .googleButton:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-control-hover);
 }
 
 .microsoftButton {
-  background: var(--c-provider-microsoft);
+  background: var(--auth-provider-microsoft-surface);
   color: var(--c-text-inverse);
   border: none;
 }
@@ -170,7 +173,7 @@
 }
 
 .githubButton {
-  background: var(--c-provider-github);
+  background: var(--auth-provider-github-surface);
   color: var(--c-text-inverse);
   border: none;
 }
@@ -180,11 +183,11 @@
 }
 
 .oauthButton {
-  background: var(--c-bg);
+  background: var(--c-surface);
   color: var(--c-text);
   border: 1px solid var(--c-border);
 }
 
 .oauthButton:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-control-hover);
 }

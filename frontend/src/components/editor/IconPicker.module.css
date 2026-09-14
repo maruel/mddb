@@ -1,11 +1,13 @@
 /* Styles for the IconPicker component. */
 .picker {
+  --icon-picker-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+
   position: absolute;
   z-index: 200;
-  background: var(--c-bg);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: 8px;
-  box-shadow: var(--shadow-icon-picker);
+  box-shadow: var(--icon-picker-shadow);
   width: 320px;
   overflow: hidden;
   display: flex;
@@ -23,14 +25,14 @@
 .pickerTitle {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .removeBtn {
   font-size: 0.75rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   background: none;
   border: none;
   cursor: pointer;
@@ -39,8 +41,8 @@
 }
 
 .removeBtn:hover {
-  color: var(--c-danger);
-  background: var(--c-error-bg);
+  color: var(--c-text-danger);
+  background: var(--c-surface-danger-subtle);
 }
 
 .tabs {
@@ -57,7 +59,7 @@
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   transition:
     color 0.15s,
     border-color 0.15s;
@@ -68,8 +70,8 @@
 }
 
 .activeTab {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-text-accent);
+  border-bottom-color: var(--c-border-accent);
 }
 
 .searchInput {
@@ -78,7 +80,7 @@
   border: 1px solid var(--c-border);
   border-radius: 6px;
   font-size: 0.85rem;
-  background: var(--c-bg);
+  background: var(--c-surface);
   color: var(--c-text);
   outline: none;
 }
@@ -96,7 +98,7 @@
 .groupLabel {
   font-size: 0.7rem;
   font-weight: 600;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   padding: 6px 4px 2px;
@@ -130,7 +132,7 @@
 }
 
 .emojiBtn:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }
 
 .emojiDisplay {
@@ -163,8 +165,8 @@
 }
 
 .iconBtn:hover {
-  background: var(--c-bg-hover);
-  color: var(--c-primary);
+  background: var(--c-surface-hover);
+  color: var(--c-text-accent);
 }
 
 .iconBtn :global(.material-symbols-outlined) {
@@ -175,5 +177,5 @@
   padding: 24px;
   text-align: center;
   font-size: 0.85rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }

@@ -52,7 +52,7 @@ export function createEditorState(doc: ProseMirrorNode, extraPlugins?: Plugin[])
       numberCounterPlugin,
 
       // UI polish
-      dropCursor({ color: 'var(--c-primary)', width: 2 }),
+      dropCursor({ color: 'var(--c-control-accent)', width: 2 }),
       gapCursor(),
 
       // Extra plugins passed from Editor (e.g. slash menu, upload)

@@ -23,15 +23,15 @@
   border: none;
   font-size: 0.9rem;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   padding: var(--s-2) var(--s-3);
-  border-radius: var(--radius);
-  transition: all var(--transition);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
 }
 
 .backButton:hover {
   color: var(--c-text);
-  background: var(--c-bg-alt);
+  background: var(--c-surface-control-hover);
 }
 
 .section {
@@ -57,29 +57,29 @@
 
 .table th {
   font-weight: 600;
-  color: var(--c-text-light);
-  background: var(--c-bg-alt);
+  color: var(--c-text-muted);
+  background: var(--c-surface-table-header);
 }
 
 .roleSelect {
   padding: var(--s-2);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .error {
   padding: var(--s-3);
   background: var(--c-surface-danger);
-  color: var(--c-danger);
-  border-radius: var(--radius);
+  color: var(--c-text-danger);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
 }
 
 .success {
   padding: var(--s-3);
   background: var(--c-surface-success);
-  color: var(--c-success);
-  border-radius: var(--radius);
+  color: var(--c-text-success);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
 }
 
@@ -96,9 +96,9 @@
   padding: var(--s-3) var(--s-4);
   cursor: pointer;
   font-weight: 500;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   border-bottom: 2px solid transparent;
-  transition: all var(--transition);
+  transition: all var(--transition-fast);
 }
 
 .tabs button:hover {
@@ -106,15 +106,15 @@
 }
 
 .tabs button.activeTab {
-  color: var(--c-primary);
-  border-bottom-color: var(--c-primary);
+  color: var(--c-text-accent);
+  border-bottom-color: var(--c-border-accent);
 }
 
 .settingsForm {
-  background: var(--c-bg);
+  background: var(--c-surface);
   padding: var(--s-4);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .formItem {
@@ -133,21 +133,21 @@
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .saveButton {
   padding: var(--s-3) var(--s-5);
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: 500;
 }
 
 .saveButton:hover {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }
 
 .saveButton:disabled {
@@ -162,8 +162,8 @@
 .inviteForm {
   margin-top: var(--s-5);
   padding: var(--s-4);
-  background: var(--c-bg-alt);
-  border-radius: var(--radius);
+  background: var(--c-surface-panel);
+  border-radius: var(--radius-md);
 }
 
 .inviteForm h4 {
@@ -179,7 +179,7 @@
 .formGroup select {
   padding: var(--s-2);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .formGroup input {
@@ -188,13 +188,13 @@
 
 .formGroup button {
   padding: var(--s-2) var(--s-4);
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .formGroup button:hover {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }

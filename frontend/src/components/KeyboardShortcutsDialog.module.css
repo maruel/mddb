@@ -9,7 +9,7 @@
 }
 
 .header p {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.9rem;
 }
 

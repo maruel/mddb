@@ -11,8 +11,8 @@
 .error {
   padding: var(--s-2) var(--s-3);
   background: var(--c-surface-danger);
-  color: var(--c-danger);
-  border-radius: var(--radius);
+  color: var(--c-text-danger);
+  border-radius: var(--radius-md);
   font-size: 0.85rem;
   margin-bottom: var(--s-3);
 }
@@ -24,18 +24,18 @@
 .pushButton {
   padding: var(--s-2) var(--s-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  background: var(--c-bg);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
   color: var(--c-text);
   cursor: pointer;
   font-size: 0.85rem;
   transition:
-    background var(--transition),
-    border-color var(--transition);
+    background var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .pushButton:hover:not(:disabled) {
-  border-color: var(--c-primary);
+  border-color: var(--c-border-accent);
 }
 
 .pushButton:disabled {
@@ -44,14 +44,14 @@
 }
 
 .pushActive {
-  background: var(--c-primary);
+  background: var(--c-surface-accent-solid);
   color: var(--c-text-inverse);
-  border-color: var(--c-primary);
+  border-color: var(--c-border-accent);
 }
 
 .pushDenied {
   font-size: 0.8rem;
-  color: var(--c-danger);
+  color: var(--c-text-danger);
   margin-top: var(--s-2);
 }
 
@@ -65,7 +65,7 @@
   text-align: center;
   padding: var(--s-2);
   font-weight: 500;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   border-bottom: 1px solid var(--c-border);
 }
 

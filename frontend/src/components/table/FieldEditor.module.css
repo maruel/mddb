@@ -13,7 +13,7 @@
 
 .input:focus {
   outline: none;
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   border-radius: 4px;
   padding: 1px var(--s-1);
 }
@@ -22,7 +22,7 @@
   cursor: pointer;
   width: 14px;
   height: 14px;
-  accent-color: var(--c-primary);
+  accent-color: var(--c-control-accent);
 }
 
 /* Shared chip and options styles for single- and multi-select */
@@ -46,7 +46,7 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
   border-radius: 10px;
   font-size: 0.75rem;
@@ -72,17 +72,17 @@
 }
 
 .selectPlaceholder {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.85rem;
 }
 
 .portalDropdown {
   position: fixed;
   z-index: 1000;
-  background: var(--c-bg);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-menu);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -94,11 +94,11 @@
   padding: 5px 10px;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background var(--transition);
+  transition: background var(--transition-fast);
 }
 
 .optionItem:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }
 
 .optionColor {
@@ -109,7 +109,7 @@
 }
 
 .optionNone {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .memberAvatar {
@@ -122,7 +122,7 @@
   justify-content: center;
   font-size: 0.6em;
   font-weight: 600;
-  background: var(--c-primary);
+  background: var(--c-surface-accent-solid);
   color: var(--c-text-inverse);
   flex-shrink: 0;
   overflow: hidden;
@@ -136,7 +136,7 @@
 .memberEmail {
   margin-left: auto;
   font-size: 0.78em;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   opacity: 0.7;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -161,7 +161,7 @@
 }
 
 .optionItemActive {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   font-weight: 500;
 }
 
@@ -172,7 +172,7 @@
 
 .optionCheckmark {
   width: 12px;
-  color: var(--c-primary);
+  color: var(--c-text-accent);
   flex-shrink: 0;
   font-size: 0.8rem;
 }

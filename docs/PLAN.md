@@ -8,12 +8,6 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 
 **Current Phase: Phase 7 (Intelligence & Polish)**
 
-- [x] Phase 1: Core Foundation
-- [x] Phase 2: Polish & Features
-- [x] Phase 3: Multi-tenant Foundation
-- [x] Phase 4: Relational Metadata & Identity
-- [x] Phase 5: Experience & Scaling
-- [x] Phase 6: Advanced Sync & Onboarding
 - [ ] Phase 7: Intelligence & Polish
 
 ## Current Objectives (Phase 7)
@@ -24,9 +18,6 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 - **Intelligence**: Semantic search and AI agent readiness (MCP).
 - **Global Presence**: Full localization and offline PWA capabilities.
 - **Advanced Table Views**: Filter/sort UI (backend + state management done, UI pending).
-  - [x] Backend filter/sort model, query engine, and validation.
-  - [x] View persistence (filters/sorts saved per view).
-  - [x] RecordsContext with client-side and server-side filter/sort execution.
   - [ ] ViewToolbar with Filter and Sort buttons.
   - [ ] SortMenu dropdown (property + direction per row).
   - [ ] FilterMenu dropdown (property + operator + value per row, compound AND/OR).

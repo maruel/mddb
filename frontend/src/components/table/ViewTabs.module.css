@@ -29,7 +29,7 @@
 }
 
 .tabWrapper:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }
 
 .tab {
@@ -41,14 +41,14 @@
   background: none;
   font-size: 0.85rem;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   white-space: nowrap;
   /* Bottom inset shadow acts as active underline indicator */
   box-shadow: inset 0 -2px 0 0 transparent;
   transition:
-    color var(--transition),
-    background var(--transition),
-    box-shadow var(--transition);
+    color var(--transition-fast),
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .tab:hover {
@@ -58,7 +58,7 @@
 .tab.active {
   color: var(--c-text);
   font-weight: 500;
-  box-shadow: inset 0 -2px 0 0 var(--c-primary);
+  box-shadow: inset 0 -2px 0 0 var(--c-border-accent);
 }
 
 .icon {
@@ -104,12 +104,12 @@
   border: none;
   background: none;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   opacity: 0;
   flex-shrink: 0;
   transition:
-    opacity var(--transition),
-    color var(--transition);
+    opacity var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .tabWrapper:hover .deleteBtn {
@@ -117,7 +117,7 @@
 }
 
 .deleteBtn:hover {
-  color: var(--c-danger);
+  color: var(--c-text-danger);
 }
 
 .deleteBtn svg {
@@ -140,11 +140,11 @@
   border: none;
   background: none;
   cursor: pointer;
-  border-radius: var(--radius);
-  color: var(--c-text-light);
+  border-radius: var(--radius-md);
+  color: var(--c-text-muted);
   font-size: 0.8rem;
   white-space: nowrap;
-  transition: all var(--transition);
+  transition: all var(--transition-fast);
 }
 
 .addButton svg {
@@ -152,7 +152,7 @@
 }
 
 .addButton:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
 }
 
@@ -160,10 +160,10 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  background: var(--c-bg);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-menu);
   min-width: 150px;
   z-index: 100;
   overflow: hidden;
@@ -185,5 +185,5 @@
 }
 
 .dropdown button:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }

@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: var(--c-bg);
+  background: var(--c-surface);
 }
 
 .header {
@@ -13,7 +13,7 @@
   justify-content: space-between;
   padding: var(--s-3) var(--s-4);
   border-bottom: 1px solid var(--c-border);
-  background: var(--c-bg);
+  background: var(--c-surface);
   flex-shrink: 0;
   height: 56px;
 }
@@ -39,15 +39,15 @@
   border: none;
   font-size: 0.9rem;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   padding: var(--s-2) var(--s-3);
-  border-radius: var(--radius);
-  transition: all var(--transition);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
 }
 
 .backButton:hover {
   color: var(--c-text);
-  background: var(--c-bg-alt);
+  background: var(--c-surface-control-hover);
 }
 
 .title {
@@ -58,7 +58,7 @@
 }
 
 .title:hover {
-  color: var(--c-primary);
+  color: var(--c-text-accent);
 }
 
 .layout {

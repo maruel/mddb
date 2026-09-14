@@ -6,7 +6,7 @@
   border-radius: 10px;
   font-size: 0.78rem;
   font-weight: 500;
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
   white-space: nowrap;
   max-width: 100%;
@@ -25,13 +25,13 @@
   width: 14px;
   height: 14px;
   cursor: default;
-  accent-color: var(--c-primary);
+  accent-color: var(--c-control-accent);
   vertical-align: middle;
   pointer-events: none;
 }
 
 .link {
-  color: var(--c-primary);
+  color: var(--c-text-accent);
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -51,7 +51,7 @@
   padding: 1px var(--s-2);
   border-radius: 4px;
   font-size: 0.85em;
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
   white-space: nowrap;
   max-width: 100%;
@@ -73,7 +73,7 @@
   justify-content: center;
   font-size: 0.6em;
   font-weight: 600;
-  background: var(--c-primary);
+  background: var(--c-surface-accent-solid);
   color: var(--c-text-inverse);
   flex-shrink: 0;
   overflow: hidden;

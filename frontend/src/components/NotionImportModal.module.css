@@ -14,24 +14,24 @@
 }
 
 .header p {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.9rem;
 }
 
 .error {
   padding: var(--s-3);
   background: var(--c-surface-danger);
-  color: var(--c-danger);
-  border-radius: var(--radius);
+  color: var(--c-text-danger);
+  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
   text-align: center;
   font-size: 0.85rem;
 }
 
 .setupBox {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-panel);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   padding: var(--s-3);
   margin-bottom: var(--s-4);
 }
@@ -55,24 +55,24 @@
   align-items: center;
   gap: 4px;
   padding: var(--s-1) var(--s-3);
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
   text-decoration: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   font-size: 0.85rem;
   font-weight: 500;
-  transition: background var(--transition);
+  transition: background var(--transition-fast);
 }
 
 .createLink:hover {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }
 
 .setupSteps {
   margin: 0;
   padding-left: var(--s-4);
   font-size: 0.85rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   line-height: 1.6;
 }
 
@@ -109,7 +109,7 @@
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .actions {
@@ -122,18 +122,18 @@
   flex: 2;
   display: block;
   padding: var(--s-3);
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--transition);
+  transition: background var(--transition-fast);
 }
 
 .primaryButton:hover {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }
 
 .primaryButton:disabled {
@@ -146,12 +146,12 @@
   padding: var(--s-3) var(--s-4);
   background: none;
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
-  color: var(--c-text-light);
+  border-radius: var(--radius-md);
+  color: var(--c-text-muted);
   cursor: pointer;
   font-weight: 500;
 }
 
 .secondaryButton:hover {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-control-hover);
 }

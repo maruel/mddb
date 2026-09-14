@@ -10,22 +10,22 @@
 
 .primary {
   border: none;
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
 }
 
 .primary:hover:not(:disabled) {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }
 
 .secondary {
   border: 1px solid var(--c-border);
   background: transparent;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .secondary:hover:not(:disabled) {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-control-hover);
 }
 
 .ghost,
@@ -35,10 +35,10 @@
 }
 
 .ghost {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .ghost:hover:not(:disabled) {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
 }

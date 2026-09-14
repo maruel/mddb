@@ -18,8 +18,8 @@
   padding: var(--s-5);
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--c-bg);
-  border-radius: var(--radius);
+  background: var(--c-surface);
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-dialog);
   animation: slideUp 0.2s ease-out;
 }

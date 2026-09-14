@@ -10,10 +10,10 @@
   gap: var(--s-2);
   max-width: min(32rem, calc(100vw - var(--s-6)));
   padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--c-danger);
-  border-radius: var(--radius);
-  background: var(--c-error-bg);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--c-border-danger-strong);
+  border-radius: var(--radius-md);
+  background: var(--c-surface-danger-subtle);
+  box-shadow: var(--shadow-toast);
   color: var(--c-text);
 }
 

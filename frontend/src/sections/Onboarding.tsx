@@ -125,7 +125,7 @@ export default function Onboarding() {
       }}
     >
       <Show when={error()}>
-        <div style={{ color: 'var(--c-danger)', 'margin-bottom': '1rem' }}>{error()}</div>
+        <div style={{ color: 'var(--c-text-danger)', 'margin-bottom': '1rem' }}>{error()}</div>
       </Show>
       <Show when={!error()}>
         <div style={{ 'font-size': '1.5rem', 'margin-bottom': '1rem' }}>
@@ -138,7 +138,7 @@ export default function Onboarding() {
             width: '40px',
             height: '40px',
             border: '3px solid var(--c-border)',
-            'border-top-color': 'var(--c-primary)',
+            'border-top-color': 'var(--c-border-accent)',
             'border-radius': '50%',
             animation: 'spin 1s linear infinite',
           }}

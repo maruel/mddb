@@ -8,14 +8,14 @@
   border-left: 2px solid var(--c-border);
   margin-left: 12px;
   padding-left: 0;
-  background: linear-gradient(to right, var(--c-bg-alt) 0px, var(--c-bg-alt) 1px, transparent 1px);
+  background: linear-gradient(to right, var(--c-divider) 0px, var(--c-divider) 1px, transparent 1px);
 }
 
 .pageItem {
   padding: var(--s-3);
   padding-left: var(--s-2);
   border-bottom: 1px solid var(--c-border);
-  transition: background var(--transition);
+  transition: background var(--transition-fast);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -42,12 +42,12 @@
 }
 
 .pageItem:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
 }
 
 .pageItem.active {
   background: var(--c-surface-info);
-  border-left: 3px solid var(--c-primary);
+  border-left: 3px solid var(--c-border-accent);
   padding-left: calc(var(--s-2) - 3px);
 }
 
@@ -107,9 +107,9 @@
   transition:
     transform 0.2s ease,
     opacity 0.15s ease,
-    color var(--transition),
-    background var(--transition);
-  color: var(--c-text-light);
+    color var(--transition-fast),
+    background var(--transition-fast);
+  color: var(--c-text-muted);
   border-radius: 4px;
   opacity: 0;
 }
@@ -120,7 +120,7 @@
 
 .expandButton:hover .expandIcon:not(.loading) {
   color: var(--c-text);
-  background: var(--c-bg-alt);
+  background: var(--c-surface-control-hover);
 }
 
 .expandIcon.expanded {
@@ -130,7 +130,7 @@
 .expandIcon.loading {
   opacity: 1;
   animation: spin 0.8s linear infinite;
-  color: var(--c-primary);
+  color: var(--c-text-accent);
 }
 
 /* When loading, hide the page icon */
@@ -176,8 +176,8 @@
   font-size: 0.85rem;
   opacity: 0;
   transition:
-    opacity var(--transition),
-    background var(--transition);
+    opacity var(--transition-fast),
+    background var(--transition-fast);
   line-height: 1;
 }
 
@@ -191,7 +191,7 @@
 
 .hoverDeleteButton:hover {
   opacity: 1;
-  background: var(--c-bg);
+  background: var(--c-surface);
 }
 
 /* Drag-and-drop states */

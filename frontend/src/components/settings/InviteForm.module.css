@@ -6,8 +6,8 @@
 
 .inviteForm {
   padding: var(--s-4);
-  background: var(--c-bg-alt);
-  border-radius: var(--radius);
+  background: var(--c-surface-panel);
+  border-radius: var(--radius-md);
 }
 
 .inviteForm h4 {
@@ -23,7 +23,7 @@
 .formGroup select {
   padding: var(--s-2);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .formGroup input {
@@ -38,15 +38,15 @@
 
 .formGroup button {
   padding: var(--s-2) var(--s-4);
-  background: var(--c-primary);
+  background: var(--c-action-primary);
   color: var(--c-text-inverse);
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .formGroup button:hover:not(:disabled) {
-  background: var(--c-primary-hover);
+  background: var(--c-action-primary-hover);
 }
 
 .formGroup button:disabled {
@@ -76,6 +76,6 @@
 
 .table th {
   font-weight: 600;
-  color: var(--c-text-light);
-  background: var(--c-bg-alt);
+  color: var(--c-text-muted);
+  background: var(--c-surface-table-header);
 }

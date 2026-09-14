@@ -10,7 +10,7 @@
 }
 
 .header p {
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   font-size: 0.9rem;
 }
 
@@ -29,7 +29,7 @@
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .actions {
@@ -42,11 +42,11 @@
   flex: 2;
   display: block;
   padding: var(--s-3);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background var(--transition);
+  transition: background var(--transition-fast);
 }
 
 .primaryButton:disabled {
@@ -57,7 +57,7 @@
 .secondaryButton {
   flex: 1;
   padding: var(--s-3) var(--s-4);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-weight: 500;
 }
@@ -69,9 +69,9 @@
 .error {
   padding: var(--s-3);
   margin-bottom: var(--s-4);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   background: var(--c-surface-danger);
-  color: var(--c-danger);
+  color: var(--c-text-danger);
   text-align: center;
   font-size: 0.85rem;
 }

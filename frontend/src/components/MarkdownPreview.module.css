@@ -31,7 +31,7 @@
 
 .preview :is(h5, h6) {
   font-size: 1rem;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .preview p {
@@ -61,19 +61,19 @@
 
 .preview :global(li.task-list-item[data-checked='true']) {
   text-decoration: line-through;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
 }
 
 .preview blockquote {
   margin: var(--s-3) 0;
   padding-left: var(--s-3);
-  border-left: 3px solid var(--c-primary);
-  color: var(--c-text-light);
+  border-left: 3px solid var(--c-border-accent);
+  color: var(--c-text-muted);
   font-style: italic;
 }
 
 .preview code {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-code);
   padding: 0.15rem 0.4rem;
   border-radius: 3px;
   font-family: var(--font-mono);
@@ -82,9 +82,9 @@
 }
 
 .preview pre {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-code);
   padding: var(--s-3);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   overflow-x: auto;
   margin: var(--s-3) 0;
 }
@@ -96,7 +96,7 @@
 }
 
 .preview a {
-  color: var(--c-primary);
+  color: var(--c-text-accent);
   text-decoration: none;
 }
 
@@ -107,7 +107,7 @@
 .preview img {
   max-width: 100%;
   height: auto;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   margin: var(--s-3) 0;
 }
 
@@ -124,13 +124,13 @@
 }
 
 .preview th {
-  background: var(--c-bg-alt);
+  background: var(--c-surface-table-header);
   font-weight: 600;
 }
 
 .preview hr {
   border: none;
   height: 1px;
-  background: var(--c-border);
+  background: var(--c-divider);
   margin: var(--s-4) 0;
 }

@@ -27,26 +27,26 @@
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   padding: 4px 6px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition:
-    background var(--transition),
-    color var(--transition);
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .actionButton:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
 }
 
 .headerTitle {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin: 0;
@@ -58,16 +58,16 @@
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   padding: 4px 6px;
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   transition:
-    background var(--transition),
-    color var(--transition);
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .closeButton:hover {
-  background: var(--c-bg-hover);
+  background: var(--c-surface-hover);
   color: var(--c-text);
 }
 
@@ -90,7 +90,7 @@
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
-  color: var(--c-text-light);
+  color: var(--c-text-muted);
   letter-spacing: 0.04em;
 }
 
@@ -104,17 +104,17 @@
   color: inherit;
   width: 100%;
   padding: var(--s-1) 0;
-  transition: border-color var(--transition);
+  transition: border-color var(--transition-fast);
 }
 
 .titleInput:focus {
   outline: none;
-  border-bottom-color: var(--c-primary);
+  border-bottom-color: var(--c-border-focus);
 }
 
 .fieldValue {
   background: var(--c-surface-sunken);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   padding: var(--s-1) var(--s-2);
   font-size: 0.9rem;
 }
