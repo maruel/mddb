@@ -148,11 +148,7 @@ def check_css_vars(variable_files: list[str], source_files: list[str], token_fil
 def check_unused_shared_css_vars(token_file: str, source_files: list[str]) -> list[tuple[str, int, str]]:
     """Report shared token definitions that no frontend source references."""
     token_text = _read_source(token_file)
-    used = {
-        match.group(1)
-        for path in source_files
-        for match in _VAR_USE_RE.finditer(_read_source(path))
-    }
+    used = {match.group(1) for path in source_files for match in _VAR_USE_RE.finditer(_read_source(path))}
     return [
         (token_file, token_text[: match.start()].count("\n") + 1, match.group(1))
         for match in _VAR_DEF_RE.finditer(token_text)
@@ -309,9 +305,7 @@ def main() -> int:
 
     raw_color_source_files = [f for f in source_files if f.endswith((".ts", ".tsx"))]
     color_palette_json_files = [f for f in files if f.endswith("ColorPalette.json")]
-    raw_color_json_files = [
-        f for f in files if f.endswith(".json") and f not in color_palette_json_files
-    ]
+    raw_color_json_files = [f for f in files if f.endswith(".json") and f not in color_palette_json_files]
     try:
         var_errors = check_css_vars(variable_files, source_files, token_file)
         unused_var_errors = check_unused_shared_css_vars(token_file, source_files)

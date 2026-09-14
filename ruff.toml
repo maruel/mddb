@@ -1,10 +1,10 @@
-# Ruff configuration for scripts directory
+# Ruff rules for repository automation scripts.
 
 target-version = "py313"
 line-length = 120
 
 [lint]
-# Enable Pyflakes (F), pycodestyle (E, W), isort (I), and flake8-bugbear (B)
+# Enable Pyflakes (F), pycodestyle (E, W), isort (I), and flake8-bugbear (B).
 select = ["E", "F", "W", "I", "B"]
 ignore = []
 
@@ -12,4 +12,4 @@ ignore = []
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
-line-ending = "auto"
+line-ending = "lf"

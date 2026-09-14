@@ -101,7 +101,8 @@ lint-frontend: $(FRONTEND_STAMP)
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint
 
 lint-python:
-	@ruff check scripts/
+	@ruff check .
+	@ruff format --check .
 
 lint-binaries:
 	@python3 scripts/lint_binaries.py
@@ -112,12 +113,12 @@ lint-css:
 lint-fix: $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run ./... --fix || true
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint:fix
-	@ruff check scripts/ --fix
-	@ruff format scripts/
+	@ruff check . --fix
+	@ruff format .
 
 format-python:
-	@ruff format scripts/
-	@ruff check scripts/ --fix
+	@ruff format .
+	@ruff check . --fix
 
 git-hooks:
 	@mkdir -p .git/hooks
