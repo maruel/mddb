@@ -17,8 +17,6 @@ body {
   --c-primary: #2563eb;
   /* Hover state for primary buttons */
   --c-primary-hover: #1d4ed8;
-  /* Darker primary for active/pressed states */
-  --c-primary-dark: #1565c0;
   /* Focus ring border color */
   --c-border-focus: #2563eb;
 
@@ -120,7 +118,6 @@ body {
   --s-6: 2.5rem;
 
   /* Typography */
-  --font: system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, monospace;
 
   /* Default border radius */
