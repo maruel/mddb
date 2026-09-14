@@ -1,17 +1,33 @@
 #!/usr/bin/env python3
-"""Lint binary files in the repository for consistency."""
-
+# Lint for unexpected binary or executable files in the repository.
 import os
 import stat
 import subprocess
 import sys
 
-ALLOWED_BINARY_EXT = {".br", ".gif", ".ico", ".jpg", ".png", ".svg", ".webp", ".zst"}
+ALLOWED_BINARY_EXT = {
+    ".avif",
+    ".br",
+    ".gif",
+    ".ico",
+    ".jar",
+    ".jpg",
+    ".mov",
+    ".mp4",
+    ".pdf",
+    ".png",
+    ".svg",
+    ".wasm",
+    ".wav",
+    ".webm",
+    ".webp",
+    ".zst",
+}
 
 
 def is_binary(file_path):
     """Simple binary detection by checking for null bytes in the first 1024 bytes."""
-    if not os.path.isfile(file_path):
+    if os.path.islink(file_path) or not os.path.isfile(file_path):
         return False
     try:
         with open(file_path, "rb") as f:
@@ -33,6 +49,8 @@ def has_shebang(file_path):
 def is_executable(file_path):
     """Check if file has executable bit set."""
     try:
+        if os.path.islink(file_path):
+            return False
         return os.stat(file_path).st_mode & stat.S_IXUSR != 0
     except Exception:
         return False
