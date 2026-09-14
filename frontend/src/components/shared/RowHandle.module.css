@@ -1,3 +1,4 @@
+/* Styles for the RowHandle component. */
 .handle {
   /* Position is relative - parent container handles absolute positioning */
   position: relative;

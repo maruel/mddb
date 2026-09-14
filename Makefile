@@ -1,5 +1,5 @@
 # Build, test, and development commands.
-.PHONY: help build dev test e2e e2e-slow coverage lint lint-go lint-frontend lint-binaries lint-fix git-hooks frontend-dev types upgrade docs
+.PHONY: help build dev test e2e e2e-slow coverage lint lint-go lint-frontend lint-python lint-binaries lint-css lint-docs lint-fix format-python git-hooks frontend-dev types upgrade docs
 
 # Variables
 DATA_DIR?=./data
@@ -91,7 +91,7 @@ coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm coverage
 
-lint: lint-go lint-frontend lint-python lint-binaries lint-css
+lint: lint-go lint-frontend lint-python lint-binaries lint-css lint-docs
 
 lint-go:
 	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
@@ -110,11 +110,15 @@ lint-binaries:
 lint-css:
 	@python3 scripts/lint_css_vars.py
 
+lint-docs:
+	@python3 scripts/update_agents_file_index.py --check
+
 lint-fix: $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run ./... --fix || true
 	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint:fix
 	@ruff check . --fix
 	@ruff format .
+	@python3 scripts/update_agents_file_index.py
 
 format-python:
 	@ruff format .
