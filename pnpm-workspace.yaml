@@ -1,5 +1,9 @@
 # pnpm workspace configuration.
 engineStrict: true
+minimumReleaseAge: 11520
+minimumReleaseAgeExclude:
+  - '@pnpm/*'
+  - pnpm
 allowBuilds:
   esbuild: true
   sharp: true

@@ -343,6 +343,10 @@
         "n": "flushed face"
       },
       {
+        "c": "🫪",
+        "n": "distorted face"
+      },
+      {
         "c": "🥺",
         "n": "pleading face"
       },
@@ -633,6 +637,10 @@
       {
         "c": "💢",
         "n": "anger symbol"
+      },
+      {
+        "c": "🫯",
+        "n": "fight cloud"
       },
       {
         "c": "💥",
@@ -1616,6 +1624,10 @@
         "n": "troll"
       },
       {
+        "c": "🫈",
+        "n": "hairy creature"
+      },
+      {
         "c": "💆",
         "n": "person getting massage"
       },
@@ -1794,6 +1806,10 @@
       {
         "c": "🏃‍♂️‍➡️",
         "n": "man running facing right"
+      },
+      {
+        "c": "🧑‍🩰",
+        "n": "ballet dancer"
       },
       {
         "c": "💃",
@@ -2633,6 +2649,10 @@
         "n": "dolphin"
       },
       {
+        "c": "🫍",
+        "n": "orca"
+      },
+      {
         "c": "🦭",
         "n": "seal"
       },
@@ -3437,6 +3457,10 @@
       {
         "c": "⛰️",
         "n": "mountain"
+      },
+      {
+        "c": "🛘",
+        "n": "landslide"
       },
       {
         "c": "🌋",
@@ -4889,6 +4913,14 @@
         "n": "saxophone"
       },
       {
+        "c": "🎺",
+        "n": "trumpet"
+      },
+      {
+        "c": "🪊",
+        "n": "trombone"
+      },
+      {
         "c": "🪗",
         "n": "accordion"
       },
@@ -4899,10 +4931,6 @@
       {
         "c": "🎹",
         "n": "musical keyboard"
-      },
-      {
-        "c": "🎺",
-        "n": "trumpet"
       },
       {
         "c": "🎻",
@@ -5145,12 +5173,16 @@
         "n": "label"
       },
       {
+        "c": "🪙",
+        "n": "coin"
+      },
+      {
         "c": "💰",
         "n": "money bag"
       },
       {
-        "c": "🪙",
-        "n": "coin"
+        "c": "🪎",
+        "n": "treasure chest"
       },
       {
         "c": "💴",

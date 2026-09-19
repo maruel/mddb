@@ -1,15 +1,14 @@
 // Markdown-to-flat-blocks parser: converts markdown to ProseMirror document with flat block structure.
 // Strategy: Parse markdown using MarkdownParser (which handles nesting correctly), then flatten the result.
 
-import MarkdownIt from 'markdown-it';
-import type Token from 'markdown-it/lib/token.mjs';
+import MarkdownIt, { type MarkdownIt as MarkdownItInstance, type Token } from 'markdown-it';
 import { MarkdownParser } from 'prosemirror-markdown';
 import { nestedSchema } from './nested-schema';
 import { schema, nodes, type BlockAttrs } from './schema';
 import type { Node as ProseMirrorNode } from 'prosemirror-model';
 
 // Create markdown-it instance with task list and underline support
-function createMarkdownIt(): MarkdownIt {
+function createMarkdownIt(): MarkdownItInstance {
   const md = new MarkdownIt();
 
   // Parse task list checkboxes: [ ] and [x] at start of content
@@ -114,7 +113,10 @@ function convertInlineContent(content: ProseMirrorNode | null): ProseMirrorNode[
  */
 export function parseMarkdown(markdown: string): ProseMirrorNode {
   const md = createMarkdownIt();
-  const parser = new MarkdownParser(nestedSchema, md, {
+  // prosemirror-markdown 1.13 types its constructor against @types/markdown-it 14, whose token
+  // attributes are [string, string]; markdown-it 15 ships its own types and widened the value to
+  // string | number. The runtime API is unchanged, so the instance is bridged at this boundary.
+  const parser = new MarkdownParser(nestedSchema, md as unknown as ConstructorParameters<typeof MarkdownParser>[1], {
     blockquote: { block: 'blockquote' },
     paragraph: { block: 'paragraph' },
     list_item: {

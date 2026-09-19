@@ -76,7 +76,7 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
   const assetUrls = env?.assetUrls as AssetUrlMap | undefined;
   const srcAttr = attrs?.[srcIndex];
   if (srcAttr && assetUrls) {
-    const src = srcAttr[1];
+    const src = String(srcAttr[1]);
     // If it's a local filename (not a URL or absolute path), look up signed URL
     if (!src.includes('://') && !src.startsWith('/')) {
       const signedUrl = assetUrls[src];

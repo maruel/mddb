@@ -2,6 +2,7 @@
 import { defineConfig } from 'vitest/config';
 import solid from 'vite-plugin-solid';
 import solidSVG from 'vite-solid-svg';
+import { QuietReporter } from './scripts/vitest-quiet-reporter.mjs';
 import { resolve } from 'path';
 
 export default defineConfig({
@@ -19,7 +20,8 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['src/test-setup.ts'],
     silent: 'passed-only',
-    reporters: ['dot'],
+    reporters: [new QuietReporter()],
+    fsModuleCache: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],

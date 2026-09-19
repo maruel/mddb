@@ -82,12 +82,24 @@ For developers or advanced setup:
 
 ## Building from Source
 
-Development requires Node.js 24 via nvm and pnpm 12.4.0. Clone the repository and run:
+Development requires Node.js 26 via nvm and pnpm 12.4.2. Clone the repository and run:
 
 ```bash
 nvm install
 nvm use
 make build-all
+```
+
+## Dependency updates
+
+pnpm refuses package versions published within the last eight days, including
+transitive dependencies. Check and update eligible packages with:
+
+```bash
+pnpm outdated
+make upgrade
+make lint-fix
+make test
 ```
 
 ## Comparison

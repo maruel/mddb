@@ -17,7 +17,7 @@ jobs:
           #- windows-latest
     runs-on: ${{ matrix.os }}
     env:
-      CGO_ENABLED: "0"
+      CGO_ENABLED: '0'
     steps:
       - uses: actions/checkout@v7
       # Setup
@@ -30,6 +30,7 @@ jobs:
       - run: python -m pip install --disable-pip-version-check ruff==0.16.7
       - uses: pnpm/setup@v2
         with:
+          runtime: node@26
           cache: true
           install: false
       - name: Configure Python for Windows
