@@ -1,16 +1,21 @@
 // Main application component with router setup.
 
-import { lazy, Show, Switch, Match, Suspense, type ParentComponent } from 'solid-js';
+import { Show, Switch, Match, Suspense, type ParentComponent } from 'solid-js';
 import { Router, Route, Navigate, A } from '@solidjs/router';
 import { AuthProvider, useAuth, NotificationProvider } from './contexts';
 import AppErrorBoundary from './components/ErrorBoundary';
 import PWAInstallBanner from './components/PWAInstallBanner';
+import Auth from './components/Auth';
+import Privacy from './components/Privacy';
+import Terms from './components/Terms';
+import Onboarding from './sections/Onboarding';
 
-// Lazy-loaded route components
-const Auth = lazy(() => import('./components/Auth'));
-const Privacy = lazy(() => import('./components/Privacy'));
-const Terms = lazy(() => import('./components/Terms'));
-const Onboarding = lazy(() => import('./sections/Onboarding'));
+// Route components are imported directly rather than through lazy(). The router renders a
+// route it is navigating to before it commits the location and again afterwards, so a route
+// component is instantiated more than once per navigation. From solid-js 1.9.14 lazy() drops
+// its cached accessor on disposal and the resource behind it releases its Suspense
+// registration, so the instance rendered after that disposal waits on a load it can never
+// observe. Importing these directly removes the only state either render could tear down.
 
 // Import settings section and route components (not lazy - needed for nested routes)
 import SettingsSection, {
@@ -24,7 +29,7 @@ import SettingsSection, {
 // Import workspace section and route components (not lazy - needed for nested routes)
 import WorkspaceSection, { WorkspaceLayout, WorkspaceRoot, NodeView } from './sections/WorkspaceSection';
 
-// Loading fallback for lazy-loaded routes
+// Loading fallback for routes that suspend
 function RouteLoading() {
   return <div style={{ padding: '2rem', 'text-align': 'center' }}>Loading...</div>;
 }

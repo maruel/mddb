@@ -27,9 +27,8 @@
     "noUncheckedIndexedAccess": true,
 
     /* Paths */
-    "baseUrl": ".",
     "paths": {
-      "@sdk/*": ["sdk/*"]
+      "@sdk/*": ["./sdk/*"]
     }
   },
   "include": ["frontend/src", "sdk"],

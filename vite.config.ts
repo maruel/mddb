@@ -10,8 +10,10 @@ export default defineConfig({
   root: 'frontend',
   cacheDir: '../node_modules/.vite',
   resolve: {
+    // A duplicated solid-js copy breaks reactivity signal identity at runtime.
+    dedupe: ['solid-js'],
     alias: {
-      '@sdk': resolve(__dirname, 'sdk'),
+      '@sdk': resolve(import.meta.dirname, 'sdk'),
     },
   },
   plugins: [
@@ -53,7 +55,21 @@ export default defineConfig({
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
         buildPlugins: {
-          vite: [{ name: 'sw-quiet', config: () => ({ build: { reportCompressedSize: false }, logLevel: 'silent' }) }],
+          vite: [
+            {
+              name: 'sw-quiet',
+              // The plugin still asks for the deprecated rollup spelling of
+              // "bundle the service worker into one file".
+              config: (config) => {
+                const output = config.build?.rollupOptions?.output;
+                if (output && !Array.isArray(output)) {
+                  delete output.inlineDynamicImports;
+                  output.codeSplitting = false;
+                }
+                return { build: { reportCompressedSize: false }, logLevel: 'silent' };
+              },
+            },
+          ],
         },
       },
     }),
@@ -65,21 +81,32 @@ export default defineConfig({
     }),
   ],
   build: {
+    // Matches the browsers Vite 8 supports by default; pinned so a Vite upgrade
+    // cannot silently move the floor.
+    target: 'baseline-widely-available',
+    minify: 'oxc',
+    cssMinify: 'lightningcss',
     reportCompressedSize: false,
-    outDir: '../backend/frontend/dist',  // relative to frontend/
+    outDir: '../backend/frontend/dist', // relative to frontend/
     emptyOutDir: true,
-    minify: 'terser',
-    sourcemap: true,
-    rollupOptions: {
+    // dist/ is brotli-compressed into the Go binary, so a source map would be
+    // embedded as dead weight. Debug against the dev server instead.
+    sourcemap: false,
+    rolldownOptions: {
       output: {
         // Split chunks for better caching and lazy loading
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
             // ProseMirror and markdown-it are lazy-loaded with Editor
-            if (id.includes('prosemirror') || id.includes('markdown-it') ||
-                id.includes('entities') || id.includes('linkify-it') ||
-                id.includes('mdurl') || id.includes('uc.micro') ||
-                id.includes('punycode')) {
+            if (
+              id.includes('prosemirror') ||
+              id.includes('markdown-it') ||
+              id.includes('entities') ||
+              id.includes('linkify-it') ||
+              id.includes('mdurl') ||
+              id.includes('uc.micro') ||
+              id.includes('punycode')
+            ) {
               return 'editor-vendor';
             }
             // Core dependencies always loaded

@@ -143,9 +143,15 @@ export const RecordsProvider: ParentComponent = (props) => {
   createEffect(() => {
     const ws = wsApi();
     if (!ws) return;
-    ws.listWorkspaceMembers().then((res) => {
-      setWorkspaceMembers(res.members ?? []);
-    });
+    ws.listWorkspaceMembers()
+      .then((res) => {
+        setWorkspaceMembers(res.members ?? []);
+      })
+      .catch(() => {
+        // Non-critical: the member list feeds the user-type column picker, and a
+        // logout or workspace switch cancels the request that was in flight.
+        setWorkspaceMembers([]);
+      });
   });
 
   // Resolve ghost users: called after loading records to surface removed members.

@@ -1,3 +1,5 @@
+# Generated artifacts and dependency locks use tool-owned formatting.
+pnpm-lock.yaml
 *.gen.ts
 *.md
 build
