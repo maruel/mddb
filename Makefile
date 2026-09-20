@@ -1,5 +1,23 @@
 # Build, test, and development commands.
-.PHONY: help build dev test e2e e2e-slow coverage lint lint-go lint-frontend lint-python lint-binaries lint-css lint-docs lint-fix format format-check verify git-hooks frontend-dev types upgrade docs
+.PHONY: help build dev test e2e e2e-slow coverage lint lint-go lint-frontend lint-python lint-binaries lint-css lint-docs lint-fix format format-check verify git-hooks frontend-dev types upgrade docs tools
+
+# Tool versions. The tools target installs a tool that is missing or at another version, so
+# these are the only places the versions are written down.
+GOLANGCI_LINT_VERSION=v2.13.2
+SHFMT_VERSION=v3.14.1
+RUFF_VERSION=0.16.8
+
+# The tools target installs into the Go and uv tool directories. Prepend them so a recipe
+# that just installed a tool can run it, whatever the caller's PATH holds.
+GO_BIN := $(if $(shell command -v go 2>/dev/null),$(shell go env GOPATH 2>/dev/null)/bin)
+UV_BIN := $(if $(shell command -v uv 2>/dev/null),$(shell uv tool dir --bin 2>/dev/null))
+export PATH := $(if $(GO_BIN),$(GO_BIN):)$(if $(UV_BIN),$(UV_BIN):)$(PATH)
+
+tools:
+	@command -v golangci-lint > /dev/null 2>&1 && golangci-lint --version 2>/dev/null | grep -Fqw "$(GOLANGCI_LINT_VERSION:v%=%)" || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@command -v shfmt > /dev/null 2>&1 && shfmt --version 2>/dev/null | grep -Fqw "$(SHFMT_VERSION)" || go install mvdan.cc/sh/v3/cmd/shfmt@$(SHFMT_VERSION)
+	@command -v uv > /dev/null 2>&1 || { echo 'uv is required to install the Python tools; see https://docs.astral.sh/uv/' >&2; exit 1; }
+	@ruff --version 2>/dev/null | grep -Fqw "$(RUFF_VERSION)" || uv tool install --force --quiet ruff==$(RUFF_VERSION)
 
 # Variables
 DATA_DIR?=./data
@@ -93,18 +111,17 @@ coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
 	@pnpm coverage
 
-lint: lint-go lint-frontend lint-python lint-binaries lint-css lint-docs
+lint: tools lint-go lint-frontend lint-python lint-binaries lint-css lint-docs
 
 verify: format-check lint
 
-lint-go:
-	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+lint-go: tools
 	@golangci-lint run --show-stats=false ./...
 
 lint-frontend: $(FRONTEND_STAMP)
 	@pnpm --silent lint
 
-lint-python:
+lint-python: tools
 	@ruff check --quiet .
 
 lint-binaries:
@@ -116,7 +133,7 @@ lint-css:
 lint-docs:
 	@python3 scripts/update_agents_file_index.py --check
 
-lint-fix: $(FRONTEND_STAMP)
+lint-fix: tools $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run --show-stats=false ./... --fix
 	@pnpm --silent lint:fix
 	@ruff check --quiet . --fix
@@ -127,13 +144,13 @@ lint-fix: $(FRONTEND_STAMP)
 # gofmt and goimports through golangci-lint for Go, ruff format for the Python
 # scripts, and shfmt for the shell scripts.
 # Prettier skips whatever .prettierignore excludes (locks, generated code, testdata).
-format: $(FRONTEND_STAMP)
+format: tools $(FRONTEND_STAMP)
 	@pnpm --silent format
 	@golangci-lint fmt
 	@ruff format --quiet .
 	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || shfmt -w $$files
 
-format-check: $(FRONTEND_STAMP)
+format-check: tools $(FRONTEND_STAMP)
 	@pnpm --silent format:check
 	@out=$$(golangci-lint fmt --diff); [ -z "$$out" ] || { echo 'Go files need formatting (gofmt, goimports):' >&2; echo "$$out" >&2; exit 1; }
 	@ruff format --check --quiet .

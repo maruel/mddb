@@ -35,7 +35,7 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.x"
-      - run: python -m pip install --disable-pip-version-check ruff==0.16.8
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
       - uses: pnpm/setup@v2
         with:
           runtime: node@26
@@ -55,24 +55,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
       # Lint
-      - name: Lint (Go)
+      - name: Verify (format check and lint)
         if: runner.os == 'Linux'
-        run: make lint-go
-      - name: Lint (Frontend)
-        if: runner.os == 'Linux'
-        run: make lint-frontend
-      - name: Lint (Python)
-        if: runner.os == 'Linux'
-        run: make lint-python
-      - name: Lint (Binaries)
-        if: runner.os == 'Linux'
-        run: make lint-binaries
-      - name: Install shfmt
-        if: runner.os == 'Linux'
-        run: go install mvdan.cc/sh/v3/cmd/shfmt@v3.14.1
-      - name: Format check
-        if: runner.os == 'Linux'
-        run: make format-check
+        run: make verify
       # Build & Test
       - run: make build
       - name: Test
