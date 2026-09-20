@@ -2,14 +2,14 @@
 // Inject custom tag colors and server log link into Playwright HTML report.
 // Usage: node e2e/inject-tag-colors.cjs
 
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const reportPath = path.join(__dirname, '..', 'playwright-report', 'index.html');
+const reportPath = path.join(__dirname, "..", "playwright-report", "index.html");
 if (!fs.existsSync(reportPath)) process.exit(0);
 
-let html = fs.readFileSync(reportPath, 'utf8');
-if (html.includes('pwCustom')) process.exit(0);
+let html = fs.readFileSync(reportPath, "utf8");
+if (html.includes("pwCustom")) process.exit(0);
 
 // Inline script: style screenshot tags + add server log link to header
 const injection = `<script id="pwCustom">
@@ -38,4 +38,4 @@ const injection = `<script id="pwCustom">
 })()
 </script>`;
 
-fs.writeFileSync(reportPath, html.replace('</body>', injection + '</body>'));
+fs.writeFileSync(reportPath, html.replace("</body>", injection + "</body>"));

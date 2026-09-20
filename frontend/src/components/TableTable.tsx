@@ -1,7 +1,7 @@
 // Table view with inline editing.
 
-import { createSignal, createEffect, onCleanup, For, Show } from 'solid-js';
-import { Dynamic } from 'solid-js/web';
+import { createSignal, createEffect, onCleanup, For, Show } from "solid-js";
+import { Dynamic } from "solid-js/web";
 import {
   type DataRecordResponse,
   type Filter,
@@ -10,31 +10,31 @@ import {
   PropertyTypeMultiSelect,
   SortAsc,
   SortDesc,
-} from '@sdk/types.gen';
-import styles from './TableTable.module.css';
-import { RowHandle, ContextMenu, type ContextMenuAction } from './shared';
-import { TABLE_RECORD_MIME } from './table/TableRow';
-import { TableCell } from './table/TableCell';
-import { AddColumnDropdown } from './table/AddColumnDropdown';
-import { FilterPanel } from './table/FilterPanel';
-import { SelectOptionsEditor } from './table/SelectOptionsEditor';
-import { useI18n } from '../i18n';
-import { useRecords, DEFAULT_VIEW_ID } from '../contexts';
-import { useClickOutside } from '../composables/useClickOutside';
+} from "@sdk/types.gen";
+import styles from "./TableTable.module.css";
+import { RowHandle, ContextMenu, type ContextMenuAction } from "./shared";
+import { TABLE_RECORD_MIME } from "./table/TableRow";
+import { TableCell } from "./table/TableCell";
+import { AddColumnDropdown } from "./table/AddColumnDropdown";
+import { FilterPanel } from "./table/FilterPanel";
+import { SelectOptionsEditor } from "./table/SelectOptionsEditor";
+import { useI18n } from "../i18n";
+import { useRecords, DEFAULT_VIEW_ID } from "../contexts";
+import { useClickOutside } from "../composables/useClickOutside";
 
-import ArrowUpwardIcon from '@material-symbols/svg-400/outlined/arrow_upward.svg?solid';
-import ArrowDownwardIcon from '@material-symbols/svg-400/outlined/arrow_downward.svg?solid';
-import DescriptionIcon from '@material-symbols/svg-400/outlined/description.svg?solid';
-import FilterAltIcon from '@material-symbols/svg-400/outlined/filter_alt.svg?solid';
-import CloseIcon from '@material-symbols/svg-400/outlined/close.svg?solid';
-import OpenInFullIcon from '@material-symbols/svg-400/outlined/open_in_full.svg?solid';
-import AbcIcon from '@material-symbols/svg-400/outlined/abc.svg?solid';
-import NumbersIcon from '@material-symbols/svg-400/outlined/numbers.svg?solid';
-import CheckBoxOutlineBlankIcon from '@material-symbols/svg-400/outlined/check_box_outline_blank.svg?solid';
-import CalendarMonthIcon from '@material-symbols/svg-400/outlined/calendar_month.svg?solid';
-import LabelIcon from '@material-symbols/svg-400/outlined/label.svg?solid';
-import LinkIcon from '@material-symbols/svg-400/outlined/link.svg?solid';
-import AlternateEmailIcon from '@material-symbols/svg-400/outlined/alternate_email.svg?solid';
+import ArrowUpwardIcon from "@material-symbols/svg-400/outlined/arrow_upward.svg?solid";
+import ArrowDownwardIcon from "@material-symbols/svg-400/outlined/arrow_downward.svg?solid";
+import DescriptionIcon from "@material-symbols/svg-400/outlined/description.svg?solid";
+import FilterAltIcon from "@material-symbols/svg-400/outlined/filter_alt.svg?solid";
+import CloseIcon from "@material-symbols/svg-400/outlined/close.svg?solid";
+import OpenInFullIcon from "@material-symbols/svg-400/outlined/open_in_full.svg?solid";
+import AbcIcon from "@material-symbols/svg-400/outlined/abc.svg?solid";
+import NumbersIcon from "@material-symbols/svg-400/outlined/numbers.svg?solid";
+import CheckBoxOutlineBlankIcon from "@material-symbols/svg-400/outlined/check_box_outline_blank.svg?solid";
+import CalendarMonthIcon from "@material-symbols/svg-400/outlined/calendar_month.svg?solid";
+import LabelIcon from "@material-symbols/svg-400/outlined/label.svg?solid";
+import LinkIcon from "@material-symbols/svg-400/outlined/link.svg?solid";
+import AlternateEmailIcon from "@material-symbols/svg-400/outlined/alternate_email.svg?solid";
 
 interface TableTableProps {
   tableId: string;
@@ -110,7 +110,7 @@ export default function TableTable(props: TableTableProps) {
 
   // Inline column rename state
   const [renamingColumn, setRenamingColumn] = createSignal<number | null>(null);
-  const [renameValue, setRenameValue] = createSignal('');
+  const [renameValue, setRenameValue] = createSignal("");
 
   // Column resize state
   const [dragWidths, setDragWidths] = createSignal<Record<string, number>>({});
@@ -137,7 +137,7 @@ export default function TableTable(props: TableTableProps) {
       e.preventDefault();
       return;
     }
-    e.dataTransfer?.setData('text/plain', colName);
+    e.dataTransfer?.setData("text/plain", colName);
     setDraggingColName(colName);
   };
 
@@ -172,7 +172,7 @@ export default function TableTable(props: TableTableProps) {
   let hiddenDropdownRef: HTMLDivElement | undefined;
   useClickOutside(
     () => hiddenDropdownRef,
-    () => setHiddenDropdownOpen(false)
+    () => setHiddenDropdownOpen(false),
   );
 
   const isColumnVisible = (colName: string): boolean => {
@@ -209,7 +209,7 @@ export default function TableTable(props: TableTableProps) {
   const handleResizeStart = (e: MouseEvent, colName: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const th = (e.currentTarget as HTMLElement).closest('th');
+    const th = (e.currentTarget as HTMLElement).closest("th");
     const startWidth = th?.getBoundingClientRect().width ?? colWidth(colName);
     setResizing({ colName, startX: e.clientX, startWidth });
   };
@@ -237,11 +237,11 @@ export default function TableTable(props: TableTableProps) {
       }
       setResizing(null);
     };
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
     onCleanup(() => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
     });
   });
 
@@ -256,14 +256,14 @@ export default function TableTable(props: TableTableProps) {
   const handleRowDragStart = (e: DragEvent, recordId: string) => {
     e.dataTransfer?.setData(TABLE_RECORD_MIME, recordId);
     if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = "move";
     }
   };
 
   const handleRowDragOver = (e: DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = "move";
     }
   };
 
@@ -276,24 +276,24 @@ export default function TableTable(props: TableTableProps) {
 
     if (props.onOpenRecord) {
       actions.push({
-        id: 'open',
-        label: t('table.openRecord') || 'Open',
+        id: "open",
+        label: t("table.openRecord") || "Open",
       });
     }
 
     if (props.onDuplicateRecord) {
       actions.push({
-        id: 'duplicate',
-        label: t('table.duplicateRecord') || 'Duplicate',
-        shortcut: '\u2318D',
+        id: "duplicate",
+        label: t("table.duplicateRecord") || "Duplicate",
+        shortcut: "\u2318D",
       });
     }
 
     if (props.onDeleteRecord) {
       actions.push({
-        id: 'delete',
-        label: t('table.deleteRecord') || 'Delete',
-        shortcut: '\u232B',
+        id: "delete",
+        label: t("table.deleteRecord") || "Delete",
+        shortcut: "\u232B",
         danger: true,
         separator: actions.length > 0,
       });
@@ -307,13 +307,13 @@ export default function TableTable(props: TableTableProps) {
     if (!state) return;
 
     switch (actionId) {
-      case 'open':
+      case "open":
         props.onOpenRecord?.(state.recordId);
         break;
-      case 'duplicate':
+      case "duplicate":
         props.onDuplicateRecord?.(state.recordId);
         break;
-      case 'delete':
+      case "delete":
         props.onDeleteRecord?.(state.recordId);
         break;
     }
@@ -322,7 +322,7 @@ export default function TableTable(props: TableTableProps) {
 
   // Left-click on column header → cycle sort (none → asc → desc → none)
   const handleHeaderClick = (e: MouseEvent, colIndex: number) => {
-    if ((e.target as HTMLElement).tagName === 'INPUT') return;
+    if ((e.target as HTMLElement).tagName === "INPUT") return;
     const column = props.columns[colIndex];
     if (!column) return;
     const existing = activeSorts().find((s) => s.property === column.name);
@@ -337,7 +337,7 @@ export default function TableTable(props: TableTableProps) {
 
   // Right-click on column header → show context menu
   const handleHeaderContextMenu = (e: MouseEvent, colIndex: number) => {
-    if ((e.target as HTMLElement).tagName === 'INPUT') return;
+    if ((e.target as HTMLElement).tagName === "INPUT") return;
     e.preventDefault();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setColumnMenu({ colIndex, x: rect.left, y: rect.bottom + 4 });
@@ -348,39 +348,39 @@ export default function TableTable(props: TableTableProps) {
     const activeSort = column ? activeSorts().find((s) => s.property === column.name) : undefined;
     const activeFilter = column ? activeFilters().find((f) => f.property === column.name) : undefined;
 
-    const actions: ContextMenuAction[] = [{ id: 'rename', label: t('table.renameColumn') || 'Rename' }];
+    const actions: ContextMenuAction[] = [{ id: "rename", label: t("table.renameColumn") || "Rename" }];
 
     if (
       column &&
       (column.type === PropertyTypeSelect || column.type === PropertyTypeMultiSelect) &&
       props.onUpdateColumns
     ) {
-      actions.push({ id: 'edit-options', label: t('table.editOptions') || 'Edit options' });
+      actions.push({ id: "edit-options", label: t("table.editOptions") || "Edit options" });
     }
 
     actions.push(
-      { id: 'sort-asc', label: t('table.sortAscending') || 'Sort Ascending' },
-      { id: 'sort-desc', label: t('table.sortDescending') || 'Sort Descending' }
+      { id: "sort-asc", label: t("table.sortAscending") || "Sort Ascending" },
+      { id: "sort-desc", label: t("table.sortDescending") || "Sort Descending" },
     );
 
     if (activeSort) {
       actions.push({
-        id: 'remove-sort',
-        label: t('table.removeSort') || 'Remove sort',
+        id: "remove-sort",
+        label: t("table.removeSort") || "Remove sort",
         separator: true,
       });
     }
 
     actions.push({
-      id: 'filter-by',
-      label: activeFilter ? `${t('table.filterBy') || 'Filter by...'} \u2713` : t('table.filterBy') || 'Filter by...',
+      id: "filter-by",
+      label: activeFilter ? `${t("table.filterBy") || "Filter by..."} \u2713` : t("table.filterBy") || "Filter by...",
       separator: true,
     });
 
     if (activeViewId() !== DEFAULT_VIEW_ID) {
       actions.push({
-        id: 'hide-column',
-        label: t('table.hideColumn') || 'Hide column',
+        id: "hide-column",
+        label: t("table.hideColumn") || "Hide column",
         disabled: visibleColumns().length <= 1,
         separator: true,
       });
@@ -389,18 +389,18 @@ export default function TableTable(props: TableTableProps) {
     if (props.onInsertColumn) {
       actions.push(
         {
-          id: 'insert-left',
-          label: t('table.insertColumnLeft') || 'Insert Left',
-          separator: !actions.find((a) => a.id === 'hide-column'),
+          id: "insert-left",
+          label: t("table.insertColumnLeft") || "Insert Left",
+          separator: !actions.find((a) => a.id === "hide-column"),
         },
-        { id: 'insert-right', label: t('table.insertColumnRight') || 'Insert Right' }
+        { id: "insert-right", label: t("table.insertColumnRight") || "Insert Right" },
       );
     }
 
     if (props.onDeleteColumn && props.columns.length > 1) {
       actions.push({
-        id: 'delete-column',
-        label: t('table.deleteColumn') || 'Delete column',
+        id: "delete-column",
+        label: t("table.deleteColumn") || "Delete column",
         danger: true,
         separator: true,
       });
@@ -468,36 +468,36 @@ export default function TableTable(props: TableTableProps) {
     if (!column) return;
 
     switch (actionId) {
-      case 'rename':
+      case "rename":
         setRenameValue(column.name);
         setRenamingColumn(state.colIndex);
         break;
-      case 'edit-options':
+      case "edit-options":
         setOptionsEditor({ column, x: state.x, y: state.y });
         break;
-      case 'sort-asc':
+      case "sort-asc":
         applySort(state.colIndex, SortAsc);
         break;
-      case 'sort-desc':
+      case "sort-desc":
         applySort(state.colIndex, SortDesc);
         break;
-      case 'remove-sort':
+      case "remove-sort":
         removeSort(state.colIndex);
         break;
-      case 'filter-by':
+      case "filter-by":
         setFilterPanel({ colIndex: state.colIndex, column, x: state.x, y: state.y });
         break;
-      case 'hide-column':
+      case "hide-column":
         hideColumn(column.name);
         break;
-      case 'insert-left':
+      case "insert-left":
         props.onInsertColumn?.(state.colIndex);
         break;
-      case 'insert-right':
+      case "insert-right":
         props.onInsertColumn?.(state.colIndex + 1);
         break;
-      case 'delete-column':
-        if (confirm(t('table.confirmDeleteColumn') || 'Delete this column and all its data?')) {
+      case "delete-column":
+        if (confirm(t("table.confirmDeleteColumn") || "Delete this column and all its data?")) {
           props.onDeleteColumn?.(state.colIndex);
         }
         break;
@@ -536,7 +536,7 @@ export default function TableTable(props: TableTableProps) {
   };
 
   // Navigate to an adjacent cell after Tab/Enter
-  const moveFocus = (direction: 'next' | 'prev' | 'down') => {
+  const moveFocus = (direction: "next" | "prev" | "down") => {
     const current = editingCell();
     if (!current) return;
     const cols = visibleColumns();
@@ -548,14 +548,14 @@ export default function TableTable(props: TableTableProps) {
     let nextColIdx = colIdx;
     let nextRowIdx = rowIdx;
 
-    if (direction === 'next') {
+    if (direction === "next") {
       if (colIdx < cols.length - 1) {
         nextColIdx = colIdx + 1;
       } else {
         nextColIdx = 0;
         nextRowIdx = rowIdx + 1;
       }
-    } else if (direction === 'prev') {
+    } else if (direction === "prev") {
       if (colIdx > 0) {
         nextColIdx = colIdx - 1;
       } else {
@@ -599,7 +599,7 @@ export default function TableTable(props: TableTableProps) {
                 <button
                   class={styles.chipRemove}
                   onClick={() => removeSortByName(sort.property)}
-                  title={t('table.removeSort') || 'Remove sort'}
+                  title={t("table.removeSort") || "Remove sort"}
                 >
                   <CloseIcon />
                 </button>
@@ -608,7 +608,7 @@ export default function TableTable(props: TableTableProps) {
           </For>
           <For each={activeFilters()}>
             {(filter) => {
-              const prop = filter.property ?? '';
+              const prop = filter.property ?? "";
               return (
                 <div class={`${styles.chip} ${styles.chipFilter}`} data-testid={`filter-chip-${prop}`}>
                   <span class={styles.chipIcon}>
@@ -616,15 +616,15 @@ export default function TableTable(props: TableTableProps) {
                   </span>
                   <span class={styles.chipLabel}>
                     {prop}
-                    <Show when={filter.value !== undefined && filter.value !== ''}>
-                      {': '}
+                    <Show when={filter.value !== undefined && filter.value !== ""}>
+                      {": "}
                       {String(filter.value)}
                     </Show>
                   </span>
                   <button
                     class={styles.chipRemove}
                     onClick={() => removeFilterByName(prop)}
-                    title={t('table.removeFilter') || 'Remove filter'}
+                    title={t("table.removeFilter") || "Remove filter"}
                   >
                     <CloseIcon />
                   </button>
@@ -656,7 +656,7 @@ export default function TableTable(props: TableTableProps) {
                         [`${styles.colDragging}`]: draggingColName() === column.name,
                         [`${styles.colDragOver}`]: dragOverColName() === column.name,
                       }}
-                      style={{ width: `${colWidth(column.name)}px`, 'min-width': `${MIN_COL_WIDTH}px` }}
+                      style={{ width: `${colWidth(column.name)}px`, "min-width": `${MIN_COL_WIDTH}px` }}
                       draggable={!!props.onReorderColumns && realIndex() > 0}
                       onClick={(e) => handleHeaderClick(e, realIndex())}
                       onContextMenu={(e) => handleHeaderContextMenu(e, realIndex())}
@@ -702,8 +702,8 @@ export default function TableTable(props: TableTableProps) {
                           value={renameValue()}
                           onInput={(e) => setRenameValue(e.target.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') commitRename();
-                            if (e.key === 'Escape') setRenamingColumn(null);
+                            if (e.key === "Enter") commitRename();
+                            if (e.key === "Escape") setRenamingColumn(null);
                           }}
                           onBlur={commitRename}
                           ref={(el) => setTimeout(() => el?.select(), 0)}
@@ -733,7 +733,7 @@ export default function TableTable(props: TableTableProps) {
                       data-testid="hidden-columns-btn"
                       onClick={() => setHiddenDropdownOpen(!hiddenDropdownOpen())}
                     >
-                      {hiddenColumns().length} {t('table.hiddenColumns') || 'hidden'}
+                      {hiddenColumns().length} {t("table.hiddenColumns") || "hidden"}
                     </button>
                     <Show when={hiddenDropdownOpen()}>
                       <div class={styles.hiddenColumnsDropdown} data-testid="hidden-columns-dropdown">
@@ -741,7 +741,7 @@ export default function TableTable(props: TableTableProps) {
                           {(col) => (
                             <div class={styles.hiddenColumnItem}>
                               <span>{col.name}</span>
-                              <button onClick={() => showColumn(col.name)}>{t('table.showColumn') || 'Show'}</button>
+                              <button onClick={() => showColumn(col.name)}>{t("table.showColumn") || "Show"}</button>
                             </div>
                           )}
                         </For>
@@ -773,7 +773,7 @@ export default function TableTable(props: TableTableProps) {
                             e.stopPropagation();
                             onOpen()(record.id);
                           }}
-                          title={t('table.openRecord') || 'Open'}
+                          title={t("table.openRecord") || "Open"}
                         >
                           <OpenInFullIcon />
                         </button>
@@ -785,9 +785,9 @@ export default function TableTable(props: TableTableProps) {
                       <button
                         class={styles.deleteBtn}
                         onClick={() => props.onDeleteRecord?.(record.id)}
-                        title={t('table.deleteRecord') || 'Delete'}
+                        title={t("table.deleteRecord") || "Delete"}
                       >
-                        {'\u2715'}
+                        {"\u2715"}
                       </button>
                     </td>
                   </Show>
@@ -811,9 +811,9 @@ export default function TableTable(props: TableTableProps) {
                           onStartEdit={() => setEditingCell({ recordId: record.id, columnId: column.name })}
                           onSave={(value) => handleCellSave(record.id, column.name, value)}
                           onCancel={() => setEditingCell(null)}
-                          onTabNext={() => moveFocus('next')}
-                          onTabPrev={() => moveFocus('prev')}
-                          onEnterDown={() => moveFocus('down')}
+                          onTabNext={() => moveFocus("next")}
+                          onTabPrev={() => moveFocus("prev")}
+                          onEnterDown={() => moveFocus("down")}
                         />
                       );
                     }}
@@ -836,7 +836,7 @@ export default function TableTable(props: TableTableProps) {
                   }
                   onClick={handleAddRow}
                 >
-                  + {t('table.addRecord') || 'New'}
+                  + {t("table.addRecord") || "New"}
                 </td>
               </tr>
             </Show>
@@ -846,21 +846,21 @@ export default function TableTable(props: TableTableProps) {
 
       <Show when={props.columns.length === 0}>
         <div class={styles.empty}>
-          {t('table.noColumns')}
+          {t("table.noColumns")}
           <Show when={props.onAddColumn}>
-            <span> {t('table.addColumnFirst') || 'Click + to add a column.'}</span>
+            <span> {t("table.addColumnFirst") || "Click + to add a column."}</span>
           </Show>
         </div>
       </Show>
 
       <Show when={props.hasMore}>
         <div class={styles.loadMore}>
-          <button onClick={() => props.onLoadMore?.()}>{t('table.loadMore')}</button>
+          <button onClick={() => props.onLoadMore?.()}>{t("table.loadMore")}</button>
         </div>
       </Show>
 
       <div class={styles.statusBar}>
-        {props.records.length} {t('table.recordCount') || 'records'}
+        {props.records.length} {t("table.recordCount") || "records"}
       </div>
 
       {/* Row context menu */}

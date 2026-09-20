@@ -1,12 +1,12 @@
 // Kanban board view for table records, grouped by select/multi-select columns. Multi-select records appear in all matching groups (replace-all drag behavior).
 
-import { For, Show, createMemo } from 'solid-js';
-import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from '@sdk/types.gen';
-import { updateRecordField, handleEnterBlur, getRecordTitle } from './table/tableUtils';
-import { FieldEditor } from './table/FieldEditor';
-import { TableRow } from './table/TableRow';
-import { useI18n } from '../i18n';
-import styles from './TableBoard.module.css';
+import { For, Show, createMemo } from "solid-js";
+import { type DataRecordResponse, type Property, PropertyTypeSelect, PropertyTypeMultiSelect } from "@sdk/types.gen";
+import { updateRecordField, handleEnterBlur, getRecordTitle } from "./table/tableUtils";
+import { FieldEditor } from "./table/FieldEditor";
+import { TableRow } from "./table/TableRow";
+import { useI18n } from "../i18n";
+import styles from "./TableBoard.module.css";
 
 interface TableBoardProps {
   records: DataRecordResponse[];
@@ -23,14 +23,14 @@ interface TableBoardProps {
 // For each record, returns the list of matching group option IDs.
 // Multi-select records can appear in multiple groups.
 function getRecordGroupIds(record: DataRecordResponse, col: Property): string[] {
-  const raw = String(record.data[col.name] ?? '');
-  if (!raw) return ['__none__'];
+  const raw = String(record.data[col.name] ?? "");
+  if (!raw) return ["__none__"];
   if (col.type === PropertyTypeMultiSelect) {
     const ids = raw
-      .split(',')
+      .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-    return ids.length > 0 ? ids : ['__none__'];
+    return ids.length > 0 ? ids : ["__none__"];
   }
   return [raw]; // single select
 }
@@ -40,7 +40,7 @@ export default function TableBoard(props: TableBoardProps) {
 
   // Columns eligible for grouping.
   const groupableColumns = createMemo(() =>
-    props.columns.filter((c) => c.type === PropertyTypeSelect || c.type === PropertyTypeMultiSelect)
+    props.columns.filter((c) => c.type === PropertyTypeSelect || c.type === PropertyTypeMultiSelect),
   );
 
   const groupColumn = createMemo(() => {
@@ -55,7 +55,7 @@ export default function TableBoard(props: TableBoardProps) {
 
   const groups = createMemo(() => {
     const col = groupColumn();
-    if (!col) return [{ id: '', name: 'All Records', color: undefined, records: props.records }];
+    if (!col) return [{ id: "", name: "All Records", color: undefined, records: props.records }];
 
     const grouped: Record<string, { id: string; name: string; color?: string; records: DataRecordResponse[] }> = {};
 
@@ -65,7 +65,7 @@ export default function TableBoard(props: TableBoardProps) {
       });
     }
 
-    grouped['__none__'] = { id: '__none__', name: t('table.noGroup') || 'No Group', color: undefined, records: [] };
+    grouped["__none__"] = { id: "__none__", name: t("table.noGroup") || "No Group", color: undefined, records: [] };
 
     props.records.forEach((record) => {
       const groupIds = getRecordGroupIds(record, col);
@@ -77,7 +77,7 @@ export default function TableBoard(props: TableBoardProps) {
       });
     });
 
-    return Object.values(grouped).filter((g) => g.records.length > 0 || g.id !== '__none__');
+    return Object.values(grouped).filter((g) => g.records.length > 0 || g.id !== "__none__");
   });
 
   // Body columns: all except the title column and the group column.
@@ -91,7 +91,7 @@ export default function TableBoard(props: TableBoardProps) {
     const col = groupColumn();
     if (!props.onAddRecord) return;
     const data: Record<string, unknown> = {};
-    if (col && groupId !== '__none__') {
+    if (col && groupId !== "__none__") {
       data[col.name] = groupId;
     }
     props.onAddRecord(data);
@@ -99,16 +99,16 @@ export default function TableBoard(props: TableBoardProps) {
 
   return (
     <div class={styles.board} data-testid="board">
-      <Show when={groupColumn()} fallback={<div class={styles.noGroup}>{t('table.addSelectColumn')}</div>}>
+      <Show when={groupColumn()} fallback={<div class={styles.noGroup}>{t("table.addSelectColumn")}</div>}>
         <Show when={groupableColumns().length > 1 && props.onGroupByChange}>
           <div class={styles.boardHeader}>
             <label class={styles.groupByLabel} for="board-group-by">
-              {t('table.groupBy')}:
+              {t("table.groupBy")}:
             </label>
             <select
               id="board-group-by"
               class={styles.groupBySelect}
-              value={groupColumn()?.name ?? ''}
+              value={groupColumn()?.name ?? ""}
               onChange={(e) => props.onGroupByChange?.(e.currentTarget.value)}
             >
               <For each={groupableColumns()}>{(col) => <option value={col.name}>{col.name}</option>}</For>
@@ -121,7 +121,7 @@ export default function TableBoard(props: TableBoardProps) {
               <div
                 class={styles.column}
                 data-testid="board-column"
-                style={group.color ? { '--column-color': group.color } : {}}
+                style={group.color ? { "--column-color": group.color } : {}}
               >
                 <div class={styles.columnHeader} data-testid="board-column-header">
                   <div class={styles.columnTitle}>
@@ -143,7 +143,7 @@ export default function TableBoard(props: TableBoardProps) {
                           <input
                             type="text"
                             value={getRecordTitle(record, props.columns)}
-                            placeholder={t('table.untitled') || 'Untitled'}
+                            placeholder={t("table.untitled") || "Untitled"}
                             onBlur={(e) =>
                               props.columns[0] &&
                               updateRecordField(record, props.columns[0].name, e.target.value, props.onUpdateRecord)
@@ -171,7 +171,7 @@ export default function TableBoard(props: TableBoardProps) {
                   </For>
                   <Show when={props.onAddRecord}>
                     <button class={styles.addCard} onClick={() => handleAddCard(group.id)}>
-                      + {t('table.addRecord') || 'Add'}
+                      + {t("table.addRecord") || "Add"}
                     </button>
                   </Show>
                 </div>

@@ -1,13 +1,13 @@
 // Tests SSE connection status across failure and recovery transitions.
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@solidjs/testing-library';
-import { EventSourceProvider, useEventSource } from './EventSourceContext';
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@solidjs/testing-library";
+import { EventSourceProvider, useEventSource } from "./EventSourceContext";
 
-vi.mock('./AuthContext', () => ({
+vi.mock("./AuthContext", () => ({
   useAuth: () => ({
-    user: () => ({ id: 'user-1', workspace_id: 'workspace-1' }),
-    token: () => 'test-token',
+    user: () => ({ id: "user-1", workspace_id: "workspace-1" }),
+    token: () => "test-token",
   }),
 }));
 
@@ -24,17 +24,17 @@ class MockEventSource {
   addEventListener(_type: string, _listener: unknown) {}
 
   open() {
-    this.onopen?.(new Event('open'));
+    this.onopen?.(new Event("open"));
   }
 
   fail() {
-    this.onerror?.(new Event('error'));
+    this.onerror?.(new Event("error"));
   }
 }
 
 function ConnectionStatus() {
   const { connected } = useEventSource();
-  return <output data-testid="connection-status">{connected() ? 'Connected' : 'Reconnecting'}</output>;
+  return <output data-testid="connection-status">{connected() ? "Connected" : "Reconnecting"}</output>;
 }
 
 afterEach(() => {
@@ -43,9 +43,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('EventSourceProvider', () => {
-  it('reports reconnecting after a connection failure and connected after recovery', () => {
-    vi.stubGlobal('EventSource', MockEventSource);
+describe("EventSourceProvider", () => {
+  it("reports reconnecting after a connection failure and connected after recovery", () => {
+    vi.stubGlobal("EventSource", MockEventSource);
 
     render(() => (
       <EventSourceProvider>
@@ -56,18 +56,18 @@ describe('EventSourceProvider', () => {
     expect(MockEventSource.instances).toHaveLength(1);
     const eventSource = MockEventSource.instances[0];
     if (!eventSource) {
-      throw new Error('EventSourceProvider did not create an event source');
+      throw new Error("EventSourceProvider did not create an event source");
     }
-    expect(eventSource.url).toBe('/api/v1/workspaces/workspace-1/events?token=test-token');
-    expect(screen.getByTestId('connection-status')).toHaveTextContent('Reconnecting');
+    expect(eventSource.url).toBe("/api/v1/workspaces/workspace-1/events?token=test-token");
+    expect(screen.getByTestId("connection-status")).toHaveTextContent("Reconnecting");
 
     eventSource.open();
-    expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+    expect(screen.getByTestId("connection-status")).toHaveTextContent("Connected");
 
     eventSource.fail();
-    expect(screen.getByTestId('connection-status')).toHaveTextContent('Reconnecting');
+    expect(screen.getByTestId("connection-status")).toHaveTextContent("Reconnecting");
 
     eventSource.open();
-    expect(screen.getByTestId('connection-status')).toHaveTextContent('Connected');
+    expect(screen.getByTestId("connection-status")).toHaveTextContent("Connected");
   });
 });

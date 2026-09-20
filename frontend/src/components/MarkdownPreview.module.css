@@ -59,7 +59,7 @@
   top: 0.15em;
 }
 
-.preview :global(li.task-list-item[data-checked='true']) {
+.preview :global(li.task-list-item[data-checked="true"]) {
   text-decoration: line-through;
   color: var(--c-text-muted);
 }

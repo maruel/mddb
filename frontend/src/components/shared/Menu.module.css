@@ -1,6 +1,6 @@
 /* Styles for the Menu component. */
 .menu:focus-visible,
-.menu [role='menuitem']:focus-visible {
+.menu [role="menuitem"]:focus-visible {
   outline: 2px solid var(--c-border-focus);
   outline-offset: -2px;
 }

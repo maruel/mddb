@@ -1,20 +1,20 @@
 // Utility functions for asset URL handling in markdown content.
 
-import type { AssetUrlMap } from '../../contexts/EditorContext';
-import type { NodeTitleMap } from '../../utils/markdown-utils';
+import type { AssetUrlMap } from "../../contexts/EditorContext";
+import type { NodeTitleMap } from "../../utils/markdown-utils";
 
 // Re-export NodeTitleMap and extractLinkedNodeIds from utils for backward compatibility
-export type { NodeTitleMap } from '../../utils/markdown-utils';
-export { extractLinkedNodeIds } from '../../utils/markdown-utils';
+export type { NodeTitleMap } from "../../utils/markdown-utils";
+export { extractLinkedNodeIds } from "../../utils/markdown-utils";
 
 /**
  * Check if a source looks like a local filename (not a URL or absolute path).
  */
 function isLocalFilename(src: string): boolean {
   // Skip if it looks like a URL (contains ://)
-  if (src.includes('://')) return false;
+  if (src.includes("://")) return false;
   // Skip if it starts with / (absolute path)
-  if (src.startsWith('/')) return false;
+  if (src.startsWith("/")) return false;
   return true;
 }
 
@@ -154,7 +154,7 @@ export function rewriteInternalLinkTitles(markdown: string, nodeTitles: NodeTitl
       }
       // Keep original if no title found (page might be deleted)
       return match;
-    }
+    },
   );
 }
 

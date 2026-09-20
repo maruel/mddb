@@ -1,6 +1,6 @@
 // Table cell component with inline editing for different property types.
 
-import { createSignal, Show, type Accessor, type JSXElement } from 'solid-js';
+import { createSignal, Show, type Accessor, type JSXElement } from "solid-js";
 import {
   type DataRecordResponse,
   type Property,
@@ -10,10 +10,10 @@ import {
   PropertyTypeNumber,
   PropertyTypeDate,
   PropertyTypeUser,
-} from '@sdk/types.gen';
-import styles from './TableCell.module.css';
-import { FieldValue } from './FieldValue';
-import { MultiSelectEditor, SingleSelectEditor, UserEditor } from './FieldEditor';
+} from "@sdk/types.gen";
+import styles from "./TableCell.module.css";
+import { FieldValue } from "./FieldValue";
+import { MultiSelectEditor, SingleSelectEditor, UserEditor } from "./FieldEditor";
 
 export interface TableCellProps {
   record: DataRecordResponse;
@@ -33,12 +33,12 @@ export interface TableCellProps {
  * Renders appropriate input based on column type when editing.
  */
 export function TableCell(props: TableCellProps) {
-  const [editValue, setEditValue] = createSignal('');
+  const [editValue, setEditValue] = createSignal("");
   const [editCancelled, setEditCancelled] = createSignal(false);
   let inputRef: HTMLInputElement | HTMLSelectElement | undefined;
 
   const getCellValue = () => {
-    return props.record.data[props.column.name] ?? '';
+    return props.record.data[props.column.name] ?? "";
   };
 
   const handleClick = () => {
@@ -59,15 +59,15 @@ export function TableCell(props: TableCellProps) {
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleCellSave();
       props.onEnterDown?.();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       e.preventDefault();
       setEditCancelled(true);
       props.onCancel();
-    } else if (e.key === 'Tab') {
+    } else if (e.key === "Tab") {
       e.preventDefault();
       handleCellSave();
       if (e.shiftKey) {
@@ -88,7 +88,7 @@ export function TableCell(props: TableCellProps) {
   // Read current value from input ref for saving
   const getCurrentValue = () => {
     if (!inputRef) return editValue();
-    if (inputRef instanceof HTMLInputElement && inputRef.type === 'checkbox') {
+    if (inputRef instanceof HTMLInputElement && inputRef.type === "checkbox") {
       return String(inputRef.checked);
     }
     return inputRef.value;
@@ -106,7 +106,7 @@ export function TableCell(props: TableCellProps) {
 
   const onKeyDown = (e: KeyboardEvent) => {
     // Sync current value from input before handling key press
-    if (e.key === 'Enter' || e.key === 'Tab' || e.key === 'Escape') {
+    if (e.key === "Enter" || e.key === "Tab" || e.key === "Escape") {
       setEditValue(getCurrentValue());
     }
     handleKeyDown(e);
@@ -116,7 +116,7 @@ export function TableCell(props: TableCellProps) {
     inputRef = el;
     setTimeout(() => {
       el.focus();
-      if (el instanceof HTMLInputElement && el.type === 'text') el.select();
+      if (el instanceof HTMLInputElement && el.type === "text") el.select();
     }, 0);
   };
 
@@ -129,7 +129,7 @@ export function TableCell(props: TableCellProps) {
           <input
             ref={focusRef}
             type="checkbox"
-            checked={initialValue === 'true'}
+            checked={initialValue === "true"}
             onChange={syncAndSave}
             onKeyDown={onKeyDown}
             class={styles.input}
@@ -210,7 +210,7 @@ export function TableCell(props: TableCellProps) {
   };
 
   return (
-    <td class={`${styles.cell}${props.isEditing() ? ` ${styles.editing}` : ''}`} onClick={handleClick}>
+    <td class={`${styles.cell}${props.isEditing() ? ` ${styles.editing}` : ""}`} onClick={handleClick}>
       <Show
         when={props.isEditing()}
         fallback={

@@ -1,15 +1,15 @@
 // Keyboard bindings for flat block editor.
 // Handles Tab/Shift-Tab for indentation, Enter for block splitting, Backspace for merging.
 
-import { keymap } from 'prosemirror-keymap';
-import { type Command, type EditorState } from 'prosemirror-state';
-import { type BlockType } from './schema';
+import { keymap } from "prosemirror-keymap";
+import { type Command, type EditorState } from "prosemirror-state";
+import { type BlockType } from "./schema";
 
 /**
  * Check if a block type is list-like (supports indentation).
  */
 function isListType(type: BlockType): boolean {
-  return ['bullet', 'number', 'task'].includes(type);
+  return ["bullet", "number", "task"].includes(type);
 }
 
 /**
@@ -38,7 +38,7 @@ const indentCommand: Command = (state, dispatch) => {
       state.tr.setNodeMarkup(pos, undefined, {
         ...node.attrs,
         indent: (indent as number) + 1,
-      })
+      }),
     );
   }
   return true;
@@ -59,7 +59,7 @@ const outdentCommand: Command = (state, dispatch) => {
       state.tr.setNodeMarkup(pos, undefined, {
         ...node.attrs,
         indent: (indent as number) - 1,
-      })
+      }),
     );
   }
   return true;
@@ -85,8 +85,8 @@ const enterCommand: Command = (state, dispatch) => {
     if (dispatch) {
       const newAttrs =
         (indent as number) > 0
-          ? { type, indent: (indent as number) - 1, checked: type === 'task' ? false : null }
-          : { type: 'paragraph', indent: 0, checked: null };
+          ? { type, indent: (indent as number) - 1, checked: type === "task" ? false : null }
+          : { type: "paragraph", indent: 0, checked: null };
       dispatch(state.tr.setNodeMarkup(pos, undefined, newAttrs));
     }
     return true;
@@ -98,7 +98,7 @@ const enterCommand: Command = (state, dispatch) => {
     const newAttrs = { ...node.attrs };
 
     // Reset checked state for new task items
-    if (type === 'task') {
+    if (type === "task") {
       newAttrs.checked = false;
     }
 
@@ -131,23 +131,23 @@ const backspaceCommand: Command = (state, dispatch) => {
         state.tr.setNodeMarkup(pos, undefined, {
           ...node.attrs,
           indent: (indent as number) - 1,
-        })
+        }),
       );
     }
     return true;
   }
 
   // If list/quote type, convert to paragraph
-  if (['bullet', 'number', 'task', 'quote'].includes(type as string)) {
+  if (["bullet", "number", "task", "quote"].includes(type as string)) {
     if (dispatch) {
       dispatch(
         state.tr.setNodeMarkup(pos, undefined, {
-          type: 'paragraph',
+          type: "paragraph",
           indent: 0,
           checked: null,
           level: null,
           language: null,
-        })
+        }),
       );
     }
     return true;
@@ -164,7 +164,7 @@ const backspaceCommand: Command = (state, dispatch) => {
 export function buildBlockKeymap() {
   return keymap({
     Tab: indentCommand,
-    'Shift-Tab': outdentCommand,
+    "Shift-Tab": outdentCommand,
     Enter: enterCommand,
     Backspace: backspaceCommand,
   });

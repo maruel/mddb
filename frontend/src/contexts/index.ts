@@ -1,11 +1,11 @@
 // Context providers for global application state.
 
-export { AuthProvider, useAuth } from './AuthContext';
-export { WorkspaceProvider, useWorkspace } from './WorkspaceContext';
-export { EditorProvider, useEditor } from './EditorContext';
-export { RecordsProvider, useRecords, DEFAULT_VIEW_ID } from './RecordsContext';
-export { NotificationProvider, useNotifications } from './NotificationContext';
-export { EventSourceProvider, useEventSource } from './EventSourceContext';
+export { AuthProvider, useAuth } from "./AuthContext";
+export { WorkspaceProvider, useWorkspace } from "./WorkspaceContext";
+export { EditorProvider, useEditor } from "./EditorContext";
+export { RecordsProvider, useRecords, DEFAULT_VIEW_ID } from "./RecordsContext";
+export { NotificationProvider, useNotifications } from "./NotificationContext";
+export { EventSourceProvider, useEventSource } from "./EventSourceContext";
 
 // Re-export slugify from urls for backward compatibility (but prefer importing from urls directly)
-export { slugify } from '../utils/urls';
+export { slugify } from "../utils/urls";

@@ -1,12 +1,12 @@
 // List view for table records, displaying each record as a compact horizontal row.
 
-import { For, Show } from 'solid-js';
-import type { DataRecordResponse, Property } from '@sdk/types.gen';
-import { getRecordTitle } from './table/tableUtils';
-import { FieldValue } from './table/FieldValue';
-import { TableRow } from './table/TableRow';
-import { useI18n } from '../i18n';
-import styles from './TableList.module.css';
+import { For, Show } from "solid-js";
+import type { DataRecordResponse, Property } from "@sdk/types.gen";
+import { getRecordTitle } from "./table/tableUtils";
+import { FieldValue } from "./table/FieldValue";
+import { TableRow } from "./table/TableRow";
+import { useI18n } from "../i18n";
+import styles from "./TableList.module.css";
 
 interface TableListProps {
   records: DataRecordResponse[];
@@ -25,7 +25,7 @@ export default function TableList(props: TableListProps) {
 
   return (
     <div class={styles.container} data-testid="list-view">
-      <Show when={props.records.length > 0} fallback={<div class={styles.empty}>{t('table.noRecords')}</div>}>
+      <Show when={props.records.length > 0} fallback={<div class={styles.empty}>{t("table.noRecords")}</div>}>
         <div class={styles.list}>
           <For each={props.records}>
             {(record) => (
@@ -37,14 +37,14 @@ export default function TableList(props: TableListProps) {
                 class={styles.row}
               >
                 <span class={styles.title}>
-                  {getRecordTitle(record, props.columns) || t('table.untitled') || 'Untitled'}
+                  {getRecordTitle(record, props.columns) || t("table.untitled") || "Untitled"}
                 </span>
                 <Show when={bodyColumns().length > 0}>
                   <span class={styles.fields}>
                     <For each={bodyColumns()}>
                       {(col) => {
                         const val = record.data[col.name];
-                        if (val === undefined || val === null || val === '') return null;
+                        if (val === undefined || val === null || val === "") return null;
                         return (
                           <span class={styles.field}>
                             <span class={styles.fieldName}>{col.name}</span>
@@ -64,11 +64,11 @@ export default function TableList(props: TableListProps) {
       </Show>
       <div class={styles.statusBar}>
         <span>
-          {props.records.length} {t('table.recordCount') || 'records'}
+          {props.records.length} {t("table.recordCount") || "records"}
         </span>
         <Show when={props.onAddRecord}>
           <button class={styles.addRecord} onClick={() => props.onAddRecord?.()}>
-            + {t('table.addRecord') || 'Add Record'}
+            + {t("table.addRecord") || "Add Record"}
           </button>
         </Show>
       </div>

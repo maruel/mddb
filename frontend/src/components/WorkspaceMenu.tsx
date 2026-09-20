@@ -1,20 +1,20 @@
 // Dropdown menu for switching workspaces and accessing workspace settings.
 
-import { createSignal, For, Show, createMemo } from 'solid-js';
-import { useI18n } from '../i18n';
-import { useAuth } from '../contexts';
-import { useWorkspace } from '../contexts';
-import { useClickOutside } from '../composables/useClickOutside';
-import { Button, Menu, MenuItem } from './shared';
-import type { WSMembershipResponse } from '@sdk/types.gen';
-import styles from './WorkspaceMenu.module.css';
+import { createSignal, For, Show, createMemo } from "solid-js";
+import { useI18n } from "../i18n";
+import { useAuth } from "../contexts";
+import { useWorkspace } from "../contexts";
+import { useClickOutside } from "../composables/useClickOutside";
+import { Button, Menu, MenuItem } from "./shared";
+import type { WSMembershipResponse } from "@sdk/types.gen";
+import styles from "./WorkspaceMenu.module.css";
 
-import ExpandLessIcon from '@material-symbols/svg-400/outlined/expand_less.svg?solid';
-import ExpandMoreIcon from '@material-symbols/svg-400/outlined/expand_more.svg?solid';
-import CheckIcon from '@material-symbols/svg-400/outlined/check.svg?solid';
-import SettingsIcon from '@material-symbols/svg-400/outlined/settings.svg?solid';
-import AddIcon from '@material-symbols/svg-400/outlined/add.svg?solid';
-import DownloadIcon from '@material-symbols/svg-400/outlined/download.svg?solid';
+import ExpandLessIcon from "@material-symbols/svg-400/outlined/expand_less.svg?solid";
+import ExpandMoreIcon from "@material-symbols/svg-400/outlined/expand_more.svg?solid";
+import CheckIcon from "@material-symbols/svg-400/outlined/check.svg?solid";
+import SettingsIcon from "@material-symbols/svg-400/outlined/settings.svg?solid";
+import AddIcon from "@material-symbols/svg-400/outlined/add.svg?solid";
+import DownloadIcon from "@material-symbols/svg-400/outlined/download.svg?solid";
 
 interface WorkspaceMenuProps {
   onOpenSettings: () => void;
@@ -67,18 +67,18 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
     return Array.from(orgMap.values()).filter((o) => o.workspaces.length > 0);
   });
 
-  const currentWsId = () => user()?.workspace_id || '';
+  const currentWsId = () => user()?.workspace_id || "";
 
   const currentWsName = () => {
     const u = user();
-    if (!u) return t('app.workspace');
+    if (!u) return t("app.workspace");
     const current = u.workspaces?.find((ws) => ws.workspace_id === u.workspace_id);
-    return current?.workspace_name || t('app.workspace');
+    return current?.workspace_name || t("app.workspace");
   };
 
   useClickOutside(
     () => menuRef,
-    () => setIsOpen(false)
+    () => setIsOpen(false),
   );
 
   const handleSwitchWorkspace = async (wsId: string) => {
@@ -115,7 +115,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
         class={styles.wsButton}
         onClick={() => setIsOpen(!isOpen())}
         title={currentWsName()}
-        aria-label={t('app.switchWorkspace') || 'Switch workspace'}
+        aria-label={t("app.switchWorkspace") || "Switch workspace"}
         aria-expanded={isOpen()}
         aria-haspopup="menu"
       >
@@ -127,7 +127,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
 
       <Show when={isOpen()}>
         <Menu
-          ariaLabel={t('app.switchWorkspace') || 'Switch workspace'}
+          ariaLabel={t("app.switchWorkspace") || "Switch workspace"}
           class={styles.dropdown}
           onClose={() => setIsOpen(false)}
           trigger={() => triggerRef}
@@ -142,7 +142,7 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
                   <For each={org.workspaces}>
                     {(ws) => (
                       <MenuItem
-                        class={`${styles.wsItem} ${ws.workspace_id === currentWsId() ? styles.active : ''}`}
+                        class={`${styles.wsItem} ${ws.workspace_id === currentWsId() ? styles.active : ""}`}
                         onClick={() => handleSwitchWorkspace(ws.workspace_id)}
                       >
                         <span class={styles.wsItemName}>{ws.workspace_name || ws.workspace_id}</span>
@@ -163,19 +163,19 @@ export default function WorkspaceMenu(props: WorkspaceMenuProps) {
             <span class={styles.icon} aria-hidden="true">
               <SettingsIcon />
             </span>
-            {t('app.settings')}
+            {t("app.settings")}
           </MenuItem>
           <MenuItem class={styles.menuItem} onClick={handleCreateWorkspace}>
             <span class={styles.plusIcon} aria-hidden="true">
               <AddIcon />
             </span>
-            {t('createWorkspace.title')}
+            {t("createWorkspace.title")}
           </MenuItem>
           <MenuItem class={styles.menuItem} onClick={handleImportFromNotion}>
             <span class={styles.icon} aria-hidden="true">
               <DownloadIcon />
             </span>
-            {t('notionImport.title')}
+            {t("notionImport.title")}
           </MenuItem>
         </Menu>
       </Show>

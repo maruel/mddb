@@ -1,24 +1,24 @@
 // E2E tests for floating toolbar visibility lifecycle.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
 
-test.describe('Floating Toolbar Visibility', () => {
-  test('toolbar lifecycle: hidden -> visible on selection -> hidden on blur', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'float-toolbar-lifecycle');
+test.describe("Floating Toolbar Visibility", () => {
+  test("toolbar lifecycle: hidden -> visible on selection -> hidden on blur", async ({ page, request }) => {
+    const { token } = await registerUser(request, "float-toolbar-lifecycle");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with simple content
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Toolbar Visibility Test',
-      content: 'Hello world',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Toolbar Visibility Test",
+      content: "Hello world",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -36,38 +36,38 @@ test.describe('Floating Toolbar Visibility', () => {
     await expect(modeToggle).toBeVisible();
 
     // 2. Type text: Toolbar should REMAIN HIDDEN
-    await editor.locator('p').first().click();
-    await page.keyboard.type(' more text');
+    await editor.locator("p").first().click();
+    await page.keyboard.type(" more text");
     await expect(toolbar).not.toBeVisible();
 
     // 3. Select text: Toolbar should become VISIBLE
-    await editor.locator('p').first().selectText();
+    await editor.locator("p").first().selectText();
     await expect(toolbar).toBeVisible({ timeout: 3000 });
 
     // 4. Click away (clear selection): Toolbar should become HIDDEN
-    await editor.locator('p').first().click();
+    await editor.locator("p").first().click();
     await expect(toolbar).not.toBeVisible({ timeout: 3000 });
 
     // Mode toggle should STILL be visible
     await expect(modeToggle).toBeVisible();
   });
 
-  test('toolbar appears on double-click word selection', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'float-toolbar-dblclick');
+  test("toolbar appears on double-click word selection", async ({ page, request }) => {
+    const { token } = await registerUser(request, "float-toolbar-dblclick");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple words
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Double Click Test',
-      content: 'Hello world testing',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Double Click Test",
+      content: "Hello world testing",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -75,7 +75,7 @@ test.describe('Floating Toolbar Visibility', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Wait for the actual page content to load (not just editor visibility)
-    await expect(editor.locator('p')).toContainText('Hello', { timeout: 5000 });
+    await expect(editor.locator("p")).toContainText("Hello", { timeout: 5000 });
 
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
     await expect(toolbar).not.toBeVisible();
@@ -83,7 +83,7 @@ test.describe('Floating Toolbar Visibility', () => {
     // Double-click on text to select a word
     // Note: We use mouse.dblclick with coordinates near the text start because
     // locator.dblclick() clicks the center of the element which may be empty space
-    const paragraph = editor.locator('p').first();
+    const paragraph = editor.locator("p").first();
     const box = await paragraph.boundingBox();
     expect(box).toBeTruthy();
 
@@ -100,39 +100,39 @@ test.describe('Floating Toolbar Visibility', () => {
     expect(selection?.length).toBeGreaterThan(0);
   });
 
-  test('toolbar stays within editor bounds when sidebar is open', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'float-toolbar-bounds');
+  test("toolbar stays within editor bounds when sidebar is open", async ({ page, request }) => {
+    const { token } = await registerUser(request, "float-toolbar-bounds");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with content
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Toolbar Bounds Test',
-      content: 'Test content for toolbar positioning',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Toolbar Bounds Test",
+      content: "Test content for toolbar positioning",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
     const editor = page.locator('[data-testid="wysiwyg-editor"]');
-    const prosemirror = editor.locator('.ProseMirror');
+    const prosemirror = editor.locator(".ProseMirror");
     await expect(prosemirror).toBeVisible({ timeout: 5000 });
 
     // Wait for content to load
-    await expect(prosemirror.locator('p')).toContainText('Test content', { timeout: 5000 });
+    await expect(prosemirror.locator("p")).toContainText("Test content", { timeout: 5000 });
 
     // Ensure sidebar is open
-    const sidebar = page.locator('aside');
+    const sidebar = page.locator("aside");
     await expect(sidebar).toBeVisible();
 
     // Select text to show toolbar
-    await prosemirror.locator('p').first().selectText();
+    await prosemirror.locator("p").first().selectText();
 
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
     await expect(toolbar).toBeVisible({ timeout: 3000 });

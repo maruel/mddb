@@ -8,9 +8,9 @@ import {
   onCleanup,
   type ParentComponent,
   type Accessor,
-} from 'solid-js';
-import { useAuth } from './AuthContext';
-import type { WorkspaceEvent } from '@sdk/types.gen';
+} from "solid-js";
+import { useAuth } from "./AuthContext";
+import type { WorkspaceEvent } from "@sdk/types.gen";
 
 interface EventSourceContextValue {
   lastEvent: Accessor<WorkspaceEvent | null>;
@@ -32,7 +32,7 @@ export const EventSourceProvider: ParentComponent = (props) => {
     const wsId = user()?.workspace_id;
     const t = token();
     const userId = user()?.id;
-    if (!wsId || !t || typeof EventSource === 'undefined') {
+    if (!wsId || !t || typeof EventSource === "undefined") {
       setConnected(false);
       return;
     }
@@ -43,7 +43,7 @@ export const EventSourceProvider: ParentComponent = (props) => {
     es.onopen = () => setConnected(true);
     es.onerror = () => setConnected(false);
 
-    es.addEventListener('workspace', (e: MessageEvent) => {
+    es.addEventListener("workspace", (e: MessageEvent) => {
       try {
         const evt = JSON.parse(e.data) as WorkspaceEvent;
         // Self-filter: ignore events caused by the current user.
@@ -54,7 +54,7 @@ export const EventSourceProvider: ParentComponent = (props) => {
       }
     });
 
-    es.addEventListener('server', (e: MessageEvent) => {
+    es.addEventListener("server", (e: MessageEvent) => {
       try {
         const { revision } = JSON.parse(e.data) as { revision: string };
         if (knownRevision === null) {
@@ -79,7 +79,7 @@ export const EventSourceProvider: ParentComponent = (props) => {
 export function useEventSource(): EventSourceContextValue {
   const ctx = useContext(EventSourceCtx);
   if (!ctx) {
-    throw new Error('useEventSource must be used within an EventSourceProvider');
+    throw new Error("useEventSource must be used within an EventSourceProvider");
   }
   return ctx;
 }

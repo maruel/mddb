@@ -2,7 +2,7 @@
 engineStrict: true
 minimumReleaseAge: 11520
 minimumReleaseAgeExclude:
-  - '@pnpm/*'
+  - "@pnpm/*"
   - pnpm
 allowBuilds:
   esbuild: true

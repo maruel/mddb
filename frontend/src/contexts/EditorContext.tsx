@@ -9,16 +9,16 @@ import {
   untrack,
   type ParentComponent,
   type Accessor,
-} from 'solid-js';
-import { useAuth } from './AuthContext';
-import { useEventSource } from './EventSourceContext';
-import { useWorkspace } from './WorkspaceContext';
-import { useI18n } from '../i18n';
-import { debounce } from '../utils/debounce';
-import { nodeUrl } from '../utils/urls';
-import { extractLinkedNodeIds, relativeLinksToSpaUrls, spaUrlsToRelativeLinks } from '../utils/markdown-utils';
-import { EventNodeUpdated, type Commit } from '@sdk/types.gen';
-import { useUndo } from '../hooks/useUndo';
+} from "solid-js";
+import { useAuth } from "./AuthContext";
+import { useEventSource } from "./EventSourceContext";
+import { useWorkspace } from "./WorkspaceContext";
+import { useI18n } from "../i18n";
+import { debounce } from "../utils/debounce";
+import { nodeUrl } from "../utils/urls";
+import { extractLinkedNodeIds, relativeLinksToSpaUrls, spaUrlsToRelativeLinks } from "../utils/markdown-utils";
+import { EventNodeUpdated, type Commit } from "@sdk/types.gen";
+import { useUndo } from "../hooks/useUndo";
 
 /** Map of asset filename to signed URL */
 export type AssetUrlMap = Record<string, string>;
@@ -34,7 +34,7 @@ interface EditorContextValue {
   setContent: (content: string) => void;
   hasUnsavedChanges: Accessor<boolean>;
   setHasUnsavedChanges: (has: boolean) => void;
-  autoSaveStatus: Accessor<'idle' | 'saving' | 'saved' | 'error'>;
+  autoSaveStatus: Accessor<"idle" | "saving" | "saved" | "error">;
 
   // Asset URLs (filename -> signed URL)
   assetUrls: Accessor<AssetUrlMap>;
@@ -91,15 +91,15 @@ export const EditorProvider: ParentComponent = (props) => {
   let applyingTitleUndo = false;
 
   // Editor state
-  const [title, setTitle] = createSignal('');
-  const [content, setContent] = createSignal('');
+  const [title, setTitle] = createSignal("");
+  const [content, setContent] = createSignal("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = createSignal(false);
-  const [autoSaveStatus, setAutoSaveStatus] = createSignal<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [autoSaveStatus, setAutoSaveStatus] = createSignal<"idle" | "saving" | "saved" | "error">("idle");
   let savedStatusTimer: number | undefined;
 
   // Frontmatter state
-  const [icon, setIcon] = createSignal('');
-  const [cover, setCover] = createSignal('');
+  const [icon, setIcon] = createSignal("");
+  const [cover, setCover] = createSignal("");
 
   // Asset URLs accessor - derived from selectedNodeData
   const assetUrls = (): AssetUrlMap => selectedNodeData()?.asset_urls || {};
@@ -139,12 +139,12 @@ export const EditorProvider: ParentComponent = (props) => {
     if (!nodeId || !hasUnsavedChanges() || !ws) return;
 
     try {
-      setAutoSaveStatus('saving');
-      const wsId = user()?.workspace_id || '';
+      setAutoSaveStatus("saving");
+      const wsId = user()?.workspace_id || "";
       const diskContent = spaUrlsToRelativeLinks(content(), wsId);
       await ws.nodes.page.updatePage(nodeId, { title: title(), content: diskContent });
       setHasUnsavedChanges(false);
-      setAutoSaveStatus('saved');
+      setAutoSaveStatus("saved");
 
       // Update URL if title changed
       const wsName = user()?.workspace_name;
@@ -152,7 +152,7 @@ export const EditorProvider: ParentComponent = (props) => {
         const currentPath = window.location.pathname;
         const newPath = nodeUrl(wsId, wsName, nodeId, title());
         if (currentPath !== newPath) {
-          window.history.replaceState(null, '', newPath);
+          window.history.replaceState(null, "", newPath);
         }
       }
 
@@ -161,13 +161,13 @@ export const EditorProvider: ParentComponent = (props) => {
       }
       savedStatusTimer = window.setTimeout(() => {
         savedStatusTimer = undefined;
-        if (untrack(autoSaveStatus) === 'saved') {
-          setAutoSaveStatus('idle');
+        if (untrack(autoSaveStatus) === "saved") {
+          setAutoSaveStatus("idle");
         }
       }, 2000);
     } catch (err) {
-      setSaveError(`${t('errors.autoSaveFailed')}: ${err}`);
-      setAutoSaveStatus('error');
+      setSaveError(`${t("errors.autoSaveFailed")}: ${err}`);
+      setAutoSaveStatus("error");
     }
   }, 2000);
 
@@ -196,7 +196,7 @@ export const EditorProvider: ParentComponent = (props) => {
     }
 
     try {
-      const resp = await ws.nodes.getNodeTitles({ IDs: linkedIds.join(',') });
+      const resp = await ws.nodes.getNodeTitles({ IDs: linkedIds.join(",") });
       setLinkedNodeTitles(resp.titles || {});
     } catch {
       // Silent failure - just use stored titles in links
@@ -213,13 +213,13 @@ export const EditorProvider: ParentComponent = (props) => {
     if (node) {
       setTitle(node.title);
       // Convert relative file path links from API to SPA URLs for the editor.
-      const wsId = user()?.workspace_id || '';
-      const spaContent = relativeLinksToSpaUrls(node.content || '', wsId);
+      const wsId = user()?.workspace_id || "";
+      const spaContent = relativeLinksToSpaUrls(node.content || "", wsId);
       setContent(spaContent);
-      setIcon(node.icon || '');
-      setCover(node.cover || '');
+      setIcon(node.icon || "");
+      setCover(node.cover || "");
       setHasUnsavedChanges(false);
-      setAutoSaveStatus('idle');
+      setAutoSaveStatus("idle");
       setShowHistory(false);
       setExternalChange(false);
       // Fetch linked node titles in the background
@@ -230,12 +230,12 @@ export const EditorProvider: ParentComponent = (props) => {
   });
 
   function resetEditor() {
-    setTitle('');
-    setContent('');
-    setIcon('');
-    setCover('');
+    setTitle("");
+    setContent("");
+    setIcon("");
+    setCover("");
     setHasUnsavedChanges(false);
-    setAutoSaveStatus('idle');
+    setAutoSaveStatus("idle");
     setShowHistory(false);
     setHistory([]);
     setLinkedNodeTitles({});
@@ -251,7 +251,7 @@ export const EditorProvider: ParentComponent = (props) => {
     try {
       await ws.nodes.page.updatePageFrontmatter(nodeId, { icon: newIcon, cover: cover() });
     } catch (err) {
-      setSaveError(`${t('errors.failedToSave')}: ${err}`);
+      setSaveError(`${t("errors.failedToSave")}: ${err}`);
     }
   }
 
@@ -263,7 +263,7 @@ export const EditorProvider: ParentComponent = (props) => {
     try {
       await ws.nodes.page.updatePageFrontmatter(nodeId, { icon: icon(), cover: newCover });
     } catch (err) {
-      setSaveError(`${t('errors.failedToSave')}: ${err}`);
+      setSaveError(`${t("errors.failedToSave")}: ${err}`);
     }
   }
 
@@ -273,7 +273,7 @@ export const EditorProvider: ParentComponent = (props) => {
       const oldTitle = title();
       titleBeforeEdit = oldTitle;
       undoActions.push({
-        description: t('common.undo'),
+        description: t("common.undo"),
         undo: async () => {
           applyingTitleUndo = true;
           titleBeforeEdit = null;
@@ -320,7 +320,7 @@ export const EditorProvider: ParentComponent = (props) => {
       setHistory((data.history?.filter(Boolean) as Commit[]) || []);
       setShowHistory(true);
     } catch (err) {
-      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoadingHistory(false);
     }
@@ -364,7 +364,7 @@ export const EditorProvider: ParentComponent = (props) => {
 export function useEditor(): EditorContextValue {
   const context = useContext(EditorContext);
   if (!context) {
-    throw new Error('useEditor must be used within an EditorProvider');
+    throw new Error("useEditor must be used within an EditorProvider");
   }
   return context;
 }

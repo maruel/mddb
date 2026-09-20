@@ -1,11 +1,11 @@
 // Tests for notification controls, keyboard dismissal, and trigger focus restoration.
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@solidjs/testing-library';
-import type { NotificationDTO } from '@sdk/types.gen';
-import { I18nProvider } from '../i18n';
-import type { NotificationContextValue } from '../contexts/NotificationContext';
-import NotificationBell from './NotificationBell';
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
+import type { NotificationDTO } from "@sdk/types.gen";
+import { I18nProvider } from "../i18n";
+import type { NotificationContextValue } from "../contexts/NotificationContext";
+import NotificationBell from "./NotificationBell";
 
 const notificationMocks = vi.hoisted(() => ({
   deleteNotification: vi.fn(),
@@ -15,14 +15,14 @@ const notificationMocks = vi.hoisted(() => ({
   refresh: vi.fn(),
 }));
 
-vi.mock('../contexts/NotificationContext', () => ({
+vi.mock("../contexts/NotificationContext", () => ({
   useNotifications: (): NotificationContextValue => {
     const notifications: NotificationDTO[] = [
       {
-        id: 'notification-1',
-        type: 'page_edited',
-        title: 'Test notification',
-        body: 'A keyboard-operable notification action',
+        id: "notification-1",
+        type: "page_edited",
+        title: "Test notification",
+        body: "A keyboard-operable notification action",
         read: false,
         created_at: Date.now(),
       },
@@ -50,24 +50,24 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('NotificationBell', () => {
-  it('activates notification actions as buttons and restores trigger focus after Escape', async () => {
+describe("NotificationBell", () => {
+  it("activates notification actions as buttons and restores trigger focus after Escape", async () => {
     render(() => (
       <I18nProvider>
         <NotificationBell />
       </I18nProvider>
     ));
-    const trigger = screen.getByRole('button', { name: 'Notifications' });
+    const trigger = screen.getByRole("button", { name: "Notifications" });
     trigger.focus();
     fireEvent.click(trigger);
 
-    await screen.findByRole('region', { name: 'Notifications' });
-    const item = screen.getByRole('button', { name: /Test notification/ });
+    await screen.findByRole("region", { name: "Notifications" });
+    const item = screen.getByRole("button", { name: /Test notification/ });
     fireEvent.click(item);
-    expect(notificationMocks.markAsRead).toHaveBeenCalledWith('notification-1');
+    expect(notificationMocks.markAsRead).toHaveBeenCalledWith("notification-1");
 
-    fireEvent.keyDown(document, { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByRole('region', { name: 'Notifications' })).toBeNull());
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Notifications" })).toBeNull());
     expect(trigger).toHaveFocus();
   });
 });

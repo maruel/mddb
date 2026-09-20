@@ -1,38 +1,38 @@
 // E2E tests for page links with dynamic title resolution.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
 
-test.describe('Page Links with Dynamic Titles', () => {
-  test.screenshot('link displays current title of linked page', async ({ page, request, takeScreenshot }) => {
-    const { token } = await registerUser(request, 'page-links');
+test.describe("Page Links with Dynamic Titles", () => {
+  test.screenshot("link displays current title of linked page", async ({ page, request, takeScreenshot }) => {
+    const { token } = await registerUser(request, "page-links");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create parent page
-    const parentData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Parent Page',
-      content: '',
+    const parentData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Parent Page",
+      content: "",
     });
 
     // Create child page with initial title
     const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
-      title: 'Original Child Title',
-      content: 'Child content',
+      title: "Original Child Title",
+      content: "Child content",
     });
 
     // Update parent page with a link to child using the correct format
     // Format: [DisplayText](/w/@{wsId}+{slug}/@{nodeId}+{slug})
     const linkContent = `Check out [Original Child Title](/w/@${wsID}+workspace/@${childData.id}+original-child-title)`;
     await client.ws(wsID).nodes.page.updatePage(parentData.id, {
-      title: 'Parent Page',
+      title: "Parent Page",
       content: linkContent,
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to parent page - click specifically on the pageItem, not the whole node (which includes children)
     const parentNode = page.locator(`[data-testid="sidebar-node-${parentData.id}"]`);
@@ -45,54 +45,54 @@ test.describe('Page Links with Dynamic Titles', () => {
 
     // Wait for title to confirm we're on parent page
     const titleInput = page.locator('input[placeholder*="Title"]');
-    await expect(titleInput).toHaveValue('Parent Page', { timeout: 5000 });
+    await expect(titleInput).toHaveValue("Parent Page", { timeout: 5000 });
 
-    await takeScreenshot('parent-page-with-link');
+    await takeScreenshot("parent-page-with-link");
 
     // The link should be visible with the child's title
-    const link = editor.locator('a');
+    const link = editor.locator("a");
     await expect(link).toBeVisible({ timeout: 5000 });
-    await expect(link).toContainText('Original Child Title');
+    await expect(link).toContainText("Original Child Title");
 
     // Now rename the child page
     await client.ws(wsID).nodes.page.updatePage(childData.id, {
-      title: 'Updated Child Title',
-      content: 'Child content',
+      title: "Updated Child Title",
+      content: "Child content",
     });
 
     // Reload parent page
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate back to parent page
     await parentPageItem.click();
-    await expect(titleInput).toHaveValue('Parent Page', { timeout: 5000 });
+    await expect(titleInput).toHaveValue("Parent Page", { timeout: 5000 });
     await expect(editor).toBeVisible({ timeout: 5000 });
 
-    await takeScreenshot('parent-page-after-child-rename');
+    await takeScreenshot("parent-page-after-child-rename");
 
     // The link should now show the updated title (resolved dynamically)
-    await expect(link).toContainText('Updated Child Title', { timeout: 5000 });
+    await expect(link).toContainText("Updated Child Title", { timeout: 5000 });
   });
 
-  test('verify GetNodeTitles API returns titles correctly', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'titles-api');
+  test("verify GetNodeTitles API returns titles correctly", async ({ page, request }) => {
+    const { token } = await registerUser(request, "titles-api");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create two pages
-    const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Page One',
-      content: '',
+    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Page One",
+      content: "",
     });
     const page1ID = page1Data.id as string;
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Page Two',
-      content: '',
+    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Page Two",
+      content: "",
     });
     const page2ID = page2Data.id as string;
 
@@ -103,29 +103,29 @@ test.describe('Page Links with Dynamic Titles', () => {
 
     // Verify titles are returned
     expect(titlesData.titles).toBeDefined();
-    expect(titlesData.titles[page1ID]).toBe('Page One');
-    expect(titlesData.titles[page2ID]).toBe('Page Two');
+    expect(titlesData.titles[page1ID]).toBe("Page One");
+    expect(titlesData.titles[page2ID]).toBe("Page Two");
   });
 
-  test('backlinks are returned when getting a page', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'backlinks');
+  test("backlinks are returned when getting a page", async ({ page, request }) => {
+    const { token } = await registerUser(request, "backlinks");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create source and target pages
-    const targetData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Target Page',
-      content: '',
+    const targetData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Target Page",
+      content: "",
     });
     const targetID = targetData.id as string;
 
     // Create source page with a relative-path link to target (matches on-disk format).
     const linkContent = `Link to [Target Page](../${targetID}/index.md)`;
-    const sourceData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Source Page',
+    const sourceData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Source Page",
       content: linkContent,
     });
     const sourceID = sourceData.id as string;
@@ -138,26 +138,26 @@ test.describe('Page Links with Dynamic Titles', () => {
     expect(getTargetData.backlinks).toHaveLength(1);
     const firstLink = getTargetData.backlinks?.[0];
     expect(firstLink?.node_id).toBe(sourceID);
-    expect(firstLink?.title).toBe('Source Page');
+    expect(firstLink?.title).toBe("Source Page");
   });
 
-  test('/page slash command creates link that shows in parent', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'slash-page-link');
+  test("/page slash command creates link that shows in parent", async ({ page, request }) => {
+    const { token } = await registerUser(request, "slash-page-link");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a parent page
     const createResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
       headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Parent With Subpage', content: '' },
+      data: { title: "Parent With Subpage", content: "" },
     });
     expect(createResponse.ok()).toBe(true);
     const parentData = await createResponse.json();
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to parent page
     const parentNode = page.locator(`[data-testid="sidebar-node-${parentData.id}"]`);
@@ -169,19 +169,19 @@ test.describe('Page Links with Dynamic Titles', () => {
 
     // Focus editor and use /page to create subpage
     await editor.click();
-    await page.keyboard.type('/page');
+    await page.keyboard.type("/page");
 
     const slashMenu = page.locator('[data-testid="slash-command-menu"]');
     await expect(slashMenu).toBeVisible({ timeout: 3000 });
-    await page.keyboard.press('Enter');
+    await page.keyboard.press("Enter");
     await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
 
     // Wait for navigation to new child page
     const titleInput = page.locator('input[placeholder*="Title"]');
-    await expect(titleInput).toHaveValue('Untitled', { timeout: 10000 });
+    await expect(titleInput).toHaveValue("Untitled", { timeout: 10000 });
 
     // Rename the child page
-    await titleInput.fill('My Subpage');
+    await titleInput.fill("My Subpage");
 
     // Trigger autosave by blurring
     await titleInput.blur();
@@ -192,125 +192,124 @@ test.describe('Page Links with Dynamic Titles', () => {
 
     // Navigate back to parent
     await parentNode.locator('> [class*="pageItem"]').click();
-    await expect(titleInput).toHaveValue('Parent With Subpage', { timeout: 5000 });
+    await expect(titleInput).toHaveValue("Parent With Subpage", { timeout: 5000 });
 
     // Check link in parent shows child title
     await expect(editor).toBeVisible({ timeout: 5000 });
-    const link = editor.locator('a');
+    const link = editor.locator("a");
     await expect(link).toBeVisible({ timeout: 5000 });
 
     // The link should show the subpage title (either Untitled or My Subpage depending on timing)
     const linkText = await link.textContent();
-    expect(linkText === 'Untitled' || linkText === 'My Subpage').toBe(true);
+    expect(linkText === "Untitled" || linkText === "My Subpage").toBe(true);
   });
 
-  test.screenshot('invalid link is highlighted in red after target page is deleted', async ({
-    page,
-    request,
-    takeScreenshot,
-  }) => {
-    const { token } = await registerUser(request, 'invalid-link');
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  test.screenshot(
+    "invalid link is highlighted in red after target page is deleted",
+    async ({ page, request, takeScreenshot }) => {
+      const { token } = await registerUser(request, "invalid-link");
+      await page.goto(`/?token=${token}`);
+      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    const wsID = await getWorkspaceId(page);
+      const wsID = await getWorkspaceId(page);
 
-    // Create parent page
-    const parentResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Page with Link', content: '' },
-    });
-    expect(parentResponse.ok()).toBe(true);
-    const parentData = await parentResponse.json();
+      // Create parent page
+      const parentResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { title: "Page with Link", content: "" },
+      });
+      expect(parentResponse.ok()).toBe(true);
+      const parentData = await parentResponse.json();
 
-    // Create target page
-    const targetResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Target Page', content: '' },
-    });
-    expect(targetResponse.ok()).toBe(true);
-    const targetData = await targetResponse.json();
+      // Create target page
+      const targetResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/0/page/create`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { title: "Target Page", content: "" },
+      });
+      expect(targetResponse.ok()).toBe(true);
+      const targetData = await targetResponse.json();
 
-    // Update parent page with a link to target
-    const linkContent = `Link to [Target Page](/w/@${wsID}+workspace/@${targetData.id}+target-page)`;
-    const updateResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/${parentData.id}/page`, {
-      headers: { Authorization: `Bearer ${token}` },
-      data: { title: 'Page with Link', content: linkContent },
-    });
-    expect(updateResponse.ok()).toBe(true);
+      // Update parent page with a link to target
+      const linkContent = `Link to [Target Page](/w/@${wsID}+workspace/@${targetData.id}+target-page)`;
+      const updateResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/${parentData.id}/page`, {
+        headers: { Authorization: `Bearer ${token}` },
+        data: { title: "Page with Link", content: linkContent },
+      });
+      expect(updateResponse.ok()).toBe(true);
 
-    await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+      await page.reload();
+      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    // Navigate to parent page
-    const parentNode = page.locator(`[data-testid="sidebar-node-${parentData.id}"]`);
-    const parentPageItem = parentNode.locator('> [class*="pageItem"]');
-    await parentPageItem.click();
+      // Navigate to parent page
+      const parentNode = page.locator(`[data-testid="sidebar-node-${parentData.id}"]`);
+      const parentPageItem = parentNode.locator('> [class*="pageItem"]');
+      await parentPageItem.click();
 
-    // Wait for editor to load
-    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
-    await expect(editor).toBeVisible({ timeout: 5000 });
+      // Wait for editor to load
+      const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+      await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // The link should be visible and NOT have the invalid-link class
-    const link = editor.locator('a');
-    await expect(link).toBeVisible({ timeout: 5000 });
-    await expect(link).toContainText('Target Page');
+      // The link should be visible and NOT have the invalid-link class
+      const link = editor.locator("a");
+      await expect(link).toBeVisible({ timeout: 5000 });
+      await expect(link).toContainText("Target Page");
 
-    // Verify link does NOT have invalid-link class (target exists)
-    const invalidLink = editor.locator('.invalid-link');
-    await expect(invalidLink).not.toBeVisible();
+      // Verify link does NOT have invalid-link class (target exists)
+      const invalidLink = editor.locator(".invalid-link");
+      await expect(invalidLink).not.toBeVisible();
 
-    await takeScreenshot('link-to-existing-page');
+      await takeScreenshot("link-to-existing-page");
 
-    // Now delete the target page
-    const deleteResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/${targetData.id}/delete`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    expect(deleteResponse.ok()).toBe(true);
+      // Now delete the target page
+      const deleteResponse = await request.post(`/api/v1/workspaces/${wsID}/nodes/${targetData.id}/delete`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(deleteResponse.ok()).toBe(true);
 
-    // Reload to get updated linkedNodeTitles
-    await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+      // Reload to get updated linkedNodeTitles
+      await page.reload();
+      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
-    // Navigate back to parent page
-    await parentPageItem.click();
-    await expect(editor).toBeVisible({ timeout: 5000 });
+      // Navigate back to parent page
+      await parentPageItem.click();
+      await expect(editor).toBeVisible({ timeout: 5000 });
 
-    // The link should now have the invalid-link class (styled red)
-    await expect(invalidLink).toBeVisible({ timeout: 5000 });
+      // The link should now have the invalid-link class (styled red)
+      await expect(invalidLink).toBeVisible({ timeout: 5000 });
 
-    await takeScreenshot('link-to-deleted-page-red');
-  });
+      await takeScreenshot("link-to-deleted-page-red");
+    },
+  );
 
-  test('clicking internal link navigates to target page', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'click-link');
+  test("clicking internal link navigates to target page", async ({ page, request }) => {
+    const { token } = await registerUser(request, "click-link");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create source page
-    const sourceData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Source Page',
-      content: '',
+    const sourceData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Source Page",
+      content: "",
     });
 
     // Create target page with distinctive content
-    const targetData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Target Page',
-      content: 'This is the target page content.',
+    const targetData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Target Page",
+      content: "This is the target page content.",
     });
 
     // Update source page with a link to target
     const linkContent = `Click here: [Go to Target](/w/@${wsID}+workspace/@${targetData.id}+target-page)`;
     await client.ws(wsID).nodes.page.updatePage(sourceData.id, {
-      title: 'Source Page',
+      title: "Source Page",
       content: linkContent,
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to source page
     const sourceNode = page.locator(`[data-testid="sidebar-node-${sourceData.id}"]`);
@@ -323,18 +322,18 @@ test.describe('Page Links with Dynamic Titles', () => {
 
     // Verify we're on source page
     const titleInput = page.locator('input[placeholder*="Title"]');
-    await expect(titleInput).toHaveValue('Source Page', { timeout: 5000 });
+    await expect(titleInput).toHaveValue("Source Page", { timeout: 5000 });
 
     // Click the link
-    const link = editor.locator('a');
+    const link = editor.locator("a");
     await expect(link).toBeVisible({ timeout: 5000 });
     await link.click();
 
     // Wait for navigation to target page
-    await expect(titleInput).toHaveValue('Target Page', { timeout: 5000 });
+    await expect(titleInput).toHaveValue("Target Page", { timeout: 5000 });
 
     // Verify target page content is visible
-    await expect(editor).toContainText('This is the target page content.', { timeout: 5000 });
+    await expect(editor).toContainText("This is the target page content.", { timeout: 5000 });
 
     // Verify URL contains target node ID (with @ prefix and optional slug)
     await expect(page).toHaveURL(new RegExp(`/@${targetData.id}`), { timeout: 5000 });

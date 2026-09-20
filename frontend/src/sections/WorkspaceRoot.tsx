@@ -1,9 +1,9 @@
 // Workspace root component that redirects to the first node.
 
-import { createEffect } from 'solid-js';
-import { useNavigate, useParams } from '@solidjs/router';
-import { useAuth, useWorkspace } from '../contexts';
-import { nodeUrl, stripSlug } from '../utils/urls';
+import { createEffect } from "solid-js";
+import { useNavigate, useParams } from "@solidjs/router";
+import { useAuth, useWorkspace } from "../contexts";
+import { nodeUrl, stripSlug } from "../utils/urls";
 
 /**
  * WorkspaceRoot handles the /w/:wsId/ route.

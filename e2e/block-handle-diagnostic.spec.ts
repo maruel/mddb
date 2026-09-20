@@ -1,11 +1,11 @@
 // Diagnostic tests for block handle visibility and text alignment issues.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
 
-test('diagnose: block handle visibility on hover', async ({ page, request }) => {
-  const { token } = await registerUser(request, 'block-handle-visual');
+test("diagnose: block handle visibility on hover", async ({ page, request }) => {
+  const { token } = await registerUser(request, "block-handle-visual");
   await page.goto(`/?token=${token}`);
-  await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
 
@@ -27,14 +27,14 @@ code block
 \`\`\``;
 
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage('0', {
-    title: 'Handle Visibility Test',
+  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+    title: "Handle Visibility Test",
     content: markdownContent,
   });
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
@@ -43,7 +43,7 @@ code block
   await expect(editor).toBeVisible({ timeout: 5000 });
 
   // Get all blocks
-  const blocks = editor.locator('.block-row');
+  const blocks = editor.locator(".block-row");
   const blockCount = await blocks.count();
   expect(blockCount).toBeGreaterThan(0);
 
@@ -69,7 +69,8 @@ code block
     });
 
     // Check if handle is actually visible (opacity > 0, visibility != hidden, display != none)
-    const isVisible = handleStyles.opacity !== '0' && handleStyles.visibility !== 'hidden' && handleStyles.display !== 'none';
+    const isVisible =
+      handleStyles.opacity !== "0" && handleStyles.visibility !== "hidden" && handleStyles.display !== "none";
     expect(isVisible).toBe(true);
   }
 
@@ -78,19 +79,19 @@ code block
   await firstBlock.hover();
 
   // Wait for the CSS opacity transition to complete (opacity should reach 1)
-  const firstBlockHandle = firstBlock.locator('.block-handle-container');
+  const firstBlockHandle = firstBlock.locator(".block-handle-container");
   await expect(async () => {
     const opacity = await firstBlockHandle.evaluate((el) => window.getComputedStyle(el).opacity);
     expect(Number(opacity)).toBeGreaterThan(0.9);
   }).toPass({ timeout: 1000 });
 
-  await page.screenshot({ path: '/tmp/block-handle-hover.png' });
+  await page.screenshot({ path: "/tmp/block-handle-hover.png" });
 });
 
-test('diagnose: text alignment in lists (bullets, numbers, tasks)', async ({ page, request }) => {
-  const { token } = await registerUser(request, 'text-alignment-diagnostic');
+test("diagnose: text alignment in lists (bullets, numbers, tasks)", async ({ page, request }) => {
+  const { token } = await registerUser(request, "text-alignment-diagnostic");
   await page.goto(`/?token=${token}`);
-  await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
 
@@ -110,14 +111,14 @@ test('diagnose: text alignment in lists (bullets, numbers, tasks)', async ({ pag
 - [ ] Task item 3`;
 
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage('0', {
-    title: 'Text Alignment Test',
+  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+    title: "Text Alignment Test",
     content: markdownContent,
   });
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
@@ -140,8 +141,8 @@ test('diagnose: text alignment in lists (bullets, numbers, tasks)', async ({ pag
         alignItems: computed.alignItems,
       };
     });
-    expect(styles.display).toBe('flex');
-    expect(styles.alignItems).toBe('flex-start');
+    expect(styles.display).toBe("flex");
+    expect(styles.alignItems).toBe("flex-start");
   }
 
   // Check numbered items - wait for them to load
@@ -152,8 +153,8 @@ test('diagnose: text alignment in lists (bullets, numbers, tasks)', async ({ pag
 
   for (let i = 0; i < Math.min(2, numberCount); i++) {
     const block = numberBlocks.nth(i);
-    const numberDiv = block.locator('.block-number');
-    const numberAttr = await numberDiv.getAttribute('data-number');
+    const numberDiv = block.locator(".block-number");
+    const numberAttr = await numberDiv.getAttribute("data-number");
     expect(numberAttr).not.toBeNull();
   }
 
@@ -165,10 +166,10 @@ test('diagnose: text alignment in lists (bullets, numbers, tasks)', async ({ pag
 
   for (let i = 0; i < Math.min(2, taskCount); i++) {
     const block = taskBlocks.nth(i);
-    const checkedAttr = await block.getAttribute('data-checked');
+    const checkedAttr = await block.getAttribute("data-checked");
     expect(checkedAttr).not.toBeNull();
   }
 
   // Take a screenshot showing text alignment
-  await page.screenshot({ path: '/tmp/text-alignment.png' });
+  await page.screenshot({ path: "/tmp/text-alignment.png" });
 });

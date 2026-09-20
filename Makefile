@@ -1,5 +1,5 @@
 # Build, test, and development commands.
-.PHONY: help build dev test e2e e2e-slow coverage lint lint-go lint-frontend lint-python lint-binaries lint-css lint-docs lint-fix format-python git-hooks frontend-dev types upgrade docs
+.PHONY: help build dev test e2e e2e-slow coverage lint lint-go lint-frontend lint-python lint-binaries lint-css lint-docs lint-fix format format-check verify git-hooks frontend-dev types upgrade docs
 
 # Variables
 DATA_DIR?=./data
@@ -21,6 +21,8 @@ help:
 	@echo "  make docs           - Update AGENTS.md file index"
 	@echo "  make lint           - Run linters (Go + frontend)"
 	@echo "  make lint-fix       - Fix all linting issues automatically"
+	@echo "  make format         - Apply the shared formatters (prettier, gofmt, ruff, shfmt)"
+	@echo "  make format-check   - Verify formatting without writing"
 	@echo "  make git-hooks      - Install git pre-commit hooks"
 	@echo "  make frontend-dev   - Run frontend dev server (http://localhost:5173)"
 	@echo "  make upgrade        - Upgrade Go and pnpm dependencies"
@@ -93,8 +95,10 @@ coverage: $(FRONTEND_STAMP)
 
 lint: lint-go lint-frontend lint-python lint-binaries lint-css lint-docs
 
+verify: format-check lint
+
 lint-go:
-	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
 	@golangci-lint run ./...
 
 lint-frontend: $(FRONTEND_STAMP)
@@ -120,9 +124,21 @@ lint-fix: $(FRONTEND_STAMP)
 	@ruff format .
 	@python3 scripts/update_agents_file_index.py
 
-format-python:
+# Apply and verify the shared formatters: prettier for the web and prose sources,
+# gofmt and goimports through golangci-lint for Go, ruff format for the Python
+# scripts, and shfmt for the shell scripts.
+# Prettier skips whatever .prettierignore excludes (locks, generated code, testdata).
+format: $(FRONTEND_STAMP)
+	@pnpm format
+	@golangci-lint fmt
 	@ruff format .
-	@ruff check . --fix
+	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || shfmt -w $$files
+
+format-check: $(FRONTEND_STAMP)
+	@pnpm format:check
+	@out=$$(golangci-lint fmt --diff); [ -z "$$out" ] || { echo 'Go files need formatting (gofmt, goimports):' >&2; echo "$$out" >&2; exit 1; }
+	@ruff format --check .
+	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || { out=$$(shfmt -l $$files); [ -z "$$out" ] || { echo 'Shell files need shfmt:' >&2; echo "$$out" >&2; exit 1; }; }
 
 git-hooks:
 	@./scripts/install-git-hooks.sh

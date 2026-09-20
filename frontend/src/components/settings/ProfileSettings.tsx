@@ -1,16 +1,16 @@
 // User profile settings panel for managing personal preferences.
 
-import { createSignal, createEffect, onMount, Show, For } from 'solid-js';
-import { useNavigate, useLocation } from '@solidjs/router';
-import type { UserSettings, OrgMembershipResponse } from '@sdk/types.gen';
-import { OrgRoleAdmin, OrgRoleOwner } from '@sdk/types.gen';
-import { useAuth } from '../../contexts';
-import { useI18n, type Locale } from '../../i18n';
-import { settingsUrl } from '../../utils/urls';
-import LinkedAccountsSection from './LinkedAccountsSection';
-import PasswordSection from './PasswordSection';
-import NotificationSettings from './NotificationSettings';
-import styles from './ProfileSettings.module.css';
+import { createSignal, createEffect, onMount, Show, For } from "solid-js";
+import { useNavigate, useLocation } from "@solidjs/router";
+import type { UserSettings, OrgMembershipResponse } from "@sdk/types.gen";
+import { OrgRoleAdmin, OrgRoleOwner } from "@sdk/types.gen";
+import { useAuth } from "../../contexts";
+import { useI18n, type Locale } from "../../i18n";
+import { settingsUrl } from "../../utils/urls";
+import LinkedAccountsSection from "./LinkedAccountsSection";
+import PasswordSection from "./PasswordSection";
+import NotificationSettings from "./NotificationSettings";
+import styles from "./ProfileSettings.module.css";
 
 export default function ProfileSettings() {
   const { t, setLocale } = useI18n();
@@ -18,8 +18,8 @@ export default function ProfileSettings() {
   const location = useLocation();
   const { user, api } = useAuth();
 
-  const [theme, setTheme] = createSignal('light');
-  const [language, setLanguage] = createSignal('en');
+  const [theme, setTheme] = createSignal("light");
+  const [language, setLanguage] = createSignal("en");
 
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
@@ -28,16 +28,16 @@ export default function ProfileSettings() {
   // Handle OAuth callback URL params on mount
   onMount(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('oauth_linked') === 'true') {
-      setSuccess(t('settings.accountLinked'));
+    if (params.get("oauth_linked") === "true") {
+      setSuccess(t("settings.accountLinked"));
       // Clean up URL params - use replaceState to update URL without navigation
-      window.history.replaceState({}, '', location.pathname);
+      window.history.replaceState({}, "", location.pathname);
     }
-    const oauthError = params.get('oauth_error');
+    const oauthError = params.get("oauth_error");
     if (oauthError) {
-      setError(`${t('settings.linkingFailed')}: ${oauthError}`);
+      setError(`${t("settings.linkingFailed")}: ${oauthError}`);
       // Clean up URL params - use replaceState to update URL without navigation
-      window.history.replaceState({}, '', location.pathname);
+      window.history.replaceState({}, "", location.pathname);
     }
   });
 
@@ -56,18 +56,18 @@ export default function ProfileSettings() {
   // Get initials from user name
   const getInitials = () => {
     const u = user();
-    const name = u?.name || u?.email || '';
+    const name = u?.name || u?.email || "";
     const parts = name.split(/[\s@]+/);
     if (parts.length >= 2 && parts[0] && parts[1]) {
-      return ((parts[0][0] || '') + (parts[1][0] || '')).toUpperCase();
+      return ((parts[0][0] || "") + (parts[1][0] || "")).toUpperCase();
     }
     return name.slice(0, 2).toUpperCase();
   };
 
   createEffect(() => {
     const u = user();
-    setTheme(u?.settings?.theme || 'light');
-    setLanguage(u?.settings?.language || 'en');
+    setTheme(u?.settings?.theme || "light");
+    setLanguage(u?.settings?.language || "en");
   });
 
   const savePersonalSettings = async (e: Event) => {
@@ -88,18 +88,18 @@ export default function ProfileSettings() {
       // Update locale immediately so UI refreshes
       const lang = language() as Locale;
       setLocale(lang);
-      localStorage.setItem('mddb_locale', lang);
+      localStorage.setItem("mddb_locale", lang);
 
-      setSuccess(t('success.personalSettingsSaved') || 'Personal settings saved successfully');
+      setSuccess(t("success.personalSettingsSaved") || "Personal settings saved successfully");
     } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setLoading(false);
     }
   };
 
   const navigateToOrgSettings = (org: OrgMembershipResponse) => {
-    navigate(settingsUrl('org', org.organization_id, org.organization_name));
+    navigate(settingsUrl("org", org.organization_id, org.organization_name));
   };
 
   return (
@@ -120,7 +120,7 @@ export default function ProfileSettings() {
                   {(url) => (
                     <img
                       src={url()}
-                      alt={u().name || 'User'}
+                      alt={u().name || "User"}
                       class={styles.avatarImageLarge}
                       referrerPolicy="no-referrer"
                     />
@@ -137,10 +137,10 @@ export default function ProfileSettings() {
             </section>
 
             <section class={styles.section}>
-              <h3>{t('profile.myOrganizations')}</h3>
+              <h3>{t("profile.myOrganizations")}</h3>
               <Show
                 when={u().organizations?.length}
-                fallback={<p class={styles.emptyState}>{t('profile.noOrganizations')}</p>}
+                fallback={<p class={styles.emptyState}>{t("profile.noOrganizations")}</p>}
               >
                 <div class={styles.orgList}>
                   <For each={u().organizations}>
@@ -152,7 +152,7 @@ export default function ProfileSettings() {
                           <div class={styles.orgInfo}>
                             <Show when={isAdmin()} fallback={<span class={styles.orgName}>{orgDisplayName}</span>}>
                               <a
-                                href={settingsUrl('org', org.organization_id, org.organization_name)}
+                                href={settingsUrl("org", org.organization_id, org.organization_name)}
                                 class={styles.orgNameLink}
                                 onClick={(e) => {
                                   e.preventDefault();
@@ -173,27 +173,27 @@ export default function ProfileSettings() {
             </section>
 
             <section class={styles.section}>
-              <h3>{t('settings.personalSettings')}</h3>
+              <h3>{t("settings.personalSettings")}</h3>
               <form onSubmit={savePersonalSettings} class={styles.settingsForm}>
                 <div class={styles.formItem}>
-                  <label>{t('settings.theme')}</label>
+                  <label>{t("settings.theme")}</label>
                   <select value={theme()} onChange={(e) => setTheme(e.target.value)}>
-                    <option value="light">{t('settings.themeLight')}</option>
-                    <option value="dark">{t('settings.themeDark')}</option>
-                    <option value="system">{t('settings.themeSystem')}</option>
+                    <option value="light">{t("settings.themeLight")}</option>
+                    <option value="dark">{t("settings.themeDark")}</option>
+                    <option value="system">{t("settings.themeSystem")}</option>
                   </select>
                 </div>
                 <div class={styles.formItem}>
-                  <label>{t('settings.language')}</label>
+                  <label>{t("settings.language")}</label>
                   <select value={language()} onChange={(e) => setLanguage(e.target.value)}>
-                    <option value="en">{t('settings.languageEn')}</option>
-                    <option value="fr">{t('settings.languageFr')}</option>
-                    <option value="de">{t('settings.languageDe')}</option>
-                    <option value="es">{t('settings.languageEs')}</option>
+                    <option value="en">{t("settings.languageEn")}</option>
+                    <option value="fr">{t("settings.languageFr")}</option>
+                    <option value="de">{t("settings.languageDe")}</option>
+                    <option value="es">{t("settings.languageEs")}</option>
                   </select>
                 </div>
                 <button type="submit" class={styles.saveButton} disabled={loading()}>
-                  {t('settings.saveChanges')}
+                  {t("settings.saveChanges")}
                 </button>
               </form>
             </section>

@@ -1,6 +1,6 @@
 // Tree reconciliation helpers for workspace moves, lazy children, and breadcrumb paths.
 
-import type { NodeResponse } from '@sdk/types.gen';
+import type { NodeResponse } from "@sdk/types.gen";
 
 export interface ReconciledMove {
   movedNode: NodeResponse;
@@ -23,8 +23,8 @@ export function reconcileMovedNode(nodes: NodeResponse[], nodeId: string, newPar
   const sourcePath = findNodePath(nodes, nodeId);
   if (!sourcePath) return null;
 
-  const destinationPath = newParentId === '0' ? null : findNodePath(nodes, newParentId);
-  if (newParentId !== '0' && (!destinationPath || sourcePath.some((node) => node.id === newParentId))) {
+  const destinationPath = newParentId === "0" ? null : findNodePath(nodes, newParentId);
+  if (newParentId !== "0" && (!destinationPath || sourcePath.some((node) => node.id === newParentId))) {
     return null;
   }
 
@@ -51,7 +51,7 @@ export function reconcileMovedNode(nodes: NodeResponse[], nodeId: string, newPar
   if (!removeFromList(nodes) || !movedNode) return null;
   const moved = movedNode;
 
-  if (newParentId === '0') {
+  if (newParentId === "0") {
     nodes.push(moved);
     return { movedNode: moved, destinationChildrenLoaded: true };
   }
@@ -70,7 +70,7 @@ export function reconcileBreadcrumbPath(
   currentPath: NodeResponse[],
   selectedNodeId: string | null,
   move: ReconciledMove,
-  newParentId: string
+  newParentId: string,
 ): NodeResponse[] {
   if (!selectedNodeId) return currentPath;
 
@@ -80,7 +80,7 @@ export function reconcileBreadcrumbPath(
   const movedPathIndex = currentPath.findIndex((node) => node.id === move.movedNode.id);
   if (movedPathIndex === -1) return currentPath;
 
-  const destinationPath = newParentId === '0' ? [] : findNodePath(nodes, newParentId);
+  const destinationPath = newParentId === "0" ? [] : findNodePath(nodes, newParentId);
   if (!destinationPath) return currentPath;
   return [...destinationPath, move.movedNode, ...currentPath.slice(movedPathIndex + 1)];
 }
@@ -89,7 +89,7 @@ export function reconcileSelectedNodeData(
   selectedNodeId: string | null,
   selectedNodeData: NodeResponse | null,
   movedNodeId: string,
-  newParentId: string
+  newParentId: string,
 ): NodeResponse | null {
   if (selectedNodeId !== movedNodeId || !selectedNodeData) return selectedNodeData;
   return { ...selectedNodeData, parent_id: newParentId };

@@ -1,10 +1,10 @@
 // Onboarding component for first-time users without org/workspace.
 
-import { createEffect, createSignal, Show } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
-import { useAuth } from '../contexts';
-import { useI18n } from '../i18n';
-import { workspaceUrl } from '../utils/urls';
+import { createEffect, createSignal, Show } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import { useAuth } from "../contexts";
+import { useI18n } from "../i18n";
+import { workspaceUrl } from "../utils/urls";
 
 /**
  * Onboarding handles the first-login flow for users who have authenticated
@@ -20,14 +20,14 @@ export default function Onboarding() {
   const { user, api, setUser } = useAuth();
   const navigate = useNavigate();
 
-  const [status, setStatus] = createSignal<'loading' | 'creating-org' | 'creating-ws' | 'done'>('loading');
+  const [status, setStatus] = createSignal<"loading" | "creating-org" | "creating-ws" | "done">("loading");
   const [error, setError] = createSignal<string | null>(null);
 
   // Get user's first name for default naming
   function getUserFirstName(): string {
     const u = user();
-    if (!u?.name) return '';
-    const firstName = u.name.split(' ')[0];
+    if (!u?.name) return "";
+    const firstName = u.name.split(" ")[0];
     return firstName || u.name;
   }
 
@@ -53,11 +53,11 @@ export default function Onboarding() {
 
         // Step 1: Create organization if needed
         if (orgs.length === 0) {
-          setStatus('creating-org');
+          setStatus("creating-org");
           const firstName = getUserFirstName();
           const orgName = firstName
-            ? (t('onboarding.defaultOrgName', { name: firstName }) as string)
-            : (t('onboarding.defaultOrgNameFallback') as string);
+            ? (t("onboarding.defaultOrgName", { name: firstName }) as string)
+            : (t("onboarding.defaultOrgNameFallback") as string);
 
           await api().organizations.createOrganization({ name: orgName });
 
@@ -73,11 +73,11 @@ export default function Onboarding() {
         if (firstOrg) {
           const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg.organization_id) || [];
           if (orgWorkspaces.length === 0) {
-            setStatus('creating-ws');
+            setStatus("creating-ws");
             const firstName = getUserFirstName();
             const wsName = firstName
-              ? (t('onboarding.defaultWorkspaceName', { name: firstName }) as string)
-              : (t('onboarding.defaultWorkspaceNameFallback') as string);
+              ? (t("onboarding.defaultWorkspaceName", { name: firstName }) as string)
+              : (t("onboarding.defaultWorkspaceNameFallback") as string);
 
             const ws = await api().org(firstOrg.organization_id).workspaces.createWorkspace({ name: wsName });
 
@@ -102,10 +102,10 @@ export default function Onboarding() {
           }
         }
 
-        setStatus('done');
+        setStatus("done");
         setRunning(false);
       } catch (err) {
-        console.error('Onboarding error:', err);
+        console.error("Onboarding error:", err);
         setError(String(err));
         setRunning(false);
       }
@@ -115,32 +115,32 @@ export default function Onboarding() {
   return (
     <div
       style={{
-        display: 'flex',
-        'flex-direction': 'column',
-        'align-items': 'center',
-        'justify-content': 'center',
-        height: '100vh',
-        padding: '2rem',
-        'text-align': 'center',
+        display: "flex",
+        "flex-direction": "column",
+        "align-items": "center",
+        "justify-content": "center",
+        height: "100vh",
+        padding: "2rem",
+        "text-align": "center",
       }}
     >
       <Show when={error()}>
-        <div style={{ color: 'var(--c-text-danger)', 'margin-bottom': '1rem' }}>{error()}</div>
+        <div style={{ color: "var(--c-text-danger)", "margin-bottom": "1rem" }}>{error()}</div>
       </Show>
       <Show when={!error()}>
-        <div style={{ 'font-size': '1.5rem', 'margin-bottom': '1rem' }}>
-          {status() === 'creating-org' && (t('onboarding.creatingOrg') || 'Creating your organization...')}
-          {status() === 'creating-ws' && (t('onboarding.creatingWorkspace') || 'Creating your workspace...')}
-          {(status() === 'loading' || status() === 'done') && (t('common.loading') || 'Loading...')}
+        <div style={{ "font-size": "1.5rem", "margin-bottom": "1rem" }}>
+          {status() === "creating-org" && (t("onboarding.creatingOrg") || "Creating your organization...")}
+          {status() === "creating-ws" && (t("onboarding.creatingWorkspace") || "Creating your workspace...")}
+          {(status() === "loading" || status() === "done") && (t("common.loading") || "Loading...")}
         </div>
         <div
           style={{
-            width: '40px',
-            height: '40px',
-            border: '3px solid var(--c-border)',
-            'border-top-color': 'var(--c-border-accent)',
-            'border-radius': '50%',
-            animation: 'spin 1s linear infinite',
+            width: "40px",
+            height: "40px",
+            border: "3px solid var(--c-border)",
+            "border-top-color": "var(--c-border-accent)",
+            "border-radius": "50%",
+            animation: "spin 1s linear infinite",
           }}
         />
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

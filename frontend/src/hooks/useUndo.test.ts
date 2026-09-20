@@ -1,11 +1,11 @@
 // Unit tests for the useUndo hook.
 
-import { describe, it, expect, vi } from 'vitest';
-import { createRoot } from 'solid-js';
-import { useUndo } from './useUndo';
+import { describe, it, expect, vi } from "vitest";
+import { createRoot } from "solid-js";
+import { useUndo } from "./useUndo";
 
-describe('useUndo', () => {
-  it('starts with empty stacks', () => {
+describe("useUndo", () => {
+  it("starts with empty stacks", () => {
     createRoot((dispose) => {
       const { canUndo, canRedo } = useUndo();
       expect(canUndo()).toBe(false);
@@ -14,10 +14,10 @@ describe('useUndo', () => {
     });
   });
 
-  it('push enables canUndo and clears redo stack', () => {
+  it("push enables canUndo and clears redo stack", () => {
     createRoot((dispose) => {
       const { push, canUndo, canRedo } = useUndo();
-      const action = { description: 'test', undo: vi.fn().mockResolvedValue(undefined) };
+      const action = { description: "test", undo: vi.fn().mockResolvedValue(undefined) };
       push(action);
       expect(canUndo()).toBe(true);
       expect(canRedo()).toBe(false);
@@ -25,11 +25,11 @@ describe('useUndo', () => {
     });
   });
 
-  it('undo calls action.undo and disables canUndo', async () => {
+  it("undo calls action.undo and disables canUndo", async () => {
     await createRoot(async (dispose) => {
       const { push, undo, canUndo } = useUndo();
       const undoFn = vi.fn().mockResolvedValue(undefined);
-      push({ description: 'test', undo: undoFn });
+      push({ description: "test", undo: undoFn });
       await undo();
       expect(undoFn).toHaveBeenCalledOnce();
       expect(canUndo()).toBe(false);
@@ -37,11 +37,11 @@ describe('useUndo', () => {
     });
   });
 
-  it('undo with redo function enables canRedo', async () => {
+  it("undo with redo function enables canRedo", async () => {
     await createRoot(async (dispose) => {
       const { push, undo, canRedo } = useUndo();
       push({
-        description: 'test',
+        description: "test",
         undo: vi.fn().mockResolvedValue(undefined),
         redo: vi.fn().mockResolvedValue(undefined),
       });
@@ -51,22 +51,22 @@ describe('useUndo', () => {
     });
   });
 
-  it('undo without redo function does not populate redo stack', async () => {
+  it("undo without redo function does not populate redo stack", async () => {
     await createRoot(async (dispose) => {
       const { push, undo, canRedo } = useUndo();
-      push({ description: 'test', undo: vi.fn().mockResolvedValue(undefined) });
+      push({ description: "test", undo: vi.fn().mockResolvedValue(undefined) });
       await undo();
       expect(canRedo()).toBe(false);
       dispose();
     });
   });
 
-  it('redo calls action.redo and re-enables canUndo', async () => {
+  it("redo calls action.redo and re-enables canUndo", async () => {
     await createRoot(async (dispose) => {
       const { push, undo, redo, canUndo, canRedo } = useUndo();
       const redoFn = vi.fn().mockResolvedValue(undefined);
       push({
-        description: 'test',
+        description: "test",
         undo: vi.fn().mockResolvedValue(undefined),
         redo: redoFn,
       });
@@ -79,23 +79,23 @@ describe('useUndo', () => {
     });
   });
 
-  it('push clears redo stack', async () => {
+  it("push clears redo stack", async () => {
     await createRoot(async (dispose) => {
       const { push, undo, canRedo } = useUndo();
       push({
-        description: 'first',
+        description: "first",
         undo: vi.fn().mockResolvedValue(undefined),
         redo: vi.fn().mockResolvedValue(undefined),
       });
       await undo();
       expect(canRedo()).toBe(true);
-      push({ description: 'second', undo: vi.fn().mockResolvedValue(undefined) });
+      push({ description: "second", undo: vi.fn().mockResolvedValue(undefined) });
       expect(canRedo()).toBe(false);
       dispose();
     });
   });
 
-  it('undo is no-op when stack is empty', async () => {
+  it("undo is no-op when stack is empty", async () => {
     await createRoot(async (dispose) => {
       const { undo, canUndo } = useUndo();
       await undo(); // should not throw
@@ -104,7 +104,7 @@ describe('useUndo', () => {
     });
   });
 
-  it('redo is no-op when stack is empty', async () => {
+  it("redo is no-op when stack is empty", async () => {
     await createRoot(async (dispose) => {
       const { redo, canRedo } = useUndo();
       await redo(); // should not throw
@@ -113,15 +113,15 @@ describe('useUndo', () => {
     });
   });
 
-  it('clear empties both stacks', async () => {
+  it("clear empties both stacks", async () => {
     await createRoot(async (dispose) => {
       const { push, undo, clear, canUndo, canRedo } = useUndo();
       push({
-        description: 'a',
+        description: "a",
         undo: vi.fn().mockResolvedValue(undefined),
         redo: vi.fn().mockResolvedValue(undefined),
       });
-      push({ description: 'b', undo: vi.fn().mockResolvedValue(undefined) });
+      push({ description: "b", undo: vi.fn().mockResolvedValue(undefined) });
       await undo();
       clear();
       expect(canUndo()).toBe(false);
@@ -130,7 +130,7 @@ describe('useUndo', () => {
     });
   });
 
-  it('caps stack at 50 items', () => {
+  it("caps stack at 50 items", () => {
     createRoot((dispose) => {
       const { push, canUndo } = useUndo();
       for (let i = 0; i < 60; i++) {

@@ -1,10 +1,10 @@
 // ProseMirror NodeView implementation for flat blocks with integrated drag handles.
 
-import { render } from 'solid-js/web';
-import type { Node as ProseMirrorNode } from 'prosemirror-model';
-import type { EditorView, NodeView, ViewMutationRecord } from 'prosemirror-view';
-import { RowHandle } from '../shared/RowHandle';
-import { getSelectedBlockPositions, BLOCK_DRAG_MIME, BLOCKS_DRAG_MIME } from './blockDragPlugin';
+import { render } from "solid-js/web";
+import type { Node as ProseMirrorNode } from "prosemirror-model";
+import type { EditorView, NodeView, ViewMutationRecord } from "prosemirror-view";
+import { RowHandle } from "../shared/RowHandle";
+import { getSelectedBlockPositions, BLOCK_DRAG_MIME, BLOCKS_DRAG_MIME } from "./blockDragPlugin";
 
 /**
  * Custom event detail for block context menu requests.
@@ -19,7 +19,7 @@ export interface BlockContextMenuDetail {
 /**
  * Custom event dispatched when a block's context menu is requested.
  */
-export const BLOCK_CONTEXT_MENU_EVENT = 'block-context-menu';
+export const BLOCK_CONTEXT_MENU_EVENT = "block-context-menu";
 
 /**
  * NodeView implementation for flat block nodes.
@@ -33,15 +33,15 @@ export class BlockNodeView implements NodeView {
   constructor(
     private node: ProseMirrorNode,
     private view: EditorView,
-    private getPos: () => number | undefined
+    private getPos: () => number | undefined,
   ) {
-    this.dom = document.createElement('div');
-    this.dom.className = 'block-row row-with-handle';
+    this.dom = document.createElement("div");
+    this.dom.className = "block-row row-with-handle";
     this.updateDOMAttributes();
 
-    this.handleContainer = document.createElement('div');
-    this.handleContainer.className = 'block-handle-container';
-    this.handleContainer.contentEditable = 'false';
+    this.handleContainer = document.createElement("div");
+    this.handleContainer.className = "block-handle-container";
+    this.handleContainer.contentEditable = "false";
     this.dom.appendChild(this.handleContainer);
 
     this.mountHandle();
@@ -56,38 +56,38 @@ export class BlockNodeView implements NodeView {
     let element: HTMLElement;
 
     switch (type) {
-      case 'heading': {
+      case "heading": {
         const tag = `h${level || 1}`;
         element = document.createElement(tag);
         break;
       }
-      case 'code': {
-        const pre = document.createElement('pre');
-        const code = document.createElement('code');
+      case "code": {
+        const pre = document.createElement("pre");
+        const code = document.createElement("code");
         pre.appendChild(code);
         if (language) {
           pre.dataset.language = language;
         }
-        pre.className = 'block-content';
+        pre.className = "block-content";
         return { contentDOM: code, wrapperDOM: pre };
       }
-      case 'quote': {
-        element = document.createElement('blockquote');
+      case "quote": {
+        element = document.createElement("blockquote");
         break;
       }
-      case 'divider': {
-        element = document.createElement('hr');
+      case "divider": {
+        element = document.createElement("hr");
         break;
       }
-      case 'task': {
-        element = document.createElement('div');
-        element.className = 'block-task';
+      case "task": {
+        element = document.createElement("div");
+        element.className = "block-task";
         element.dataset.checked = String(checked || false);
         break;
       }
-      case 'bullet':
-      case 'number': {
-        element = document.createElement('div');
+      case "bullet":
+      case "number": {
+        element = document.createElement("div");
         element.className = `block-${type}`;
         if (this.node.attrs.number !== undefined && this.node.attrs.number !== null) {
           element.dataset.number = String(this.node.attrs.number);
@@ -95,12 +95,12 @@ export class BlockNodeView implements NodeView {
         break;
       }
       default: {
-        element = document.createElement('p');
+        element = document.createElement("p");
         break;
       }
     }
 
-    element.className = `${element.className || ''} block-content`.trim();
+    element.className = `${element.className || ""} block-content`.trim();
     return { contentDOM: element };
   }
 
@@ -123,7 +123,7 @@ export class BlockNodeView implements NodeView {
 
   private mountHandle(): void {
     const pos = this.getPos();
-    const rowId = pos !== undefined ? String(pos) : '0';
+    const rowId = pos !== undefined ? String(pos) : "0";
 
     this.handleDispose = render(
       () =>
@@ -133,7 +133,7 @@ export class BlockNodeView implements NodeView {
           onContextMenu: this.handleContextMenu.bind(this),
           onClick: this.handleClick.bind(this),
         }),
-      this.handleContainer
+      this.handleContainer,
     );
   }
 
@@ -151,7 +151,7 @@ export class BlockNodeView implements NodeView {
       } else {
         e.dataTransfer.setData(BLOCK_DRAG_MIME, String(pos));
       }
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = "move";
 
       // Set drag image
       const blockRect = this.dom.getBoundingClientRect();
@@ -185,7 +185,7 @@ export class BlockNodeView implements NodeView {
       new CustomEvent(BLOCK_CONTEXT_MENU_EVENT, {
         detail,
         bubbles: true,
-      })
+      }),
     );
   }
 
@@ -203,18 +203,18 @@ export class BlockNodeView implements NodeView {
     }
 
     // Heading level changes require a new content element (e.g., <h1> → <h2>)
-    if (node.attrs.type === 'heading' && node.attrs.level !== this.node.attrs.level) {
+    if (node.attrs.type === "heading" && node.attrs.level !== this.node.attrs.level) {
       return false;
     }
 
     this.node = node;
     this.updateDOMAttributes();
 
-    if (node.attrs.type === 'task') {
+    if (node.attrs.type === "task") {
       this.contentDOM.dataset.checked = String(node.attrs.checked || false);
     }
 
-    if (node.attrs.type === 'number') {
+    if (node.attrs.type === "number") {
       if (node.attrs.number !== undefined && node.attrs.number !== null) {
         this.contentDOM.dataset.number = String(node.attrs.number);
       }
@@ -224,15 +224,15 @@ export class BlockNodeView implements NodeView {
   }
 
   selectNode(): void {
-    this.dom.classList.add('selected');
+    this.dom.classList.add("selected");
   }
 
   deselectNode(): void {
-    this.dom.classList.remove('selected');
+    this.dom.classList.remove("selected");
   }
 
   destroy(): void {
-    this.dom.classList.remove('dragging');
+    this.dom.classList.remove("dragging");
 
     if (this.handleDispose) {
       this.handleDispose();
@@ -249,21 +249,21 @@ export class BlockNodeView implements NodeView {
     // Drag events must pass through so our blockDragPlugin can handle them.
     if (this.handleContainer.contains(event.target as Node)) {
       const t = event.type;
-      return t === 'mousedown' || t === 'mouseup' || t === 'pointerdown' || t === 'pointerup';
+      return t === "mousedown" || t === "mouseup" || t === "pointerdown" || t === "pointerup";
     }
     return false;
   }
 
   ignoreMutation(mutation: ViewMutationRecord): boolean {
-    if (mutation.type !== 'selection' && this.handleContainer.contains(mutation.target as Node)) {
+    if (mutation.type !== "selection" && this.handleContainer.contains(mutation.target as Node)) {
       return true;
     }
     // Ignore class attribute changes on block-row (e.g., 'dragging', 'selected')
-    if (mutation.type === 'attributes' && mutation.target === this.dom) {
+    if (mutation.type === "attributes" && mutation.target === this.dom) {
       return true;
     }
     // Ignore data-checked attribute changes on task blocks
-    if (mutation.type === 'attributes' && (mutation.target as HTMLElement).classList?.contains('block-task')) {
+    if (mutation.type === "attributes" && (mutation.target as HTMLElement).classList?.contains("block-task")) {
       return true;
     }
     return false;
@@ -273,7 +273,7 @@ export class BlockNodeView implements NodeView {
 export function createBlockNodeView(
   node: ProseMirrorNode,
   view: EditorView,
-  getPos: () => number | undefined
+  getPos: () => number | undefined,
 ): BlockNodeView {
   return new BlockNodeView(node, view, getPos);
 }

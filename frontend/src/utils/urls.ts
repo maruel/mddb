@@ -6,8 +6,8 @@
  */
 export function stripSlug(idWithSlug: string): string {
   let s = idWithSlug;
-  if (s.startsWith('@')) s = s.substring(1);
-  const plusIndex = s.indexOf('+');
+  if (s.startsWith("@")) s = s.substring(1);
+  const plusIndex = s.indexOf("+");
   return plusIndex >= 0 ? s.substring(0, plusIndex) : s;
 }
 
@@ -19,16 +19,16 @@ export function slugify(text: string): string {
     .toString()
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w-]+/g, '')
-    .replace(/--+/g, '-');
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]+/g, "")
+    .replace(/--+/g, "-");
 }
 
 /**
  * Builds a workspace root URL.
  */
 export function workspaceUrl(wsId: string, wsName?: string): string {
-  const wsSlug = slugify(wsName || 'workspace');
+  const wsSlug = slugify(wsName || "workspace");
   return `/w/@${wsId}+${wsSlug}/`;
 }
 
@@ -36,16 +36,16 @@ export function workspaceUrl(wsId: string, wsName?: string): string {
  * Builds a node (page/table) URL within a workspace.
  */
 export function nodeUrl(wsId: string, wsName: string | undefined, nodeId: string, nodeTitle?: string): string {
-  const wsSlug = slugify(wsName || 'workspace');
-  const nodeSlug = nodeTitle ? slugify(nodeTitle) : '';
-  return `/w/@${wsId}+${wsSlug}/@${nodeId}${nodeSlug ? '+' + nodeSlug : ''}`;
+  const wsSlug = slugify(wsName || "workspace");
+  const nodeSlug = nodeTitle ? slugify(nodeTitle) : "";
+  return `/w/@${wsId}+${wsSlug}/@${nodeId}${nodeSlug ? "+" + nodeSlug : ""}`;
 }
 
 /**
  * Builds a workspace settings URL.
  */
 export function workspaceSettingsUrl(wsId: string, wsName?: string): string {
-  const wsSlug = slugify(wsName || 'workspace');
+  const wsSlug = slugify(wsName || "workspace");
   return `/w/@${wsId}+${wsSlug}/settings`;
 }
 
@@ -53,7 +53,7 @@ export function workspaceSettingsUrl(wsId: string, wsName?: string): string {
  * Builds an organization settings URL.
  */
 export function orgSettingsUrl(orgId: string, orgName?: string): string {
-  const orgSlug = slugify(orgName || 'organization');
+  const orgSlug = slugify(orgName || "organization");
   return `/o/@${orgId}+${orgSlug}/settings`;
 }
 
@@ -119,18 +119,18 @@ export function parseOrgSettings(path: string): SettingsMatch | null {
 /**
  * Checks if path is a static route.
  */
-export function isStaticRoute(path: string): 'privacy' | 'terms' | 'profile' | 'settings' | null {
-  if (path === '/privacy') return 'privacy';
-  if (path === '/terms') return 'terms';
-  if (path === '/profile') return 'profile';
-  if (path.startsWith('/settings')) return 'settings';
+export function isStaticRoute(path: string): "privacy" | "terms" | "profile" | "settings" | null {
+  if (path === "/privacy") return "privacy";
+  if (path === "/terms") return "terms";
+  if (path === "/profile") return "profile";
+  if (path.startsWith("/settings")) return "settings";
   return null;
 }
 
 /** Unified Settings URL types */
 
 export interface UnifiedSettingsMatch {
-  type: 'profile' | 'workspace' | 'org' | 'server' | 'redirect';
+  type: "profile" | "workspace" | "org" | "server" | "redirect";
   id?: string;
   section?: string;
 }
@@ -138,9 +138,9 @@ export interface UnifiedSettingsMatch {
 /**
  * Builds a unified settings URL.
  */
-export function settingsUrl(type?: 'user' | 'workspace' | 'org' | 'server', id?: string, name?: string): string {
-  if (!type || type === 'user') return '/settings/user';
-  if (type === 'server') return '/settings/server';
+export function settingsUrl(type?: "user" | "workspace" | "org" | "server", id?: string, name?: string): string {
+  if (!type || type === "user") return "/settings/user";
+  if (type === "server") return "/settings/server";
   const slug = slugify(name || type);
   return `/settings/${type}/@${id}+${slug}`;
 }

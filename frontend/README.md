@@ -22,4 +22,3 @@ Builds optimized frontend to `../backend/frontend/dist/` which is embedded in th
 ## Icons
 
 We use Material Design icon and symbols from https://fonts.google.com/icons
-

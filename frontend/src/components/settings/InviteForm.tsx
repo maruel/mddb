@@ -1,8 +1,8 @@
 // Shared invite form component for workspace and organization settings.
 
-import { createSignal, For, Show } from 'solid-js';
-import { useI18n } from '../../i18n';
-import styles from './InviteForm.module.css';
+import { createSignal, For, Show } from "solid-js";
+import { useI18n } from "../../i18n";
+import styles from "./InviteForm.module.css";
 
 interface RoleOption {
   value: string;
@@ -25,24 +25,24 @@ interface InviteFormProps {
 
 export default function InviteForm(props: InviteFormProps) {
   const { t } = useI18n();
-  const [email, setEmail] = createSignal('');
+  const [email, setEmail] = createSignal("");
   const [role, setRole] = createSignal(props.defaultRole);
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
     if (!email()) return;
     await props.onInvite(email(), role());
-    setEmail('');
+    setEmail("");
   };
 
   return (
     <div class={styles.inviteSection}>
       <form onSubmit={handleSubmit} class={styles.inviteForm}>
-        <h4>{t('settings.inviteNewMember')}</h4>
+        <h4>{t("settings.inviteNewMember")}</h4>
         <div class={styles.formGroup}>
           <input
             type="email"
-            placeholder={t('settings.emailPlaceholder') || 'Email address'}
+            placeholder={t("settings.emailPlaceholder") || "Email address"}
             value={email()}
             onInput={(e) => setEmail(e.target.value)}
             required
@@ -52,20 +52,20 @@ export default function InviteForm(props: InviteFormProps) {
             <For each={props.roleOptions}>{(option) => <option value={option.value}>{option.label}</option>}</For>
           </select>
           <button type="submit" disabled={props.loading}>
-            {t('common.invite')}
+            {t("common.invite")}
           </button>
         </div>
       </form>
 
       <Show when={props.pendingInvitations.length > 0}>
         <div class={styles.pendingSection}>
-          <h4>{t('settings.pendingInvitations')}</h4>
+          <h4>{t("settings.pendingInvitations")}</h4>
           <table class={styles.table}>
             <thead>
               <tr>
-                <th>{t('settings.emailColumn')}</th>
-                <th>{t('settings.roleColumn')}</th>
-                <th>{t('settings.sentColumn')}</th>
+                <th>{t("settings.emailColumn")}</th>
+                <th>{t("settings.roleColumn")}</th>
+                <th>{t("settings.sentColumn")}</th>
               </tr>
             </thead>
             <tbody>

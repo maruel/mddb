@@ -1,20 +1,20 @@
 // Sidebar navigation component containing workspace selection and page tree.
 
-import { createSignal, For, Show, createEffect, createMemo } from 'solid-js';
-import SidebarNode from './SidebarNode';
-import { useI18n } from '../i18n';
-import { useAuth } from '../contexts';
-import { useWorkspace } from '../contexts';
-import type { NodeResponse, WSMembershipResponse } from '@sdk/types.gen';
-import { WSRoleAdmin } from '@sdk/types.gen';
-import styles from './Sidebar.module.css';
+import { createSignal, For, Show, createEffect, createMemo } from "solid-js";
+import SidebarNode from "./SidebarNode";
+import { useI18n } from "../i18n";
+import { useAuth } from "../contexts";
+import { useWorkspace } from "../contexts";
+import type { NodeResponse, WSMembershipResponse } from "@sdk/types.gen";
+import { WSRoleAdmin } from "@sdk/types.gen";
+import styles from "./Sidebar.module.css";
 
-import SettingsIcon from '@material-symbols/svg-400/outlined/settings.svg?solid';
-import LeftPanelCloseIcon from '@material-symbols/svg-400/outlined/left_panel_close.svg?solid';
-import ChevronRightIcon from '@material-symbols/svg-400/outlined/chevron_right.svg?solid';
-import AddIcon from '@material-symbols/svg-400/outlined/add.svg?solid';
-import DownloadIcon from '@material-symbols/svg-400/outlined/download.svg?solid';
-import KeyboardIcon from '@material-symbols/svg-400/outlined/keyboard.svg?solid';
+import SettingsIcon from "@material-symbols/svg-400/outlined/settings.svg?solid";
+import LeftPanelCloseIcon from "@material-symbols/svg-400/outlined/left_panel_close.svg?solid";
+import ChevronRightIcon from "@material-symbols/svg-400/outlined/chevron_right.svg?solid";
+import AddIcon from "@material-symbols/svg-400/outlined/add.svg?solid";
+import DownloadIcon from "@material-symbols/svg-400/outlined/download.svg?solid";
+import KeyboardIcon from "@material-symbols/svg-400/outlined/keyboard.svg?solid";
 
 interface OrgWithWorkspaces {
   orgId: string;
@@ -50,7 +50,7 @@ export default function Sidebar(props: SidebarProps) {
   const { switchWorkspace } = useWorkspace();
   const [showOtherWorkspaces, setShowOtherWorkspaces] = createSignal(false);
   const [isEditingName, setIsEditingName] = createSignal(false);
-  const [editNameValue, setEditNameValue] = createSignal('');
+  const [editNameValue, setEditNameValue] = createSignal("");
   const [isSaving, setIsSaving] = createSignal(false);
   const [focusedNodeId, setFocusedNodeId] = createSignal<string | null>(null);
   const [movingNodeId, setMovingNodeId] = createSignal<string | null>(null);
@@ -68,17 +68,17 @@ export default function Sidebar(props: SidebarProps) {
     for (let frame = 0; frame < 3; frame += 1) {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const movedItem = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="treeitem"]')).find(
-        (item) => item.dataset.nodeId === nodeId
+        (item) => item.dataset.nodeId === nodeId,
       );
       if (!movedItem) continue;
 
-      const movedNodeList = movedItem.closest('li')?.parentElement;
+      const movedNodeList = movedItem.closest("li")?.parentElement;
       const atDestination =
-        newParentId === '0'
-          ? movedNodeList?.getAttribute('role') === 'tree'
+        newParentId === "0"
+          ? movedNodeList?.getAttribute("role") === "tree"
           : document
               .querySelector<HTMLButtonElement>(`[data-node-id="${newParentId}"]`)
-              ?.closest('li')
+              ?.closest("li")
               ?.contains(movedItem);
       if (!atDestination) continue;
 
@@ -94,12 +94,12 @@ export default function Sidebar(props: SidebarProps) {
     await focusMovedNode(nodeId, newParentId);
   };
 
-  const currentWsId = () => user()?.workspace_id || '';
+  const currentWsId = () => user()?.workspace_id || "";
   const currentWsName = () => {
     const u = user();
-    if (!u) return t('app.workspace');
+    if (!u) return t("app.workspace");
     const current = u.workspaces?.find((ws) => ws.workspace_id === u.workspace_id);
-    return current?.workspace_name || t('app.workspace');
+    return current?.workspace_name || t("app.workspace");
   };
   const isAdmin = () => user()?.workspace_role === WSRoleAdmin;
 
@@ -111,7 +111,7 @@ export default function Sidebar(props: SidebarProps) {
 
   const cancelEditingName = () => {
     setIsEditingName(false);
-    setEditNameValue('');
+    setEditNameValue("");
   };
 
   const saveWorkspaceName = async () => {
@@ -128,7 +128,7 @@ export default function Sidebar(props: SidebarProps) {
       await refreshUser();
       setIsEditingName(false);
     } catch (err) {
-      console.error('Failed to update workspace name:', err);
+      console.error("Failed to update workspace name:", err);
       // Keep edit mode open on error so user can retry or cancel
     } finally {
       setIsSaving(false);
@@ -136,10 +136,10 @@ export default function Sidebar(props: SidebarProps) {
   };
 
   const handleNameKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       saveWorkspaceName();
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       e.preventDefault();
       cancelEditingName();
     }
@@ -193,7 +193,7 @@ export default function Sidebar(props: SidebarProps) {
     // Only accept when dragging directly over the <ul>, not bubbled from children
     if (e.target !== e.currentTarget) return;
     e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
     setIsRootDropTarget(true);
   };
 
@@ -206,23 +206,23 @@ export default function Sidebar(props: SidebarProps) {
     if (e.target !== e.currentTarget) return;
     e.preventDefault();
     setIsRootDropTarget(false);
-    const nodeId = e.dataTransfer?.getData('text/plain');
+    const nodeId = e.dataTransfer?.getData("text/plain");
     if (nodeId) {
-      props.onMoveNode?.(nodeId, '0');
+      props.onMoveNode?.(nodeId, "0");
     }
   };
 
   return (
-    <aside class={`${styles.sidebar} ${props.isOpen ? styles.open : ''}`}>
+    <aside class={`${styles.sidebar} ${props.isOpen ? styles.open : ""}`}>
       {/* Current workspace header */}
       <div class={styles.workspaceHeader}>
         <Show
           when={isEditingName()}
           fallback={
             <span
-              class={`${styles.workspaceName} ${isAdmin() ? styles.editable : ''}`}
+              class={`${styles.workspaceName} ${isAdmin() ? styles.editable : ""}`}
               onClick={startEditingName}
-              title={isAdmin() ? t('settings.clickToEditName') || 'Click to edit name' : undefined}
+              title={isAdmin() ? t("settings.clickToEditName") || "Click to edit name" : undefined}
             >
               {currentWsName()}
             </span>
@@ -242,7 +242,7 @@ export default function Sidebar(props: SidebarProps) {
         <button
           class={styles.settingsButton}
           onClick={() => props.onOpenSettings()}
-          title={t('app.settings') || 'Settings'}
+          title={t("app.settings") || "Settings"}
           data-testid="workspace-settings-button"
         >
           <SettingsIcon />
@@ -250,20 +250,20 @@ export default function Sidebar(props: SidebarProps) {
         <button
           class={styles.collapseButton}
           onClick={() => props.onCloseMobileSidebar()}
-          title={t('app.collapseSidebar') || 'Collapse sidebar'}
+          title={t("app.collapseSidebar") || "Collapse sidebar"}
         >
           <LeftPanelCloseIcon />
         </button>
       </div>
 
       <Show when={props.loading && props.nodes.length === 0}>
-        <p class={styles.loading}>{t('common.loading')}</p>
+        <p class={styles.loading}>{t("common.loading")}</p>
       </Show>
 
       {/* Current workspace pages */}
       <ul
         role="tree"
-        aria-label={t('app.workspaceTree')}
+        aria-label={t("app.workspaceTree")}
         class={styles.pageList}
         data-testid="workspace-tree"
         classList={{ [`${styles.rootDropTarget}`]: isRootDropTarget() }}
@@ -299,10 +299,10 @@ export default function Sidebar(props: SidebarProps) {
       <div class={styles.otherWorkspaces}>
         <Show when={otherWorkspaces().length > 0}>
           <button class={styles.otherWorkspacesToggle} onClick={() => setShowOtherWorkspaces(!showOtherWorkspaces())}>
-            <span class={`${styles.toggleChevron} ${showOtherWorkspaces() ? styles.expanded : ''}`}>
+            <span class={`${styles.toggleChevron} ${showOtherWorkspaces() ? styles.expanded : ""}`}>
               <ChevronRightIcon />
             </span>
-            {t('app.otherWorkspaces') || 'Other workspaces'}
+            {t("app.otherWorkspaces") || "Other workspaces"}
           </button>
 
           <Show when={showOtherWorkspaces()}>
@@ -340,7 +340,7 @@ export default function Sidebar(props: SidebarProps) {
             <span class={styles.actionIcon} aria-hidden="true">
               <KeyboardIcon />
             </span>
-            {t('app.keyboardShortcuts')}
+            {t("app.keyboardShortcuts")}
           </button>
           <button
             class={styles.actionButton}
@@ -350,7 +350,7 @@ export default function Sidebar(props: SidebarProps) {
             <span class={styles.actionIcon}>
               <AddIcon />
             </span>
-            {t('createWorkspace.title') || 'Create workspace'}
+            {t("createWorkspace.title") || "Create workspace"}
           </button>
           <button
             class={styles.actionButton}
@@ -360,7 +360,7 @@ export default function Sidebar(props: SidebarProps) {
             <span class={styles.actionIcon}>
               <DownloadIcon />
             </span>
-            {t('notionImport.title') || 'Import from Notion'}
+            {t("notionImport.title") || "Import from Notion"}
           </button>
         </div>
       </div>

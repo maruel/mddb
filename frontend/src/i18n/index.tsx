@@ -1,9 +1,9 @@
 // Internationalization provider and context hooks.
 
-import { createContext, useContext, createSignal, createResource, type ParentComponent, type Accessor } from 'solid-js';
-import * as i18n from '@solid-primitives/i18n';
-import type { Dictionary, Locale } from './types';
-import type { ErrorCode } from '@sdk/types.gen';
+import { createContext, useContext, createSignal, createResource, type ParentComponent, type Accessor } from "solid-js";
+import * as i18n from "@solid-primitives/i18n";
+import type { Dictionary, Locale } from "./types";
+import type { ErrorCode } from "@sdk/types.gen";
 
 // Flatten the dictionary for dot-notation access
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,7 +26,7 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue>();
 
 export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props) => {
-  const [locale, setLocale] = createSignal<Locale>(props.initialLocale || 'en');
+  const [locale, setLocale] = createSignal<Locale>(props.initialLocale || "en");
   const [dict] = createResource(locale, fetchDictionary);
 
   const rawTranslator = i18n.translator(dict, i18n.resolveTemplate);
@@ -41,7 +41,7 @@ export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props)
   };
 
   // Expose whether translations are loaded
-  const ready = () => dict.state === 'ready';
+  const ready = () => dict.state === "ready";
 
   const translateError = (code: ErrorCode | string): string => {
     // Try to find error message by code
@@ -51,7 +51,7 @@ export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props)
       return translated as string;
     }
     // Fallback to unknown error
-    return (t('errors.unknown') as string) || 'An error occurred';
+    return (t("errors.unknown") as string) || "An error occurred";
   };
 
   const value: I18nContextValue = {
@@ -68,7 +68,7 @@ export const I18nProvider: ParentComponent<{ initialLocale?: Locale }> = (props)
 export function useI18n(): I18nContextValue {
   const context = useContext(I18nContext);
   if (!context) {
-    throw new Error('useI18n must be used within I18nProvider');
+    throw new Error("useI18n must be used within I18nProvider");
   }
   return context;
 }

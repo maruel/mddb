@@ -11,15 +11,15 @@ export interface TabDef {
 
 // Workspace settings tabs in display order.
 export const workspaceTabDefs: TabDef[] = [
-  { id: 'members', labelKey: 'settings.members' },
-  { id: 'settings', labelKey: 'settings.workspace' },
-  { id: 'quotas', labelKey: 'settings.quotas' },
-  { id: 'sync', labelKey: 'settings.gitSync', adminOnly: true },
+  { id: "members", labelKey: "settings.members" },
+  { id: "settings", labelKey: "settings.workspace" },
+  { id: "quotas", labelKey: "settings.quotas" },
+  { id: "sync", labelKey: "settings.gitSync", adminOnly: true },
 ];
 
 // Organization settings tabs in display order.
 export const orgTabDefs: TabDef[] = [
-  { id: 'members', labelKey: 'settings.members' },
-  { id: 'settings', labelKey: 'settings.settings' },
-  { id: 'quotas', labelKey: 'settings.quotas' },
+  { id: "members", labelKey: "settings.members" },
+  { id: "settings", labelKey: "settings.settings" },
+  { id: "quotas", labelKey: "settings.quotas" },
 ];

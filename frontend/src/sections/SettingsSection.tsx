@@ -1,21 +1,21 @@
 // Settings section with nested routes for user, workspace, org, and server settings.
 
-import { lazy, Show, Suspense, type JSX } from 'solid-js';
-import { Navigate, useParams, useLocation, useNavigate } from '@solidjs/router';
-import { useAuth } from '../contexts';
-import { useI18n } from '../i18n';
-import { settingsUrl, stripSlug } from '../utils/urls';
-import SettingsLayout from './SettingsLayout';
+import { lazy, Show, Suspense, type JSX } from "solid-js";
+import { Navigate, useParams, useLocation, useNavigate } from "@solidjs/router";
+import { useAuth } from "../contexts";
+import { useI18n } from "../i18n";
+import { settingsUrl, stripSlug } from "../utils/urls";
+import SettingsLayout from "./SettingsLayout";
 
-const ProfileSettings = lazy(() => import('../components/settings/ProfileSettings'));
-const WorkspaceSettingsPanel = lazy(() => import('../components/settings/WorkspaceSettingsPanel'));
-const OrgSettingsPanel = lazy(() => import('../components/settings/OrgSettingsPanel'));
-const ServerSettingsPanel = lazy(() => import('../components/settings/ServerSettingsPanel'));
+const ProfileSettings = lazy(() => import("../components/settings/ProfileSettings"));
+const WorkspaceSettingsPanel = lazy(() => import("../components/settings/WorkspaceSettingsPanel"));
+const OrgSettingsPanel = lazy(() => import("../components/settings/OrgSettingsPanel"));
+const ServerSettingsPanel = lazy(() => import("../components/settings/ServerSettingsPanel"));
 
 // Loading fallback
 function SettingsLoading() {
   const { t } = useI18n();
-  return <div style={{ padding: '2rem', color: 'var(--c-text-muted)' }}>{t('common.loading')}</div>;
+  return <div style={{ padding: "2rem", color: "var(--c-text-muted)" }}>{t("common.loading")}</div>;
 }
 
 // Guard component for server settings (global admin only)
@@ -42,7 +42,7 @@ export function WorkspaceSettingsRoute() {
   const section = () => location.hash?.slice(1) || undefined;
 
   // Extract wsId - handle "@id+slug" format
-  const wsId = () => stripSlug(params.wsId || '');
+  const wsId = () => stripSlug(params.wsId || "");
 
   // Verify user has access to this workspace
   const hasAccess = () => {
@@ -51,7 +51,7 @@ export function WorkspaceSettingsRoute() {
   };
 
   const handleNavigateToOrgSettings = (orgId: string, orgName: string) => {
-    navigate(settingsUrl('org', orgId, orgName));
+    navigate(settingsUrl("org", orgId, orgName));
   };
 
   return (
@@ -77,7 +77,7 @@ export function OrgSettingsRoute() {
   const section = () => location.hash?.slice(1) || undefined;
 
   // Extract orgId - handle "@id+slug" format
-  const orgId = () => stripSlug(params.orgId || '');
+  const orgId = () => stripSlug(params.orgId || "");
 
   // Verify user has access to this organization
   const hasAccess = () => {

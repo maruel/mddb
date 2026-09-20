@@ -1,9 +1,9 @@
 // Shared members table component for workspace and organization settings.
 
-import { For, Show } from 'solid-js';
-import { useI18n } from '../../i18n';
-import type { UserResponse } from '@sdk/types.gen';
-import styles from './MembersTable.module.css';
+import { For, Show } from "solid-js";
+import { useI18n } from "../../i18n";
+import type { UserResponse } from "@sdk/types.gen";
+import styles from "./MembersTable.module.css";
 
 interface RoleOption {
   value: string;
@@ -14,7 +14,7 @@ interface MembersTableProps {
   members: UserResponse[];
   currentUserId: string;
   roleOptions: RoleOption[];
-  roleField: 'workspace_role' | 'org_role';
+  roleField: "workspace_role" | "org_role";
   onUpdateRole: (userId: string, role: string) => void;
   onRemove?: (userId: string) => void;
   loading?: boolean;
@@ -24,18 +24,18 @@ export default function MembersTable(props: MembersTableProps) {
   const { t } = useI18n();
 
   const getMemberRole = (member: UserResponse): string => {
-    return (props.roleField === 'workspace_role' ? member.workspace_role : member.org_role) || '';
+    return (props.roleField === "workspace_role" ? member.workspace_role : member.org_role) || "";
   };
 
   return (
     <table class={styles.table}>
       <thead>
         <tr>
-          <th>{t('settings.nameColumn')}</th>
-          <th>{t('settings.emailColumn')}</th>
-          <th>{t('settings.roleColumn')}</th>
+          <th>{t("settings.nameColumn")}</th>
+          <th>{t("settings.emailColumn")}</th>
+          <th>{t("settings.roleColumn")}</th>
           <Show when={props.onRemove}>
-            <th>{t('settings.actionsColumn')}</th>
+            <th>{t("settings.actionsColumn")}</th>
           </Show>
         </tr>
       </thead>
@@ -67,7 +67,7 @@ export default function MembersTable(props: MembersTableProps) {
                       onClick={() => props.onRemove?.(member.id)}
                       disabled={props.loading}
                     >
-                      {t('common.remove')}
+                      {t("common.remove")}
                     </button>
                   </Show>
                 </td>

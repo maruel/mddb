@@ -1,9 +1,9 @@
 // Input rules for flat block editor.
 // Convert markdown-style syntax to block attributes.
 
-import { inputRules, InputRule } from 'prosemirror-inputrules';
-import { smartQuotes, ellipsis, emDash } from 'prosemirror-inputrules';
-import type { EditorState } from 'prosemirror-state';
+import { inputRules, InputRule } from "prosemirror-inputrules";
+import { smartQuotes, ellipsis, emDash } from "prosemirror-inputrules";
+import type { EditorState } from "prosemirror-state";
 
 /**
  * Helper to create a block type conversion input rule.
@@ -31,7 +31,7 @@ export function buildBlockInputRules() {
     rules: [
       // Bullet list: - or * at start followed by space
       blockTypeRule(/^[-*]\s$/, () => ({
-        type: 'bullet',
+        type: "bullet",
         indent: 0,
         level: null,
         checked: null,
@@ -40,7 +40,7 @@ export function buildBlockInputRules() {
 
       // Numbered list: 1. at start (any number)
       blockTypeRule(/^(\d+)\.\s$/, () => ({
-        type: 'number',
+        type: "number",
         indent: 0,
         level: null,
         checked: null,
@@ -49,7 +49,7 @@ export function buildBlockInputRules() {
 
       // Task list (unchecked): - [ ] at start
       blockTypeRule(/^[-*]\s*\[\s\]\s$/, () => ({
-        type: 'task',
+        type: "task",
         indent: 0,
         checked: false,
         level: null,
@@ -58,7 +58,7 @@ export function buildBlockInputRules() {
 
       // Task list (unchecked): [ ] at start (fallback if bullet rule consumed dash)
       blockTypeRule(/^\[\s\]\s$/, () => ({
-        type: 'task',
+        type: "task",
         indent: 0,
         checked: false,
         level: null,
@@ -67,7 +67,7 @@ export function buildBlockInputRules() {
 
       // Task list (checked): - [x] or - [X] at start
       blockTypeRule(/^[-*]\s*\[[xX]\]\s$/, () => ({
-        type: 'task',
+        type: "task",
         indent: 0,
         checked: true,
         level: null,
@@ -76,7 +76,7 @@ export function buildBlockInputRules() {
 
       // Task list (checked): [x] or [X] at start (fallback)
       blockTypeRule(/^\[[xX]\]\s$/, () => ({
-        type: 'task',
+        type: "task",
         indent: 0,
         checked: true,
         level: null,
@@ -85,7 +85,7 @@ export function buildBlockInputRules() {
 
       // Heading 1: # at start
       blockTypeRule(/^#\s$/, () => ({
-        type: 'heading',
+        type: "heading",
         level: 1,
         indent: 0,
         checked: null,
@@ -94,7 +94,7 @@ export function buildBlockInputRules() {
 
       // Heading 2: ## at start
       blockTypeRule(/^##\s$/, () => ({
-        type: 'heading',
+        type: "heading",
         level: 2,
         indent: 0,
         checked: null,
@@ -103,7 +103,7 @@ export function buildBlockInputRules() {
 
       // Heading 3: ### at start
       blockTypeRule(/^###\s$/, () => ({
-        type: 'heading',
+        type: "heading",
         level: 3,
         indent: 0,
         checked: null,
@@ -112,7 +112,7 @@ export function buildBlockInputRules() {
 
       // Heading 4: #### at start
       blockTypeRule(/^####\s$/, () => ({
-        type: 'heading',
+        type: "heading",
         level: 4,
         indent: 0,
         checked: null,
@@ -121,7 +121,7 @@ export function buildBlockInputRules() {
 
       // Heading 5: ##### at start
       blockTypeRule(/^#####\s$/, () => ({
-        type: 'heading',
+        type: "heading",
         level: 5,
         indent: 0,
         checked: null,
@@ -130,7 +130,7 @@ export function buildBlockInputRules() {
 
       // Heading 6: ###### at start
       blockTypeRule(/^######\s$/, () => ({
-        type: 'heading',
+        type: "heading",
         level: 6,
         indent: 0,
         checked: null,
@@ -139,7 +139,7 @@ export function buildBlockInputRules() {
 
       // Blockquote: > at start
       blockTypeRule(/^>\s$/, () => ({
-        type: 'quote',
+        type: "quote",
         indent: 0,
         level: null,
         checked: null,
@@ -159,7 +159,7 @@ export function buildBlockInputRules() {
         // If we require space, the user types space.
 
         return state.tr.delete(start, end).setNodeMarkup(blockPos, undefined, {
-          type: 'code',
+          type: "code",
           language: match[1] || null,
           indent: 0,
           level: null,
@@ -181,7 +181,7 @@ export function buildBlockInputRules() {
         // So doc content length should be match[0].length - 1.
         if (block && block.textContent.length === match[0].length - 1) {
           return state.tr.delete(start, end).setNodeMarkup(blockPos, undefined, {
-            type: 'divider',
+            type: "divider",
             indent: 0,
             level: null,
             checked: null,

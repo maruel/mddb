@@ -1,19 +1,19 @@
 // Hook for uploading assets to a node via multipart form data.
 
-import { createSignal } from 'solid-js';
-import type { UploadNodeAssetResponse } from '@sdk/types.gen';
+import { createSignal } from "solid-js";
+import type { UploadNodeAssetResponse } from "@sdk/types.gen";
 
 // Client-side limits for quick feedback. Backend enforces these authoritatively.
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const ALLOWED_MIME_TYPES = new Set([
-  'image/png',
-  'image/jpeg',
-  'image/gif',
-  'image/webp',
-  'image/svg+xml',
-  'image/avif',
-  'application/pdf',
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+  "image/avif",
+  "application/pdf",
 ]);
 
 export interface UploadResult {
@@ -59,7 +59,7 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
 
     const token = options.getToken();
     if (!token) {
-      const err = 'Not authenticated';
+      const err = "Not authenticated";
       setError(err);
       console.error(err);
       return null;
@@ -68,10 +68,10 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
     setUploading(true);
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const response = await fetch(`/api/v1/workspaces/${options.wsId}/nodes/${options.nodeId}/assets`, {
-        method: 'POST',
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -98,7 +98,7 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       setError(errMsg);
-      console.error('Asset upload failed:', err);
+      console.error("Asset upload failed:", err);
       return null;
     } finally {
       setUploading(false);
@@ -114,5 +114,5 @@ export function useAssetUpload(options: UseAssetUploadOptions): UseAssetUploadRe
 
 /** Check if a MIME type represents an image */
 export function isImageMimeType(mimeType: string): boolean {
-  return mimeType.startsWith('image/');
+  return mimeType.startsWith("image/");
 }

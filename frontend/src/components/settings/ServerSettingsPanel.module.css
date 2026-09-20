@@ -114,10 +114,10 @@
   font-weight: 500;
 }
 
-.formItem input[type='text'],
-.formItem input[type='email'],
-.formItem input[type='password'],
-.formItem input[type='number'] {
+.formItem input[type="text"],
+.formItem input[type="email"],
+.formItem input[type="password"],
+.formItem input[type="number"] {
   width: 100%;
   padding: var(--s-3);
   border: 1px solid var(--c-border);

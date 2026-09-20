@@ -1,10 +1,10 @@
 // ProseMirror plugin for highlighting invalid (broken) internal page links.
 
-import { Plugin, PluginKey } from 'prosemirror-state';
-import { Decoration, DecorationSet } from 'prosemirror-view';
-import type { EditorView } from 'prosemirror-view';
-import type { Node as ProseMirrorNode } from 'prosemirror-model';
-import type { NodeTitleMap } from './markdown-utils';
+import { Plugin, PluginKey } from "prosemirror-state";
+import { Decoration, DecorationSet } from "prosemirror-view";
+import type { EditorView } from "prosemirror-view";
+import type { Node as ProseMirrorNode } from "prosemirror-model";
+import type { NodeTitleMap } from "./markdown-utils";
 
 /**
  * Pattern to extract nodeId from internal page link URLs.
@@ -20,7 +20,7 @@ export interface InvalidLinkPluginState {
   wsId: string | undefined;
 }
 
-export const invalidLinkPluginKey = new PluginKey<InvalidLinkPluginState>('invalidLink');
+export const invalidLinkPluginKey = new PluginKey<InvalidLinkPluginState>("invalidLink");
 
 /**
  * Check if a link URL is an internal page link and if the target page exists.
@@ -32,8 +32,8 @@ function isInvalidInternalLink(href: string, linkedNodeTitles: NodeTitleMap, wsI
   const match = href.match(INTERNAL_LINK_URL_PATTERN);
   if (!match) {
     // Debug: log if pattern doesn't match internal-looking links
-    if (href.startsWith('/w/')) {
-      console.warn('[invalidLink] Pattern did not match:', href);
+    if (href.startsWith("/w/")) {
+      console.warn("[invalidLink] Pattern did not match:", href);
     }
     return false;
   }
@@ -56,19 +56,19 @@ function isInvalidInternalLink(href: string, linkedNodeTitles: NodeTitleMap, wsI
 function buildDecorations(
   doc: ProseMirrorNode,
   linkedNodeTitles: NodeTitleMap,
-  wsId: string | undefined
+  wsId: string | undefined,
 ): DecorationSet {
   const decorations: Decoration[] = [];
 
   doc.descendants((node, pos) => {
     // Check each mark on text nodes
     if (node.isText) {
-      const linkMark = node.marks.find((m) => m.type.name === 'link');
+      const linkMark = node.marks.find((m) => m.type.name === "link");
       if (linkMark && linkMark.attrs.href) {
         const href = linkMark.attrs.href as string;
         if (isInvalidInternalLink(href, linkedNodeTitles, wsId)) {
           // Add inline decoration for the entire text node with the link
-          decorations.push(Decoration.inline(pos, pos + node.nodeSize, { class: 'invalid-link' }));
+          decorations.push(Decoration.inline(pos, pos + node.nodeSize, { class: "invalid-link" }));
         }
       }
     }
@@ -141,7 +141,7 @@ export function createInvalidLinkPlugin(): Plugin<InvalidLinkPluginState> {
 export function updateInvalidLinkState(
   view: EditorView,
   linkedNodeTitles: NodeTitleMap,
-  wsId: string | undefined
+  wsId: string | undefined,
 ): void {
   const tr = view.state.tr.setMeta(invalidLinkPluginKey, { linkedNodeTitles, wsId });
   view.dispatch(tr);

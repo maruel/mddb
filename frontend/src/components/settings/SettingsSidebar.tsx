@@ -1,14 +1,14 @@
 // Settings sidebar navigation with expandable workspace and organization items.
 
-import { For } from 'solid-js';
-import { useLocation, useNavigate } from '@solidjs/router';
-import { useAuth } from '../../contexts';
-import { useI18n } from '../../i18n';
-import { settingsUrl, type UnifiedSettingsMatch } from '../../utils/urls';
-import { OrgRoleAdmin, OrgRoleOwner, WSRoleAdmin } from '@sdk/types.gen';
-import SettingsNavItem from './SettingsNavItem';
-import { workspaceTabDefs, orgTabDefs } from './settingsTabs';
-import styles from './SettingsSidebar.module.css';
+import { For } from "solid-js";
+import { useLocation, useNavigate } from "@solidjs/router";
+import { useAuth } from "../../contexts";
+import { useI18n } from "../../i18n";
+import { settingsUrl, type UnifiedSettingsMatch } from "../../utils/urls";
+import { OrgRoleAdmin, OrgRoleOwner, WSRoleAdmin } from "@sdk/types.gen";
+import SettingsNavItem from "./SettingsNavItem";
+import { workspaceTabDefs, orgTabDefs } from "./settingsTabs";
+import styles from "./SettingsSidebar.module.css";
 
 interface SettingsSidebarProps {
   isOpen: boolean;
@@ -36,24 +36,24 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
     const path = location.pathname;
     const hash = location.hash?.slice(1) || undefined;
 
-    if (path === '/settings/user' || path === '/settings/user/') {
-      return { type: 'profile' };
+    if (path === "/settings/user" || path === "/settings/user/") {
+      return { type: "profile" };
     }
-    if (path === '/settings/server' || path === '/settings/server/') {
-      return { type: 'server' };
+    if (path === "/settings/server" || path === "/settings/server/") {
+      return { type: "server" };
     }
 
     const wsMatch = path.match(/^\/settings\/workspace\/([^+/]+)/);
     if (wsMatch) {
-      return { type: 'workspace', id: wsMatch[1], section: hash };
+      return { type: "workspace", id: wsMatch[1], section: hash };
     }
 
     const orgMatch = path.match(/^\/settings\/org\/([^+/]+)/);
     if (orgMatch) {
-      return { type: 'org', id: orgMatch[1], section: hash };
+      return { type: "org", id: orgMatch[1], section: hash };
     }
 
-    return { type: 'profile' };
+    return { type: "profile" };
   };
 
   // Use provided props or fall back to router-based values
@@ -74,9 +74,9 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
 
     // User profile
     items.push({
-      id: 'user',
-      label: t('settings.personal'),
-      url: settingsUrl('user'),
+      id: "user",
+      label: t("settings.personal"),
+      url: settingsUrl("user"),
     });
 
     // Workspaces
@@ -91,20 +91,20 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
           .map((tab) => ({
             id: `ws-${wsId}-${tab.id}`,
             label: t(tab.labelKey as Parameters<typeof t>[0]),
-            url: settingsUrl('workspace', wsId, wsName) + `#${tab.id}`,
+            url: settingsUrl("workspace", wsId, wsName) + `#${tab.id}`,
           }));
         return {
           id: `ws-${wsId}`,
           label: wsName,
-          url: settingsUrl('workspace', wsId, wsName),
+          url: settingsUrl("workspace", wsId, wsName),
           children,
         };
       });
 
       items.push({
-        id: 'workspaces',
-        label: t('settings.workspaces'),
-        url: '',
+        id: "workspaces",
+        label: t("settings.workspaces"),
+        url: "",
         children: wsChildren,
       });
     }
@@ -118,19 +118,19 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
         return {
           id: `org-${orgId}`,
           label: orgName,
-          url: settingsUrl('org', orgId, orgName),
+          url: settingsUrl("org", orgId, orgName),
           children: orgTabDefs.map((tab) => ({
             id: `org-${orgId}-${tab.id}`,
             label: t(tab.labelKey as Parameters<typeof t>[0]),
-            url: settingsUrl('org', orgId, orgName) + `#${tab.id}`,
+            url: settingsUrl("org", orgId, orgName) + `#${tab.id}`,
           })),
         };
       });
 
       items.push({
-        id: 'organizations',
-        label: t('settings.organizations'),
-        url: '',
+        id: "organizations",
+        label: t("settings.organizations"),
+        url: "",
         children: orgChildren,
       });
     }
@@ -138,23 +138,23 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
     // Server settings (only for global admins)
     if (u.is_global_admin) {
       items.push({
-        id: 'server',
-        label: t('server.serverSettings'),
-        url: settingsUrl('server'),
+        id: "server",
+        label: t("server.serverSettings"),
+        url: settingsUrl("server"),
       });
     }
 
     // Privacy and Terms links
     items.push({
-      id: 'privacy',
-      label: t('app.privacyPolicy'),
-      url: '/privacy',
+      id: "privacy",
+      label: t("app.privacyPolicy"),
+      url: "/privacy",
       separator: true,
     });
     items.push({
-      id: 'terms',
-      label: t('app.terms'),
-      url: '/terms',
+      id: "terms",
+      label: t("app.terms"),
+      url: "/terms",
     });
 
     return items;
@@ -166,15 +166,15 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
     if (!url) return false;
 
     // Match based on route type and URL
-    if (url === '/settings/user' && route.type === 'profile') return true;
-    if (url === '/settings/server' && route.type === 'server') return true;
+    if (url === "/settings/user" && route.type === "profile") return true;
+    if (url === "/settings/server" && route.type === "server") return true;
 
     // For workspace/org URLs, check if the ID matches
-    if (route.type === 'workspace' && route.id) {
+    if (route.type === "workspace" && route.id) {
       const wsMatch = url.match(/^\/settings\/workspace\/([^+/]+)/);
       if (wsMatch && wsMatch[1] === route.id) {
         // Check section/hash match
-        const [, urlHash] = url.split('#');
+        const [, urlHash] = url.split("#");
         if (urlHash) {
           return route.section === urlHash;
         }
@@ -182,11 +182,11 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
       }
     }
 
-    if (route.type === 'org' && route.id) {
+    if (route.type === "org" && route.id) {
       const orgMatch = url.match(/^\/settings\/org\/([^+/]+)/);
       if (orgMatch && orgMatch[1] === route.id) {
         // Check section/hash match
-        const [, urlHash] = url.split('#');
+        const [, urlHash] = url.split("#");
         if (urlHash) {
           return route.section === urlHash;
         }
@@ -198,7 +198,7 @@ export default function SettingsSidebar(props: SettingsSidebarProps) {
   };
 
   return (
-    <aside class={`${styles.sidebar} ${props.isOpen ? styles.mobileOpen : ''}`}>
+    <aside class={`${styles.sidebar} ${props.isOpen ? styles.mobileOpen : ""}`}>
       <nav class={styles.nav}>
         <For each={navItems()}>
           {(item) => (

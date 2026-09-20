@@ -1,7 +1,7 @@
 // ProseMirror plugin for detecting "/" slash commands and tracking menu state.
 
-import { Plugin, PluginKey } from 'prosemirror-state';
-import type { EditorView } from 'prosemirror-view';
+import { Plugin, PluginKey } from "prosemirror-state";
+import type { EditorView } from "prosemirror-view";
 
 export interface SlashMenuState {
   active: boolean;
@@ -10,11 +10,11 @@ export interface SlashMenuState {
   position: { top: number; left: number };
 }
 
-export const slashMenuKey = new PluginKey<SlashMenuState>('slashMenu');
+export const slashMenuKey = new PluginKey<SlashMenuState>("slashMenu");
 
 const initialState: SlashMenuState = {
   active: false,
-  query: '',
+  query: "",
   triggerPos: 0,
   position: { top: 0, left: 0 },
 };
@@ -70,13 +70,13 @@ export function createSlashCommandPlugin(onStateChange: (state: SlashMenuState) 
         // Ensure we are inside a textblock (not identifying the doc or non-textblock)
         if (!$from.parent.isTextblock) return pluginState;
 
-        const textToCursor = newState.doc.textBetween(textBlockStart, $from.pos, '', '');
+        const textToCursor = newState.doc.textBetween(textBlockStart, $from.pos, "", "");
 
         // Match "/" at line start or after whitespace, followed by optional query
         const slashMatch = textToCursor.match(/(^|\s)\/([^\s]*)$/);
 
         if (slashMatch) {
-          const query = slashMatch[2] || '';
+          const query = slashMatch[2] || "";
           const slashOffset = textToCursor.length - slashMatch[0].length + (slashMatch[1] ? 1 : 0);
           const triggerPos = textBlockStart + slashOffset;
 
@@ -144,11 +144,11 @@ export function createSlashCommandPlugin(onStateChange: (state: SlashMenuState) 
 
         // Intercept these keys to prevent ProseMirror from handling them
         // The menu component's document listener handles the actual navigation
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === 'Tab') {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Enter" || event.key === "Tab") {
           return true; // Tell ProseMirror we handled it
         }
 
-        if (event.key === 'Escape') {
+        if (event.key === "Escape") {
           closeSlashMenu(view);
           return true;
         }

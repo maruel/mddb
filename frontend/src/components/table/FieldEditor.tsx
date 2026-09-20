@@ -1,7 +1,7 @@
 // Shared always-editable field input for card-style views (gallery, grid).
 
-import { For, Show, Switch, Match, createSignal, createEffect, onCleanup, onMount, type JSX } from 'solid-js';
-import { Portal } from 'solid-js/web';
+import { For, Show, Switch, Match, createSignal, createEffect, onCleanup, onMount, type JSX } from "solid-js";
+import { Portal } from "solid-js/web";
 import {
   type DataRecordResponse,
   type Property,
@@ -14,12 +14,12 @@ import {
   PropertyTypeEmail,
   PropertyTypePhone,
   PropertyTypeUser,
-} from '@sdk/types.gen';
-import { updateRecordField, handleEnterBlur, getFieldValue, chipTextColor } from './tableUtils';
-import { useRecords } from '../../contexts/RecordsContext';
-import { useI18n } from '../../i18n';
-import { useDialogOverlayTarget } from '../shared/Dialog';
-import styles from './FieldEditor.module.css';
+} from "@sdk/types.gen";
+import { updateRecordField, handleEnterBlur, getFieldValue, chipTextColor } from "./tableUtils";
+import { useRecords } from "../../contexts/RecordsContext";
+import { useI18n } from "../../i18n";
+import { useDialogOverlayTarget } from "../shared/Dialog";
+import styles from "./FieldEditor.module.css";
 
 interface FieldEditorProps {
   record: DataRecordResponse;
@@ -59,7 +59,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
   const { t } = useI18n();
   const [open, setOpen] = createSignal(false);
   const [dropPos, setDropPos] = createSignal<DropPos | null>(null);
-  const [query, setQuery] = createSignal('');
+  const [query, setQuery] = createSignal("");
   const [focusedIndex, setFocusedIndex] = createSignal(-1);
   let triggerRef: HTMLDivElement | undefined;
   let dropRef: HTMLDivElement | undefined;
@@ -73,7 +73,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
   const closeDropdown = () => {
     setOpen(false);
     setDropPos(null);
-    setQuery('');
+    setQuery("");
     setFocusedIndex(-1);
     props.onClose?.();
   };
@@ -88,15 +88,15 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
       if (!triggerRef?.contains(target) && !dropRef?.contains(target)) {
         setOpen(false);
         setDropPos(null);
-        setQuery('');
+        setQuery("");
         setFocusedIndex(-1);
         props.onClose?.();
       }
     };
-    const id = setTimeout(() => document.addEventListener('mousedown', handler, true), 0);
+    const id = setTimeout(() => document.addEventListener("mousedown", handler, true), 0);
     onCleanup(() => {
       clearTimeout(id);
-      document.removeEventListener('mousedown', handler, true);
+      document.removeEventListener("mousedown", handler, true);
     });
   });
 
@@ -104,13 +104,13 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
   createEffect(() => {
     if (!open()) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.stopPropagation();
         closeDropdown();
       }
     };
-    document.addEventListener('keydown', handler, true);
-    onCleanup(() => document.removeEventListener('keydown', handler, true));
+    document.addEventListener("keydown", handler, true);
+    onCleanup(() => document.removeEventListener("keydown", handler, true));
   });
 
   onMount(() => {
@@ -119,7 +119,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
 
   const selectedIds = () =>
     props.value
-      .split(',')
+      .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
 
@@ -131,7 +131,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
   const toggle = (id: string) => {
     const current = selectedIds();
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-    props.onSave(next.join(','));
+    props.onSave(next.join(","));
   };
 
   const filteredOptions = () => {
@@ -141,13 +141,13 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
 
   const handleSearchKeyDown = (e: KeyboardEvent) => {
     const opts = filteredOptions();
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setFocusedIndex((i) => (i + 1) % opts.length);
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setFocusedIndex((i) => (i <= 0 ? opts.length - 1 : i - 1));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       const idx = focusedIndex();
       const opt = opts[idx];
@@ -194,14 +194,14 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
               style={{
                 left: `${pos().left}px`,
                 top: `${pos().top}px`,
-                'min-width': `${pos().minWidth}px`,
+                "min-width": `${pos().minWidth}px`,
               }}
             >
               <input
                 ref={(el) => setTimeout(() => el?.focus(), 0)}
                 type="text"
                 class={styles.searchInput}
-                placeholder={t('table.searchOptions')}
+                placeholder={t("table.searchOptions")}
                 value={query()}
                 onInput={(e) => setQuery(e.currentTarget.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -212,13 +212,13 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
                   const isFocused = () => focusedIndex() === index();
                   return (
                     <div
-                      class={`${styles.optionItem}${isFocused() ? ` ${styles.optionItemFocused}` : ''}`}
+                      class={`${styles.optionItem}${isFocused() ? ` ${styles.optionItemFocused}` : ""}`}
                       onMouseDown={(e) => {
                         e.preventDefault(); // prevent blur before toggle
                         toggle(opt.id);
                       }}
                     >
-                      <span class={styles.optionCheckmark}>{isSelected() ? '✓' : ''}</span>
+                      <span class={styles.optionCheckmark}>{isSelected() ? "✓" : ""}</span>
                       <Show when={opt.color}>
                         <span class={styles.optionColor} style={{ background: opt.color }} />
                       </Show>
@@ -247,7 +247,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
   const { t } = useI18n();
   const [open, setOpen] = createSignal(false);
   const [dropPos, setDropPos] = createSignal<DropPos | null>(null);
-  const [query, setQuery] = createSignal('');
+  const [query, setQuery] = createSignal("");
   const [focusedIndex, setFocusedIndex] = createSignal(-1);
   let triggerRef: HTMLDivElement | undefined;
   let dropRef: HTMLDivElement | undefined;
@@ -261,7 +261,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
   const closeDropdown = () => {
     setOpen(false);
     setDropPos(null);
-    setQuery('');
+    setQuery("");
     setFocusedIndex(-1);
     props.onClose?.();
   };
@@ -274,28 +274,28 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
       if (!triggerRef?.contains(target) && !dropRef?.contains(target)) {
         setOpen(false);
         setDropPos(null);
-        setQuery('');
+        setQuery("");
         setFocusedIndex(-1);
         props.onClose?.();
       }
     };
-    const id = setTimeout(() => document.addEventListener('mousedown', handler, true), 0);
+    const id = setTimeout(() => document.addEventListener("mousedown", handler, true), 0);
     onCleanup(() => {
       clearTimeout(id);
-      document.removeEventListener('mousedown', handler, true);
+      document.removeEventListener("mousedown", handler, true);
     });
   });
 
   createEffect(() => {
     if (!open()) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.stopPropagation();
         closeDropdown();
       }
     };
-    document.addEventListener('keydown', handler, true);
-    onCleanup(() => document.removeEventListener('keydown', handler, true));
+    document.addEventListener("keydown", handler, true);
+    onCleanup(() => document.removeEventListener("keydown", handler, true));
   });
 
   onMount(() => {
@@ -311,7 +311,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
 
   const handleClear = (e: MouseEvent) => {
     e.stopPropagation();
-    props.onSave('');
+    props.onSave("");
     closeDropdown();
   };
 
@@ -323,13 +323,13 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
 
   const handleSearchKeyDown = (e: KeyboardEvent) => {
     const opts = filteredOptions();
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setFocusedIndex((i) => (i + 1) % opts.length);
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setFocusedIndex((i) => (i <= 0 ? opts.length - 1 : i - 1));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       const idx = focusedIndex();
       const opt = opts[idx];
@@ -347,7 +347,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
     >
       <Show when={selectedOption()} fallback={<span class={styles.selectPlaceholder}>--</span>}>
         {(opt) => {
-          const color = opt().color ?? '';
+          const color = opt().color ?? "";
           return (
             <span class={styles.chip} style={color ? { background: color, color: chipTextColor(color) } : {}}>
               {opt().name}
@@ -370,14 +370,14 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
               style={{
                 left: `${pos().left}px`,
                 top: `${pos().top}px`,
-                'min-width': `${pos().minWidth}px`,
+                "min-width": `${pos().minWidth}px`,
               }}
             >
               <input
                 ref={(el) => setTimeout(() => el?.focus(), 0)}
                 type="text"
                 class={styles.searchInput}
-                placeholder={t('table.searchOptions')}
+                placeholder={t("table.searchOptions")}
                 value={query()}
                 onInput={(e) => setQuery(e.currentTarget.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -386,7 +386,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
                 class={styles.optionItem}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  props.onSave('');
+                  props.onSave("");
                   closeDropdown();
                 }}
               >
@@ -398,7 +398,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
                   const isFocused = () => focusedIndex() === index();
                   return (
                     <div
-                      class={`${styles.optionItem}${isActive() ? ` ${styles.optionItemActive}` : ''}${isFocused() ? ` ${styles.optionItemFocused}` : ''}`}
+                      class={`${styles.optionItem}${isActive() ? ` ${styles.optionItemActive}` : ""}${isFocused() ? ` ${styles.optionItemFocused}` : ""}`}
                       onMouseDown={(e) => {
                         e.preventDefault();
                         handleSelect(opt.id);
@@ -466,23 +466,23 @@ export function UserEditor(props: UserEditorProps) {
         props.onClose?.();
       }
     };
-    const id = setTimeout(() => document.addEventListener('mousedown', handler, true), 0);
+    const id = setTimeout(() => document.addEventListener("mousedown", handler, true), 0);
     onCleanup(() => {
       clearTimeout(id);
-      document.removeEventListener('mousedown', handler, true);
+      document.removeEventListener("mousedown", handler, true);
     });
   });
 
   createEffect(() => {
     if (!open()) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.stopPropagation();
         closeDropdown();
       }
     };
-    document.addEventListener('keydown', handler, true);
-    onCleanup(() => document.removeEventListener('keydown', handler, true));
+    document.addEventListener("keydown", handler, true);
+    onCleanup(() => document.removeEventListener("keydown", handler, true));
   });
 
   onMount(() => {
@@ -507,7 +507,7 @@ export function UserEditor(props: UserEditorProps) {
 
   const handleClear = (e: MouseEvent) => {
     e.stopPropagation();
-    props.onSave('');
+    props.onSave("");
     closeDropdown();
   };
 
@@ -520,9 +520,9 @@ export function UserEditor(props: UserEditorProps) {
       <Show when={selectedMember()} fallback={<span class={styles.selectPlaceholder}>--</span>}>
         {(user) => {
           const initials = user()
-            .name.split(' ')
+            .name.split(" ")
             .map((w: string) => w[0])
-            .join('')
+            .join("")
             .slice(0, 2)
             .toUpperCase();
           return (
@@ -532,8 +532,8 @@ export function UserEditor(props: UserEditorProps) {
               </Show>
               {user().name}
               <Show when={user().is_ghost}>
-                {' '}
-                <span class={styles.ghostLabel}>({t('table.userRemoved')})</span>
+                {" "}
+                <span class={styles.ghostLabel}>({t("table.userRemoved")})</span>
               </Show>
               <button class={styles.chipRemove} onClick={handleClear} type="button" aria-label="Clear">
                 ×
@@ -551,14 +551,14 @@ export function UserEditor(props: UserEditorProps) {
               style={{
                 left: `${pos().left}px`,
                 top: `${pos().top}px`,
-                'min-width': `${pos().minWidth}px`,
+                "min-width": `${pos().minWidth}px`,
               }}
             >
               <div
                 class={styles.optionItem}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  props.onSave('');
+                  props.onSave("");
                   closeDropdown();
                 }}
               >
@@ -567,9 +567,9 @@ export function UserEditor(props: UserEditorProps) {
               <For each={members()}>
                 {(member) => {
                   const initials = member.name
-                    .split(' ')
+                    .split(" ")
                     .map((w) => w[0])
-                    .join('')
+                    .join("")
                     .slice(0, 2)
                     .toUpperCase();
                   return (
@@ -616,7 +616,7 @@ export function FieldEditor(props: FieldEditorProps) {
       <Match when={props.column.type === PropertyTypeCheckbox}>
         <input
           type="checkbox"
-          checked={value() === 'true'}
+          checked={value() === "true"}
           onChange={(e) => save(String(e.currentTarget.checked))}
           class={styles.checkbox}
         />

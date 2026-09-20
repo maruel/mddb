@@ -1,15 +1,15 @@
 // Option management panel for select and multi_select columns.
 
-import { createSignal, For, Show, createEffect, onCleanup, untrack } from 'solid-js';
-import { Portal } from 'solid-js/web';
-import type { Property, SelectOption } from '@sdk/types.gen';
-import { useI18n } from '../../i18n';
-import styles from './SelectOptionsEditor.module.css';
+import { createSignal, For, Show, createEffect, onCleanup, untrack } from "solid-js";
+import { Portal } from "solid-js/web";
+import type { Property, SelectOption } from "@sdk/types.gen";
+import { useI18n } from "../../i18n";
+import styles from "./SelectOptionsEditor.module.css";
 
-import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
-import CloseIcon from '@material-symbols/svg-400/outlined/close.svg?solid';
-import DragIndicatorIcon from '@material-symbols/svg-400/outlined/drag_indicator.svg?solid';
-import optionColorPalette from './selectOptionColorPalette.json';
+import DeleteIcon from "@material-symbols/svg-400/outlined/delete.svg?solid";
+import CloseIcon from "@material-symbols/svg-400/outlined/close.svg?solid";
+import DragIndicatorIcon from "@material-symbols/svg-400/outlined/drag_indicator.svg?solid";
+import optionColorPalette from "./selectOptionColorPalette.json";
 
 // Persisted select-option color values, with a separate default-color sentinel.
 export const OPTION_COLORS = optionColorPalette.colors;
@@ -42,7 +42,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
   let panelRef: HTMLDivElement | undefined;
 
   const [localOptions, setLocalOptions] = createSignal<SelectOption[]>(
-    untrack(() => (props.column.options ?? []).map((o) => ({ ...o })))
+    untrack(() => (props.column.options ?? []).map((o) => ({ ...o }))),
   );
   const [openSwatchFor, setOpenSwatchFor] = createSignal<string | null>(null);
   const [pendingSave, setPendingSave] = createSignal(false);
@@ -68,23 +68,23 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
         props.onClose();
       }
     };
-    const id = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    const id = setTimeout(() => document.addEventListener("mousedown", handler), 0);
     onCleanup(() => {
       clearTimeout(id);
-      document.removeEventListener('mousedown', handler);
+      document.removeEventListener("mousedown", handler);
     });
   });
 
   // Escape to close
   createEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         props.onClose();
       }
     };
-    document.addEventListener('keydown', handler);
-    onCleanup(() => document.removeEventListener('keydown', handler));
+    document.addEventListener("keydown", handler);
+    onCleanup(() => document.removeEventListener("keydown", handler));
   });
 
   const save = async (opts: SelectOption[]) => {
@@ -125,21 +125,21 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
   };
 
   const handleAddOption = () => {
-    const newOpt: SelectOption = { id: generateOptionId(localOptions()), name: '' };
+    const newOpt: SelectOption = { id: generateOptionId(localOptions()), name: "" };
     const next = [...localOptions(), newOpt];
     setLocalOptions(next);
     // Focus the new input on next tick
     setTimeout(() => {
-      const inputs = panelRef?.querySelectorAll<HTMLInputElement>('.' + styles.optionNameInput);
+      const inputs = panelRef?.querySelectorAll<HTMLInputElement>("." + styles.optionNameInput);
       inputs?.[inputs.length - 1]?.focus();
     }, 0);
   };
 
   const usageCount = (id: string): number => {
     return props.records.filter((r) => {
-      const v = String(r.data[props.column.name] ?? '');
+      const v = String(r.data[props.column.name] ?? "");
       return v
-        .split(',')
+        .split(",")
         .map((s) => s.trim())
         .includes(id);
     }).length;
@@ -184,7 +184,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
       >
         <div class={styles.header}>
           <span class={styles.title}>{props.column.name}</span>
-          <button class={styles.closeBtn} onClick={() => props.onClose()} aria-label={t('common.close') || 'Close'}>
+          <button class={styles.closeBtn} onClick={() => props.onClose()} aria-label={t("common.close") || "Close"}>
             <CloseIcon />
           </button>
         </div>
@@ -232,10 +232,10 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
                               class={styles.swatchChoice}
                               style={
                                 color === NO_OPTION_COLOR
-                                  ? { background: 'var(--c-surface-hover)', border: '1px solid var(--c-border)' }
+                                  ? { background: "var(--c-surface-hover)", border: "1px solid var(--c-border)" }
                                   : { background: color }
                               }
-                              classList={{ [`${styles.swatchChoiceActive}`]: (opt.color ?? '') === color }}
+                              classList={{ [`${styles.swatchChoiceActive}`]: (opt.color ?? "") === color }}
                               onClick={() => handleRecolor(opt.id, color)}
                               aria-label={color}
                               data-testid={`swatch-${color}`}
@@ -250,17 +250,17 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
                     type="text"
                     class={styles.optionNameInput}
                     value={opt.name}
-                    placeholder={t('table.optionPlaceholder') || 'Option name'}
+                    placeholder={t("table.optionPlaceholder") || "Option name"}
                     onInput={(e) => handleRename(opt.id, e.currentTarget.value)}
                     onBlur={(e) => handleRenameBlur(opt.id, e.currentTarget.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') e.currentTarget.blur();
+                      if (e.key === "Enter") e.currentTarget.blur();
                     }}
                     data-testid={`option-name-${opt.id}`}
                   />
 
                   <Show when={count > 0}>
-                    <span class={styles.usageHint} title={t('table.optionUsedWarning').replace('{n}', String(count))}>
+                    <span class={styles.usageHint} title={t("table.optionUsedWarning").replace("{n}", String(count))}>
                       {count}
                     </span>
                   </Show>
@@ -268,7 +268,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
                   <button
                     class={styles.deleteBtn}
                     onClick={() => handleDelete(opt.id)}
-                    aria-label={t('table.deleteOption') || 'Delete option'}
+                    aria-label={t("table.deleteOption") || "Delete option"}
                     data-testid={`option-delete-${opt.id}`}
                   >
                     <DeleteIcon />
@@ -285,7 +285,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
           disabled={pendingSave()}
           data-testid="add-option-btn"
         >
-          + {t('table.addOption') || 'Add an option'}
+          + {t("table.addOption") || "Add an option"}
         </button>
       </div>
     </Portal>

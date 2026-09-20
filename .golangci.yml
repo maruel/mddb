@@ -62,6 +62,10 @@ formatters:
   enable:
     - gofmt
     - goimports
+  settings:
+    gofmt:
+      # Simplify the code the way gofmt -s does.
+      simplify: true
   exclusions:
     generated: lax
     paths:

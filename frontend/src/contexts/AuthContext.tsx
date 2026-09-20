@@ -10,9 +10,9 @@ import {
   onMount,
   type ParentComponent,
   type Accessor,
-} from 'solid-js';
-import { createApi, APIError, type Api } from '../useApi';
-import type { UserResponse } from '@sdk/types.gen';
+} from "solid-js";
+import { createApi, APIError, type Api } from "../useApi";
+import type { UserResponse } from "@sdk/types.gen";
 
 interface AuthContextValue {
   user: Accessor<UserResponse | null>;
@@ -20,8 +20,8 @@ interface AuthContextValue {
   /** True once initial auth check is complete (token validated or no token present) */
   ready: Accessor<boolean>;
   api: Accessor<Api>;
-  wsApi: Accessor<ReturnType<Api['ws']> | null>;
-  orgApi: Accessor<ReturnType<Api['org']> | null>;
+  wsApi: Accessor<ReturnType<Api["ws"]> | null>;
+  orgApi: Accessor<ReturnType<Api["org"]> | null>;
   login: (token: string, user: UserResponse) => void;
   logout: () => Promise<void>;
   setUser: (user: UserResponse | null) => void;
@@ -32,7 +32,7 @@ const AuthContext = createContext<AuthContextValue>();
 
 export const AuthProvider: ParentComponent = (props) => {
   const [user, setUser] = createSignal<UserResponse | null>(null);
-  const [token, setToken] = createSignal<string | null>(localStorage.getItem('mddb_token'));
+  const [token, setToken] = createSignal<string | null>(localStorage.getItem("mddb_token"));
   const [ready, setReady] = createSignal(false);
 
   const logout = async () => {
@@ -41,14 +41,14 @@ export const AuthProvider: ParentComponent = (props) => {
       try {
         const logoutApi = createApi(
           () => currentToken,
-          () => {}
+          () => {},
         );
         await logoutApi.auth.logout();
       } catch {
         // Ignore errors - proceed with local logout even if server call fails
       }
     }
-    localStorage.removeItem('mddb_token');
+    localStorage.removeItem("mddb_token");
     setToken(null);
     setUser(null);
     // Note: Navigation after logout is handled by calling components
@@ -70,7 +70,7 @@ export const AuthProvider: ParentComponent = (props) => {
   });
 
   const login = (newToken: string, userData: UserResponse) => {
-    localStorage.setItem('mddb_token', newToken);
+    localStorage.setItem("mddb_token", newToken);
     setToken(newToken);
     setUser(userData);
   };
@@ -80,9 +80,9 @@ export const AuthProvider: ParentComponent = (props) => {
       const data = await api().auth.getMe();
       setUser(data);
     } catch (err) {
-      console.error('Failed to refresh user', err);
+      console.error("Failed to refresh user", err);
       if (err instanceof APIError && err.status === 401) {
-        localStorage.removeItem('mddb_token');
+        localStorage.removeItem("mddb_token");
         setToken(null);
         setUser(null);
       }
@@ -92,9 +92,9 @@ export const AuthProvider: ParentComponent = (props) => {
   // Handle OAuth token from URL on mount and fetch user data
   onMount(async () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const urlToken = urlParams.get('token');
+    const urlToken = urlParams.get("token");
     if (urlToken) {
-      localStorage.setItem('mddb_token', urlToken);
+      localStorage.setItem("mddb_token", urlToken);
       setToken(urlToken);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -102,15 +102,15 @@ export const AuthProvider: ParentComponent = (props) => {
     // Determine which token to use - URL token takes priority over localStorage
     // Note: We read the token directly from the sources, not from the signal,
     // because the signal update might not be visible in this synchronous context
-    const effectiveToken = urlToken || localStorage.getItem('mddb_token');
+    const effectiveToken = urlToken || localStorage.getItem("mddb_token");
     if (effectiveToken) {
       try {
         const data = await api().auth.getMe();
         setUser(data);
       } catch (err) {
-        console.error('Failed to load user', err);
+        console.error("Failed to load user", err);
         if (err instanceof APIError && err.status === 401) {
-          localStorage.removeItem('mddb_token');
+          localStorage.removeItem("mddb_token");
           setToken(null);
         }
       }
@@ -132,17 +132,17 @@ export const AuthProvider: ParentComponent = (props) => {
               const data = await api().auth.getMe();
               setUser(data);
             } catch (err) {
-              console.error('Failed to load user', err);
+              console.error("Failed to load user", err);
               if (err instanceof APIError && err.status === 401) {
-                localStorage.removeItem('mddb_token');
+                localStorage.removeItem("mddb_token");
                 setToken(null);
               }
             }
           })();
         }
       },
-      { defer: true }
-    )
+      { defer: true },
+    ),
   );
 
   const value: AuthContextValue = {
@@ -164,7 +164,7 @@ export const AuthProvider: ParentComponent = (props) => {
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

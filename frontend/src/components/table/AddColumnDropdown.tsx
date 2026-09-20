@@ -1,22 +1,22 @@
 // Dropdown UI for adding a new column to a table.
 
-import { createSignal, Show, For } from 'solid-js';
-import type { Property, PropertyType, SelectOption } from '@sdk/types.gen';
-import { useI18n } from '../../i18n';
-import { NO_OPTION_COLOR, OPTION_COLORS } from './SelectOptionsEditor';
-import styles from './AddColumnDropdown.module.css';
+import { createSignal, Show, For } from "solid-js";
+import type { Property, PropertyType, SelectOption } from "@sdk/types.gen";
+import { useI18n } from "../../i18n";
+import { NO_OPTION_COLOR, OPTION_COLORS } from "./SelectOptionsEditor";
+import styles from "./AddColumnDropdown.module.css";
 
 // Column types available for adding
 const COLUMN_TYPES: { type: PropertyType; labelKey: string }[] = [
-  { type: 'text', labelKey: 'table.typeText' },
-  { type: 'number', labelKey: 'table.typeNumber' },
-  { type: 'checkbox', labelKey: 'table.typeCheckbox' },
-  { type: 'date', labelKey: 'table.typeDate' },
-  { type: 'select', labelKey: 'table.typeSelect' },
-  { type: 'multi_select', labelKey: 'table.typeMultiSelect' },
-  { type: 'user', labelKey: 'table.typeUser' },
-  { type: 'url', labelKey: 'table.typeUrl' },
-  { type: 'email', labelKey: 'table.typeEmail' },
+  { type: "text", labelKey: "table.typeText" },
+  { type: "number", labelKey: "table.typeNumber" },
+  { type: "checkbox", labelKey: "table.typeCheckbox" },
+  { type: "date", labelKey: "table.typeDate" },
+  { type: "select", labelKey: "table.typeSelect" },
+  { type: "multi_select", labelKey: "table.typeMultiSelect" },
+  { type: "user", labelKey: "table.typeUser" },
+  { type: "url", labelKey: "table.typeUrl" },
+  { type: "email", labelKey: "table.typeEmail" },
 ];
 
 function genOptionId(existing: SelectOption[]): string {
@@ -39,12 +39,12 @@ export interface AddColumnDropdownProps {
 export function AddColumnDropdown(props: AddColumnDropdownProps) {
   const { t } = useI18n();
   const [showDropdown, setShowDropdown] = createSignal(false);
-  const [newColumnName, setNewColumnName] = createSignal('');
-  const [newColumnType, setNewColumnType] = createSignal<PropertyType>('text');
+  const [newColumnName, setNewColumnName] = createSignal("");
+  const [newColumnType, setNewColumnType] = createSignal<PropertyType>("text");
   const [inlineOptions, setInlineOptions] = createSignal<SelectOption[]>([]);
   const [openSwatchFor, setOpenSwatchFor] = createSignal<string | null>(null);
 
-  const isSelectType = () => newColumnType() === 'select' || newColumnType() === 'multi_select';
+  const isSelectType = () => newColumnType() === "select" || newColumnType() === "multi_select";
 
   const handleTypeChange = (type: PropertyType) => {
     setNewColumnType(type);
@@ -53,7 +53,7 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
   };
 
   const handleAddOption = () => {
-    const newOpt: SelectOption = { id: genOptionId(inlineOptions()), name: '' };
+    const newOpt: SelectOption = { id: genOptionId(inlineOptions()), name: "" };
     setInlineOptions([...inlineOptions(), newOpt]);
   };
 
@@ -83,16 +83,16 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
     };
 
     props.onAddColumn(newColumn);
-    setNewColumnName('');
-    setNewColumnType('text');
+    setNewColumnName("");
+    setNewColumnType("text");
     setInlineOptions([]);
     setOpenSwatchFor(null);
     setShowDropdown(false);
   };
 
   const handleCancel = () => {
-    setNewColumnName('');
-    setNewColumnType('text');
+    setNewColumnName("");
+    setNewColumnType("text");
     setInlineOptions([]);
     setOpenSwatchFor(null);
     setShowDropdown(false);
@@ -104,7 +104,7 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
         <button
           class={styles.addColumnBtn}
           onClick={() => setShowDropdown(!showDropdown())}
-          title={t('table.addColumn') || 'Add Column'}
+          title={t("table.addColumn") || "Add Column"}
         >
           +
         </button>
@@ -112,7 +112,7 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
           <div class={styles.addColumnDropdown}>
             <input
               type="text"
-              placeholder={t('table.columnName') || 'Column Name'}
+              placeholder={t("table.columnName") || "Column Name"}
               value={newColumnName()}
               onInput={(e) => setNewColumnName(e.target.value)}
               class={styles.columnNameInput}
@@ -149,8 +149,8 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
                                     style={
                                       color === NO_OPTION_COLOR
                                         ? {
-                                            background: 'var(--c-surface-hover)',
-                                            border: '1px solid var(--c-border)',
+                                            background: "var(--c-surface-hover)",
+                                            border: "1px solid var(--c-border)",
                                           }
                                         : { background: color }
                                     }
@@ -166,16 +166,16 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
                           type="text"
                           class={styles.inlineOptionInput}
                           value={opt.name}
-                          placeholder={t('table.optionPlaceholder') || 'Option name'}
+                          placeholder={t("table.optionPlaceholder") || "Option name"}
                           onInput={(e) => handleOptionRename(opt.id, e.currentTarget.value)}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter') e.currentTarget.blur();
+                            if (e.key === "Enter") e.currentTarget.blur();
                           }}
                         />
                         <button
                           class={styles.inlineOptionDelete}
                           onClick={() => handleDeleteOption(opt.id)}
-                          aria-label={t('table.deleteOption') || 'Delete'}
+                          aria-label={t("table.deleteOption") || "Delete"}
                         >
                           ×
                         </button>
@@ -184,17 +184,17 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
                   }}
                 </For>
                 <button class={styles.inlineAddOptionBtn} onClick={handleAddOption}>
-                  + {t('table.addOption') || 'Add an option'}
+                  + {t("table.addOption") || "Add an option"}
                 </button>
               </div>
             </Show>
 
             <div class={styles.addColumnActions}>
               <button class={styles.addColumnConfirm} onClick={handleAddColumn}>
-                {t('common.confirm') || 'Add'}
+                {t("common.confirm") || "Add"}
               </button>
               <button class={styles.addColumnCancel} onClick={handleCancel}>
-                {t('common.cancel') || 'Cancel'}
+                {t("common.cancel") || "Cancel"}
               </button>
             </div>
           </div>

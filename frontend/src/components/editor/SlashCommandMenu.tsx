@@ -1,18 +1,18 @@
 // Slash command menu overlay component for selecting block types.
 
-import { createSignal, createEffect, For, Show, onMount, onCleanup } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
-import type { EditorView } from 'prosemirror-view';
-import { schema, marks } from './prosemirror-config';
-import { useI18n } from '../../i18n';
-import { useAuth } from '../../contexts/AuthContext';
-import { useWorkspace } from '../../contexts/WorkspaceContext';
-import { useEditor } from '../../contexts/EditorContext';
-import { useClickOutside } from '../../composables/useClickOutside';
-import { nodeUrl } from '../../utils/urls';
-import { filterCommands, type SlashCommand } from './slashCommands';
-import { closeSlashMenu, slashMenuKey, type SlashMenuState } from './slashCommandPlugin';
-import styles from './Editor.module.css';
+import { createSignal, createEffect, For, Show, onMount, onCleanup } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import type { EditorView } from "prosemirror-view";
+import { schema, marks } from "./prosemirror-config";
+import { useI18n } from "../../i18n";
+import { useAuth } from "../../contexts/AuthContext";
+import { useWorkspace } from "../../contexts/WorkspaceContext";
+import { useEditor } from "../../contexts/EditorContext";
+import { useClickOutside } from "../../composables/useClickOutside";
+import { nodeUrl } from "../../utils/urls";
+import { filterCommands, type SlashCommand } from "./slashCommands";
+import { closeSlashMenu, slashMenuKey, type SlashMenuState } from "./slashCommandPlugin";
+import styles from "./Editor.module.css";
 
 interface SlashCommandMenuProps {
   view: EditorView;
@@ -104,7 +104,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
     if (menuRef) {
       const selectedItem = menuRef.querySelector(`[data-index="${index}"]`);
       if (selectedItem) {
-        selectedItem.scrollIntoView({ block: 'nearest' });
+        selectedItem.scrollIntoView({ block: "nearest" });
       }
     }
   });
@@ -116,7 +116,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
       if (props.state.active) {
         closeSlashMenu(props.view);
       }
-    }
+    },
   );
 
   // Handle keyboard navigation
@@ -132,23 +132,23 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
       if (commands.length === 0) return;
 
       switch (e.key) {
-        case 'ArrowDown':
+        case "ArrowDown":
           e.preventDefault();
           e.stopPropagation();
           setSelectedIndex((i) => (i + 1) % commands.length);
           break;
-        case 'ArrowUp':
+        case "ArrowUp":
           e.preventDefault();
           e.stopPropagation();
           setSelectedIndex((i) => (i - 1 + commands.length) % commands.length);
           break;
-        case 'Enter':
-        case 'Tab':
+        case "Enter":
+        case "Tab":
           e.preventDefault();
           e.stopPropagation();
           executeCommand(commands[selectedIndex()]);
           break;
-        case 'Escape':
+        case "Escape":
           e.preventDefault();
           e.stopPropagation();
           closeSlashMenu(props.view);
@@ -156,9 +156,9 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener("keydown", handleKeyDown, true);
     onCleanup(() => {
-      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener("keydown", handleKeyDown, true);
     });
   });
 
@@ -173,7 +173,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
     const cursorPos = props.view.state.selection.from;
 
     // Handle async actions
-    if (command.asyncAction === 'createSubpage') {
+    if (command.asyncAction === "createSubpage") {
       const ws = wsApi();
       const u = user();
       const parentId = props.nodeId;
@@ -185,14 +185,14 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
 
       try {
         // Create the subpage
-        const untitledTitle = t('slashMenu.untitledSubpage') || 'Untitled';
+        const untitledTitle = t("slashMenu.untitledSubpage") || "Untitled";
         const newPage = await ws.nodes.page.createPage(parentId, { title: untitledTitle });
         if (!newPage?.id) return;
 
         // Build the URL for the new page
         const wsId = u.workspace_id;
         const wsName = u.workspace_name;
-        const url = nodeUrl(wsId || '', wsName, newPage.id, untitledTitle);
+        const url = nodeUrl(wsId || "", wsName, newPage.id, untitledTitle);
 
         // Insert a proper link node with link mark (not raw markdown text)
         const linkMark = marks.link.create({ href: url, title: null });
@@ -211,7 +211,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         await loadNode(newPage.id);
         navigate(url);
       } catch (err) {
-        console.error('Failed to create subpage:', err);
+        console.error("Failed to create subpage:", err);
       }
 
       props.view.focus();
@@ -251,17 +251,17 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         style={{
           top: `${menuPosition().top}px`,
           left: `${menuPosition().left}px`,
-          visibility: hasValidPosition() ? 'visible' : 'hidden',
+          visibility: hasValidPosition() ? "visible" : "hidden",
         }}
       >
         <Show
           when={filteredCommands().length > 0}
-          fallback={<div class={styles.slashMenuEmpty}>{t('slashMenu.noResults')}</div>}
+          fallback={<div class={styles.slashMenuEmpty}>{t("slashMenu.noResults")}</div>}
         >
           <For each={filteredCommands()}>
             {(command, index) => (
               <div
-                class={`${styles.slashMenuItem} ${index() === selectedIndex() ? styles.selected : ''}`}
+                class={`${styles.slashMenuItem} ${index() === selectedIndex() ? styles.selected : ""}`}
                 data-index={index()}
                 onClick={() => handleItemClick(command)}
                 onMouseEnter={() => handleItemMouseEnter(index())}

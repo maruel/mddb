@@ -9,12 +9,12 @@ import {
   batch,
   type ParentComponent,
   type Accessor,
-} from 'solid-js';
-import { createStore, produce, reconcile } from 'solid-js/store';
-import { useNavigate } from '@solidjs/router';
-import { useAuth } from './AuthContext';
-import { useEventSource } from './EventSourceContext';
-import { useI18n } from '../i18n';
+} from "solid-js";
+import { createStore, produce, reconcile } from "solid-js/store";
+import { useNavigate } from "@solidjs/router";
+import { useAuth } from "./AuthContext";
+import { useEventSource } from "./EventSourceContext";
+import { useI18n } from "../i18n";
 import {
   EventNodeCreated,
   EventNodeDeleted,
@@ -25,9 +25,9 @@ import {
   WSRoleAdmin,
   WSRoleEditor,
   type NodeResponse,
-} from '@sdk/types.gen';
-import { workspaceUrl } from '../utils/urls';
-import { reconcileBreadcrumbPath, reconcileMovedNode, reconcileSelectedNodeData } from './workspaceTree';
+} from "@sdk/types.gen";
+import { workspaceUrl } from "../utils/urls";
+import { reconcileBreadcrumbPath, reconcileMovedNode, reconcileSelectedNodeData } from "./workspaceTree";
 
 interface WorkspaceContextValue {
   // Node tree
@@ -117,7 +117,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       switchingWorkspace() ||
       savingNodeId() !== null ||
       deletingNodeId() !== null ||
-      creatingNode()
+      creatingNode(),
   );
 
   // First login state
@@ -156,7 +156,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
           return false;
         };
         update(list);
-      })
+      }),
     );
     setBreadcrumbPath((path) => path.map((node) => (node.id === nodeId ? { ...node, title: newTitle } : node)));
   };
@@ -177,7 +177,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
           return false;
         };
         update(list);
-      })
+      }),
     );
   };
 
@@ -203,15 +203,15 @@ export const WorkspaceProvider: ParentComponent = (props) => {
           return false;
         };
         removeFromList(list);
-      })
+      }),
     );
   };
 
   // Get user's first name for default naming
   function getUserFirstName(): string {
     const u = user();
-    if (!u?.name) return '';
-    const firstName = u.name.split(' ')[0];
+    if (!u?.name) return "";
+    const firstName = u.name.split(" ")[0];
     return firstName || u.name;
   }
 
@@ -224,7 +224,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   async function createWorkspace(data: { name: string }) {
     const u = user();
     if (!u || !u.organization_id) {
-      throw new Error('No organization selected');
+      throw new Error("No organization selected");
     }
     const ws = await api().org(u.organization_id).workspaces.createWorkspace({ name: data.name });
     const updatedUser = await api().auth.getMe();
@@ -238,11 +238,11 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setCreatingNode(true);
       const firstName = getUserFirstName();
       const orgName = firstName
-        ? t('onboarding.defaultOrgName', { name: firstName })
-        : t('onboarding.defaultOrgNameFallback');
+        ? t("onboarding.defaultOrgName", { name: firstName })
+        : t("onboarding.defaultOrgNameFallback");
       await createOrganization({ name: orgName as string });
     } catch (err) {
-      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
     } finally {
       setCreatingNode(false);
     }
@@ -254,11 +254,11 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setCreatingNode(true);
       const firstName = getUserFirstName();
       const wsName = firstName
-        ? t('onboarding.defaultWorkspaceName', { name: firstName })
-        : t('onboarding.defaultWorkspaceNameFallback');
+        ? t("onboarding.defaultWorkspaceName", { name: firstName })
+        : t("onboarding.defaultWorkspaceNameFallback");
       await createWorkspace({ name: wsName as string });
     } catch (err) {
-      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
     } finally {
       setCreatingNode(false);
     }
@@ -273,13 +273,13 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       return null;
     }
     try {
-      const newPage = await ws.nodes.page.createPage('0', {
-        title: t('welcome.welcomePageTitle'),
-        content: t('welcome.welcomePageContent'),
+      const newPage = await ws.nodes.page.createPage("0", {
+        title: t("welcome.welcomePageTitle"),
+        content: t("welcome.welcomePageContent"),
       });
       return newPage?.id ? String(newPage.id) : null;
     } catch (err) {
-      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
       return null;
     }
   }
@@ -289,7 +289,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setSwitchingWorkspace(true);
       const data = await api().auth.switchWorkspace({ ws_id: wsId });
       if (!data.user) {
-        throw new Error('No user data returned');
+        throw new Error("No user data returned");
       }
       login(data.token, data.user);
       batch(() => {
@@ -306,7 +306,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         navigate(workspaceUrl(u.workspace_id, u.workspace_name));
       }
     } catch (err) {
-      setLoadError(`${t('errors.failedToSwitch')}: ${err}`);
+      setLoadError(`${t("errors.failedToSwitch")}: ${err}`);
     } finally {
       setSwitchingWorkspace(false);
     }
@@ -320,13 +320,13 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
     try {
       setLoadingNodes(true);
-      const resp = await ws.nodes.listNodeChildren('0');
+      const resp = await ws.nodes.listNodeChildren("0");
       let loadedNodes = resp?.nodes || [];
 
       if (loadedNodes.length === 0 && firstLoginCheckDone()) {
         const newPageId = await createWelcomePageIfNeeded();
         if (newPageId) {
-          const resp2 = await ws.nodes.listNodeChildren('0');
+          const resp2 = await ws.nodes.listNodeChildren("0");
           loadedNodes = resp2?.nodes || [];
         }
       }
@@ -336,7 +336,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setLoadError(null);
       // Navigation to first node is handled by WorkspaceRoot component
     } catch (err) {
-      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoadingNodes(false);
     }
@@ -361,7 +361,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       // Build breadcrumb path
       const path: NodeResponse[] = [nodeData];
       let currentNode = nodeData;
-      while (currentNode.parent_id && currentNode.parent_id !== '0') {
+      while (currentNode.parent_id && currentNode.parent_id !== "0") {
         try {
           const parentNode = await ws.nodes.getNode(currentNode.parent_id);
           path.unshift(parentNode);
@@ -374,7 +374,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
       return nodeData;
     } catch (err) {
-      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
       return undefined;
     } finally {
       setLoadingNodeId(null);
@@ -405,10 +405,10 @@ export const WorkspaceProvider: ParentComponent = (props) => {
             return false;
           };
           updateChildren(list);
-        })
+        }),
       );
     } catch (err) {
-      console.error('Failed to fetch children:', err);
+      console.error("Failed to fetch children:", err);
     }
   }
 
@@ -486,7 +486,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
         setNodesStore(
           produce((list) => {
             moveResult = reconcileMovedNode(list as NodeResponse[], nodeId, newParentId);
-          })
+          }),
         );
 
         if (!moveResult) return;
@@ -505,7 +505,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       });
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t('errors.failedToMove')}: ${err}`);
+      setSaveError(`${t("errors.failedToMove")}: ${err}`);
     }
   }
 
@@ -553,7 +553,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 export function useWorkspace(): WorkspaceContextValue {
   const context = useContext(WorkspaceContext);
   if (!context) {
-    throw new Error('useWorkspace must be used within a WorkspaceProvider');
+    throw new Error("useWorkspace must be used within a WorkspaceProvider");
   }
   return context;
 }

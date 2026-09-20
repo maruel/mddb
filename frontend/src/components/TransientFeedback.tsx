@@ -1,9 +1,9 @@
 // Fixed live-region feedback for transient workspace operation failures.
 
-import { createEffect, on, onCleanup } from 'solid-js';
-import { useI18n } from '../i18n';
-import { Button } from './shared';
-import styles from './TransientFeedback.module.css';
+import { createEffect, on, onCleanup } from "solid-js";
+import { useI18n } from "../i18n";
+import { Button } from "./shared";
+import styles from "./TransientFeedback.module.css";
 
 const DISMISS_AFTER_MS = 8_000;
 
@@ -29,8 +29,8 @@ export function TransientFeedback(props: TransientFeedbackProps) {
       () => {
         clearDismissTimer();
         dismissTimer = window.setTimeout(props.onDismiss, DISMISS_AFTER_MS);
-      }
-    )
+      },
+    ),
   );
 
   onCleanup(() => {
@@ -41,7 +41,7 @@ export function TransientFeedback(props: TransientFeedbackProps) {
     <div class={styles.feedback} role="alert" aria-live="assertive" aria-atomic="true" data-testid="workspace-feedback">
       <span class={styles.message}>{props.message}</span>
       <Button variant="ghost" class={styles.dismiss} onClick={props.onDismiss}>
-        {t('common.close') || 'Close'}
+        {t("common.close") || "Close"}
       </Button>
     </div>
   );

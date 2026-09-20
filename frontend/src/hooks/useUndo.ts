@@ -1,6 +1,6 @@
 // Generic undo/redo stack hook with a maximum depth of 50 actions.
 
-import { createSignal } from 'solid-js';
+import { createSignal } from "solid-js";
 
 export interface UndoAction {
   description: string;

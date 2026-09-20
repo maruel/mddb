@@ -1,8 +1,8 @@
 // Shared read-mode field renderer for all property types.
 
-import { For, Show, Switch, Match } from 'solid-js';
-import type { JSXElement } from 'solid-js';
-import type { DataRecordResponse, Property } from '@sdk/types.gen';
+import { For, Show, Switch, Match } from "solid-js";
+import type { JSXElement } from "solid-js";
+import type { DataRecordResponse, Property } from "@sdk/types.gen";
 import {
   PropertyTypeCheckbox,
   PropertyTypeSelect,
@@ -12,23 +12,23 @@ import {
   PropertyTypeEmail,
   PropertyTypePhone,
   PropertyTypeUser,
-} from '@sdk/types.gen';
-import { useRecords } from '../../contexts/RecordsContext';
-import { useI18n } from '../../i18n';
-import { chipTextColor } from './tableUtils';
-import styles from './FieldValue.module.css';
+} from "@sdk/types.gen";
+import { useRecords } from "../../contexts/RecordsContext";
+import { useI18n } from "../../i18n";
+import { chipTextColor } from "./tableUtils";
+import styles from "./FieldValue.module.css";
 
 function truncateUrl(url: string): string {
   try {
     const { hostname, pathname } = new URL(url);
-    if (pathname === '/') return hostname;
+    if (pathname === "/") return hostname;
     const full = hostname + pathname;
     if (full.length <= 32) return full;
     const start = 4;
     const end = 7;
-    return hostname + pathname.slice(0, start + 1) + '\u2026' + pathname.slice(-end);
+    return hostname + pathname.slice(0, start + 1) + "\u2026" + pathname.slice(-end);
   } catch {
-    return url.length > 32 ? url.slice(0, 29) + '\u2026' : url;
+    return url.length > 32 ? url.slice(0, 29) + "\u2026" : url;
   }
 }
 
@@ -51,11 +51,11 @@ export function FieldValue(props: FieldValueProps): JSXElement {
     // Outside RecordsProvider context — user columns will fall back to showing the raw ID.
   }
 
-  const rawValue = () => props.record.data[props.column.name] ?? '';
+  const rawValue = () => props.record.data[props.column.name] ?? "";
   const strValue = () => String(rawValue());
   const chips = () =>
     strValue()
-      .split(',')
+      .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
 
@@ -76,7 +76,7 @@ export function FieldValue(props: FieldValueProps): JSXElement {
         <input
           type="checkbox"
           class={styles.checkbox}
-          checked={rawValue() === 'true' || rawValue() === true}
+          checked={rawValue() === "true" || rawValue() === true}
           readOnly
         />
       </Match>
@@ -123,19 +123,19 @@ export function FieldValue(props: FieldValueProps): JSXElement {
             const avatarUrl = resolved?.avatar_url;
             const isGhost = resolved?.is_ghost ?? false;
             const initials = name
-              .split(' ')
+              .split(" ")
               .map((w) => w[0])
-              .join('')
+              .join("")
               .slice(0, 2)
               .toUpperCase();
             return (
-              <span class={`${styles.userChip}${isGhost ? ` ${styles.ghost}` : ''}`}>
+              <span class={`${styles.userChip}${isGhost ? ` ${styles.ghost}` : ""}`}>
                 <Show when={avatarUrl} fallback={<span class={styles.userAvatar}>{initials}</span>}>
                   <img src={avatarUrl} class={styles.userAvatar} alt="" />
                 </Show>
                 {name}
                 <Show when={isGhost}>
-                  <span class={styles.userGhostLabel}>({t('table.userRemoved')})</span>
+                  <span class={styles.userGhostLabel}>({t("table.userRemoved")})</span>
                 </Show>
               </span>
             );

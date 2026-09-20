@@ -1,35 +1,35 @@
 // Tests for the TableBoard (Kanban) view.
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
-import type { JSX } from 'solid-js';
-import TableBoard from './TableBoard';
-import { I18nProvider } from '../i18n';
-import type { DataRecordResponse, Property } from '@sdk/types.gen';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@solidjs/testing-library";
+import type { JSX } from "solid-js";
+import TableBoard from "./TableBoard";
+import { I18nProvider } from "../i18n";
+import type { DataRecordResponse, Property } from "@sdk/types.gen";
 
 // Mock CSS module
-vi.mock('./TableBoard.module.css', () => ({
+vi.mock("./TableBoard.module.css", () => ({
   default: {
-    board: 'board',
-    boardHeader: 'boardHeader',
-    groupByLabel: 'groupByLabel',
-    groupBySelect: 'groupBySelect',
-    noGroup: 'noGroup',
-    columns: 'columns',
-    column: 'column',
-    columnHeader: 'columnHeader',
-    columnTitle: 'columnTitle',
-    colorDot: 'colorDot',
-    columnName: 'columnName',
-    columnCount: 'columnCount',
-    cards: 'cards',
-    card: 'card',
-    cardHeader: 'cardHeader',
-    cardBody: 'cardBody',
-    field: 'field',
-    fieldName: 'fieldName',
-    fieldValue: 'fieldValue',
-    titleInput: 'titleInput',
-    addCard: 'addCard',
+    board: "board",
+    boardHeader: "boardHeader",
+    groupByLabel: "groupByLabel",
+    groupBySelect: "groupBySelect",
+    noGroup: "noGroup",
+    columns: "columns",
+    column: "column",
+    columnHeader: "columnHeader",
+    columnTitle: "columnTitle",
+    colorDot: "colorDot",
+    columnName: "columnName",
+    columnCount: "columnCount",
+    cards: "cards",
+    card: "card",
+    cardHeader: "cardHeader",
+    cardBody: "cardBody",
+    field: "field",
+    fieldName: "fieldName",
+    fieldValue: "fieldValue",
+    titleInput: "titleInput",
+    addCard: "addCard",
   },
 }));
 
@@ -41,61 +41,61 @@ function renderWithI18n(component: () => JSX.Element) {
   return render(() => <I18nProvider>{component()}</I18nProvider>);
 }
 
-describe('TableBoard', () => {
+describe("TableBoard", () => {
   const mockColumnsWithSelect: Property[] = [
-    { name: 'Title', type: 'text' },
+    { name: "Title", type: "text" },
     {
-      name: 'Status',
-      type: 'select',
+      name: "Status",
+      type: "select",
       options: [
-        { id: 'todo', name: 'To Do', color: 'gray' },
-        { id: 'in_progress', name: 'In Progress', color: 'blue' },
-        { id: 'done', name: 'Done', color: 'green' },
+        { id: "todo", name: "To Do", color: "gray" },
+        { id: "in_progress", name: "In Progress", color: "blue" },
+        { id: "done", name: "Done", color: "green" },
       ],
     },
-    { name: 'Priority', type: 'text' },
-    { name: 'Assignee', type: 'text' },
+    { name: "Priority", type: "text" },
+    { name: "Assignee", type: "text" },
   ];
 
   const mockColumnsWithMultiSelect: Property[] = [
-    { name: 'Name', type: 'text' },
+    { name: "Name", type: "text" },
     {
-      name: 'Tags',
-      type: 'multi_select',
+      name: "Tags",
+      type: "multi_select",
       options: [
-        { id: 'bug', name: 'Bug' },
-        { id: 'feature', name: 'Feature' },
+        { id: "bug", name: "Bug" },
+        { id: "feature", name: "Feature" },
       ],
     },
   ];
 
   const mockColumnsNoSelect: Property[] = [
-    { name: 'Title', type: 'text' },
-    { name: 'Description', type: 'text' },
+    { name: "Title", type: "text" },
+    { name: "Description", type: "text" },
   ];
 
   const mockRecords: DataRecordResponse[] = [
     {
-      id: 'rec-1',
-      data: { Title: 'Task 1', Status: 'todo', Priority: 'High', Assignee: 'Alice' },
+      id: "rec-1",
+      data: { Title: "Task 1", Status: "todo", Priority: "High", Assignee: "Alice" },
       created: 1704067200,
       modified: 1704067200,
     },
     {
-      id: 'rec-2',
-      data: { Title: 'Task 2', Status: 'in_progress', Priority: 'Medium', Assignee: 'Bob' },
+      id: "rec-2",
+      data: { Title: "Task 2", Status: "in_progress", Priority: "Medium", Assignee: "Bob" },
       created: 1704067200,
       modified: 1704067200,
     },
     {
-      id: 'rec-3',
-      data: { Title: 'Task 3', Status: 'done', Priority: 'Low', Assignee: 'Charlie' },
+      id: "rec-3",
+      data: { Title: "Task 3", Status: "done", Priority: "Low", Assignee: "Charlie" },
       created: 1704067200,
       modified: 1704067200,
     },
     {
-      id: 'rec-4',
-      data: { Title: 'Task 4', Status: '', Priority: 'High', Assignee: 'Diana' },
+      id: "rec-4",
+      data: { Title: "Task 4", Status: "", Priority: "High", Assignee: "Diana" },
       created: 1704067200,
       modified: 1704067200,
     },
@@ -107,15 +107,15 @@ describe('TableBoard', () => {
     vi.clearAllMocks();
   });
 
-  it('renders board with columns based on select options', async () => {
+  it("renders board with columns based on select options", async () => {
     renderWithI18n(() => (
       <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('To Do')).toBeTruthy();
-      expect(screen.getByText('In Progress')).toBeTruthy();
-      expect(screen.getByText('Done')).toBeTruthy();
+      expect(screen.getByText("To Do")).toBeTruthy();
+      expect(screen.getByText("In Progress")).toBeTruthy();
+      expect(screen.getByText("Done")).toBeTruthy();
     });
   });
 
@@ -125,28 +125,28 @@ describe('TableBoard', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('No Group')).toBeTruthy();
+      expect(screen.getByText("No Group")).toBeTruthy();
     });
   });
 
-  it('groups records correctly by status', async () => {
+  it("groups records correctly by status", async () => {
     renderWithI18n(() => (
       <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
       // Task 1 should be in "To Do"
-      expect(screen.getByDisplayValue('Task 1')).toBeTruthy();
+      expect(screen.getByDisplayValue("Task 1")).toBeTruthy();
       // Task 2 should be in "In Progress"
-      expect(screen.getByDisplayValue('Task 2')).toBeTruthy();
+      expect(screen.getByDisplayValue("Task 2")).toBeTruthy();
       // Task 3 should be in "Done"
-      expect(screen.getByDisplayValue('Task 3')).toBeTruthy();
+      expect(screen.getByDisplayValue("Task 3")).toBeTruthy();
       // Task 4 should be in "No Group"
-      expect(screen.getByDisplayValue('Task 4')).toBeTruthy();
+      expect(screen.getByDisplayValue("Task 4")).toBeTruthy();
     });
   });
 
-  it('shows record count in column headers', async () => {
+  it("shows record count in column headers", async () => {
     renderWithI18n(() => (
       <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
@@ -154,27 +154,27 @@ describe('TableBoard', () => {
     await waitFor(() => {
       // Each column should show count
       // To Do: 1, In Progress: 1, Done: 1, No Group: 1
-      const counts = screen.getAllByText('1');
+      const counts = screen.getAllByText("1");
       expect(counts.length).toBeGreaterThanOrEqual(4);
     });
   });
 
-  it('uses first column value as card title', async () => {
+  it("uses first column value as card title", async () => {
     renderWithI18n(() => (
       <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      const task1 = screen.getByDisplayValue('Task 1');
-      expect(task1.tagName).toBe('INPUT');
+      const task1 = screen.getByDisplayValue("Task 1");
+      expect(task1.tagName).toBe("INPUT");
     });
   });
 
   it('shows "Untitled" for records without first column value', async () => {
     const recordsWithoutTitle: DataRecordResponse[] = [
       {
-        id: 'rec-1',
-        data: { Status: 'todo', Priority: 'High' },
+        id: "rec-1",
+        data: { Status: "todo", Priority: "High" },
         created: 1704067200,
         modified: 1704067200,
       },
@@ -185,29 +185,29 @@ describe('TableBoard', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getAllByPlaceholderText('Untitled').length).toBeGreaterThan(0);
+      expect(screen.getAllByPlaceholderText("Untitled").length).toBeGreaterThan(0);
     });
   });
 
-  it('displays additional fields in card body (excluding group column)', async () => {
+  it("displays additional fields in card body (excluding group column)", async () => {
     renderWithI18n(() => (
       <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
       // Should show Priority and Assignee, but not Status (the group column)
-      expect(screen.getAllByText('Priority').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Assignee').length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Priority").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Assignee").length).toBeGreaterThan(0);
     });
   });
 
-  it('shows delete option in context menu', async () => {
+  it("shows delete option in context menu", async () => {
     renderWithI18n(() => (
       <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      const cards = document.querySelectorAll('.card');
+      const cards = document.querySelectorAll(".card");
       expect(cards.length).toBe(4);
     });
 
@@ -222,13 +222,13 @@ describe('TableBoard', () => {
     });
   });
 
-  it('calls onDeleteRecord when delete option is clicked', async () => {
+  it("calls onDeleteRecord when delete option is clicked", async () => {
     renderWithI18n(() => (
       <TableBoard columns={mockColumnsWithSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('Task 1')).toBeTruthy();
+      expect(screen.getByDisplayValue("Task 1")).toBeTruthy();
     });
 
     // Trigger context menu
@@ -245,7 +245,7 @@ describe('TableBoard', () => {
     expect(mockDeleteRecord).toHaveBeenCalled();
   });
 
-  it('shows message when no select column exists', async () => {
+  it("shows message when no select column exists", async () => {
     renderWithI18n(() => (
       <TableBoard columns={mockColumnsNoSelect} records={mockRecords} onDeleteRecord={mockDeleteRecord} />
     ));
@@ -255,17 +255,17 @@ describe('TableBoard', () => {
     });
   });
 
-  it('works with multi_select columns', async () => {
+  it("works with multi_select columns", async () => {
     const recordsWithTags: DataRecordResponse[] = [
       {
-        id: 'rec-1',
-        data: { Name: 'Issue 1', Tags: 'bug' },
+        id: "rec-1",
+        data: { Name: "Issue 1", Tags: "bug" },
         created: 1704067200,
         modified: 1704067200,
       },
       {
-        id: 'rec-2',
-        data: { Name: 'Issue 2', Tags: 'feature' },
+        id: "rec-2",
+        data: { Name: "Issue 2", Tags: "feature" },
         created: 1704067200,
         modified: 1704067200,
       },
@@ -277,16 +277,16 @@ describe('TableBoard', () => {
 
     await waitFor(() => {
       // Should create columns from options
-      expect(screen.getByText('Bug')).toBeTruthy();
-      expect(screen.getByText('Feature')).toBeTruthy();
+      expect(screen.getByText("Bug")).toBeTruthy();
+      expect(screen.getByText("Feature")).toBeTruthy();
     });
   });
 
-  it('shows empty columns from options even when no records match', async () => {
+  it("shows empty columns from options even when no records match", async () => {
     const recordsOnlyTodo: DataRecordResponse[] = [
       {
-        id: 'rec-1',
-        data: { Title: 'Task 1', Status: 'todo', Priority: 'High' },
+        id: "rec-1",
+        data: { Title: "Task 1", Status: "todo", Priority: "High" },
         created: 1704067200,
         modified: 1704067200,
       },
@@ -298,17 +298,17 @@ describe('TableBoard', () => {
 
     await waitFor(() => {
       // All columns from options should be visible
-      expect(screen.getByText('To Do')).toBeTruthy();
-      expect(screen.getByText('In Progress')).toBeTruthy();
-      expect(screen.getByText('Done')).toBeTruthy();
+      expect(screen.getByText("To Do")).toBeTruthy();
+      expect(screen.getByText("In Progress")).toBeTruthy();
+      expect(screen.getByText("Done")).toBeTruthy();
     });
   });
 
-  it('handles records with non-option status values', async () => {
+  it("handles records with non-option status values", async () => {
     const recordsWithCustomStatus: DataRecordResponse[] = [
       {
-        id: 'rec-1',
-        data: { Title: 'Task 1', Status: 'custom_status', Priority: 'High' },
+        id: "rec-1",
+        data: { Title: "Task 1", Status: "custom_status", Priority: "High" },
         created: 1704067200,
         modified: 1704067200,
       },
@@ -320,18 +320,18 @@ describe('TableBoard', () => {
 
     await waitFor(() => {
       // Should create a column for the custom status
-      expect(screen.getByText('custom_status')).toBeTruthy();
+      expect(screen.getByText("custom_status")).toBeTruthy();
     });
   });
 
-  it('renders empty board when no records', async () => {
+  it("renders empty board when no records", async () => {
     renderWithI18n(() => <TableBoard columns={mockColumnsWithSelect} records={[]} onDeleteRecord={mockDeleteRecord} />);
 
     await waitFor(() => {
       // Should still show column headers from options
-      expect(screen.getByText('To Do')).toBeTruthy();
-      expect(screen.getByText('In Progress')).toBeTruthy();
-      expect(screen.getByText('Done')).toBeTruthy();
+      expect(screen.getByText("To Do")).toBeTruthy();
+      expect(screen.getByText("In Progress")).toBeTruthy();
+      expect(screen.getByText("Done")).toBeTruthy();
     });
   });
 });

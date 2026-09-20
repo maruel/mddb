@@ -1,5 +1,5 @@
 // ProseMirror plugin that auto-numbers numbered list blocks based on indentation level.
-import { Plugin } from 'prosemirror-state';
+import { Plugin } from "prosemirror-state";
 
 /**
  * Plugin to automatically manage numbering for numbered lists.
@@ -17,11 +17,11 @@ export const numberCounterPlugin = new Plugin({
 
     newState.doc.forEach((node, pos) => {
       // In flat architecture, blocks are always direct children of doc
-      if (node.type.name !== 'block') return;
+      if (node.type.name !== "block") return;
 
       const indent = node.attrs.indent || 0;
 
-      if (node.attrs.type === 'number') {
+      if (node.attrs.type === "number") {
         const currentCount = (counters.get(indent) || 0) + 1;
         counters.set(indent, currentCount);
 

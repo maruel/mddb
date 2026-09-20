@@ -1,13 +1,13 @@
 // ProseMirror plugin for drag-and-drop file upload support.
 
-import { Plugin, PluginKey } from 'prosemirror-state';
-import type { EditorView } from 'prosemirror-view';
+import { Plugin, PluginKey } from "prosemirror-state";
+import type { EditorView } from "prosemirror-view";
 
 export interface DropUploadState {
   isDragging: boolean;
 }
 
-export const dropUploadKey = new PluginKey<DropUploadState>('dropUpload');
+export const dropUploadKey = new PluginKey<DropUploadState>("dropUpload");
 
 export interface DropUploadOptions {
   /** Callback when files are dropped. Returns position in document. */
@@ -39,7 +39,7 @@ export function createDropUploadPlugin(options: DropUploadOptions): Plugin<DropU
       attributes(state): { [name: string]: string } {
         const pluginState = dropUploadKey.getState(state);
         if (pluginState?.isDragging) {
-          return { class: 'drop-target-active' };
+          return { class: "drop-target-active" };
         }
         return {};
       },
@@ -47,7 +47,7 @@ export function createDropUploadPlugin(options: DropUploadOptions): Plugin<DropU
       handleDOMEvents: {
         dragenter(view: EditorView, event: DragEvent) {
           // Only handle if dragging files
-          if (!event.dataTransfer?.types.includes('Files')) {
+          if (!event.dataTransfer?.types.includes("Files")) {
             return false;
           }
           event.preventDefault();
@@ -57,13 +57,13 @@ export function createDropUploadPlugin(options: DropUploadOptions): Plugin<DropU
 
         dragover(_view: EditorView, event: DragEvent) {
           // Only handle if dragging files
-          if (!event.dataTransfer?.types.includes('Files')) {
+          if (!event.dataTransfer?.types.includes("Files")) {
             return false;
           }
           event.preventDefault();
           // Set drop effect
           if (event.dataTransfer) {
-            event.dataTransfer.dropEffect = 'copy';
+            event.dataTransfer.dropEffect = "copy";
           }
           return false;
         },
@@ -125,12 +125,12 @@ function setDragging(view: EditorView, isDragging: boolean): void {
 
 function isValidFileType(mimeType: string): boolean {
   return (
-    mimeType === 'image/png' ||
-    mimeType === 'image/jpeg' ||
-    mimeType === 'image/gif' ||
-    mimeType === 'image/webp' ||
-    mimeType === 'image/svg+xml' ||
-    mimeType === 'image/avif' ||
-    mimeType === 'application/pdf'
+    mimeType === "image/png" ||
+    mimeType === "image/jpeg" ||
+    mimeType === "image/gif" ||
+    mimeType === "image/webp" ||
+    mimeType === "image/svg+xml" ||
+    mimeType === "image/avif" ||
+    mimeType === "application/pdf"
   );
 }

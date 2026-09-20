@@ -1,29 +1,29 @@
 // Server settings panel for global admins: dashboard, SMTP configuration, and quotas/rate limits.
 
-import { createSignal, createEffect, Show, lazy } from 'solid-js';
-import { useAuth } from '../../contexts';
-import { useI18n } from '../../i18n';
-import type { ResourceQuotas, ServerConfigResponse } from '@sdk/types.gen';
-import ResourceQuotaForm from './ResourceQuotaForm';
-import styles from './ServerSettingsPanel.module.css';
+import { createSignal, createEffect, Show, lazy } from "solid-js";
+import { useAuth } from "../../contexts";
+import { useI18n } from "../../i18n";
+import type { ResourceQuotas, ServerConfigResponse } from "@sdk/types.gen";
+import ResourceQuotaForm from "./ResourceQuotaForm";
+import styles from "./ServerSettingsPanel.module.css";
 
-const AdminDashboard = lazy(() => import('./AdminDashboard'));
+const AdminDashboard = lazy(() => import("./AdminDashboard"));
 
-type Tab = 'dashboard' | 'smtp' | 'quotas';
+type Tab = "dashboard" | "smtp" | "quotas";
 
 export default function ServerSettingsPanel() {
   const { t } = useI18n();
   const { api } = useAuth();
 
-  const [activeTab, setActiveTab] = createSignal<Tab>('dashboard');
+  const [activeTab, setActiveTab] = createSignal<Tab>("dashboard");
   const [config, setConfig] = createSignal<ServerConfigResponse | null>(null);
 
   // SMTP fields
-  const [smtpHost, setSmtpHost] = createSignal('');
+  const [smtpHost, setSmtpHost] = createSignal("");
   const [smtpPort, setSmtpPort] = createSignal(587);
-  const [smtpUsername, setSmtpUsername] = createSignal('');
-  const [smtpPassword, setSmtpPassword] = createSignal('');
-  const [smtpFrom, setSmtpFrom] = createSignal('');
+  const [smtpUsername, setSmtpUsername] = createSignal("");
+  const [smtpPassword, setSmtpPassword] = createSignal("");
+  const [smtpFrom, setSmtpFrom] = createSignal("");
 
   // The 6 shared ResourceQuotas fields
   const [resourceQuotas, setResourceQuotas] = createSignal<ResourceQuotas>({
@@ -61,11 +61,11 @@ export default function ServerSettingsPanel() {
       const data = await api().server.getConfig();
       setConfig(data);
 
-      setSmtpHost(data.smtp.host || '');
+      setSmtpHost(data.smtp.host || "");
       setSmtpPort(data.smtp.port || 587);
-      setSmtpUsername(data.smtp.username || '');
-      setSmtpFrom(data.smtp.from || '');
-      setSmtpPassword('');
+      setSmtpUsername(data.smtp.username || "");
+      setSmtpFrom(data.smtp.from || "");
+      setSmtpPassword("");
 
       setResourceQuotas({
         max_pages: data.quotas.max_pages,
@@ -89,7 +89,7 @@ export default function ServerSettingsPanel() {
       setReadAuthRatePerMin(data.rate_limits.read_auth_rate_per_min);
       setReadUnauthRatePerMin(data.rate_limits.read_unauth_rate_per_min);
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -116,10 +116,10 @@ export default function ServerSettingsPanel() {
         },
       });
 
-      setSuccess(t('server.configurationSaved'));
+      setSuccess(t("server.configurationSaved"));
       await loadConfig();
     } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -151,9 +151,9 @@ export default function ServerSettingsPanel() {
         },
       });
 
-      setSuccess(t('server.configurationSaved'));
+      setSuccess(t("server.configurationSaved"));
     } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -161,17 +161,17 @@ export default function ServerSettingsPanel() {
 
   return (
     <div class={styles.panel}>
-      <h2>{t('server.serverSettings')}</h2>
+      <h2>{t("server.serverSettings")}</h2>
 
       <div class={styles.tabs}>
-        <button class={activeTab() === 'dashboard' ? styles.activeTab : ''} onClick={() => setActiveTab('dashboard')}>
-          {t('server.dashboard')}
+        <button class={activeTab() === "dashboard" ? styles.activeTab : ""} onClick={() => setActiveTab("dashboard")}>
+          {t("server.dashboard")}
         </button>
-        <button class={activeTab() === 'smtp' ? styles.activeTab : ''} onClick={() => setActiveTab('smtp')}>
-          {t('server.smtpConfiguration')}
+        <button class={activeTab() === "smtp" ? styles.activeTab : ""} onClick={() => setActiveTab("smtp")}>
+          {t("server.smtpConfiguration")}
         </button>
-        <button class={activeTab() === 'quotas' ? styles.activeTab : ''} onClick={() => setActiveTab('quotas')}>
-          {t('server.quotas')}
+        <button class={activeTab() === "quotas" ? styles.activeTab : ""} onClick={() => setActiveTab("quotas")}>
+          {t("server.quotas")}
         </button>
       </div>
 
@@ -182,21 +182,21 @@ export default function ServerSettingsPanel() {
         <div class={styles.success}>{success()}</div>
       </Show>
 
-      <Show when={activeTab() === 'dashboard'}>
+      <Show when={activeTab() === "dashboard"}>
         <AdminDashboard />
       </Show>
 
-      <Show when={activeTab() === 'smtp'}>
+      <Show when={activeTab() === "smtp"}>
         <section class={styles.section}>
           <div class={styles.statusBadge}>
-            <Show when={config()?.smtp.host} fallback={<span class={styles.disabled}>{t('server.smtpDisabled')}</span>}>
-              <span class={styles.enabled}>{t('server.smtpEnabled')}</span>
+            <Show when={config()?.smtp.host} fallback={<span class={styles.disabled}>{t("server.smtpDisabled")}</span>}>
+              <span class={styles.enabled}>{t("server.smtpEnabled")}</span>
             </Show>
           </div>
 
           <form onSubmit={saveSMTP} class={styles.settingsForm}>
             <div class={styles.formItem}>
-              <label>{t('server.smtpHost')}</label>
+              <label>{t("server.smtpHost")}</label>
               <input
                 type="text"
                 value={smtpHost()}
@@ -206,7 +206,7 @@ export default function ServerSettingsPanel() {
             </div>
 
             <div class={styles.formItem}>
-              <label>{t('server.smtpPort')}</label>
+              <label>{t("server.smtpPort")}</label>
               <input
                 type="number"
                 value={smtpPort()}
@@ -217,7 +217,7 @@ export default function ServerSettingsPanel() {
             </div>
 
             <div class={styles.formItem}>
-              <label>{t('server.smtpUsername')}</label>
+              <label>{t("server.smtpUsername")}</label>
               <input
                 type="text"
                 value={smtpUsername()}
@@ -227,18 +227,18 @@ export default function ServerSettingsPanel() {
             </div>
 
             <div class={styles.formItem}>
-              <label>{t('server.smtpPassword')}</label>
+              <label>{t("server.smtpPassword")}</label>
               <input
                 type="password"
                 value={smtpPassword()}
                 onInput={(e) => setSmtpPassword(e.target.value)}
                 placeholder="••••••••"
               />
-              <p class={styles.hint}>{t('server.smtpPasswordHint')}</p>
+              <p class={styles.hint}>{t("server.smtpPasswordHint")}</p>
             </div>
 
             <div class={styles.formItem}>
-              <label>{t('server.smtpFrom')}</label>
+              <label>{t("server.smtpFrom")}</label>
               <input
                 type="email"
                 value={smtpFrom()}
@@ -248,22 +248,22 @@ export default function ServerSettingsPanel() {
             </div>
 
             <button type="submit" class={styles.saveButton} disabled={loading()}>
-              {t('server.saveConfiguration')}
+              {t("server.saveConfiguration")}
             </button>
           </form>
         </section>
       </Show>
 
-      <Show when={activeTab() === 'quotas'}>
+      <Show when={activeTab() === "quotas"}>
         <section class={styles.section}>
           <form onSubmit={saveQuotas} class={styles.settingsForm}>
-            <h3>{t('settings.quotas')}</h3>
+            <h3>{t("settings.quotas")}</h3>
             <ResourceQuotaForm value={resourceQuotas} onChange={setResourceQuotas} />
 
-            <h3>{t('server.quotas')}</h3>
+            <h3>{t("server.quotas")}</h3>
             <div class={styles.formGrid}>
               <div class={styles.formItem}>
-                <label>{t('server.maxRequestBodyBytes')}</label>
+                <label>{t("server.maxRequestBodyBytes")}</label>
                 <input
                   type="number"
                   value={maxRequestBodyBytes()}
@@ -273,7 +273,7 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.maxSessionsPerUser')}</label>
+                <label>{t("server.maxSessionsPerUser")}</label>
                 <input
                   type="number"
                   value={maxSessionsPerUser()}
@@ -283,7 +283,7 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.maxOrganizations')}</label>
+                <label>{t("server.maxOrganizations")}</label>
                 <input
                   type="number"
                   value={maxOrganizations()}
@@ -293,7 +293,7 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.maxWorkspaces')}</label>
+                <label>{t("server.maxWorkspaces")}</label>
                 <input
                   type="number"
                   value={maxWorkspaces()}
@@ -303,7 +303,7 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.maxUsers')}</label>
+                <label>{t("server.maxUsers")}</label>
                 <input
                   type="number"
                   value={maxUsers()}
@@ -313,7 +313,7 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.maxTotalStorageBytes')}</label>
+                <label>{t("server.maxTotalStorageBytes")}</label>
                 <input
                   type="number"
                   value={maxTotalStorageBytes()}
@@ -323,7 +323,7 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.maxEgressBandwidthBps')}</label>
+                <label>{t("server.maxEgressBandwidthBps")}</label>
                 <input
                   type="number"
                   value={maxEgressBandwidthBps()}
@@ -333,11 +333,11 @@ export default function ServerSettingsPanel() {
               </div>
             </div>
 
-            <h3>{t('server.rateLimits')}</h3>
-            <p class={styles.hint}>{t('server.rateLimitsHint')}</p>
+            <h3>{t("server.rateLimits")}</h3>
+            <p class={styles.hint}>{t("server.rateLimitsHint")}</p>
             <div class={styles.formGrid}>
               <div class={styles.formItem}>
-                <label>{t('server.authRatePerMin')}</label>
+                <label>{t("server.authRatePerMin")}</label>
                 <input
                   type="number"
                   value={authRatePerMin()}
@@ -347,7 +347,7 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.writeRatePerMin')}</label>
+                <label>{t("server.writeRatePerMin")}</label>
                 <input
                   type="number"
                   value={writeRatePerMin()}
@@ -357,7 +357,7 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.readAuthRatePerMin')}</label>
+                <label>{t("server.readAuthRatePerMin")}</label>
                 <input
                   type="number"
                   value={readAuthRatePerMin()}
@@ -367,7 +367,7 @@ export default function ServerSettingsPanel() {
               </div>
 
               <div class={styles.formItem}>
-                <label>{t('server.readUnauthRatePerMin')}</label>
+                <label>{t("server.readUnauthRatePerMin")}</label>
                 <input
                   type="number"
                   value={readUnauthRatePerMin()}
@@ -378,7 +378,7 @@ export default function ServerSettingsPanel() {
             </div>
 
             <button type="submit" class={styles.saveButton} disabled={loading()}>
-              {t('server.saveConfiguration')}
+              {t("server.saveConfiguration")}
             </button>
           </form>
         </section>

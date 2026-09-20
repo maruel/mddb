@@ -73,8 +73,8 @@
   font-weight: 500;
 }
 
-.formItem input[type='text'],
-.formItem input[type='number'],
+.formItem input[type="text"],
+.formItem input[type="number"],
 .formItem select {
   width: 100%;
   padding: var(--s-3);

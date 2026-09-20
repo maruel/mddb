@@ -1,12 +1,12 @@
 // User profile page for managing personal settings.
 
-import { createSignal, createEffect, Show, For } from 'solid-js';
-import type { UserSettings, WorkspaceMembershipSettings, OrgMembershipResponse } from '@sdk/types.gen';
-import { OrgRoleAdmin, OrgRoleOwner } from '@sdk/types.gen';
-import { useAuth } from '../contexts';
-import { slugify } from '../utils/urls';
-import styles from './UserProfile.module.css';
-import { useI18n, type Locale } from '../i18n';
+import { createSignal, createEffect, Show, For } from "solid-js";
+import type { UserSettings, WorkspaceMembershipSettings, OrgMembershipResponse } from "@sdk/types.gen";
+import { OrgRoleAdmin, OrgRoleOwner } from "@sdk/types.gen";
+import { useAuth } from "../contexts";
+import { slugify } from "../utils/urls";
+import styles from "./UserProfile.module.css";
+import { useI18n, type Locale } from "../i18n";
 
 interface UserProfileProps {
   onBack: () => void;
@@ -18,8 +18,8 @@ export default function UserProfile(props: UserProfileProps) {
   const { user, api, wsApi } = useAuth();
 
   // Personal Settings states
-  const [theme, setTheme] = createSignal('light');
-  const [language, setLanguage] = createSignal('en');
+  const [theme, setTheme] = createSignal("light");
+  const [language, setLanguage] = createSignal("en");
   const [notifications, setNotifications] = createSignal(true);
 
   const [loading, setLoading] = createSignal(false);
@@ -41,18 +41,18 @@ export default function UserProfile(props: UserProfileProps) {
   // Get initials from user name
   const getInitials = () => {
     const u = user();
-    const name = u?.name || u?.email || '';
+    const name = u?.name || u?.email || "";
     const parts = name.split(/[\s@]+/);
     if (parts.length >= 2 && parts[0] && parts[1]) {
-      return ((parts[0][0] || '') + (parts[1][0] || '')).toUpperCase();
+      return ((parts[0][0] || "") + (parts[1][0] || "")).toUpperCase();
     }
     return name.slice(0, 2).toUpperCase();
   };
 
   createEffect(() => {
     const u = user();
-    setTheme(u?.settings?.theme || 'light');
-    setLanguage(u?.settings?.language || 'en');
+    setTheme(u?.settings?.theme || "light");
+    setLanguage(u?.settings?.language || "en");
   });
 
   const loadData = async () => {
@@ -69,7 +69,7 @@ export default function UserProfile(props: UserProfileProps) {
         setNotifications(currentWsMembership.settings?.notifications ?? true);
       }
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -108,11 +108,11 @@ export default function UserProfile(props: UserProfileProps) {
       // Update locale immediately so UI refreshes
       const lang = language() as Locale;
       setLocale(lang);
-      localStorage.setItem('mddb_locale', lang);
+      localStorage.setItem("mddb_locale", lang);
 
-      setSuccess(t('success.personalSettingsSaved') || 'Personal settings saved successfully');
+      setSuccess(t("success.personalSettingsSaved") || "Personal settings saved successfully");
     } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -122,9 +122,9 @@ export default function UserProfile(props: UserProfileProps) {
     <div class={styles.profile}>
       <header class={styles.header}>
         <button onClick={() => props.onBack()} class={styles.backButton}>
-          ← {t('common.back')}
+          ← {t("common.back")}
         </button>
-        <h2>{t('profile.title')}</h2>
+        <h2>{t("profile.title")}</h2>
       </header>
 
       <Show when={error()}>
@@ -143,7 +143,7 @@ export default function UserProfile(props: UserProfileProps) {
                   {(url) => (
                     <img
                       src={url()}
-                      alt={u().name || 'User'}
+                      alt={u().name || "User"}
                       class={styles.avatarImageLarge}
                       referrerPolicy="no-referrer"
                     />
@@ -160,16 +160,16 @@ export default function UserProfile(props: UserProfileProps) {
             </section>
 
             <section class={styles.section}>
-              <h3>{t('profile.myOrganizations')}</h3>
+              <h3>{t("profile.myOrganizations")}</h3>
               <Show
                 when={u().organizations?.length}
-                fallback={<p class={styles.emptyState}>{t('profile.noOrganizations')}</p>}
+                fallback={<p class={styles.emptyState}>{t("profile.noOrganizations")}</p>}
               >
                 <div class={styles.orgList}>
                   <For each={u().organizations}>
                     {(org) => {
                       const isAdmin = () => org.role === OrgRoleAdmin || org.role === OrgRoleOwner;
-                      const orgSlug = slugify(org.organization_name || 'organization');
+                      const orgSlug = slugify(org.organization_name || "organization");
                       const settingsHref = `/o/@${org.organization_id}+${orgSlug}/settings`;
                       const orgDisplayName = org.organization_name || org.organization_id;
                       return (
@@ -198,23 +198,23 @@ export default function UserProfile(props: UserProfileProps) {
             </section>
 
             <section class={styles.section}>
-              <h3>{t('settings.personalSettings')}</h3>
+              <h3>{t("settings.personalSettings")}</h3>
               <form onSubmit={savePersonalSettings} class={styles.settingsForm}>
                 <div class={styles.formItem}>
-                  <label>{t('settings.theme')}</label>
+                  <label>{t("settings.theme")}</label>
                   <select value={theme()} onChange={(e) => setTheme(e.target.value)}>
-                    <option value="light">{t('settings.themeLight')}</option>
-                    <option value="dark">{t('settings.themeDark')}</option>
-                    <option value="system">{t('settings.themeSystem')}</option>
+                    <option value="light">{t("settings.themeLight")}</option>
+                    <option value="dark">{t("settings.themeDark")}</option>
+                    <option value="system">{t("settings.themeSystem")}</option>
                   </select>
                 </div>
                 <div class={styles.formItem}>
-                  <label>{t('settings.language')}</label>
+                  <label>{t("settings.language")}</label>
                   <select value={language()} onChange={(e) => setLanguage(e.target.value)}>
-                    <option value="en">{t('settings.languageEn')}</option>
-                    <option value="fr">{t('settings.languageFr')}</option>
-                    <option value="de">{t('settings.languageDe')}</option>
-                    <option value="es">{t('settings.languageEs')}</option>
+                    <option value="en">{t("settings.languageEn")}</option>
+                    <option value="fr">{t("settings.languageFr")}</option>
+                    <option value="de">{t("settings.languageDe")}</option>
+                    <option value="es">{t("settings.languageEs")}</option>
                   </select>
                 </div>
                 <Show when={u().workspace_id}>
@@ -225,12 +225,12 @@ export default function UserProfile(props: UserProfileProps) {
                         checked={notifications()}
                         onChange={(e) => setNotifications(e.currentTarget.checked)}
                       />
-                      {t('settings.enableNotifications')}
+                      {t("settings.enableNotifications")}
                     </label>
                   </div>
                 </Show>
                 <button type="submit" class={styles.saveButton} disabled={loading()}>
-                  {t('settings.saveChanges')}
+                  {t("settings.saveChanges")}
                 </button>
               </form>
             </section>

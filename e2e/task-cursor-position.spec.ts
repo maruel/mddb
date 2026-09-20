@@ -1,26 +1,23 @@
 // E2E test for task block cursor positioning when navigating with arrow keys.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
 
-test('right arrow from end of task line places cursor after checkbox, not before', async ({
-  page,
-  request,
-}) => {
-  const { token } = await registerUser(request, 'task-cursor');
+test("right arrow from end of task line places cursor after checkbox, not before", async ({ page, request }) => {
+  const { token } = await registerUser(request, "task-cursor");
   await page.goto(`/?token=${token}`);
-  await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsID = await getWorkspaceId(page);
 
   // Create a page with two task items
   const client = createClient(request, token);
-  const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-    title: 'Task Cursor Test',
-    content: '- [ ] First task\n- [ ] Second task',
+  const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    title: "Task Cursor Test",
+    content: "- [ ] First task\n- [ ] Second task",
   });
 
   await page.reload();
-  await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
   // Navigate to the page
   await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -33,14 +30,14 @@ test('right arrow from end of task line places cursor after checkbox, not before
   await expect(taskBlocks).toHaveCount(2, { timeout: 5000 });
 
   // Click at the end of the first task's text
-  const firstTaskContent = taskBlocks.nth(0).locator('.block-task');
+  const firstTaskContent = taskBlocks.nth(0).locator(".block-task");
   await firstTaskContent.click();
 
   // Move to end of line
-  await page.keyboard.press('End');
+  await page.keyboard.press("End");
 
   // Press right arrow to move to the next task block
-  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press("ArrowRight");
 
   // The cursor should be visually to the right of the second task's checkbox.
   // With the pseudo-element approach, the checkbox is a ::before on .block-task
@@ -54,7 +51,7 @@ test('right arrow from end of task line places cursor after checkbox, not before
     // Get bounding rect of cursor position
     const cursorRect = range.getBoundingClientRect();
     const secondTask = document.querySelectorAll('.block-row[data-type="task"]')[1];
-    const taskContent = secondTask?.querySelector('.block-task') as HTMLElement | null;
+    const taskContent = secondTask?.querySelector(".block-task") as HTMLElement | null;
 
     if (!taskContent) return null;
 

@@ -1,5 +1,5 @@
 // Shared drag handle component rendering a 6-dot grip icon for draggable rows.
-import styles from './RowHandle.module.css';
+import styles from "./RowHandle.module.css";
 
 export interface RowHandleProps {
   /** Unique identifier for the row (block position, record ID, etc.) */
@@ -34,7 +34,7 @@ export function RowHandle(props: RowHandleProps) {
 
   return (
     <div
-      class={`${styles.handle} ${props.class || ''}`}
+      class={`${styles.handle} ${props.class || ""}`}
       draggable="true"
       onDragStart={handleDragStart}
       onContextMenu={handleContextMenu}

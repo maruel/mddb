@@ -1,15 +1,21 @@
 // Shared e2e test helpers for registration, workspace management, and screenshots.
 
-import { test as base, expect, type Page, type APIRequestContext, type TestInfo } from '@playwright/test';
-import type { TestType, PlaywrightTestArgs, PlaywrightTestOptions, PlaywrightWorkerArgs, PlaywrightWorkerOptions } from '@playwright/test';
-import { createAPIClient, type APIClient } from '../sdk/api.gen';
+import { test as base, expect, type Page, type APIRequestContext, type TestInfo } from "@playwright/test";
+import type {
+  TestType,
+  PlaywrightTestArgs,
+  PlaywrightTestOptions,
+  PlaywrightWorkerArgs,
+  PlaywrightWorkerOptions,
+} from "@playwright/test";
+import { createAPIClient, type APIClient } from "../sdk/api.gen";
 
 // Helper to create a typed API client from Playwright's request context
 export function createClient(request: APIRequestContext, token?: string): APIClient {
   const fetchFn = async (url: string, init?: RequestInit) => {
     const headers: Record<string, string> = {};
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
     if (init?.headers) {
       Object.assign(headers, init.headers);
@@ -18,7 +24,7 @@ export function createClient(request: APIRequestContext, token?: string): APICli
     // Playwright's fetch expects 'data' for the body, not 'body'
     // The SDK serializes the body to a string in init.body
     const response = await request.fetch(url, {
-      method: init?.method || 'GET',
+      method: init?.method || "GET",
       data: init?.body,
       headers,
     });
@@ -42,10 +48,10 @@ export async function registerUser(request: APIRequestContext, prefix: string) {
   const maxRetries = 3;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    const registerResponse = await request.post('/api/v1/auth/register', {
+    const registerResponse = await request.post("/api/v1/auth/register", {
       data: {
         email,
-        password: 'testpassword123',
+        password: "testpassword123",
         name: `${prefix} Test User`,
       },
     });
@@ -78,7 +84,7 @@ export async function getWorkspaceId(page: Page): Promise<string> {
   expect(wsMatch).toBeTruthy();
   const workspaceId = wsMatch?.[1];
   if (!workspaceId) {
-    throw new Error('Failed to extract workspace ID from URL');
+    throw new Error("Failed to extract workspace ID from URL");
   }
   return workspaceId;
 }
@@ -87,8 +93,8 @@ export async function getWorkspaceId(page: Page): Promise<string> {
 function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
     .slice(0, 50);
 }
 
@@ -103,10 +109,7 @@ type AllFixtures = PlaywrightTestArgs & PlaywrightTestOptions & CustomFixtures;
 type AllWorkerFixtures = PlaywrightWorkerArgs & PlaywrightWorkerOptions;
 
 // Test callback type for screenshot tests
-type ScreenshotTestFn = (
-  args: AllFixtures & AllWorkerFixtures,
-  testInfo: TestInfo
-) => void | Promise<void>;
+type ScreenshotTestFn = (args: AllFixtures & AllWorkerFixtures, testInfo: TestInfo) => void | Promise<void>;
 
 // Base extended test type
 type ExtendedTestType = TestType<AllFixtures, AllWorkerFixtures>;
@@ -118,47 +121,50 @@ interface TestWithScreenshot extends ExtendedTestType {
 
 // Extended test with takeScreenshot fixture
 const baseTest = base.extend<CustomFixtures>({
-  takeScreenshot: [async ({ page }, use, testInfo: TestInfo) => {
-    let hasScreenshot = false;
-    let screenshotIndex = 0;
+  takeScreenshot: [
+    async ({ page }, use, testInfo: TestInfo) => {
+      let hasScreenshot = false;
+      let screenshotIndex = 0;
 
-    const screenshotFn: ScreenshotFn = async (name, options = {}) => {
-      screenshotIndex++;
-      const nameSlug = slugify(name);
+      const screenshotFn: ScreenshotFn = async (name, options = {}) => {
+        screenshotIndex++;
+        const nameSlug = slugify(name);
 
-      // Create meaningful filename: index_screenshot-name.png
-      // Playwright stores in test output dir which already has test name in path
-      const filename = `${screenshotIndex.toString().padStart(2, '0')}_${nameSlug}.png`;
+        // Create meaningful filename: index_screenshot-name.png
+        // Playwright stores in test output dir which already has test name in path
+        const filename = `${screenshotIndex.toString().padStart(2, "0")}_${nameSlug}.png`;
 
-      // Use testInfo.outputPath for proper test output directory
-      const screenshotPath = testInfo.outputPath(filename);
+        // Use testInfo.outputPath for proper test output directory
+        const screenshotPath = testInfo.outputPath(filename);
 
-      // Save screenshot with meaningful name
-      await page.screenshot({
-        path: screenshotPath,
-        fullPage: options.fullPage ?? false,
-      });
+        // Save screenshot with meaningful name
+        await page.screenshot({
+          path: screenshotPath,
+          fullPage: options.fullPage ?? false,
+        });
 
-      // Add annotation on first screenshot - visible in test details panel
-      if (!hasScreenshot) {
-        testInfo.annotations.push({ type: 'screenshot', description: 'This test captures screenshots' });
-        hasScreenshot = true;
-      }
+        // Add annotation on first screenshot - visible in test details panel
+        if (!hasScreenshot) {
+          testInfo.annotations.push({ type: "screenshot", description: "This test captures screenshots" });
+          hasScreenshot = true;
+        }
 
-      // Attach to test report for inline viewing (uses the file we just saved)
-      await testInfo.attach(name, {
-        path: screenshotPath,
-        contentType: 'image/png',
-      });
-    };
-    await use(screenshotFn);
-  }, { scope: 'test' }],
+        // Attach to test report for inline viewing (uses the file we just saved)
+        await testInfo.attach(name, {
+          path: screenshotPath,
+          contentType: "image/png",
+        });
+      };
+      await use(screenshotFn);
+    },
+    { scope: "test" },
+  ],
 });
 
 // Helper to create a test with @screenshot tag visible in test list
 // Usage: test.screenshot('test name', async ({ page, takeScreenshot }) => { ... })
 (baseTest as TestWithScreenshot).screenshot = (title: string, fn: ScreenshotTestFn) => {
-  return baseTest(title, { tag: '@screenshot' }, fn);
+  return baseTest(title, { tag: "@screenshot" }, fn);
 };
 
 export const test: TestWithScreenshot = baseTest as TestWithScreenshot;
@@ -194,4 +200,4 @@ export async function fillEditorContent(page: Page, content: string) {
   await textarea.fill(content);
 }
 
-export { expect } from '@playwright/test';
+export { expect } from "@playwright/test";

@@ -1,12 +1,12 @@
 // Component for rendering Markdown content with custom plugins.
 
-import MarkdownIt from 'markdown-it';
-import DOMPurify from 'dompurify';
-import type { AssetUrlMap } from '../contexts/EditorContext';
-import styles from './MarkdownPreview.module.css';
+import MarkdownIt from "markdown-it";
+import DOMPurify from "dompurify";
+import type { AssetUrlMap } from "../contexts/EditorContext";
+import styles from "./MarkdownPreview.module.css";
 
 // Internal links start with "/" but not "/api/" (which are backend endpoints)
-const isInternalLink = (href: string) => href.startsWith('/') && !href.startsWith('/api/');
+const isInternalLink = (href: string) => href.startsWith("/") && !href.startsWith("/api/");
 
 interface MarkdownPreviewProps {
   content: string;
@@ -21,27 +21,27 @@ const md = new MarkdownIt({
 });
 
 // Add core rule to detect checkbox syntax in list items
-md.core.ruler.after('inline', 'task_list', (state) => {
+md.core.ruler.after("inline", "task_list", (state) => {
   const tokens = state.tokens;
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     if (!token) continue;
-    if (token.type === 'list_item_open') {
+    if (token.type === "list_item_open") {
       // Look for inline content in this list item
       const inlineToken = tokens[i + 2];
-      if (inlineToken && inlineToken.type === 'inline' && inlineToken.children) {
+      if (inlineToken && inlineToken.type === "inline" && inlineToken.children) {
         const firstChild = inlineToken.children[0];
-        if (firstChild && firstChild.type === 'text' && firstChild.content) {
+        if (firstChild && firstChild.type === "text" && firstChild.content) {
           const match = firstChild.content.match(/^\[([ xX])\]\s*/);
           if (match && match[1]) {
             // Set attributes on list_item_open token
-            token.attrSet('class', 'task-list-item');
-            token.attrSet('data-checked', match[1].toLowerCase() === 'x' ? 'true' : 'false');
+            token.attrSet("class", "task-list-item");
+            token.attrSet("data-checked", match[1].toLowerCase() === "x" ? "true" : "false");
             // Remove checkbox syntax from text and add checkbox input
             firstChild.content = firstChild.content.slice(match[0].length);
             // Insert checkbox token at the beginning of inline children
-            const checkboxToken = new state.Token('checkbox', '', 0);
-            checkboxToken.attrSet('checked', match[1].toLowerCase() === 'x' ? 'true' : 'false');
+            const checkboxToken = new state.Token("checkbox", "", 0);
+            checkboxToken.attrSet("checked", match[1].toLowerCase() === "x" ? "true" : "false");
             inlineToken.children.unshift(checkboxToken);
           }
         }
@@ -54,9 +54,9 @@ md.core.ruler.after('inline', 'task_list', (state) => {
 // Custom renderer for checkbox token
 md.renderer.rules.checkbox = (tokens, idx) => {
   const token = tokens[idx];
-  if (!token) return '';
-  const isChecked = token.attrGet('checked') === 'true';
-  return `<input type="checkbox" class="task-checkbox" disabled${isChecked ? ' checked' : ''}> `;
+  if (!token) return "";
+  const isChecked = token.attrGet("checked") === "true";
+  return `<input type="checkbox" class="task-checkbox" disabled${isChecked ? " checked" : ""}> `;
 };
 
 // Custom renderer for images to support signed asset URLs
@@ -71,14 +71,14 @@ md.renderer.rules.image = (tokens, idx, options, env, self) => {
   if (!token) {
     return originalImageRenderer(tokens, idx, options, env, self);
   }
-  const srcIndex = token.attrIndex('src');
+  const srcIndex = token.attrIndex("src");
   const attrs = token.attrs;
   const assetUrls = env?.assetUrls as AssetUrlMap | undefined;
   const srcAttr = attrs?.[srcIndex];
   if (srcAttr && assetUrls) {
     const src = String(srcAttr[1]);
     // If it's a local filename (not a URL or absolute path), look up signed URL
-    if (!src.includes('://') && !src.startsWith('/')) {
+    if (!src.includes("://") && !src.startsWith("/")) {
       const signedUrl = assetUrls[src];
       if (signedUrl) {
         srcAttr[1] = signedUrl;
@@ -97,10 +97,10 @@ export default function MarkdownPreview(props: MarkdownPreviewProps) {
   // Handle link clicks: internal links use client-side navigation, external links open in new tab
   const handleClick = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
-    const anchor = target.closest('a');
+    const anchor = target.closest("a");
     if (!anchor) return;
 
-    const href = anchor.getAttribute('href');
+    const href = anchor.getAttribute("href");
     if (!href) return;
 
     // Internal links - use client-side navigation if handler provided
@@ -111,9 +111,9 @@ export default function MarkdownPreview(props: MarkdownPreviewProps) {
     }
 
     // External links - open in new tab
-    if (href.startsWith('http://') || href.startsWith('https://')) {
+    if (href.startsWith("http://") || href.startsWith("https://")) {
       e.preventDefault();
-      window.open(href, '_blank', 'noopener,noreferrer');
+      window.open(href, "_blank", "noopener,noreferrer");
     }
   };
 

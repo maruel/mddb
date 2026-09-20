@@ -1,9 +1,9 @@
 // Tests for the debounce utility.
-import { describe, it, expect, vi } from 'vitest';
-import { debounce } from './debounce';
+import { describe, it, expect, vi } from "vitest";
+import { debounce } from "./debounce";
 
-describe('debounce', () => {
-  it('calls the function after the delay', async () => {
+describe("debounce", () => {
+  it("calls the function after the delay", async () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 100);
@@ -17,7 +17,7 @@ describe('debounce', () => {
     vi.useRealTimers();
   });
 
-  it('resets the delay on subsequent calls', async () => {
+  it("resets the delay on subsequent calls", async () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 100);
@@ -34,54 +34,54 @@ describe('debounce', () => {
     vi.useRealTimers();
   });
 
-  it('passes arguments to the debounced function', () => {
+  it("passes arguments to the debounced function", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 100);
 
-    debounced('arg1', 'arg2', 123);
+    debounced("arg1", "arg2", 123);
     vi.advanceTimersByTime(100);
 
-    expect(fn).toHaveBeenCalledWith('arg1', 'arg2', 123);
+    expect(fn).toHaveBeenCalledWith("arg1", "arg2", 123);
     vi.useRealTimers();
   });
 
-  it('uses the last arguments when called multiple times', () => {
+  it("uses the last arguments when called multiple times", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 100);
 
-    debounced('first');
+    debounced("first");
     vi.advanceTimersByTime(50);
-    debounced('second');
+    debounced("second");
     vi.advanceTimersByTime(50);
-    debounced('third');
+    debounced("third");
     vi.advanceTimersByTime(100);
 
     expect(fn).toHaveBeenCalledOnce();
-    expect(fn).toHaveBeenCalledWith('third');
+    expect(fn).toHaveBeenCalledWith("third");
     vi.useRealTimers();
   });
 
-  it('can be called again after the delay has passed', () => {
+  it("can be called again after the delay has passed", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 100);
 
-    debounced('first');
+    debounced("first");
     vi.advanceTimersByTime(100);
     expect(fn).toHaveBeenCalledTimes(1);
-    expect(fn).toHaveBeenLastCalledWith('first');
+    expect(fn).toHaveBeenLastCalledWith("first");
 
-    debounced('second');
+    debounced("second");
     vi.advanceTimersByTime(100);
     expect(fn).toHaveBeenCalledTimes(2);
-    expect(fn).toHaveBeenLastCalledWith('second');
+    expect(fn).toHaveBeenLastCalledWith("second");
 
     vi.useRealTimers();
   });
 
-  it('handles zero delay', () => {
+  it("handles zero delay", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 0);
@@ -95,7 +95,7 @@ describe('debounce', () => {
     vi.useRealTimers();
   });
 
-  it('handles rapid consecutive calls', () => {
+  it("handles rapid consecutive calls", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 100);
@@ -117,9 +117,9 @@ describe('debounce', () => {
     vi.useRealTimers();
   });
 
-  it('works with async functions', () => {
+  it("works with async functions", () => {
     vi.useFakeTimers();
-    const asyncFn = vi.fn().mockResolvedValue('result');
+    const asyncFn = vi.fn().mockResolvedValue("result");
     const debounced = debounce(asyncFn, 100);
 
     debounced();
@@ -129,7 +129,7 @@ describe('debounce', () => {
     vi.useRealTimers();
   });
 
-  it('preserves this context when called', () => {
+  it("preserves this context when called", () => {
     vi.useFakeTimers();
     const obj = {
       value: 42,
@@ -147,7 +147,7 @@ describe('debounce', () => {
     vi.useRealTimers();
   });
 
-  it('does not call function if never triggered', () => {
+  it("does not call function if never triggered", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     debounce(fn, 100);
@@ -158,7 +158,7 @@ describe('debounce', () => {
     vi.useRealTimers();
   });
 
-  it('handles long delays', () => {
+  it("handles long delays", () => {
     vi.useFakeTimers();
     const fn = vi.fn();
     const debounced = debounce(fn, 60000); // 1 minute

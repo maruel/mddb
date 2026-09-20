@@ -1,10 +1,10 @@
 // Validate CSS module references against component imports.
-import { readFileSync, readdirSync, statSync } from 'fs';
-import { dirname, join, basename, relative } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, readdirSync, statSync } from "fs";
+import { dirname, join, basename, relative } from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const srcDir = join(__dirname, '..', 'src');
+const srcDir = join(__dirname, "..", "src");
 
 /** Extract class names from a CSS module file */
 function extractCssClasses(cssContent) {
@@ -12,7 +12,7 @@ function extractCssClasses(cssContent) {
 
   // Remove :global() blocks first - classes inside these are external/library classes
   // that aren't meant to be referenced via styles.className
-  const contentWithoutGlobals = cssContent.replace(/:global\([^)]*\)/g, '');
+  const contentWithoutGlobals = cssContent.replace(/:global\([^)]*\)/g, "");
 
   // Match class selectors: .className
   // Handles: .foo, .foo:hover, .foo::before, .foo.bar, .foo > .bar
@@ -28,20 +28,20 @@ function extractCssClasses(cssContent) {
 function extractImportName(tsxContent, cssFileName) {
   // Match: import styles from './Foo.module.css' or import myStyles from './Foo.module.css'
   const importRegex = new RegExp(
-    `import\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s+from\\s+['"][^'"]*${cssFileName.replace('.', '\\.')}['"]`,
-    'g'
+    `import\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s+from\\s+['"][^'"]*${cssFileName.replace(".", "\\.")}['"]`,
+    "g",
   );
   const match = importRegex.exec(tsxContent);
-  return match ? match[1] : 'styles';
+  return match ? match[1] : "styles";
 }
 
 /** Check if a class is referenced in TSX content with given import name */
 function isClassUsed(className, tsxContent, importName) {
   // Match importName.className or importName['className'] or ${importName.className}
   const patterns = [
-    new RegExp(`${importName}\\.${className}(?![a-zA-Z0-9_-])`, 'g'),
-    new RegExp(`${importName}\\['${className}'\\]`, 'g'),
-    new RegExp(`${importName}\\["${className}"\\]`, 'g'),
+    new RegExp(`${importName}\\.${className}(?![a-zA-Z0-9_-])`, "g"),
+    new RegExp(`${importName}\\['${className}'\\]`, "g"),
+    new RegExp(`${importName}\\["${className}"\\]`, "g"),
   ];
   return patterns.some((pattern) => pattern.test(tsxContent));
 }
@@ -71,7 +71,7 @@ function findTsxConsumers(cssModulePath, allTsxFiles) {
   const consumers = [];
 
   for (const tsxFile of allTsxFiles) {
-    const content = readFileSync(tsxFile, 'utf-8');
+    const content = readFileSync(tsxFile, "utf-8");
     // Check if this TSX imports the CSS module
     if (content.includes(cssFileName)) {
       consumers.push(tsxFile);
@@ -85,11 +85,10 @@ function main() {
   const cssModules = findFiles(srcDir, /\.module\.css$/);
   const tsxFiles = findFiles(srcDir, /\.tsx$/);
 
-  let hasUnused = false;
   const results = [];
 
   for (const cssModule of cssModules) {
-    const cssContent = readFileSync(cssModule, 'utf-8');
+    const cssContent = readFileSync(cssModule, "utf-8");
     const cssFileName = basename(cssModule);
     const classes = extractCssClasses(cssContent);
     const consumers = findTsxConsumers(cssModule, tsxFiles);
@@ -97,17 +96,16 @@ function main() {
     if (consumers.length === 0) {
       results.push({
         file: relative(srcDir, cssModule),
-        issue: 'No TSX file imports this CSS module',
+        issue: "No TSX file imports this CSS module",
         classes: [],
       });
-      hasUnused = true;
       continue;
     }
 
     // Check each consumer with its specific import name
     const unusedClasses = new Set(classes);
     for (const consumerPath of consumers) {
-      const tsxContent = readFileSync(consumerPath, 'utf-8');
+      const tsxContent = readFileSync(consumerPath, "utf-8");
       const importName = extractImportName(tsxContent, cssFileName);
 
       for (const className of unusedClasses) {
@@ -120,19 +118,18 @@ function main() {
     if (unusedClasses.size > 0) {
       results.push({
         file: relative(srcDir, cssModule),
-        issue: 'Unused classes',
+        issue: "Unused classes",
         classes: Array.from(unusedClasses),
       });
-      hasUnused = true;
     }
   }
 
   if (results.length === 0) {
-    console.log('All CSS module classes are in use.');
+    console.log("All CSS module classes are in use.");
     process.exit(0);
   }
 
-  console.log('Unused CSS module classes found:\n');
+  console.log("Unused CSS module classes found:\n");
   for (const result of results) {
     console.log(`${result.file}:`);
     if (result.classes.length === 0) {

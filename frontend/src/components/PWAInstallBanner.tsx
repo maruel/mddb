@@ -1,15 +1,15 @@
 // Banner component prompting users to install the app as a PWA.
 
-import { createSignal, onMount, onCleanup, Show } from 'solid-js';
-import { useI18n } from '../i18n';
-import styles from './PWAInstallBanner.module.css';
+import { createSignal, onMount, onCleanup, Show } from "solid-js";
+import { useI18n } from "../i18n";
+import styles from "./PWAInstallBanner.module.css";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
-const STORAGE_KEY = 'mddb_pwa_dismissed';
+const STORAGE_KEY = "mddb_pwa_dismissed";
 const DISMISS_DURATION_DAYS = 30;
 
 function isDismissed(): boolean {
@@ -42,12 +42,12 @@ export default function PWAInstallBanner() {
       setDeferredPrompt(null);
     };
 
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    window.addEventListener('appinstalled', handleAppInstalled);
+    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
+    window.addEventListener("appinstalled", handleAppInstalled);
 
     onCleanup(() => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-      window.removeEventListener('appinstalled', handleAppInstalled);
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      window.removeEventListener("appinstalled", handleAppInstalled);
     });
   });
 
@@ -58,7 +58,7 @@ export default function PWAInstallBanner() {
     await prompt.prompt();
     const { outcome } = await prompt.userChoice;
 
-    if (outcome === 'accepted') {
+    if (outcome === "accepted") {
       setShowBanner(false);
     }
     setDeferredPrompt(null);
@@ -73,15 +73,15 @@ export default function PWAInstallBanner() {
     <Show when={showBanner() && deferredPrompt()}>
       <div class={styles.banner}>
         <div class={styles.content}>
-          <div class={styles.title}>{t('pwa.installTitle')}</div>
-          <div class={styles.message}>{t('pwa.installMessage')}</div>
+          <div class={styles.title}>{t("pwa.installTitle")}</div>
+          <div class={styles.message}>{t("pwa.installMessage")}</div>
         </div>
         <div class={styles.actions}>
           <button class={styles.dismissButton} onClick={handleDismiss}>
-            {t('pwa.dismissButton')}
+            {t("pwa.dismissButton")}
           </button>
           <button class={styles.installButton} onClick={handleInstall}>
-            {t('pwa.installButton')}
+            {t("pwa.installButton")}
           </button>
         </div>
       </div>

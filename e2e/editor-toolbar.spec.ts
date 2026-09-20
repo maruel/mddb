@@ -1,24 +1,24 @@
 // E2E tests for editor toolbar formatting buttons.
 
-import { test, expect, registerUser, getWorkspaceId, switchToMarkdownMode, createClient } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, switchToMarkdownMode, createClient } from "./helpers";
 
-test.describe('Editor Toolbar Formatting', () => {
-  test('paragraphs render as block-row elements', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-block-row-debug');
+test.describe("Editor Toolbar Formatting", () => {
+  test("paragraphs render as block-row elements", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-block-row-debug");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple paragraphs
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Block Row Debug',
-      content: 'Line one\n\nLine two\n\nLine three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Block Row Debug",
+      content: "Line one\n\nLine two\n\nLine three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -28,31 +28,30 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // All three paragraphs should be block-row elements
-    const blockRows = editor.locator('.block-row');
+    const blockRows = editor.locator(".block-row");
     await expect(blockRows).toHaveCount(3, { timeout: 5000 });
 
     // Each should have data-type="paragraph"
     const paragraphBlocks = editor.locator('.block-row[data-type="paragraph"]');
     await expect(paragraphBlocks).toHaveCount(3, { timeout: 5000 });
-
   });
 
-  test('debug: task list button converts paragraphs', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-task-debug');
+  test("debug: task list button converts paragraphs", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-task-debug");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple paragraphs
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Task Debug',
-      content: 'Line one\n\nLine two\n\nLine three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Task Debug",
+      content: "Line one\n\nLine two\n\nLine three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -62,11 +61,11 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Verify content loaded
-    await expect(editor.locator('p').first()).toBeVisible();
+    await expect(editor.locator("p").first()).toBeVisible();
 
     // Select all text using keyboard
     await editor.click();
-    await page.keyboard.press('Control+a');
+    await page.keyboard.press("Control+a");
 
     // Wait for floating toolbar to appear (indicates selection was processed)
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
@@ -81,28 +80,28 @@ test.describe('Editor Toolbar Formatting', () => {
 
     // Wait for conversion
     await expect(async () => {
-      const taskItems = editor.locator('.block-task');
+      const taskItems = editor.locator(".block-task");
       const count = await taskItems.count();
       expect(count).toBe(3);
     }).toPass();
   });
 
-  test('selecting multiple lines and clicking Checkbox converts all lines to task list', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-checkbox-multi');
+  test("selecting multiple lines and clicking Checkbox converts all lines to task list", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-checkbox-multi");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple lines
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Multi-line Checkbox Test',
-      content: 'Line one\n\nLine two\n\nLine three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Multi-line Checkbox Test",
+      content: "Line one\n\nLine two\n\nLine three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -113,7 +112,7 @@ test.describe('Editor Toolbar Formatting', () => {
 
     // Select all text in the editor using keyboard
     await editor.click();
-    await page.keyboard.press('Control+a');
+    await page.keyboard.press("Control+a");
 
     // Click the checkbox button in the toolbar
     const checkboxButton = page.locator('button[title="Task List"]');
@@ -132,22 +131,22 @@ test.describe('Editor Toolbar Formatting', () => {
     expect(taskMatches).toHaveLength(3);
   });
 
-  test('clicking numbered list button while inside numbered list toggles it off', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-toggle-ol');
+  test("clicking numbered list button while inside numbered list toggles it off", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-toggle-ol");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a numbered list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Toggle Numbered List Test',
-      content: '1. First item\n2. Second item\n3. Third item',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Toggle Numbered List Test",
+      content: "1. First item\n2. Second item\n3. Third item",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -163,7 +162,7 @@ test.describe('Editor Toolbar Formatting', () => {
 
     // Select all list items (click first, shift-click last)
     await listItems.first().click();
-    await listItems.last().click({ modifiers: ['Shift'] });
+    await listItems.last().click({ modifiers: ["Shift"] });
 
     // The numbered list button should be active (indicating we're inside an ordered list)
     const numberedListButton = page.locator('button[title="Numbered List"]');
@@ -183,22 +182,22 @@ test.describe('Editor Toolbar Formatting', () => {
     expect(markdown).not.toMatch(/^\d+\./m);
   });
 
-  test('clicking bullet list button while inside bullet list toggles it off', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-toggle-ul');
+  test("clicking bullet list button while inside bullet list toggles it off", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-toggle-ul");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a bullet list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Toggle Bullet List Test',
-      content: '- First item\n- Second item\n- Third item',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Toggle Bullet List Test",
+      content: "- First item\n- Second item\n- Third item",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -214,7 +213,7 @@ test.describe('Editor Toolbar Formatting', () => {
 
     // Select all list items (click first, shift-click last)
     await listItems.first().click();
-    await listItems.last().click({ modifiers: ['Shift'] });
+    await listItems.last().click({ modifiers: ["Shift"] });
 
     // The bullet list button should be active
     const bulletListButton = page.locator('button[title="Bullet List"]');
@@ -234,25 +233,25 @@ test.describe('Editor Toolbar Formatting', () => {
     expect(markdown).not.toMatch(/^- /m);
   });
 
-  test('clicking checkbox button while inside task list toggles it off (unwraps to paragraphs)', async ({
+  test("clicking checkbox button while inside task list toggles it off (unwraps to paragraphs)", async ({
     page,
     request,
   }) => {
-    const { token } = await registerUser(request, 'toolbar-toggle-task');
+    const { token } = await registerUser(request, "toolbar-toggle-task");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a task list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Toggle Task List Test',
-      content: '- [ ] First task\n- [x] Second task\n- [ ] Third task',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Toggle Task List Test",
+      content: "- [ ] First task\n- [x] Second task\n- [ ] Third task",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -267,7 +266,7 @@ test.describe('Editor Toolbar Formatting', () => {
 
     // Select all task items (click first, shift-click last)
     await taskItems.first().click();
-    await taskItems.last().click({ modifiers: ['Shift'] });
+    await taskItems.last().click({ modifiers: ["Shift"] });
 
     // The checkbox button should be active
     const checkboxButton = page.locator('button[title="Task List"]');
@@ -290,22 +289,22 @@ test.describe('Editor Toolbar Formatting', () => {
     expect(markdown).not.toMatch(/^- /m);
   });
 
-  test('selecting multiple lines and clicking numbered list wraps all in one list', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-ol-multi');
+  test("selecting multiple lines and clicking numbered list wraps all in one list", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-ol-multi");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple paragraphs
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Multi-line Numbered List Test',
-      content: 'Line one\n\nLine two\n\nLine three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Multi-line Numbered List Test",
+      content: "Line one\n\nLine two\n\nLine three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -316,7 +315,7 @@ test.describe('Editor Toolbar Formatting', () => {
 
     // Select all text in the editor
     await editor.click();
-    await page.keyboard.press('Control+a');
+    await page.keyboard.press("Control+a");
 
     // Click the numbered list button
     const numberedListButton = page.locator('button[title="Numbered List"]');
@@ -336,22 +335,22 @@ test.describe('Editor Toolbar Formatting', () => {
     expect(markdown).toMatch(/3\./);
   });
 
-  test('selecting multiple lines and clicking bullet list wraps all in one list', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-ul-multi');
+  test("selecting multiple lines and clicking bullet list wraps all in one list", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-ul-multi");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with multiple paragraphs
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Multi-line Bullet List Test',
-      content: 'Line one\n\nLine two\n\nLine three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Multi-line Bullet List Test",
+      content: "Line one\n\nLine two\n\nLine three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -362,7 +361,7 @@ test.describe('Editor Toolbar Formatting', () => {
 
     // Select all text in the editor
     await editor.click();
-    await page.keyboard.press('Control+a');
+    await page.keyboard.press("Control+a");
 
     // Click the bullet list button
     const bulletListButton = page.locator('button[title="Bullet List"]');
@@ -381,22 +380,22 @@ test.describe('Editor Toolbar Formatting', () => {
     expect(bulletMatches).toHaveLength(3);
   });
 
-  test('clicking checkbox on regular text creates a task list', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-checkbox-create');
+  test("clicking checkbox on regular text creates a task list", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-checkbox-create");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with plain text
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Create Task List Test',
-      content: 'Some regular text',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Create Task List Test",
+      content: "Some regular text",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -404,7 +403,7 @@ test.describe('Editor Toolbar Formatting', () => {
     // Wait for WYSIWYG editor to load with actual page content
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
-    await expect(editor.locator('p')).toContainText('Some', { timeout: 5000 });
+    await expect(editor.locator("p")).toContainText("Some", { timeout: 5000 });
 
     // Double-click to select text and trigger the floating toolbar
     // Note: Use mouse.dblclick with coordinates near text start because
@@ -424,22 +423,22 @@ test.describe('Editor Toolbar Formatting', () => {
     await expect(taskItems).toHaveCount(1, { timeout: 3000 });
   });
 
-  test('clicking checkbox on bullet list converts to task list', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-bullet-to-task');
+  test("clicking checkbox on bullet list converts to task list", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-bullet-to-task");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a bullet list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Bullet to Task Test',
-      content: '- First item\n- Second item',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Bullet to Task Test",
+      content: "- First item\n- Second item",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -456,28 +455,28 @@ test.describe('Editor Toolbar Formatting', () => {
     await checkboxButton.click();
 
     // First item should become a task list item
-    const firstLi = editor.locator('.block-row').first();
-    await expect(firstLi).toHaveAttribute('data-type', 'task', { timeout: 3000 });
+    const firstLi = editor.locator(".block-row").first();
+    await expect(firstLi).toHaveAttribute("data-type", "task", { timeout: 3000 });
   });
 });
 
-test.describe('Editor Toolbar Edge Cases', () => {
-  test('selecting multiple task list items and clicking checkbox toggles all off', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-multi-task-off');
+test.describe("Editor Toolbar Edge Cases", () => {
+  test("selecting multiple task list items and clicking checkbox toggles all off", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-multi-task-off");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a task list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Multi Task Toggle Off Test',
-      content: '- [ ] Task one\n- [x] Task two\n- [ ] Task three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Multi Task Toggle Off Test",
+      content: "- [ ] Task one\n- [x] Task two\n- [ ] Task three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -486,35 +485,35 @@ test.describe('Editor Toolbar Edge Cases', () => {
 
     // Select all task items
     await editor.click();
-    await page.keyboard.press('Control+a');
+    await page.keyboard.press("Control+a");
 
     // Click checkbox button to toggle off
     const checkboxButton = page.locator('button[title="Task List"]');
     await checkboxButton.click();
 
     // The list should be completely removed (unwrapped to paragraphs)
-    await expect(editor.locator('ul')).not.toBeVisible({ timeout: 3000 });
+    await expect(editor.locator("ul")).not.toBeVisible({ timeout: 3000 });
 
     // Content should now be paragraphs
-    await expect(editor.locator('p')).toHaveCount(3, { timeout: 3000 });
+    await expect(editor.locator("p")).toHaveCount(3, { timeout: 3000 });
   });
 
-  test('converting numbered list to task list preserves all items', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-ol-to-task');
+  test("converting numbered list to task list preserves all items", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-ol-to-task");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a numbered list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Numbered to Task Test',
-      content: '1. First item\n2. Second item\n3. Third item',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Numbered to Task Test",
+      content: "1. First item\n2. Second item\n3. Third item",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -523,7 +522,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
 
     // Select all items
     await editor.click();
-    await page.keyboard.press('Control+a');
+    await page.keyboard.press("Control+a");
 
     // Click checkbox button to convert to task list
     const checkboxButton = page.locator('button[title="Task List"]');
@@ -534,22 +533,22 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await expect(taskItems).toHaveCount(3, { timeout: 3000 });
   });
 
-  test('converting bullet list to numbered list works', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-ul-to-ol');
+  test("converting bullet list to numbered list works", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-ul-to-ol");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a bullet list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Bullet to Numbered Test',
-      content: '- First item\n- Second item\n- Third item',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Bullet to Numbered Test",
+      content: "- First item\n- Second item\n- Third item",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -559,7 +558,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Click first item and shift-click last item to select all
     const items = editor.locator('.block-row[data-type="bullet"] .block-content');
     await items.first().click();
-    await items.last().click({ modifiers: ['Shift'] });
+    await items.last().click({ modifiers: ["Shift"] });
 
     // Click numbered list button
     const numberedListButton = page.locator('button[title="Numbered List"]');
@@ -569,22 +568,22 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await expect(editor.locator('.block-row[data-type="number"]')).toHaveCount(3);
   });
 
-  test('converting numbered list to bullet list works', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-ol-to-ul');
+  test("converting numbered list to bullet list works", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-ol-to-ul");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a numbered list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Numbered to Bullet Test',
-      content: '1. First item\n2. Second item\n3. Third item',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Numbered to Bullet Test",
+      content: "1. First item\n2. Second item\n3. Third item",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -595,7 +594,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Click first item and shift-click last item to select all
     const items = editor.locator('.block-row[data-type="number"] .block-content');
     await items.first().click();
-    await items.last().click({ modifiers: ['Shift'] });
+    await items.last().click({ modifiers: ["Shift"] });
 
     // Click bullet list button
     const bulletListButton = page.locator('button[title="Bullet List"]');
@@ -605,22 +604,22 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await expect(editor.locator('.block-row[data-type="bullet"]')).toHaveCount(3);
   });
 
-  test('converting task list to numbered list works', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-task-to-ol');
+  test("converting task list to numbered list works", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-task-to-ol");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a task list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Task to Numbered Test',
-      content: '- [ ] Task one\n- [x] Task two\n- [ ] Task three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Task to Numbered Test",
+      content: "- [ ] Task one\n- [x] Task two\n- [ ] Task three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -631,7 +630,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Click first item and shift-click last item to select all
     const items = editor.locator('.block-row[data-type="task"] .block-content');
     await items.first().click();
-    await items.last().click({ modifiers: ['Shift'] });
+    await items.last().click({ modifiers: ["Shift"] });
 
     // Click numbered list button
     const numberedListButton = page.locator('button[title="Numbered List"]');
@@ -642,22 +641,22 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await expect(editor.locator('.block-row[data-type="task"]')).toHaveCount(0);
   });
 
-  test('selection is preserved through all list type transitions', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-sel-transitions');
+  test("selection is preserved through all list type transitions", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-sel-transitions");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with 4 lines of plain text
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Selection Transitions Test',
-      content: 'Line one\n\nLine two\n\nLine three\n\nLine four',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Selection Transitions Test",
+      content: "Line one\n\nLine two\n\nLine three\n\nLine four",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -673,10 +672,10 @@ test.describe('Editor Toolbar Edge Cases', () => {
     await expect(paragraphs).toHaveCount(4, { timeout: 3000 });
 
     // Select lines 2 and 3
-    const p2 = paragraphs.nth(1).locator('.block-content');
-    const p3 = paragraphs.nth(2).locator('.block-content');
+    const p2 = paragraphs.nth(1).locator(".block-content");
+    const p3 = paragraphs.nth(2).locator(".block-content");
     await p2.click();
-    await p3.click({ modifiers: ['Shift'] });
+    await p3.click({ modifiers: ["Shift"] });
 
     // Wait for floating toolbar to appear (needed on slower CI machines)
     const toolbar = page.locator('[data-testid="floating-toolbar"]');
@@ -691,12 +690,12 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Verify markdown after bullet list
     let markdownEditor = await switchToMarkdownMode(page);
     let markdown = await markdownEditor.inputValue();
-    expect(markdown).toContain('Line one');
-    expect(markdown).toContain('- Line two');
-    expect(markdown).toContain('- Line three');
-    expect(markdown).toContain('Line four');
-    expect(markdown).not.toContain('- Line one');
-    expect(markdown).not.toContain('- Line four');
+    expect(markdown).toContain("Line one");
+    expect(markdown).toContain("- Line two");
+    expect(markdown).toContain("- Line three");
+    expect(markdown).toContain("Line four");
+    expect(markdown).not.toContain("- Line one");
+    expect(markdown).not.toContain("- Line four");
 
     // Switch back to WYSIWYG
     await page.locator('[data-testid="editor-mode-visual"]').click();
@@ -705,7 +704,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Re-select the list items (click first list item content, shift-click second)
     const listItems = editor.locator('.block-row[data-type="bullet"] .block-content');
     await listItems.first().click();
-    await listItems.last().click({ modifiers: ['Shift'] });
+    await listItems.last().click({ modifiers: ["Shift"] });
 
     // Step 2: Click numbered list - should convert to numbered list
     await numberedButton.click();
@@ -715,10 +714,10 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Verify markdown after numbered list
     markdownEditor = await switchToMarkdownMode(page);
     markdown = await markdownEditor.inputValue();
-    expect(markdown).toContain('Line one');
-    expect(markdown).toContain('1. Line two');
-    expect(markdown).toContain('2. Line three');
-    expect(markdown).toContain('Line four');
+    expect(markdown).toContain("Line one");
+    expect(markdown).toContain("1. Line two");
+    expect(markdown).toContain("2. Line three");
+    expect(markdown).toContain("Line four");
 
     // Switch back to WYSIWYG
     await page.locator('[data-testid="editor-mode-visual"]').click();
@@ -727,7 +726,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Re-select the list items
     const orderedItems = editor.locator('.block-row[data-type="number"] .block-content');
     await orderedItems.first().click();
-    await orderedItems.last().click({ modifiers: ['Shift'] });
+    await orderedItems.last().click({ modifiers: ["Shift"] });
 
     // Step 3: Click checkbox - should convert to task list
     await checkboxButton.click();
@@ -736,10 +735,10 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Verify markdown after task list
     markdownEditor = await switchToMarkdownMode(page);
     markdown = await markdownEditor.inputValue();
-    expect(markdown).toContain('Line one');
-    expect(markdown).toContain('- [ ] Line two');
-    expect(markdown).toContain('- [ ] Line three');
-    expect(markdown).toContain('Line four');
+    expect(markdown).toContain("Line one");
+    expect(markdown).toContain("- [ ] Line two");
+    expect(markdown).toContain("- [ ] Line three");
+    expect(markdown).toContain("Line four");
 
     // Switch back to WYSIWYG
     await page.locator('[data-testid="editor-mode-visual"]').click();
@@ -748,7 +747,7 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Re-select the task list items
     const taskItems = editor.locator('.block-row[data-type="task"] .block-content');
     await taskItems.first().click();
-    await taskItems.last().click({ modifiers: ['Shift'] });
+    await taskItems.last().click({ modifiers: ["Shift"] });
 
     // Step 4: Click checkbox again - should toggle off to paragraphs
     await checkboxButton.click();
@@ -760,32 +759,32 @@ test.describe('Editor Toolbar Edge Cases', () => {
     // Verify markdown - all 4 lines should be plain paragraphs
     markdownEditor = await switchToMarkdownMode(page);
     markdown = await markdownEditor.inputValue();
-    expect(markdown).toContain('Line one');
-    expect(markdown).toContain('Line two');
-    expect(markdown).toContain('Line three');
-    expect(markdown).toContain('Line four');
-    expect(markdown).not.toContain('- ');
+    expect(markdown).toContain("Line one");
+    expect(markdown).toContain("Line two");
+    expect(markdown).toContain("Line three");
+    expect(markdown).toContain("Line four");
+    expect(markdown).not.toContain("- ");
     expect(markdown).not.toMatch(/^\d+\./m);
   });
 });
 
-test.describe('Editor Toolbar Inline Formatting', () => {
-  test('underline formatting is preserved when switching to markdown mode', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-underline');
+test.describe("Editor Toolbar Inline Formatting", () => {
+  test("underline formatting is preserved when switching to markdown mode", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-underline");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with plain text
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Underline Test',
-      content: 'Some text to underline',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Underline Test",
+      content: "Some text to underline",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -793,7 +792,7 @@ test.describe('Editor Toolbar Inline Formatting', () => {
     // Wait for WYSIWYG editor to load
     const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
     await expect(editor).toBeVisible({ timeout: 5000 });
-    await expect(editor.locator('p')).toContainText('Some text', { timeout: 5000 });
+    await expect(editor.locator("p")).toContainText("Some text", { timeout: 5000 });
 
     // Select text using mouse drag
     const paragraph = editor.locator('.block-row[data-type="paragraph"] .block-content').first();
@@ -807,36 +806,36 @@ test.describe('Editor Toolbar Inline Formatting', () => {
     await underlineButton.click();
 
     // Verify the text is underlined in the editor
-    await expect(editor.locator('u')).toBeVisible({ timeout: 3000 });
+    await expect(editor.locator("u")).toBeVisible({ timeout: 3000 });
 
     // Switch to markdown mode and verify underline syntax
     const markdownEditor = await switchToMarkdownMode(page);
     const markdown = await markdownEditor.inputValue();
 
     // Should have <u> tags for underline
-    expect(markdown).toContain('<u>');
-    expect(markdown).toContain('</u>');
+    expect(markdown).toContain("<u>");
+    expect(markdown).toContain("</u>");
     expect(markdown).toMatch(/<u>Some text to underline<\/u>/);
   });
 });
 
-test.describe('Editor Toolbar Button States', () => {
-  test('task list only highlights checkbox button, not bullet or numbered list buttons', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-task-highlight');
+test.describe("Editor Toolbar Button States", () => {
+  test("task list only highlights checkbox button, not bullet or numbered list buttons", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-task-highlight");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a task list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Task List Highlight Test',
-      content: '- [ ] Task one\n- [x] Task two\n- [ ] Task three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Task List Highlight Test",
+      content: "- [ ] Task one\n- [x] Task two\n- [ ] Task three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -861,22 +860,22 @@ test.describe('Editor Toolbar Button States', () => {
     await expect(numberedListButton).not.toHaveClass(/isActive/);
   });
 
-  test('bullet list only highlights bullet button, not checkbox or numbered buttons', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-bullet-highlight');
+  test("bullet list only highlights bullet button, not checkbox or numbered buttons", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-bullet-highlight");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a bullet list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Bullet List Highlight Test',
-      content: '- Item one\n- Item two\n- Item three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Bullet List Highlight Test",
+      content: "- Item one\n- Item two\n- Item three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -901,22 +900,22 @@ test.describe('Editor Toolbar Button States', () => {
     await expect(numberedListButton).not.toHaveClass(/isActive/);
   });
 
-  test('numbered list only highlights numbered button, not checkbox or bullet buttons', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'toolbar-num-highlight');
+  test("numbered list only highlights numbered button, not checkbox or bullet buttons", async ({ page, request }) => {
+    const { token } = await registerUser(request, "toolbar-num-highlight");
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a numbered list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Numbered List Highlight Test',
-      content: '1. Item one\n2. Item two\n3. Item three',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Numbered List Highlight Test",
+      content: "1. Item one\n2. Item two\n3. Item three",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();

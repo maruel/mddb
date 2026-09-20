@@ -1,60 +1,60 @@
 // Tests for the TableTable view.
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
-import type { JSX } from 'solid-js';
-import TableTable from './TableTable';
-import { I18nProvider } from '../i18n';
-import type { DataRecordResponse, Property } from '@sdk/types.gen';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@solidjs/testing-library";
+import type { JSX } from "solid-js";
+import TableTable from "./TableTable";
+import { I18nProvider } from "../i18n";
+import type { DataRecordResponse, Property } from "@sdk/types.gen";
 
 // Mock RecordsContext so TableTable can be tested without a provider
-vi.mock('../contexts', () => ({
+vi.mock("../contexts", () => ({
   useRecords: () => ({
     setSorts: vi.fn(),
     setFilters: vi.fn(),
     updateView: vi.fn(),
-    activeViewId: () => '__default__',
+    activeViewId: () => "__default__",
     activeSorts: () => [],
     activeFilters: () => [],
     views: () => [],
   }),
-  DEFAULT_VIEW_ID: '__default__',
+  DEFAULT_VIEW_ID: "__default__",
 }));
 
 // Mock CSS module
-vi.mock('./TableTable.module.css', () => ({
+vi.mock("./TableTable.module.css", () => ({
   default: {
-    container: 'container',
-    tableWrapper: 'tableWrapper',
-    table: 'table',
-    headerRow: 'headerRow',
-    headerCell: 'headerCell',
-    required: 'required',
-    row: 'row',
-    handleHeader: 'handleHeader',
-    handleCell: 'handleCell',
-    actionsHeader: 'actionsHeader',
-    actionsCell: 'actionsCell',
-    deleteBtn: 'deleteBtn',
-    cell: 'cell',
-    editing: 'editing',
-    cellContent: 'cellContent',
-    input: 'input',
-    newRow: 'newRow',
-    newRowPlaceholder: 'newRowPlaceholder',
-    empty: 'empty',
-    loadMore: 'loadMore',
-    addColumnCell: 'addColumnCell',
-    addColumnWrapper: 'addColumnWrapper',
-    addColumnBtn: 'addColumnBtn',
-    addColumnDropdown: 'addColumnDropdown',
-    columnNameInput: 'columnNameInput',
-    columnTypeSelect: 'columnTypeSelect',
-    addColumnActions: 'addColumnActions',
-    addColumnConfirm: 'addColumnConfirm',
-    addColumnCancel: 'addColumnCancel',
-    resizing: 'resizing',
-    resizeHandle: 'resizeHandle',
-    resizeHandleActive: 'resizeHandleActive',
+    container: "container",
+    tableWrapper: "tableWrapper",
+    table: "table",
+    headerRow: "headerRow",
+    headerCell: "headerCell",
+    required: "required",
+    row: "row",
+    handleHeader: "handleHeader",
+    handleCell: "handleCell",
+    actionsHeader: "actionsHeader",
+    actionsCell: "actionsCell",
+    deleteBtn: "deleteBtn",
+    cell: "cell",
+    editing: "editing",
+    cellContent: "cellContent",
+    input: "input",
+    newRow: "newRow",
+    newRowPlaceholder: "newRowPlaceholder",
+    empty: "empty",
+    loadMore: "loadMore",
+    addColumnCell: "addColumnCell",
+    addColumnWrapper: "addColumnWrapper",
+    addColumnBtn: "addColumnBtn",
+    addColumnDropdown: "addColumnDropdown",
+    columnNameInput: "columnNameInput",
+    columnTypeSelect: "columnTypeSelect",
+    addColumnActions: "addColumnActions",
+    addColumnConfirm: "addColumnConfirm",
+    addColumnCancel: "addColumnCancel",
+    resizing: "resizing",
+    resizeHandle: "resizeHandle",
+    resizeHandleActive: "resizeHandleActive",
   },
 }));
 
@@ -66,32 +66,32 @@ function renderWithI18n(component: () => JSX.Element) {
   return render(() => <I18nProvider>{component()}</I18nProvider>);
 }
 
-describe('TableTable', () => {
+describe("TableTable", () => {
   const mockColumns: Property[] = [
-    { name: 'Name', type: 'text', required: true },
-    { name: 'Age', type: 'number' },
-    { name: 'Active', type: 'checkbox' },
-    { name: 'Birthday', type: 'date' },
+    { name: "Name", type: "text", required: true },
+    { name: "Age", type: "number" },
+    { name: "Active", type: "checkbox" },
+    { name: "Birthday", type: "date" },
     {
-      name: 'Status',
-      type: 'select',
+      name: "Status",
+      type: "select",
       options: [
-        { id: 'active', name: 'Active', color: 'green' },
-        { id: 'inactive', name: 'Inactive', color: 'gray' },
+        { id: "active", name: "Active", color: "green" },
+        { id: "inactive", name: "Inactive", color: "gray" },
       ],
     },
   ];
 
   const mockRecords: DataRecordResponse[] = [
     {
-      id: 'rec-1',
-      data: { Name: 'Alice', Age: 30, Active: true, Birthday: '1994-05-15', Status: 'active' },
+      id: "rec-1",
+      data: { Name: "Alice", Age: 30, Active: true, Birthday: "1994-05-15", Status: "active" },
       created: 1704067200,
       modified: 1704067200,
     },
     {
-      id: 'rec-2',
-      data: { Name: 'Bob', Age: 25, Active: false, Birthday: '1999-08-20', Status: 'inactive' },
+      id: "rec-2",
+      data: { Name: "Bob", Age: 25, Active: false, Birthday: "1999-08-20", Status: "inactive" },
       created: 1704067200,
       modified: 1704067200,
     },
@@ -101,40 +101,40 @@ describe('TableTable', () => {
     vi.clearAllMocks();
   });
 
-  it('renders table with headers', async () => {
+  it("renders table with headers", async () => {
     renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Name')).toBeTruthy();
-      expect(screen.getByText('Age')).toBeTruthy();
+      expect(screen.getByText("Name")).toBeTruthy();
+      expect(screen.getByText("Age")).toBeTruthy();
       // 'Active' appears in header (checkbox col) and in select cell (option name), so use getAllByText
-      expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
-      expect(screen.getByText('Birthday')).toBeTruthy();
-      expect(screen.getByText('Status')).toBeTruthy();
+      expect(screen.getAllByText("Active").length).toBeGreaterThan(0);
+      expect(screen.getByText("Birthday")).toBeTruthy();
+      expect(screen.getByText("Status")).toBeTruthy();
     });
   });
 
-  it('shows required indicator for required columns', async () => {
+  it("shows required indicator for required columns", async () => {
     renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     await waitFor(() => {
-      const requiredIndicator = screen.getByText('*');
+      const requiredIndicator = screen.getByText("*");
       expect(requiredIndicator).toBeTruthy();
     });
   });
 
-  it('renders record data correctly', async () => {
+  it("renders record data correctly", async () => {
     renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Alice')).toBeTruthy();
-      expect(screen.getByText('Bob')).toBeTruthy();
-      expect(screen.getByText('30')).toBeTruthy();
-      expect(screen.getByText('25')).toBeTruthy();
+      expect(screen.getByText("Alice")).toBeTruthy();
+      expect(screen.getByText("Bob")).toBeTruthy();
+      expect(screen.getByText("30")).toBeTruthy();
+      expect(screen.getByText("25")).toBeTruthy();
     });
   });
 
-  it('renders checkbox values as checkmarks', async () => {
+  it("renders checkbox values as checkmarks", async () => {
     renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     await waitFor(() => {
@@ -145,18 +145,18 @@ describe('TableTable', () => {
     });
   });
 
-  it('formats date values', async () => {
+  it("formats date values", async () => {
     renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} />);
 
     // Date should be formatted according to locale
     // The exact format depends on the browser's locale settings
     await waitFor(() => {
       // Just check that the container renders without error
-      expect(screen.getByText('Name')).toBeTruthy();
+      expect(screen.getByText("Name")).toBeTruthy();
     });
   });
 
-  it('shows delete button when onDeleteRecord is provided', async () => {
+  it("shows delete button when onDeleteRecord is provided", async () => {
     const mockDelete = vi.fn();
 
     renderWithI18n(() => (
@@ -164,12 +164,12 @@ describe('TableTable', () => {
     ));
 
     await waitFor(() => {
-      const deleteButtons = screen.getAllByText('✕');
+      const deleteButtons = screen.getAllByText("✕");
       expect(deleteButtons.length).toBeGreaterThan(0);
     });
   });
 
-  it('calls onDeleteRecord when delete button is clicked', async () => {
+  it("calls onDeleteRecord when delete button is clicked", async () => {
     const mockDelete = vi.fn();
 
     renderWithI18n(() => (
@@ -184,19 +184,19 @@ describe('TableTable', () => {
     const firstButton = deleteButtons[0];
     if (firstButton) fireEvent.click(firstButton);
 
-    expect(mockDelete).toHaveBeenCalledWith('rec-1');
+    expect(mockDelete).toHaveBeenCalledWith("rec-1");
   });
 
-  it('enters edit mode when clicking a cell', async () => {
+  it("enters edit mode when clicking a cell", async () => {
     renderWithI18n(() => (
       <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Alice')).toBeTruthy();
+      expect(screen.getByText("Alice")).toBeTruthy();
     });
 
-    const aliceCell = screen.getByText('Alice');
+    const aliceCell = screen.getByText("Alice");
     fireEvent.click(aliceCell);
 
     await waitFor(() => {
@@ -206,16 +206,16 @@ describe('TableTable', () => {
     });
   });
 
-  it('shows inline input when editing (no save/cancel buttons)', async () => {
+  it("shows inline input when editing (no save/cancel buttons)", async () => {
     renderWithI18n(() => (
       <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Alice')).toBeTruthy();
+      expect(screen.getByText("Alice")).toBeTruthy();
     });
 
-    const aliceCell = screen.getByText('Alice');
+    const aliceCell = screen.getByText("Alice");
     fireEvent.click(aliceCell);
 
     await waitFor(() => {
@@ -223,23 +223,23 @@ describe('TableTable', () => {
       const input = document.querySelector('input[type="text"]');
       expect(input).toBeTruthy();
       // No separate save/cancel buttons
-      const cancelButton = document.querySelector('.cancelBtn');
+      const cancelButton = document.querySelector(".cancelBtn");
       expect(cancelButton).toBeFalsy();
     });
   });
 
-  it('shows add row option when no records', async () => {
+  it("shows add row option when no records", async () => {
     // Empty tables just show headers and "+ New" row
     renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={[]} onAddRecord={vi.fn()} />);
 
     await waitFor(() => {
       // Should show the header and the add row option
-      expect(screen.getByText('Name')).toBeTruthy();
+      expect(screen.getByText("Name")).toBeTruthy();
       expect(screen.getByText(/\+ add record/i)).toBeTruthy();
     });
   });
 
-  it('shows load more button when hasMore is true', async () => {
+  it("shows load more button when hasMore is true", async () => {
     const mockLoadMore = vi.fn();
 
     renderWithI18n(() => (
@@ -256,7 +256,7 @@ describe('TableTable', () => {
     expect(mockLoadMore).toHaveBeenCalled();
   });
 
-  it('hides load more button when hasMore is false', async () => {
+  it("hides load more button when hasMore is false", async () => {
     renderWithI18n(() => <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} hasMore={false} />);
 
     await waitFor(() => {
@@ -264,7 +264,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('shows clickable new row when onAddRecord is provided', async () => {
+  it("shows clickable new row when onAddRecord is provided", async () => {
     const mockAddRecord = vi.fn();
 
     renderWithI18n(() => (
@@ -278,38 +278,38 @@ describe('TableTable', () => {
     });
   });
 
-  it('renders select dropdown for select type columns', async () => {
+  it("renders select dropdown for select type columns", async () => {
     renderWithI18n(() => (
       <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     await waitFor(() => {
       // Status 'active' resolves to option name 'Active'
-      expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Active").length).toBeGreaterThan(0);
     });
 
     // Click on a status cell to enter edit mode — find the chip inside a <td>
-    const chips = screen.getAllByText('Active');
-    const statusCell = chips.find((el) => el.closest('td'))!;
+    const chips = screen.getAllByText("Active");
+    const statusCell = chips.find((el) => el.closest("td"))!;
     fireEvent.click(statusCell);
 
     await waitFor(() => {
       // Should now have a custom select dropdown with a clear option (—)
-      expect(screen.getByText('—')).toBeTruthy();
+      expect(screen.getByText("—")).toBeTruthy();
     });
   });
 
-  it('renders number input for number type columns', async () => {
+  it("renders number input for number type columns", async () => {
     renderWithI18n(() => (
       <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('30')).toBeTruthy();
+      expect(screen.getByText("30")).toBeTruthy();
     });
 
     // Click on age cell
-    const ageCell = screen.getByText('30');
+    const ageCell = screen.getByText("30");
     fireEvent.click(ageCell);
 
     await waitFor(() => {
@@ -318,7 +318,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('renders date input for date type columns', async () => {
+  it("renders date input for date type columns", async () => {
     renderWithI18n(() => (
       <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
@@ -326,14 +326,14 @@ describe('TableTable', () => {
     // Find a date cell and click it
     // Dates are formatted, so we need to find the cell by the row
     await waitFor(() => {
-      expect(screen.getByText('Alice')).toBeTruthy();
+      expect(screen.getByText("Alice")).toBeTruthy();
     });
 
     // Get all cells in the first row and click the birthday cell
-    const table = document.querySelector('table');
-    const rows = table?.querySelectorAll('tbody tr');
+    const table = document.querySelector("table");
+    const rows = table?.querySelectorAll("tbody tr");
     if (rows && rows[0]) {
-      const cells = rows[0].querySelectorAll('td');
+      const cells = rows[0].querySelectorAll("td");
       // Birthday is the 4th column (Name, Age, Active, Birthday)
       // Column 0 is handle, so Birthday is at index 4
       if (cells[4]) {
@@ -347,7 +347,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('renders checkbox input for checkbox type columns', async () => {
+  it("renders checkbox input for checkbox type columns", async () => {
     renderWithI18n(() => (
       <TableTable tableId="db-1" columns={mockColumns} records={mockRecords} onUpdateRecord={vi.fn()} />
     ));
@@ -360,9 +360,9 @@ describe('TableTable', () => {
     });
 
     // Click on the Active cell (handle=td[0], Name=td[1], Age=td[2], Active=td[3])
-    const table = document.querySelector('table');
-    const rows = table?.querySelectorAll('tbody tr');
-    const activeCell = rows?.[0]?.querySelectorAll('td')[3];
+    const table = document.querySelector("table");
+    const rows = table?.querySelectorAll("tbody tr");
+    const activeCell = rows?.[0]?.querySelectorAll("td")[3];
     if (activeCell) {
       fireEvent.click(activeCell);
     }
@@ -374,7 +374,7 @@ describe('TableTable', () => {
     });
   });
 
-  it('handles cell save on blur', async () => {
+  it("handles cell save on blur", async () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
@@ -382,11 +382,11 @@ describe('TableTable', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Alice')).toBeTruthy();
+      expect(screen.getByText("Alice")).toBeTruthy();
     });
 
     // Click to edit
-    const aliceCell = screen.getByText('Alice');
+    const aliceCell = screen.getByText("Alice");
     fireEvent.click(aliceCell);
 
     await waitFor(() => {
@@ -395,22 +395,22 @@ describe('TableTable', () => {
 
     // Change the value
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
-    fireEvent.input(input, { target: { value: 'Alice Updated' } });
+    fireEvent.input(input, { target: { value: "Alice Updated" } });
 
     // Blur to trigger auto-save
     fireEvent.blur(input);
 
     await waitFor(() => {
       expect(mockUpdateRecord).toHaveBeenCalledWith(
-        'rec-1',
+        "rec-1",
         expect.objectContaining({
-          Name: 'Alice Updated',
-        })
+          Name: "Alice Updated",
+        }),
       );
     });
   });
 
-  it('handles cell cancel with Escape key', async () => {
+  it("handles cell cancel with Escape key", async () => {
     const mockUpdateRecord = vi.fn();
 
     renderWithI18n(() => (
@@ -418,11 +418,11 @@ describe('TableTable', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getByText('Alice')).toBeTruthy();
+      expect(screen.getByText("Alice")).toBeTruthy();
     });
 
     // Click to edit
-    const aliceCell = screen.getByText('Alice');
+    const aliceCell = screen.getByText("Alice");
     fireEvent.click(aliceCell);
 
     await waitFor(() => {
@@ -431,12 +431,12 @@ describe('TableTable', () => {
 
     // Change the value but don't save
     const input = document.querySelector('input[type="text"]') as HTMLInputElement;
-    fireEvent.input(input, { target: { value: 'Alice Updated' } });
+    fireEvent.input(input, { target: { value: "Alice Updated" } });
 
     // Press Escape to cancel
     // In real browser, blur fires after component re-renders removing input
     // In tests, we just verify Escape doesn't immediately save
-    fireEvent.keyDown(input, { key: 'Escape' });
+    fireEvent.keyDown(input, { key: "Escape" });
 
     // Wait for SolidJS to process the signal update
     await waitFor(() => {

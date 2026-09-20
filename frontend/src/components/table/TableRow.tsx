@@ -1,14 +1,14 @@
 // Shared table row wrapper with drag handle and context menu.
 // Used across TableTable, TableGrid, TableGallery, and TableBoard views.
 
-import { createSignal, Show, type ParentProps } from 'solid-js';
-import { Dynamic } from 'solid-js/web';
-import { RowHandle, ContextMenu, type ContextMenuAction } from '../shared';
-import { useI18n } from '../../i18n';
-import styles from './TableRow.module.css';
+import { createSignal, Show, type ParentProps } from "solid-js";
+import { Dynamic } from "solid-js/web";
+import { RowHandle, ContextMenu, type ContextMenuAction } from "../shared";
+import { useI18n } from "../../i18n";
+import styles from "./TableRow.module.css";
 
 /** MIME type for table record drag data */
-export const TABLE_RECORD_MIME = 'application/x-table-record';
+export const TABLE_RECORD_MIME = "application/x-table-record";
 
 export interface TableRowProps extends ParentProps {
   /** The record ID */
@@ -32,7 +32,7 @@ export interface TableRowProps extends ParentProps {
   /** Additional CSS class for the row container */
   class?: string;
   /** Element type: 'div' for card views, 'tr' for table view */
-  as?: 'div' | 'tr';
+  as?: "div" | "tr";
 }
 
 /**
@@ -49,24 +49,24 @@ export function TableRow(props: TableRowProps) {
 
     if (props.onOpen) {
       actions.push({
-        id: 'open',
-        label: t('table.openRecord') || 'Open',
+        id: "open",
+        label: t("table.openRecord") || "Open",
       });
     }
 
     if (props.onDuplicate) {
       actions.push({
-        id: 'duplicate',
-        label: t('table.duplicateRecord') || 'Duplicate',
-        shortcut: '⌘D',
+        id: "duplicate",
+        label: t("table.duplicateRecord") || "Duplicate",
+        shortcut: "⌘D",
       });
     }
 
     if (props.onDelete) {
       actions.push({
-        id: 'delete',
-        label: t('table.deleteRecord') || 'Delete',
-        shortcut: '⌫',
+        id: "delete",
+        label: t("table.deleteRecord") || "Delete",
+        shortcut: "⌫",
         danger: true,
         separator: actions.length > 0,
       });
@@ -78,7 +78,7 @@ export function TableRow(props: TableRowProps) {
   const handleDragStart = (e: DragEvent, _rowId: string) => {
     e.dataTransfer?.setData(TABLE_RECORD_MIME, props.recordId);
     if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = "move";
     }
     props.onDragStart?.(props.recordId, e);
   };
@@ -89,13 +89,13 @@ export function TableRow(props: TableRowProps) {
 
   const handleAction = (actionId: string) => {
     switch (actionId) {
-      case 'open':
+      case "open":
         props.onOpen?.(props.recordId);
         break;
-      case 'duplicate':
+      case "duplicate":
         props.onDuplicate?.(props.recordId);
         break;
-      case 'delete':
+      case "delete":
         props.onDelete?.(props.recordId);
         break;
     }
@@ -105,7 +105,7 @@ export function TableRow(props: TableRowProps) {
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer) {
-      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.dropEffect = "move";
     }
     props.onDragOver?.(props.recordId, e);
   };
@@ -116,7 +116,7 @@ export function TableRow(props: TableRowProps) {
   };
 
   const containerClass = () =>
-    `${styles.row} row-with-handle ${props.isDragging ? styles.dragging : ''} ${props.class || ''}`.trim();
+    `${styles.row} row-with-handle ${props.isDragging ? styles.dragging : ""} ${props.class || ""}`.trim();
 
   return (
     <>
@@ -124,7 +124,7 @@ export function TableRow(props: TableRowProps) {
         <div class={styles.dropIndicator} />
       </Show>
       <Dynamic
-        component={props.as === 'tr' ? 'tr' : 'div'}
+        component={props.as === "tr" ? "tr" : "div"}
         class={containerClass()}
         onDragOver={handleDragOver}
         onDrop={handleDrop}

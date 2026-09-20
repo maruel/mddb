@@ -1,31 +1,31 @@
 // WYSIWYG markdown editor component using ProseMirror with flat block architecture.
 
-import { createSignal, onMount, onCleanup, createEffect, on, createMemo, Show, untrack } from 'solid-js';
-import { EditorView } from 'prosemirror-view';
-import type { Node as ProseMirrorNode } from 'prosemirror-model';
-import { useI18n } from '../../i18n';
+import { createSignal, onMount, onCleanup, createEffect, on, createMemo, Show, untrack } from "solid-js";
+import { EditorView } from "prosemirror-view";
+import type { Node as ProseMirrorNode } from "prosemirror-model";
+import { useI18n } from "../../i18n";
 import {
   rewriteAssetUrls,
   reverseRewriteAssetUrls,
   rewriteInternalLinkTitles,
   type NodeTitleMap,
-} from './markdown-utils';
-import { nodes, marks, createEditorState, schema } from './prosemirror-config';
-import { parseMarkdown } from './markdown-parser';
-import { serializeToMarkdown } from './markdown-serializer';
-import { transformPastedHTML } from './dom-parser';
-import { createBlockNodeView } from './BlockNodeView';
-import { toggleTaskBlock } from './blockCommands';
-import { createSlashCommandPlugin, type SlashMenuState } from './slashCommandPlugin';
-import { createDropUploadPlugin } from './dropUploadPlugin';
-import { createInvalidLinkPlugin, updateInvalidLinkState, INTERNAL_LINK_URL_PATTERN } from './invalidLinkPlugin';
-import { useAssetUpload, isImageMimeType } from './useAssetUpload';
-import { BlockContextMenu } from './BlockContextMenu';
-import { EditorDropIndicator } from './EditorDropIndicator';
-import SlashCommandMenu from './SlashCommandMenu';
-import EditorToolbar, { type FormatState } from './EditorToolbar';
-import type { AssetUrlMap } from '../../contexts/EditorContext';
-import styles from './Editor.module.css';
+} from "./markdown-utils";
+import { nodes, marks, createEditorState, schema } from "./prosemirror-config";
+import { parseMarkdown } from "./markdown-parser";
+import { serializeToMarkdown } from "./markdown-serializer";
+import { transformPastedHTML } from "./dom-parser";
+import { createBlockNodeView } from "./BlockNodeView";
+import { toggleTaskBlock } from "./blockCommands";
+import { createSlashCommandPlugin, type SlashMenuState } from "./slashCommandPlugin";
+import { createDropUploadPlugin } from "./dropUploadPlugin";
+import { createInvalidLinkPlugin, updateInvalidLinkState, INTERNAL_LINK_URL_PATTERN } from "./invalidLinkPlugin";
+import { useAssetUpload, isImageMimeType } from "./useAssetUpload";
+import { BlockContextMenu } from "./BlockContextMenu";
+import { EditorDropIndicator } from "./EditorDropIndicator";
+import SlashCommandMenu from "./SlashCommandMenu";
+import EditorToolbar, { type FormatState } from "./EditorToolbar";
+import type { AssetUrlMap } from "../../contexts/EditorContext";
+import styles from "./Editor.module.css";
 
 interface EditorProps {
   content: string;
@@ -44,12 +44,12 @@ interface EditorProps {
 
 export default function Editor(props: EditorProps) {
   const { t } = useI18n();
-  const [editorMode, setEditorMode] = createSignal<'wysiwyg' | 'markdown'>('wysiwyg');
+  const [editorMode, setEditorMode] = createSignal<"wysiwyg" | "markdown">("wysiwyg");
   const [markdownContent, setMarkdownContent] = createSignal(untrack(() => props.content));
   const [view, setView] = createSignal<EditorView | undefined>();
   const [slashMenuState, setSlashMenuState] = createSignal<SlashMenuState>({
     active: false,
-    query: '',
+    query: "",
     triggerPos: 0,
     position: { top: 0, left: 0 },
   });
@@ -103,7 +103,7 @@ export default function Editor(props: EditorProps) {
             });
 
             // Create a new paragraph block containing the image
-            const block = nodes.block.create({ type: 'paragraph', indent: 0 }, imageNode);
+            const block = nodes.block.create({ type: "paragraph", indent: 0 }, imageNode);
             tr = tr.insert(pos, block);
           }
         } else {
@@ -113,7 +113,7 @@ export default function Editor(props: EditorProps) {
             const linkMark = linkType.create({ href: result.url, title: null });
             const textNode = schema.text(result.name, [linkMark]);
             // Create a new paragraph block containing the link
-            const block = nodes.block.create({ type: 'paragraph', indent: 0 }, textNode);
+            const block = nodes.block.create({ type: "paragraph", indent: 0 }, textNode);
             tr = tr.insert(pos, block);
           }
         }
@@ -171,7 +171,7 @@ export default function Editor(props: EditorProps) {
     const { from, $from, to, empty } = state.selection;
 
     // Toolbar position
-    if (empty || editorMode() === 'markdown') {
+    if (empty || editorMode() === "markdown") {
       setToolbarPosition(null);
     } else {
       try {
@@ -226,14 +226,14 @@ export default function Editor(props: EditorProps) {
     let headingLevel: number | null = null;
 
     // If we have a single block context, use it
-    if (blockNode && blockNode.type.name === 'block') {
+    if (blockNode && blockNode.type.name === "block") {
       const type = blockNode.attrs.type;
-      if (type === 'bullet') isBulletList = true;
-      if (type === 'number') isOrderedList = true;
-      if (type === 'task') isTaskList = true;
-      if (type === 'quote') isBlockquote = true;
-      if (type === 'code') isCodeBlock = true;
-      if (type === 'heading') headingLevel = blockNode.attrs.level;
+      if (type === "bullet") isBulletList = true;
+      if (type === "number") isOrderedList = true;
+      if (type === "task") isTaskList = true;
+      if (type === "quote") isBlockquote = true;
+      if (type === "code") isCodeBlock = true;
+      if (type === "heading") headingLevel = blockNode.attrs.level;
     }
 
     setFormatState({
@@ -266,17 +266,17 @@ export default function Editor(props: EditorProps) {
         return transformPastedHTML(html);
       },
       clipboardTextSerializer(slice) {
-        return localSerializeMarkdown(schema.node('doc', null, slice.content));
+        return localSerializeMarkdown(schema.node("doc", null, slice.content));
       },
       handlePaste(_view, event) {
-        const html = event.clipboardData?.getData('text/html');
+        const html = event.clipboardData?.getData("text/html");
         if (html) return false; // Let transformPastedHTML handle it
 
-        const text = event.clipboardData?.getData('text/plain');
+        const text = event.clipboardData?.getData("text/plain");
         if (!text) return false;
 
         // Heuristic: if it has multiple lines or markdown markers, parse as markdown
-        const hasMarkers = /^[#>\-*\d+]|[`[*_]/.test(text) || text.includes('\n');
+        const hasMarkers = /^[#>\-*\d+]|[`[*_]/.test(text) || text.includes("\n");
         if (hasMarkers) {
           const parsed = localParseMarkdown(text);
           if (parsed) {
@@ -308,7 +308,7 @@ export default function Editor(props: EditorProps) {
           const target = event.target as HTMLElement;
 
           // Handle checkbox toggle: clicks on the ::before pseudo-element area (left padding)
-          const taskEl = target.closest('.block-task') as HTMLElement | null;
+          const taskEl = target.closest(".block-task") as HTMLElement | null;
           if (taskEl) {
             const taskRect = taskEl.getBoundingClientRect();
             // Check if click is in the left padding area where the checkbox pseudo-element is
@@ -322,10 +322,10 @@ export default function Editor(props: EditorProps) {
             }
           }
 
-          const anchor = target.closest('a');
+          const anchor = target.closest("a");
           if (!anchor) return false;
 
-          const href = anchor.getAttribute('href');
+          const href = anchor.getAttribute("href");
           if (!href) return false;
 
           const match = href.match(INTERNAL_LINK_URL_PATTERN);
@@ -335,9 +335,9 @@ export default function Editor(props: EditorProps) {
             return true;
           }
 
-          if (href.startsWith('http://') || href.startsWith('https://')) {
+          if (href.startsWith("http://") || href.startsWith("https://")) {
             event.preventDefault();
-            window.open(href, '_blank', 'noopener,noreferrer');
+            window.open(href, "_blank", "noopener,noreferrer");
             return true;
           }
 
@@ -346,7 +346,7 @@ export default function Editor(props: EditorProps) {
       },
     });
 
-    const pmEl = editorEl.querySelector('.ProseMirror') as HTMLElement & { pmView?: EditorView };
+    const pmEl = editorEl.querySelector(".ProseMirror") as HTMLElement & { pmView?: EditorView };
     if (pmEl) pmEl.pmView = editorView;
 
     setView(editorView);
@@ -355,13 +355,13 @@ export default function Editor(props: EditorProps) {
 
     const handleScroll = () => updateActiveStates(editorView);
     const scrollContainer = editorEl.closest('[class*="prosemirrorEditor"]') || editorEl;
-    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     onCleanup(() => {
       editorView.destroy();
-      scrollContainer.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('scroll', handleScroll);
+      scrollContainer.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", handleScroll);
     });
   });
 
@@ -380,7 +380,7 @@ export default function Editor(props: EditorProps) {
 
           if (nodeChanged || contentChangedExternally) {
             setMarkdownContent(content);
-            setEditorMode('wysiwyg');
+            setEditorMode("wysiwyg");
           }
 
           const editorView = view();
@@ -394,8 +394,8 @@ export default function Editor(props: EditorProps) {
           }
         }
       },
-      { defer: true }
-    )
+      { defer: true },
+    ),
   );
 
   const handleMarkdownChange = (value: string) => {
@@ -415,7 +415,7 @@ export default function Editor(props: EditorProps) {
         updateInvalidLinkState(editorView, props.linkedNodeTitles || {}, props.wsId);
       }
     }
-    setEditorMode('wysiwyg');
+    setEditorMode("wysiwyg");
   };
 
   const switchToMarkdown = () => {
@@ -424,11 +424,11 @@ export default function Editor(props: EditorProps) {
       const md = localSerializeMarkdown(editorView.state.doc);
       setMarkdownContent(md);
     }
-    setEditorMode('markdown');
+    setEditorMode("markdown");
   };
 
   const toggleMode = () => {
-    if (editorMode() === 'wysiwyg') {
+    if (editorMode() === "wysiwyg") {
       switchToMarkdown();
     } else {
       switchToWysiwyg();
@@ -436,25 +436,25 @@ export default function Editor(props: EditorProps) {
   };
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'm') {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "m") {
       e.preventDefault();
       toggleMode();
     }
   };
 
   onMount(() => {
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
   });
   onCleanup(() => {
-    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener("keydown", handleKeyDown);
   });
 
   const wysiwygClass = createMemo(() =>
-    editorMode() === 'wysiwyg' ? styles.prosemirrorEditor : `${styles.prosemirrorEditor} ${styles.hidden}`
+    editorMode() === "wysiwyg" ? styles.prosemirrorEditor : `${styles.prosemirrorEditor} ${styles.hidden}`,
   );
 
   const markdownClass = createMemo(() =>
-    editorMode() === 'markdown' ? styles.markdownEditor : `${styles.markdownEditor} ${styles.hidden}`
+    editorMode() === "markdown" ? styles.markdownEditor : `${styles.markdownEditor} ${styles.hidden}`,
   );
 
   return (
@@ -478,14 +478,14 @@ export default function Editor(props: EditorProps) {
         class={markdownClass()}
         value={markdownContent()}
         onInput={(e) => handleMarkdownChange(e.target.value)}
-        placeholder={props.placeholder || t('editor.contentPlaceholder') || 'Write markdown...'}
+        placeholder={props.placeholder || t("editor.contentPlaceholder") || "Write markdown..."}
         readOnly={props.readOnly}
         data-testid="markdown-editor"
       />
 
       <div class={styles.modeIndicator}>
         <button
-          class={editorMode() === 'wysiwyg' ? styles.modeIndicatorActive : undefined}
+          class={editorMode() === "wysiwyg" ? styles.modeIndicatorActive : undefined}
           onClick={switchToWysiwyg}
           title="Visual mode (Ctrl+Shift+M)"
           data-testid="editor-mode-visual"
@@ -493,7 +493,7 @@ export default function Editor(props: EditorProps) {
           Visual
         </button>
         <button
-          class={editorMode() === 'markdown' ? styles.modeIndicatorActive : undefined}
+          class={editorMode() === "markdown" ? styles.modeIndicatorActive : undefined}
           onClick={switchToMarkdown}
           title="Markdown mode (Ctrl+Shift+M)"
           data-testid="editor-mode-markdown"

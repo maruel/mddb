@@ -1,24 +1,24 @@
 // Test for block handle visibility bug fix.
 
-import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
 
-test('block handle should be visible when block is hovered', async ({ page, request }) => {
-  const { token } = await registerUser(request, 'block-handle-fix');
+test("block handle should be visible when block is hovered", async ({ page, request }) => {
+  const { token } = await registerUser(request, "block-handle-fix");
   await page.goto(`/?token=${token}`);
-  await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
 
   // Create a simple page with one bullet item
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage('0', {
-    title: 'Handle Visibility',
-    content: '- Test bullet item',
+  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+    title: "Handle Visibility",
+    content: "- Test bullet item",
   });
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
@@ -31,7 +31,7 @@ test('block handle should be visible when block is hovered', async ({ page, requ
   await bulletBlock.hover();
 
   // The handle container should have opacity > 0 when hovered
-  const handleContainer = bulletBlock.locator('.block-handle-container');
+  const handleContainer = bulletBlock.locator(".block-handle-container");
 
   // Wait for the opacity to transition to visible (0.15s transition)
   await expect(async () => {
@@ -50,10 +50,10 @@ test('block handle should be visible when block is hovered', async ({ page, requ
   expect(Number(handleOpacity)).toBeGreaterThan(0);
 });
 
-test('numbered list items should have data-number attribute for CSS content', async ({ page, request }) => {
-  const { token } = await registerUser(request, 'number-data-attr');
+test("numbered list items should have data-number attribute for CSS content", async ({ page, request }) => {
+  const { token } = await registerUser(request, "number-data-attr");
   await page.goto(`/?token=${token}`);
-  await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
 
@@ -66,14 +66,14 @@ test('numbered list items should have data-number attribute for CSS content', as
 3. Third item
 
 `;
-  const pageResp = await client.ws(wsId).nodes.page.createPage('0', {
-    title: 'Numbered Items',
+  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+    title: "Numbered Items",
     content: markdownContent,
   });
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
@@ -89,22 +89,22 @@ test('numbered list items should have data-number attribute for CSS content', as
   // Each numbered block should have a .block-number div with data-number attribute
   for (let i = 0; i < count; i++) {
     const block = numberBlocks.nth(i);
-    const numberDiv = block.locator('.block-number');
+    const numberDiv = block.locator(".block-number");
     await expect(numberDiv).toBeVisible({ timeout: 3000 });
 
-    const dataNumber = await numberDiv.getAttribute('data-number');
+    const dataNumber = await numberDiv.getAttribute("data-number");
 
     // Should have a numeric value (not null or empty)
     expect(dataNumber).not.toBeNull();
-    expect(dataNumber).not.toBe('');
+    expect(dataNumber).not.toBe("");
     expect(Number(dataNumber)).toBeGreaterThan(0);
   }
 });
 
-test('bullet list items should display with proper text alignment', async ({ page, request }) => {
-  const { token } = await registerUser(request, 'bullet-alignment');
+test("bullet list items should display with proper text alignment", async ({ page, request }) => {
+  const { token } = await registerUser(request, "bullet-alignment");
   await page.goto(`/?token=${token}`);
-  await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
 
@@ -114,14 +114,14 @@ test('bullet list items should display with proper text alignment', async ({ pag
 - This is a much longer bullet item that wraps to multiple lines to verify alignment
 - Another item
 `;
-  const pageResp = await client.ws(wsId).nodes.page.createPage('0', {
-    title: 'Bullet Alignment',
+  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+    title: "Bullet Alignment",
     content: markdownContent,
   });
   const nodeId = pageResp.id;
 
   await page.reload();
-  await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
   await page.locator(`[data-testid="sidebar-node-${nodeId}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
@@ -137,7 +137,7 @@ test('bullet list items should display with proper text alignment', async ({ pag
   // Check that bullet markers are properly aligned with text
   // The bullet should appear to the left of the text, not overlapping
   const secondBullet = bulletBlocks.nth(1);
-  const bulletDiv = secondBullet.locator('.block-bullet');
+  const bulletDiv = secondBullet.locator(".block-bullet");
 
   // Verify the bullet is visible (via ::before pseudo-element)
   // We can't directly inspect pseudo-elements, but we can check the layout

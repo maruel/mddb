@@ -3,14 +3,14 @@
 // methods (dragTo, mouse.down/move/up) do not reliably trigger the browser's native
 // drag events needed for ProseMirror's drag-and-drop system.
 
-import type { Page } from '@playwright/test';
-import { test, expect, registerUser, getWorkspaceId, createClient } from './helpers';
+import type { Page } from "@playwright/test";
+import { test, expect, registerUser, getWorkspaceId, createClient } from "./helpers";
 
 // Helper to setup editor with test content
 async function setupEditorWithBlocks(page: Page, request: Parameters<typeof registerUser>[0]) {
-  const { token } = await registerUser(request, 'block-dnd');
+  const { token } = await registerUser(request, "block-dnd");
   await page.goto(`/?token=${token}`);
-  await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
   const wsId = await getWorkspaceId(page);
 
@@ -22,13 +22,13 @@ Second paragraph
 Third paragraph`;
 
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage('0', {
-    title: 'Drag Test',
+  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+    title: "Drag Test",
     content: markdownContent,
   });
 
   await page.reload();
-  await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
   await page.locator(`[data-testid="sidebar-node-${pageResp.id}"]`).click();
   await expect(page.locator('[data-testid="wysiwyg-editor"]')).toBeVisible({ timeout: 5000 });
 
@@ -43,20 +43,15 @@ Third paragraph`;
  * This is necessary because Playwright's native drag methods don't reliably trigger
  * the browser's native drag events for elements with draggable="true".
  */
-async function simulateBlockDrag(
-  page: Page,
-  sourceIndex: number,
-  targetIndex: number,
-  dropBelow: boolean = true
-) {
+async function simulateBlockDrag(page: Page, sourceIndex: number, targetIndex: number, dropBelow: boolean = true) {
   return await page.evaluate(
     async ({ sourceIdx, targetIdx, below }: { sourceIdx: number; targetIdx: number; below: boolean }) => {
       const editor = document.querySelector('[data-testid="wysiwyg-editor"] .ProseMirror') as HTMLElement;
-      const blocks = editor.querySelectorAll('.block-row');
+      const blocks = editor.querySelectorAll(".block-row");
       const handles = editor.querySelectorAll('[data-testid="row-handle"]') as NodeListOf<HTMLElement>;
 
       if (blocks.length <= Math.max(sourceIdx, targetIdx) || handles.length <= sourceIdx) {
-        return { success: false, error: 'Invalid block indices' };
+        return { success: false, error: "Invalid block indices" };
       }
 
       // Non-null assertion is safe: indices already validated above
@@ -65,14 +60,14 @@ async function simulateBlockDrag(
 
       // Create DataTransfer
       const dataTransfer = new DataTransfer();
-      dataTransfer.effectAllowed = 'move';
+      dataTransfer.effectAllowed = "move";
 
       // Get coordinates
       const handleRect = sourceHandle.getBoundingClientRect();
       const targetBlockRect = targetBlock.getBoundingClientRect();
 
       // 1. Dispatch dragstart on the source handle
-      const dragStartEvent = new DragEvent('dragstart', {
+      const dragStartEvent = new DragEvent("dragstart", {
         bubbles: true,
         cancelable: true,
         dataTransfer,
@@ -88,10 +83,10 @@ async function simulateBlockDrag(
       // To drop below a block, position mouse in the lower third of the block
       const blockHeight = targetBlockRect.height;
       const dropY = below
-        ? targetBlockRect.top + blockHeight * 0.75  // Lower part of block -> drop below
+        ? targetBlockRect.top + blockHeight * 0.75 // Lower part of block -> drop below
         : targetBlockRect.top + blockHeight * 0.25; // Upper part of block -> drop above
 
-      const dragOverEvent = new DragEvent('dragover', {
+      const dragOverEvent = new DragEvent("dragover", {
         bubbles: true,
         cancelable: true,
         clientX: targetBlockRect.left + targetBlockRect.width / 2,
@@ -103,7 +98,7 @@ async function simulateBlockDrag(
       await new Promise((r) => setTimeout(r, 50));
 
       // 3. Dispatch drop
-      const dropEvent = new DragEvent('drop', {
+      const dropEvent = new DragEvent("drop", {
         bubbles: true,
         cancelable: true,
         clientX: targetBlockRect.left + targetBlockRect.width / 2,
@@ -115,7 +110,7 @@ async function simulateBlockDrag(
       await new Promise((r) => setTimeout(r, 50));
 
       // 4. Dispatch dragend
-      const dragEndEvent = new DragEvent('dragend', {
+      const dragEndEvent = new DragEvent("dragend", {
         bubbles: true,
         cancelable: true,
         dataTransfer,
@@ -123,26 +118,26 @@ async function simulateBlockDrag(
       sourceHandle.dispatchEvent(dragEndEvent);
 
       // Get final order
-      const newBlocks = editor.querySelectorAll('.block-row');
+      const newBlocks = editor.querySelectorAll(".block-row");
       const newTexts = Array.from(newBlocks).map((b) => (b as HTMLElement).innerText.trim());
 
       return { success: true, newTexts };
     },
-    { sourceIdx: sourceIndex, targetIdx: targetIndex, below: dropBelow }
+    { sourceIdx: sourceIndex, targetIdx: targetIndex, below: dropBelow },
   );
 }
 
-test.describe('Block drag and drop reordering', () => {
-  test('drag first block to after third block', async ({ page, request }) => {
+test.describe("Block drag and drop reordering", () => {
+  test("drag first block to after third block", async ({ page, request }) => {
     const { prosemirror } = await setupEditorWithBlocks(page, request);
 
-    const blocks = prosemirror.locator('.block-row');
+    const blocks = prosemirror.locator(".block-row");
     await expect(blocks).toHaveCount(3);
 
     const initialTexts = await blocks.allInnerTexts();
-    expect(initialTexts[0]).toContain('First');
-    expect(initialTexts[1]).toContain('Second');
-    expect(initialTexts[2]).toContain('Third');
+    expect(initialTexts[0]).toContain("First");
+    expect(initialTexts[1]).toContain("Second");
+    expect(initialTexts[2]).toContain("Third");
 
     // Hover to reveal handles (for visual feedback)
     await blocks.nth(0).hover();
@@ -152,65 +147,65 @@ test.describe('Block drag and drop reordering', () => {
     const result = await simulateBlockDrag(page, 0, 2, true);
 
     expect(result.success).toBe(true);
-    expect(result.newTexts).toEqual(['Second paragraph', 'Third paragraph', 'First paragraph']);
+    expect(result.newTexts).toEqual(["Second paragraph", "Third paragraph", "First paragraph"]);
 
     // Verify final state
     const finalTexts = await blocks.allInnerTexts();
-    expect(finalTexts[0]).toContain('Second');
-    expect(finalTexts[1]).toContain('Third');
-    expect(finalTexts[2]).toContain('First');
+    expect(finalTexts[0]).toContain("Second");
+    expect(finalTexts[1]).toContain("Third");
+    expect(finalTexts[2]).toContain("First");
   });
 
-  test('drag third block to before first block', async ({ page, request }) => {
+  test("drag third block to before first block", async ({ page, request }) => {
     const { prosemirror } = await setupEditorWithBlocks(page, request);
 
-    const blocks = prosemirror.locator('.block-row');
+    const blocks = prosemirror.locator(".block-row");
     await expect(blocks).toHaveCount(3);
 
     // Drag third block to before first block
     const result = await simulateBlockDrag(page, 2, 0, false);
 
     expect(result.success).toBe(true);
-    expect(result.newTexts).toEqual(['Third paragraph', 'First paragraph', 'Second paragraph']);
+    expect(result.newTexts).toEqual(["Third paragraph", "First paragraph", "Second paragraph"]);
 
     // Verify final state
     const finalTexts = await blocks.allInnerTexts();
-    expect(finalTexts[0]).toContain('Third');
-    expect(finalTexts[1]).toContain('First');
-    expect(finalTexts[2]).toContain('Second');
+    expect(finalTexts[0]).toContain("Third");
+    expect(finalTexts[1]).toContain("First");
+    expect(finalTexts[2]).toContain("Second");
   });
 
-  test('drag middle block to end', async ({ page, request }) => {
+  test("drag middle block to end", async ({ page, request }) => {
     const { prosemirror } = await setupEditorWithBlocks(page, request);
 
-    const blocks = prosemirror.locator('.block-row');
+    const blocks = prosemirror.locator(".block-row");
     await expect(blocks).toHaveCount(3);
 
     // Drag second block to after third
     const result = await simulateBlockDrag(page, 1, 2, true);
 
     expect(result.success).toBe(true);
-    expect(result.newTexts).toEqual(['First paragraph', 'Third paragraph', 'Second paragraph']);
+    expect(result.newTexts).toEqual(["First paragraph", "Third paragraph", "Second paragraph"]);
   });
 
-  test('drag middle block to beginning', async ({ page, request }) => {
+  test("drag middle block to beginning", async ({ page, request }) => {
     const { prosemirror } = await setupEditorWithBlocks(page, request);
 
-    const blocks = prosemirror.locator('.block-row');
+    const blocks = prosemirror.locator(".block-row");
     await expect(blocks).toHaveCount(3);
 
     // Drag second block to before first
     const result = await simulateBlockDrag(page, 1, 0, false);
 
     expect(result.success).toBe(true);
-    expect(result.newTexts).toEqual(['Second paragraph', 'First paragraph', 'Third paragraph']);
+    expect(result.newTexts).toEqual(["Second paragraph", "First paragraph", "Third paragraph"]);
   });
 
-  test('drop indicator appears during drag', async ({ page, request }) => {
+  test("drop indicator appears during drag", async ({ page, request }) => {
     const { prosemirror } = await setupEditorWithBlocks(page, request);
 
     // Wait for blocks to be ready
-    const blocks = prosemirror.locator('.block-row');
+    const blocks = prosemirror.locator(".block-row");
     await expect(blocks).toHaveCount(3);
 
     // Hover to make handles visible
@@ -222,10 +217,10 @@ test.describe('Block drag and drop reordering', () => {
     const indicatorVisible = await page.evaluate(async () => {
       const editor = document.querySelector('[data-testid="wysiwyg-editor"] .ProseMirror') as HTMLElement;
       const handles = editor.querySelectorAll('[data-testid="row-handle"]') as NodeListOf<HTMLElement>;
-      const blockElements = editor.querySelectorAll('.block-row');
+      const blockElements = editor.querySelectorAll(".block-row");
 
       if (handles.length < 1 || blockElements.length < 3) {
-        return { success: false, error: 'Not enough blocks or handles' };
+        return { success: false, error: "Not enough blocks or handles" };
       }
 
       const sourceHandle = handles[0] as HTMLElement;
@@ -233,14 +228,14 @@ test.describe('Block drag and drop reordering', () => {
 
       // Create DataTransfer
       const dataTransfer = new DataTransfer();
-      dataTransfer.effectAllowed = 'move';
+      dataTransfer.effectAllowed = "move";
 
       // Get coordinates
       const handleRect = sourceHandle.getBoundingClientRect();
       const targetBlockRect = targetBlock.getBoundingClientRect();
 
       // 1. Dispatch dragstart
-      const dragStartEvent = new DragEvent('dragstart', {
+      const dragStartEvent = new DragEvent("dragstart", {
         bubbles: true,
         cancelable: true,
         dataTransfer,
@@ -253,7 +248,7 @@ test.describe('Block drag and drop reordering', () => {
 
       // 2. Dispatch dragover to trigger indicator
       const dropY = targetBlockRect.top + targetBlockRect.height * 0.75;
-      const dragOverEvent = new DragEvent('dragover', {
+      const dragOverEvent = new DragEvent("dragover", {
         bubbles: true,
         cancelable: true,
         clientX: targetBlockRect.left + targetBlockRect.width / 2,
@@ -281,9 +276,8 @@ test.describe('Block drag and drop reordering', () => {
         indicatorTop = style.top;
       }
 
-
       // 3. Cleanup - dispatch dragend on the editor (where ProseMirror listens)
-      const dragEndEvent = new DragEvent('dragend', {
+      const dragEndEvent = new DragEvent("dragend", {
         bubbles: true,
         cancelable: true,
         dataTransfer,

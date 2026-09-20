@@ -1,10 +1,10 @@
 // Page header component: cover image and icon display with edit UX.
 
-import { createSignal, Show } from 'solid-js';
-import { useI18n } from '../../i18n';
-import { IconPicker, IconDisplay } from './IconPicker';
-import AddPhotoIcon from '@material-symbols/svg-400/outlined/add_photo_alternate.svg?solid';
-import styles from './PageHeader.module.css';
+import { createSignal, Show } from "solid-js";
+import { useI18n } from "../../i18n";
+import { IconPicker, IconDisplay } from "./IconPicker";
+import AddPhotoIcon from "@material-symbols/svg-400/outlined/add_photo_alternate.svg?solid";
+import styles from "./PageHeader.module.css";
 
 interface PageHeaderProps {
   icon: string;
@@ -35,7 +35,7 @@ export function PageHeader(props: PageHeaderProps) {
     e.preventDefault();
     setDraggingCover(false);
     const file = e.dataTransfer?.files?.[0];
-    if (file && file.type.startsWith('image/')) {
+    if (file && file.type.startsWith("image/")) {
       handleCoverFileInput(file);
     }
   }
@@ -57,10 +57,10 @@ export function PageHeader(props: PageHeaderProps) {
           <img class={styles.coverImage} src={props.coverUrl} alt="" />
           <div class={styles.coverOverlay}>
             <button class={styles.coverBtn} onClick={() => coverInputRef?.click()}>
-              {t('editor.changeCover')}
+              {t("editor.changeCover")}
             </button>
-            <button class={styles.coverBtn} onClick={() => props.onCoverChange('')}>
-              {t('editor.removeCover')}
+            <button class={styles.coverBtn} onClick={() => props.onCoverChange("")}>
+              {t("editor.removeCover")}
             </button>
           </div>
         </div>
@@ -74,7 +74,7 @@ export function PageHeader(props: PageHeaderProps) {
             <button
               class={styles.iconButton}
               onClick={() => setShowIconPicker((v) => !v)}
-              title={t('editor.changeIcon') || 'Change icon'}
+              title={t("editor.changeIcon") || "Change icon"}
             >
               <IconDisplay icon={props.icon} class={styles.pageIcon} />
             </button>
@@ -86,7 +86,7 @@ export function PageHeader(props: PageHeaderProps) {
                   setShowIconPicker(false);
                 }}
                 onRemove={() => {
-                  props.onIconChange('');
+                  props.onIconChange("");
                   setShowIconPicker(false);
                 }}
                 onClose={() => setShowIconPicker(false)}
@@ -99,7 +99,7 @@ export function PageHeader(props: PageHeaderProps) {
         <div class={styles.hoverActions}>
           <Show when={!hasIcon()}>
             <button class={styles.hoverBtn} onClick={() => setShowIconPicker((v) => !v)}>
-              {t('editor.addIcon')}
+              {t("editor.addIcon")}
             </button>
             <Show when={showIconPicker()}>
               <IconPicker
@@ -116,7 +116,7 @@ export function PageHeader(props: PageHeaderProps) {
           <Show when={!hasCover()}>
             <button class={styles.hoverBtn} onClick={() => coverInputRef?.click()}>
               <AddPhotoIcon />
-              {t('editor.addCover')}
+              {t("editor.addCover")}
             </button>
           </Show>
         </div>
@@ -127,11 +127,11 @@ export function PageHeader(props: PageHeaderProps) {
         ref={(el) => (coverInputRef = el)}
         type="file"
         accept="image/*"
-        style={{ display: 'none' }}
+        style={{ display: "none" }}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleCoverFileInput(file);
-          e.target.value = '';
+          e.target.value = "";
         }}
       />
     </div>

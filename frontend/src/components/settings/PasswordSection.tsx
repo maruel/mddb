@@ -1,9 +1,9 @@
 // Password management section for adding or changing password.
 
-import { createSignal, Show } from 'solid-js';
-import { useAuth } from '../../contexts';
-import { useI18n } from '../../i18n';
-import styles from './PasswordSection.module.css';
+import { createSignal, Show } from "solid-js";
+import { useAuth } from "../../contexts";
+import { useI18n } from "../../i18n";
+import styles from "./PasswordSection.module.css";
 
 interface Props {
   hasPassword: boolean;
@@ -15,9 +15,9 @@ export default function PasswordSection(props: Props) {
   const { t } = useI18n();
   const { api } = useAuth();
 
-  const [currentPassword, setCurrentPassword] = createSignal('');
-  const [newPassword, setNewPassword] = createSignal('');
-  const [confirmPassword, setConfirmPassword] = createSignal('');
+  const [currentPassword, setCurrentPassword] = createSignal("");
+  const [newPassword, setNewPassword] = createSignal("");
+  const [confirmPassword, setConfirmPassword] = createSignal("");
   const [loading, setLoading] = createSignal(false);
 
   const handleSubmit = async (e: Event) => {
@@ -25,7 +25,7 @@ export default function PasswordSection(props: Props) {
 
     // Validate passwords match
     if (newPassword() !== confirmPassword()) {
-      props.onError(t('settings.passwordMismatch'));
+      props.onError(t("settings.passwordMismatch"));
       return;
     }
 
@@ -37,16 +37,16 @@ export default function PasswordSection(props: Props) {
       });
 
       // Clear form
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
 
-      props.onSuccess(props.hasPassword ? t('settings.passwordChanged') : t('settings.passwordAdded'));
+      props.onSuccess(props.hasPassword ? t("settings.passwordChanged") : t("settings.passwordAdded"));
 
       // Reload to update has_password state
       window.location.reload();
     } catch (err) {
-      props.onError(`${t('errors.failedToSave')}: ${err}`);
+      props.onError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -54,13 +54,13 @@ export default function PasswordSection(props: Props) {
 
   return (
     <div class={styles.section}>
-      <h3>{props.hasPassword ? t('settings.changePassword') : t('settings.addPassword')}</h3>
-      <p class={styles.hint}>{props.hasPassword ? t('settings.changePasswordHint') : t('settings.addPasswordHint')}</p>
+      <h3>{props.hasPassword ? t("settings.changePassword") : t("settings.addPassword")}</h3>
+      <p class={styles.hint}>{props.hasPassword ? t("settings.changePasswordHint") : t("settings.addPasswordHint")}</p>
 
       <form onSubmit={handleSubmit} class={styles.form}>
         <Show when={props.hasPassword}>
           <div class={styles.formItem}>
-            <label>{t('settings.currentPassword')}</label>
+            <label>{t("settings.currentPassword")}</label>
             <input
               type="password"
               value={currentPassword()}
@@ -72,7 +72,7 @@ export default function PasswordSection(props: Props) {
         </Show>
 
         <div class={styles.formItem}>
-          <label>{t('settings.newPassword')}</label>
+          <label>{t("settings.newPassword")}</label>
           <input
             type="password"
             value={newPassword()}
@@ -84,7 +84,7 @@ export default function PasswordSection(props: Props) {
         </div>
 
         <div class={styles.formItem}>
-          <label>{t('settings.confirmPassword')}</label>
+          <label>{t("settings.confirmPassword")}</label>
           <input
             type="password"
             value={confirmPassword()}
@@ -96,7 +96,7 @@ export default function PasswordSection(props: Props) {
         </div>
 
         <button type="submit" class={styles.submitButton} disabled={loading()}>
-          {loading() ? '...' : props.hasPassword ? t('settings.changePassword') : t('settings.addPassword')}
+          {loading() ? "..." : props.hasPassword ? t("settings.changePassword") : t("settings.addPassword")}
         </button>
       </form>
     </div>

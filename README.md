@@ -16,10 +16,10 @@ and then:
 
 \-\- Ivan Zhao, Notion CEO
 
-
 ## What is mddb?
 
 mddb lets you:
+
 - 📝 **Create and edit documents**: Write in markdown with live preview (Google Docs)
 - 📊 **Build tables**: Store structured data with typed columns and cross table references (Google Sheets)
 - 🗂️ **Organize information**: Create folders and nested structures (Google Drive)
@@ -30,6 +30,7 @@ mddb lets you:
 - 🚀 **Designed for LLM agents**: storage is easy for an agent to navigate
 
 > **Note**: mddb uses a two-level hierarchy:
+>
 > - **Organization**: Billing and administrative entity (like a company or team)
 > - **Workspace**: Isolated content container within an organization (like a project or department)
 > - **Table** instead of Notion's "Database" (a collection of records with columns)
@@ -57,6 +58,7 @@ data/
 ```
 
 Every content mutation is a git commit. You can:
+
 - Edit files directly with any text editor
 - Sync each workspace to GitHub, GitLab, or any git remote
 - Use git history, branches, and merge workflows
@@ -78,6 +80,7 @@ A: The data is itself in text form.
 ## Advanced Users
 
 For developers or advanced setup:
+
 - Review [AGENTS.md](AGENTS.md) for development guidelines
 
 ## Building from Source
@@ -104,17 +107,17 @@ make test
 
 ## Comparison
 
-| Feature | Notion | Obsidian | HackMD / ([CodiMD](https://github.com/hackmdio/codimd)) |
-| - | - | - | - |
-| Organization | ✅ | ✅ | ✅ |
-| Workspace | ✅ | ✅ | ✅ |
-| Git native storage | ❌ | ❌ | ❌ |
-| Export to Git | ❌ | ✅ | ✅ |
-| Markdown | ✅ | ✅ | ✅ |
-| Self hosted | ❌ | ✅ | ✅ |
-| Backend open source | ❌ | ❌ | ✅ |
-| Web app first | ✅ | ❌ | ✅ |
-| Native table support | ✅ | ✅ | ❌ |
+| Feature              | Notion | Obsidian | HackMD / ([CodiMD](https://github.com/hackmdio/codimd)) |
+| -------------------- | ------ | -------- | ------------------------------------------------------- |
+| Organization         | ✅     | ✅       | ✅                                                      |
+| Workspace            | ✅     | ✅       | ✅                                                      |
+| Git native storage   | ❌     | ❌       | ❌                                                      |
+| Export to Git        | ❌     | ✅       | ✅                                                      |
+| Markdown             | ✅     | ✅       | ✅                                                      |
+| Self hosted          | ❌     | ✅       | ✅                                                      |
+| Backend open source  | ❌     | ❌       | ✅                                                      |
+| Web app first        | ✅     | ❌       | ✅                                                      |
+| Native table support | ✅     | ✅       | ❌                                                      |
 
 ## License
 

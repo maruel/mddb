@@ -1,6 +1,6 @@
 // Utilities for creating authenticated and retry-enabled API clients.
 
-import { createAPIClient, APIError, type FetchFn } from '@sdk/api.gen';
+import { createAPIClient, APIError, type FetchFn } from "@sdk/api.gen";
 
 export { APIError };
 
@@ -54,7 +54,7 @@ function withRetry(fetchFn: FetchFn): FetchFn {
       if (!isRetryableStatus(response.status) || attempt >= RETRY_CONFIG.maxRetries) {
         return response;
       }
-      const retryAfterMs = parseRetryAfter(response.headers.get('Retry-After'));
+      const retryAfterMs = parseRetryAfter(response.headers.get("Retry-After"));
       const delay = getRetryDelay(attempt, retryAfterMs);
       await new Promise((resolve) => setTimeout(resolve, delay));
       attempt++;
@@ -74,7 +74,7 @@ export function createAuthFetch(getToken: () => string | null, onUnauthorized?: 
       ...init?.headers,
     };
     if (token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+      (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
     }
     const res = await fetch(url, { ...init, headers });
     if (res.status === 401 && onUnauthorized) {

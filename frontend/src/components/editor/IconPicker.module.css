@@ -113,7 +113,7 @@
 /* Use Noto Color Emoji for consistent cross-platform emoji rendering. */
 .emojiBtn,
 .emojiDisplay {
-  font-family: 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', emoji;
+  font-family: "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji", emoji;
 }
 
 .emojiBtn {

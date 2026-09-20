@@ -1,28 +1,28 @@
 // Node view component displaying editor or table based on node type.
 
-import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack } from 'solid-js';
-import { useParams, useNavigate, useSearchParams } from '@solidjs/router';
-import TableTable from '../components/TableTable';
-import TableList from '../components/TableList';
-import TableGallery from '../components/TableGallery';
-import TableBoard from '../components/TableBoard';
-import RecordDetail from '../components/RecordDetail';
-import ViewTabs from '../components/table/ViewTabs';
-import { AddColumnDropdown } from '../components/table/AddColumnDropdown';
-import MarkdownPreview from '../components/MarkdownPreview';
-import { PageHeader } from '../components/editor/PageHeader';
-import { useAssetUpload } from '../components/editor/useAssetUpload';
-import { useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from '../contexts';
-import { useI18n } from '../i18n';
-import { nodeUrl, stripSlug } from '../utils/urls';
-import { relativeLinksToSpaUrls } from '../utils/markdown-utils';
-import type { Property, Commit } from '@sdk/types.gen';
-import styles from './WorkspaceSection.module.css';
-import EditIcon from '@material-symbols/svg-400/outlined/edit.svg?solid';
-import SyncIcon from '@material-symbols/svg-400/outlined/sync.svg?solid';
-import CloudDoneIcon from '@material-symbols/svg-400/outlined/cloud_done.svg?solid';
+import { createEffect, createMemo, Show, For, Suspense, lazy, createSignal, on, untrack } from "solid-js";
+import { useParams, useNavigate, useSearchParams } from "@solidjs/router";
+import TableTable from "../components/TableTable";
+import TableList from "../components/TableList";
+import TableGallery from "../components/TableGallery";
+import TableBoard from "../components/TableBoard";
+import RecordDetail from "../components/RecordDetail";
+import ViewTabs from "../components/table/ViewTabs";
+import { AddColumnDropdown } from "../components/table/AddColumnDropdown";
+import MarkdownPreview from "../components/MarkdownPreview";
+import { PageHeader } from "../components/editor/PageHeader";
+import { useAssetUpload } from "../components/editor/useAssetUpload";
+import { useAuth, useWorkspace, useEditor, useRecords, DEFAULT_VIEW_ID } from "../contexts";
+import { useI18n } from "../i18n";
+import { nodeUrl, stripSlug } from "../utils/urls";
+import { relativeLinksToSpaUrls } from "../utils/markdown-utils";
+import type { Property, Commit } from "@sdk/types.gen";
+import styles from "./WorkspaceSection.module.css";
+import EditIcon from "@material-symbols/svg-400/outlined/edit.svg?solid";
+import SyncIcon from "@material-symbols/svg-400/outlined/sync.svg?solid";
+import CloudDoneIcon from "@material-symbols/svg-400/outlined/cloud_done.svg?solid";
 
-const Editor = lazy(() => import('../components/editor/Editor'));
+const Editor = lazy(() => import("../components/editor/Editor"));
 
 export default function NodeView() {
   const { t } = useI18n();
@@ -61,10 +61,10 @@ export default function NodeView() {
 
   const coverUpload = useAssetUpload({
     get wsId() {
-      return user()?.workspace_id ?? '';
+      return user()?.workspace_id ?? "";
     },
     get nodeId() {
-      return selectedNodeId() ?? '';
+      return selectedNodeId() ?? "";
     },
     getToken: () => token(),
   });
@@ -89,7 +89,7 @@ export default function NodeView() {
 
   // Derive view type from active view in RecordsContext
   const activeView = createMemo(() => views().find((v) => v.id === activeViewId()));
-  const viewType = createMemo(() => activeView()?.type || 'table');
+  const viewType = createMemo(() => activeView()?.type || "table");
 
   // Signal: true once the URL ?view= param has been applied for the current node.
   // This gates the URL sync effect so it cannot fire before initialization is complete,
@@ -102,8 +102,8 @@ export default function NodeView() {
       () => stripSlug(params.nodeId),
       () => {
         setViewParamApplied(false);
-      }
-    )
+      },
+    ),
   );
 
   // 2. Apply URL ?view= param and track back/forward navigation.
@@ -189,7 +189,7 @@ export default function NodeView() {
       setSelectedNodeData({ ...nodeData, properties: updatedProperties });
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t('errors.failedToSave')}: ${err}`);
+      setSaveError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setSavingNodeId(null);
     }
@@ -237,7 +237,7 @@ export default function NodeView() {
     const nodeData = selectedNodeData();
     if (!nodeId || !nodeData) return;
     const currentProperties: Property[] = [...(nodeData.properties || [])];
-    const newColumn: Property = { name: 'New Column', type: 'text', required: false };
+    const newColumn: Property = { name: "New Column", type: "text", required: false };
     currentProperties.splice(beforeIndex, 0, newColumn);
     await updateTableProperties(nodeId, currentProperties);
   }
@@ -247,7 +247,7 @@ export default function NodeView() {
     if (!result) {
       const err = coverUpload.error();
       if (err) setSaveError(err);
-      return '';
+      return "";
     }
     // Reload node to get updated asset URLs
     const nodeId = selectedNodeId();
@@ -261,11 +261,11 @@ export default function NodeView() {
     try {
       setLoadingPreview(true);
       const data = await ws.nodes.history.getNodeVersion(nodeId, commit.hash);
-      const wsId = user()?.workspace_id || '';
-      setPreviewContent(relativeLinksToSpaUrls(data.content || '', wsId));
+      const wsId = user()?.workspace_id || "";
+      setPreviewContent(relativeLinksToSpaUrls(data.content || "", wsId));
       setPreviewCommit(commit);
     } catch (err) {
-      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoadingPreview(false);
     }
@@ -288,9 +288,9 @@ export default function NodeView() {
         <div class={styles.editor}>
           <Show when={externalChange()}>
             <div class={styles.conflictBanner}>
-              <span>{t('sse.externalChange')}</span>
-              <button onClick={refreshFromServer}>{t('sse.refreshContent')}</button>
-              <button onClick={dismissExternalChange}>{t('sse.dismissNotice')}</button>
+              <span>{t("sse.externalChange")}</span>
+              <button onClick={refreshFromServer}>{t("sse.refreshContent")}</button>
+              <button onClick={dismissExternalChange}>{t("sse.dismissNotice")}</button>
             </div>
           </Show>
           <Show when={!previewCommit()}>
@@ -298,7 +298,7 @@ export default function NodeView() {
               <PageHeader
                 icon={icon()}
                 cover={cover()}
-                coverUrl={cover() ? (assetUrls()[cover()] ?? '') : ''}
+                coverUrl={cover() ? (assetUrls()[cover()] ?? "") : ""}
                 onIconChange={handleIconChange}
                 onCoverChange={handleCoverChange}
                 onUploadCover={handleUploadCover}
@@ -307,34 +307,34 @@ export default function NodeView() {
             <div class={styles.editorHeader}>
               <input
                 type="text"
-                placeholder={t('editor.titlePlaceholder') || 'Title'}
+                placeholder={t("editor.titlePlaceholder") || "Title"}
                 value={title()}
                 onInput={(e) => handleTitleChange(e.target.value)}
                 class={styles.titleInput}
               />
               <div class={styles.editorStatus}>
-                <Show when={hasUnsavedChanges() && autoSaveStatus() === 'idle'}>
+                <Show when={hasUnsavedChanges() && autoSaveStatus() === "idle"}>
                   <span class={styles.unsavedIndicator} role="status" aria-live="polite" aria-atomic="true">
                     <EditIcon aria-hidden="true" />
-                    <span>{t('editor.unsaved') || 'Unsaved'}</span>
+                    <span>{t("editor.unsaved") || "Unsaved"}</span>
                   </span>
                 </Show>
-                <Show when={autoSaveStatus() === 'saving'}>
+                <Show when={autoSaveStatus() === "saving"}>
                   <span class={styles.savingIndicator} role="status" aria-live="polite" aria-atomic="true">
                     <SyncIcon aria-hidden="true" />
-                    <span>{t('common.saving') || 'Saving...'}</span>
+                    <span>{t("common.saving") || "Saving..."}</span>
                   </span>
                 </Show>
-                <Show when={autoSaveStatus() === 'saved'}>
+                <Show when={autoSaveStatus() === "saved"}>
                   <span class={styles.savedIndicator} role="status" aria-live="polite" aria-atomic="true">
                     <CloudDoneIcon aria-hidden="true" />
-                    <span>{t('common.saved') || 'Saved'}</span>
+                    <span>{t("common.saved") || "Saved"}</span>
                   </span>
                 </Show>
-                <Show when={autoSaveStatus() === 'error'}>
+                <Show when={autoSaveStatus() === "error"}>
                   <span class={styles.saveErrorIndicator} role="status" aria-live="assertive" aria-atomic="true">
                     <span aria-hidden="true">!</span>
-                    <span>{t('errors.autoSaveFailed') || 'Auto-save failed'}</span>
+                    <span>{t("errors.autoSaveFailed") || "Auto-save failed"}</span>
                   </span>
                 </Show>
               </div>
@@ -343,7 +343,7 @@ export default function NodeView() {
 
           <Show when={showHistory()}>
             <div class={styles.historyPanel}>
-              <h3>{t('editor.versionHistory')}</h3>
+              <h3>{t("editor.versionHistory")}</h3>
               <ul class={styles.historyList}>
                 <For each={history()}>
                   {(commit) => (
@@ -372,7 +372,7 @@ export default function NodeView() {
                   )}
                 </For>
                 <Show when={history().length === 0}>
-                  <li class={styles.noHistory}>{t('editor.noHistory')}</li>
+                  <li class={styles.noHistory}>{t("editor.noHistory")}</li>
                 </Show>
               </ul>
             </div>
@@ -381,7 +381,7 @@ export default function NodeView() {
           <Show when={!previewCommit()}>
             <div class={styles.nodeContent}>
               <Show when={selectedNodeData()?.has_page}>
-                <Suspense fallback={<div class={styles.editorLoading}>{t('common.loading')}</div>}>
+                <Suspense fallback={<div class={styles.editorLoading}>{t("common.loading")}</div>}>
                   <Editor
                     content={content()}
                     nodeId={selectedNodeId() ?? undefined}
@@ -404,15 +404,15 @@ export default function NodeView() {
                 <div class={styles.tableView}>
                   <div class={styles.viewBar}>
                     <ViewTabs />
-                    <Show when={viewType() !== 'table'}>
+                    <Show when={viewType() !== "table"}>
                       <div class={styles.viewBarAddField}>
                         <AddColumnDropdown onAddColumn={handleAddColumn} />
                       </div>
                     </Show>
                   </div>
-                  <Show when={viewType() === 'table'}>
+                  <Show when={viewType() === "table"}>
                     <TableTable
-                      tableId={selectedNodeId() || ''}
+                      tableId={selectedNodeId() || ""}
                       columns={selectedNodeData()?.properties || []}
                       records={records()}
                       onAddRecord={addRecord}
@@ -434,7 +434,7 @@ export default function NodeView() {
                       onOpenRecord={(id) => setOpenRecordId(id)}
                     />
                   </Show>
-                  <Show when={viewType() === 'list'}>
+                  <Show when={viewType() === "list"}>
                     <TableList
                       records={records()}
                       columns={selectedNodeData()?.properties || []}
@@ -445,10 +445,10 @@ export default function NodeView() {
                       onOpenRecord={(id) => setOpenRecordId(id)}
                     />
                   </Show>
-                  <Show when={viewType() === 'calendar'}>
-                    <div class={styles.calendarPlaceholder}>{t('table.calendarNotAvailable')}</div>
+                  <Show when={viewType() === "calendar"}>
+                    <div class={styles.calendarPlaceholder}>{t("table.calendarNotAvailable")}</div>
                   </Show>
-                  <Show when={viewType() === 'gallery'}>
+                  <Show when={viewType() === "gallery"}>
                     <TableGallery
                       records={records()}
                       columns={selectedNodeData()?.properties || []}
@@ -459,7 +459,7 @@ export default function NodeView() {
                       onOpenRecord={(id) => setOpenRecordId(id)}
                     />
                   </Show>
-                  <Show when={viewType() === 'board'}>
+                  <Show when={viewType() === "board"}>
                     <TableBoard
                       records={records()}
                       columns={selectedNodeData()?.properties || []}
@@ -497,7 +497,7 @@ export default function NodeView() {
             <div class={styles.previewPane}>
               <div class={styles.previewHeader}>
                 <div class={styles.previewInfo}>
-                  <h4>{t('editor.versionPreview')}</h4>
+                  <h4>{t("editor.versionPreview")}</h4>
                   <span class={styles.previewMeta}>
                     {previewCommit()?.author_name} • {new Date(previewCommit()?.timestamp || 0).toLocaleString()}
                   </span>
@@ -509,11 +509,11 @@ export default function NodeView() {
                   }}
                   class={styles.closePreviewButton}
                 >
-                  {t('editor.closePreview')}
+                  {t("editor.closePreview")}
                 </button>
               </div>
               <div class={styles.previewContent}>
-                <MarkdownPreview content={previewContent() || ''} assetUrls={assetUrls()} onNavigate={navigate} />
+                <MarkdownPreview content={previewContent() || ""} assetUrls={assetUrls()} onNavigate={navigate} />
               </div>
             </div>
           </Show>

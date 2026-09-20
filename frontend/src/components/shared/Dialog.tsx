@@ -1,7 +1,7 @@
 // Accessible modal and drawer dialog foundation with focus management.
 
-import { createContext, onCleanup, onMount, useContext, type Accessor, type JSX } from 'solid-js';
-import styles from './Dialog.module.css';
+import { createContext, onCleanup, onMount, useContext, type Accessor, type JSX } from "solid-js";
+import styles from "./Dialog.module.css";
 
 type DismissRule = boolean | (() => boolean);
 
@@ -15,18 +15,18 @@ export interface DialogProps {
   dismissOnEscape: DismissRule;
   onClose: () => void;
   overlayClass?: string;
-  variant?: 'modal' | 'drawer';
+  variant?: "modal" | "drawer";
 }
 
 const focusableSelector =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function allowsDismissal(rule: DismissRule): boolean {
-  return typeof rule === 'function' ? rule() : rule;
+  return typeof rule === "function" ? rule() : rule;
 }
 
 function focusableElements(dialog: HTMLElement): HTMLElement[] {
-  return Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter((el) => !el.hasAttribute('hidden'));
+  return Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter((el) => !el.hasAttribute("hidden"));
 }
 
 /** Returns the current dialog element for overlays that must remain inside its modal tree. */
@@ -45,7 +45,7 @@ export function Dialog(props: DialogProps) {
   };
 
   const handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === 'Escape') {
+    if (event.key === "Escape") {
       event.preventDefault();
       if (allowsDismissal(props.dismissOnEscape)) {
         props.onClose();
@@ -53,7 +53,7 @@ export function Dialog(props: DialogProps) {
       return;
     }
 
-    if (event.key !== 'Tab' || !dialogRef) return;
+    if (event.key !== "Tab" || !dialogRef) return;
 
     const focusable = focusableElements(dialogRef);
     if (focusable.length === 0) {
@@ -76,27 +76,27 @@ export function Dialog(props: DialogProps) {
   };
 
   onMount(() => {
-    const autofocus = dialogRef?.querySelector<HTMLElement>('[autofocus]');
+    const autofocus = dialogRef?.querySelector<HTMLElement>("[autofocus]");
     const firstFocusable = dialogRef ? focusableElements(dialogRef)[0] : undefined;
     (autofocus ?? firstFocusable ?? dialogRef)?.focus();
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
   });
 
   onCleanup(() => {
-    document.removeEventListener('keydown', handleKeyDown);
+    document.removeEventListener("keydown", handleKeyDown);
     previousActiveElement?.focus();
   });
 
-  const variant = () => props.variant ?? 'modal';
+  const variant = () => props.variant ?? "modal";
 
   return (
     <div
-      class={`${styles.overlay} ${variant() === 'drawer' ? styles.drawerOverlay : ''} ${props.overlayClass ?? ''}`}
+      class={`${styles.overlay} ${variant() === "drawer" ? styles.drawerOverlay : ""} ${props.overlayClass ?? ""}`}
       onClick={handleBackdropClick}
     >
       <div
         ref={(el) => (dialogRef = el)}
-        class={`${styles.dialog} ${variant() === 'drawer' ? styles.drawer : ''} ${props.class ?? ''}`}
+        class={`${styles.dialog} ${variant() === "drawer" ? styles.drawer : ""} ${props.class ?? ""}`}
         role="dialog"
         aria-label={props.ariaLabel}
         aria-modal="true"

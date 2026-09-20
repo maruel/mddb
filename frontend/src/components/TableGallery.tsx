@@ -1,13 +1,13 @@
 // Gallery view for table records, emphasizing images.
 
-import { For, Show } from 'solid-js';
-import type { DataRecordResponse, Property } from '@sdk/types.gen';
-import { PropertyTypeURL } from '@sdk/types.gen';
-import { updateRecordField, handleEnterBlur, getRecordTitle } from './table/tableUtils';
-import { FieldEditor } from './table/FieldEditor';
-import { TableRow } from './table/TableRow';
-import { useI18n } from '../i18n';
-import styles from './TableGallery.module.css';
+import { For, Show } from "solid-js";
+import type { DataRecordResponse, Property } from "@sdk/types.gen";
+import { PropertyTypeURL } from "@sdk/types.gen";
+import { updateRecordField, handleEnterBlur, getRecordTitle } from "./table/tableUtils";
+import { FieldEditor } from "./table/FieldEditor";
+import { TableRow } from "./table/TableRow";
+import { useI18n } from "../i18n";
+import styles from "./TableGallery.module.css";
 
 interface TableGalleryProps {
   records: DataRecordResponse[];
@@ -27,9 +27,9 @@ export default function TableGallery(props: TableGalleryProps) {
     props.columns.find((c) => c.type === PropertyTypeURL) ??
     props.columns.find(
       (c) =>
-        c.name.toLowerCase().includes('image') ||
-        c.name.toLowerCase().includes('cover') ||
-        c.name.toLowerCase().includes('photo')
+        c.name.toLowerCase().includes("image") ||
+        c.name.toLowerCase().includes("cover") ||
+        c.name.toLowerCase().includes("photo"),
     );
 
   const titleColumn = () => props.columns[0];
@@ -43,7 +43,7 @@ export default function TableGallery(props: TableGalleryProps) {
 
   return (
     <div class={styles.container} data-testid="gallery-view">
-      <Show when={props.records.length > 0} fallback={<div class={styles.empty}>{t('table.noRecords')}</div>}>
+      <Show when={props.records.length > 0} fallback={<div class={styles.empty}>{t("table.noRecords")}</div>}>
         <div class={styles.gallery} data-testid="gallery">
           <For each={props.records}>
             {(record) => {
@@ -62,20 +62,20 @@ export default function TableGallery(props: TableGalleryProps) {
                       <div class={styles.imageContainer}>
                         <Show
                           when={record.data[col().name]}
-                          fallback={<div class={styles.imagePlaceholder}>{t('table.noImage')}</div>}
+                          fallback={<div class={styles.imagePlaceholder}>{t("table.noImage")}</div>}
                         >
                           <img
                             src={String(record.data[col().name])}
-                            alt={getRecordTitle(record, props.columns) || 'Record'}
+                            alt={getRecordTitle(record, props.columns) || "Record"}
                             class={styles.image}
                             onError={(e) => {
-                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.style.display = "none";
                               const sibling = e.currentTarget.nextSibling as HTMLElement | null;
-                              sibling?.style.setProperty('display', 'flex');
+                              sibling?.style.setProperty("display", "flex");
                             }}
                           />
-                          <div class={styles.imagePlaceholder} style={{ display: 'none' }}>
-                            {t('table.noImage')}
+                          <div class={styles.imagePlaceholder} style={{ display: "none" }}>
+                            {t("table.noImage")}
                           </div>
                         </Show>
                       </div>
@@ -88,7 +88,7 @@ export default function TableGallery(props: TableGalleryProps) {
                           <input
                             type="text"
                             value={getRecordTitle(record, props.columns)}
-                            placeholder={t('table.untitled') || 'Untitled'}
+                            placeholder={t("table.untitled") || "Untitled"}
                             onBlur={(e) => updateRecordField(record, col().name, e.target.value, props.onUpdateRecord)}
                             onKeyDown={handleEnterBlur}
                             class={styles.titleInput}
@@ -119,11 +119,11 @@ export default function TableGallery(props: TableGalleryProps) {
       </Show>
       <div class={styles.statusBar}>
         <span>
-          {props.records.length} {t('table.recordCount') || 'records'}
+          {props.records.length} {t("table.recordCount") || "records"}
         </span>
         <Show when={props.onAddRecord}>
           <button class={styles.addRecord} onClick={() => props.onAddRecord?.()}>
-            + {t('table.addRecord') || 'Add Record'}
+            + {t("table.addRecord") || "Add Record"}
           </button>
         </Show>
       </div>

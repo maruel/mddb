@@ -23,17 +23,17 @@ const RELATIVE_LINK_PATTERN = /\[([^\]]*)\]\(([^)]+\/index\.md)\)/g;
  * @returns Content with relative paths replaced by SPA URLs
  */
 export function relativeLinksToSpaUrls(content: string, wsId: string): string {
-  if (!content || !wsId || !content.includes('/index.md)')) return content;
+  if (!content || !wsId || !content.includes("/index.md)")) return content;
 
   return content.replace(RELATIVE_LINK_PATTERN, (match, text, href) => {
     // Skip absolute or external links.
-    if (href.startsWith('/') || href.startsWith('http')) return match;
+    if (href.startsWith("/") || href.startsWith("http")) return match;
 
     // Extract nodeId from directory name: "../nodeId/index.md" -> "nodeId"
-    const lastSlash = href.lastIndexOf('/');
+    const lastSlash = href.lastIndexOf("/");
     if (lastSlash < 0) return match;
     const dir = href.substring(0, lastSlash);
-    const secondLastSlash = dir.lastIndexOf('/');
+    const secondLastSlash = dir.lastIndexOf("/");
     const nodeId = secondLastSlash >= 0 ? dir.substring(secondLastSlash + 1) : dir;
 
     // Validate: node IDs are uppercase alphanumeric (base32)
@@ -61,9 +61,9 @@ const SPA_LINK_PATTERN = /\[([^\]]*)\]\(\/w\/@([^/+]+)(?:\+[^/]*)?\/@([A-Za-z0-9
  * @returns Content with SPA URLs replaced by relative file paths
  */
 export function spaUrlsToRelativeLinks(content: string, wsId: string): string {
-  if (!content || !wsId || !content.includes('/w/@')) return content;
+  if (!content || !wsId || !content.includes("/w/@")) return content;
 
-  return content.replace(new RegExp(SPA_LINK_PATTERN.source, 'g'), (match, text, linkWsId, nodeId) => {
+  return content.replace(new RegExp(SPA_LINK_PATTERN.source, "g"), (match, text, linkWsId, nodeId) => {
     // Skip cross-workspace links.
     if (linkWsId !== wsId) return match;
     return `[${text}](../${nodeId}/index.md)`;
@@ -82,7 +82,7 @@ export function extractLinkedNodeIds(markdown: string, currentWsId: string): str
   if (!markdown || !currentWsId) return [];
 
   const seen = new Set<string>();
-  const pattern = new RegExp(SPA_LINK_PATTERN.source, 'g');
+  const pattern = new RegExp(SPA_LINK_PATTERN.source, "g");
   let match;
 
   while ((match = pattern.exec(markdown)) !== null) {

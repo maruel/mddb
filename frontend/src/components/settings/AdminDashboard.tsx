@@ -1,14 +1,14 @@
 // Admin dashboard showing server-wide stats, org/workspace breakdown, and request metrics.
 
-import { createSignal, createEffect, For, Show } from 'solid-js';
-import { useAuth } from '../../contexts';
-import { useI18n } from '../../i18n';
-import type { AdminServerDetail } from '@sdk/types.gen';
-import styles from './AdminDashboard.module.css';
+import { createSignal, createEffect, For, Show } from "solid-js";
+import { useAuth } from "../../contexts";
+import { useI18n } from "../../i18n";
+import type { AdminServerDetail } from "@sdk/types.gen";
+import styles from "./AdminDashboard.module.css";
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
 }
@@ -28,7 +28,7 @@ function formatDate(unixSeconds: number): string {
 }
 
 function reqPerMin(count: number, uptimeSeconds: number): string {
-  if (uptimeSeconds <= 0) return '0';
+  if (uptimeSeconds <= 0) return "0";
   return ((count / uptimeSeconds) * 60).toFixed(1);
 }
 
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
       const resp = await api().admin.getServerDetail();
       setData(resp);
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -72,30 +72,30 @@ export default function AdminDashboard() {
               <div class={styles.summaryCards}>
                 <div class={styles.card}>
                   <div class={styles.cardValue}>{d().user_count}</div>
-                  <div class={styles.cardLabel}>{t('server.totalUsers')}</div>
+                  <div class={styles.cardLabel}>{t("server.totalUsers")}</div>
                 </div>
                 <div class={styles.card}>
                   <div class={styles.cardValue}>{d().org_count}</div>
-                  <div class={styles.cardLabel}>{t('server.totalOrganizations')}</div>
+                  <div class={styles.cardLabel}>{t("server.totalOrganizations")}</div>
                 </div>
                 <div class={styles.card}>
                   <div class={styles.cardValue}>{d().workspace_count}</div>
-                  <div class={styles.cardLabel}>{t('server.totalWorkspaces')}</div>
+                  <div class={styles.cardLabel}>{t("server.totalWorkspaces")}</div>
                 </div>
                 <div class={styles.card}>
                   <div class={styles.cardValue}>{formatBytes(d().total_storage)}</div>
-                  <div class={styles.cardLabel}>{t('server.totalStorage')}</div>
+                  <div class={styles.cardLabel}>{t("server.totalStorage")}</div>
                 </div>
                 <div class={styles.card}>
                   <div class={styles.cardValue}>{d().active_sessions}</div>
-                  <div class={styles.cardLabel}>{t('server.activeSessions')}</div>
+                  <div class={styles.cardLabel}>{t("server.activeSessions")}</div>
                 </div>
               </div>
 
               {/* Refresh */}
               <div class={styles.refreshRow}>
                 <button class={styles.refreshButton} onClick={load} disabled={loading()}>
-                  {t('server.refresh')}
+                  {t("server.refresh")}
                 </button>
               </div>
 
@@ -104,13 +104,13 @@ export default function AdminDashboard() {
                 <thead>
                   <tr>
                     <th>
-                      {t('server.organizationName')} / {t('server.workspaceName')}
+                      {t("server.organizationName")} / {t("server.workspaceName")}
                     </th>
-                    <th class={styles.numCell}>{t('server.members')}</th>
-                    <th class={styles.numCell}>{t('server.pages')}</th>
-                    <th class={styles.numCell}>{t('server.storage')}</th>
-                    <th class={styles.numCell}>{t('server.gitCommits')}</th>
-                    <th>{t('server.created')}</th>
+                    <th class={styles.numCell}>{t("server.members")}</th>
+                    <th class={styles.numCell}>{t("server.pages")}</th>
+                    <th class={styles.numCell}>{t("server.storage")}</th>
+                    <th class={styles.numCell}>{t("server.gitCommits")}</th>
+                    <th>{t("server.created")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -145,38 +145,38 @@ export default function AdminDashboard() {
 
               {/* Request metrics */}
               <div class={styles.metricsSection}>
-                <h3>{t('server.requestMetrics')}</h3>
+                <h3>{t("server.requestMetrics")}</h3>
                 <div class={styles.metricsGrid}>
                   <div class={styles.metric}>
-                    <div class={styles.metricLabel}>{t('server.serverUptime')}</div>
+                    <div class={styles.metricLabel}>{t("server.serverUptime")}</div>
                     <div class={styles.metricValue}>{formatUptime(metrics().uptime_seconds)}</div>
                   </div>
                   <div class={styles.metric}>
-                    <div class={styles.metricLabel}>{t('server.authRequests')}</div>
+                    <div class={styles.metricLabel}>{t("server.authRequests")}</div>
                     <div class={styles.metricValue}>{metrics().auth_count.toLocaleString()}</div>
                     <div class={styles.metricRate}>
-                      {reqPerMin(metrics().auth_count, metrics().uptime_seconds)} {t('server.reqPerMin')}
+                      {reqPerMin(metrics().auth_count, metrics().uptime_seconds)} {t("server.reqPerMin")}
                     </div>
                   </div>
                   <div class={styles.metric}>
-                    <div class={styles.metricLabel}>{t('server.writeRequests')}</div>
+                    <div class={styles.metricLabel}>{t("server.writeRequests")}</div>
                     <div class={styles.metricValue}>{metrics().write_count.toLocaleString()}</div>
                     <div class={styles.metricRate}>
-                      {reqPerMin(metrics().write_count, metrics().uptime_seconds)} {t('server.reqPerMin')}
+                      {reqPerMin(metrics().write_count, metrics().uptime_seconds)} {t("server.reqPerMin")}
                     </div>
                   </div>
                   <div class={styles.metric}>
-                    <div class={styles.metricLabel}>{t('server.readAuthRequests')}</div>
+                    <div class={styles.metricLabel}>{t("server.readAuthRequests")}</div>
                     <div class={styles.metricValue}>{metrics().read_auth_count.toLocaleString()}</div>
                     <div class={styles.metricRate}>
-                      {reqPerMin(metrics().read_auth_count, metrics().uptime_seconds)} {t('server.reqPerMin')}
+                      {reqPerMin(metrics().read_auth_count, metrics().uptime_seconds)} {t("server.reqPerMin")}
                     </div>
                   </div>
                   <div class={styles.metric}>
-                    <div class={styles.metricLabel}>{t('server.readUnauthRequests')}</div>
+                    <div class={styles.metricLabel}>{t("server.readUnauthRequests")}</div>
                     <div class={styles.metricValue}>{metrics().read_unauth_count.toLocaleString()}</div>
                     <div class={styles.metricRate}>
-                      {reqPerMin(metrics().read_unauth_count, metrics().uptime_seconds)} {t('server.reqPerMin')}
+                      {reqPerMin(metrics().read_unauth_count, metrics().uptime_seconds)} {t("server.reqPerMin")}
                     </div>
                   </div>
                 </div>

@@ -1,12 +1,12 @@
 // Dropdown menu for user profile and logout.
 
-import { createSignal, Show } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
-import { useI18n } from '../i18n';
-import { useAuth } from '../contexts';
-import { useClickOutside } from '../composables/useClickOutside';
-import { Button, Menu, MenuItem } from './shared';
-import styles from './UserMenu.module.css';
+import { createSignal, Show } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import { useI18n } from "../i18n";
+import { useAuth } from "../contexts";
+import { useClickOutside } from "../composables/useClickOutside";
+import { Button, Menu, MenuItem } from "./shared";
+import styles from "./UserMenu.module.css";
 
 interface UserMenuProps {
   onProfile: () => void;
@@ -37,28 +37,28 @@ export default function UserMenu(props: UserMenuProps) {
   // Get initials from user name
   const getInitials = () => {
     const u = user();
-    if (!u) return '';
-    const name = u.name || u.email || '';
+    if (!u) return "";
+    const name = u.name || u.email || "";
     const parts = name.split(/[\s@]+/);
     if (parts.length >= 2 && parts[0] && parts[1]) {
-      return ((parts[0][0] || '') + (parts[1][0] || '')).toUpperCase();
+      return ((parts[0][0] || "") + (parts[1][0] || "")).toUpperCase();
     }
     return name.slice(0, 2).toUpperCase();
   };
 
-  const userName = () => user()?.name || '';
-  const userEmail = () => user()?.email || '';
+  const userName = () => user()?.name || "";
+  const userEmail = () => user()?.email || "";
   const workspaceRole = () => user()?.workspace_role;
 
   useClickOutside(
     () => menuRef,
-    () => setIsOpen(false)
+    () => setIsOpen(false),
   );
 
   const handleLogout = async () => {
     setIsOpen(false);
     await logout();
-    navigate('/');
+    navigate("/");
   };
 
   const handleProfile = () => {
@@ -74,21 +74,21 @@ export default function UserMenu(props: UserMenuProps) {
         class={styles.avatarButton}
         onClick={() => setIsOpen(!isOpen())}
         title={userName() || userEmail()}
-        aria-label={t('userMenu.label')}
+        aria-label={t("userMenu.label")}
         aria-expanded={isOpen()}
         aria-haspopup="menu"
         data-testid="user-menu-button"
       >
         <Show when={getAvatarUrl()} fallback={<span class={styles.initials}>{getInitials()}</span>}>
           {(url) => (
-            <img src={url()} alt={userName() || 'User'} class={styles.avatarImage} referrerPolicy="no-referrer" />
+            <img src={url()} alt={userName() || "User"} class={styles.avatarImage} referrerPolicy="no-referrer" />
           )}
         </Show>
       </Button>
 
       <Show when={isOpen()}>
         <Menu
-          ariaLabel={t('userMenu.label')}
+          ariaLabel={t("userMenu.label")}
           class={styles.dropdown}
           onClose={() => setIsOpen(false)}
           trigger={() => triggerRef}
@@ -102,10 +102,10 @@ export default function UserMenu(props: UserMenuProps) {
           </div>
           <div class={styles.divider} />
           <MenuItem class={styles.menuItem} onClick={handleProfile}>
-            {t('userMenu.profile')}
+            {t("userMenu.profile")}
           </MenuItem>
           <MenuItem class={styles.menuItem} onClick={handleLogout}>
-            {t('userMenu.logout')}
+            {t("userMenu.logout")}
           </MenuItem>
         </Menu>
       </Show>

@@ -1,20 +1,20 @@
 // Horizontal tabs for switching between saved table views.
 
-import { createSignal, For, Show } from 'solid-js';
-import { useRecords } from '../../contexts';
-import { useClickOutside } from '../../composables/useClickOutside';
-import { useI18n } from '../../i18n';
-import type { View, ViewType } from '@sdk/types.gen';
-import { ContextMenu, type ContextMenuAction } from '../shared';
-import styles from './ViewTabs.module.css';
+import { createSignal, For, Show } from "solid-js";
+import { useRecords } from "../../contexts";
+import { useClickOutside } from "../../composables/useClickOutside";
+import { useI18n } from "../../i18n";
+import type { View, ViewType } from "@sdk/types.gen";
+import { ContextMenu, type ContextMenuAction } from "../shared";
+import styles from "./ViewTabs.module.css";
 
-import TableRowsIcon from '@material-symbols/svg-400/outlined/table_rows.svg?solid';
-import GridGoldenratioIcon from '@material-symbols/svg-400/outlined/grid_goldenratio.svg?solid';
-import GridViewIcon from '@material-symbols/svg-400/outlined/grid_view.svg?solid';
-import ViewStreamIcon from '@material-symbols/svg-400/outlined/view_stream.svg?solid';
-import CalendarMonthIcon from '@material-symbols/svg-400/outlined/calendar_month.svg?solid';
-import AddIcon from '@material-symbols/svg-400/outlined/add.svg?solid';
-import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
+import TableRowsIcon from "@material-symbols/svg-400/outlined/table_rows.svg?solid";
+import GridGoldenratioIcon from "@material-symbols/svg-400/outlined/grid_goldenratio.svg?solid";
+import GridViewIcon from "@material-symbols/svg-400/outlined/grid_view.svg?solid";
+import ViewStreamIcon from "@material-symbols/svg-400/outlined/view_stream.svg?solid";
+import CalendarMonthIcon from "@material-symbols/svg-400/outlined/calendar_month.svg?solid";
+import AddIcon from "@material-symbols/svg-400/outlined/add.svg?solid";
+import DeleteIcon from "@material-symbols/svg-400/outlined/delete.svg?solid";
 
 const VIEW_ICONS: Record<ViewType, SolidSVG> = {
   table: TableRowsIcon,
@@ -35,12 +35,12 @@ export default function ViewTabs() {
 
   // Inline rename state
   const [renamingViewId, setRenamingViewId] = createSignal<string | null>(null);
-  const [renameValue, setRenameValue] = createSignal('');
+  const [renameValue, setRenameValue] = createSignal("");
 
   let addWrapperRef: HTMLDivElement | undefined;
   useClickOutside(
     () => addWrapperRef,
-    () => setShowNewViewMenu(false)
+    () => setShowNewViewMenu(false),
   );
 
   const handleTabClick = (viewId: string) => {
@@ -48,7 +48,7 @@ export default function ViewTabs() {
   };
 
   const handleNewView = (type: ViewType) => {
-    const name = t('table.newView') || 'New View';
+    const name = t("table.newView") || "New View";
     createView(name, type);
     setShowNewViewMenu(false);
   };
@@ -60,13 +60,13 @@ export default function ViewTabs() {
 
   const getTabActions = (view: View): ContextMenuAction[] => {
     const actions: ContextMenuAction[] = [
-      { id: 'rename', label: t('table.renameView') || 'Rename view' },
-      { id: 'duplicate', label: t('table.duplicateView') || 'Duplicate view' },
+      { id: "rename", label: t("table.renameView") || "Rename view" },
+      { id: "duplicate", label: t("table.duplicateView") || "Duplicate view" },
     ];
     if (!view.default) {
       actions.push({
-        id: 'delete',
-        label: t('common.delete') || 'Delete',
+        id: "delete",
+        label: t("common.delete") || "Delete",
         danger: true,
         separator: true,
       });
@@ -80,14 +80,14 @@ export default function ViewTabs() {
     if (!state) return;
 
     switch (actionId) {
-      case 'rename':
+      case "rename":
         setRenameValue(state.view.name);
         setRenamingViewId(state.view.id);
         break;
-      case 'duplicate':
-        createView(state.view.name + ' (copy)', state.view.type);
+      case "duplicate":
+        createView(state.view.name + " (copy)", state.view.type);
         break;
-      case 'delete':
+      case "delete":
         deleteView(state.view.id);
         break;
     }
@@ -128,8 +128,8 @@ export default function ViewTabs() {
                       onInput={(e) => setRenameValue(e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') commitRename();
-                        if (e.key === 'Escape') setRenamingViewId(null);
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") setRenamingViewId(null);
                         e.stopPropagation();
                       }}
                       onBlur={commitRename}
@@ -141,7 +141,7 @@ export default function ViewTabs() {
                   <button
                     class={styles.deleteBtn}
                     onClick={() => deleteView(view.id)}
-                    title={t('common.delete') || 'Delete'}
+                    title={t("common.delete") || "Delete"}
                     tabIndex={-1}
                   >
                     <DeleteIcon />
@@ -159,38 +159,38 @@ export default function ViewTabs() {
         <button
           class={styles.addButton}
           onClick={() => setShowNewViewMenu(!showNewViewMenu())}
-          title={t('table.newView') || 'New View'}
+          title={t("table.newView") || "New View"}
           data-testid="add-view-button"
         >
           <AddIcon />
-          <span>{t('table.newView') || 'New View'}</span>
+          <span>{t("table.newView") || "New View"}</span>
         </button>
 
         <Show when={showNewViewMenu()}>
           <div class={styles.dropdown} data-testid="view-type-menu">
-            <button onClick={() => handleNewView('table')} data-testid="view-type-table">
+            <button onClick={() => handleNewView("table")} data-testid="view-type-table">
               <span class={styles.icon}>
                 <TableRowsIcon />
               </span>
-              {t('table.table')}
+              {t("table.table")}
             </button>
-            <button onClick={() => handleNewView('list')} data-testid="view-type-list">
+            <button onClick={() => handleNewView("list")} data-testid="view-type-list">
               <span class={styles.icon}>
                 <ViewStreamIcon />
               </span>
-              {t('table.list')}
+              {t("table.list")}
             </button>
-            <button onClick={() => handleNewView('gallery')} data-testid="view-type-gallery">
+            <button onClick={() => handleNewView("gallery")} data-testid="view-type-gallery">
               <span class={styles.icon}>
                 <GridViewIcon />
               </span>
-              {t('table.gallery')}
+              {t("table.gallery")}
             </button>
-            <button onClick={() => handleNewView('board')} data-testid="view-type-board">
+            <button onClick={() => handleNewView("board")} data-testid="view-type-board">
               <span class={styles.icon}>
                 <GridGoldenratioIcon />
               </span>
-              {t('table.board')}
+              {t("table.board")}
             </button>
           </div>
         </Show>

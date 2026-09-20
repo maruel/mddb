@@ -5,7 +5,7 @@ set -eu
 
 SHORT_SHA="${GITHUB_SHA:0:7}"
 DEPLOY_DIR=$(mktemp -d)
-echo "DEPLOY_DIR=$DEPLOY_DIR" >> "$GITHUB_ENV"
+echo "DEPLOY_DIR=$DEPLOY_DIR" >>"$GITHUB_ENV"
 cd "$DEPLOY_DIR"
 
 git init
@@ -21,7 +21,7 @@ fi
 mkdir -p reports
 rm -rf "reports/${SHORT_SHA}"
 cp -r "${GITHUB_WORKSPACE}/playwright-report" "reports/${SHORT_SHA}"
-date -u '+%Y-%m-%d %H:%M' > "reports/${SHORT_SHA}/.timestamp"
+date -u '+%Y-%m-%d %H:%M' >"reports/${SHORT_SHA}/.timestamp"
 rm -f reports/latest
 ln -s "${SHORT_SHA}" reports/latest
 
@@ -40,7 +40,7 @@ done
 cd ..
 
 # Generate index.html with links to all reports
-cat > index.html <<'HEADER'
+cat >index.html <<'HEADER'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -70,13 +70,12 @@ for dir in reports/*/; do
   [ "$dir" = "latest" ] && continue
   ts=$(cat "reports/${dir}/.timestamp" 2>/dev/null || echo "unknown")
   printf '%s\t<tr><td><code>%s</code></td><td>%s</td><td><a href="reports/%s/">View</a></td><td><a href="reports/%s/server.log">Log</a></td></tr>\n' "$ts" "$dir" "$ts" "$dir" "$dir"
-done | sort -r | cut -f2- >> index.html
+done | sort -r | cut -f2- >>index.html
 
-echo '</table></body></html>' >> index.html
+echo '</table></body></html>' >>index.html
 
 # Commit and push
 git add -A
 git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
   commit -m "Playwright report for ${SHORT_SHA}" || exit 0
 git push origin HEAD:gh-pages
-

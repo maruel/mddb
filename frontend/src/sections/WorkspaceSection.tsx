@@ -1,7 +1,7 @@
 // Workspace section module wrapping providers and nested routes.
 
-import { type ParentComponent } from 'solid-js';
-import { WorkspaceProvider, EventSourceProvider, EditorProvider, RecordsProvider } from '../contexts';
+import { type ParentComponent } from "solid-js";
+import { WorkspaceProvider, EventSourceProvider, EditorProvider, RecordsProvider } from "../contexts";
 
 /**
  * WorkspaceSection is the self-contained module for workspace functionality.
@@ -34,6 +34,6 @@ const WorkspaceSection: ParentComponent = (props) => {
 export default WorkspaceSection;
 
 // Re-export components for use in route definitions
-export { default as WorkspaceLayout } from './WorkspaceLayout';
-export { default as WorkspaceRoot } from './WorkspaceRoot';
-export { default as NodeView } from './NodeView';
+export { default as WorkspaceLayout } from "./WorkspaceLayout";
+export { default as WorkspaceRoot } from "./WorkspaceRoot";
+export { default as NodeView } from "./NodeView";

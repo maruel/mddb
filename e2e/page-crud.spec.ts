@@ -1,47 +1,47 @@
 // E2E tests for page create, read, update, and delete operations.
-import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from './helpers';
+import { test, expect, registerUser, getWorkspaceId, fillEditorContent, createClient } from "./helpers";
 
-test.describe('Page CRUD Operations', () => {
-  test('delete a page - page removed from sidebar and content area cleared', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'delete-page');
+test.describe("Page CRUD Operations", () => {
+  test("delete a page - page removed from sidebar and content area cleared", async ({ page, request }) => {
+    const { token } = await registerUser(request, "delete-page");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId('connection-status')).toHaveText('Connected', { timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId("connection-status")).toHaveText("Connected", { timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page to delete
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Page To Delete',
-      content: 'This page will be deleted',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Page To Delete",
+      content: "This page will be deleted",
     });
     const pageID = pageData.id;
 
     // Reload to see the page
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     const pageNode = page.locator(`[data-testid="sidebar-node-${pageID}"]`);
     await expect(pageNode).toBeVisible({ timeout: 5000 });
     await pageNode.click();
-    await expect(page.getByText('This page will be deleted', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("This page will be deleted", { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Set up dialog handler BEFORE any action that might trigger it
     // Use 'once' to handle exactly one dialog
-    page.once('dialog', async (dialog) => {
+    page.once("dialog", async (dialog) => {
       await dialog.accept();
     });
 
     // Hover over the page item to reveal its pointer delete affordance.
     // The accessible tree owns the sole Tab stop; deletion is also exposed
     // through its keyboard context menu.
-    const pageItem = pageNode.locator('> div').first();
+    const pageItem = pageNode.locator("> div").first();
     await pageItem.hover();
 
     // Use the control's stable identity rather than its non-focusable DOM tag.
-    const deleteButton = pageItem.getByTestId('delete-node-button');
+    const deleteButton = pageItem.getByTestId("delete-node-button");
     await expect(deleteButton).toBeVisible({ timeout: 3000 });
     await deleteButton.click();
 
@@ -55,37 +55,37 @@ test.describe('Page CRUD Operations', () => {
       const isVisible = await titleInput.isVisible();
       if (isVisible) {
         const value = await titleInput.inputValue();
-        expect(value).not.toBe('Page To Delete');
+        expect(value).not.toBe("Page To Delete");
       }
     }).toPass({ timeout: 5000 });
 
     // Verify via API that the page no longer exists
     try {
       await client.ws(wsID).nodes.page.getPage(pageID);
-      throw new Error('Should have thrown 404');
+      throw new Error("Should have thrown 404");
     } catch (e) {
       const error = e as { status: number };
       expect(error.status).toBe(404);
     }
   });
 
-  test('page title updates in sidebar as user types (real-time sync)', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'sidebar-sync');
+  test("page title updates in sidebar as user types (real-time sync)", async ({ page, request }) => {
+    const { token } = await registerUser(request, "sidebar-sync");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Original Title',
-      content: 'Content here',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Original Title",
+      content: "Content here",
     });
     const pageID = pageData.id;
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     const pageNode = page.locator(`[data-testid="sidebar-node-${pageID}"]`);
@@ -93,272 +93,275 @@ test.describe('Page CRUD Operations', () => {
 
     // Wait for title input to be ready with correct value
     const titleInput = page.locator('input[placeholder*="Title"]');
-    await expect(titleInput).toHaveValue('Original Title', { timeout: 5000 });
+    await expect(titleInput).toHaveValue("Original Title", { timeout: 5000 });
 
     // Get sidebar text element - title is in span with class pageTitleText
     const sidebarTitle = pageNode.locator('[class*="pageTitleText"]');
-    await expect(sidebarTitle).toContainText('Original Title');
+    await expect(sidebarTitle).toContainText("Original Title");
 
     // Type a new title
-    await titleInput.fill('Updated Title');
+    await titleInput.fill("Updated Title");
 
     // Sidebar should update immediately (optimistic update)
-    await expect(sidebarTitle).toContainText('Updated Title', { timeout: 5000 });
+    await expect(sidebarTitle).toContainText("Updated Title", { timeout: 5000 });
   });
 
-  test('unsaved indicator appears when editing and disappears after save', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'unsaved-ind');
+  test("unsaved indicator appears when editing and disappears after save", async ({ page, request }) => {
+    const { token } = await registerUser(request, "unsaved-ind");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Test Page',
-      content: 'Initial content',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Test Page",
+      content: "Initial content",
     });
     const pageID = pageData.id;
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageID}"]`).click();
-    await expect(page.getByText('Initial content', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Initial content", { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Initially, no unsaved editor status (use the dedicated status class).
     const unsavedIndicator = page.locator('[class*="unsavedIndicator"]');
     await expect(unsavedIndicator).not.toBeVisible();
 
     // Edit the content (switch to markdown mode for reliable interaction)
-    await fillEditorContent(page, 'Modified content');
+    await fillEditorContent(page, "Modified content");
 
     // Unsaved indicator should appear
     await expect(unsavedIndicator).toBeVisible({ timeout: 2000 });
-    await expect(unsavedIndicator).toHaveText('Unsaved');
+    await expect(unsavedIndicator).toHaveText("Unsaved");
 
     // Wait for autosave to complete - the unsaved indicator should disappear
     // (saving may flash too quickly to catch reliably). The saved status is
     // deliberately retained long enough to announce a successful autosave.
     await expect(unsavedIndicator).not.toBeVisible({ timeout: 10000 });
-    await expect(page.locator('[class*="savedIndicator"]')).toHaveText('Saved', { timeout: 10000 });
+    await expect(page.locator('[class*="savedIndicator"]')).toHaveText("Saved", { timeout: 10000 });
 
     // Verify content was saved via API
     const savedData = await client.ws(wsID).nodes.page.getPage(pageID);
-    expect(savedData.content).toBe('Modified content');
+    expect(savedData.content).toBe("Modified content");
   });
 
-  test('shows a fixed transient failure message when autosave fails', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'autosave-feedback');
+  test("shows a fixed transient failure message when autosave fails", async ({ page, request }) => {
+    const { token } = await registerUser(request, "autosave-feedback");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Autosave feedback',
-      content: 'Initial content',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Autosave feedback",
+      content: "Initial content",
     });
 
     await page.reload();
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
-    await expect(page.locator('input[placeholder*="Title"]')).toHaveValue('Autosave feedback', { timeout: 5000 });
+    await expect(page.locator('input[placeholder*="Title"]')).toHaveValue("Autosave feedback", { timeout: 5000 });
 
     await page.route(`**/nodes/${pageData.id}/page`, async (route) => {
-      if (route.request().method() === 'POST') {
-        await route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":"save failed"}' });
+      if (route.request().method() === "POST") {
+        await route.fulfill({ status: 500, contentType: "application/json", body: '{"error":"save failed"}' });
         return;
       }
       await route.continue();
     });
-    await fillEditorContent(page, 'Unsaved after failed autosave');
+    await fillEditorContent(page, "Unsaved after failed autosave");
 
-    const feedback = page.getByTestId('workspace-feedback');
+    const feedback = page.getByTestId("workspace-feedback");
     await expect(feedback).toBeVisible({ timeout: 10000 });
-    await expect(feedback).toContainText('Auto-save failed');
-    await expect(feedback).toHaveCSS('position', 'fixed');
-    await expect(page.locator('[class*="saveErrorIndicator"]')).toContainText('Auto-save failed');
+    await expect(feedback).toContainText("Auto-save failed");
+    await expect(feedback).toHaveCSS("position", "fixed");
+    await expect(page.locator('[class*="saveErrorIndicator"]')).toContainText("Auto-save failed");
   });
 });
 
-test.describe('Page Navigation', () => {
-  test.screenshot('browser back button navigates between pages', async ({ page, request, takeScreenshot }) => {
-    const { token } = await registerUser(request, 'browser-nav');
+test.describe("Page Navigation", () => {
+  test.screenshot("browser back button navigates between pages", async ({ page, request, takeScreenshot }) => {
+    const { token } = await registerUser(request, "browser-nav");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create two pages
-    const page1Data = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Nav Page 1',
-      content: 'Content of page 1',
+    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Nav Page 1",
+      content: "Content of page 1",
     });
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Nav Page 2',
-      content: 'Content of page 2',
+    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Nav Page 2",
+      content: "Content of page 2",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-    await takeScreenshot('workspace-with-pages');
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    await takeScreenshot("workspace-with-pages");
 
     // Navigate to page 1
     await page.locator(`[data-testid="sidebar-node-${page1Data.id}"]`).click();
-    await expect(page.getByText('Content of page 1', { exact: true })).toBeVisible({ timeout: 5000 });
-    await takeScreenshot('page1-view');
+    await expect(page.getByText("Content of page 1", { exact: true })).toBeVisible({ timeout: 5000 });
+    await takeScreenshot("page1-view");
 
     // Navigate to page 2
     await page.locator(`[data-testid="sidebar-node-${page2Data.id}"]`).click();
-    await expect(page.getByText('Content of page 2', { exact: true })).toBeVisible({ timeout: 5000 });
-    await takeScreenshot('page2-view');
+    await expect(page.getByText("Content of page 2", { exact: true })).toBeVisible({ timeout: 5000 });
+    await takeScreenshot("page2-view");
 
     // Click browser back button
     await page.goBack();
 
     // Should show page 1 again
-    await expect(page.getByText('Content of page 1', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Content of page 1", { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Forward button should return to page 2
     await page.goForward();
-    await expect(page.getByText('Content of page 2', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Content of page 2", { exact: true })).toBeVisible({ timeout: 5000 });
   });
 
-  test('URL updates with page slug when navigating', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'url-slug');
+  test("URL updates with page slug when navigating", async ({ page, request }) => {
+    const { token } = await registerUser(request, "url-slug");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a specific title
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'My Awesome Page',
-      content: 'Content here',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "My Awesome Page",
+      content: "Content here",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
-    await expect(page.getByText('Content here', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Content here", { exact: true })).toBeVisible({ timeout: 5000 });
 
     // URL should contain workspace ID and page ID with slug
     await expect(page).toHaveURL(new RegExp(`/w/@${wsID}[^/]*/@${pageData.id}\\+my-awesome-page`));
   });
 
-  test('direct URL navigation loads correct page', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'direct-url');
+  test("direct URL navigation loads correct page", async ({ page, request }) => {
+    const { token } = await registerUser(request, "direct-url");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Direct URL Page',
-      content: 'Loaded via direct URL',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Direct URL Page",
+      content: "Loaded via direct URL",
     });
 
     // Navigate directly to the page URL
     await page.goto(`/w/@${wsID}/@${pageData.id}?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Page content should be visible
-    await expect(page.getByText('Loaded via direct URL', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Loaded via direct URL", { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Title input should have the correct value
     const titleInput = page.locator('input[placeholder*="Title"]');
-    await expect(titleInput).toHaveValue('Direct URL Page');
+    await expect(titleInput).toHaveValue("Direct URL Page");
   });
 
-  test.screenshot('direct URL navigation to grandchild expands sidebar ancestors', async ({ page, request, takeScreenshot }) => {
-    const { token } = await registerUser(request, 'direct-grandchild');
+  test.screenshot(
+    "direct URL navigation to grandchild expands sidebar ancestors",
+    async ({ page, request, takeScreenshot }) => {
+      const { token } = await registerUser(request, "direct-grandchild");
+      const client = createClient(request, token);
+      await page.goto(`/?token=${token}`);
+      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+
+      const wsID = await getWorkspaceId(page);
+
+      // Create parent -> child -> grandchild hierarchy
+      const parentData = await client.ws(wsID).nodes.page.createPage("0", {
+        title: "Parent",
+        content: "Parent content",
+      });
+
+      const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
+        title: "Child",
+        content: "Child content",
+      });
+
+      const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
+        title: "Grandchild",
+        content: "Grandchild content",
+      });
+
+      // Navigate directly to grandchild URL (fresh page load)
+      await page.goto(`/w/@${wsID}/@${grandchildData.id}?token=${token}`);
+      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+
+      // Grandchild content should be visible
+      await expect(page.getByText("Grandchild content", { exact: true })).toBeVisible({ timeout: 5000 });
+
+      await takeScreenshot("grandchild-direct-nav");
+
+      // Sidebar should show expanded tree with grandchild visible and highlighted
+      const grandchildNode = page.locator(`[data-testid="sidebar-node-${grandchildData.id}"]`);
+      await expect(grandchildNode).toBeVisible({ timeout: 5000 });
+
+      // Grandchild should be highlighted (active)
+      const grandchildPageItem = grandchildNode.locator('> [class*="pageItem"]');
+      await expect(grandchildPageItem).toHaveClass(/active/);
+
+      // Parent and child should be visible (expanded)
+      await expect(page.locator(`[data-testid="sidebar-node-${parentData.id}"]`)).toBeVisible();
+      await expect(page.locator(`[data-testid="sidebar-node-${childData.id}"]`)).toBeVisible();
+    },
+  );
+
+  test("direct URL navigation to great-grandchild expands all ancestors", async ({ page, request }) => {
+    const { token } = await registerUser(request, "direct-greatgrand");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    const wsID = await getWorkspaceId(page);
-
-    // Create parent -> child -> grandchild hierarchy
-    const parentData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Parent',
-      content: 'Parent content',
-    });
-
-    const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
-      title: 'Child',
-      content: 'Child content',
-    });
-
-    const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
-      title: 'Grandchild',
-      content: 'Grandchild content',
-    });
-
-    // Navigate directly to grandchild URL (fresh page load)
-    await page.goto(`/w/@${wsID}/@${grandchildData.id}?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    // Grandchild content should be visible
-    await expect(page.getByText('Grandchild content', { exact: true })).toBeVisible({ timeout: 5000 });
-
-    await takeScreenshot('grandchild-direct-nav');
-
-    // Sidebar should show expanded tree with grandchild visible and highlighted
-    const grandchildNode = page.locator(`[data-testid="sidebar-node-${grandchildData.id}"]`);
-    await expect(grandchildNode).toBeVisible({ timeout: 5000 });
-
-    // Grandchild should be highlighted (active)
-    const grandchildPageItem = grandchildNode.locator('> [class*="pageItem"]');
-    await expect(grandchildPageItem).toHaveClass(/active/);
-
-    // Parent and child should be visible (expanded)
-    await expect(page.locator(`[data-testid="sidebar-node-${parentData.id}"]`)).toBeVisible();
-    await expect(page.locator(`[data-testid="sidebar-node-${childData.id}"]`)).toBeVisible();
-  });
-
-  test('direct URL navigation to great-grandchild expands all ancestors', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'direct-greatgrand');
-    const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create 4-level hierarchy: parent -> child -> grandchild -> great-grandchild
-    const parentData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Level1',
-      content: '',
+    const parentData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Level1",
+      content: "",
     });
 
     const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
-      title: 'Level2',
-      content: '',
+      title: "Level2",
+      content: "",
     });
 
     const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
-      title: 'Level3',
-      content: '',
+      title: "Level3",
+      content: "",
     });
 
     const greatGrandchildData = await client.ws(wsID).nodes.page.createPage(grandchildData.id, {
-      title: 'Level4',
-      content: 'Deep content',
+      title: "Level4",
+      content: "Deep content",
     });
 
     // Navigate directly to great-grandchild URL
     await page.goto(`/w/@${wsID}/@${greatGrandchildData.id}?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Content should be visible
-    await expect(page.getByText('Deep content', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Deep content", { exact: true })).toBeVisible({ timeout: 5000 });
 
     // All ancestors should be expanded and great-grandchild should be visible
     const greatGrandchildNode = page.locator(`[data-testid="sidebar-node-${greatGrandchildData.id}"]`);
@@ -369,34 +372,34 @@ test.describe('Page Navigation', () => {
     await expect(pageItem).toHaveClass(/active/);
   });
 
-  test('breadcrumb navigation works for nested pages', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'breadcrumb');
+  test("breadcrumb navigation works for nested pages", async ({ page, request }) => {
+    const { token } = await registerUser(request, "breadcrumb");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create parent page
-    const parentData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Alpha',
-      content: 'Parent content',
+    const parentData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Alpha",
+      content: "Parent content",
     });
 
     // Create child page
     const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
-      title: 'Beta',
-      content: 'Child content',
+      title: "Beta",
+      content: "Child content",
     });
 
     // Create grandchild page
     const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
-      title: 'Gamma',
-      content: 'Grandchild content',
+      title: "Gamma",
+      content: "Grandchild content",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Expand hierarchy and navigate to grandchild
     await page.locator(`[data-testid="sidebar-node-${parentData.id}"]`).click();
@@ -412,39 +415,39 @@ test.describe('Page Navigation', () => {
     await expect(page.locator(`[data-testid="sidebar-node-${grandchildData.id}"]`)).toBeVisible({ timeout: 5000 });
     await page.locator(`[data-testid="sidebar-node-${grandchildData.id}"]`).click();
 
-    await expect(page.getByText('Grandchild content', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Grandchild content", { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Check breadcrumbs are visible (use exact match)
     const breadcrumbs = page.locator('nav[class*="breadcrumbs"]');
-    await expect(breadcrumbs.getByText('Alpha', { exact: true })).toBeVisible();
-    await expect(breadcrumbs.getByText('Beta', { exact: true })).toBeVisible();
-    await expect(breadcrumbs.getByText('Gamma', { exact: true })).toBeVisible();
+    await expect(breadcrumbs.getByText("Alpha", { exact: true })).toBeVisible();
+    await expect(breadcrumbs.getByText("Beta", { exact: true })).toBeVisible();
+    await expect(breadcrumbs.getByText("Gamma", { exact: true })).toBeVisible();
 
     // Click on parent breadcrumb
-    await breadcrumbs.getByText('Alpha', { exact: true }).click();
+    await breadcrumbs.getByText("Alpha", { exact: true }).click();
 
     // Should navigate to parent
-    await expect(page.getByText('Parent content', { exact: true })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Parent content", { exact: true })).toBeVisible({ timeout: 5000 });
   });
 });
 
-test.describe('Editor Features', () => {
-  test.screenshot('WYSIWYG editor renders markdown correctly', async ({ page, request, takeScreenshot }) => {
-    const { token } = await registerUser(request, 'wysiwyg-editor');
+test.describe("Editor Features", () => {
+  test.screenshot("WYSIWYG editor renders markdown correctly", async ({ page, request, takeScreenshot }) => {
+    const { token } = await registerUser(request, "wysiwyg-editor");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with markdown content
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Markdown Test',
-      content: '# Heading 1\n\n**Bold text**\n\n- List item 1\n- List item 2\n\n`code inline`',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Markdown Test",
+      content: "# Heading 1\n\n**Bold text**\n\n- List item 1\n- List item 2\n\n`code inline`",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -453,34 +456,34 @@ test.describe('Editor Features', () => {
     await expect(editor).toBeVisible({ timeout: 5000 });
 
     // Check for rendered markdown elements in WYSIWYG editor
-    await expect(editor.locator('h1')).toContainText('Heading 1');
-    await expect(editor.locator('strong')).toContainText('Bold text');
-    await expect(editor.locator('.block-row[data-type="bullet"]').first()).toContainText('List item 1');
+    await expect(editor.locator("h1")).toContainText("Heading 1");
+    await expect(editor.locator("strong")).toContainText("Bold text");
+    await expect(editor.locator('.block-row[data-type="bullet"]').first()).toContainText("List item 1");
     // Expect inline code to be rendered as <code> tag, not necessarily a code block
-    await expect(editor.locator('code').first()).toContainText('code inline');
+    await expect(editor.locator("code").first()).toContainText("code inline");
 
-    await takeScreenshot('wysiwyg-editor');
+    await takeScreenshot("wysiwyg-editor");
   });
 
   test.screenshot(
-    'WYSIWYG to markdown round-trip preserves all formatting',
+    "WYSIWYG to markdown round-trip preserves all formatting",
     async ({ page, request, takeScreenshot }) => {
-      const { token } = await registerUser(request, 'round-trip');
+      const { token } = await registerUser(request, "round-trip");
       const client = createClient(request, token);
       await page.goto(`/?token=${token}`);
-      await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
       const wsID = await getWorkspaceId(page);
 
       // Create an empty page via API
-      const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-        title: 'Round Trip Test',
-        content: '',
+      const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+        title: "Round Trip Test",
+        content: "",
       });
 
       // Reload and verify in UI
       await page.reload();
-      await expect(page.locator('aside')).toBeVisible({ timeout: 15000 });
+      await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
       await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
 
@@ -535,40 +538,48 @@ function hello() {
       // Fill the markdown editor
       await markdownEditor.fill(originalMarkdown);
 
-      await takeScreenshot('markdown-original');
+      await takeScreenshot("markdown-original");
 
       // === Switch to Visual mode ===
       await page.locator('[data-testid="editor-mode-visual"]').click();
       await expect(editor).toBeVisible({ timeout: 3000 });
 
-      await takeScreenshot('wysiwyg-rendered');
+      await takeScreenshot("wysiwyg-rendered");
 
       // Verify all elements render correctly in WYSIWYG
-      await expect(editor.locator('h1')).toContainText('Heading One', { timeout: 5000 });
-      await expect(editor.locator('h2')).toContainText('Heading Two', { timeout: 3000 });
-      await expect(editor.locator('h3')).toContainText('Heading Three', { timeout: 3000 });
-      await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
-      await expect(editor.locator('em')).toContainText('italic text', { timeout: 3000 });
-      await expect(editor.locator('p code')).toContainText('code', { timeout: 3000 });
-      await expect(editor.locator('.block-row[data-type="bullet"]').first()).toContainText('First bullet', { timeout: 3000 });
-      await expect(editor.locator('.block-row[data-type="bullet"]').nth(1)).toContainText('Second bullet', { timeout: 3000 });
-      await expect(editor.locator('.block-row[data-type="number"]').first()).toContainText('First item', { timeout: 3000 });
-      await expect(editor.locator('.block-row[data-type="number"]').nth(1)).toContainText('Second item', { timeout: 3000 });
+      await expect(editor.locator("h1")).toContainText("Heading One", { timeout: 5000 });
+      await expect(editor.locator("h2")).toContainText("Heading Two", { timeout: 3000 });
+      await expect(editor.locator("h3")).toContainText("Heading Three", { timeout: 3000 });
+      await expect(editor.locator("strong")).toContainText("bold text", { timeout: 3000 });
+      await expect(editor.locator("em")).toContainText("italic text", { timeout: 3000 });
+      await expect(editor.locator("p code")).toContainText("code", { timeout: 3000 });
+      await expect(editor.locator('.block-row[data-type="bullet"]').first()).toContainText("First bullet", {
+        timeout: 3000,
+      });
+      await expect(editor.locator('.block-row[data-type="bullet"]').nth(1)).toContainText("Second bullet", {
+        timeout: 3000,
+      });
+      await expect(editor.locator('.block-row[data-type="number"]').first()).toContainText("First item", {
+        timeout: 3000,
+      });
+      await expect(editor.locator('.block-row[data-type="number"]').nth(1)).toContainText("Second item", {
+        timeout: 3000,
+      });
 
       // Verify task list items (checkboxes)
       const taskItems = editor.locator('.block-row[data-type="task"]');
       await expect(taskItems).toHaveCount(3, { timeout: 3000 });
-      await expect(taskItems.first()).toContainText('Unchecked task', { timeout: 3000 });
-      await expect(taskItems.nth(1)).toContainText('Checked task', { timeout: 3000 });
+      await expect(taskItems.first()).toContainText("Unchecked task", { timeout: 3000 });
+      await expect(taskItems.nth(1)).toContainText("Checked task", { timeout: 3000 });
       // Verify checkbox states via data-checked attribute
-      await expect(taskItems.first()).toHaveAttribute('data-checked', 'false');
-      await expect(taskItems.nth(1)).toHaveAttribute('data-checked', 'true');
-      await expect(taskItems.nth(2)).toHaveAttribute('data-checked', 'false');
+      await expect(taskItems.first()).toHaveAttribute("data-checked", "false");
+      await expect(taskItems.nth(1)).toHaveAttribute("data-checked", "true");
+      await expect(taskItems.nth(2)).toHaveAttribute("data-checked", "false");
 
-      await expect(editor.locator('blockquote')).toContainText('This is a blockquote', { timeout: 3000 });
-      await expect(editor.locator('pre code')).toContainText('const x = 42;', { timeout: 3000 });
-      await expect(editor.locator('hr')).toBeVisible({ timeout: 3000 });
-      await expect(editor.locator('a[href="https://example.com"]')).toContainText('Link text', { timeout: 3000 });
+      await expect(editor.locator("blockquote")).toContainText("This is a blockquote", { timeout: 3000 });
+      await expect(editor.locator("pre code")).toContainText("const x = 42;", { timeout: 3000 });
+      await expect(editor.locator("hr")).toBeVisible({ timeout: 3000 });
+      await expect(editor.locator('a[href="https://example.com"]')).toContainText("Link text", { timeout: 3000 });
 
       // === Switch back to Markdown mode ===
       await page.locator('[data-testid="editor-mode-markdown"]').click();
@@ -576,63 +587,63 @@ function hello() {
 
       const markdownAfterRoundTrip = await markdownEditor.inputValue();
 
-      await takeScreenshot('markdown-after-round-trip');
+      await takeScreenshot("markdown-after-round-trip");
 
       // Verify markdown still contains all expected elements after round-trip
-      expect(markdownAfterRoundTrip).toContain('# Heading One');
-      expect(markdownAfterRoundTrip).toContain('## Heading Two');
-      expect(markdownAfterRoundTrip).toContain('### Heading Three');
-      expect(markdownAfterRoundTrip).toContain('**bold text**');
-      expect(markdownAfterRoundTrip).toContain('*italic text*');
-      expect(markdownAfterRoundTrip).toContain('`code`');
-      expect(markdownAfterRoundTrip).toContain('- First bullet');
-      expect(markdownAfterRoundTrip).toContain('- Second bullet');
-      expect(markdownAfterRoundTrip).toContain('1. First item');
-      expect(markdownAfterRoundTrip).toContain('2. Second item');
+      expect(markdownAfterRoundTrip).toContain("# Heading One");
+      expect(markdownAfterRoundTrip).toContain("## Heading Two");
+      expect(markdownAfterRoundTrip).toContain("### Heading Three");
+      expect(markdownAfterRoundTrip).toContain("**bold text**");
+      expect(markdownAfterRoundTrip).toContain("*italic text*");
+      expect(markdownAfterRoundTrip).toContain("`code`");
+      expect(markdownAfterRoundTrip).toContain("- First bullet");
+      expect(markdownAfterRoundTrip).toContain("- Second bullet");
+      expect(markdownAfterRoundTrip).toContain("1. First item");
+      expect(markdownAfterRoundTrip).toContain("2. Second item");
       // Verify task list syntax is preserved
-      expect(markdownAfterRoundTrip).toContain('[ ] Unchecked task');
-      expect(markdownAfterRoundTrip).toContain('[x] Checked task');
-      expect(markdownAfterRoundTrip).toContain('[ ] Another unchecked task');
-      expect(markdownAfterRoundTrip).toContain('> This is a blockquote');
-      expect(markdownAfterRoundTrip).toContain('```');
-      expect(markdownAfterRoundTrip).toContain('const x = 42;');
-      expect(markdownAfterRoundTrip).toContain('---');
-      expect(markdownAfterRoundTrip).toContain('[Link text](https://example.com)');
+      expect(markdownAfterRoundTrip).toContain("[ ] Unchecked task");
+      expect(markdownAfterRoundTrip).toContain("[x] Checked task");
+      expect(markdownAfterRoundTrip).toContain("[ ] Another unchecked task");
+      expect(markdownAfterRoundTrip).toContain("> This is a blockquote");
+      expect(markdownAfterRoundTrip).toContain("```");
+      expect(markdownAfterRoundTrip).toContain("const x = 42;");
+      expect(markdownAfterRoundTrip).toContain("---");
+      expect(markdownAfterRoundTrip).toContain("[Link text](https://example.com)");
 
       // === Switch to Visual one more time to confirm stability ===
       await page.locator('[data-testid="editor-mode-visual"]').click();
       await expect(editor).toBeVisible({ timeout: 3000 });
 
       // All elements should still be present
-      await expect(editor.locator('h1')).toContainText('Heading One', { timeout: 5000 });
-      await expect(editor.locator('strong')).toContainText('bold text', { timeout: 3000 });
-      await expect(editor.locator('pre code')).toContainText('const x = 42;', { timeout: 3000 });
+      await expect(editor.locator("h1")).toContainText("Heading One", { timeout: 5000 });
+      await expect(editor.locator("strong")).toContainText("bold text", { timeout: 3000 });
+      await expect(editor.locator("pre code")).toContainText("const x = 42;", { timeout: 3000 });
       // Task list items should still be present with correct states
       const finalTaskItems = editor.locator('.block-row[data-type="task"]');
       await expect(finalTaskItems).toHaveCount(3, { timeout: 3000 });
-      await expect(finalTaskItems.nth(1)).toHaveAttribute('data-checked', 'true');
+      await expect(finalTaskItems.nth(1)).toHaveAttribute("data-checked", "true");
 
-      await takeScreenshot('wysiwyg-final');
-    }
+      await takeScreenshot("wysiwyg-final");
+    },
   );
 
-  test('markdown editor fills available vertical space', async ({ page, request }) => {
-    const { token } = await registerUser(request, 'editor-height');
+  test("markdown editor fills available vertical space", async ({ page, request }) => {
+    const { token } = await registerUser(request, "editor-height");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page with 10 lines of content
-    const multiLineContent = Array.from({ length: 10 }, (_, i) => `Line ${i + 1} of content`).join('\n');
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Height Test',
+    const multiLineContent = Array.from({ length: 10 }, (_, i) => `Line ${i + 1} of content`).join("\n");
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Height Test",
       content: multiLineContent,
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -647,7 +658,7 @@ function hello() {
     expect(editorBox).toBeTruthy();
 
     // Get the editor container (parent of toolbar and editor)
-    const editorContainer = page.locator('[data-testid="markdown-editor"]').locator('..');
+    const editorContainer = page.locator('[data-testid="markdown-editor"]').locator("..");
     const containerBox = await editorContainer.boundingBox();
     expect(containerBox).toBeTruthy();
 
@@ -665,22 +676,22 @@ function hello() {
     expect(bottomGap).toBeLessThan(20);
   });
 
-  test.screenshot('slash command menu appears and applies block types', async ({ page, request, takeScreenshot }) => {
-    const { token } = await registerUser(request, 'slash-cmd');
+  test.screenshot("slash command menu appears and applies block types", async ({ page, request, takeScreenshot }) => {
+    const { token } = await registerUser(request, "slash-cmd");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create an empty page
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Slash Command Test',
-      content: '',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "Slash Command Test",
+      content: "",
     });
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Navigate to the page
     await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
@@ -693,12 +704,12 @@ function hello() {
     await editor.click();
 
     // Type "/" to trigger slash menu
-    await page.keyboard.type('/');
+    await page.keyboard.type("/");
 
     // Slash menu should appear
     const slashMenu = page.locator('[data-testid="slash-command-menu"]');
     await expect(slashMenu).toBeVisible({ timeout: 3000 });
-    await takeScreenshot('slash-menu-visible');
+    await takeScreenshot("slash-menu-visible");
 
     // Menu should show command options (11 including subpage)
     const menuItems = slashMenu.locator('[class*="slashMenuItem"]');
@@ -708,66 +719,66 @@ function hello() {
     await expect(menuItems.first()).toHaveClass(/selected/);
 
     // Arrow down should move selection to second item
-    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press("ArrowDown");
     await expect(menuItems.nth(0)).not.toHaveClass(/selected/);
     await expect(menuItems.nth(1)).toHaveClass(/selected/);
 
     // Arrow down again to third item
-    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press("ArrowDown");
     await expect(menuItems.nth(2)).toHaveClass(/selected/);
 
     // Arrow up should go back to second item
-    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press("ArrowUp");
     await expect(menuItems.nth(1)).toHaveClass(/selected/);
 
     // Type to filter commands (this will reset selection)
-    await page.keyboard.type('head');
-    await takeScreenshot('slash-menu-filtered');
+    await page.keyboard.type("head");
+    await takeScreenshot("slash-menu-filtered");
 
     // Should show only heading commands (heading1, heading2, heading3)
     await expect(slashMenu.locator('[class*="slashMenuItem"]')).toHaveCount(3, { timeout: 3000 });
 
     // Press Enter to select first option (Heading 1)
-    await page.keyboard.press('Enter');
+    await page.keyboard.press("Enter");
 
     // Menu should close
     await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
 
     // Editor should now have an h1 element
-    await expect(editor.locator('h1')).toBeVisible({ timeout: 3000 });
-    await takeScreenshot('heading1-applied');
+    await expect(editor.locator("h1")).toBeVisible({ timeout: 3000 });
+    await takeScreenshot("heading1-applied");
 
     // Type some content in the heading
-    await page.keyboard.type('My Heading');
-    await expect(editor.locator('h1')).toContainText('My Heading');
+    await page.keyboard.type("My Heading");
+    await expect(editor.locator("h1")).toContainText("My Heading");
 
     // Press Enter to create new paragraph, then type "/" again
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('/');
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("/");
     await expect(slashMenu).toBeVisible({ timeout: 3000 });
 
     // Use arrow keys to navigate and select "Bullet List"
-    await page.keyboard.type('bullet');
+    await page.keyboard.type("bullet");
     await expect(slashMenu.locator('[class*="slashMenuItem"]')).toHaveCount(1, { timeout: 3000 });
-    await page.keyboard.press('Enter');
+    await page.keyboard.press("Enter");
 
     // Menu should close
     await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
 
     // Editor should have a bullet list
     await expect(editor.locator('.block-row[data-type="bullet"]')).toBeVisible({ timeout: 3000 });
-    await takeScreenshot('bullet-list-applied');
+    await takeScreenshot("bullet-list-applied");
 
     // Test Escape to close menu without selecting
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('/');
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("/");
     await expect(slashMenu).toBeVisible({ timeout: 3000 });
-    await page.keyboard.press('Escape');
+    await page.keyboard.press("Escape");
     await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
-    await takeScreenshot('slash-menu-escaped');
+    await takeScreenshot("slash-menu-escaped");
 
     // Test clicking outside to close menu
-    await page.keyboard.type('/');
+    await page.keyboard.type("/");
     await expect(slashMenu).toBeVisible({ timeout: 3000 });
     // Click on the title input to close menu
     await page.locator('input[placeholder*="Title"]').click();
@@ -776,13 +787,13 @@ function hello() {
     // Test menu position is correct when filtering with "/pag"
     // Type characters one by one to test position stability during filtering
     await editor.click();
-    await page.keyboard.press('End');
-    await page.keyboard.press('Enter');
-    await page.keyboard.type('/');
+    await page.keyboard.press("End");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("/");
     await expect(slashMenu).toBeVisible({ timeout: 3000 });
-    await page.keyboard.type('p');
-    await page.keyboard.type('a');
-    await page.keyboard.type('g');
+    await page.keyboard.type("p");
+    await page.keyboard.type("a");
+    await page.keyboard.type("g");
 
     // Verify menu is positioned near the cursor, not at (0, 0)
     // Wait for menu to have valid position (it starts hidden while calculating)
@@ -794,230 +805,228 @@ function hello() {
       expect(menuBox!.x).toBeGreaterThan(200);
       expect(menuBox!.y).toBeGreaterThan(100);
     }).toPass({ timeout: 3000 });
-    await takeScreenshot('slash-menu-pag-position');
+    await takeScreenshot("slash-menu-pag-position");
 
     // Should show matches for "pag" (Subpage, Paragraph, Code Block via fuzzy match on "programming")
     const pagMenuItems = slashMenu.locator('[class*="slashMenuItem"]');
     const pagItemCount = await pagMenuItems.count();
     expect(pagItemCount).toBeGreaterThan(0);
-    await page.keyboard.press('Escape');
+    await page.keyboard.press("Escape");
 
     // Verify slash command does NOT trigger mid-word
     await editor.click();
-    await page.keyboard.press('End'); // Go to end of current line
-    await page.keyboard.press('Enter'); // Start a fresh line
-    await page.keyboard.type('test/noslash');
+    await page.keyboard.press("End"); // Go to end of current line
+    await page.keyboard.press("Enter"); // Start a fresh line
+    await page.keyboard.type("test/noslash");
     await expect(slashMenu).not.toBeVisible({ timeout: 1000 });
   });
 
-  test.screenshot('slash menu stays visible when cursor is near bottom of viewport', async ({
-    page,
-    request,
-    takeScreenshot,
-  }) => {
-    const { token } = await registerUser(request, 'slash-bottom');
+  test.screenshot(
+    "slash menu stays visible when cursor is near bottom of viewport",
+    async ({ page, request, takeScreenshot }) => {
+      const { token } = await registerUser(request, "slash-bottom");
+      const client = createClient(request, token);
+      await page.goto(`/?token=${token}`);
+      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+
+      const wsID = await getWorkspaceId(page);
+
+      // Create a page with lots of content to push cursor near bottom
+      const manyLines = Array(30).fill("This is a line of text to fill the page.").join("\n\n");
+      const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+        title: "Bottom Slash Test",
+        content: manyLines,
+      });
+
+      await page.reload();
+      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+
+      // Navigate to the page
+      await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
+
+      // Wait for WYSIWYG editor to load
+      const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+      await expect(editor).toBeVisible({ timeout: 5000 });
+
+      // Click the last block content to ensure we are at the bottom
+      await editor.locator(".block-content").last().click();
+
+      // Move to end of line (just in case click wasn't at end, though it usually is for text)
+      await page.keyboard.press("End");
+
+      // Type " /" to trigger slash menu at the end of the text
+      await page.keyboard.type(" /");
+
+      // Slash menu should appear
+      const slashMenu = page.locator('[data-testid="slash-command-menu"]');
+      await expect(slashMenu).toBeVisible({ timeout: 3000 });
+      await takeScreenshot("slash-menu-at-bottom");
+
+      // Get viewport height
+      const viewportSize = page.viewportSize();
+      const viewportHeight = viewportSize?.height ?? 720;
+
+      // Check that the menu is fully visible within the viewport
+      const menuBox = await slashMenu.boundingBox();
+      expect(menuBox).toBeTruthy();
+
+      // The menu should not extend beyond the viewport bottom
+      const menuBottom = menuBox!.y + menuBox!.height;
+      expect(menuBottom).toBeLessThanOrEqual(viewportHeight);
+
+      // Navigate down through all items and verify each selected item is visible
+      const menuItems = slashMenu.locator('[class*="slashMenuItem"]');
+      const itemCount = await menuItems.count();
+
+      for (let i = 1; i < itemCount; i++) {
+        await page.keyboard.press("ArrowDown");
+
+        // The selected item should be visible within the menu's scroll area
+        const selectedItem = menuItems.nth(i);
+        await expect(selectedItem).toHaveClass(/selected/);
+
+        // Verify the selected item is within the viewport
+        const itemBox = await selectedItem.boundingBox();
+        expect(itemBox).toBeTruthy();
+        expect(itemBox!.y).toBeGreaterThanOrEqual(0);
+        expect(itemBox!.y + itemBox!.height).toBeLessThanOrEqual(viewportHeight);
+      }
+
+      await takeScreenshot("slash-menu-scrolled-to-last");
+    },
+  );
+
+  test.screenshot(
+    "slash command /page creates subpage and shows in sidebar",
+    async ({ page, request, takeScreenshot }) => {
+      const { token } = await registerUser(request, "slash-subpage");
+      const client = createClient(request, token);
+      await page.goto(`/?token=${token}`);
+      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+
+      const wsID = await getWorkspaceId(page);
+
+      // Create a page at root level
+      const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+        title: "Test Page",
+        content: "",
+      });
+      const pageId = pageData.id;
+
+      await page.reload();
+      await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+
+      // Navigate to the page
+      const pageNode = page.locator(`[data-testid="sidebar-node-${pageId}"]`);
+      await expect(pageNode).toBeVisible({ timeout: 5000 });
+      await pageNode.click();
+
+      // Wait for page to load
+      const titleInput = page.locator('input[placeholder*="Title"]');
+      await expect(titleInput).toHaveValue("Test Page", { timeout: 5000 });
+
+      // Wait for WYSIWYG editor to load
+      const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
+      await expect(editor).toBeVisible({ timeout: 5000 });
+
+      // Click in the editor to focus it
+      await editor.click();
+
+      // Type "/page" to trigger slash menu and filter to subpage command
+      await page.keyboard.type("/page");
+
+      // Slash menu should appear with subpage option
+      const slashMenu = page.locator('[data-testid="slash-command-menu"]');
+      await expect(slashMenu).toBeVisible({ timeout: 3000 });
+
+      // Should show subpage command (matches "page" keyword)
+      const menuItems = slashMenu.locator('[class*="slashMenuItem"]');
+      await expect(menuItems).toHaveCount(1, { timeout: 3000 });
+
+      await takeScreenshot("slash-menu-subpage");
+
+      // Press Enter to select the subpage command (creates child)
+      await page.keyboard.press("Enter");
+
+      // Menu should close
+      await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
+
+      // After /page creates a child, it navigates to the child page
+      // Wait for the child page to load (title changes from "Test Page" to "Untitled")
+      await expect(titleInput).toHaveValue("Untitled", { timeout: 10000 });
+
+      await takeScreenshot("child-page-loaded");
+
+      // The parent should be expanded in the sidebar and child should be visible and active
+      const expandIcon = page.locator(`[data-testid="expand-icon-${pageId}"]`);
+      await expect(expandIcon).toBeVisible({ timeout: 5000 });
+      // Expand icon should not be hidden (has children) and should be expanded
+      await expect(expandIcon).not.toHaveClass(/hidden/);
+
+      // Find the child node in the sidebar (nested under parent)
+      const childNode = page.locator(`[data-testid="sidebar-node-${pageId}"] [data-testid^="sidebar-node-"]`).first();
+      await expect(childNode).toBeVisible({ timeout: 5000 });
+
+      // Get the child's ID
+      const childTestId = await childNode.getAttribute("data-testid");
+      expect(childTestId).toBeTruthy();
+      const childId = childTestId!.replace("sidebar-node-", "");
+
+      // Child should be highlighted (active)
+      const childPageItem = childNode.locator('> [class*="pageItem"]');
+      await expect(childPageItem).toHaveClass(/active/, { timeout: 3000 });
+
+      await takeScreenshot("child-highlighted-in-sidebar");
+
+      // Navigate back to parent page to verify the link was inserted
+      await pageNode.locator('> [class*="pageItem"]').click();
+
+      // Wait for parent page to load
+      await expect(titleInput).toHaveValue("Test Page", { timeout: 5000 });
+      await expect(editor).toBeVisible({ timeout: 5000 });
+
+      // The editor should contain a link to the child
+      const link = editor.locator("a").first();
+      await expect(link).toBeVisible({ timeout: 5000 });
+      await expect(link).toContainText("Untitled");
+
+      // Verify the link href contains the child ID
+      const href = await link.getAttribute("href");
+      expect(href).toContain(childId);
+
+      await takeScreenshot("link-in-parent-page");
+    },
+  );
+
+  test.screenshot("version history loads and displays commits", async ({ page, request, takeScreenshot }) => {
+    const { token } = await registerUser(request, "version-history");
     const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    const wsID = await getWorkspaceId(page);
-
-    // Create a page with lots of content to push cursor near bottom
-    const manyLines = Array(30).fill('This is a line of text to fill the page.').join('\n\n');
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Bottom Slash Test',
-      content: manyLines,
-    });
-
-    await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    // Navigate to the page
-    await page.locator(`[data-testid="sidebar-node-${pageData.id}"]`).click();
-
-    // Wait for WYSIWYG editor to load
-    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
-    await expect(editor).toBeVisible({ timeout: 5000 });
-
-    // Click the last block content to ensure we are at the bottom
-    await editor.locator('.block-content').last().click();
-
-    // Move to end of line (just in case click wasn't at end, though it usually is for text)
-    await page.keyboard.press('End');
-
-    // Type " /" to trigger slash menu at the end of the text
-    await page.keyboard.type(' /');
-
-    // Slash menu should appear
-    const slashMenu = page.locator('[data-testid="slash-command-menu"]');
-    await expect(slashMenu).toBeVisible({ timeout: 3000 });
-    await takeScreenshot('slash-menu-at-bottom');
-
-    // Get viewport height
-    const viewportSize = page.viewportSize();
-    const viewportHeight = viewportSize?.height ?? 720;
-
-    // Check that the menu is fully visible within the viewport
-    const menuBox = await slashMenu.boundingBox();
-    expect(menuBox).toBeTruthy();
-
-    // The menu should not extend beyond the viewport bottom
-    const menuBottom = menuBox!.y + menuBox!.height;
-    expect(menuBottom).toBeLessThanOrEqual(viewportHeight);
-
-    // Navigate down through all items and verify each selected item is visible
-    const menuItems = slashMenu.locator('[class*="slashMenuItem"]');
-    const itemCount = await menuItems.count();
-
-    for (let i = 1; i < itemCount; i++) {
-      await page.keyboard.press('ArrowDown');
-
-      // The selected item should be visible within the menu's scroll area
-      const selectedItem = menuItems.nth(i);
-      await expect(selectedItem).toHaveClass(/selected/);
-
-      // Verify the selected item is within the viewport
-      const itemBox = await selectedItem.boundingBox();
-      expect(itemBox).toBeTruthy();
-      expect(itemBox!.y).toBeGreaterThanOrEqual(0);
-      expect(itemBox!.y + itemBox!.height).toBeLessThanOrEqual(viewportHeight);
-    }
-
-    await takeScreenshot('slash-menu-scrolled-to-last');
-  });
-
-  test.screenshot('slash command /page creates subpage and shows in sidebar', async ({
-    page,
-    request,
-    takeScreenshot,
-  }) => {
-    const { token } = await registerUser(request, 'slash-subpage');
-    const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    const wsID = await getWorkspaceId(page);
-
-    // Create a page at root level
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'Test Page',
-      content: '',
-    });
-    const pageId = pageData.id;
-
-    await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
-
-    // Navigate to the page
-    const pageNode = page.locator(`[data-testid="sidebar-node-${pageId}"]`);
-    await expect(pageNode).toBeVisible({ timeout: 5000 });
-    await pageNode.click();
-
-    // Wait for page to load
-    const titleInput = page.locator('input[placeholder*="Title"]');
-    await expect(titleInput).toHaveValue('Test Page', { timeout: 5000 });
-
-    // Wait for WYSIWYG editor to load
-    const editor = page.locator('[data-testid="wysiwyg-editor"] .ProseMirror');
-    await expect(editor).toBeVisible({ timeout: 5000 });
-
-    // Click in the editor to focus it
-    await editor.click();
-
-    // Type "/page" to trigger slash menu and filter to subpage command
-    await page.keyboard.type('/page');
-
-    // Slash menu should appear with subpage option
-    const slashMenu = page.locator('[data-testid="slash-command-menu"]');
-    await expect(slashMenu).toBeVisible({ timeout: 3000 });
-
-    // Should show subpage command (matches "page" keyword)
-    const menuItems = slashMenu.locator('[class*="slashMenuItem"]');
-    await expect(menuItems).toHaveCount(1, { timeout: 3000 });
-
-    await takeScreenshot('slash-menu-subpage');
-
-    // Press Enter to select the subpage command (creates child)
-    await page.keyboard.press('Enter');
-
-    // Menu should close
-    await expect(slashMenu).not.toBeVisible({ timeout: 3000 });
-
-    // After /page creates a child, it navigates to the child page
-    // Wait for the child page to load (title changes from "Test Page" to "Untitled")
-    await expect(titleInput).toHaveValue('Untitled', { timeout: 10000 });
-
-    await takeScreenshot('child-page-loaded');
-
-    // The parent should be expanded in the sidebar and child should be visible and active
-    const expandIcon = page.locator(`[data-testid="expand-icon-${pageId}"]`);
-    await expect(expandIcon).toBeVisible({ timeout: 5000 });
-    // Expand icon should not be hidden (has children) and should be expanded
-    await expect(expandIcon).not.toHaveClass(/hidden/);
-
-    // Find the child node in the sidebar (nested under parent)
-    const childNode = page.locator(`[data-testid="sidebar-node-${pageId}"] [data-testid^="sidebar-node-"]`).first();
-    await expect(childNode).toBeVisible({ timeout: 5000 });
-
-    // Get the child's ID
-    const childTestId = await childNode.getAttribute('data-testid');
-    expect(childTestId).toBeTruthy();
-    const childId = childTestId!.replace('sidebar-node-', '');
-
-    // Child should be highlighted (active)
-    const childPageItem = childNode.locator('> [class*="pageItem"]');
-    await expect(childPageItem).toHaveClass(/active/, { timeout: 3000 });
-
-    await takeScreenshot('child-highlighted-in-sidebar');
-
-    // Navigate back to parent page to verify the link was inserted
-    await pageNode.locator('> [class*="pageItem"]').click();
-
-    // Wait for parent page to load
-    await expect(titleInput).toHaveValue('Test Page', { timeout: 5000 });
-    await expect(editor).toBeVisible({ timeout: 5000 });
-
-    // The editor should contain a link to the child
-    const link = editor.locator('a').first();
-    await expect(link).toBeVisible({ timeout: 5000 });
-    await expect(link).toContainText('Untitled');
-
-    // Verify the link href contains the child ID
-    const href = await link.getAttribute('href');
-    expect(href).toContain(childId);
-
-    await takeScreenshot('link-in-parent-page');
-  });
-
-  test.screenshot('version history loads and displays commits', async ({ page, request, takeScreenshot }) => {
-    const { token } = await registerUser(request, 'version-history');
-    const client = createClient(request, token);
-    await page.goto(`/?token=${token}`);
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const pageData = await client.ws(wsID).nodes.page.createPage('0', {
-      title: 'History Test',
-      content: 'Initial content',
+    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      title: "History Test",
+      content: "Initial content",
     });
     expect(pageData.id).toBeTruthy();
 
     // Update the page a few times to create history
     for (let i = 1; i <= 3; i++) {
       await client.ws(wsID).nodes.page.updatePage(pageData.id, {
-        title: 'History Test',
+        title: "History Test",
         content: `Content version ${i}`,
       });
     }
 
     await page.reload();
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
 
     // Right-click on the sidebar node to open context menu
     const sidebarNode = page.locator(`[data-testid="sidebar-node-${pageData.id}"]`);
-    await sidebarNode.click({ button: 'right' });
+    await sidebarNode.click({ button: "right" });
 
     // Click History option in context menu
     const historyButton = page.locator('[data-testid="context-menu-history"]');
@@ -1032,6 +1041,6 @@ function hello() {
     const historyItems = historyPanel.locator('li[class*="historyItem"]');
     await expect(historyItems).toHaveCount(4, { timeout: 5000 });
 
-    await takeScreenshot('version-history-panel');
+    await takeScreenshot("version-history-panel");
   });
 });

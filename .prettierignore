@@ -1,7 +1,15 @@
-# Generated artifacts and dependency locks use tool-owned formatting.
-pnpm-lock.yaml
-*.gen.ts
-*.md
+# Tool-owned locks, generated artifacts, and testdata.
+node_modules
+dist
 build
 coverage
-node_modules
+pnpm-lock.yaml
+playwright-report
+data
+data-e2e
+*.gen.ts
+sdk/API.md
+**/testdata/**
+# AGENTS.md indexes are written by scripts/update_agents_file_index.py.
+AGENTS.md
+CLAUDE.md

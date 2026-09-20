@@ -1,7 +1,7 @@
 // Type definitions for internationalization (dictionaries and locales).
 
 // Supported locales
-export type Locale = 'en' | 'fr' | 'de' | 'es';
+export type Locale = "en" | "fr" | "de" | "es";
 
 // Dictionary structure - English is the source of truth
 export interface Dictionary {

@@ -21,7 +21,7 @@
 }
 
 .cellContent:empty::after {
-  content: '\00a0';
+  content: "\00a0";
 }
 
 /* Inline input - no save/cancel buttons */

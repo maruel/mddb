@@ -1,14 +1,14 @@
 // Linked accounts section for managing OAuth provider connections.
 
-import { createSignal, createEffect, Show, For } from 'solid-js';
-import type { OAuthIdentity, OAuthProvider, LinkOAuthAccountResponse, ErrorResponse } from '@sdk/types.gen';
-import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from '@sdk/types.gen';
-import { useAuth } from '../../contexts';
-import { useI18n } from '../../i18n';
-import styles from './LinkedAccountsSection.module.css';
-import { GoogleIcon, MicrosoftIcon, GitHubIcon } from '../OAuthIcons';
+import { createSignal, createEffect, Show, For } from "solid-js";
+import type { OAuthIdentity, OAuthProvider, LinkOAuthAccountResponse, ErrorResponse } from "@sdk/types.gen";
+import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from "@sdk/types.gen";
+import { useAuth } from "../../contexts";
+import { useI18n } from "../../i18n";
+import styles from "./LinkedAccountsSection.module.css";
+import { GoogleIcon, MicrosoftIcon, GitHubIcon } from "../OAuthIcons";
 
-import type { JSX } from 'solid-js';
+import type { JSX } from "solid-js";
 
 interface Props {
   oauthIdentities: OAuthIdentity[] | undefined;
@@ -24,9 +24,9 @@ interface ProviderInfo {
 }
 
 const PROVIDERS: ProviderInfo[] = [
-  { id: OAuthProviderGoogle, name: 'Google', icon: GoogleIcon },
-  { id: OAuthProviderMicrosoft, name: 'Microsoft', icon: MicrosoftIcon },
-  { id: OAuthProviderGitHub, name: 'GitHub', icon: GitHubIcon },
+  { id: OAuthProviderGoogle, name: "Google", icon: GoogleIcon },
+  { id: OAuthProviderMicrosoft, name: "Microsoft", icon: MicrosoftIcon },
+  { id: OAuthProviderGitHub, name: "GitHub", icon: GitHubIcon },
 ];
 
 export default function LinkedAccountsSection(props: Props) {
@@ -39,9 +39,9 @@ export default function LinkedAccountsSection(props: Props) {
   // Helper to make authenticated fetch calls for OAuth endpoints (not in generated SDK)
   const authFetch = async (url: string, body: object) => {
     const res = await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token()}`,
       },
       body: JSON.stringify(body),
@@ -58,7 +58,7 @@ export default function LinkedAccountsSection(props: Props) {
     api()
       .auth.listProviders()
       .then((resp) => setAvailableProviders(resp.providers))
-      .catch((err) => console.error('Failed to fetch providers:', err));
+      .catch((err) => console.error("Failed to fetch providers:", err));
   });
 
   // Check if a provider is linked
@@ -76,11 +76,11 @@ export default function LinkedAccountsSection(props: Props) {
   const handleLink = async (providerId: OAuthProvider) => {
     setLoading(providerId);
     try {
-      const resp = (await authFetch('/api/v1/auth/oauth/link', { provider: providerId })) as LinkOAuthAccountResponse;
+      const resp = (await authFetch("/api/v1/auth/oauth/link", { provider: providerId })) as LinkOAuthAccountResponse;
       // Redirect to OAuth provider
       window.location.href = resp.redirect_url;
     } catch (err) {
-      props.onError(`${t('settings.linkingFailed')}: ${err}`);
+      props.onError(`${t("settings.linkingFailed")}: ${err}`);
       setLoading(null);
     }
   };
@@ -88,18 +88,18 @@ export default function LinkedAccountsSection(props: Props) {
   // Unlink a provider
   const handleUnlink = async (providerId: OAuthProvider) => {
     if (!canUnlink()) {
-      props.onError(t('settings.cannotUnlinkOnly'));
+      props.onError(t("settings.cannotUnlinkOnly"));
       return;
     }
 
     setLoading(providerId);
     try {
-      await authFetch('/api/v1/auth/oauth/unlink', { provider: providerId });
-      props.onSuccess(t('settings.accountUnlinked'));
+      await authFetch("/api/v1/auth/oauth/unlink", { provider: providerId });
+      props.onSuccess(t("settings.accountUnlinked"));
       // Refresh user data
       window.location.reload();
     } catch (err) {
-      props.onError(`${t('errors.failedToSave')}: ${err}`);
+      props.onError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setLoading(null);
     }
@@ -107,8 +107,8 @@ export default function LinkedAccountsSection(props: Props) {
 
   return (
     <div class={styles.section}>
-      <h3>{t('settings.linkedAccounts')}</h3>
-      <p class={styles.hint}>{t('settings.linkedAccountsHint')}</p>
+      <h3>{t("settings.linkedAccounts")}</h3>
+      <p class={styles.hint}>{t("settings.linkedAccountsHint")}</p>
 
       <div class={styles.providerList}>
         <For each={PROVIDERS}>
@@ -126,13 +126,13 @@ export default function LinkedAccountsSection(props: Props) {
                     <Show when={linked()} keyed>
                       {(identity) => (
                         <>
-                          <span class={styles.linkedBadge}>{t('settings.linked')}</span>
+                          <span class={styles.linkedBadge}>{t("settings.linked")}</span>
                           <span class={styles.linkedEmail}>{identity.email}</span>
                         </>
                       )}
                     </Show>
                     <Show when={!linked()}>
-                      <span class={styles.notLinkedBadge}>{t('settings.notLinked')}</span>
+                      <span class={styles.notLinkedBadge}>{t("settings.notLinked")}</span>
                     </Show>
                   </div>
                   <div class={styles.providerActions}>
@@ -144,7 +144,7 @@ export default function LinkedAccountsSection(props: Props) {
                           onClick={() => handleLink(provider.id)}
                           disabled={isLoading()}
                         >
-                          {isLoading() ? '...' : t('settings.linkAccount')}
+                          {isLoading() ? "..." : t("settings.linkAccount")}
                         </button>
                       }
                     >
@@ -152,9 +152,9 @@ export default function LinkedAccountsSection(props: Props) {
                         class={styles.unlinkButton}
                         onClick={() => handleUnlink(provider.id)}
                         disabled={isLoading() || !canUnlink()}
-                        title={!canUnlink() ? t('settings.cannotUnlinkOnly') : ''}
+                        title={!canUnlink() ? t("settings.cannotUnlinkOnly") : ""}
                       >
-                        {isLoading() ? '...' : t('settings.unlinkAccount')}
+                        {isLoading() ? "..." : t("settings.unlinkAccount")}
                       </button>
                     </Show>
                   </div>

@@ -73,10 +73,10 @@
   font-weight: 500;
 }
 
-.formItem input[type='text'],
-.formItem input[type='url'],
-.formItem input[type='password'],
-.formItem input[type='number'],
+.formItem input[type="text"],
+.formItem input[type="url"],
+.formItem input[type="password"],
+.formItem input[type="number"],
 .formItem select {
   width: 100%;
   padding: var(--s-3);
@@ -234,22 +234,22 @@
   font-weight: 500;
 }
 
-.syncBadge[data-status='idle'] {
+.syncBadge[data-status="idle"] {
   background: var(--c-surface-success);
   color: var(--c-text-success);
 }
 
-.syncBadge[data-status='syncing'] {
+.syncBadge[data-status="syncing"] {
   background: var(--c-surface-info);
   color: var(--c-text-accent);
 }
 
-.syncBadge[data-status='error'] {
+.syncBadge[data-status="error"] {
   background: var(--c-surface-danger);
   color: var(--c-text-danger);
 }
 
-.syncBadge[data-status='conflict'] {
+.syncBadge[data-status="conflict"] {
   background: var(--c-surface-warning-subtle);
   color: var(--c-text-warning);
 }
@@ -270,7 +270,7 @@
   cursor: pointer;
 }
 
-.checkboxLabel input[type='checkbox'] {
+.checkboxLabel input[type="checkbox"] {
   width: auto;
 }
 

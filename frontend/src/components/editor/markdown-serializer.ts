@@ -1,11 +1,11 @@
 // Flat-blocks-to-markdown serializer: reconstructs nested markdown from flat block structure.
 // Groups consecutive list items by indent and type, emits proper list markers and indentation.
 
-import type { Node as ProseMirrorNode } from 'prosemirror-model';
-import type { BlockAttrs } from './schema';
+import type { Node as ProseMirrorNode } from "prosemirror-model";
+import type { BlockAttrs } from "./schema";
 
 interface ListContext {
-  type: 'bullet' | 'number' | 'task';
+  type: "bullet" | "number" | "task";
   indent: number;
 }
 
@@ -37,80 +37,80 @@ export function serializeToMarkdown(doc: ProseMirrorNode): string {
 
     // Add blank line before paragraphs that follow non-paragraphs (e.g., after list items)
     // This ensures proper separation in markdown so they parse correctly
-    const prevWasList = prevType === 'bullet' || prevType === 'number' || prevType === 'task';
-    const currentIsParagraph = type === 'paragraph';
+    const prevWasList = prevType === "bullet" || prevType === "number" || prevType === "task";
+    const currentIsParagraph = type === "paragraph";
     if (lines.length > 0 && prevWasList && currentIsParagraph) {
-      lines.push('');
+      lines.push("");
     }
     // Also add blank line between paragraphs
-    if (lines.length > 0 && prevType === 'paragraph' && currentIsParagraph) {
-      lines.push('');
+    if (lines.length > 0 && prevType === "paragraph" && currentIsParagraph) {
+      lines.push("");
     }
     // Add blank line before list items that follow paragraphs
-    if (lines.length > 0 && prevType === 'paragraph' && isListType(type)) {
-      lines.push('');
+    if (lines.length > 0 && prevType === "paragraph" && isListType(type)) {
+      lines.push("");
     }
 
     // Build line with appropriate prefix
-    const indentStr = '  '.repeat(indent);
+    const indentStr = "  ".repeat(indent);
     let prefix: string;
 
     switch (type) {
-      case 'bullet': {
-        prefix = '- ';
-        if (!listContext.some((ctx) => ctx.indent === indent && ctx.type === 'bullet')) {
-          listContext.push({ type: 'bullet', indent });
+      case "bullet": {
+        prefix = "- ";
+        if (!listContext.some((ctx) => ctx.indent === indent && ctx.type === "bullet")) {
+          listContext.push({ type: "bullet", indent });
         }
         break;
       }
 
-      case 'number': {
+      case "number": {
         const counter = (numberCounters.get(indent) || 0) + 1;
         numberCounters.set(indent, counter);
         prefix = `${counter}. `;
-        if (!listContext.some((ctx) => ctx.indent === indent && ctx.type === 'number')) {
-          listContext.push({ type: 'number', indent });
+        if (!listContext.some((ctx) => ctx.indent === indent && ctx.type === "number")) {
+          listContext.push({ type: "number", indent });
         }
         break;
       }
 
-      case 'task': {
-        prefix = checked ? '- [x] ' : '- [ ] ';
-        if (!listContext.some((ctx) => ctx.indent === indent && ctx.type === 'task')) {
-          listContext.push({ type: 'task', indent });
+      case "task": {
+        prefix = checked ? "- [x] " : "- [ ] ";
+        if (!listContext.some((ctx) => ctx.indent === indent && ctx.type === "task")) {
+          listContext.push({ type: "task", indent });
         }
         break;
       }
 
-      case 'heading': {
-        prefix = '#'.repeat(level || 1) + ' ';
+      case "heading": {
+        prefix = "#".repeat(level || 1) + " ";
         // Reset number counters at this indent level when leaving list
         numberCounters.delete(indent);
         break;
       }
 
-      case 'quote': {
-        prefix = '> ';
+      case "quote": {
+        prefix = "> ";
         numberCounters.delete(indent);
         break;
       }
 
-      case 'code': {
-        lines.push('```' + (language || ''));
+      case "code": {
+        lines.push("```" + (language || ""));
         lines.push(content);
-        lines.push('```');
+        lines.push("```");
         prevType = type;
         return;
       }
 
-      case 'divider': {
-        lines.push('---');
+      case "divider": {
+        lines.push("---");
         prevType = type;
         return;
       }
 
       default:
-        prefix = '';
+        prefix = "";
         numberCounters.delete(indent);
     }
 
@@ -118,44 +118,44 @@ export function serializeToMarkdown(doc: ProseMirrorNode): string {
     prevType = type;
   });
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 /**
  * Serializes the inline content of a block (handles marks and nested formatting).
  */
 function serializeInline(block: ProseMirrorNode): string {
-  let result = '';
+  let result = "";
 
   block.forEach((node) => {
     if (node.isText) {
-      let text = node.text || '';
+      let text = node.text || "";
 
       // Apply marks
       node.marks.forEach((mark) => {
-        if (mark.type.name === 'strong') {
+        if (mark.type.name === "strong") {
           text = `**${text}**`;
-        } else if (mark.type.name === 'em') {
+        } else if (mark.type.name === "em") {
           text = `*${text}*`;
-        } else if (mark.type.name === 'code') {
+        } else if (mark.type.name === "code") {
           text = `\`${text}\``;
-        } else if (mark.type.name === 'strikethrough') {
+        } else if (mark.type.name === "strikethrough") {
           text = `~~${text}~~`;
-        } else if (mark.type.name === 'underline') {
+        } else if (mark.type.name === "underline") {
           text = `<u>${text}</u>`;
-        } else if (mark.type.name === 'link') {
-          const href = mark.attrs.href || '#';
+        } else if (mark.type.name === "link") {
+          const href = mark.attrs.href || "#";
           const title = mark.attrs.title;
-          text = `[${text}](${href}${title ? ` "${title}"` : ''})`;
+          text = `[${text}](${href}${title ? ` "${title}"` : ""})`;
         }
       });
 
       result += text;
-    } else if (node.type.name === 'image') {
+    } else if (node.type.name === "image") {
       const { src, alt, title } = node.attrs;
-      result += `![${alt || ''}](${src || ''}${title ? ` "${title}"` : ''})`;
-    } else if (node.type.name === 'hard_break') {
-      result += '\\\n';
+      result += `![${alt || ""}](${src || ""}${title ? ` "${title}"` : ""})`;
+    } else if (node.type.name === "hard_break") {
+      result += "\\\n";
     }
   });
 
@@ -166,5 +166,5 @@ function serializeInline(block: ProseMirrorNode): string {
  * Checks if a block type is a list type.
  */
 function isListType(type: string): boolean {
-  return type === 'bullet' || type === 'number' || type === 'task';
+  return type === "bullet" || type === "number" || type === "task";
 }

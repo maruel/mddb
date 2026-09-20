@@ -43,7 +43,7 @@
   border-radius: var(--radius-md);
 }
 
-.authForm button[type='submit'] {
+.authForm button[type="submit"] {
   width: 100%;
   padding: var(--s-3);
   background: var(--c-action-primary);
@@ -55,11 +55,11 @@
   margin-top: var(--s-3);
 }
 
-.authForm button[type='submit']:hover {
+.authForm button[type="submit"]:hover {
   background: var(--c-action-primary-hover);
 }
 
-.authForm button[type='submit']:disabled {
+.authForm button[type="submit"]:disabled {
   opacity: 0.5;
 }
 
@@ -116,7 +116,7 @@
 
 .divider::before,
 .divider::after {
-  content: '';
+  content: "";
   flex: 1;
   border-bottom: 1px solid var(--c-border);
 }

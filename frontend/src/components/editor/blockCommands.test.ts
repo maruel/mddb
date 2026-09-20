@@ -1,7 +1,7 @@
 // Tests for ProseMirror block commands.
-import { describe, it, expect } from 'vitest';
-import { EditorState } from 'prosemirror-state';
-import type { Node } from 'prosemirror-model';
+import { describe, it, expect } from "vitest";
+import { EditorState } from "prosemirror-state";
+import type { Node } from "prosemirror-model";
 import {
   deleteBlock,
   deleteBlocks,
@@ -14,10 +14,10 @@ import {
   indentBlocks,
   outdentBlocks,
   toggleTaskBlock,
-} from './blockCommands';
-import { schema } from './schema';
+} from "./blockCommands";
+import { schema } from "./schema";
 
-describe('blockCommands', () => {
+describe("blockCommands", () => {
   /**
    * Helper to create a test document with blocks
    */
@@ -31,7 +31,7 @@ describe('blockCommands', () => {
           indent: 0,
           ...attrs,
         },
-        text
+        text,
       );
     });
     return schema.nodes.doc!.create(undefined, content);
@@ -53,12 +53,12 @@ describe('blockCommands', () => {
     return pos;
   }
 
-  describe('deleteBlock', () => {
-    it('deletes a single block', () => {
+  describe("deleteBlock", () => {
+    it("deletes a single block", () => {
       const doc = createDoc(
-        { type: 'paragraph', content: 'First' },
-        { type: 'paragraph', content: 'Second' },
-        { type: 'paragraph', content: 'Third' }
+        { type: "paragraph", content: "First" },
+        { type: "paragraph", content: "Second" },
+        { type: "paragraph", content: "Third" },
       );
       const state = EditorState.create({ doc, schema });
       const pos = getBlockPos(doc, 1); // Delete second block
@@ -71,12 +71,12 @@ describe('blockCommands', () => {
 
       expect(result).toBe(true);
       expect(newState.doc.childCount).toBe(2);
-      expect(newState.doc.child(0).textContent).toBe('First');
-      expect(newState.doc.child(1).textContent).toBe('Third');
+      expect(newState.doc.child(0).textContent).toBe("First");
+      expect(newState.doc.child(1).textContent).toBe("Third");
     });
 
-    it('returns false for invalid position', () => {
-      const doc = createDoc({ type: 'paragraph', content: 'Only one' });
+    it("returns false for invalid position", () => {
+      const doc = createDoc({ type: "paragraph", content: "Only one" });
       const state = EditorState.create({ doc, schema });
 
       let result: boolean;
@@ -89,8 +89,8 @@ describe('blockCommands', () => {
       expect(result).toBe(false);
     });
 
-    it('handles dispatch=undefined (query mode)', () => {
-      const doc = createDoc({ type: 'paragraph', content: 'Text' });
+    it("handles dispatch=undefined (query mode)", () => {
+      const doc = createDoc({ type: "paragraph", content: "Text" });
       const state = EditorState.create({ doc, schema });
       const pos = getBlockPos(doc, 0);
 
@@ -100,13 +100,13 @@ describe('blockCommands', () => {
     });
   });
 
-  describe('deleteBlocks', () => {
-    it('deletes multiple blocks', () => {
+  describe("deleteBlocks", () => {
+    it("deletes multiple blocks", () => {
       const doc = createDoc(
-        { type: 'paragraph', content: 'First' },
-        { type: 'paragraph', content: 'Second' },
-        { type: 'paragraph', content: 'Third' },
-        { type: 'paragraph', content: 'Fourth' }
+        { type: "paragraph", content: "First" },
+        { type: "paragraph", content: "Second" },
+        { type: "paragraph", content: "Third" },
+        { type: "paragraph", content: "Fourth" },
       );
       const state = EditorState.create({ doc, schema });
 
@@ -121,12 +121,12 @@ describe('blockCommands', () => {
 
       expect(result).toBe(true);
       expect(newState.doc.childCount).toBe(2);
-      expect(newState.doc.child(0).textContent).toBe('First');
-      expect(newState.doc.child(1).textContent).toBe('Fourth');
+      expect(newState.doc.child(0).textContent).toBe("First");
+      expect(newState.doc.child(1).textContent).toBe("Fourth");
     });
 
-    it('returns false for empty positions', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false for empty positions", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
       const command = deleteBlocks([]);
@@ -134,11 +134,11 @@ describe('blockCommands', () => {
       expect(result).toBe(false);
     });
 
-    it('ignores invalid positions in list', () => {
+    it("ignores invalid positions in list", () => {
       const doc = createDoc(
-        { type: 'paragraph', content: 'First' },
-        { type: 'paragraph', content: 'Second' },
-        { type: 'paragraph', content: 'Third' }
+        { type: "paragraph", content: "First" },
+        { type: "paragraph", content: "Second" },
+        { type: "paragraph", content: "Third" },
       );
       const state = EditorState.create({ doc, schema });
 
@@ -152,14 +152,14 @@ describe('blockCommands', () => {
 
       expect(result).toBe(true);
       expect(newState.doc.childCount).toBe(2);
-      expect(newState.doc.child(0).textContent).toBe('Second');
-      expect(newState.doc.child(1).textContent).toBe('Third');
+      expect(newState.doc.child(0).textContent).toBe("Second");
+      expect(newState.doc.child(1).textContent).toBe("Third");
     });
   });
 
-  describe('duplicateBlock', () => {
-    it('duplicates a single block', () => {
-      const doc = createDoc({ type: 'paragraph', content: 'First' }, { type: 'paragraph', content: 'Second' });
+  describe("duplicateBlock", () => {
+    it("duplicates a single block", () => {
+      const doc = createDoc({ type: "paragraph", content: "First" }, { type: "paragraph", content: "Second" });
       const state = EditorState.create({ doc, schema });
       const pos = getBlockPos(doc, 0);
 
@@ -171,15 +171,15 @@ describe('blockCommands', () => {
 
       expect(result).toBe(true);
       expect(newState.doc.childCount).toBe(3);
-      expect(newState.doc.child(0).textContent).toBe('First');
-      expect(newState.doc.child(1).textContent).toBe('First');
-      expect(newState.doc.child(2).textContent).toBe('Second');
+      expect(newState.doc.child(0).textContent).toBe("First");
+      expect(newState.doc.child(1).textContent).toBe("First");
+      expect(newState.doc.child(2).textContent).toBe("Second");
     });
 
-    it('preserves block attributes', () => {
+    it("preserves block attributes", () => {
       const doc = createDoc({
-        type: 'heading',
-        content: 'Title',
+        type: "heading",
+        content: "Title",
         attrs: { level: 2 },
       });
       const state = EditorState.create({ doc, schema });
@@ -191,12 +191,12 @@ describe('blockCommands', () => {
         newState = state.apply(tr);
       });
 
-      expect(newState.doc.child(1).attrs.type).toBe('heading');
+      expect(newState.doc.child(1).attrs.type).toBe("heading");
       expect(newState.doc.child(1).attrs.level).toBe(2);
     });
 
-    it('returns false for invalid position', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false for invalid position", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
       let result: boolean;
@@ -210,12 +210,12 @@ describe('blockCommands', () => {
     });
   });
 
-  describe('duplicateBlocks', () => {
-    it('duplicates multiple blocks', () => {
+  describe("duplicateBlocks", () => {
+    it("duplicates multiple blocks", () => {
       const doc = createDoc(
-        { type: 'paragraph', content: 'First' },
-        { type: 'paragraph', content: 'Second' },
-        { type: 'paragraph', content: 'Third' }
+        { type: "paragraph", content: "First" },
+        { type: "paragraph", content: "Second" },
+        { type: "paragraph", content: "Third" },
       );
       const state = EditorState.create({ doc, schema });
 
@@ -230,15 +230,15 @@ describe('blockCommands', () => {
       expect(result).toBe(true);
       expect(newState.doc.childCount).toBe(5);
       // Original: [0, 1, 2], duplicates inserted after position 1 → [0, 1, dup(0), dup(1), 2]
-      expect(newState.doc.child(0).textContent).toBe('First');
-      expect(newState.doc.child(1).textContent).toBe('Second');
-      expect(newState.doc.child(2).textContent).toBe('First');
-      expect(newState.doc.child(3).textContent).toBe('Second');
-      expect(newState.doc.child(4).textContent).toBe('Third');
+      expect(newState.doc.child(0).textContent).toBe("First");
+      expect(newState.doc.child(1).textContent).toBe("Second");
+      expect(newState.doc.child(2).textContent).toBe("First");
+      expect(newState.doc.child(3).textContent).toBe("Second");
+      expect(newState.doc.child(4).textContent).toBe("Third");
     });
 
-    it('returns false for empty positions', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false for empty positions", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
       const command = duplicateBlocks([]);
@@ -247,53 +247,53 @@ describe('blockCommands', () => {
     });
   });
 
-  describe('convertBlock', () => {
-    it('converts block type', () => {
-      const doc = createDoc({ type: 'paragraph', content: 'Text' });
+  describe("convertBlock", () => {
+    it("converts block type", () => {
+      const doc = createDoc({ type: "paragraph", content: "Text" });
       const state = EditorState.create({ doc, schema });
       const pos = getBlockPos(doc, 0);
 
-      const command = convertBlock(pos, 'heading', { level: 1 });
+      const command = convertBlock(pos, "heading", { level: 1 });
       let newState = state;
       const result = command(state, (tr) => {
         newState = state.apply(tr);
       });
 
       expect(result).toBe(true);
-      expect(newState.doc.child(0).attrs.type).toBe('heading');
+      expect(newState.doc.child(0).attrs.type).toBe("heading");
       expect(newState.doc.child(0).attrs.level).toBe(1);
     });
 
-    it('clears type-specific attributes when converting away', () => {
+    it("clears type-specific attributes when converting away", () => {
       const doc = createDoc({
-        type: 'heading',
-        content: 'Title',
+        type: "heading",
+        content: "Title",
         attrs: { level: 2 },
       });
       const state = EditorState.create({ doc, schema });
       const pos = getBlockPos(doc, 0);
 
-      const command = convertBlock(pos, 'paragraph');
+      const command = convertBlock(pos, "paragraph");
       let newState = state;
       command(state, (tr) => {
         newState = state.apply(tr);
       });
 
-      expect(newState.doc.child(0).attrs.type).toBe('paragraph');
+      expect(newState.doc.child(0).attrs.type).toBe("paragraph");
       // Schema defaults to null, not undefined
       expect(newState.doc.child(0).attrs.level).toBe(null);
     });
 
-    it('preserves indent when converting', () => {
+    it("preserves indent when converting", () => {
       const doc = createDoc({
-        type: 'paragraph',
-        content: 'Text',
+        type: "paragraph",
+        content: "Text",
         attrs: { indent: 2 },
       });
       const state = EditorState.create({ doc, schema });
       const pos = getBlockPos(doc, 0);
 
-      const command = convertBlock(pos, 'bullet');
+      const command = convertBlock(pos, "bullet");
       let newState = state;
       command(state, (tr) => {
         newState = state.apply(tr);
@@ -302,13 +302,13 @@ describe('blockCommands', () => {
       expect(newState.doc.child(0).attrs.indent).toBe(2);
     });
 
-    it('returns false for invalid position', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false for invalid position", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
       let result: boolean;
       try {
-        const command = convertBlock(9999, 'heading');
+        const command = convertBlock(9999, "heading");
         result = command(state, () => {});
       } catch {
         result = false;
@@ -317,17 +317,17 @@ describe('blockCommands', () => {
     });
   });
 
-  describe('convertBlocks', () => {
-    it('converts multiple blocks', () => {
+  describe("convertBlocks", () => {
+    it("converts multiple blocks", () => {
       const doc = createDoc(
-        { type: 'paragraph', content: 'First' },
-        { type: 'paragraph', content: 'Second' },
-        { type: 'paragraph', content: 'Third' }
+        { type: "paragraph", content: "First" },
+        { type: "paragraph", content: "Second" },
+        { type: "paragraph", content: "Third" },
       );
       const state = EditorState.create({ doc, schema });
 
       const positions = [getBlockPos(doc, 0), getBlockPos(doc, 2)];
-      const command = convertBlocks(positions, 'bullet');
+      const command = convertBlocks(positions, "bullet");
 
       let newState = state;
       const result = command(state, (tr) => {
@@ -335,27 +335,27 @@ describe('blockCommands', () => {
       });
 
       expect(result).toBe(true);
-      expect(newState.doc.child(0).attrs.type).toBe('bullet');
-      expect(newState.doc.child(1).attrs.type).toBe('paragraph');
-      expect(newState.doc.child(2).attrs.type).toBe('bullet');
+      expect(newState.doc.child(0).attrs.type).toBe("bullet");
+      expect(newState.doc.child(1).attrs.type).toBe("paragraph");
+      expect(newState.doc.child(2).attrs.type).toBe("bullet");
     });
 
-    it('returns false for empty positions', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false for empty positions", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
-      const command = convertBlocks([], 'heading');
+      const command = convertBlocks([], "heading");
       const result = command(state, () => {});
       expect(result).toBe(false);
     });
 
-    it('returns false if no blocks found at positions', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false if no blocks found at positions", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
       let result: boolean;
       try {
-        const command = convertBlocks([9999], 'heading');
+        const command = convertBlocks([9999], "heading");
         result = command(state, () => {});
       } catch {
         result = false;
@@ -364,11 +364,11 @@ describe('blockCommands', () => {
     });
   });
 
-  describe('indentBlock', () => {
-    it('increases indent', () => {
+  describe("indentBlock", () => {
+    it("increases indent", () => {
       const doc = createDoc({
-        type: 'bullet',
-        content: 'Item',
+        type: "bullet",
+        content: "Item",
         attrs: { indent: 0 },
       });
       const state = EditorState.create({ doc, schema });
@@ -384,10 +384,10 @@ describe('blockCommands', () => {
       expect(newState.doc.child(0).attrs.indent).toBe(1);
     });
 
-    it('respects maximum indent', () => {
+    it("respects maximum indent", () => {
       const doc = createDoc({
-        type: 'bullet',
-        content: 'Item',
+        type: "bullet",
+        content: "Item",
         attrs: { indent: 8 },
       });
       const state = EditorState.create({ doc, schema });
@@ -399,10 +399,10 @@ describe('blockCommands', () => {
       expect(result).toBe(false);
     });
 
-    it('handles missing indent attribute', () => {
+    it("handles missing indent attribute", () => {
       const doc = createDoc({
-        type: 'bullet',
-        content: 'Item',
+        type: "bullet",
+        content: "Item",
         attrs: { indent: undefined },
       });
       const state = EditorState.create({ doc, schema });
@@ -418,8 +418,8 @@ describe('blockCommands', () => {
       expect(newState.doc.child(0).attrs.indent).toBe(1);
     });
 
-    it('returns false for invalid position', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false for invalid position", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
       let result: boolean;
@@ -433,11 +433,11 @@ describe('blockCommands', () => {
     });
   });
 
-  describe('outdentBlock', () => {
-    it('decreases indent', () => {
+  describe("outdentBlock", () => {
+    it("decreases indent", () => {
       const doc = createDoc({
-        type: 'bullet',
-        content: 'Item',
+        type: "bullet",
+        content: "Item",
         attrs: { indent: 2 },
       });
       const state = EditorState.create({ doc, schema });
@@ -453,10 +453,10 @@ describe('blockCommands', () => {
       expect(newState.doc.child(0).attrs.indent).toBe(1);
     });
 
-    it('respects minimum indent', () => {
+    it("respects minimum indent", () => {
       const doc = createDoc({
-        type: 'bullet',
-        content: 'Item',
+        type: "bullet",
+        content: "Item",
         attrs: { indent: 0 },
       });
       const state = EditorState.create({ doc, schema });
@@ -468,8 +468,8 @@ describe('blockCommands', () => {
       expect(result).toBe(false);
     });
 
-    it('returns false for invalid position', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false for invalid position", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
       let result: boolean;
@@ -483,12 +483,12 @@ describe('blockCommands', () => {
     });
   });
 
-  describe('indentBlocks', () => {
-    it('indents multiple blocks', () => {
+  describe("indentBlocks", () => {
+    it("indents multiple blocks", () => {
       const doc = createDoc(
-        { type: 'bullet', content: 'First', attrs: { indent: 0 } },
-        { type: 'bullet', content: 'Second', attrs: { indent: 1 } },
-        { type: 'bullet', content: 'Third', attrs: { indent: 0 } }
+        { type: "bullet", content: "First", attrs: { indent: 0 } },
+        { type: "bullet", content: "Second", attrs: { indent: 1 } },
+        { type: "bullet", content: "Third", attrs: { indent: 0 } },
       );
       const state = EditorState.create({ doc, schema });
 
@@ -506,8 +506,8 @@ describe('blockCommands', () => {
       expect(newState.doc.child(2).attrs.indent).toBe(1);
     });
 
-    it('returns false for empty positions', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false for empty positions", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
       const command = indentBlocks([]);
@@ -515,10 +515,10 @@ describe('blockCommands', () => {
       expect(result).toBe(false);
     });
 
-    it('skips blocks already at max indent', () => {
+    it("skips blocks already at max indent", () => {
       const doc = createDoc(
-        { type: 'bullet', content: 'At max', attrs: { indent: 8 } },
-        { type: 'bullet', content: 'Can indent', attrs: { indent: 0 } }
+        { type: "bullet", content: "At max", attrs: { indent: 8 } },
+        { type: "bullet", content: "Can indent", attrs: { indent: 0 } },
       );
       const state = EditorState.create({ doc, schema });
 
@@ -536,12 +536,12 @@ describe('blockCommands', () => {
     });
   });
 
-  describe('outdentBlocks', () => {
-    it('outdents multiple blocks', () => {
+  describe("outdentBlocks", () => {
+    it("outdents multiple blocks", () => {
       const doc = createDoc(
-        { type: 'bullet', content: 'First', attrs: { indent: 2 } },
-        { type: 'bullet', content: 'Second', attrs: { indent: 1 } },
-        { type: 'bullet', content: 'Third', attrs: { indent: 2 } }
+        { type: "bullet", content: "First", attrs: { indent: 2 } },
+        { type: "bullet", content: "Second", attrs: { indent: 1 } },
+        { type: "bullet", content: "Third", attrs: { indent: 2 } },
       );
       const state = EditorState.create({ doc, schema });
 
@@ -559,8 +559,8 @@ describe('blockCommands', () => {
       expect(newState.doc.child(2).attrs.indent).toBe(1);
     });
 
-    it('returns false for empty positions', () => {
-      const doc = createDoc({ type: 'paragraph' });
+    it("returns false for empty positions", () => {
+      const doc = createDoc({ type: "paragraph" });
       const state = EditorState.create({ doc, schema });
 
       const command = outdentBlocks([]);
@@ -569,11 +569,11 @@ describe('blockCommands', () => {
     });
   });
 
-  describe('toggleTaskBlock', () => {
-    it('toggles task completion state', () => {
+  describe("toggleTaskBlock", () => {
+    it("toggles task completion state", () => {
       const doc = createDoc({
-        type: 'task',
-        content: 'Do something',
+        type: "task",
+        content: "Do something",
         attrs: { checked: false },
       });
       const state = EditorState.create({ doc, schema });
@@ -598,8 +598,8 @@ describe('blockCommands', () => {
       expect(newState.doc.child(0).attrs.checked).toBe(false);
     });
 
-    it('returns false for non-task blocks', () => {
-      const doc = createDoc({ type: 'paragraph', content: 'Not a task' });
+    it("returns false for non-task blocks", () => {
+      const doc = createDoc({ type: "paragraph", content: "Not a task" });
       const state = EditorState.create({ doc, schema });
       const pos = getBlockPos(doc, 0);
 
@@ -608,8 +608,8 @@ describe('blockCommands', () => {
       expect(result).toBe(false);
     });
 
-    it('returns false for invalid position', () => {
-      const doc = createDoc({ type: 'task', content: 'Task' });
+    it("returns false for invalid position", () => {
+      const doc = createDoc({ type: "task", content: "Task" });
       const state = EditorState.create({ doc, schema });
 
       let result: boolean;

@@ -1,12 +1,12 @@
 // Grid view for table records, displaying data in cards.
 
-import { For, Show } from 'solid-js';
-import type { DataRecordResponse, Property } from '@sdk/types.gen';
-import { updateRecordField, handleEnterBlur, getRecordTitle } from './table/tableUtils';
-import { FieldEditor } from './table/FieldEditor';
-import { TableRow } from './table/TableRow';
-import { useI18n } from '../i18n';
-import styles from './TableGrid.module.css';
+import { For, Show } from "solid-js";
+import type { DataRecordResponse, Property } from "@sdk/types.gen";
+import { updateRecordField, handleEnterBlur, getRecordTitle } from "./table/tableUtils";
+import { FieldEditor } from "./table/FieldEditor";
+import { TableRow } from "./table/TableRow";
+import { useI18n } from "../i18n";
+import styles from "./TableGrid.module.css";
 
 interface TableGridProps {
   records: DataRecordResponse[];
@@ -42,7 +42,7 @@ export default function TableGrid(props: TableGridProps) {
                     <input
                       type="text"
                       value={getRecordTitle(record, props.columns)}
-                      placeholder={t('table.untitled') || 'Untitled'}
+                      placeholder={t("table.untitled") || "Untitled"}
                       onBlur={(e) => updateRecordField(record, col().name, e.target.value, props.onUpdateRecord)}
                       onKeyDown={handleEnterBlur}
                       class={styles.titleInput}
@@ -53,7 +53,7 @@ export default function TableGrid(props: TableGridProps) {
                   <input
                     type="text"
                     value=""
-                    placeholder={t('table.untitled') || 'Untitled'}
+                    placeholder={t("table.untitled") || "Untitled"}
                     class={styles.titleInput}
                     disabled
                   />
@@ -77,11 +77,11 @@ export default function TableGrid(props: TableGridProps) {
       </div>
       <div class={styles.statusBar}>
         <span>
-          {props.records.length} {t('table.recordCount') || 'records'}
+          {props.records.length} {t("table.recordCount") || "records"}
         </span>
         <Show when={props.onAddRecord}>
           <button class={styles.addRecord} onClick={() => props.onAddRecord?.()}>
-            + {t('table.addRecord') || 'Add Record'}
+            + {t("table.addRecord") || "Add Record"}
           </button>
         </Show>
       </div>

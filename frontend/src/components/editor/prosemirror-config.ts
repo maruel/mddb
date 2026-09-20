@@ -1,27 +1,27 @@
 // ProseMirror configuration for the flat block editor.
 // Integrates schema, plugins, and keymaps for the new block-based architecture.
 
-import { EditorState, type Plugin } from 'prosemirror-state';
-import { history, undo, redo } from 'prosemirror-history';
-import { keymap } from 'prosemirror-keymap';
-import { baseKeymap } from 'prosemirror-commands';
-import { dropCursor } from 'prosemirror-dropcursor';
-import { gapCursor } from 'prosemirror-gapcursor';
-import type { Node as ProseMirrorNode } from 'prosemirror-model';
+import { EditorState, type Plugin } from "prosemirror-state";
+import { history, undo, redo } from "prosemirror-history";
+import { keymap } from "prosemirror-keymap";
+import { baseKeymap } from "prosemirror-commands";
+import { dropCursor } from "prosemirror-dropcursor";
+import { gapCursor } from "prosemirror-gapcursor";
+import type { Node as ProseMirrorNode } from "prosemirror-model";
 
 // Import flat block schema
-import { schema } from './schema';
+import { schema } from "./schema";
 
 // Import new block-specific plugins and rules
-import { buildBlockInputRules } from './blockInputRules';
-import { buildBlockKeymap } from './blockKeymap';
-import { blockDragPlugin } from './blockDragPlugin';
-import { blockSelectionPlugin } from './blockSelectionPlugin';
-import { numberCounterPlugin } from './numberCounterPlugin';
+import { buildBlockInputRules } from "./blockInputRules";
+import { buildBlockKeymap } from "./blockKeymap";
+import { blockDragPlugin } from "./blockDragPlugin";
+import { blockSelectionPlugin } from "./blockSelectionPlugin";
+import { numberCounterPlugin } from "./numberCounterPlugin";
 
 // Re-export schema components for use in other files
 export { schema };
-export { nodes, marks } from './schema';
+export { nodes, marks } from "./schema";
 
 /**
  * Create a new EditorState with all necessary plugins for the block editor.
@@ -38,7 +38,7 @@ export function createEditorState(doc: ProseMirrorNode, extraPlugins?: Plugin[])
       buildBlockKeymap(),
 
       // Undo/Redo keybindings (must come before history plugin)
-      keymap({ 'Mod-z': undo, 'Mod-y': redo, 'Shift-Mod-z': redo }),
+      keymap({ "Mod-z": undo, "Mod-y": redo, "Shift-Mod-z": redo }),
 
       // Standard ProseMirror keymap (basic editing)
       keymap(baseKeymap),
@@ -52,7 +52,7 @@ export function createEditorState(doc: ProseMirrorNode, extraPlugins?: Plugin[])
       numberCounterPlugin,
 
       // UI polish
-      dropCursor({ color: 'var(--c-control-accent)', width: 2 }),
+      dropCursor({ color: "var(--c-control-accent)", width: 2 }),
       gapCursor(),
 
       // Extra plugins passed from Editor (e.g. slash menu, upload)

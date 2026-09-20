@@ -46,10 +46,10 @@ GitHub OAuth requires an HTTPS URL, so you need to server over Tailscale or a re
 Microsoft OAuth is Microsoft Entra
 
 1. https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade/quickStartType~/null/isMSAApp~/false
-    1. Accounts in any organizational directory (Any Microsoft Entra ID tenant - Multitenant) and personal Microsoft accounts (e.g. Skype, Xbox)
-    1. Redirect URL:
-        1. Web
-        1. `https://<hostname>.<tailnet>.ts.net/api/v1/auth/microsoft/callback`
+   1. Accounts in any organizational directory (Any Microsoft Entra ID tenant - Multitenant) and personal Microsoft accounts (e.g. Skype, Xbox)
+   1. Redirect URL:
+      1. Web
+      1. `https://<hostname>.<tailnet>.ts.net/api/v1/auth/microsoft/callback`
 1. Click "Add a certificate or secret"
 1. New client secret
 1. Duration: 730 days
@@ -57,8 +57,8 @@ Microsoft OAuth is Microsoft Entra
 1. `MICROSOFT_CLIENT_SECRET`: Client Secret = Certificates & secrets → Client secrets → the Value column (only
    visible right after creation, not the "Secret ID" column)
 1. Set branding
-    1. https://<host>/terms
-    1. https://<host>/privacy
+   1. https://<host>/terms
+   1. https://<host>/privacy
 1. Add yourself as owner
 1. Validate a domain name with a `/.well-known/microsoft-identity-association.json` file
 
@@ -132,7 +132,6 @@ To describe later. Ask "how to run a program via launchd"
 ### Running on Windows
 
 To describe later. Ask "how to run a service on windows"
-
 
 ## Serving over the web
 

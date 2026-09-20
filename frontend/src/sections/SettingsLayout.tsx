@@ -1,12 +1,12 @@
 // Settings layout with sidebar navigation and content outlet.
 
-import { createSignal, Show, onMount, onCleanup, type JSX } from 'solid-js';
-import { useNavigate, useLocation } from '@solidjs/router';
-import { useAuth } from '../contexts';
-import { useI18n } from '../i18n';
-import { workspaceUrl } from '../utils/urls';
-import SettingsSidebar from '../components/settings/SettingsSidebar';
-import styles from './SettingsSection.module.css';
+import { createSignal, Show, onMount, onCleanup, type JSX } from "solid-js";
+import { useNavigate, useLocation } from "@solidjs/router";
+import { useAuth } from "../contexts";
+import { useI18n } from "../i18n";
+import { workspaceUrl } from "../utils/urls";
+import SettingsSidebar from "../components/settings/SettingsSidebar";
+import styles from "./SettingsSection.module.css";
 
 interface SettingsLayoutProps {
   children?: JSX.Element;
@@ -22,7 +22,7 @@ export default function SettingsLayout(props: SettingsLayoutProps) {
 
   // Handle Escape key to close mobile sidebar
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && isMobileLayout() && showMobileSidebar()) {
+    if (e.key === "Escape" && isMobileLayout() && showMobileSidebar()) {
       setShowMobileSidebar(false);
     }
   };
@@ -35,11 +35,11 @@ export default function SettingsLayout(props: SettingsLayoutProps) {
         setShowMobileSidebar(false);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('resize', handleResize);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
     onCleanup(() => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
     });
   });
 
@@ -65,24 +65,24 @@ export default function SettingsLayout(props: SettingsLayoutProps) {
     const path = location.pathname;
     const hash = location.hash?.slice(1) || undefined;
 
-    if (path === '/settings/user' || path === '/settings/user/') {
-      return { type: 'profile' as const };
+    if (path === "/settings/user" || path === "/settings/user/") {
+      return { type: "profile" as const };
     }
-    if (path === '/settings/server' || path === '/settings/server/') {
-      return { type: 'server' as const };
+    if (path === "/settings/server" || path === "/settings/server/") {
+      return { type: "server" as const };
     }
 
     const wsMatch = path.match(/^\/settings\/workspace\/([^+/]+)/);
     if (wsMatch) {
-      return { type: 'workspace' as const, id: wsMatch[1], section: hash };
+      return { type: "workspace" as const, id: wsMatch[1], section: hash };
     }
 
     const orgMatch = path.match(/^\/settings\/org\/([^+/]+)/);
     if (orgMatch) {
-      return { type: 'org' as const, id: orgMatch[1], section: hash };
+      return { type: "org" as const, id: orgMatch[1], section: hash };
     }
 
-    return { type: 'profile' as const };
+    return { type: "profile" as const };
   };
 
   return (
@@ -97,10 +97,10 @@ export default function SettingsLayout(props: SettingsLayoutProps) {
             &#9776;
           </button>
           <button onClick={handleBack} class={styles.backButton}>
-            &larr; {t('common.back')}
+            &larr; {t("common.back")}
           </button>
           <h1 class={styles.title} onClick={navigateToWorkspace}>
-            {t('settings.title')}
+            {t("settings.title")}
           </h1>
         </div>
       </header>

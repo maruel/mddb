@@ -206,7 +206,7 @@ const text = schema.text(title, [linkMark]);
 
 ### Frontend (ESLint + Prettier)
 
-Configured in root `eslint.config.js` and `.prettierrc`. Enforces strict equality, no-unused-vars, and consistent formatting (single quotes, 2 spaces).
+Configured in root `eslint.config.js`, `.editorconfig`, and the shared `.prettierignore`. Enforces strict equality, no-unused-vars, and consistent formatting (double quotes, 2 spaces).
 
 ## Useful Resources
 

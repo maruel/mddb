@@ -18,9 +18,9 @@ frontend_source_changed=false
 while IFS= read -r -d '' file; do
   staged_changes+=("$file")
   case "$file" in
-    frontend/src/*.css | frontend/src/*.html | frontend/src/*.ts | frontend/src/*.tsx)
-      frontend_source_changed=true
-      ;;
+  frontend/src/*.css | frontend/src/*.html | frontend/src/*.ts | frontend/src/*.tsx)
+    frontend_source_changed=true
+    ;;
   esac
 done < <(git diff --cached --name-only -z)
 
@@ -44,21 +44,21 @@ python_files=()
 while IFS= read -r -d '' file; do
   if [[ ! -L "$file" ]]; then
     case "$file" in
-      *.css | *.html | *.json | *.md | *.mjs | *.ts | *.tsx | *.yaml | *.yml)
-        format_files+=("$file")
-        ;;
+    *.css | *.html | *.json | *.md | *.mjs | *.ts | *.tsx | *.yaml | *.yml)
+      format_files+=("$file")
+      ;;
     esac
   fi
   case "$file" in
-    *.js | *.mjs | *.ts | *.tsx)
-      eslint_files+=("$file")
-      ;;
-    *.go)
-      go_files+=("$file")
-      ;;
-    *.py)
-      python_files+=("$file")
-      ;;
+  *.js | *.mjs | *.ts | *.tsx)
+    eslint_files+=("$file")
+    ;;
+  *.go)
+    go_files+=("$file")
+    ;;
+  *.py)
+    python_files+=("$file")
+    ;;
   esac
 done < <(git diff --cached --name-only --diff-filter=ACMR -z)
 
@@ -109,7 +109,7 @@ if ((${#go_files[@]} > 0)); then
 fi
 
 if ((${#python_files[@]} > 0)); then
-  command -v ruff > /dev/null || {
+  command -v ruff >/dev/null || {
     printf '%s\n' 'ruff is required to validate staged Python files.' >&2
     exit 1
   }

@@ -1,28 +1,28 @@
 // Notification preferences panel for managing per-type channel preferences and push subscription.
 
-import { createSignal, createEffect, Show, For } from 'solid-js';
-import type { ChannelSetDTO, NotificationPrefsDTO } from '@sdk/types.gen';
-import { useAuth } from '../../contexts';
-import { useNotifications } from '../../contexts/NotificationContext';
-import { useI18n } from '../../i18n';
-import styles from './NotificationSettings.module.css';
+import { createSignal, createEffect, Show, For } from "solid-js";
+import type { ChannelSetDTO, NotificationPrefsDTO } from "@sdk/types.gen";
+import { useAuth } from "../../contexts";
+import { useNotifications } from "../../contexts/NotificationContext";
+import { useI18n } from "../../i18n";
+import styles from "./NotificationSettings.module.css";
 
 const NOTIFICATION_TYPES = [
-  'org_invite',
-  'ws_invite',
-  'member_joined',
-  'member_removed',
-  'page_mention',
-  'page_edited',
+  "org_invite",
+  "ws_invite",
+  "member_joined",
+  "member_removed",
+  "page_mention",
+  "page_edited",
 ] as const;
 
 const TYPE_LABEL_KEYS: Record<string, string> = {
-  org_invite: 'notifications.typeOrgInvite',
-  ws_invite: 'notifications.typeWsInvite',
-  member_joined: 'notifications.typeMemberJoined',
-  member_removed: 'notifications.typeMemberRemoved',
-  page_mention: 'notifications.typePageMention',
-  page_edited: 'notifications.typePageEdited',
+  org_invite: "notifications.typeOrgInvite",
+  ws_invite: "notifications.typeWsInvite",
+  member_joined: "notifications.typeMemberJoined",
+  member_removed: "notifications.typeMemberRemoved",
+  page_mention: "notifications.typePageMention",
+  page_edited: "notifications.typePageEdited",
 };
 
 export default function NotificationSettings() {
@@ -41,7 +41,7 @@ export default function NotificationSettings() {
       const data = await api().notifications.preferences.getNotificationPrefs();
       setPrefs(data);
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export default function NotificationSettings() {
     return p.defaults?.[type] ?? { email: false, web: false };
   };
 
-  const setChannel = async (type: string, channel: 'email' | 'web', value: boolean) => {
+  const setChannel = async (type: string, channel: "email" | "web", value: boolean) => {
     const p = prefs();
     if (!p) return;
     const current = getChannels(type);
@@ -78,7 +78,7 @@ export default function NotificationSettings() {
     } catch (err) {
       // Revert
       setPrefs(p);
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setSaving(false);
     }
@@ -93,37 +93,37 @@ export default function NotificationSettings() {
   };
 
   const pushPermission = () => {
-    if (typeof Notification === 'undefined') return 'unsupported';
+    if (typeof Notification === "undefined") return "unsupported";
     return Notification.permission;
   };
 
   return (
     <section class={styles.section}>
-      <h3>{t('notifications.preferences')}</h3>
+      <h3>{t("notifications.preferences")}</h3>
       <Show when={error()}>
         <div class={styles.error}>{error()}</div>
       </Show>
 
       <div class={styles.pushSection}>
         <button
-          class={`${styles.pushButton} ${pushEnabled() ? styles.pushActive : ''}`}
+          class={`${styles.pushButton} ${pushEnabled() ? styles.pushActive : ""}`}
           onClick={handleTogglePush}
-          disabled={pushPermission() === 'denied'}
+          disabled={pushPermission() === "denied"}
         >
-          {pushEnabled() ? t('notifications.pushEnabled') : t('notifications.enablePush')}
+          {pushEnabled() ? t("notifications.pushEnabled") : t("notifications.enablePush")}
         </button>
-        <Show when={pushPermission() === 'denied'}>
-          <p class={styles.pushDenied}>{t('notifications.pushDenied')}</p>
+        <Show when={pushPermission() === "denied"}>
+          <p class={styles.pushDenied}>{t("notifications.pushDenied")}</p>
         </Show>
       </div>
 
-      <Show when={prefs()} fallback={loading() ? <p>{t('common.loading')}</p> : null}>
+      <Show when={prefs()} fallback={loading() ? <p>{t("common.loading")}</p> : null}>
         <table class={styles.prefsTable}>
           <thead>
             <tr>
               <th />
-              <th>{t('notifications.channelEmail')}</th>
-              <th>{t('notifications.channelWeb')}</th>
+              <th>{t("notifications.channelEmail")}</th>
+              <th>{t("notifications.channelWeb")}</th>
             </tr>
           </thead>
           <tbody>
@@ -137,7 +137,7 @@ export default function NotificationSettings() {
                       <input
                         type="checkbox"
                         checked={channels().email}
-                        onChange={(e) => setChannel(type, 'email', e.currentTarget.checked)}
+                        onChange={(e) => setChannel(type, "email", e.currentTarget.checked)}
                         disabled={saving()}
                       />
                     </td>
@@ -145,7 +145,7 @@ export default function NotificationSettings() {
                       <input
                         type="checkbox"
                         checked={channels().web}
-                        onChange={(e) => setChannel(type, 'web', e.currentTarget.checked)}
+                        onChange={(e) => setChannel(type, "web", e.currentTarget.checked)}
                         disabled={saving()}
                       />
                     </td>

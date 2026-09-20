@@ -1,11 +1,11 @@
 // Flat block schema for uniform drag-drop block editor.
 // Every visible line is a top-level block node with attributes for type, indentation, and styling.
 
-import { Schema, type NodeSpec, type DOMOutputSpec } from 'prosemirror-model';
-import { schema as baseSchema } from 'prosemirror-markdown';
+import { Schema, type NodeSpec, type DOMOutputSpec } from "prosemirror-model";
+import { schema as baseSchema } from "prosemirror-markdown";
 
 // Block types: correspond to different content kinds
-export type BlockType = 'paragraph' | 'heading' | 'bullet' | 'number' | 'task' | 'quote' | 'code' | 'divider';
+export type BlockType = "paragraph" | "heading" | "bullet" | "number" | "task" | "quote" | "code" | "divider";
 
 // Block attributes: describe a single block's type, nesting level, and metadata
 export interface BlockAttrs {
@@ -20,79 +20,79 @@ export interface BlockAttrs {
 // Block node specification: all content lines are unified under this node
 const blockSpec: NodeSpec = {
   attrs: {
-    type: { default: 'paragraph' },
+    type: { default: "paragraph" },
     level: { default: null },
     indent: { default: 0 },
     checked: { default: null },
     number: { default: null },
     language: { default: null },
   },
-  content: 'inline*',
-  group: 'block',
+  content: "inline*",
+  group: "block",
   parseDOM: [
     // Headings: h1-h6
-    { tag: 'h1', attrs: { type: 'heading', level: 1 } },
-    { tag: 'h2', attrs: { type: 'heading', level: 2 } },
-    { tag: 'h3', attrs: { type: 'heading', level: 3 } },
-    { tag: 'h4', attrs: { type: 'heading', level: 4 } },
-    { tag: 'h5', attrs: { type: 'heading', level: 5 } },
-    { tag: 'h6', attrs: { type: 'heading', level: 6 } },
+    { tag: "h1", attrs: { type: "heading", level: 1 } },
+    { tag: "h2", attrs: { type: "heading", level: 2 } },
+    { tag: "h3", attrs: { type: "heading", level: 3 } },
+    { tag: "h4", attrs: { type: "heading", level: 4 } },
+    { tag: "h5", attrs: { type: "heading", level: 5 } },
+    { tag: "h6", attrs: { type: "heading", level: 6 } },
 
     // Task list items: li.task-list-item with optional data-checked
     {
-      tag: 'li.task-list-item',
+      tag: "li.task-list-item",
       priority: 70,
       getAttrs(dom: HTMLElement) {
         return {
-          type: 'task',
-          checked: dom.dataset.checked === 'true',
-          indent: parseInt(dom.dataset.indent || '0', 10),
+          type: "task",
+          checked: dom.dataset.checked === "true",
+          indent: parseInt(dom.dataset.indent || "0", 10),
         };
       },
     },
 
     // Bullet and numbered list items: plain li, context determines bullet vs number
     {
-      tag: 'ul li',
+      tag: "ul li",
       priority: 70,
       getAttrs(dom: HTMLElement) {
         return {
-          type: 'bullet',
-          indent: parseInt(dom.dataset.indent || '0', 10),
+          type: "bullet",
+          indent: parseInt(dom.dataset.indent || "0", 10),
         };
       },
     },
     {
-      tag: 'ol li',
+      tag: "ol li",
       priority: 70,
       getAttrs(dom: HTMLElement) {
         return {
-          type: 'number',
-          indent: parseInt(dom.dataset.indent || '0', 10),
+          type: "number",
+          indent: parseInt(dom.dataset.indent || "0", 10),
         };
       },
     },
 
     // Fallback for plain li
     {
-      tag: 'li',
+      tag: "li",
       getAttrs(dom: HTMLElement) {
         return {
-          type: dom.dataset.type === 'number' ? 'number' : 'bullet',
-          indent: parseInt(dom.dataset.indent || '0', 10),
+          type: dom.dataset.type === "number" ? "number" : "bullet",
+          indent: parseInt(dom.dataset.indent || "0", 10),
         };
       },
     },
 
     // Blockquote: blockquote > p or just blockquote
     {
-      tag: 'blockquote',
-      attrs: { type: 'quote' },
+      tag: "blockquote",
+      attrs: { type: "quote" },
     },
 
     // Code block: pre with optional data-language
     {
-      tag: 'pre',
+      tag: "pre",
       getAttrs(dom: HTMLElement) {
         // Try to extract language from class names or data attribute
         // Import extractCodeLanguage from dom-parser
@@ -101,15 +101,15 @@ const blockSpec: NodeSpec = {
         if (!language) {
           const classes = Array.from(dom.classList);
           for (const cls of classes) {
-            if (cls.startsWith('language-')) {
+            if (cls.startsWith("language-")) {
               language = cls.slice(9);
               break;
             }
-            if (cls.startsWith('lang-')) {
+            if (cls.startsWith("lang-")) {
               language = cls.slice(5);
               break;
             }
-            if (cls.startsWith('hljs-')) {
+            if (cls.startsWith("hljs-")) {
               language = cls.slice(5);
               break;
             }
@@ -117,7 +117,7 @@ const blockSpec: NodeSpec = {
         }
 
         return {
-          type: 'code',
+          type: "code",
           language,
         };
       },
@@ -125,75 +125,75 @@ const blockSpec: NodeSpec = {
 
     // Horizontal rule: hr
     {
-      tag: 'hr',
-      attrs: { type: 'divider' },
+      tag: "hr",
+      attrs: { type: "divider" },
     },
 
     // Catch mddb's own serialized format (divs with data-type)
     {
-      tag: 'div[data-type]',
+      tag: "div[data-type]",
       priority: 60, // Higher than default
       getAttrs(dom: HTMLElement) {
         const type = dom.dataset.type as BlockType;
         return {
           type,
-          indent: parseInt(dom.dataset.indent || '0', 10),
+          indent: parseInt(dom.dataset.indent || "0", 10),
           level: dom.dataset.level ? parseInt(dom.dataset.level, 10) : null,
-          checked: dom.dataset.checked === 'true' ? true : dom.dataset.checked === 'false' ? false : null,
+          checked: dom.dataset.checked === "true" ? true : dom.dataset.checked === "false" ? false : null,
           language: dom.dataset.language || null,
         };
       },
     },
 
     // Paragraph: default, catch-all
-    { tag: 'p', attrs: { type: 'paragraph' } },
+    { tag: "p", attrs: { type: "paragraph" } },
   ],
   toDOM(node): DOMOutputSpec {
     const { type, level, indent, checked, language } = node.attrs;
     const baseAttrs: Record<string, string> = {
-      'data-type': type,
-      'data-indent': String(indent),
+      "data-type": type,
+      "data-indent": String(indent),
     };
 
     switch (type) {
-      case 'heading': {
+      case "heading": {
         const tag = `h${level || 1}`;
         return [tag, baseAttrs, 0];
       }
 
-      case 'bullet':
-      case 'number': {
+      case "bullet":
+      case "number": {
         const attrs = { ...baseAttrs, class: `block-${type}` };
-        return ['div', attrs, 0];
+        return ["div", attrs, 0];
       }
 
-      case 'task': {
+      case "task": {
         const attrs = {
           ...baseAttrs,
-          class: 'block-task',
-          'data-checked': String(checked || false),
+          class: "block-task",
+          "data-checked": String(checked || false),
         };
-        return ['div', attrs, 0];
+        return ["div", attrs, 0];
       }
 
-      case 'quote': {
-        return ['blockquote', baseAttrs, 0];
+      case "quote": {
+        return ["blockquote", baseAttrs, 0];
       }
 
-      case 'code': {
+      case "code": {
         const attrs = {
           ...baseAttrs,
-          'data-language': language || '',
+          "data-language": language || "",
         };
-        return ['pre', attrs, ['code', 0]];
+        return ["pre", attrs, ["code", 0]];
       }
 
-      case 'divider': {
-        return ['hr', baseAttrs];
+      case "divider": {
+        return ["hr", baseAttrs];
       }
 
       default:
-        return ['p', baseAttrs, 0];
+        return ["p", baseAttrs, 0];
     }
   },
 };
@@ -201,41 +201,41 @@ const blockSpec: NodeSpec = {
 // Divider node: empty block for horizontal rules
 const dividerSpec: NodeSpec = {
   attrs: {
-    type: { default: 'divider' },
+    type: { default: "divider" },
     indent: { default: 0 },
   },
-  content: 'inline*',
-  group: 'block',
-  parseDOM: [{ tag: 'hr', attrs: { type: 'divider' } }],
+  content: "inline*",
+  group: "block",
+  parseDOM: [{ tag: "hr", attrs: { type: "divider" } }],
   toDOM(node): DOMOutputSpec {
-    return ['hr', { 'data-type': 'divider', 'data-indent': String(node.attrs.indent) }];
+    return ["hr", { "data-type": "divider", "data-indent": String(node.attrs.indent) }];
   },
 };
 
 // Create flat block schema: replace nested list/heading/paragraph nodes with single block node
 export const schema = new Schema({
   nodes: baseSchema.spec.nodes
-    .remove('bullet_list')
-    .remove('ordered_list')
-    .remove('list_item')
-    .remove('paragraph')
-    .remove('heading')
-    .remove('blockquote')
-    .remove('code_block')
-    .remove('horizontal_rule')
-    .addToEnd('block', blockSpec)
-    .addToEnd('divider', dividerSpec),
+    .remove("bullet_list")
+    .remove("ordered_list")
+    .remove("list_item")
+    .remove("paragraph")
+    .remove("heading")
+    .remove("blockquote")
+    .remove("code_block")
+    .remove("horizontal_rule")
+    .addToEnd("block", blockSpec)
+    .addToEnd("divider", dividerSpec),
   marks: baseSchema.spec.marks
-    .addToEnd('underline', {
-      parseDOM: [{ tag: 'u' }, { style: 'text-decoration=underline' }],
+    .addToEnd("underline", {
+      parseDOM: [{ tag: "u" }, { style: "text-decoration=underline" }],
       toDOM(): DOMOutputSpec {
-        return ['u', 0];
+        return ["u", 0];
       },
     })
-    .addToEnd('strikethrough', {
-      parseDOM: [{ tag: 's' }, { tag: 'del' }, { style: 'text-decoration=line-through' }],
+    .addToEnd("strikethrough", {
+      parseDOM: [{ tag: "s" }, { tag: "del" }, { style: "text-decoration=line-through" }],
       toDOM(): DOMOutputSpec {
-        return ['s', 0];
+        return ["s", 0];
       },
     }),
 });
@@ -256,17 +256,17 @@ function getMarkType(name: string) {
 
 // Exported node types for use in plugins and commands
 export const nodes = {
-  doc: getNodeType('doc'),
-  block: getNodeType('block'),
-  divider: getNodeType('divider'),
+  doc: getNodeType("doc"),
+  block: getNodeType("block"),
+  divider: getNodeType("divider"),
 };
 
 // Exported mark types for use in plugins and commands
 export const marks = {
-  strong: getMarkType('strong'),
-  em: getMarkType('em'),
-  code: getMarkType('code'),
-  link: getMarkType('link'),
-  underline: getMarkType('underline'),
-  strikethrough: getMarkType('strikethrough'),
+  strong: getMarkType("strong"),
+  em: getMarkType("em"),
+  code: getMarkType("code"),
+  link: getMarkType("link"),
+  underline: getMarkType("underline"),
+  strikethrough: getMarkType("strikethrough"),
 };

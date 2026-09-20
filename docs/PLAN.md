@@ -1,6 +1,7 @@
 # mddb Implementation Plan
 
 This is the high-level roadmap for mddb. For detailed component plans, see:
+
 - [Backend Plan](../backend/docs/PLAN.md)
 - [Frontend Plan](../frontend/docs/PLAN.md)
 
@@ -24,10 +25,12 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
   - [ ] Column visibility toggles, view rename/duplicate.
 
 ## Future Evolution
+
 - **High-Performance UX**: Virtualization, command palettes, and relationship graphs.
 - **Inline Markdown Tables**: Add `table` node type to ProseMirror schema, handle `table_open`/`thead_open`/`tr_open`/`th_open`/`td_open` tokens in `markdown-parser.ts`, and render/edit tables in the flat block editor. Currently table syntax is disabled in markdown-it (`md.disable('table')`) to avoid a crash.
 - **Data Integrity**: Migration to SQLite for metadata while preserving the self-describing on-disk format.
 - **Large File Uploads**: Streaming uploads for video/large assets (avoid memory buffering), chunked/resumable uploads (tus protocol), progress tracking.
 
 ## Requirements
+
 See [REQUIREMENTS.md](REQUIREMENTS.md) for complete system requirements.

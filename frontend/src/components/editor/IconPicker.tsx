@@ -1,8 +1,8 @@
 // Icon picker component for selecting emoji (Noto Color Emoji) or Material Symbols icons.
 
-import { createSignal, For, Show, onMount, onCleanup, createResource } from 'solid-js';
-import { useI18n } from '../../i18n';
-import styles from './IconPicker.module.css';
+import { createSignal, For, Show, onMount, onCleanup, createResource } from "solid-js";
+import { useI18n } from "../../i18n";
+import styles from "./IconPicker.module.css";
 
 // Emoji entry from the generated groups file.
 interface EmojiEntry {
@@ -17,13 +17,13 @@ interface EmojiGroup {
 
 // Lazy-load emoji groups (Unicode-classified, ~132 KB JSON) on first Emoji tab open.
 async function loadEmojiGroups(): Promise<EmojiGroup[]> {
-  const mod = await import('./emoji-groups.json');
+  const mod = await import("./emoji-groups.json");
   return mod.default as EmojiGroup[];
 }
 
 // Lazy-load Material Symbols icon names (3,798 names, ~58 KB JSON) on first Icons tab open.
 async function loadIconNames(): Promise<string[]> {
-  const mod = await import('./material-symbols-names.json');
+  const mod = await import("./material-symbols-names.json");
   return mod.default as string[];
 }
 
@@ -36,35 +36,35 @@ interface IconPickerProps {
 
 export function IconPicker(props: IconPickerProps) {
   const { t } = useI18n();
-  const [tab, setTab] = createSignal<'emoji' | 'icons'>('emoji');
-  const [search, setSearch] = createSignal('');
+  const [tab, setTab] = createSignal<"emoji" | "icons">("emoji");
+  const [search, setSearch] = createSignal("");
   let containerRef: HTMLDivElement | undefined;
 
   const [emojiGroups] = createResource(
-    () => tab() === 'emoji',
-    (active) => (active ? loadEmojiGroups() : Promise.resolve([] as EmojiGroup[]))
+    () => tab() === "emoji",
+    (active) => (active ? loadEmojiGroups() : Promise.resolve([] as EmojiGroup[])),
   );
 
   const [iconNames] = createResource(
-    () => tab() === 'icons',
-    (active) => (active ? loadIconNames() : Promise.resolve([] as string[]))
+    () => tab() === "icons",
+    (active) => (active ? loadIconNames() : Promise.resolve([] as string[])),
   );
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') props.onClose();
+    if (e.key === "Escape") props.onClose();
   };
 
   onMount(() => {
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef && !containerRef.contains(e.target as Node)) {
         props.onClose();
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     onCleanup(() => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
     });
   });
 
@@ -83,7 +83,7 @@ export function IconPicker(props: IconPickerProps) {
 
   const filteredIcons = () => {
     const names = iconNames() ?? [];
-    const q = search().toLowerCase().replace(/\s+/g, '_');
+    const q = search().toLowerCase().replace(/\s+/g, "_");
     if (!q) return names;
     return names.filter((n) => n.includes(q));
   };
@@ -91,39 +91,39 @@ export function IconPicker(props: IconPickerProps) {
   return (
     <div class={styles.picker} ref={(el) => (containerRef = el)}>
       <div class={styles.pickerHeader}>
-        <span class={styles.pickerTitle}>{t('editor.iconPickerTitle')}</span>
+        <span class={styles.pickerTitle}>{t("editor.iconPickerTitle")}</span>
         <Show when={props.hasIcon}>
           <button class={styles.removeBtn} onClick={() => props.onRemove()}>
-            {t('editor.removeIcon')}
+            {t("editor.removeIcon")}
           </button>
         </Show>
       </div>
       <div class={styles.tabs}>
         <button
           class={styles.tab}
-          classList={{ [`${styles.activeTab}`]: tab() === 'emoji' }}
-          onClick={() => setTab('emoji')}
+          classList={{ [`${styles.activeTab}`]: tab() === "emoji" }}
+          onClick={() => setTab("emoji")}
         >
-          {t('editor.iconPickerEmoji')}
+          {t("editor.iconPickerEmoji")}
         </button>
         <button
           class={styles.tab}
-          classList={{ [`${styles.activeTab}`]: tab() === 'icons' }}
-          onClick={() => setTab('icons')}
+          classList={{ [`${styles.activeTab}`]: tab() === "icons" }}
+          onClick={() => setTab("icons")}
         >
-          {t('editor.iconPickerIcons')}
+          {t("editor.iconPickerIcons")}
         </button>
       </div>
       <input
         class={styles.searchInput}
         type="text"
-        placeholder={t('editor.iconPickerSearch') || 'Search...'}
+        placeholder={t("editor.iconPickerSearch") || "Search..."}
         value={search()}
         onInput={(e) => setSearch(e.target.value)}
         autofocus
       />
       <div class={styles.grid}>
-        <Show when={tab() === 'emoji'}>
+        <Show when={tab() === "emoji"}>
           <Show when={!emojiGroups.loading} fallback={<div class={styles.loadingMsg}>Loading…</div>}>
             <For each={filteredEmojiGroups()}>
               {(group) => (
@@ -143,12 +143,12 @@ export function IconPicker(props: IconPickerProps) {
             </For>
           </Show>
         </Show>
-        <Show when={tab() === 'icons'}>
+        <Show when={tab() === "icons"}>
           <Show when={!iconNames.loading} fallback={<div class={styles.loadingMsg}>Loading…</div>}>
             <div class={styles.iconGrid}>
               <For each={filteredIcons()}>
                 {(name) => (
-                  <button class={styles.iconBtn} onClick={() => props.onSelect(name)} title={name.replace(/_/g, ' ')}>
+                  <button class={styles.iconBtn} onClick={() => props.onSelect(name)} title={name.replace(/_/g, " ")}>
                     <span class="material-symbols-outlined">{name}</span>
                   </button>
                 )}
@@ -172,9 +172,9 @@ export function IconDisplay(props: { icon: string; class?: string }) {
     <Show when={props.icon}>
       <Show
         when={isEmoji()}
-        fallback={<span class={`material-symbols-outlined ${props.class ?? ''}`}>{props.icon}</span>}
+        fallback={<span class={`material-symbols-outlined ${props.class ?? ""}`}>{props.icon}</span>}
       >
-        <span class={`${styles.emojiDisplay} ${props.class ?? ''}`} aria-label={props.icon}>
+        <span class={`${styles.emojiDisplay} ${props.class ?? ""}`} aria-label={props.icon}>
           {props.icon}
         </span>
       </Show>

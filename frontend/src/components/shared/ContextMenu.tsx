@@ -1,8 +1,8 @@
 // Shared context menu component with keyboard navigation and viewport boundary detection.
 
-import { createEffect, createSignal, For, Show, type JSX, onCleanup } from 'solid-js';
-import { Portal } from 'solid-js/web';
-import styles from './ContextMenu.module.css';
+import { createEffect, createSignal, For, Show, type JSX, onCleanup } from "solid-js";
+import { Portal } from "solid-js/web";
+import styles from "./ContextMenu.module.css";
 
 export interface ContextMenuAction {
   id: string;
@@ -80,14 +80,14 @@ export function ContextMenu(props: ContextMenuProps) {
 
     // Use setTimeout to avoid immediately closing from the triggering right-click
     const timeoutId = setTimeout(() => {
-      document.addEventListener('click', handleClickOutside);
-      document.addEventListener('contextmenu', handleClickOutside);
+      document.addEventListener("click", handleClickOutside);
+      document.addEventListener("contextmenu", handleClickOutside);
     }, 0);
 
     onCleanup(() => {
       clearTimeout(timeoutId);
-      document.removeEventListener('click', handleClickOutside);
-      document.removeEventListener('contextmenu', handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
+      document.removeEventListener("contextmenu", handleClickOutside);
     });
   });
 
@@ -98,12 +98,12 @@ export function ContextMenu(props: ContextMenuProps) {
       if (enabledIndices.length === 0) return;
 
       switch (e.key) {
-        case 'Escape':
+        case "Escape":
           e.preventDefault();
           props.onClose();
           break;
 
-        case 'ArrowDown': {
+        case "ArrowDown": {
           e.preventDefault();
           const currentPos = enabledIndices.indexOf(focusedIndex());
           const nextPos = currentPos >= 0 ? (currentPos + 1) % enabledIndices.length : 0;
@@ -114,7 +114,7 @@ export function ContextMenu(props: ContextMenuProps) {
           break;
         }
 
-        case 'ArrowUp': {
+        case "ArrowUp": {
           e.preventDefault();
           const currentPos = enabledIndices.indexOf(focusedIndex());
           const prevPos =
@@ -128,8 +128,8 @@ export function ContextMenu(props: ContextMenuProps) {
           break;
         }
 
-        case 'Enter':
-        case ' ':
+        case "Enter":
+        case " ":
           e.preventDefault();
           {
             const action = props.actions[focusedIndex()];
@@ -140,16 +140,16 @@ export function ContextMenu(props: ContextMenuProps) {
           }
           break;
 
-        case 'Tab':
+        case "Tab":
           // Prevent tabbing out of menu
           e.preventDefault();
           break;
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
     onCleanup(() => {
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener("keydown", handleKeyDown);
       props.trigger?.()?.focus();
     });
   });

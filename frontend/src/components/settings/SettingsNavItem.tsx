@@ -1,11 +1,11 @@
 // Expandable navigation item for settings sidebar.
 
-import { createSignal, For, Show, createEffect, untrack } from 'solid-js';
-import type { UnifiedSettingsMatch } from '../../utils/urls';
-import type { NavItem } from './SettingsSidebar';
-import styles from './SettingsNavItem.module.css';
+import { createSignal, For, Show, createEffect, untrack } from "solid-js";
+import type { UnifiedSettingsMatch } from "../../utils/urls";
+import type { NavItem } from "./SettingsSidebar";
+import styles from "./SettingsNavItem.module.css";
 
-import ChevronRightIcon from '@material-symbols/svg-400/outlined/chevron_right.svg?solid';
+import ChevronRightIcon from "@material-symbols/svg-400/outlined/chevron_right.svg?solid";
 
 interface SettingsNavItemProps {
   item: NavItem;
@@ -68,24 +68,24 @@ export default function SettingsNavItem(props: SettingsNavItemProps) {
 
   const navItemClass = () => {
     let classes = styles.navItem;
-    if (props.isActive(props.item.url, props.currentRoute)) classes += ' ' + styles.active;
-    if (props.depth === 0 && hasChildren()) classes += ' ' + styles.section;
-    if (props.item.separator) classes += ' ' + styles.separator;
+    if (props.isActive(props.item.url, props.currentRoute)) classes += " " + styles.active;
+    if (props.depth === 0 && hasChildren()) classes += " " + styles.section;
+    if (props.item.separator) classes += " " + styles.separator;
     return classes;
   };
 
   const expandIconClass = () => {
     let classes = styles.expandIcon;
-    if (isExpanded()) classes += ' ' + styles.expanded;
+    if (isExpanded()) classes += " " + styles.expanded;
     return classes;
   };
 
   return (
     <div class={styles.navItemWrapper}>
       <a
-        href={props.item.url || '#'}
+        href={props.item.url || "#"}
         class={navItemClass()}
-        style={{ 'padding-left': paddingLeft() }}
+        style={{ "padding-left": paddingLeft() }}
         onClick={handleClick}
       >
         <Show when={hasChildren()} fallback={<span class={styles.expandSpacer} />}>

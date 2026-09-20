@@ -5,6 +5,7 @@
 mddb uses a multi-tenant directory structure where each organization owns its own data and Git history, managed via submodules.
 
 ### Directory Layout
+
 - **Root Repository**: `data/`
   - The `data/` directory is itself a Git repository that tracks workspace directories.
   - `data/db/`: System-wide information (Users, Organizations, Workspaces, Memberships) stored in JSON.
@@ -27,7 +28,9 @@ data/                     # Root Git Repository
 ```
 
 ### Automatic Versioning
+
 mddb employs a hierarchical versioning strategy:
+
 1. **Workspace Level**: Changes within `data/{wsID}/` trigger commits to that workspace's independent repository.
 2. **Root Level**: The `data/` repository tracks the state of all workspaces by staging and committing the workspace directory changes. This allows for global backups and state-in-time recovery across the entire system while maintaining tenant isolation.
 
@@ -36,39 +39,45 @@ mddb employs a hierarchical versioning strategy:
 mddb is distributed as a single self-contained binary. This is achieved using Go's `embed` package.
 
 ### Workflow
+
 1. **Frontend Build**: The SolidJS frontend is compiled into static assets in `frontend/dist/`.
 2. **Go Generate**: The `frontend/frontend.go` file uses `//go:embed dist/*` to include these assets.
 3. **Compilation**: The Go compiler includes the static assets in the final binary.
 
 ### Type Generation
+
 To maintain type safety between the Go backend and SolidJS frontend, mddb uses **tygo**.
+
 1. **Source**: Go structs in `internal/models/`, `internal/storage/`, and `internal/server/handlers/`.
 2. **Process**: `tygo` parses these Go files and generates TypeScript interfaces.
 3. **Artifact**: A unified `sdk/types.gen.ts` file used by the frontend.
 4. **Execution**: Triggered via `make types` or automatically during `make build`.
 
 ### Reproducibility
+
 The `frontend/dist/` directory is tracked in Git to ensure that the Go binary can be built deterministically without requiring a Node.js environment in the build pipeline (though `make build` will attempt to rebuild it if tools are available).
 
 ## Performance Optimizations
 
 ### Streaming Reads
+
 Table records are stored in JSONL format, allowing for line-by-line streaming using `bufio.Scanner`. This keeps memory usage low even for large tables.
 
 ### API Pagination
+
 Record retrieval supports `offset` and `limit` parameters to handle large datasets efficiently.
 
 ## System Metadata Schema
 
 The following tables are managed in `data/db/` (eventually SQLite).
 
-| Table Name     | Go Symbol (internal/models) | Description                                     |
-|----------------|-----------------------------|-------------------------------------------------|
-| `users`        | `User`                      | Core identity and global settings               |
-| `organizations`| `Organization`              | Administrative and billing entity               |
-| `workspaces`   | `Workspace`                 | Isolated project container                      |
-| `memberships`  | `Membership`                | User-Org/WS relationships and roles            |
-| `sessions`     | `Session`                   | Active user sessions and revocation             |
+| Table Name      | Go Symbol (internal/models) | Description                         |
+| --------------- | --------------------------- | ----------------------------------- |
+| `users`         | `User`                      | Core identity and global settings   |
+| `organizations` | `Organization`              | Administrative and billing entity   |
+| `workspaces`    | `Workspace`                 | Isolated project container          |
+| `memberships`   | `Membership`                | User-Org/WS relationships and roles |
+| `sessions`      | `Session`                   | Active user sessions and revocation |
 
 ## Data Model
 
@@ -76,23 +85,23 @@ mddb uses a unified Node-based data model inspired by Notion. All content entiti
 
 ### Core Entities
 
-| Entity | Description | Storage |
-|--------|-------------|---------|
-| **Node** | Unified container; can be document, table, or hybrid | Directory at `data/{wsID}/{nodeID}/` |
-| **Page** | Node with markdown content | `index.md` with YAML front matter |
-| **Table** | Node with schema (Properties) | `metadata.json` for schema |
-| **Record** | Row in a Table (`DataRecord` type) | Line in `data.jsonl` |
-| **Asset** | Binary file attached to a Node | File in node directory |
+| Entity     | Description                                          | Storage                              |
+| ---------- | ---------------------------------------------------- | ------------------------------------ |
+| **Node**   | Unified container; can be document, table, or hybrid | Directory at `data/{wsID}/{nodeID}/` |
+| **Page**   | Node with markdown content                           | `index.md` with YAML front matter    |
+| **Table**  | Node with schema (Properties)                        | `metadata.json` for schema           |
+| **Record** | Row in a Table (`DataRecord` type)                   | Line in `data.jsonl`                 |
+| **Asset**  | Binary file attached to a Node                       | File in node directory               |
 
 ### Node Content Types
 
 Node content type is inferred from file existence, exposed via `has_page` and `has_table` boolean flags in the API:
 
-| Files Present | has_page | has_table | Description |
-|---------------|----------|-----------|-------------|
-| `index.md` only | true | false | Document with markdown content |
-| `metadata.json` only | false | true | Table with schema and records |
-| Both files | true | true | Hybrid node with both content types |
+| Files Present        | has_page | has_table | Description                         |
+| -------------------- | -------- | --------- | ----------------------------------- |
+| `index.md` only      | true     | false     | Document with markdown content      |
+| `metadata.json` only | false    | true      | Table with schema and records       |
+| Both files           | true     | true      | Hybrid node with both content types |
 
 Storage types defined in `backend/internal/storage/content/types.go`.
 
@@ -111,36 +120,36 @@ data/{wsID}/{nodeID}/
 
 Table columns support these types:
 
-| Type | Description |
-|------|-------------|
-| `text` | Plain text |
-| `number` | Integer or float |
-| `checkbox` | Boolean |
-| `date` | ISO8601 date string |
-| `select` | Single selection from options |
+| Type           | Description                      |
+| -------------- | -------------------------------- |
+| `text`         | Plain text                       |
+| `number`       | Integer or float                 |
+| `checkbox`     | Boolean                          |
+| `date`         | ISO8601 date string              |
+| `select`       | Single selection from options    |
 | `multi_select` | Multiple selections from options |
-| `url` | Validated URL |
-| `email` | Validated email address |
-| `phone` | Phone number |
+| `url`          | Validated URL                    |
+| `email`        | Validated email address          |
+| `phone`        | Phone number                     |
 
 ### Property Structure
 
 Each `Property` (table column) has:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `Name` | string | Column header / field key |
-| `Type` | PropertyType | One of the types above |
-| `Required` | bool | Whether records must have this field |
-| `Options` | []SelectOption | For `select`/`multi_select` only |
+| Field      | Type           | Description                          |
+| ---------- | -------------- | ------------------------------------ |
+| `Name`     | string         | Column header / field key            |
+| `Type`     | PropertyType   | One of the types above               |
+| `Required` | bool           | Whether records must have this field |
+| `Options`  | []SelectOption | For `select`/`multi_select` only     |
 
 `SelectOption` defines allowed values for enumerated types:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `ID` | string | Stored value (stable identifier) |
-| `Name` | string | Display name |
-| `Color` | string | Optional color for UI
+| Field   | Type   | Description                      |
+| ------- | ------ | -------------------------------- |
+| `ID`    | string | Stored value (stable identifier) |
+| `Name`  | string | Display name                     |
+| `Color` | string | Optional color for UI            |
 
 ### Entity Relationships
 
@@ -162,11 +171,11 @@ Table Node
 
 ### ID Types
 
-| Entity | ID Type | Example |
-|--------|---------|---------|
-| Node | `jsonldb.ID` (uint64) | `01JWAB...` |
-| Record | `jsonldb.ID` (uint64) | `01JWAC...` |
-| Asset | `string` (filename) | `"image.png"`, `"doc.pdf"` |
+| Entity | ID Type               | Example                    |
+| ------ | --------------------- | -------------------------- |
+| Node   | `jsonldb.ID` (uint64) | `01JWAB...`                |
+| Record | `jsonldb.ID` (uint64) | `01JWAC...`                |
+| Asset  | `string` (filename)   | `"image.png"`, `"doc.pdf"` |
 
 #### ID Format (jsonldb.ID)
 
@@ -202,9 +211,9 @@ JWT-based authentication with 24-hour token expiry using HS256 signing.
 
 Supports Google and Microsoft OIDC flows.
 
-| Provider | Endpoint | Scopes |
-|----------|----------|--------|
-| Google | `/api/v1/auth/oauth/google` | profile, email |
+| Provider  | Endpoint                       | Scopes          |
+| --------- | ------------------------------ | --------------- |
+| Google    | `/api/v1/auth/oauth/google`    | profile, email  |
 | Microsoft | `/api/v1/auth/oauth/microsoft` | Azure AD common |
 
 - **Callback handling**: `/api/v1/auth/oauth/{provider}/callback`
@@ -233,24 +242,24 @@ Role-based access control is enforced at both organization and workspace levels.
 
 #### Organization Roles
 
-| Role | Description |
-|------|-------------|
-| `owner` | Full control including billing and organization deletion |
-| `admin` | Manage workspaces and members, access all workspaces as admin |
+| Role     | Description                                                           |
+| -------- | --------------------------------------------------------------------- |
+| `owner`  | Full control including billing and organization deletion              |
+| `admin`  | Manage workspaces and members, access all workspaces as admin         |
 | `member` | View organization details, access workspaces where explicitly granted |
 
 #### Workspace Roles
 
-| Role | Permissions |
-|------|-------------|
-| `viewer` | Read pages, tables, records, assets |
-| `editor` | Create/modify content, no member management |
-| `admin` | Full workspace control including member management and Git settings |
+| Role     | Permissions                                                         |
+| -------- | ------------------------------------------------------------------- |
+| `viewer` | Read pages, tables, records, assets                                 |
+| `editor` | Create/modify content, no member management                         |
+| `admin`  | Full workspace control including member management and Git settings |
 
 #### Server-wide Roles
 
-| Role | Permissions |
-|------|-------------|
+| Role          | Permissions                                             |
+| ------------- | ------------------------------------------------------- |
 | `globalAdmin` | Server-wide access to all data and management endpoints |
 
 - **Implicit Permissions**: Organization admins and owners implicitly have `admin` access to all workspaces in their organization.
@@ -261,27 +270,30 @@ Role-based access control is enforced at both organization and workspace levels.
 
 Enforced at write time via `FileStore` pre-checks.
 
-| Quota | Default | Scope |
-|-------|---------|-------|
-| `MaxPages` | 1000 | per ws |
-| `MaxStorage` | 1 GiB | per ws |
-| `MaxUsers` | 3 | per ws |
-| `MaxRecordsPerTable` | 10,000 | per table |
-| `MaxAssetSize` | 50 MiB | per asset |
-| `MaxOrgs` | 3 | per user |
+| Quota                | Default | Scope     |
+| -------------------- | ------- | --------- |
+| `MaxPages`           | 1000    | per ws    |
+| `MaxStorage`         | 1 GiB   | per ws    |
+| `MaxUsers`           | 3       | per ws    |
+| `MaxRecordsPerTable` | 10,000  | per table |
+| `MaxAssetSize`       | 50 MiB  | per asset |
+| `MaxOrgs`            | 3       | per user  |
 
 - **Implementation**: `backend/internal/storage/content/filestore.go`
 
 ## High-Efficiency Caching
 
 ### In-Memory Cache
+
 A thread-safe, in-memory cache is used to store:
+
 1. **Metadata**: Table schemas and organization configurations.
 2. **Hot Pages**: Frequently accessed markdown content.
 3. **Record Indexes**: In-memory maps of record IDs to file positions or small record sets.
 4. **Parent Map**: Node ID to parent ID mapping for fast path resolution.
 
 ### Strategy
+
 - **LRU Policy**: Least Recently Used eviction to maintain a fixed memory footprint.
 - **Write-Through/Invalidation**: Cache is updated or invalidated on every write operation to ensure consistency with the on-disk storage.
 - **Lazy Loading**: Data is loaded into the cache on the first read request.

@@ -1,7 +1,7 @@
 // Accessible dropdown menu foundation with arrow navigation and trigger focus restoration.
 
-import { onCleanup, onMount, splitProps, type JSX } from 'solid-js';
-import styles from './Menu.module.css';
+import { onCleanup, onMount, splitProps, type JSX } from "solid-js";
+import styles from "./Menu.module.css";
 
 export interface MenuProps {
   ariaLabel: string;
@@ -32,23 +32,23 @@ export function Menu(props: MenuProps) {
 
   const handleKeyDown = (event: KeyboardEvent) => {
     switch (event.key) {
-      case 'Escape':
+      case "Escape":
         event.preventDefault();
         props.onClose();
         break;
-      case 'ArrowDown':
+      case "ArrowDown":
         event.preventDefault();
         focusItem(1);
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         event.preventDefault();
         focusItem(-1);
         break;
-      case 'Home':
+      case "Home":
         event.preventDefault();
         getMenuItems()[0]?.focus();
         break;
-      case 'End': {
+      case "End": {
         event.preventDefault();
         const items = getMenuItems();
         items[items.length - 1]?.focus();
@@ -68,7 +68,7 @@ export function Menu(props: MenuProps) {
   return (
     <div
       ref={(el) => (menuRef = el)}
-      class={`${styles.menu} ${props.class ?? ''}`}
+      class={`${styles.menu} ${props.class ?? ""}`}
       role="menu"
       aria-label={props.ariaLabel}
       onKeyDown={handleKeyDown}
@@ -79,7 +79,7 @@ export function Menu(props: MenuProps) {
 }
 
 export function MenuItem(props: MenuItemProps) {
-  const [local, buttonProps] = splitProps(props, ['type']);
-  const type = () => local.type ?? 'button';
+  const [local, buttonProps] = splitProps(props, ["type"]);
+  const type = () => local.type ?? "button";
   return <button {...buttonProps} type={type()} role="menuitem" />;
 }

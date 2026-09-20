@@ -1,17 +1,17 @@
 // Recursive component for rendering navigation tree nodes in the sidebar.
 
-import { createSignal, createEffect, For, Show, on, untrack } from 'solid-js';
-import { useI18n } from '../i18n';
-import type { NodeResponse } from '@sdk/types.gen';
-import { ContextMenu, type ContextMenuAction } from './shared';
-import styles from './SidebarNode.module.css';
+import { createSignal, createEffect, For, Show, on, untrack } from "solid-js";
+import { useI18n } from "../i18n";
+import type { NodeResponse } from "@sdk/types.gen";
+import { ContextMenu, type ContextMenuAction } from "./shared";
+import styles from "./SidebarNode.module.css";
 
-import DescriptionIcon from '@material-symbols/svg-400/outlined/description.svg?solid';
-import TableChartIcon from '@material-symbols/svg-400/outlined/table_chart.svg?solid';
-import ChevronRightIcon from '@material-symbols/svg-400/outlined/chevron_right.svg?solid';
-import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
-import HistoryIcon from '@material-symbols/svg-400/outlined/history.svg?solid';
-import { IconDisplay } from './editor/IconPicker';
+import DescriptionIcon from "@material-symbols/svg-400/outlined/description.svg?solid";
+import TableChartIcon from "@material-symbols/svg-400/outlined/table_chart.svg?solid";
+import ChevronRightIcon from "@material-symbols/svg-400/outlined/chevron_right.svg?solid";
+import DeleteIcon from "@material-symbols/svg-400/outlined/delete.svg?solid";
+import HistoryIcon from "@material-symbols/svg-400/outlined/history.svg?solid";
+import { IconDisplay } from "./editor/IconPicker";
 
 // Module-level drag state (imperative, not reactive)
 let dragState: { nodeId: string; element: HTMLElement } | null = null;
@@ -74,8 +74,8 @@ export default function SidebarNode(props: SidebarNodeProps) {
           setHasAutoExpanded(true);
           setIsExpanded(true);
         }
-      }
-    )
+      },
+    ),
   );
 
   // Fetch children when expanded and not yet loaded
@@ -110,8 +110,8 @@ export default function SidebarNode(props: SidebarNodeProps) {
 
   const handleDragStart = (e: DragEvent) => {
     if (!e.dataTransfer) return;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', props.node.id);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", props.node.id);
     dragState = { nodeId: props.node.id, element: liRef };
     setIsDragging(true);
   };
@@ -132,7 +132,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
 
     e.preventDefault();
     e.stopPropagation();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
     setIsDropTarget(true);
 
     // Auto-expand collapsed nodes with children after 600ms hover
@@ -193,13 +193,13 @@ export default function SidebarNode(props: SidebarNodeProps) {
     const sourceId = props.movingNodeId;
     if (!sourceId || sourceId === props.node.id) return false;
     const sourceItem = treeItems().find((item) => item.dataset.nodeId === sourceId);
-    return !sourceItem?.closest('li')?.contains(liRef);
+    return !sourceItem?.closest("li")?.contains(liRef);
   };
 
   const focusBeforeDelete = () => {
     if (props.focusedNodeId !== props.node.id) return;
     let target: HTMLButtonElement | undefined;
-    if (props.node.parent_id && props.node.parent_id !== '0') {
+    if (props.node.parent_id && props.node.parent_id !== "0") {
       target = treeItems().find((item) => item.dataset.nodeId === props.node.parent_id);
     } else {
       const items = treeItems();
@@ -228,15 +228,15 @@ export default function SidebarNode(props: SidebarNodeProps) {
 
   const handleTreeKeyDown = (event: KeyboardEvent) => {
     switch (event.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         event.preventDefault();
         focusAtOffset(1);
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         event.preventDefault();
         focusAtOffset(-1);
         break;
-      case 'Home': {
+      case "Home": {
         event.preventDefault();
         const first = treeItems()[0];
         const nodeId = first?.dataset.nodeId;
@@ -246,7 +246,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
         }
         break;
       }
-      case 'End': {
+      case "End": {
         event.preventDefault();
         const items = treeItems();
         const last = items[items.length - 1];
@@ -257,7 +257,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
         }
         break;
       }
-      case 'ArrowRight':
+      case "ArrowRight":
         if (!mightHaveChildren()) break;
         event.preventDefault();
         if (!isExpanded()) {
@@ -269,31 +269,31 @@ export default function SidebarNode(props: SidebarNodeProps) {
           }
         }
         break;
-      case 'ArrowLeft':
+      case "ArrowLeft":
         event.preventDefault();
         if (mightHaveChildren() && isExpanded()) {
           setIsExpanded(false);
-        } else if (props.node.parent_id && props.node.parent_id !== '0') {
+        } else if (props.node.parent_id && props.node.parent_id !== "0") {
           focusNode(props.node.parent_id);
         }
         break;
-      case 'Enter':
-      case ' ':
+      case "Enter":
+      case " ":
         event.preventDefault();
         props.onSelect(props.node);
         break;
-      case 'ContextMenu':
+      case "ContextMenu":
         event.preventDefault();
         openContextMenu();
         break;
-      case 'F10':
+      case "F10":
         if (event.shiftKey) {
           event.preventDefault();
           openContextMenu();
         }
         break;
-      case 'v':
-      case 'V':
+      case "v":
+      case "V":
         if (event.ctrlKey && canMoveHere() && props.movingNodeId) {
           event.preventDefault();
           void props.onMoveNode?.(props.movingNodeId, props.node.id);
@@ -305,33 +305,33 @@ export default function SidebarNode(props: SidebarNodeProps) {
   const contextActions = (): ContextMenuAction[] => {
     const actions: ContextMenuAction[] = [
       {
-        id: 'create-subpage',
-        label: t('app.createSubPage') || 'Create sub-page',
+        id: "create-subpage",
+        label: t("app.createSubPage") || "Create sub-page",
         icon: <DescriptionIcon />,
       },
       {
-        id: 'create-subtable',
-        label: t('app.createSubTable') || 'Create sub-table',
+        id: "create-subtable",
+        label: t("app.createSubTable") || "Create sub-table",
         icon: <TableChartIcon />,
       },
       {
-        id: 'history',
-        label: t('editor.history') || 'History',
+        id: "history",
+        label: t("editor.history") || "History",
         icon: <HistoryIcon />,
         separator: true,
       },
       {
-        id: 'move-node',
-        label: t('app.moveNode'),
+        id: "move-node",
+        label: t("app.moveNode"),
         separator: true,
       },
       {
-        id: 'move-root',
-        label: t('app.moveToRoot'),
+        id: "move-root",
+        label: t("app.moveToRoot"),
       },
       {
-        id: 'delete-node',
-        label: t('common.delete'),
+        id: "delete-node",
+        label: t("common.delete"),
         danger: true,
         separator: true,
       },
@@ -339,8 +339,8 @@ export default function SidebarNode(props: SidebarNodeProps) {
 
     if (canMoveHere()) {
       actions.push({
-        id: 'move-here',
-        label: t('app.moveNodeHere'),
+        id: "move-here",
+        label: t("app.moveNodeHere"),
         separator: true,
       });
     }
@@ -362,7 +362,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
           [`${styles.dragging}`]: isDragging(),
           [`${styles.dropTarget}`]: isDropTarget(),
         }}
-        style={{ 'padding-left': `${props.depth * 12 + 8}px` }}
+        style={{ "padding-left": `${props.depth * 12 + 8}px` }}
         draggable="true"
         onClick={() => props.onSelect(props.node)}
         onContextMenu={handleContextMenu}
@@ -394,8 +394,8 @@ export default function SidebarNode(props: SidebarNodeProps) {
             aria-hidden="true"
             title={
               isExpanded()
-                ? t('app.collapseNode', { title: props.node.title })
-                : t('app.expandNode', { title: props.node.title })
+                ? t("app.collapseNode", { title: props.node.title })
+                : t("app.expandNode", { title: props.node.title })
             }
             onClick={(event) => {
               event.stopPropagation();
@@ -420,7 +420,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
               }}
               aria-hidden="true"
             >
-              {isLoadingChildren() ? '○' : <ChevronRightIcon />}
+              {isLoadingChildren() ? "○" : <ChevronRightIcon />}
             </span>
           </span>
         </Show>
@@ -431,7 +431,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
           role="treeitem"
           aria-label={props.node.title}
           data-node-id={props.node.id}
-          aria-current={props.selectedId === props.node.id ? 'page' : undefined}
+          aria-current={props.selectedId === props.node.id ? "page" : undefined}
           aria-expanded={mightHaveChildren() ? isExpanded() : undefined}
           aria-owns={isExpanded() && children().length > 0 ? `tree-group-${props.node.id}` : undefined}
           aria-level={props.depth + 1}
@@ -454,7 +454,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
             e.stopPropagation();
             requestDelete();
           }}
-          title={t('common.delete') || 'Delete'}
+          title={t("common.delete") || "Delete"}
           aria-hidden="true"
           onMouseDown={(event) => event.preventDefault()}
         >
@@ -468,27 +468,27 @@ export default function SidebarNode(props: SidebarNodeProps) {
           actions={contextActions()}
           onAction={(actionId) => {
             switch (actionId) {
-              case 'create-subpage':
+              case "create-subpage":
                 props.onCreateChildPage(props.node.id);
                 break;
-              case 'create-subtable':
+              case "create-subtable":
                 props.onCreateChildTable(props.node.id);
                 break;
-              case 'history':
+              case "history":
                 props.onShowHistory?.(props.node.id);
                 break;
-              case 'move-node':
+              case "move-node":
                 props.onStartMove(props.node.id);
                 break;
-              case 'move-root':
-                void props.onMoveNode?.(props.node.id, '0');
+              case "move-root":
+                void props.onMoveNode?.(props.node.id, "0");
                 break;
-              case 'move-here':
+              case "move-here":
                 if (props.movingNodeId) {
                   void props.onMoveNode?.(props.movingNodeId, props.node.id);
                 }
                 break;
-              case 'delete-node':
+              case "delete-node":
                 requestDelete();
                 break;
             }

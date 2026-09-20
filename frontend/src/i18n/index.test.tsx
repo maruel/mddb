@@ -1,8 +1,8 @@
 // Tests for the i18n provider and translations.
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, cleanup } from '@solidjs/testing-library';
-import { onMount } from 'solid-js';
-import { I18nProvider, useI18n } from './index';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, cleanup } from "@solidjs/testing-library";
+import { onMount } from "solid-js";
+import { I18nProvider, useI18n } from "./index";
 
 // Helper component that uses the i18n hook
 function TestConsumer(props: { onReady?: (ctx: ReturnType<typeof useI18n>) => void }) {
@@ -11,15 +11,15 @@ function TestConsumer(props: { onReady?: (ctx: ReturnType<typeof useI18n>) => vo
   return (
     <div>
       <span data-testid="locale">{ctx.locale()}</span>
-      <span data-testid="translated">{ctx.t('common.loading')}</span>
-      <button data-testid="change-locale" onClick={() => ctx.setLocale('fr')}>
+      <span data-testid="translated">{ctx.t("common.loading")}</span>
+      <button data-testid="change-locale" onClick={() => ctx.setLocale("fr")}>
         Change to FR
       </button>
     </div>
   );
 }
 
-describe('I18nProvider', () => {
+describe("I18nProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     cleanup();
@@ -30,29 +30,29 @@ describe('I18nProvider', () => {
     vi.restoreAllMocks();
   });
 
-  it('provides default locale as en', async () => {
+  it("provides default locale as en", async () => {
     const { unmount } = render(() => (
       <I18nProvider>
         <TestConsumer />
       </I18nProvider>
     ));
 
-    expect(screen.getByTestId('locale').textContent).toBe('en');
+    expect(screen.getByTestId("locale").textContent).toBe("en");
     unmount();
   });
 
-  it('accepts initialLocale prop', async () => {
+  it("accepts initialLocale prop", async () => {
     const { unmount } = render(() => (
       <I18nProvider initialLocale="de">
         <TestConsumer />
       </I18nProvider>
     ));
 
-    expect(screen.getByTestId('locale').textContent).toBe('de');
+    expect(screen.getByTestId("locale").textContent).toBe("de");
     unmount();
   });
 
-  it('loads dictionary and translates keys', async () => {
+  it("loads dictionary and translates keys", async () => {
     const { unmount } = render(() => (
       <I18nProvider>
         <TestConsumer />
@@ -61,29 +61,29 @@ describe('I18nProvider', () => {
 
     // Wait for dictionary to load
     await waitFor(() => {
-      const text = screen.getByTestId('translated').textContent;
-      expect(text).toBe('Loading...');
+      const text = screen.getByTestId("translated").textContent;
+      expect(text).toBe("Loading...");
     });
     unmount();
   });
 
-  it('allows changing locale', async () => {
+  it("allows changing locale", async () => {
     const { unmount } = render(() => (
       <I18nProvider>
         <TestConsumer />
       </I18nProvider>
     ));
 
-    const button = screen.getByTestId('change-locale');
+    const button = screen.getByTestId("change-locale");
     button.click();
 
     await waitFor(() => {
-      expect(screen.getByTestId('locale').textContent).toBe('fr');
+      expect(screen.getByTestId("locale").textContent).toBe("fr");
     });
     unmount();
   });
 
-  it('updates translations when locale changes', async () => {
+  it("updates translations when locale changes", async () => {
     const { unmount } = render(() => (
       <I18nProvider>
         <TestConsumer />
@@ -92,23 +92,23 @@ describe('I18nProvider', () => {
 
     // Wait for initial English dictionary to load
     await waitFor(() => {
-      expect(screen.getByTestId('translated').textContent).toBe('Loading...');
+      expect(screen.getByTestId("translated").textContent).toBe("Loading...");
     });
 
     // Click button to change to French
-    const button = screen.getByTestId('change-locale');
+    const button = screen.getByTestId("change-locale");
     button.click();
 
     // Wait for French dictionary to load and translation to update
     await waitFor(() => {
       // French translation for 'common.loading' is 'Chargement...'
-      expect(screen.getByTestId('translated').textContent).toBe('Chargement...');
+      expect(screen.getByTestId("translated").textContent).toBe("Chargement...");
     });
     unmount();
   });
 });
 
-describe('useI18n', () => {
+describe("useI18n", () => {
   beforeEach(() => {
     cleanup();
   });
@@ -117,15 +117,15 @@ describe('useI18n', () => {
     cleanup();
   });
 
-  it('throws error when used outside I18nProvider', () => {
+  it("throws error when used outside I18nProvider", () => {
     // This should throw when trying to use the hook outside provider
     expect(() => {
       render(() => <TestConsumer />);
-    }).toThrow('useI18n must be used within I18nProvider');
+    }).toThrow("useI18n must be used within I18nProvider");
   });
 });
 
-describe('translateError', () => {
+describe("translateError", () => {
   beforeEach(() => {
     cleanup();
   });
@@ -134,7 +134,7 @@ describe('translateError', () => {
     cleanup();
   });
 
-  it('translates known error codes', async () => {
+  it("translates known error codes", async () => {
     let translateError: ((code: string) => string) | undefined;
 
     const { unmount } = render(() => (
@@ -149,17 +149,17 @@ describe('translateError', () => {
 
     // Wait for dictionary to load
     await waitFor(() => {
-      expect(screen.getByTestId('translated').textContent).toBe('Loading...');
+      expect(screen.getByTestId("translated").textContent).toBe("Loading...");
     });
 
     if (translateError) {
-      const result = translateError('NOT_FOUND');
-      expect(result).toBe('The requested resource was not found');
+      const result = translateError("NOT_FOUND");
+      expect(result).toBe("The requested resource was not found");
     }
     unmount();
   });
 
-  it('returns fallback for unknown error codes', async () => {
+  it("returns fallback for unknown error codes", async () => {
     let translateError: ((code: string) => string) | undefined;
 
     const { unmount } = render(() => (
@@ -174,11 +174,11 @@ describe('translateError', () => {
 
     // Wait for dictionary to load
     await waitFor(() => {
-      expect(screen.getByTestId('translated').textContent).toBe('Loading...');
+      expect(screen.getByTestId("translated").textContent).toBe("Loading...");
     });
 
     if (translateError) {
-      const result = translateError('UNKNOWN_ERROR_CODE_XYZ');
+      const result = translateError("UNKNOWN_ERROR_CODE_XYZ");
       // Should fall back to 'unknown' translation or default message
       expect(result).toMatch(/error|occurred/i);
     }

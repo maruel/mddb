@@ -1,8 +1,8 @@
 // SVG icons for OAuth providers (Google, Microsoft, GitHub) following official branding.
 
-import type { JSX } from 'solid-js';
-import GoogleIcon from './GoogleIcon.svg?solid';
-import MicrosoftIcon from './MicrosoftIcon.svg?solid';
+import type { JSX } from "solid-js";
+import GoogleIcon from "./GoogleIcon.svg?solid";
+import MicrosoftIcon from "./MicrosoftIcon.svg?solid";
 
 export { GoogleIcon, MicrosoftIcon };
 

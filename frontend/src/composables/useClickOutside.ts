@@ -1,6 +1,6 @@
 // Composable for detecting clicks outside an element.
 
-import { onMount, onCleanup } from 'solid-js';
+import { onMount, onCleanup } from "solid-js";
 
 /**
  * Calls onClose when a click occurs outside the referenced element.
@@ -23,9 +23,9 @@ export function useClickOutside(getRef: () => HTMLElement | undefined, onClose: 
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     onCleanup(() => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     });
   });
 }

@@ -1,24 +1,24 @@
 // Floating editor toolbar with formatting buttons (appears on text selection).
 
-import { Show, createSignal, createEffect, on } from 'solid-js';
-import type { EditorView } from 'prosemirror-view';
-import { toggleMark } from 'prosemirror-commands';
-import { marks } from './prosemirror-config';
-import { convertBlocks } from './blockCommands';
-import { getSelectedBlockPositions } from './blockDragPlugin';
-import type { BlockType, BlockAttrs } from './schema';
-import styles from './Editor.module.css';
+import { Show, createSignal, createEffect, on } from "solid-js";
+import type { EditorView } from "prosemirror-view";
+import { toggleMark } from "prosemirror-commands";
+import { marks } from "./prosemirror-config";
+import { convertBlocks } from "./blockCommands";
+import { getSelectedBlockPositions } from "./blockDragPlugin";
+import type { BlockType, BlockAttrs } from "./schema";
+import styles from "./Editor.module.css";
 
-import FormatBoldIcon from '@material-symbols/svg-400/outlined/format_bold.svg?solid';
-import FormatItalicIcon from '@material-symbols/svg-400/outlined/format_italic.svg?solid';
-import FormatUnderlinedIcon from '@material-symbols/svg-400/outlined/format_underlined.svg?solid';
-import FormatStrikethroughIcon from '@material-symbols/svg-400/outlined/format_strikethrough.svg?solid';
-import CodeIcon from '@material-symbols/svg-400/outlined/code.svg?solid';
-import FormatListBulletedIcon from '@material-symbols/svg-400/outlined/format_list_bulleted.svg?solid';
-import FormatListNumberedIcon from '@material-symbols/svg-400/outlined/format_list_numbered.svg?solid';
-import ChecklistIcon from '@material-symbols/svg-400/outlined/checklist.svg?solid';
-import FormatQuoteIcon from '@material-symbols/svg-400/outlined/format_quote.svg?solid';
-import TerminalIcon from '@material-symbols/svg-400/outlined/terminal.svg?solid';
+import FormatBoldIcon from "@material-symbols/svg-400/outlined/format_bold.svg?solid";
+import FormatItalicIcon from "@material-symbols/svg-400/outlined/format_italic.svg?solid";
+import FormatUnderlinedIcon from "@material-symbols/svg-400/outlined/format_underlined.svg?solid";
+import FormatStrikethroughIcon from "@material-symbols/svg-400/outlined/format_strikethrough.svg?solid";
+import CodeIcon from "@material-symbols/svg-400/outlined/code.svg?solid";
+import FormatListBulletedIcon from "@material-symbols/svg-400/outlined/format_list_bulleted.svg?solid";
+import FormatListNumberedIcon from "@material-symbols/svg-400/outlined/format_list_numbered.svg?solid";
+import ChecklistIcon from "@material-symbols/svg-400/outlined/checklist.svg?solid";
+import FormatQuoteIcon from "@material-symbols/svg-400/outlined/format_quote.svg?solid";
+import TerminalIcon from "@material-symbols/svg-400/outlined/terminal.svg?solid";
 
 export interface FormatState {
   isBold: boolean;
@@ -86,8 +86,8 @@ export default function EditorToolbar(props: EditorToolbarProps) {
             setClampedLeft(null); // No clamping needed
           }
         });
-      }
-    )
+      },
+    ),
   );
 
   const formatButtonClass = (isActive: boolean) =>
@@ -148,49 +148,49 @@ export default function EditorToolbar(props: EditorToolbarProps) {
 
   const setHeading = (level: number) => {
     if (props.formatState.headingLevel === level) {
-      setBlockType('paragraph');
+      setBlockType("paragraph");
     } else {
-      setBlockType('heading', { level });
+      setBlockType("heading", { level });
     }
   };
 
   const toggleBulletList = () => {
     if (props.formatState.isBulletList) {
-      setBlockType('paragraph');
+      setBlockType("paragraph");
     } else {
-      setBlockType('bullet');
+      setBlockType("bullet");
     }
   };
 
   const toggleOrderedList = () => {
     if (props.formatState.isOrderedList) {
-      setBlockType('paragraph');
+      setBlockType("paragraph");
     } else {
-      setBlockType('number');
+      setBlockType("number");
     }
   };
 
   const toggleTaskList = () => {
     if (props.formatState.isTaskList) {
-      setBlockType('paragraph');
+      setBlockType("paragraph");
     } else {
-      setBlockType('task', { checked: false });
+      setBlockType("task", { checked: false });
     }
   };
 
   const toggleBlockquote = () => {
     if (props.formatState.isBlockquote) {
-      setBlockType('paragraph');
+      setBlockType("paragraph");
     } else {
-      setBlockType('quote');
+      setBlockType("quote");
     }
   };
 
   const toggleCodeBlock = () => {
     if (props.formatState.isCodeBlock) {
-      setBlockType('paragraph');
+      setBlockType("paragraph");
     } else {
-      setBlockType('code');
+      setBlockType("code");
     }
   };
 
@@ -198,7 +198,7 @@ export default function EditorToolbar(props: EditorToolbarProps) {
     <Show when={props.position}>
       <div
         ref={(el) => (toolbarRef = el)}
-        class={`${styles.floatingToolbar} ${above() ? styles.above : ''}`}
+        class={`${styles.floatingToolbar} ${above() ? styles.above : ""}`}
         data-testid="floating-toolbar"
         style={{
           top: `${above() ? props.position?.top : props.position?.bottom}px`,

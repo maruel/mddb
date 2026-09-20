@@ -10,13 +10,13 @@ import {
   type Accessor,
   batch,
   onCleanup,
-} from 'solid-js';
-import { useAuth } from './AuthContext';
-import { useEventSource } from './EventSourceContext';
-import { useWorkspace } from './WorkspaceContext';
-import { useI18n } from '../i18n';
-import { debounce } from '../utils/debounce';
-import { useUndo } from '../hooks/useUndo';
+} from "solid-js";
+import { useAuth } from "./AuthContext";
+import { useEventSource } from "./EventSourceContext";
+import { useWorkspace } from "./WorkspaceContext";
+import { useI18n } from "../i18n";
+import { debounce } from "../utils/debounce";
+import { useUndo } from "../hooks/useUndo";
 import {
   EventRecordsChanged,
   EventTableUpdated,
@@ -28,13 +28,13 @@ import {
   type ViewType,
   type WorkspaceMemberResponse,
   type ResolvedUser,
-} from '@sdk/types.gen';
+} from "@sdk/types.gen";
 
 const PAGE_SIZE = 50;
 const FILTER_DEBOUNCE_MS = 300;
 
 /** Virtual view ID used when no saved views exist. */
-export const DEFAULT_VIEW_ID = '__default__';
+export const DEFAULT_VIEW_ID = "__default__";
 
 interface RecordsContextValue {
   records: Accessor<DataRecordResponse[]>;
@@ -130,7 +130,7 @@ export const RecordsProvider: ParentComponent = (props) => {
 
   // Combined loading (any operation in progress) - derived for backward compatibility
   const loading = createMemo(
-    () => loadingRecords() || savingRecordId() !== null || deletingRecordId() !== null || savingView()
+    () => loadingRecords() || savingRecordId() !== null || deletingRecordId() !== null || savingView(),
   );
 
   // Clear all errors
@@ -170,7 +170,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     for (const rec of loadedRecords) {
       for (const col of userCols) {
         const v = rec.data?.[col];
-        if (typeof v === 'string' && v && !memberIds.has(v)) {
+        if (typeof v === "string" && v && !memberIds.has(v)) {
           unknownIds.add(v);
         }
       }
@@ -220,46 +220,46 @@ export const RecordsProvider: ParentComponent = (props) => {
     const filterValue = filter.value;
 
     switch (filter.operator) {
-      case 'equals':
+      case "equals":
         return fieldValue === filterValue;
-      case 'not_equals':
+      case "not_equals":
         return fieldValue !== filterValue;
-      case 'contains':
+      case "contains":
         return (
-          typeof fieldValue === 'string' &&
-          typeof filterValue === 'string' &&
+          typeof fieldValue === "string" &&
+          typeof filterValue === "string" &&
           fieldValue.toLowerCase().includes(filterValue.toLowerCase())
         );
-      case 'not_contains':
+      case "not_contains":
         return (
-          typeof fieldValue === 'string' &&
-          typeof filterValue === 'string' &&
+          typeof fieldValue === "string" &&
+          typeof filterValue === "string" &&
           !fieldValue.toLowerCase().includes(filterValue.toLowerCase())
         );
-      case 'starts_with':
+      case "starts_with":
         return (
-          typeof fieldValue === 'string' &&
-          typeof filterValue === 'string' &&
+          typeof fieldValue === "string" &&
+          typeof filterValue === "string" &&
           fieldValue.toLowerCase().startsWith(filterValue.toLowerCase())
         );
-      case 'ends_with':
+      case "ends_with":
         return (
-          typeof fieldValue === 'string' &&
-          typeof filterValue === 'string' &&
+          typeof fieldValue === "string" &&
+          typeof filterValue === "string" &&
           fieldValue.toLowerCase().endsWith(filterValue.toLowerCase())
         );
-      case 'is_empty':
-        return fieldValue === null || fieldValue === undefined || fieldValue === '';
-      case 'is_not_empty':
-        return fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
-      case 'gt':
-        return typeof fieldValue === 'number' && typeof filterValue === 'number' && fieldValue > filterValue;
-      case 'gte':
-        return typeof fieldValue === 'number' && typeof filterValue === 'number' && fieldValue >= filterValue;
-      case 'lt':
-        return typeof fieldValue === 'number' && typeof filterValue === 'number' && fieldValue < filterValue;
-      case 'lte':
-        return typeof fieldValue === 'number' && typeof filterValue === 'number' && fieldValue <= filterValue;
+      case "is_empty":
+        return fieldValue === null || fieldValue === undefined || fieldValue === "";
+      case "is_not_empty":
+        return fieldValue !== null && fieldValue !== undefined && fieldValue !== "";
+      case "gt":
+        return typeof fieldValue === "number" && typeof filterValue === "number" && fieldValue > filterValue;
+      case "gte":
+        return typeof fieldValue === "number" && typeof filterValue === "number" && fieldValue >= filterValue;
+      case "lt":
+        return typeof fieldValue === "number" && typeof filterValue === "number" && fieldValue < filterValue;
+      case "lte":
+        return typeof fieldValue === "number" && typeof filterValue === "number" && fieldValue <= filterValue;
       default:
         return true;
     }
@@ -287,16 +287,16 @@ export const RecordsProvider: ParentComponent = (props) => {
           cmp = 1; // nulls last
         } else if (bVal === null || bVal === undefined) {
           cmp = -1;
-        } else if (typeof aVal === 'string' && typeof bVal === 'string') {
+        } else if (typeof aVal === "string" && typeof bVal === "string") {
           cmp = aVal.localeCompare(bVal);
-        } else if (typeof aVal === 'number' && typeof bVal === 'number') {
+        } else if (typeof aVal === "number" && typeof bVal === "number") {
           cmp = aVal - bVal;
         } else {
           cmp = String(aVal).localeCompare(String(bVal));
         }
 
         if (cmp !== 0) {
-          return sort.direction === 'desc' ? -cmp : cmp;
+          return sort.direction === "desc" ? -cmp : cmp;
         }
       }
       return 0;
@@ -339,8 +339,8 @@ export const RecordsProvider: ParentComponent = (props) => {
           // Create a virtual default view when no views exist
           const virtualDefault: View = {
             id: DEFAULT_VIEW_ID,
-            name: t('table.all') || 'All',
-            type: 'table',
+            name: t("table.all") || "All",
+            type: "table",
             default: true,
             filters: [],
             sorts: [],
@@ -424,14 +424,14 @@ export const RecordsProvider: ParentComponent = (props) => {
 
       // Don't send virtual default view ID to server
       const viewId = activeViewId();
-      const serverViewId = viewId === DEFAULT_VIEW_ID ? '' : viewId || '';
+      const serverViewId = viewId === DEFAULT_VIEW_ID ? "" : viewId || "";
 
       const data = await ws.nodes.table.records.listRecords(nodeId, {
         Offset: 0,
         Limit: PAGE_SIZE,
         ViewID: serverViewId,
-        Filters: filters || '',
-        Sorts: sorts || '',
+        Filters: filters || "",
+        Sorts: sorts || "",
       });
 
       const loadedRecords = (data.records || []) as DataRecordResponse[];
@@ -450,7 +450,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       // Resolve any ghost user references in the loaded records.
       resolveGhostUsers(loadedRecords);
     } catch (err) {
-      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoadingRecords(false);
     }
@@ -494,14 +494,14 @@ export const RecordsProvider: ParentComponent = (props) => {
 
       // Don't send virtual default view ID to server
       const viewId = activeViewId();
-      const serverViewId = viewId === DEFAULT_VIEW_ID ? '' : viewId || '';
+      const serverViewId = viewId === DEFAULT_VIEW_ID ? "" : viewId || "";
 
       const data = await ws.nodes.table.records.listRecords(nodeId, {
         Offset: offset,
         Limit: PAGE_SIZE,
         ViewID: serverViewId,
-        Filters: filters || '',
-        Sorts: sorts || '',
+        Filters: filters || "",
+        Sorts: sorts || "",
       });
 
       const newRecords = (data.records || []) as DataRecordResponse[];
@@ -516,7 +516,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       }
       setLoadError(null);
     } catch (err) {
-      setLoadError(`${t('errors.failedToLoad')}: ${err}`);
+      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoadingRecords(false);
     }
@@ -528,7 +528,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!nodeId || !ws) return;
 
     try {
-      setSavingRecordId('__new__'); // Special marker for creating new record
+      setSavingRecordId("__new__"); // Special marker for creating new record
       // Invalidate cache since data is changing
       setAllRecords(null);
       const result = await ws.nodes.table.records.createRecord(nodeId, { data });
@@ -540,7 +540,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         const capturedNodeId = nodeId;
         const capturedData = { ...data };
         undoActions.push({
-          description: t('common.undo'),
+          description: t("common.undo"),
           undo: async () => {
             const ws2 = wsApi();
             if (!ws2) return;
@@ -566,7 +566,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         });
       }
     } catch (err) {
-      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
     } finally {
       setSavingRecordId(null);
     }
@@ -595,7 +595,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         const capturedPrevData = prevData;
         const capturedNewData = { ...data };
         undoActions.push({
-          description: t('common.undo'),
+          description: t("common.undo"),
           undo: async () => {
             const ws2 = wsApi();
             if (!ws2) return;
@@ -625,7 +625,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         });
       }
     } catch (err) {
-      setSaveError(`${t('errors.failedToSave')}: ${err}`);
+      setSaveError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setSavingRecordId(null);
     }
@@ -635,7 +635,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || !ws) return;
-    if (!confirm(t('table.confirmDeleteRecord') || 'Delete this record?')) return;
+    if (!confirm(t("table.confirmDeleteRecord") || "Delete this record?")) return;
 
     // Capture full record data before deletion for undo.
     const record = records().find((r) => r.id === recordId);
@@ -655,7 +655,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         // Track the re-created record ID so redo can delete the right record.
         let reCreatedId: string | null = null;
         undoActions.push({
-          description: t('common.undo'),
+          description: t("common.undo"),
           undo: async () => {
             const ws2 = wsApi();
             if (!ws2) return;
@@ -686,7 +686,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         });
       }
     } catch (err) {
-      setSaveError(`${t('errors.failedToDelete')}: ${err}`);
+      setSaveError(`${t("errors.failedToDelete")}: ${err}`);
     } finally {
       setDeletingRecordId(null);
     }
@@ -701,14 +701,14 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (!record) return;
 
     try {
-      setSavingRecordId('__new__'); // Special marker for creating new record
+      setSavingRecordId("__new__"); // Special marker for creating new record
       // Invalidate cache since data is changing
       setAllRecords(null);
       await ws.nodes.table.records.createRecord(nodeId, { data: record.data || {} });
       await loadRecords(nodeId);
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
     } finally {
       setSavingRecordId(null);
     }
@@ -747,7 +747,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       setSaveError(null);
       // No need to reload records as filters are empty
     } catch (err) {
-      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
     } finally {
       setSavingView(false);
     }
@@ -774,7 +774,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       // overwrite any user changes made while the request was in flight.
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t('errors.failedToSave')}: ${err}`);
+      setSaveError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setSavingView(false);
     }
@@ -785,7 +785,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     const ws = wsApi();
     if (!nodeId || !ws) return;
 
-    if (!confirm(t('table.confirmDeleteView') || 'Delete this view?')) return;
+    if (!confirm(t("table.confirmDeleteView") || "Delete this view?")) return;
 
     try {
       setSavingView(true);
@@ -805,7 +805,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       }
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t('errors.failedToDelete')}: ${err}`);
+      setSaveError(`${t("errors.failedToDelete")}: ${err}`);
     } finally {
       setSavingView(false);
     }
@@ -855,7 +855,7 @@ export const RecordsProvider: ParentComponent = (props) => {
 export function useRecords(): RecordsContextValue {
   const context = useContext(RecordsContext);
   if (!context) {
-    throw new Error('useRecords must be used within a RecordsProvider');
+    throw new Error("useRecords must be used within a RecordsProvider");
   }
   return context;
 }

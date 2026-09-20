@@ -1,8 +1,8 @@
 // ProseMirror plugin for block-level drag-and-drop functionality.
 // Manages drag state and provides drop indicator decorations.
 
-import { Plugin, PluginKey, type EditorState, type Transaction } from 'prosemirror-state';
-import { DecorationSet, type EditorView } from 'prosemirror-view';
+import { Plugin, PluginKey, type EditorState, type Transaction } from "prosemirror-state";
+import { DecorationSet, type EditorView } from "prosemirror-view";
 
 // Drag state interface (only tracks drop target for visual indicator)
 export interface DragState {
@@ -13,7 +13,7 @@ export interface DragState {
 }
 
 // Plugin key for accessing drag state
-export const blockDragPluginKey = new PluginKey<DragState>('blockDrag');
+export const blockDragPluginKey = new PluginKey<DragState>("blockDrag");
 
 // Initial state
 const initialState: DragState = {
@@ -32,13 +32,13 @@ export function getSelectedBlockPositions(state: EditorState): number[] {
   const $to = state.doc.resolve(state.selection.to);
   const range = $from.blockRange($to);
 
-  if (range && range.parent.type.name === 'doc') {
+  if (range && range.parent.type.name === "doc") {
     // Iterate manually through the range indices to ensure we capture all top-level blocks
     // `range.start` is the position of the start of the range (before first block)
     let currentPos = range.start;
     for (let i = range.startIndex; i < range.endIndex; i++) {
       const child = range.parent.child(i);
-      if (child.type.name === 'block') {
+      if (child.type.name === "block") {
         positions.push(currentPos);
       }
       currentPos += child.nodeSize;
@@ -50,7 +50,7 @@ export function getSelectedBlockPositions(state: EditorState): number[] {
   // If the selection is inside a block, blockRange might return null (inline content range)
   // or the parent might be the block itself (not doc)
   // We want to return the position of the block itself.
-  if ($from.sameParent($to) && $from.parent.type.name === 'block') {
+  if ($from.sameParent($to) && $from.parent.type.name === "block") {
     // The position of the block is before its content starts?
     // nodeAt(pos) expects the pos BEFORE the node.
     // $from.before(depth) returns the pos before the start of the node at depth.
@@ -63,7 +63,7 @@ export function getSelectedBlockPositions(state: EditorState): number[] {
   // Fallback to nodesBetween if blockRange doesn't give us doc-level blocks
   state.doc.nodesBetween(state.selection.from, state.selection.to, (node, pos) => {
     // Only include flat blocks, not the doc or inline content
-    if (node.type.name === 'block' && pos >= 0) {
+    if (node.type.name === "block" && pos >= 0) {
       positions.push(pos);
     }
     return true; // Continue traversal
@@ -100,7 +100,7 @@ export function clearDragState(tr: Transaction): Transaction {
 export function findDropTarget(
   view: EditorView,
   clientX: number,
-  clientY: number
+  clientY: number,
 ): { pos: number; y: number; above: boolean } | null {
   const coords = { left: clientX, top: clientY };
   const posInfo = view.posAtCoords(coords);
@@ -123,7 +123,7 @@ export function findDropTarget(
     let smallestDistance = Infinity;
 
     doc.forEach((node, pos) => {
-      if (node.type.name === 'block') {
+      if (node.type.name === "block") {
         const nodeStartCoords = view.coordsAtPos(pos);
         const nodeEndCoords = view.coordsAtPos(pos + node.nodeSize);
         const nodeMidY = (nodeStartCoords.top + nodeEndCoords.bottom) / 2;
@@ -272,7 +272,7 @@ export const blockDragPlugin = new Plugin<DragState>({
 
         event.preventDefault();
         if (event.dataTransfer) {
-          event.dataTransfer.dropEffect = 'move';
+          event.dataTransfer.dropEffect = "move";
         }
 
         const target = findDropTarget(view, event.clientX, event.clientY);
@@ -281,7 +281,7 @@ export const blockDragPlugin = new Plugin<DragState>({
             setDragState(view.state.tr, {
               dropTarget: target.pos,
               dropIndicatorY: target.y,
-            })
+            }),
           );
         }
 
@@ -293,8 +293,8 @@ export const blockDragPlugin = new Plugin<DragState>({
         const { dropTarget } = state;
 
         // Clean up dragging class from all blocks
-        view.dom.querySelectorAll('.block-row.dragging').forEach((el) => {
-          el.classList.remove('dragging');
+        view.dom.querySelectorAll(".block-row.dragging").forEach((el) => {
+          el.classList.remove("dragging");
         });
 
         // Get source positions from dataTransfer (not plugin state)
@@ -331,8 +331,8 @@ export const blockDragPlugin = new Plugin<DragState>({
 
       dragend(view) {
         // Clean up dragging class from all blocks
-        view.dom.querySelectorAll('.block-row.dragging').forEach((el) => {
-          el.classList.remove('dragging');
+        view.dom.querySelectorAll(".block-row.dragging").forEach((el) => {
+          el.classList.remove("dragging");
         });
         view.dispatch(clearDragState(view.state.tr));
         return false;
@@ -346,7 +346,7 @@ export const blockDragPlugin = new Plugin<DragState>({
             setDragState(view.state.tr, {
               dropTarget: null,
               dropIndicatorY: null,
-            })
+            }),
           );
         }
         return false;
@@ -370,5 +370,5 @@ export const blockDragPlugin = new Plugin<DragState>({
 /**
  * MIME type for block drag data.
  */
-export const BLOCK_DRAG_MIME = 'application/x-prosemirror-block';
-export const BLOCKS_DRAG_MIME = 'application/x-prosemirror-blocks';
+export const BLOCK_DRAG_MIME = "application/x-prosemirror-block";
+export const BLOCKS_DRAG_MIME = "application/x-prosemirror-blocks";

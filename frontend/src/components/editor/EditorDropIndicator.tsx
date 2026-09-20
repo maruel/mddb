@@ -1,10 +1,10 @@
 // Editor drop indicator component that renders during block drag-and-drop.
 // Shows a horizontal line at the insertion point between blocks.
 
-import { createSignal, createEffect, onCleanup, Show } from 'solid-js';
-import type { EditorView } from 'prosemirror-view';
-import { getDragState } from './blockDragPlugin';
-import styles from './EditorDropIndicator.module.css';
+import { createSignal, createEffect, onCleanup, Show } from "solid-js";
+import type { EditorView } from "prosemirror-view";
+import { getDragState } from "./blockDragPlugin";
+import styles from "./EditorDropIndicator.module.css";
 
 export interface EditorDropIndicatorProps {
   view: EditorView | undefined;
@@ -20,7 +20,7 @@ export function EditorDropIndicator(props: EditorDropIndicatorProps) {
 
   // Track when we've wrapped dispatch to avoid wrapping multiple times
   let wrappedView: EditorView | null = null;
-  let originalDispatch: EditorView['dispatch'] | null = null;
+  let originalDispatch: EditorView["dispatch"] | null = null;
 
   /**
    * Update indicator position based on drag state.

@@ -20,11 +20,18 @@ as markdown files and images.
 
 ### Professionalism
 
-After making changes, run:
+After making changes run `make lint-fix`, then `make format`, then `make verify`.
 
 ```bash
+make lint-fix   # Autofix lint and refresh generated file indexes.
+make format     # Apply prettier, gofmt, ruff format, and shfmt.
+make verify     # Re-check formatting and lint; the pre-push gate.
 make lint build test
 ```
+
+`make verify` re-checks prettier, gofmt, ruff, and shfmt plus the ESLint, CSS, binary, and file-index checks.
+Indentation and width come from `.editorconfig`; Ruff keeps its own copy of the width in `pyproject.toml`
+because it does not read `.editorconfig`.
 
 After making UI or API changes, also run the end-to-end browser tests:
 

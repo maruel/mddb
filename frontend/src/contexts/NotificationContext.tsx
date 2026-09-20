@@ -8,11 +8,11 @@ import {
   onCleanup,
   type ParentComponent,
   type Accessor,
-} from 'solid-js';
-import type { NotificationDTO } from '@sdk/types.gen';
-import type { APIClient } from '@sdk/api.gen';
-import { registerServiceWorker } from '../notifications/sw-register';
-import { subscribeToPush, unsubscribeFromPush } from '../notifications/push-manager';
+} from "solid-js";
+import type { NotificationDTO } from "@sdk/types.gen";
+import type { APIClient } from "@sdk/api.gen";
+import { registerServiceWorker } from "../notifications/sw-register";
+import { subscribeToPush, unsubscribeFromPush } from "../notifications/push-manager";
 
 const POLL_INTERVAL_MS = 60_000;
 const PAGE_SIZE = 20;
@@ -192,7 +192,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
 export function useNotifications(): NotificationContextValue {
   const context = useContext(NotificationContext);
   if (!context) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    throw new Error("useNotifications must be used within a NotificationProvider");
   }
   return context;
 }

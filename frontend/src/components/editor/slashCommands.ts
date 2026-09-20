@@ -1,20 +1,20 @@
 // Slash command registry defining available block types for the editor menu.
 
-import type { EditorView } from 'prosemirror-view';
-import { Selection } from 'prosemirror-state';
-import { nodes } from './prosemirror-config';
-import type { BlockAttrs } from './schema';
-import { convertBlock } from './blockCommands';
+import type { EditorView } from "prosemirror-view";
+import { Selection } from "prosemirror-state";
+import { nodes } from "./prosemirror-config";
+import type { BlockAttrs } from "./schema";
+import { convertBlock } from "./blockCommands";
 
-import SubjectIcon from '@material-symbols/svg-400/outlined/subject.svg?solid';
-import TitleIcon from '@material-symbols/svg-400/outlined/title.svg?solid';
-import FormatListBulletedIcon from '@material-symbols/svg-400/outlined/format_list_bulleted.svg?solid';
-import FormatListNumberedIcon from '@material-symbols/svg-400/outlined/format_list_numbered.svg?solid';
-import ChecklistIcon from '@material-symbols/svg-400/outlined/checklist.svg?solid';
-import FormatQuoteIcon from '@material-symbols/svg-400/outlined/format_quote.svg?solid';
-import CodeIcon from '@material-symbols/svg-400/outlined/code.svg?solid';
-import HorizontalRuleIcon from '@material-symbols/svg-400/outlined/horizontal_rule.svg?solid';
-import DescriptionIcon from '@material-symbols/svg-400/outlined/description.svg?solid';
+import SubjectIcon from "@material-symbols/svg-400/outlined/subject.svg?solid";
+import TitleIcon from "@material-symbols/svg-400/outlined/title.svg?solid";
+import FormatListBulletedIcon from "@material-symbols/svg-400/outlined/format_list_bulleted.svg?solid";
+import FormatListNumberedIcon from "@material-symbols/svg-400/outlined/format_list_numbered.svg?solid";
+import ChecklistIcon from "@material-symbols/svg-400/outlined/checklist.svg?solid";
+import FormatQuoteIcon from "@material-symbols/svg-400/outlined/format_quote.svg?solid";
+import CodeIcon from "@material-symbols/svg-400/outlined/code.svg?solid";
+import HorizontalRuleIcon from "@material-symbols/svg-400/outlined/horizontal_rule.svg?solid";
+import DescriptionIcon from "@material-symbols/svg-400/outlined/description.svg?solid";
 
 export interface SlashCommand {
   id: string;
@@ -22,7 +22,7 @@ export interface SlashCommand {
   keywords: string[];
   icon: SolidSVG;
   execute: (view: EditorView, from: number, to: number) => void;
-  asyncAction?: 'createSubpage'; // Async actions handled by SlashCommandMenu
+  asyncAction?: "createSubpage"; // Async actions handled by SlashCommandMenu
 }
 
 // Helper to delete the "/" trigger text and execute a command
@@ -38,8 +38,8 @@ function deleteSlashAndExecute(view: EditorView, from: number, to: number, actio
 // Helper to convert current block (where cursor is) to another type
 function convertCurrentBlock(
   view: EditorView,
-  type: 'paragraph' | 'heading' | 'bullet' | 'number' | 'task' | 'quote' | 'code' | 'divider',
-  attrs: Partial<BlockAttrs> = {}
+  type: "paragraph" | "heading" | "bullet" | "number" | "task" | "quote" | "code" | "divider",
+  attrs: Partial<BlockAttrs> = {},
 ) {
   const { state, dispatch } = view;
   const { $from } = state.selection;
@@ -56,111 +56,111 @@ function convertCurrentBlock(
 
 export const slashCommands: SlashCommand[] = [
   {
-    id: 'paragraph',
-    labelKey: 'paragraph',
-    keywords: ['paragraph', 'text', 'plain'],
+    id: "paragraph",
+    labelKey: "paragraph",
+    keywords: ["paragraph", "text", "plain"],
     icon: SubjectIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        convertCurrentBlock(v, 'paragraph');
+        convertCurrentBlock(v, "paragraph");
       });
     },
   },
   {
-    id: 'heading1',
-    labelKey: 'heading1',
-    keywords: ['heading', 'h1', 'title', 'header'],
+    id: "heading1",
+    labelKey: "heading1",
+    keywords: ["heading", "h1", "title", "header"],
     icon: TitleIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        convertCurrentBlock(v, 'heading', { level: 1 });
+        convertCurrentBlock(v, "heading", { level: 1 });
       });
     },
   },
   {
-    id: 'heading2',
-    labelKey: 'heading2',
-    keywords: ['heading', 'h2', 'subtitle', 'header'],
+    id: "heading2",
+    labelKey: "heading2",
+    keywords: ["heading", "h2", "subtitle", "header"],
     icon: TitleIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        convertCurrentBlock(v, 'heading', { level: 2 });
+        convertCurrentBlock(v, "heading", { level: 2 });
       });
     },
   },
   {
-    id: 'heading3',
-    labelKey: 'heading3',
-    keywords: ['heading', 'h3', 'header'],
+    id: "heading3",
+    labelKey: "heading3",
+    keywords: ["heading", "h3", "header"],
     icon: TitleIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        convertCurrentBlock(v, 'heading', { level: 3 });
+        convertCurrentBlock(v, "heading", { level: 3 });
       });
     },
   },
   {
-    id: 'bulletList',
-    labelKey: 'bulletList',
-    keywords: ['bullet', 'list', 'unordered', 'ul'],
+    id: "bulletList",
+    labelKey: "bulletList",
+    keywords: ["bullet", "list", "unordered", "ul"],
     icon: FormatListBulletedIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        convertCurrentBlock(v, 'bullet');
+        convertCurrentBlock(v, "bullet");
       });
     },
   },
   {
-    id: 'orderedList',
-    labelKey: 'orderedList',
-    keywords: ['ordered', 'list', 'numbered', 'ol'],
+    id: "orderedList",
+    labelKey: "orderedList",
+    keywords: ["ordered", "list", "numbered", "ol"],
     icon: FormatListNumberedIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        convertCurrentBlock(v, 'number');
+        convertCurrentBlock(v, "number");
       });
     },
   },
   {
-    id: 'taskList',
-    labelKey: 'taskList',
-    keywords: ['task', 'checkbox', 'todo', 'checklist', 'check'],
+    id: "taskList",
+    labelKey: "taskList",
+    keywords: ["task", "checkbox", "todo", "checklist", "check"],
     icon: ChecklistIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        convertCurrentBlock(v, 'task', { checked: false });
+        convertCurrentBlock(v, "task", { checked: false });
       });
     },
   },
   {
-    id: 'blockquote',
-    labelKey: 'blockquote',
-    keywords: ['quote', 'blockquote', 'citation'],
+    id: "blockquote",
+    labelKey: "blockquote",
+    keywords: ["quote", "blockquote", "citation"],
     icon: FormatQuoteIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        convertCurrentBlock(v, 'quote');
+        convertCurrentBlock(v, "quote");
       });
     },
   },
   {
-    id: 'codeBlock',
-    labelKey: 'codeBlock',
-    keywords: ['code', 'codeblock', 'pre', 'programming'],
+    id: "codeBlock",
+    labelKey: "codeBlock",
+    keywords: ["code", "codeblock", "pre", "programming"],
     icon: CodeIcon,
     execute: (view, from, to) => {
       deleteSlashAndExecute(view, from, to, (v) => {
-        convertCurrentBlock(v, 'code');
+        convertCurrentBlock(v, "code");
       });
     },
   },
   {
-    id: 'divider',
-    labelKey: 'divider',
-    keywords: ['divider', 'hr', 'horizontal', 'rule', 'line'],
+    id: "divider",
+    labelKey: "divider",
+    keywords: ["divider", "hr", "horizontal", "rule", "line"],
     icon: HorizontalRuleIcon,
     execute: (view) => {
-      convertCurrentBlock(view, 'divider');
+      convertCurrentBlock(view, "divider");
 
       // Insert paragraph after
       const { state } = view;
@@ -170,18 +170,18 @@ export const slashCommands: SlashCommand[] = [
 
       if (blockNode) {
         const newPos = blockPos + blockNode.nodeSize;
-        const tr2 = state.tr.insert(newPos, nodes.block.create({ type: 'paragraph', indent: blockNode.attrs.indent }));
+        const tr2 = state.tr.insert(newPos, nodes.block.create({ type: "paragraph", indent: blockNode.attrs.indent }));
         tr2.setSelection(Selection.near(tr2.doc.resolve(newPos + 1)));
         view.dispatch(tr2);
       }
     },
   },
   {
-    id: 'subpage',
-    labelKey: 'subpage',
-    keywords: ['subpage', 'page', 'child', 'nested', 'link'],
+    id: "subpage",
+    labelKey: "subpage",
+    keywords: ["subpage", "page", "child", "nested", "link"],
     icon: DescriptionIcon,
-    asyncAction: 'createSubpage',
+    asyncAction: "createSubpage",
     execute: () => {
       // Handled by SlashCommandMenu via asyncAction
     },

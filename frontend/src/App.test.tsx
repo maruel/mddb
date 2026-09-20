@@ -1,66 +1,66 @@
 // Tests for the root App component.
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
-import type { JSX } from 'solid-js';
-import App from './App';
-import { I18nProvider } from './i18n';
-import type { UserResponse, NodeResponse } from '@sdk/types.gen';
-import { WSRoleViewer } from '@sdk/types.gen';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@solidjs/testing-library";
+import type { JSX } from "solid-js";
+import App from "./App";
+import { I18nProvider } from "./i18n";
+import type { UserResponse, NodeResponse } from "@sdk/types.gen";
+import { WSRoleViewer } from "@sdk/types.gen";
 
 // Mock CSS modules
-vi.mock('./sections/WorkspaceSection.module.css', () => ({
+vi.mock("./sections/WorkspaceSection.module.css", () => ({
   default: {
-    app: 'app',
-    sidebarOpen: 'sidebarOpen',
-    header: 'header',
-    headerLeft: 'headerLeft',
-    hamburger: 'hamburger',
-    userInfo: 'userInfo',
-    container: 'container',
-    main: 'main',
-    breadcrumbs: 'breadcrumbs',
-    breadcrumbSeparator: 'breadcrumbSeparator',
-    breadcrumbItem: 'breadcrumbItem',
-    error: 'error',
-    editor: 'editor',
-    editorHeader: 'editorHeader',
-    editorStatus: 'editorStatus',
-    editorLoading: 'editorLoading',
-    unsavedIndicator: 'unsavedIndicator',
-    savingIndicator: 'savingIndicator',
-    savedIndicator: 'savedIndicator',
-    titleInput: 'titleInput',
-    nodeContent: 'nodeContent',
-    tableView: 'tableView',
-    historyPanel: 'historyPanel',
-    historyList: 'historyList',
-    historyItem: 'historyItem',
-    historyMeta: 'historyMeta',
-    historyDate: 'historyDate',
-    historyHash: 'historyHash',
-    historyMessage: 'historyMessage',
-    mobileBackdrop: 'mobileBackdrop',
-    mobileBackdropVisible: 'mobileBackdropVisible',
+    app: "app",
+    sidebarOpen: "sidebarOpen",
+    header: "header",
+    headerLeft: "headerLeft",
+    hamburger: "hamburger",
+    userInfo: "userInfo",
+    container: "container",
+    main: "main",
+    breadcrumbs: "breadcrumbs",
+    breadcrumbSeparator: "breadcrumbSeparator",
+    breadcrumbItem: "breadcrumbItem",
+    error: "error",
+    editor: "editor",
+    editorHeader: "editorHeader",
+    editorStatus: "editorStatus",
+    editorLoading: "editorLoading",
+    unsavedIndicator: "unsavedIndicator",
+    savingIndicator: "savingIndicator",
+    savedIndicator: "savedIndicator",
+    titleInput: "titleInput",
+    nodeContent: "nodeContent",
+    tableView: "tableView",
+    historyPanel: "historyPanel",
+    historyList: "historyList",
+    historyItem: "historyItem",
+    historyMeta: "historyMeta",
+    historyDate: "historyDate",
+    historyHash: "historyHash",
+    historyMessage: "historyMessage",
+    mobileBackdrop: "mobileBackdrop",
+    mobileBackdropVisible: "mobileBackdropVisible",
   },
 }));
 
-vi.mock('./sections/SettingsSection.module.css', () => ({
+vi.mock("./sections/SettingsSection.module.css", () => ({
   default: {
-    settingsPage: 'settingsPage',
-    header: 'header',
-    headerLeft: 'headerLeft',
-    hamburger: 'hamburger',
-    backButton: 'backButton',
-    title: 'title',
-    layout: 'layout',
-    mobileBackdrop: 'mobileBackdrop',
-    content: 'content',
-    error: 'error',
+    settingsPage: "settingsPage",
+    header: "header",
+    headerLeft: "headerLeft",
+    hamburger: "hamburger",
+    backButton: "backButton",
+    title: "title",
+    layout: "layout",
+    mobileBackdrop: "mobileBackdrop",
+    content: "content",
+    error: "error",
   },
 }));
 
 // Mock child components that have their own tests
-vi.mock('./components/SidebarNode', () => ({
+vi.mock("./components/SidebarNode", () => ({
   default: (props: { node: NodeResponse; selectedId: string | null; onSelect: (n: NodeResponse) => void }) => (
     <li data-testid={`sidebar-node-${props.node.id}`} onClick={() => props.onSelect(props.node)}>
       {props.node.title}
@@ -68,27 +68,27 @@ vi.mock('./components/SidebarNode', () => ({
   ),
 }));
 
-vi.mock('./components/MarkdownPreview', () => ({
+vi.mock("./components/MarkdownPreview", () => ({
   default: (props: { content: string }) => <div data-testid="markdown-preview">{props.content}</div>,
 }));
 
-vi.mock('./components/TableTable', () => ({
+vi.mock("./components/TableTable", () => ({
   default: () => <div data-testid="table-table">TableTable</div>,
 }));
 
-vi.mock('./components/TableGrid', () => ({
+vi.mock("./components/TableGrid", () => ({
   default: () => <div data-testid="table-grid">TableGrid</div>,
 }));
 
-vi.mock('./components/TableGallery', () => ({
+vi.mock("./components/TableGallery", () => ({
   default: () => <div data-testid="table-gallery">TableGallery</div>,
 }));
 
-vi.mock('./components/TableBoard', () => ({
+vi.mock("./components/TableBoard", () => ({
   default: () => <div data-testid="table-board">TableBoard</div>,
 }));
 
-vi.mock('./components/WorkspaceSettings', () => ({
+vi.mock("./components/WorkspaceSettings", () => ({
   default: (props: { onBack: () => void }) => (
     <div data-testid="workspace-settings-old">
       <button onClick={() => props.onBack()}>Back</button>
@@ -96,7 +96,7 @@ vi.mock('./components/WorkspaceSettings', () => ({
   ),
 }));
 
-vi.mock('./components/settings', () => ({
+vi.mock("./components/settings", () => ({
   Settings: (props: { route: { type: string; id?: string }; onClose: () => void }) => (
     <div data-testid="workspace-settings">
       <span data-testid="settings-route-type">{props.route.type}</span>
@@ -105,7 +105,7 @@ vi.mock('./components/settings', () => ({
   ),
 }));
 
-vi.mock('./components/Onboarding', () => ({
+vi.mock("./components/Onboarding", () => ({
   default: (props: { onComplete: () => void }) => (
     <div data-testid="onboarding">
       <button onClick={() => props.onComplete()}>Complete Onboarding</button>
@@ -113,43 +113,43 @@ vi.mock('./components/Onboarding', () => ({
   ),
 }));
 
-vi.mock('./components/Auth', () => ({
+vi.mock("./components/Auth", () => ({
   default: (props: { onLogin: (token: string, user: UserResponse) => void }) => (
     <div data-testid="auth-form">
       <button
         onClick={() =>
-          props.onLogin('test-token', {
-            id: 'user-1',
-            email: 'test@example.com',
-            name: 'Test User',
-            organization_id: 'org-1',
-            org_role: 'org:member',
-            workspace_id: 'ws-1',
-            workspace_name: 'Test Workspace',
-            workspace_role: 'ws:viewer',
+          props.onLogin("test-token", {
+            id: "user-1",
+            email: "test@example.com",
+            name: "Test User",
+            organization_id: "org-1",
+            org_role: "org:member",
+            workspace_id: "ws-1",
+            workspace_name: "Test Workspace",
+            workspace_role: "ws:viewer",
             organizations: [
               {
-                id: 'mem-1',
-                user_id: 'user-1',
-                organization_id: 'org-1',
-                organization_name: 'Test Org',
-                role: 'org:member',
+                id: "mem-1",
+                user_id: "user-1",
+                organization_id: "org-1",
+                organization_name: "Test Org",
+                role: "org:member",
                 created: 1704067200,
               },
             ],
             workspaces: [
               {
-                id: 'wsmem-1',
-                user_id: 'user-1',
-                workspace_id: 'ws-1',
-                workspace_name: 'Default Workspace',
-                organization_id: 'org-1',
-                role: 'ws:viewer',
+                id: "wsmem-1",
+                user_id: "user-1",
+                workspace_id: "ws-1",
+                workspace_name: "Default Workspace",
+                organization_id: "org-1",
+                role: "ws:viewer",
                 settings: { notifications: true },
                 created: 1704067200,
               },
             ],
-            settings: { theme: 'light', language: 'en' },
+            settings: { theme: "light", language: "en" },
             created: 1704067200,
             modified: 1704067200,
           })
@@ -161,39 +161,39 @@ vi.mock('./components/Auth', () => ({
   ),
 }));
 
-vi.mock('./components/Privacy', () => ({
+vi.mock("./components/Privacy", () => ({
   default: () => <div data-testid="privacy-page">Privacy Policy</div>,
 }));
 
-vi.mock('./components/Terms', () => ({
+vi.mock("./components/Terms", () => ({
   default: () => <div data-testid="terms-page">Terms of Service</div>,
 }));
 
-vi.mock('./components/PWAInstallBanner', () => ({
+vi.mock("./components/PWAInstallBanner", () => ({
   default: () => <div data-testid="pwa-banner" />,
 }));
 
-vi.mock('./components/CreateOrgModal', () => ({
+vi.mock("./components/CreateOrgModal", () => ({
   default: (props: { isFirstOrg?: boolean; onClose: () => void; onCreate: (data: unknown) => void }) => (
-    <div data-testid={props.isFirstOrg ? 'create-org-modal-first' : 'create-org-modal'}>
+    <div data-testid={props.isFirstOrg ? "create-org-modal-first" : "create-org-modal"}>
       <button onClick={() => props.onClose()}>Close</button>
-      <button onClick={() => props.onCreate({ name: 'New Org', welcomePageTitle: 'Welcome', welcomePageContent: '' })}>
+      <button onClick={() => props.onCreate({ name: "New Org", welcomePageTitle: "Welcome", welcomePageContent: "" })}>
         Create
       </button>
     </div>
   ),
 }));
 
-vi.mock('./components/CreateWorkspaceModal', () => ({
+vi.mock("./components/CreateWorkspaceModal", () => ({
   default: (props: { isFirstWorkspace?: boolean; onClose: () => void; onCreate: (data: unknown) => void }) => (
-    <div data-testid={props.isFirstWorkspace ? 'create-workspace-modal-first' : 'create-workspace-modal'}>
+    <div data-testid={props.isFirstWorkspace ? "create-workspace-modal-first" : "create-workspace-modal"}>
       <button onClick={() => props.onClose()}>Close</button>
-      <button onClick={() => props.onCreate({ name: 'New Workspace' })}>Create</button>
+      <button onClick={() => props.onCreate({ name: "New Workspace" })}>Create</button>
     </div>
   ),
 }));
 
-vi.mock('./components/UserMenu', () => ({
+vi.mock("./components/UserMenu", () => ({
   default: (props: { onProfile: () => void }) => (
     <div data-testid="user-menu">
       <span data-testid="user-info">User Menu</span>
@@ -204,9 +204,9 @@ vi.mock('./components/UserMenu', () => ({
         data-testid="logout-button"
         onClick={() => {
           // Simulate logout by clearing localStorage (the real logout does this via AuthContext)
-          localStorage.removeItem('mddb_token');
+          localStorage.removeItem("mddb_token");
           // Trigger re-render by dispatching storage event
-          window.dispatchEvent(new StorageEvent('storage', { key: 'mddb_token' }));
+          window.dispatchEvent(new StorageEvent("storage", { key: "mddb_token" }));
         }}
       >
         Logout
@@ -237,13 +237,13 @@ const localStorageMock = (() => {
     },
   };
 })();
-Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+Object.defineProperty(window, "localStorage", { value: localStorageMock });
 
 // Note: @solidjs/router uses the browser's History API directly.
 // We spy on history methods for verification but don't override them completely
 // since the router needs real browser navigation to work.
-const historyPushStateSpy = vi.spyOn(window.history, 'pushState');
-const historyReplaceStateSpy = vi.spyOn(window.history, 'replaceState');
+const historyPushStateSpy = vi.spyOn(window.history, "pushState");
+const historyReplaceStateSpy = vi.spyOn(window.history, "replaceState");
 
 // Mock confirm
 const mockConfirm = vi.fn(() => true);
@@ -256,45 +256,45 @@ function renderWithI18n(component: () => JSX.Element) {
 
 // Mock user data
 const mockUser: UserResponse = {
-  id: 'user-1',
-  email: 'test@example.com',
-  name: 'Test User',
-  organization_id: 'org-1',
-  org_role: 'org:member',
-  workspace_id: 'ws-1',
-  workspace_name: 'Test Workspace',
+  id: "user-1",
+  email: "test@example.com",
+  name: "Test User",
+  organization_id: "org-1",
+  org_role: "org:member",
+  workspace_id: "ws-1",
+  workspace_name: "Test Workspace",
   workspace_role: WSRoleViewer,
   organizations: [
     {
-      id: 'mem-1',
-      user_id: 'user-1',
-      organization_id: 'org-1',
-      organization_name: 'Test Org',
-      role: 'org:member',
+      id: "mem-1",
+      user_id: "user-1",
+      organization_id: "org-1",
+      organization_name: "Test Org",
+      role: "org:member",
       created: 1704067200,
     },
   ],
   workspaces: [
     {
-      id: 'wsmem-1',
-      user_id: 'user-1',
-      workspace_id: 'ws-1',
-      workspace_name: 'Test Workspace',
-      organization_id: 'org-1',
+      id: "wsmem-1",
+      user_id: "user-1",
+      workspace_id: "ws-1",
+      workspace_name: "Test Workspace",
+      organization_id: "org-1",
       role: WSRoleViewer,
       settings: { notifications: true },
       created: 1704067200,
     },
   ],
-  settings: { theme: 'light', language: 'en' },
+  settings: { theme: "light", language: "en" },
   created: 1704067200,
   modified: 1704067200,
 };
 
 // Root node (id=0) with children indication
 const mockRootNode: NodeResponse = {
-  id: '0',
-  title: 'Root',
+  id: "0",
+  title: "Root",
   created: 1704067200,
   modified: 1704067200,
   has_page: true,
@@ -304,25 +304,25 @@ const mockRootNode: NodeResponse = {
 
 const mockNodes: NodeResponse[] = [
   {
-    id: 'node-1',
-    title: 'Test Page',
-    content: '# Hello World',
+    id: "node-1",
+    title: "Test Page",
+    content: "# Hello World",
     created: 1704067200,
     modified: 1704067200,
     has_page: true,
     has_table: false,
   },
   {
-    id: 'node-2',
-    title: 'Test Table',
+    id: "node-2",
+    title: "Test Table",
     properties: [
-      { name: 'Name', type: 'text', required: true },
+      { name: "Name", type: "text", required: true },
       {
-        name: 'Status',
-        type: 'select',
+        name: "Status",
+        type: "select",
         options: [
-          { id: 'opt-1', name: 'Todo' },
-          { id: 'opt-2', name: 'Done' },
+          { id: "opt-1", name: "Todo" },
+          { id: "opt-2", name: "Done" },
         ],
       },
     ],
@@ -336,7 +336,7 @@ const mockNodes: NodeResponse[] = [
 // Note: mockRecords removed - table record tests are now skipped
 // and covered by e2e tests instead.
 
-describe('App', () => {
+describe("App", () => {
   beforeEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -345,7 +345,7 @@ describe('App', () => {
     historyPushStateSpy.mockClear();
     historyReplaceStateSpy.mockClear();
     // Reset URL to root for each test
-    window.history.replaceState(null, '', '/');
+    window.history.replaceState(null, "", "/");
   });
 
   afterEach(() => {
@@ -353,20 +353,20 @@ describe('App', () => {
     vi.restoreAllMocks();
   });
 
-  describe('Authentication', () => {
-    it('shows Auth component when not logged in', async () => {
+  describe("Authentication", () => {
+    it("shows Auth component when not logged in", async () => {
       renderWithI18n(() => <App />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('auth-form')).toBeTruthy();
+        expect(screen.getByTestId("auth-form")).toBeTruthy();
       });
     });
 
-    it('shows main app when logged in via localStorage token', async () => {
-      localStorageMock.setItem('mddb_token', 'existing-token');
+    it("shows main app when logged in via localStorage token", async () => {
+      localStorageMock.setItem("mddb_token", "existing-token");
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/v1/auth/me') {
+        if (url === "/api/v1/auth/me") {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -392,24 +392,24 @@ describe('App', () => {
       renderWithI18n(() => <App />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('user-menu')).toBeTruthy();
+        expect(screen.getByTestId("user-menu")).toBeTruthy();
       });
     });
 
     // Skip: OAuth token extraction requires setting URL query params before render,
     // but @solidjs/router reads from actual browser location. This is better tested via e2e.
-    it.skip('extracts OAuth token from URL query params', async () => {
+    it.skip("extracts OAuth token from URL query params", async () => {
       // Test skipped - OAuth flow is covered by e2e tests
     });
 
     // Note: Logout is now handled internally by UserMenu through AuthContext.
     // This test is skipped because the mock can't properly trigger the context logout flow.
     // Logout functionality should be tested at the UserMenu/AuthContext level.
-    it.skip('handles logout', async () => {
-      localStorageMock.setItem('mddb_token', 'existing-token');
+    it.skip("handles logout", async () => {
+      localStorageMock.setItem("mddb_token", "existing-token");
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/v1/auth/me') {
+        if (url === "/api/v1/auth/me") {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -441,15 +441,15 @@ describe('App', () => {
       fireEvent.click(screen.getByText(/logout/i));
 
       await waitFor(() => {
-        expect(localStorageMock.removeItem).toHaveBeenCalledWith('mddb_token');
+        expect(localStorageMock.removeItem).toHaveBeenCalledWith("mddb_token");
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('auth-form')).toBeTruthy();
+        expect(screen.getByTestId("auth-form")).toBeTruthy();
       });
     });
 
-    it('handles login callback from Auth component', async () => {
+    it("handles login callback from Auth component", async () => {
       mockFetch.mockImplementation((url: string) => {
         if (url.match(/\/nodes\/0$/)) {
           // GET /nodes/0 returns root node
@@ -471,18 +471,18 @@ describe('App', () => {
       renderWithI18n(() => <App />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('auth-form')).toBeTruthy();
+        expect(screen.getByTestId("auth-form")).toBeTruthy();
       });
 
       // Click the mock login button
-      fireEvent.click(screen.getByText('Login'));
+      fireEvent.click(screen.getByText("Login"));
 
       await waitFor(() => {
-        expect(localStorageMock.setItem).toHaveBeenCalledWith('mddb_token', 'test-token');
+        expect(localStorageMock.setItem).toHaveBeenCalledWith("mddb_token", "test-token");
       });
 
       await waitFor(() => {
-        expect(screen.getByTestId('user-menu')).toBeTruthy();
+        expect(screen.getByTestId("user-menu")).toBeTruthy();
       });
     });
   });
@@ -490,21 +490,21 @@ describe('App', () => {
   // Skip: Static page routing tests require setting initial URL before render,
   // but @solidjs/router reads from actual browser location. These are better tested via e2e.
   // The Privacy and Terms components have their own unit tests if needed.
-  describe.skip('Static Pages', () => {
-    it('shows Privacy page when on /privacy', async () => {
+  describe.skip("Static Pages", () => {
+    it("shows Privacy page when on /privacy", async () => {
       // Routing is now handled by @solidjs/router - see e2e tests
     });
 
-    it('shows Terms page when on /terms', async () => {
+    it("shows Terms page when on /terms", async () => {
       // Routing is now handled by @solidjs/router - see e2e tests
     });
   });
 
-  describe('Node List', () => {
+  describe("Node List", () => {
     beforeEach(() => {
-      localStorageMock.setItem('mddb_token', 'test-token');
+      localStorageMock.setItem("mddb_token", "test-token");
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/v1/auth/me') {
+        if (url === "/api/v1/auth/me") {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -528,21 +528,21 @@ describe('App', () => {
       });
     });
 
-    it('loads and displays nodes in sidebar', async () => {
+    it("loads and displays nodes in sidebar", async () => {
       renderWithI18n(() => <App />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('sidebar-node-node-1')).toBeTruthy();
-        expect(screen.getByTestId('sidebar-node-node-1')).toBeTruthy();
+        expect(screen.getByTestId("sidebar-node-node-1")).toBeTruthy();
+        expect(screen.getByTestId("sidebar-node-node-1")).toBeTruthy();
       });
     });
 
-    it('auto-selects first node when nodes are loaded', async () => {
+    it("auto-selects first node when nodes are loaded", async () => {
       renderWithI18n(() => <App />);
 
       // First node should be auto-selected when at workspace root
       await waitFor(() => {
-        expect(screen.getByTestId('sidebar-node-node-1')).toBeTruthy();
+        expect(screen.getByTestId("sidebar-node-node-1")).toBeTruthy();
       });
     });
   });
@@ -550,12 +550,12 @@ describe('App', () => {
   // Skip: Node selection tests require router navigation after click, which causes
   // the route to change but the components don't properly re-render in the test
   // environment. These interactions are better tested via e2e (Playwright).
-  describe.skip('Node Selection and Loading', () => {
-    it('loads document node when clicked', async () => {
+  describe.skip("Node Selection and Loading", () => {
+    it("loads document node when clicked", async () => {
       // Navigation and node loading is covered by e2e tests
     });
 
-    it('loads table node with records', async () => {
+    it("loads table node with records", async () => {
       // Navigation and table loading is covered by e2e tests
     });
   });
@@ -563,17 +563,17 @@ describe('App', () => {
   // Skip: View mode switching tests require router navigation after click,
   // which doesn't work reliably in the test environment with @solidjs/router.
   // Table view switching is covered by e2e tests.
-  describe.skip('View Mode Switching', () => {
-    it('displays table with default view and view tabs', async () => {
+  describe.skip("View Mode Switching", () => {
+    it("displays table with default view and view tabs", async () => {
       // Table view switching is covered by e2e tests
     });
   });
 
-  describe('Settings', () => {
+  describe("Settings", () => {
     beforeEach(() => {
-      localStorageMock.setItem('mddb_token', 'test-token');
+      localStorageMock.setItem("mddb_token", "test-token");
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/v1/auth/me') {
+        if (url === "/api/v1/auth/me") {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -600,21 +600,21 @@ describe('App', () => {
     // Skip: Opening settings navigates to /settings route, but components
     // don't re-render properly in the test environment with @solidjs/router.
     // Settings navigation is covered by e2e tests.
-    it.skip('opens settings panel when clicking settings in workspace menu', async () => {
+    it.skip("opens settings panel when clicking settings in workspace menu", async () => {
       // Settings navigation is covered by e2e tests
     });
 
     // Skip: Testing settings close requires simulating browser back navigation,
     // which doesn't work reliably with @solidjs/router in unit tests.
     // The Back button itself works (calls history.back), covered by e2e tests.
-    it.skip('closes settings panel', async () => {
+    it.skip("closes settings panel", async () => {
       // Settings close/back navigation is covered by e2e tests
     });
   });
 
-  describe('Workspace Management', () => {
-    it('auto-creates organization when user has no memberships', async () => {
-      localStorageMock.setItem('mddb_token', 'test-token');
+  describe("Workspace Management", () => {
+    it("auto-creates organization when user has no memberships", async () => {
+      localStorageMock.setItem("mddb_token", "test-token");
 
       const userWithNoMemberships: UserResponse = {
         ...mockUser,
@@ -627,21 +627,21 @@ describe('App', () => {
         ...mockUser,
         organizations: [
           {
-            id: 'new-membership-1',
-            user_id: 'user-1',
-            organization_id: 'new-org-1',
+            id: "new-membership-1",
+            user_id: "user-1",
+            organization_id: "new-org-1",
             organization_name: "Test's Organization",
-            role: 'owner',
+            role: "owner",
             created: 1704067200,
           },
         ],
-        organization_id: 'new-org-1',
+        organization_id: "new-org-1",
         workspaces: [],
       };
 
       let getMeCallCount = 0;
       mockFetch.mockImplementation((url: string, options?: RequestInit) => {
-        if (url === '/api/v1/auth/me') {
+        if (url === "/api/v1/auth/me") {
           getMeCallCount++;
           // First call returns no memberships, subsequent calls return the new org
           if (getMeCallCount === 1) {
@@ -655,13 +655,13 @@ describe('App', () => {
             json: () => Promise.resolve(userAfterOrgCreation),
           });
         }
-        if (url === '/api/v1/organizations' && options?.method === 'POST') {
+        if (url === "/api/v1/organizations" && options?.method === "POST") {
           // Mock org creation (named after user's first name)
           return Promise.resolve({
             ok: true,
             json: () =>
               Promise.resolve({
-                id: 'new-org-1',
+                id: "new-org-1",
                 name: "Test's Organization",
                 settings: {},
                 created: 1704067200,
@@ -680,41 +680,41 @@ describe('App', () => {
         () => {
           const createOrgCalls = mockFetch.mock.calls.filter(
             (call: unknown[]) =>
-              call[0] === '/api/v1/organizations' && (call[1] as RequestInit | undefined)?.method === 'POST'
+              call[0] === "/api/v1/organizations" && (call[1] as RequestInit | undefined)?.method === "POST",
           );
           expect(createOrgCalls.length).toBeGreaterThan(0);
         },
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
     });
 
-    it('shows workspace switcher for users with multiple workspaces', async () => {
-      localStorageMock.setItem('mddb_token', 'test-token');
+    it("shows workspace switcher for users with multiple workspaces", async () => {
+      localStorageMock.setItem("mddb_token", "test-token");
 
       const userWithMultipleOrgs: UserResponse = {
         ...mockUser,
         organizations: [
           {
-            id: 'mem-1',
-            user_id: 'user-1',
-            organization_id: 'org-1',
-            organization_name: 'Org 1',
-            role: 'org:member',
+            id: "mem-1",
+            user_id: "user-1",
+            organization_id: "org-1",
+            organization_name: "Org 1",
+            role: "org:member",
             created: 1704067200,
           },
           {
-            id: 'mem-2',
-            user_id: 'user-1',
-            organization_id: 'org-2',
-            organization_name: 'Org 2',
-            role: 'admin',
+            id: "mem-2",
+            user_id: "user-1",
+            organization_id: "org-2",
+            organization_name: "Org 2",
+            role: "admin",
             created: 1704067200,
           },
         ],
       };
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/v1/auth/me') {
+        if (url === "/api/v1/auth/me") {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(userWithMultipleOrgs),
@@ -741,15 +741,15 @@ describe('App', () => {
 
       // Workspace actions are now in sidebar, check for create workspace button
       await waitFor(() => {
-        expect(screen.getByTestId('create-workspace-button')).toBeTruthy();
+        expect(screen.getByTestId("create-workspace-button")).toBeTruthy();
       });
     });
 
-    it('opens create workspace modal from sidebar', async () => {
-      localStorageMock.setItem('mddb_token', 'test-token');
+    it("opens create workspace modal from sidebar", async () => {
+      localStorageMock.setItem("mddb_token", "test-token");
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/v1/auth/me') {
+        if (url === "/api/v1/auth/me") {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -776,24 +776,24 @@ describe('App', () => {
 
       // Wait for workspace menu to appear
       await waitFor(() => {
-        expect(screen.getByTestId('create-workspace-button')).toBeTruthy();
+        expect(screen.getByTestId("create-workspace-button")).toBeTruthy();
       });
 
       // Click "Create Workspace" button
-      fireEvent.click(screen.getByTestId('create-workspace-button'));
+      fireEvent.click(screen.getByTestId("create-workspace-button"));
 
       await waitFor(() => {
-        expect(screen.getByTestId('create-workspace-modal')).toBeTruthy();
+        expect(screen.getByTestId("create-workspace-modal")).toBeTruthy();
       });
     });
   });
 
-  describe('Onboarding', () => {
-    it('does not show onboarding on initial load', async () => {
-      localStorageMock.setItem('mddb_token', 'test-token');
+  describe("Onboarding", () => {
+    it("does not show onboarding on initial load", async () => {
+      localStorageMock.setItem("mddb_token", "test-token");
 
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/v1/auth/me') {
+        if (url === "/api/v1/auth/me") {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
@@ -819,44 +819,44 @@ describe('App', () => {
       renderWithI18n(() => <App />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('user-menu')).toBeTruthy();
+        expect(screen.getByTestId("user-menu")).toBeTruthy();
       });
 
       // Onboarding is only shown after org creation, not on initial load
-      expect(screen.queryByTestId('onboarding')).toBeFalsy();
+      expect(screen.queryByTestId("onboarding")).toBeFalsy();
     });
   });
 
   // Skip: URL routing tests require setting initial URL before render,
   // but @solidjs/router reads from actual browser location. These are better tested via e2e.
-  describe.skip('URL Routing', () => {
-    it('loads node from URL on mount', async () => {
+  describe.skip("URL Routing", () => {
+    it("loads node from URL on mount", async () => {
       // Routing is now handled by @solidjs/router - see e2e tests
     });
   });
 
-  describe('Error Handling', () => {
+  describe("Error Handling", () => {
     beforeEach(() => {
-      localStorageMock.setItem('mddb_token', 'test-token');
+      localStorageMock.setItem("mddb_token", "test-token");
     });
 
     // Skip: loadNodes now catches errors silently to handle empty workspace gracefully
-    it.skip('displays error message from failed API calls', async () => {
+    it.skip("displays error message from failed API calls", async () => {
       mockFetch.mockImplementation((url: string) => {
-        if (url === '/api/v1/auth/me') {
+        if (url === "/api/v1/auth/me") {
           return Promise.resolve({
             ok: true,
             json: () => Promise.resolve(mockUser),
           });
         }
         // Fail the root node request
-        if (url === '/api/v1/workspaces/ws-1/nodes/0') {
+        if (url === "/api/v1/workspaces/ws-1/nodes/0") {
           return Promise.resolve({
             ok: false,
             status: 500,
             json: () =>
               Promise.resolve({
-                error: { code: 'SERVER_ERROR', message: 'Server error' },
+                error: { code: "SERVER_ERROR", message: "Server error" },
               }),
           });
         }
@@ -869,20 +869,20 @@ describe('App', () => {
       // The error div should be present in the DOM
       await waitFor(
         () => {
-          const errorDiv = document.querySelector('.error');
+          const errorDiv = document.querySelector(".error");
           expect(errorDiv).toBeTruthy();
         },
-        { timeout: 3000 }
+        { timeout: 3000 },
       );
     });
   });
 
-  describe('PWA Banner', () => {
-    it('always renders PWA install banner', async () => {
+  describe("PWA Banner", () => {
+    it("always renders PWA install banner", async () => {
       renderWithI18n(() => <App />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('pwa-banner')).toBeTruthy();
+        expect(screen.getByTestId("pwa-banner")).toBeTruthy();
       });
     });
   });
@@ -890,8 +890,8 @@ describe('App', () => {
 
 // Skip: slugify tests that verify URL updates are better tested via e2e.
 // The slugify utility function itself could have a separate unit test if needed.
-describe.skip('slugify', () => {
-  it('creates URL-safe slugs', async () => {
+describe.skip("slugify", () => {
+  it("creates URL-safe slugs", async () => {
     // URL slug generation is now handled by router navigation - see e2e tests
   });
 });

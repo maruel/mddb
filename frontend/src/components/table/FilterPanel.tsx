@@ -1,7 +1,7 @@
 // Positioned filter panel for per-column filtering, rendered via Portal.
 
-import { createEffect, createSignal, For, Show, onCleanup, untrack } from 'solid-js';
-import { Portal } from 'solid-js/web';
+import { createEffect, createSignal, For, Show, onCleanup, untrack } from "solid-js";
+import { Portal } from "solid-js/web";
 import {
   type Filter,
   type Property,
@@ -23,9 +23,9 @@ import {
   PropertyTypeCheckbox,
   PropertyTypeSelect,
   PropertyTypeMultiSelect,
-} from '@sdk/types.gen';
-import styles from './FilterPanel.module.css';
-import { useI18n } from '../../i18n';
+} from "@sdk/types.gen";
+import styles from "./FilterPanel.module.css";
+import { useI18n } from "../../i18n";
 
 interface FilterPanelProps {
   column: Property;
@@ -56,28 +56,28 @@ export function FilterPanel(props: FilterPanelProps) {
   };
 
   const [operator, setOperator] = createSignal<FilterOp>(
-    untrack(() => (props.currentFilter?.operator as FilterOp | undefined) ?? defaultOperator())
+    untrack(() => (props.currentFilter?.operator as FilterOp | undefined) ?? defaultOperator()),
   );
   const [value, setValue] = createSignal<string>(
-    untrack(() => (props.currentFilter?.value !== undefined ? String(props.currentFilter.value) : ''))
+    untrack(() => (props.currentFilter?.value !== undefined ? String(props.currentFilter.value) : "")),
   );
 
   const getOperators = (): OperatorOption[] => {
     const type = props.column.type;
     const base: OperatorOption[] = [
-      { value: FilterOpEquals, label: t('table.opEquals') },
-      { value: FilterOpNotEquals, label: t('table.opNotEquals') },
+      { value: FilterOpEquals, label: t("table.opEquals") },
+      { value: FilterOpNotEquals, label: t("table.opNotEquals") },
     ];
 
     if (type === PropertyTypeNumber || type === PropertyTypeDate) {
       return [
         ...base,
-        { value: FilterOpGreaterThan, label: t('table.opGt') },
-        { value: FilterOpGreaterEqual, label: t('table.opGte') },
-        { value: FilterOpLessThan, label: t('table.opLt') },
-        { value: FilterOpLessEqual, label: t('table.opLte') },
-        { value: FilterOpIsEmpty, label: t('table.opIsEmpty') },
-        { value: FilterOpIsNotEmpty, label: t('table.opIsNotEmpty') },
+        { value: FilterOpGreaterThan, label: t("table.opGt") },
+        { value: FilterOpGreaterEqual, label: t("table.opGte") },
+        { value: FilterOpLessThan, label: t("table.opLt") },
+        { value: FilterOpLessEqual, label: t("table.opLte") },
+        { value: FilterOpIsEmpty, label: t("table.opIsEmpty") },
+        { value: FilterOpIsNotEmpty, label: t("table.opIsNotEmpty") },
       ];
     }
 
@@ -88,33 +88,33 @@ export function FilterPanel(props: FilterPanelProps) {
     if (type === PropertyTypeSelect || type === PropertyTypeMultiSelect) {
       return [
         ...base,
-        { value: FilterOpContains, label: t('table.opContains') },
-        { value: FilterOpIsEmpty, label: t('table.opIsEmpty') },
-        { value: FilterOpIsNotEmpty, label: t('table.opIsNotEmpty') },
+        { value: FilterOpContains, label: t("table.opContains") },
+        { value: FilterOpIsEmpty, label: t("table.opIsEmpty") },
+        { value: FilterOpIsNotEmpty, label: t("table.opIsNotEmpty") },
       ];
     }
 
     // text, url, email, phone
     return [
       ...base,
-      { value: FilterOpContains, label: t('table.opContains') },
-      { value: FilterOpNotContains, label: t('table.opNotContains') },
-      { value: FilterOpStartsWith, label: t('table.opStartsWith') },
-      { value: FilterOpEndsWith, label: t('table.opEndsWith') },
-      { value: FilterOpIsEmpty, label: t('table.opIsEmpty') },
-      { value: FilterOpIsNotEmpty, label: t('table.opIsNotEmpty') },
+      { value: FilterOpContains, label: t("table.opContains") },
+      { value: FilterOpNotContains, label: t("table.opNotContains") },
+      { value: FilterOpStartsWith, label: t("table.opStartsWith") },
+      { value: FilterOpEndsWith, label: t("table.opEndsWith") },
+      { value: FilterOpIsEmpty, label: t("table.opIsEmpty") },
+      { value: FilterOpIsNotEmpty, label: t("table.opIsNotEmpty") },
     ];
   };
 
   const needsValue = () => !NO_VALUE_OPS.includes(operator());
 
-  const [optionQuery, setOptionQuery] = createSignal('');
+  const [optionQuery, setOptionQuery] = createSignal("");
 
   const isMultiOp = () => props.column.type === PropertyTypeMultiSelect || operator() === FilterOpContains;
 
   const selectedOptionIds = () =>
     value()
-      .split(',')
+      .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
 
@@ -127,9 +127,9 @@ export function FilterPanel(props: FilterPanelProps) {
     if (isMultiOp()) {
       const current = selectedOptionIds();
       const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
-      setValue(next.join(','));
+      setValue(next.join(","));
     } else {
-      setValue(selectedOptionIds()[0] === id ? '' : id);
+      setValue(selectedOptionIds()[0] === id ? "" : id);
     }
   };
 
@@ -156,32 +156,32 @@ export function FilterPanel(props: FilterPanelProps) {
         props.onClose();
       }
     };
-    const id = setTimeout(() => document.addEventListener('click', handleClickOutside), 0);
+    const id = setTimeout(() => document.addEventListener("click", handleClickOutside), 0);
     onCleanup(() => {
       clearTimeout(id);
-      document.removeEventListener('click', handleClickOutside);
+      document.removeEventListener("click", handleClickOutside);
     });
   });
 
   // Escape to close
   createEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         e.preventDefault();
         props.onClose();
       }
     };
-    document.addEventListener('keydown', handleKeyDown);
-    onCleanup(() => document.removeEventListener('keydown', handleKeyDown));
+    document.addEventListener("keydown", handleKeyDown);
+    onCleanup(() => document.removeEventListener("keydown", handleKeyDown));
   });
 
   const handleApply = () => {
     let filterValue: unknown = value();
     if (needsValue()) {
       if (props.column.type === PropertyTypeNumber) {
-        filterValue = value() === '' ? '' : Number(value());
+        filterValue = value() === "" ? "" : Number(value());
       } else if (props.column.type === PropertyTypeCheckbox) {
-        filterValue = value() === 'true';
+        filterValue = value() === "true";
       }
     }
     const filter: Filter = {
@@ -226,14 +226,14 @@ export function FilterPanel(props: FilterPanelProps) {
                       class={styles.input}
                       type={
                         props.column.type === PropertyTypeNumber
-                          ? 'number'
+                          ? "number"
                           : props.column.type === PropertyTypeDate
-                            ? 'date'
-                            : 'text'
+                            ? "date"
+                            : "text"
                       }
                       value={value()}
                       onInput={(e) => setValue(e.currentTarget.value)}
-                      placeholder={t('table.filterValue')}
+                      placeholder={t("table.filterValue")}
                       data-testid="filter-value"
                       autofocus
                     />
@@ -243,7 +243,7 @@ export function FilterPanel(props: FilterPanelProps) {
                     <input
                       class={styles.optionSearch}
                       type="text"
-                      placeholder={t('table.searchOptions') || 'Search…'}
+                      placeholder={t("table.searchOptions") || "Search…"}
                       value={optionQuery()}
                       onInput={(e) => setOptionQuery(e.currentTarget.value)}
                       data-testid="filter-option-search"
@@ -289,7 +289,7 @@ export function FilterPanel(props: FilterPanelProps) {
         </Show>
         <div class={styles.actions}>
           <button class={styles.applyBtn} onClick={handleApply} data-testid="filter-apply">
-            {t('table.filterApply')}
+            {t("table.filterApply")}
           </button>
           <Show when={props.currentFilter}>
             <button
@@ -300,7 +300,7 @@ export function FilterPanel(props: FilterPanelProps) {
               }}
               data-testid="filter-remove"
             >
-              {t('table.removeFilter')}
+              {t("table.removeFilter")}
             </button>
           </Show>
         </div>

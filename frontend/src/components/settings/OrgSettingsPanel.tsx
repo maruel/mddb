@@ -1,22 +1,22 @@
 // Organization settings panel for managing organization members and preferences.
 
-import { createSignal, createEffect, createMemo, Show } from 'solid-js';
-import { useNavigate, useLocation } from '@solidjs/router';
-import { useAuth } from '../../contexts';
-import { useI18n } from '../../i18n';
-import type { UserResponse, OrgInvitationResponse, OrganizationRole, ResourceQuotas } from '@sdk/types.gen';
-import { OrgRoleOwner, OrgRoleAdmin } from '@sdk/types.gen';
-import MembersTable from './MembersTable';
-import InviteForm from './InviteForm';
-import ResourceQuotaForm from './ResourceQuotaForm';
-import styles from './OrgSettingsPanel.module.css';
+import { createSignal, createEffect, createMemo, Show } from "solid-js";
+import { useNavigate, useLocation } from "@solidjs/router";
+import { useAuth } from "../../contexts";
+import { useI18n } from "../../i18n";
+import type { UserResponse, OrgInvitationResponse, OrganizationRole, ResourceQuotas } from "@sdk/types.gen";
+import { OrgRoleOwner, OrgRoleAdmin } from "@sdk/types.gen";
+import MembersTable from "./MembersTable";
+import InviteForm from "./InviteForm";
+import ResourceQuotaForm from "./ResourceQuotaForm";
+import styles from "./OrgSettingsPanel.module.css";
 
 interface OrgSettingsPanelProps {
   orgId: string;
   section?: string;
 }
 
-type Tab = 'members' | 'settings' | 'quotas';
+type Tab = "members" | "settings" | "quotas";
 
 export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const { t } = useI18n();
@@ -25,17 +25,17 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   const { user, api } = useAuth();
 
   const getInitialTab = (): Tab => {
-    if (props.section === 'settings') return 'settings';
-    if (props.section === 'quotas') return 'quotas';
-    return 'members';
+    if (props.section === "settings") return "settings";
+    if (props.section === "quotas") return "quotas";
+    return "members";
   };
 
   const [activeTab, setActiveTab] = createSignal<Tab>(getInitialTab());
   const [members, setMembers] = createSignal<UserResponse[]>([]);
   const [invitations, setInvitations] = createSignal<OrgInvitationResponse[]>([]);
 
-  const [orgName, setOrgName] = createSignal('');
-  const [originalOrgName, setOriginalOrgName] = createSignal('');
+  const [orgName, setOrgName] = createSignal("");
+  const [originalOrgName, setOriginalOrgName] = createSignal("");
 
   // Organization-specific quotas (not part of ResourceQuotas)
   const [maxWorkspacesPerOrg, setMaxWorkspacesPerOrg] = createSignal(0);
@@ -74,7 +74,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
-    const newHash = tab === 'members' ? '' : `#${tab}`;
+    const newHash = tab === "members" ? "" : `#${tab}`;
     navigate(location.pathname + newHash, { replace: true });
   };
 
@@ -105,7 +105,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setLoading(true);
       setError(null);
 
-      if (activeTab() === 'members' && isAdmin()) {
+      if (activeTab() === "members" && isAdmin()) {
         const [membersData, invsData] = await Promise.all([
           org.users.listUsers(),
           org.invitations.listOrgInvitations(),
@@ -114,11 +114,11 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
         setInvitations(invsData.invitations?.filter((i): i is OrgInvitationResponse => !!i) || []);
       }
 
-      if (activeTab() === 'settings' || activeTab() === 'quotas') {
+      if (activeTab() === "settings" || activeTab() === "quotas") {
         await loadOrgData();
       }
     } catch (err) {
-      setError(`${t('errors.failedToLoad')}: ${err}`);
+      setError(`${t("errors.failedToLoad")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -130,9 +130,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
 
   createEffect(() => {
     const section = props.section;
-    if (section === 'settings') setActiveTab('settings');
-    else if (section === 'quotas') setActiveTab('quotas');
-    else if (section === 'members' || !section) setActiveTab('members');
+    if (section === "settings") setActiveTab("settings");
+    else if (section === "quotas") setActiveTab("quotas");
+    else if (section === "members" || !section) setActiveTab("members");
   });
 
   const handleInvite = async (email: string, role: string) => {
@@ -140,27 +140,27 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
 
     try {
       setLoading(true);
-      await org.invitations.createOrgInvitation({ email, role: role as 'admin' | 'member' });
-      setSuccess(t('success.invitationSent') || 'Invitation sent successfully');
+      await org.invitations.createOrgInvitation({ email, role: role as "admin" | "member" });
+      setSuccess(t("success.invitationSent") || "Invitation sent successfully");
       loadData();
     } catch (err) {
-      setError(`${t('errors.failedToInvite')}: ${err}`);
+      setError(`${t("errors.failedToInvite")}: ${err}`);
     } finally {
       setLoading(false);
     }
   };
 
   const handleRemoveMember = async (userId: string) => {
-    if (!confirm(t('settings.confirmRemoveMember'))) return;
+    if (!confirm(t("settings.confirmRemoveMember"))) return;
     const org = orgApi();
 
     try {
       setLoading(true);
       await org.users.removeOrgMember({ user_id: userId });
-      setSuccess(t('success.memberRemoved'));
+      setSuccess(t("success.memberRemoved"));
       loadData();
     } catch (err) {
-      setError(`${t('errors.failedToRemoveMember')}: ${err}`);
+      setError(`${t("errors.failedToRemoveMember")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -172,10 +172,10 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     try {
       setLoading(true);
       await org.users.updateOrgMemberRole({ user_id: userId, role: role as OrganizationRole });
-      setSuccess(t('success.roleUpdated') || 'Role updated');
+      setSuccess(t("success.roleUpdated") || "Role updated");
       loadData();
     } catch (err) {
-      setError(`${t('errors.failedToUpdateRole')}: ${err}`);
+      setError(`${t("errors.failedToUpdateRole")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -204,9 +204,9 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       }
 
       await org.settings.updateOrgPreferences({ quotas: buildQuotasPayload() });
-      setSuccess(t('success.orgSettingsSaved') || 'Organization settings saved');
+      setSuccess(t("success.orgSettingsSaved") || "Organization settings saved");
     } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setLoading(false);
     }
@@ -222,23 +222,23 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setSuccess(null);
 
       await org.settings.updateOrgPreferences({ quotas: buildQuotasPayload() });
-      setSuccess(t('success.orgSettingsSaved') || 'Organization settings saved');
+      setSuccess(t("success.orgSettingsSaved") || "Organization settings saved");
     } catch (err) {
-      setError(`${t('errors.failedToSave')}: ${err}`);
+      setError(`${t("errors.failedToSave")}: ${err}`);
     } finally {
       setLoading(false);
     }
   };
 
   const orgRoleOptions = [
-    { value: 'owner', label: t('settings.roleOwner') },
-    { value: 'admin', label: t('settings.roleAdmin') },
-    { value: 'member', label: t('settings.roleMember') },
+    { value: "owner", label: t("settings.roleOwner") },
+    { value: "admin", label: t("settings.roleAdmin") },
+    { value: "member", label: t("settings.roleMember") },
   ];
 
   const inviteRoleOptions = [
-    { value: 'admin', label: t('settings.roleAdmin') },
-    { value: 'member', label: t('settings.roleMember') },
+    { value: "admin", label: t("settings.roleAdmin") },
+    { value: "member", label: t("settings.roleMember") },
   ];
 
   const pendingInvitations = () =>
@@ -251,14 +251,14 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
   return (
     <div class={styles.panel}>
       <div class={styles.tabs}>
-        <button class={activeTab() === 'members' ? styles.activeTab : ''} onClick={() => handleTabChange('members')}>
-          {t('settings.members')}
+        <button class={activeTab() === "members" ? styles.activeTab : ""} onClick={() => handleTabChange("members")}>
+          {t("settings.members")}
         </button>
-        <button class={activeTab() === 'settings' ? styles.activeTab : ''} onClick={() => handleTabChange('settings')}>
-          {t('settings.settings')}
+        <button class={activeTab() === "settings" ? styles.activeTab : ""} onClick={() => handleTabChange("settings")}>
+          {t("settings.settings")}
         </button>
-        <button class={activeTab() === 'quotas' ? styles.activeTab : ''} onClick={() => handleTabChange('quotas')}>
-          {t('settings.quotas')}
+        <button class={activeTab() === "quotas" ? styles.activeTab : ""} onClick={() => handleTabChange("quotas")}>
+          {t("settings.quotas")}
         </button>
       </div>
 
@@ -269,13 +269,13 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
         <div class={styles.success}>{success()}</div>
       </Show>
 
-      <Show when={activeTab() === 'members'}>
+      <Show when={activeTab() === "members"}>
         <section class={styles.section}>
-          <h3>{t('settings.organizationMembers')}</h3>
-          <Show when={isAdmin()} fallback={<p>{t('settings.adminOnlyMembers')}</p>}>
+          <h3>{t("settings.organizationMembers")}</h3>
+          <Show when={isAdmin()} fallback={<p>{t("settings.adminOnlyMembers")}</p>}>
             <MembersTable
               members={members()}
-              currentUserId={user()?.id || ''}
+              currentUserId={user()?.id || ""}
               roleOptions={orgRoleOptions}
               roleField="org_role"
               onUpdateRole={handleUpdateRole}
@@ -293,20 +293,20 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
         </section>
       </Show>
 
-      <Show when={activeTab() === 'settings'}>
+      <Show when={activeTab() === "settings"}>
         <section class={styles.section}>
-          <h3>{t('settings.organizationPreferences')}</h3>
-          <Show when={isAdmin()} fallback={<p>{t('settings.adminOnlySettings')}</p>}>
+          <h3>{t("settings.organizationPreferences")}</h3>
+          <Show when={isAdmin()} fallback={<p>{t("settings.adminOnlySettings")}</p>}>
             <form onSubmit={saveOrgSettings} class={styles.settingsForm}>
               <div class={styles.formItem}>
-                <label>{t('settings.organizationName')}</label>
+                <label>{t("settings.organizationName")}</label>
                 <input type="text" value={orgName()} onInput={(e) => setOrgName(e.target.value)} required />
               </div>
 
-              <h4>{t('settings.organizationQuotas')}</h4>
+              <h4>{t("settings.organizationQuotas")}</h4>
               <div class={styles.formGrid}>
                 <div class={styles.formItem}>
-                  <label>{t('settings.maxWorkspacesPerOrg')}</label>
+                  <label>{t("settings.maxWorkspacesPerOrg")}</label>
                   <input
                     type="number"
                     value={maxWorkspacesPerOrg()}
@@ -315,7 +315,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
                   />
                 </div>
                 <div class={styles.formItem}>
-                  <label>{t('settings.maxMembersPerOrg')}</label>
+                  <label>{t("settings.maxMembersPerOrg")}</label>
                   <input
                     type="number"
                     value={maxMembersPerOrg()}
@@ -324,7 +324,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
                   />
                 </div>
                 <div class={styles.formItem}>
-                  <label>{t('settings.maxMembersPerWorkspace')}</label>
+                  <label>{t("settings.maxMembersPerWorkspace")}</label>
                   <input
                     type="number"
                     value={maxMembersPerWorkspace()}
@@ -333,7 +333,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
                   />
                 </div>
                 <div class={styles.formItem}>
-                  <label>{t('settings.maxTotalStorageBytes')}</label>
+                  <label>{t("settings.maxTotalStorageBytes")}</label>
                   <input
                     type="number"
                     value={maxTotalStorageBytes()}
@@ -344,27 +344,27 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
               </div>
 
               <button type="submit" class={styles.saveButton} disabled={loading()}>
-                {t('common.save')}
+                {t("common.save")}
               </button>
             </form>
           </Show>
         </section>
       </Show>
 
-      <Show when={activeTab() === 'quotas'}>
+      <Show when={activeTab() === "quotas"}>
         <section class={styles.section}>
-          <h3>{t('settings.quotas')}</h3>
-          <Show when={isAdmin()} fallback={<p>{t('settings.adminOnlySettings')}</p>}>
+          <h3>{t("settings.quotas")}</h3>
+          <Show when={isAdmin()} fallback={<p>{t("settings.adminOnlySettings")}</p>}>
             <form onSubmit={saveOrgQuotas} class={styles.settingsForm}>
               <ResourceQuotaForm
                 value={resourceQuotas}
                 onChange={setResourceQuotas}
                 ceiling={serverLimits}
-                ceilingLabel={t('settings.serverCeiling')}
+                ceilingLabel={t("settings.serverCeiling")}
                 allowInherit={true}
               />
               <button type="submit" class={styles.saveButton} disabled={loading()}>
-                {t('common.save')}
+                {t("common.save")}
               </button>
             </form>
           </Show>

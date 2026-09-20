@@ -1,31 +1,31 @@
 // Tests for the TableGallery view.
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@solidjs/testing-library';
-import type { JSX } from 'solid-js';
-import TableGallery from './TableGallery';
-import { I18nProvider } from '../i18n';
-import type { DataRecordResponse, Property } from '@sdk/types.gen';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, cleanup } from "@solidjs/testing-library";
+import type { JSX } from "solid-js";
+import TableGallery from "./TableGallery";
+import { I18nProvider } from "../i18n";
+import type { DataRecordResponse, Property } from "@sdk/types.gen";
 
 // Mock CSS module
-vi.mock('./TableGallery.module.css', () => ({
+vi.mock("./TableGallery.module.css", () => ({
   default: {
-    container: 'container',
-    gallery: 'gallery',
-    card: 'card',
-    imageContainer: 'imageContainer',
-    imagePlaceholder: 'imagePlaceholder',
-    image: 'image',
-    cardContent: 'cardContent',
-    cardHeader: 'cardHeader',
-    deleteBtn: 'deleteBtn',
-    cardBody: 'cardBody',
-    field: 'field',
-    fieldName: 'fieldName',
-    fieldValue: 'fieldValue',
-    empty: 'empty',
-    statusBar: 'statusBar',
-    titleInput: 'titleInput',
-    addRecord: 'addRecord',
+    container: "container",
+    gallery: "gallery",
+    card: "card",
+    imageContainer: "imageContainer",
+    imagePlaceholder: "imagePlaceholder",
+    image: "image",
+    cardContent: "cardContent",
+    cardHeader: "cardHeader",
+    deleteBtn: "deleteBtn",
+    cardBody: "cardBody",
+    field: "field",
+    fieldName: "fieldName",
+    fieldValue: "fieldValue",
+    empty: "empty",
+    statusBar: "statusBar",
+    titleInput: "titleInput",
+    addRecord: "addRecord",
   },
 }));
 
@@ -37,44 +37,44 @@ function renderWithI18n(component: () => JSX.Element) {
   return render(() => <I18nProvider>{component()}</I18nProvider>);
 }
 
-describe('TableGallery', () => {
+describe("TableGallery", () => {
   const mockColumnsWithImage: Property[] = [
-    { name: 'Title', type: 'text' },
-    { name: 'Image', type: 'url' },
-    { name: 'Description', type: 'text' },
-    { name: 'Price', type: 'number' },
+    { name: "Title", type: "text" },
+    { name: "Image", type: "url" },
+    { name: "Description", type: "text" },
+    { name: "Price", type: "number" },
   ];
 
   const mockColumnsWithCover: Property[] = [
-    { name: 'Name', type: 'text' },
-    { name: 'Cover', type: 'url' },
-    { name: 'Category', type: 'text' },
+    { name: "Name", type: "text" },
+    { name: "Cover", type: "url" },
+    { name: "Category", type: "text" },
   ];
 
   const mockColumnsNoImage: Property[] = [
-    { name: 'Title', type: 'text' },
-    { name: 'Description', type: 'text' },
-    { name: 'Price', type: 'number' },
+    { name: "Title", type: "text" },
+    { name: "Description", type: "text" },
+    { name: "Price", type: "number" },
   ];
 
   const mockRecordsWithImage: DataRecordResponse[] = [
     {
-      id: 'rec-1',
+      id: "rec-1",
       data: {
-        Title: 'Product A',
-        Image: 'https://example.com/image1.jpg',
-        Description: 'Great product',
+        Title: "Product A",
+        Image: "https://example.com/image1.jpg",
+        Description: "Great product",
         Price: 99,
       },
       created: 1704067200,
       modified: 1704067200,
     },
     {
-      id: 'rec-2',
+      id: "rec-2",
       data: {
-        Title: 'Product B',
-        Image: '',
-        Description: 'Another product',
+        Title: "Product B",
+        Image: "",
+        Description: "Another product",
         Price: 149,
       },
       created: 1704067200,
@@ -88,14 +88,14 @@ describe('TableGallery', () => {
     vi.clearAllMocks();
   });
 
-  it('renders gallery with cards', async () => {
+  it("renders gallery with cards", async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('Product A')).toBeTruthy();
-      expect(screen.getByDisplayValue('Product B')).toBeTruthy();
+      expect(screen.getByDisplayValue("Product A")).toBeTruthy();
+      expect(screen.getByDisplayValue("Product B")).toBeTruthy();
     });
   });
 
@@ -105,20 +105,20 @@ describe('TableGallery', () => {
     ));
 
     await waitFor(() => {
-      const img = document.querySelector('img');
+      const img = document.querySelector("img");
       expect(img).toBeTruthy();
-      expect(img?.src).toBe('https://example.com/image1.jpg');
+      expect(img?.src).toBe("https://example.com/image1.jpg");
     });
   });
 
   it('detects image column by name containing "cover"', async () => {
     const recordsWithCover: DataRecordResponse[] = [
       {
-        id: 'rec-1',
+        id: "rec-1",
         data: {
-          Name: 'Album A',
-          Cover: 'https://example.com/cover.jpg',
-          Category: 'Music',
+          Name: "Album A",
+          Cover: "https://example.com/cover.jpg",
+          Category: "Music",
         },
         created: 1704067200,
         modified: 1704067200,
@@ -130,42 +130,42 @@ describe('TableGallery', () => {
     ));
 
     await waitFor(() => {
-      const img = document.querySelector('img');
+      const img = document.querySelector("img");
       expect(img).toBeTruthy();
-      expect(img?.src).toBe('https://example.com/cover.jpg');
+      expect(img?.src).toBe("https://example.com/cover.jpg");
     });
   });
 
-  it('shows placeholder when no image value', async () => {
+  it("shows placeholder when no image value", async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
       // Product B has no image: the fallback placeholder should be visible (not hidden)
-      const placeholders = screen.getAllByText('No Image');
-      const visible = placeholders.filter((el) => (el as HTMLElement).style.display !== 'none');
+      const placeholders = screen.getAllByText("No Image");
+      const visible = placeholders.filter((el) => (el as HTMLElement).style.display !== "none");
       expect(visible.length).toBeGreaterThan(0);
     });
   });
 
-  it('uses first column value as card title', async () => {
+  it("uses first column value as card title", async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
       // Title renders as an editable input in the card header
-      const title = screen.getByDisplayValue('Product A');
-      expect(title.tagName).toBe('INPUT');
+      const title = screen.getByDisplayValue("Product A");
+      expect(title.tagName).toBe("INPUT");
     });
   });
 
   it('shows "Untitled" for records without first column value', async () => {
     const recordsWithoutTitle: DataRecordResponse[] = [
       {
-        id: 'rec-1',
-        data: { Image: 'https://example.com/img.jpg', Description: 'No title' },
+        id: "rec-1",
+        data: { Image: "https://example.com/img.jpg", Description: "No title" },
         created: 1704067200,
         modified: 1704067200,
       },
@@ -176,11 +176,11 @@ describe('TableGallery', () => {
     ));
 
     await waitFor(() => {
-      expect(screen.getAllByPlaceholderText('Untitled').length).toBeGreaterThan(0);
+      expect(screen.getAllByPlaceholderText("Untitled").length).toBeGreaterThan(0);
     });
   });
 
-  it('displays all body fields in card', async () => {
+  it("displays all body fields in card", async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
@@ -188,18 +188,18 @@ describe('TableGallery', () => {
     await waitFor(() => {
       // Image column is used as cover; remaining body columns (Description, Price) render as field labels.
       // Colon is added via CSS ::after, so DOM text is just the column name.
-      expect(screen.getAllByText('Description').length).toBeGreaterThan(0);
-      expect(screen.getAllByText('Price').length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Description").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Price").length).toBeGreaterThan(0);
     });
   });
 
-  it('shows delete option in context menu', async () => {
+  it("shows delete option in context menu", async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      const cards = document.querySelectorAll('.card');
+      const cards = document.querySelectorAll(".card");
       expect(cards.length).toBe(2);
     });
 
@@ -214,13 +214,13 @@ describe('TableGallery', () => {
     });
   });
 
-  it('calls onDeleteRecord when delete option is clicked', async () => {
+  it("calls onDeleteRecord when delete option is clicked", async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      expect(screen.getByDisplayValue('Product A')).toBeTruthy();
+      expect(screen.getByDisplayValue("Product A")).toBeTruthy();
     });
 
     // Trigger context menu
@@ -234,32 +234,32 @@ describe('TableGallery', () => {
       fireEvent.click(deleteOption);
     });
 
-    expect(mockDeleteRecord).toHaveBeenCalledWith('rec-1');
+    expect(mockDeleteRecord).toHaveBeenCalledWith("rec-1");
   });
 
-  it('sets correct alt text on images', async () => {
+  it("sets correct alt text on images", async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
-      const img = document.querySelector('img');
-      expect(img?.alt).toBe('Product A');
+      const img = document.querySelector("img");
+      expect(img?.alt).toBe("Product A");
     });
   });
 
-  it('renders empty gallery when no records', async () => {
+  it("renders empty gallery when no records", async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={[]} onDeleteRecord={mockDeleteRecord} />
     ));
 
     await waitFor(() => {
       // Empty state message replaces the gallery grid
-      expect(screen.getByText('No records')).toBeTruthy();
+      expect(screen.getByText("No records")).toBeTruthy();
     });
   });
 
-  it('shows add record button when onAddRecord is provided', async () => {
+  it("shows add record button when onAddRecord is provided", async () => {
     const mockAddRecord = vi.fn();
 
     renderWithI18n(() => (
@@ -279,7 +279,7 @@ describe('TableGallery', () => {
     expect(mockAddRecord).toHaveBeenCalledOnce();
   });
 
-  it('hides add record button when onAddRecord is not provided', async () => {
+  it("hides add record button when onAddRecord is not provided", async () => {
     renderWithI18n(() => (
       <TableGallery columns={mockColumnsWithImage} records={mockRecordsWithImage} onDeleteRecord={mockDeleteRecord} />
     ));
@@ -289,11 +289,11 @@ describe('TableGallery', () => {
     });
   });
 
-  it('handles table without image column', async () => {
+  it("handles table without image column", async () => {
     const recordsNoImage: DataRecordResponse[] = [
       {
-        id: 'rec-1',
-        data: { Title: 'Article A', Description: 'Some text', Price: 0 },
+        id: "rec-1",
+        data: { Title: "Article A", Description: "Some text", Price: 0 },
         created: 1704067200,
         modified: 1704067200,
       },
@@ -305,7 +305,7 @@ describe('TableGallery', () => {
 
     await waitFor(() => {
       // Should still render the card without image section
-      expect(screen.getByDisplayValue('Article A')).toBeTruthy();
+      expect(screen.getByDisplayValue("Article A")).toBeTruthy();
     });
   });
 });

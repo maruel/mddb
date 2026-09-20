@@ -55,7 +55,7 @@
 }
 
 .fieldName::after {
-  content: ':';
+  content: ":";
 }
 
 .fieldValue {

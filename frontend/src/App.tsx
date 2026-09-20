@@ -1,14 +1,14 @@
 // Main application component with router setup.
 
-import { Show, Switch, Match, Suspense, type ParentComponent } from 'solid-js';
-import { Router, Route, Navigate, A } from '@solidjs/router';
-import { AuthProvider, useAuth, NotificationProvider } from './contexts';
-import AppErrorBoundary from './components/ErrorBoundary';
-import PWAInstallBanner from './components/PWAInstallBanner';
-import Auth from './components/Auth';
-import Privacy from './components/Privacy';
-import Terms from './components/Terms';
-import Onboarding from './sections/Onboarding';
+import { Show, Switch, Match, Suspense, type ParentComponent } from "solid-js";
+import { Router, Route, Navigate, A } from "@solidjs/router";
+import { AuthProvider, useAuth, NotificationProvider } from "./contexts";
+import AppErrorBoundary from "./components/ErrorBoundary";
+import PWAInstallBanner from "./components/PWAInstallBanner";
+import Auth from "./components/Auth";
+import Privacy from "./components/Privacy";
+import Terms from "./components/Terms";
+import Onboarding from "./sections/Onboarding";
 
 // Route components are imported directly rather than through lazy(). The router renders a
 // route it is navigating to before it commits the location and again afterwards, so a route
@@ -24,22 +24,22 @@ import SettingsSection, {
   OrgSettingsRoute,
   ServerSettingsGuard,
   SettingsRedirect,
-} from './sections/SettingsSection';
+} from "./sections/SettingsSection";
 
 // Import workspace section and route components (not lazy - needed for nested routes)
-import WorkspaceSection, { WorkspaceLayout, WorkspaceRoot, NodeView } from './sections/WorkspaceSection';
+import WorkspaceSection, { WorkspaceLayout, WorkspaceRoot, NodeView } from "./sections/WorkspaceSection";
 
 // Loading fallback for routes that suspend
 function RouteLoading() {
-  return <div style={{ padding: '2rem', 'text-align': 'center' }}>Loading...</div>;
+  return <div style={{ padding: "2rem", "text-align": "center" }}>Loading...</div>;
 }
 
 // 404 page for unmatched routes - shows explicit error instead of silent redirect
 function NotFound() {
   const path = window.location.pathname;
-  console.error('404: Route not found:', path);
+  console.error("404: Route not found:", path);
   return (
-    <div style={{ padding: '2rem', 'text-align': 'center' }}>
+    <div style={{ padding: "2rem", "text-align": "center" }}>
       <h1>Page Not Found</h1>
       <p>
         The path <code>{path}</code> doesn't exist.

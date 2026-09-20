@@ -1,6 +1,6 @@
 // ProseMirror commands for block operations: delete, duplicate, convert, indent/outdent, and toggle task.
-import { type Command } from 'prosemirror-state';
-import { type BlockType } from './schema';
+import { type Command } from "prosemirror-state";
+import { type BlockType } from "./schema";
 
 /**
  * Delete a block at the given position.
@@ -112,7 +112,7 @@ export function duplicateBlocks(positions: number[]): Command {
 export function convertBlock(
   pos: number,
   toType: BlockType,
-  attrs?: { level?: number; checked?: boolean; language?: string }
+  attrs?: { level?: number; checked?: boolean; language?: string },
 ): Command {
   return (state, dispatch) => {
     const node = state.doc.nodeAt(pos);
@@ -126,13 +126,13 @@ export function convertBlock(
       };
 
       // Clear type-specific attrs when converting
-      if (toType !== 'heading') {
+      if (toType !== "heading") {
         newAttrs.level = undefined;
       }
-      if (toType !== 'task') {
+      if (toType !== "task") {
         newAttrs.checked = undefined;
       }
-      if (toType !== 'code') {
+      if (toType !== "code") {
         newAttrs.language = undefined;
       }
 
@@ -148,7 +148,7 @@ export function convertBlock(
 export function convertBlocks(
   positions: number[],
   toType: BlockType,
-  attrs?: { level?: number; checked?: boolean; language?: string }
+  attrs?: { level?: number; checked?: boolean; language?: string },
 ): Command {
   return (state, dispatch) => {
     if (positions.length === 0) return false;
@@ -167,13 +167,13 @@ export function convertBlocks(
       };
 
       // Clear type-specific attrs when converting
-      if (toType !== 'heading') {
+      if (toType !== "heading") {
         newAttrs.level = undefined;
       }
-      if (toType !== 'task') {
+      if (toType !== "task") {
         newAttrs.checked = undefined;
       }
-      if (toType !== 'code') {
+      if (toType !== "code") {
         newAttrs.language = undefined;
       }
 
@@ -207,7 +207,7 @@ export function indentBlock(pos: number): Command {
         state.tr.setNodeMarkup(pos, undefined, {
           ...node.attrs,
           indent: currentIndent + 1,
-        })
+        }),
       );
     }
     return true;
@@ -231,7 +231,7 @@ export function outdentBlock(pos: number): Command {
         state.tr.setNodeMarkup(pos, undefined, {
           ...node.attrs,
           indent: currentIndent - 1,
-        })
+        }),
       );
     }
     return true;
@@ -310,14 +310,14 @@ export function outdentBlocks(positions: number[]): Command {
 export function toggleTaskBlock(pos: number): Command {
   return (state, dispatch) => {
     const node = state.doc.nodeAt(pos);
-    if (!node || node.attrs.type !== 'task') return false;
+    if (!node || node.attrs.type !== "task") return false;
 
     if (dispatch) {
       dispatch(
         state.tr.setNodeMarkup(pos, undefined, {
           ...node.attrs,
           checked: !node.attrs.checked,
-        })
+        }),
       );
     }
     return true;

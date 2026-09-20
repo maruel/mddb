@@ -1,22 +1,22 @@
 // Workspace layout with header, sidebar, and content outlet.
 
-import { createSignal, Show, For, onCleanup, onMount, type ParentComponent } from 'solid-js';
-import { useNavigate } from '@solidjs/router';
-import Sidebar from '../components/Sidebar';
-import UserMenu from '../components/UserMenu';
-import NotificationBell from '../components/NotificationBell';
-import NotionImportBanner from '../components/NotionImportBanner';
-import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
-import NotionImportModal, { type NotionImportData } from '../components/NotionImportModal';
-import KeyboardShortcutsDialog from '../components/KeyboardShortcutsDialog';
-import { TransientFeedback } from '../components/TransientFeedback';
-import { useAuth, useWorkspace, useEditor, useEventSource, useRecords } from '../contexts';
-import { useI18n } from '../i18n';
-import { settingsUrl, nodeUrl } from '../utils/urls';
-import type { NodeResponse, NotionImportStatusResponse } from '@sdk/types.gen';
-import styles from './WorkspaceSection.module.css';
+import { createSignal, Show, For, onCleanup, onMount, type ParentComponent } from "solid-js";
+import { useNavigate } from "@solidjs/router";
+import Sidebar from "../components/Sidebar";
+import UserMenu from "../components/UserMenu";
+import NotificationBell from "../components/NotificationBell";
+import NotionImportBanner from "../components/NotionImportBanner";
+import CreateWorkspaceModal from "../components/CreateWorkspaceModal";
+import NotionImportModal, { type NotionImportData } from "../components/NotionImportModal";
+import KeyboardShortcutsDialog from "../components/KeyboardShortcutsDialog";
+import { TransientFeedback } from "../components/TransientFeedback";
+import { useAuth, useWorkspace, useEditor, useEventSource, useRecords } from "../contexts";
+import { useI18n } from "../i18n";
+import { settingsUrl, nodeUrl } from "../utils/urls";
+import type { NodeResponse, NotionImportStatusResponse } from "@sdk/types.gen";
+import styles from "./WorkspaceSection.module.css";
 
-import MenuIcon from '@material-symbols/svg-400/outlined/menu.svg?solid';
+import MenuIcon from "@material-symbols/svg-400/outlined/menu.svg?solid";
 
 const WorkspaceLayout: ParentComponent = (props) => {
   const { t } = useI18n();
@@ -50,9 +50,9 @@ const WorkspaceLayout: ParentComponent = (props) => {
   // element has focus so we do not interfere.
   onMount(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return;
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
       const active = document.activeElement as HTMLElement | null;
-      if (active?.isContentEditable || active?.tagName === 'INPUT' || active?.tagName === 'TEXTAREA') return;
+      if (active?.isContentEditable || active?.tagName === "INPUT" || active?.tagName === "TEXTAREA") return;
 
       e.preventDefault();
       const isTable = selectedNodeData()?.has_table ?? false;
@@ -70,8 +70,8 @@ const WorkspaceLayout: ParentComponent = (props) => {
         }
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    onCleanup(() => window.removeEventListener('keydown', handleKeyDown));
+    window.addEventListener("keydown", handleKeyDown);
+    onCleanup(() => window.removeEventListener("keydown", handleKeyDown));
   });
 
   // Keep desktop collapse and mobile overlay state independent across breakpoint changes.
@@ -147,17 +147,17 @@ const WorkspaceLayout: ParentComponent = (props) => {
     };
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      if (event.key === 'Escape' && isMobileLayout() && mobileSidebarOpen()) {
+      if (event.key === "Escape" && isMobileLayout() && mobileSidebarOpen()) {
         event.preventDefault();
         setMobileSidebarOpen(false);
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("keydown", handleKeyDown);
     onCleanup(() => {
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("keydown", handleKeyDown);
     });
   });
 
@@ -175,20 +175,20 @@ const WorkspaceLayout: ParentComponent = (props) => {
         return;
       }
 
-      if (event.key === '?') {
+      if (event.key === "?") {
         event.preventDefault();
         setShowKeyboardShortcuts(true);
         return;
       }
 
-      if (event.key.toLowerCase() === 'g' && !event.shiftKey) {
+      if (event.key.toLowerCase() === "g" && !event.shiftKey) {
         event.preventDefault();
         focusWorkspaceTree();
       }
     };
 
-    window.addEventListener('keydown', handleKeyboardShortcut);
-    onCleanup(() => window.removeEventListener('keydown', handleKeyboardShortcut));
+    window.addEventListener("keydown", handleKeyboardShortcut);
+    onCleanup(() => window.removeEventListener("keydown", handleKeyboardShortcut));
   });
 
   // Notion import polling
@@ -202,11 +202,11 @@ const WorkspaceLayout: ParentComponent = (props) => {
       try {
         const status = await org.notion.getStatus(wsId);
         setNotionImportStatus(status);
-        if (['completed', 'failed', 'cancelled'].includes(status.status)) {
+        if (["completed", "failed", "cancelled"].includes(status.status)) {
           window.clearInterval(importPollInterval);
           importPollInterval = undefined;
           // Reload nodes if import completed
-          if (status.status === 'completed') {
+          if (status.status === "completed") {
             loadNodes(true);
           }
         }
@@ -227,7 +227,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     await switchWorkspace(result.workspace_id);
     // Start polling for import status
     startNotionImportPolling(result.workspace_id);
-    setNotionImportStatus({ status: 'running', progress: 0, total: 0 });
+    setNotionImportStatus({ status: "running", progress: 0, total: 0 });
   };
 
   const handleCancelNotionImport = async () => {
@@ -236,7 +236,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     if (!ws || !wsId) return;
     try {
       await ws.notion.cancelImport();
-      setNotionImportStatus((prev) => (prev ? { ...prev, status: 'cancelled' } : null));
+      setNotionImportStatus((prev) => (prev ? { ...prev, status: "cancelled" } : null));
     } catch {
       // Ignore
     }
@@ -261,7 +261,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   function findNodeContext(
     nodeId: string,
     nodeList: NodeResponse[] = nodes,
-    parent: NodeResponse | null = null
+    parent: NodeResponse | null = null,
   ): { parent: NodeResponse | null; siblings: NodeResponse[]; index: number } | null {
     const index = nodeList.findIndex((n) => n.id === nodeId);
     if (index !== -1) {
@@ -277,22 +277,22 @@ const WorkspaceLayout: ParentComponent = (props) => {
   }
 
   // Create node helper
-  async function createNode(type: 'document' | 'table' = 'document', parentId?: string) {
+  async function createNode(type: "document" | "table" = "document", parentId?: string) {
     const ws = wsApi();
     if (!ws) return;
 
     try {
       setCreatingNode(true);
-      const parent = parentId || nodeCreationParentId() || '0';
+      const parent = parentId || nodeCreationParentId() || "0";
       let newNodeId: string | number;
       const defaultTitle =
-        type === 'table'
-          ? t('welcome.untitledTable') || 'Untitled Table'
-          : t('welcome.untitledPage') || 'Untitled Page';
-      if (type === 'table') {
+        type === "table"
+          ? t("welcome.untitledTable") || "Untitled Table"
+          : t("welcome.untitledPage") || "Untitled Page";
+      if (type === "table") {
         const result = await ws.nodes.table.createTable(parent, {
           title: defaultTitle,
-          properties: [{ name: 'Name', type: 'text', required: false }],
+          properties: [{ name: "Name", type: "text", required: false }],
         });
         newNodeId = result.id;
       } else {
@@ -309,7 +309,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
       setSaveError(null);
       setNodeCreationParentId(null);
     } catch (err) {
-      setSaveError(`${t('errors.failedToCreate')}: ${err}`);
+      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
     } finally {
       setCreatingNode(false);
     }
@@ -332,7 +332,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   async function handleDeleteNode(nodeId: string) {
     const ws = wsApi();
     if (!ws) return;
-    if (!confirm(t('table.confirmDeleteRecord') || 'Delete this item?')) return;
+    if (!confirm(t("table.confirmDeleteRecord") || "Delete this item?")) return;
 
     // Find navigation target BEFORE deleting (if this is the selected node)
     let nextNode: NodeResponse | null = null;
@@ -340,7 +340,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
       const ctx = findNodeContext(nodeId);
       if (ctx) {
         const { parent, siblings, index } = ctx;
-        if (parent && parent.id !== '0') {
+        if (parent && parent.id !== "0") {
           nextNode = parent;
         } else {
           if (index > 0) {
@@ -366,12 +366,12 @@ const WorkspaceLayout: ParentComponent = (props) => {
         } else if (wsId) {
           await loadNodes(true);
           // Navigate to workspace root, let WorkspaceRoot handle redirect
-          navigate(`/w/@${wsId}+${wsName || 'workspace'}/`);
+          navigate(`/w/@${wsId}+${wsName || "workspace"}/`);
         }
       }
       setSaveError(null);
     } catch (err) {
-      setSaveError(`${t('errors.failedToDelete')}: ${err}`);
+      setSaveError(`${t("errors.failedToDelete")}: ${err}`);
     } finally {
       setDeletingNodeId(null);
     }
@@ -382,7 +382,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   }
 
   return (
-    <div class={`${styles.app} ${isSidebarOpen() ? styles.sidebarOpen : ''}`}>
+    <div class={`${styles.app} ${isSidebarOpen() ? styles.sidebarOpen : ""}`}>
       <Show when={notionImportStatus()} keyed>
         {(status) => (
           <NotionImportBanner
@@ -403,7 +403,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
             <MenuIcon />
           </button>
           <Show when={selectedNodeId()}>
-            <nav class={styles.breadcrumbs} aria-label={t('app.breadcrumbs')}>
+            <nav class={styles.breadcrumbs} aria-label={t("app.breadcrumbs")}>
               <ol class={styles.breadcrumbList}>
                 <For each={breadcrumbPath()}>
                   {(crumb, i) => (
@@ -442,12 +442,12 @@ const WorkspaceLayout: ParentComponent = (props) => {
             data-testid="connection-status"
           >
             <span class={styles.connectionIndicator} aria-hidden="true" />
-            {connected() ? t('sse.connected') || 'Connected' : t('sse.reconnecting') || 'Reconnecting'}
+            {connected() ? t("sse.connected") || "Connected" : t("sse.reconnecting") || "Reconnecting"}
           </span>
           <NotificationBell />
           <UserMenu
             onProfile={() => {
-              navigate(settingsUrl('user'));
+              navigate(settingsUrl("user"));
             }}
           />
         </div>
@@ -456,7 +456,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
       <div class={styles.container}>
         <Show when={isMobileLayout()}>
           <div
-            class={`${styles.mobileBackdrop} ${mobileSidebarOpen() ? styles.mobileBackdropVisible : ''}`}
+            class={`${styles.mobileBackdrop} ${mobileSidebarOpen() ? styles.mobileBackdropVisible : ""}`}
             data-testid="workspace-sidebar-backdrop"
             onClick={() => setMobileSidebarOpen(false)}
           />
@@ -469,22 +469,22 @@ const WorkspaceLayout: ParentComponent = (props) => {
           ancestorIds={breadcrumbPath().map((n) => n.id)}
           onCreatePage={() => {
             setNodeCreationParentId(null);
-            createNode('document');
+            createNode("document");
             closeSidebar();
           }}
           onCreateTable={() => {
             setNodeCreationParentId(null);
-            createNode('table');
+            createNode("table");
             closeSidebar();
           }}
           onCreateChildPage={(parentId: string) => {
             setNodeCreationParentId(parentId);
-            createNode('document', parentId);
+            createNode("document", parentId);
             closeSidebar();
           }}
           onCreateChildTable={(parentId: string) => {
             setNodeCreationParentId(parentId);
-            createNode('table', parentId);
+            createNode("table", parentId);
             closeSidebar();
           }}
           onSelectNode={handleNodeClick}
@@ -508,7 +508,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
             const wsName = user()?.workspace_name;
             if (wsId) {
               closeSidebar();
-              navigate(settingsUrl('workspace', wsId, wsName));
+              navigate(settingsUrl("workspace", wsId, wsName));
             }
           }}
           onCreateWorkspace={() => setShowCreateWorkspace(true)}

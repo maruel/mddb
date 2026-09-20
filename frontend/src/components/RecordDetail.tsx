@@ -1,14 +1,14 @@
 // Record detail panel (slide-over) showing all fields of a record for editing.
 
-import { For, Show, createMemo } from 'solid-js';
-import type { DataRecordResponse, Property } from '@sdk/types.gen';
-import { updateRecordField, handleEnterBlur, getRecordTitle } from './table/tableUtils';
-import { FieldEditor } from './table/FieldEditor';
-import { useI18n } from '../i18n';
-import { Dialog, IconButton } from './shared';
-import styles from './RecordDetail.module.css';
-import DeleteIcon from '@material-symbols/svg-400/outlined/delete.svg?solid';
-import ContentCopyIcon from '@material-symbols/svg-400/outlined/content_copy.svg?solid';
+import { For, Show, createMemo } from "solid-js";
+import type { DataRecordResponse, Property } from "@sdk/types.gen";
+import { updateRecordField, handleEnterBlur, getRecordTitle } from "./table/tableUtils";
+import { FieldEditor } from "./table/FieldEditor";
+import { useI18n } from "../i18n";
+import { Dialog, IconButton } from "./shared";
+import styles from "./RecordDetail.module.css";
+import DeleteIcon from "@material-symbols/svg-400/outlined/delete.svg?solid";
+import ContentCopyIcon from "@material-symbols/svg-400/outlined/content_copy.svg?solid";
 
 interface RecordDetailProps {
   recordId: string;
@@ -30,7 +30,7 @@ export default function RecordDetail(props: RecordDetailProps) {
 
   return (
     <Dialog
-      ariaLabel={t('table.recordDetail')}
+      ariaLabel={t("table.recordDetail")}
       class={styles.panel}
       dismissOnBackdrop={true}
       dismissOnEscape={true}
@@ -38,7 +38,7 @@ export default function RecordDetail(props: RecordDetailProps) {
       variant="drawer"
     >
       <div class={styles.header}>
-        <h2 class={styles.headerTitle}>{t('table.recordDetail')}</h2>
+        <h2 class={styles.headerTitle}>{t("table.recordDetail")}</h2>
         <div class={styles.headerActions}>
           <Show when={props.onDuplicate}>
             <IconButton
@@ -48,8 +48,8 @@ export default function RecordDetail(props: RecordDetailProps) {
                 props.onDuplicate?.(props.recordId);
                 props.onClose();
               }}
-              aria-label={t('table.duplicateRecord')}
-              title={t('table.duplicateRecord')}
+              aria-label={t("table.duplicateRecord")}
+              title={t("table.duplicateRecord")}
             >
               <ContentCopyIcon />
             </IconButton>
@@ -62,13 +62,13 @@ export default function RecordDetail(props: RecordDetailProps) {
                 props.onDelete?.(props.recordId);
                 props.onClose();
               }}
-              aria-label={t('table.deleteRecord')}
-              title={t('table.deleteRecord')}
+              aria-label={t("table.deleteRecord")}
+              title={t("table.deleteRecord")}
             >
               <DeleteIcon />
             </IconButton>
           </Show>
-          <IconButton variant="ghost" class={styles.closeButton} onClick={props.onClose} aria-label={t('common.close')}>
+          <IconButton variant="ghost" class={styles.closeButton} onClick={props.onClose} aria-label={t("common.close")}>
             ×
           </IconButton>
         </div>
@@ -84,7 +84,7 @@ export default function RecordDetail(props: RecordDetailProps) {
                     <input
                       type="text"
                       value={getRecordTitle(rec(), props.columns)}
-                      placeholder={t('table.untitled') || 'Untitled'}
+                      placeholder={t("table.untitled") || "Untitled"}
                       onBlur={(e) => updateRecordField(rec(), col().name, e.target.value, props.onUpdate)}
                       onKeyDown={handleEnterBlur}
                       class={styles.titleInput}

@@ -1,9 +1,9 @@
 // Shared resource quota form rendering the 6 ResourceQuotas fields for server, org, and workspace panels.
 
-import { Show, For } from 'solid-js';
-import { useI18n } from '../../i18n';
-import type { ResourceQuotas } from '@sdk/types.gen';
-import styles from './ResourceQuotaForm.module.css';
+import { Show, For } from "solid-js";
+import { useI18n } from "../../i18n";
+import type { ResourceQuotas } from "@sdk/types.gen";
+import styles from "./ResourceQuotaForm.module.css";
 
 interface ResourceQuotaFormProps {
   value: () => ResourceQuotas;
@@ -35,12 +35,12 @@ export default function ResourceQuotaForm(props: ResourceQuotaFormProps) {
   };
 
   const fields: Array<{ key: QuotaKey; label: string }> = [
-    { key: 'max_pages', label: t('settings.maxPages') },
-    { key: 'max_storage_bytes', label: t('settings.maxStorageBytes') },
-    { key: 'max_records_per_table', label: t('settings.maxRecordsPerTable') },
-    { key: 'max_asset_size_bytes', label: t('settings.maxAssetSizeBytes') },
-    { key: 'max_tables_per_workspace', label: t('settings.maxTablesPerWorkspace') },
-    { key: 'max_columns_per_table', label: t('settings.maxColumnsPerTable') },
+    { key: "max_pages", label: t("settings.maxPages") },
+    { key: "max_storage_bytes", label: t("settings.maxStorageBytes") },
+    { key: "max_records_per_table", label: t("settings.maxRecordsPerTable") },
+    { key: "max_asset_size_bytes", label: t("settings.maxAssetSizeBytes") },
+    { key: "max_tables_per_workspace", label: t("settings.maxTablesPerWorkspace") },
+    { key: "max_columns_per_table", label: t("settings.maxColumnsPerTable") },
   ];
 
   return (
@@ -61,12 +61,12 @@ export default function ResourceQuotaForm(props: ResourceQuotaFormProps) {
               <Show when={props.allowInherit}>
                 <label class={styles.inheritLabel}>
                   <input type="checkbox" checked={isInherited()} onChange={() => toggleInherit(field.key)} />
-                  {t('settings.inheritFromParent')}
+                  {t("settings.inheritFromParent")}
                 </label>
               </Show>
               <Show
                 when={!isInherited()}
-                fallback={<input type="number" value={ceilDisplay() ?? ''} disabled class={styles.inheritedInput} />}
+                fallback={<input type="number" value={ceilDisplay() ?? ""} disabled class={styles.inheritedInput} />}
               >
                 <input
                   type="number"
@@ -77,7 +77,7 @@ export default function ResourceQuotaForm(props: ResourceQuotaFormProps) {
                 <Show when={ceilDisplay()}>
                   {(v) => (
                     <p class={styles.ceilingHint}>
-                      {props.ceilingLabel ?? t('settings.parentCeiling')}: {v()}
+                      {props.ceilingLabel ?? t("settings.parentCeiling")}: {v()}
                     </p>
                   )}
                 </Show>
