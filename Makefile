@@ -63,7 +63,7 @@ build: types docs
 
 types: $(FRONTEND_STAMP)
 	@cd ./backend && go tool tygo generate
-	@pnpm exec prettier --log-level silent --write sdk/types.gen.ts
+	@pnpm --silent exec prettier --log-level silent --write sdk/types.gen.ts
 
 docs:
 	@./scripts/update_agents_file_index.py
@@ -80,11 +80,11 @@ dev: build $(ENV_FILE)
 
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...
-	@pnpm test
+	@pnpm --silent test
 
 e2e: build
 	@python3 scripts/clean_data_e2e.py
-	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=1 pnpm test:e2e; \
+	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=1 pnpm --silent test:e2e; \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
 	if [ $$e2e_exit -ne 0 ]; then \
@@ -97,7 +97,7 @@ e2e: build
 e2e-slow: build
 	@python3 scripts/clean_data_e2e.py
 	@echo "Running e2e tests with normal rate limits (single worker)..."
-	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=0 pnpm exec playwright test --workers=1; \
+	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=0 pnpm --silent exec playwright test --workers=1; \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
 	if [ $$e2e_exit -ne 0 ]; then \
@@ -109,7 +109,7 @@ e2e-slow: build
 
 coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
-	@pnpm coverage
+	@pnpm --silent coverage
 
 lint: tools lint-go lint-frontend lint-python lint-binaries lint-css lint-docs
 
@@ -162,8 +162,8 @@ git-hooks:
 	@echo "✓ Git hooks installed"
 
 frontend-dev: $(FRONTEND_STAMP)
-	@pnpm dev
+	@pnpm --silent dev
 
 upgrade:
 	@go get -u ./... && go mod tidy
-	@pnpm update --latest
+	@pnpm --silent update --latest
