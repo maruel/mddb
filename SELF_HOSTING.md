@@ -30,7 +30,7 @@ Google OAuth works even if you only expose the server on localhost!
 1. Go to API and services at https://console.cloud.google.com/apis/dashboard
 1. Configure the OAuth interstitial branding at https://console.cloud.google.com/auth/branding
 1. Create a OAuth Google Client ID and Google Client Secret for a web application at https://console.cloud.google.com/auth/clients
-1. The callback URL (for tailscale) is `https://<hostname>.<tailnet>.ts.net/api/v1/auth/google/callback`
+1. The callback URL (for tailscale) is `https://<hostname>.<tailnet>.ts.net/api/v1/auth/oauth/google/callback`
 1. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
 
 ### GitHub OAuth
@@ -38,7 +38,7 @@ Google OAuth works even if you only expose the server on localhost!
 GitHub OAuth requires an HTTPS URL, so you need to server over Tailscale or a reverse proxy like Caddy.
 
 1. Go to OAuth Apps at https://github.com/settings/developers
-1. Set as the Authorization callback URL `https://<hostname>.<tailnet>.ts.net/api/v1/auth/github/callback`
+1. Set as the Authorization callback URL `https://<hostname>.<tailnet>.ts.net/api/v1/auth/oauth/github/callback`
 1. Set `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
 
 ### Microsoft OAuth
@@ -49,7 +49,7 @@ Microsoft OAuth is Microsoft Entra
    1. Accounts in any organizational directory (Any Microsoft Entra ID tenant - Multitenant) and personal Microsoft accounts (e.g. Skype, Xbox)
    1. Redirect URL:
       1. Web
-      1. `https://<hostname>.<tailnet>.ts.net/api/v1/auth/microsoft/callback`
+      1. `https://<hostname>.<tailnet>.ts.net/api/v1/auth/oauth/microsoft/callback`
 1. Click "Add a certificate or secret"
 1. New client secret
 1. Duration: 730 days

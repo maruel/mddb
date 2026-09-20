@@ -35,7 +35,7 @@ help:
 
 # Install frontend dependencies (only when lockfile changes)
 $(FRONTEND_STAMP): pnpm-lock.yaml
-	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm install --frozen-lockfile --silent
+	@pnpm install --frozen-lockfile --silent
 	@touch $@
 
 # Build frontend and Go server
@@ -45,7 +45,7 @@ build: types docs
 
 types: $(FRONTEND_STAMP)
 	@cd ./backend && go tool tygo generate
-	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec prettier --log-level silent --write sdk/types.gen.ts
+	@pnpm exec prettier --log-level silent --write sdk/types.gen.ts
 
 docs:
 	@./scripts/update_agents_file_index.py
@@ -62,11 +62,11 @@ dev: build $(ENV_FILE)
 
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...
-	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test
+	@pnpm test
 
 e2e: build
 	@python3 scripts/clean_data_e2e.py
-	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=1 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm test:e2e; \
+	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=1 pnpm test:e2e; \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
 	if [ $$e2e_exit -ne 0 ]; then \
@@ -79,7 +79,7 @@ e2e: build
 e2e-slow: build
 	@python3 scripts/clean_data_e2e.py
 	@echo "Running e2e tests with normal rate limits (single worker)..."
-	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=0 NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm exec playwright test --workers=1; \
+	@TEST_OAUTH=1 TEST_FAST_RATE_LIMIT=0 pnpm exec playwright test --workers=1; \
 	e2e_exit=$$?; \
 	cp -f ./data-e2e/server.log playwright-report/server.log 2>/dev/null || true; \
 	if [ $$e2e_exit -ne 0 ]; then \
@@ -91,7 +91,7 @@ e2e-slow: build
 
 coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
-	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm coverage
+	@pnpm coverage
 
 lint: lint-go lint-frontend lint-python lint-binaries lint-css lint-docs
 
@@ -99,14 +99,13 @@ verify: format-check lint
 
 lint-go:
 	@which golangci-lint > /dev/null || go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
-	@golangci-lint run ./...
+	@golangci-lint run --show-stats=false ./...
 
 lint-frontend: $(FRONTEND_STAMP)
-	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint
+	@pnpm --silent lint
 
 lint-python:
-	@ruff check .
-	@ruff format --check .
+	@ruff check --quiet .
 
 lint-binaries:
 	@python3 scripts/lint_binaries.py
@@ -118,10 +117,10 @@ lint-docs:
 	@python3 scripts/update_agents_file_index.py --check
 
 lint-fix: $(FRONTEND_STAMP)
-	@cd ./backend && golangci-lint run ./... --fix || true
-	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm lint:fix
-	@ruff check . --fix
-	@ruff format .
+	@cd ./backend && golangci-lint run --show-stats=false ./... --fix
+	@pnpm --silent lint:fix
+	@ruff check --quiet . --fix
+	@ruff format --quiet .
 	@python3 scripts/update_agents_file_index.py
 
 # Apply and verify the shared formatters: prettier for the web and prose sources,
@@ -129,15 +128,15 @@ lint-fix: $(FRONTEND_STAMP)
 # scripts, and shfmt for the shell scripts.
 # Prettier skips whatever .prettierignore excludes (locks, generated code, testdata).
 format: $(FRONTEND_STAMP)
-	@pnpm format
+	@pnpm --silent format
 	@golangci-lint fmt
-	@ruff format .
+	@ruff format --quiet .
 	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || shfmt -w $$files
 
 format-check: $(FRONTEND_STAMP)
-	@pnpm format:check
+	@pnpm --silent format:check
 	@out=$$(golangci-lint fmt --diff); [ -z "$$out" ] || { echo 'Go files need formatting (gofmt, goimports):' >&2; echo "$$out" >&2; exit 1; }
-	@ruff format --check .
+	@ruff format --check --quiet .
 	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || { out=$$(shfmt -l $$files); [ -z "$$out" ] || { echo 'Shell files need shfmt:' >&2; echo "$$out" >&2; exit 1; }; }
 
 git-hooks:
@@ -146,7 +145,7 @@ git-hooks:
 	@echo "✓ Git hooks installed"
 
 frontend-dev: $(FRONTEND_STAMP)
-	@NPM_CONFIG_AUDIT=false NPM_CONFIG_FUND=false pnpm dev
+	@pnpm dev
 
 upgrade:
 	@go get -u ./... && go mod tidy

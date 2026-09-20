@@ -61,8 +61,6 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-python3 scripts/lint_binaries.py
-
 # Repository-specific verification.
 make verify
 

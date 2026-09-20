@@ -97,7 +97,7 @@ check_gofmt() {
 }
 
 if ((${#format_files[@]} > 0)); then
-  run_check format pnpm exec prettier --check -- "${format_files[@]}"
+  run_check format pnpm exec prettier --check --log-level warn -- "${format_files[@]}"
 fi
 
 if ((${#eslint_files[@]} > 0)); then
@@ -113,8 +113,8 @@ if ((${#python_files[@]} > 0)); then
     printf '%s\n' 'ruff is required to validate staged Python files.' >&2
     exit 1
   }
-  run_check python-lint ruff check -- "${python_files[@]}"
-  run_check python-format ruff format --check -- "${python_files[@]}"
+  run_check python-lint ruff check --quiet -- "${python_files[@]}"
+  run_check python-format ruff format --check --quiet -- "${python_files[@]}"
 fi
 
 if "$frontend_source_changed"; then

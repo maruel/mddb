@@ -125,7 +125,6 @@ function main() {
   }
 
   if (results.length === 0) {
-    console.log("All CSS module classes are in use.");
     process.exit(0);
   }
 
