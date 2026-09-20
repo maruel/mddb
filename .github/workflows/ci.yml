@@ -59,7 +59,12 @@ jobs:
         if: runner.os == 'Linux'
         run: make verify
       # Build & Test
-      - run: make build
+      - name: Build and verify the generated files are committed
+        if: runner.os == 'Linux'
+        run: |
+          make build
+          status=$(git status --porcelain)
+          [ -z "$status" ] || { echo 'The build left a dirty worktree; commit the generated files it rewrote:' >&2; echo "$status" >&2; exit 1; }
       - name: Test
         if: runner.os != 'Linux'
         run: make test

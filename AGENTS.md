@@ -30,6 +30,8 @@ make lint build test
 ```
 
 `make verify` re-checks prettier, gofmt, ruff, and shfmt plus the ESLint, CSS, binary, and file-index checks.
+CI builds the frontend and fails when that build leaves the worktree dirty, so the committed frontend
+bundles stay in step with the sources that produce them.
 Indentation and width come from `.editorconfig`; Ruff keeps its own copy of the width in `pyproject.toml`
 because it does not read `.editorconfig`.
 
