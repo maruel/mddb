@@ -57,6 +57,13 @@ $(FRONTEND_STAMP): pnpm-lock.yaml
 	@touch $@
 
 # Build frontend and Go server
+
+# methodfilecheck (see .golangci.yml) is a golangci-lint module plugin, so the
+# Go linting must run through the custom binary built from the published
+# plugin module.
+custom-gcl: .custom-gcl.yml
+	@golangci-lint custom --version $(GOLANGCI_LINT_VERSION)
+
 build: types docs
 	@go generate ./...
 	@go install -trimpath -ldflags="-s -w -buildid=" ./backend/cmd/...
@@ -115,8 +122,8 @@ lint: tools lint-go lint-frontend lint-python lint-binaries lint-css lint-docs
 
 verify: format-check lint
 
-lint-go: tools
-	@golangci-lint run --show-stats=false ./...
+lint-go: tools custom-gcl
+	@./custom-gcl run --show-stats=false ./...
 
 lint-frontend: $(FRONTEND_STAMP)
 	@pnpm --silent lint
@@ -135,7 +142,7 @@ lint-docs:
 	@python3 scripts/update_agents_file_index.py --check
 
 lint-fix: tools $(FRONTEND_STAMP)
-	@cd ./backend && golangci-lint run --show-stats=false ./... --fix
+	@cd ./backend && $(CURDIR)/custom-gcl run --show-stats=false ./... --fix
 	@pnpm --silent lint:fix
 	@pnpm --silent lint:style:fix
 	@ruff check --quiet . --fix

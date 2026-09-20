@@ -12,8 +12,6 @@ import (
 // BlobRef is a content-addressed blob reference in format "sha256:<BASE32>-<size>".
 type BlobRef string
 
-const blobRefPrefix = "sha256:"
-
 // Validate checks if the blob reference is valid.
 // Format: "sha256:<hash>-<size>" where hash is 52 uppercase base32 hex chars (0-9, A-V) and size is decimal digits.
 func (r BlobRef) Validate() error {
@@ -44,6 +42,8 @@ func (r BlobRef) Validate() error {
 func (r BlobRef) IsZero() bool {
 	return r == ""
 }
+
+const blobRefPrefix = "sha256:"
 
 // Blob represents a reference to content-addressed binary data stored externally.
 //

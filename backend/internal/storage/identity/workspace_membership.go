@@ -14,15 +14,6 @@ import (
 // WorkspaceRole defines the permissions for a user within a workspace.
 type WorkspaceRole string
 
-const (
-	// WSRoleAdmin has full workspace control.
-	WSRoleAdmin WorkspaceRole = "ws:admin"
-	// WSRoleEditor can create and modify content.
-	WSRoleEditor WorkspaceRole = "ws:editor"
-	// WSRoleViewer can only read content.
-	WSRoleViewer WorkspaceRole = "ws:viewer"
-)
-
 // IsValid returns true if the role is a valid workspace role.
 func (r WorkspaceRole) IsValid() bool {
 	switch r {
@@ -46,6 +37,15 @@ func (r WorkspaceRole) CanManageMembers() bool {
 func (r WorkspaceRole) CanManageSettings() bool {
 	return r == WSRoleAdmin
 }
+
+const (
+	// WSRoleAdmin has full workspace control.
+	WSRoleAdmin WorkspaceRole = "ws:admin"
+	// WSRoleEditor can create and modify content.
+	WSRoleEditor WorkspaceRole = "ws:editor"
+	// WSRoleViewer can only read content.
+	WSRoleViewer WorkspaceRole = "ws:viewer"
+)
 
 // WorkspaceMembership represents a user's relationship with a workspace.
 type WorkspaceMembership struct {

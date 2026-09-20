@@ -124,60 +124,6 @@ func NewAPIError(statusCode int, code ErrorCode, message string) *APIError {
 	}
 }
 
-// WithDetails adds details to the error.
-func (e *APIError) WithDetails(details map[string]any) *APIError {
-	if e.details == nil {
-		e.details = make(map[string]any)
-	}
-	maps.Copy(e.details, details)
-	return e
-}
-
-// WithDetail adds a single detail to the error.
-func (e *APIError) WithDetail(key string, value any) *APIError {
-	if e.details == nil {
-		e.details = make(map[string]any)
-	}
-	e.details[key] = value
-	return e
-}
-
-// Wrap wraps an underlying error.
-func (e *APIError) Wrap(err error) *APIError {
-	e.wrappedErr = err
-	return e
-}
-
-// Error implements the error interface.
-func (e *APIError) Error() string {
-	if e.wrappedErr != nil {
-		return fmt.Sprintf("%s: %v", e.message, e.wrappedErr)
-	}
-	return e.message
-}
-
-// StatusCode returns the HTTP status code.
-func (e *APIError) StatusCode() int {
-	return e.statusCode
-}
-
-// Code returns the error code.
-func (e *APIError) Code() ErrorCode {
-	return e.code
-}
-
-// Details returns additional error details.
-func (e *APIError) Details() map[string]any {
-	return e.details
-}
-
-// Unwrap returns the wrapped error if any.
-func (e *APIError) Unwrap() error {
-	return e.wrappedErr
-}
-
-// Predefined error constructors for common cases
-
 // NotFound creates a 404 Not Found error.
 func NotFound(resource string) *APIError {
 	return NewAPIError(http.StatusNotFound, ErrorCodeNotFound, resource+" not found")
@@ -196,16 +142,6 @@ func MissingField(fieldName string) *APIError {
 // InvalidField creates a 400 Bad Request error for an invalid field value.
 func InvalidField(fieldName, reason string) *APIError {
 	return NewAPIError(http.StatusBadRequest, ErrorCodeInvalidFormat, fieldName+": "+reason)
-}
-
-// Forbidden returns a 403 Forbidden error.
-func Forbidden(message string) error {
-	return NewAPIError(403, ErrorCodeForbidden, message)
-}
-
-// Unauthorized returns a 401 Unauthorized error.
-func Unauthorized() error {
-	return NewAPIError(401, ErrorCodeUnauthorized, "Unauthorized")
 }
 
 // Internal returns a 500 Internal Server Error.
@@ -290,6 +226,70 @@ func PayloadTooLarge(maxBytes int64) *APIError {
 	return NewAPIError(http.StatusRequestEntityTooLarge, ErrorCodePayloadTooLarge,
 		fmt.Sprintf("File too large: maximum %s allowed", humanBytes(maxBytes))).
 		WithDetail("max_bytes", maxBytes)
+}
+
+// WithDetails adds details to the error.
+func (e *APIError) WithDetails(details map[string]any) *APIError {
+	if e.details == nil {
+		e.details = make(map[string]any)
+	}
+	maps.Copy(e.details, details)
+	return e
+}
+
+// WithDetail adds a single detail to the error.
+func (e *APIError) WithDetail(key string, value any) *APIError {
+	if e.details == nil {
+		e.details = make(map[string]any)
+	}
+	e.details[key] = value
+	return e
+}
+
+// Wrap wraps an underlying error.
+func (e *APIError) Wrap(err error) *APIError {
+	e.wrappedErr = err
+	return e
+}
+
+// Error implements the error interface.
+func (e *APIError) Error() string {
+	if e.wrappedErr != nil {
+		return fmt.Sprintf("%s: %v", e.message, e.wrappedErr)
+	}
+	return e.message
+}
+
+// StatusCode returns the HTTP status code.
+func (e *APIError) StatusCode() int {
+	return e.statusCode
+}
+
+// Code returns the error code.
+func (e *APIError) Code() ErrorCode {
+	return e.code
+}
+
+// Details returns additional error details.
+func (e *APIError) Details() map[string]any {
+	return e.details
+}
+
+// Unwrap returns the wrapped error if any.
+func (e *APIError) Unwrap() error {
+	return e.wrappedErr
+}
+
+// Predefined error constructors for common cases
+
+// Forbidden returns a 403 Forbidden error.
+func Forbidden(message string) error {
+	return NewAPIError(403, ErrorCodeForbidden, message)
+}
+
+// Unauthorized returns a 401 Unauthorized error.
+func Unauthorized() error {
+	return NewAPIError(401, ErrorCodeUnauthorized, "Unauthorized")
 }
 
 // humanBytes formats a byte count as a human-readable string (e.g. "10 MB", "512 KB").

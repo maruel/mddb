@@ -11,11 +11,6 @@ import (
 // Time is a JSON encoded unix timestamp in 1ms units.
 type Time int64
 
-// AsTime returns the time as UTC so its string value doesn't depend on the local time zone.
-func (t *Time) AsTime() time.Time {
-	return time.UnixMilli(int64(*t)).UTC()
-}
-
 // ToTime converts a time.Time to a storage.Time.
 func ToTime(v time.Time) Time {
 	return Time(v.UnixMilli())
@@ -24,6 +19,11 @@ func ToTime(v time.Time) Time {
 // Now returns the current time as a storage.Time.
 func Now() Time {
 	return ToTime(time.Now())
+}
+
+// AsTime returns the time as UTC so its string value doesn't depend on the local time zone.
+func (t *Time) AsTime() time.Time {
+	return time.UnixMilli(int64(*t)).UTC()
 }
 
 // IsZero returns true if the time is zero.

@@ -80,15 +80,6 @@ type UserQuota struct {
 // OAuthProvider represents a supported OAuth2 provider.
 type OAuthProvider string
 
-const (
-	// OAuthProviderGoogle represents Google OAuth.
-	OAuthProviderGoogle OAuthProvider = "google"
-	// OAuthProviderMicrosoft represents Microsoft OAuth.
-	OAuthProviderMicrosoft OAuthProvider = "microsoft"
-	// OAuthProviderGitHub represents GitHub OAuth.
-	OAuthProviderGitHub OAuthProvider = "github"
-)
-
 // IsValid checks if the provider is a known valid value.
 func (p OAuthProvider) IsValid() bool {
 	switch p {
@@ -97,6 +88,15 @@ func (p OAuthProvider) IsValid() bool {
 	}
 	return false
 }
+
+const (
+	// OAuthProviderGoogle represents Google OAuth.
+	OAuthProviderGoogle OAuthProvider = "google"
+	// OAuthProviderMicrosoft represents Microsoft OAuth.
+	OAuthProviderMicrosoft OAuthProvider = "microsoft"
+	// OAuthProviderGitHub represents GitHub OAuth.
+	OAuthProviderGitHub OAuthProvider = "github"
+)
 
 // OAuthIdentity represents a link between a local user and an OAuth2 provider.
 type OAuthIdentity struct {

@@ -616,6 +616,14 @@ type ListNodesRequest struct {
 	WsID ksid.ID `path:"wsID" tstype:"-"`
 }
 
+// Validate validates the list nodes request fields.
+func (r *ListNodesRequest) Validate() error {
+	if r.WsID.IsZero() {
+		return MissingField("wsID")
+	}
+	return nil
+}
+
 // GetNodeTitlesRequest is a request to get titles for multiple nodes.
 type GetNodeTitlesRequest struct {
 	WsID ksid.ID     `path:"wsID" tstype:"-"`
@@ -629,14 +637,6 @@ func (r *GetNodeTitlesRequest) Validate() error {
 	}
 	if len(r.IDs) == 0 {
 		return MissingField("ids")
-	}
-	return nil
-}
-
-// Validate validates the list nodes request fields.
-func (r *ListNodesRequest) Validate() error {
-	if r.WsID.IsZero() {
-		return MissingField("wsID")
 	}
 	return nil
 }
@@ -800,14 +800,6 @@ type CreateOrgInvitationRequest struct {
 	Locale string           `json:"locale,omitempty"` // Optional: language for invitation email (en, fr, de, es)
 }
 
-// CreateWSInvitationRequest is a request to create a workspace invitation.
-type CreateWSInvitationRequest struct {
-	WsID   ksid.ID       `path:"wsID" tstype:"-"`
-	Email  string        `json:"email"`
-	Role   WorkspaceRole `json:"role"`
-	Locale string        `json:"locale,omitempty"` // Optional: language for invitation email (en, fr, de, es)
-}
-
 // Validate validates the create organization invitation request fields.
 func (r *CreateOrgInvitationRequest) Validate() error {
 	if r.OrgID.IsZero() {
@@ -820,6 +812,14 @@ func (r *CreateOrgInvitationRequest) Validate() error {
 		return MissingField("role")
 	}
 	return nil
+}
+
+// CreateWSInvitationRequest is a request to create a workspace invitation.
+type CreateWSInvitationRequest struct {
+	WsID   ksid.ID       `path:"wsID" tstype:"-"`
+	Email  string        `json:"email"`
+	Role   WorkspaceRole `json:"role"`
+	Locale string        `json:"locale,omitempty"` // Optional: language for invitation email (en, fr, de, es)
 }
 
 // Validate validates the create workspace invitation request fields.
@@ -1204,6 +1204,17 @@ type ChangeEmailRequest struct {
 	Password string `json:"password"` // Required for security verification
 }
 
+// Validate validates the change email request fields.
+func (r *ChangeEmailRequest) Validate() error {
+	if err := validateEmail(r.NewEmail); err != nil {
+		return InvalidField("new_email", "invalid email format")
+	}
+	if r.Password == "" {
+		return MissingField("password")
+	}
+	return nil
+}
+
 // --- Email Verification ---
 
 // SendVerificationEmailRequest is a request to send a verification email.
@@ -1223,17 +1234,6 @@ type VerifyEmailRequest struct {
 func (r *VerifyEmailRequest) Validate() error {
 	if r.Token == "" {
 		return MissingField("token")
-	}
-	return nil
-}
-
-// Validate validates the change email request fields.
-func (r *ChangeEmailRequest) Validate() error {
-	if err := validateEmail(r.NewEmail); err != nil {
-		return InvalidField("new_email", "invalid email format")
-	}
-	if r.Password == "" {
-		return MissingField("password")
 	}
 	return nil
 }

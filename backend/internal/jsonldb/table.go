@@ -72,6 +72,30 @@ type Table[T Row[T]] struct {
 	blobStore    blobStore // lazily initialized for tables with blob fields
 }
 
+// NewTable creates a Table and loads existing data from the JSONL file at path.
+//
+// If the file doesn't exist, an empty table is created and the schema is
+// auto-discovered from type T via reflection.
+// Returns an error if the file exists but cannot be read or contains invalid data.
+func NewTable[T Row[T]](path string) (*Table[T], error) {
+	table := &Table[T]{path: path}
+	if err := table.load(); err != nil {
+		return nil, err
+	}
+	// Initialize schema if not loaded (new table)
+	if table.schema.Version == "" {
+		columns, err := schemaFromType[T]()
+		if err != nil {
+			return nil, fmt.Errorf("failed to discover schema from type: %w", err)
+		}
+		table.schema = schemaHeader{
+			Version: currentVersion,
+			Columns: columns,
+		}
+	}
+	return table, nil
+}
+
 // AddObserver registers an observer to receive mutation notifications.
 //
 // The observer is immediately called with OnAppend for each existing row,
@@ -294,30 +318,6 @@ func (t *Table[T]) Modify(id ksid.ID, fn func(row T) error) (T, error) {
 		obs.OnUpdate(prev, row)
 	}
 	return row.Clone(), nil
-}
-
-// NewTable creates a Table and loads existing data from the JSONL file at path.
-//
-// If the file doesn't exist, an empty table is created and the schema is
-// auto-discovered from type T via reflection.
-// Returns an error if the file exists but cannot be read or contains invalid data.
-func NewTable[T Row[T]](path string) (*Table[T], error) {
-	table := &Table[T]{path: path}
-	if err := table.load(); err != nil {
-		return nil, err
-	}
-	// Initialize schema if not loaded (new table)
-	if table.schema.Version == "" {
-		columns, err := schemaFromType[T]()
-		if err != nil {
-			return nil, fmt.Errorf("failed to discover schema from type: %w", err)
-		}
-		table.schema = schemaHeader{
-			Version: currentVersion,
-			Columns: columns,
-		}
-	}
-	return table, nil
 }
 
 func (t *Table[T]) load() error {

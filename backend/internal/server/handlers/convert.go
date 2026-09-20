@@ -438,6 +438,105 @@ type userWithMemberships struct {
 	CurrentWSRole  identity.WorkspaceRole
 }
 
+// getUserWithMemberships fetches a user and their org/workspace memberships with names.
+func getUserWithMemberships(
+	userService *identity.UserService,
+	orgMemService *identity.OrganizationMembershipService,
+	wsMemService *identity.WorkspaceMembershipService,
+	orgService *identity.OrganizationService,
+	wsService *identity.WorkspaceService,
+	userID ksid.ID,
+) (*userWithMemberships, error) {
+	user, err := userService.Get(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if user has password set
+	hasPassword := userService.HasPassword(userID)
+
+	// Get org memberships
+	var orgMems []orgMembershipWithName
+	for m := range orgMemService.IterByUser(userID) {
+		mwon := orgMembershipWithName{OrganizationMembership: m}
+		if org, err := orgService.Get(m.OrganizationID); err == nil {
+			mwon.OrganizationName = org.Name
+		}
+		orgMems = append(orgMems, mwon)
+	}
+
+	// Get workspace memberships
+	var wsMems []wsMembershipWithName
+	for m := range wsMemService.IterByUser(userID) {
+		mwon := wsMembershipWithName{WorkspaceMembership: m}
+		if ws, err := wsService.Get(m.WorkspaceID); err == nil {
+			mwon.WorkspaceName = ws.Name
+			mwon.OrganizationID = ws.OrganizationID
+		}
+		wsMems = append(wsMems, mwon)
+	}
+
+	return &userWithMemberships{
+		User:           user,
+		HasPassword:    hasPassword,
+		OrgMemberships: orgMems,
+		WSMemberships:  wsMems,
+	}, nil
+}
+
+// populateActiveContext populates organization/workspace context in the UserResponse.
+func (uwm *userWithMemberships) populateActiveContext(userResp *dto.UserResponse) {
+	// Try workspaces from LRU list in order (most recently used first)
+	for _, savedWsID := range uwm.User.Settings.LastActiveWorkspaces {
+		for _, ws := range uwm.WSMemberships {
+			if ws.WorkspaceID != savedWsID {
+				continue
+			}
+			// Found an accessible workspace from the LRU list
+			userResp.WorkspaceID = ws.WorkspaceID
+			userResp.WorkspaceName = ws.WorkspaceName
+			userResp.WorkspaceRole = dto.WorkspaceRole(ws.Role)
+			uwm.CurrentWSID = ws.WorkspaceID
+			uwm.CurrentWSRole = ws.Role
+			// Set the org context for this workspace
+			userResp.OrganizationID = ws.OrganizationID
+			uwm.CurrentOrgID = ws.OrganizationID
+			// Find org role
+			for _, org := range uwm.OrgMemberships {
+				if org.OrganizationID == ws.OrganizationID {
+					userResp.OrgRole = dto.OrganizationRole(org.Role)
+					uwm.CurrentOrgRole = org.Role
+					break
+				}
+			}
+			return
+		}
+	}
+
+	// No saved workspace accessible, fall through to default
+
+	// Default: Set first org as active
+	if len(uwm.OrgMemberships) > 0 {
+		userResp.OrganizationID = uwm.OrgMemberships[0].OrganizationID
+		userResp.OrgRole = dto.OrganizationRole(uwm.OrgMemberships[0].Role)
+		uwm.CurrentOrgID = uwm.OrgMemberships[0].OrganizationID
+		uwm.CurrentOrgRole = uwm.OrgMemberships[0].Role
+	}
+
+	// Set first workspace in that org as active
+	for _, ws := range uwm.WSMemberships {
+		if ws.OrganizationID != uwm.CurrentOrgID {
+			continue
+		}
+		userResp.WorkspaceID = ws.WorkspaceID
+		userResp.WorkspaceName = ws.WorkspaceName
+		userResp.WorkspaceRole = dto.WorkspaceRole(ws.Role)
+		uwm.CurrentWSID = ws.WorkspaceID
+		uwm.CurrentWSRole = ws.Role
+		break
+	}
+}
+
 func orgMembershipWithNameToResponse(m *orgMembershipWithName) dto.OrgMembershipResponse {
 	return dto.OrgMembershipResponse{
 		ID:               m.ID,
@@ -498,50 +597,4 @@ func userWithMembershipsToResponse(uwm *userWithMemberships) *dto.UserResponse {
 	}
 
 	return resp
-}
-
-// getUserWithMemberships fetches a user and their org/workspace memberships with names.
-func getUserWithMemberships(
-	userService *identity.UserService,
-	orgMemService *identity.OrganizationMembershipService,
-	wsMemService *identity.WorkspaceMembershipService,
-	orgService *identity.OrganizationService,
-	wsService *identity.WorkspaceService,
-	userID ksid.ID,
-) (*userWithMemberships, error) {
-	user, err := userService.Get(userID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Check if user has password set
-	hasPassword := userService.HasPassword(userID)
-
-	// Get org memberships
-	var orgMems []orgMembershipWithName
-	for m := range orgMemService.IterByUser(userID) {
-		mwon := orgMembershipWithName{OrganizationMembership: m}
-		if org, err := orgService.Get(m.OrganizationID); err == nil {
-			mwon.OrganizationName = org.Name
-		}
-		orgMems = append(orgMems, mwon)
-	}
-
-	// Get workspace memberships
-	var wsMems []wsMembershipWithName
-	for m := range wsMemService.IterByUser(userID) {
-		mwon := wsMembershipWithName{WorkspaceMembership: m}
-		if ws, err := wsService.Get(m.WorkspaceID); err == nil {
-			mwon.WorkspaceName = ws.Name
-			mwon.OrganizationID = ws.OrganizationID
-		}
-		wsMems = append(wsMems, mwon)
-	}
-
-	return &userWithMemberships{
-		User:           user,
-		HasPassword:    hasPassword,
-		OrgMemberships: orgMems,
-		WSMemberships:  wsMems,
-	}, nil
 }

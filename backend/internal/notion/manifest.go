@@ -18,50 +18,6 @@ type ViewManifest struct {
 	Databases []DatabaseViewConfig `yaml:"databases"`
 }
 
-// DatabaseViewConfig defines views for a specific database.
-type DatabaseViewConfig struct {
-	NotionID string       `yaml:"notion_id"`
-	Views    []ViewConfig `yaml:"views"`
-}
-
-// ViewConfig defines a single view configuration.
-type ViewConfig struct {
-	Name         string         `yaml:"name"`
-	Type         string         `yaml:"type"`
-	Default      bool           `yaml:"default,omitempty"`
-	Columns      []ColumnConfig `yaml:"columns,omitempty"`
-	Sorts        []SortConfig   `yaml:"sorts,omitempty"`
-	Filters      []FilterConfig `yaml:"filters,omitempty"`
-	GroupBy      string         `yaml:"group_by,omitempty"`
-	HiddenGroups []string       `yaml:"hidden_groups,omitempty"`
-	DateProperty string         `yaml:"date_property,omitempty"`
-	// Gallery-specific
-	CoverProperty string `yaml:"cover_property,omitempty"`
-	TitleProperty string `yaml:"title_property,omitempty"`
-}
-
-// ColumnConfig defines column visibility and width.
-type ColumnConfig struct {
-	Property string `yaml:"property"`
-	Width    int    `yaml:"width,omitempty"`
-	Visible  *bool  `yaml:"visible,omitempty"` // nil means visible
-}
-
-// SortConfig defines a sort criterion.
-type SortConfig struct {
-	Property  string `yaml:"property"`
-	Direction string `yaml:"direction"` // "asc" or "desc"
-}
-
-// FilterConfig defines a filter condition.
-type FilterConfig struct {
-	Property string         `yaml:"property,omitempty"`
-	Operator string         `yaml:"operator,omitempty"`
-	Value    any            `yaml:"value,omitempty"`
-	And      []FilterConfig `yaml:"and,omitempty"`
-	Or       []FilterConfig `yaml:"or,omitempty"`
-}
-
 // ParseManifest reads and parses a view manifest from a file.
 // The path is provided by the CLI user, so file inclusion is expected.
 func ParseManifest(path string) (*ViewManifest, error) {
@@ -147,6 +103,50 @@ func (m *ViewManifest) ToContentViews(notionID string) []content.View {
 		views = append(views, configToView(&configs[i]))
 	}
 	return views
+}
+
+// DatabaseViewConfig defines views for a specific database.
+type DatabaseViewConfig struct {
+	NotionID string       `yaml:"notion_id"`
+	Views    []ViewConfig `yaml:"views"`
+}
+
+// ViewConfig defines a single view configuration.
+type ViewConfig struct {
+	Name         string         `yaml:"name"`
+	Type         string         `yaml:"type"`
+	Default      bool           `yaml:"default,omitempty"`
+	Columns      []ColumnConfig `yaml:"columns,omitempty"`
+	Sorts        []SortConfig   `yaml:"sorts,omitempty"`
+	Filters      []FilterConfig `yaml:"filters,omitempty"`
+	GroupBy      string         `yaml:"group_by,omitempty"`
+	HiddenGroups []string       `yaml:"hidden_groups,omitempty"`
+	DateProperty string         `yaml:"date_property,omitempty"`
+	// Gallery-specific
+	CoverProperty string `yaml:"cover_property,omitempty"`
+	TitleProperty string `yaml:"title_property,omitempty"`
+}
+
+// ColumnConfig defines column visibility and width.
+type ColumnConfig struct {
+	Property string `yaml:"property"`
+	Width    int    `yaml:"width,omitempty"`
+	Visible  *bool  `yaml:"visible,omitempty"` // nil means visible
+}
+
+// SortConfig defines a sort criterion.
+type SortConfig struct {
+	Property  string `yaml:"property"`
+	Direction string `yaml:"direction"` // "asc" or "desc"
+}
+
+// FilterConfig defines a filter condition.
+type FilterConfig struct {
+	Property string         `yaml:"property,omitempty"`
+	Operator string         `yaml:"operator,omitempty"`
+	Value    any            `yaml:"value,omitempty"`
+	And      []FilterConfig `yaml:"and,omitempty"`
+	Or       []FilterConfig `yaml:"or,omitempty"`
 }
 
 // configToView converts a ViewConfig to a content.View.

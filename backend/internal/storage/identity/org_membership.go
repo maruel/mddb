@@ -14,15 +14,6 @@ import (
 // OrganizationRole defines the role of a user within an organization.
 type OrganizationRole string
 
-const (
-	// OrgRoleOwner has full control including billing.
-	OrgRoleOwner OrganizationRole = "org:owner"
-	// OrgRoleAdmin can manage workspaces and members.
-	OrgRoleAdmin OrganizationRole = "org:admin"
-	// OrgRoleMember can only access granted workspaces.
-	OrgRoleMember OrganizationRole = "org:member"
-)
-
 // IsValid returns true if the role is a valid organization role.
 func (r OrganizationRole) IsValid() bool {
 	switch r {
@@ -51,6 +42,15 @@ func (r OrganizationRole) CanManageBilling() bool {
 func (r OrganizationRole) CanDeleteOrg() bool {
 	return r == OrgRoleOwner
 }
+
+const (
+	// OrgRoleOwner has full control including billing.
+	OrgRoleOwner OrganizationRole = "org:owner"
+	// OrgRoleAdmin can manage workspaces and members.
+	OrgRoleAdmin OrganizationRole = "org:admin"
+	// OrgRoleMember can only access granted workspaces.
+	OrgRoleMember OrganizationRole = "org:member"
+)
 
 // OrganizationMembership represents a user's relationship with an organization.
 type OrganizationMembership struct {

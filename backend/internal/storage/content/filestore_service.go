@@ -31,17 +31,6 @@ type FileStoreService struct {
 	stores       map[ksid.ID]*WorkspaceFileStore // wsID -> WorkspaceFileStore
 }
 
-// page is an internal type for reading/writing page markdown files.
-type page struct {
-	title    string
-	content  string
-	created  storage.Time
-	modified storage.Time
-	tags     []string
-	icon     string // emoji character or MDI icon name
-	cover    string // asset filename used as cover image
-}
-
 // NewFileStoreService creates a versioned file store service.
 // gitMgr is required - all operations are versioned.
 // wsSvc provides quota limits for workspaces.
@@ -279,4 +268,15 @@ func (svc *FileStoreService) CheckServerStorageQuota(additionalBytes, maxBytes i
 		return ErrServerStorageQuotaExceeded
 	}
 	return nil
+}
+
+// page is an internal type for reading/writing page markdown files.
+type page struct {
+	title    string
+	content  string
+	created  storage.Time
+	modified storage.Time
+	tags     []string
+	icon     string // emoji character or MDI icon name
+	cover    string // asset filename used as cover image
 }

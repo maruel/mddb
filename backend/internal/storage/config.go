@@ -42,166 +42,6 @@ type ServerConfig struct {
 	RateLimits RateLimits `json:"rate_limits"`
 }
 
-// RateLimits defines rate limiting configuration (requests per minute).
-type RateLimits struct {
-	// AuthRatePerMin limits authentication attempts (login, register, OAuth).
-	// 0 means unlimited.
-	AuthRatePerMin int `json:"auth_rate_per_min"`
-
-	// WriteRatePerMin limits write operations (POST/DELETE).
-	// 0 means unlimited.
-	WriteRatePerMin int `json:"write_rate_per_min"`
-
-	// ReadAuthRatePerMin limits authenticated read operations.
-	// 0 means unlimited.
-	ReadAuthRatePerMin int `json:"read_auth_rate_per_min"`
-
-	// ReadUnauthRatePerMin limits unauthenticated read operations.
-	// 0 means unlimited.
-	ReadUnauthRatePerMin int `json:"read_unauth_rate_per_min"`
-}
-
-// Validate checks that rate limit values are non-negative.
-func (r *RateLimits) Validate() error {
-	if r.AuthRatePerMin < 0 {
-		return errors.New("auth_rate_per_min must be non-negative")
-	}
-	if r.WriteRatePerMin < 0 {
-		return errors.New("write_rate_per_min must be non-negative")
-	}
-	if r.ReadAuthRatePerMin < 0 {
-		return errors.New("read_auth_rate_per_min must be non-negative")
-	}
-	if r.ReadUnauthRatePerMin < 0 {
-		return errors.New("read_unauth_rate_per_min must be non-negative")
-	}
-	return nil
-}
-
-// DefaultRateLimits returns the default rate limits.
-func DefaultRateLimits() RateLimits {
-	return RateLimits{
-		AuthRatePerMin:       5,     // 5 req/min for auth
-		WriteRatePerMin:      60,    // 60 req/min for writes
-		ReadAuthRatePerMin:   30000, // 30k req/min for authenticated reads
-		ReadUnauthRatePerMin: 6000,  // 6k req/min for unauthenticated reads
-	}
-}
-
-// ServerQuotas defines server-wide resource limits.
-// ResourceQuotas fields are shared with org and workspace layers;
-// the effective quota is min(server, org, workspace) per field.
-type ServerQuotas struct {
-	ResourceQuotas
-
-	// MaxRequestBodyBytes limits the size of any single HTTP request body.
-	MaxRequestBodyBytes int64 `json:"max_request_body_bytes"`
-
-	// MaxSessionsPerUser limits active sessions per user.
-	MaxSessionsPerUser int `json:"max_sessions_per_user"`
-
-	// MaxOrganizations limits total organizations on the server.
-	MaxOrganizations int `json:"max_organizations"`
-
-	// MaxWorkspaces limits total workspaces on the server.
-	MaxWorkspaces int `json:"max_workspaces"`
-
-	// MaxUsers limits total users on the server.
-	MaxUsers int `json:"max_users"`
-
-	// MaxTotalStorageBytes limits total storage across all workspaces.
-	MaxTotalStorageBytes int64 `json:"max_total_storage_bytes"`
-
-	// MaxEgressBandwidthBps limits total egress bandwidth in bytes per second.
-	// 0 means unlimited.
-	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps"`
-
-	// NotificationRetentionDays is how many days to keep notifications before GC.
-	// 0 means no age-based deletion.
-	NotificationRetentionDays int `json:"notification_retention_days"`
-
-	// MaxNotificationsPerUser caps notifications per user. Oldest are deleted when exceeded.
-	// 0 means unlimited.
-	MaxNotificationsPerUser int `json:"max_notifications_per_user"`
-}
-
-// Validate checks that all quota values are valid.
-// All ResourceQuotas fields must be positive (server is the ultimate fallback; zero is not allowed).
-func (q *ServerQuotas) Validate() error {
-	if err := q.ValidatePositive(); err != nil {
-		return err
-	}
-	if q.MaxRequestBodyBytes < 0 {
-		return errors.New("max_request_body_bytes must be non-negative")
-	}
-	if q.MaxSessionsPerUser < 0 {
-		return errors.New("max_sessions_per_user must be non-negative")
-	}
-	if q.MaxOrganizations < 0 {
-		return errors.New("max_organizations must be non-negative")
-	}
-	if q.MaxWorkspaces < 0 {
-		return errors.New("max_workspaces must be non-negative")
-	}
-	if q.MaxUsers < 0 {
-		return errors.New("max_users must be non-negative")
-	}
-	if q.MaxTotalStorageBytes < 0 {
-		return errors.New("max_total_storage_bytes must be non-negative")
-	}
-	if q.MaxEgressBandwidthBps < 0 {
-		return errors.New("max_egress_bandwidth_bps must be non-negative")
-	}
-	if q.NotificationRetentionDays < 0 {
-		return errors.New("notification_retention_days must be non-negative")
-	}
-	if q.MaxNotificationsPerUser < 0 {
-		return errors.New("max_notifications_per_user must be non-negative")
-	}
-	return nil
-}
-
-// DefaultServerQuotas returns the default server-wide quotas.
-func DefaultServerQuotas() ServerQuotas {
-	maxUsers := 50 // 50 users
-	// Increase quota for e2e tests (TEST_OAUTH=1 indicates test mode)
-	if os.Getenv("TEST_OAUTH") == "1" {
-		maxUsers = 200
-	}
-	return ServerQuotas{
-		ResourceQuotas:            DefaultResourceQuotas(),
-		MaxRequestBodyBytes:       10 * 1024 * 1024, // 10 MiB
-		MaxSessionsPerUser:        10,               // 10 sessions
-		MaxOrganizations:          1000,             // 1000 organizations
-		MaxWorkspaces:             10000,            // 10000 workspaces
-		MaxUsers:                  maxUsers,
-		MaxTotalStorageBytes:      100 * 1024 * 1024 * 1024, // 100 GiB
-		MaxEgressBandwidthBps:     0,                        // unlimited
-		NotificationRetentionDays: 90,                       // 90 days
-		MaxNotificationsPerUser:   500,                      // 500 per user
-	}
-}
-
-// Validate checks that the configuration is valid.
-func (c *ServerConfig) Validate() error {
-	if len(c.JWTSecret) == 0 {
-		return errors.New("jwt_secret is required")
-	}
-	if len(c.JWTSecret) < 32 {
-		return errors.New("jwt_secret must be at least 32 bytes")
-	}
-	if err := c.SMTP.Validate(); err != nil {
-		return fmt.Errorf("smtp: %w", err)
-	}
-	if err := c.Quotas.Validate(); err != nil {
-		return fmt.Errorf("quotas: %w", err)
-	}
-	if err := c.RateLimits.Validate(); err != nil {
-		return fmt.Errorf("rate_limits: %w", err)
-	}
-	return nil
-}
-
 // LoadServerConfig loads configuration from dataDir/server_config.json.
 // Creates the file with defaults if it doesn't exist.
 // Auto-generates JWTSecret if empty.
@@ -258,6 +98,26 @@ func LoadServerConfig(dataDir string) (*ServerConfig, error) {
 	return &cfg, nil
 }
 
+// Validate checks that the configuration is valid.
+func (c *ServerConfig) Validate() error {
+	if len(c.JWTSecret) == 0 {
+		return errors.New("jwt_secret is required")
+	}
+	if len(c.JWTSecret) < 32 {
+		return errors.New("jwt_secret must be at least 32 bytes")
+	}
+	if err := c.SMTP.Validate(); err != nil {
+		return fmt.Errorf("smtp: %w", err)
+	}
+	if err := c.Quotas.Validate(); err != nil {
+		return fmt.Errorf("quotas: %w", err)
+	}
+	if err := c.RateLimits.Validate(); err != nil {
+		return fmt.Errorf("rate_limits: %w", err)
+	}
+	return nil
+}
+
 // Save saves configuration to dataDir/server_config.json.
 func (c *ServerConfig) Save(dataDir string) error {
 	if err := c.Validate(); err != nil {
@@ -271,6 +131,146 @@ func (c *ServerConfig) Save(dataDir string) error {
 	data = append(data, '\n')
 	if err := os.WriteFile(filepath.Join(dataDir, "server_config.json"), data, 0o600); err != nil {
 		return fmt.Errorf("failed to write config.json: %w", err)
+	}
+	return nil
+}
+
+// RateLimits defines rate limiting configuration (requests per minute).
+type RateLimits struct {
+	// AuthRatePerMin limits authentication attempts (login, register, OAuth).
+	// 0 means unlimited.
+	AuthRatePerMin int `json:"auth_rate_per_min"`
+
+	// WriteRatePerMin limits write operations (POST/DELETE).
+	// 0 means unlimited.
+	WriteRatePerMin int `json:"write_rate_per_min"`
+
+	// ReadAuthRatePerMin limits authenticated read operations.
+	// 0 means unlimited.
+	ReadAuthRatePerMin int `json:"read_auth_rate_per_min"`
+
+	// ReadUnauthRatePerMin limits unauthenticated read operations.
+	// 0 means unlimited.
+	ReadUnauthRatePerMin int `json:"read_unauth_rate_per_min"`
+}
+
+// DefaultRateLimits returns the default rate limits.
+func DefaultRateLimits() RateLimits {
+	return RateLimits{
+		AuthRatePerMin:       5,     // 5 req/min for auth
+		WriteRatePerMin:      60,    // 60 req/min for writes
+		ReadAuthRatePerMin:   30000, // 30k req/min for authenticated reads
+		ReadUnauthRatePerMin: 6000,  // 6k req/min for unauthenticated reads
+	}
+}
+
+// Validate checks that rate limit values are non-negative.
+func (r *RateLimits) Validate() error {
+	if r.AuthRatePerMin < 0 {
+		return errors.New("auth_rate_per_min must be non-negative")
+	}
+	if r.WriteRatePerMin < 0 {
+		return errors.New("write_rate_per_min must be non-negative")
+	}
+	if r.ReadAuthRatePerMin < 0 {
+		return errors.New("read_auth_rate_per_min must be non-negative")
+	}
+	if r.ReadUnauthRatePerMin < 0 {
+		return errors.New("read_unauth_rate_per_min must be non-negative")
+	}
+	return nil
+}
+
+// ServerQuotas defines server-wide resource limits.
+// ResourceQuotas fields are shared with org and workspace layers;
+// the effective quota is min(server, org, workspace) per field.
+type ServerQuotas struct {
+	ResourceQuotas
+
+	// MaxRequestBodyBytes limits the size of any single HTTP request body.
+	MaxRequestBodyBytes int64 `json:"max_request_body_bytes"`
+
+	// MaxSessionsPerUser limits active sessions per user.
+	MaxSessionsPerUser int `json:"max_sessions_per_user"`
+
+	// MaxOrganizations limits total organizations on the server.
+	MaxOrganizations int `json:"max_organizations"`
+
+	// MaxWorkspaces limits total workspaces on the server.
+	MaxWorkspaces int `json:"max_workspaces"`
+
+	// MaxUsers limits total users on the server.
+	MaxUsers int `json:"max_users"`
+
+	// MaxTotalStorageBytes limits total storage across all workspaces.
+	MaxTotalStorageBytes int64 `json:"max_total_storage_bytes"`
+
+	// MaxEgressBandwidthBps limits total egress bandwidth in bytes per second.
+	// 0 means unlimited.
+	MaxEgressBandwidthBps int64 `json:"max_egress_bandwidth_bps"`
+
+	// NotificationRetentionDays is how many days to keep notifications before GC.
+	// 0 means no age-based deletion.
+	NotificationRetentionDays int `json:"notification_retention_days"`
+
+	// MaxNotificationsPerUser caps notifications per user. Oldest are deleted when exceeded.
+	// 0 means unlimited.
+	MaxNotificationsPerUser int `json:"max_notifications_per_user"`
+}
+
+// DefaultServerQuotas returns the default server-wide quotas.
+func DefaultServerQuotas() ServerQuotas {
+	maxUsers := 50 // 50 users
+	// Increase quota for e2e tests (TEST_OAUTH=1 indicates test mode)
+	if os.Getenv("TEST_OAUTH") == "1" {
+		maxUsers = 200
+	}
+	return ServerQuotas{
+		ResourceQuotas:            DefaultResourceQuotas(),
+		MaxRequestBodyBytes:       10 * 1024 * 1024, // 10 MiB
+		MaxSessionsPerUser:        10,               // 10 sessions
+		MaxOrganizations:          1000,             // 1000 organizations
+		MaxWorkspaces:             10000,            // 10000 workspaces
+		MaxUsers:                  maxUsers,
+		MaxTotalStorageBytes:      100 * 1024 * 1024 * 1024, // 100 GiB
+		MaxEgressBandwidthBps:     0,                        // unlimited
+		NotificationRetentionDays: 90,                       // 90 days
+		MaxNotificationsPerUser:   500,                      // 500 per user
+	}
+}
+
+// Validate checks that all quota values are valid.
+// All ResourceQuotas fields must be positive (server is the ultimate fallback; zero is not allowed).
+func (q *ServerQuotas) Validate() error {
+	if err := q.ValidatePositive(); err != nil {
+		return err
+	}
+	if q.MaxRequestBodyBytes < 0 {
+		return errors.New("max_request_body_bytes must be non-negative")
+	}
+	if q.MaxSessionsPerUser < 0 {
+		return errors.New("max_sessions_per_user must be non-negative")
+	}
+	if q.MaxOrganizations < 0 {
+		return errors.New("max_organizations must be non-negative")
+	}
+	if q.MaxWorkspaces < 0 {
+		return errors.New("max_workspaces must be non-negative")
+	}
+	if q.MaxUsers < 0 {
+		return errors.New("max_users must be non-negative")
+	}
+	if q.MaxTotalStorageBytes < 0 {
+		return errors.New("max_total_storage_bytes must be non-negative")
+	}
+	if q.MaxEgressBandwidthBps < 0 {
+		return errors.New("max_egress_bandwidth_bps must be non-negative")
+	}
+	if q.NotificationRetentionDays < 0 {
+		return errors.New("notification_retention_days must be non-negative")
+	}
+	if q.MaxNotificationsPerUser < 0 {
+		return errors.New("max_notifications_per_user must be non-negative")
 	}
 	return nil
 }

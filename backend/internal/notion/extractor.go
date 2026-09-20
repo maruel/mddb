@@ -49,13 +49,6 @@ func NewExtractor(client *Client, writer *Writer, progress ProgressReporter) *Ex
 	}
 }
 
-// databaseData holds fetched data for a database during extraction.
-type databaseData struct {
-	db   *Database
-	node *content.Node
-	rows []Page
-}
-
 // Extract performs the full extraction based on options.
 func (e *Extractor) Extract(ctx context.Context, opts ExtractOptions) (*ExtractStats, error) {
 	startTime := time.Now()
@@ -527,4 +520,11 @@ func (e *Extractor) DryRunJSON(ctx context.Context, opts ExtractOptions) (string
 	}
 
 	return string(data), nil
+}
+
+// databaseData holds fetched data for a database during extraction.
+type databaseData struct {
+	db   *Database
+	node *content.Node
+	rows []Page
 }

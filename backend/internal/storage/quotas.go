@@ -29,6 +29,47 @@ type ResourceQuotas struct {
 	MaxColumnsPerTable int `json:"max_columns_per_table" jsonschema:"description=Maximum columns per table (-1=inherit, 0=disabled, positive=limit)"`
 }
 
+// AllInheritResourceQuotas returns a ResourceQuotas where every field is -1 (inherit).
+// Use this as a placeholder when a layer should be excluded from EffectiveQuotas.
+func AllInheritResourceQuotas() ResourceQuotas {
+	return ResourceQuotas{
+		MaxPages:              -1,
+		MaxStorageBytes:       -1,
+		MaxRecordsPerTable:    -1,
+		MaxAssetSizeBytes:     -1,
+		MaxTablesPerWorkspace: -1,
+		MaxColumnsPerTable:    -1,
+	}
+}
+
+// DefaultResourceQuotas returns the default server-level resource quotas.
+func DefaultResourceQuotas() ResourceQuotas {
+	return ResourceQuotas{
+		MaxPages:              1000,
+		MaxStorageBytes:       1024 * 1024 * 1024, // 1 GiB
+		MaxRecordsPerTable:    10000,
+		MaxAssetSizeBytes:     50 * 1024 * 1024, // 50 MiB
+		MaxTablesPerWorkspace: 100,
+		MaxColumnsPerTable:    50,
+	}
+}
+
+// EffectiveQuotas computes the effective quotas by taking the minimum non-inherit
+// value across server, org, and workspace layers for each field.
+// A -1 value means "inherit from parent" and is skipped.
+// A 0 value means "disabled" and is treated as 0 (blocks all usage).
+// The server layer must always have positive values, so the result is always ≥ 0.
+func EffectiveQuotas(server, org, ws ResourceQuotas) ResourceQuotas {
+	return ResourceQuotas{
+		MaxPages:              minEffective(server.MaxPages, org.MaxPages, ws.MaxPages),
+		MaxStorageBytes:       minEffectiveInt64(server.MaxStorageBytes, org.MaxStorageBytes, ws.MaxStorageBytes),
+		MaxRecordsPerTable:    minEffective(server.MaxRecordsPerTable, org.MaxRecordsPerTable, ws.MaxRecordsPerTable),
+		MaxAssetSizeBytes:     minEffectiveInt64(server.MaxAssetSizeBytes, org.MaxAssetSizeBytes, ws.MaxAssetSizeBytes),
+		MaxTablesPerWorkspace: minEffective(server.MaxTablesPerWorkspace, org.MaxTablesPerWorkspace, ws.MaxTablesPerWorkspace),
+		MaxColumnsPerTable:    minEffective(server.MaxColumnsPerTable, org.MaxColumnsPerTable, ws.MaxColumnsPerTable),
+	}
+}
+
 // Validate checks that all quota values are valid for org/workspace layers.
 // -1 means "inherit from parent", 0 means "disabled", and positive means a limit.
 // Values below -1 are invalid.
@@ -76,47 +117,6 @@ func (q *ResourceQuotas) ValidatePositive() error {
 		return errors.New("max_columns_per_table must be positive")
 	}
 	return nil
-}
-
-// AllInheritResourceQuotas returns a ResourceQuotas where every field is -1 (inherit).
-// Use this as a placeholder when a layer should be excluded from EffectiveQuotas.
-func AllInheritResourceQuotas() ResourceQuotas {
-	return ResourceQuotas{
-		MaxPages:              -1,
-		MaxStorageBytes:       -1,
-		MaxRecordsPerTable:    -1,
-		MaxAssetSizeBytes:     -1,
-		MaxTablesPerWorkspace: -1,
-		MaxColumnsPerTable:    -1,
-	}
-}
-
-// DefaultResourceQuotas returns the default server-level resource quotas.
-func DefaultResourceQuotas() ResourceQuotas {
-	return ResourceQuotas{
-		MaxPages:              1000,
-		MaxStorageBytes:       1024 * 1024 * 1024, // 1 GiB
-		MaxRecordsPerTable:    10000,
-		MaxAssetSizeBytes:     50 * 1024 * 1024, // 50 MiB
-		MaxTablesPerWorkspace: 100,
-		MaxColumnsPerTable:    50,
-	}
-}
-
-// EffectiveQuotas computes the effective quotas by taking the minimum non-inherit
-// value across server, org, and workspace layers for each field.
-// A -1 value means "inherit from parent" and is skipped.
-// A 0 value means "disabled" and is treated as 0 (blocks all usage).
-// The server layer must always have positive values, so the result is always ≥ 0.
-func EffectiveQuotas(server, org, ws ResourceQuotas) ResourceQuotas {
-	return ResourceQuotas{
-		MaxPages:              minEffective(server.MaxPages, org.MaxPages, ws.MaxPages),
-		MaxStorageBytes:       minEffectiveInt64(server.MaxStorageBytes, org.MaxStorageBytes, ws.MaxStorageBytes),
-		MaxRecordsPerTable:    minEffective(server.MaxRecordsPerTable, org.MaxRecordsPerTable, ws.MaxRecordsPerTable),
-		MaxAssetSizeBytes:     minEffectiveInt64(server.MaxAssetSizeBytes, org.MaxAssetSizeBytes, ws.MaxAssetSizeBytes),
-		MaxTablesPerWorkspace: minEffective(server.MaxTablesPerWorkspace, org.MaxTablesPerWorkspace, ws.MaxTablesPerWorkspace),
-		MaxColumnsPerTable:    minEffective(server.MaxColumnsPerTable, org.MaxColumnsPerTable, ws.MaxColumnsPerTable),
-	}
 }
 
 // minEffective returns the minimum non-inherit value among the arguments.

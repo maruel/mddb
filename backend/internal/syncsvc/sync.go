@@ -45,8 +45,6 @@ func New(wsSvc *identity.WorkspaceService, fileStore *content.FileStoreService, 
 	}
 }
 
-const autoPushDebounce = 5 * time.Second
-
 // TriggerPush starts an async debounced push for a workspace if GitAutoPush is enabled.
 func (s *Service) TriggerPush(wsID ksid.ID) {
 	ws, err := s.wsSvc.Get(wsID)
@@ -233,3 +231,5 @@ func (s *Service) updateLastSync(wsID ksid.ID) {
 		slog.Error("Failed to update last sync", "wsID", wsID, "err", err)
 	}
 }
+
+const autoPushDebounce = 5 * time.Second

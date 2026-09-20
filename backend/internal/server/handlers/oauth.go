@@ -44,14 +44,6 @@ func NewOAuthHandler(svc *Services, cfg *Config) *OAuthHandler {
 	}
 }
 
-// oauthUserInfo holds user info fetched from an OAuth provider.
-type oauthUserInfo struct {
-	ID        string
-	Email     string
-	Name      string
-	AvatarURL string
-}
-
 // AddProvider adds an OAuth2 provider configuration.
 func (h *OAuthHandler) AddProvider(name identity.OAuthProvider, clientID, clientSecret, redirectURL string) {
 	var endpoint oauth2.Endpoint
@@ -402,6 +394,14 @@ func (h *OAuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 		Name:      userInfo.Name,
 		AvatarURL: userInfo.AvatarURL,
 	})
+}
+
+// oauthUserInfo holds user info fetched from an OAuth provider.
+type oauthUserInfo struct {
+	ID        string
+	Email     string
+	Name      string
+	AvatarURL string
 }
 
 // finishOAuthLogin finds or creates a user from OAuth info, generates a JWT, and redirects.

@@ -15,16 +15,6 @@ type UserHandler struct {
 	Svc *Services
 }
 
-// bestAvatarURL returns the first non-empty avatar URL from a user's OAuth identities.
-func bestAvatarURL(u *identity.User) string {
-	for i := range u.OAuthIdentities {
-		if u.OAuthIdentities[i].AvatarURL != "" {
-			return u.OAuthIdentities[i].AvatarURL
-		}
-	}
-	return ""
-}
-
 // ListUsers returns all users in the organization.
 func (h *UserHandler) ListUsers(ctx context.Context, orgID ksid.ID, _ *identity.User, _ *dto.ListUsersRequest) (*dto.ListUsersResponse, error) {
 	// Filter by organization membership and convert to response
@@ -213,4 +203,14 @@ func (h *UserHandler) UpdateUserSettings(ctx context.Context, user *identity.Use
 		return nil, dto.InternalWithError("Failed to get user", err)
 	}
 	return userWithMembershipsToResponse(uwm), nil
+}
+
+// bestAvatarURL returns the first non-empty avatar URL from a user's OAuth identities.
+func bestAvatarURL(u *identity.User) string {
+	for i := range u.OAuthIdentities {
+		if u.OAuthIdentities[i].AvatarURL != "" {
+			return u.OAuthIdentities[i].AvatarURL
+		}
+	}
+	return ""
 }

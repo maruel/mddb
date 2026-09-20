@@ -13,3 +13,4 @@ coverage.out
 /test-results/
 /tmp/
 bundle-stats.html
+/custom-gcl

@@ -26,21 +26,6 @@ type Client struct {
 	tokens map[int64]cachedToken // installationID -> cached token
 }
 
-type cachedToken struct {
-	Token     string
-	ExpiresAt time.Time
-}
-
-// Repo represents a GitHub repository returned by the installation API.
-type Repo struct {
-	FullName string `json:"full_name"`
-	Owner    string `json:"owner"`
-	Name     string `json:"name"`
-	Private  bool   `json:"private"`
-	HTMLURL  string `json:"html_url"`
-	CloneURL string `json:"clone_url"`
-}
-
 // NewClient creates a new GitHub App client.
 func NewClient(appID int64, privateKey *rsa.PrivateKey) *Client {
 	return &Client{
@@ -216,4 +201,19 @@ func (c *Client) ListInstallationRepos(ctx context.Context, installationID int64
 		}
 	}
 	return repos, nil
+}
+
+type cachedToken struct {
+	Token     string
+	ExpiresAt time.Time
+}
+
+// Repo represents a GitHub repository returned by the installation API.
+type Repo struct {
+	FullName string `json:"full_name"`
+	Owner    string `json:"owner"`
+	Name     string `json:"name"`
+	Private  bool   `json:"private"`
+	HTMLURL  string `json:"html_url"`
+	CloneURL string `json:"clone_url"`
 }

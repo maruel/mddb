@@ -233,6 +233,15 @@ type View struct {
 // ViewType defines the layout type for a view.
 type ViewType string
 
+// Validate returns an error if the view type is not a known valid value.
+func (v ViewType) Validate() error {
+	switch v {
+	case ViewTypeTable, ViewTypeBoard, ViewTypeGallery, ViewTypeList, ViewTypeCalendar:
+		return nil
+	}
+	return errors.New("must be one of: table, board, gallery, list, calendar")
+}
+
 const (
 	// ViewTypeTable displays records in a spreadsheet-like table.
 	ViewTypeTable ViewType = "table"
@@ -245,15 +254,6 @@ const (
 	// ViewTypeCalendar displays records on a calendar by date property.
 	ViewTypeCalendar ViewType = "calendar"
 )
-
-// Validate returns an error if the view type is not a known valid value.
-func (v ViewType) Validate() error {
-	switch v {
-	case ViewTypeTable, ViewTypeBoard, ViewTypeGallery, ViewTypeList, ViewTypeCalendar:
-		return nil
-	}
-	return errors.New("must be one of: table, board, gallery, list, calendar")
-}
 
 // ViewColumn defines the visibility and width of a property column.
 type ViewColumn struct {
@@ -273,6 +273,17 @@ type Filter struct {
 
 // FilterOp defines the comparison operator for a filter.
 type FilterOp string
+
+// Validate returns an error if the filter operator is not a known valid value.
+func (f FilterOp) Validate() error {
+	switch f {
+	case FilterOpEquals, FilterOpNotEquals, FilterOpContains, FilterOpNotContains,
+		FilterOpStartsWith, FilterOpEndsWith, FilterOpGreaterThan, FilterOpLessThan,
+		FilterOpGreaterEqual, FilterOpLessEqual, FilterOpIsEmpty, FilterOpIsNotEmpty:
+		return nil
+	}
+	return errors.New("invalid operator: " + string(f))
+}
 
 const (
 	// FilterOpEquals matches if value equals the filter value.
@@ -300,17 +311,6 @@ const (
 	// FilterOpIsNotEmpty matches if value is not empty/null.
 	FilterOpIsNotEmpty FilterOp = "is_not_empty"
 )
-
-// Validate returns an error if the filter operator is not a known valid value.
-func (f FilterOp) Validate() error {
-	switch f {
-	case FilterOpEquals, FilterOpNotEquals, FilterOpContains, FilterOpNotContains,
-		FilterOpStartsWith, FilterOpEndsWith, FilterOpGreaterThan, FilterOpLessThan,
-		FilterOpGreaterEqual, FilterOpLessEqual, FilterOpIsEmpty, FilterOpIsNotEmpty:
-		return nil
-	}
-	return errors.New("invalid operator: " + string(f))
-}
 
 // Sort defines the sort order for a property.
 type Sort struct {

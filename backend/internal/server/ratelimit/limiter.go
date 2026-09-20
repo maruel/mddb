@@ -31,11 +31,6 @@ type Limiter struct {
 	count   atomic.Int64
 }
 
-type bucket struct {
-	limiter  *rate.Limiter
-	lastSeen time.Time
-}
-
 // NewLimiter creates a rate limiter allowing requests tokens per window with burst capacity.
 func NewLimiter(requests int, window time.Duration, burst int) *Limiter {
 	// Convert requests/window to tokens/second
@@ -172,4 +167,9 @@ func (l *Limiter) Update(requests int, window time.Duration, burst int) {
 		b.limiter.SetLimit(l.rate)
 		b.limiter.SetBurst(l.burst)
 	}
+}
+
+type bucket struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
 }
