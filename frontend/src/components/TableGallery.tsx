@@ -69,12 +69,15 @@ export default function TableGallery(props: TableGalleryProps) {
                             alt={getRecordTitle(record, props.columns) || "Record"}
                             class={styles.image}
                             onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                              const sibling = e.currentTarget.nextSibling as HTMLElement | null;
-                              sibling?.style.setProperty("display", "flex");
+                              e.currentTarget.classList.add(styles.imageHidden as string);
+                              const placeholder = e.currentTarget.nextElementSibling as HTMLElement | null;
+                              placeholder?.classList.replace(
+                                styles.imagePlaceholderHidden as string,
+                                styles.imagePlaceholderVisible as string,
+                              );
                             }}
                           />
-                          <div class={styles.imagePlaceholder} style={{ display: "none" }}>
+                          <div class={`${styles.imagePlaceholder} ${styles.imagePlaceholderHidden}`}>
                             {t("table.noImage")}
                           </div>
                         </Show>

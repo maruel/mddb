@@ -9,20 +9,16 @@
 /* Handle wrapper positioned to the left */
 .handleWrapper {
   position: absolute;
-  left: -28px;
   top: 0;
-  height: 100%;
+  left: -28px;
   display: flex;
   align-items: center;
+  height: 100%;
   opacity: 0;
   transition: opacity 0.15s ease;
 }
 
 /* Show handle on hover */
-.row:hover .handleWrapper,
-.row:focus-within .handleWrapper {
-  opacity: 1;
-}
 
 /* Dragging state */
 .row.dragging {
@@ -32,22 +28,22 @@
 /* Drop indicator line */
 .dropIndicator {
   position: absolute;
-  left: 0;
   right: 0;
-  height: 2px;
-  background: var(--c-surface-accent-solid);
-  pointer-events: none;
+  left: 0;
   z-index: 100;
+  height: 2px;
+  pointer-events: none;
+  background: var(--c-surface-accent-solid);
   border-radius: 1px;
 }
 
 .dropIndicator::before,
 .dropIndicator::after {
-  content: "";
   position: absolute;
   top: -3px;
   width: 8px;
   height: 8px;
+  content: "";
   background: var(--c-surface-accent-solid);
   border-radius: 50%;
 }
@@ -67,8 +63,13 @@ tr.row {
 
 tr.row .handleWrapper {
   position: absolute;
-  left: -28px;
   top: 50%;
-  transform: translateY(-50%);
+  left: -28px;
   height: auto;
+  transform: translateY(-50%);
+}
+
+.row:hover .handleWrapper,
+.row:focus-within .handleWrapper {
+  opacity: 1;
 }

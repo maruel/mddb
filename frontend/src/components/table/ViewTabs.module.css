@@ -1,16 +1,17 @@
 /* Styles for ViewTabs component - horizontal tabs for saved table views. */
 
 .container {
-  flex: 1;
   display: flex;
+  flex: 1;
   min-width: 0;
+
   /* No overflow:hidden here — would clip the add-view dropdown */
 }
 
 .tabs {
   display: flex;
-  align-items: stretch;
   flex: 1;
+  align-items: stretch;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -22,9 +23,9 @@
 
 /* Wrapper holds the tab button and optional delete button as siblings */
 .tabWrapper {
+  position: relative;
   display: flex;
   align-items: stretch;
-  position: relative;
   border-radius: var(--radius-sm);
 }
 
@@ -34,15 +35,16 @@
 
 .tab {
   display: flex;
-  align-items: center;
   gap: var(--s-1);
+  align-items: center;
   padding: var(--s-2) var(--s-2) var(--s-2) var(--s-3);
-  border: none;
-  background: none;
   font-size: 0.85rem;
-  cursor: pointer;
   color: var(--c-text-muted);
   white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: none;
+
   /* Bottom inset shadow acts as active underline indicator */
   box-shadow: inset 0 -2px 0 0 transparent;
   transition:
@@ -56,8 +58,8 @@
 }
 
 .tab.active {
-  color: var(--c-text);
   font-weight: 500;
+  color: var(--c-text);
   box-shadow: inset 0 -2px 0 0 var(--c-border-accent);
 }
 
@@ -83,41 +85,41 @@
 }
 
 .renameInput {
-  max-width: 140px;
   min-width: 60px;
+  max-width: 140px;
   padding: 0;
-  border: none;
-  background: transparent;
   font: inherit;
   font-size: 0.85rem;
   color: var(--c-text);
   outline: none;
+  background: transparent;
+  border: none;
 }
 
 /* Delete button: sibling of .tab, revealed on wrapper hover */
 .deleteBtn {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 20px;
   padding: 0 var(--s-1);
-  border: none;
-  background: none;
-  cursor: pointer;
   color: var(--c-text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
   opacity: 0;
-  flex-shrink: 0;
   transition:
     opacity var(--transition-fast),
     color var(--transition-fast);
 }
 
-.tabWrapper:hover .deleteBtn {
-  opacity: 1;
-}
-
 .deleteBtn:hover {
   color: var(--c-text-danger);
+}
+
+.tabWrapper:hover .deleteBtn {
+  opacity: 1;
 }
 
 .deleteBtn svg {
@@ -134,16 +136,16 @@
 
 .addButton {
   display: inline-flex;
-  align-items: center;
   gap: var(--s-1);
+  align-items: center;
   padding: var(--s-1) var(--s-2);
-  border: none;
-  background: none;
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  color: var(--c-text-muted);
   font-size: 0.8rem;
+  color: var(--c-text-muted);
   white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
   transition: all var(--transition-fast);
 }
 
@@ -152,36 +154,36 @@
 }
 
 .addButton:hover {
-  background: var(--c-surface-hover);
   color: var(--c-text);
+  background: var(--c-surface-hover);
 }
 
 .dropdown {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
+  z-index: 100;
+  min-width: 150px;
+  overflow: hidden;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-menu);
-  min-width: 150px;
-  z-index: 100;
-  overflow: hidden;
 }
 
 .dropdown button {
   display: flex;
-  align-items: center;
   gap: var(--s-2);
+  align-items: center;
   width: 100%;
   padding: var(--s-2) var(--s-3);
-  border: none;
-  background: none;
   font-size: 0.85rem;
-  cursor: pointer;
-  text-align: left;
   color: var(--c-text);
+  text-align: left;
   white-space: nowrap;
+  cursor: pointer;
+  background: none;
+  border: none;
 }
 
 .dropdown button:hover {

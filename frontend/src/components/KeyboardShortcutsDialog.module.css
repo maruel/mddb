@@ -4,13 +4,13 @@
 }
 
 .header h2 {
-  font-size: 1.25rem;
   margin-bottom: var(--s-2);
+  font-size: 1.25rem;
 }
 
 .header p {
-  color: var(--c-text-muted);
   font-size: 0.9rem;
+  color: var(--c-text-muted);
 }
 
 .shortcutList {
@@ -21,8 +21,8 @@
 .shortcut {
   display: grid;
   grid-template-columns: minmax(5rem, auto) 1fr;
-  align-items: center;
   gap: var(--s-3);
+  align-items: center;
   padding: var(--s-2) 0;
   border-bottom: 1px solid var(--c-border);
 }
@@ -35,19 +35,19 @@
 .shortcut kbd {
   min-width: var(--s-5);
   padding: var(--s-1) var(--s-2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-sm);
-  background: var(--c-surface-subtle);
-  box-shadow: var(--shadow-control-selected);
-  color: var(--c-text);
   font-family: var(--font-mono);
   font-size: 0.8rem;
+  color: var(--c-text);
   text-align: center;
+  background: var(--c-surface-subtle);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-control-selected);
 }
 
 .shortcut dd {
-  color: var(--c-text);
   font-size: 0.9rem;
+  color: var(--c-text);
 }
 
 .actions {

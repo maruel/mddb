@@ -5,15 +5,15 @@
 }
 
 .bellButton {
-  background: transparent;
-  border: none;
-  color: var(--c-text-inverse);
-  cursor: pointer;
-  padding: var(--s-1);
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  padding: var(--s-1);
+  color: var(--c-text-inverse);
+  cursor: pointer;
+  background: transparent;
+  border: none;
   border-radius: var(--radius-md);
   transition: background var(--transition-fast);
 }
@@ -31,41 +31,41 @@
   position: absolute;
   top: 0;
   right: 0;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: var(--c-surface-danger-solid);
-  color: var(--c-text-inverse);
-  font-size: 0.65rem;
-  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
   line-height: 1;
+  color: var(--c-text-inverse);
   pointer-events: none;
+  background: var(--c-surface-danger-solid);
+  border-radius: 8px;
 }
 
 .panel {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
   width: 360px;
   max-height: 480px;
+  overflow: hidden;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popover);
-  z-index: 1000;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }
 
 .panelHeader {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: var(--s-3);
   border-bottom: 1px solid var(--c-border);
 }
@@ -78,12 +78,12 @@
 }
 
 .markAllButton {
+  padding: var(--s-1) var(--s-2);
+  font-size: 0.8rem;
+  color: var(--c-text-accent);
+  cursor: pointer;
   background: none;
   border: none;
-  color: var(--c-text-accent);
-  font-size: 0.8rem;
-  cursor: pointer;
-  padding: var(--s-1) var(--s-2);
   border-radius: var(--radius-md);
 }
 
@@ -92,15 +92,15 @@
 }
 
 .panelBody {
-  overflow-y: auto;
   flex: 1;
+  overflow-y: auto;
 }
 
 .empty {
   padding: var(--s-6);
-  text-align: center;
-  color: var(--c-text-muted);
   font-size: 0.85rem;
+  color: var(--c-text-muted);
+  text-align: center;
 }
 
 .item {
@@ -123,6 +123,14 @@
   background: var(--c-surface-selected);
 }
 
+.itemTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;
+  color: var(--c-text);
+  white-space: nowrap;
+}
+
 .unread .itemTitle {
   font-weight: 600;
 }
@@ -137,45 +145,29 @@
   flex: 1;
   min-width: 0;
   padding: var(--s-3);
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
   font: inherit;
+  color: inherit;
   text-align: left;
-}
-
-.itemButton:focus-visible,
-.deleteButton:focus-visible,
-.markAllButton:focus-visible,
-.loadMoreButton:focus-visible {
-  outline: 2px solid var(--c-border-focus);
-  outline-offset: -2px;
-}
-
-.itemTitle {
-  font-size: 0.85rem;
-  color: var(--c-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  cursor: pointer;
+  background: transparent;
+  border: none;
 }
 
 .itemBody {
-  font-size: 0.8rem;
-  color: var(--c-text-muted);
   margin-top: 2px;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+  white-space: nowrap;
 }
 
 .itemMeta {
   display: flex;
   gap: var(--s-2);
+  margin-top: 4px;
   font-size: 0.75rem;
   color: var(--c-text-muted);
-  margin-top: 4px;
 }
 
 .actor {
@@ -183,27 +175,17 @@
 }
 
 .deleteButton {
-  background: none;
-  border: none;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 2px;
   color: var(--c-text-muted);
   cursor: pointer;
-  padding: 2px;
+  background: none;
+  border: none;
   border-radius: var(--radius-md);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
   opacity: 0;
   transition: opacity var(--transition-fast);
-}
-
-.item:hover .deleteButton,
-.item:focus-within .deleteButton {
-  opacity: 1;
-}
-
-.deleteButton:hover {
-  color: var(--c-text-danger);
-  background: var(--c-surface-hover);
 }
 
 .deleteButton svg {
@@ -214,11 +196,11 @@
 .loadMoreButton {
   width: 100%;
   padding: var(--s-2);
-  border: none;
-  background: none;
-  color: var(--c-text-accent);
   font-size: 0.8rem;
+  color: var(--c-text-accent);
   cursor: pointer;
+  background: none;
+  border: none;
 }
 
 .loadMoreButton:hover {
@@ -230,9 +212,27 @@
   cursor: default;
 }
 
-@media (max-width: 768px) {
+.itemButton:focus-visible,
+.deleteButton:focus-visible,
+.markAllButton:focus-visible,
+.loadMoreButton:focus-visible {
+  outline: 2px solid var(--c-border-focus);
+  outline-offset: -2px;
+}
+
+.deleteButton:hover {
+  color: var(--c-text-danger);
+  background: var(--c-surface-hover);
+}
+
+.item:hover .deleteButton,
+.item:focus-within .deleteButton {
+  opacity: 1;
+}
+
+@media (width <= 768px) {
   .panel {
-    width: calc(100vw - 16px);
     right: -8px;
+    width: calc(100vw - 16px);
   }
 }

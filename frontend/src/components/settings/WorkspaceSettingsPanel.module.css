@@ -12,12 +12,12 @@
 }
 
 .tabs button {
-  background: none;
-  border: none;
   padding: var(--s-3) var(--s-4);
-  cursor: pointer;
   font-weight: 500;
   color: var(--c-text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
   border-bottom: 2px solid transparent;
   transition: all var(--transition-fast);
 }
@@ -36,29 +36,29 @@
 }
 
 .section h3 {
-  font-size: 1.1rem;
   margin-bottom: var(--s-3);
+  font-size: 1.1rem;
 }
 
 .error {
   padding: var(--s-3);
-  background: var(--c-surface-danger);
-  color: var(--c-text-danger);
-  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
+  color: var(--c-text-danger);
+  background: var(--c-surface-danger);
+  border-radius: var(--radius-md);
 }
 
 .success {
   padding: var(--s-3);
-  background: var(--c-surface-success);
-  color: var(--c-text-success);
-  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
+  color: var(--c-text-success);
+  background: var(--c-surface-success);
+  border-radius: var(--radius-md);
 }
 
 .settingsForm {
-  background: var(--c-surface);
   padding: var(--s-4);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
 }
@@ -84,9 +84,13 @@
   border-radius: var(--radius-md);
 }
 
+.addRemoteSection h4 {
+  margin: 0 0 var(--s-3) 0;
+}
+
 .settingsForm h4 {
-  font-size: 1rem;
   margin: var(--s-4) 0 var(--s-3) 0;
+  font-size: 1rem;
   color: var(--c-text-muted);
 }
 
@@ -96,12 +100,12 @@
 
 .saveButton {
   padding: var(--s-3) var(--s-5);
-  background: var(--c-action-primary);
+  font-weight: 500;
   color: var(--c-text-inverse);
+  cursor: pointer;
+  background: var(--c-action-primary);
   border: none;
   border-radius: var(--radius-md);
-  cursor: pointer;
-  font-weight: 500;
 }
 
 .saveButton:hover {
@@ -109,14 +113,14 @@
 }
 
 .saveButton:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .hint {
+  margin-top: var(--s-1);
   font-size: 0.8rem;
   color: var(--c-text-muted);
-  margin-top: var(--s-1);
 }
 
 .table {
@@ -145,11 +149,11 @@
 .smallButton {
   padding: var(--s-2) var(--s-3);
   font-size: 0.85rem;
-  background: var(--c-action-primary);
   color: var(--c-text-inverse);
+  cursor: pointer;
+  background: var(--c-action-primary);
   border: none;
   border-radius: var(--radius-md);
-  cursor: pointer;
 }
 
 .smallButton:hover {
@@ -159,11 +163,11 @@
 .deleteButtonSmall {
   padding: var(--s-2) var(--s-3);
   font-size: 0.85rem;
-  background: var(--c-surface-danger);
   color: var(--c-text-danger);
+  cursor: pointer;
+  background: var(--c-surface-danger);
   border: 1px solid var(--c-border-danger);
   border-radius: var(--radius-md);
-  cursor: pointer;
 }
 
 .deleteButtonSmall:hover {
@@ -171,39 +175,35 @@
 }
 
 .addRemoteSection {
-  margin-top: var(--s-5);
   padding: var(--s-4);
+  margin-top: var(--s-5);
   background: var(--c-surface-panel);
-  border-radius: var(--radius-md);
   border: 1px dashed var(--c-border);
-}
-
-.addRemoteSection h4 {
-  margin: 0 0 var(--s-3) 0;
+  border-radius: var(--radius-md);
 }
 
 .orgLink {
-  margin-top: var(--s-5);
   padding: var(--s-4);
+  margin-top: var(--s-5);
   background: var(--c-surface-panel);
-  border-radius: var(--radius-md);
   border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
 }
 
 .orgLink p {
   margin: 0 0 var(--s-3) 0;
-  color: var(--c-text-muted);
   font-size: 0.9rem;
+  color: var(--c-text-muted);
 }
 
 .linkButton {
-  background: none;
-  border: none;
-  color: var(--c-text-accent);
-  cursor: pointer;
-  font-weight: 500;
   padding: 0;
   font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--c-text-accent);
+  cursor: pointer;
+  background: none;
+  border: none;
 }
 
 .linkButton:hover {
@@ -212,60 +212,60 @@
 
 .conflictAlert {
   padding: var(--s-3);
-  background: var(--c-surface-warning-subtle);
+  margin-bottom: var(--s-4);
   color: var(--c-text-warning);
+  background: var(--c-surface-warning-subtle);
   border: 1px solid var(--c-border-warning-subtle);
   border-radius: var(--radius-md);
-  margin-bottom: var(--s-4);
 }
 
 .conflictFiles {
   margin-top: var(--s-2);
   font-size: 0.8rem;
-  white-space: pre-wrap;
   color: var(--c-text-warning-strong);
+  white-space: pre-wrap;
 }
 
 .syncBadge {
   display: inline-block;
   padding: var(--s-1) var(--s-2);
-  border-radius: var(--radius-md);
   font-size: 0.8rem;
   font-weight: 500;
+  border-radius: var(--radius-md);
 }
 
 .syncBadge[data-status="idle"] {
-  background: var(--c-surface-success);
   color: var(--c-text-success);
+  background: var(--c-surface-success);
 }
 
 .syncBadge[data-status="syncing"] {
-  background: var(--c-surface-info);
   color: var(--c-text-accent);
+  background: var(--c-surface-info);
 }
 
 .syncBadge[data-status="error"] {
-  background: var(--c-surface-danger);
   color: var(--c-text-danger);
+  background: var(--c-surface-danger);
 }
 
 .syncBadge[data-status="conflict"] {
-  background: var(--c-surface-warning-subtle);
   color: var(--c-text-warning);
+  background: var(--c-surface-warning-subtle);
 }
 
 .autoPushRow {
-  margin-top: var(--s-4);
   padding: var(--s-3);
+  margin-top: var(--s-4);
   background: var(--c-surface-panel);
-  border-radius: var(--radius-md);
   border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
 }
 
 .checkboxLabel {
   display: flex;
-  align-items: center;
   gap: var(--s-2);
+  align-items: center;
   font-weight: 500;
   cursor: pointer;
 }
@@ -283,37 +283,37 @@
 .setupTab,
 .activeSetupTab {
   padding: var(--s-2) var(--s-4);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  background: var(--c-surface);
-  cursor: pointer;
   font-weight: 500;
   color: var(--c-text-muted);
+  cursor: pointer;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
 }
 
 .activeSetupTab {
-  background: var(--c-surface-accent-solid);
   color: var(--c-text-inverse);
+  background: var(--c-surface-accent-solid);
   border-color: var(--c-border-accent);
 }
 
 .disabledSetupTab {
   padding: var(--s-2) var(--s-4);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  background: var(--c-surface-control-disabled);
-  cursor: not-allowed;
   font-weight: 500;
   color: var(--c-text-muted);
+  cursor: not-allowed;
+  background: var(--c-surface-control-disabled);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
   opacity: 0.6;
 }
 
 .notConfiguredMessage {
   padding: var(--s-4);
+  margin-top: var(--s-4);
+  color: var(--c-text-muted);
+  text-align: center;
   background: var(--c-surface-panel);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  color: var(--c-text-muted);
-  text-align: center;
-  margin-top: var(--s-4);
 }

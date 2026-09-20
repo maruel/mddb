@@ -2,32 +2,32 @@
 
 .container {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
+  inset: 0;
   z-index: 50;
+  pointer-events: none;
 }
 
 .indicator {
+  --editor-drop-indicator-top: 0;
+
   position: absolute;
-  left: 28px; /* Align with block content (past the handle area) */
+  top: var(--editor-drop-indicator-top);
   right: 8px;
+  left: 28px; /* Align with block content (past the handle area) */
+  z-index: 100;
   height: 2px;
   background: var(--c-surface-accent-solid);
   border-radius: 1px;
-  z-index: 100;
 }
 
 /* Circular end caps */
 .indicator::before,
 .indicator::after {
-  content: "";
   position: absolute;
   top: -3px;
   width: 8px;
   height: 8px;
+  content: "";
   background: var(--c-surface-accent-solid);
   border-radius: 50%;
 }

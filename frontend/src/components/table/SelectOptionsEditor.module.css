@@ -1,47 +1,52 @@
 /* Option management panel for select/multi_select columns. */
 
 .panel {
+  --panel-left: 0;
+  --panel-top: 0;
+
   position: fixed;
+  top: var(--panel-top);
+  left: var(--panel-left);
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  max-height: 420px;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popover);
-  width: 280px;
-  max-height: 420px;
-  display: flex;
-  flex-direction: column;
 }
 
 .header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   padding: 8px 10px;
   border-bottom: 1px solid var(--c-border);
-  flex-shrink: 0;
 }
 
 .title {
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--c-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .closeBtn {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 2px;
+  font-size: 1rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
   background: none;
   border: none;
-  cursor: pointer;
-  color: var(--c-text-muted);
-  padding: 2px;
   border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  font-size: 1rem;
-  flex-shrink: 0;
 }
 
 .closeBtn:hover {
@@ -50,17 +55,17 @@
 }
 
 .optionList {
-  overflow-y: auto;
   flex: 1;
   padding: 4px 0;
+  overflow-y: auto;
 }
 
 .optionRow {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
   position: relative;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 3px 8px;
   transition: background var(--transition-fast);
 }
 
@@ -77,12 +82,12 @@
 }
 
 .dragHandle {
-  color: var(--c-text-muted);
-  cursor: grab;
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   font-size: 1rem;
-  flex-shrink: 0;
+  color: var(--c-text-muted);
+  cursor: grab;
 }
 
 .dragHandle:active {
@@ -97,14 +102,16 @@
 }
 
 .swatchBtn {
+  --swatch-color: var(--c-surface-hover);
+
+  display: block;
   width: 14px;
   height: 14px;
-  border-radius: 50%;
-  border: 1px solid var(--c-border);
-  background: var(--c-surface-hover);
-  cursor: pointer;
   padding: 0;
-  display: block;
+  cursor: pointer;
+  background: var(--swatch-color);
+  border: 1px solid var(--c-border);
+  border-radius: 50%;
 }
 
 .swatchBtn:hover {
@@ -115,29 +122,39 @@
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 4px;
   z-index: 1010;
+  display: grid;
+  grid-template-columns: repeat(4, 18px);
+  gap: 4px;
+  padding: 6px;
+  margin-top: 4px;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popover);
-  padding: 6px;
-  display: grid;
-  grid-template-columns: repeat(4, 18px);
-  gap: 4px;
 }
 
 .swatchChoice {
+  --swatch-color: transparent;
+
   width: 18px;
   height: 18px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
   padding: 0;
+  cursor: pointer;
+  background: var(--swatch-color);
+  border: 2px solid transparent;
+  border-radius: 50%;
 }
 
 .swatchChoice:hover {
   border-color: var(--c-border-strong);
+}
+
+/* The white palette entry is the "no colour" choice: it keeps a neutral hairline border. */
+.swatchChoiceNone,
+.swatchChoiceNone:hover {
+  border-color: var(--c-border);
+  border-width: 1px;
 }
 
 .swatchChoiceActive {
@@ -148,14 +165,14 @@
 
 .optionNameInput {
   flex: 1;
-  border: none;
-  background: transparent;
+  min-width: 0;
+  padding: 2px 4px;
   font-family: inherit;
   font-size: 0.85rem;
   color: var(--c-text);
-  padding: 2px 4px;
+  background: transparent;
+  border: none;
   border-radius: 3px;
-  min-width: 0;
 }
 
 .optionNameInput:focus {
@@ -166,31 +183,27 @@
 /* Usage count hint */
 
 .usageHint {
-  font-size: 0.75rem;
-  color: var(--c-text-muted);
   flex-shrink: 0;
   padding: 0 2px;
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
 }
 
 /* Delete button */
 
 .deleteBtn {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 2px;
+  font-size: 1rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
   background: none;
   border: none;
-  cursor: pointer;
-  color: var(--c-text-muted);
-  padding: 2px;
   border-radius: 3px;
-  display: flex;
-  align-items: center;
-  font-size: 1rem;
-  flex-shrink: 0;
   opacity: 0;
   transition: opacity var(--transition-fast);
-}
-
-.optionRow:hover .deleteBtn {
-  opacity: 1;
 }
 
 .deleteBtn:hover {
@@ -198,28 +211,32 @@
   background: var(--c-surface-control-hover);
 }
 
+.optionRow:hover .deleteBtn {
+  opacity: 1;
+}
+
 /* Add option button */
 
 .addOptionBtn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: var(--c-text-muted);
-  font-size: 0.82rem;
-  padding: 8px 12px;
-  text-align: left;
-  width: 100%;
-  border-top: 1px solid var(--c-border);
   flex-shrink: 0;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  color: var(--c-text-muted);
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--c-border);
   transition: background var(--transition-fast);
 }
 
 .addOptionBtn:hover {
-  background: var(--c-surface-hover);
   color: var(--c-text);
+  background: var(--c-surface-hover);
 }
 
 .addOptionBtn:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }

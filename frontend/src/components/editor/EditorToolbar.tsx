@@ -201,8 +201,8 @@ export default function EditorToolbar(props: EditorToolbarProps) {
         class={`${styles.floatingToolbar} ${above() ? styles.above : ""}`}
         data-testid="floating-toolbar"
         style={{
-          top: `${above() ? props.position?.top : props.position?.bottom}px`,
-          left: `${clampedLeft() ?? props.position?.left ?? 0}px`,
+          "--editor-toolbar-top": `${above() ? props.position?.top : props.position?.bottom}px`,
+          "--editor-toolbar-left": `${clampedLeft() ?? props.position?.left ?? 0}px`,
         }}
       >
         <div class={styles.toolbarRow}>

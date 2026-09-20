@@ -14,24 +14,24 @@
 }
 
 .card {
+  padding: var(--s-4);
+  text-align: center;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  padding: var(--s-4);
-  text-align: center;
 }
 
 .cardValue {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--c-text-accent);
   line-height: 1.2;
+  color: var(--c-text-accent);
 }
 
 .cardLabel {
+  margin-top: var(--s-1);
   font-size: 0.8rem;
   color: var(--c-text-muted);
-  margin-top: var(--s-1);
 }
 
 /* Refresh button */
@@ -42,12 +42,12 @@
 
 .refreshButton {
   padding: var(--s-2) var(--s-4);
+  font-weight: 500;
+  color: var(--c-text);
+  cursor: pointer;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  cursor: pointer;
-  font-weight: 500;
-  color: var(--c-text);
   transition: all var(--transition-fast);
 }
 
@@ -56,37 +56,33 @@
 }
 
 .refreshButton:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* Org/Workspace table */
 .orgTable {
   width: 100%;
+  overflow: hidden;
+  font-size: 0.875rem;
   border-collapse: collapse;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  overflow: hidden;
-  font-size: 0.875rem;
 }
 
 .orgTable th {
-  text-align: left;
   padding: var(--s-3);
-  background: var(--c-surface-table-header);
   font-weight: 600;
   color: var(--c-text-muted);
+  text-align: left;
+  background: var(--c-surface-table-header);
   border-bottom: 1px solid var(--c-border);
 }
 
 .orgTable td {
   padding: var(--s-3);
   border-bottom: 1px solid var(--c-border);
-}
-
-.orgTable tr:last-child td {
-  border-bottom: none;
 }
 
 .orgHeader td {
@@ -98,15 +94,19 @@
   padding-left: var(--s-6);
 }
 
+.orgTable tr:last-child td {
+  border-bottom: none;
+}
+
 .numCell {
-  text-align: right;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 /* Request metrics */
 .metricsSection h3 {
-  font-size: 1rem;
   margin: 0 0 var(--s-3) 0;
+  font-size: 1rem;
   color: var(--c-text-muted);
 }
 
@@ -117,16 +117,16 @@
 }
 
 .metric {
+  padding: var(--s-3);
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  padding: var(--s-3);
 }
 
 .metricLabel {
+  margin-bottom: var(--s-1);
   font-size: 0.8rem;
   color: var(--c-text-muted);
-  margin-bottom: var(--s-1);
 }
 
 .metricValue {
@@ -135,14 +135,14 @@
 }
 
 .metricRate {
+  margin-top: var(--s-1);
   font-size: 0.75rem;
   color: var(--c-text-muted);
-  margin-top: var(--s-1);
 }
 
 .error {
   padding: var(--s-3);
-  background: var(--c-surface-danger);
   color: var(--c-text-danger);
+  background: var(--c-surface-danger);
   border-radius: var(--radius-md);
 }

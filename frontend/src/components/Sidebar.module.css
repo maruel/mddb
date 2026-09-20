@@ -1,15 +1,15 @@
 /* Styles for the Sidebar component. */
 .sidebar {
-  width: 260px;
-  background: var(--c-surface);
-  border-right: 1px solid var(--c-border);
-  display: flex;
-  flex-direction: column;
   position: fixed;
   top: 0;
   left: 0;
-  height: 100vh;
   z-index: 200;
+  display: flex;
+  flex-direction: column;
+  width: 260px;
+  height: 100vh;
+  background: var(--c-surface);
+  border-right: 1px solid var(--c-border);
   transform: translateX(-100%);
   transition: transform 0.15s ease;
 }
@@ -19,16 +19,16 @@
 }
 
 .collapseButton {
-  background: transparent;
-  border: none;
-  color: var(--c-text-muted);
-  cursor: pointer;
-  padding: var(--s-1);
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  padding: var(--s-1);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
 }
 
 .collapseButton svg {
@@ -36,36 +36,36 @@
 }
 
 .collapseButton:hover {
-  background: var(--c-surface-control-hover);
   color: var(--c-text);
+  background: var(--c-surface-control-hover);
 }
 
 /* Workspace header */
 .workspaceHeader {
   display: flex;
-  align-items: center;
   gap: var(--s-1);
+  align-items: center;
+  min-height: 40px;
   padding: var(--s-2) var(--s-3);
   border-bottom: 1px solid var(--c-border);
-  min-height: 40px;
 }
 
 .workspaceName {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--c-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--c-text);
+  white-space: nowrap;
 }
 
 .workspaceName.editable {
-  cursor: pointer;
-  border-radius: var(--radius-md);
   padding: 2px 4px;
   margin: -2px -4px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
 }
 
 .workspaceName.editable:hover {
@@ -75,15 +75,15 @@
 .workspaceNameInput {
   flex: 1;
   min-width: 0;
-  font-weight: 600;
+  padding: 2px 4px;
+  margin: -3px -5px;
   font-size: 0.9rem;
+  font-weight: 600;
   color: var(--c-text);
+  outline: none;
   background: var(--c-surface);
   border: 1px solid var(--c-border-focus);
   border-radius: var(--radius-md);
-  padding: 2px 4px;
-  margin: -3px -5px;
-  outline: none;
 }
 
 .workspaceNameInput:focus {
@@ -91,47 +91,46 @@
 }
 
 .settingsButton {
-  opacity: 0;
-  background: transparent;
-  border: none;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-1);
   color: var(--c-text-muted);
   cursor: pointer;
-  padding: var(--s-1);
+  background: transparent;
+  border: none;
   border-radius: var(--radius-md);
+  opacity: 0;
   transition:
     opacity 0.15s ease,
     background 0.15s ease;
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .settingsButton svg {
   font-size: 1.1rem;
 }
 
+.settingsButton:hover {
+  color: var(--c-text);
+  background: var(--c-surface-control-hover);
+}
+
 .workspaceHeader:hover .settingsButton {
   opacity: 1;
 }
 
-.settingsButton:hover {
-  background: var(--c-surface-control-hover);
-  color: var(--c-text);
-}
-
 .loading {
   padding: var(--s-3);
-  color: var(--c-text-muted);
   font-size: 0.85rem;
+  color: var(--c-text-muted);
 }
 
 .pageList {
-  list-style: none;
-  overflow-y: auto;
-  overflow-x: hidden;
   flex: 1;
   padding-top: var(--s-1);
+  overflow: hidden auto;
+  list-style: none;
 }
 
 /* Root drop target for drag-and-drop */
@@ -141,22 +140,22 @@
 
 /* Other workspaces section */
 .otherWorkspaces {
-  border-top: 1px solid var(--c-border);
   padding: var(--s-2) 0;
+  border-top: 1px solid var(--c-border);
 }
 
 .otherWorkspacesToggle {
   display: flex;
-  align-items: center;
   gap: var(--s-2);
+  align-items: center;
   width: 100%;
   padding: var(--s-2) var(--s-3);
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+  text-align: left;
+  cursor: pointer;
   background: transparent;
   border: none;
-  color: var(--c-text-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-  text-align: left;
 }
 
 .otherWorkspacesToggle:hover {
@@ -196,15 +195,15 @@
   width: 100%;
   padding: var(--s-2) var(--s-3);
   padding-left: var(--s-4);
-  background: transparent;
-  border: none;
-  color: var(--c-text);
-  font-size: 0.85rem;
-  cursor: pointer;
-  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.85rem;
+  color: var(--c-text);
+  text-align: left;
   white-space: nowrap;
+  cursor: pointer;
+  background: transparent;
+  border: none;
 }
 
 .otherWorkspaceItem:hover {
@@ -214,59 +213,59 @@
 /* Sidebar actions */
 .sidebarActions {
   padding: var(--s-1) 0;
-  border-top: 1px solid var(--c-border);
   margin-top: var(--s-1);
+  border-top: 1px solid var(--c-border);
 }
 
 .actionButton {
   display: flex;
-  align-items: center;
   gap: var(--s-2);
+  align-items: center;
   width: 100%;
   padding: var(--s-2) var(--s-3);
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+  text-align: left;
+  cursor: pointer;
   background: transparent;
   border: none;
-  color: var(--c-text-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-  text-align: left;
   transition:
     background 0.15s ease,
     color 0.15s ease;
 }
 
 .actionButton:hover {
-  background: var(--c-surface-control-hover);
   color: var(--c-text);
+  background: var(--c-surface-control-hover);
 }
 
 .actionIcon {
-  width: 1.2em;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 1.2em;
 }
 
 .actionIcon svg {
   font-size: 1.1rem;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .sidebar {
     top: 40px; /* Below header (min-height 36px + padding) */
     left: 0;
+    visibility: hidden;
     height: calc(100vh - 40px);
     margin: 0;
     transition:
       transform 0.15s ease,
       visibility 0s 0.15s;
-    visibility: hidden;
   }
 
   .sidebar.open {
+    visibility: visible;
     transition:
       transform 0.15s ease,
       visibility 0s 0s;
-    visibility: visible;
   }
 }

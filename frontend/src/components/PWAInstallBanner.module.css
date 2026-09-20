@@ -1,24 +1,21 @@
 /* Styles for the PWAInstallBanner component. */
 .banner {
-  --dismiss-control-hover-surface: rgba(255, 255, 255, 0.1);
-  --dismiss-control-border: rgba(255, 255, 255, 0.5);
-
   position: fixed;
+  right: 0;
   bottom: 0;
   left: 0;
-  right: 0;
-  background: var(--c-surface-accent-solid);
-  color: var(--c-text-inverse);
-  padding: var(--s-3) var(--s-4);
+  z-index: 1000;
   display: flex;
+  gap: var(--s-3);
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-3);
-  z-index: 1000;
-  animation: slideUp 0.2s ease-out;
+  padding: var(--s-3) var(--s-4);
+  color: var(--c-text-inverse);
+  background: var(--c-surface-accent-solid);
+  animation: slide-up 0.2s ease-out;
 }
 
-@keyframes slideUp {
+@keyframes slide-up {
   from {
     transform: translateY(100%);
   }
@@ -29,8 +26,8 @@
 }
 
 .title {
-  font-weight: 600;
   margin-bottom: var(--s-1);
+  font-weight: 600;
 }
 
 .message {
@@ -44,13 +41,13 @@
 }
 
 .installButton {
-  background: var(--c-surface);
-  color: var(--c-text-accent);
-  border: none;
   padding: var(--s-2) var(--s-3);
-  border-radius: var(--radius-md);
   font-weight: 500;
+  color: var(--c-text-accent);
   cursor: pointer;
+  background: var(--c-surface);
+  border: none;
+  border-radius: var(--radius-md);
 }
 
 .installButton:hover {
@@ -58,26 +55,26 @@
 }
 
 .dismissButton {
-  background: transparent;
-  color: var(--c-text-inverse);
-  border: 1px solid var(--dismiss-control-border);
   padding: var(--s-2) var(--s-3);
-  border-radius: var(--radius-md);
+  color: var(--c-text-inverse);
   cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--c-on-brand-border-strong);
+  border-radius: var(--radius-md);
 }
 
 .dismissButton:hover {
-  background: var(--dismiss-control-hover-surface);
+  background: var(--c-on-brand-surface-subtle);
 }
 
-@media (max-width: 480px) {
+@media (width <= 480px) {
   .banner {
     flex-direction: column;
     text-align: center;
   }
 
   .actions {
-    width: 100%;
     justify-content: center;
+    width: 100%;
   }
 }

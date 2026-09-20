@@ -5,6 +5,7 @@ import { useNavigate } from "@solidjs/router";
 import { useAuth } from "../contexts";
 import { useI18n } from "../i18n";
 import { workspaceUrl } from "../utils/urls";
+import styles from "./Onboarding.module.css";
 
 /**
  * Onboarding handles the first-login flow for users who have authenticated
@@ -113,37 +114,17 @@ export default function Onboarding() {
   });
 
   return (
-    <div
-      style={{
-        display: "flex",
-        "flex-direction": "column",
-        "align-items": "center",
-        "justify-content": "center",
-        height: "100vh",
-        padding: "2rem",
-        "text-align": "center",
-      }}
-    >
+    <div class={styles.container}>
       <Show when={error()}>
-        <div style={{ color: "var(--c-text-danger)", "margin-bottom": "1rem" }}>{error()}</div>
+        <div class={styles.error}>{error()}</div>
       </Show>
       <Show when={!error()}>
-        <div style={{ "font-size": "1.5rem", "margin-bottom": "1rem" }}>
+        <div class={styles.status}>
           {status() === "creating-org" && (t("onboarding.creatingOrg") || "Creating your organization...")}
           {status() === "creating-ws" && (t("onboarding.creatingWorkspace") || "Creating your workspace...")}
           {(status() === "loading" || status() === "done") && (t("common.loading") || "Loading...")}
         </div>
-        <div
-          style={{
-            width: "40px",
-            height: "40px",
-            border: "3px solid var(--c-border)",
-            "border-top-color": "var(--c-border-accent)",
-            "border-radius": "50%",
-            animation: "spin 1s linear infinite",
-          }}
-        />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div class={styles.spinner} />
       </Show>
     </div>
   );

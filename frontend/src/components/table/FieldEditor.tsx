@@ -163,8 +163,9 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
         <For each={selectedIds()}>
           {(id) => {
             const color = optionColor(id);
+            const textColor = color ? chipTextColor(color) : undefined;
             return (
-              <span class={styles.chip} style={color ? { background: color, color: chipTextColor(color) } : {}}>
+              <span class={styles.chip} style={{ "--chip-surface": color, "--chip-text": textColor }}>
                 {optionName(id)}
                 <button
                   class={styles.chipRemove}
@@ -192,9 +193,9 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               style={{
-                left: `${pos().left}px`,
-                top: `${pos().top}px`,
-                "min-width": `${pos().minWidth}px`,
+                "--portal-dropdown-left": `${pos().left}px`,
+                "--portal-dropdown-top": `${pos().top}px`,
+                "--portal-dropdown-min-width": `${pos().minWidth}px`,
               }}
             >
               <input
@@ -220,7 +221,7 @@ export function MultiSelectEditor(props: MultiSelectEditorProps) {
                     >
                       <span class={styles.optionCheckmark}>{isSelected() ? "✓" : ""}</span>
                       <Show when={opt.color}>
-                        <span class={styles.optionColor} style={{ background: opt.color }} />
+                        <span class={styles.optionColor} style={{ "--option-color": opt.color }} />
                       </Show>
                       {opt.name}
                     </div>
@@ -347,9 +348,10 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
     >
       <Show when={selectedOption()} fallback={<span class={styles.selectPlaceholder}>--</span>}>
         {(opt) => {
-          const color = opt().color ?? "";
+          const color = opt().color;
+          const textColor = color ? chipTextColor(color) : undefined;
           return (
-            <span class={styles.chip} style={color ? { background: color, color: chipTextColor(color) } : {}}>
+            <span class={styles.chip} style={{ "--chip-surface": color, "--chip-text": textColor }}>
               {opt().name}
               <button class={styles.chipRemove} onClick={handleClear} type="button" aria-label="Clear">
                 ×
@@ -368,9 +370,9 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               style={{
-                left: `${pos().left}px`,
-                top: `${pos().top}px`,
-                "min-width": `${pos().minWidth}px`,
+                "--portal-dropdown-left": `${pos().left}px`,
+                "--portal-dropdown-top": `${pos().top}px`,
+                "--portal-dropdown-min-width": `${pos().minWidth}px`,
               }}
             >
               <input
@@ -405,7 +407,7 @@ export function SingleSelectEditor(props: SingleSelectEditorProps) {
                       }}
                     >
                       <Show when={opt.color}>
-                        <span class={styles.optionColor} style={{ background: opt.color }} />
+                        <span class={styles.optionColor} style={{ "--option-color": opt.color }} />
                       </Show>
                       {opt.name}
                     </div>
@@ -549,9 +551,9 @@ export function UserEditor(props: UserEditorProps) {
               ref={(el) => (dropRef = el)}
               class={styles.portalDropdown}
               style={{
-                left: `${pos().left}px`,
-                top: `${pos().top}px`,
-                "min-width": `${pos().minWidth}px`,
+                "--portal-dropdown-left": `${pos().left}px`,
+                "--portal-dropdown-top": `${pos().top}px`,
+                "--portal-dropdown-min-width": `${pos().minWidth}px`,
               }}
             >
               <div

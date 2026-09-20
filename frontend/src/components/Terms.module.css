@@ -1,37 +1,37 @@
 /* Styles for the Terms component. */
 .container {
-  min-height: 100vh;
-  background: var(--c-surface-page);
   display: flex;
   justify-content: center;
+  min-height: 100vh;
   padding: var(--s-5);
+  background: var(--c-surface-page);
 }
 
 .content {
-  max-width: 700px;
   width: 100%;
-  background: var(--c-surface);
+  max-width: 700px;
   padding: var(--s-5);
+  line-height: 1.6;
+  background: var(--c-surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-raised);
-  line-height: 1.6;
 }
 
 .header {
+  padding-bottom: var(--s-4);
   margin-bottom: var(--s-5);
   border-bottom: 1px solid var(--c-border);
-  padding-bottom: var(--s-4);
 }
 
 .header h1 {
+  margin-bottom: var(--s-2);
   font-size: 1.75rem;
   color: var(--c-text-accent);
-  margin-bottom: var(--s-2);
 }
 
 .header p {
-  color: var(--c-text-muted);
   font-size: 0.85rem;
+  color: var(--c-text-muted);
 }
 
 .section {
@@ -39,8 +39,8 @@
 }
 
 .section h2 {
-  font-size: 1.25rem;
   margin-bottom: var(--s-3);
+  font-size: 1.25rem;
 }
 
 .section p {
@@ -48,20 +48,20 @@
 }
 
 .footer {
-  margin-top: var(--s-5);
-  padding-top: var(--s-4);
-  border-top: 1px solid var(--c-border);
   display: flex;
   justify-content: center;
+  padding-top: var(--s-4);
+  margin-top: var(--s-5);
+  border-top: 1px solid var(--c-border);
 }
 
 .backButton {
   padding: var(--s-3) var(--s-5);
-  background: var(--c-action-primary);
   color: var(--c-text-inverse);
+  cursor: pointer;
+  background: var(--c-action-primary);
   border: none;
   border-radius: var(--radius-md);
-  cursor: pointer;
 }
 
 .backButton:hover {

@@ -63,8 +63,9 @@ export function FieldValue(props: FieldValueProps): JSXElement {
     const opt = props.column.options?.find((o) => o.id === id || o.name === id);
     const label = opt?.name ?? id;
     const color = opt?.color;
+    const textColor = color ? chipTextColor(color) : undefined;
     return (
-      <span class={styles.selectChip} style={color ? { background: color, color: chipTextColor(color) } : {}}>
+      <span class={styles.selectChip} style={{ "--chip-surface": color, "--chip-text": textColor }}>
         {label}
       </span>
     );

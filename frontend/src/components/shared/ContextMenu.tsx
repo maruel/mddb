@@ -182,8 +182,8 @@ export function ContextMenu(props: ContextMenuProps) {
         ref={(el) => (menuRef = el)}
         class={styles.menu}
         style={{
-          left: `${adjustedPosition().x}px`,
-          top: `${adjustedPosition().y}px`,
+          "--context-menu-left": `${adjustedPosition().x}px`,
+          "--context-menu-top": `${adjustedPosition().y}px`,
         }}
         role="menu"
         tabIndex={-1}

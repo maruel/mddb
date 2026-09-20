@@ -10,11 +10,11 @@
 
 .error {
   padding: var(--s-2) var(--s-3);
-  background: var(--c-surface-danger);
-  color: var(--c-text-danger);
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
   margin-bottom: var(--s-3);
+  font-size: 0.85rem;
+  color: var(--c-text-danger);
+  background: var(--c-surface-danger);
+  border-radius: var(--radius-md);
 }
 
 .pushSection {
@@ -23,49 +23,49 @@
 
 .pushButton {
   padding: var(--s-2) var(--s-3);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  background: var(--c-surface);
+  font-size: 0.85rem;
   color: var(--c-text);
   cursor: pointer;
-  font-size: 0.85rem;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast);
+}
+
+.pushButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .pushButton:hover:not(:disabled) {
   border-color: var(--c-border-accent);
 }
 
-.pushButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .pushActive {
-  background: var(--c-surface-accent-solid);
   color: var(--c-text-inverse);
+  background: var(--c-surface-accent-solid);
   border-color: var(--c-border-accent);
 }
 
 .pushDenied {
+  margin-top: var(--s-2);
   font-size: 0.8rem;
   color: var(--c-text-danger);
-  margin-top: var(--s-2);
 }
 
 .prefsTable {
   width: 100%;
-  border-collapse: collapse;
   font-size: 0.85rem;
+  border-collapse: collapse;
 }
 
 .prefsTable th {
-  text-align: center;
   padding: var(--s-2);
   font-weight: 500;
   color: var(--c-text-muted);
+  text-align: center;
   border-bottom: 1px solid var(--c-border);
 }
 

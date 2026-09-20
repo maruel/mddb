@@ -1,17 +1,17 @@
 /* Styles for the UserProfile component. */
 .profile {
-  padding: var(--s-5);
   max-width: 600px;
+  padding: var(--s-5);
   margin: 0 auto;
 }
 
 .header {
   display: flex;
-  align-items: center;
   gap: var(--s-4);
+  align-items: center;
+  padding-bottom: var(--s-3);
   margin-bottom: var(--s-5);
   border-bottom: 1px solid var(--c-border);
-  padding-bottom: var(--s-3);
 }
 
 .header h2 {
@@ -19,12 +19,12 @@
 }
 
 .backButton {
+  padding: var(--s-2) var(--s-3);
+  font-size: 0.9rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
   background: none;
   border: none;
-  font-size: 0.9rem;
-  cursor: pointer;
-  color: var(--c-text-muted);
-  padding: var(--s-2) var(--s-3);
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
 }
@@ -36,24 +36,24 @@
 
 .userInfoSection {
   display: flex;
-  align-items: center;
   gap: var(--s-5);
+  align-items: center;
   padding: var(--s-5);
+  margin-bottom: var(--s-5);
   background: var(--c-surface-panel);
   border-radius: var(--radius-md);
-  margin-bottom: var(--s-5);
 }
 
 .avatarLarge {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: var(--c-surface-accent-solid);
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
   overflow: hidden;
+  background: var(--c-surface-accent-solid);
+  border-radius: 50%;
 }
 
 .avatarImageLarge {
@@ -63,9 +63,9 @@
 }
 
 .initialsLarge {
-  color: var(--c-text-inverse);
   font-size: 1.5rem;
   font-weight: 600;
+  color: var(--c-text-inverse);
 }
 
 .userDetails {
@@ -73,24 +73,24 @@
 }
 
 .userName {
+  margin: 0 0 var(--s-1) 0;
   font-size: 1.25rem;
   font-weight: 600;
-  margin: 0 0 var(--s-1) 0;
 }
 
 .userEmail {
-  color: var(--c-text-muted);
   margin: 0 0 var(--s-2) 0;
+  color: var(--c-text-muted);
 }
 
 .userRole {
   display: inline-block;
   padding: var(--s-1) var(--s-2);
-  background: var(--c-surface-accent-solid);
-  color: var(--c-text-inverse);
   font-size: 0.75rem;
-  border-radius: var(--radius-md);
+  color: var(--c-text-inverse);
   text-transform: capitalize;
+  background: var(--c-surface-accent-solid);
+  border-radius: var(--radius-md);
 }
 
 .section {
@@ -98,29 +98,29 @@
 }
 
 .section h3 {
-  font-size: 1.1rem;
   margin-bottom: var(--s-3);
+  font-size: 1.1rem;
 }
 
 .error {
   padding: var(--s-3);
-  background: var(--c-surface-danger);
-  color: var(--c-text-danger);
-  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
+  color: var(--c-text-danger);
+  background: var(--c-surface-danger);
+  border-radius: var(--radius-md);
 }
 
 .success {
   padding: var(--s-3);
-  background: var(--c-surface-success);
-  color: var(--c-text-success);
-  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
+  color: var(--c-text-success);
+  background: var(--c-surface-success);
+  border-radius: var(--radius-md);
 }
 
 .settingsForm {
-  background: var(--c-surface);
   padding: var(--s-4);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
 }
@@ -146,10 +146,10 @@
 
 .checkboxLabel {
   display: flex !important;
-  align-items: center;
   gap: var(--s-3);
-  cursor: pointer;
+  align-items: center;
   font-weight: normal !important;
+  cursor: pointer;
 }
 
 .checkboxLabel input {
@@ -159,12 +159,12 @@
 
 .saveButton {
   padding: var(--s-3) var(--s-5);
-  background: var(--c-action-primary);
+  font-weight: 500;
   color: var(--c-text-inverse);
+  cursor: pointer;
+  background: var(--c-action-primary);
   border: none;
   border-radius: var(--radius-md);
-  cursor: pointer;
-  font-weight: 500;
 }
 
 .saveButton:hover {
@@ -172,8 +172,8 @@
 }
 
 .saveButton:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .orgList {
@@ -194,8 +194,8 @@
 
 .orgInfo {
   display: flex;
-  align-items: center;
   gap: var(--s-3);
+  align-items: center;
 }
 
 .orgName {
@@ -213,16 +213,16 @@
 }
 
 .orgRole {
-  font-size: 0.75rem;
   padding: var(--s-1) var(--s-2);
-  background: var(--c-surface-badge-neutral);
-  border-radius: var(--radius-md);
+  font-size: 0.75rem;
   color: var(--c-text-muted);
   text-transform: capitalize;
+  background: var(--c-surface-badge-neutral);
+  border-radius: var(--radius-md);
 }
 
 .emptyState {
-  color: var(--c-text-muted);
-  font-style: italic;
   padding: var(--s-3);
+  font-style: italic;
+  color: var(--c-text-muted);
 }

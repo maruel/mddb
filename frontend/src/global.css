@@ -2,9 +2,9 @@
 *,
 *::before,
 *::after {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
 html,
@@ -14,6 +14,7 @@ body {
 
 :root {
   /* Semantic color, surface, state, and elevation foundation for the light theme. */
+
   /* Interactive accent roles. Separate roles may diverge in future themes. */
   --c-action-primary: #2563eb;
   --c-action-primary-hover: #1d4ed8;
@@ -23,6 +24,10 @@ body {
   --c-divider: #e5e7eb;
   --c-focus-on-brand: #fff;
   --c-text-accent: #2563eb;
+
+  /* Third-party sign-in provider brand surfaces. */
+  --c-provider-github-surface: #24292e;
+  --c-provider-microsoft-surface: #2f2f2f;
 
   /* Text roles. */
   --c-text: #1f2937;
@@ -38,7 +43,7 @@ body {
   --c-surface: #fff;
   --c-surface-subtle: #f5f5f5;
   --c-surface-sunken: #e5e7eb;
-  --c-surface-hover: rgba(0, 0, 0, 0.04);
+  --c-surface-hover: rgb(0 0 0 / 4%);
   --c-surface-badge-neutral: #e5e7eb;
   --c-surface-control: #e5e7eb;
   --c-surface-control-disabled: #e5e7eb;
@@ -48,6 +53,7 @@ body {
   --c-surface-page: #e5e7eb;
   --c-surface-table-header: #e5e7eb;
   --c-surface-selected: #dbeafe;
+  --c-over-image-control-surface: rgb(255 255 255 / 90%);
   --c-surface-info: #eff6ff;
   --c-surface-accent: #eef6ff;
   --c-surface-accent-solid: #2563eb;
@@ -55,7 +61,7 @@ body {
   /* Status surfaces. */
   --c-surface-danger: #fef2f2;
   --c-surface-danger-strong: #fee2e2;
-  --c-surface-danger-subtle: rgba(239, 68, 68, 0.1);
+  --c-surface-danger-subtle: rgb(239 68 68 / 10%);
   --c-surface-danger-solid: #dc2626;
   --c-surface-success: #f0fdf4;
   --c-surface-success-strong: #dcfce7;
@@ -82,16 +88,19 @@ body {
   --c-chip-text-light: #fff;
 
   /* Overlay layers: modal, drawer, and lower-priority responsive scrims. */
-  --c-overlay-modal: rgba(0, 0, 0, 0.5);
-  --c-overlay-drawer: rgba(0, 0, 0, 0.35);
-  --c-overlay-subtle: rgba(0, 0, 0, 0.3);
-  --c-overlay-image: rgba(0, 0, 0, 0.25);
-  --c-on-brand-text-muted: rgba(255, 255, 255, 0.92);
-  --c-on-brand-text-subtle: rgba(255, 255, 255, 0.5);
-  --c-on-brand-control: rgba(255, 255, 255, 0.15);
-  --c-on-brand-control-hover: rgba(255, 255, 255, 0.25);
-  --c-on-brand-border: rgba(255, 255, 255, 0.3);
-  --c-on-brand-border-hover: rgba(255, 255, 255, 0.6);
+  --c-overlay-modal: rgb(0 0 0 / 50%);
+  --c-overlay-drawer: rgb(0 0 0 / 35%);
+  --c-overlay-subtle: rgb(0 0 0 / 30%);
+  --c-overlay-image: rgb(0 0 0 / 25%);
+  --c-on-brand-text-muted: rgb(255 255 255 / 92%);
+  --c-on-brand-text-subtle: rgb(255 255 255 / 50%);
+  --c-on-brand-surface-subtle: rgb(255 255 255 / 10%);
+  --c-on-brand-control: rgb(255 255 255 / 15%);
+  --c-on-brand-control-strong: rgb(255 255 255 / 20%);
+  --c-on-brand-control-hover: rgb(255 255 255 / 25%);
+  --c-on-brand-border: rgb(255 255 255 / 30%);
+  --c-on-brand-border-strong: rgb(255 255 255 / 50%);
+  --c-on-brand-border-hover: rgb(255 255 255 / 60%);
 
   /* Spacing scale: 4px base (s-05=2px, s-1=4px, s-2=8px, s-3=16px, s-4=24px, s-5=32px, s-6=40px) */
   --s-05: 0.125rem;
@@ -110,13 +119,14 @@ body {
   --radius-sm: 4px;
 
   /* Elevation roles. */
-  --shadow-raised: 0 1px 3px rgba(0, 0, 0, 0.1);
-  --shadow-menu: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --shadow-popover: 0 4px 12px rgba(0, 0, 0, 0.15);
-  --shadow-drawer: -4px 0 16px rgba(0, 0, 0, 0.12);
-  --shadow-dialog: 0 10px 40px rgba(0, 0, 0, 0.2);
-  --shadow-control-selected: 0 1px 2px rgba(0, 0, 0, 0.1);
-  --shadow-toast: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-raised: 0 1px 3px rgb(0 0 0 / 10%);
+  --shadow-menu: 0 4px 12px rgb(0 0 0 / 12%);
+  --shadow-popover: 0 4px 12px rgb(0 0 0 / 15%);
+  --shadow-picker: 0 8px 24px rgb(0 0 0 / 15%);
+  --shadow-drawer: -4px 0 16px rgb(0 0 0 / 12%);
+  --shadow-dialog: 0 10px 40px rgb(0 0 0 / 20%);
+  --shadow-control-selected: 0 1px 2px rgb(0 0 0 / 10%);
+  --shadow-toast: 0 4px 12px rgb(0 0 0 / 12%);
   --focus-ring: 0 0 0 2px var(--c-surface-selected);
 
   /* Motion scale. */
@@ -125,10 +135,10 @@ body {
 
 /* Global Icon Styling */
 svg {
+  display: inline-block;
+  flex-shrink: 0;
   width: 1em;
   height: 1em;
-  fill: currentColor;
-  display: inline-block;
   vertical-align: middle;
-  flex-shrink: 0;
+  fill: currentcolor;
 }

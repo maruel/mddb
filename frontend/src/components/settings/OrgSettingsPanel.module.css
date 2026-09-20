@@ -12,12 +12,12 @@
 }
 
 .tabs button {
-  background: none;
-  border: none;
   padding: var(--s-3) var(--s-4);
-  cursor: pointer;
   font-weight: 500;
   color: var(--c-text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
   border-bottom: 2px solid transparent;
   transition: all var(--transition-fast);
 }
@@ -36,29 +36,29 @@
 }
 
 .section h3 {
-  font-size: 1.1rem;
   margin-bottom: var(--s-3);
+  font-size: 1.1rem;
 }
 
 .error {
   padding: var(--s-3);
-  background: var(--c-surface-danger);
-  color: var(--c-text-danger);
-  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
+  color: var(--c-text-danger);
+  background: var(--c-surface-danger);
+  border-radius: var(--radius-md);
 }
 
 .success {
   padding: var(--s-3);
-  background: var(--c-surface-success);
-  color: var(--c-text-success);
-  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
+  color: var(--c-text-success);
+  background: var(--c-surface-success);
+  border-radius: var(--radius-md);
 }
 
 .settingsForm {
-  background: var(--c-surface);
   padding: var(--s-4);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
 }
@@ -94,8 +94,8 @@
 }
 
 .settingsForm h4 {
-  font-size: 1rem;
   margin: var(--s-4) 0 var(--s-3) 0;
+  font-size: 1rem;
   color: var(--c-text-muted);
 }
 
@@ -105,12 +105,12 @@
 
 .saveButton {
   padding: var(--s-3) var(--s-5);
-  background: var(--c-action-primary);
+  font-weight: 500;
   color: var(--c-text-inverse);
+  cursor: pointer;
+  background: var(--c-action-primary);
   border: none;
   border-radius: var(--radius-md);
-  cursor: pointer;
-  font-weight: 500;
 }
 
 .saveButton:hover {
@@ -118,6 +118,6 @@
 }
 
 .saveButton:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }

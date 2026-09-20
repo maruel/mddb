@@ -5,13 +5,13 @@
 }
 
 .header h2 {
-  font-size: 1.25rem;
   margin-bottom: var(--s-2);
+  font-size: 1.25rem;
 }
 
 .header p {
-  color: var(--c-text-muted);
   font-size: 0.9rem;
+  color: var(--c-text-muted);
 }
 
 .formGroup {
@@ -39,27 +39,27 @@
 }
 
 .primaryButton {
-  flex: 2;
   display: block;
+  flex: 2;
   padding: var(--s-3);
-  border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
+  border-radius: var(--radius-md);
   transition: background var(--transition-fast);
 }
 
 .primaryButton:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .secondaryButton {
   flex: 1;
   padding: var(--s-3) var(--s-4);
-  border-radius: var(--radius-md);
-  cursor: pointer;
   font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius-md);
 }
 
 .fullWidth {
@@ -69,9 +69,9 @@
 .error {
   padding: var(--s-3);
   margin-bottom: var(--s-4);
-  border-radius: var(--radius-md);
-  background: var(--c-surface-danger);
+  font-size: 0.85rem;
   color: var(--c-text-danger);
   text-align: center;
-  font-size: 0.85rem;
+  background: var(--c-surface-danger);
+  border-radius: var(--radius-md);
 }

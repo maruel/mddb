@@ -12,9 +12,9 @@
 }
 
 .preview h1 {
+  padding-bottom: var(--s-2);
   font-size: 1.75rem;
   border-bottom: 1px solid var(--c-border);
-  padding-bottom: var(--s-2);
 }
 
 .preview h2 {
@@ -39,8 +39,8 @@
 }
 
 .preview :is(ul, ol) {
-  margin: var(--s-3) 0;
   padding-left: var(--s-5);
+  margin: var(--s-3) 0;
 }
 
 .preview li {
@@ -49,50 +49,50 @@
 
 /* Task list items - using :global() since class names are injected via innerHTML */
 .preview :global(li.task-list-item) {
-  list-style: none;
   position: relative;
+  list-style: none;
 }
 
 .preview :global(li.task-list-item .task-checkbox) {
   position: absolute;
-  left: -1.5rem;
   top: 0.15em;
+  left: -1.5rem;
 }
 
 .preview :global(li.task-list-item[data-checked="true"]) {
-  text-decoration: line-through;
   color: var(--c-text-muted);
+  text-decoration: line-through;
 }
 
 .preview blockquote {
-  margin: var(--s-3) 0;
   padding-left: var(--s-3);
-  border-left: 3px solid var(--c-border-accent);
-  color: var(--c-text-muted);
+  margin: var(--s-3) 0;
   font-style: italic;
+  color: var(--c-text-muted);
+  border-left: 3px solid var(--c-border-accent);
 }
 
 .preview code {
-  background: var(--c-surface-code);
   padding: 0.15rem 0.4rem;
-  border-radius: 3px;
   font-family: var(--font-mono);
   font-size: 0.9em;
   color: var(--c-text-code);
+  background: var(--c-surface-code);
+  border-radius: 3px;
 }
 
 .preview pre {
-  background: var(--c-surface-code);
   padding: var(--s-3);
-  border-radius: var(--radius-md);
-  overflow-x: auto;
   margin: var(--s-3) 0;
+  overflow-x: auto;
+  background: var(--c-surface-code);
+  border-radius: var(--radius-md);
 }
 
 .preview pre code {
-  background: none;
   padding: 0;
   color: inherit;
+  background: none;
 }
 
 .preview a {
@@ -107,30 +107,30 @@
 .preview img {
   max-width: 100%;
   height: auto;
-  border-radius: var(--radius-md);
   margin: var(--s-3) 0;
+  border-radius: var(--radius-md);
 }
 
 .preview table {
-  border-collapse: collapse;
   width: 100%;
   margin: var(--s-3) 0;
+  border-collapse: collapse;
 }
 
 .preview :is(th, td) {
-  border: 1px solid var(--c-border);
   padding: var(--s-2) var(--s-3);
   text-align: left;
+  border: 1px solid var(--c-border);
 }
 
 .preview th {
-  background: var(--c-surface-table-header);
   font-weight: 600;
+  background: var(--c-surface-table-header);
 }
 
 .preview hr {
-  border: none;
   height: 1px;
-  background: var(--c-divider);
   margin: var(--s-4) 0;
+  background: var(--c-divider);
+  border: none;
 }

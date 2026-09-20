@@ -136,7 +136,7 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
                         <div class={styles.inlineSwatchWrapper}>
                           <button
                             class={styles.inlineSwatchBtn}
-                            style={opt.color ? { background: opt.color } : {}}
+                            style={{ "--swatch-color": opt.color }}
                             onClick={() => setOpenSwatchFor(isSwatchOpen() ? null : opt.id)}
                             aria-label="Change color"
                           />
@@ -146,14 +146,10 @@ export function AddColumnDropdown(props: AddColumnDropdownProps) {
                                 {(color) => (
                                   <button
                                     class={styles.inlineSwatchChoice}
-                                    style={
-                                      color === NO_OPTION_COLOR
-                                        ? {
-                                            background: "var(--c-surface-hover)",
-                                            border: "1px solid var(--c-border)",
-                                          }
-                                        : { background: color }
-                                    }
+                                    classList={{ [`${styles.inlineSwatchChoiceNone}`]: color === NO_OPTION_COLOR }}
+                                    style={{
+                                      "--swatch-color": color === NO_OPTION_COLOR ? "var(--c-surface-hover)" : color,
+                                    }}
                                     onClick={() => handleOptionRecolor(opt.id, color)}
                                     aria-label={color}
                                   />

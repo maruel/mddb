@@ -1,12 +1,12 @@
 /* Styles for the NotionImportBanner component. */
 .banner {
   display: flex;
-  align-items: center;
   gap: var(--s-3);
+  align-items: center;
   padding: var(--s-3) var(--s-4);
+  font-size: 0.85rem;
   background: var(--c-surface-accent);
   border-bottom: 1px solid var(--c-border-accent);
-  font-size: 0.85rem;
 }
 
 .banner.success {
@@ -29,8 +29,8 @@
 }
 
 .content {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
 }
@@ -40,8 +40,8 @@
 }
 
 .progress {
-  color: var(--c-text-muted);
   font-size: 0.8rem;
+  color: var(--c-text-muted);
 }
 
 .stats {
@@ -68,12 +68,12 @@
 
 .cancelButton {
   padding: var(--s-1) var(--s-3);
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
   background: none;
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  font-size: 0.8rem;
-  cursor: pointer;
-  color: var(--c-text-muted);
 }
 
 .cancelButton:hover {
@@ -82,11 +82,11 @@
 
 .dismissButton {
   padding: var(--s-1) var(--s-3);
+  font-size: 0.8rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
   background: none;
   border: none;
-  font-size: 0.8rem;
-  cursor: pointer;
-  color: var(--c-text-muted);
 }
 
 .dismissButton:hover {

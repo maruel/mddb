@@ -2,43 +2,43 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: var(--c-overlay-modal);
+  z-index: 2000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  background: var(--c-overlay-modal);
 }
 
 .modal {
-  background: var(--c-surface);
   width: 100%;
   max-width: 440px;
+  padding: var(--s-5);
+  background: var(--c-surface);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-dialog);
-  padding: var(--s-5);
-  animation: slideUp 0.2s ease-out;
+  animation: slide-up 0.2s ease-out;
 }
 
-@keyframes slideUp {
+@keyframes slide-up {
   from {
-    transform: translateY(10px);
     opacity: 0;
+    transform: translateY(10px);
   }
 }
 
 .header {
-  text-align: center;
   margin-bottom: var(--s-4);
+  text-align: center;
 }
 
 .header h2 {
-  font-size: 1.25rem;
   margin-bottom: var(--s-2);
+  font-size: 1.25rem;
 }
 
 .header p {
-  color: var(--c-text-muted);
   font-size: 0.9rem;
+  color: var(--c-text-muted);
 }
 
 .content {
@@ -47,8 +47,8 @@
 
 .step h3 {
   margin-bottom: var(--s-4);
-  text-align: center;
   font-size: 1rem;
+  text-align: center;
 }
 
 .formGroup {
@@ -70,21 +70,21 @@
 }
 
 .formGroup input:disabled {
-  background: var(--c-surface-control-disabled);
   color: var(--c-text-muted);
+  background: var(--c-surface-control-disabled);
 }
 
 .primaryButton {
   display: block;
   width: 100%;
   padding: var(--s-3);
-  background: var(--c-action-primary);
-  color: var(--c-text-inverse);
-  border: none;
-  border-radius: var(--radius-md);
   font-size: 0.9rem;
   font-weight: 500;
+  color: var(--c-text-inverse);
   cursor: pointer;
+  background: var(--c-action-primary);
+  border: none;
+  border-radius: var(--radius-md);
   transition: background var(--transition-fast);
 }
 
@@ -93,18 +93,18 @@
 }
 
 .primaryButton:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .secondaryButton {
   padding: var(--s-3) var(--s-4);
+  font-weight: 500;
+  color: var(--c-text-muted);
+  cursor: pointer;
   background: none;
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  color: var(--c-text-muted);
-  cursor: pointer;
-  font-weight: 500;
 }
 
 .secondaryButton:hover {
@@ -127,12 +127,12 @@
 
 .error {
   padding: var(--s-3);
-  background: var(--c-surface-danger);
-  color: var(--c-text-danger);
-  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
-  text-align: center;
   font-size: 0.85rem;
+  color: var(--c-text-danger);
+  text-align: center;
+  background: var(--c-surface-danger);
+  border-radius: var(--radius-md);
 }
 
 .gitForm {

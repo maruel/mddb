@@ -179,7 +179,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
       <div
         ref={(el) => (panelRef = el)}
         class={styles.panel}
-        style={{ left: `${adjustedPos().x}px`, top: `${adjustedPos().y}px` }}
+        style={{ "--panel-left": `${adjustedPos().x}px`, "--panel-top": `${adjustedPos().y}px` }}
         data-testid="select-options-editor"
       >
         <div class={styles.header}>
@@ -219,7 +219,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
                   <div class={styles.swatchWrapper}>
                     <button
                       class={styles.swatchBtn}
-                      style={opt.color ? { background: opt.color } : {}}
+                      style={{ "--swatch-color": opt.color }}
                       onClick={() => setOpenSwatchFor(isSwatchOpen() ? null : opt.id)}
                       aria-label="Change color"
                       data-testid={`option-color-${opt.id}`}
@@ -230,12 +230,13 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
                           {(color) => (
                             <button
                               class={styles.swatchChoice}
-                              style={
-                                color === NO_OPTION_COLOR
-                                  ? { background: "var(--c-surface-hover)", border: "1px solid var(--c-border)" }
-                                  : { background: color }
-                              }
-                              classList={{ [`${styles.swatchChoiceActive}`]: (opt.color ?? "") === color }}
+                              classList={{
+                                [`${styles.swatchChoiceActive}`]: (opt.color ?? "") === color,
+                                [`${styles.swatchChoiceNone}`]: color === NO_OPTION_COLOR,
+                              }}
+                              style={{
+                                "--swatch-color": color === NO_OPTION_COLOR ? "var(--c-surface-hover)" : color,
+                              }}
                               onClick={() => handleRecolor(opt.id, color)}
                               aria-label={color}
                               data-testid={`swatch-${color}`}

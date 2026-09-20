@@ -8,38 +8,38 @@
 
 .gallery {
   display: grid;
+  flex: 1;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  align-content: start;
   gap: var(--s-4);
+  align-content: start;
   padding: var(--s-4) var(--s-3) var(--s-3) 28px;
   overflow-y: auto;
-  flex: 1;
 }
 
 .card {
+  flex-direction: column;
+  overflow: hidden;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  overflow: hidden;
   transition:
     transform var(--transition-fast),
     box-shadow var(--transition-fast);
-  flex-direction: column;
 }
 
 .card:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-raised);
+  transform: translateY(-2px);
 }
 
 .imageContainer {
-  height: 140px;
-  background: var(--c-surface-subtle);
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  height: 140px;
+  background: var(--c-surface-subtle);
   border-bottom: 1px solid var(--c-border);
-  flex-shrink: 0;
 }
 
 .image {
@@ -48,9 +48,21 @@
   object-fit: cover;
 }
 
+.imageHidden {
+  display: none;
+}
+
 .imagePlaceholder {
-  color: var(--c-text-muted);
   font-size: 0.85rem;
+  color: var(--c-text-muted);
+}
+
+.imagePlaceholderHidden {
+  display: none;
+}
+
+.imagePlaceholderVisible {
+  display: flex;
 }
 
 .cardContent {
@@ -67,16 +79,16 @@
 
 .field {
   display: flex;
-  align-items: baseline;
   gap: var(--s-2);
+  align-items: baseline;
   margin-bottom: var(--s-1);
   overflow: hidden;
 }
 
 .fieldName {
-  color: var(--c-text-muted);
   flex-shrink: 0;
   font-size: 0.78rem;
+  color: var(--c-text-muted);
 }
 
 .fieldName::after {
@@ -84,60 +96,60 @@
 }
 
 .fieldValue {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
   color: var(--c-text);
+  white-space: nowrap;
 }
 
 .titleInput {
-  background: none;
-  border: none;
+  width: 100%;
+  padding: 2px 0;
   font-family: inherit;
   font-size: 1rem;
   font-weight: 700;
   color: inherit;
-  width: 100%;
-  padding: 2px 0;
+  background: none;
+  border: none;
 }
 
 .titleInput:focus {
+  padding: 2px var(--s-1);
   outline: none;
   background: var(--c-surface-hover);
   border-radius: 4px;
-  padding: 2px var(--s-1);
 }
 
 .empty {
-  flex: 1;
   display: flex;
+  flex: 1;
   align-items: center;
   justify-content: center;
-  color: var(--c-text-muted);
-  font-style: italic;
   font-size: 0.9rem;
+  font-style: italic;
+  color: var(--c-text-muted);
 }
 
 .statusBar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
   padding: var(--s-1) var(--s-3);
   font-size: 0.75rem;
   color: var(--c-text-muted);
-  border-top: 1px solid var(--c-border);
-  flex-shrink: 0;
   user-select: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  border-top: 1px solid var(--c-border);
 }
 
 .addRecord {
+  padding: 2px var(--s-2);
+  font-size: 0.75rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
   background: none;
   border: none;
-  color: var(--c-text-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-  padding: 2px var(--s-2);
   border-radius: var(--radius-md);
   transition:
     background var(--transition-fast),
@@ -145,6 +157,6 @@
 }
 
 .addRecord:hover {
-  background: var(--c-surface-hover);
   color: var(--c-text);
+  background: var(--c-surface-hover);
 }

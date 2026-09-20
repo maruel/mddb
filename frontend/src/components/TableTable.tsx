@@ -656,7 +656,7 @@ export default function TableTable(props: TableTableProps) {
                         [`${styles.colDragging}`]: draggingColName() === column.name,
                         [`${styles.colDragOver}`]: dragOverColName() === column.name,
                       }}
-                      style={{ width: `${colWidth(column.name)}px`, "min-width": `${MIN_COL_WIDTH}px` }}
+                      style={{ "--column-width": `${colWidth(column.name)}px` }}
                       draggable={!!props.onReorderColumns && realIndex() > 0}
                       onClick={(e) => handleHeaderClick(e, realIndex())}
                       onContextMenu={(e) => handleHeaderContextMenu(e, realIndex())}
@@ -741,7 +741,9 @@ export default function TableTable(props: TableTableProps) {
                           {(col) => (
                             <div class={styles.hiddenColumnItem}>
                               <span>{col.name}</span>
-                              <button onClick={() => showColumn(col.name)}>{t("table.showColumn") || "Show"}</button>
+                              <button class={styles.hiddenColumnShowBtn} onClick={() => showColumn(col.name)}>
+                                {t("table.showColumn") || "Show"}
+                              </button>
                             </div>
                           )}
                         </For>

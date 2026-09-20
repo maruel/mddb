@@ -9,9 +9,9 @@
 }
 
 .primary {
-  border: none;
-  background: var(--c-action-primary);
   color: var(--c-text-inverse);
+  background: var(--c-action-primary);
+  border: none;
 }
 
 .primary:hover:not(:disabled) {
@@ -19,9 +19,9 @@
 }
 
 .secondary {
-  border: 1px solid var(--c-border);
-  background: transparent;
   color: var(--c-text-muted);
+  background: transparent;
+  border: 1px solid var(--c-border);
 }
 
 .secondary:hover:not(:disabled) {
@@ -30,8 +30,8 @@
 
 .ghost,
 .unstyled {
-  border: none;
   background: transparent;
+  border: none;
 }
 
 .ghost {
@@ -39,6 +39,6 @@
 }
 
 .ghost:hover:not(:disabled) {
-  background: var(--c-surface-hover);
   color: var(--c-text);
+  background: var(--c-surface-hover);
 }

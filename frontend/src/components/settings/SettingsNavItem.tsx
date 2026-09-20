@@ -66,14 +66,6 @@ export default function SettingsNavItem(props: SettingsNavItemProps) {
 
   const paddingLeft = () => `${props.depth * 12 + 16}px`;
 
-  const navItemClass = () => {
-    let classes = styles.navItem;
-    if (props.isActive(props.item.url, props.currentRoute)) classes += " " + styles.active;
-    if (props.depth === 0 && hasChildren()) classes += " " + styles.section;
-    if (props.item.separator) classes += " " + styles.separator;
-    return classes;
-  };
-
   const expandIconClass = () => {
     let classes = styles.expandIcon;
     if (isExpanded()) classes += " " + styles.expanded;
@@ -84,8 +76,13 @@ export default function SettingsNavItem(props: SettingsNavItemProps) {
     <div class={styles.navItemWrapper}>
       <a
         href={props.item.url || "#"}
-        class={navItemClass()}
-        style={{ "padding-left": paddingLeft() }}
+        classList={{
+          [`${styles.navItem}`]: true,
+          [`${styles.active}`]: props.isActive(props.item.url, props.currentRoute),
+          [`${styles.section}`]: props.depth === 0 && hasChildren(),
+          [`${styles.separator}`]: props.item.separator === true,
+        }}
+        style={{ "--settings-nav-item-indent": paddingLeft() }}
         onClick={handleClick}
       >
         <Show when={hasChildren()} fallback={<span class={styles.expandSpacer} />}>

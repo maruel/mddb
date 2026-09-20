@@ -2,25 +2,26 @@
 .handle {
   /* Position is relative - parent container handles absolute positioning */
   position: relative;
-  width: 18px;
-  height: 24px;
-  cursor: grab;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 3px;
+  width: 18px;
+  height: 24px;
   color: var(--c-text-muted);
+  cursor: grab;
+  user-select: none;
+  border-radius: 3px;
   transition:
     background 0.1s,
     color 0.1s;
-  user-select: none;
+
   /* Ensure webkit browsers treat this as a draggable element, not text */
   -webkit-user-drag: element;
 }
 
 .handle:hover {
-  background: var(--c-surface-control-hover);
   color: var(--c-text);
+  background: var(--c-surface-control-hover);
 }
 
 .handle:active {

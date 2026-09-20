@@ -8,58 +8,58 @@
 
 .header {
   display: flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
   padding: var(--s-3) var(--s-4);
   border-bottom: 1px solid var(--c-border);
-  flex-shrink: 0;
 }
 
 .headerActions {
   display: flex;
-  align-items: center;
   gap: var(--s-1);
+  align-items: center;
 }
 
 .actionButton {
-  background: none;
-  border: none;
-  font-size: 1rem;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--c-text-muted);
-  padding: 4px 6px;
-  border-radius: var(--radius-md);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 4px 6px;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: var(--radius-md);
   transition:
     background var(--transition-fast),
     color var(--transition-fast);
 }
 
 .actionButton:hover {
-  background: var(--c-surface-hover);
   color: var(--c-text);
+  background: var(--c-surface-hover);
 }
 
 .headerTitle {
+  margin: 0;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--c-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin: 0;
 }
 
 .closeButton {
-  background: none;
-  border: none;
+  padding: 4px 6px;
   font-size: 1.25rem;
   line-height: 1;
-  cursor: pointer;
   color: var(--c-text-muted);
-  padding: 4px 6px;
+  cursor: pointer;
+  background: none;
+  border: none;
   border-radius: var(--radius-md);
   transition:
     background var(--transition-fast),
@@ -67,17 +67,17 @@
 }
 
 .closeButton:hover {
-  background: var(--c-surface-hover);
   color: var(--c-text);
+  background: var(--c-surface-hover);
 }
 
 .body {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--s-4);
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: var(--s-4);
+  padding: var(--s-4);
+  overflow-y: auto;
 }
 
 .field {
@@ -89,21 +89,21 @@
 .fieldLabel {
   font-size: 0.7rem;
   font-weight: 600;
-  text-transform: uppercase;
   color: var(--c-text-muted);
+  text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .titleInput {
-  background: none;
-  border: none;
-  border-bottom: 1px solid var(--c-border);
+  width: 100%;
+  padding: var(--s-1) 0;
   font-family: inherit;
   font-size: 1.25rem;
   font-weight: 700;
   color: inherit;
-  width: 100%;
-  padding: var(--s-1) 0;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--c-border);
   transition: border-color var(--transition-fast);
 }
 
@@ -113,8 +113,8 @@
 }
 
 .fieldValue {
-  background: var(--c-surface-sunken);
-  border-radius: var(--radius-md);
   padding: var(--s-1) var(--s-2);
   font-size: 0.9rem;
+  background: var(--c-surface-sunken);
+  border-radius: var(--radius-md);
 }

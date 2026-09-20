@@ -1,12 +1,14 @@
 /* Styles for the PageHeader component. */
 .pageHeader {
-  --cover-control-surface: rgba(255, 255, 255, 0.9);
-
   display: flex;
   flex-direction: column;
 }
 
 /* Cover image */
+.coverInput {
+  display: none;
+}
+
 .coverWrapper {
   position: relative;
   width: 100%;
@@ -22,23 +24,23 @@
 }
 
 .coverImage {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center 30%;
-  display: block;
 }
 
 .coverOverlay {
   position: absolute;
   inset: 0;
   display: flex;
+  gap: var(--s-2);
   align-items: flex-end;
   justify-content: flex-end;
-  gap: var(--s-2);
   padding: var(--s-2);
-  opacity: 0;
   background: linear-gradient(to top, var(--c-overlay-image) 0%, transparent 60%);
+  opacity: 0;
   transition: opacity 0.15s;
 }
 
@@ -47,13 +49,13 @@
 }
 
 .coverBtn {
-  font-size: 0.75rem;
   padding: 4px 10px;
-  background: var(--cover-control-surface);
+  font-size: 0.75rem;
   color: var(--c-text);
+  cursor: pointer;
+  background: var(--c-over-image-control-surface);
   border: none;
   border-radius: 4px;
-  cursor: pointer;
   backdrop-filter: blur(4px);
 }
 
@@ -63,31 +65,32 @@
 
 /* Meta row: icon + hover-action buttons */
 .metaRow {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-3) 0;
-  min-height: 44px;
   position: relative;
+  display: flex;
+  gap: var(--s-2);
+  align-items: flex-end;
+  min-height: 44px;
+  padding: var(--s-2) var(--s-3) 0;
 }
 
 /* Icon display */
 .iconWrapper {
   position: relative;
   flex-shrink: 0;
+
   /* Pull icon up to overlap cover when cover is visible */
   margin-top: -28px;
 }
 
 .iconButton {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 4px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  border-radius: 8px;
   transition: background 0.12s;
 }
 
@@ -96,11 +99,11 @@
 }
 
 .pageIcon {
-  font-size: 3rem;
-  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 3rem;
+  line-height: 1;
 }
 
 .pageIcon svg {
@@ -115,12 +118,12 @@
 
 /* Hover action buttons ("Add icon", "Add cover") */
 .hoverActions {
+  position: relative;
   display: flex;
-  align-items: center;
   gap: var(--s-2);
+  align-items: center;
   opacity: 0;
   transition: opacity 0.15s;
-  position: relative;
 }
 
 .metaRow:hover .hoverActions {
@@ -129,16 +132,16 @@
 
 .hoverBtn {
   display: inline-flex;
-  align-items: center;
   gap: var(--s-1);
+  align-items: center;
+  padding: 4px 8px;
   font-size: 0.8rem;
   color: var(--c-text-muted);
+  white-space: nowrap;
+  cursor: pointer;
   background: none;
   border: none;
-  cursor: pointer;
-  padding: 4px 8px;
   border-radius: 4px;
-  white-space: nowrap;
   transition:
     color 0.12s,
     background 0.12s;

@@ -5,16 +5,16 @@
 
 .wsButton {
   display: flex;
-  align-items: center;
   gap: var(--s-2);
-  background: var(--c-on-brand-control);
-  color: var(--c-text-inverse);
-  border: none;
+  align-items: center;
   padding: var(--s-2) var(--s-3);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background var(--transition-fast);
   font-size: 0.85rem;
+  color: var(--c-text-inverse);
+  cursor: pointer;
+  background: var(--c-on-brand-control);
+  border: none;
+  border-radius: var(--radius-md);
+  transition: background var(--transition-fast);
 }
 
 .wsButton:hover {
@@ -22,17 +22,17 @@
 }
 
 .wsName {
-  font-weight: 500;
   max-width: 200px;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 500;
   white-space: nowrap;
 }
 
 .chevron {
-  opacity: 0.8;
   display: inline-flex;
   align-items: center;
+  opacity: 0.8;
 }
 
 .chevron svg {
@@ -43,13 +43,13 @@
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
+  z-index: 1000;
   min-width: 220px;
+  overflow: hidden;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-menu);
-  z-index: 1000;
-  overflow: hidden;
 }
 
 .wsList {
@@ -69,18 +69,18 @@
 }
 
 .wsItem {
-  width: 100%;
-  padding: var(--s-3);
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--c-text);
-  transition: background var(--transition-fast);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  padding: var(--s-3);
+  font-size: 0.85rem;
+  color: var(--c-text);
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
+  transition: background var(--transition-fast);
 }
 
 .wsItem:hover {
@@ -98,9 +98,9 @@
 }
 
 .checkmark {
-  color: var(--c-text-accent);
   display: inline-flex;
   align-items: center;
+  color: var(--c-text-accent);
 }
 
 .checkmark svg {
@@ -113,18 +113,18 @@
 }
 
 .menuItem {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
   width: 100%;
   padding: var(--s-3);
-  border: none;
-  background: none;
-  text-align: left;
-  cursor: pointer;
   font-size: 0.85rem;
   color: var(--c-text);
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: none;
   transition: background var(--transition-fast);
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
 }
 
 .menuItem:hover {
@@ -132,9 +132,9 @@
 }
 
 .icon {
-  opacity: 0.7;
   display: inline-flex;
   align-items: center;
+  opacity: 0.7;
 }
 
 .icon svg {
@@ -142,9 +142,9 @@
 }
 
 .plusIcon {
-  color: var(--c-text-accent);
   display: inline-flex;
   align-items: center;
+  color: var(--c-text-accent);
 }
 
 .plusIcon svg {

@@ -1,28 +1,28 @@
 /* Styles for always-editable field inputs in card-style views. */
 
 .input {
-  background: none;
-  border: none;
+  width: 100%;
+  min-width: 0;
+  padding: 1px 0;
   font-family: inherit;
   font-size: inherit;
   color: inherit;
-  width: 100%;
-  padding: 1px 0;
-  min-width: 0;
+  background: none;
+  border: none;
 }
 
 .input:focus {
+  padding: 1px var(--s-1);
   outline: none;
   background: var(--c-surface-hover);
   border-radius: 4px;
-  padding: 1px var(--s-1);
 }
 
 .checkbox {
-  cursor: pointer;
   width: 14px;
   height: 14px;
   accent-color: var(--c-control-accent);
+  cursor: pointer;
 }
 
 /* Shared chip and options styles for single- and multi-select */
@@ -31,8 +31,8 @@
 .multiSelectWrapper {
   position: relative;
   width: 100%;
-  cursor: pointer;
   min-height: 24px;
+  cursor: pointer;
 }
 
 .chipList {
@@ -43,28 +43,31 @@
 }
 
 .chip {
+  --chip-surface: var(--c-surface-hover);
+  --chip-text: var(--c-text);
+
   display: inline-flex;
-  align-items: center;
   gap: 3px;
-  background: var(--c-surface-hover);
-  color: var(--c-text);
-  border-radius: 10px;
-  font-size: 0.75rem;
+  align-items: center;
   padding: 1px 6px 1px 8px;
+  font-size: 0.75rem;
   line-height: 1.4;
+  color: var(--chip-text);
+  background: var(--chip-surface);
+  border-radius: 10px;
 }
 
 .chipRemove {
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
   padding: 0;
   font-size: 0.9rem;
   line-height: 1;
+  color: inherit;
+  cursor: pointer;
+  background: none;
+  border: none;
   opacity: 0.7;
-  display: inline-flex;
-  align-items: center;
 }
 
 .chipRemove:hover {
@@ -72,25 +75,32 @@
 }
 
 .selectPlaceholder {
-  color: var(--c-text-muted);
   font-size: 0.85rem;
+  color: var(--c-text-muted);
 }
 
 .portalDropdown {
+  --portal-dropdown-left: 0;
+  --portal-dropdown-min-width: 0;
+  --portal-dropdown-top: 0;
+
   position: fixed;
+  top: var(--portal-dropdown-top);
+  left: var(--portal-dropdown-left);
   z-index: 1000;
+  min-width: var(--portal-dropdown-min-width);
+  max-height: 200px;
+  overflow-y: auto;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-menu);
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .optionItem {
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
   padding: 5px 10px;
   font-size: 0.85rem;
   cursor: pointer;
@@ -102,10 +112,13 @@
 }
 
 .optionColor {
+  --option-color: transparent;
+
+  flex-shrink: 0;
   width: 8px;
   height: 8px;
+  background: var(--option-color);
   border-radius: 50%;
-  flex-shrink: 0;
 }
 
 .optionNone {
@@ -113,19 +126,19 @@
 }
 
 .memberAvatar {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  object-fit: cover;
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  width: 18px;
+  height: 18px;
+  overflow: hidden;
   font-size: 0.6em;
   font-weight: 600;
-  background: var(--c-surface-accent-solid);
   color: var(--c-text-inverse);
-  flex-shrink: 0;
-  overflow: hidden;
+  object-fit: cover;
+  background: var(--c-surface-accent-solid);
+  border-radius: 50%;
 }
 
 .ghostLabel {
@@ -134,26 +147,26 @@
 }
 
 .memberEmail {
+  max-width: 120px;
   margin-left: auto;
-  font-size: 0.78em;
-  color: var(--c-text-muted);
-  opacity: 0.7;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.78em;
+  color: var(--c-text-muted);
   white-space: nowrap;
-  max-width: 120px;
+  opacity: 0.7;
 }
 
 .searchInput {
+  box-sizing: border-box;
   width: 100%;
   padding: 5px 10px;
-  border: none;
-  border-bottom: 1px solid var(--c-border);
-  background: transparent;
   font-family: inherit;
   font-size: 0.85rem;
   color: inherit;
-  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--c-border);
 }
 
 .searchInput:focus {
@@ -161,18 +174,18 @@
 }
 
 .optionItemActive {
-  background: var(--c-surface-hover);
   font-weight: 500;
+  background: var(--c-surface-hover);
 }
 
 .optionItemFocused {
-  background: var(--c-surface-selected);
   outline: none;
+  background: var(--c-surface-selected);
 }
 
 .optionCheckmark {
-  width: 12px;
-  color: var(--c-text-accent);
   flex-shrink: 0;
+  width: 12px;
   font-size: 0.8rem;
+  color: var(--c-text-accent);
 }

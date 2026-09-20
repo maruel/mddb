@@ -127,7 +127,7 @@ export function PageHeader(props: PageHeaderProps) {
         ref={(el) => (coverInputRef = el)}
         type="file"
         accept="image/*"
-        style={{ display: "none" }}
+        class={styles.coverInput}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleCoverFileInput(file);

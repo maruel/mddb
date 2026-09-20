@@ -1,0 +1,5 @@
+/* Styles for the App route fallbacks. */
+.routeMessage {
+  padding: var(--s-5);
+  text-align: center;
+}

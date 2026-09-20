@@ -1,17 +1,17 @@
 /* Styles for the WorkspaceSettings component. */
 .settings {
-  padding: var(--s-5);
   max-width: 800px;
+  padding: var(--s-5);
   margin: 0 auto;
 }
 
 .header {
   display: flex;
-  align-items: center;
   gap: var(--s-4);
+  align-items: center;
+  padding-bottom: var(--s-3);
   margin-bottom: var(--s-5);
   border-bottom: 1px solid var(--c-border);
-  padding-bottom: var(--s-3);
 }
 
 .header h2 {
@@ -19,12 +19,12 @@
 }
 
 .backButton {
+  padding: var(--s-2) var(--s-3);
+  font-size: 0.9rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
   background: none;
   border: none;
-  font-size: 0.9rem;
-  cursor: pointer;
-  color: var(--c-text-muted);
-  padding: var(--s-2) var(--s-3);
   border-radius: var(--radius-md);
   transition: all var(--transition-fast);
 }
@@ -39,8 +39,8 @@
 }
 
 .section h3 {
-  font-size: 1.1rem;
   margin-bottom: var(--s-3);
+  font-size: 1.1rem;
 }
 
 .table {
@@ -69,18 +69,18 @@
 
 .error {
   padding: var(--s-3);
-  background: var(--c-surface-danger);
-  color: var(--c-text-danger);
-  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
+  color: var(--c-text-danger);
+  background: var(--c-surface-danger);
+  border-radius: var(--radius-md);
 }
 
 .success {
   padding: var(--s-3);
-  background: var(--c-surface-success);
-  color: var(--c-text-success);
-  border-radius: var(--radius-md);
   margin-bottom: var(--s-4);
+  color: var(--c-text-success);
+  background: var(--c-surface-success);
+  border-radius: var(--radius-md);
 }
 
 .tabs {
@@ -91,28 +91,19 @@
 }
 
 .tabs button {
-  background: none;
-  border: none;
   padding: var(--s-3) var(--s-4);
-  cursor: pointer;
   font-weight: 500;
   color: var(--c-text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
   border-bottom: 2px solid transparent;
   transition: all var(--transition-fast);
 }
 
-.tabs button:hover {
-  color: var(--c-text);
-}
-
-.tabs button.activeTab {
-  color: var(--c-text-accent);
-  border-bottom-color: var(--c-border-accent);
-}
-
 .settingsForm {
-  background: var(--c-surface);
   padding: var(--s-4);
+  background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
 }
@@ -138,12 +129,12 @@
 
 .saveButton {
   padding: var(--s-3) var(--s-5);
-  background: var(--c-action-primary);
+  font-weight: 500;
   color: var(--c-text-inverse);
+  cursor: pointer;
+  background: var(--c-action-primary);
   border: none;
   border-radius: var(--radius-md);
-  cursor: pointer;
-  font-weight: 500;
 }
 
 .saveButton:hover {
@@ -151,14 +142,14 @@
 }
 
 .saveButton:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .hint {
+  margin-top: var(--s-1);
   font-size: 0.8rem;
   color: var(--c-text-muted);
-  margin-top: var(--s-1);
 }
 
 .inviteSection {
@@ -166,8 +157,8 @@
 }
 
 .inviteForm {
-  margin-top: var(--s-5);
   padding: var(--s-4);
+  margin-top: var(--s-5);
   background: var(--c-surface-panel);
   border-radius: var(--radius-md);
 }
@@ -194,23 +185,32 @@
 
 .formGroup button {
   padding: var(--s-2) var(--s-4);
-  background: var(--c-action-primary);
   color: var(--c-text-inverse);
+  cursor: pointer;
+  background: var(--c-action-primary);
   border: none;
   border-radius: var(--radius-md);
-  cursor: pointer;
 }
 
 .formGroup button:hover {
   background: var(--c-action-primary-hover);
 }
 
+.tabs button:hover {
+  color: var(--c-text);
+}
+
+.tabs button.activeTab {
+  color: var(--c-text-accent);
+  border-bottom-color: var(--c-border-accent);
+}
+
 .addRemoteSection {
-  margin-top: var(--s-5);
   padding: var(--s-4);
+  margin-top: var(--s-5);
   background: var(--c-surface-panel);
-  border-radius: var(--radius-md);
   border: 1px dashed var(--c-border);
+  border-radius: var(--radius-md);
 }
 
 .addRemoteSection h4 {
@@ -225,11 +225,11 @@
 .smallButton {
   padding: var(--s-2) var(--s-3);
   font-size: 0.85rem;
-  background: var(--c-action-primary);
   color: var(--c-text-inverse);
+  cursor: pointer;
+  background: var(--c-action-primary);
   border: none;
   border-radius: var(--radius-md);
-  cursor: pointer;
 }
 
 .smallButton:hover {
@@ -239,11 +239,11 @@
 .deleteButtonSmall {
   padding: var(--s-2) var(--s-3);
   font-size: 0.85rem;
-  background: var(--c-surface-danger);
   color: var(--c-text-danger);
+  cursor: pointer;
+  background: var(--c-surface-danger);
   border: 1px solid var(--c-border-danger);
   border-radius: var(--radius-md);
-  cursor: pointer;
 }
 
 .deleteButtonSmall:hover {
@@ -251,27 +251,27 @@
 }
 
 .orgLink {
-  margin-top: var(--s-5);
   padding: var(--s-4);
+  margin-top: var(--s-5);
   background: var(--c-surface-panel);
-  border-radius: var(--radius-md);
   border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
 }
 
 .orgLink p {
   margin: 0 0 var(--s-3) 0;
-  color: var(--c-text-muted);
   font-size: 0.9rem;
+  color: var(--c-text-muted);
 }
 
 .linkButton {
-  background: none;
-  border: none;
-  color: var(--c-text-accent);
-  cursor: pointer;
-  font-weight: 500;
   padding: 0;
   font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--c-text-accent);
+  cursor: pointer;
+  background: none;
+  border: none;
 }
 
 .linkButton:hover {

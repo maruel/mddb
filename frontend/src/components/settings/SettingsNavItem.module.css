@@ -5,19 +5,22 @@
 }
 
 .navItem {
+  --settings-nav-item-indent: var(--s-3);
+
   display: flex;
-  align-items: center;
   gap: var(--s-2);
+  align-items: center;
   padding: var(--s-2) var(--s-3);
   padding-right: var(--s-3);
-  cursor: pointer;
+  padding-left: var(--settings-nav-item-indent);
+  font-size: 0.9rem;
   color: var(--c-text);
   text-decoration: none;
+  cursor: pointer;
+  border-left: 3px solid transparent;
   transition:
     background var(--transition-fast),
     border-color var(--transition-fast);
-  border-left: 3px solid transparent;
-  font-size: 0.9rem;
 }
 
 .navItem:hover {
@@ -25,56 +28,56 @@
 }
 
 .navItem.active {
+  font-weight: 500;
+  color: var(--c-text-accent);
   background: var(--c-surface-info);
   border-left-color: var(--c-border-accent);
-  color: var(--c-text-accent);
-  font-weight: 500;
 }
 
 .navItem.section {
-  font-weight: 600;
+  padding-top: var(--s-3);
+  margin-top: var(--s-3);
   font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--c-text-muted);
-  margin-top: var(--s-3);
-  padding-top: var(--s-3);
   border-top: 1px solid var(--c-border);
 }
 
 .navItem.section:first-child {
-  margin-top: 0;
   padding-top: var(--s-2);
+  margin-top: 0;
   border-top: none;
 }
 
 .navItem.section:hover {
-  background: transparent;
   color: var(--c-text);
+  background: transparent;
 }
 
 .navItem.separator {
-  border-top: 1px solid var(--c-border);
-  margin-top: var(--s-3);
   padding-top: var(--s-3);
+  margin-top: var(--s-3);
+  border-top: 1px solid var(--c-border);
 }
 
 .expandIcon {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
   font-size: 9px;
-  transition: transform 0.2s ease;
   color: var(--c-text-muted);
   border-radius: 3px;
+  transition: transform 0.2s ease;
 }
 
 .expandIcon:hover {
-  background: var(--c-surface-control-hover);
   color: var(--c-text);
+  background: var(--c-surface-control-hover);
 }
 
 .expandIcon.expanded {
@@ -82,16 +85,16 @@
 }
 
 .expandSpacer {
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
 }
 
 .label {
   flex: 1;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .children {

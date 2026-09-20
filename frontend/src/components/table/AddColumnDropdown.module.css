@@ -1,8 +1,8 @@
 /* Add column dropdown styles */
 
 .addColumnCell {
-  padding: var(--s-2) var(--s-3);
   min-width: 36px;
+  padding: var(--s-2) var(--s-3);
 }
 
 .addColumnWrapper {
@@ -11,51 +11,51 @@
 }
 
 .addColumnBtn {
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  font-size: 1rem;
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  color: var(--c-text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 1rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
   transition: all 0.15s;
 }
 
 .addColumnBtn:hover {
-  background: var(--c-surface-control-hover);
   color: var(--c-text);
+  background: var(--c-surface-control-hover);
 }
 
 .addColumnDropdown {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: var(--s-1);
-  padding: var(--s-3);
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-popover);
-  min-width: 220px;
   z-index: 100;
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
+  min-width: 220px;
+  padding: var(--s-3);
+  margin-top: var(--s-1);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
 }
 
 .columnNameInput,
 .columnTypeSelect {
   width: 100%;
   padding: var(--s-2);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
   font-size: 0.85rem;
   background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
 }
 
 .columnNameInput:focus,
@@ -75,16 +75,16 @@
 .addColumnCancel {
   flex: 1;
   padding: var(--s-2);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
   border: none;
   border-radius: var(--radius-md);
-  font-size: 0.8rem;
-  cursor: pointer;
-  font-weight: 500;
 }
 
 .addColumnConfirm {
-  background: var(--c-action-primary);
   color: var(--c-text-inverse);
+  background: var(--c-action-primary);
 }
 
 .addColumnConfirm:hover {
@@ -92,8 +92,8 @@
 }
 
 .addColumnCancel {
-  background: var(--c-surface-control);
   color: var(--c-text);
+  background: var(--c-surface-control);
 }
 
 .addColumnCancel:hover {
@@ -106,17 +106,17 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  max-height: 160px;
+  padding: 4px;
+  overflow-y: auto;
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
-  padding: 4px;
-  max-height: 160px;
-  overflow-y: auto;
 }
 
 .inlineOptionRow {
   display: flex;
-  align-items: center;
   gap: 4px;
+  align-items: center;
   padding: 2px 4px;
   border-radius: 3px;
 }
@@ -131,54 +131,66 @@
 }
 
 .inlineSwatchBtn {
+  --swatch-color: var(--c-surface-hover);
+
+  display: block;
   width: 12px;
   height: 12px;
-  border-radius: 50%;
-  border: 1px solid var(--c-border);
-  background: var(--c-surface-hover);
-  cursor: pointer;
   padding: 0;
-  display: block;
+  cursor: pointer;
+  background: var(--swatch-color);
+  border: 1px solid var(--c-border);
+  border-radius: 50%;
 }
 
 .inlineSwatchPicker {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 4px;
   z-index: 200;
+  display: grid;
+  grid-template-columns: repeat(4, 16px);
+  gap: 4px;
+  padding: 6px;
+  margin-top: 4px;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-popover);
-  padding: 6px;
-  display: grid;
-  grid-template-columns: repeat(4, 16px);
-  gap: 4px;
 }
 
 .inlineSwatchChoice {
+  --swatch-color: transparent;
+
   width: 16px;
   height: 16px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  cursor: pointer;
   padding: 0;
+  cursor: pointer;
+  background: var(--swatch-color);
+  border: 2px solid transparent;
+  border-radius: 50%;
 }
 
 .inlineSwatchChoice:hover {
   border-color: var(--c-border-strong);
 }
 
+/* The white palette entry is the "no colour" choice: it keeps a neutral hairline border. */
+.inlineSwatchChoiceNone,
+.inlineSwatchChoiceNone:hover {
+  border-color: var(--c-border);
+  border-width: 1px;
+}
+
 .inlineOptionInput {
   flex: 1;
-  border: none;
-  background: transparent;
+  min-width: 0;
+  padding: 1px 2px;
   font-family: inherit;
   font-size: 0.82rem;
   color: var(--c-text);
-  padding: 1px 2px;
-  min-width: 0;
+  background: transparent;
+  border: none;
 }
 
 .inlineOptionInput:focus {
@@ -186,38 +198,38 @@
 }
 
 .inlineOptionDelete {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--c-text-muted);
+  flex-shrink: 0;
   padding: 0;
   font-size: 0.9rem;
   line-height: 1;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  background: none;
+  border: none;
   opacity: 0;
-  flex-shrink: 0;
-}
-
-.inlineOptionRow:hover .inlineOptionDelete {
-  opacity: 1;
 }
 
 .inlineOptionDelete:hover {
   color: var(--c-text-danger);
 }
 
+.inlineOptionRow:hover .inlineOptionDelete {
+  opacity: 1;
+}
+
 .inlineAddOptionBtn {
+  padding: 3px 4px;
+  font-size: 0.78rem;
+  color: var(--c-text-muted);
+  text-align: left;
+  cursor: pointer;
   background: none;
   border: none;
-  cursor: pointer;
-  color: var(--c-text-muted);
-  font-size: 0.78rem;
-  padding: 3px 4px;
-  text-align: left;
   border-radius: 3px;
   transition: background var(--transition-fast);
 }
 
 .inlineAddOptionBtn:hover {
-  background: var(--c-surface-hover);
   color: var(--c-text);
+  background: var(--c-surface-hover);
 }

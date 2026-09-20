@@ -362,7 +362,7 @@ export default function SidebarNode(props: SidebarNodeProps) {
           [`${styles.dragging}`]: isDragging(),
           [`${styles.dropTarget}`]: isDropTarget(),
         }}
-        style={{ "padding-left": `${props.depth * 12 + 8}px` }}
+        style={{ "--sidebar-node-indent": `${props.depth * 12 + 8}px` }}
         draggable="true"
         onClick={() => props.onSelect(props.node)}
         onContextMenu={handleContextMenu}

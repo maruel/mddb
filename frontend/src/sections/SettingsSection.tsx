@@ -6,6 +6,7 @@ import { useAuth } from "../contexts";
 import { useI18n } from "../i18n";
 import { settingsUrl, stripSlug } from "../utils/urls";
 import SettingsLayout from "./SettingsLayout";
+import styles from "./SettingsSection.module.css";
 
 const ProfileSettings = lazy(() => import("../components/settings/ProfileSettings"));
 const WorkspaceSettingsPanel = lazy(() => import("../components/settings/WorkspaceSettingsPanel"));
@@ -15,7 +16,7 @@ const ServerSettingsPanel = lazy(() => import("../components/settings/ServerSett
 // Loading fallback
 function SettingsLoading() {
   const { t } = useI18n();
-  return <div style={{ padding: "2rem", color: "var(--c-text-muted)" }}>{t("common.loading")}</div>;
+  return <div class={styles.loading}>{t("common.loading")}</div>;
 }
 
 // Guard component for server settings (global admin only)

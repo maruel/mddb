@@ -5,20 +5,22 @@
 }
 
 .childList {
-  border-left: 2px solid var(--c-border);
-  margin-left: 12px;
   padding-left: 0;
-  background: linear-gradient(to right, var(--c-divider) 0px, var(--c-divider) 1px, transparent 1px);
+  margin-left: 12px;
+  background: linear-gradient(to right, var(--c-divider) 0, var(--c-divider) 1px, transparent 1px);
+  border-left: 2px solid var(--c-border);
 }
 
 .pageItem {
+  --sidebar-node-indent: var(--s-2);
+
+  display: flex;
+  gap: 4px;
+  align-items: center;
   padding: var(--s-3);
-  padding-left: var(--s-2);
+  padding-left: var(--sidebar-node-indent);
   border-bottom: 1px solid var(--c-border);
   transition: background var(--transition-fast);
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
 
 .pageButton {
@@ -26,19 +28,12 @@
   flex: 1;
   min-width: 0;
   padding: 0;
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
   font: inherit;
+  color: inherit;
   text-align: left;
-}
-
-.pageButton:focus-visible,
-.expandButton:focus-visible,
-.hoverDeleteButton:focus-visible {
-  outline: 2px solid var(--c-border-focus);
-  outline-offset: 2px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
 }
 
 .pageItem:hover {
@@ -46,19 +41,19 @@
 }
 
 .pageItem.active {
+  padding-left: calc(var(--s-2) - 3px);
   background: var(--c-surface-info);
   border-left: 3px solid var(--c-border-accent);
-  padding-left: calc(var(--s-2) - 3px);
 }
 
 .iconSlot {
   position: relative;
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  width: 20px;
+  height: 20px;
 }
 
 .expandButton {
@@ -67,10 +62,10 @@
   width: 20px;
   height: 20px;
   padding: 0;
-  border: none;
-  background: transparent;
   color: inherit;
   cursor: pointer;
+  background: transparent;
+  border: none;
 }
 
 .nodeIcon {
@@ -85,17 +80,12 @@
   opacity: 0;
 }
 
-.expandButton:hover .expandIcon,
-.pageItem:hover .expandButton .expandIcon {
-  opacity: 1;
-}
-
 .pageTitleText {
   flex: 1;
-  white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
+  white-space: nowrap;
 }
 
 .expandIcon {
@@ -104,14 +94,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  color: var(--c-text-muted);
+  border-radius: 4px;
+  opacity: 0;
   transition:
     transform 0.2s ease,
     opacity 0.15s ease,
     color var(--transition-fast),
     background var(--transition-fast);
-  color: var(--c-text-muted);
-  border-radius: 4px;
-  opacity: 0;
+}
+
+.expandButton:hover .expandIcon,
+.pageItem:hover .expandButton .expandIcon {
+  opacity: 1;
 }
 
 .expandIcon svg {
@@ -128,9 +123,9 @@
 }
 
 .expandIcon.loading {
+  color: var(--c-text-accent);
   opacity: 1;
   animation: spin 0.8s linear infinite;
-  color: var(--c-text-accent);
 }
 
 /* When loading, hide the page icon */
@@ -160,6 +155,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -167,18 +163,30 @@
 
 /* Hover delete button */
 .hoverDeleteButton {
-  margin-left: auto;
   padding: 2px 4px;
+  margin-left: auto;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
   background: transparent;
   border: none;
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.85rem;
   opacity: 0;
   transition:
     opacity var(--transition-fast),
     background var(--transition-fast);
-  line-height: 1;
+}
+
+.pageButton:focus-visible,
+.expandButton:focus-visible,
+.hoverDeleteButton:focus-visible {
+  outline: 2px solid var(--c-border-focus);
+  outline-offset: 2px;
+}
+
+.hoverDeleteButton:hover {
+  background: var(--c-surface);
+  opacity: 1;
 }
 
 .pageItem:hover .hoverDeleteButton {
@@ -187,11 +195,6 @@
 
 .pageItem:focus-within .hoverDeleteButton {
   opacity: 0.6;
-}
-
-.hoverDeleteButton:hover {
-  opacity: 1;
-  background: var(--c-surface);
 }
 
 /* Drag-and-drop states */
@@ -204,11 +207,12 @@
   border-radius: 4px;
 }
 
-@keyframes slideIn {
+@keyframes slide-in {
   from {
     opacity: 0;
     transform: translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

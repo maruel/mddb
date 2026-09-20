@@ -6,6 +6,7 @@ import { createSignal, Show } from "solid-js";
 import { Dialog } from "./Dialog";
 import { IconButton } from "./IconButton";
 import { Menu, MenuItem } from "./Menu";
+import CloseIcon from "@material-symbols/svg-400/outlined/close.svg?solid";
 
 afterEach(() => {
   cleanup();
@@ -153,7 +154,7 @@ describe("IconButton", () => {
   it("requires and exposes its accessible name", () => {
     render(() => (
       <IconButton aria-label="Close record">
-        <svg aria-hidden="true" />
+        <CloseIcon aria-hidden="true" />
       </IconButton>
     ));
 

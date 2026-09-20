@@ -127,8 +127,9 @@ lint-python: tools
 lint-binaries:
 	@python3 scripts/lint_binaries.py
 
-lint-css:
-	@python3 scripts/lint_css_vars.py
+lint-css: $(FRONTEND_STAMP)
+	@node scripts/lint_frontend_styles.mjs
+	@pnpm --silent lint:style
 
 lint-docs:
 	@python3 scripts/update_agents_file_index.py --check
@@ -136,6 +137,7 @@ lint-docs:
 lint-fix: tools $(FRONTEND_STAMP)
 	@cd ./backend && golangci-lint run --show-stats=false ./... --fix
 	@pnpm --silent lint:fix
+	@pnpm --silent lint:style:fix
 	@ruff check --quiet . --fix
 	@ruff format --quiet .
 	@python3 scripts/update_agents_file_index.py
@@ -146,6 +148,7 @@ lint-fix: tools $(FRONTEND_STAMP)
 # Prettier skips whatever .prettierignore excludes (locks, generated code, testdata).
 format: tools $(FRONTEND_STAMP)
 	@pnpm --silent format
+	@pnpm --silent lint:style:fix
 	@golangci-lint fmt
 	@ruff format --quiet .
 	@files=$$(git ls-files '*.sh' 'scripts/hooks/*'); [ -z "$$files" ] || shfmt -w $$files

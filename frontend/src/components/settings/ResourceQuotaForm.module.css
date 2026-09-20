@@ -28,26 +28,26 @@
 .inheritedInput {
   width: 100%;
   padding: var(--s-3);
-  border: 1px solid var(--c-border);
-  border-radius: var(--radius-md);
-  background: var(--c-surface-control-disabled);
   color: var(--c-text-muted);
   cursor: default;
+  background: var(--c-surface-control-disabled);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
 }
 
 .inheritLabel {
   display: flex;
-  align-items: center;
   gap: var(--s-2);
+  align-items: center;
+  margin-bottom: var(--s-2);
   font-size: 0.85rem;
   color: var(--c-text-muted);
-  margin-bottom: var(--s-2);
   cursor: pointer;
 }
 
 .ceilingHint {
   margin: var(--s-1) 0 0 0;
   font-size: 0.78rem;
-  color: var(--c-text-muted);
   font-style: italic;
+  color: var(--c-text-muted);
 }

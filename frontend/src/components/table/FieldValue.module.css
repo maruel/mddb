@@ -1,17 +1,20 @@
 /* Shared read-mode field value styles used across table views. */
 
 .selectChip {
+  --chip-surface: var(--c-surface-hover);
+  --chip-text: var(--c-text);
+
   display: inline-block;
-  padding: 1px var(--s-2);
-  border-radius: 10px;
-  font-size: 0.78rem;
-  font-weight: 500;
-  background: var(--c-surface-hover);
-  color: var(--c-text);
-  white-space: nowrap;
   max-width: 100%;
+  padding: 1px var(--s-2);
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--chip-text);
+  white-space: nowrap;
+  background: var(--chip-surface);
+  border-radius: 10px;
 }
 
 .multiChips {
@@ -24,20 +27,20 @@
   display: inline-block;
   width: 14px;
   height: 14px;
-  cursor: default;
-  accent-color: var(--c-control-accent);
   vertical-align: middle;
+  accent-color: var(--c-control-accent);
   pointer-events: none;
+  cursor: default;
 }
 
 .link {
-  color: var(--c-text-accent);
-  text-decoration: none;
+  display: inline-block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--c-text-accent);
   white-space: nowrap;
-  max-width: 100%;
-  display: inline-block;
+  text-decoration: none;
 }
 
 .link:hover {
@@ -46,17 +49,17 @@
 
 .userChip {
   display: inline-flex;
-  align-items: center;
   gap: 4px;
-  padding: 1px var(--s-2);
-  border-radius: 4px;
-  font-size: 0.85em;
-  background: var(--c-surface-hover);
-  color: var(--c-text);
-  white-space: nowrap;
+  align-items: center;
   max-width: 100%;
+  padding: 1px var(--s-2);
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 0.85em;
+  color: var(--c-text);
+  white-space: nowrap;
+  background: var(--c-surface-hover);
+  border-radius: 4px;
 }
 
 .userChip.ghost {
@@ -64,19 +67,19 @@
 }
 
 .userAvatar {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  object-fit: cover;
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
   font-size: 0.6em;
   font-weight: 600;
-  background: var(--c-surface-accent-solid);
   color: var(--c-text-inverse);
-  flex-shrink: 0;
-  overflow: hidden;
+  object-fit: cover;
+  background: var(--c-surface-accent-solid);
+  border-radius: 50%;
 }
 
 .userGhostLabel {

@@ -249,9 +249,9 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
         class={styles.slashMenu}
         data-testid="slash-command-menu"
         style={{
-          top: `${menuPosition().top}px`,
-          left: `${menuPosition().left}px`,
-          visibility: hasValidPosition() ? "visible" : "hidden",
+          "--slash-menu-top": `${menuPosition().top}px`,
+          "--slash-menu-left": `${menuPosition().left}px`,
+          "--slash-menu-visibility": hasValidPosition() ? "visible" : "hidden",
         }}
       >
         <Show

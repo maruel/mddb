@@ -198,7 +198,7 @@ export function FilterPanel(props: FilterPanelProps) {
       <div
         ref={(el) => (panelRef = el)}
         class={styles.panel}
-        style={{ left: `${adjustedPos().x}px`, top: `${adjustedPos().y}px` }}
+        style={{ "--panel-left": `${adjustedPos().x}px`, "--panel-top": `${adjustedPos().y}px` }}
         data-testid="filter-panel"
       >
         <div class={styles.row}>
@@ -263,7 +263,7 @@ export function FilterPanel(props: FilterPanelProps) {
                               data-testid={`filter-option-${opt.id}`}
                             >
                               <Show when={opt.color}>
-                                <span class={styles.optionPickerSwatch} style={{ background: opt.color }} />
+                                <span class={styles.optionPickerSwatch} style={{ "--option-color": opt.color }} />
                               </Show>
                               {opt.name}
                             </div>

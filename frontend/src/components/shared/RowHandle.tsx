@@ -1,5 +1,6 @@
 // Shared drag handle component rendering a 6-dot grip icon for draggable rows.
 import styles from "./RowHandle.module.css";
+import RowGripIcon from "./RowGripIcon.svg?solid";
 
 export interface RowHandleProps {
   /** Unique identifier for the row (block position, record ID, etc.) */
@@ -42,14 +43,7 @@ export function RowHandle(props: RowHandleProps) {
       aria-label="Drag handle"
       data-testid="row-handle"
     >
-      <svg viewBox="0 0 12 16" class={styles.icon} fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="3" cy="3" r="1.5" />
-        <circle cx="3" cy="8" r="1.5" />
-        <circle cx="3" cy="13" r="1.5" />
-        <circle cx="9" cy="3" r="1.5" />
-        <circle cx="9" cy="8" r="1.5" />
-        <circle cx="9" cy="13" r="1.5" />
-      </svg>
+      <RowGripIcon class={styles.icon} />
     </div>
   );
 }

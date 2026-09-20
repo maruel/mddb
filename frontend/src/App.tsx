@@ -2,6 +2,7 @@
 
 import { Show, Switch, Match, Suspense, type ParentComponent } from "solid-js";
 import { Router, Route, Navigate, A } from "@solidjs/router";
+import styles from "./App.module.css";
 import { AuthProvider, useAuth, NotificationProvider } from "./contexts";
 import AppErrorBoundary from "./components/ErrorBoundary";
 import PWAInstallBanner from "./components/PWAInstallBanner";
@@ -31,7 +32,7 @@ import WorkspaceSection, { WorkspaceLayout, WorkspaceRoot, NodeView } from "./se
 
 // Loading fallback for routes that suspend
 function RouteLoading() {
-  return <div style={{ padding: "2rem", "text-align": "center" }}>Loading...</div>;
+  return <div class={styles.routeMessage}>Loading...</div>;
 }
 
 // 404 page for unmatched routes - shows explicit error instead of silent redirect
@@ -39,7 +40,7 @@ function NotFound() {
   const path = window.location.pathname;
   console.error("404: Route not found:", path);
   return (
-    <div style={{ padding: "2rem", "text-align": "center" }}>
+    <div class={styles.routeMessage}>
       <h1>Page Not Found</h1>
       <p>
         The path <code>{path}</code> doesn't exist.

@@ -7,9 +7,9 @@
   justify-content: center;
   min-height: 100vh;
   padding: 2rem;
-  background: var(--c-surface);
   color: var(--c-text);
   text-align: center;
+  background: var(--c-surface);
 }
 
 .alertContent {
@@ -32,45 +32,45 @@
 }
 
 .errorDetails {
+  width: 100%;
+  max-width: 600px;
   margin-bottom: 1.5rem;
   text-align: left;
-  max-width: 600px;
-  width: 100%;
 }
 
 .errorDetails summary {
-  cursor: pointer;
-  color: var(--c-text-muted);
   font-size: 0.875rem;
+  color: var(--c-text-muted);
+  cursor: pointer;
 }
 
 .errorDetails pre {
-  margin-top: 0.5rem;
   padding: 1rem;
+  margin-top: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.75rem;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
   background: var(--c-surface-subtle);
   border-radius: 4px;
-  font-size: 0.75rem;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: var(--s-2);
+  justify-content: center;
 }
 
 .actions button {
   padding: var(--s-2) var(--s-3);
-  border-radius: var(--radius-sm);
   cursor: pointer;
+  border-radius: var(--radius-sm);
 }
 
 .copyStatus {
   min-height: 1.25rem;
   margin-top: var(--s-2);
-  color: var(--c-text-muted);
   font-size: 0.875rem;
+  color: var(--c-text-muted);
 }
