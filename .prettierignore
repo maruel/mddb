@@ -13,3 +13,5 @@ sdk/API.md
 # AGENTS.md indexes are written by scripts/update_agents_file_index.py.
 AGENTS.md
 CLAUDE.md
+# Playwright failure artifacts written by the e2e targets.
+test-results
