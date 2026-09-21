@@ -27,7 +27,7 @@
     "lint:style": "pnpm --silent lint:style:files -- \"frontend/src/**/*.css\"",
     "lint:style:files": "stylelint",
     "lint:style:fix": "pnpm exec stylelint --fix \"frontend/src/**/*.css\"",
-    "lint": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/root.tsbuildinfo && tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/e2e.tsbuildinfo -p tsconfig.e2e.json && eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts",
+    "lint:check": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/root.tsbuildinfo && tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/e2e.tsbuildinfo -p tsconfig.e2e.json && eslint --cache --cache-location node_modules/.cache/eslint/ --cache-strategy content frontend/src sdk e2e playwright.config.ts",
     "lint:fix": "eslint frontend/src sdk e2e playwright.config.ts --fix",
     "format": "prettier --write --log-level warn .",
     "format:check": "prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content .",

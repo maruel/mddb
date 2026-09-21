@@ -125,13 +125,13 @@ Blob fields are discovered automatically via reflection, including nested struct
 ## Build & Test
 
 Run these commands to verify changes:
-- `make lint` - Run linters
+- `make lint` - Apply the lint autofixes, then run `make lint-check`
 - `make build` - Compile backend and frontend
 - `make test` - Run all tests
 
 ## Code Quality & Linting
 
-**All code must pass `make lint` before commits.**
+**All code must pass `make lint-check` before commits.**
 
 ### Go Backend (golangci-lint)
 
@@ -139,8 +139,8 @@ Configured in `.golangci.yml`. Enforces error handling (`errcheck`, `errorlint`)
 
 Run with:
 ```bash
-make lint
-make lint-fix
+make lint        # autofix, then check
+make lint-check  # check only
 ```
 
 <!-- BEGIN FILE INDEX -->

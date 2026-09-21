@@ -1,5 +1,5 @@
 # Build, test, and development commands.
-.PHONY: help build dev test e2e e2e-slow coverage lint lint-go lint-frontend lint-python lint-binaries lint-css lint-docs lint-fix format format-check verify git-hooks frontend-dev types upgrade docs tools
+.PHONY: help build dev test e2e e2e-slow coverage lint lint-check lint-go lint-frontend lint-python lint-binaries lint-css lint-docs format format-check verify git-hooks frontend-dev types upgrade docs tools
 
 # Tool versions. The tools target installs a tool that is missing or at another version, so
 # these are the only places the versions are written down.
@@ -37,8 +37,8 @@ help:
 	@echo "  make e2e-slow       - Run e2e tests with normal rate limits (sequential)"
 	@echo "  make types          - Generate TypeScript types from Go structs"
 	@echo "  make docs           - Update AGENTS.md file index"
-	@echo "  make lint           - Run linters (Go + frontend)"
-	@echo "  make lint-fix       - Fix all linting issues automatically"
+	@echo "  make lint           - Fix what is autofixable, then run lint-check"
+	@echo "  make lint-check     - Run the linters without writing (Go + frontend + Python + CSS + docs)"
 	@echo "  make format         - Apply the shared formatters (prettier, gofmt, ruff, shfmt)"
 	@echo "  make format-check   - Verify formatting without writing"
 	@echo "  make git-hooks      - Install git pre-commit hooks"
@@ -118,15 +118,15 @@ coverage: $(FRONTEND_STAMP)
 	@go test -coverprofile=coverage.out ./...
 	@pnpm --silent coverage
 
-lint: tools lint-go lint-frontend lint-python lint-binaries lint-css lint-docs
+lint-check: tools lint-go lint-frontend lint-python lint-binaries lint-css lint-docs
 
-verify: format-check lint
+verify: format-check lint-check
 
 lint-go: tools custom-gcl
 	@./custom-gcl run --show-stats=false ./...
 
 lint-frontend: $(FRONTEND_STAMP)
-	@pnpm --silent lint
+	@pnpm --silent lint:check
 
 lint-python: tools
 	@ruff check --quiet .
@@ -141,13 +141,14 @@ lint-css: $(FRONTEND_STAMP)
 lint-docs:
 	@python3 scripts/update_agents_file_index.py --check
 
-lint-fix: tools $(FRONTEND_STAMP)
+# Apply the autofixes, then report what is left to fix by hand.
+lint: tools custom-gcl $(FRONTEND_STAMP)
 	@cd ./backend && $(CURDIR)/custom-gcl run --show-stats=false ./... --fix
 	@pnpm --silent lint:fix
 	@pnpm --silent lint:style:fix
 	@ruff check --quiet . --fix
-	@ruff format --quiet .
 	@python3 scripts/update_agents_file_index.py
+	@$(MAKE) --no-print-directory lint-check
 
 # Apply and verify the shared formatters: prettier for the web and prose sources,
 # gofmt and goimports through golangci-lint for Go, ruff format for the Python

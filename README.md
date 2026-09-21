@@ -101,7 +101,7 @@ transitive dependencies. Check and update eligible packages with:
 ```bash
 pnpm outdated
 make upgrade
-make lint-fix
+make lint
 make test
 ```
 

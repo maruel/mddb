@@ -20,13 +20,13 @@ as markdown files and images.
 
 ### Professionalism
 
-After making changes run `make lint-fix`, then `make format`, then `make verify`.
+After making changes run `make lint`, then `make format`, then `make verify`.
 
 ```bash
-make lint-fix   # Autofix lint and refresh generated file indexes.
+make lint       # Autofix lint, refresh generated file indexes, then run make lint-check.
 make format     # Apply prettier, gofmt, ruff format, and shfmt.
 make verify     # Re-check formatting and lint; the pre-push gate.
-make lint build test
+make lint-check build test
 ```
 
 `make verify` re-checks prettier, gofmt, ruff, and shfmt plus the ESLint, CSS, binary, and file-index checks.
@@ -60,7 +60,7 @@ fully staged snapshot. Commit-msg requires a subject, a blank separator before a
 and message lines no longer than 120 characters; it also rejects `Co-authored-by:` trailers.
 Pre-push only allows the checked-out commit (deleting a remote ref is the exception); it
 rejects dirty worktrees, unexpected binary files, WIP commits, and multi-commit pushes to
-`main`, then runs `make lint`.
+`main`, then runs `make verify`.
 
 <!-- BEGIN FILE INDEX -->
 ## File Index
