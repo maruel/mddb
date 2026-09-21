@@ -15,7 +15,7 @@ import { parseMarkdown } from "./markdown-parser";
 import { serializeToMarkdown } from "./markdown-serializer";
 import { transformPastedHTML } from "./dom-parser";
 import { createBlockNodeView } from "./BlockNodeView";
-import { toggleTaskBlock } from "./blockCommands";
+import { isTaskCheckboxClick, taskBlockPos, toggleTaskBlock } from "./blockCommands";
 import { createSlashCommandPlugin, type SlashMenuState } from "./slashCommandPlugin";
 import { createDropUploadPlugin } from "./dropUploadPlugin";
 import { createInvalidLinkPlugin, updateInvalidLinkState, INTERNAL_LINK_URL_PATTERN } from "./invalidLinkPlugin";
@@ -309,17 +309,10 @@ export default function Editor(props: EditorProps) {
 
           // Handle checkbox toggle: clicks on the ::before pseudo-element area (left padding)
           const taskEl = target.closest(".block-task") as HTMLElement | null;
-          if (taskEl) {
-            const taskRect = taskEl.getBoundingClientRect();
-            // Check if click is in the left padding area where the checkbox pseudo-element is
-            if (event.clientX < taskRect.left + 22) {
-              event.preventDefault();
-              const pos = editorView.posAtDOM(taskEl, 0);
-              const $pos = editorView.state.doc.resolve(pos);
-              const blockPos = $pos.depth >= 1 ? $pos.before(1) : pos;
-              toggleTaskBlock(blockPos)(editorView.state, editorView.dispatch);
-              return true;
-            }
+          if (taskEl && isTaskCheckboxClick(event, taskEl)) {
+            event.preventDefault();
+            toggleTaskBlock(taskBlockPos(editorView, taskEl))(editorView.state, editorView.dispatch);
+            return true;
           }
 
           const anchor = target.closest("a");

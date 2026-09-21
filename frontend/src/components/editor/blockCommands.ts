@@ -304,6 +304,40 @@ export function outdentBlocks(positions: number[]): Command {
   };
 }
 
+/** Clicks within this many pixels of a task block's left edge toggle its checkbox.
+ * The checkbox is a 16px ::before at left:2px inside 24px padding (Editor.module.css);
+ * 22px covers the checkbox with slack for imprecise clicks. */
+export const TASK_CHECKBOX_HIT_WIDTH = 22;
+
+export interface ClickPosition {
+  clientX: number;
+}
+
+export interface BoundedElement {
+  getBoundingClientRect(): { left: number };
+}
+
+/** Decides whether a click landed in a task block's checkbox area. */
+export function isTaskCheckboxClick(event: ClickPosition, taskEl: BoundedElement): boolean {
+  return event.clientX < taskEl.getBoundingClientRect().left + TASK_CHECKBOX_HIT_WIDTH;
+}
+
+export interface TaskBlockLocator {
+  posAtDOM(node: HTMLElement, offset: number): number;
+  state: {
+    doc: {
+      resolve(pos: number): { depth: number; before(depth: number): number };
+    };
+  };
+}
+
+/** Resolves the top-level block position of a task element for toggleTaskBlock. */
+export function taskBlockPos(view: TaskBlockLocator, taskEl: HTMLElement): number {
+  const pos = view.posAtDOM(taskEl, 0);
+  const $pos = view.state.doc.resolve(pos);
+  return $pos.depth >= 1 ? $pos.before(1) : pos;
+}
+
 /**
  * Toggle task completion state.
  */

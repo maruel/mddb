@@ -1,7 +1,7 @@
 # Build, verify, test, and development commands.
 
 .DEFAULT_GOAL := help
-.PHONY: help build dev coverage fix git-hooks frontend-dev test test-e2e test-e2e-slow types verify tools custom-gcl
+.PHONY: help build dev coverage fix git-hooks frontend-dev test test-e2e test-e2e-slow types verify tools custom-gcl benchmark
 
 # Tool versions. The tools target installs a tool that is missing or at another version, so
 # these are the only places the versions are written down.
@@ -71,6 +71,7 @@ help:
 	@printf '  %-18s - %s\n' 'make fix' 'Apply every autofix, then refresh the file index'
 	@printf '  %-18s - %s\n' 'make verify' 'Fast static gate: lint, formatting, generated docs (pre-push gate)'
 	@printf '  %-18s - %s\n' 'make test' 'Run unit tests (Go, frontend)'
+	@printf '  %-18s - %s\n' 'make benchmark' 'Run frontend micro-benchmarks (tinybench)'
 	@printf '  %-18s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, fast rate limits, parallel)'
 	@printf '  %-18s - %s\n' 'make test-e2e-slow' 'Run e2e tests with normal rate limits (sequential)'
 	@printf '  %-18s - %s\n' 'make build' 'Build the Go server (generates types and frontend)'
@@ -113,6 +114,11 @@ dev: build $(ENV_FILE)
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...
 	@pnpm --silent test
+
+# Frontend micro-benchmarks (tinybench) over frontend/src/**/*.bench.ts. Fast;
+# use --save/--compare for JSON baselines when reporting deltas.
+benchmark:
+	@pnpm --silent benchmark
 
 # End-to-end tests build the server, start a test instance on scraped data, and
 # run Playwright. Slow, and it shares the frontend build with build targets, so

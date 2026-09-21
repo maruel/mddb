@@ -32,7 +32,8 @@
     "format": "prettier --write --log-level warn .",
     "format:check": "prettier --check --log-level warn --cache --cache-location node_modules/.cache/prettier/.prettier-cache --cache-strategy content .",
     "hooks:install": "scripts/install-git-hooks.sh",
-    "prepare": "pnpm --silent hooks:install"
+    "prepare": "pnpm --silent hooks:install",
+    "benchmark": "tsx scripts/bench.ts 'frontend/src/**/*.bench.ts'"
   },
   "dependencies": {
     "@solid-primitives/i18n": "2.2.1",
@@ -83,6 +84,7 @@
     "stylelint-config-css-modules": "4.6.0",
     "stylelint-config-recess-order": "7.8.0",
     "stylelint-config-standard": "40.0.0",
+    "tinybench": "^6.2.0",
     "tsx": "4.23.13",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.0",

@@ -8,12 +8,14 @@ import {
   deleteBlocks,
   duplicateBlock,
   duplicateBlocks,
+  isTaskCheckboxClick,
   convertBlock,
   convertBlocks,
   indentBlock,
   outdentBlock,
   indentBlocks,
   outdentBlocks,
+  taskBlockPos,
   toggleTaskBlock,
 } from "./blockCommands";
 import { schema } from "./schema";
@@ -571,6 +573,40 @@ describe("blockCommands", () => {
   });
 
   describe("toggleTaskBlock", () => {
+    // Mirrors the former checkbox-toggle e2e: a click in the left padding area of a task
+    // block must toggle it, and a click on the text content must not.
+    it("recognizes clicks in the checkbox hit area", () => {
+      const taskEl = { getBoundingClientRect: () => ({ left: 120 }) };
+
+      // The checkbox occupies left+2..left+18; the hit area extends to left+22.
+      expect(isTaskCheckboxClick({ clientX: 128 }, taskEl)).toBe(true);
+      expect(isTaskCheckboxClick({ clientX: 141 }, taskEl)).toBe(true);
+      expect(isTaskCheckboxClick({ clientX: 142 }, taskEl)).toBe(false);
+      expect(isTaskCheckboxClick({ clientX: 300 }, taskEl)).toBe(false);
+    });
+
+    it("resolves the task element to its top-level block position", () => {
+      const view = {
+        posAtDOM: () => 17,
+        state: {
+          doc: {
+            resolve: (pos: number) => ({ depth: 1, before: () => pos - 1 }),
+          },
+        },
+      };
+      expect(taskBlockPos(view, {} as HTMLElement)).toBe(16);
+
+      const shallow = {
+        posAtDOM: () => 4,
+        state: {
+          doc: {
+            resolve: () => ({ depth: 0, before: () => 0 }),
+          },
+        },
+      };
+      expect(taskBlockPos(shallow, {} as HTMLElement)).toBe(4);
+    });
+
     it("toggles task completion state", () => {
       const doc = createDoc({
         type: "task",
