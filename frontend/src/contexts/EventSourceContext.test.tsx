@@ -1,15 +1,40 @@
 // Tests SSE connection status across failure and recovery transitions.
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, it } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { cleanup, render, screen } from "@solidjs/testing-library";
+import { AuthContext, type AuthContextValue } from "./AuthContext";
 import { EventSourceProvider, useEventSource } from "./EventSourceContext";
+import type { UserResponse } from "@sdk/types.gen";
 
-vi.mock("./AuthContext", () => ({
-  useAuth: () => ({
-    user: () => ({ id: "user-1", workspace_id: "workspace-1" }),
-    token: () => "test-token",
-  }),
-}));
+const testUser: UserResponse = {
+  id: "user-1",
+  email: "test@example.com",
+  name: "Test User",
+  organization_id: "org-1",
+  org_role: "org:member",
+  workspace_id: "workspace-1",
+  workspace_name: "Test Workspace",
+  workspace_role: "ws:viewer",
+  organizations: [],
+  workspaces: [],
+} as unknown as UserResponse;
+
+// Canned auth state provided through the real AuthContext instead of a module mock.
+const authValue: AuthContextValue = {
+  user: () => testUser,
+  token: () => "test-token",
+  ready: () => true,
+  api: () => {
+    throw new Error("api is not used by these tests");
+  },
+  wsApi: () => null,
+  orgApi: () => null,
+  login: () => undefined,
+  logout: async () => undefined,
+  setUser: () => undefined,
+  refreshUser: async () => undefined,
+};
 
 class MockEventSource {
   static instances: MockEventSource[] = [];
@@ -48,9 +73,11 @@ describe("EventSourceProvider", () => {
     vi.stubGlobal("EventSource", MockEventSource);
 
     render(() => (
-      <EventSourceProvider>
-        <ConnectionStatus />
-      </EventSourceProvider>
+      <AuthContext.Provider value={authValue}>
+        <EventSourceProvider>
+          <ConnectionStatus />
+        </EventSourceProvider>
+      </AuthContext.Provider>
     ));
 
     expect(MockEventSource.instances).toHaveLength(1);

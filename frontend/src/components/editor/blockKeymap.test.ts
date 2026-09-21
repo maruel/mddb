@@ -1,5 +1,6 @@
 // Tests for block editor keyboard shortcuts.
-import { describe, it, expect } from "vitest";
+import { describe, it } from "node:test";
+import { expect } from "@tests/expect";
 import { EditorState, TextSelection, type Command, type Transaction } from "prosemirror-state";
 import type { Node as ProseMirrorNode } from "prosemirror-model";
 import { schema } from "./schema";

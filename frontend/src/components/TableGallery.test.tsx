@@ -1,5 +1,6 @@
 // Tests for the TableGallery view.
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, beforeEach, afterEach } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { render, screen, fireEvent, waitFor, cleanup } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import TableGallery from "./TableGallery";
@@ -7,28 +8,6 @@ import { I18nProvider } from "../i18n";
 import type { DataRecordResponse, Property } from "@sdk/types.gen";
 
 // Mock CSS module
-vi.mock("./TableGallery.module.css", () => ({
-  default: {
-    container: "container",
-    gallery: "gallery",
-    card: "card",
-    imageContainer: "imageContainer",
-    imagePlaceholder: "imagePlaceholder",
-    image: "image",
-    cardContent: "cardContent",
-    cardHeader: "cardHeader",
-    deleteBtn: "deleteBtn",
-    cardBody: "cardBody",
-    field: "field",
-    fieldName: "fieldName",
-    fieldValue: "fieldValue",
-    empty: "empty",
-    statusBar: "statusBar",
-    titleInput: "titleInput",
-    addRecord: "addRecord",
-  },
-}));
-
 afterEach(() => {
   cleanup();
 });

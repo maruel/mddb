@@ -1,6 +1,7 @@
 // Tests for shared dialog and menu keyboard and focus behavior.
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, it } from "node:test";
+import { expect } from "@tests/expect";
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { createSignal, Show } from "solid-js";
 import { Dialog } from "./Dialog";

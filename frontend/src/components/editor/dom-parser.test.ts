@@ -1,6 +1,7 @@
 // Unit tests for DOM parsing utilities.
 
-import { describe, it, expect } from "vitest";
+import { describe, it } from "node:test";
+import { expect } from "@tests/expect";
 import { transformPastedHTML, extractCodeLanguage } from "./dom-parser";
 
 describe("dom-parser", () => {

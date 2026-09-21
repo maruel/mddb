@@ -36,7 +36,7 @@ const FILTER_DEBOUNCE_MS = 300;
 /** Virtual view ID used when no saved views exist. */
 export const DEFAULT_VIEW_ID = "__default__";
 
-interface RecordsContextValue {
+export interface RecordsContextValue {
   records: Accessor<DataRecordResponse[]>;
   workspaceMembers: Accessor<WorkspaceMemberResponse[]>;
   // Map from user ID string to resolved user info (includes ghosts).
@@ -88,7 +88,8 @@ interface RecordsContextValue {
   canRedo: () => boolean;
 }
 
-const RecordsContext = createContext<RecordsContextValue>();
+// Exported so tests can provide canned records state without mocking the module.
+export const RecordsContext = createContext<RecordsContextValue>();
 
 export const RecordsProvider: ParentComponent = (props) => {
   const { t } = useI18n();

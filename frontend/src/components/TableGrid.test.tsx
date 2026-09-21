@@ -1,5 +1,6 @@
 // Tests for the TableGrid view.
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, beforeEach, afterEach } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { render, screen, fireEvent, waitFor, cleanup } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import TableGrid from "./TableGrid";
@@ -7,21 +8,6 @@ import { I18nProvider } from "../i18n";
 import type { DataRecordResponse, Property } from "@sdk/types.gen";
 
 // Mock CSS module
-vi.mock("./TableGrid.module.css", () => ({
-  default: {
-    container: "container",
-    grid: "grid",
-    card: "card",
-    cardHeader: "cardHeader",
-    cardBody: "cardBody",
-    field: "field",
-    fieldName: "fieldName",
-    titleInput: "titleInput",
-    statusBar: "statusBar",
-    addRecord: "addRecord",
-  },
-}));
-
 afterEach(() => {
   cleanup();
 });

@@ -28,10 +28,11 @@
 
     /* Paths */
     "paths": {
-      "@sdk/*": ["./sdk/*"]
+      "@sdk/*": ["./sdk/*"],
+      "@tests/*": ["./frontend/tests/*"]
     }
   },
-  "include": ["frontend/src", "sdk"],
+  "include": ["frontend/src", "frontend/tests", "sdk"],
   "exclude": ["frontend/src/sw.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

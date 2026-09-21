@@ -1,6 +1,7 @@
 // Unit tests for markdown link conversion utilities.
 
-import { describe, it, expect } from "vitest";
+import { describe, it } from "node:test";
+import { expect } from "@tests/expect";
 import { relativeLinksToSpaUrls, spaUrlsToRelativeLinks, extractLinkedNodeIds } from "./markdown-utils";
 
 describe("relativeLinksToSpaUrls", () => {

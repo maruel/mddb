@@ -1,6 +1,7 @@
 // Tests for the debounce utility.
-import { describe, it, expect, vi } from "vitest";
+import { describe, it } from "node:test";
 import { debounce } from "./debounce";
+import { expect, vi } from "@tests/expect";
 
 describe("debounce", () => {
   it("calls the function after the delay", async () => {

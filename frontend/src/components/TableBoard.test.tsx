@@ -1,5 +1,6 @@
 // Tests for the TableBoard (Kanban) view.
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, beforeEach, afterEach } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { render, screen, fireEvent, waitFor, cleanup } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import TableBoard from "./TableBoard";
@@ -7,32 +8,6 @@ import { I18nProvider } from "../i18n";
 import type { DataRecordResponse, Property } from "@sdk/types.gen";
 
 // Mock CSS module
-vi.mock("./TableBoard.module.css", () => ({
-  default: {
-    board: "board",
-    boardHeader: "boardHeader",
-    groupByLabel: "groupByLabel",
-    groupBySelect: "groupBySelect",
-    noGroup: "noGroup",
-    columns: "columns",
-    column: "column",
-    columnHeader: "columnHeader",
-    columnTitle: "columnTitle",
-    colorDot: "colorDot",
-    columnName: "columnName",
-    columnCount: "columnCount",
-    cards: "cards",
-    card: "card",
-    cardHeader: "cardHeader",
-    cardBody: "cardBody",
-    field: "field",
-    fieldName: "fieldName",
-    fieldValue: "fieldValue",
-    titleInput: "titleInput",
-    addCard: "addCard",
-  },
-}));
-
 afterEach(() => {
   cleanup();
 });

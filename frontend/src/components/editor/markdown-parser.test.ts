@@ -1,6 +1,7 @@
 // Unit tests for markdown parser: converting markdown to flat blocks.
 
-import { describe, it, expect } from "vitest";
+import { describe, it } from "node:test";
+import { expect } from "@tests/expect";
 import { parseMarkdown } from "./markdown-parser";
 import { serializeToMarkdown } from "./markdown-serializer";
 

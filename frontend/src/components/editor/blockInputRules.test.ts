@@ -1,5 +1,6 @@
 // Tests for ProseMirror block input rules.
-import { describe, it, expect } from "vitest";
+import { describe, it } from "node:test";
+import { expect } from "@tests/expect";
 import { EditorState, type Transaction } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { schema } from "./schema";

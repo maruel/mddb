@@ -1,5 +1,6 @@
 // Tests for the Auth component.
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, beforeEach, afterEach } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { render, screen, fireEvent, waitFor, cleanup } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import { Router, Route } from "@solidjs/router";
@@ -8,23 +9,6 @@ import { I18nProvider } from "../i18n";
 import type { UserResponse, AuthResponse, ErrorResponse } from "@sdk/types.gen";
 
 // Mock CSS module
-vi.mock("./Auth.module.css", () => ({
-  default: {
-    authContainer: "authContainer",
-    authForm: "authForm",
-    error: "error",
-    formGroup: "formGroup",
-    toggle: "toggle",
-    oauthSection: "oauthSection",
-    divider: "divider",
-    oauthButtons: "oauthButtons",
-    googleButton: "googleButton",
-    microsoftButton: "microsoftButton",
-    oauthButton: "oauthButton",
-    authFooter: "authFooter",
-  },
-}));
-
 // Mock response for providers endpoint
 const mockProvidersResponse = {
   ok: true,

@@ -1,16 +1,11 @@
 // Tests for the MarkdownPreview component.
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, beforeEach, afterEach } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { render, cleanup } from "@solidjs/testing-library";
 import MarkdownPreview from "./MarkdownPreview";
 import type { AssetUrlMap } from "../contexts/EditorContext";
 
 // Mock CSS module
-vi.mock("./MarkdownPreview.module.css", () => ({
-  default: {
-    preview: "preview",
-  },
-}));
-
 afterEach(() => {
   cleanup();
 });

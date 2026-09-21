@@ -14,7 +14,7 @@ import {
 import { createApi, APIError, type Api } from "../useApi";
 import type { UserResponse } from "@sdk/types.gen";
 
-interface AuthContextValue {
+export interface AuthContextValue {
   user: Accessor<UserResponse | null>;
   token: Accessor<string | null>;
   /** True once initial auth check is complete (token validated or no token present) */
@@ -28,7 +28,8 @@ interface AuthContextValue {
   refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue>();
+// Exported so tests can provide canned auth state without mocking the module.
+export const AuthContext = createContext<AuthContextValue>();
 
 export const AuthProvider: ParentComponent = (props) => {
   const [user, setUser] = createSignal<UserResponse | null>(null);

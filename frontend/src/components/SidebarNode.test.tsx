@@ -1,6 +1,7 @@
 // Unit tests for SidebarNode tree navigation, activation, moves, and sidebar data flow.
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, it } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { createSignal, type JSX } from "solid-js";
 import { createStore, produce } from "solid-js/store";

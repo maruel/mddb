@@ -1,6 +1,7 @@
 // Unit tests for the useUndo hook.
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { createRoot } from "solid-js";
 import { useUndo } from "./useUndo";
 

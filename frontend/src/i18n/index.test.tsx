@@ -1,5 +1,6 @@
 // Tests for the i18n provider and translations.
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, beforeEach, afterEach } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { render, screen, waitFor, cleanup } from "@solidjs/testing-library";
 import { onMount } from "solid-js";
 import { I18nProvider, useI18n } from "./index";

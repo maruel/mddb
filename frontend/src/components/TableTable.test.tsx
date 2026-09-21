@@ -1,69 +1,63 @@
 // Tests for the TableTable view.
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, beforeEach, afterEach } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { render, screen, fireEvent, waitFor, cleanup } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import TableTable from "./TableTable";
 import { I18nProvider } from "../i18n";
+import { DEFAULT_VIEW_ID, RecordsContext } from "../contexts/RecordsContext";
+import type { RecordsContextValue } from "../contexts/RecordsContext";
 import type { DataRecordResponse, Property } from "@sdk/types.gen";
 
-// Mock RecordsContext so TableTable can be tested without a provider
-vi.mock("../contexts", () => ({
-  useRecords: () => ({
-    setSorts: vi.fn(),
-    setFilters: vi.fn(),
-    updateView: vi.fn(),
-    activeViewId: () => "__default__",
-    activeSorts: () => [],
-    activeFilters: () => [],
-    views: () => [],
-  }),
-  DEFAULT_VIEW_ID: "__default__",
-}));
-
-// Mock CSS module
-vi.mock("./TableTable.module.css", () => ({
-  default: {
-    container: "container",
-    tableWrapper: "tableWrapper",
-    table: "table",
-    headerRow: "headerRow",
-    headerCell: "headerCell",
-    required: "required",
-    row: "row",
-    handleHeader: "handleHeader",
-    handleCell: "handleCell",
-    actionsHeader: "actionsHeader",
-    actionsCell: "actionsCell",
-    deleteBtn: "deleteBtn",
-    cell: "cell",
-    editing: "editing",
-    cellContent: "cellContent",
-    input: "input",
-    newRow: "newRow",
-    newRowPlaceholder: "newRowPlaceholder",
-    empty: "empty",
-    loadMore: "loadMore",
-    addColumnCell: "addColumnCell",
-    addColumnWrapper: "addColumnWrapper",
-    addColumnBtn: "addColumnBtn",
-    addColumnDropdown: "addColumnDropdown",
-    columnNameInput: "columnNameInput",
-    columnTypeSelect: "columnTypeSelect",
-    addColumnActions: "addColumnActions",
-    addColumnConfirm: "addColumnConfirm",
-    addColumnCancel: "addColumnCancel",
-    resizing: "resizing",
-    resizeHandle: "resizeHandle",
-    resizeHandleActive: "resizeHandleActive",
-  },
-}));
+// Canned records state provided through the real RecordsContext instead of a module mock.
+const recordsValue: RecordsContextValue = {
+  records: () => [],
+  workspaceMembers: () => [],
+  resolvedUsers: () => new Map(),
+  hasMore: () => false,
+  views: () => [],
+  activeViewId: () => DEFAULT_VIEW_ID,
+  activeFilters: () => [],
+  activeSorts: () => [],
+  loadingRecords: () => false,
+  savingRecordId: () => null,
+  deletingRecordId: () => null,
+  savingView: () => false,
+  loadError: () => null,
+  setLoadError: vi.fn(),
+  saveError: () => null,
+  setSaveError: vi.fn(),
+  loading: () => false,
+  loadRecords: vi.fn(async () => undefined),
+  loadMoreRecords: vi.fn(async () => undefined),
+  addRecord: vi.fn(async () => undefined),
+  updateRecord: vi.fn(async () => undefined),
+  deleteRecord: vi.fn(async () => undefined),
+  duplicateRecord: vi.fn(async () => undefined),
+  clearRecords: vi.fn(),
+  setActiveViewId: vi.fn(),
+  setFilters: vi.fn(),
+  setSorts: vi.fn(),
+  createView: vi.fn(async () => undefined),
+  updateView: vi.fn(async () => undefined),
+  deleteView: vi.fn(async () => undefined),
+  clearErrors: vi.fn(),
+  undo: vi.fn(async () => undefined),
+  redo: vi.fn(async () => undefined),
+  canUndo: () => false,
+  canRedo: () => false,
+};
 
 afterEach(() => {
   cleanup();
 });
 
 function renderWithI18n(component: () => JSX.Element) {
-  return render(() => <I18nProvider>{component()}</I18nProvider>);
+  return render(() => (
+    <RecordsContext.Provider value={recordsValue}>
+      <I18nProvider>{component()}</I18nProvider>
+    </RecordsContext.Provider>
+  ));
 }
 
 describe("TableTable", () => {

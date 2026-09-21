@@ -1,6 +1,7 @@
 // Tests for workspace move reconciliation, selected-node metadata, and lazy child lists.
 
-import { describe, expect, it } from "vitest";
+import { describe, it } from "node:test";
+import { expect } from "@tests/expect";
 import type { NodeResponse } from "@sdk/types.gen";
 import { reconcileBreadcrumbPath, reconcileMovedNode, reconcileSelectedNodeData } from "./workspaceTree";
 

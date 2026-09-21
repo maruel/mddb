@@ -32,7 +32,8 @@ export interface NotificationContextValue {
   hasMore: Accessor<boolean>;
 }
 
-const NotificationContext = createContext<NotificationContextValue>();
+// Exported so tests can provide canned notification state without mocking the module.
+export const NotificationContext = createContext<NotificationContextValue>();
 
 export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }> = (props) => {
   const [notifications, setNotifications] = createSignal<NotificationDTO[]>([]);

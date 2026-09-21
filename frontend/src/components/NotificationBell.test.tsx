@@ -1,49 +1,48 @@
 // Tests for notification controls, keyboard dismissal, and trigger focus restoration.
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, it } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import type { NotificationDTO } from "@sdk/types.gen";
 import { I18nProvider } from "../i18n";
+import { NotificationContext } from "../contexts/NotificationContext";
 import type { NotificationContextValue } from "../contexts/NotificationContext";
 import NotificationBell from "./NotificationBell";
 
-const notificationMocks = vi.hoisted(() => ({
+const notificationMocks = {
   deleteNotification: vi.fn(),
   loadMore: vi.fn(),
   markAllAsRead: vi.fn(),
   markAsRead: vi.fn(),
   refresh: vi.fn(),
-}));
+};
 
-vi.mock("../contexts/NotificationContext", () => ({
-  useNotifications: (): NotificationContextValue => {
-    const notifications: NotificationDTO[] = [
-      {
-        id: "notification-1",
-        type: "page_edited",
-        title: "Test notification",
-        body: "A keyboard-operable notification action",
-        read: false,
-        created_at: Date.now(),
-      },
-    ];
-
-    return {
-      notifications: () => notifications,
-      unreadCount: () => 1,
-      isLoading: () => false,
-      pushEnabled: () => false,
-      markAsRead: async (id) => notificationMocks.markAsRead(id),
-      markAllAsRead: async () => notificationMocks.markAllAsRead(),
-      deleteNotification: async (id) => notificationMocks.deleteNotification(id),
-      enablePush: async () => false,
-      disablePush: async () => undefined,
-      refresh: async () => notificationMocks.refresh(),
-      loadMore: async () => notificationMocks.loadMore(),
-      hasMore: () => false,
-    };
+// Canned notification state provided through the real NotificationContext instead of a module mock.
+const notifications: NotificationDTO[] = [
+  {
+    id: "notification-1",
+    type: "page_edited",
+    title: "Test notification",
+    body: "A keyboard-operable notification action",
+    read: false,
+    created_at: Date.now(),
   },
-}));
+];
+
+const notificationValue: NotificationContextValue = {
+  notifications: () => notifications,
+  unreadCount: () => 1,
+  isLoading: () => false,
+  pushEnabled: () => false,
+  markAsRead: async (id) => notificationMocks.markAsRead(id),
+  markAllAsRead: async () => notificationMocks.markAllAsRead(),
+  deleteNotification: async (id) => notificationMocks.deleteNotification(id),
+  enablePush: async () => false,
+  disablePush: async () => undefined,
+  refresh: async () => notificationMocks.refresh(),
+  loadMore: async () => notificationMocks.loadMore(),
+  hasMore: () => false,
+};
 
 afterEach(() => {
   cleanup();
@@ -53,9 +52,11 @@ afterEach(() => {
 describe("NotificationBell", () => {
   it("activates notification actions as buttons and restores trigger focus after Escape", async () => {
     render(() => (
-      <I18nProvider>
-        <NotificationBell />
-      </I18nProvider>
+      <NotificationContext.Provider value={notificationValue}>
+        <I18nProvider>
+          <NotificationBell />
+        </I18nProvider>
+      </NotificationContext.Provider>
     ));
     const trigger = screen.getByRole("button", { name: "Notifications" });
     trigger.focus();

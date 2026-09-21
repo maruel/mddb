@@ -1,6 +1,7 @@
 // Tests localized error-boundary recovery actions and diagnostic copying.
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, it } from "node:test";
+import { expect, vi } from "@tests/expect";
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import { createSignal } from "solid-js";
 import { I18nProvider } from "../i18n";

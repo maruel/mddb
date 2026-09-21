@@ -1,5 +1,6 @@
 // Unit tests for prosemirror-config: verifies undo/redo keybindings are wired.
-import { describe, it, expect } from "vitest";
+import { describe, it } from "node:test";
+import { expect } from "@tests/expect";
 import { undo, redo } from "prosemirror-history";
 import { schema, createEditorState } from "./prosemirror-config";
 

@@ -1,5 +1,6 @@
 // Tests for the block editor schema.
-import { describe, it, expect } from "vitest";
+import { describe, it } from "node:test";
+import { expect } from "@tests/expect";
 import { schema } from "./schema";
 import { DOMSerializer, DOMParser } from "prosemirror-model";
 
