@@ -78,7 +78,7 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.out,coverage/lcov.info
       # E2E
-      - run: make e2e
+      - run: make test-e2e
       - uses: actions/upload-artifact@v7
         id: playwright-report
         if: always()

@@ -125,23 +125,18 @@ Blob fields are discovered automatically via reflection, including nested struct
 ## Build & Test
 
 Run these commands to verify changes:
-- `make lint` - Apply the lint autofixes, then run `make lint-check`
+- `make fix` - Apply every autofix, then refresh the file index
+- `make verify` - Fast static gate; the pre-push gate
 - `make build` - Compile backend and frontend
 - `make test` - Run all tests
 
 ## Code Quality & Linting
 
-**All code must pass `make lint-check` before commits.**
+**All code must pass `make verify` before commits.**
 
 ### Go Backend (golangci-lint)
 
 Configured in `.golangci.yml`. Enforces error handling (`errcheck`, `errorlint`), naming (`errname`), style (`revive`, `gocritic`), and more.
-
-Run with:
-```bash
-make lint        # autofix, then check
-make lint-check  # check only
-```
 
 <!-- BEGIN FILE INDEX -->
 ## File Index
