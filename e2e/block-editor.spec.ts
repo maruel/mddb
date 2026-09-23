@@ -36,7 +36,7 @@ Normal paragraph
 Another paragraph`;
 
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Block Types Test",
     content: markdownContent,
   });
@@ -93,7 +93,7 @@ code block
 \`\`\``;
 
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Drag Handles Test",
     content: markdownContent,
   });

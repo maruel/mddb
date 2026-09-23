@@ -75,14 +75,14 @@ test.screenshot("all column types in all view modes", async ({ page, request, ta
   const client = createClient(request, token);
 
   // Create table with every column type
-  const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+  const tableData = await client.ws(wsID).createTable("0", {
     title: "All Column Types",
     properties: ALL_PROPERTIES,
   });
 
   // Populate with sample records
   for (const data of SAMPLE_RECORDS) {
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, { data });
+    await client.ws(wsID).createRecord(tableData.id, { data });
   }
 
   // Navigate to the table

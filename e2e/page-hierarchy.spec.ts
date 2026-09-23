@@ -27,7 +27,7 @@ test.describe("Page Hierarchy", () => {
     const wsID = await getWorkspaceId(page);
 
     // 5. Create a child page via API
-    const childData = await client.ws(wsID).nodes.page.createPage(topLevelPageId, {
+    const childData = await client.ws(wsID).createPage(topLevelPageId, {
       title: "Child Page",
       content: "This is a child page content",
     });
@@ -56,7 +56,7 @@ test.describe("Page Hierarchy", () => {
     expect(page.url()).toContain("/w/");
 
     // 11. Create a grandchild via API
-    const grandchildData = await client.ws(wsID).nodes.page.createPage(childID, {
+    const grandchildData = await client.ws(wsID).createPage(childID, {
       title: "Grandchild Page",
       content: "This is a grandchild page",
     });
@@ -121,14 +121,14 @@ test.describe("Page Hierarchy", () => {
     const rootPageId = welcomeNodeId!.replace("sidebar-node-", "") as string;
 
     // Create a child page
-    const childData = await client.ws(wsID).nodes.page.createPage(rootPageId, {
+    const childData = await client.ws(wsID).createPage(rootPageId, {
       title: "Child Page",
       content: "Child content",
     });
     const childID = childData.id as string;
 
     // Create a grandchild page
-    const grandchildData = await client.ws(wsID).nodes.page.createPage(childID, {
+    const grandchildData = await client.ws(wsID).createPage(childID, {
       title: "Grandchild Page",
       content: "Grandchild content",
     });
@@ -194,14 +194,14 @@ test.describe("Page Hierarchy", () => {
     const rootPageId = (await welcomePageLink.getAttribute("data-testid"))!.replace("sidebar-node-", "") as string;
 
     // Create child page
-    const childData = await client.ws(wsID).nodes.page.createPage(rootPageId, {
+    const childData = await client.ws(wsID).createPage(rootPageId, {
       title: "Child With Grandchildren",
       content: "Child content",
     });
     const childID = childData.id as string;
 
     // Create grandchild
-    const grandchildData = await client.ws(wsID).nodes.page.createPage(childID, {
+    const grandchildData = await client.ws(wsID).createPage(childID, {
       title: "Nested Grandchild",
       content: "Grandchild content",
     });
@@ -257,13 +257,13 @@ test.describe("Page Hierarchy", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create two sibling pages at root level
-    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page1Data = await client.ws(wsID).createPage("0", {
       title: "Page One",
       content: "Content one",
     });
     const page1ID = page1Data.id as string;
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page2Data = await client.ws(wsID).createPage("0", {
       title: "Page Two",
       content: "Content two",
     });
@@ -304,13 +304,13 @@ test.describe("Page Hierarchy", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create two sibling pages via API
-    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page1Data = await client.ws(wsID).createPage("0", {
       title: "First Page",
       content: "Content of first page",
     });
     const page1ID = page1Data.id as string;
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page2Data = await client.ws(wsID).createPage("0", {
       title: "Second Page",
       content: "Content of second page",
     });

@@ -70,7 +70,7 @@ test.describe("Error Handling - API Failures", () => {
 
     // Create a page
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Network Error Test",
       content: "Initial",
     });
@@ -105,7 +105,7 @@ test.describe("Error Handling - Concurrent Edits", () => {
 
     // Create a page
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Concurrent Edit Test",
       content: "Original content",
     });
@@ -130,7 +130,7 @@ test.describe("Error Handling - Concurrent Edits", () => {
     // Poll API until one of the contents is saved (last writer wins)
     await expect(async () => {
       const pollClient = createClient(request, token);
-      const savedData = await pollClient.ws(wsID).nodes.page.getPage(pageData.id);
+      const savedData = await pollClient.ws(wsID).getPage(pageData.id);
       const savedContent = savedData.content.trim();
       expect(savedContent === "Content from tab 1" || savedContent === "Content from tab 2").toBe(true);
     }).toPass({ timeout: 8000 });
@@ -149,7 +149,7 @@ test.describe("Edge Cases", () => {
 
     // Create a page
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Title to Clear",
       content: "Content",
     });
@@ -192,7 +192,7 @@ test.describe("Edge Cases", () => {
 
     // Create a page
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Short Title",
       content: "Content",
     });
@@ -217,7 +217,7 @@ test.describe("Edge Cases", () => {
     // Then verify page handles gracefully - either truncate, show error, or save
     await expect(async () => {
       const pollClient = createClient(request, token);
-      const savedData = await pollClient.ws(wsID).nodes.page.getPage(pageData.id);
+      const savedData = await pollClient.ws(wsID).getPage(pageData.id);
       // Title should be saved (possibly truncated or unchanged if validation rejects)
       expect(savedData.title.length).toBeGreaterThan(0);
     }).toPass({ timeout: 5000 });
@@ -233,7 +233,7 @@ test.describe("Edge Cases", () => {
     // Create a page with special characters
     const specialTitle = "Test <script>alert(1)</script> & \"quotes\" 'apostrophe' 中文 émojis 🎉";
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: specialTitle,
       content: 'Content with <html> & special "chars"',
     });
@@ -248,7 +248,7 @@ test.describe("Edge Cases", () => {
     await expect(titleInput).toBeVisible({ timeout: 5000 });
 
     // Content should be preserved
-    const savedData = await client.ws(wsID).nodes.page.getPage(pageData.id);
+    const savedData = await client.ws(wsID).getPage(pageData.id);
     expect(savedData.title).toContain("Test");
     // Script tags should be stored as-is (not executed) or sanitized
   });
@@ -272,7 +272,7 @@ Inline \`code\` here.
 `;
 
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Code Blocks Test",
       content: markdownContent,
     });

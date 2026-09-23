@@ -33,12 +33,12 @@ export async function subscribeToPush(
   const auth = json.keys?.auth ?? "";
   if (!endpoint || !p256dh || !auth) return null;
 
-  await api.notifications.subscribePush({ endpoint, p256dh, auth });
+  await api.subscribePush({ endpoint, p256dh, auth });
 
   return subscription;
 }
 
 export async function unsubscribeFromPush(subscription: PushSubscription, api: APIClient): Promise<void> {
-  await api.notifications.unsubscribePush({ endpoint: subscription.endpoint });
+  await api.unsubscribePush({ endpoint: subscription.endpoint });
   await subscription.unsubscribe();
 }

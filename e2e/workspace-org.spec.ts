@@ -95,7 +95,7 @@ test.describe("Workspace Switching", () => {
 
     // Create a page in first workspace
     const client = createClient(request, token);
-    const page1Data = await client.ws(wsID1).nodes.page.createPage("0", {
+    const page1Data = await client.ws(wsID1).createPage("0", {
       title: "WS1 Page",
       content: "Content in workspace 1",
     });

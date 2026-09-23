@@ -124,7 +124,7 @@ export default function Sidebar(props: SidebarProps) {
 
     try {
       setIsSaving(true);
-      await ws.workspaces.updateWorkspace({ name: newName });
+      await ws.updateWorkspace({ name: newName });
       await refreshUser();
       setIsEditingName(false);
     } catch (err) {

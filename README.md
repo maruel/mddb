@@ -85,13 +85,13 @@ For developers or advanced setup:
 
 ## Building from Source
 
-Development requires Node.js 26 via nvm and pnpm 12.4.2. Clone the repository and run:
+Development requires Node.js 26 and pnpm 12.4.2. From the repository root:
 
 ```bash
-nvm install
-nvm use
-make build-all
+make build
 ```
+
+The `backend/internal/cmd/gen-api-sdk` command generates `sdk/api.gen.ts` and `sdk/API.md` from `backend/internal/server/dto/sdk.go`; the router's JSON endpoints are checked against this specification by a backend test. `tygo` generates `sdk/types.gen.ts`.
 
 ## Dependency updates
 

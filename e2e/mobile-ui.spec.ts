@@ -80,7 +80,7 @@ test.describe("Mobile UI - Sidebar Toggle", () => {
 
     // Create a page
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Mobile Test Page",
       content: "Mobile content",
     });
@@ -118,7 +118,7 @@ test.describe("Mobile UI - Layout", () => {
 
     // Create a page
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Mobile Layout Test",
       content: "Testing mobile layout",
     });
@@ -151,7 +151,7 @@ test.describe("Mobile UI - Layout", () => {
 
     // Create a page
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Mobile Editor Test",
       content: "Original content",
     });

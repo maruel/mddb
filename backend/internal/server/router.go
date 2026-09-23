@@ -5,8 +5,7 @@
 // It also serves the embedded SolidJS frontend.
 package server
 
-//go:generate go run ../apiroutes -q
-//go:generate go run ../apiclient -q
+//go:generate go run ../cmd/gen-api-sdk
 
 import (
 	"crypto/rsa"

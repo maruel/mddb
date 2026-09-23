@@ -180,7 +180,7 @@ export default function NodeView() {
     if (!nodeData || !ws) return;
     try {
       setSavingNodeId(nodeId);
-      await ws.nodes.table.updateTable(nodeId, {
+      await ws.updateTable(nodeId, {
         title: nodeData.title,
         properties: updatedProperties,
       });
@@ -260,7 +260,7 @@ export default function NodeView() {
     if (!ws) return;
     try {
       setLoadingPreview(true);
-      const data = await ws.nodes.history.getNodeVersion(nodeId, commit.hash);
+      const data = await ws.getNodeVersion(nodeId, commit.hash);
       const wsId = user()?.workspace_id || "";
       setPreviewContent(relativeLinksToSpaUrls(data.content || "", wsId));
       setPreviewCommit(commit);

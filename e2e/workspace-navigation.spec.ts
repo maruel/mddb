@@ -9,11 +9,11 @@ test.describe("Workspace tree navigation", () => {
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const workspaceId = await getWorkspaceId(page);
     const client = createClient(request, token);
-    const source = await client.ws(workspaceId).nodes.page.createPage("0", {
+    const source = await client.ws(workspaceId).createPage("0", {
       title: "A keyboard source",
       content: "Keyboard source content",
     });
-    const target = await client.ws(workspaceId).nodes.page.createPage("0", {
+    const target = await client.ws(workspaceId).createPage("0", {
       title: "B keyboard target",
       content: "Keyboard target content",
     });

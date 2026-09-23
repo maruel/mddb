@@ -44,7 +44,7 @@ export const AuthProvider: ParentComponent = (props) => {
           () => currentToken,
           () => {},
         );
-        await logoutApi.auth.logout();
+        await logoutApi.logout();
       } catch {
         // Ignore errors - proceed with local logout even if server call fails
       }
@@ -78,7 +78,7 @@ export const AuthProvider: ParentComponent = (props) => {
 
   const refreshUser = async () => {
     try {
-      const data = await api().auth.getMe();
+      const data = await api().getMe();
       setUser(data);
     } catch (err) {
       console.error("Failed to refresh user", err);
@@ -106,7 +106,7 @@ export const AuthProvider: ParentComponent = (props) => {
     const effectiveToken = urlToken || localStorage.getItem("mddb_token");
     if (effectiveToken) {
       try {
-        const data = await api().auth.getMe();
+        const data = await api().getMe();
         setUser(data);
       } catch (err) {
         console.error("Failed to load user", err);
@@ -130,7 +130,7 @@ export const AuthProvider: ParentComponent = (props) => {
         if (tok && !u) {
           (async () => {
             try {
-              const data = await api().auth.getMe();
+              const data = await api().getMe();
               setUser(data);
             } catch (err) {
               console.error("Failed to load user", err);

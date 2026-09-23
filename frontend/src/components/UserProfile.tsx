@@ -93,14 +93,14 @@ export default function UserProfile(props: UserProfileProps) {
         language: language(),
       };
 
-      const promises: Promise<unknown>[] = [api().auth.updateUserSettings({ settings: userSettings })];
+      const promises: Promise<unknown>[] = [api().updateUserSettings({ settings: userSettings })];
 
       // Only update workspace membership settings if we have a workspace
       if (ws) {
         const memSettings: WorkspaceMembershipSettings = {
           notifications: notifications(),
         };
-        promises.push(ws.settings.updateWSMembershipSettings({ settings: memSettings }));
+        promises.push(ws.updateWSMembershipSettings({ settings: memSettings }));
       }
 
       await Promise.all(promises);

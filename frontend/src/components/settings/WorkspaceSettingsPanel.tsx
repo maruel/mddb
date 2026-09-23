@@ -104,15 +104,15 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       const ws = wsApi();
       if (activeTab() === "members" && isAdmin()) {
         const [membersData, invsData] = await Promise.all([
-          org.users.listUsers(),
-          ws ? ws.invitations.listWSInvitations() : Promise.resolve({ invitations: [] }),
+          org.listUsers(),
+          ws ? ws.listWSInvitations() : Promise.resolve({ invitations: [] }),
         ]);
         setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
         setInvitations(invsData.invitations?.filter((i): i is WSInvitationResponse => !!i) || []);
       }
 
       if ((activeTab() === "settings" || activeTab() === "quotas") && ws) {
-        const wsData = await ws.workspaces.getWorkspace();
+        const wsData = await ws.getWorkspace();
         setWsName(wsData.name);
         setOriginalWsName(wsData.name);
         setGitAutoPush(wsData.settings.git_auto_push);
@@ -129,11 +129,11 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
       if (activeTab() === "sync" && isAdmin() && ws) {
         try {
-          const availResp = await api().githubApp.isGitHubAppAvailable();
+          const availResp = await api().isGitHubAppAvailable();
           setGitHubAppAvailable(availResp.available);
           if (availResp.available) {
             try {
-              const instResp = await api().githubApp.listGitHubAppInstallations();
+              const instResp = await api().listGitHubAppInstallations();
               setGhInstallations(instResp.installations || []);
             } catch {
               setGhInstallations([]);
@@ -147,14 +147,14 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
         }
 
         try {
-          const remoteData = await ws.settings.git.getGitRemote();
+          const remoteData = await ws.getGitRemote();
           setGitRemote(remoteData);
         } catch {
           setGitRemote(null);
         }
 
         try {
-          const statusData = await ws.settings.git.getSyncStatus();
+          const statusData = await ws.getSyncStatus();
           setSyncStatus(statusData.sync_status || "");
           setLastSyncError(statusData.last_sync_error || "");
         } catch {
@@ -186,7 +186,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
     try {
       setLoading(true);
-      await ws.invitations.createWSInvitation({ email, role: role as "admin" | "editor" | "viewer" });
+      await ws.createWSInvitation({ email, role: role as "admin" | "editor" | "viewer" });
       setSuccess(t("success.invitationSent") || "Invitation sent successfully");
       loadData();
     } catch (err) {
@@ -202,7 +202,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
 
     try {
       setLoading(true);
-      await ws.users.updateWSMemberRole({ user_id: userId, role: role as WorkspaceRole });
+      await ws.updateWSMemberRole({ user_id: userId, role: role as WorkspaceRole });
       setSuccess(t("success.roleUpdated") || "Role updated");
       loadData();
     } catch (err) {
@@ -223,7 +223,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setSuccess(null);
 
       if (wsName() !== originalWsName() && wsName().trim()) {
-        await ws.workspaces.updateWorkspace({ name: wsName().trim() });
+        await ws.updateWorkspace({ name: wsName().trim() });
         setOriginalWsName(wsName().trim());
       }
 
@@ -245,7 +245,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setError(null);
       setSuccess(null);
 
-      await ws.workspaces.updateWorkspace({ quotas: resourceQuotas() });
+      await ws.updateWorkspace({ quotas: resourceQuotas() });
       setSuccess(t("success.workspaceSettingsSaved") || "Workspace settings saved successfully");
     } catch (err) {
       setError(`${t("errors.failedToSave")}: ${err}`);
@@ -262,7 +262,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     try {
       setLoading(true);
       setError(null);
-      const remoteData = await ws.settings.git.updateGitRemote({
+      const remoteData = await ws.updateGitRemote({
         url: newRemoteURL(),
         token: newRemoteToken(),
         type: "custom",
@@ -287,7 +287,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setLoading(true);
       setError(null);
       setSuccess(null);
-      await ws.settings.git.pushGit();
+      await ws.pushGit();
       setSuccess(t("success.pushSuccessful") || "Push successful");
       await loadData();
     } catch (err) {
@@ -305,7 +305,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setLoading(true);
       setError(null);
       setSuccess(null);
-      await ws.settings.git.pullGit();
+      await ws.pullGit();
       setSuccess(t("success.pullSuccessful") || "Pull successful");
       await loadData();
     } catch (err) {
@@ -324,7 +324,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     try {
       setLoading(true);
       setError(null);
-      await ws.settings.git.deleteGitRemote();
+      await ws.deleteGitRemote();
       setGitRemote(null);
       setSuccess(t("success.remoteRemoved") || "Remote removed");
     } catch (err) {
@@ -344,7 +344,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
       setGhAppRepos([]);
       setGhSelectedRepo("");
       setError(null);
-      const resp = await api().githubApp.listGitHubAppRepos({ installation_id: instId });
+      const resp = await api().listGitHubAppRepos({ installation_id: instId });
       setGhAppRepos(resp.repos || []);
     } catch (err) {
       setError(`${t("errors.failedToLoad")}: ${err}`);
@@ -364,7 +364,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     try {
       setLoading(true);
       setError(null);
-      const remoteData = await ws.settings.git.setupGitHubAppRemote({
+      const remoteData = await ws.setupGitHubAppRemote({
         installation_id: parseInt(ghSelectedInstallation(), 10),
         repo_owner: selected.owner,
         repo_name: selected.name,
@@ -390,8 +390,8 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     try {
       setLoading(true);
       setError(null);
-      const wsData = await ws.workspaces.getWorkspace();
-      await ws.workspaces.updateWorkspace({
+      const wsData = await ws.getWorkspace();
+      await ws.updateWorkspace({
         settings: { ...wsData.settings, git_auto_push: newVal },
       });
       setGitAutoPush(newVal);

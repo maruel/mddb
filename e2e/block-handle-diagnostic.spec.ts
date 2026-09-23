@@ -27,7 +27,7 @@ code block
 \`\`\``;
 
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Handle Visibility Test",
     content: markdownContent,
   });
@@ -111,7 +111,7 @@ test("diagnose: text alignment in lists (bullets, numbers, tasks)", async ({ pag
 - [ ] Task item 3`;
 
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Text Alignment Test",
     content: markdownContent,
   });

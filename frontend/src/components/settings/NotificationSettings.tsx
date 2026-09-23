@@ -38,7 +38,7 @@ export default function NotificationSettings() {
     try {
       setLoading(true);
       setError(null);
-      const data = await api().notifications.preferences.getNotificationPrefs();
+      const data = await api().getNotificationPrefs();
       setPrefs(data);
     } catch (err) {
       setError(`${t("errors.failedToLoad")}: ${err}`);
@@ -71,7 +71,7 @@ export default function NotificationSettings() {
 
     try {
       setSaving(true);
-      const result = await api().notifications.preferences.updateNotificationPrefs({
+      const result = await api().updateNotificationPrefs({
         overrides: newOverrides,
       });
       setPrefs(result);

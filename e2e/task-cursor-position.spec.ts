@@ -11,7 +11,7 @@ test("right arrow from end of task line places cursor after checkbox, not before
 
   // Create a page with two task items
   const client = createClient(request, token);
-  const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+  const pageData = await client.ws(wsID).createPage("0", {
     title: "Task Cursor Test",
     content: "- [ ] First task\n- [ ] Second task",
   });

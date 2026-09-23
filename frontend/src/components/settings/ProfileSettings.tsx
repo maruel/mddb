@@ -83,7 +83,7 @@ export default function ProfileSettings() {
         language: language(),
       };
 
-      await api().auth.updateUserSettings({ settings: userSettings });
+      await api().updateUserSettings({ settings: userSettings });
 
       // Update locale immediately so UI refreshes
       const lang = language() as Locale;

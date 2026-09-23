@@ -9,11 +9,11 @@ test.describe("Workspace keyboard shortcuts", () => {
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const workspaceId = await getWorkspaceId(page);
     const client = createClient(request, token);
-    await client.ws(workspaceId).nodes.page.createPage("0", {
+    await client.ws(workspaceId).createPage("0", {
       title: "A shortcut source",
       content: "Source editor content",
     });
-    await client.ws(workspaceId).nodes.page.createPage("0", {
+    await client.ws(workspaceId).createPage("0", {
       title: "B shortcut target",
       content: "Target editor content",
     });

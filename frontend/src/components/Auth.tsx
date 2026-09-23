@@ -2,7 +2,7 @@
 
 import { createSignal, createResource, createMemo, Show, For, type JSX } from "solid-js";
 import { A } from "@solidjs/router";
-import { createAPIClient, APIError } from "@sdk/api.gen";
+import { createApiClient, APIError } from "@sdk/api.gen";
 import type { UserResponse, OAuthProvider } from "@sdk/types.gen";
 import { OAuthProviderGoogle, OAuthProviderMicrosoft, OAuthProviderGitHub } from "@sdk/types.gen";
 import styles from "./Auth.module.css";
@@ -37,11 +37,11 @@ function getProviderConfig(provider: OAuthProvider): { style: string; label: str
 }
 
 // Create an unauthenticated API client for login/register
-const api = createAPIClient((url, init) => fetch(url, init));
+const api = createApiClient((url, init) => fetch(url, init));
 
 export default function Auth(props: AuthProps) {
   const { t } = useI18n();
-  const [providers] = createResource(() => api.auth.listProviders().then((r) => r.providers));
+  const [providers] = createResource(() => api.listProviders().then((r) => r.providers));
   const sortedProviders = createMemo(() => {
     const list = providers() ?? [];
     const order = [OAuthProviderGoogle, OAuthProviderGitHub, OAuthProviderMicrosoft];
@@ -67,8 +67,8 @@ export default function Auth(props: AuthProps) {
 
     try {
       const data = isRegister()
-        ? await api.auth.register({ email: email(), password: password(), name: name() })
-        : await api.auth.login({ email: email(), password: password() });
+        ? await api.register({ email: email(), password: password(), name: name() })
+        : await api.login({ email: email(), password: password() });
 
       if (data.token && data.user) {
         props.onLogin(data.token, data.user);
@@ -77,7 +77,7 @@ export default function Auth(props: AuthProps) {
       }
     } catch (err) {
       if (err instanceof APIError) {
-        setError(err.response.error?.message || "Authentication failed");
+        setError(err.message || "Authentication failed");
       } else {
         setError("An error occurred. Please try again.");
       }

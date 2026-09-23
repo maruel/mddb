@@ -11,7 +11,7 @@ test("block handle should be visible when block is hovered", async ({ page, requ
 
   // Create a simple page with one bullet item
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Handle Visibility",
     content: "- Test bullet item",
   });
@@ -66,7 +66,7 @@ test("numbered list items should have data-number attribute for CSS content", as
 3. Third item
 
 `;
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Numbered Items",
     content: markdownContent,
   });
@@ -114,7 +114,7 @@ test("bullet list items should display with proper text alignment", async ({ pag
 - This is a much longer bullet item that wraps to multiple lines to verify alignment
 - Another item
 `;
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Bullet Alignment",
     content: markdownContent,
   });

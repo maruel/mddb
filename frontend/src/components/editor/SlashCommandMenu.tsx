@@ -186,7 +186,7 @@ export default function SlashCommandMenu(props: SlashCommandMenuProps) {
       try {
         // Create the subpage
         const untitledTitle = t("slashMenu.untitledSubpage") || "Untitled";
-        const newPage = await ws.nodes.page.createPage(parentId, { title: untitledTitle });
+        const newPage = await ws.createPage(parentId, { title: untitledTitle });
         if (!newPage?.id) return;
 
         // Build the URL for the new page

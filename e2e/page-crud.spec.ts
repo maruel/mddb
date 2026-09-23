@@ -12,7 +12,7 @@ test.describe("Page CRUD Operations", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page to delete
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Page To Delete",
       content: "This page will be deleted",
     });
@@ -61,7 +61,7 @@ test.describe("Page CRUD Operations", () => {
 
     // Verify via API that the page no longer exists
     try {
-      await client.ws(wsID).nodes.page.getPage(pageID);
+      await client.ws(wsID).getPage(pageID);
       throw new Error("Should have thrown 404");
     } catch (e) {
       const error = e as { status: number };
@@ -78,7 +78,7 @@ test.describe("Page CRUD Operations", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Original Title",
       content: "Content here",
     });
@@ -115,7 +115,7 @@ test.describe("Page CRUD Operations", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Test Page",
       content: "Initial content",
     });
@@ -146,7 +146,7 @@ test.describe("Page CRUD Operations", () => {
     await expect(page.locator('[class*="savedIndicator"]')).toHaveText("Saved", { timeout: 10000 });
 
     // Verify content was saved via API
-    const savedData = await client.ws(wsID).nodes.page.getPage(pageID);
+    const savedData = await client.ws(wsID).getPage(pageID);
     expect(savedData.content).toBe("Modified content");
   });
 
@@ -156,7 +156,7 @@ test.describe("Page CRUD Operations", () => {
     await page.goto(`/?token=${token}`);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const wsID = await getWorkspaceId(page);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Autosave feedback",
       content: "Initial content",
     });
@@ -192,12 +192,12 @@ test.describe("Page Navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create two pages
-    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page1Data = await client.ws(wsID).createPage("0", {
       title: "Nav Page 1",
       content: "Content of page 1",
     });
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page2Data = await client.ws(wsID).createPage("0", {
       title: "Nav Page 2",
       content: "Content of page 2",
     });
@@ -236,7 +236,7 @@ test.describe("Page Navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with a specific title
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "My Awesome Page",
       content: "Content here",
     });
@@ -261,7 +261,7 @@ test.describe("Page Navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Direct URL Page",
       content: "Loaded via direct URL",
     });
@@ -289,17 +289,17 @@ test.describe("Page Navigation", () => {
       const wsID = await getWorkspaceId(page);
 
       // Create parent -> child -> grandchild hierarchy
-      const parentData = await client.ws(wsID).nodes.page.createPage("0", {
+      const parentData = await client.ws(wsID).createPage("0", {
         title: "Parent",
         content: "Parent content",
       });
 
-      const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
+      const childData = await client.ws(wsID).createPage(parentData.id, {
         title: "Child",
         content: "Child content",
       });
 
-      const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
+      const grandchildData = await client.ws(wsID).createPage(childData.id, {
         title: "Grandchild",
         content: "Grandchild content",
       });
@@ -336,22 +336,22 @@ test.describe("Page Navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create 4-level hierarchy: parent -> child -> grandchild -> great-grandchild
-    const parentData = await client.ws(wsID).nodes.page.createPage("0", {
+    const parentData = await client.ws(wsID).createPage("0", {
       title: "Level1",
       content: "",
     });
 
-    const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
+    const childData = await client.ws(wsID).createPage(parentData.id, {
       title: "Level2",
       content: "",
     });
 
-    const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
+    const grandchildData = await client.ws(wsID).createPage(childData.id, {
       title: "Level3",
       content: "",
     });
 
-    const greatGrandchildData = await client.ws(wsID).nodes.page.createPage(grandchildData.id, {
+    const greatGrandchildData = await client.ws(wsID).createPage(grandchildData.id, {
       title: "Level4",
       content: "Deep content",
     });
@@ -381,19 +381,19 @@ test.describe("Page Navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create parent page
-    const parentData = await client.ws(wsID).nodes.page.createPage("0", {
+    const parentData = await client.ws(wsID).createPage("0", {
       title: "Alpha",
       content: "Parent content",
     });
 
     // Create child page
-    const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
+    const childData = await client.ws(wsID).createPage(parentData.id, {
       title: "Beta",
       content: "Child content",
     });
 
     // Create grandchild page
-    const grandchildData = await client.ws(wsID).nodes.page.createPage(childData.id, {
+    const grandchildData = await client.ws(wsID).createPage(childData.id, {
       title: "Gamma",
       content: "Grandchild content",
     });
@@ -441,7 +441,7 @@ test.describe("Editor Features", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page with markdown content
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Markdown Test",
       content: "# Heading 1\n\n**Bold text**\n\n- List item 1\n- List item 2\n\n`code inline`",
     });
@@ -476,7 +476,7 @@ test.describe("Editor Features", () => {
       const wsID = await getWorkspaceId(page);
 
       // Create an empty page via API
-      const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      const pageData = await client.ws(wsID).createPage("0", {
         title: "Round Trip Test",
         content: "",
       });
@@ -637,7 +637,7 @@ function hello() {
 
     // Create a page with 10 lines of content
     const multiLineContent = Array.from({ length: 10 }, (_, i) => `Line ${i + 1} of content`).join("\n");
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Height Test",
       content: multiLineContent,
     });
@@ -685,7 +685,7 @@ function hello() {
     const wsID = await getWorkspaceId(page);
 
     // Create an empty page
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Slash Command Test",
       content: "",
     });
@@ -833,7 +833,7 @@ function hello() {
 
       // Create a page with lots of content to push cursor near bottom
       const manyLines = Array(30).fill("This is a line of text to fill the page.").join("\n\n");
-      const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      const pageData = await client.ws(wsID).createPage("0", {
         title: "Bottom Slash Test",
         content: manyLines,
       });
@@ -907,7 +907,7 @@ function hello() {
       const wsID = await getWorkspaceId(page);
 
       // Create a page at root level
-      const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+      const pageData = await client.ws(wsID).createPage("0", {
         title: "Test Page",
         content: "",
       });
@@ -1007,7 +1007,7 @@ function hello() {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "History Test",
       content: "Initial content",
     });
@@ -1015,7 +1015,7 @@ function hello() {
 
     // Update the page a few times to create history
     for (let i = 1; i <= 3; i++) {
-      await client.ws(wsID).nodes.page.updatePage(pageData.id, {
+      await client.ws(wsID).updatePage(pageData.id, {
         title: "History Test",
         content: `Content version ${i}`,
       });

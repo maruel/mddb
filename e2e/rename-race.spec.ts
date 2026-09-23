@@ -23,13 +23,13 @@ test.describe("Page rename with navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // 4. Create two pages via API
-    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page1Data = await client.ws(wsID).createPage("0", {
       title: "Page To Rename",
       content: "Content of page to rename",
     });
     const page1ID = page1Data.id as string;
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page2Data = await client.ws(wsID).createPage("0", {
       title: "Other Page",
       content: "Content of other page",
     });
@@ -75,7 +75,7 @@ test.describe("Page rename with navigation", () => {
     await expect(titleInput).toHaveValue("RENAMED PAGE TITLE");
 
     // 11. Verify via API that the title was persisted to storage
-    const pageData = await client.ws(wsID).nodes.page.getPage(page1ID);
+    const pageData = await client.ws(wsID).getPage(page1ID);
     expect(pageData.title).toBe("RENAMED PAGE TITLE");
 
     // 12. Reload page and verify rename still persists (survives page refresh)
@@ -96,7 +96,7 @@ test.describe("Page rename with navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create a page
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Original Title",
       content: "Some content",
     });
@@ -117,7 +117,7 @@ test.describe("Page rename with navigation", () => {
 
     // Poll API until title is saved
     await expect(async () => {
-      const savedData = await client.ws(wsID).nodes.page.getPage(pageID);
+      const savedData = await client.ws(wsID).getPage(pageID);
       expect(savedData.title).toBe("Updated Title");
     }).toPass({ timeout: 8000 });
 
@@ -129,7 +129,7 @@ test.describe("Page rename with navigation", () => {
     await expect(titleInput).toHaveValue("Updated Title");
 
     // Verify via API
-    const verifyData = await client.ws(wsID).nodes.page.getPage(pageID);
+    const verifyData = await client.ws(wsID).getPage(pageID);
     expect(verifyData.title).toBe("Updated Title");
   });
 
@@ -144,13 +144,13 @@ test.describe("Page rename with navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create two pages
-    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page1Data = await client.ws(wsID).createPage("0", {
       title: "Rapid Rename Page",
       content: "Content for rapid rename test",
     });
     const page1ID = page1Data.id as string;
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page2Data = await client.ws(wsID).createPage("0", {
       title: "Navigation Target",
       content: "Navigation target content",
     });
@@ -182,7 +182,7 @@ test.describe("Page rename with navigation", () => {
     await expect(titleInput).toHaveValue("FINAL RENAME");
 
     // Verify via API
-    const pageData = await client.ws(wsID).nodes.page.getPage(page1ID);
+    const pageData = await client.ws(wsID).getPage(page1ID);
     expect(pageData.title).toBe("FINAL RENAME");
   });
 
@@ -197,13 +197,13 @@ test.describe("Page rename with navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create two pages
-    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page1Data = await client.ws(wsID).createPage("0", {
       title: "Content Edit Page",
       content: "Original content",
     });
     const page1ID = page1Data.id as string;
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page2Data = await client.ws(wsID).createPage("0", {
       title: "Other Page",
       content: "Other page content",
     });
@@ -237,7 +237,7 @@ test.describe("Page rename with navigation", () => {
     expect(contentValue.trim()).toBe("MODIFIED CONTENT - this should persist");
 
     // Verify via API
-    const pageData = await client.ws(wsID).nodes.page.getPage(page1ID);
+    const pageData = await client.ws(wsID).getPage(page1ID);
     expect(pageData.content.trim()).toBe("MODIFIED CONTENT - this should persist");
   });
 
@@ -252,13 +252,13 @@ test.describe("Page rename with navigation", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create two pages
-    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page1Data = await client.ws(wsID).createPage("0", {
       title: "Original Title",
       content: "Original content",
     });
     const page1ID = page1Data.id as string;
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page2Data = await client.ws(wsID).createPage("0", {
       title: "Other Page",
       content: "Other page content",
     });
@@ -294,7 +294,7 @@ test.describe("Page rename with navigation", () => {
     expect(contentValue.trim()).toBe("NEW CONTENT");
 
     // Verify via API
-    const pageData = await client.ws(wsID).nodes.page.getPage(page1ID);
+    const pageData = await client.ws(wsID).getPage(page1ID);
     expect(pageData.title).toBe("NEW TITLE");
     expect(pageData.content.trim()).toBe("NEW CONTENT");
   });

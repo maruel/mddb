@@ -31,7 +31,7 @@ export default function PasswordSection(props: Props) {
 
     setLoading(true);
     try {
-      await api().auth.setPassword({
+      await api().setPassword({
         current_password: props.hasPassword ? currentPassword() : undefined,
         new_password: newPassword(),
       });

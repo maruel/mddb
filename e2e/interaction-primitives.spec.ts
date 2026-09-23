@@ -9,7 +9,7 @@ test.describe("Interaction primitives", () => {
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
     const workspaceId = await getWorkspaceId(page);
     const client = createClient(request, token);
-    const table = await client.ws(workspaceId).nodes.table.createTable("0", {
+    const table = await client.ws(workspaceId).createTable("0", {
       title: "Drawer dropdowns",
       properties: [
         { name: "Title", type: "text" },
@@ -31,7 +31,7 @@ test.describe("Interaction primitives", () => {
         },
       ],
     });
-    await client.ws(workspaceId).nodes.table.records.createRecord(table.id, {
+    await client.ws(workspaceId).createRecord(table.id, {
       data: { Title: "Record in drawer", Status: "", Tags: "" },
     });
 

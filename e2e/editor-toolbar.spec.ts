@@ -12,7 +12,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with multiple paragraphs
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Block Row Debug",
       content: "Line one\n\nLine two\n\nLine three",
     });
@@ -45,7 +45,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with multiple paragraphs
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Task Debug",
       content: "Line one\n\nLine two\n\nLine three",
     });
@@ -95,7 +95,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with multiple lines
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Multi-line Checkbox Test",
       content: "Line one\n\nLine two\n\nLine three",
     });
@@ -140,7 +140,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with a numbered list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Toggle Numbered List Test",
       content: "1. First item\n2. Second item\n3. Third item",
     });
@@ -191,7 +191,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with a bullet list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Toggle Bullet List Test",
       content: "- First item\n- Second item\n- Third item",
     });
@@ -245,7 +245,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with a task list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Toggle Task List Test",
       content: "- [ ] First task\n- [x] Second task\n- [ ] Third task",
     });
@@ -298,7 +298,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with multiple paragraphs
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Multi-line Numbered List Test",
       content: "Line one\n\nLine two\n\nLine three",
     });
@@ -344,7 +344,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with multiple paragraphs
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Multi-line Bullet List Test",
       content: "Line one\n\nLine two\n\nLine three",
     });
@@ -389,7 +389,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with plain text
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Create Task List Test",
       content: "Some regular text",
     });
@@ -432,7 +432,7 @@ test.describe("Editor Toolbar Formatting", () => {
 
     // Create a page with a bullet list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Bullet to Task Test",
       content: "- First item\n- Second item",
     });
@@ -470,7 +470,7 @@ test.describe("Editor Toolbar Edge Cases", () => {
 
     // Create a page with a task list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Multi Task Toggle Off Test",
       content: "- [ ] Task one\n- [x] Task two\n- [ ] Task three",
     });
@@ -507,7 +507,7 @@ test.describe("Editor Toolbar Edge Cases", () => {
 
     // Create a page with a numbered list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Numbered to Task Test",
       content: "1. First item\n2. Second item\n3. Third item",
     });
@@ -542,7 +542,7 @@ test.describe("Editor Toolbar Edge Cases", () => {
 
     // Create a page with a bullet list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Bullet to Numbered Test",
       content: "- First item\n- Second item\n- Third item",
     });
@@ -577,7 +577,7 @@ test.describe("Editor Toolbar Edge Cases", () => {
 
     // Create a page with a numbered list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Numbered to Bullet Test",
       content: "1. First item\n2. Second item\n3. Third item",
     });
@@ -613,7 +613,7 @@ test.describe("Editor Toolbar Edge Cases", () => {
 
     // Create a page with a task list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Task to Numbered Test",
       content: "- [ ] Task one\n- [x] Task two\n- [ ] Task three",
     });
@@ -650,7 +650,7 @@ test.describe("Editor Toolbar Edge Cases", () => {
 
     // Create a page with 4 lines of plain text
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Selection Transitions Test",
       content: "Line one\n\nLine two\n\nLine three\n\nLine four",
     });
@@ -778,7 +778,7 @@ test.describe("Editor Toolbar Inline Formatting", () => {
 
     // Create a page with plain text
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Underline Test",
       content: "Some text to underline",
     });
@@ -829,7 +829,7 @@ test.describe("Editor Toolbar Button States", () => {
 
     // Create a page with a task list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Task List Highlight Test",
       content: "- [ ] Task one\n- [x] Task two\n- [ ] Task three",
     });
@@ -869,7 +869,7 @@ test.describe("Editor Toolbar Button States", () => {
 
     // Create a page with a bullet list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Bullet List Highlight Test",
       content: "- Item one\n- Item two\n- Item three",
     });
@@ -909,7 +909,7 @@ test.describe("Editor Toolbar Button States", () => {
 
     // Create a page with a numbered list
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Numbered List Highlight Test",
       content: "1. Item one\n2. Item two\n3. Item three",
     });

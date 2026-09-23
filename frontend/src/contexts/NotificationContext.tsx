@@ -48,7 +48,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
 
   const fetchUnreadCount = async () => {
     try {
-      const result = await props.api().notifications.getUnreadCount();
+      const result = await props.api().getUnreadCount();
       setUnreadCount(result.count);
     } catch {
       // Silently ignore polling errors
@@ -58,7 +58,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   const fetchNotifications = async (offset = 0) => {
     setIsLoading(true);
     try {
-      const result = await props.api().notifications.listNotifications({
+      const result = await props.api().listNotifications({
         Limit: PAGE_SIZE,
         Offset: offset,
         UnreadOnly: false,
@@ -87,7 +87,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
 
   const markAsRead = async (id: string) => {
     try {
-      await props.api().notifications.markNotificationRead(id);
+      await props.api().markNotificationRead(id);
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch {
@@ -97,7 +97,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
 
   const markAllAsRead = async () => {
     try {
-      await props.api().notifications.readAll.markAllNotificationsRead();
+      await props.api().markAllNotificationsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch {
@@ -108,7 +108,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   const deleteNotification = async (id: string) => {
     try {
       const target = notifications().find((item) => item.id === id);
-      await props.api().notifications.deleteNotification(id);
+      await props.api().deleteNotification(id);
       setNotifications((prev) => prev.filter((item) => item.id !== id));
       if (target && !target.read) {
         setUnreadCount((c) => Math.max(0, c - 1));
@@ -124,7 +124,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
         swRegistration = await registerServiceWorker();
       }
       if (!swRegistration) return false;
-      const vapidResp = await props.api().notifications.vapidKey.getVAPIDPublicKey();
+      const vapidResp = await props.api().getVAPIDPublicKey();
       pushSubscription = await subscribeToPush(swRegistration, vapidResp.public_key, props.api());
       if (pushSubscription) {
         setPushEnabled(true);

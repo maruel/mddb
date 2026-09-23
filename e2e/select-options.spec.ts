@@ -12,7 +12,7 @@ async function setupSelectTable(page: Page, request: APIRequestContext, prefix: 
   const wsID = await getWorkspaceId(page);
   const client = createClient(request, token);
 
-  const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+  const tableData = await client.ws(wsID).createTable("0", {
     title: `${prefix} Table`,
     properties: [
       {
@@ -73,7 +73,7 @@ test.describe("Select Options Editor", () => {
 
     // Verify via API
     await expect(async () => {
-      const schema = await client.ws(wsID).nodes.table.getTable(tableId);
+      const schema = await client.ws(wsID).getTable(tableId);
       const statusCol = schema.properties?.find((p: Property) => p.name === "Status");
       const gamma = statusCol?.options?.find((o) => o.name === "Gamma");
       expect(gamma).toBeTruthy();
@@ -89,7 +89,7 @@ test.describe("Select Options Editor", () => {
     await nameInput.blur();
 
     await expect(async () => {
-      const schema = await client.ws(wsID).nodes.table.getTable(tableId);
+      const schema = await client.ws(wsID).getTable(tableId);
       const statusCol = schema.properties?.find((p: Property) => p.name === "Status");
       const opt1 = statusCol?.options?.find((o) => o.id === "opt1");
       expect(opt1?.name).toBe("Renamed");
@@ -112,7 +112,7 @@ test.describe("Select Options Editor", () => {
 
     // Verify via API
     await expect(async () => {
-      const schema = await client.ws(wsID).nodes.table.getTable(tableId);
+      const schema = await client.ws(wsID).getTable(tableId);
       const statusCol = schema.properties?.find((p: Property) => p.name === "Status");
       const opt1 = statusCol?.options?.find((o) => o.id === "opt1");
       expect(opt1?.color).toBe("#e03e3e");
@@ -130,7 +130,7 @@ test.describe("Select Options Editor", () => {
 
     // Verify via API
     await expect(async () => {
-      const schema = await client.ws(wsID).nodes.table.getTable(tableId);
+      const schema = await client.ws(wsID).getTable(tableId);
       const statusCol = schema.properties?.find((p: Property) => p.name === "Status");
       const opt2 = statusCol?.options?.find((o) => o.id === "opt2");
       expect(opt2).toBeUndefined();
@@ -141,7 +141,7 @@ test.describe("Select Options Editor", () => {
     const { client, wsID, tableId } = await setupSelectTable(page, request, "opts-usage");
 
     // Create a record that uses opt1
-    await client.ws(wsID).nodes.table.records.createRecord(tableId, { data: { Status: "opt1" } });
+    await client.ws(wsID).createRecord(tableId, { data: { Status: "opt1" } });
 
     await page.reload();
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
@@ -162,7 +162,7 @@ test.describe("Select Options Editor", () => {
     const { client, wsID, tableId } = await setupSelectTable(page, request, "opts-order");
 
     // Reorder via API: put opt2 before opt1
-    await client.ws(wsID).nodes.table.updateTable(tableId, {
+    await client.ws(wsID).updateTable(tableId, {
       title: "opts-order Table",
       properties: [
         {
@@ -211,7 +211,7 @@ test.describe("Select Options Editor", () => {
 
     // API should persist the new order
     await expect(async () => {
-      const schema = await client.ws(wsID).nodes.table.getTable(tableId);
+      const schema = await client.ws(wsID).getTable(tableId);
       const statusCol = schema.properties?.find((p: Property) => p.name === "Status");
       expect(statusCol?.options?.[0]?.name).toBe("Beta");
       expect(statusCol?.options?.[1]?.name).toBe("Alpha");
@@ -228,7 +228,7 @@ test.describe("Select Dropdown Interaction", () => {
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
 
-    const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+    const tableData = await client.ws(wsID).createTable("0", {
       title: `${prefix} Table`,
       properties: [
         {
@@ -241,7 +241,7 @@ test.describe("Select Dropdown Interaction", () => {
         },
       ],
     });
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, { data: { Status: "" } });
+    await client.ws(wsID).createRecord(tableData.id, { data: { Status: "" } });
 
     await page.reload();
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
@@ -311,7 +311,7 @@ test.describe("Select Column UX", () => {
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
 
-    const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+    const tableData = await client.ws(wsID).createTable("0", {
       title: "Chip Table",
       properties: [
         {
@@ -321,7 +321,7 @@ test.describe("Select Column UX", () => {
         },
       ],
     });
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, { data: { Tag: "todo" } });
+    await client.ws(wsID).createRecord(tableData.id, { data: { Tag: "todo" } });
 
     await page.reload();
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
@@ -339,7 +339,7 @@ test.describe("Select Column UX", () => {
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
 
-    const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+    const tableData = await client.ws(wsID).createTable("0", {
       title: "KBD Table",
       properties: [
         {
@@ -352,7 +352,7 @@ test.describe("Select Column UX", () => {
         },
       ],
     });
-    const rec = await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
+    const rec = await client.ws(wsID).createRecord(tableData.id, {
       data: { Status: "" },
     });
 
@@ -376,7 +376,7 @@ test.describe("Select Column UX", () => {
 
     // Verify via API
     await expect(async () => {
-      const data = await client.ws(wsID).nodes.table.records.getRecord(tableData.id, rec.id);
+      const data = await client.ws(wsID).getRecord(tableData.id, rec.id);
       expect(String(data.data["Status"])).toBe("opt1");
     }).toPass({ timeout: 5000 });
   });
@@ -388,7 +388,7 @@ test.describe("Select Column UX", () => {
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
 
-    const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+    const tableData = await client.ws(wsID).createTable("0", {
       title: "MultiSel Table",
       properties: [
         {
@@ -402,7 +402,7 @@ test.describe("Select Column UX", () => {
       ],
     });
     // Record with all options already selected
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
+    await client.ws(wsID).createRecord(tableData.id, {
       data: { Tags: "a,b" },
     });
 
@@ -439,7 +439,7 @@ test.describe("Select Filter Option Picker", () => {
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
 
-    const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+    const tableData = await client.ws(wsID).createTable("0", {
       title: "Filter Picker Table",
       properties: [
         {
@@ -452,10 +452,10 @@ test.describe("Select Filter Option Picker", () => {
         },
       ],
     });
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
+    await client.ws(wsID).createRecord(tableData.id, {
       data: { Status: "todo" },
     });
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, {
+    await client.ws(wsID).createRecord(tableData.id, {
       data: { Status: "done" },
     });
 

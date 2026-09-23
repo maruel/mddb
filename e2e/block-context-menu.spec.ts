@@ -23,7 +23,7 @@ Second paragraph
 Third paragraph`;
 
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Context Menu Test",
     content: markdownContent,
   });

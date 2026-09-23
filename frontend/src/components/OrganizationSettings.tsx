@@ -56,16 +56,13 @@ export default function OrganizationSettings(props: OrganizationSettingsProps) {
       setError(null);
 
       if (activeTab() === "members" && isAdmin()) {
-        const [membersData, invsData] = await Promise.all([
-          org.users.listUsers(),
-          org.invitations.listOrgInvitations(),
-        ]);
+        const [membersData, invsData] = await Promise.all([org.listUsers(), org.listOrgInvitations()]);
         setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
         setInvitations(invsData.invitations?.filter((i): i is OrgInvitationResponse => !!i) || []);
       }
 
       if (activeTab() === "settings") {
-        const orgData = await org.organizations.getOrganization();
+        const orgData = await org.getOrganization();
         setOrgName(orgData.name);
         setOriginalOrgName(orgData.name);
       }
@@ -87,7 +84,7 @@ export default function OrganizationSettings(props: OrganizationSettingsProps) {
 
     try {
       setLoading(true);
-      await org.invitations.createOrgInvitation({ email: inviteEmail(), role: inviteRole() });
+      await org.createOrgInvitation({ email: inviteEmail(), role: inviteRole() });
       setInviteEmail("");
       setSuccess(t("success.invitationSent") || "Invitation sent successfully");
       loadData();
@@ -103,7 +100,7 @@ export default function OrganizationSettings(props: OrganizationSettingsProps) {
 
     try {
       setLoading(true);
-      await org.users.updateOrgMemberRole({ user_id: userId, role });
+      await org.updateOrgMemberRole({ user_id: userId, role });
       setSuccess(t("success.roleUpdated") || "Role updated");
       loadData();
     } catch (err) {
@@ -124,7 +121,7 @@ export default function OrganizationSettings(props: OrganizationSettingsProps) {
 
       // Rename org if name changed
       if (orgName() !== originalOrgName() && orgName().trim()) {
-        await org.organizations.updateOrganization({ name: orgName().trim() });
+        await org.updateOrganization({ name: orgName().trim() });
       }
 
       setOriginalOrgName(orgName().trim());

@@ -34,7 +34,7 @@ export default function Onboarding(props: OnboardingProps) {
       setError(null);
 
       // Setup git remote
-      await ws.settings.git.updateGitRemote({
+      await ws.updateGitRemote({
         url: remoteURL(),
         token: remoteToken(),
         type: "custom",

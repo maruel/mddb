@@ -9,7 +9,7 @@ test("paste standard HTML lists into the editor", async ({ page, request }) => {
 
   const wsId = await getWorkspaceId(page);
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Paste Test",
     content: "",
   });
@@ -78,7 +78,7 @@ test("copy content from editor as markdown", async ({ page, request, context }) 
 
   const wsId = await getWorkspaceId(page);
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Copy Test",
     content: "- Bullet item\n- Second item",
   });
@@ -115,7 +115,7 @@ test("paste HTML headings into the editor", async ({ page, request }) => {
 
   const wsId = await getWorkspaceId(page);
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Paste Headings",
     content: "",
   });
@@ -165,7 +165,7 @@ test("copy headings from editor as markdown", async ({ page, request, context })
 
   const wsId = await getWorkspaceId(page);
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Copy Headings",
     content: "# Big Title\n## Section\nParagraph here",
   });
@@ -206,7 +206,7 @@ test("heading copy-paste round-trip preserves structure", async ({ page, request
   const client = createClient(request, token);
 
   // Create page with mixed heading/paragraph/list content
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Round Trip",
     content: "# Title\n\nSome text\n\n## Section\n\n- Item 1\n- Item 2\n\n### Subsection\n\nMore text",
   });
@@ -241,7 +241,7 @@ test("heading copy-paste round-trip preserves structure", async ({ page, request
   }).toPass();
 
   // Create a fresh empty page and paste into it
-  const page2Resp = await client.ws(wsId).nodes.page.createPage("0", {
+  const page2Resp = await client.ws(wsId).createPage("0", {
     title: "Paste Target",
     content: "",
   });
@@ -278,7 +278,7 @@ test("paste markdown into editor", async ({ page, request }) => {
 
   const wsId = await getWorkspaceId(page);
   const client = createClient(request, token);
-  const pageResp = await client.ws(wsId).nodes.page.createPage("0", {
+  const pageResp = await client.ws(wsId).createPage("0", {
     title: "Paste MD Test",
     content: "",
   });

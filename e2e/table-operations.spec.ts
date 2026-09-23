@@ -18,13 +18,13 @@ async function setupTable(
   const wsID = await getWorkspaceId(page);
   const client = createClient(request, token);
 
-  const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+  const tableData = await client.ws(wsID).createTable("0", {
     title: `${prefix} Table`,
     properties,
   });
 
   for (const data of records) {
-    await client.ws(wsID).nodes.table.records.createRecord(tableData.id, { data });
+    await client.ws(wsID).createRecord(tableData.id, { data });
   }
 
   await page.reload();
@@ -50,7 +50,7 @@ test.describe("Table Creation and Basic Operations", () => {
 
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
-    const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+    const tableData = await client.ws(wsID).createTable("0", {
       title: "Test Table",
       properties: [
         { name: "Name", type: "text", required: true },
@@ -112,7 +112,7 @@ test.describe("Table Creation and Basic Operations", () => {
     // Verify via API
     const listParams = { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 };
     await expect(async () => {
-      const data = await client.ws(wsID).nodes.table.records.listRecords(tableId, listParams);
+      const data = await client.ws(wsID).listRecords(tableId, listParams);
       const edited = data.records.find((r: DataRecordResponse) => (r.data.Name as string) === "Edited Item 1");
       expect(edited).toBeTruthy();
     }).toPass({ timeout: 5000 });
@@ -148,7 +148,7 @@ test.describe("Table Creation and Basic Operations", () => {
     // Verify record was created via API
     const listParams = { ViewID: "", Filters: "", Sorts: "", Offset: 0, Limit: 100 };
     await expect(async () => {
-      const data = await client.ws(wsID).nodes.table.records.listRecords(tableId, listParams);
+      const data = await client.ws(wsID).listRecords(tableId, listParams);
       expect(data.records.length).toBe(1);
     }).toPass({ timeout: 5000 });
   });
@@ -339,7 +339,7 @@ test.describe("Table Sort UI", () => {
     await expect(page.getByText("Zebra", { exact: true })).toBeVisible({ timeout: 5000 });
 
     // Create a saved view via API
-    const viewData = await client.ws(wsID).nodes.views.createView(tableId, {
+    const viewData = await client.ws(wsID).createView(tableId, {
       name: "Sorted",
       type: "table",
     });
@@ -370,7 +370,7 @@ test.describe("Table Sort UI", () => {
         Offset: 0,
         Limit: 100,
       };
-      const data = await client.ws(wsID).nodes.table.records.listRecords(tableId, listParams);
+      const data = await client.ws(wsID).listRecords(tableId, listParams);
       const names = data.records.map((r: DataRecordResponse) => r.data.Name);
       expect(names).toEqual(["Apple", "Mango", "Zebra"]);
     }).toPass({ timeout: 5000 });
@@ -568,7 +568,7 @@ test.describe("Table and Page Hybrid", () => {
 
     const wsID = await getWorkspaceId(page);
     const client = createClient(request, token);
-    const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+    const tableData = await client.ws(wsID).createTable("0", {
       title: "Table Only Node",
       properties: [{ name: "Item", type: "text" }],
     });

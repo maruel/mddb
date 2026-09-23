@@ -58,7 +58,7 @@ export default function ServerSettingsPanel() {
     try {
       setLoading(true);
       setError(null);
-      const data = await api().server.getConfig();
+      const data = await api().getConfig();
       setConfig(data);
 
       setSmtpHost(data.smtp.host || "");
@@ -106,7 +106,7 @@ export default function ServerSettingsPanel() {
       setError(null);
       setSuccess(null);
 
-      await api().server.updateConfig({
+      await api().updateConfig({
         smtp: {
           host: smtpHost(),
           port: smtpPort(),
@@ -132,7 +132,7 @@ export default function ServerSettingsPanel() {
       setError(null);
       setSuccess(null);
 
-      await api().server.updateConfig({
+      await api().updateConfig({
         quotas: {
           ...resourceQuotas(),
           max_request_body_bytes: maxRequestBodyBytes(),

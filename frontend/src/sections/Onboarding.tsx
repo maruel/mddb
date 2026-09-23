@@ -60,10 +60,10 @@ export default function Onboarding() {
             ? (t("onboarding.defaultOrgName", { name: firstName }) as string)
             : (t("onboarding.defaultOrgNameFallback") as string);
 
-          await api().organizations.createOrganization({ name: orgName });
+          await api().createOrganization({ name: orgName });
 
           // Refresh user data - effect will re-run with updated user
-          const updatedUser = await api().auth.getMe();
+          const updatedUser = await api().getMe();
           setUser(updatedUser);
           setRunning(false);
           return;
@@ -80,10 +80,10 @@ export default function Onboarding() {
               ? (t("onboarding.defaultWorkspaceName", { name: firstName }) as string)
               : (t("onboarding.defaultWorkspaceNameFallback") as string);
 
-            const ws = await api().org(firstOrg.organization_id).workspaces.createWorkspace({ name: wsName });
+            const ws = await api().org(firstOrg.organization_id).createWorkspace({ name: wsName });
 
             // Switch to the new workspace - effect will re-run with updated user
-            const switchResult = await api().auth.switchWorkspace({ ws_id: ws.id });
+            const switchResult = await api().switchWorkspace({ ws_id: ws.id });
             if (switchResult.user) {
               setUser(switchResult.user);
             }
@@ -96,7 +96,7 @@ export default function Onboarding() {
         if (!u.workspace_id && u.workspaces && u.workspaces.length > 0) {
           const firstWs = u.workspaces[0];
           if (firstWs) {
-            const switchResult = await api().auth.switchWorkspace({ ws_id: firstWs.workspace_id });
+            const switchResult = await api().switchWorkspace({ ws_id: firstWs.workspace_id });
             if (switchResult.user) {
               setUser(switchResult.user);
             }

@@ -12,14 +12,14 @@ test("navigating with ?view= param activates the correct non-default view", asyn
   const wsID = await getWorkspaceId(page);
 
   // Create a table then two extra views so the default (first) view is NOT the requested one.
-  const tableData = await client.ws(wsID).nodes.table.createTable("0", {
+  const tableData = await client.ws(wsID).createTable("0", {
     title: "View Param Table",
     properties: [{ name: "Name", type: "text" }],
   });
   const tableID = tableData.id;
 
-  await client.ws(wsID).nodes.views.createView(tableID, { name: "View B", type: "table" });
-  const viewC = await client.ws(wsID).nodes.views.createView(tableID, { name: "View C", type: "table" });
+  await client.ws(wsID).createView(tableID, { name: "View B", type: "table" });
+  const viewC = await client.ws(wsID).createView(tableID, { name: "View C", type: "table" });
   const viewCId = viewC.id;
 
   // Navigate directly to the table requesting the LAST view (not the default first view).

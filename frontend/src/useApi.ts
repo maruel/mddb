@@ -1,6 +1,6 @@
 // Utilities for creating authenticated and retry-enabled API clients.
 
-import { createAPIClient, APIError, type FetchFn } from "@sdk/api.gen";
+import { createApiClient, APIError, type FetchFn } from "@sdk/api.gen";
 
 export { APIError };
 
@@ -91,5 +91,5 @@ export function createAuthFetch(getToken: () => string | null, onUnauthorized?: 
  * @param onUnauthorized - Callback when a 401 response is received
  */
 export function createApi(getToken: () => string | null, onUnauthorized?: () => void) {
-  return createAPIClient(createAuthFetch(getToken, onUnauthorized));
+  return createApiClient(createAuthFetch(getToken, onUnauthorized));
 }

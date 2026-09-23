@@ -12,13 +12,13 @@ test.describe("Page Links with Dynamic Titles", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create parent page
-    const parentData = await client.ws(wsID).nodes.page.createPage("0", {
+    const parentData = await client.ws(wsID).createPage("0", {
       title: "Parent Page",
       content: "",
     });
 
     // Create child page with initial title
-    const childData = await client.ws(wsID).nodes.page.createPage(parentData.id, {
+    const childData = await client.ws(wsID).createPage(parentData.id, {
       title: "Original Child Title",
       content: "Child content",
     });
@@ -26,7 +26,7 @@ test.describe("Page Links with Dynamic Titles", () => {
     // Update parent page with a link to child using the correct format
     // Format: [DisplayText](/w/@{wsId}+{slug}/@{nodeId}+{slug})
     const linkContent = `Check out [Original Child Title](/w/@${wsID}+workspace/@${childData.id}+original-child-title)`;
-    await client.ws(wsID).nodes.page.updatePage(parentData.id, {
+    await client.ws(wsID).updatePage(parentData.id, {
       title: "Parent Page",
       content: linkContent,
     });
@@ -55,7 +55,7 @@ test.describe("Page Links with Dynamic Titles", () => {
     await expect(link).toContainText("Original Child Title");
 
     // Now rename the child page
-    await client.ws(wsID).nodes.page.updatePage(childData.id, {
+    await client.ws(wsID).updatePage(childData.id, {
       title: "Updated Child Title",
       content: "Child content",
     });
@@ -84,20 +84,20 @@ test.describe("Page Links with Dynamic Titles", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create two pages
-    const page1Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page1Data = await client.ws(wsID).createPage("0", {
       title: "Page One",
       content: "",
     });
     const page1ID = page1Data.id as string;
 
-    const page2Data = await client.ws(wsID).nodes.page.createPage("0", {
+    const page2Data = await client.ws(wsID).createPage("0", {
       title: "Page Two",
       content: "",
     });
     const page2ID = page2Data.id as string;
 
     // Call GetNodeTitles API
-    const titlesData = await client.ws(wsID).nodes.getNodeTitles({
+    const titlesData = await client.ws(wsID).getNodeTitles({
       IDs: `${page1ID},${page2ID}`,
     });
 
@@ -116,7 +116,7 @@ test.describe("Page Links with Dynamic Titles", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create source and target pages
-    const targetData = await client.ws(wsID).nodes.page.createPage("0", {
+    const targetData = await client.ws(wsID).createPage("0", {
       title: "Target Page",
       content: "",
     });
@@ -124,14 +124,14 @@ test.describe("Page Links with Dynamic Titles", () => {
 
     // Create source page with a relative-path link to target (matches on-disk format).
     const linkContent = `Link to [Target Page](../${targetID}/index.md)`;
-    const sourceData = await client.ws(wsID).nodes.page.createPage("0", {
+    const sourceData = await client.ws(wsID).createPage("0", {
       title: "Source Page",
       content: linkContent,
     });
     const sourceID = sourceData.id as string;
 
     // Get target page - should have backlink from source
-    const getTargetData = await client.ws(wsID).nodes.getNode(targetID);
+    const getTargetData = await client.ws(wsID).getNode(targetID);
 
     // Verify backlinks exist and have correct data
     expect(getTargetData.backlinks).toBeDefined();
@@ -290,20 +290,20 @@ test.describe("Page Links with Dynamic Titles", () => {
     const wsID = await getWorkspaceId(page);
 
     // Create source page
-    const sourceData = await client.ws(wsID).nodes.page.createPage("0", {
+    const sourceData = await client.ws(wsID).createPage("0", {
       title: "Source Page",
       content: "",
     });
 
     // Create target page with distinctive content
-    const targetData = await client.ws(wsID).nodes.page.createPage("0", {
+    const targetData = await client.ws(wsID).createPage("0", {
       title: "Target Page",
       content: "This is the target page content.",
     });
 
     // Update source page with a link to target
     const linkContent = `Click here: [Go to Target](/w/@${wsID}+workspace/@${targetData.id}+target-page)`;
-    await client.ws(wsID).nodes.page.updatePage(sourceData.id, {
+    await client.ws(wsID).updatePage(sourceData.id, {
       title: "Source Page",
       content: linkContent,
     });

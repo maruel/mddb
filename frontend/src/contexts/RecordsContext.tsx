@@ -192,7 +192,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     const toFetch = [...unknownIds].filter((id) => !merged.has(id));
     if (toFetch.length > 0) {
       try {
-        const res = await ws.users.resolveUsers({ ids: toFetch });
+        const res = await ws.resolveUsers({ ids: toFetch });
         for (const u of res.users ?? []) {
           merged.set(u.id, u);
         }
@@ -427,7 +427,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       const viewId = activeViewId();
       const serverViewId = viewId === DEFAULT_VIEW_ID ? "" : viewId || "";
 
-      const data = await ws.nodes.table.records.listRecords(nodeId, {
+      const data = await ws.listRecords(nodeId, {
         Offset: 0,
         Limit: PAGE_SIZE,
         ViewID: serverViewId,
@@ -497,7 +497,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       const viewId = activeViewId();
       const serverViewId = viewId === DEFAULT_VIEW_ID ? "" : viewId || "";
 
-      const data = await ws.nodes.table.records.listRecords(nodeId, {
+      const data = await ws.listRecords(nodeId, {
         Offset: offset,
         Limit: PAGE_SIZE,
         ViewID: serverViewId,
@@ -532,7 +532,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       setSavingRecordId("__new__"); // Special marker for creating new record
       // Invalidate cache since data is changing
       setAllRecords(null);
-      const result = await ws.nodes.table.records.createRecord(nodeId, { data });
+      const result = await ws.createRecord(nodeId, { data });
       await loadRecords(nodeId);
       setSaveError(null);
 
@@ -547,7 +547,7 @@ export const RecordsProvider: ParentComponent = (props) => {
             if (!ws2) return;
             isUndoing = true;
             try {
-              await ws2.nodes.table.records.deleteRecord(capturedNodeId, createdId);
+              await ws2.deleteRecord(capturedNodeId, createdId);
               await loadRecords(capturedNodeId);
             } finally {
               isUndoing = false;
@@ -558,7 +558,7 @@ export const RecordsProvider: ParentComponent = (props) => {
             if (!ws2) return;
             isUndoing = true;
             try {
-              await ws2.nodes.table.records.createRecord(capturedNodeId, { data: capturedData });
+              await ws2.createRecord(capturedNodeId, { data: capturedData });
               await loadRecords(capturedNodeId);
             } finally {
               isUndoing = false;
@@ -586,7 +586,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       setSavingRecordId(recordId);
       // Invalidate cache since data is changing
       setAllRecords(null);
-      await ws.nodes.table.records.updateRecord(nodeId, recordId, { data });
+      await ws.updateRecord(nodeId, recordId, { data });
       await loadRecords(nodeId);
       setSaveError(null);
 
@@ -602,7 +602,7 @@ export const RecordsProvider: ParentComponent = (props) => {
             if (!ws2) return;
             isUndoing = true;
             try {
-              await ws2.nodes.table.records.updateRecord(capturedNodeId, capturedRecordId, {
+              await ws2.updateRecord(capturedNodeId, capturedRecordId, {
                 data: capturedPrevData,
               });
               await loadRecords(capturedNodeId);
@@ -615,7 +615,7 @@ export const RecordsProvider: ParentComponent = (props) => {
             if (!ws2) return;
             isUndoing = true;
             try {
-              await ws2.nodes.table.records.updateRecord(capturedNodeId, capturedRecordId, {
+              await ws2.updateRecord(capturedNodeId, capturedRecordId, {
                 data: capturedNewData,
               });
               await loadRecords(capturedNodeId);
@@ -646,7 +646,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       setDeletingRecordId(recordId);
       // Invalidate cache since data is changing
       setAllRecords(null);
-      await ws.nodes.table.records.deleteRecord(nodeId, recordId);
+      await ws.deleteRecord(nodeId, recordId);
       await loadRecords(nodeId);
       setSaveError(null);
 
@@ -662,7 +662,7 @@ export const RecordsProvider: ParentComponent = (props) => {
             if (!ws2) return;
             isUndoing = true;
             try {
-              const result = await ws2.nodes.table.records.createRecord(capturedNodeId, {
+              const result = await ws2.createRecord(capturedNodeId, {
                 data: capturedData,
               });
               reCreatedId = result.id;
@@ -677,7 +677,7 @@ export const RecordsProvider: ParentComponent = (props) => {
             if (!ws2) return;
             isUndoing = true;
             try {
-              await ws2.nodes.table.records.deleteRecord(capturedNodeId, reCreatedId);
+              await ws2.deleteRecord(capturedNodeId, reCreatedId);
               reCreatedId = null;
               await loadRecords(capturedNodeId);
             } finally {
@@ -705,7 +705,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       setSavingRecordId("__new__"); // Special marker for creating new record
       // Invalidate cache since data is changing
       setAllRecords(null);
-      await ws.nodes.table.records.createRecord(nodeId, { data: record.data || {} });
+      await ws.createRecord(nodeId, { data: record.data || {} });
       await loadRecords(nodeId);
       setSaveError(null);
     } catch (err) {
@@ -722,7 +722,7 @@ export const RecordsProvider: ParentComponent = (props) => {
 
     try {
       setSavingView(true);
-      const res = await ws.nodes.views.createView(nodeId, { name, type });
+      const res = await ws.createView(nodeId, { name, type });
 
       // Ideally reload node to get updated views list, but we can also optimistically update
       // Since we need the full View object which CreateViewResponse doesn't return (only ID),
@@ -765,7 +765,7 @@ export const RecordsProvider: ParentComponent = (props) => {
       // The API expects UpdateViewRequest which matches Partial<View> structure mostly.
       // But we need to map View properties to UpdateViewRequest properties if they differ.
       // They are identical in our DTOs.
-      await ws.nodes.views.updateView(nodeId, viewId, updates);
+      await ws.updateView(nodeId, viewId, updates);
 
       setViews(views().map((v) => (v.id === viewId ? { ...v, ...updates } : v)));
 
@@ -790,7 +790,7 @@ export const RecordsProvider: ParentComponent = (props) => {
 
     try {
       setSavingView(true);
-      await ws.nodes.views.deleteView(nodeId, viewId);
+      await ws.deleteView(nodeId, viewId);
 
       const newViews = views().filter((v) => v.id !== viewId);
       setViews(newViews);

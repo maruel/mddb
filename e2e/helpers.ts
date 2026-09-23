@@ -8,7 +8,7 @@ import type {
   PlaywrightWorkerArgs,
   PlaywrightWorkerOptions,
 } from "@playwright/test";
-import { createAPIClient, type APIClient } from "../sdk/api.gen";
+import { createApiClient, type APIClient } from "../sdk/api.gen";
 
 // Helper to create a typed API client from Playwright's request context
 export function createClient(request: APIRequestContext, token?: string): APIClient {
@@ -39,7 +39,7 @@ export function createClient(request: APIRequestContext, token?: string): APICli
     } as unknown as Response;
   };
 
-  return createAPIClient(fetchFn);
+  return createApiClient(fetchFn);
 }
 
 // Helper to register a user and get token (with retry for rate limiting)

@@ -200,7 +200,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
       const org = orgApi();
       if (!org) return;
       try {
-        const status = await org.notion.getStatus(wsId);
+        const status = await org.getStatus(wsId);
         setNotionImportStatus(status);
         if (["completed", "failed", "cancelled"].includes(status.status)) {
           window.clearInterval(importPollInterval);
@@ -220,7 +220,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
   const handleNotionImport = async (data: NotionImportData) => {
     const org = orgApi();
     if (!org) return;
-    const result = await org.notion.startImport({
+    const result = await org.startImport({
       notion_token: data.notionToken,
     });
     // Switch to the new workspace (switchWorkspace navigates automatically)
@@ -235,7 +235,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
     const wsId = notionImportWsId();
     if (!ws || !wsId) return;
     try {
-      await ws.notion.cancelImport();
+      await ws.cancelImport();
       setNotionImportStatus((prev) => (prev ? { ...prev, status: "cancelled" } : null));
     } catch {
       // Ignore
@@ -290,13 +290,13 @@ const WorkspaceLayout: ParentComponent = (props) => {
           ? t("welcome.untitledTable") || "Untitled Table"
           : t("welcome.untitledPage") || "Untitled Page";
       if (type === "table") {
-        const result = await ws.nodes.table.createTable(parent, {
+        const result = await ws.createTable(parent, {
           title: defaultTitle,
           properties: [{ name: "Name", type: "text", required: false }],
         });
         newNodeId = result.id;
       } else {
-        const result = await ws.nodes.page.createPage(parent, { title: defaultTitle });
+        const result = await ws.createPage(parent, { title: defaultTitle });
         newNodeId = result.id;
       }
       await loadNodes(true);
@@ -354,7 +354,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
 
     try {
       setDeletingNodeId(nodeId);
-      await ws.nodes.deleteNode(nodeId);
+      await ws.deleteNode(nodeId);
       removeNode(nodeId);
 
       if (nodeId === selectedNodeId()) {

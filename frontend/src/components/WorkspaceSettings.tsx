@@ -57,22 +57,22 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       const ws = wsApi();
       if (activeTab() === "members" && isAdmin()) {
         const [membersData, invsData] = await Promise.all([
-          org.users.listUsers(),
-          ws ? ws.invitations.listWSInvitations() : Promise.resolve({ invitations: [] }),
+          org.listUsers(),
+          ws ? ws.listWSInvitations() : Promise.resolve({ invitations: [] }),
         ]);
         setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
         setInvitations(invsData.invitations?.filter((i): i is WSInvitationResponse => !!i) || []);
       }
 
       if (activeTab() === "workspace" && ws) {
-        const wsData = await ws.workspaces.getWorkspace();
+        const wsData = await ws.getWorkspace();
         setWsName(wsData.name);
         setOriginalWsName(wsData.name);
       }
 
       if (activeTab() === "sync" && isAdmin() && ws) {
         try {
-          const remoteData = await ws.settings.git.getGitRemote();
+          const remoteData = await ws.getGitRemote();
           setGitRemote(remoteData);
         } catch {
           // No remote configured is a valid state
@@ -97,7 +97,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
     try {
       setLoading(true);
-      await ws.invitations.createWSInvitation({ email: inviteEmail(), role: inviteRole() });
+      await ws.createWSInvitation({ email: inviteEmail(), role: inviteRole() });
       setInviteEmail("");
       setSuccess(t("success.invitationSent") || "Invitation sent successfully");
       loadData();
@@ -114,7 +114,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
     try {
       setLoading(true);
-      await ws.users.updateWSMemberRole({ user_id: userId, role });
+      await ws.updateWSMemberRole({ user_id: userId, role });
       setSuccess(t("success.roleUpdated") || "Role updated");
       loadData();
     } catch (err) {
@@ -136,7 +136,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
 
       // Rename workspace if name changed
       if (wsName() !== originalWsName() && wsName().trim()) {
-        await ws.workspaces.updateWorkspace({ name: wsName().trim() });
+        await ws.updateWorkspace({ name: wsName().trim() });
       }
 
       setOriginalWsName(wsName().trim());
@@ -156,7 +156,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     try {
       setLoading(true);
       setError(null);
-      const remoteData = await ws.settings.git.updateGitRemote({
+      const remoteData = await ws.updateGitRemote({
         url: newRemoteURL(),
         token: newRemoteToken(),
         type: "custom",
@@ -181,7 +181,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
       setLoading(true);
       setError(null);
       setSuccess(null);
-      await ws.settings.git.pushGit();
+      await ws.pushGit();
       setSuccess(t("success.pushSuccessful") || "Push successful");
       loadData();
     } catch (err) {
@@ -200,7 +200,7 @@ export default function WorkspaceSettings(props: WorkspaceSettingsProps) {
     try {
       setLoading(true);
       setError(null);
-      await ws.settings.git.deleteGitRemote();
+      await ws.deleteGitRemote();
       setGitRemote(null);
       setSuccess(t("success.remoteRemoved") || "Remote removed");
     } catch (err) {

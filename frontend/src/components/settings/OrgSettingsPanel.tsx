@@ -80,7 +80,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
 
   const loadOrgData = async () => {
     const org = orgApi();
-    const orgData = await org.organizations.getOrganization();
+    const orgData = await org.getOrganization();
     setOrgName(orgData.name);
     setOriginalOrgName(orgData.name);
     setMaxWorkspacesPerOrg(orgData.quotas.max_workspaces_per_org);
@@ -106,10 +106,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setError(null);
 
       if (activeTab() === "members" && isAdmin()) {
-        const [membersData, invsData] = await Promise.all([
-          org.users.listUsers(),
-          org.invitations.listOrgInvitations(),
-        ]);
+        const [membersData, invsData] = await Promise.all([org.listUsers(), org.listOrgInvitations()]);
         setMembers(membersData.users?.filter((u): u is UserResponse => !!u) || []);
         setInvitations(invsData.invitations?.filter((i): i is OrgInvitationResponse => !!i) || []);
       }
@@ -140,7 +137,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
 
     try {
       setLoading(true);
-      await org.invitations.createOrgInvitation({ email, role: role as "admin" | "member" });
+      await org.createOrgInvitation({ email, role: role as "admin" | "member" });
       setSuccess(t("success.invitationSent") || "Invitation sent successfully");
       loadData();
     } catch (err) {
@@ -156,7 +153,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
 
     try {
       setLoading(true);
-      await org.users.removeOrgMember({ user_id: userId });
+      await org.removeOrgMember({ user_id: userId });
       setSuccess(t("success.memberRemoved"));
       loadData();
     } catch (err) {
@@ -171,7 +168,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
 
     try {
       setLoading(true);
-      await org.users.updateOrgMemberRole({ user_id: userId, role: role as OrganizationRole });
+      await org.updateOrgMemberRole({ user_id: userId, role: role as OrganizationRole });
       setSuccess(t("success.roleUpdated") || "Role updated");
       loadData();
     } catch (err) {
@@ -199,11 +196,11 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setSuccess(null);
 
       if (orgName() !== originalOrgName() && orgName().trim()) {
-        await org.organizations.updateOrganization({ name: orgName().trim() });
+        await org.updateOrganization({ name: orgName().trim() });
         setOriginalOrgName(orgName().trim());
       }
 
-      await org.settings.updateOrgPreferences({ quotas: buildQuotasPayload() });
+      await org.updateOrgPreferences({ quotas: buildQuotasPayload() });
       setSuccess(t("success.orgSettingsSaved") || "Organization settings saved");
     } catch (err) {
       setError(`${t("errors.failedToSave")}: ${err}`);
@@ -221,7 +218,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
       setError(null);
       setSuccess(null);
 
-      await org.settings.updateOrgPreferences({ quotas: buildQuotasPayload() });
+      await org.updateOrgPreferences({ quotas: buildQuotasPayload() });
       setSuccess(t("success.orgSettingsSaved") || "Organization settings saved");
     } catch (err) {
       setError(`${t("errors.failedToSave")}: ${err}`);

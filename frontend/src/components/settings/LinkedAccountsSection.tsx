@@ -56,7 +56,7 @@ export default function LinkedAccountsSection(props: Props) {
   // Fetch available providers on mount
   createEffect(() => {
     api()
-      .auth.listProviders()
+      .listProviders()
       .then((resp) => setAvailableProviders(resp.providers))
       .catch((err) => console.error("Failed to fetch providers:", err));
   });

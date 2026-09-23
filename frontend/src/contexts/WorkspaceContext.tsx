@@ -216,8 +216,8 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   }
 
   async function createOrganization(data: { name: string }) {
-    await api().organizations.createOrganization({ name: data.name });
-    const updatedUser = await api().auth.getMe();
+    await api().createOrganization({ name: data.name });
+    const updatedUser = await api().getMe();
     setUser(updatedUser);
   }
 
@@ -226,8 +226,8 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     if (!u || !u.organization_id) {
       throw new Error("No organization selected");
     }
-    const ws = await api().org(u.organization_id).workspaces.createWorkspace({ name: data.name });
-    const updatedUser = await api().auth.getMe();
+    const ws = await api().org(u.organization_id).createWorkspace({ name: data.name });
+    const updatedUser = await api().getMe();
     setUser(updatedUser);
     await switchWorkspace(ws.id);
   }
@@ -273,7 +273,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       return null;
     }
     try {
-      const newPage = await ws.nodes.page.createPage("0", {
+      const newPage = await ws.createPage("0", {
         title: t("welcome.welcomePageTitle"),
         content: t("welcome.welcomePageContent"),
       });
@@ -287,7 +287,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   async function switchWorkspace(wsId: string) {
     try {
       setSwitchingWorkspace(true);
-      const data = await api().auth.switchWorkspace({ ws_id: wsId });
+      const data = await api().switchWorkspace({ ws_id: wsId });
       if (!data.user) {
         throw new Error("No user data returned");
       }
@@ -320,13 +320,13 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
     try {
       setLoadingNodes(true);
-      const resp = await ws.nodes.listNodeChildren("0");
+      const resp = await ws.listNodeChildren("0");
       let loadedNodes = resp?.nodes || [];
 
       if (loadedNodes.length === 0 && firstLoginCheckDone()) {
         const newPageId = await createWelcomePageIfNeeded();
         if (newPageId) {
-          const resp2 = await ws.nodes.listNodeChildren("0");
+          const resp2 = await ws.listNodeChildren("0");
           loadedNodes = resp2?.nodes || [];
         }
       }
@@ -349,7 +349,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
 
     try {
       setLoadingNodeId(id);
-      const nodeData = await ws.nodes.getNode(id);
+      const nodeData = await ws.getNode(id);
 
       batch(() => {
         setSelectedNodeId(nodeData.id);
@@ -363,7 +363,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       let currentNode = nodeData;
       while (currentNode.parent_id && currentNode.parent_id !== "0") {
         try {
-          const parentNode = await ws.nodes.getNode(currentNode.parent_id);
+          const parentNode = await ws.getNode(currentNode.parent_id);
           path.unshift(parentNode);
           currentNode = parentNode;
         } catch {
@@ -386,7 +386,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     if (!ws) return;
 
     try {
-      const data = await ws.nodes.listNodeChildren(nodeId);
+      const data = await ws.listNodeChildren(nodeId);
       const children = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
 
       setNodesStore(
@@ -479,7 +479,7 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     if (!ws) return;
 
     try {
-      await ws.nodes.moveNode(nodeId, { new_parent_id: newParentId });
+      await ws.moveNode(nodeId, { new_parent_id: newParentId });
 
       let moveResult: ReturnType<typeof reconcileMovedNode>;
       batch(() => {

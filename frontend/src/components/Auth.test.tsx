@@ -138,6 +138,7 @@ describe("Auth", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: "test@example.com", password: "password123" }),
+        signal: expect.any(AbortSignal),
       });
     });
 
@@ -295,6 +296,7 @@ describe("Auth", () => {
           password: "newpassword123",
           name: "New User",
         }),
+        signal: expect.any(AbortSignal),
       });
     });
   });

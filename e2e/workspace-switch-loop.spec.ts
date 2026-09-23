@@ -13,7 +13,7 @@ test("switching workspace while viewing a node does not cause 404 loop", async (
 
   // Create a page in workspace 1 and navigate to it
   const client = createClient(request, token);
-  const pageData = await client.ws(wsID1).nodes.page.createPage("0", {
+  const pageData = await client.ws(wsID1).createPage("0", {
     title: "WS1 Only Page",
     content: "This page only exists in workspace 1",
   });

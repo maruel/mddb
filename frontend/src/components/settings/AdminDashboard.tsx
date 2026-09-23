@@ -44,7 +44,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       setError(null);
-      const resp = await api().admin.getServerDetail();
+      const resp = await api().getServerDetail();
       setData(resp);
     } catch (err) {
       setError(`${t("errors.failedToLoad")}: ${err}`);

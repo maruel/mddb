@@ -12,7 +12,7 @@ test.describe("Floating Toolbar Visibility", () => {
 
     // Create a page with simple content
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Toolbar Visibility Test",
       content: "Hello world",
     });
@@ -61,7 +61,7 @@ test.describe("Floating Toolbar Visibility", () => {
 
     // Create a page with multiple words
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Double Click Test",
       content: "Hello world testing",
     });
@@ -109,7 +109,7 @@ test.describe("Floating Toolbar Visibility", () => {
 
     // Create a page with content
     const client = createClient(request, token);
-    const pageData = await client.ws(wsID).nodes.page.createPage("0", {
+    const pageData = await client.ws(wsID).createPage("0", {
       title: "Toolbar Bounds Test",
       content: "Test content for toolbar positioning",
     });

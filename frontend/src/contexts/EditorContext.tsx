@@ -142,7 +142,7 @@ export const EditorProvider: ParentComponent = (props) => {
       setAutoSaveStatus("saving");
       const wsId = user()?.workspace_id || "";
       const diskContent = spaUrlsToRelativeLinks(content(), wsId);
-      await ws.nodes.page.updatePage(nodeId, { title: title(), content: diskContent });
+      await ws.updatePage(nodeId, { title: title(), content: diskContent });
       setHasUnsavedChanges(false);
       setAutoSaveStatus("saved");
 
@@ -196,7 +196,7 @@ export const EditorProvider: ParentComponent = (props) => {
     }
 
     try {
-      const resp = await ws.nodes.getNodeTitles({ IDs: linkedIds.join(",") });
+      const resp = await ws.getNodeTitles({ IDs: linkedIds.join(",") });
       setLinkedNodeTitles(resp.titles || {});
     } catch {
       // Silent failure - just use stored titles in links
@@ -249,7 +249,7 @@ export const EditorProvider: ParentComponent = (props) => {
     setIcon(newIcon);
     updateNodeIcon(nodeId, newIcon);
     try {
-      await ws.nodes.page.updatePageFrontmatter(nodeId, { icon: newIcon, cover: cover() });
+      await ws.updatePageFrontmatter(nodeId, { icon: newIcon, cover: cover() });
     } catch (err) {
       setSaveError(`${t("errors.failedToSave")}: ${err}`);
     }
@@ -261,7 +261,7 @@ export const EditorProvider: ParentComponent = (props) => {
     if (!nodeId || !ws) return;
     setCover(newCover);
     try {
-      await ws.nodes.page.updatePageFrontmatter(nodeId, { icon: icon(), cover: newCover });
+      await ws.updatePageFrontmatter(nodeId, { icon: icon(), cover: newCover });
     } catch (err) {
       setSaveError(`${t("errors.failedToSave")}: ${err}`);
     }
@@ -316,7 +316,7 @@ export const EditorProvider: ParentComponent = (props) => {
 
     try {
       setLoadingHistory(true);
-      const data = await ws.nodes.history.listNodeVersions(nodeId, { Limit: 100 });
+      const data = await ws.listNodeVersions(nodeId, { Limit: 100 });
       setHistory((data.history?.filter(Boolean) as Commit[]) || []);
       setShowHistory(true);
     } catch (err) {

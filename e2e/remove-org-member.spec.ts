@@ -11,7 +11,7 @@ test.describe("Remove Organization Member", () => {
 
     // Get user A's org and workspace IDs.
     const clientA = createClient(request, userA.token);
-    const meA = await clientA.auth.getMe();
+    const meA = await clientA.getMe();
     const orgId = meA.organization_id!;
     const wsId = meA.workspace_id!;
     expect(orgId).toBeTruthy();
@@ -20,17 +20,17 @@ test.describe("Remove Organization Member", () => {
     // Register user B (no onboarding needed — they'll be added to A's org).
     const userB = await registerUser(request, "remove-member-b");
     const clientB = createClient(request, userB.token);
-    const meB = await clientB.auth.getMe();
+    const meB = await clientB.getMe();
     const userBId = meB.id;
 
     // User A adds user B to org as member and to workspace as editor.
     const orgApi = clientA.org(orgId);
-    await orgApi.users.updateOrgMemberRole({ user_id: userBId, role: "org:member" });
+    await orgApi.updateOrgMemberRole({ user_id: userBId, role: "org:member" });
     const wsApi = clientA.ws(wsId);
-    await wsApi.users.updateWSMemberRole({ user_id: userBId, role: "ws:editor" });
+    await wsApi.updateWSMemberRole({ user_id: userBId, role: "ws:editor" });
 
     // Verify user B appears in org members list.
-    const members = await orgApi.users.listUsers();
+    const members = await orgApi.listUsers();
     expect(members.users.find((u) => u.id === userBId)).toBeTruthy();
 
     // Navigate to org settings members page.
@@ -55,10 +55,10 @@ test.describe("Remove Organization Member", () => {
     await expect(page.getByText(userB.email)).not.toBeVisible({ timeout: 5000 });
 
     // Verify via API that user B lost both org and workspace memberships.
-    const membersAfter = await orgApi.users.listUsers();
+    const membersAfter = await orgApi.listUsers();
     expect(membersAfter.users.find((u) => u.id === userBId)).toBeUndefined();
 
-    const meBAfter = await clientB.auth.getMe();
+    const meBAfter = await clientB.getMe();
     expect(meBAfter.organizations?.find((o) => o.organization_id === orgId)).toBeUndefined();
     expect(meBAfter.workspaces?.find((w) => w.workspace_id === wsId)).toBeUndefined();
   });
@@ -69,13 +69,13 @@ test.describe("Remove Organization Member", () => {
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const clientA = createClient(request, userA.token);
-    const meA = await clientA.auth.getMe();
+    const meA = await clientA.getMe();
     const orgId = meA.organization_id!;
     expect(orgId).toBeTruthy();
 
     const orgApi = clientA.org(orgId);
     await expect(async () => {
-      await orgApi.users.removeOrgMember({ user_id: meA.id });
+      await orgApi.removeOrgMember({ user_id: meA.id });
     }).rejects.toThrow();
   });
 
@@ -85,22 +85,22 @@ test.describe("Remove Organization Member", () => {
     await expect(page.locator("aside")).toBeVisible({ timeout: 15000 });
 
     const clientA = createClient(request, userA.token);
-    const meA = await clientA.auth.getMe();
+    const meA = await clientA.getMe();
     const orgId = meA.organization_id!;
     expect(orgId).toBeTruthy();
 
     // Register user B and add as admin.
     const userB = await registerUser(request, "remove-last-owner-b");
     const clientB = createClient(request, userB.token);
-    const meB = await clientB.auth.getMe();
+    const meB = await clientB.getMe();
 
     const orgApi = clientA.org(orgId);
-    await orgApi.users.updateOrgMemberRole({ user_id: meB.id, role: "org:admin" });
+    await orgApi.updateOrgMemberRole({ user_id: meB.id, role: "org:admin" });
 
     // User B tries to remove user A (the sole owner) — should fail.
     const orgApiB = clientB.org(orgId);
     await expect(async () => {
-      await orgApiB.users.removeOrgMember({ user_id: meA.id });
+      await orgApiB.removeOrgMember({ user_id: meA.id });
     }).rejects.toThrow();
   });
 });
