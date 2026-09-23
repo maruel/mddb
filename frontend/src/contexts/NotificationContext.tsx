@@ -13,6 +13,7 @@ import type { NotificationDTO } from "@sdk/types.gen";
 import type { APIClient } from "@sdk/api.gen";
 import { registerServiceWorker } from "../notifications/sw-register";
 import { subscribeToPush, unsubscribeFromPush } from "../notifications/push-manager";
+import { isGoModeHost } from "../gomode/host";
 
 const POLL_INTERVAL_MS = 60_000;
 const PAGE_SIZE = 20;
@@ -119,6 +120,7 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
   };
 
   const enablePush = async (): Promise<boolean> => {
+    if (isGoModeHost()) return false;
     try {
       if (!swRegistration) {
         swRegistration = await registerServiceWorker();
@@ -153,12 +155,14 @@ export const NotificationProvider: ParentComponent<{ api: Accessor<APIClient> }>
     await fetchUnreadCount();
 
     // Check existing push subscription
-    swRegistration = await registerServiceWorker();
-    if (swRegistration) {
-      const existing = await swRegistration.pushManager.getSubscription();
-      if (existing) {
-        pushSubscription = existing;
-        setPushEnabled(true);
+    if (!isGoModeHost()) {
+      swRegistration = await registerServiceWorker();
+      if (swRegistration) {
+        const existing = await swRegistration.pushManager.getSubscription();
+        if (existing) {
+          pushSubscription = existing;
+          setPushEnabled(true);
+        }
       }
     }
 

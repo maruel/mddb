@@ -6,6 +6,7 @@ import {
   createSignal,
   createMemo,
   createEffect,
+  batch,
   on,
   onMount,
   type ParentComponent,
@@ -13,6 +14,7 @@ import {
 } from "solid-js";
 import { createApi, APIError, type Api } from "../useApi";
 import type { UserResponse } from "@sdk/types.gen";
+import { publishGoModeBearerToken } from "../gomode/host";
 
 export interface AuthContextValue {
   user: Accessor<UserResponse | null>;
@@ -36,8 +38,18 @@ export const AuthProvider: ParentComponent = (props) => {
   const [token, setToken] = createSignal<string | null>(localStorage.getItem("mddb_token"));
   const [ready, setReady] = createSignal(false);
 
+  const clearAuth = () => {
+    localStorage.removeItem("mddb_token");
+    batch(() => {
+      setToken(null);
+      setUser(null);
+    });
+    publishGoModeBearerToken(null);
+  };
+
   const logout = async () => {
     const currentToken = token();
+    clearAuth();
     if (currentToken) {
       try {
         const logoutApi = createApi(
@@ -49,9 +61,6 @@ export const AuthProvider: ParentComponent = (props) => {
         // Ignore errors - proceed with local logout even if server call fails
       }
     }
-    localStorage.removeItem("mddb_token");
-    setToken(null);
-    setUser(null);
     // Note: Navigation after logout is handled by calling components
   };
 
@@ -72,26 +81,36 @@ export const AuthProvider: ParentComponent = (props) => {
 
   const login = (newToken: string, userData: UserResponse) => {
     localStorage.setItem("mddb_token", newToken);
-    setToken(newToken);
-    setUser(userData);
+    batch(() => {
+      setToken(newToken);
+      setUser(userData);
+    });
+    publishGoModeBearerToken(newToken);
+  };
+
+  const acceptValidatedUser = (validatedToken: string, data: UserResponse) => {
+    if (token() !== validatedToken) return;
+    setUser(data);
+    publishGoModeBearerToken(validatedToken);
   };
 
   const refreshUser = async () => {
+    const currentToken = token();
+    if (!currentToken) return;
     try {
       const data = await api().getMe();
-      setUser(data);
+      acceptValidatedUser(currentToken, data);
     } catch (err) {
       console.error("Failed to refresh user", err);
       if (err instanceof APIError && err.status === 401) {
-        localStorage.removeItem("mddb_token");
-        setToken(null);
-        setUser(null);
+        if (token() === currentToken) clearAuth();
       }
     }
   };
 
   // Handle OAuth token from URL on mount and fetch user data
   onMount(async () => {
+    publishGoModeBearerToken(null);
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get("token");
     if (urlToken) {
@@ -107,12 +126,11 @@ export const AuthProvider: ParentComponent = (props) => {
     if (effectiveToken) {
       try {
         const data = await api().getMe();
-        setUser(data);
+        acceptValidatedUser(effectiveToken, data);
       } catch (err) {
         console.error("Failed to load user", err);
         if (err instanceof APIError && err.status === 401) {
-          localStorage.removeItem("mddb_token");
-          setToken(null);
+          if (token() === effectiveToken) clearAuth();
         }
       }
     }
@@ -129,14 +147,14 @@ export const AuthProvider: ParentComponent = (props) => {
       ([tok, u]) => {
         if (tok && !u) {
           (async () => {
+            const currentToken = tok;
             try {
               const data = await api().getMe();
-              setUser(data);
+              acceptValidatedUser(currentToken, data);
             } catch (err) {
               console.error("Failed to load user", err);
               if (err instanceof APIError && err.status === 401) {
-                localStorage.removeItem("mddb_token");
-                setToken(null);
+                if (token() === currentToken) clearAuth();
               }
             }
           })();

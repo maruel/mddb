@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/maruel/gomode"
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/githubapp"
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
@@ -63,6 +64,13 @@ type OAuthConfig struct {
 // Services.Email and Services.EmailVerif may be nil if SMTP is not configured.
 func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux := &http.ServeMux{}
+	settings := goModeSettings(cfg.Version)
+	goModeHandler, err := gomode.NewHandler(&settings)
+	if err != nil {
+		slog.Error("Go Mode discovery disabled", "err", err)
+	} else {
+		mux.Handle("GET /.well-known/gomode.json", goModeHandler)
+	}
 
 	// Create rate limiters from storage config
 	rlCfg := ratelimit.ConfigFromStorage(
@@ -88,6 +96,7 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Auth handler (needs New* for map initialization)
 	authh := handlers.NewAuthHandler(svc, hcfg)
+	mux.Handle("POST "+goModeMCPEndpoint, WrapAuthReadRaw(goModeMCP(svc, cfg.Version), svc, hcfg, identity.WSRoleViewer, limiters))
 
 	// Content handlers
 	ah := &handlers.AssetHandler{Svc: svc, Cfg: hcfg}

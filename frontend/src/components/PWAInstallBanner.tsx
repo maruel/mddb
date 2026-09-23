@@ -3,6 +3,7 @@
 import { createSignal, onMount, onCleanup, Show } from "solid-js";
 import { useI18n } from "../i18n";
 import styles from "./PWAInstallBanner.module.css";
+import { isGoModeHost } from "../gomode/host";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -29,6 +30,7 @@ export default function PWAInstallBanner() {
   const [showBanner, setShowBanner] = createSignal(false);
 
   onMount(() => {
+    if (isGoModeHost()) return;
     if (isDismissed()) return;
 
     const handleBeforeInstall = (e: Event) => {

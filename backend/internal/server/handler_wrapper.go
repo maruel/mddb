@@ -496,16 +496,37 @@ func triggerAutoPush(svc *handlers.Services, method string, wsID ksid.ID, handle
 	svc.SyncService.TriggerPush(wsID)
 }
 
-// WrapAuthRaw wraps a raw http.HandlerFunc with authentication and role checking.
+// WrapAuthRaw wraps a mutating raw HTTP handler with authentication and role checking.
 // Use this for handlers that need to handle requests directly (e.g., multipart forms).
-// The wrapped handler receives the request with validated auth - the handler should
-// extract wsID from the path via r.PathValue("wsID") if needed.
 func WrapAuthRaw(
 	fn http.HandlerFunc,
 	svc *handlers.Services,
 	cfg *handlers.Config,
 	requiredRole identity.WorkspaceRole,
 	limiters *ratelimit.Limiters,
+) http.Handler {
+	return wrapAuthRaw(fn, svc, cfg, requiredRole, limiters, true)
+}
+
+// WrapAuthReadRaw wraps a read-only raw HTTP handler, including POST transports
+// whose request body selects a read operation rather than mutating data.
+func WrapAuthReadRaw(
+	fn http.HandlerFunc,
+	svc *handlers.Services,
+	cfg *handlers.Config,
+	requiredRole identity.WorkspaceRole,
+	limiters *ratelimit.Limiters,
+) http.Handler {
+	return wrapAuthRaw(fn, svc, cfg, requiredRole, limiters, false)
+}
+
+func wrapAuthRaw(
+	fn http.HandlerFunc,
+	svc *handlers.Services,
+	cfg *handlers.Config,
+	requiredRole identity.WorkspaceRole,
+	limiters *ratelimit.Limiters,
+	mutating bool,
 ) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Validate JWT and session (don't need context for raw handlers)
@@ -541,20 +562,22 @@ func WrapAuthRaw(
 			}
 		}
 
-		// Limit request body size for raw handlers, but skip for multipart
-		// uploads — the asset handler enforces its own per-quota limit.
+		// Limit request body size for raw handlers. Mutating multipart asset
+		// uploads enforce their own per-quota limit in the asset handler.
 		ct := r.Header.Get("Content-Type")
 		isMultipart := len(ct) >= 9 && ct[:9] == "multipart"
-		if !isMultipart && cfg != nil && cfg.Quotas.MaxRequestBodyBytes > 0 {
+		if (!mutating || !isMultipart) && cfg != nil && cfg.Quotas.MaxRequestBodyBytes > 0 {
 			r.Body = http.MaxBytesReader(w, r.Body, cfg.Quotas.MaxRequestBodyBytes)
 		}
 
 		// Store user in context for raw handlers
 		ctx := reqctx.WithUser(r.Context(), user)
 		fn(w, r.WithContext(ctx))
-		// Commit DB changes for mutating raw handlers (e.g., asset upload)
-		commitDBIfMutating(ctx, r, svc.RootRepo, handlers.GitAuthor(user))
-		triggerAutoPush(svc, r.Method, wsID, nil)
+		if mutating {
+			// Commit DB changes for mutating raw handlers (e.g., asset upload).
+			commitDBIfMutating(ctx, r, svc.RootRepo, handlers.GitAuthor(user))
+			triggerAutoPush(svc, r.Method, wsID, nil)
+		}
 	})
 }
 

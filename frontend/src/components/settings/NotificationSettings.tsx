@@ -5,6 +5,7 @@ import type { ChannelSetDTO, NotificationPrefsDTO } from "@sdk/types.gen";
 import { useAuth } from "../../contexts";
 import { useNotifications } from "../../contexts/NotificationContext";
 import { useI18n } from "../../i18n";
+import { isGoModeHost } from "../../gomode/host";
 import styles from "./NotificationSettings.module.css";
 
 const NOTIFICATION_TYPES = [
@@ -104,18 +105,20 @@ export default function NotificationSettings() {
         <div class={styles.error}>{error()}</div>
       </Show>
 
-      <div class={styles.pushSection}>
-        <button
-          class={`${styles.pushButton} ${pushEnabled() ? styles.pushActive : ""}`}
-          onClick={handleTogglePush}
-          disabled={pushPermission() === "denied"}
-        >
-          {pushEnabled() ? t("notifications.pushEnabled") : t("notifications.enablePush")}
-        </button>
-        <Show when={pushPermission() === "denied"}>
-          <p class={styles.pushDenied}>{t("notifications.pushDenied")}</p>
-        </Show>
-      </div>
+      <Show when={!isGoModeHost()}>
+        <div class={styles.pushSection}>
+          <button
+            class={`${styles.pushButton} ${pushEnabled() ? styles.pushActive : ""}`}
+            onClick={handleTogglePush}
+            disabled={pushPermission() === "denied"}
+          >
+            {pushEnabled() ? t("notifications.pushEnabled") : t("notifications.enablePush")}
+          </button>
+          <Show when={pushPermission() === "denied"}>
+            <p class={styles.pushDenied}>{t("notifications.pushDenied")}</p>
+          </Show>
+        </div>
+      </Show>
 
       <Show when={prefs()} fallback={loading() ? <p>{t("common.loading")}</p> : null}>
         <table class={styles.prefsTable}>

@@ -103,6 +103,7 @@ func TestLimiters_MatchAuth(t *testing.T) {
 		{"POST", "/api/v1/tables", "write"},      // Write tier
 		{"DELETE", "/api/v1/pages/123", "write"}, // Write tier (DELETE)
 		{"POST", "/api/v1/search", "read"},       // Search is a read operation
+		{"POST", "/api/v1/gomode/mcp", "read"},   // MCP read transport
 	}
 
 	for _, tt := range tests {

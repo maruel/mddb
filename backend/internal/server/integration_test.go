@@ -23,6 +23,7 @@ var testJWTSecret = []byte("test-secret-key-32-bytes-long!!!")
 
 type testEnv struct {
 	server        *httptest.Server
+	services      *handlers.Services
 	userService   *identity.UserService
 	orgService    *identity.OrganizationService
 	wsService     *identity.WorkspaceService
@@ -126,6 +127,7 @@ func setupTestEnv(t *testing.T) *testEnv {
 
 	return &testEnv{
 		server:        server,
+		services:      svc,
 		userService:   userService,
 		orgService:    orgService,
 		wsService:     wsService,

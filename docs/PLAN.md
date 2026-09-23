@@ -16,7 +16,7 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 - **Security Hardening**:
   - [ ] Add authentication to asset serving endpoint (currently public).
   - [ ] Add optional public asset sharing with workspace-level settings.
-- **Intelligence**: Semantic search and AI agent readiness (MCP).
+- **Intelligence**: Go Mode discovery, native bearer handoff, and read-only MCP access to nested nodes in the active workspace are implemented. Semantic search and write tools remain future work.
 - **Global Presence**: Full localization and offline PWA capabilities.
 - **Advanced Table Views**: Filter/sort UI (backend + state management done, UI pending).
   - [ ] ViewToolbar with Filter and Sort buttons.

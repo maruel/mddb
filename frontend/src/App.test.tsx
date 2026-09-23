@@ -143,6 +143,8 @@ beforeEach(() => {
   fetchCalls.length = 0;
   fetchRoutes = [];
   localStorage.clear();
+  delete window.goModeHost;
+  delete window.gomodeAuth;
   // Reset URL to root for each test.
   window.history.replaceState(null, "", "/");
 });
@@ -154,6 +156,36 @@ afterEach(() => {
 
 describe("App", () => {
   describe("Authentication", () => {
+    it("hands a validated bearer to Go Mode and clears it on logout", async () => {
+      window.goModeHost = {};
+      const postMessage = vi.fn();
+      window.gomodeAuth = { postMessage };
+      localStorage.setItem("mddb_token", "existing-token");
+      let resolveUser!: (user: UserResponse) => void;
+      const userResponse = new Promise<UserResponse>((resolve) => {
+        resolveUser = resolve;
+      });
+      apiGet("/api/v1/auth/me", () => userResponse);
+      stubWorkspace();
+      api("POST", "/api/v1/auth/logout", () => ({}));
+
+      renderWithI18n(() => <App />);
+      expect(postMessage).not.toHaveBeenCalledWith(JSON.stringify({ bearerToken: "existing-token" }));
+
+      resolveUser(mockUser);
+      await waitFor(() => {
+        expect(postMessage).toHaveBeenCalledWith(JSON.stringify({ bearerToken: "existing-token" }));
+      });
+      await waitFor(() => {
+        expect(screen.getByTestId("user-menu-button")).toBeTruthy();
+      });
+      fireEvent.click(screen.getByTestId("user-menu-button"));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Logout" }));
+      await waitFor(() => {
+        expect(postMessage).toHaveBeenLastCalledWith(JSON.stringify({ bearerToken: null }));
+      });
+    });
+
     it("shows the login form when not logged in", async () => {
       renderWithI18n(() => <App />);
 

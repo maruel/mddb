@@ -18,6 +18,16 @@ and then:
 
 ## What is mddb?
 
+Go Mode clients can discover mddb at `/.well-known/gomode.json`. The advertised
+`/api/v1/gomode/mcp` endpoint accepts the same bearer token as the web API and
+reads nodes from the user's most recently selected workspace. Switching
+workspaces in mddb changes the workspace exposed on subsequent MCP requests.
+The MCP tools `nodes_list` and `node_read` and node resources are read-only;
+resource discovery includes nested documents and tables. Users must have viewer
+access to the selected workspace. In the Go Mode Android shell, the hosted
+frontend hands its validated bearer token to the native MCP client and clears
+it on logout.
+
 mddb lets you:
 
 - 📝 **Create and edit documents**: Write in markdown with live preview (Google Docs)

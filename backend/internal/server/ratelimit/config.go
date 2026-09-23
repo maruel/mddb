@@ -167,8 +167,8 @@ func (l *Limiters) MatchAuth(method, path string) *Tier {
 		return nil
 	}
 
-	// Search is a read operation even though it uses POST
-	if method == "POST" && strings.HasSuffix(path, "/search") {
+	// Search and the read-only MCP transport use POST to carry read requests.
+	if method == "POST" && (path == "/api/v1/gomode/mcp" || strings.HasSuffix(path, "/search")) {
 		return &l.ReadAuth
 	}
 
