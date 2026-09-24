@@ -20,3 +20,14 @@ if (root) {
     root,
   );
 }
+
+// Reload once when an updated service worker takes control, so the page runs the
+// new hashed bundle instead of mixing it with chunks the new build removed.
+if ("serviceWorker" in navigator) {
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (reloaded) return;
+    reloaded = true;
+    window.location.reload();
+  });
+}

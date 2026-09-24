@@ -219,6 +219,15 @@ func setCacheHeaders(w http.ResponseWriter, urlPath string) {
 		return
 	}
 
+	// The SPA document names the hashed asset bundle, so it must always be
+	// revalidated. A cached index.html keeps serving the bundle from the previous
+	// deploy for its max-age (longer behind a shared cache), so a new build can
+	// stay invisible to clients that already loaded the old one.
+	if filename == "index.html" {
+		w.Header().Set("Cache-Control", "no-cache")
+		return
+	}
+
 	// Workbox runtime is hashed, can be cached long-term
 	if strings.HasPrefix(filename, "workbox-") && strings.HasSuffix(filename, ".js") {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")

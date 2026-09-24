@@ -132,6 +132,25 @@ func (svc *Services) Emit(ctx context.Context, vapid *vapidKeys, userID ksid.ID,
 	}
 }
 
+// ActiveWorkspaceID resolves the workspace the API treats as active for user:
+// the most recent accessible entry from the user's LRU, otherwise the default
+// workspace chosen from their memberships. It reuses populateActiveContext so
+// non-HTTP surfaces such as the Go Mode MCP endpoint agree with the workspace
+// the UI shows instead of failing when nothing was recorded yet. Returns the
+// zero ID when the user has no accessible workspace.
+func (s *Services) ActiveWorkspaceID(user *identity.User) ksid.ID {
+	if user == nil {
+		return 0
+	}
+	uwm, err := getUserWithMemberships(s.User, s.OrgMembership, s.WSMembership, s.Organization, s.Workspace, user.ID)
+	if err != nil {
+		return 0
+	}
+	var resp dto.UserResponse
+	uwm.populateActiveContext(&resp)
+	return resp.WorkspaceID
+}
+
 // BandwidthUpdater allows updating bandwidth limits at runtime.
 type BandwidthUpdater interface {
 	Update(maxBytesPerSecond int64)

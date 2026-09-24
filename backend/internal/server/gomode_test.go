@@ -20,6 +20,7 @@ import (
 	voiceapi "github.com/maruel/gomode/voicegateway/api"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
+	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
 
 type testVoiceBridge struct {
@@ -216,6 +217,53 @@ func TestGoModeVoiceGateway(t *testing.T) {
 		if got.Error.Code != tc.code || got.Error.Message == "" {
 			t.Fatalf("voice error = %+v, want code %s", got.Error, tc.code)
 		}
+	}
+}
+
+// TestGoModeMCPUsesDefaultWorkspaceAfterLRUClear guards that the MCP surface
+// resolves the same default workspace the UI shows when the account has not
+// recorded a recent workspace yet, instead of rejecting the request.
+func TestGoModeMCPUsesDefaultWorkspaceAfterLRUClear(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	var auth dto.AuthResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{
+		Email: "gomode-no-lru@example.com", Password: "Pass1234", Name: "No LRU",
+	}, &auth, ""); status != http.StatusOK {
+		t.Fatalf("register status = %d", status)
+	}
+	var org dto.OrganizationResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/organizations", dto.CreateOrganizationRequest{
+		Name: "No LRU Org",
+	}, &org, auth.Token); status != http.StatusOK {
+		t.Fatalf("create organization status = %d", status)
+	}
+	var ws dto.WorkspaceResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/organizations/"+org.ID.String()+"/workspaces", dto.CreateWorkspaceRequest{
+		Name: "No LRU Workspace",
+	}, &ws, auth.Token); status != http.StatusOK {
+		t.Fatalf("create workspace status = %d", status)
+	}
+	var page dto.CreatePageResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/workspaces/"+ws.ID.String()+"/nodes/0/page/create", dto.CreatePageRequest{Title: "No LRU page"}, &page, auth.Token); status != http.StatusOK {
+		t.Fatalf("create page status = %d", status)
+	}
+
+	// An account that never switched a workspace has no recorded recent one.
+	if _, err := env.services.User.Modify(auth.User.ID, func(u *identity.User) error {
+		u.Settings.LastActiveWorkspaces = nil
+		return nil
+	}); err != nil {
+		t.Fatalf("clear active workspaces: %v", err)
+	}
+
+	result := callMCP(t, env, auth.Token, "resources/list", map[string]any{})
+	var listed mcp.ResourcesListResult
+	if err := json.Unmarshal(result, &listed); err != nil {
+		t.Fatalf("decode resources/list: %v", err)
+	}
+	if len(listed.Resources) != 1 || listed.Resources[0].Name != page.ID.String() {
+		t.Fatalf("resources = %#v, want the default workspace page", listed.Resources)
 	}
 }
 

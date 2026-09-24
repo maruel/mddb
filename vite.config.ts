@@ -53,7 +53,10 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,png,svg,ico,woff,woff2}"],
+        // index.html is intentionally excluded: the document names the hashed
+        // bundle, so precaching it would serve the previous build until the
+        // next worker activation. Navigations are network-first in sw.ts.
+        globPatterns: ["**/*.{js,css,png,svg,ico,woff,woff2}"],
         buildPlugins: {
           vite: [
             {

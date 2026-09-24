@@ -43,18 +43,36 @@ func goModeSettings(version string, voiceEnabled bool) gomode.Settings {
 func goModeMCP(svc *handlers.Services, version string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		u := reqctx.User(r.Context())
-		if u == nil || len(u.Settings.LastActiveWorkspaces) == 0 {
-			http.Error(w, "Select a workspace first", http.StatusConflict)
+		if u == nil {
+			writeMCPError(w, http.StatusUnauthorized, "Authentication required")
 			return
 		}
-		wsID := u.Settings.LastActiveWorkspaces[0]
+		wsID := svc.ActiveWorkspaceID(u)
+		if wsID.IsZero() {
+			writeMCPError(w, http.StatusConflict, "Select a workspace first")
+			return
+		}
 		if msg, status := checkWSMembership(u, wsID, svc, identity.WSRoleViewer); msg != "" {
-			http.Error(w, msg, status)
+			writeMCPError(w, status, msg)
 			return
 		}
 		h := &mcp.Handler{Registry: &workspaceRegistry{svc: svc, wsID: wsID}, ServerInfo: mcp.Implementation{Name: "mddb", Version: version}}
 		h.HandleMCP(w, r)
 	}
+}
+
+// writeMCPError answers an MCP request that failed before dispatch with a
+// JSON-RPC error body. MCP clients parse the response as JSON, so a plain-text
+// HTTP error reaches them as an opaque "not valid JSON" failure instead of the
+// actual reason.
+func writeMCPError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"jsonrpc": "2.0",
+		"id":      nil,
+		"error":   map[string]any{"code": -32001, "message": message},
+	})
 }
 
 type workspaceRegistry struct {

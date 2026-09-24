@@ -14,9 +14,14 @@ Run `mddb -help` for a full list of configuration options.
 
 ### Voice overlay
 
-Set `GEMINI_API_KEY` in the process environment or the data directory's `.env`
-file to enable the embedded Gemini Live voice gateway. The discovery manifest
-advertises the gateway only after it starts successfully. Signaling uses the
+Set `GEMINI_API_KEY` in the process environment, the data directory's `.env`
+file, or `~/.config/mddb/mddb.env` (loaded by the bundled systemd unit) to
+enable the embedded Gemini Live voice gateway. The discovery manifest
+advertises the gateway only after it starts successfully, and the browser shows
+the voice bar only when the manifest advertises one. If it stays hidden, check
+`curl <base-url>/.well-known/gomode.json` (expect a non-empty
+`webShell.voiceGateway.url`) and make sure any reverse proxy forwards
+`/.well-known/` to mddb. Signaling uses the
 mddb HTTP origin and requires a valid mddb bearer token. WebRTC media also
 needs a reachable UDP port; the embedded gateway selects a free port at startup.
 Voice startup failures leave the main server running without the overlay. The

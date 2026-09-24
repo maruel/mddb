@@ -2,6 +2,7 @@
 # Install: mkdir -p ~/.config/systemd/user && cp contrib/mddb.service ~/.config/systemd/user/
 # Enable:  systemctl --user daemon-reload && systemctl --user enable --now mddb
 # Logs:    journalctl --user -u mddb -f
+# Optional env overrides (for example GEMINI_API_KEY): ~/.config/mddb/mddb.env
 
 [Unit]
 Description=mddb - Notion-like document and table system
@@ -11,6 +12,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+# Optional environment overrides. Use this to keep secrets such as
+# GEMINI_API_KEY out of <data-dir>/.env; the file may be absent.
+EnvironmentFile=-%h/.config/mddb/mddb.env
 # Don't forget to run:
 #  tailscale serve -bg 8080
 ExecStart=%h/go/bin/mddb -http :8080 -data-dir %h/mddb/data -log-level info -base-url my-hostname.my-tailnet.ts.net
