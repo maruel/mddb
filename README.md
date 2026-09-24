@@ -28,6 +28,33 @@ access to the selected workspace. In the Go Mode Android shell, the hosted
 frontend hands its validated bearer token to the native MCP client and clears
 it on logout.
 
+The frontend can also host Go Mode's voice overlay. Set `GEMINI_API_KEY` in the
+server environment or the data directory's `.env` file to enable the embedded
+voice gateway. Its signaling routes require the same mddb bearer token as the
+web API. Each user can have one active voice session; the server allows eight
+active sessions and limits new offers to three per minute per user and twenty
+per minute overall. When capacity is available, a new offer replaces that
+user's previous session so a dropped connection can reconnect. Voice media
+uses WebRTC over UDP. The gateway keeps transcripts in a private temporary
+directory while mddb runs and removes them on shutdown.
+
+The embedded backend is Google Gemini Live, so enable voice only when you accept
+sending microphone audio and voice turns off the device. While a voice session
+is connected, microphone audio, the session instructions, and the tool results
+the client executes are sent to Google; the assistant's audio comes back from
+Google. Without `GEMINI_API_KEY` the overlay is not advertised and no voice
+audio leaves the device. Speech recognition, model inference, and speech
+synthesis all run in Google's Gemini Live service; mddb itself does not store
+voice audio, but the gateway writes transcript activity logs to a private
+temporary directory for the life of the process.
+
+Voice can call the same read-only workspace MCP tools that Go Mode clients use
+at `/api/v1/gomode/mcp`: `nodes_list` and `node_read`, plus node resources. The
+browser or Android client executes each tool call with the signed-in user's
+bearer token against the user's active workspace, so voice sees only the
+workspaces and nodes the user already has viewer access to, and it cannot
+modify content.
+
 mddb lets you:
 
 - 📝 **Create and edit documents**: Write in markdown with live preview (Google Docs)
@@ -95,9 +122,13 @@ For developers or advanced setup:
 
 ## Building from Source
 
-Development requires Node.js 26 and pnpm 12.4.2. From the repository root:
+Development requires Node.js 26 and pnpm 12.4.2. The Go module and frontend
+package both pin the published `github.com/maruel/gomode` revision, so a single
+checkout is enough; no sibling clone or Go workspace is needed.
 
 ```bash
+git clone https://github.com/maruel/mddb.git
+cd mddb
 make build
 ```
 

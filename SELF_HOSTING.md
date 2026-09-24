@@ -12,6 +12,36 @@ go install github.com/maruel/mddb/backend/cmd/mddb@latest
 
 Run `mddb -help` for a full list of configuration options.
 
+### Voice overlay
+
+Set `GEMINI_API_KEY` in the process environment or the data directory's `.env`
+file to enable the embedded Gemini Live voice gateway. The discovery manifest
+advertises the gateway only after it starts successfully. Signaling uses the
+mddb HTTP origin and requires a valid mddb bearer token. WebRTC media also
+needs a reachable UDP port; the embedded gateway selects a free port at startup.
+Voice startup failures leave the main server running without the overlay. The
+gateway allows one active session per user, eight globally, and at most three
+new offers per minute per user and twenty globally. When capacity is available,
+a new offer replaces an existing session from the same user; sessions expire
+after two hours. Transcript activity logs are stored in a private temporary
+directory outside the git-backed data directory and removed on normal shutdown.
+
+Enabling voice accepts sending speech off the device. The embedded backend is
+Google Gemini Live: while a session is connected, microphone audio, the session
+instructions, and the results of client-executed MCP tools are sent to Google,
+and assistant audio is returned from Google. Without `GEMINI_API_KEY` the
+discovery manifest does not advertise a gateway and no audio leaves the device.
+mddb does not store voice audio.
+
+Voice reuses the workspace MCP catalog at `/api/v1/gomode/mcp`, which is
+read-only: `nodes_list` and `node_read` plus node resources, scoped to the
+user's active workspace and viewer access. Voice cannot modify content.
+
+To validate the live path (requires `GEMINI_API_KEY` and a reachable WebRTC UDP
+port), run `make test-smoke-voice`: it completes one Gemini voice turn, calls
+`nodes_list` through the workspace MCP endpoint, and checks that hang-up
+releases session capacity.
+
 ### GeoLite
 
 Get a .mmdb for free. You need to create af free account at https://www.maxmind.com/en/geolite2/signup

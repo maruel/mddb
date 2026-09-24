@@ -1,19 +1,223 @@
-// Tests authenticated Go Mode MCP reads across nested workspace content.
+// Tests authenticated Go Mode MCP reads and embedded voice gateway access.
 
 package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/maruel/gomode"
 	"github.com/maruel/gomode/mcp"
+	voiceapi "github.com/maruel/gomode/voicegateway/api"
 	"github.com/maruel/mddb/backend/internal/server/dto"
 	"github.com/maruel/mddb/backend/internal/storage"
 )
+
+type testVoiceBridge struct {
+	mu     sync.Mutex
+	next   int
+	closed []string
+}
+
+func (b *testVoiceBridge) HandleOffer(_ context.Context, sdp string) (answer, sessionID string, err error) {
+	if sdp == "invalid" {
+		return "", "", errors.New("invalid SDP")
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.next++
+	return "answer", fmt.Sprintf("session-%d", b.next), nil
+}
+
+func (b *testVoiceBridge) Close(id string) {
+	b.mu.Lock()
+	b.closed = append(b.closed, id)
+	b.mu.Unlock()
+}
+
+func TestGoModeVoiceGateway(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	var auth dto.AuthResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{
+		Email: "voice@example.com", Password: "Pass1234", Name: "Voice",
+	}, &auth, ""); status != http.StatusOK {
+		t.Fatalf("register status = %d", status)
+	}
+	serverCfg := &storage.ServerConfig{JWTSecret: testJWTSecret, Quotas: storage.DefaultServerQuotas(), RateLimits: storage.DefaultRateLimits()}
+	bridge := &testVoiceBridge{}
+	server := httptest.NewServer(NewRouter(env.services, &Config{ServerConfig: serverCfg, Version: "test", VoiceBridge: bridge}))
+	t.Cleanup(server.Close)
+
+	discoveryReq, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/.well-known/gomode.json", http.NoBody)
+	if err != nil {
+		t.Fatalf("new discovery request: %v", err)
+	}
+	resp, err := http.DefaultClient.Do(discoveryReq)
+	if err != nil {
+		t.Fatalf("get discovery: %v", err)
+	}
+	var settings gomode.Settings
+	if err := json.NewDecoder(resp.Body).Decode(&settings); err != nil {
+		t.Fatalf("decode discovery: %v", err)
+	}
+	if err := resp.Body.Close(); err != nil {
+		t.Fatalf("close discovery: %v", err)
+	}
+	if settings.WebShell.VoiceGateway.URL != "/" || !settings.WebShell.VoiceGateway.AuthRequired {
+		t.Fatalf("voice discovery = %+v", settings.WebShell.VoiceGateway)
+	}
+
+	for _, tc := range []struct {
+		name, path, body string
+		want             int
+	}{
+		{name: "offer", path: "/api/voicegateway/v1/voice/rtc/offer", body: `{}`, want: http.StatusBadRequest},
+		{name: "diagnostics", path: "/api/voicegateway/v1/voice/rtc/session/diagnostics", body: `{}`, want: http.StatusNotFound},
+		{name: "close", path: "/api/voicegateway/v1/voice/rtc/session", want: http.StatusNotFound},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, authCase := range []struct {
+				name, token string
+				want        int
+			}{
+				{name: "anonymous", want: http.StatusUnauthorized},
+				{name: "authenticated", token: auth.Token, want: tc.want},
+			} {
+				t.Run(authCase.name, func(t *testing.T) {
+					req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL+tc.path, strings.NewReader(tc.body))
+					if err != nil {
+						t.Fatalf("new request: %v", err)
+					}
+					if authCase.token != "" {
+						req.Header.Set("Authorization", "Bearer "+authCase.token)
+					}
+					resp, err := http.DefaultClient.Do(req)
+					if err != nil {
+						t.Fatalf("voice request: %v", err)
+					}
+					if err := resp.Body.Close(); err != nil {
+						t.Fatalf("close voice response: %v", err)
+					}
+					if resp.StatusCode != authCase.want {
+						t.Fatalf("voice status = %d, want %d", resp.StatusCode, authCase.want)
+					}
+				})
+			}
+		})
+	}
+
+	var other dto.AuthResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{
+		Email: "other-voice@example.com", Password: "Pass1234", Name: "Other Voice",
+	}, &other, ""); status != http.StatusOK {
+		t.Fatalf("register second user status = %d", status)
+	}
+	voiceRequest := func(path, body, token string) int {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL+path, strings.NewReader(body))
+		if err != nil {
+			t.Fatalf("new voice request: %v", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("voice request: %v", err)
+		}
+		if err := resp.Body.Close(); err != nil {
+			t.Fatalf("close voice response: %v", err)
+		}
+		return resp.StatusCode
+	}
+	offer := "/api/voicegateway/v1/voice/rtc/offer"
+	if status := voiceRequest(offer, `{"sdp":"m=audio 9"}`, auth.Token); status != http.StatusOK {
+		t.Fatalf("valid offer status = %d", status)
+	}
+	if status := voiceRequest(offer, `{}`, auth.Token); status != http.StatusBadRequest {
+		t.Fatalf("malformed reconnect status = %d", status)
+	}
+	if status := voiceRequest(offer, `{"sdp":"invalid"}`, auth.Token); status != http.StatusInternalServerError {
+		t.Fatalf("bridge-rejected reconnect status = %d", status)
+	}
+	bridge.mu.Lock()
+	closed := append([]string(nil), bridge.closed...)
+	bridge.mu.Unlock()
+	if len(closed) != 0 {
+		t.Fatalf("rejected reconnect closed active session: %v", closed)
+	}
+	if status := voiceRequest("/api/voicegateway/v1/voice/rtc/session-1/diagnostics", `{}`, auth.Token); status != http.StatusOK {
+		t.Fatalf("original session after rejected reconnect status = %d", status)
+	}
+	if status := voiceRequest(offer, `{"sdp":"m=audio 9"}`, auth.Token); status != http.StatusOK {
+		t.Fatalf("replacement offer status = %d", status)
+	}
+	bridge.mu.Lock()
+	if len(bridge.closed) != 1 || bridge.closed[0] != "session-1" {
+		t.Fatalf("replaced session closes = %v", bridge.closed)
+	}
+	bridge.mu.Unlock()
+	if status := voiceRequest("/api/voicegateway/v1/voice/rtc/session-1/diagnostics", `{}`, auth.Token); status != http.StatusNotFound {
+		t.Fatalf("replaced session diagnostics status = %d", status)
+	}
+	diagnostics := "/api/voicegateway/v1/voice/rtc/session-2/diagnostics"
+	closeSession := "/api/voicegateway/v1/voice/rtc/session-2"
+	for _, path := range []string{diagnostics, closeSession} {
+		if status := voiceRequest(path, `{}`, other.Token); status != http.StatusNotFound {
+			t.Fatalf("cross-user request %s status = %d", path, status)
+		}
+	}
+	if status := voiceRequest(diagnostics, `{}`, auth.Token); status != http.StatusOK {
+		t.Fatalf("owner diagnostics status = %d", status)
+	}
+	if status := voiceRequest(closeSession, `{}`, auth.Token); status != http.StatusOK {
+		t.Fatalf("owner close status = %d", status)
+	}
+	if status := voiceRequest(diagnostics, `{}`, auth.Token); status != http.StatusNotFound {
+		t.Fatalf("closed session diagnostics status = %d", status)
+	}
+	if status := voiceRequest(offer, `{"sdp":"m=audio 9"}`, auth.Token); status != http.StatusTooManyRequests {
+		t.Fatalf("offer rate limit status = %d", status)
+	}
+	for _, tc := range []struct {
+		path, token string
+		status      int
+		code        voiceapi.ErrorCode
+	}{
+		{path: offer, token: auth.Token, status: http.StatusTooManyRequests, code: voiceapi.CodeBadRequest},
+		{path: diagnostics, token: other.Token, status: http.StatusNotFound, code: voiceapi.CodeNotFound},
+	} {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL+tc.path, strings.NewReader(`{"sdp":"m=audio 9"}`))
+		if err != nil {
+			t.Fatalf("new error request: %v", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+tc.token)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("voice error request: %v", err)
+		}
+		if resp.StatusCode != tc.status || !strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
+			t.Fatalf("error response status/content-type = %d/%q", resp.StatusCode, resp.Header.Get("Content-Type"))
+		}
+		var got voiceapi.ErrorResponse
+		if err := json.NewDecoder(resp.Body).Decode(&got); err != nil {
+			t.Fatalf("decode voice error: %v", err)
+		}
+		if err := resp.Body.Close(); err != nil {
+			t.Fatalf("close error response: %v", err)
+		}
+		if got.Error.Code != tc.code || got.Error.Message == "" {
+			t.Fatalf("voice error = %+v, want code %s", got.Error, tc.code)
+		}
+	}
+}
 
 func TestGoModeMCP(t *testing.T) {
 	t.Parallel()
@@ -104,6 +308,58 @@ func TestGoModeMCP(t *testing.T) {
 	t.Cleanup(func() { _ = resp.Body.Close() })
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("oversized multipart MCP status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
+	}
+}
+
+// TestMCPToolSchemas validates every advertised workspace tool schema and
+// guards the parameter header mapping, so a malformed read-only catalog fails
+// the build instead of the request path.
+func TestMCPToolSchemas(t *testing.T) {
+	t.Parallel()
+
+	registry := &workspaceRegistry{}
+	if err := registry.validateToolSchemas(); err != nil {
+		t.Fatalf("validateToolSchemas() error: %v", err)
+	}
+
+	// The read-only workspace tools take no header-mirrored parameters; the
+	// empty expectations catch an accidental x-mcp-header or a renamed tool.
+	expectedHeaders := map[string]map[string]string{
+		"nodes_list": {},
+		"node_read":  {},
+	}
+	specs := registry.specs()
+	if len(specs) != len(expectedHeaders) {
+		t.Fatalf("specs = %d, want %d", len(specs), len(expectedHeaders))
+	}
+	for _, spec := range specs {
+		t.Run(spec.Name, func(t *testing.T) {
+			t.Parallel()
+
+			want, ok := expectedHeaders[spec.Name]
+			if !ok {
+				t.Fatalf("unexpected tool %q", spec.Name)
+			}
+			params, err := mcp.HeaderParams(spec.InputSchema)
+			if err != nil {
+				t.Fatalf("HeaderParams() error: %v", err)
+			}
+			got := make(map[string]string, len(params))
+			for _, param := range params {
+				if len(param.Path) != 1 {
+					t.Fatalf("header %q path = %v, want one property", param.Header, param.Path)
+				}
+				got[param.Path[0]] = param.Header
+			}
+			if len(got) != len(want) {
+				t.Fatalf("headers = %v, want %v", got, want)
+			}
+			for property, header := range want {
+				if got[property] != header {
+					t.Fatalf("header for %q = %q, want %q", property, got[property], header)
+				}
+			}
+		})
 	}
 }
 

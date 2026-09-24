@@ -24,7 +24,11 @@ let fetchRoutes: Array<{
 }> = [];
 
 function jsonResponse(body: unknown, ok = true): Response {
-  return { ok, json: () => Promise.resolve(body) } as unknown as Response;
+  return {
+    ok,
+    headers: new Headers({ "content-type": "application/json" }),
+    json: () => Promise.resolve(body),
+  } as unknown as Response;
 }
 
 globalThis.fetch = ((request: RequestInfo | URL, init?: RequestInit) => {
@@ -152,6 +156,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("App", () => {
@@ -203,6 +208,33 @@ describe("App", () => {
       await waitFor(() => {
         expect(screen.getByTestId("user-menu-button")).toBeTruthy();
       });
+    });
+
+    it("shows the browser voice overlay only when the host advertises a gateway", async () => {
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          observe() {}
+          unobserve() {}
+          disconnect() {}
+        },
+      );
+      localStorage.setItem("mddb_token", "existing-token");
+      stubWorkspace();
+      apiGet("/.well-known/gomode.json", () => ({
+        service: "mddb",
+        webShell: {
+          toolGroups: [{ name: "workspace", endpoint: "/api/v1/gomode/mcp" }],
+          voiceGateway: { url: "/", authRequired: true },
+        },
+      }));
+
+      renderWithI18n(() => <App />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("voice-overlay")).toBeTruthy();
+      });
+      expect(screen.getByRole("button", { name: "Connect voice assistant" })).toBeTruthy();
     });
 
     it("stores the token and shows the main app after the login form submits", async () => {

@@ -608,4 +608,31 @@ export interface Dictionary {
     connected: string;
     reconnecting: string;
   };
+
+  voice: {
+    assistant: string;
+    cancel: string;
+    cancelConnection: string;
+    clearTranscript: string;
+    connect: string;
+    connectionFailed: string;
+    endSession: string;
+    listening: string;
+    microphone: string;
+    mute: string;
+    muted: string;
+    reconnecting: string;
+    retry: string;
+    signaling: string;
+    speaker: string;
+    speaking: string;
+    transcript: string;
+    transcriptPlaceholder: string;
+    unmute: string;
+    voiceAssistant: string;
+    waitingForServer: string;
+    settingUpWebRTC: string;
+    you: string;
+    setupFailed: string;
+  };
 }

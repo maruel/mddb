@@ -21,7 +21,12 @@ import (
 
 const goModeMCPEndpoint = "/api/v1/gomode/mcp"
 
-func goModeSettings(version string) gomode.Settings {
+func goModeSettings(version string, voiceEnabled bool) gomode.Settings {
+	voice := gomode.VoiceGatewaySettings{Required: false}
+	if voiceEnabled {
+		voice.URL = "/"
+		voice.AuthRequired = true
+	}
 	return gomode.Settings{
 		Service: "mddb", ServiceVersion: version, APIVersion: 1,
 		WebShell: gomode.WebShellSettings{
@@ -30,7 +35,7 @@ func goModeSettings(version string) gomode.Settings {
 				Name: "workspace", Description: "Read documents in your active workspace",
 				Endpoint: goModeMCPEndpoint, ProtocolVersion: mcp.ProtocolVersion, AuthRequired: true,
 			}},
-			VoiceGateway: gomode.VoiceGatewaySettings{Required: false},
+			VoiceGateway: voice,
 		},
 	}
 }
@@ -68,6 +73,21 @@ func (m *workspaceRegistry) specs() []mcp.ToolSpec {
 	list.Annotations = annotations
 	read.Annotations = annotations
 	return []mcp.ToolSpec{list, read}
+}
+
+// validateToolSchemas fails when an advertised workspace tool schema is
+// structurally invalid, so a malformed catalog is caught at startup instead of
+// on the request path.
+func (m *workspaceRegistry) validateToolSchemas() error {
+	for _, spec := range m.specs() {
+		if err := mcp.ValidateToolSchema(spec.InputSchema); err != nil {
+			return fmt.Errorf("MCP tool %s input schema: %w", spec.Name, err)
+		}
+		if err := mcp.ValidateToolSchema(spec.OutputSchema); err != nil {
+			return fmt.Errorf("MCP tool %s output schema: %w", spec.Name, err)
+		}
+	}
+	return nil
 }
 
 func (m *workspaceRegistry) Tools(context.Context) ([]mcp.ToolDescriptor, error) {

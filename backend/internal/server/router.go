@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/maruel/gomode"
+	"github.com/maruel/gomode/voicegateway"
 	"github.com/maruel/mddb/backend/frontend"
 	"github.com/maruel/mddb/backend/internal/githubapp"
 	"github.com/maruel/mddb/backend/internal/server/bandwidth"
@@ -30,15 +31,16 @@ import (
 // Config holds configuration for the router.
 type Config struct {
 	*storage.ServerConfig
-	DataDir   string
-	BaseURL   string
-	Version   string
-	GoVersion string
-	Revision  string
-	Dirty     bool
-	OAuth     OAuthConfig
-	GitHubApp GitHubAppConfig
-	IPGeo     *ipgeo.Checker
+	DataDir     string
+	BaseURL     string
+	Version     string
+	GoVersion   string
+	Revision    string
+	Dirty       bool
+	OAuth       OAuthConfig
+	GitHubApp   GitHubAppConfig
+	IPGeo       *ipgeo.Checker
+	VoiceBridge voicegateway.MediaBridge
 }
 
 // GitHubAppConfig holds GitHub App credentials for installation-based auth.
@@ -64,7 +66,7 @@ type OAuthConfig struct {
 // Services.Email and Services.EmailVerif may be nil if SMTP is not configured.
 func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	mux := &http.ServeMux{}
-	settings := goModeSettings(cfg.Version)
+	settings := goModeSettings(cfg.Version, cfg.VoiceBridge != nil)
 	goModeHandler, err := gomode.NewHandler(&settings)
 	if err != nil {
 		slog.Error("Go Mode discovery disabled", "err", err)
@@ -96,7 +98,21 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Auth handler (needs New* for map initialization)
 	authh := handlers.NewAuthHandler(svc, hcfg)
-	mux.Handle("POST "+goModeMCPEndpoint, WrapAuthReadRaw(goModeMCP(svc, cfg.Version), svc, hcfg, identity.WSRoleViewer, limiters))
+	if err := (&workspaceRegistry{svc: svc}).validateToolSchemas(); err != nil {
+		slog.Error("Go Mode MCP disabled: invalid tool schemas", "err", err)
+	} else {
+		mux.Handle("POST "+goModeMCPEndpoint, WrapAuthReadRaw(goModeMCP(svc, cfg.Version), svc, hcfg, identity.WSRoleViewer, limiters))
+	}
+	if cfg.VoiceBridge != nil {
+		voice := newVoiceGateway(cfg.VoiceBridge)
+		for _, path := range []string{
+			"POST /api/voicegateway/v1/voice/rtc/offer",
+			"POST /api/voicegateway/v1/voice/rtc/{sessionID}/diagnostics",
+			"POST /api/voicegateway/v1/voice/rtc/{sessionID}",
+		} {
+			mux.Handle(path, WrapAuthReadRaw(voice.ServeHTTP, svc, hcfg, identity.WSRoleViewer, limiters))
+		}
+	}
 
 	// Content handlers
 	ah := &handlers.AssetHandler{Svc: svc, Cfg: hcfg}

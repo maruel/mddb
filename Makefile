@@ -1,7 +1,7 @@
 # Build, verify, test, and development commands.
 
 .DEFAULT_GOAL := help
-.PHONY: help build dev coverage fix git-hooks frontend-dev test test-e2e test-e2e-slow types verify tools custom-gcl benchmark
+.PHONY: help build dev coverage fix git-hooks frontend-dev test test-smoke-voice test-e2e test-e2e-slow types verify tools custom-gcl benchmark
 
 # Tool versions. The tools target installs a tool that is missing or at another version, so
 # these are the only places the versions are written down.
@@ -71,6 +71,7 @@ help:
 	@printf '  %-18s - %s\n' 'make fix' 'Apply every autofix, then refresh the file index'
 	@printf '  %-18s - %s\n' 'make verify' 'Fast static gate: lint, formatting, generated docs (pre-push gate)'
 	@printf '  %-18s - %s\n' 'make test' 'Run unit tests (Go, frontend)'
+	@printf '  %-18s - %s\n' 'make test-smoke-voice' 'Run the live Gemini voice gateway smoke test (slow, needs GEMINI_API_KEY)'
 	@printf '  %-18s - %s\n' 'make benchmark' 'Run frontend micro-benchmarks (tinybench)'
 	@printf '  %-18s - %s\n' 'make test-e2e' 'Run Playwright e2e tests (slow, fast rate limits, parallel)'
 	@printf '  %-18s - %s\n' 'make test-e2e-slow' 'Run e2e tests with normal rate limits (sequential)'
@@ -114,6 +115,12 @@ dev: build $(ENV_FILE)
 test: $(FRONTEND_STAMP)
 	@go test -cover ./...
 	@pnpm --silent test
+
+# Slow and opt-in: needs GEMINI_API_KEY and reachable WebRTC UDP. Runs one live
+# Gemini voice turn through the embedded gateway, executes the workspace MCP
+# nodes_list tool, and checks that hang-up releases session capacity.
+test-smoke-voice:
+	@go test -tags=smoke -run TestSmokeVoiceGatewayGemini -v -timeout 5m ./backend/internal/server/
 
 # Frontend micro-benchmarks (tinybench) over frontend/src/**/*.bench.ts. Fast;
 # use --save/--compare for JSON baselines when reporting deltas.

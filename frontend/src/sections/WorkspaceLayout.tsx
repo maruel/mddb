@@ -10,6 +10,7 @@ import CreateWorkspaceModal from "../components/CreateWorkspaceModal";
 import NotionImportModal, { type NotionImportData } from "../components/NotionImportModal";
 import KeyboardShortcutsDialog from "../components/KeyboardShortcutsDialog";
 import { TransientFeedback } from "../components/TransientFeedback";
+import BrowserVoiceShell from "../gomode/BrowserVoiceShell";
 import { useAuth, useWorkspace, useEditor, useEventSource, useRecords } from "../contexts";
 import { useI18n } from "../i18n";
 import { settingsUrl, nodeUrl } from "../utils/urls";
@@ -531,6 +532,8 @@ const WorkspaceLayout: ParentComponent = (props) => {
           {props.children}
         </main>
       </div>
+
+      <BrowserVoiceShell />
 
       <Show when={showCreateWorkspace()}>
         <CreateWorkspaceModal

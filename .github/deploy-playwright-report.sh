@@ -1,7 +1,7 @@
 #!/bin/bash
 # Deploy Playwright report to gh-pages branch and prepare for GitHub Pages upload.
 # Required environment variables: GITHUB_SHA, GITHUB_WORKSPACE, GITHUB_ENV, PAGES_URL, GIT_REMOTE_URL
-set -eu
+set -euo pipefail
 
 SHORT_SHA="${GITHUB_SHA:0:7}"
 DEPLOY_DIR=$(mktemp -d)
@@ -20,7 +20,7 @@ fi
 # Add new report
 mkdir -p reports
 rm -rf "reports/${SHORT_SHA}"
-cp -r "${GITHUB_WORKSPACE}/playwright-report" "reports/${SHORT_SHA}"
+cp -r "${GITHUB_WORKSPACE}/mddb/playwright-report" "reports/${SHORT_SHA}"
 date -u '+%Y-%m-%d %H:%M' >"reports/${SHORT_SHA}/.timestamp"
 rm -f reports/latest
 ln -s "${SHORT_SHA}" reports/latest

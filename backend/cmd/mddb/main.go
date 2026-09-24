@@ -3,7 +3,8 @@
 // mddb is a local-first markdown database that stores content as files,
 // provides OAuth authentication (Google/Microsoft), and exposes a RESTful
 // HTTP API. Configuration is read from CLI flags, a .env file (for OAuth),
-// and config.json (for JWT secret, SMTP, quotas).
+// and config.json (for JWT secret, SMTP, quotas). An optional GEMINI_API_KEY
+// enables the embedded voice gateway.
 package main
 
 import (
@@ -29,6 +30,8 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/lmittmann/tint"
+	"github.com/maruel/gomode/voicegateway"
+	"github.com/maruel/gomode/voicegateway/voicertc"
 	"github.com/maruel/mddb/backend/internal/email"
 	"github.com/maruel/mddb/backend/internal/githubapp"
 	"github.com/maruel/mddb/backend/internal/server"
@@ -418,6 +421,40 @@ func mainImpl() error {
 
 	// Initialize sync service
 	syncService := syncsvc.New(wsService, fileStore, ghAppClient, rootRepo)
+	geminiAPIKey := os.Getenv("GEMINI_API_KEY")
+	if geminiAPIKey == "" {
+		geminiAPIKey = env["GEMINI_API_KEY"]
+	}
+	var voiceBridge voicegateway.MediaBridge
+	if geminiAPIKey != "" {
+		voiceCfg := voicegateway.DefaultConfig()
+		if err := voiceCfg.ValidateEmbedded(); err != nil {
+			slog.WarnContext(ctx, "embedded voice gateway disabled: invalid configuration", "err", err)
+		} else {
+			// Activity logs contain transcripts. Keep them outside the git-backed
+			// data directory and remove them after the bridge has closed.
+			activityDir, dirErr := os.MkdirTemp("", "mddb-voice-")
+			if dirErr != nil {
+				slog.WarnContext(ctx, "embedded voice gateway disabled: create activity directory", "err", dirErr)
+			} else {
+				bridge, err := voicertc.NewBridge(ctx, &voiceCfg, geminiAPIKey, voiceCfg.Server.WebRTCUDPPort, activityDir)
+				if err != nil {
+					slog.WarnContext(ctx, "embedded voice gateway disabled: startup failed", "err", err)
+					if removeErr := os.RemoveAll(activityDir); removeErr != nil {
+						slog.WarnContext(ctx, "remove voice activity directory", "err", removeErr)
+					}
+				} else {
+					voiceBridge = bridge
+					defer func() {
+						bridge.CloseAll(context.WithoutCancel(ctx))
+						if removeErr := os.RemoveAll(activityDir); removeErr != nil {
+							slog.Warn("remove voice activity directory", "err", removeErr)
+						}
+					}()
+				}
+			}
+		}
+	}
 
 	svc := &handlers.Services{
 		FileStore:        fileStore,
@@ -449,6 +486,7 @@ func mainImpl() error {
 		Revision:     buildRevision,
 		Dirty:        buildDirty,
 		IPGeo:        geoChecker,
+		VoiceBridge:  voiceBridge,
 		OAuth: server.OAuthConfig{
 			GoogleClientID:     *googleClientID,
 			GoogleClientSecret: *googleClientSecret,

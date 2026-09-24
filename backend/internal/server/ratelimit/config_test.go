@@ -96,14 +96,15 @@ func TestLimiters_MatchAuth(t *testing.T) {
 		path     string
 		wantTier string
 	}{
-		{"GET", "/api/v1/health", ""},            // No rate limit for health check
-		{"GET", "/api/v1/pages", "read"},         // Read tier
-		{"GET", "/api/v1/users", "read"},         // Read tier
-		{"POST", "/api/v1/pages", "write"},       // Write tier
-		{"POST", "/api/v1/tables", "write"},      // Write tier
-		{"DELETE", "/api/v1/pages/123", "write"}, // Write tier (DELETE)
-		{"POST", "/api/v1/search", "read"},       // Search is a read operation
-		{"POST", "/api/v1/gomode/mcp", "read"},   // MCP read transport
+		{"GET", "/api/v1/health", ""},                            // No rate limit for health check
+		{"GET", "/api/v1/pages", "read"},                         // Read tier
+		{"GET", "/api/v1/users", "read"},                         // Read tier
+		{"POST", "/api/v1/pages", "write"},                       // Write tier
+		{"POST", "/api/v1/tables", "write"},                      // Write tier
+		{"DELETE", "/api/v1/pages/123", "write"},                 // Write tier (DELETE)
+		{"POST", "/api/v1/search", "read"},                       // Search is a read operation
+		{"POST", "/api/v1/gomode/mcp", "read"},                   // MCP read transport
+		{"POST", "/api/voicegateway/v1/voice/rtc/offer", "read"}, // Voice offer has a dedicated limiter
 	}
 
 	for _, tt := range tests {

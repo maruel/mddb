@@ -1,0 +1,18 @@
+/* Maps mddb's semantic theme roles onto the reusable Go Mode voice panel. */
+.shell {
+  flex-shrink: 0;
+
+  --color-primary: var(--c-action-primary);
+  --color-primary-hover: var(--c-action-primary-hover);
+  --color-on-primary: var(--c-text-inverse);
+  --color-bg-surface: var(--c-surface);
+  --color-bg-hover: var(--c-surface-hover);
+  --color-border: var(--c-border);
+  --color-border-medium: var(--c-border-muted);
+  --color-text-secondary: var(--c-text);
+  --color-text-muted: var(--c-text-muted);
+  --color-text-faint: var(--c-text-muted);
+  --color-plan: var(--c-text-accent);
+  --color-danger: var(--c-text-danger);
+  --color-success: var(--c-text-success);
+}
