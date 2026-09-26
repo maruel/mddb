@@ -4,8 +4,8 @@ import { createSignal, For, Show } from "solid-js";
 import { useI18n } from "../../i18n";
 import styles from "./InviteForm.module.css";
 
-interface RoleOption {
-  value: string;
+interface RoleOption<T extends string> {
+  value: T;
   label: string;
 }
 
@@ -15,18 +15,23 @@ interface PendingInvitation {
   created: string | number;
 }
 
-interface InviteFormProps {
-  roleOptions: RoleOption[];
-  defaultRole: string;
+interface InviteFormProps<T extends string> {
+  roleOptions: readonly RoleOption<T>[];
+  defaultRole: T;
   pendingInvitations: PendingInvitation[];
-  onInvite: (email: string, role: string) => Promise<void>;
+  onInvite: (email: string, role: T) => Promise<void>;
   loading?: boolean;
 }
 
-export default function InviteForm(props: InviteFormProps) {
+export default function InviteForm<T extends string>(props: InviteFormProps<T>) {
   const { t } = useI18n();
   const [email, setEmail] = createSignal("");
-  const [role, setRole] = createSignal(props.defaultRole);
+  const [role, setRole] = createSignal<T>(props.defaultRole);
+
+  const selectRole = (value: string) => {
+    const option = props.roleOptions.find((item) => item.value === value);
+    if (option) setRole(() => option.value);
+  };
 
   const handleSubmit = async (e: Event) => {
     e.preventDefault();
@@ -48,7 +53,7 @@ export default function InviteForm(props: InviteFormProps) {
             required
             disabled={props.loading}
           />
-          <select value={role()} onChange={(e) => setRole(e.target.value)} disabled={props.loading}>
+          <select value={role()} onChange={(e) => selectRole(e.target.value)} disabled={props.loading}>
             <For each={props.roleOptions}>{(option) => <option value={option.value}>{option.label}</option>}</For>
           </select>
           <button type="submit" disabled={props.loading}>

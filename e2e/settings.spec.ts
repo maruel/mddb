@@ -1,6 +1,6 @@
 // E2E tests for user settings and language switching.
 import type { Page } from "@playwright/test";
-import { test, expect, registerUser } from "./helpers";
+import { test, expect, registerUser, createClient } from "./helpers";
 
 // Helper to open user menu and click an option
 async function openUserMenuAndClick(page: Page, optionText: string) {
@@ -13,6 +13,41 @@ async function openUserMenuAndClick(page: Page, optionText: string) {
   await expect(option).toBeVisible({ timeout: 3000 });
   await option.click();
 }
+
+test("member invitation forms send the API role values", async ({ page, request }) => {
+  const owner = await registerUser(request, "invite-owner");
+  const invitee = await registerUser(request, "invite-member");
+  await page.goto(`/?token=${owner.token}`);
+  await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+
+  const client = createClient(request, owner.token);
+  const me = await client.getMe();
+  const orgID = me.organization_id!;
+  const wsID = me.workspace_id!;
+
+  await page.goto(`/settings/org/${orgID}`);
+  const orgForm = page.locator('form[class*="inviteForm"]');
+  await orgForm.locator('input[type="email"]').fill(invitee.email);
+  await orgForm.locator("select").selectOption("org:admin");
+  await orgForm.locator('button[type="submit"]').click();
+  await expect
+    .poll(
+      async () =>
+        (await client.org(orgID).listOrgInvitations()).invitations.find((i) => i.email === invitee.email)?.role,
+    )
+    .toBe("org:admin");
+
+  await page.goto(`/settings/workspace/${wsID}`);
+  const wsForm = page.locator('form[class*="inviteForm"]');
+  await wsForm.locator('input[type="email"]').fill(invitee.email);
+  await wsForm.locator("select").selectOption("ws:editor");
+  await wsForm.locator('button[type="submit"]').click();
+  await expect
+    .poll(
+      async () => (await client.ws(wsID).listWSInvitations()).invitations.find((i) => i.email === invitee.email)?.role,
+    )
+    .toBe("ws:editor");
+});
 
 test.describe("User Profile Settings", () => {
   test.screenshot("navigate to profile and verify user info displayed", async ({ page, request, takeScreenshot }) => {

@@ -9,7 +9,7 @@ import (
 	"github.com/maruel/mddb/backend/internal/storage"
 )
 
-// Time is a type alias for storage.Time to ensure it generates as 'number' in TypeScript.
+// Time is the Unix timestamp type used by API DTOs.
 type Time = storage.Time
 
 // PropertyType represents the type of a table property.
@@ -166,7 +166,7 @@ func (q *ResourceQuotas) Validate(prefix string) error {
 
 // OrganizationQuotas defines limits for an organization.
 type OrganizationQuotas struct {
-	ResourceQuotas `tstype:",extends"`
+	ResourceQuotas
 
 	MaxWorkspacesPerOrg    int   `json:"max_workspaces_per_org" jsonschema:"description=Maximum number of workspaces in this org"`
 	MaxMembersPerOrg       int   `json:"max_members_per_org" jsonschema:"description=Maximum members at org level"`

@@ -295,7 +295,6 @@ export interface Dictionary {
     roleOwner: string;
     roleMember: string;
     // Organization settings
-    organizationSettings: string;
     organizationMembers: string;
     organizationPreferences: string;
     organizationQuotas: string;

@@ -110,7 +110,9 @@ Organization membership is stored in the identity database, not in the file stru
 ## FAQ
 
 **Q: Is my data private?**
-A: Yes! Everything runs locally. No data is sent anywhere.
+A: Workspaces are stored locally. Git sync sends workspace data to a remote only
+if you configure one. Optional voice sends audio and tool results to Google
+Gemini Live while a voice session is connected.
 
 **Q: Can I sync across devices?**
 A: Configure a git remote in workspace settings—changes push automatically.
@@ -126,28 +128,12 @@ For developers or advanced setup:
 
 ## Building from Source
 
-Development requires Node.js 26 and pnpm 12.4.2. The Go module and frontend
-package both pin the published `github.com/maruel/gomode` revision, so a single
-checkout is enough; no sibling clone or Go workspace is needed.
+Development requires Node.js 26 and pnpm 12.4.2.
 
 ```bash
 git clone https://github.com/maruel/mddb.git
 cd mddb
 make build
-```
-
-The `backend/internal/cmd/gen-api-sdk` command generates `sdk/api.gen.ts` and `sdk/API.md` from `backend/internal/server/dto/sdk.go`; the router's JSON endpoints are checked against this specification by a backend test. `tygo` generates `sdk/types.gen.ts`.
-
-## Dependency updates
-
-pnpm refuses package versions published within the last eight days, including
-transitive dependencies. Check and update eligible packages with:
-
-```bash
-pnpm outdated
-make upgrade
-make fix
-make test
 ```
 
 ## Comparison

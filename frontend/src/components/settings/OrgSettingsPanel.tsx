@@ -5,7 +5,7 @@ import { useNavigate, useLocation } from "@solidjs/router";
 import { useAuth } from "../../contexts";
 import { useI18n } from "../../i18n";
 import type { UserResponse, OrgInvitationResponse, OrganizationRole, ResourceQuotas } from "@sdk/types.gen";
-import { OrgRoleOwner, OrgRoleAdmin } from "@sdk/types.gen";
+import { OrgRoleOwner, OrgRoleAdmin, OrgRoleMember } from "@sdk/types.gen";
 import MembersTable from "./MembersTable";
 import InviteForm from "./InviteForm";
 import ResourceQuotaForm from "./ResourceQuotaForm";
@@ -132,12 +132,12 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     else if (section === "members" || !section) setActiveTab("members");
   });
 
-  const handleInvite = async (email: string, role: string) => {
+  const handleInvite = async (email: string, role: OrganizationRole) => {
     const org = orgApi();
 
     try {
       setLoading(true);
-      await org.createOrgInvitation({ email, role: role as "admin" | "member" });
+      await org.createOrgInvitation({ email, role });
       setSuccess(t("success.invitationSent") || "Invitation sent successfully");
       loadData();
     } catch (err) {
@@ -163,12 +163,12 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     }
   };
 
-  const handleUpdateRole = async (userId: string, role: string) => {
+  const handleUpdateRole = async (userId: string, role: OrganizationRole) => {
     const org = orgApi();
 
     try {
       setLoading(true);
-      await org.updateOrgMemberRole({ user_id: userId, role: role as OrganizationRole });
+      await org.updateOrgMemberRole({ user_id: userId, role });
       setSuccess(t("success.roleUpdated") || "Role updated");
       loadData();
     } catch (err) {
@@ -227,15 +227,15 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
     }
   };
 
-  const orgRoleOptions = [
-    { value: "owner", label: t("settings.roleOwner") },
-    { value: "admin", label: t("settings.roleAdmin") },
-    { value: "member", label: t("settings.roleMember") },
+  const orgRoleOptions: { value: OrganizationRole; label: string }[] = [
+    { value: OrgRoleOwner, label: t("settings.roleOwner") },
+    { value: OrgRoleAdmin, label: t("settings.roleAdmin") },
+    { value: OrgRoleMember, label: t("settings.roleMember") },
   ];
 
-  const inviteRoleOptions = [
-    { value: "admin", label: t("settings.roleAdmin") },
-    { value: "member", label: t("settings.roleMember") },
+  const inviteRoleOptions: { value: OrganizationRole; label: string }[] = [
+    { value: OrgRoleAdmin, label: t("settings.roleAdmin") },
+    { value: OrgRoleMember, label: t("settings.roleMember") },
   ];
 
   const pendingInvitations = () =>
@@ -281,7 +281,7 @@ export default function OrgSettingsPanel(props: OrgSettingsPanelProps) {
             />
             <InviteForm
               roleOptions={inviteRoleOptions}
-              defaultRole="member"
+              defaultRole={OrgRoleMember}
               pendingInvitations={pendingInvitations()}
               onInvite={handleInvite}
               loading={loading()}

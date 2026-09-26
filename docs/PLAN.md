@@ -7,6 +7,8 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 
 ## Status
 
+- [x] Consolidate TypeScript DTO, client, and API reference generation in apisdkgen; remove tygo.
+
 **Current Phase: Phase 7 (Intelligence & Polish)**
 
 - [ ] Phase 7: Intelligence & Polish

@@ -46,10 +46,10 @@ mddb is distributed as a single self-contained binary. This is achieved using Go
 
 ### Type Generation
 
-To maintain type safety between the Go backend and SolidJS frontend, mddb uses **tygo** for DTO types and the pinned **apisdkgen** Go module for its TypeScript client and API reference. Routes are declared in `backend/internal/server/dto/sdk.go` and checked against router registrations by a backend test.
+To maintain type safety between the Go backend and SolidJS frontend, mddb uses **apisdkgen** for DTO types, its TypeScript client, and the API reference. Routes are declared in `backend/internal/server/dto/sdk.go` and checked against router registrations by a backend test.
 
 1. **Source**: Go API structs in `backend/internal/server/dto/`.
-2. **Process**: `tygo` parses these Go files and generates TypeScript interfaces.
+2. **Process**: `apisdkgen` follows the route specification and generates TypeScript interfaces and client methods.
 3. **Artifact**: A unified `sdk/types.gen.ts` file used by the frontend.
 4. **Execution**: Triggered via `make types` or automatically during `make build`.
 

@@ -5,6 +5,8 @@ import (
 	"reflect"
 
 	"github.com/maruel/apisdkgen/apispec"
+	"github.com/maruel/ksid"
+	"github.com/maruel/mddb/backend/internal/storage"
 )
 
 // SDKAPI returns the API surface generated for mddb clients and documentation.
@@ -106,9 +108,16 @@ func SDKAPI() apispec.Config[ErrorCode] {
 			{Name: "unsubscribePush", Method: "POST", Path: "/api/v1/notifications/unsubscribe", Req: reflect.TypeFor[PushUnsubscribeRequest](), Resp: reflect.TypeFor[PushUnsubscribeResponse]()},
 		},
 		SDKPackagePaths: map[string]struct{}{reflect.TypeFor[ErrorResponse]().PkgPath(): {}},
-		ExtraSeeds:      []reflect.Type{reflect.TypeFor[ErrorResponse]()},
+		ExtraSeeds: []reflect.Type{
+			reflect.TypeFor[ErrorResponse](),
+			reflect.TypeFor[UploadNodeAssetResponse](),
+			reflect.TypeFor[WorkspaceEvent](),
+		},
 		SpecialTypes: []apispec.SpecialType{
 			{Type: reflect.TypeFor[any](), TSType: "unknown", KTType: "JsonElement", SwiftType: "JSONValue", DocType: "JSONValue", TSValidate: "%[1]s"},
+			{Type: reflect.TypeFor[ksid.ID](), TSType: "string", DocType: "string"},
+			{Type: reflect.TypeFor[ksid.IDList](), TSType: "string", DocType: "string"},
+			{Type: reflect.TypeFor[storage.Time](), TSType: "number", DocType: "number"},
 		},
 		APIDocTitle: "mddb API Reference",
 		APIDocIntro: "RESTful JSON API for mddb at `/api/v1/`.",

@@ -294,7 +294,6 @@ export const dict: Dictionary = {
     roleOwner: "Eigentümer",
     roleMember: "Mitglied",
     // Organization settings
-    organizationSettings: "Organisationseinstellungen",
     organizationMembers: "Organisationsmitglieder",
     organizationPreferences: "Organisationseinstellungen",
     organizationQuotas: "Organisationskontingente",

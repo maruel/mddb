@@ -58,11 +58,6 @@ type RevokeAllSessionsResponse struct {
 
 // --- Node Content Responses ---
 
-// UpdateNodeResponse is a response from updating a node.
-type UpdateNodeResponse struct {
-	ID ksid.ID `json:"id"`
-}
-
 // DeleteNodeResponse is a response from deleting a node.
 type DeleteNodeResponse = OkResponse
 
@@ -77,33 +72,6 @@ type GetNodeVersionResponse struct {
 }
 
 // --- Table Responses ---
-
-// ListTablesResponse is a response containing a list of tables.
-type ListTablesResponse struct {
-	Tables []TableSummary `json:"tables"`
-}
-
-// TableSummary is a brief representation of a table for list responses.
-type TableSummary struct {
-	ID       ksid.ID `json:"id"`
-	Title    string  `json:"title"`
-	Created  Time    `json:"created"`
-	Modified Time    `json:"modified"`
-}
-
-// GetTableResponse is a response containing a table.
-type GetTableResponse struct {
-	ID         ksid.ID    `json:"id"`
-	Title      string     `json:"title"`
-	Properties []Property `json:"properties"`
-	Created    Time       `json:"created"`
-	Modified   Time       `json:"modified"`
-}
-
-// CreateTableResponse is a response from creating a table.
-type CreateTableResponse struct {
-	ID ksid.ID `json:"id"`
-}
 
 // UpdateTableResponse is a response from updating a table.
 type UpdateTableResponse struct {
@@ -153,11 +121,6 @@ type GetRecordResponse struct {
 type DeleteRecordResponse = OkResponse
 
 // --- Node Responses ---
-
-// ListNodesResponse is a response containing a list of nodes.
-type ListNodesResponse struct {
-	Nodes []NodeResponse `json:"nodes"`
-}
 
 // MoveNodeResponse is a response from moving a node.
 type MoveNodeResponse = OkResponse
@@ -597,13 +560,6 @@ type AdminRequestMetrics struct {
 	ReadUnauthCount int64   `json:"read_unauth_count" jsonschema:"description=Total unauthenticated read requests"`
 }
 
-// --- List Workspaces Response ---
-
-// ListWorkspacesResponse is a response containing a list of workspaces.
-type ListWorkspacesResponse struct {
-	Workspaces []WorkspaceResponse `json:"workspaces"`
-}
-
 // --- Notion Import Responses ---
 
 // NotionImportResponse is a response from starting a Notion import.
@@ -642,7 +598,7 @@ type SMTPConfigResponse struct {
 
 // QuotasConfigResponse contains quota configuration for the response.
 type QuotasConfigResponse struct {
-	ResourceQuotas `tstype:",extends"`
+	ResourceQuotas
 
 	MaxRequestBodyBytes   int64 `json:"max_request_body_bytes" jsonschema:"description=Maximum HTTP request body size in bytes"`
 	MaxSessionsPerUser    int   `json:"max_sessions_per_user" jsonschema:"description=Maximum active sessions per user"`

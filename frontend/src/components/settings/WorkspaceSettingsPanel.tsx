@@ -6,6 +6,8 @@ import { useAuth } from "../../contexts";
 import { useI18n } from "../../i18n";
 import {
   WSRoleAdmin,
+  WSRoleEditor,
+  WSRoleViewer,
   type UserResponse,
   type WSInvitationResponse,
   type WorkspaceRole,
@@ -180,13 +182,13 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     else if (section === "members" || !section) setActiveTab("members");
   });
 
-  const handleInvite = async (email: string, role: string) => {
+  const handleInvite = async (email: string, role: WorkspaceRole) => {
     const ws = wsApi();
     if (!ws) return;
 
     try {
       setLoading(true);
-      await ws.createWSInvitation({ email, role: role as "admin" | "editor" | "viewer" });
+      await ws.createWSInvitation({ email, role });
       setSuccess(t("success.invitationSent") || "Invitation sent successfully");
       loadData();
     } catch (err) {
@@ -196,13 +198,13 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     }
   };
 
-  const handleUpdateRole = async (userId: string, role: string) => {
+  const handleUpdateRole = async (userId: string, role: WorkspaceRole) => {
     const ws = wsApi();
     if (!ws) return;
 
     try {
       setLoading(true);
-      await ws.updateWSMemberRole({ user_id: userId, role: role as WorkspaceRole });
+      await ws.updateWSMemberRole({ user_id: userId, role });
       setSuccess(t("success.roleUpdated") || "Role updated");
       loadData();
     } catch (err) {
@@ -416,10 +418,10 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
     }
   };
 
-  const wsRoleOptions = [
-    { value: "admin", label: t("settings.roleAdmin") },
-    { value: "editor", label: t("settings.roleEditor") },
-    { value: "viewer", label: t("settings.roleViewer") },
+  const wsRoleOptions: { value: WorkspaceRole; label: string }[] = [
+    { value: WSRoleAdmin, label: t("settings.roleAdmin") },
+    { value: WSRoleEditor, label: t("settings.roleEditor") },
+    { value: WSRoleViewer, label: t("settings.roleViewer") },
   ];
 
   const pendingInvitations = () =>
@@ -469,7 +471,7 @@ export default function WorkspaceSettingsPanel(props: WorkspaceSettingsPanelProp
             />
             <InviteForm
               roleOptions={wsRoleOptions}
-              defaultRole="viewer"
+              defaultRole={WSRoleViewer}
               pendingInvitations={pendingInvitations()}
               onInvite={handleInvite}
               loading={loading()}

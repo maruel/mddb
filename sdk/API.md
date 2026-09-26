@@ -264,14 +264,14 @@ AdminWorkspaceDetail contains workspace details for the admin dashboard.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
-| `org_id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
+| `org_id` | `string` |  | yes |
 | `name` | `string` |  | yes |
 | `member_count` | `int` |  | yes |
 | `page_count` | `int` |  | yes |
 | `storage_bytes` | `int64` |  | yes |
 | `git_commits` | `int` |  | yes |
-| `created` | `int64` |  | yes |
+| `created` | `number` |  | yes |
 
 ### AdminOrgDetail
 
@@ -279,11 +279,11 @@ AdminOrgDetail contains organization details for the admin dashboard.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `name` | `string` |  | yes |
 | `member_count` | `int` |  | yes |
 | `workspace_count` | `int` |  | yes |
-| `created` | `int64` |  | yes |
+| `created` | `number` |  | yes |
 | `workspaces` | `AdminWorkspaceDetail[]` |  | yes |
 
 ### AdminRequestMetrics
@@ -345,7 +345,12 @@ QuotasConfigResponse contains quota configuration for the response.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `ResourceQuotas` | `ResourceQuotas` |  | yes |
+| `max_pages` | `int` |  | yes |
+| `max_storage_bytes` | `int64` |  | yes |
+| `max_records_per_table` | `int` |  | yes |
+| `max_asset_size_bytes` | `int64` |  | yes |
+| `max_tables_per_workspace` | `int` |  | yes |
+| `max_columns_per_table` | `int` |  | yes |
 | `max_request_body_bytes` | `int64` |  | yes |
 | `max_sessions_per_user` | `int` |  | yes |
 | `max_organizations` | `int` |  | yes |
@@ -393,7 +398,12 @@ QuotasConfigUpdate contains quota configuration fields for updates.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `ResourceQuotas` | `ResourceQuotas` |  | yes |
+| `max_pages` | `int` |  | yes |
+| `max_storage_bytes` | `int64` |  | yes |
+| `max_records_per_table` | `int` |  | yes |
+| `max_asset_size_bytes` | `int64` |  | yes |
+| `max_tables_per_workspace` | `int` |  | yes |
+| `max_columns_per_table` | `int` |  | yes |
 | `max_request_body_bytes` | `int64` |  | yes |
 | `max_sessions_per_user` | `int` |  | yes |
 | `max_organizations` | `int` |  | yes |
@@ -450,7 +460,7 @@ OAuthIdentity represents a link between a local user and an OAuth2 provider.
 | `provider_id` | `string` |  | yes |
 | `email` | `string` |  | yes |
 | `avatar_url` | `string` |  |  |
-| `last_login` | `int64` |  | yes |
+| `last_login` | `number` |  | yes |
 
 ### UserSettings
 
@@ -468,12 +478,12 @@ OrgMembershipResponse is the API representation of an organization membership.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
-| `user_id` | `uint64` |  | yes |
-| `organization_id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
+| `user_id` | `string` |  | yes |
+| `organization_id` | `string` |  | yes |
 | `organization_name` | `string` |  |  |
 | `role` | `OrganizationRole` |  | yes |
-| `created` | `int64` |  | yes |
+| `created` | `number` |  | yes |
 
 ### WorkspaceMembershipSettings
 
@@ -489,14 +499,14 @@ WSMembershipResponse is the API representation of a workspace membership.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
-| `user_id` | `uint64` |  | yes |
-| `workspace_id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
+| `user_id` | `string` |  | yes |
+| `workspace_id` | `string` |  | yes |
 | `workspace_name` | `string` |  |  |
-| `organization_id` | `uint64` |  | yes |
+| `organization_id` | `string` |  | yes |
 | `role` | `WorkspaceRole` |  | yes |
 | `settings` | `WorkspaceMembershipSettings` |  | yes |
-| `created` | `int64` |  | yes |
+| `created` | `number` |  | yes |
 
 ### UserResponse
 
@@ -504,7 +514,7 @@ UserResponse is the API representation of a user.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `email` | `string` |  | yes |
 | `email_verified` | `boolean` |  |  |
 | `name` | `string` |  | yes |
@@ -512,11 +522,11 @@ UserResponse is the API representation of a user.
 | `has_password` | `boolean` |  |  |
 | `oauth_identities` | `OAuthIdentity[]` |  |  |
 | `settings` | `UserSettings` |  | yes |
-| `created` | `int64` |  | yes |
-| `modified` | `int64` |  | yes |
-| `organization_id` | `uint64` | Current context |  |
+| `created` | `number` |  | yes |
+| `modified` | `number` |  | yes |
+| `organization_id` | `string` | Current context |  |
 | `org_role` | `OrganizationRole` |  |  |
-| `workspace_id` | `uint64` |  |  |
+| `workspace_id` | `string` |  |  |
 | `workspace_name` | `string` |  |  |
 | `workspace_role` | `WorkspaceRole` |  |  |
 | `organizations` | `OrgMembershipResponse[]` | All memberships |  |
@@ -566,12 +576,12 @@ SessionResponse is the API representation of a session.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `device_info` | `string` |  | yes |
 | `ip_address` | `string` |  | yes |
 | `country_code` | `string` |  |  |
-| `created` | `int64` |  | yes |
-| `last_used` | `int64` |  | yes |
+| `created` | `number` |  | yes |
+| `last_used` | `number` |  | yes |
 | `is_current` | `boolean` |  | yes |
 
 ### ListSessionsResponse
@@ -588,7 +598,7 @@ RevokeSessionRequest is a request to revoke a specific session.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `session_id` | `uint64` |  | yes |
+| `session_id` | `string` |  | yes |
 
 ### RevokeAllSessionsResponse
 
@@ -632,7 +642,7 @@ SwitchWorkspaceRequest is a request to switch active workspace.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `ws_id` | `uint64` |  | yes |
+| `ws_id` | `string` |  | yes |
 
 ### SwitchWorkspaceResponse
 
@@ -698,7 +708,12 @@ OrganizationQuotas defines limits for an organization.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `ResourceQuotas` | `ResourceQuotas` |  | yes |
+| `max_pages` | `int` |  | yes |
+| `max_storage_bytes` | `int64` |  | yes |
+| `max_records_per_table` | `int` |  | yes |
+| `max_asset_size_bytes` | `int64` |  | yes |
+| `max_tables_per_workspace` | `int` |  | yes |
+| `max_columns_per_table` | `int` |  | yes |
 | `max_workspaces_per_org` | `int` |  | yes |
 | `max_members_per_org` | `int` |  | yes |
 | `max_members_per_workspace` | `int` |  | yes |
@@ -718,14 +733,14 @@ OrganizationResponse is the API representation of an organization.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `name` | `string` |  | yes |
 | `billing_email` | `string` |  |  |
 | `quotas` | `OrganizationQuotas` |  | yes |
 | `settings` | `OrganizationSettings` |  | yes |
 | `member_count` | `int` |  | yes |
 | `workspace_count` | `int` |  | yes |
-| `created` | `int64` |  | yes |
+| `created` | `number` |  | yes |
 | `server_resource_limits` | `ResourceQuotas` | ServerResourceLimits shows the server-imposed upper bound for each resource quota.
 The organization's resource quotas cannot exceed these server-level limits. | yes |
 
@@ -735,7 +750,6 @@ UpdateOrganizationRequest is a request to update organization details.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `OrgID` | `uint64` |  | yes |
 | `name` | `string` |  |  |
 
 ### UpdateOrgPreferencesRequest
@@ -744,7 +758,6 @@ UpdateOrgPreferencesRequest is a request to update organization-wide preferences
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `OrgID` | `uint64` |  | yes |
 | `settings` | `OrganizationSettings` |  |  |
 | `quotas` | `OrganizationQuotas` |  |  |
 
@@ -762,8 +775,7 @@ UpdateOrgMemberRoleRequest is a request to update a user's organization role.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `OrgID` | `uint64` |  | yes |
-| `user_id` | `uint64` |  | yes |
+| `user_id` | `string` |  | yes |
 | `role` | `OrganizationRole` |  | yes |
 
 ### RemoveOrgMemberRequest
@@ -772,8 +784,7 @@ RemoveOrgMemberRequest is a request to remove a user from an organization.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `OrgID` | `uint64` |  | yes |
-| `user_id` | `uint64` |  | yes |
+| `user_id` | `string` |  | yes |
 
 ### OrgInvitationResponse
 
@@ -781,13 +792,13 @@ OrgInvitationResponse is the API representation of an organization invitation (e
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `email` | `string` |  | yes |
-| `organization_id` | `uint64` |  | yes |
+| `organization_id` | `string` |  | yes |
 | `role` | `OrganizationRole` |  | yes |
-| `invited_by` | `uint64` |  | yes |
-| `expires_at` | `int64` |  | yes |
-| `created` | `int64` |  | yes |
+| `invited_by` | `string` |  | yes |
+| `expires_at` | `number` |  | yes |
+| `created` | `number` |  | yes |
 
 ### ListOrgInvitationsResponse
 
@@ -803,7 +814,6 @@ CreateOrgInvitationRequest is a request to create an organization invitation.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `OrgID` | `uint64` |  | yes |
 | `email` | `string` |  | yes |
 | `role` | `OrganizationRole` |  | yes |
 | `locale` | `string` | Optional: language for invitation email (en, fr, de, es) |  |
@@ -814,7 +824,6 @@ CreateWorkspaceRequest is a request to create a new workspace within an organiza
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `OrgID` | `uint64` |  | yes |
 | `name` | `string` |  | yes |
 
 ### WorkspaceSettings
@@ -833,7 +842,7 @@ GitRemoteResponse is the API representation of a git remote.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `workspace_id` | `uint64` |  | yes |
+| `workspace_id` | `string` |  | yes |
 | `url` | `string` |  | yes |
 | `type` | `string` |  | yes |
 | `auth_type` | `string` |  | yes |
@@ -843,8 +852,8 @@ GitRemoteResponse is the API representation of a git remote.
 | `branch` | `string` |  |  |
 | `sync_status` | `string` |  |  |
 | `last_sync_error` | `string` |  |  |
-| `created` | `int64` |  | yes |
-| `last_sync` | `int64` |  |  |
+| `created` | `number` |  | yes |
+| `last_sync` | `number` |  |  |
 
 ### WorkspaceResponse
 
@@ -852,14 +861,14 @@ WorkspaceResponse is the API representation of a workspace.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
-| `organization_id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
+| `organization_id` | `string` |  | yes |
 | `name` | `string` |  | yes |
 | `quotas` | `ResourceQuotas` |  | yes |
 | `settings` | `WorkspaceSettings` |  | yes |
 | `git_remote` | `GitRemoteResponse` |  |  |
 | `member_count` | `int` |  | yes |
-| `created` | `int64` |  | yes |
+| `created` | `number` |  | yes |
 | `parent_resource_limits` | `ResourceQuotas` | ParentResourceLimits shows the effective upper bound imposed by the server and organization.
 The workspace's resource quotas cannot exceed these combined limits.
 Zero means unlimited at the parent level. | yes |
@@ -870,7 +879,6 @@ NotionImportRequest is a request to start a Notion import into a new workspace.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `OrgID` | `uint64` |  | yes |
 | `notion_token` | `string` |  | yes |
 
 ### NotionImportResponse
@@ -879,7 +887,7 @@ NotionImportResponse is a response from starting a Notion import.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `workspace_id` | `uint64` |  | yes |
+| `workspace_id` | `string` |  | yes |
 | `workspace_name` | `string` |  | yes |
 | `status` | `string` |  | yes |
 
@@ -906,7 +914,6 @@ UpdateWorkspaceRequest is a request to update workspace details.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
 | `name` | `string` |  |  |
 | `quotas` | `ResourceQuotas` |  |  |
 | `settings` | `WorkspaceSettings` |  |  |
@@ -917,7 +924,6 @@ UpdateWSMembershipSettingsRequest is a request to update user preferences within
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
 | `settings` | `WorkspaceMembershipSettings` |  | yes |
 
 ### UpdateGitRemoteRequest
@@ -926,7 +932,6 @@ UpdateGitRemoteRequest is a request to set (create or update) the git remote for
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
 | `url` | `string` |  | yes |
 | `type` | `string` | github, gitlab, custom | yes |
 | `auth_type` | `string` | token, ssh | yes |
@@ -939,7 +944,7 @@ GitSyncStatusResponse is a response containing sync status.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `sync_status` | `string` |  | yes |
-| `last_sync` | `int64` |  |  |
+| `last_sync` | `number` |  |  |
 | `last_sync_error` | `string` |  |  |
 
 ### SetupGitHubAppRemoteRequest
@@ -948,7 +953,6 @@ SetupGitHubAppRemoteRequest is a request to configure a GitHub App-based remote.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
 | `installation_id` | `int64` |  | yes |
 | `repo_owner` | `string` |  | yes |
 | `repo_name` | `string` |  | yes |
@@ -1014,7 +1018,7 @@ Used by the user column type to populate the picker and display names.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `name` | `string` |  | yes |
 | `email` | `string` |  | yes |
 | `avatar_url` | `string` |  |  |
@@ -1042,7 +1046,7 @@ IsGhost is true when the user ID is valid but the user is no longer a member.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `name` | `string` |  | yes |
 | `email` | `string` |  | yes |
 | `avatar_url` | `string` |  |  |
@@ -1062,8 +1066,7 @@ UpdateWSMemberRoleRequest is a request to update a user's workspace role.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `user_id` | `uint64` |  | yes |
+| `user_id` | `string` |  | yes |
 | `role` | `WorkspaceRole` |  | yes |
 
 ### WSInvitationResponse
@@ -1072,13 +1075,13 @@ WSInvitationResponse is the API representation of a workspace invitation (exclud
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `email` | `string` |  | yes |
-| `workspace_id` | `uint64` |  | yes |
+| `workspace_id` | `string` |  | yes |
 | `role` | `WorkspaceRole` |  | yes |
-| `invited_by` | `uint64` |  | yes |
-| `expires_at` | `int64` |  | yes |
-| `created` | `int64` |  | yes |
+| `invited_by` | `string` |  | yes |
+| `expires_at` | `number` |  | yes |
+| `created` | `number` |  | yes |
 
 ### ListWSInvitationsResponse
 
@@ -1094,7 +1097,6 @@ CreateWSInvitationRequest is a request to create a workspace invitation.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
 | `email` | `string` |  | yes |
 | `role` | `WorkspaceRole` |  | yes |
 | `locale` | `string` | Optional: language for invitation email (en, fr, de, es) |  |
@@ -1105,8 +1107,7 @@ GetNodeTitlesRequest is a request to get titles for multiple nodes.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `IDs` | `uint64[]` | Comma-separated node IDs | yes |
+| `IDs` | `string` | Comma-separated node IDs | yes |
 
 ### GetNodeTitlesResponse
 
@@ -1114,7 +1115,7 @@ GetNodeTitlesResponse is a response containing a map of node IDs to titles.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `titles` | `Record<uint64, string>` |  | yes |
+| `titles` | `Record<string, string>` |  | yes |
 
 ### SelectOption
 
@@ -1184,7 +1185,7 @@ View represents a saved table view configuration.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `name` | `string` |  | yes |
 | `type` | `ViewType` |  | yes |
 | `default` | `boolean` |  |  |
@@ -1199,7 +1200,7 @@ BacklinkInfo represents a page that links to this page.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `node_id` | `uint64` |  | yes |
+| `node_id` | `string` |  | yes |
 | `title` | `string` |  | yes |
 
 ### NodeResponse
@@ -1208,14 +1209,14 @@ NodeResponse is the API representation of a node.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
-| `parent_id` | `uint64` |  |  |
+| `id` | `string` |  | yes |
+| `parent_id` | `string` |  |  |
 | `title` | `string` |  | yes |
 | `content` | `string` |  |  |
 | `properties` | `Property[]` |  |  |
 | `views` | `View[]` |  |  |
-| `created` | `int64` |  | yes |
-| `modified` | `int64` |  | yes |
+| `created` | `number` |  | yes |
+| `modified` | `number` |  | yes |
 | `tags` | `string[]` |  |  |
 | `favicon_url` | `string` |  |  |
 | `icon` | `string` |  |  |
@@ -1241,9 +1242,7 @@ MoveNodeRequest is a request to move a node to a new parent.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ID` | `uint64` |  | yes |
-| `new_parent_id` | `uint64` | New parent node ID; 0 = root | yes |
+| `new_parent_id` | `string` | New parent node ID; 0 = root | yes |
 
 ### CreatePageRequest
 
@@ -1252,8 +1251,6 @@ The parent ID is in the path ({id}); use "0" for root.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ParentID` | `uint64` | Parent node ID; 0 = root | yes |
 | `title` | `string` |  | yes |
 | `content` | `string` |  |  |
 
@@ -1263,7 +1260,7 @@ CreatePageResponse is a response from creating a page.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 
 ### GetPageResponse
 
@@ -1271,11 +1268,11 @@ GetPageResponse is a response containing page content.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `title` | `string` |  | yes |
 | `content` | `string` |  | yes |
-| `created` | `int64` |  | yes |
-| `modified` | `int64` |  | yes |
+| `created` | `number` |  | yes |
+| `modified` | `number` |  | yes |
 
 ### UpdatePageRequest
 
@@ -1283,8 +1280,6 @@ UpdatePageRequest is a request to update a page's content.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ID` | `uint64` |  | yes |
 | `title` | `string` |  | yes |
 | `content` | `string` |  | yes |
 
@@ -1294,8 +1289,8 @@ UpdatePageResponse is a response from updating a page.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
-| `modified` | `int64` | Modified is the node revision after the write. A client stores it to tell
+| `id` | `string` |  | yes |
+| `modified` | `number` | Modified is the node revision after the write. A client stores it to tell
 its own change apart from the matching workspace SSE event. | yes |
 
 ### UpdatePageFrontmatterRequest
@@ -1305,8 +1300,6 @@ Pass an empty string to clear a field.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ID` | `uint64` |  | yes |
 | `icon` | `string` |  | yes |
 | `cover` | `string` |  | yes |
 
@@ -1316,8 +1309,8 @@ UpdatePageFrontmatterResponse is a response from updating a page's icon and cove
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
-| `modified` | `int64` |  | yes |
+| `id` | `string` |  | yes |
+| `modified` | `number` |  | yes |
 
 ### CreateTableRequest
 
@@ -1326,8 +1319,6 @@ The parent ID is in the path ({id}); use "0" for root.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ParentID` | `uint64` | Parent node ID; 0 = root | yes |
 | `title` | `string` |  | yes |
 | `properties` | `Property[]` |  | yes |
 
@@ -1337,7 +1328,7 @@ CreateTableUnderParentResponse is a response from creating a table under a paren
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 
 ### GetTableSchemaResponse
 
@@ -1345,12 +1336,12 @@ GetTableSchemaResponse is a response containing table schema.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `title` | `string` |  | yes |
 | `properties` | `Property[]` |  | yes |
 | `views` | `View[]` |  |  |
-| `created` | `int64` |  | yes |
-| `modified` | `int64` |  | yes |
+| `created` | `number` |  | yes |
+| `modified` | `number` |  | yes |
 
 ### UpdateTableRequest
 
@@ -1359,8 +1350,6 @@ Now used for /nodes/{id}/table endpoint.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ID` | `uint64` |  | yes |
 | `title` | `string` |  | yes |
 | `properties` | `Property[]` |  | yes |
 
@@ -1370,7 +1359,7 @@ UpdateTableResponse is a response from updating a table.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 
 ### CreateViewRequest
 
@@ -1378,8 +1367,6 @@ CreateViewRequest is a request to create a new view for a table.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `NodeID` | `uint64` |  | yes |
 | `name` | `string` |  | yes |
 | `type` | `ViewType` |  | yes |
 
@@ -1389,7 +1376,7 @@ CreateViewResponse is a response from creating a view.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 
 ### UpdateViewRequest
 
@@ -1397,9 +1384,6 @@ UpdateViewRequest is a request to update an existing view.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `NodeID` | `uint64` |  | yes |
-| `ViewID` | `uint64` |  | yes |
 | `name` | `string` |  |  |
 | `type` | `ViewType` |  |  |
 | `columns` | `ViewColumn[]` |  |  |
@@ -1413,7 +1397,7 @@ UpdateViewResponse is a response from updating a view.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 
 ### ListRecordsRequest
 
@@ -1422,9 +1406,7 @@ Now used for /nodes/{id}/table/records endpoint.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ID` | `uint64` | Node ID; 0 = root | yes |
-| `ViewID` | `uint64` | Optional: apply saved view configuration | yes |
+| `ViewID` | `string` | Optional: apply saved view configuration | yes |
 | `Filters` | `string` | Optional: JSON-encoded ad-hoc filters | yes |
 | `Sorts` | `string` | Optional: JSON-encoded ad-hoc sorts | yes |
 | `Offset` | `int` |  | yes |
@@ -1436,10 +1418,10 @@ DataRecordResponse is the API representation of a data record.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `data` | `Record<string, JSONValue>` |  | yes |
-| `created` | `int64` |  | yes |
-| `modified` | `int64` |  | yes |
+| `created` | `number` |  | yes |
+| `modified` | `number` |  | yes |
 
 ### ListRecordsResponse
 
@@ -1455,10 +1437,10 @@ GetRecordResponse is a response containing a record.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `data` | `Record<string, JSONValue>` |  | yes |
-| `created` | `int64` |  | yes |
-| `modified` | `int64` |  | yes |
+| `created` | `number` |  | yes |
+| `modified` | `number` |  | yes |
 
 ### CreateRecordRequest
 
@@ -1467,8 +1449,6 @@ Now used for /nodes/{id}/table/records/create endpoint.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ID` | `uint64` | Node ID; 0 = root | yes |
 | `data` | `Record<string, JSONValue>` |  | yes |
 
 ### CreateRecordResponse
@@ -1477,7 +1457,7 @@ CreateRecordResponse is a response from creating a record.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 
 ### UpdateRecordRequest
 
@@ -1486,9 +1466,6 @@ Now used for /nodes/{id}/table/records/{rid} endpoint.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ID` | `uint64` | Node ID; 0 = root | yes |
-| `RID` | `uint64` |  | yes |
 | `data` | `Record<string, JSONValue>` |  | yes |
 
 ### UpdateRecordResponse
@@ -1497,7 +1474,7 @@ UpdateRecordResponse is a response from updating a record.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 
 ### ListNodeVersionsRequest
 
@@ -1505,8 +1482,6 @@ ListNodeVersionsRequest is a request to list node version history.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
-| `ID` | `uint64` | Node ID; 0 = root | yes |
 | `Limit` | `int` | Max commits to return (1-1000, default 1000). | yes |
 
 ### Commit
@@ -1519,7 +1494,7 @@ Commit represents a commit in git history.
 | `message` | `string` |  | yes |
 | `author_name` | `string` |  | yes |
 | `author_email` | `string` |  | yes |
-| `timestamp` | `int64` |  | yes |
+| `timestamp` | `number` |  | yes |
 
 ### ListNodeVersionsResponse
 
@@ -1547,7 +1522,7 @@ AssetSummary is a brief representation of an asset for list responses.
 | `name` | `string` |  | yes |
 | `size` | `int64` |  | yes |
 | `mime_type` | `string` |  | yes |
-| `created` | `int64` |  | yes |
+| `created` | `number` |  | yes |
 | `url` | `string` |  | yes |
 
 ### ListNodeAssetsResponse
@@ -1564,7 +1539,6 @@ SearchRequest is a request to search pages and tables.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `WsID` | `uint64` |  | yes |
 | `query` | `string` |  | yes |
 | `limit` | `int` |  |  |
 | `match_title` | `boolean` |  |  |
@@ -1584,7 +1558,7 @@ SearchResult represents a single search result.
 | `snippet` | `string` |  | yes |
 | `score` | `float64` |  | yes |
 | `matches` | `Record<string, string>` |  | yes |
-| `modified` | `int64` |  | yes |
+| `modified` | `number` |  | yes |
 
 ### SearchResponse
 
@@ -1610,15 +1584,15 @@ NotificationDTO is the API representation of a notification.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| `id` | `uint64` |  | yes |
+| `id` | `string` |  | yes |
 | `type` | `string` |  | yes |
 | `title` | `string` |  | yes |
 | `body` | `string` |  |  |
 | `resource_id` | `string` |  |  |
-| `actor_id` | `uint64` |  |  |
+| `actor_id` | `string` |  |  |
 | `actor_name` | `string` |  |  |
 | `read` | `boolean` |  | yes |
-| `created_at` | `int64` |  | yes |
+| `created_at` | `number` |  | yes |
 
 ### ListNotificationsResponse
 

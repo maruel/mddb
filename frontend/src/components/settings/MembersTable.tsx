@@ -5,26 +5,31 @@ import { useI18n } from "../../i18n";
 import type { UserResponse } from "@sdk/types.gen";
 import styles from "./MembersTable.module.css";
 
-interface RoleOption {
-  value: string;
+interface RoleOption<T extends string> {
+  value: T;
   label: string;
 }
 
-interface MembersTableProps {
+interface MembersTableProps<T extends string> {
   members: UserResponse[];
   currentUserId: string;
-  roleOptions: RoleOption[];
+  roleOptions: readonly RoleOption<T>[];
   roleField: "workspace_role" | "org_role";
-  onUpdateRole: (userId: string, role: string) => void;
+  onUpdateRole: (userId: string, role: T) => void;
   onRemove?: (userId: string) => void;
   loading?: boolean;
 }
 
-export default function MembersTable(props: MembersTableProps) {
+export default function MembersTable<T extends string>(props: MembersTableProps<T>) {
   const { t } = useI18n();
 
   const getMemberRole = (member: UserResponse): string => {
     return (props.roleField === "workspace_role" ? member.workspace_role : member.org_role) || "";
+  };
+
+  const updateRole = (userId: string, value: string) => {
+    const option = props.roleOptions.find((item) => item.value === value);
+    if (option) props.onUpdateRole(userId, option.value);
   };
 
   return (
@@ -49,7 +54,7 @@ export default function MembersTable(props: MembersTableProps) {
                 <Show when={member.id !== props.currentUserId} fallback={getMemberRole(member)}>
                   <select
                     value={getMemberRole(member)}
-                    onChange={(e) => props.onUpdateRole(member.id, e.target.value)}
+                    onChange={(e) => updateRole(member.id, e.target.value)}
                     class={styles.roleSelect}
                     disabled={props.loading}
                   >

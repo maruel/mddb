@@ -1,4 +1,4 @@
-// Command gen-api-sdk generates mddb's TypeScript client and API reference.
+// Command gen-api-sdk generates mddb's TypeScript DTOs, client, and API reference.
 package main
 
 import (
@@ -18,9 +18,8 @@ func main() {
 
 func generate() error {
 	api := apisdkgen.NewAPI("dto", apisdkgen.OutputConfig{
-		TypeScriptDir:        "../../../sdk",
-		MarkdownDir:          "../../../sdk",
-		TypeScriptClientOnly: true,
+		TypeScriptDir: "../../../sdk",
+		MarkdownDir:   "../../../sdk",
 	}, dto.SDKAPI())
 	return apisdkgen.Generate(&api)
 }

@@ -27,7 +27,7 @@
 
 - [x] **REST API**: Implementation of all functional endpoints.
 - [x] **Error Handling**: Centralized `ErrorCode` system with HTTP status mapping.
-- [x] **Type Generation**: `tygo` integration for synchronizing models with frontend.
+- [x] **Type Generation**: `apisdkgen` synchronizes DTOs and the API client with the frontend.
 
 ### 5. Multi-User & Security
 
