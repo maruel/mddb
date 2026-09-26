@@ -3,13 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
-concurrency:
-  group: pages
-  cancel-in-progress: false
 permissions:
-  contents: write
-  pages: write
-  id-token: write
+  contents: read
 
 jobs:
   ci:
@@ -21,9 +16,6 @@ jobs:
           #- macos-latest
           #- windows-latest
     runs-on: ${{ matrix.os }}
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
     env:
       CGO_ENABLED: "0"
     steps:
@@ -113,26 +105,3 @@ jobs:
               echo ":page_facing_up: Playwright report for ${{ runner.os }} is available as a workflow artifact."
             } >> "$GITHUB_STEP_SUMMARY"
           fi
-      - name: Playwright Report URL
-        if: always() && runner.os == 'Linux'
-        run: |
-          PAGES_URL="https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}"
-          SHORT_SHA="${{ github.sha }}"
-          SHORT_SHA="${SHORT_SHA:0:7}"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo ":page_facing_up: [View Playwright Report](${PAGES_URL}/reports/${SHORT_SHA}/)" >> "$GITHUB_STEP_SUMMARY"
-        shell: bash
-      - name: Deploy Playwright Report to gh-pages
-        if: always() && runner.os == 'Linux' && github.ref == 'refs/heads/main'
-        env:
-          GIT_REMOTE_URL: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
-        run: ./.github/deploy-playwright-report.sh
-      - name: Upload Pages artifact
-        if: always() && runner.os == 'Linux' && github.ref == 'refs/heads/main'
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: ${{ env.DEPLOY_DIR }}
-      - name: Deploy to GitHub Pages
-        id: deploy
-        if: always() && runner.os == 'Linux' && github.ref == 'refs/heads/main'
-        uses: actions/deploy-pages@v5
