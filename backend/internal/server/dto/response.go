@@ -499,11 +499,15 @@ type CreatePageResponse struct {
 // UpdatePageResponse is a response from updating a page.
 type UpdatePageResponse struct {
 	ID ksid.ID `json:"id" jsonschema:"description=Node identifier"`
+	// Modified is the node revision after the write. A client stores it to tell
+	// its own change apart from the matching workspace SSE event.
+	Modified Time `json:"modified" jsonschema:"description=Node revision after the update"`
 }
 
 // UpdatePageFrontmatterResponse is a response from updating a page's icon and cover.
 type UpdatePageFrontmatterResponse struct {
-	ID ksid.ID `json:"id" jsonschema:"description=Node identifier"`
+	ID       ksid.ID `json:"id" jsonschema:"description=Node identifier"`
+	Modified Time    `json:"modified" jsonschema:"description=Node revision after the update"`
 }
 
 // DeletePageResponse is a response from deleting a page.

@@ -185,3 +185,39 @@ func TestMultipleWorkspaces(t *testing.T) {
 		// ok
 	}
 }
+
+func TestSubscribeEvents(t *testing.T) {
+	b := NewBroker()
+	wsID := ksid.NewID()
+	events, cleanup := b.SubscribeEvents(wsID)
+
+	evt := dto.WorkspaceEvent{
+		Type:     dto.EventNodeUpdated,
+		NodeID:   ksid.NewID(),
+		ActorID:  ksid.NewID(),
+		Modified: storage.Now(),
+	}
+	b.Publish(wsID, evt)
+
+	select {
+	case got := <-events:
+		if got.NodeID != evt.NodeID || got.Type != evt.Type || got.Modified != evt.Modified {
+			t.Fatalf("event = %#v, want %#v", got, evt)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("no structured event received")
+	}
+
+	// Another workspace's events are not delivered.
+	b.Publish(ksid.NewID(), evt)
+	select {
+	case got := <-events:
+		t.Fatalf("received event for another workspace: %#v", got)
+	case <-time.After(10 * time.Millisecond):
+	}
+
+	cleanup()
+	if _, ok := <-events; ok {
+		t.Fatal("cleanup did not close the event channel")
+	}
+}

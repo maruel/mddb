@@ -46,6 +46,14 @@ const WorkspaceLayout: ParentComponent = (props) => {
   const { flushAutoSave, loadHistory, undo: editorUndo, redo: editorRedo } = useEditor();
   const { undo: recordsUndo, redo: recordsRedo } = useRecords();
 
+  // The voice agent watches the open document so it can be told when the page
+  // changes underneath it.
+  const voiceResourceSubscriptions = (): string[] => {
+    const wsId = user()?.workspace_id;
+    const nodeId = selectedNodeId();
+    return wsId && nodeId ? [`mddb://workspaces/${wsId}/nodes/${nodeId}`] : [];
+  };
+
   // Global Ctrl-Z / Ctrl-Shift-Z handler for application-level undo/redo.
   // ProseMirror and native inputs handle their own undo — skip if an editable
   // element has focus so we do not interfere.
@@ -533,7 +541,7 @@ const WorkspaceLayout: ParentComponent = (props) => {
         </main>
       </div>
 
-      <BrowserVoiceShell />
+      <BrowserVoiceShell resourceSubscriptions={voiceResourceSubscriptions()} />
 
       <Show when={showCreateWorkspace()}>
         <CreateWorkspaceModal

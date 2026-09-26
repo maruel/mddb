@@ -1288,12 +1288,18 @@ export interface CreatePageResponse {
  */
 export interface UpdatePageResponse {
   id: string;
+  /**
+   * Modified is the node revision after the write. A client stores it to tell
+   * its own change apart from the matching workspace SSE event.
+   */
+  modified: Time;
 }
 /**
  * UpdatePageFrontmatterResponse is a response from updating a page's icon and cover.
  */
 export interface UpdatePageFrontmatterResponse {
   id: string;
+  modified: Time;
 }
 /**
  * DeletePageResponse is a response from deleting a page.

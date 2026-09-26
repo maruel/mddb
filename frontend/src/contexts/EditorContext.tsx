@@ -17,6 +17,7 @@ import { useI18n } from "../i18n";
 import { debounce } from "../utils/debounce";
 import { nodeUrl } from "../utils/urls";
 import { extractLinkedNodeIds, relativeLinksToSpaUrls, spaUrlsToRelativeLinks } from "../utils/markdown-utils";
+import { classifyExternalUpdate } from "./editorSync";
 import { EventNodeUpdated, type Commit } from "@sdk/types.gen";
 import { useUndo } from "../hooks/useUndo";
 
@@ -113,6 +114,10 @@ export const EditorProvider: ParentComponent = (props) => {
 
   // External change detection (SSE)
   const [externalChange, setExternalChange] = createSignal(false);
+  // syncedModified is the node revision this editor already holds: the revision
+  // it loaded, or the one its own last write returned. An SSE event at or below
+  // it is this editor's own echo rather than another writer's edit.
+  const [syncedModified, setSyncedModified] = createSignal<number | null>(null);
   const dismissExternalChange = () => setExternalChange(false);
   const refreshFromServer = () => {
     const nodeId = selectedNodeId();
@@ -122,13 +127,24 @@ export const EditorProvider: ParentComponent = (props) => {
     }
   };
 
-  // Detect external edits on current page via SSE
+  // Apply another writer's edit live when the editor is clean, and fall back to
+  // the conflict banner when reloading would discard unsaved local work.
   createEffect(() => {
     const evt = lastEvent();
     if (!evt) return;
-    if (evt.type === EventNodeUpdated && evt.node_id === selectedNodeId()) {
-      setExternalChange(true);
-    }
+    untrack(() => {
+      if (evt.type !== EventNodeUpdated || evt.node_id !== selectedNodeId()) return;
+      const nodeId = selectedNodeId();
+      if (!nodeId) return;
+      const decision = classifyExternalUpdate(evt.modified, syncedModified(), hasUnsavedChanges());
+      if (decision === "ignore") return;
+      if (decision === "conflict") {
+        setExternalChange(true);
+        return;
+      }
+      setExternalChange(false);
+      loadNode(nodeId);
+    });
   });
 
   // Debounced auto-save
@@ -142,7 +158,8 @@ export const EditorProvider: ParentComponent = (props) => {
       setAutoSaveStatus("saving");
       const wsId = user()?.workspace_id || "";
       const diskContent = spaUrlsToRelativeLinks(content(), wsId);
-      await ws.updatePage(nodeId, { title: title(), content: diskContent });
+      const saved = await ws.updatePage(nodeId, { title: title(), content: diskContent });
+      setSyncedModified(saved.modified);
       setHasUnsavedChanges(false);
       setAutoSaveStatus("saved");
 
@@ -218,6 +235,7 @@ export const EditorProvider: ParentComponent = (props) => {
       setContent(spaContent);
       setIcon(node.icon || "");
       setCover(node.cover || "");
+      setSyncedModified(node.modified ?? null);
       setHasUnsavedChanges(false);
       setAutoSaveStatus("idle");
       setShowHistory(false);
@@ -240,6 +258,7 @@ export const EditorProvider: ParentComponent = (props) => {
     setHistory([]);
     setLinkedNodeTitles({});
     setExternalChange(false);
+    setSyncedModified(null);
   }
 
   async function handleIconChange(newIcon: string) {
@@ -249,7 +268,8 @@ export const EditorProvider: ParentComponent = (props) => {
     setIcon(newIcon);
     updateNodeIcon(nodeId, newIcon);
     try {
-      await ws.updatePageFrontmatter(nodeId, { icon: newIcon, cover: cover() });
+      const saved = await ws.updatePageFrontmatter(nodeId, { icon: newIcon, cover: cover() });
+      setSyncedModified(saved.modified);
     } catch (err) {
       setSaveError(`${t("errors.failedToSave")}: ${err}`);
     }
@@ -261,7 +281,8 @@ export const EditorProvider: ParentComponent = (props) => {
     if (!nodeId || !ws) return;
     setCover(newCover);
     try {
-      await ws.updatePageFrontmatter(nodeId, { icon: icon(), cover: newCover });
+      const saved = await ws.updatePageFrontmatter(nodeId, { icon: icon(), cover: newCover });
+      setSyncedModified(saved.modified);
     } catch (err) {
       setSaveError(`${t("errors.failedToSave")}: ${err}`);
     }

@@ -1295,6 +1295,8 @@ UpdatePageResponse is a response from updating a page.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `id` | `uint64` |  | yes |
+| `modified` | `int64` | Modified is the node revision after the write. A client stores it to tell
+its own change apart from the matching workspace SSE event. | yes |
 
 ### UpdatePageFrontmatterRequest
 
@@ -1315,6 +1317,7 @@ UpdatePageFrontmatterResponse is a response from updating a page's icon and cove
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `id` | `uint64` |  | yes |
+| `modified` | `int64` |  | yes |
 
 ### CreateTableRequest
 

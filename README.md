@@ -24,7 +24,10 @@ reads nodes from the user's most recently selected workspace. Switching
 workspaces in mddb changes the workspace exposed on subsequent MCP requests.
 The MCP tools `nodes_list` and `node_read` and node resources are read-only;
 resource discovery includes nested documents and tables. Users must have viewer
-access to the selected workspace. In the Go Mode Android shell, the hosted
+access to the selected workspace. Editors also get `node_create`, `node_update`,
+and `node_append`; every edit is committed to the workspace git history, and the
+web editor flags the page as externally changed instead of overwriting it. In
+the Go Mode Android shell, the hosted
 frontend hands its validated bearer token to the native MCP client and clears
 it on logout.
 
@@ -48,12 +51,13 @@ synthesis all run in Google's Gemini Live service; mddb itself does not store
 voice audio, but the gateway writes transcript activity logs to a private
 temporary directory for the life of the process.
 
-Voice can call the same read-only workspace MCP tools that Go Mode clients use
-at `/api/v1/gomode/mcp`: `nodes_list` and `node_read`, plus node resources. The
-browser or Android client executes each tool call with the signed-in user's
-bearer token against the user's active workspace, so voice sees only the
-workspaces and nodes the user already has viewer access to, and it cannot
-modify content.
+Voice can call the same workspace MCP tools that Go Mode clients use at
+`/api/v1/gomode/mcp`: `nodes_list` and `node_read`, plus node resources, and —
+for editors — `node_create`, `node_update`, and `node_append`. The browser or
+Android client executes each tool call with the signed-in user's bearer token
+against the user's active workspace, so voice only reaches the workspaces and
+nodes the user already has access to, and an edit is committed to the workspace
+git history like any other change.
 
 mddb lets you:
 

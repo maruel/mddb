@@ -15,6 +15,8 @@ import (
 const (
 	// subscriberBufSize is the channel buffer for each subscriber.
 	subscriberBufSize = 64
+	// eventBufSize is the channel buffer for each structured event subscriber.
+	eventBufSize = 64
 	// maxConnsPerUser is the maximum concurrent SSE connections per user per workspace.
 	maxConnsPerUser = 5
 )
@@ -31,6 +33,8 @@ type Broker struct {
 	mu sync.RWMutex
 	// workspaces maps workspace ID -> set of subscribers.
 	workspaces map[ksid.ID]map[*Subscriber]struct{}
+	// events maps workspace ID -> set of structured in-process subscribers.
+	events map[ksid.ID]map[chan dto.WorkspaceEvent]struct{}
 	// eventID is a monotonically increasing SSE event ID.
 	eventID atomic.Int64
 }
@@ -39,6 +43,7 @@ type Broker struct {
 func NewBroker() *Broker {
 	return &Broker{
 		workspaces: make(map[ksid.ID]map[*Subscriber]struct{}),
+		events:     make(map[ksid.ID]map[chan dto.WorkspaceEvent]struct{}),
 	}
 }
 
@@ -85,6 +90,41 @@ func (b *Broker) Subscribe(wsID, userID ksid.ID) (*Subscriber, func(), error) {
 	return sub, cleanup, nil
 }
 
+// SubscribeEvents registers a structured in-process subscriber for the given
+// workspace. It returns the event channel and a cleanup function the caller must
+// call when done; the channel is closed by cleanup. Publishers never block, so a
+// slow consumer drops events instead of stalling them.
+func (b *Broker) SubscribeEvents(wsID ksid.ID) (events <-chan dto.WorkspaceEvent, unsubscribe func()) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	subs, ok := b.events[wsID]
+	if !ok {
+		subs = make(map[chan dto.WorkspaceEvent]struct{})
+		b.events[wsID] = subs
+	}
+	ch := make(chan dto.WorkspaceEvent, eventBufSize)
+	subs[ch] = struct{}{}
+
+	unsubscribe = func() {
+		b.mu.Lock()
+		defer b.mu.Unlock()
+		ws, ok := b.events[wsID]
+		if !ok {
+			return
+		}
+		if _, ok := ws[ch]; !ok {
+			return
+		}
+		delete(ws, ch)
+		close(ch)
+		if len(ws) == 0 {
+			delete(b.events, wsID)
+		}
+	}
+	return ch, unsubscribe
+}
+
 // Publish sends an event to all subscribers of the given workspace.
 // The event is JSON-serialized once and wrapped as an SSE frame. Slow
 // subscribers whose buffers are full will have the event dropped.
@@ -100,14 +140,16 @@ func (b *Broker) Publish(wsID ksid.ID, event dto.WorkspaceEvent) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	subs, ok := b.workspaces[wsID]
-	if !ok {
-		return
-	}
-	for s := range subs {
+	for s := range b.workspaces[wsID] {
 		// Non-blocking send; drop if full.
 		select {
 		case s.ch <- msg:
+		default:
+		}
+	}
+	for ch := range b.events[wsID] {
+		select {
+		case ch <- event:
 		default:
 		}
 	}

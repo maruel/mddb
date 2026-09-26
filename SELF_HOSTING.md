@@ -38,9 +38,10 @@ and assistant audio is returned from Google. Without `GEMINI_API_KEY` the
 discovery manifest does not advertise a gateway and no audio leaves the device.
 mddb does not store voice audio.
 
-Voice reuses the workspace MCP catalog at `/api/v1/gomode/mcp`, which is
-read-only: `nodes_list` and `node_read` plus node resources, scoped to the
-user's active workspace and viewer access. Voice cannot modify content.
+Voice reuses the workspace MCP catalog at `/api/v1/gomode/mcp`, scoped to the
+user's active workspace. Every member can list and read nodes and node
+resources; editors additionally get `node_create`, `node_update`, and
+`node_append`, and each edit is committed to the workspace git history.
 
 To validate the live path (requires `GEMINI_API_KEY` and a reachable WebRTC UDP
 port), run `make test-smoke-voice`: it completes one Gemini voice turn, calls

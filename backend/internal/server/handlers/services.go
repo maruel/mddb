@@ -62,6 +62,20 @@ func (s *Services) PublishEvent(wsID ksid.ID, eventType dto.EventType, nodeID, a
 	})
 }
 
+// PublishNodeEvent publishes a node change carrying the node's own revision, so
+// subscribers can tell their own write apart from a concurrent edit.
+func (s *Services) PublishNodeEvent(wsID ksid.ID, eventType dto.EventType, node *content.Node, actorID ksid.ID) {
+	if s.Broker == nil {
+		return
+	}
+	s.Broker.Publish(wsID, dto.WorkspaceEvent{
+		Type:     eventType,
+		NodeID:   node.ID,
+		ActorID:  actorID,
+		Modified: node.Modified,
+	})
+}
+
 // PublishRecordEvent publishes a record-level workspace SSE event.
 func (s *Services) PublishRecordEvent(wsID, nodeID, recordID, actorID ksid.ID) {
 	if s.Broker == nil {

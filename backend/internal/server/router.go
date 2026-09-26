@@ -98,11 +98,6 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 
 	// Auth handler (needs New* for map initialization)
 	authh := handlers.NewAuthHandler(svc, hcfg)
-	if err := (&workspaceRegistry{svc: svc}).validateToolSchemas(); err != nil {
-		slog.Error("Go Mode MCP disabled: invalid tool schemas", "err", err)
-	} else {
-		mux.Handle("POST "+goModeMCPEndpoint, WrapAuthReadRaw(goModeMCP(svc, cfg.Version), svc, hcfg, identity.WSRoleViewer, limiters))
-	}
 	if cfg.VoiceBridge != nil {
 		voice := newVoiceGateway(cfg.VoiceBridge)
 		for _, path := range []string{
@@ -118,6 +113,13 @@ func NewRouter(svc *handlers.Services, cfg *Config) http.Handler {
 	ah := &handlers.AssetHandler{Svc: svc, Cfg: hcfg}
 	nh := &handlers.NodeHandler{Svc: svc, Cfg: hcfg}
 	sh := &handlers.SearchHandler{Svc: svc}
+
+	// Go Mode MCP: workspace-scoped reads for every member, writes for editors.
+	if err := (&workspaceRegistry{svc: svc}).validateToolSchemas(); err != nil {
+		slog.Error("Go Mode MCP disabled: invalid tool schemas", "err", err)
+	} else {
+		mux.Handle("POST "+goModeMCPEndpoint, WrapAuthReadRaw(goModeMCP(svc, cfg.Version, nh), svc, hcfg, identity.WSRoleViewer, limiters))
+	}
 
 	// Other handlers
 	uh := &handlers.UserHandler{Svc: svc}

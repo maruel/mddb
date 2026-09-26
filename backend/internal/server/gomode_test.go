@@ -1,8 +1,9 @@
-// Tests authenticated Go Mode MCP reads and embedded voice gateway access.
+// Tests authenticated Go Mode MCP reads and writes and embedded voice gateway access.
 
 package server
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -14,11 +15,14 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/maruel/gomode"
 	"github.com/maruel/gomode/mcp"
 	voiceapi "github.com/maruel/gomode/voicegateway/api"
+	"github.com/maruel/ksid"
 	"github.com/maruel/mddb/backend/internal/server/dto"
+	"github.com/maruel/mddb/backend/internal/server/sse"
 	"github.com/maruel/mddb/backend/internal/storage"
 	"github.com/maruel/mddb/backend/internal/storage/identity"
 )
@@ -370,13 +374,16 @@ func TestMCPToolSchemas(t *testing.T) {
 		t.Fatalf("validateToolSchemas() error: %v", err)
 	}
 
-	// The read-only workspace tools take no header-mirrored parameters; the
-	// empty expectations catch an accidental x-mcp-header or a renamed tool.
+	// Every advertised tool carries no header-mirrored parameters; the empty
+	// expectations catch an accidental x-mcp-header or a renamed tool.
 	expectedHeaders := map[string]map[string]string{
-		"nodes_list": {},
-		"node_read":  {},
+		"nodes_list":  {},
+		"node_read":   {},
+		"node_update": {},
+		"node_create": {},
+		"node_append": {},
 	}
-	specs := registry.specs()
+	specs := registry.allSpecs()
 	if len(specs) != len(expectedHeaders) {
 		t.Fatalf("specs = %d, want %d", len(specs), len(expectedHeaders))
 	}
@@ -411,7 +418,231 @@ func TestMCPToolSchemas(t *testing.T) {
 	}
 }
 
+// TestGoModeMCPResourceSubscription verifies that an MCP client subscribed to a
+// node resource is notified over the SSE stream when that page changes.
+func TestGoModeMCPResourceSubscription(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	// The router normally wires the broker; unit tests construct services directly.
+	env.services.Broker = sse.NewBroker()
+	token, wsID := setupGoModeWorkspace(t, env, "gomode-subscribe@example.com")
+
+	created := callMCPTool(t, env, token, "node_create", map[string]any{"title": "Watched", "content": "Before"})
+	if created.IsError {
+		t.Fatalf("node_create = %#v", created)
+	}
+	id := created.StructuredContent.Node.ID
+	uri := fmt.Sprintf("mddb://workspaces/%s/nodes/%s", wsID, id)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	body, err := json.Marshal(map[string]any{
+		"jsonrpc": "2.0", "id": "1", "method": "subscriptions/listen",
+		"params": map[string]any{
+			"notifications": map[string]any{"resourceSubscriptions": []string{uri}},
+			"_meta": map[string]any{
+				"io.modelcontextprotocol/protocolVersion":    mcp.ProtocolVersion,
+				"io.modelcontextprotocol/clientInfo":         map[string]string{"name": "mddb-test", "version": "1"},
+				"io.modelcontextprotocol/clientCapabilities": map[string]any{},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal subscriptions/listen: %v", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, env.server.URL+goModeMCPEndpoint, bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("create subscription request: %v", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Mcp-Protocol-Version", mcp.ProtocolVersion)
+	req.Header.Set("Mcp-Method", "subscriptions/listen")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("open subscription: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("subscription status = %d", resp.StatusCode)
+	}
+
+	// The handler captures its dedup baseline before acknowledging, so a write
+	// that lands after the acknowledgment is reported as a change.
+	reader := bufio.NewReader(resp.Body)
+	readSSEUntil(t, reader, "subscriptions/acknowledged")
+
+	updated := callMCPTool(t, env, token, "node_update", map[string]any{"nodeId": id, "title": "Watched", "content": "After"})
+	if updated.IsError {
+		t.Fatalf("node_update = %#v", updated)
+	}
+	frame := readSSEUntil(t, reader, "notifications/resources/updated")
+	if !strings.Contains(frame, uri) {
+		t.Fatalf("update notification = %q, want uri %q", frame, uri)
+	}
+}
+
+// readSSEUntil reads the stream line by line until one contains substr.
+func readSSEUntil(t *testing.T, r *bufio.Reader, substr string) string {
+	t.Helper()
+	var seen strings.Builder
+	for {
+		line, err := r.ReadString('\n')
+		seen.WriteString(line)
+		if strings.Contains(line, substr) {
+			return line
+		}
+		if err != nil {
+			t.Fatalf("SSE stream ended before %q: %v\n%s", substr, err, seen.String())
+		}
+	}
+}
+
+// mcpToolOutcome is the decoded tools/call result shared by the MCP write tests.
+type mcpToolOutcome struct {
+	IsError           bool `json:"isError"`
+	StructuredContent struct {
+		Error string     `json:"error"`
+		Node  nodeDetail `json:"node"`
+	} `json:"structuredContent"`
+}
+
+// setupGoModeWorkspace registers a user who owns an organization and workspace,
+// making them an editor, and switches to it. It returns the bearer token and the
+// workspace ID.
+func setupGoModeWorkspace(t *testing.T, env *testEnv, email string) (string, ksid.ID) {
+	t.Helper()
+	var auth dto.AuthResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/register", dto.RegisterRequest{
+		Email: email, Password: "Pass1234", Name: "Go Mode",
+	}, &auth, ""); status != http.StatusOK {
+		t.Fatalf("register status = %d", status)
+	}
+	var org dto.OrganizationResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/organizations", dto.CreateOrganizationRequest{
+		Name: "Go Mode Org",
+	}, &org, auth.Token); status != http.StatusOK {
+		t.Fatalf("create organization status = %d", status)
+	}
+	var ws dto.WorkspaceResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/organizations/"+org.ID.String()+"/workspaces", dto.CreateWorkspaceRequest{
+		Name: "Go Mode Workspace",
+	}, &ws, auth.Token); status != http.StatusOK {
+		t.Fatalf("create workspace status = %d", status)
+	}
+	var switched dto.SwitchWorkspaceResponse
+	if status := env.doJSON(t, http.MethodPost, "/api/v1/auth/switch-workspace", dto.SwitchWorkspaceRequest{
+		WsID: ws.ID,
+	}, &switched, auth.Token); status != http.StatusOK {
+		t.Fatalf("switch workspace status = %d", status)
+	}
+	return switched.Token, ws.ID
+}
+
+// TestGoModeMCPWriteTools verifies that an editor can create, append to, and
+// replace a page through the MCP tools, and that the edits persist for reads.
+func TestGoModeMCPWriteTools(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	token, _ := setupGoModeWorkspace(t, env, "gomode-write@example.com")
+
+	listed := callMCP(t, env, token, "tools/list", map[string]any{})
+	var tools mcp.ToolsListResult
+	if err := json.Unmarshal(listed, &tools); err != nil {
+		t.Fatalf("decode tools/list: %v", err)
+	}
+	names := make(map[string]bool, len(tools.Tools))
+	for _, tool := range tools.Tools {
+		names[tool.Name] = true
+	}
+	for _, want := range []string{"node_update", "node_create", "node_append"} {
+		if !names[want] {
+			t.Fatalf("tools/list missing %q: %v", want, names)
+		}
+	}
+
+	created := callMCPTool(t, env, token, "node_create", map[string]any{"title": "Agent page", "content": "First"})
+	if created.IsError || created.StructuredContent.Node.Content != "First" {
+		t.Fatalf("node_create = %#v, want created page", created)
+	}
+	id := created.StructuredContent.Node.ID
+
+	appended := callMCPTool(t, env, token, "node_append", map[string]any{"nodeId": id, "content": "Second"})
+	if got := appended.StructuredContent.Node.Content; got != "First\n\nSecond" {
+		t.Fatalf("node_append content = %q, want %q", got, "First\n\nSecond")
+	}
+
+	updated := callMCPTool(t, env, token, "node_update", map[string]any{"nodeId": id, "title": "Renamed", "content": "Replaced"})
+	if node := updated.StructuredContent.Node; node.Title != "Renamed" || node.Content != "Replaced" {
+		t.Fatalf("node_update node = %#v, want renamed and replaced", node)
+	}
+
+	read := callMCPTool(t, env, token, "node_read", map[string]any{"nodeId": id})
+	if node := read.StructuredContent.Node; node.Title != "Renamed" || node.Content != "Replaced" {
+		t.Fatalf("node_read node = %#v, want the update to persist", node)
+	}
+
+	missing := callMCPTool(t, env, token, "node_update", map[string]any{"nodeId": ksid.ID(0).String(), "title": "x", "content": "y"})
+	if !missing.IsError {
+		t.Fatalf("node_update on a missing node = %#v, want a tool error", missing)
+	}
+}
+
+// TestGoModeMCPWriteToolsRequireEditor guards that viewers neither see nor can
+// call the mutating tools.
+func TestGoModeMCPWriteToolsRequireEditor(t *testing.T) {
+	t.Parallel()
+	env := setupTestEnv(t)
+	_, wsID := setupGoModeWorkspace(t, env, "gomode-viewer@example.com")
+
+	viewer := &workspaceRegistry{svc: env.services, wsID: wsID, role: identity.WSRoleViewer}
+	tools, err := viewer.Tools(t.Context())
+	if err != nil {
+		t.Fatalf("Tools() error: %v", err)
+	}
+	for _, tool := range tools {
+		switch tool.Name {
+		case "node_update", "node_create", "node_append":
+			t.Fatalf("viewer advertised write tool %q", tool.Name)
+		}
+	}
+	args := json.RawMessage(`{"nodeId":"` + ksid.ID(0).String() + `","title":"x","content":"y"}`)
+	if _, err := viewer.CallTool(t.Context(), "node_update", args); err == nil {
+		t.Fatal("viewer CallTool(node_update) succeeded, want an error")
+	}
+
+	editor := &workspaceRegistry{svc: env.services, wsID: wsID, role: identity.WSRoleEditor}
+	tools, err = editor.Tools(t.Context())
+	if err != nil {
+		t.Fatalf("Tools() error: %v", err)
+	}
+	found := false
+	for _, tool := range tools {
+		if tool.Name == "node_update" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("editor did not see node_update")
+	}
+}
+
 func callMCP(t *testing.T, e *testEnv, token, method string, params map[string]any) json.RawMessage {
+	return callMCPNamed(t, e, token, method, params, "")
+}
+
+// callMCPTool calls a tool and decodes its structured result.
+func callMCPTool(t *testing.T, e *testEnv, token, name string, args map[string]any) mcpToolOutcome {
+	t.Helper()
+	raw := callMCPNamed(t, e, token, "tools/call", map[string]any{"name": name, "arguments": args}, name)
+	var out mcpToolOutcome
+	if err := json.Unmarshal(raw, &out); err != nil {
+		t.Fatalf("decode tools/call %s: %v", name, err)
+	}
+	return out
+}
+
+func callMCPNamed(t *testing.T, e *testEnv, token, method string, params map[string]any, name string) json.RawMessage {
 	params["_meta"] = map[string]any{
 		"io.modelcontextprotocol/protocolVersion":    mcp.ProtocolVersion,
 		"io.modelcontextprotocol/clientInfo":         map[string]string{"name": "mddb-test", "version": "1"},
@@ -429,6 +660,9 @@ func callMCP(t *testing.T, e *testEnv, token, method string, params map[string]a
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Mcp-Protocol-Version", mcp.ProtocolVersion)
 	req.Header.Set("Mcp-Method", method)
+	if name != "" {
+		req.Header.Set("Mcp-Name", name)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("send MCP request: %v", err)

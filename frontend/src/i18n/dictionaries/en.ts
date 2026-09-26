@@ -598,7 +598,7 @@ export const dict: Dictionary = {
   },
 
   sse: {
-    externalChange: "This page was edited by another user.",
+    externalChange: "This page changed elsewhere. Refresh to load it and discard your unsaved edits.",
     refreshContent: "Refresh",
     dismissNotice: "Dismiss",
     connected: "Connected",

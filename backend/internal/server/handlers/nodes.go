@@ -212,7 +212,7 @@ func (h *NodeHandler) CreatePage(ctx context.Context, wsID ksid.ID, user *identi
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to create page", err)
 	}
-	h.Svc.PublishEvent(wsID, dto.EventNodeCreated, node.ID, user.ID)
+	h.Svc.PublishNodeEvent(wsID, dto.EventNodeCreated, node, user.ID)
 	return &dto.CreatePageResponse{ID: node.ID}, nil
 }
 
@@ -248,8 +248,8 @@ func (h *NodeHandler) UpdatePage(ctx context.Context, wsID ksid.ID, user *identi
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
-	h.Svc.PublishEvent(wsID, dto.EventNodeUpdated, node.ID, user.ID)
-	return &dto.UpdatePageResponse{ID: node.ID}, nil
+	h.Svc.PublishNodeEvent(wsID, dto.EventNodeUpdated, node, user.ID)
+	return &dto.UpdatePageResponse{ID: node.ID, Modified: node.Modified}, nil
 }
 
 // UpdatePageFrontmatter updates the icon and cover of a page.
@@ -263,8 +263,8 @@ func (h *NodeHandler) UpdatePageFrontmatter(ctx context.Context, wsID ksid.ID, u
 	if err != nil {
 		return nil, dto.NotFound("page")
 	}
-	h.Svc.PublishEvent(wsID, dto.EventNodeUpdated, node.ID, user.ID)
-	return &dto.UpdatePageFrontmatterResponse{ID: node.ID}, nil
+	h.Svc.PublishNodeEvent(wsID, dto.EventNodeUpdated, node, user.ID)
+	return &dto.UpdatePageFrontmatterResponse{ID: node.ID, Modified: node.Modified}, nil
 }
 
 // DeletePage removes the page content from a node.

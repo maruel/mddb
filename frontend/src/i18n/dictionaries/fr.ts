@@ -598,7 +598,8 @@ export const dict: Dictionary = {
   },
 
   sse: {
-    externalChange: "Cette page a été modifiée par un autre utilisateur.",
+    externalChange:
+      "Cette page a changé ailleurs. Actualisez pour la charger et abandonner vos modifications non enregistrées.",
     refreshContent: "Actualiser",
     dismissNotice: "Ignorer",
     connected: "Connecté",

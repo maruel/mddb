@@ -6,7 +6,10 @@ import { isGoModeHost } from "./host";
 import styles from "./BrowserVoiceShell.module.css";
 
 export type VoiceEndpoints = { gatewayURL: string; mcpEndpoint: string };
-type LoadedPanel = { component: Component<{ endpoints: VoiceEndpoints }>; endpoints: VoiceEndpoints };
+type LoadedPanel = {
+  component: Component<{ endpoints: VoiceEndpoints; resourceSubscriptions?: string[] }>;
+  endpoints: VoiceEndpoints;
+};
 
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -50,7 +53,7 @@ export async function voiceEndpointsFromResponse(response: Response, origin: str
   return resolveVoiceEndpoints(manifest, origin);
 }
 
-export default function BrowserVoiceShell() {
+export default function BrowserVoiceShell(props: { resourceSubscriptions?: string[] }) {
   const { t } = useI18n();
   const [panel, setPanel] = createSignal<LoadedPanel | null>(null);
   const [setupFailed, setSetupFailed] = createSignal(false);
@@ -83,7 +86,9 @@ export default function BrowserVoiceShell() {
   return (
     <>
       <Show when={panel()} keyed>
-        {({ component: Panel, endpoints }) => <Panel endpoints={endpoints} />}
+        {({ component: Panel, endpoints }) => (
+          <Panel endpoints={endpoints} resourceSubscriptions={props.resourceSubscriptions} />
+        )}
       </Show>
       <Show when={setupFailed()}>
         <p class={styles.error} role="alert">

@@ -170,31 +170,38 @@ func checkWSMembership(
 	svc *handlers.Services,
 	requiredRole identity.WorkspaceRole,
 ) (errMsg string, statusCode int) {
+	role, msg, status := effectiveWSRole(user, wsID, svc)
+	if msg != "" {
+		return msg, status
+	}
+	if !hasWSPermission(role, requiredRole) {
+		return "Forbidden: insufficient permissions", http.StatusForbidden
+	}
+	return "", 0
+}
+
+// effectiveWSRole returns the caller's effective role in wsID, applying the
+// org-owner/admin override. The error string and status code match the HTTP
+// wrappers so callers can answer directly.
+func effectiveWSRole(user *identity.User, wsID ksid.ID, svc *handlers.Services) (role identity.WorkspaceRole, errMsg string, statusCode int) {
 	ws, err := svc.Workspace.Get(wsID)
 	if err != nil {
-		return "Workspace not found", http.StatusNotFound
+		return "", "Workspace not found", http.StatusNotFound
 	}
 
 	orgMem, err := svc.OrgMembership.Get(user.ID, ws.OrganizationID)
 	if err != nil {
-		return "Forbidden: not a member of this organization", http.StatusForbidden
+		return "", "Forbidden: not a member of this organization", http.StatusForbidden
 	}
-
-	var effectiveRole identity.WorkspaceRole
 	if orgMem.Role == identity.OrgRoleOwner || orgMem.Role == identity.OrgRoleAdmin {
-		effectiveRole = identity.WSRoleAdmin
-	} else {
-		wsMem, err := svc.WSMembership.Get(user.ID, wsID)
-		if err != nil {
-			return "Forbidden: not a member of this workspace", http.StatusForbidden
-		}
-		effectiveRole = wsMem.Role
+		return identity.WSRoleAdmin, "", 0
 	}
 
-	if !hasWSPermission(effectiveRole, requiredRole) {
-		return "Forbidden: insufficient permissions", http.StatusForbidden
+	wsMem, err := svc.WSMembership.Get(user.ID, wsID)
+	if err != nil {
+		return "", "Forbidden: not a member of this workspace", http.StatusForbidden
 	}
-	return "", 0
+	return wsMem.Role, "", 0
 }
 
 // Wrap wraps a handler function to work as an http.Handler.
