@@ -1,13 +1,15 @@
-# CI workflow: build, lint, and test on push.
+# CI workflow: build, lint, and test on pushes and pull requests.
 name: CI
 on:
   push:
     branches: [main]
+  pull_request:
+    branches-ignore: [gh-pages]
 permissions:
   contents: read
 
 jobs:
-  ci:
+  test:
     strategy:
       fail-fast: false
       matrix:
