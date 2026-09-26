@@ -209,8 +209,10 @@ test.describe("Workspace Settings", () => {
 
   test("rename workspace", async ({ page, request }) => {
     const { token } = await registerUser(request, "rename-ws");
+    const client = createClient(request, token);
     await page.goto(`/?token=${token}`);
     await expect(page.locator("aside")).toBeVisible({ timeout: 10000 });
+    const wsID = (await client.getMe()).workspace_id!;
 
     // Navigate to settings via sidebar settings button
     const workspaceHeader = page.locator('aside [class*="workspaceHeader"]');
@@ -226,10 +228,12 @@ test.describe("Workspace Settings", () => {
 
     // Find workspace name input (labeled "Workspace Name")
     const wsNameInput = page.locator("label", { hasText: "Workspace Name" }).locator("..").locator("input");
-    await expect(wsNameInput).toBeVisible({ timeout: 5000 });
+    const originalName = (await client.ws(wsID).getWorkspace()).name;
+    await expect(wsNameInput).toHaveValue(originalName, { timeout: 5000 });
 
     // Change the name
     await wsNameInput.fill("Renamed Workspace");
+    await expect(wsNameInput).toHaveValue("Renamed Workspace");
 
     // Save
     const saveButton = page.locator('button[type="submit"]');
@@ -237,6 +241,7 @@ test.describe("Workspace Settings", () => {
 
     // Should show success
     await expect(page.locator('[class*="success"]')).toBeVisible({ timeout: 5000 });
+    await expect.poll(async () => (await client.ws(wsID).getWorkspace()).name).toBe("Renamed Workspace");
   });
 });
 
