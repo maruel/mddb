@@ -1,7 +1,7 @@
 // Main application component with router setup.
 
 import { Show, Switch, Match, Suspense, type ParentComponent } from "solid-js";
-import { Router, Route, Navigate, A } from "@solidjs/router";
+import { Router, Route, Navigate, A, useParams } from "@solidjs/router";
 import styles from "./App.module.css";
 import { AuthProvider, useAuth, NotificationProvider } from "./contexts";
 import AppErrorBoundary from "./components/ErrorBoundary";
@@ -10,6 +10,7 @@ import Auth from "./components/Auth";
 import Privacy from "./components/Privacy";
 import Terms from "./components/Terms";
 import Onboarding from "./sections/Onboarding";
+import { stripSlug, workspaceUrl } from "./utils/urls";
 
 // Route components are imported directly rather than through lazy(). The router renders a
 // route it is navigating to before it commits the location and again afterwards, so a route
@@ -121,11 +122,22 @@ const SettingsSectionWithAuth: ParentComponent = (props) => {
 
 // Workspace section wrapper with auth guard
 const WorkspaceSectionWithAuth: ParentComponent = (props) => {
+  const { user } = useAuth();
+  const params = useParams<{ wsId: string }>();
+  const redirect = () => {
+    const current = user();
+    return current?.workspace_id ? workspaceUrl(current.workspace_id, current.workspace_name) : "/onboarding";
+  };
   return (
     <RequireAuth>
-      <Suspense fallback={<RouteLoading />}>
-        <WorkspaceSection>{props.children}</WorkspaceSection>
-      </Suspense>
+      <Show
+        when={!user()?.workspace_id || stripSlug(params.wsId || "") === user()?.workspace_id}
+        fallback={<Navigate href={redirect()} />}
+      >
+        <Suspense fallback={<RouteLoading />}>
+          <WorkspaceSection>{props.children}</WorkspaceSection>
+        </Suspense>
+      </Show>
     </RequireAuth>
   );
 };

@@ -16,7 +16,7 @@ export default function ProfileSettings() {
   const { t, setLocale } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, api } = useAuth();
+  const { user, api, refreshUser } = useAuth();
 
   const [theme, setTheme] = createSignal("light");
   const [language, setLanguage] = createSignal("en");
@@ -88,7 +88,7 @@ export default function ProfileSettings() {
       // Update locale immediately so UI refreshes
       const lang = language() as Locale;
       setLocale(lang);
-      localStorage.setItem("mddb_locale", lang);
+      await refreshUser();
 
       setSuccess(t("success.personalSettingsSaved") || "Personal settings saved successfully");
     } catch (err) {

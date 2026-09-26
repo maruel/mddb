@@ -89,7 +89,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue>();
 export const WorkspaceProvider: ParentComponent = (props) => {
   const { t, ready: i18nReady } = useI18n();
   const navigate = useNavigate();
-  const { user, setUser, api, wsApi, login } = useAuth();
+  const { user, token, setUser, api, wsApi, login } = useAuth();
 
   // Node state
   const [nodes, setNodesStore] = createStore<NodeResponse[]>([]);
@@ -127,6 +127,30 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   // Track loaded state to prevent duplicate calls
   const [loadedForWorkspace, setLoadedForWorkspace] = createSignal<string | null>(null);
   const [loadedNodeId, setLoadedNodeId] = createSignal<string | null>(null);
+  const workspaceIdentity = () => `${token() ?? ""}:${user()?.id ?? ""}:${user()?.workspace_id ?? ""}`;
+  let nodeListRequest = 0;
+  let nodeRequest = 0;
+  let loadingForWorkspace: string | null = null;
+
+  let previousIdentity = workspaceIdentity();
+  createEffect(() => {
+    const identity = workspaceIdentity();
+    if (identity === previousIdentity) return;
+    previousIdentity = identity;
+    nodeListRequest++;
+    nodeRequest++;
+    loadingForWorkspace = null;
+    batch(() => {
+      setNodesStore(reconcile([]));
+      setSelectedNodeId(null);
+      setSelectedNodeData(null);
+      setBreadcrumbPath([]);
+      setLoadedForWorkspace(null);
+      setLoadedNodeId(null);
+      setLoadingNodes(false);
+      setLoadingNodeId(null);
+    });
+  });
 
   // Clear all errors
   const clearErrors = () => {
@@ -299,7 +323,6 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       });
       setLoadedNodeId(null);
       setLoadedForWorkspace(null);
-      await loadNodes();
       // Navigate to the new workspace root to clear any stale node ID from the URL.
       const u = user();
       if (u?.workspace_id) {
@@ -315,18 +338,24 @@ export const WorkspaceProvider: ParentComponent = (props) => {
   async function loadNodes(force = false) {
     const ws = wsApi();
     const wsId = user()?.workspace_id;
-    if (!ws || loadingNodes()) return;
+    if (!ws || !wsId || (loadingNodes() && loadingForWorkspace === wsId)) return;
     if (!force && wsId && loadedForWorkspace() === wsId && nodes.length > 0) return;
+
+    const identity = workspaceIdentity();
+    const request = ++nodeListRequest;
+    loadingForWorkspace = wsId;
 
     try {
       setLoadingNodes(true);
       const resp = await ws.listNodeChildren("0");
+      if (request !== nodeListRequest || identity !== workspaceIdentity()) return;
       let loadedNodes = resp?.nodes || [];
 
       if (loadedNodes.length === 0 && firstLoginCheckDone()) {
         const newPageId = await createWelcomePageIfNeeded();
         if (newPageId) {
           const resp2 = await ws.listNodeChildren("0");
+          if (request !== nodeListRequest || identity !== workspaceIdentity()) return;
           loadedNodes = resp2?.nodes || [];
         }
       }
@@ -336,9 +365,14 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       setLoadError(null);
       // Navigation to first node is handled by WorkspaceRoot component
     } catch (err) {
-      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      if (request === nodeListRequest && identity === workspaceIdentity()) {
+        setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      }
     } finally {
-      setLoadingNodes(false);
+      if (request === nodeListRequest) {
+        loadingForWorkspace = null;
+        setLoadingNodes(false);
+      }
     }
   }
 
@@ -347,9 +381,13 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     if (!ws) return undefined;
     if (loadingNodeId() === id || loadedNodeId() === id) return undefined;
 
+    const identity = workspaceIdentity();
+    const request = ++nodeRequest;
+
     try {
       setLoadingNodeId(id);
       const nodeData = await ws.getNode(id);
+      if (request !== nodeRequest || identity !== workspaceIdentity()) return undefined;
 
       batch(() => {
         setSelectedNodeId(nodeData.id);
@@ -364,29 +402,35 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       while (currentNode.parent_id && currentNode.parent_id !== "0") {
         try {
           const parentNode = await ws.getNode(currentNode.parent_id);
+          if (request !== nodeRequest || identity !== workspaceIdentity()) return undefined;
           path.unshift(parentNode);
           currentNode = parentNode;
         } catch {
           break;
         }
       }
+      if (request !== nodeRequest || identity !== workspaceIdentity()) return undefined;
       setBreadcrumbPath(path);
 
       return nodeData;
     } catch (err) {
-      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      if (request === nodeRequest && identity === workspaceIdentity()) {
+        setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      }
       return undefined;
     } finally {
-      setLoadingNodeId(null);
+      if (request === nodeRequest) setLoadingNodeId(null);
     }
   }
 
   async function fetchNodeChildren(nodeId: string): Promise<void> {
     const ws = wsApi();
     if (!ws) return;
+    const identity = workspaceIdentity();
 
     try {
       const data = await ws.listNodeChildren(nodeId);
+      if (identity !== workspaceIdentity()) return;
       const children = (data.nodes?.filter(Boolean) as NodeResponse[]) || [];
 
       setNodesStore(

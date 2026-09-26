@@ -9,12 +9,14 @@ import {
   batch,
   on,
   onMount,
+  onCleanup,
   type ParentComponent,
   type Accessor,
 } from "solid-js";
 import { createApi, APIError, type Api } from "../useApi";
 import type { UserResponse } from "@sdk/types.gen";
 import { publishGoModeBearerToken } from "../gomode/host";
+import { useI18n, type Locale } from "../i18n";
 
 export interface AuthContextValue {
   user: Accessor<UserResponse | null>;
@@ -34,15 +36,23 @@ export interface AuthContextValue {
 export const AuthContext = createContext<AuthContextValue>();
 
 export const AuthProvider: ParentComponent = (props) => {
+  const { setLocale } = useI18n();
   const [user, setUser] = createSignal<UserResponse | null>(null);
   const [token, setToken] = createSignal<string | null>(localStorage.getItem("mddb_token"));
   const [ready, setReady] = createSignal(false);
+
+  createEffect(() => {
+    const language = user()?.settings?.language;
+    const locale: Locale = language === "fr" || language === "de" || language === "es" ? language : "en";
+    setLocale(locale);
+  });
 
   const clearAuth = () => {
     localStorage.removeItem("mddb_token");
     batch(() => {
       setToken(null);
       setUser(null);
+      setReady(true);
     });
     publishGoModeBearerToken(null);
   };
@@ -65,7 +75,14 @@ export const AuthProvider: ParentComponent = (props) => {
   };
 
   // Create API client with auth
-  const api = createMemo(() => createApi(() => token(), logout));
+  const api = createMemo(() =>
+    createApi(
+      () => token(),
+      (failedToken) => {
+        if (failedToken && token() === failedToken) void logout();
+      },
+    ),
+  );
 
   // Get workspace-scoped API client
   const wsApi = createMemo(() => {
@@ -110,6 +127,19 @@ export const AuthProvider: ParentComponent = (props) => {
 
   // Handle OAuth token from URL on mount and fetch user data
   onMount(async () => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.storageArea !== localStorage || (event.key !== "mddb_token" && event.key !== null)) return;
+      const storedToken = localStorage.getItem("mddb_token");
+      if (storedToken === token()) return;
+      batch(() => {
+        setReady(!storedToken);
+        setToken(storedToken);
+        setUser(null);
+      });
+      publishGoModeBearerToken(null);
+    };
+    window.addEventListener("storage", handleStorage);
+    onCleanup(() => window.removeEventListener("storage", handleStorage));
     publishGoModeBearerToken(null);
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get("token");
@@ -136,7 +166,7 @@ export const AuthProvider: ParentComponent = (props) => {
     }
 
     // Auth check complete - mark as ready
-    setReady(true);
+    if (token() === effectiveToken) setReady(true);
   });
 
   // Fetch user when token changes after mount (e.g., login)
@@ -156,6 +186,8 @@ export const AuthProvider: ParentComponent = (props) => {
               if (err instanceof APIError && err.status === 401) {
                 if (token() === currentToken) clearAuth();
               }
+            } finally {
+              if (token() === currentToken) setReady(true);
             }
           })();
         }

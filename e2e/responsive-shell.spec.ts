@@ -1,6 +1,7 @@
 // End-to-end coverage for responsive workspace and settings sidebar behavior.
 
-import { expect, registerUser, test } from "./helpers";
+import { createClient, expect, registerUser, test } from "./helpers";
+import { OrgRoleMember } from "../sdk/types.gen";
 
 test.describe("Responsive shell", () => {
   test("keeps desktop collapse separate from mobile overlay dismissal across resizes", async ({ page, request }) => {
@@ -110,15 +111,19 @@ test.describe("Responsive shell", () => {
   }) => {
     await page.setViewportSize({ width: 375, height: 667 });
     const { token } = await registerUser(request, "responsive-first-workspace");
-    const meResponse = await request.get("/api/v1/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    expect(meResponse.ok()).toBe(true);
-    const firstWorkspaceUser = (await meResponse.json()) as Record<string, unknown>;
+    const client = createClient(request, token);
+    await client.createOrganization({ name: "First Workspace Dialog Org" });
+    const firstWorkspaceUser: Record<string, unknown> = { ...(await client.getMe()) };
     delete firstWorkspaceUser.workspace_id;
     delete firstWorkspaceUser.workspace_name;
     delete firstWorkspaceUser.workspace_role;
     delete firstWorkspaceUser.workspaces;
+    firstWorkspaceUser.organizations = (firstWorkspaceUser.organizations as Array<Record<string, unknown>>).map(
+      (org) => ({
+        ...org,
+        role: OrgRoleMember,
+      }),
+    );
 
     let interceptedMe = false;
     await page.route(/\/api\/v1\/auth\/me(?:\?.*)?$/, async (route) => {
@@ -136,6 +141,7 @@ test.describe("Responsive shell", () => {
     expect(interceptedMe).toBe(true);
     await menuButton.click();
     await expect(sidebar).toHaveClass(/open/i);
+    await expect.poll(async () => (await sidebar.boundingBox())?.x).toBe(0);
 
     await page.getByTestId("create-workspace-button").click();
     const dialog = page.getByRole("dialog", { name: "Create Your First Workspace" });

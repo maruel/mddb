@@ -93,7 +93,7 @@ export const RecordsContext = createContext<RecordsContextValue>();
 
 export const RecordsProvider: ParentComponent = (props) => {
   const { t } = useI18n();
-  const { wsApi } = useAuth();
+  const { user, token, wsApi } = useAuth();
   const { selectedNodeId, selectedNodeData } = useWorkspace();
 
   // Application-level undo stack for record CRUD operations.
@@ -112,6 +112,9 @@ export const RecordsProvider: ParentComponent = (props) => {
   // Full dataset cache for client-side filtering when all records are loaded
   // allRecords stores the unfiltered dataset when hasMore is false
   const [allRecords, setAllRecords] = createSignal<DataRecordResponse[] | null>(null);
+  const workspaceIdentity = () => `${token() ?? ""}:${user()?.id ?? ""}:${user()?.workspace_id ?? ""}`;
+  const recordIdentity = (nodeId: string) => `${workspaceIdentity()}:${nodeId}`;
+  let recordsRequest = 0;
 
   // View state
   const [views, setViews] = createSignal<View[]>([]);
@@ -144,14 +147,17 @@ export const RecordsProvider: ParentComponent = (props) => {
   createEffect(() => {
     const ws = wsApi();
     if (!ws) return;
+    const identity = workspaceIdentity();
+    setWorkspaceMembers([]);
+    setResolvedUsers(new Map());
     ws.listWorkspaceMembers()
       .then((res) => {
-        setWorkspaceMembers(res.members ?? []);
+        if (identity === workspaceIdentity()) setWorkspaceMembers(res.members ?? []);
       })
       .catch(() => {
         // Non-critical: the member list feeds the user-type column picker, and a
         // logout or workspace switch cancels the request that was in flight.
-        setWorkspaceMembers([]);
+        if (identity === workspaceIdentity()) setWorkspaceMembers([]);
       });
   });
 
@@ -160,6 +166,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     const ws = wsApi();
     const node = selectedNodeData();
     if (!ws || !node?.properties) return;
+    const identity = recordIdentity(node.id);
 
     // Collect user-type column names.
     const userCols = node.properties.filter((p) => p.type === PropertyTypeUser).map((p) => p.name);
@@ -184,7 +191,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     }
 
     if (unknownIds.size === 0) {
-      setResolvedUsers(merged);
+      if (identity === recordIdentity(selectedNodeId() ?? "")) setResolvedUsers(merged);
       return;
     }
 
@@ -200,7 +207,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         // Non-critical: ghost users remain unresolved.
       }
     }
-    setResolvedUsers(merged);
+    if (identity === recordIdentity(selectedNodeId() ?? "")) setResolvedUsers(merged);
   }
 
   // Virtual default view used when no views exist (uses module-level constant)
@@ -323,6 +330,7 @@ export const RecordsProvider: ParentComponent = (props) => {
     if (nodeId === prevNodeId) return;
     prevNodeId = nodeId;
     undoActions.clear();
+    clearRecords();
 
     if (node?.has_table) {
       batch(() => {
@@ -355,8 +363,6 @@ export const RecordsProvider: ParentComponent = (props) => {
         }
       });
       loadRecords(node.id);
-    } else if (prevNodeId !== undefined) {
-      clearRecords();
     }
   });
 
@@ -374,6 +380,8 @@ export const RecordsProvider: ParentComponent = (props) => {
 
   function clearRecords() {
     debouncedServerReload.cancel();
+    recordsRequest++;
+    setLoadingRecords(false);
     setRecords([]);
     setHasMore(false);
     setAllRecords(null);
@@ -416,6 +424,8 @@ export const RecordsProvider: ParentComponent = (props) => {
   async function loadRecordsFromServer(nodeId: string) {
     const ws = wsApi();
     if (!ws) return;
+    const identity = recordIdentity(nodeId);
+    const request = ++recordsRequest;
 
     try {
       setLoadingRecords(true);
@@ -434,6 +444,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         Filters: filters || "",
         Sorts: sorts || "",
       });
+      if (request !== recordsRequest || identity !== recordIdentity(selectedNodeId() ?? "")) return;
 
       const loadedRecords = (data.records || []) as DataRecordResponse[];
       setRecords(loadedRecords);
@@ -451,9 +462,11 @@ export const RecordsProvider: ParentComponent = (props) => {
       // Resolve any ghost user references in the loaded records.
       resolveGhostUsers(loadedRecords);
     } catch (err) {
-      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      if (request === recordsRequest && identity === recordIdentity(selectedNodeId() ?? "")) {
+        setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      }
     } finally {
-      setLoadingRecords(false);
+      if (request === recordsRequest) setLoadingRecords(false);
     }
   }
 
@@ -485,6 +498,8 @@ export const RecordsProvider: ParentComponent = (props) => {
     const nodeId = selectedNodeId();
     const ws = wsApi();
     if (!nodeId || loadingRecords() || !ws) return;
+    const identity = recordIdentity(nodeId);
+    const request = ++recordsRequest;
 
     try {
       setLoadingRecords(true);
@@ -504,6 +519,7 @@ export const RecordsProvider: ParentComponent = (props) => {
         Filters: filters || "",
         Sorts: sorts || "",
       });
+      if (request !== recordsRequest || identity !== recordIdentity(selectedNodeId() ?? "")) return;
 
       const newRecords = (data.records || []) as DataRecordResponse[];
       const allRecs = [...records(), ...newRecords];
@@ -517,9 +533,11 @@ export const RecordsProvider: ParentComponent = (props) => {
       }
       setLoadError(null);
     } catch (err) {
-      setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      if (request === recordsRequest && identity === recordIdentity(selectedNodeId() ?? "")) {
+        setLoadError(`${t("errors.failedToLoad")}: ${err}`);
+      }
     } finally {
-      setLoadingRecords(false);
+      if (request === recordsRequest) setLoadingRecords(false);
     }
   }
 

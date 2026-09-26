@@ -17,7 +17,7 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
   - [ ] Add authentication to asset serving endpoint (currently public).
   - [ ] Add optional public asset sharing with workspace-level settings.
 - **Intelligence**: Go Mode discovery, native bearer handoff, read-only MCP access to nested nodes in the active workspace, and an optional authenticated embedded voice gateway are implemented. Semantic search and write tools remain future work.
-- **Global Presence**: Full localization and offline PWA capabilities.
+- **Global Presence**: Full localization and offline PWA capabilities. The browser now takes language from the authenticated user's saved settings and discards late responses from a previous account or workspace. First service worker installation no longer reloads an active page; later updates still reload it once.
 - **Advanced Table Views**: Filter/sort UI (backend + state management done, UI pending).
   - [ ] ViewToolbar with Filter and Sort buttons.
   - [ ] SortMenu dropdown (property + direction per row).

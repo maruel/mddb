@@ -9,7 +9,7 @@ import { expect, vi } from "@tests/expect";
 import { cleanup, fireEvent, render, screen, waitFor } from "@solidjs/testing-library";
 import type { JSX } from "solid-js";
 import App from "./App";
-import { I18nProvider } from "./i18n";
+import { I18nProvider, useI18n } from "./i18n";
 import type { UserResponse } from "@sdk/types.gen";
 import { WSRoleViewer } from "@sdk/types.gen";
 
@@ -141,6 +141,11 @@ function renderWithI18n(component: () => JSX.Element) {
   return render(() => <I18nProvider>{component()}</I18nProvider>);
 }
 
+function LocaleStatus() {
+  const { locale } = useI18n();
+  return <output data-testid="locale">{locale()}</output>;
+}
+
 beforeEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -161,6 +166,54 @@ afterEach(() => {
 
 describe("App", () => {
   describe("Authentication", () => {
+    it("uses the authenticated user's language instead of a previous account's stored language", async () => {
+      localStorage.setItem("mddb_locale", "fr");
+      localStorage.setItem("mddb_token", "existing-token");
+      stubWorkspace();
+
+      render(() => (
+        <I18nProvider initialLocale="fr">
+          <App />
+          <LocaleStatus />
+        </I18nProvider>
+      ));
+
+      await waitFor(() => expect(screen.getByTestId("user-menu-button")).toBeTruthy());
+      expect(screen.getByTestId("locale")).toHaveTextContent("en");
+    });
+
+    it("drops the old account when another tab replaces the token", async () => {
+      localStorage.setItem("mddb_token", "existing-token");
+      const otherUser = { ...mockUser, id: "user-2", name: "Other User" };
+      api("GET", "/api/v1/auth/me", (_url, init) =>
+        (init?.headers as Record<string, string> | undefined)?.Authorization === "Bearer new-token"
+          ? otherUser
+          : mockUser,
+      );
+      stubWorkspace();
+      renderWithI18n(() => <App />);
+      await waitFor(() => expect(screen.getByTestId("user-menu-button")).toBeTruthy());
+
+      localStorage.setItem("mddb_token", "new-token");
+      window.dispatchEvent(
+        new window.StorageEvent("storage", {
+          key: "mddb_token",
+          oldValue: "existing-token",
+          newValue: "new-token",
+          storageArea: localStorage,
+        }),
+      );
+
+      await waitFor(() => {
+        const calls = fetchCalls.filter(
+          ({ url, init }) =>
+            url === "/api/v1/auth/me" &&
+            (init?.headers as Record<string, string> | undefined)?.Authorization === "Bearer new-token",
+        );
+        expect(calls.length).toBeGreaterThan(0);
+      });
+      await waitFor(() => expect(screen.getByTestId("user-menu-button")).toHaveAttribute("title", "Other User"));
+    });
     it("hands a validated bearer to Go Mode and clears it on logout", async () => {
       window.goModeHost = {};
       const postMessage = vi.fn();
@@ -286,6 +339,45 @@ describe("App", () => {
   });
 
   describe("Workspace Management", () => {
+    it("ignores a node list that finishes after switching workspaces", async () => {
+      localStorage.setItem("mddb_token", "test-token");
+      const firstMembership = mockUser.workspaces?.[0];
+      if (!firstMembership) throw new Error("Missing workspace fixture");
+      const otherWorkspace = {
+        ...firstMembership,
+        id: "wsmem-2",
+        workspace_id: "ws-2",
+        workspace_name: "Other Workspace",
+      };
+      const firstUser = { ...mockUser, workspaces: [...(mockUser.workspaces ?? []), otherWorkspace] };
+      const secondUser = { ...firstUser, workspace_id: "ws-2", workspace_name: "Other Workspace" };
+      let resolveOldNodes!: (nodes: { nodes: typeof mockNodes }) => void;
+      const oldNodes = new Promise<{ nodes: typeof mockNodes }>((resolve) => {
+        resolveOldNodes = resolve;
+      });
+      apiGet(/\/workspaces\/ws-1\/nodes\/0\/children$/, () => oldNodes);
+      apiGet(/\/workspaces\/ws-2\/nodes\/0\/children$/, () => ({
+        nodes: [{ ...mockNodes[0]!, id: "other-node", title: "Other Workspace Page" }],
+      }));
+      apiGet(/\/workspaces\/ws-2\/nodes\/other-node$/, () => ({
+        ...mockNodes[0]!,
+        id: "other-node",
+        title: "Other Workspace Page",
+      }));
+      api("POST", "/api/v1/auth/switch-workspace", () => ({ token: "new-token", user: secondUser }));
+      stubWorkspace(firstUser);
+
+      renderWithI18n(() => <App />);
+      await waitFor(() => expect(screen.getByRole("button", { name: /Other workspaces/i })).toBeTruthy());
+      fireEvent.click(screen.getByRole("button", { name: /Other workspaces/i }));
+      fireEvent.click(screen.getByRole("button", { name: "Other Workspace" }));
+      await waitFor(() => expect(screen.getByTestId("sidebar-node-other-node")).toBeTruthy());
+
+      resolveOldNodes({ nodes: mockNodes });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(screen.queryByTestId("sidebar-node-node-1")).toBeNull();
+      expect(screen.getByTestId("sidebar-node-other-node")).toBeTruthy();
+    });
     it("auto-creates an organization when the user has no memberships", async () => {
       localStorage.setItem("mddb_token", "test-token");
 

@@ -15,7 +15,7 @@ interface UserProfileProps {
 
 export default function UserProfile(props: UserProfileProps) {
   const { t, setLocale } = useI18n();
-  const { user, api, wsApi } = useAuth();
+  const { user, api, wsApi, refreshUser } = useAuth();
 
   // Personal Settings states
   const [theme, setTheme] = createSignal("light");
@@ -108,7 +108,7 @@ export default function UserProfile(props: UserProfileProps) {
       // Update locale immediately so UI refreshes
       const lang = language() as Locale;
       setLocale(lang);
-      localStorage.setItem("mddb_locale", lang);
+      await refreshUser();
 
       setSuccess(t("success.personalSettingsSaved") || "Personal settings saved successfully");
     } catch (err) {
