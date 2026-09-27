@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/maruel/ksid"
@@ -75,6 +76,24 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 	if req.Name == "" {
 		return nil, dto.MissingField("name")
 	}
+	defer h.Svc.userCreationLocks.lock(user.ID)()
+	if req.EnsureFirst {
+		for membership := range h.Svc.WSMembership.IterByUser(user.ID) {
+			ws, err := h.Svc.Workspace.Get(membership.WorkspaceID)
+			if err != nil {
+				return nil, dto.InternalWithError("Failed to get existing workspace", err)
+			}
+			if ws.OrganizationID != orgID {
+				continue
+			}
+			org, err := h.Svc.Organization.Get(orgID)
+			if err != nil {
+				return nil, dto.InternalWithError("Failed to get organization", err)
+			}
+			memberCount := h.Svc.WSMembership.CountWSMemberships(ws.ID)
+			return workspaceToResponse(ws, memberCount, h.workspaceParentLimits(org)), nil
+		}
+	}
 
 	// Check server-wide workspace quota
 	if h.Cfg.Quotas.MaxWorkspaces > 0 && h.Svc.Workspace.Count() >= h.Cfg.Quotas.MaxWorkspaces {
@@ -96,17 +115,19 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 		return nil, dto.InternalWithError("Failed to create workspace", err)
 	}
 
-	// Create workspace membership (user becomes admin of new workspace)
-	if _, err := h.Svc.WSMembership.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
-		return nil, dto.InternalWithError("Failed to create workspace membership", err)
-	}
-
 	// Initialize workspace storage
 	if err := h.Svc.FileStore.InitWorkspace(ctx, ws.ID); err != nil {
+		err = errors.Join(err, h.rollbackUnpublishedWorkspace(ws.ID))
 		return nil, dto.InternalWithError("Failed to initialize workspace storage", err)
 	}
 
-	// Register workspace as a git submodule of the root data repo
+	// Publish membership only after the workspace can be opened by the user.
+	if _, err := h.Svc.WSMembership.Create(user.ID, ws.ID, identity.WSRoleAdmin); err != nil {
+		err = errors.Join(err, h.rollbackUnpublishedWorkspace(ws.ID))
+		return nil, dto.InternalWithError("Failed to create workspace membership", err)
+	}
+
+	// Register workspace as a git submodule of the root data repo.
 	if err := h.Svc.RootRepo.AddWorkspaceSubmodule(ctx, ws.ID.String()); err != nil {
 		slog.ErrorContext(ctx, "Failed to add workspace submodule", "wsID", ws.ID, "err", err)
 	}
@@ -114,6 +135,10 @@ func (h *OrganizationHandler) CreateWorkspace(ctx context.Context, orgID ksid.ID
 	memberCount := h.Svc.WSMembership.CountWSMemberships(ws.ID)
 	parentLimits := h.workspaceParentLimits(org)
 	return workspaceToResponse(ws, memberCount, parentLimits), nil
+}
+
+func (h *OrganizationHandler) rollbackUnpublishedWorkspace(wsID ksid.ID) error {
+	return errors.Join(h.Svc.Workspace.Delete(wsID), h.Svc.FileStore.DiscardWorkspace(wsID))
 }
 
 // GetWorkspace retrieves workspace details.

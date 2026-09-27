@@ -175,6 +175,16 @@ func (svc *FileStoreService) InitWorkspace(ctx context.Context, wsID ksid.ID) er
 	return nil
 }
 
+// DiscardWorkspace removes storage for a workspace that was never published to a member.
+func (svc *FileStoreService) DiscardWorkspace(wsID ksid.ID) error {
+	if wsID.IsZero() {
+		return errWSIDRequired
+	}
+	svc.InvalidateWorkspaceStore(wsID)
+	svc.git.ForgetRepo(wsID.String())
+	return os.RemoveAll(filepath.Join(svc.rootDir, wsID.String()))
+}
+
 // CheckOrgStorageQuota returns an error if adding the given bytes would exceed the organization's total storage quota.
 // This checks the sum of storage usage across all workspaces in the organization.
 func (svc *FileStoreService) CheckOrgStorageQuota(wsID ksid.ID, additionalBytes int64) error {

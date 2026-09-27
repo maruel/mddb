@@ -1,9 +1,11 @@
-// Onboarding component for first-time users without org/workspace.
+// Onboarding screen for first-time users, using the shared first-workspace provisioner.
 
 import { createEffect, createSignal, Show } from "solid-js";
 import { useNavigate } from "@solidjs/router";
 import { useAuth } from "../contexts";
+import { provisionFirstWorkspace } from "../contexts/firstLogin";
 import { useI18n } from "../i18n";
+import { createApi } from "../useApi";
 import { workspaceUrl } from "../utils/urls";
 import styles from "./Onboarding.module.css";
 
@@ -11,26 +13,15 @@ import styles from "./Onboarding.module.css";
  * Onboarding handles the first-login flow for users who have authenticated
  * but don't yet have an organization or workspace.
  *
- * Flow:
- * 1. Check if user has no organizations -> create one
- * 2. Check if user has no workspaces -> create one
- * 3. Redirect to the new workspace
+ * Creates or picks the first workspace and redirects to it.
  */
 export default function Onboarding() {
   const { t, ready: i18nReady } = useI18n();
-  const { user, api, setUser } = useAuth();
+  const { user, token, login, setUser } = useAuth();
   const navigate = useNavigate();
 
-  const [status, setStatus] = createSignal<"loading" | "creating-org" | "creating-ws" | "done">("loading");
+  const [done, setDone] = createSignal(false);
   const [error, setError] = createSignal<string | null>(null);
-
-  // Get user's first name for default naming
-  function getUserFirstName(): string {
-    const u = user();
-    if (!u?.name) return "";
-    const firstName = u.name.split(" ")[0];
-    return firstName || u.name;
-  }
 
   // Track whether we're already running to prevent duplicate executions
   const [running, setRunning] = createSignal(false);
@@ -38,7 +29,8 @@ export default function Onboarding() {
   // Run first-login flow
   createEffect(() => {
     const u = user();
-    if (!u || !i18nReady() || running()) return;
+    const initialToken = token();
+    if (!u || !initialToken || !i18nReady() || running() || done() || error()) return;
 
     // If user already has a workspace, redirect
     if (u.workspace_id) {
@@ -50,64 +42,29 @@ export default function Onboarding() {
     setRunning(true);
     (async () => {
       try {
-        const orgs = u.organizations || [];
-
-        // Step 1: Create organization if needed
-        if (orgs.length === 0) {
-          setStatus("creating-org");
-          const firstName = getUserFirstName();
-          const orgName = firstName
-            ? (t("onboarding.defaultOrgName", { name: firstName }) as string)
-            : (t("onboarding.defaultOrgNameFallback") as string);
-
-          await api().createOrganization({ name: orgName });
-
-          // Refresh user data - effect will re-run with updated user
-          const updatedUser = await api().getMe();
-          setUser(updatedUser);
-          setRunning(false);
-          return;
-        }
-
-        // Step 2: Create workspace if needed
-        const firstOrg = orgs[0];
-        if (firstOrg) {
-          const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg.organization_id) || [];
-          if (orgWorkspaces.length === 0) {
-            setStatus("creating-ws");
-            const firstName = getUserFirstName();
-            const wsName = firstName
-              ? (t("onboarding.defaultWorkspaceName", { name: firstName }) as string)
-              : (t("onboarding.defaultWorkspaceNameFallback") as string);
-
-            const ws = await api().org(firstOrg.organization_id).createWorkspace({ name: wsName });
-
-            // Switch to the new workspace - effect will re-run with updated user
-            const switchResult = await api().switchWorkspace({ ws_id: ws.id });
-            if (switchResult.user) {
-              setUser(switchResult.user);
-            }
-            setRunning(false);
-            return;
-          }
-        }
-
-        // Step 3: User has org and workspaces but no active workspace - pick first one
-        if (!u.workspace_id && u.workspaces && u.workspaces.length > 0) {
-          const firstWs = u.workspaces[0];
-          if (firstWs) {
-            const switchResult = await api().switchWorkspace({ ws_id: firstWs.workspace_id });
-            if (switchResult.user) {
-              setUser(switchResult.user);
-            }
-          }
-        }
-
-        setStatus("done");
-        setRunning(false);
+        const firstName = u.name.split(" ")[0] || u.name;
+        const result = await provisionFirstWorkspace(
+          u.id,
+          createApi(() => initialToken),
+          {
+            organization: (firstName
+              ? t("onboarding.defaultOrgName", { name: firstName })
+              : t("onboarding.defaultOrgNameFallback")) as string,
+            workspace: (firstName
+              ? t("onboarding.defaultWorkspaceName", { name: firstName })
+              : t("onboarding.defaultWorkspaceNameFallback")) as string,
+          },
+        );
+        if (token() !== initialToken) return;
+        if (result.token) login(result.token, result.user);
+        else setUser(result.user);
+        if (result.user.workspace_id)
+          navigate(workspaceUrl(result.user.workspace_id, result.user.workspace_name), { replace: true });
+        setDone(true);
       } catch (err) {
         console.error("Onboarding error:", err);
         setError(String(err));
+      } finally {
         setRunning(false);
       }
     })();
@@ -119,11 +76,7 @@ export default function Onboarding() {
         <div class={styles.error}>{error()}</div>
       </Show>
       <Show when={!error()}>
-        <div class={styles.status}>
-          {status() === "creating-org" && (t("onboarding.creatingOrg") || "Creating your organization...")}
-          {status() === "creating-ws" && (t("onboarding.creatingWorkspace") || "Creating your workspace...")}
-          {(status() === "loading" || status() === "done") && (t("common.loading") || "Loading...")}
-        </div>
+        <div class={styles.status}>{t("common.loading") || "Loading..."}</div>
         <div class={styles.spinner} />
       </Show>
     </div>

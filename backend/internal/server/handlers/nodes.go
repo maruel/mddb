@@ -202,9 +202,21 @@ func (h *NodeHandler) DeleteNodeAsset(ctx context.Context, wsID ksid.ID, user *i
 // CreatePage creates a new page under a parent node.
 // The parent ID is in req.ParentID; use 0 for root.
 func (h *NodeHandler) CreatePage(ctx context.Context, wsID ksid.ID, user *identity.User, req *dto.CreatePageRequest) (*dto.CreatePageResponse, error) {
+	if req.ParentID.IsZero() {
+		defer h.Svc.rootPageCreationLocks.lock(wsID)()
+	}
 	ws, err := h.Svc.FileStore.GetWorkspaceStore(ctx, wsID)
 	if err != nil {
 		return nil, dto.InternalWithError("Failed to get workspace", err)
+	}
+	if req.EnsureRootIfEmpty {
+		children, err := ws.ListChildren(0)
+		if err != nil {
+			return nil, dto.InternalWithError("Failed to list root pages", err)
+		}
+		if len(children) > 0 {
+			return &dto.CreatePageResponse{ID: children[0].ID}, nil
+		}
 	}
 
 	author := GitAuthor(user)

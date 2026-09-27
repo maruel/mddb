@@ -1,8 +1,7 @@
 // Tests the real App composition tree in jsdom: auth flow, sidebar node loading, workspace
 // management, and onboarding. The network seam is stubbed through globalThis.fetch and
 // localStorage is jsdom's real storage, so no child component needs mocking.
-// Routing, node selection, settings navigation, and PWA install flows are covered by the
-// Playwright e2e tests.
+// Browser-specific navigation and PWA installation remain covered by Playwright.
 
 import { afterEach, beforeEach, describe, it } from "node:test";
 import { expect, vi } from "@tests/expect";
@@ -184,7 +183,14 @@ describe("App", () => {
 
     it("drops the old account when another tab replaces the token", async () => {
       localStorage.setItem("mddb_token", "existing-token");
-      const otherUser = { ...mockUser, id: "user-2", name: "Other User" };
+      window.history.replaceState(null, "", "/w/@ws-1+test-workspace/@node-1+test-page");
+      const otherUser = {
+        ...mockUser,
+        id: "user-2",
+        name: "Other User",
+        workspace_id: "ws-2",
+        workspace_name: "Other Workspace",
+      };
       api("GET", "/api/v1/auth/me", (_url, init) =>
         (init?.headers as Record<string, string> | undefined)?.Authorization === "Bearer new-token"
           ? otherUser
@@ -213,7 +219,9 @@ describe("App", () => {
         expect(calls.length).toBeGreaterThan(0);
       });
       await waitFor(() => expect(screen.getByTestId("user-menu-button")).toHaveAttribute("title", "Other User"));
+      await waitFor(() => expect(window.location.pathname).toMatch(/^\/w\/@ws-2(?:[+/]|$)/));
     });
+
     it("hands a validated bearer to Go Mode and clears it on logout", async () => {
       window.goModeHost = {};
       const postMessage = vi.fn();
@@ -378,11 +386,13 @@ describe("App", () => {
       expect(screen.queryByTestId("sidebar-node-node-1")).toBeNull();
       expect(screen.getByTestId("sidebar-node-other-node")).toBeTruthy();
     });
-    it("auto-creates an organization when the user has no memberships", async () => {
+    it("auto-provisions an organization and workspace when the user has no memberships", async () => {
       localStorage.setItem("mddb_token", "test-token");
 
       const userWithNoMemberships: UserResponse = {
         ...mockUser,
+        workspace_id: undefined,
+        workspace_name: undefined,
         organizations: [],
         workspaces: [],
       };
@@ -401,22 +411,39 @@ describe("App", () => {
           },
         ],
         organization_id: "new-org-1",
+        workspace_id: undefined,
+        workspace_name: undefined,
         workspaces: [],
       };
+      const userAfterWorkspaceCreation: UserResponse = {
+        ...userAfterOrgCreation,
+        workspace_id: "new-ws-1",
+        workspace_name: "Test's Workspace",
+        workspaces: [
+          {
+            ...mockUser.workspaces![0]!,
+            workspace_id: "new-ws-1",
+            workspace_name: "Test's Workspace",
+            organization_id: "new-org-1",
+          },
+        ],
+      };
 
-      let getMeCallCount = 0;
-      apiGet("/api/v1/auth/me", () => {
-        getMeCallCount += 1;
-        return getMeCallCount === 1 ? userWithNoMemberships : userAfterOrgCreation;
+      let orgCreated = false;
+      let workspaceCreated = false;
+      apiGet("/api/v1/auth/me", () =>
+        workspaceCreated ? userAfterWorkspaceCreation : orgCreated ? userAfterOrgCreation : userWithNoMemberships,
+      );
+      api("POST", "/api/v1/organizations", () => {
+        orgCreated = true;
+        return { id: "new-org-1", name: "Test's Organization" };
       });
-      api("POST", "/api/v1/organizations", () => ({
-        id: "new-org-1",
-        name: "Test's Organization",
-        settings: {},
-        created: 1704067200,
-        member_count: 1,
-        workspace_count: 0,
-      }));
+      api("POST", "/api/v1/organizations/new-org-1/workspaces", () => {
+        workspaceCreated = true;
+        return { id: "new-ws-1", name: "Test's Workspace" };
+      });
+      api("POST", "/api/v1/auth/switch-workspace", () => ({ token: "new-token", user: userAfterWorkspaceCreation }));
+      apiGet(/\/nodes\/0\/children$/, () => ({ nodes: mockNodes }));
 
       renderWithI18n(() => <App />);
 
@@ -425,7 +452,8 @@ describe("App", () => {
           const createOrgCalls = fetchCalls.filter(
             ({ url, init }) => url === "/api/v1/organizations" && init?.method === "POST",
           );
-          expect(createOrgCalls.length).toBeGreaterThan(0);
+          expect(createOrgCalls).toHaveLength(1);
+          expect(fetchCalls.filter(({ url }) => url === "/api/v1/organizations/new-org-1/workspaces")).toHaveLength(1);
         },
         { timeout: 3000 },
       );

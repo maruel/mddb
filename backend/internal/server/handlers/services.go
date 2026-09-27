@@ -47,6 +47,9 @@ type Services struct {
 	Notification     *identity.NotificationService     // may be nil
 	PushSubscription *identity.PushSubscriptionService // may be nil
 	Broker           *sse.Broker
+
+	userCreationLocks     keyedMutex
+	rootPageCreationLocks keyedMutex
 }
 
 // PublishEvent publishes a workspace SSE event if the broker is configured.

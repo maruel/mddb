@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -143,6 +144,18 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.Use
 	if req.Name == "" {
 		return nil, dto.MissingField("name")
 	}
+	defer h.svc.userCreationLocks.lock(user.ID)()
+	if req.EnsureFirst {
+		for membership := range h.svc.OrgMembership.IterByUser(user.ID) {
+			org, err := h.svc.Organization.Get(membership.OrganizationID)
+			if err != nil {
+				return nil, dto.InternalWithError("Failed to get existing organization", err)
+			}
+			memberCount := h.svc.OrgMembership.CountOrgMemberships(org.ID)
+			workspaceCount := h.svc.Workspace.CountByOrg(org.ID)
+			return organizationToResponse(org, memberCount, workspaceCount, h.cfg.Quotas.ResourceQuotas), nil
+		}
+	}
 
 	// Check server-wide organization quota
 	if h.cfg.Quotas.MaxOrganizations > 0 && h.svc.Organization.Count() >= h.cfg.Quotas.MaxOrganizations {
@@ -157,6 +170,9 @@ func (h *AuthHandler) CreateOrganization(ctx context.Context, user *identity.Use
 
 	// Create org membership (user becomes owner of new org)
 	if _, err := h.svc.OrgMembership.Create(user.ID, org.ID, identity.OrgRoleOwner); err != nil {
+		if cleanupErr := h.svc.Organization.Delete(org.ID); cleanupErr != nil {
+			err = errors.Join(err, cleanupErr)
+		}
 		return nil, dto.InternalWithError("Failed to create membership", err)
 	}
 

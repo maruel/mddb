@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -118,6 +119,8 @@ func TestSSEHandler_StreamsEvent(t *testing.T) {
 // flushRecorder implements http.ResponseWriter and http.Flusher for testing SSE.
 type flushRecorder struct {
 	*httptest.ResponseRecorder
+
+	mu sync.RWMutex
 }
 
 func newFlushRecorder() *flushRecorder {
@@ -128,6 +131,14 @@ func (f *flushRecorder) Flush() {
 	f.ResponseRecorder.Flush()
 }
 
+func (f *flushRecorder) Write(p []byte) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.ResponseRecorder.Write(p)
+}
+
 func (f *flushRecorder) Body() string {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
 	return f.ResponseRecorder.Body.String()
 }

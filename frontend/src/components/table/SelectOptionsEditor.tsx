@@ -261,7 +261,7 @@ export function SelectOptionsEditor(props: SelectOptionsEditorProps) {
                   />
 
                   <Show when={count > 0}>
-                    <span class={styles.usageHint} title={t("table.optionUsedWarning").replace("{n}", String(count))}>
+                    <span class={styles.usageHint} title={t("table.optionUsedWarning")?.replace("{n}", String(count))}>
                       {count}
                     </span>
                   </Show>

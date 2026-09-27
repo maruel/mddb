@@ -32,6 +32,13 @@ After making UI or API changes, also run `make test-e2e` (fast rate limits, para
 `make test-e2e-slow` (normal rate limits, sequential). These build the binary, start a test server, and run
 the Playwright tests in `e2e/`; the server log is at `data-e2e/server.log`.
 
+### Test Scope
+
+`make test` runs Go and frontend unit tests; `make coverage` reports their coverage. Frontend component tests
+cover editor toolbar list conversions with a real ProseMirror state, select-option edits, and shared context-menu
+keyboard and pointer behavior. Playwright retains representative full-app journeys: editor selection and Markdown
+mode, select-option drag persistence, block actions and conversion, and concurrent first-login setup.
+
 ### Git Hooks
 
 Mandatory: Run `make git-hooks` to install git hooks before making any change.

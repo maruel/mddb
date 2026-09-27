@@ -27,7 +27,9 @@ import {
   type NodeResponse,
 } from "@sdk/types.gen";
 import { workspaceUrl } from "../utils/urls";
+import { createApi } from "../useApi";
 import { reconcileBreadcrumbPath, reconcileMovedNode, reconcileSelectedNodeData } from "./workspaceTree";
+import { provisionFirstWorkspace } from "./firstLogin";
 
 interface WorkspaceContextValue {
   // Node tree
@@ -231,14 +233,6 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     );
   };
 
-  // Get user's first name for default naming
-  function getUserFirstName(): string {
-    const u = user();
-    if (!u?.name) return "";
-    const firstName = u.name.split(" ")[0];
-    return firstName || u.name;
-  }
-
   async function createOrganization(data: { name: string }) {
     await api().createOrganization({ name: data.name });
     const updatedUser = await api().getMe();
@@ -256,55 +250,54 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     await switchWorkspace(ws.id);
   }
 
-  // Auto-create organization for first-time users
-  async function autoCreateOrganization() {
+  // Provision the first organization and workspace with server-side idempotency.
+  async function autoProvisionFirstLogin() {
+    const initialUser = user();
+    const initialToken = token();
+    if (!initialUser || !initialToken) return;
     try {
       setCreatingNode(true);
-      const firstName = getUserFirstName();
-      const orgName = firstName
-        ? t("onboarding.defaultOrgName", { name: firstName })
-        : t("onboarding.defaultOrgNameFallback");
-      await createOrganization({ name: orgName as string });
+      const firstName = initialUser.name.split(" ")[0] || initialUser.name;
+      const result = await provisionFirstWorkspace(
+        initialUser.id,
+        createApi(() => initialToken),
+        {
+          organization: (firstName
+            ? t("onboarding.defaultOrgName", { name: firstName })
+            : t("onboarding.defaultOrgNameFallback")) as string,
+          workspace: (firstName
+            ? t("onboarding.defaultWorkspaceName", { name: firstName })
+            : t("onboarding.defaultWorkspaceNameFallback")) as string,
+        },
+      );
+      if (token() !== initialToken) return;
+      if (result.token) login(result.token, result.user);
+      else setUser(result.user);
+      if (result.user.workspace_id) navigate(workspaceUrl(result.user.workspace_id, result.user.workspace_name));
     } catch (err) {
       setSaveError(`${t("errors.failedToCreate")}: ${err}`);
-    } finally {
-      setCreatingNode(false);
-    }
-  }
-
-  // Auto-create workspace for users with org but no workspace
-  async function autoCreateWorkspace() {
-    try {
-      setCreatingNode(true);
-      const firstName = getUserFirstName();
-      const wsName = firstName
-        ? t("onboarding.defaultWorkspaceName", { name: firstName })
-        : t("onboarding.defaultWorkspaceNameFallback");
-      await createWorkspace({ name: wsName as string });
-    } catch (err) {
-      setSaveError(`${t("errors.failedToCreate")}: ${err}`);
+      setFirstLoginCheckDone(true);
     } finally {
       setCreatingNode(false);
     }
   }
 
   // Auto-create welcome page if no root page exists
-  async function createWelcomePageIfNeeded(): Promise<string | null> {
+  async function createWelcomePageIfNeeded(): Promise<void> {
     const ws = wsApi();
     const u = user();
-    if (!ws || !u) return null;
+    if (!ws || !u?.workspace_id) return;
     if (u.workspace_role !== WSRoleAdmin && u.workspace_role !== WSRoleEditor) {
-      return null;
+      return;
     }
     try {
-      const newPage = await ws.createPage("0", {
+      await ws.createPage("0", {
         title: t("welcome.welcomePageTitle"),
         content: t("welcome.welcomePageContent"),
+        ensure_root_if_empty: true,
       });
-      return newPage?.id ? String(newPage.id) : null;
     } catch (err) {
       setSaveError(`${t("errors.failedToCreate")}: ${err}`);
-      return null;
     }
   }
 
@@ -352,12 +345,10 @@ export const WorkspaceProvider: ParentComponent = (props) => {
       let loadedNodes = resp?.nodes || [];
 
       if (loadedNodes.length === 0 && firstLoginCheckDone()) {
-        const newPageId = await createWelcomePageIfNeeded();
-        if (newPageId) {
-          const resp2 = await ws.listNodeChildren("0");
-          if (request !== nodeListRequest || identity !== workspaceIdentity()) return;
-          loadedNodes = resp2?.nodes || [];
-        }
+        await createWelcomePageIfNeeded();
+        const resp2 = await ws.listNodeChildren("0");
+        if (request !== nodeListRequest || identity !== workspaceIdentity()) return;
+        loadedNodes = resp2?.nodes || [];
       }
 
       setNodesStore(reconcile(loadedNodes));
@@ -462,23 +453,16 @@ export const WorkspaceProvider: ParentComponent = (props) => {
     const u = user();
     if (!u || !i18nReady() || firstLoginCheckDone() || firstLoginInProgress()) return;
 
-    const orgs = u.organizations || [];
-    if (orgs.length === 0) {
+    const firstOrg = u.organizations?.[0];
+    const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg?.organization_id) ?? [];
+    if (
+      !firstOrg ||
+      (!u.workspace_id && !!u.workspaces?.length) ||
+      (orgWorkspaces.length === 0 && (firstOrg.role === OrgRoleAdmin || firstOrg.role === OrgRoleOwner))
+    ) {
       setFirstLoginInProgress(true);
-      autoCreateOrganization().finally(() => setFirstLoginInProgress(false));
+      void autoProvisionFirstLogin().finally(() => setFirstLoginInProgress(false));
       return;
-    }
-
-    const firstOrg = orgs[0];
-    if (firstOrg) {
-      const orgWorkspaces = u.workspaces?.filter((ws) => ws.organization_id === firstOrg.organization_id) || [];
-      if (orgWorkspaces.length === 0) {
-        if (firstOrg.role === OrgRoleAdmin || firstOrg.role === OrgRoleOwner) {
-          setFirstLoginInProgress(true);
-          autoCreateWorkspace().finally(() => setFirstLoginInProgress(false));
-          return;
-        }
-      }
     }
 
     const wsId = u.workspace_id;

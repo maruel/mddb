@@ -701,6 +701,7 @@ CreateOrganizationRequest is a request to create a new organization.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `name` | `string` |  | yes |
+| `ensure_first` | `boolean` |  |  |
 
 ### OrganizationQuotas
 
@@ -825,6 +826,7 @@ CreateWorkspaceRequest is a request to create a new workspace within an organiza
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | `name` | `string` |  | yes |
+| `ensure_first` | `boolean` |  |  |
 
 ### WorkspaceSettings
 
@@ -1253,6 +1255,7 @@ The parent ID is in the path ({id}); use "0" for root.
 |-------|------|-------------|----------|
 | `title` | `string` |  | yes |
 | `content` | `string` |  |  |
+| `ensure_root_if_empty` | `boolean` |  |  |
 
 ### CreatePageResponse
 

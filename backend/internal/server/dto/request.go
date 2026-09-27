@@ -196,10 +196,11 @@ func (r *GetMeRequest) Validate() error {
 // CreatePageRequest is a request to create a page under a parent node.
 // The parent ID is in the path ({id}); use "0" for root.
 type CreatePageRequest struct {
-	WsID     ksid.ID `path:"wsID" json:"-"`
-	ParentID ksid.ID `path:"id" json:"-"` // Parent node ID; 0 = root
-	Title    string  `json:"title"`
-	Content  string  `json:"content,omitempty"`
+	WsID              ksid.ID `path:"wsID" json:"-"`
+	ParentID          ksid.ID `path:"id" json:"-"` // Parent node ID; 0 = root
+	Title             string  `json:"title"`
+	Content           string  `json:"content,omitempty"`
+	EnsureRootIfEmpty bool    `json:"ensure_root_if_empty,omitempty"`
 }
 
 // Validate validates the create page request fields.
@@ -208,6 +209,9 @@ func (r *CreatePageRequest) Validate() error {
 		return MissingField("wsID")
 	}
 	// ParentID can be zero (root)
+	if r.EnsureRootIfEmpty && !r.ParentID.IsZero() {
+		return InvalidField("ensure_root_if_empty", "requires a root parent")
+	}
 	if r.Title == "" {
 		return MissingField("title")
 	}
@@ -978,7 +982,8 @@ func (r *UpdateOrganizationRequest) Validate() error {
 
 // CreateOrganizationRequest is a request to create a new organization.
 type CreateOrganizationRequest struct {
-	Name string `json:"name"`
+	Name        string `json:"name"`
+	EnsureFirst bool   `json:"ensure_first,omitempty"`
 }
 
 // Validate validates the create organization request fields.
@@ -991,8 +996,9 @@ func (r *CreateOrganizationRequest) Validate() error {
 
 // CreateWorkspaceRequest is a request to create a new workspace within an organization.
 type CreateWorkspaceRequest struct {
-	OrgID ksid.ID `path:"orgID" json:"-"`
-	Name  string  `json:"name"`
+	OrgID       ksid.ID `path:"orgID" json:"-"`
+	Name        string  `json:"name"`
+	EnsureFirst bool    `json:"ensure_first,omitempty"`
 }
 
 // Validate validates the create workspace request fields.

@@ -8,6 +8,11 @@ This is the high-level roadmap for mddb. For detailed component plans, see:
 ## Status
 
 - [x] Consolidate TypeScript DTO, client, and API reference generation in apisdkgen; remove tygo.
+- [x] Move toolbar list transition cases from browser tests to ProseMirror component tests; keep representative selection and Markdown mode journeys in Playwright.
+- [x] Make the cross-tab account test use a provisioned second account so concurrent first-login setup cannot change its workspace identity.
+- [x] Share first-login provisioning between onboarding and workspace routes; make first organization, workspace, and welcome-page creation idempotent on the server.
+- [x] Move select-option editor interaction cases to component tests while retaining browser coverage for drag persistence and table workflows.
+- [x] Move shared context-menu keyboard and pointer checks to component tests; keep browser journeys for block actions and conversion.
 
 **Current Phase: Phase 7 (Intelligence & Polish)**
 

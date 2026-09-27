@@ -124,6 +124,11 @@ func (m *Manager) Repo(ctx context.Context, subdir string) (Repository, error) {
 	return actual.(Repository), nil
 }
 
+// ForgetRepo removes a repository from the cache after its directory is discarded.
+func (m *Manager) ForgetRepo(subdir string) {
+	m.repos.Delete(filepath.Join(m.rootDir, subdir))
+}
+
 // Author identifies who made a change for git commits.
 type Author struct {
 	Name  string

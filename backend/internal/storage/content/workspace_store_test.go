@@ -111,6 +111,32 @@ func TestFileStoreService(t *testing.T) {
 			t.Fatalf("AGENTS.md not found: %v", err)
 		}
 	})
+
+	t.Run("DiscardWorkspacePreventsMigrationAfterRestart", func(t *testing.T) {
+		fs, wsID := testFileStore(t)
+		if _, err := git.NewRootRepo(t.Context(), fs.rootDir, "test", "test@test.com"); err != nil {
+			t.Fatal(err)
+		}
+		if err := fs.InitWorkspace(t.Context(), wsID); err != nil {
+			t.Fatal(err)
+		}
+		if err := fs.DiscardWorkspace(wsID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(filepath.Join(fs.rootDir, wsID.String())); !os.IsNotExist(err) {
+			t.Fatalf("discarded workspace directory still exists: %v", err)
+		}
+		if _, err := git.NewRootRepo(t.Context(), fs.rootDir, "test", "test@test.com"); err != nil {
+			t.Fatal(err)
+		}
+		modules, err := os.ReadFile(filepath.Join(fs.rootDir, ".gitmodules"))
+		if err != nil && !os.IsNotExist(err) {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(modules), wsID.String()) {
+			t.Fatal("restart migrated the discarded workspace as a submodule")
+		}
+	})
 }
 
 func TestWorkspaceFileStore(t *testing.T) {

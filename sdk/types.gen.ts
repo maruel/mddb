@@ -525,6 +525,7 @@ export interface UnlinkOAuthAccountRequest {
 /** CreateOrganizationRequest is a request to create a new organization. */
 export interface CreateOrganizationRequest {
   name: string;
+  ensure_first?: boolean;
 }
 
 /** OrganizationQuotas defines limits for an organization. */
@@ -617,6 +618,7 @@ export interface CreateOrgInvitationRequest {
 /** CreateWorkspaceRequest is a request to create a new workspace within an organization. */
 export interface CreateWorkspaceRequest {
   name: string;
+  ensure_first?: boolean;
 }
 
 /** WorkspaceSettings represents workspace-wide settings. */
@@ -942,6 +944,7 @@ export interface MoveNodeRequest {
 export interface CreatePageRequest {
   title: string;
   content?: string;
+  ensure_root_if_empty?: boolean;
 }
 
 /** CreatePageResponse is a response from creating a page. */
