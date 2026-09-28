@@ -9,3 +9,5 @@ allowBuilds:
   sharp: true
 ignoredBuiltDependencies:
   - esbuild
+minimumReleaseAgeIgnoreMissingTime: false
+minimumReleaseAgeStrict: true

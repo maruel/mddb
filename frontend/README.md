@@ -2,6 +2,9 @@
 
 SolidJS-based frontend for mddb - a markdown document and table system.
 
+Run these commands from the repository root; `frontend/` has no separate
+`package.json`.
+
 ## Development
 
 ```bash
@@ -9,7 +12,8 @@ pnpm install
 pnpm dev
 ```
 
-Frontend runs on http://localhost:5173 and proxies API calls to http://localhost:8080
+The frontend runs on http://localhost:5173 and proxies API calls to
+http://localhost:8080.
 
 ## Build
 
@@ -17,7 +21,8 @@ Frontend runs on http://localhost:5173 and proxies API calls to http://localhost
 pnpm build
 ```
 
-Builds optimized frontend to `../backend/frontend/dist/` which is embedded in the Go binary via `go:embed`.
+`pnpm build` writes assets to `backend/frontend/dist/`. Run `make build` to
+precompress those assets and embed them in the Go binary.
 
 ## Icons
 
