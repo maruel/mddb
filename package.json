@@ -15,7 +15,6 @@
     }
   },
   "scripts": {
-    "check:pre-commit": "scripts/check-staged.sh",
     "dev": "vite",
     "build": "node frontend/scripts/gen-material-icons.mjs && node frontend/scripts/gen-emoji-groups.mjs && vite build",
     "preview": "vite preview",
@@ -24,8 +23,7 @@
     "test:e2e:ui": "playwright test --ui",
     "coverage": "NODE_OPTIONS=--no-experimental-webstorage tsx --test --conditions=browser --test-force-exit --experimental-test-coverage --test-reporter=./scripts/quiet-test-reporter.mjs --import ./frontend/tests/setup-dom.ts 'frontend/src/**/*.test.ts' 'frontend/src/**/*.test.tsx'",
     "typecheck": "tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/root.tsbuildinfo && tsc --noEmit --incremental --tsBuildInfoFile node_modules/.cache/tsc/e2e.tsbuildinfo -p tsconfig.e2e.json",
-    "hooks:install": "scripts/install-git-hooks.sh",
-    "prepare": "pnpm --silent hooks:install",
+    "prepare": "scripts/install-git-hooks.sh",
     "benchmark": "tsx scripts/bench.ts 'frontend/src/**/*.bench.ts'"
   },
   "dependencies": {
